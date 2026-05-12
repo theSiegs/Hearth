@@ -43,6 +43,13 @@ class AppsService extends ChangeNotifier {
   Map<String, Uint8List> _bannerCache = Map();
 
   Map<int, Category> _categoriesById = Map();
+  Map<String, Category>? _categoriesByNameCache;
+  Category? _fallbackCategoryCache;
+
+  void _invalidateCategoryCache() {
+    _categoriesByNameCache = null;
+    _fallbackCategoryCache = null;
+  }
 
   // Cached SharedPreferences instance to avoid repeated disk I/O
   SharedPreferences? _prefs;
@@ -294,6 +301,7 @@ class AppsService extends ChangeNotifier {
 
     _categoriesById = Map.fromEntries(
         categories.map((category) => MapEntry(category.id, category)));
+    _invalidateCategoryCache();
     _applications = Map.fromEntries(appsFromDatabase
         .map((application) => MapEntry(application.packageName, application)));
 
@@ -369,17 +377,25 @@ class AppsService extends ChangeNotifier {
   /// Returns "TV Apps" for TV apps, "Non-TV Apps" for sideloaded apps,
   /// or falls back to first non-Favorites category if defaults don't exist.
   Category? _findTargetCategoryForNewApp(bool isSideloaded) {
-    final targetName = isSideloaded ? "non-tv apps" : "tv apps";
-    return _categoriesById.values.firstWhere(
-      (c) => c.name.toLowerCase() == targetName,
-      orElse: () {
-        // Fallback: first non-favorites category
-        return _categoriesById.values.firstWhere(
+    if (_categoriesById.isEmpty) return null;
+
+    if (_categoriesByNameCache == null) {
+      _categoriesByNameCache = {};
+      for (var c in _categoriesById.values) {
+        _categoriesByNameCache!.putIfAbsent(c.name.toLowerCase(), () => c);
+      }
+      try {
+        _fallbackCategoryCache = _categoriesById.values.firstWhere(
           (c) => c.name.toLowerCase() != 'favorites',
           orElse: () => _categoriesById.values.first,
         );
-      },
-    );
+      } catch (_) {
+        _fallbackCategoryCache = null;
+      }
+    }
+
+    final targetName = isSideloaded ? "non-tv apps" : "tv apps";
+    return _categoriesByNameCache![targetName] ?? _fallbackCategoryCache;
   }
 
   Future<Uint8List> getAppBanner(String packageName) async {
@@ -750,6 +766,7 @@ class AppsService extends ChangeNotifier {
       }
 
       _categoriesById = newCategories;
+      _invalidateCategoryCache();
       _launcherSections.add(newCategory);
 
       if (shouldNotifyListeners) {
@@ -778,6 +795,7 @@ class AppsService extends ChangeNotifier {
     CategorySort oldSort = category!.sort;
 
     category.name = name;
+    _invalidateCategoryCache();
     category.sort = sort;
     category.type = type;
     category.columnsCount = columnsCount;
@@ -818,6 +836,7 @@ class AppsService extends ChangeNotifier {
     final categoryFound = _categoriesById[category.id];
     if (categoryFound != null) {
       categoryFound.name = categoryName;
+      _invalidateCategoryCache();
       notifyListeners();
     }
   }
@@ -829,6 +848,7 @@ class AppsService extends ChangeNotifier {
     if (section is Category) {
       await _database.deleteCategory(section.id);
       _categoriesById.remove(section.id);
+      _invalidateCategoryCache();
     } else {
       await _database.deleteSpacer(section.id);
     }
