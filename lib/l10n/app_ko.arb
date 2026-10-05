@@ -1,5 +1,5 @@
 {
-    "aboutFlauncher": "LTvLauncher 정보",
+    "aboutFlauncher": "Hearth 정보",
     "addCategory": "카테고리 추가",
     "addSection": "섹션 추가",
     "alphabetical": "알파벳순",
@@ -89,7 +89,7 @@
     "appSelectorTransitionAnimation": "앱 선택기 전환 애니메이션",
     "sort": "정렬",
     "systemSettings": "시스템 설정",
-    "textAboutDialog": "LTvLauncher는 FLauncher를 기반으로 한 Android TV용 맞춤형 오픈 소스 런처입니다.\n\nLeanBitLab에서 개발했습니다.\n소스 코드는 {repoUrl}에서 사용할 수 있습니다.",
+    "textAboutDialog": "Hearth (LTvLauncher)는 FLauncher를 기반으로 한 Android TV용 맞춤형 오픈 소스 런처입니다.\n\nLeanBitLab에서 개발했습니다.\n소스 코드는 {repoUrl}에서 사용할 수 있습니다.",
     "@textAboutDialog": {
         "placeholders": {
             "repoUrl": {
@@ -111,10 +111,10 @@
     "pickDayWallpaper": "주간 배경화면 선택",
     "pickNightWallpaper": "야간 배경화면 선택",
     "accessibility": "접근성",
-    "defaultLauncherIsDefault": "LTvLauncher가 기본 런처입니다",
-    "defaultLauncherNotDefault": "LTvLauncher가 기본 런처가 아닙니다",
+    "defaultLauncherIsDefault": "Hearth가 기본 런처입니다",
+    "defaultLauncherNotDefault": "Hearth가 기본 런처가 아닙니다",
     "setAsDefaultLauncher": "기본 런처로 설정",
-    "defaultLauncherDescription": "기본 런처로 설정하면 홈 버튼은 항상 LTvLauncher로 돌아갑니다. TV도 직접 LTvLauncher로 부팅됩니다.",
+    "defaultLauncherDescription": "기본 런처로 설정하면 홈 버튼은 항상 Hearth로 돌아갑니다. TV도 직접 Hearth로 부팅됩니다.",
     "inputs": "입력",
     "inputSources": "입력 소스",
     "backupAndRestore": "백업 및 복원",

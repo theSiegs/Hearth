@@ -7,7 +7,7 @@ class AppLocalizationsTr extends AppLocalizations {
   AppLocalizationsTr([String locale = 'tr']) : super(locale);
 
   @override
-  String get aboutFlauncher => 'LTvLauncher Hakkında';
+  String get aboutFlauncher => 'Hearth Hakkında';
 
   @override
   String get addCategory => 'Kategori ekle';
@@ -202,7 +202,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String textAboutDialog(String repoUrl) {
-    return 'LTvLauncher, FLauncher tabanlı, Android TV için özelleştirilmiş açık kaynaklı bir başlatıcıdır.\n\nLeanBitLab tarafından geliştirilmiştir.\nKaynak kodu $repoUrl adresinde mevcuttur.';
+    return 'Hearth (LTvLauncher), FLauncher tabanlı, Android TV için özelleştirilmiş açık kaynaklı bir başlatıcıdır.\n\nLeanBitLab tarafından geliştirilmiştir.\nKaynak kodu $repoUrl adresinde mevcuttur.';
   }
 
   @override
@@ -248,16 +248,16 @@ class AppLocalizationsTr extends AppLocalizations {
   String get accessibility => 'Erişilebilirlik';
 
   @override
-  String get defaultLauncherIsDefault => 'LTvLauncher varsayılan başlatıcıdır';
+  String get defaultLauncherIsDefault => 'Hearth varsayılan başlatıcıdır';
 
   @override
-  String get defaultLauncherNotDefault => 'LTvLauncher varsayılan başlatıcı değildir';
+  String get defaultLauncherNotDefault => 'Hearth varsayılan başlatıcı değildir';
 
   @override
   String get setAsDefaultLauncher => 'Varsayılan başlatıcı olarak ayarla';
 
   @override
-  String get defaultLauncherDescription => 'Varsayılan başlatıcı olarak ayarlandığında, Ana Sayfa düğmesi her zaman LTvLauncher\'a döner. TV de doğrudan LTvLauncher\'da başlar.';
+  String get defaultLauncherDescription => 'Varsayılan başlatıcı olarak ayarlandığında, Ana Sayfa düğmesi her zaman Hearth\'a döner. TV de doğrudan Hearth\'da başlar.';
 
   @override
   String get inputs => 'Girişler';

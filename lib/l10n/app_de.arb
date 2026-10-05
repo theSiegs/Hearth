@@ -1,5 +1,5 @@
 {
-    "aboutFlauncher": "Über LTvLauncher",
+    "aboutFlauncher": "Über Hearth",
     "addCategory": "Kategorie hinzufügen",
     "addSection": "Abschnitt hinzufügen",
     "alphabetical": "Alphabetisch",
@@ -89,7 +89,7 @@
     "appSelectorTransitionAnimation": "App-Auswahl-Übergangsanimation",
     "sort": "Sortieren",
     "systemSettings": "Systemeinstellungen",
-    "textAboutDialog": "LTvLauncher ist ein angepasster Open-Source-Launcher für Android TV, basierend auf FLauncher.\n\nEntwickelt von LeanBitLab.\nQuellcode verfügbar unter {repoUrl}.",
+    "textAboutDialog": "Hearth (LTvLauncher) ist ein angepasster Open-Source-Launcher für Android TV, basierend auf FLauncher.\n\nEntwickelt von LeanBitLab.\nQuellcode verfügbar unter {repoUrl}.",
     "@textAboutDialog": {
         "placeholders": {
             "repoUrl": {
@@ -111,10 +111,10 @@
     "pickDayWallpaper": "Tag-Hintergrundbild auswählen",
     "pickNightWallpaper": "Nacht-Hintergrundbild auswählen",
     "accessibility": "Barrierefreiheit",
-    "defaultLauncherIsDefault": "LTvLauncher ist der Standard-Launcher",
-    "defaultLauncherNotDefault": "LTvLauncher ist nicht der Standard-Launcher",
+    "defaultLauncherIsDefault": "Hearth ist der Standard-Launcher",
+    "defaultLauncherNotDefault": "Hearth ist nicht der Standard-Launcher",
     "setAsDefaultLauncher": "Als Standard-Launcher festlegen",
-    "defaultLauncherDescription": "Wenn als Standard-Launcher festgelegt, kehrt die Home-Taste immer zu LTvLauncher zurück. Der TV bootet ebenfalls direkt in LTvLauncher.",
+    "defaultLauncherDescription": "Wenn als Standard-Launcher festgelegt, kehrt die Home-Taste immer zu Hearth zurück. Der TV bootet ebenfalls direkt in Hearth.",
     "inputs": "Eingänge",
     "inputSources": "Eingabequellen",
     "backupAndRestore": "Sichern & Wiederherstellen",

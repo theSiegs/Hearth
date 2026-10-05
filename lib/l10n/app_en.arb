@@ -1,5 +1,5 @@
 {
-    "aboutFlauncher": "About LTvLauncher",
+    "aboutFlauncher": "About Hearth",
     "addCategory": "Add category",
     "addSection": "Add section",
     "alphabetical": "Alphabetical",
@@ -89,7 +89,7 @@
     "appSelectorTransitionAnimation": "App selector transition animation",
     "sort": "Sort",
     "systemSettings": "System settings",
-    "textAboutDialog": "LTvLauncher is a customized open-source launcher for Android TV, based on FLauncher.\n\nDeveloped by LeanBitLab.\nSource code available at {repoUrl}.",
+    "textAboutDialog": "Hearth is a private, family-friendly launcher for Google TV. It is a fork of LTvLauncher by LeanBitLab, which is based on FLauncher.\n\nSource code available at {repoUrl}.",
     "@textAboutDialog": {
         "placeholders": {
             "repoUrl": {
@@ -111,10 +111,10 @@
     "pickDayWallpaper": "Pick day wallpaper",
     "pickNightWallpaper": "Pick night wallpaper",
     "accessibility": "Accessibility",
-    "defaultLauncherIsDefault": "LTvLauncher is the default launcher",
-    "defaultLauncherNotDefault": "LTvLauncher is not the default launcher",
+    "defaultLauncherIsDefault": "Hearth is the default launcher",
+    "defaultLauncherNotDefault": "Hearth is not the default launcher",
     "setAsDefaultLauncher": "Set as default launcher",
-    "defaultLauncherDescription": "When set as the default launcher, the Home button will always return to LTvLauncher. The TV will also boot directly into LTvLauncher.",
+    "defaultLauncherDescription": "When set as the default launcher, the Home button will always return to Hearth. The TV will also boot directly into Hearth.",
     "inputs": "Inputs",
     "inputSources": "Input Sources",
     "backupAndRestore": "Backup & Restore",

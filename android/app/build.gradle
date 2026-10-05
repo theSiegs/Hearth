@@ -134,9 +134,9 @@ android {
             output.versionCodeOverride = variant.versionCode
             def abi = output.getFilter(com.android.build.OutputFile.ABI)
             if (abi != null) {
-                outputFileName = "LTvLauncher-${abi}-${variant.buildType.name}.apk"
+                outputFileName = "Hearth-${abi}-${variant.buildType.name}.apk"
             } else {
-                outputFileName = "LTvLauncher-universal-${variant.buildType.name}.apk"
+                outputFileName = "Hearth-universal-${variant.buildType.name}.apk"
             }
         }
     }

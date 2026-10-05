@@ -121,7 +121,7 @@ class _AccessibilityPageState extends State<AccessibilityPage> with WidgetsBindi
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Text(
                       'On Google TV this choice does not change the Home button (turn on Home Button Fix below '
-                      'for that). It does stop kids profiles from blocking LTvLauncher, so pick it here too.',
+                      'for that). It does stop kids profiles from blocking Hearth, so pick it here too.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
                       textAlign: TextAlign.center,
                     ),
@@ -175,7 +175,7 @@ class _AccessibilityPageState extends State<AccessibilityPage> with WidgetsBindi
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Text(
                     'On Google TV, enable "Home Button Fix" under Accessibility settings. The Home button then opens this launcher, '
-                    'and it comes back after switching profiles. Kids profiles must approve LTvLauncher in their app list.',
+                    'and it comes back after switching profiles. Kids profiles must approve Hearth in their app list.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.white54,
                         ),

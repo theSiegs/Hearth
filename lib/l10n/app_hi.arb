@@ -1,5 +1,5 @@
 {
-    "aboutFlauncher": "LTvLauncher के बारे में",
+    "aboutFlauncher": "Hearth के बारे में",
     "addCategory": "श्रेणी जोड़ें",
     "addSection": "अनुभाग जोड़ें",
     "alphabetical": "वर्णानुक्रम",
@@ -89,7 +89,7 @@
     "appSelectorTransitionAnimation": "ऐप सेलेक्टर ट्रांज़िशन एनिमेशन",
     "sort": "क्रमबद्ध करें",
     "systemSettings": "सिस्टम सेटिंग्स",
-    "textAboutDialog": "LTvLauncher FLauncher पर आधारित Android TV के लिए एक अनुकूलित ओपन-सोर्स लॉन्चर है।\n\nLeanBitLab द्वारा विकसित।\nस्रोत कोड {repoUrl} पर उपलब्ध है।",
+    "textAboutDialog": "Hearth (LTvLauncher) FLauncher पर आधारित Android TV के लिए एक अनुकूलित ओपन-सोर्स लॉन्चर है।\n\nLeanBitLab द्वारा विकसित।\nस्रोत कोड {repoUrl} पर उपलब्ध है।",
     "@textAboutDialog": {
         "placeholders": {
             "repoUrl": {
@@ -111,10 +111,10 @@
     "pickDayWallpaper": "दिन का वॉलपेपर चुनें",
     "pickNightWallpaper": "रात का वॉलपेपर चुनें",
     "accessibility": "पहुंच (एक्सेसिबिलिटी)",
-    "defaultLauncherIsDefault": "LTvLauncher डिफ़ॉल्ट लॉन्चर है",
-    "defaultLauncherNotDefault": "LTvLauncher डिफ़ॉल्ट लॉन्चर नहीं है",
+    "defaultLauncherIsDefault": "Hearth डिफ़ॉल्ट लॉन्चर है",
+    "defaultLauncherNotDefault": "Hearth डिफ़ॉल्ट लॉन्चर नहीं है",
     "setAsDefaultLauncher": "डिफ़ॉल्ट लॉन्चर के रूप में सेट करें",
-    "defaultLauncherDescription": "डिफ़ॉल्ट लॉन्चर के रूप में सेट होने पर, होम बटन हमेशा LTvLauncher पर वापस आएगा। टीवी भी सीधे LTvLauncher में बूट होगा।",
+    "defaultLauncherDescription": "डिफ़ॉल्ट लॉन्चर के रूप में सेट होने पर, होम बटन हमेशा Hearth पर वापस आएगा। टीवी भी सीधे Hearth में बूट होगा।",
     "inputs": "इनपुट",
     "inputSources": "इनपुट स्रोत",
     "backupAndRestore": "बैकअप और पुनर्स्थापना",

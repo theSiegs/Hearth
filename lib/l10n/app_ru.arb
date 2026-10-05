@@ -1,5 +1,5 @@
 {
-    "aboutFlauncher": "О программе LTvLauncher",
+    "aboutFlauncher": "О программе Hearth",
     "addCategory": "Добавить категорию",
     "addSection": "Добавить раздел",
     "alphabetical": "По алфавиту",
@@ -89,7 +89,7 @@
     "appSelectorTransitionAnimation": "Анимация перехода селектора приложений",
     "sort": "Сортировать",
     "systemSettings": "Системные настройки",
-    "textAboutDialog": "LTvLauncher — это настраиваемый лаунчер с открытым исходным кодом для Android TV, основанный на FLauncher.\n\nРазработан LeanBitLab.\nИсходный код доступен по адресу {repoUrl}.",
+    "textAboutDialog": "Hearth (LTvLauncher) — это настраиваемый лаунчер с открытым исходным кодом для Android TV, основанный на FLauncher.\n\nРазработан LeanBitLab.\nИсходный код доступен по адресу {repoUrl}.",
     "@textAboutDialog": {
         "placeholders": {
             "repoUrl": {
@@ -111,10 +111,10 @@
     "pickDayWallpaper": "Выбрать дневные обои",
     "pickNightWallpaper": "Выбрать ночные обои",
     "accessibility": "Специальные возможности",
-    "defaultLauncherIsDefault": "LTvLauncher является лаунчером по умолчанию",
-    "defaultLauncherNotDefault": "LTvLauncher не является лаунчером по умолчанию",
+    "defaultLauncherIsDefault": "Hearth является лаунчером по умолчанию",
+    "defaultLauncherNotDefault": "Hearth не является лаунчером по умолчанию",
     "setAsDefaultLauncher": "Установить как лаунчер по умолчанию",
-    "defaultLauncherDescription": "При установке в качестве лаунчера по умолчанию кнопка «Домой» всегда будет возвращать к LTvLauncher. ТВ также будет загружаться напрямую в LTvLauncher.",
+    "defaultLauncherDescription": "При установке в качестве лаунчера по умолчанию кнопка «Домой» всегда будет возвращать к Hearth. ТВ также будет загружаться напрямую в Hearth.",
     "inputs": "Входы",
     "inputSources": "Источники ввода",
     "backupAndRestore": "Резервное копирование и восстановление",

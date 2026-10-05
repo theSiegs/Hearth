@@ -160,7 +160,7 @@ public class MainActivity extends FlutterActivity {
                 case "sendHaTestNotification" -> {
                     HaNotificationServer.Notification test = new HaNotificationServer.Notification();
                     test.title = "Home Assistant";
-                    test.message = "Test notification from LTvLauncher";
+                    test.message = "Test notification from Hearth";
                     result.success(LauncherAccessibilityService.showHaNotification(test));
                 }
                 case "getLocalIpAddress" -> result.success(getLocalIpAddress());
