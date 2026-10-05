@@ -124,3 +124,6 @@ CLAUDE.original.md
 .windsurf/
 .cody/
 .copilot/
+
+# Native SQLite for running Drift tests on Windows (fetched by tool/fetch_sqlite_windows.ps1)
+tool/windows/sqlite3.dll
