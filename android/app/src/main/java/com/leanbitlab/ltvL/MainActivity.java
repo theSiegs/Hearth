@@ -148,6 +148,66 @@ public class MainActivity extends FlutterActivity {
                     }
                 }
                 case "openDefaultLauncherSettings" -> result.success(openDefaultLauncherSettings());
+                case "openProfileChooser" -> result.success(openProfileChooser());
+                case "isGoogleTv" -> result.success(isGoogleTv());
+                case "isKidsProfile" -> result.success(isKidsProfile());
+                case "getHaNotificationsEnabled" -> result.success(LauncherAccessibilityService.isHaNotificationsEnabled(this));
+                case "setHaNotificationsEnabled" -> {
+                    Boolean enabled = call.arguments();
+                    LauncherAccessibilityService.setHaNotificationsEnabled(this, enabled != null && enabled);
+                    result.success(null);
+                }
+                case "sendHaTestNotification" -> {
+                    HaNotificationServer.Notification test = new HaNotificationServer.Notification();
+                    test.title = "Home Assistant";
+                    test.message = "Test notification from LTvLauncher";
+                    result.success(LauncherAccessibilityService.showHaNotification(test));
+                }
+                case "getLocalIpAddress" -> result.success(getLocalIpAddress());
+                case "getHaStatusConfig" -> {
+                    android.content.SharedPreferences prefs =
+                            getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, MODE_PRIVATE);
+                    Map<String, Object> config = new HashMap<>();
+                    config.put("url", prefs.getString(HaStatusReporter.URL_KEY, null));
+                    config.put("webhookId", prefs.getString(HaStatusReporter.WEBHOOK_KEY, null));
+                    result.success(config);
+                }
+                case "setHaStatusConfig" -> {
+                    LauncherAccessibilityService.setHaStatusConfig(this, call.argument("url"), call.argument("webhookId"));
+                    result.success(null);
+                }
+                case "getButtonMappings" -> result.success(ButtonMapper.getJson(this));
+                case "setButtonMappings" -> {
+                    try {
+                        ButtonMapper.setJson(this, call.arguments());
+                        result.success(null);
+                    } catch (Exception e) {
+                        result.error("INVALID_ARGUMENT", e.getMessage(), null);
+                    }
+                }
+                case "captureButton" -> {
+                    boolean started = LauncherAccessibilityService.captureNextKey(keyCode -> {
+                        Map<String, Object> captured = new HashMap<>();
+                        captured.put("keyCode", keyCode);
+                        captured.put("name", ButtonMapper.keyName(keyCode));
+                        captured.put("remappable", ButtonMapper.isRemappable(keyCode));
+                        result.success(captured);
+                    });
+                    if (!started) {
+                        result.error("SERVICE_OFF", "Home Button Fix (accessibility service) is not running", null);
+                    }
+                }
+                case "cancelButtonCapture" -> {
+                    LauncherAccessibilityService.cancelCapture();
+                    result.success(null);
+                }
+                case "getIdleStandbyMinutes" -> result.success(LauncherAccessibilityService.getIdleStandbyMinutes(this));
+                case "setIdleStandbyMinutes" -> {
+                    Integer minutes = call.arguments();
+                    LauncherAccessibilityService.setIdleStandbyMinutes(this, minutes != null ? minutes : 0);
+                    result.success(null);
+                }
+                case "getActiveProfileName" -> result.success(LauncherAccessibilityService.getActiveProfileName(this));
                 case "openWifiSettings" -> result.success(openWifiSettings());
                 case "openVpnSettings" -> result.success(openVpnSettings());
                 case "getTvInputs" -> result.success(getTvInputs());
@@ -197,6 +257,9 @@ public class MainActivity extends FlutterActivity {
                 case "isBreezyWeatherInstalled" -> result.success(isBreezyWeatherInstalled());
                 case "openBreezyWeather" -> result.success(openBreezyWeather());
                 case "getPackageName" -> result.success(getPackageName());
+                case "checkInstallPermission" -> result.success(checkInstallPermission());
+                case "requestInstallPermission" -> result.success(requestInstallPermission());
+                case "installApk" -> result.success(installApk(call.argument("path")));
                 case "playClickSound" -> {
                     getWindow().getDecorView().playSoundEffect(android.view.SoundEffectConstants.CLICK);
                     result.success(null);
@@ -426,6 +489,9 @@ public class MainActivity extends FlutterActivity {
 
     public Map<String, Serializable> getApplication(String packageName) {
         Map<String, Serializable> map = new java.util.HashMap<>();
+        if (packageName.equals(getPackageName())) {
+            return map;
+        }
         PackageManager packageManager = getPackageManager();
         Intent intent = packageManager.getLeanbackLaunchIntentForPackage(packageName);
 
@@ -494,8 +560,11 @@ public class MainActivity extends FlutterActivity {
         Intent intent = new Intent(Intent.ACTION_MAIN)
                 .addCategory(category);
 
-        return getPackageManager()
-                .queryIntentActivities(intent, 0);
+        // Exclude ourselves: launching the launcher from its own grid is a no-op.
+        String ownPackage = getPackageName();
+        List<ResolveInfo> activities = new ArrayList<>(getPackageManager().queryIntentActivities(intent, 0));
+        activities.removeIf(info -> info.activityInfo.packageName.equals(ownPackage));
+        return activities;
     }
 
     private Map<String, Serializable> buildAppMap(ActivityInfo activityInfo, boolean sideloaded, String action) {
@@ -503,8 +572,13 @@ public class MainActivity extends FlutterActivity {
 
         String applicationName = activityInfo.loadLabel(packageManager).toString(),
                 applicationVersionName = "";
+        boolean suspended = false;
         try {
-            applicationVersionName = packageManager.getPackageInfo(activityInfo.packageName, 0).versionName;
+            PackageInfo packageInfo = packageManager.getPackageInfo(activityInfo.packageName, 0);
+            applicationVersionName = packageInfo.versionName;
+            // Google TV suspends apps a kids profile hasn't approved
+            suspended = packageInfo.applicationInfo != null
+                    && (packageInfo.applicationInfo.flags & ApplicationInfo.FLAG_SUSPENDED) != 0;
         } catch (PackageManager.NameNotFoundException ignored) {
         }
 
@@ -513,6 +587,7 @@ public class MainActivity extends FlutterActivity {
         appMap.put("packageName", activityInfo.packageName);
         appMap.put("version", applicationVersionName);
         appMap.put("sideloaded", sideloaded);
+        appMap.put("suspended", suspended);
 
         if (action != null) {
             appMap.put("action", action);
@@ -580,6 +655,14 @@ public class MainActivity extends FlutterActivity {
     }
 
     private boolean isDefaultLauncher() {
+        // On Google TV the Home intent always resolves to Google TV's own home (higher priority), so check the
+        // role the user picked instead: holding it also keeps kids profiles from suspending the launcher.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            android.app.role.RoleManager roleManager = getSystemService(android.app.role.RoleManager.class);
+            if (roleManager != null && roleManager.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME)) {
+                return roleManager.isRoleHeld(android.app.role.RoleManager.ROLE_HOME);
+            }
+        }
         Intent intent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME);
         ResolveInfo defaultLauncher = getPackageManager().resolveActivity(intent, 0);
 
@@ -1006,6 +1089,55 @@ public class MainActivity extends FlutterActivity {
         return launchActivityFromAction(Settings.ACTION_SETTINGS);
     }
 
+    // Google TV's own profile switcher: switching here is what applies kids profile restrictions system-wide.
+    // Not a public API, so fall back to the accounts settings page if Google TV changes it.
+    private boolean openProfileChooser() {
+        Intent chooser = new Intent("com.google.android.gms.account.ProfilePickerDelegation")
+                .setClassName(LauncherAccessibilityService.GOOGLE_TV_PACKAGE,
+                        LauncherAccessibilityService.GOOGLE_TV_PACKAGE + ".profile.chooser.ProfileChooserActivity");
+        if (tryStartActivity(chooser)) {
+            return true;
+        }
+        return tryStartActivity(new Intent(Settings.ACTION_SYNC_SETTINGS));
+    }
+
+    // Google TV kids profiles suspend every app a parent hasn't approved; adult profiles suspend none.
+    private boolean isKidsProfile() {
+        for (boolean sideloaded : new boolean[]{false, true}) {
+            for (ResolveInfo info : queryIntentActivities(sideloaded)) {
+                if ((info.activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SUSPENDED) != 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** The TV's LAN address, for the Home Assistant integration's host field. */
+    private String getLocalIpAddress() {
+        try {
+            for (java.net.NetworkInterface nif : java.util.Collections.list(java.net.NetworkInterface.getNetworkInterfaces())) {
+                if (!nif.isUp() || nif.isLoopback()) continue;
+                for (java.net.InetAddress address : java.util.Collections.list(nif.getInetAddresses())) {
+                    if (address instanceof java.net.Inet4Address && address.isSiteLocalAddress()) {
+                        return address.getHostAddress();
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private boolean isGoogleTv() {
+        try {
+            getPackageManager().getPackageInfo(LauncherAccessibilityService.GOOGLE_TV_PACKAGE, 0);
+            return true;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+
     private boolean openWifiSettings() {
         // 1. Try Android Q+ WiFi panel
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -1049,6 +1181,14 @@ public class MainActivity extends FlutterActivity {
     }
 
     private boolean openScreensaverSettings() {
+        // 0. Google TV: the screensaver is "Ambient mode". Its own task, so a Settings screen left open
+        // earlier doesn't come back up in its place.
+        Intent ambientIntent = new Intent("com.google.android.tv.settings.ambient")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        if (ambientIntent.resolveActivity(getPackageManager()) != null && tryStartActivity(ambientIntent)) {
+            return true;
+        }
+
         // 1. Try Android TV specific screensaver settings (DaydreamActivity - from
         // Aerial Views)
         Intent tvIntent = new Intent(Intent.ACTION_MAIN);
@@ -1282,6 +1422,51 @@ public class MainActivity extends FlutterActivity {
             }
         }
         return true;
+    }
+
+    private boolean checkInstallPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            return getPackageManager().canRequestPackageInstalls();
+        }
+        return true;
+    }
+
+    private boolean requestInstallPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:" + getPackageName()));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                return tryStartActivity(intent);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /// Launches the system package installer for an APK previously downloaded by UpdateService,
+    /// via FileProvider so the installer (a separate app) can read the file across the
+    /// scoped-storage boundary.
+    private boolean installApk(String path) {
+        if (path == null) return false;
+        try {
+            java.io.File apkFile = new java.io.File(path);
+            if (!apkFile.exists()) return false;
+
+            Uri apkUri = androidx.core.content.FileProvider.getUriForFile(
+                    this, getPackageName() + ".fileprovider", apkFile);
+
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            return tryStartActivity(intent);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     private static String cursorStringOrEmpty(android.database.Cursor cursor, String column) {

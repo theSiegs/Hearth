@@ -2,6 +2,7 @@ import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flauncher/widgets/settings/accessibility_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -88,5 +89,47 @@ void main() {
 
     expect(find.text("Accessibility"), findsOneWidget);
     expect(find.text("LTvLauncher is not the default launcher"), findsOneWidget);
+  });
+
+  testWidgets("AccessibilityPage explains what the default launcher does on Google TV", (tester) async {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('me.efesser.flauncher/method'),
+      (call) async => call.method == "isGoogleTv" ? true : false,
+    );
+    addTearDown(() => tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('me.efesser.flauncher/method'), null));
+
+    final appsService = MockAppsService();
+    final launcherState = LauncherState();
+    final settingsService = MockSettingsService();
+
+    when(appsService.isDefaultLauncher()).thenAnswer((_) async => false);
+    when(settingsService.appHighlightAnimationEnabled).thenReturn(true);
+    when(settingsService.startOnBoot).thenReturn(false);
+    when(settingsService.accentColorHex).thenReturn("7C4DFF");
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AppsService>.value(value: appsService),
+          ChangeNotifierProvider<LauncherState>.value(value: launcherState),
+          ChangeNotifierProvider<SettingsService>.value(value: settingsService),
+        ],
+        builder: (_, __) => MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(body: AccessibilityPage()),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining("stop kids profiles from blocking LTvLauncher"), findsOneWidget);
+    expect(find.text("Set as default launcher"), findsOneWidget);
   });
 }

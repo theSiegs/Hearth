@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/providers/wallpaper_service.dart';
+import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'dart:async';
 
 import 'package:flauncher/actions.dart';
@@ -311,6 +313,9 @@ class _AppCardState extends State<AppCard> with TickerProviderStateMixin {
                                   onTap: () => _onPressed(context, LogicalKeyboardKey.enter),
                                   onLongPress: () => _onLongPress(context, LogicalKeyboardKey.enter),
                                   onFocusChange: (focused) {
+                                    if (focused) {
+                                      context.read<WallpaperService?>()?.onAppFocused(widget.application.packageName);
+                                    }
                                     Scrollable.ensureVisible(
                                       context,
                                       // This specific alignment value is not only
@@ -766,6 +771,7 @@ class _AppCardState extends State<AppCard> with TickerProviderStateMixin {
   }
 
   Future<void> _showPanel(BuildContext context) async {
+    if (!await requireParent(context) || !context.mounted) return;
     try {
       final result = await showDialog<ApplicationInfoPanelResult>(
         context: context,

@@ -131,6 +131,47 @@ class FLauncherChannel {
   Future<void> openDefaultLauncherSettings() async =>
       await _methodChannel.invokeMethod("openDefaultLauncherSettings");
 
+  Future<void> openProfileChooser() async => await _methodChannel.invokeMethod("openProfileChooser");
+
+  Future<String?> getActiveProfileName() async => await _methodChannel.invokeMethod<String>("getActiveProfileName");
+
+  Future<bool> isKidsProfile() async => await _methodChannel.invokeMethod<bool>("isKidsProfile") ?? false;
+
+  Future<int> getIdleStandbyMinutes() async => await _methodChannel.invokeMethod<int>("getIdleStandbyMinutes") ?? 0;
+
+  Future<void> setIdleStandbyMinutes(int minutes) async =>
+      await _methodChannel.invokeMethod("setIdleStandbyMinutes", minutes);
+
+  Future<String> getButtonMappings() async => await _methodChannel.invokeMethod<String>("getButtonMappings") ?? "{}";
+
+  Future<void> setButtonMappings(String json) async => await _methodChannel.invokeMethod("setButtonMappings", json);
+
+  /// Resolves with the next remote button pressed ({keyCode, name, remappable}).
+  Future<Map<dynamic, dynamic>?> captureButton() async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("captureButton");
+
+  Future<void> cancelButtonCapture() async => await _methodChannel.invokeMethod("cancelButtonCapture");
+
+  Future<bool> getHaNotificationsEnabled() async =>
+      await _methodChannel.invokeMethod<bool>("getHaNotificationsEnabled") ?? false;
+
+  Future<void> setHaNotificationsEnabled(bool enabled) async =>
+      await _methodChannel.invokeMethod("setHaNotificationsEnabled", enabled);
+
+  /// False when Home Button Fix (the accessibility service) isn't running.
+  Future<bool> sendHaTestNotification() async =>
+      await _methodChannel.invokeMethod<bool>("sendHaTestNotification") ?? false;
+
+  Future<Map<dynamic, dynamic>> getHaStatusConfig() async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getHaStatusConfig") ?? {};
+
+  Future<void> setHaStatusConfig(String? url, String? webhookId) async =>
+      await _methodChannel.invokeMethod("setHaStatusConfig", {"url": url, "webhookId": webhookId});
+
+  Future<String?> getLocalIpAddress() async => await _methodChannel.invokeMethod<String>("getLocalIpAddress");
+
+  Future<bool> isGoogleTv() async => await _methodChannel.invokeMethod("isGoogleTv") ?? false;
+
   Future<void> playClickSound() async {
     try {
       await _methodChannel.invokeMethod("playClickSound");
@@ -310,4 +351,31 @@ class FLauncherChannel {
 
   StreamSubscription<dynamic> addWatchNextChangedListener(void Function(dynamic) onEvent) =>
       _watchNextEventChannel.receiveBroadcastStream().listen(onEvent);
+
+  Future<bool> checkInstallPermission() async {
+    try {
+      final bool? allowed = await _methodChannel.invokeMethod<bool>("checkInstallPermission");
+      return allowed ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> requestInstallPermission() async {
+    try {
+      final bool? success = await _methodChannel.invokeMethod<bool>("requestInstallPermission");
+      return success ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> installApk(String path) async {
+    try {
+      final bool? success = await _methodChannel.invokeMethod<bool>("installApk", {"path": path});
+      return success ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
 }

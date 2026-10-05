@@ -32,6 +32,8 @@ import 'package:flauncher/providers/notifications_service.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/providers/backup_service.dart';
+import 'package:flauncher/providers/update_service.dart';
+import 'package:flauncher/providers/profile_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -115,7 +117,20 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => TvInputsService(fLauncherChannel)),
         ChangeNotifierProvider(create: (_) => NotificationsService(fLauncherChannel)),
         ChangeNotifierProvider(create: (_) => WatchNextService(fLauncherChannel)),
-        ChangeNotifierProvider(create: (_) => WeatherService(fLauncherChannel)),
+        ChangeNotifierProvider(create: (_) => WeatherService(fLauncherChannel, sharedPreferences: sharedPreferences)),
+        ChangeNotifierProvider(create: (_) => UpdateService(fLauncherChannel)),
+        ChangeNotifierProvider(
+            create: (context) {
+              final backupService = Provider.of<BackupService>(context, listen: false);
+              final settingsService = Provider.of<SettingsService>(context, listen: false);
+              final appsService = Provider.of<AppsService>(context, listen: false);
+              // Daily automatic backup, checked at start and then hourly while the launcher runs
+              backupService.autoBackupIfDue(settingsService).catchError((_) => null);
+              Timer.periodic(const Duration(hours: 1),
+                  (_) => backupService.autoBackupIfDue(settingsService).catchError((_) => null));
+              return ProfileService(fLauncherChannel, sharedPreferences, backupService, settingsService, appsService);
+            },
+            lazy: false),
       ],
       child: FLauncherApp()
     )

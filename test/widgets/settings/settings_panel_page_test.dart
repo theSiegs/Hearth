@@ -58,6 +58,8 @@ void main() {
 
     await _pumpWidgetWithProviders(tester, settingsService, appsService);
 
+    await tester.ensureVisible(find.text("Applications"));
+    await tester.pumpAndSettle();
     await tester.tap(find.text("Applications"));
     await tester.pumpAndSettle();
     expect(find.byKey(Key("ApplicationsPanelPage")), findsOneWidget);
@@ -72,6 +74,8 @@ void main() {
 
     await _pumpWidgetWithProviders(tester, settingsService, appsService);
 
+    await tester.ensureVisible(find.text("Interface"));
+    await tester.pumpAndSettle();
     await tester.tap(find.text("Interface"));
     await tester.pumpAndSettle();
     expect(find.byKey(Key("InterfaceSettingsPage")), findsOneWidget);
@@ -86,6 +90,8 @@ void main() {
 
     await _pumpWidgetWithProviders(tester, settingsService, appsService);
 
+    await tester.ensureVisible(find.text("System"));
+    await tester.pumpAndSettle();
     await tester.tap(find.text("System"));
     await tester.pumpAndSettle();
     expect(find.byKey(Key("GeneralSettingsPage")), findsOneWidget);
@@ -100,6 +106,8 @@ void main() {
 
     await _pumpWidgetWithProviders(tester, settingsService, appsService);
 
+    await tester.ensureVisible(find.text("Display & Screensaver"));
+    await tester.pumpAndSettle();
     await tester.tap(find.text("Display & Screensaver"));
     await tester.pumpAndSettle();
     expect(find.byKey(Key("DisplaySettingsPage")), findsOneWidget);
@@ -114,6 +122,8 @@ void main() {
 
     await _pumpWidgetWithProviders(tester, settingsService, appsService);
 
+    await tester.ensureVisible(find.text("Notifications"));
+    await tester.pumpAndSettle();
     await tester.tap(find.text("Notifications"));
     await tester.pumpAndSettle();
     expect(find.byKey(Key("NotificationsSettingsPage")), findsOneWidget);
@@ -128,6 +138,8 @@ void main() {
 
     await _pumpWidgetWithProviders(tester, settingsService, appsService);
 
+    await tester.ensureVisible(find.text("Accessibility"));
+    await tester.pumpAndSettle();
     await tester.tap(find.text("Accessibility"));
     await tester.pumpAndSettle();
     expect(find.byKey(Key("AccessibilityPage")), findsOneWidget);
@@ -142,6 +154,8 @@ void main() {
 
     await _pumpWidgetWithProviders(tester, settingsService, appsService);
 
+    await tester.ensureVisible(find.text("System settings"));
+    await tester.pumpAndSettle();
     await tester.tap(find.text("System settings"));
     await tester.pumpAndSettle();
     verify(appsService.openSettings());
@@ -158,6 +172,8 @@ void main() {
 
     await _pumpWidgetWithProviders(tester, settingsService, appsService);
 
+    await tester.ensureVisible(find.text("About LTvLauncher"));
+    await tester.pumpAndSettle();
     await tester.tap(find.text("About LTvLauncher"));
     await tester.pumpAndSettle();
     expect(find.byType(LTvLauncherAboutDialog), findsOneWidget);
@@ -173,6 +189,8 @@ void main() {
 
     await _pumpWidgetWithProviders(tester, settingsService, appsService);
 
+    await tester.ensureVisible(find.text("Support & Donate"));
+    await tester.pumpAndSettle();
     await tester.tap(find.text("Support & Donate"));
     await tester.pumpAndSettle();
     expect(find.byType(DonateDialog), findsOneWidget);
@@ -184,6 +202,7 @@ Future<void> _pumpWidgetWithProviders(
   SettingsService settingsService,
   AppsService appsService,
 ) async {
+  when(settingsService.hasParentPin).thenReturn(false);
   await tester.pumpWidget(
     MultiProvider(
       providers: [

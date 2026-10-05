@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/widgets/settings/weather_location_dialog.dart';
+import 'package:flauncher/providers/open_meteo_client.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
@@ -120,31 +122,28 @@ class StatusBarPanelPage extends StatelessWidget {
                   ),
                   Consumer<WeatherService>(
                     builder: (context, weatherService, _) {
-                      if (!weatherService.hasWeather) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.info_outline, size: 20, color: Colors.white70),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    localizations.breezyWeatherSetupHint,
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
-                                  ),
-                                ),
-                              ],
-                            ),
+                      final place = weatherService.location;
+                      return Column(
+                        children: [
+                          FocusableSettingsTile(
+                            leading: const Icon(Icons.place_outlined),
+                            title: Text(place == null ? "Weather location: not set" : "Weather location: ${place.displayName}"),
+                            onPressed: () async {
+                              final picked = await showDialog<WeatherPlace>(
+                                context: context,
+                                builder: (_) => WeatherLocationDialog(weatherService: weatherService),
+                              );
+                              if (picked != null) await weatherService.setLocation(picked);
+                            },
                           ),
-                        );
-                      }
-                      return const SizedBox.shrink();
+                          if (place != null && weatherService.builtInError)
+                            _weatherHint(context, "Couldn't load the weather. It will retry automatically."),
+                          if (place == null && !weatherService.hasWeather)
+                            _weatherHint(context,
+                                "Choose a weather location above (weather from Open-Meteo, free, no account). "
+                                "Without one, weather comes from the Breezy Weather app if it's installed with Gadgetbridge sharing on."),
+                        ],
+                      );
                     },
                   ),
                 ],
@@ -154,4 +153,24 @@ class StatusBarPanelPage extends StatelessWidget {
         ],
       );
   }
+
+  Widget _weatherHint(BuildContext context, String text) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.info_outline, size: 20, color: Colors.white70),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(text, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70)),
+              ),
+            ],
+          ),
+        ),
+      );
 }

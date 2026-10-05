@@ -600,6 +600,7 @@ SettingsService mkSettingsService() {
   when(settingsService.showDateInStatusBar).thenReturn(true);
   when(settingsService.showTimeInStatusBar).thenReturn(true);
   when(settingsService.accentColorHex).thenReturn('00ff00');
+  when(settingsService.hasParentPin).thenReturn(false);
   when(settingsService.showAppNamesBelowIcons).thenReturn(true);
   when(settingsService.themes).thenReturn('classic');
   when(settingsService.hideHighlightOutlineOnHomescreen).thenReturn(false);
@@ -617,6 +618,7 @@ SettingsService mkSettingsService() {
 WallpaperService mkWallpaperService([bool wallpaper = true]) {
   final wallpaperService = MockWallpaperService();
   when(wallpaperService.gradient).thenReturn(FLauncherGradients.greatWhale);
+  when(wallpaperService.focusedAppColor).thenReturn(null);
   when(wallpaperService.wallpaper).thenReturn(wallpaper ? Image.asset('assets/icon.png').image : null);
   when(wallpaperService.version).thenReturn(0);
   return wallpaperService;

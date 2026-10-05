@@ -1,9 +1,12 @@
+import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
 import 'package:flauncher/widgets/settings/inputs_panel.dart';
 import 'package:flauncher/widgets/settings/notifications_panel.dart';
 import 'package:flauncher/providers/tv_inputs_service.dart';
 import 'package:flauncher/providers/notifications_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -102,8 +105,14 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
               _FocusableIconButton(
                 icon: Icons.settings_outlined,
                 focusNode: _settingsFocusNode,
-                onPressed: () => showDialog(context: context, builder: (_) => const SettingsPanel()),
+                onPressed: () async {
+                  if (await requireParent(context) && context.mounted) {
+                    showDialog(context: context, builder: (_) => const SettingsPanel());
+                  }
+                },
               ),
+              const SizedBox(width: 16),
+              const _ProfileButton(),
               Selector<SettingsService, bool>(
                 selector: (_, settings) => settings.showInputsWidgetInStatusBar,
                 builder: (context, showInputs, _) => showInputs
@@ -296,14 +305,27 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
   }
 }
 
+/// Opens Google TV's profile chooser and shows the active profile's name.
+class _ProfileButton extends StatelessWidget {
+  const _ProfileButton();
+
+  @override
+  Widget build(BuildContext context) => _FocusableIconButton(
+        icon: Icons.people_outline,
+        label: context.select<ProfileService?, String?>((p) => p?.activeProfileName),
+        onPressed: () => FLauncherChannel().openProfileChooser(),
+      );
+}
+
 /// Reusable focusable icon button with consistent outline focus indicator
 class _FocusableIconButton extends StatefulWidget {
   final IconData icon;
   final VoidCallback onPressed;
   final FocusNode? focusNode;
   final int badgeCount;
+  final String? label;
 
-  const _FocusableIconButton({required this.icon, required this.onPressed, this.focusNode, this.badgeCount = 0});
+  const _FocusableIconButton({required this.icon, required this.onPressed, this.focusNode, this.badgeCount = 0, this.label});
 
   @override
   State<_FocusableIconButton> createState() => _FocusableIconButtonState();
@@ -355,9 +377,24 @@ class _FocusableIconButtonState extends State<_FocusableIconButton> {
                     ],
                   ),
                 )
-              : Icon(widget.icon,
-                  shadows: const [
-                    Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 2))
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(widget.icon,
+                      shadows: const [
+                        Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 2))
+                      ],
+                    ),
+                    if (widget.label != null) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.label!,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          shadows: const [Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 2))],
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                    ],
                   ],
                 ),
           ),

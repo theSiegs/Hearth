@@ -203,6 +203,22 @@ class _FLauncherState extends State<FLauncher> {
       background = Container(key: const Key("background"), decoration: BoxDecoration(gradient: wallpaperService.gradient.gradient));
     }
 
+    final Color? appColor = wallpaperService.focusedAppColor;
+    if (appColor != null) {
+      background = AnimatedContainer(
+        key: const Key("background_app_color"),
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOut,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [appColor, Color.lerp(appColor, Colors.black, 0.7)!],
+          ),
+        ),
+      );
+    }
+
     return Stack(
       fit: StackFit.expand,
       children: [

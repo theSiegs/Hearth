@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/widgets/settings/home_assistant_page.dart';
+import 'package:flauncher/widgets/settings/remote_buttons_page.dart';
 import 'package:flauncher/widgets/side_panel_dialog.dart';
 import 'package:flauncher/widgets/settings/applications_panel_page.dart';
 import 'package:flauncher/widgets/settings/launcher_sections_panel_page.dart';
@@ -114,6 +116,10 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       return _FastPageRoute(builder: (_) => const ThemesPage());
                     case AccentColorPage.routeName:
                       return _FastPageRoute(builder: (_) => AccentColorPage());
+                    case HomeAssistantPage.routeName:
+                      return _FastPageRoute(builder: (_) => const HomeAssistantPage());
+                    case RemoteButtonsPage.routeName:
+                      return _FastPageRoute(builder: (_) => const RemoteButtonsPage());
                     case AccessibilityPage.routeName:
                       return _FastPageRoute(builder: (_) => const AccessibilityPage());
                     case BackupRestorePage.routeName:

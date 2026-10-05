@@ -83,6 +83,9 @@ Future<void> _pumpWidgetWithProviders(
   WallpaperService wallpaperService,
 ) async {
   when(settingsService.timeBasedWallpaperEnabled).thenReturn(false);
+  when(settingsService.bingWallpaperEnabled).thenReturn(false);
+  when(settingsService.matchSelectedAppBackground).thenReturn(false);
+  when(wallpaperService.bingWallpaperError).thenReturn(false);
   await tester.pumpWidget(
     MultiProvider(
       providers: [

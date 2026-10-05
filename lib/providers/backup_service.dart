@@ -148,11 +148,27 @@ class BackupService {
   /// Exports categories, apps, spacers, and settings to a JSON file.
   Future<String> exportBackup([SettingsService? settingsService]) async {
     final Directory dir = await getBackupDirectory();
-    final now = DateTime.now();
-    final timestamp = "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_"
-        "${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}";
-    final filename = 'ltv_backup_$timestamp.json';
+    final filename = 'ltv_backup_${_timestamp(DateTime.now())}.json';
     final File file = File(path.join(dir.path, filename));
+    final Map<String, dynamic> backupData = await buildBackupData(settingsService);
+    final String jsonStr = const JsonEncoder.withIndent('  ').convert(backupData);
+    await file.writeAsString(jsonStr);
+
+    // Also attempt writing a copy to public Download folder if accessible
+    try {
+      final downloadDir = Directory('/storage/emulated/0/Download');
+      if (downloadDir.existsSync() && downloadDir.path != dir.path) {
+        final publicFile = File(path.join(downloadDir.path, filename));
+        await publicFile.writeAsString(jsonStr);
+      }
+    } catch (_) {}
+
+    return file.path;
+  }
+
+  /// Snapshot of categories, apps, spacers, and settings. With [profileOnly], device-wide settings are left out
+  /// so a per-profile layout never carries them between profiles.
+  Future<Map<String, dynamic>> buildBackupData([SettingsService? settingsService, bool profileOnly = false]) async {
 
     // 1. Fetch complete settings
     final Map<String, dynamic> settingsMap = {};
@@ -166,6 +182,9 @@ class BackupService {
         settingsMap[key] = value;
       }
     }
+    if (profileOnly) {
+      settingsMap.removeWhere((key, _) => isDeviceLevelKey(key));
+    }
 
     // 2. Fetch database tables
     final List<Category> categories = await _database.getCategories();
@@ -174,7 +193,7 @@ class BackupService {
     final List<LauncherSpacer> spacers = await _database.getLauncherSpacers();
 
     // 3. Serialize everything
-    final Map<String, dynamic> backupData = {
+    return {
       "version": 1,
       "settings": settingsMap,
       "apps": apps.map((a) => {
@@ -204,20 +223,6 @@ class BackupService {
         "order": s.order,
       }).toList(),
     };
-
-    final String jsonStr = const JsonEncoder.withIndent('  ').convert(backupData);
-    await file.writeAsString(jsonStr);
-
-    // Also attempt writing a copy to public Download folder if accessible
-    try {
-      final downloadDir = Directory('/storage/emulated/0/Download');
-      if (downloadDir.existsSync() && downloadDir.path != dir.path) {
-        final publicFile = File(path.join(downloadDir.path, filename));
-        await publicFile.writeAsString(jsonStr);
-      }
-    } catch (_) {}
-
-    return file.path;
   }
 
   /// Imports categories, apps, spacers, and settings from the JSON file.
@@ -237,13 +242,21 @@ class BackupService {
 
     final String jsonStr = await backupFile.readAsString();
     final Map<String, dynamic> backupData = json.decode(jsonStr) as Map<String, dynamic>;
+    await restoreBackupData(backupData, settingsService);
+  }
 
+  /// Replaces the launcher layout and settings with [backupData]. With [profileOnly], device-wide settings are kept.
+  Future<void> restoreBackupData(Map<String, dynamic> backupData,
+      [SettingsService? settingsService, bool profileOnly = false]) async {
     if (backupData["version"] != 1) {
       throw FormatException("Invalid backup file version");
     }
 
     // 1. Restore SharedPreferences
     final Map<String, dynamic> settingsMap = Map<String, dynamic>.from(backupData["settings"] as Map);
+    if (profileOnly) {
+      settingsMap.removeWhere((key, _) => isDeviceLevelKey(key));
+    }
     if (settingsService != null) {
       await settingsService.importSettingsMap(settingsMap);
     } else {
@@ -345,6 +358,70 @@ class BackupService {
         batch.insertAll(_database.launcherSpacers, spacersCompanions);
       });
     });
+  }
+
+  /// Settings that belong to the device, not to a profile's layout.
+  static bool isDeviceLevelKey(String key) => key.startsWith("device_") || key == "start_on_boot";
+
+  static String _timestamp(DateTime now) =>
+      "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_"
+      "${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}";
+
+  static const String _lastAutoBackupKey = "device_last_auto_backup";
+  static const String _autoBackupPrefix = "ltv_backup_auto_";
+
+  /// Writes a backup to the app's own storage once a day, keeping the newest [keep]. They show up in the
+  /// restore list next to manual backups.
+  Future<File?> autoBackupIfDue(SettingsService settingsService,
+      {Duration interval = const Duration(days: 1), int keep = 7, DateTime? now}) async {
+    final DateTime time = now ?? DateTime.now();
+    final int? last = _sharedPreferences.getInt(_lastAutoBackupKey);
+    if (last != null && time.difference(DateTime.fromMillisecondsSinceEpoch(last)) < interval) {
+      return null;
+    }
+
+    final Directory dir = await getApplicationDocumentsDirectory();
+    final File file = File(path.join(dir.path, '$_autoBackupPrefix${_timestamp(time)}.json'));
+    await file.writeAsString(jsonEncode(await buildBackupData(settingsService)));
+    await _sharedPreferences.setInt(_lastAutoBackupKey, time.millisecondsSinceEpoch);
+
+    final List<File> autoBackups = dir
+        .listSync()
+        .whereType<File>()
+        .where((f) => path.basename(f.path).startsWith(_autoBackupPrefix))
+        .toList()
+      ..sort((a, b) => path.basename(b.path).compareTo(path.basename(a.path)));
+    for (final old in autoBackups.skip(keep)) {
+      try {
+        await old.delete();
+      } catch (_) {}
+    }
+    return file;
+  }
+
+  Future<File> _profileLayoutFile(String profileName) async {
+    final Directory dir = Directory(path.join((await getApplicationDocumentsDirectory()).path, "profile_layouts"));
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    final String safeName = profileName.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+    return File(path.join(dir.path, "$safeName.json"));
+  }
+
+  Future<void> saveProfileLayout(String profileName, SettingsService settingsService) async {
+    final File file = await _profileLayoutFile(profileName);
+    await file.writeAsString(jsonEncode(await buildBackupData(settingsService, true)));
+  }
+
+  /// Returns false when this profile has no saved layout yet.
+  Future<bool> loadProfileLayout(String profileName, SettingsService settingsService) async {
+    final File file = await _profileLayoutFile(profileName);
+    if (!await file.exists()) {
+      return false;
+    }
+    final Map<String, dynamic> data = json.decode(await file.readAsString()) as Map<String, dynamic>;
+    await restoreBackupData(data, settingsService, true);
+    return true;
   }
 }
 
