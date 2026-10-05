@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
@@ -319,6 +320,59 @@ void main() {
       expect(result, isTrue);
       expect(watchNextService.programs, isEmpty);
       verify(mockChannel.deleteWatchNextProgram(42)).called(1);
+    });
+  });
+
+  group('WatchNextService posters', () {
+    Map<String, Object> program(int id, String poster) => {
+          'id': id,
+          'packageName': 'com.example.tv',
+          'title': 'Show $id',
+          'description': '',
+          'watchNextType': 1,
+          'lastEngagementTime': 1600000000 - id,
+          'playbackPosition': 0,
+          'duration': 0,
+          'intentUri': '',
+          'posterArtUri': poster,
+        };
+
+    Future<WatchNextService> ready() async {
+      final service = WatchNextService(mockChannel);
+      while (!service.initialized) {
+        await Future.delayed(Duration.zero);
+      }
+      await pumpEventQueue();
+      return service;
+    }
+
+    test('fills in posters after the row appears and reuses them on the next refresh', () async {
+      final art = Uint8List.fromList([1, 2, 3]);
+      when(mockChannel.getWatchNextPrograms())
+          .thenAnswer((_) async => [program(1, 'https://img.example/1.jpg'), program(2, '')]);
+      when(mockChannel.getWatchNextPoster('https://img.example/1.jpg')).thenAnswer((_) async => art);
+
+      final service = await ready();
+
+      expect(service.programs[0].posterBytes, art);
+      expect(service.programs[1].posterBytes, isNull);
+      verifyNever(mockChannel.getWatchNextPoster(''));
+
+      watchNextStreamController.add(true);
+      await pumpEventQueue();
+
+      expect(service.programs[0].posterBytes, art);
+      verify(mockChannel.getWatchNextPoster('https://img.example/1.jpg')).called(1);
+    });
+
+    test('a poster that fails to load leaves the card without art', () async {
+      when(mockChannel.getWatchNextPrograms())
+          .thenAnswer((_) async => [program(1, 'https://img.example/broken.jpg')]);
+      when(mockChannel.getWatchNextPoster(any)).thenAnswer((_) async => null);
+
+      final service = await ready();
+
+      expect(service.programs.single.posterBytes, isNull);
     });
   });
 }

@@ -89,6 +89,7 @@ public class MainActivity extends FlutterActivity {
     @Override
     public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
         super.configureFlutterEngine(flutterEngine);
+        sIoExecutor.execute(() -> WatchNextPosters.pruneCache(getApplicationContext()));
 
         BinaryMessenger messenger = flutterEngine.getDartExecutor().getBinaryMessenger();
 
@@ -241,6 +242,13 @@ public class MainActivity extends FlutterActivity {
                     }
                 }
                 case "getWatchNextPrograms" -> result.success(getWatchNextPrograms());
+                case "getWatchNextPoster" -> {
+                    String posterArtUri = call.argument("posterArtUri");
+                    sIoExecutor.execute(() -> {
+                        byte[] posterBytes = WatchNextPosters.load(getApplicationContext(), posterArtUri);
+                        runOnUiThread(() -> result.success(posterBytes));
+                    });
+                }
                 case "deleteWatchNextProgram" -> {
                     Number id = call.argument("id");
                     if (id != null) {
