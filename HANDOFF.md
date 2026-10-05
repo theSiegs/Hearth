@@ -25,7 +25,7 @@
 >   **TODO:** fetch remote artwork anonymously (e.g. through a self-hosted image proxy on the home network) so the
 >   artwork hosts don't see the TV's IP and what's on the row.
 
-**Repo:** `C:\Users\alex\dev\LtvLauncher` (local clone of `github.com/theSiegs/Hearth`, formerly `theSiegs/LtvLauncher`, a personal fork of `LeanBitLab/LtvLauncher`, itself a fork of the open-source `FLauncher` Android TV launcher — Flutter/Dart app + thin native Android layer)
+**Repo:** `C:\Users\alex\dev\Hearth` (formerly `dev\LtvLauncher`; local clone of `github.com/theSiegs/Hearth`, formerly `theSiegs/LtvLauncher`, a personal fork of `LeanBitLab/LtvLauncher`, itself a fork of the open-source `FLauncher` Android TV launcher — Flutter/Dart app + thin native Android layer)
 
 **Goal (Alex's words):** A Google TV front end that's as native-acting/looking as possible, but without ads, tracking, recommendations, or other common privacy issues — plus future Home Assistant integration (device/camera status), per-profile startup selection, and (stretch goal) auto-selecting the matching profile in first-party apps like Netflix when switching TV profiles.
 
