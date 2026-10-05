@@ -17,6 +17,9 @@
  */
 
 import 'dart:async';
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 
 import 'package:flauncher/widgets/settings/back_button_actions.dart';
 import 'package:flutter/material.dart';
@@ -44,6 +47,8 @@ const String _showNetworkIndicatorInStatusBarKey = "show_network_indicator_in_st
 const String _accentColorKey = "accent_color";
 const String _screensaverClockStyleKey = "screensaver_clock_style";
 const String _timeBasedWallpaperEnabledKey = "time_based_wallpaper_enabled";
+const String _bingWallpaperEnabledKey = "bing_wallpaper_enabled";
+const String _matchSelectedAppBackgroundKey = "match_selected_app_background";
 const String _showInputsWidgetInStatusBarKey = "show_inputs_widget_in_status_bar";
 const String _showContinueWatchingKey = "show_continue_watching";
 const String _continueWatchingCardSizeKey = "continue_watching_card_size";
@@ -55,6 +60,8 @@ const String _continueWatchingOrderKey = "continue_watching_order";
 const String _hiddenWatchNextProgramIdsKey = "hidden_watch_next_program_ids";
 const String _hiddenWatchNextPackagesKey = "hidden_watch_next_packages";
 const String _startOnBootKey = "start_on_boot";
+// device_ prefix: shared by all profiles, never part of a per-profile layout
+const String _parentPinHashKey = "device_parent_pin_hash";
 const String _showNotificationsWidgetInStatusBarKey = "show_notifications_widget_in_status_bar";
 const String _autoHideNotificationsWidgetKey = "auto_hide_notifications_widget";
 const String _appLanguageKey = "app_language";
@@ -113,6 +120,7 @@ class SettingsService extends ChangeNotifier {
   late String _accentColorHex;
   late String _screensaverClockStyle;
   late bool _timeBasedWallpaperEnabled;
+  late bool _bingWallpaperEnabled;
   late bool _showInputsWidgetInStatusBar;
   late bool _showContinueWatching;
   late String _continueWatchingCardSize;
@@ -178,6 +186,21 @@ class SettingsService extends ChangeNotifier {
   List<String> get hiddenWatchNextProgramIds => List.unmodifiable(_hiddenWatchNextProgramIds);
   List<String> get hiddenWatchNextPackages => List.unmodifiable(_hiddenWatchNextPackages);
   bool get startOnBoot => _startOnBoot;
+
+  bool get hasParentPin => _sharedPreferences.getString(_parentPinHashKey) != null;
+
+  bool verifyParentPin(String pin) => _sharedPreferences.getString(_parentPinHashKey) == _hashPin(pin);
+
+  Future<void> setParentPin(String? pin) async {
+    if (pin == null) {
+      await _sharedPreferences.remove(_parentPinHashKey);
+    } else {
+      await _sharedPreferences.setString(_parentPinHashKey, _hashPin(pin));
+    }
+    notifyListeners();
+  }
+
+  static String _hashPin(String pin) => sha256.convert(utf8.encode("ltv-parent-pin:$pin")).toString();
   bool get showNotificationsWidgetInStatusBar => _showNotificationsWidgetInStatusBar;
   bool get autoHideNotificationsWidget => _autoHideNotificationsWidget;
   bool get showWeatherInStatusBar => _showWeatherInStatusBar;
@@ -230,6 +253,7 @@ class SettingsService extends ChangeNotifier {
     _accentColorHex = _sharedPreferences.getString(_accentColorKey) ?? ACCENT_COLOR_PURPLE;
     _screensaverClockStyle = _sharedPreferences.getString(_screensaverClockStyleKey) ?? "minimal";
     _timeBasedWallpaperEnabled = _sharedPreferences.getBool(_timeBasedWallpaperEnabledKey) ?? false;
+    _bingWallpaperEnabled = _sharedPreferences.getBool(_bingWallpaperEnabledKey) ?? false;
     _showInputsWidgetInStatusBar = _sharedPreferences.getBool(_showInputsWidgetInStatusBarKey) ?? true;
     _showContinueWatching = _sharedPreferences.getBool(_showContinueWatchingKey) ?? false;
     _continueWatchingCardSize = _sharedPreferences.getString(_continueWatchingCardSizeKey) ?? "normal";
@@ -273,6 +297,7 @@ class SettingsService extends ChangeNotifier {
       _accentColorKey: _accentColorHex,
       _screensaverClockStyleKey: _screensaverClockStyle,
       _timeBasedWallpaperEnabledKey: _timeBasedWallpaperEnabled,
+      _bingWallpaperEnabledKey: _bingWallpaperEnabled,
       _showInputsWidgetInStatusBarKey: _showInputsWidgetInStatusBar,
       _showContinueWatchingKey: _showContinueWatching,
       _continueWatchingCardSizeKey: _continueWatchingCardSize,
@@ -441,6 +466,21 @@ class SettingsService extends ChangeNotifier {
   Future<void> setTimeBasedWallpaperEnabled(bool enabled) async {
     await _sharedPreferences.setBool(_timeBasedWallpaperEnabledKey, enabled);
     _timeBasedWallpaperEnabled = enabled;
+    notifyListeners();
+  }
+
+  bool get bingWallpaperEnabled => _bingWallpaperEnabled;
+
+  bool get matchSelectedAppBackground => _sharedPreferences.getBool(_matchSelectedAppBackgroundKey) ?? false;
+
+  Future<void> setMatchSelectedAppBackground(bool enabled) async {
+    await _sharedPreferences.setBool(_matchSelectedAppBackgroundKey, enabled);
+    notifyListeners();
+  }
+
+  Future<void> setBingWallpaperEnabled(bool enabled) async {
+    await _sharedPreferences.setBool(_bingWallpaperEnabledKey, enabled);
+    _bingWallpaperEnabled = enabled;
     notifyListeners();
   }
 

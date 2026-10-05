@@ -1,4 +1,5 @@
 import 'package:flauncher/models/watch_next_program.dart';
+import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
@@ -266,7 +267,8 @@ class _WatchNextCardState extends State<WatchNextCard> with TickerProviderStateM
     }
   }
 
-  void _onLongPress() {
+  Future<void> _onLongPress() async {
+    if (!await requireParent(context) || !mounted) return;
     showDialog(
       context: context,
       builder: (context) => WatchNextInfoPanel(

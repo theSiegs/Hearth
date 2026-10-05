@@ -28,6 +28,9 @@ class App
 
   bool sideloaded;
 
+  /// Blocked in the current Google TV profile (kids profile without approval). Not persisted.
+  bool suspended = false;
+
   Map<int, int> categoryOrders;
 
   String? action;
@@ -50,6 +53,7 @@ class App
     version = data['version'] as String? ?? '',
     hidden = false,
     sideloaded = data['sideloaded'] as bool? ?? false,
+    suspended = data['suspended'] as bool? ?? false,
     categoryOrders = <int, int>{} {
     if (data.containsKey('action')) {
       action = data['action'] as String?;

@@ -20,6 +20,7 @@ class AccessibilityPage extends StatefulWidget {
 
 class _AccessibilityPageState extends State<AccessibilityPage> with WidgetsBindingObserver {
   bool _accessibilityEnabled = false;
+  bool _isGoogleTv = false;
 
   @override
   void initState() {
@@ -52,6 +53,13 @@ class _AccessibilityPageState extends State<AccessibilityPage> with WidgetsBindi
         setState(() {
           _accessibilityEnabled = enabled;
         });
+      }
+    } catch (_) {}
+
+    try {
+      final bool isGoogleTv = await FLauncherChannel().isGoogleTv();
+      if (mounted) {
+        setState(() => _isGoogleTv = isGoogleTv);
       }
     } catch (_) {}
   }
@@ -107,6 +115,18 @@ class _AccessibilityPageState extends State<AccessibilityPage> with WidgetsBindi
                     textAlign: TextAlign.center,
                   ),
                 ),
+                if (_isGoogleTv) ...[
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      'On Google TV this choice does not change the Home button (turn on Home Button Fix below '
+                      'for that). It does stop kids profiles from blocking LTvLauncher, so pick it here too.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 8),
@@ -154,7 +174,8 @@ class _AccessibilityPageState extends State<AccessibilityPage> with WidgetsBindi
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Text(
-                    'If you are using Google TV, enable "Home Button Fix" under Accessibility settings to make the Home button open this launcher.',
+                    'On Google TV, enable "Home Button Fix" under Accessibility settings. The Home button then opens this launcher, '
+                    'and it comes back after switching profiles. Kids profiles must approve LTvLauncher in their app list.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.white54,
                         ),

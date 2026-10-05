@@ -16,7 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/widgets/settings/home_assistant_page.dart';
+import 'package:flauncher/widgets/settings/remote_buttons_page.dart';
+import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/providers/apps_service.dart';
+import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/widgets/settings/accessibility_page.dart';
 import 'package:flauncher/widgets/settings/applications_panel_page.dart';
 import 'package:flauncher/widgets/settings/donate_dialog.dart';
@@ -25,6 +30,7 @@ import 'package:flauncher/widgets/settings/interface_settings_page.dart';
 import 'package:flauncher/widgets/settings/display_settings_page.dart';
 import 'package:flauncher/widgets/settings/notifications_settings_page.dart';
 import 'package:flauncher/widgets/settings/general_settings_page.dart';
+import 'package:flauncher/widgets/settings/update_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -51,6 +57,20 @@ class SettingsPanelPage extends StatelessWidget {
               children: [
                 FocusableSettingsTile(
                   autofocus: true,
+                  leading: const Icon(Icons.people_outline),
+                  title: Text("Profiles", style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => FLauncherChannel().openProfileChooser(),
+                ),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.lock_outline),
+                  title: Text("Parent PIN", style: Theme.of(context).textTheme.bodyMedium),
+                  trailing: Text(
+                    context.select<SettingsService, bool>((s) => s.hasParentPin) ? "On" : "Off",
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  onPressed: () => _editParentPin(context),
+                ),
+                FocusableSettingsTile(
                   leading: const Icon(Icons.apps),
                   title: Text(localizations.applications, style: Theme.of(context).textTheme.bodyMedium),
                   onPressed: () => Navigator.of(context).pushNamed(ApplicationsPanelPage.routeName),
@@ -81,11 +101,29 @@ class SettingsPanelPage extends StatelessWidget {
                   onPressed: () => Navigator.of(context).pushNamed(AccessibilityPage.routeName),
                 ),
                 FocusableSettingsTile(
+                  leading: const Icon(Icons.settings_remote_outlined),
+                  title: Text("Remote buttons", style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => Navigator.of(context).pushNamed(RemoteButtonsPage.routeName),
+                ),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.home_outlined),
+                  title: Text("Home Assistant", style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => Navigator.of(context).pushNamed(HomeAssistantPage.routeName),
+                ),
+                FocusableSettingsTile(
                   leading: const Icon(Icons.favorite_rounded),
                   title: Text("Support & Donate", style: Theme.of(context).textTheme.bodyMedium),
                   onPressed: () => showDialog(
                     context: context,
                     builder: (_) => const DonateDialog(),
+                  ),
+                ),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.system_update_outlined),
+                  title: Text("Check for Updates", style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => showDialog(
+                    context: context,
+                    builder: (_) => const UpdateDialog(),
                   ),
                 ),
                 const Divider(),
@@ -113,5 +151,45 @@ class SettingsPanelPage extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  /// Parent PIN guards launcher settings and app menus in Google TV kids profiles.
+  Future<void> _editParentPin(BuildContext context) async {
+    final settings = context.read<SettingsService>();
+    if (settings.hasParentPin) {
+      final current = await showDialog<String>(
+        context: context,
+        builder: (_) => ParentPinDialog(title: "Current parent PIN", verify: settings.verifyParentPin),
+      );
+      if (current == null || !context.mounted) return;
+      final bool? remove = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Parent PIN"),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text("Remove PIN")),
+            TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(false), child: const Text("Change PIN")),
+          ],
+        ),
+      );
+      if (remove == null || !context.mounted) return;
+      if (remove) {
+        await settings.setParentPin(null);
+        return;
+      }
+    }
+    final first = await showDialog<String>(
+      context: context,
+      builder: (_) => const ParentPinDialog(
+          title: "New parent PIN", subtitle: "Needed to change the launcher in Google TV kids profiles"),
+    );
+    if (first == null || !context.mounted) return;
+    final second = await showDialog<String>(
+      context: context,
+      builder: (_) => ParentPinDialog(title: "Enter the PIN again", verify: (pin) => pin == first),
+    );
+    if (second != null) {
+      await settings.setParentPin(first);
+    }
   }
 }

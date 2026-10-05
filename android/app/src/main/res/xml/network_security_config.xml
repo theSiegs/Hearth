@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home Assistant on the home network usually has no HTTPS. Plain HTTP is only ever used for the Home Assistant
+     webhook, and HaStatusReporter refuses it unless the address is on the local network. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

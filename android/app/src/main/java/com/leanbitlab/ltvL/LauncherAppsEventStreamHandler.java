@@ -113,5 +113,24 @@ public class LauncherAppsEventStreamHandler implements EventChannel.StreamHandle
         @Override
         public void onPackagesUnavailable(String[] packageNames, UserHandle user, boolean replacing) {
         }
+
+        // Switching Google TV profiles suspends/unsuspends apps for kids profiles.
+        @Override
+        public void onPackagesSuspended(String[] packageNames, UserHandle user) {
+            sendSuspensionChanged();
+        }
+
+        @Override
+        public void onPackagesUnsuspended(String[] packageNames, UserHandle user) {
+            sendSuspensionChanged();
+        }
+
+        private void sendSuspensionChanged() {
+            _activity.runOnUiThread(() -> {
+                try {
+                    _eventSink.success(new java.util.HashMap<String, Object>() {{ put("action", "PACKAGES_SUSPENSION_CHANGED"); }});
+                } catch (Exception ignored) {}
+            });
+        }
     }
 }

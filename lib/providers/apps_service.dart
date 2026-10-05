@@ -178,6 +178,10 @@ class AppsService extends ChangeNotifier {
             _bannerCache.remove(newApp.packageName);
           }
           break;
+        case "PACKAGES_SUSPENSION_CHANGED":
+          // A Google TV profile switch changed which apps are blocked: rebuild the rows.
+          await _refreshState(shouldNotifyListeners: false);
+          break;
         case "PACKAGE_REMOVED":
           String packageName = event['packageName'];
           await _database.deleteApps([packageName]);
@@ -381,6 +385,7 @@ class AppsService extends ChangeNotifier {
         if (applicationFromSystem.containsKey('sideloaded')) {
           application.sideloaded = applicationFromSystem['sideloaded'];
         }
+        application.suspended = applicationFromSystem['suspended'] as bool? ?? false;
       }
 
       if (_categoriesById.isNotEmpty) {
@@ -392,7 +397,7 @@ class AppsService extends ChangeNotifier {
             final category = _categoriesById[appCategory.categoryId];
             if (category != null) {
               application.categoryOrders[category.id] = appCategory.order;
-              if (!application.hidden) {
+              if (!application.hidden && !application.suspended) {
                 category.applications.add(application);
               }
             }
@@ -476,7 +481,7 @@ class AppsService extends ChangeNotifier {
           order: nextOrder,
         ));
         app.categoryOrders[category.id] = nextOrder;
-        if (!app.hidden) {
+        if (!app.hidden && !app.suspended) {
           category.applications.add(app);
         }
         nextOrder++;
@@ -865,8 +870,15 @@ class AppsService extends ChangeNotifier {
 
     try {
       newCategoryId = await _database.transaction(() async {
-        int newCategoryId = await _database.insertCategory(
-            CategoriesCompanion.insert(name: categoryName, order: order));
+        // Persist every setting, not just the name: otherwise a restart reloads the column defaults
+        // (e.g. a "TV Apps" grid comes back as a row).
+        int newCategoryId = await _database.insertCategory(CategoriesCompanion.insert(
+            name: categoryName,
+            order: order,
+            sort: Value(sort),
+            type: Value(type),
+            columnsCount: Value(columnsCount),
+            rowHeight: Value(rowHeight)));
         return newCategoryId;
       });
 

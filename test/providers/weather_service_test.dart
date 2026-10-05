@@ -1,11 +1,24 @@
 import 'dart:async';
 import 'package:flauncher/models/weather_data.dart';
+import 'package:flauncher/providers/open_meteo_client.dart';
 import 'package:flauncher/providers/weather_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
 import '../mocks.mocks.dart';
+
+class _FakeOpenMeteo extends OpenMeteoClient {
+  int fetches = 0;
+
+  @override
+  Future<String> fetchWeatherJson(WeatherPlace place) async {
+    fetches++;
+    return '{"location":"${place.name}","currentTemp":5,"currentConditionCode":601,"forecasts":[]}';
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -147,5 +160,28 @@ void main() {
       expect(weatherService.weatherData?.location, "Hamburg");
       expect(weatherService.weatherData?.currentTemp, 15);
     });
+  });
+
+  test("a chosen location replaces Breezy data with built-in weather", () async {
+    SharedPreferencesStorePlatform.instance = InMemorySharedPreferencesStore.empty();
+    final prefs = await SharedPreferences.getInstance();
+    final openMeteo = _FakeOpenMeteo();
+    weatherService = WeatherService(mockChannel, sharedPreferences: prefs, openMeteo: openMeteo);
+    while (!weatherService.initialized) {
+      await Future.delayed(Duration.zero);
+    }
+    expect(weatherService.weatherData!.location, "Berlin"); // from Breezy
+
+    await weatherService.setLocation(
+        const WeatherPlace(name: "Oslo", country: "Norway", latitude: 59.9, longitude: 10.7));
+    expect(weatherService.weatherData!.location, "Oslo");
+    expect(weatherService.location!.displayName, "Oslo, Norway");
+
+    // Breezy broadcasts no longer override it, and refreshes within 30 minutes reuse the last fetch
+    weatherStreamController.add('{"location":"Berlin","currentTemp":18}');
+    await Future.delayed(Duration.zero);
+    await weatherService.refresh();
+    expect(weatherService.weatherData!.location, "Oslo");
+    expect(openMeteo.fetches, 1);
   });
 }

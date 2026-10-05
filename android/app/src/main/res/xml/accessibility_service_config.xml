@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Which screen is in front and focus/click/scroll events (for idle standby and Google TV's profile
+     chooser); never window content -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeViewFocused|typeViewClicked|typeViewScrolled"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagRequestFilterKeyEvents"
     android:canRequestFilterKeyEvents="true"
-    android:canRetrieveWindowContent="false" />
+    android:canRetrieveWindowContent="false"
+    android:notificationTimeout="0" />

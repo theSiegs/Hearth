@@ -99,6 +99,11 @@ void main() {
           name: "Hidden App",
           version: "1.0.0",
           hidden: true);
+      final suspendedApp = App(
+          packageName: "app.suspended",
+          name: "Suspended App",
+          version: "1.0.0",
+          hidden: false);
 
       final category = Category(id: 1, name: "Test Category", order: 0);
 
@@ -127,6 +132,13 @@ void main() {
               'version': '1.0.0',
               'sideloaded': false
             },
+            {
+              'packageName': 'app.suspended',
+              'name': 'Suspended App',
+              'version': '1.0.0',
+              'sideloaded': false,
+              'suspended': true
+            },
           ]));
       when(channel.getApplicationIcon(any))
           .thenAnswer((_) => Future.value(Uint8List(0)));
@@ -134,7 +146,7 @@ void main() {
           .thenAnswer((_) => Future.value(Uint8List(0)));
 
       when(database.getApplications()).thenAnswer(
-          (_) => Future.value([testApp1, testApp2, testApp3, hiddenApp]));
+          (_) => Future.value([testApp1, testApp2, testApp3, hiddenApp, suspendedApp]));
       when(database.getCategories())
           .thenAnswer((_) => Future.value([category]));
       when(database.getAppsCategories()).thenAnswer((_) => Future.value([
@@ -142,6 +154,7 @@ void main() {
         AppCategory(categoryId: 1, appPackageName: "app.2", order: 0),
         AppCategory(categoryId: 1, appPackageName: "app.3", order: 2),
         AppCategory(categoryId: 1, appPackageName: "app.hidden", order: 3),
+        AppCategory(categoryId: 1, appPackageName: "app.suspended", order: 4),
       ]));
       when(database.getLauncherSpacers()).thenAnswer((_) => Future.value([]));
       when(database.transaction(any)).thenAnswer(
@@ -162,8 +175,9 @@ void main() {
       expect(categories[0].name, "Test Category");
 
       final appsInCategory = categories[0].applications;
-      // Hidden apps should be filtered out from categories
+      // Hidden apps, and apps blocked in the current Google TV profile, are left out of categories
       expect(appsInCategory.length, 3);
+      verifyNever(database.deleteApps(argThat(contains("app.suspended"))));
 
       // Should be ordered by the 'order' in AppCategory (0: app.2, 1: app.1, 2: app.3)
       expect(appsInCategory[0].packageName, "app.2");
@@ -277,6 +291,21 @@ void main() {
 
       expect((appsService.launcherSections[0] as Category).name, "TV Apps");
       expect((appsService.launcherSections[1] as Category).name, "Non-TV Apps");
+    });
+
+    test("addCategory saves the section's type and layout, not just its name", () async {
+      final channel = MockFLauncherChannel();
+      final database = MockFLauncherDatabase();
+      when(database.insertCategory(any)).thenAnswer((_) => Future.value(7));
+
+      final appsService = await _buildInitialisedAppsService(channel, database);
+      await appsService.addCategory("TV Apps", type: CategoryType.grid, columnsCount: 5, rowHeight: 120);
+
+      final saved = verify(database.insertCategory(captureAny)).captured.single as CategoriesCompanion;
+      expect(saved.type.value, CategoryType.grid);
+      expect(saved.columnsCount.value, 5);
+      expect(saved.rowHeight.value, 120);
+      expect(saved.sort.value, CategorySort.manual);
     });
 
     test(

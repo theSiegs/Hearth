@@ -38,7 +38,26 @@ class WallpaperPanelPage extends StatelessWidget {
           Text(localizations.wallpaper, style: Theme.of(context).textTheme.titleLarge),
           Divider(),
           Consumer<SettingsService>(
+            builder: (_, settings, __) => RoundedSwitchListTile(
+              title: const Text("Match selected app"),
+              secondary: const Icon(Icons.palette_outlined),
+              value: settings.matchSelectedAppBackground,
+              onChanged: (value) => settings.setMatchSelectedAppBackground(value),
+            ),
+          ),
+          Consumer<SettingsService>(
             builder: (_, settings, __) {
+              return RoundedSwitchListTile(
+                title: const Text("Bing Photo of the Day"),
+                secondary: const Icon(Icons.photo_library_outlined),
+                value: settings.bingWallpaperEnabled,
+                onChanged: (value) => settings.setBingWallpaperEnabled(value),
+              );
+            }
+          ),
+          Consumer<SettingsService>(
+            builder: (_, settings, __) {
+              if (settings.bingWallpaperEnabled) return const SizedBox.shrink();
               return RoundedSwitchListTile(
                 title: Text(localizations.timeBasedWallpaper),
                 secondary: Icon(Icons.access_time),
@@ -47,9 +66,28 @@ class WallpaperPanelPage extends StatelessWidget {
               );
             }
           ),
-          Consumer<SettingsService>(
-            builder: (_, settings, __) {
-              if (settings.timeBasedWallpaperEnabled) {
+          Consumer2<SettingsService, WallpaperService>(
+            builder: (_, settings, wallpaperService, __) {
+              if (settings.bingWallpaperEnabled) {
+                return Column(
+                  children: [
+                    FocusableSettingsTile(
+                      autofocus: true,
+                      leading: const Icon(Icons.refresh),
+                      title: const Text("Refresh Now"),
+                      onPressed: () => wallpaperService.refreshBingWallpaper(force: true),
+                    ),
+                    if (wallpaperService.bingWallpaperError)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Text(
+                          "Couldn't reach Bing. Check your network connection.",
+                          style: TextStyle(color: Colors.redAccent, fontSize: 12),
+                        ),
+                      ),
+                  ],
+                );
+              } else if (settings.timeBasedWallpaperEnabled) {
                 return Column(
                   children: [
                     FocusableSettingsTile(

@@ -18,11 +18,16 @@
 
 import 'dart:io';
 import 'dart:async';
+import 'dart:convert';
+import 'dart:developer' as developer;
+import 'dart:ui' as ui;
 
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/gradients.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/painting.dart' show HSLColor;
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -30,14 +35,75 @@ class WallpaperService extends ChangeNotifier {
   final FLauncherChannel _fLauncherChannel;
   final SettingsService _settingsService;
 
+  // "Match selected app": background tinted from the focused app's banner
+  final Map<String, Color?> _appColorCache = {};
+  Color? _focusedAppColor;
+
+  Color? get focusedAppColor => _settingsService.matchSelectedAppBackground ? _focusedAppColor : null;
+
+  Future<void> onAppFocused(String packageName) async {
+    if (!_settingsService.matchSelectedAppBackground) return;
+    final Color? color = _appColorCache.containsKey(packageName)
+        ? _appColorCache[packageName]
+        : (_appColorCache[packageName] = await _extractAppColor(packageName));
+    if (color != null && color != _focusedAppColor) {
+      _focusedAppColor = color;
+      notifyListeners();
+    }
+  }
+
+  Future<Color?> _extractAppColor(String packageName) async {
+    try {
+      Uint8List bytes = await _fLauncherChannel.getApplicationBanner(packageName);
+      if (bytes.isEmpty) bytes = await _fLauncherChannel.getApplicationIcon(packageName);
+      if (bytes.isEmpty) return null;
+      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 24);
+      final image = (await codec.getNextFrame()).image;
+      final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      image.dispose();
+      if (data == null) return null;
+      return dominantBackgroundColor(data.buffer.asUint8List());
+    } catch (e) {
+      developer.log("Failed to extract app color", name: "WallpaperService", error: e);
+      return null;
+    }
+  }
+
+  /// Average of the image weighted toward its most saturated pixels (logos over white/black padding),
+  /// darkened enough for white text on top.
+  static Color? dominantBackgroundColor(Uint8List rgba) {
+    double r = 0, g = 0, b = 0, total = 0;
+    for (int i = 0; i + 3 < rgba.length; i += 4) {
+      if (rgba[i + 3] < 128) continue;
+      final int pr = rgba[i], pg = rgba[i + 1], pb = rgba[i + 2];
+      final int maxC = [pr, pg, pb].reduce((a, c) => a > c ? a : c);
+      final int minC = [pr, pg, pb].reduce((a, c) => a < c ? a : c);
+      final double weight = 0.05 + (maxC - minC) / 255.0;
+      r += pr * weight;
+      g += pg * weight;
+      b += pb * weight;
+      total += weight;
+    }
+    if (total == 0) return null;
+    final hsl = HSLColor.fromColor(Color.fromARGB(255, (r / total).round(), (g / total).round(), (b / total).round()));
+    return hsl.withLightness(hsl.lightness.clamp(0.12, 0.26)).withSaturation(hsl.saturation.clamp(0.0, 0.65)).toColor();
+  }
+
   late File _wallpaperFile;
   late File _wallpaperDayFile;
   late File _wallpaperNightFile;
+  late File _wallpaperBingFile;
+  late File _wallpaperBingDateFile;
   Timer? _timer;
+  Timer? _bingTimer;
+  bool _bingRefreshInFlight = false;
 
   ImageProvider? _wallpaper;
   int _version = 0;
   int _updateWallpaperCallCount = 0;
+  bool _bingWallpaperError = false;
+
+  bool get bingWallpaperError => _bingWallpaperError;
 
   ImageProvider?  get wallpaper     => _wallpaper;
   int             get version       => _version;
@@ -55,13 +121,23 @@ class WallpaperService extends ChangeNotifier {
   }
 
   bool _lastTimeBasedEnabled = false;
+  bool _lastBingEnabled = false;
 
   void _onSettingsChanged() {
-    final enabled = _settingsService.timeBasedWallpaperEnabled;
-    if (enabled != _lastTimeBasedEnabled) {
-      _lastTimeBasedEnabled = enabled;
+    final timeBasedEnabled = _settingsService.timeBasedWallpaperEnabled;
+    final bingEnabled = _settingsService.bingWallpaperEnabled;
+    final timeBasedChanged = timeBasedEnabled != _lastTimeBasedEnabled;
+    final bingChanged = bingEnabled != _lastBingEnabled;
+
+    if (timeBasedChanged || bingChanged) {
+      _lastTimeBasedEnabled = timeBasedEnabled;
+      _lastBingEnabled = bingEnabled;
       _updateTimerState();
-      _updateWallpaper();
+      if (bingChanged && bingEnabled) {
+        refreshBingWallpaper(force: true);
+      } else {
+        _updateWallpaper();
+      }
     }
   }
 
@@ -69,6 +145,7 @@ class WallpaperService extends ChangeNotifier {
   void dispose() {
     _settingsService.removeListener(_onSettingsChanged);
     _timer?.cancel();
+    _bingTimer?.cancel();
     super.dispose();
   }
 
@@ -77,19 +154,35 @@ class WallpaperService extends ChangeNotifier {
     _wallpaperFile = File("${directory.path}/wallpaper");
     _wallpaperDayFile = File("${directory.path}/wallpaper_day");
     _wallpaperNightFile = File("${directory.path}/wallpaper_night");
+    _wallpaperBingFile = File("${directory.path}/wallpaper_bing");
+    _wallpaperBingDateFile = File("${directory.path}/wallpaper_bing_date");
 
     _lastTimeBasedEnabled = _settingsService.timeBasedWallpaperEnabled;
+    _lastBingEnabled = _settingsService.bingWallpaperEnabled;
     await _updateWallpaper();
     _updateTimerState();
+
+    if (_lastBingEnabled) {
+      unawaited(refreshBingWallpaperIfStale());
+    }
   }
 
   void _updateTimerState() {
-    final enabled = _settingsService.timeBasedWallpaperEnabled;
-    if (enabled && (_timer == null || !_timer!.isActive)) {
+    final timeBasedEnabled = _settingsService.timeBasedWallpaperEnabled;
+    final needsMinuteTimer = timeBasedEnabled;
+    if (needsMinuteTimer && (_timer == null || !_timer!.isActive)) {
       _timer = Timer.periodic(const Duration(minutes: 1), (_) => _updateWallpaper());
-    } else if (!enabled && _timer != null) {
+    } else if (!needsMinuteTimer && _timer != null) {
       _timer?.cancel();
       _timer = null;
+    }
+
+    final bingEnabled = _settingsService.bingWallpaperEnabled;
+    if (bingEnabled && (_bingTimer == null || !_bingTimer!.isActive)) {
+      _bingTimer = Timer.periodic(const Duration(hours: 1), (_) => refreshBingWallpaperIfStale());
+    } else if (!bingEnabled && _bingTimer != null) {
+      _bingTimer?.cancel();
+      _bingTimer = null;
     }
   }
 
@@ -97,11 +190,14 @@ class WallpaperService extends ChangeNotifier {
     final callId = ++_updateWallpaperCallCount;
     final now = DateTime.now();
     final isDay = now.hour >= 6 && now.hour < 18;
-    final enabled = _settingsService.timeBasedWallpaperEnabled;
+    final bingEnabled = _settingsService.bingWallpaperEnabled;
+    final timeBasedEnabled = _settingsService.timeBasedWallpaperEnabled;
 
     ImageProvider? newWallpaper;
 
-    if (enabled) {
+    if (bingEnabled && await _wallpaperBingFile.exists()) {
+      newWallpaper = FileImage(_wallpaperBingFile);
+    } else if (timeBasedEnabled) {
       if (isDay && await _wallpaperDayFile.exists()) {
         newWallpaper = FileImage(_wallpaperDayFile);
       } else if (!isDay && await _wallpaperNightFile.exists()) {
@@ -120,6 +216,70 @@ class WallpaperService extends ChangeNotifier {
         _wallpaper = newWallpaper;
         notifyListeners();
       }
+    }
+  }
+
+  /// Refreshes the Bing "Photo of the Day" only if it hasn't been fetched yet today.
+  Future<void> refreshBingWallpaperIfStale() async {
+    try {
+      final today = _dateStamp(DateTime.now());
+      final lastFetched = await _wallpaperBingDateFile.exists() ? await _wallpaperBingDateFile.readAsString() : "";
+      if (lastFetched.trim() != today || !await _wallpaperBingFile.exists()) {
+        await refreshBingWallpaper();
+      }
+    } catch (e) {
+      developer.log("Failed to check Bing wallpaper staleness", name: "WallpaperService", error: e);
+    }
+  }
+
+  String _dateStamp(DateTime d) =>
+      "${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+
+  /// Downloads Bing's current "Photo of the Day" and sets it as the wallpaper.
+  /// Talks only to bing.com; nothing else, no analytics.
+  Future<void> refreshBingWallpaper({bool force = false}) async {
+    if (_bingRefreshInFlight) return;
+    _bingRefreshInFlight = true;
+    try {
+      final httpClient = HttpClient();
+      final metaRequest = await httpClient
+          .getUrl(Uri.parse("https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=en-US"));
+      final metaResponse = await metaRequest.close();
+      if (metaResponse.statusCode != 200) {
+        throw Exception("Bing metadata request failed with ${metaResponse.statusCode}");
+      }
+      final metaBody = await metaResponse.transform(utf8.decoder).join();
+      final Map<String, dynamic> json = jsonDecode(metaBody) as Map<String, dynamic>;
+      final images = json['images'] as List<dynamic>?;
+      if (images == null || images.isEmpty) {
+        throw Exception("Bing metadata had no images");
+      }
+      final String urlBase = images.first['urlbase'] as String? ?? "";
+      if (urlBase.isEmpty) {
+        throw Exception("Bing metadata missing urlbase");
+      }
+      final imageUrl = "https://www.bing.com${urlBase}_1920x1080.jpg";
+
+      final imageRequest = await httpClient.getUrl(Uri.parse(imageUrl));
+      final imageResponse = await imageRequest.close();
+      if (imageResponse.statusCode != 200) {
+        throw Exception("Bing image download failed with ${imageResponse.statusCode}");
+      }
+
+      final bytes = await consolidateHttpClientResponseBytes(imageResponse);
+      await _wallpaperBingFile.writeAsBytes(bytes, flush: true);
+      await _wallpaperBingDateFile.writeAsString(_dateStamp(DateTime.now()), flush: true);
+
+      await FileImage(_wallpaperBingFile).evict();
+      _bingWallpaperError = false;
+      _version++;
+      await _updateWallpaper(force: true);
+    } catch (e, stack) {
+      developer.log("Failed to refresh Bing wallpaper", name: "WallpaperService", error: e, stackTrace: stack);
+      _bingWallpaperError = true;
+      notifyListeners();
+    } finally {
+      _bingRefreshInFlight = false;
     }
   }
 

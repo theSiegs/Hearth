@@ -1,3 +1,5 @@
+import 'package:flutter/painting.dart';
+import 'dart:typed_data';
 /*
  * FLauncher
  * Copyright (C) 2021  Étienne Fesser
@@ -16,7 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:flauncher/gradients.dart';
 import 'package:flauncher/providers/wallpaper_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -44,6 +46,7 @@ void main() {
       final fLauncherChannel = MockFLauncherChannel();
       final settingsService = MockSettingsService();
       when(settingsService.timeBasedWallpaperEnabled).thenReturn(false);
+      when(settingsService.bingWallpaperEnabled).thenReturn(false);
       when(imagePicker.pickImage(source: ImageSource.gallery)).thenAnswer((_) => Future.value(pickedFile));
       when(fLauncherChannel.checkForGetContentAvailability()).thenAnswer((_) => Future.value(true));
       final wallpaperService = WallpaperService(fLauncherChannel, settingsService);
@@ -62,6 +65,7 @@ void main() {
       when(fLauncherChannel.checkForGetContentAvailability()).thenAnswer((_) => Future.value(false));
       final settingsService = MockSettingsService();
       when(settingsService.timeBasedWallpaperEnabled).thenReturn(false);
+      when(settingsService.bingWallpaperEnabled).thenReturn(false);
       final wallpaperService = WallpaperService(fLauncherChannel, settingsService);
       await untilCalled(pathProviderPlatform.getApplicationDocumentsPath());
 
@@ -74,6 +78,7 @@ void main() {
     final fLauncherChannel = MockFLauncherChannel();
     final settingsService = MockSettingsService();
       when(settingsService.timeBasedWallpaperEnabled).thenReturn(false);
+      when(settingsService.bingWallpaperEnabled).thenReturn(false);
     final wallpaperService = WallpaperService(fLauncherChannel, settingsService);
 
     await untilCalled(pathProviderPlatform.getApplicationDocumentsPath());
@@ -88,6 +93,7 @@ void main() {
       final fLauncherChannel = MockFLauncherChannel();
       final settingsService = MockSettingsService();
       when(settingsService.timeBasedWallpaperEnabled).thenReturn(false);
+      when(settingsService.bingWallpaperEnabled).thenReturn(false);
       final wallpaperService = WallpaperService(fLauncherChannel, settingsService);
       when(settingsService.gradientUuid).thenReturn(null);
 
@@ -101,6 +107,7 @@ void main() {
       final fLauncherChannel = MockFLauncherChannel();
       final settingsService = MockSettingsService();
       when(settingsService.timeBasedWallpaperEnabled).thenReturn(false);
+      when(settingsService.bingWallpaperEnabled).thenReturn(false);
       final wallpaperService = WallpaperService(fLauncherChannel, settingsService);
       when(settingsService.gradientUuid).thenReturn(FLauncherGradients.grassShampoo.uuid);
       await untilCalled(pathProviderPlatform.getApplicationDocumentsPath());
@@ -110,6 +117,36 @@ void main() {
       expect(gradient.uuid, FLauncherGradients.grassShampoo.uuid);
     });
   });
+
+  group("dominantBackgroundColor", () {
+    Uint8List pixels(List<List<int>> colors, int each) =>
+        Uint8List.fromList([for (final c in colors) for (int i = 0; i < each; i++) ...c]);
+
+    test("favors the logo color over white padding and darkens it", () {
+      final color = WallpaperService.dominantBackgroundColor(pixels([
+        [255, 255, 255, 255],
+        [230, 20, 20, 255],
+      ], 50))!;
+      final hsl = HSLColor.fromColor(color);
+      expect(hsl.hue < 20 || hsl.hue > 340, isTrue, reason: "should be red, was hue ${hsl.hue}");
+      expect(hsl.lightness, lessThanOrEqualTo(0.26));
+    });
+
+    test("ignores transparent pixels and handles plain gray", () {
+      final color = WallpaperService.dominantBackgroundColor(pixels([
+        [0, 255, 0, 0],
+        [128, 128, 128, 255],
+      ], 10))!;
+      final hsl = HSLColor.fromColor(color);
+      expect(hsl.saturation, lessThan(0.05));
+      expect(hsl.lightness, inInclusiveRange(0.12, 0.26));
+    });
+
+    test("returns null for a fully transparent image", () {
+      expect(WallpaperService.dominantBackgroundColor(pixels([[0, 0, 0, 0]], 10)), isNull);
+    });
+  });
+
 }
 
 class _MockImagePicker extends Mock implements ImagePicker {
@@ -145,4 +182,5 @@ class _MockPathProviderPlatform extends Mock with MockPlatformInterfaceMixin imp
   @override
   Future<String?> getApplicationDocumentsPath() =>
       super.noSuchMethod(Invocation.method(#getApplicationDocumentsPath, []), returnValue: Future<String?>.value());
+
 }
