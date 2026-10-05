@@ -52,7 +52,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text("Accessibility"), findsOneWidget);
-    expect(find.text("LTvLauncher is the default launcher"), findsOneWidget);
+    expect(find.text("Hearth is the default launcher"), findsOneWidget);
     expect(find.text("Set as default launcher"), findsOneWidget);
   });
 
@@ -88,7 +88,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text("Accessibility"), findsOneWidget);
-    expect(find.text("LTvLauncher is not the default launcher"), findsOneWidget);
+    expect(find.text("Hearth is not the default launcher"), findsOneWidget);
   });
 
   testWidgets("AccessibilityPage explains what the default launcher does on Google TV", (tester) async {
@@ -129,7 +129,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.textContaining("stop kids profiles from blocking LTvLauncher"), findsOneWidget);
+    expect(find.textContaining("stop kids profiles from blocking Hearth"), findsOneWidget);
     expect(find.text("Set as default launcher"), findsOneWidget);
   });
 }

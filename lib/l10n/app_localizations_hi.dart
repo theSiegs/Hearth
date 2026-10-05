@@ -7,7 +7,7 @@ class AppLocalizationsHi extends AppLocalizations {
   AppLocalizationsHi([String locale = 'hi']) : super(locale);
 
   @override
-  String get aboutFlauncher => 'LTvLauncher के बारे में';
+  String get aboutFlauncher => 'Hearth के बारे में';
 
   @override
   String get addCategory => 'श्रेणी जोड़ें';
@@ -202,7 +202,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String textAboutDialog(String repoUrl) {
-    return 'LTvLauncher FLauncher पर आधारित Android TV के लिए एक अनुकूलित ओपन-सोर्स लॉन्चर है।\n\nLeanBitLab द्वारा विकसित।\nस्रोत कोड $repoUrl पर उपलब्ध है।';
+    return 'Hearth (LTvLauncher) FLauncher पर आधारित Android TV के लिए एक अनुकूलित ओपन-सोर्स लॉन्चर है।\n\nLeanBitLab द्वारा विकसित।\nस्रोत कोड $repoUrl पर उपलब्ध है।';
   }
 
   @override
@@ -248,16 +248,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get accessibility => 'पहुंच (एक्सेसिबिलिटी)';
 
   @override
-  String get defaultLauncherIsDefault => 'LTvLauncher डिफ़ॉल्ट लॉन्चर है';
+  String get defaultLauncherIsDefault => 'Hearth डिफ़ॉल्ट लॉन्चर है';
 
   @override
-  String get defaultLauncherNotDefault => 'LTvLauncher डिफ़ॉल्ट लॉन्चर नहीं है';
+  String get defaultLauncherNotDefault => 'Hearth डिफ़ॉल्ट लॉन्चर नहीं है';
 
   @override
   String get setAsDefaultLauncher => 'डिफ़ॉल्ट लॉन्चर के रूप में सेट करें';
 
   @override
-  String get defaultLauncherDescription => 'डिफ़ॉल्ट लॉन्चर के रूप में सेट होने पर, होम बटन हमेशा LTvLauncher पर वापस आएगा। टीवी भी सीधे LTvLauncher में बूट होगा।';
+  String get defaultLauncherDescription => 'डिफ़ॉल्ट लॉन्चर के रूप में सेट होने पर, होम बटन हमेशा Hearth पर वापस आएगा। टीवी भी सीधे Hearth में बूट होगा।';
 
   @override
   String get inputs => 'इनपुट';

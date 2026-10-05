@@ -1,5 +1,5 @@
 {
-    "aboutFlauncher": "Informazioni su LTvLauncher",
+    "aboutFlauncher": "Informazioni su Hearth",
     "addCategory": "Aggiungi categoria",
     "addSection": "Aggiungi sezione",
     "alphabetical": "Alfabetico",
@@ -89,7 +89,7 @@
     "appSelectorTransitionAnimation": "Animazione transizione selettore app",
     "sort": "Ordina",
     "systemSettings": "Impostazioni di sistema",
-    "textAboutDialog": "LTvLauncher è un launcher open-source personalizzato per Android TV, basato su FLauncher.\n\nSviluppato da LeanBitLab.\nCodice sorgente disponibile su {repoUrl}.",
+    "textAboutDialog": "Hearth (LTvLauncher) è un launcher open-source personalizzato per Android TV, basato su FLauncher.\n\nSviluppato da LeanBitLab.\nCodice sorgente disponibile su {repoUrl}.",
     "@textAboutDialog": {
         "placeholders": {
             "repoUrl": {
@@ -111,10 +111,10 @@
     "pickDayWallpaper": "Scegli sfondo diurno",
     "pickNightWallpaper": "Scegli sfondo notturno",
     "accessibility": "Accessibilità",
-    "defaultLauncherIsDefault": "LTvLauncher è il launcher predefinito",
-    "defaultLauncherNotDefault": "LTvLauncher non è il launcher predefinito",
+    "defaultLauncherIsDefault": "Hearth è il launcher predefinito",
+    "defaultLauncherNotDefault": "Hearth non è il launcher predefinito",
     "setAsDefaultLauncher": "Imposta come launcher predefinito",
-    "defaultLauncherDescription": "Quando impostato come launcher predefinito, il pulsante Home tornerà sempre a LTvLauncher. La TV si avvierà direttamente su LTvLauncher.",
+    "defaultLauncherDescription": "Quando impostato come launcher predefinito, il pulsante Home tornerà sempre a Hearth. La TV si avvierà direttamente su Hearth.",
     "inputs": "Ingressi",
     "inputSources": "Sorgenti di ingresso",
     "backupAndRestore": "Backup e Ripristino",

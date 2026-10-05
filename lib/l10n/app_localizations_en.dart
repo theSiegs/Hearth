@@ -7,7 +7,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get aboutFlauncher => 'About LTvLauncher';
+  String get aboutFlauncher => 'About Hearth';
 
   @override
   String get addCategory => 'Add category';
@@ -202,7 +202,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String textAboutDialog(String repoUrl) {
-    return 'LTvLauncher is a customized open-source launcher for Android TV, based on FLauncher.\n\nDeveloped by LeanBitLab.\nSource code available at $repoUrl.';
+    return 'Hearth is a private, family-friendly launcher for Google TV. It is a fork of LTvLauncher by LeanBitLab, which is based on FLauncher.\n\nSource code available at $repoUrl.';
   }
 
   @override
@@ -248,16 +248,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accessibility => 'Accessibility';
 
   @override
-  String get defaultLauncherIsDefault => 'LTvLauncher is the default launcher';
+  String get defaultLauncherIsDefault => 'Hearth is the default launcher';
 
   @override
-  String get defaultLauncherNotDefault => 'LTvLauncher is not the default launcher';
+  String get defaultLauncherNotDefault => 'Hearth is not the default launcher';
 
   @override
   String get setAsDefaultLauncher => 'Set as default launcher';
 
   @override
-  String get defaultLauncherDescription => 'When set as the default launcher, the Home button will always return to LTvLauncher. The TV will also boot directly into LTvLauncher.';
+  String get defaultLauncherDescription => 'When set as the default launcher, the Home button will always return to Hearth. The TV will also boot directly into Hearth.';
 
   @override
   String get inputs => 'Inputs';

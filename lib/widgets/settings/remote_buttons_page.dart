@@ -1,5 +1,5 @@
 /*
- * LTvLauncher
+ * Hearth
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -154,7 +154,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
           _option(context, "Open an app…", "app"),
           if (inputs.isNotEmpty) _option(context, "Switch to a TV input…", "input"),
           _option(context, "Switch profile (Google TV)", "profiles"),
-          _option(context, "LTvLauncher home", "home"),
+          _option(context, "Hearth home", "home"),
           _option(context, "Sleep", "sleep"),
           _option(context, "Android settings", "settings"),
         ],
@@ -186,7 +186,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
       case "profiles":
         return {"type": "profiles", "label": "Switch profile"};
       case "home":
-        return {"type": "home", "label": "LTvLauncher home"};
+        return {"type": "home", "label": "Hearth home"};
       case "sleep":
         return {"type": "sleep", "label": "Sleep"};
       case "settings":

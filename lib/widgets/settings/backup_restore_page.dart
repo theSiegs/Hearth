@@ -52,7 +52,7 @@ class BackupRestorePage extends StatelessWidget {
     try {
       final settingsService = context.read<SettingsService>();
       final pathStr = await context.read<BackupService>().exportBackup(settingsService);
-      await Share.shareXFiles([XFile(pathStr)], text: 'LTvLauncher Backup');
+      await Share.shareXFiles([XFile(pathStr)], text: 'Hearth Backup');
     } catch (e) {
       if (context.mounted) {
         showDialog(

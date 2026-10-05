@@ -49,7 +49,7 @@ class UpdateInfo {
 /// No analytics, no ads, no third-party endpoints.
 class UpdateService extends ChangeNotifier {
   static const String _repoOwner = "theSiegs";
-  static const String _repoName = "LtvLauncher";
+  static const String _repoName = "Hearth";
   static const String _releasesUrl = "https://api.github.com/repos/$_repoOwner/$_repoName/releases/latest";
 
   final FLauncherChannel _channel;
@@ -92,7 +92,7 @@ class UpdateService extends ChangeNotifier {
 
       final request = await HttpClient().getUrl(Uri.parse(_releasesUrl));
       request.headers.set(HttpHeaders.acceptHeader, "application/vnd.github+json");
-      request.headers.set(HttpHeaders.userAgentHeader, "LTvLauncher-UpdateChecker");
+      request.headers.set(HttpHeaders.userAgentHeader, "Hearth-UpdateChecker");
       final response = await request.close();
 
       if (response.statusCode != 200) {
@@ -165,7 +165,7 @@ class UpdateService extends ChangeNotifier {
 
       final httpClient = HttpClient();
       final request = await httpClient.getUrl(Uri.parse(info.downloadUrl));
-      request.headers.set(HttpHeaders.userAgentHeader, "LTvLauncher-UpdateChecker");
+      request.headers.set(HttpHeaders.userAgentHeader, "Hearth-UpdateChecker");
       final response = await request.close();
 
       if (response.statusCode != 200) {

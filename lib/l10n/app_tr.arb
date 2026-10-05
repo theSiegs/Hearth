@@ -1,5 +1,5 @@
 {
-    "aboutFlauncher": "LTvLauncher Hakkında",
+    "aboutFlauncher": "Hearth Hakkında",
     "addCategory": "Kategori ekle",
     "addSection": "Bölüm ekle",
     "alphabetical": "Alfabetik",
@@ -89,7 +89,7 @@
     "appSelectorTransitionAnimation": "Uygulama seçici geçiş animasyonu",
     "sort": "Sırala",
     "systemSettings": "Sistem ayarları",
-    "textAboutDialog": "LTvLauncher, FLauncher tabanlı, Android TV için özelleştirilmiş açık kaynaklı bir başlatıcıdır.\n\nLeanBitLab tarafından geliştirilmiştir.\nKaynak kodu {repoUrl} adresinde mevcuttur.",
+    "textAboutDialog": "Hearth (LTvLauncher), FLauncher tabanlı, Android TV için özelleştirilmiş açık kaynaklı bir başlatıcıdır.\n\nLeanBitLab tarafından geliştirilmiştir.\nKaynak kodu {repoUrl} adresinde mevcuttur.",
     "@textAboutDialog": {
         "placeholders": {
             "repoUrl": {
@@ -111,10 +111,10 @@
     "pickDayWallpaper": "Gündüz duvar kağıdını seç",
     "pickNightWallpaper": "Gece duvar kağıdını seç",
     "accessibility": "Erişilebilirlik",
-    "defaultLauncherIsDefault": "LTvLauncher varsayılan başlatıcıdır",
-    "defaultLauncherNotDefault": "LTvLauncher varsayılan başlatıcı değildir",
+    "defaultLauncherIsDefault": "Hearth varsayılan başlatıcıdır",
+    "defaultLauncherNotDefault": "Hearth varsayılan başlatıcı değildir",
     "setAsDefaultLauncher": "Varsayılan başlatıcı olarak ayarla",
-    "defaultLauncherDescription": "Varsayılan başlatıcı olarak ayarlandığında, Ana Sayfa düğmesi her zaman LTvLauncher'a döner. TV de doğrudan LTvLauncher'da başlar.",
+    "defaultLauncherDescription": "Varsayılan başlatıcı olarak ayarlandığında, Ana Sayfa düğmesi her zaman Hearth'a döner. TV de doğrudan Hearth'da başlar.",
     "inputs": "Girişler",
     "inputSources": "Giriş Kaynakları",
     "backupAndRestore": "Yedekleme ve Geri Yükleme",

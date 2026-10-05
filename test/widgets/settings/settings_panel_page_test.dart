@@ -161,7 +161,7 @@ void main() {
     verify(appsService.openSettings());
   });
 
-  testWidgets("'About LTvLauncher' opens about dialog", (tester) async {
+  testWidgets("'About Hearth' opens about dialog", (tester) async {
     final settingsService = MockSettingsService();
     final appsService = MockAppsService();
     when(appsService.launcherSections).thenReturn([]);
@@ -172,11 +172,11 @@ void main() {
 
     await _pumpWidgetWithProviders(tester, settingsService, appsService);
 
-    await tester.ensureVisible(find.text("About LTvLauncher"));
+    await tester.ensureVisible(find.text("About Hearth"));
     await tester.pumpAndSettle();
-    await tester.tap(find.text("About LTvLauncher"));
+    await tester.tap(find.text("About Hearth"));
     await tester.pumpAndSettle();
-    expect(find.byType(LTvLauncherAboutDialog), findsOneWidget);
+    expect(find.byType(HearthAboutDialog), findsOneWidget);
   });
 
   testWidgets("'Support & Donate' opens donate dialog", (tester) async {
@@ -234,7 +234,7 @@ Future<void> _pumpWidgetWithProviders(
 class _MockPackageInfoPlatform with MockPlatformInterfaceMixin implements PackageInfoPlatform {
   @override
   Future<PackageInfoData> getAll({String? baseUrl}) async => PackageInfoData(
-        appName: "LTvLauncher",
+        appName: "Hearth",
         packageName: "com.leanbitlab.ltvL",
         version: "1.0.0",
         buildNumber: "1",

@@ -1,5 +1,5 @@
 {
-    "aboutFlauncher": "关于 LTvLauncher",
+    "aboutFlauncher": "关于 Hearth",
     "addCategory": "添加类别",
     "addSection": "添加分区",
     "alphabetical": "按字母顺序",
@@ -89,7 +89,7 @@
     "appSelectorTransitionAnimation": "应用选择器转场动画",
     "sort": "排序",
     "systemSettings": "系统设置",
-    "textAboutDialog": "LTvLauncher 是一款基于 FLauncher 定制的开源 Android TV 桌面启动器。\n\n由 LeanBitLab 开发。\n源代码可在 {repoUrl} 获取。",
+    "textAboutDialog": "Hearth (LTvLauncher) 是一款基于 FLauncher 定制的开源 Android TV 桌面启动器。\n\n由 LeanBitLab 开发。\n源代码可在 {repoUrl} 获取。",
     "@textAboutDialog": {
         "placeholders": {
             "repoUrl": {
@@ -111,10 +111,10 @@
     "pickDayWallpaper": "选择日间壁纸",
     "pickNightWallpaper": "选择夜间壁纸",
     "accessibility": "无障碍",
-    "defaultLauncherIsDefault": "LTvLauncher 是默认桌面",
-    "defaultLauncherNotDefault": "LTvLauncher 不是默认桌面",
+    "defaultLauncherIsDefault": "Hearth 是默认桌面",
+    "defaultLauncherNotDefault": "Hearth 不是默认桌面",
     "setAsDefaultLauncher": "设为默认桌面",
-    "defaultLauncherDescription": "设为默认桌面后，按 Home 键将始终返回 LTvLauncher。电视开机也会直接进入 LTvLauncher。",
+    "defaultLauncherDescription": "设为默认桌面后，按 Home 键将始终返回 Hearth。电视开机也会直接进入 Hearth。",
     "inputs": "输入源",
     "inputSources": "输入源",
     "backupAndRestore": "备份与恢复",

@@ -1,5 +1,5 @@
 /*
- * LTvLauncher
+ * Hearth
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -157,7 +157,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
             SizedBox(height: 8),
             Text(
               "Downloaded. If the installer didn't open, your device may need\n"
-              "\"Install unknown apps\" permission granted for LTvLauncher.",
+              "\"Install unknown apps\" permission granted for Hearth.",
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white70, fontSize: 12),
             ),

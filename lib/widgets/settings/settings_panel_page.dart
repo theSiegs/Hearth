@@ -140,7 +140,7 @@ class SettingsPanelPage extends StatelessWidget {
                     builder: (_) => FutureBuilder<PackageInfo>(
                       future: PackageInfo.fromPlatform(),
                       builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && snapshot.hasData
-                          ? LTvLauncherAboutDialog(packageInfo: snapshot.data!)
+                          ? HearthAboutDialog(packageInfo: snapshot.data!)
                           : Container(),
                     ),
                   ),

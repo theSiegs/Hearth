@@ -22,10 +22,10 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/providers/settings_service.dart';
 
-class LTvLauncherAboutDialog extends StatelessWidget {
+class HearthAboutDialog extends StatelessWidget {
   final PackageInfo packageInfo;
 
-  const LTvLauncherAboutDialog({
+  const HearthAboutDialog({
     Key? key,
     required this.packageInfo,
   }) : super(key: key);
@@ -74,7 +74,7 @@ class LTvLauncherAboutDialog extends StatelessWidget {
 
               // Title & Version
               const Text(
-                "LTvLauncher",
+                "Hearth",
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 20,
@@ -91,7 +91,7 @@ class LTvLauncherAboutDialog extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               const Text(
-                "Developed by LeanBitLab",
+                "A fork of LTvLauncher by LeanBitLab",
                 style: TextStyle(
                   color: Colors.white70,
                   fontSize: 13,
@@ -108,7 +108,7 @@ class LTvLauncherAboutDialog extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
-                  "A fast, private, and customizable open-source launcher designed for Android TV, Google TV, and Fire TV. 100% ad-free and tracker-free.",
+                  "A private, family-friendly launcher for Google TV, with Google TV profiles and Home Assistant built in. Ad-free and tracker-free.",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white70,
@@ -151,7 +151,19 @@ class LTvLauncherAboutDialog extends StatelessWidget {
               _AboutButton(
                 icon: Icons.code,
                 iconColor: Colors.white70,
-                label: "GitHub Repository",
+                label: "Hearth on GitHub",
+                accentColor: accentColor,
+                onPressed: () {
+                  FLauncherChannel().openUrl("https://github.com/theSiegs/Hearth");
+                },
+              ),
+              const SizedBox(height: 6),
+
+              // Upstream project
+              _AboutButton(
+                icon: Icons.call_split,
+                iconColor: Colors.white70,
+                label: "LTvLauncher (upstream)",
                 accentColor: accentColor,
                 onPressed: () {
                   FLauncherChannel().openUrl("https://github.com/leanbitlab-org/LtvLauncher");

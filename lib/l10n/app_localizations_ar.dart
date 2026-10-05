@@ -7,7 +7,7 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get aboutFlauncher => 'حول LTvLauncher';
+  String get aboutFlauncher => 'حول Hearth';
 
   @override
   String get addCategory => 'إضافة فئة';
@@ -202,7 +202,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String textAboutDialog(String repoUrl) {
-    return 'LTvLauncher هو مشغل مفتوح المصدر ومخصص لتلفزيون أندرويد، مبني على FLauncher.\n\nتم تطويره بواسطة LeanBitLab.\nالكود المصدري متاح على $repoUrl.';
+    return 'Hearth (LTvLauncher) هو مشغل مفتوح المصدر ومخصص لتلفزيون أندرويد، مبني على FLauncher.\n\nتم تطويره بواسطة LeanBitLab.\nالكود المصدري متاح على $repoUrl.';
   }
 
   @override
@@ -248,16 +248,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get accessibility => 'إمكانية الوصول';
 
   @override
-  String get defaultLauncherIsDefault => 'LTvLauncher هو المشغل الافتراضي';
+  String get defaultLauncherIsDefault => 'Hearth هو المشغل الافتراضي';
 
   @override
-  String get defaultLauncherNotDefault => 'LTvLauncher ليس المشغل الافتراضي';
+  String get defaultLauncherNotDefault => 'Hearth ليس المشغل الافتراضي';
 
   @override
   String get setAsDefaultLauncher => 'تعيين كمشغل افتراضي';
 
   @override
-  String get defaultLauncherDescription => 'عند تعيينه كمشغل افتراضي، سيعود زر الصفحة الرئيسية دائماً إلى LTvLauncher. سيتم أيضاً تشغيل التلفزيون مباشرة في LTvLauncher.';
+  String get defaultLauncherDescription => 'عند تعيينه كمشغل افتراضي، سيعود زر الصفحة الرئيسية دائماً إلى Hearth. سيتم أيضاً تشغيل التلفزيون مباشرة في Hearth.';
 
   @override
   String get inputs => 'المدخلات';
