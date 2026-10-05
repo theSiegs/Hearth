@@ -17,6 +17,7 @@
  */
 
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 
@@ -289,6 +290,15 @@ class FLauncherChannel {
       return success;
     } catch (_) {
       return false;
+    }
+  }
+
+  /// Poster art for a Watch Next entry, downscaled; null when it can't be loaded.
+  Future<Uint8List?> getWatchNextPoster(String posterArtUri) async {
+    try {
+      return await _methodChannel.invokeMethod<Uint8List>("getWatchNextPoster", {"posterArtUri": posterArtUri});
+    } catch (_) {
+      return null;
     }
   }
 

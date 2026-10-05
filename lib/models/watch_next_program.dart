@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 class WatchNextProgram {
   final int id;
   final String packageName;
@@ -10,6 +12,9 @@ class WatchNextProgram {
   final String intentUri;
   final String posterArtUri;
 
+  /// Downscaled poster art, filled in after the row first appears.
+  Uint8List? posterBytes;
+
   WatchNextProgram({
     required this.id,
     required this.packageName,
@@ -21,6 +26,7 @@ class WatchNextProgram {
     required this.duration,
     required this.intentUri,
     required this.posterArtUri,
+    this.posterBytes,
   });
 
   factory WatchNextProgram.fromMap(Map<dynamic, dynamic> map) {

@@ -487,6 +487,8 @@ class _WatchNextCardState extends State<WatchNextCard> with TickerProviderStateM
       _animation.stop();
     }
 
+    final bool hasPoster = widget.program.posterBytes?.isNotEmpty ?? false;
+
     // Progress percentage
     double progress = 0;
     if (widget.program.duration > 0 && widget.program.playbackPosition >= 0) {
@@ -567,18 +569,39 @@ class _WatchNextCardState extends State<WatchNextCard> with TickerProviderStateM
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        // Card surface with subtle dark gradient and border
+                        if (hasPoster)
+                          Image.memory(
+                            widget.program.posterBytes!,
+                            fit: BoxFit.cover,
+                            cacheWidth: (cardWidth * MediaQuery.devicePixelRatioOf(context)).round(),
+                            filterQuality: FilterQuality.medium,
+                            gaplessPlayback: true,
+                            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                          ),
+                        // Card surface: a dark gradient, or a scrim over the poster so the text stays readable
                         Container(
                           decoration: BoxDecoration(
                             borderRadius: borderRadius,
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFF141517),
-                                Color(0xFF090A0B),
-                              ],
-                            ),
+                            gradient: hasPoster
+                                ? LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    stops: const [0.0, 0.3, 0.55, 1.0],
+                                    colors: [
+                                      Colors.black.withOpacity(0.35),
+                                      Colors.black.withOpacity(0.05),
+                                      Colors.black.withOpacity(0.45),
+                                      Colors.black.withOpacity(0.92),
+                                    ],
+                                  )
+                                : const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0xFF141517),
+                                      Color(0xFF090A0B),
+                                    ],
+                                  ),
                             border: Border.all(
                               color: shouldHighlight ? Colors.transparent : Colors.white.withOpacity(0.06),
                               width: 1,
@@ -607,12 +630,24 @@ class _WatchNextCardState extends State<WatchNextCard> with TickerProviderStateM
                                     ),
                                   const Spacer(),
                                   if (showPercentage && progress > 0)
-                                    Text(
-                                      '${(progress * 100).round()}%',
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: accentColor,
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w700,
+                                    Container(
+                                      // Over poster art the badge needs its own backing to stay readable.
+                                      padding: hasPoster
+                                          ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2)
+                                          : EdgeInsets.zero,
+                                      decoration: hasPoster
+                                          ? BoxDecoration(
+                                              color: Colors.black.withOpacity(0.7),
+                                              borderRadius: BorderRadius.circular(6),
+                                            )
+                                          : null,
+                                      child: Text(
+                                        '${(progress * 100).round()}%',
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: accentColor,
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                       ),
                                     ),
                                 ],
@@ -650,7 +685,8 @@ class _WatchNextCardState extends State<WatchNextCard> with TickerProviderStateM
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ],
-                              const Spacer(),
+                              // With a poster the text sits at the bottom, clear of any title logo in the art.
+                              if (hasPoster) const SizedBox(height: 8) else const Spacer(),
                               // Bottom progress indicator
                               if (showProgress && progress > 0)
                                 ClipRRect(

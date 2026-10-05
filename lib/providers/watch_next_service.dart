@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer';
 import 'dart:io' show Platform;
+import 'dart:typed_data';
 import 'package:flutter/widgets.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import '../models/watch_next_program.dart';
@@ -13,6 +14,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
   Timer? _refreshTimer;
   StreamSubscription<dynamic>? _watchNextSubscription;
   int _callCount = 0;
+  final Map<String, Uint8List> _posters = {};
   bool _isFetching = false;
   bool _hasPendingRefresh = false;
 
@@ -94,7 +96,9 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
 
       final List<WatchNextProgram> newPrograms = [];
       for (final map in list) {
-        newPrograms.add(WatchNextProgram.fromMap(map));
+        final program = WatchNextProgram.fromMap(map);
+        program.posterBytes = _posters[program.posterArtUri];
+        newPrograms.add(program);
       }
 
       // Explicitly sort programs so the most recently watched content is first
@@ -111,6 +115,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
 
       _programs = newPrograms;
       if (callSnapshot == _callCount) notifyListeners();
+      unawaited(_loadPosters(newPrograms, callSnapshot));
     } catch (e) {
       log('Failed to refresh watch next programs', name: 'WatchNextService', error: e);
     } finally {
@@ -120,6 +125,30 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
         refresh();
       }
     }
+  }
+
+  /// Fills in poster art after the row is on screen, three at a time, so one slow image host doesn't hold up the
+  /// rest; each card updates as its poster arrives. Posters stay in memory for programs still on the row.
+  Future<void> _loadPosters(List<WatchNextProgram> programs, int callSnapshot) async {
+    _posters.removeWhere((uri, _) => !programs.any((p) => p.posterArtUri == uri));
+    final queue = programs.where((p) => p.posterArtUri.isNotEmpty && p.posterBytes == null).toList();
+
+    Future<void> worker() async {
+      while (queue.isNotEmpty && callSnapshot == _callCount) {
+        final program = queue.removeAt(0);
+        try {
+          final bytes = await _channel.getWatchNextPoster(program.posterArtUri).timeout(const Duration(seconds: 20));
+          if (bytes == null || bytes.isEmpty) continue;
+          _posters[program.posterArtUri] = bytes;
+          program.posterBytes = bytes;
+          if (callSnapshot == _callCount) notifyListeners();
+        } catch (e) {
+          log('Failed to load poster for ${program.title}', name: 'WatchNextService', error: e);
+        }
+      }
+    }
+
+    await Future.wait(List.generate(3, (_) => worker()));
   }
 
   Future<bool> checkPermission() async {
