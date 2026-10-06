@@ -158,6 +158,41 @@ public class MainActivity extends FlutterActivity {
                             this, LauncherAccessibilityService.getActiveProfileName(this), kids);
                     result.success(kids);
                 }
+                case "openLinkInApp" -> {
+                    // A search result: the app's own link for the title, opened in that app (Profile Pairing first).
+                    String pkg = call.argument("packageName");
+                    String link = call.argument("link");
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(link)).setPackage(pkg)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    boolean ok = intent.resolveActivity(getPackageManager()) != null;
+                    if (ok) {
+                        ProfilePairingService.onAppLaunching(this, pkg);
+                        ok = tryStartActivity(intent);
+                    }
+                    result.success(ok);
+                }
+                case "searchInApp" -> {
+                    String pkg = call.argument("packageName");
+                    Intent intent = new Intent(Intent.ACTION_SEARCH).setPackage(pkg)
+                            .putExtra(android.app.SearchManager.QUERY, (String) call.argument("query"))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    boolean ok = intent.resolveActivity(getPackageManager()) != null;
+                    if (ok) {
+                        ProfilePairingService.onAppLaunching(this, pkg);
+                        ok = tryStartActivity(intent);
+                    }
+                    result.success(ok);
+                }
+                case "openGoogleTv" -> {
+                    // Google TV's page for a title (by Knowledge Graph link), or its search for the text.
+                    String link = call.argument("link");
+                    Intent intent = link != null
+                            ? new Intent(Intent.ACTION_VIEW, Uri.parse(link))
+                                    .setPackage(LauncherAccessibilityService.GOOGLE_TV_PACKAGE)
+                            : new Intent("android.search.action.GLOBAL_SEARCH")
+                                    .putExtra(android.app.SearchManager.QUERY, (String) call.argument("query"));
+                    result.success(tryStartActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
+                }
                 case "getProfilePairingApps" -> {
                     List<Map<String, Object>> apps = new ArrayList<>();
                     for (String pkg : ProfilePairing.APPS) {

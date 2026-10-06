@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 
 import 'daily_data_usage_widget.dart';
 import 'date_time_widget.dart';
+import 'search_page.dart';
 import 'weather_status_bar_widget.dart';
 
 class FocusAwareAppBar extends StatefulWidget implements PreferredSizeWidget
@@ -185,6 +186,12 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                 },
               ),
               const SizedBox(width: 16),
+              _FocusableIconButton(
+                key: const Key("statusbar_search"),
+                icon: Icons.search,
+                onPressed: () => SearchPage.open(context),
+              ),
+              const SizedBox(width: 16),
               // Data usage widget
               Selector<SettingsService, bool>(
                 selector: (_, settings) => settings.showDataWidgetInStatusBar,
@@ -326,7 +333,7 @@ class _FocusableIconButton extends StatefulWidget {
   final int badgeCount;
   final String? label;
 
-  const _FocusableIconButton({required this.icon, required this.onPressed, this.focusNode, this.badgeCount = 0, this.label});
+  const _FocusableIconButton({super.key, required this.icon, required this.onPressed, this.focusNode, this.badgeCount = 0, this.label});
 
   @override
   State<_FocusableIconButton> createState() => _FocusableIconButtonState();
