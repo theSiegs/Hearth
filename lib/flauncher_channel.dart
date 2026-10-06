@@ -142,6 +142,20 @@ class FLauncherChannel {
   Future<Map<dynamic, dynamic>> getProfilePairingStatus() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getProfilePairingStatus") ?? {};
 
+  /// Listens with the TV's speech recognizer; what was said, or null when cancelled or nothing was heard.
+  Future<String?> voiceSearch() async => await _methodChannel.invokeMethod<String>("voiceSearch");
+
+  /// A search the remote asked for before Flutter was listening: "voice", "text" or null.
+  Future<String?> takePendingSearch() async => await _methodChannel.invokeMethod<String>("takePendingSearch");
+
+  /// Calls [onOpenSearch] ("voice" or "text") when the remote's mapped search button is pressed.
+  static void listenForSearch(void Function(String mode) onOpenSearch) {
+    _methodChannel.setMethodCallHandler((call) async {
+      if (call.method == "openSearch") onOpenSearch(call.arguments as String? ?? "text");
+      return null;
+    });
+  }
+
   /// Opens a link in a specific app (a search result's title page). False when the app can't open it.
   Future<bool> openLinkInApp(String packageName, String link) async =>
       await _methodChannel.invokeMethod<bool>("openLinkInApp", {"packageName": packageName, "link": link}) ?? false;
