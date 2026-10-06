@@ -63,6 +63,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         sInstance = this;
+        getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).edit().putBoolean(HOME_FIX_SEEN_KEY, true).apply();
         mIdleHandler.postDelayed(mIdleCheck, IDLE_CHECK_MS);
         mHaOverlay = new HaNotificationOverlay(this);
         updateHaServer();
@@ -278,6 +279,19 @@ public class LauncherAccessibilityService extends AccessibilityService {
             mIdleHandler.postDelayed(this, IDLE_CHECK_MS);
         }
     };
+
+    // --- Home Button Fix lost: an update (or anything else) turned the service off after it had been on ---
+
+    static final String HOME_FIX_SEEN_KEY = "home_button_fix_seen";
+
+    static boolean wasHomeButtonFixSeen(Context context) {
+        return context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).getBoolean(HOME_FIX_SEEN_KEY, false);
+    }
+
+    /** Stops the "Home Button Fix is off" reminder until the service is turned on again. */
+    static void forgetHomeButtonFix(Context context) {
+        context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).edit().remove(HOME_FIX_SEEN_KEY).apply();
+    }
 
     static int getIdleStandbyMinutes(Context context) {
         return context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).getInt(IDLE_MINUTES_KEY, 0);
