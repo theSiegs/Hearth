@@ -62,13 +62,15 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          # Optional: posters and "streaming on" in search (TMDB). Without it, search has no posters.
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         run: |
           # Build universal APK first
-          flutter build apk --release --target-platform=android-arm,android-arm64
+          flutter build apk --release --target-platform=android-arm,android-arm64 --dart-define=TMDB_API_KEY="$TMDB_API_KEY"
           # Rename/save it temporarily
           mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/app-release.apk.temp
           # Build split APKs
-          flutter build apk --release --split-per-abi --target-platform=android-arm,android-arm64
+          flutter build apk --release --split-per-abi --target-platform=android-arm,android-arm64 --dart-define=TMDB_API_KEY="$TMDB_API_KEY"
           # Rename to final Hearth-* names
           mv build/app/outputs/flutter-apk/app-release.apk.temp build/app/outputs/flutter-apk/Hearth-universal-release.apk
           mv build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk build/app/outputs/flutter-apk/Hearth-armeabi-v7a-release.apk

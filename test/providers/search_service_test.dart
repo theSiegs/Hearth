@@ -63,4 +63,50 @@ void main() {
     expect(calls, 2);
     expect(await service.search("s"), isEmpty);
   });
+
+  group("TMDB", () {
+    test("reads the poster and US streaming services", () {
+      final details = TmdbClient.parseDetails({
+        "poster_path": "/abc.jpg",
+        "watch/providers": {
+          "results": {
+            "US": {
+              "flatrate": [
+                {"provider_name": "Disney Plus"},
+                {"provider_name": "Hulu"}
+              ]
+            },
+            "GB": {
+              "flatrate": [
+                {"provider_name": "BBC iPlayer"}
+              ]
+            }
+          }
+        }
+      });
+      expect(details.posterUrl, "https://image.tmdb.org/t/p/w185/abc.jpg");
+      expect(details.streamingOn, ["Disney Plus", "Hulu"]);
+    });
+
+    test("sends nothing without a key", () async {
+      var calls = 0;
+      final client = TmdbClient(apiKey: "", getJson: (_) async => calls++);
+      final bluey = SearchService.parseResults(hits, entities).last;
+      expect(bluey.tmdbId, "82728");
+      expect(await client.details(bluey), isNull);
+      expect(calls, 0);
+    });
+
+    test("asks for a show's details once", () async {
+      final asked = <Uri>[];
+      final client = TmdbClient(apiKey: "k", getJson: (uri) async {
+        asked.add(uri);
+        return {"poster_path": "/p.jpg"};
+      });
+      final bluey = SearchService.parseResults(hits, entities).last;
+      await client.details(bluey);
+      await client.details(bluey);
+      expect(asked.single.path, "/3/tv/82728");
+    });
+  });
 }

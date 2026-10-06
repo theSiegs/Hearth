@@ -27,8 +27,7 @@ const List<StreamingService> streamingServices = [_netflix, _disney, _appleTv, _
 String _netflixLink(String property, String id) => "https://www.netflix.com/title/$id";
 String _disneyLink(String property, String id) =>
     "https://www.disneyplus.com/${property == "P7595" ? "movies" : "series"}/x/$id";
-String _appleTvLink(String property, String id) =>
-    "https://tv.apple.com/${property == "P9586" ? "movie" : "show"}/$id";
+String _appleTvLink(String property, String id) => "https://tv.apple.com/${property == "P9586" ? "movie" : "show"}/$id";
 String _maxLink(String property, String id) => "https://play.max.com/$id";
 String _paramountLink(String property, String id) => "https://www.paramountplus.com/shows/$id/";
 
@@ -55,6 +54,10 @@ class SearchResult {
   final String? googleId;
   final List<SearchOffer> offers;
 
+  /// The Movie Database id, for the poster and where it's streaming; [tmdbIsMovie] says which kind of id.
+  final String? tmdbId;
+  final bool tmdbIsMovie;
+
   const SearchResult({
     required this.wikidataId,
     required this.title,
@@ -62,6 +65,8 @@ class SearchResult {
     this.year,
     this.googleId,
     this.offers = const [],
+    this.tmdbId,
+    this.tmdbIsMovie = false,
   });
 
   /// Google TV's page for this title, when Wikidata knows its Google id.
@@ -134,6 +139,8 @@ class SearchService {
         year: _year(claims, "P577") ?? _year(claims, "P580"),
         googleId: _firstString(claims, _googleKnowledgeGraph),
         offers: offers,
+        tmdbId: _firstString(claims, _tmdbMovie) ?? _firstString(claims, _tmdbShow),
+        tmdbIsMovie: _firstString(claims, _tmdbMovie) != null,
       ));
     }
     return results;
@@ -183,5 +190,59 @@ class SearchService {
     } finally {
       client.close();
     }
+  }
+}
+
+/// A title's poster and the services streaming it in the US, from The Movie Database (TMDB).
+class TitleDetails {
+  final String? posterUrl;
+
+  /// Subscription services streaming it in the US, as TMDB names them (data from JustWatch).
+  final List<String> streamingOn;
+
+  const TitleDetails({this.posterUrl, this.streamingOn = const []});
+}
+
+/// Looks titles up in TMDB by the id Wikidata gives. Needs an API key built in with
+/// `--dart-define=TMDB_API_KEY=...`; without one, [enabled] is false and nothing is sent.
+class TmdbClient {
+  static const String _key = String.fromEnvironment("TMDB_API_KEY");
+
+  final String _apiKey;
+  final Future<dynamic> Function(Uri uri) _getJson;
+  final Map<String, Future<TitleDetails?>> _cache = {};
+
+  TmdbClient({String? apiKey, Future<dynamic> Function(Uri uri)? getJson})
+      : _apiKey = apiKey ?? _key,
+        _getJson = getJson ?? SearchService._httpGetJson;
+
+  bool get enabled => _apiKey.isNotEmpty;
+
+  Future<TitleDetails?> details(SearchResult result) {
+    final id = result.tmdbId;
+    if (!enabled || id == null) return Future.value(null);
+    final kind = result.tmdbIsMovie ? "movie" : "tv";
+    return _cache["$kind/$id"] ??= _fetch(kind, id);
+  }
+
+  Future<TitleDetails?> _fetch(String kind, String id) async {
+    try {
+      final json = await _getJson(Uri.https("api.themoviedb.org", "/3/$kind/$id", {
+        "api_key": _apiKey,
+        "append_to_response": "watch/providers",
+      }));
+      return parseDetails(json as Map);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static TitleDetails parseDetails(Map json) {
+    final poster = json["poster_path"];
+    final us = SearchService._at(json, ["watch/providers", "results", "US", "flatrate"]);
+    return TitleDetails(
+      posterUrl: poster is String ? "https://image.tmdb.org/t/p/w185$poster" : null,
+      streamingOn: us is List ? us.map((p) => p is Map ? p["provider_name"] : null).whereType<String>().toList() : [],
+    );
   }
 }
