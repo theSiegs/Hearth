@@ -102,7 +102,42 @@ class _CompanionAppsPageState extends State<CompanionAppsPage> with WidgetsBindi
       for (final app in companionApps) {
         _refreshInstalled(app);
       }
+      _resumeAfterPermission();
     }
+  }
+
+  /// The app whose install waits for "Install unknown apps" to be allowed.
+  CompanionApp? _waitingForPermission;
+
+  Future<void> _resumeAfterPermission() async {
+    final app = _waitingForPermission;
+    if (app == null) return;
+    _waitingForPermission = null;
+    if (await _channel.checkInstallPermission()) _install(app);
+  }
+
+  /// Explains the "Install unknown apps" screen before opening it; true when the user goes ahead.
+  Future<bool> _askForInstallPermission() async {
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Allow Hearth to install apps"),
+        content: const SizedBox(
+          width: 420,
+          child: Text("On the next screen, find Hearth and turn it on, then press Back. "
+              "The install continues when you're back here."),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text("Not now")),
+          TextButton(
+            autofocus: true,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text("Open Settings"),
+          ),
+        ],
+      ),
+    );
+    return go == true;
   }
 
   void _set(CompanionApp app, _State state, {String? error}) {
@@ -188,6 +223,8 @@ class _CompanionAppsPageState extends State<CompanionAppsPage> with WidgetsBindi
     final release = _releases[app.packageName];
     if (release == null) return;
     if (!await _channel.checkInstallPermission()) {
+      if (!mounted || !await _askForInstallPermission()) return;
+      _waitingForPermission = app;
       await _channel.requestInstallPermission();
       return;
     }

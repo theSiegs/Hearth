@@ -173,6 +173,16 @@
                 android:name="android.speech.tts"
                 android:resource="@xml/hearth_voice_engine" />
         </service>
+        <activity
+            android:name=".HearthVoiceCheckActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.speech.tts.engine.CHECK_TTS_DATA" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <receiver
             android:name=".LauncherAccessibilityService$UnsuspendedReceiver"

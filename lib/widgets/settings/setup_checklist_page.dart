@@ -98,7 +98,7 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
     SetupStep(
       title: "Hearth voice",
       why: "Lets Profile Pairing hear Netflix's profile screen. Other apps keep Google's voice.",
-      instructions: "On the next screen, under Preferred engine, choose \"Hearth voice\". Press Back to return.",
+      instructions: "On the next screen, under Preferred engine, choose \"Hearth voice\", then OK on the warning (Hearth only listens to the streaming apps). Press Back to return.",
       icon: Icons.record_voice_over,
       optional: true,
       done: pairing["voiceDefault"] == true,
