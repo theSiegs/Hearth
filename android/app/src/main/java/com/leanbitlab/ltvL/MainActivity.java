@@ -176,6 +176,12 @@ public class MainActivity extends FlutterActivity {
                     HaPanelActivity.setConfig(this, call.argument("token"), call.argument("dashboard"));
                     result.success(null);
                 }
+                case "startHaSetup" -> result.success(HaSetupServer.start(this));
+                case "stopHaSetup" -> {
+                    HaSetupServer.stop();
+                    result.success(null);
+                }
+                case "getHaSetupReceived" -> result.success(HaSetupServer.received());
                 case "openHaPanel" -> {
                     startActivity(new Intent(this, HaPanelActivity.class));
                     result.success(null);

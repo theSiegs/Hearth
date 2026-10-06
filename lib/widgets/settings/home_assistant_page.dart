@@ -22,6 +22,7 @@ import '../../flauncher_channel.dart';
 import '../../providers/settings_service.dart';
 import '../rounded_switch_list_tile.dart';
 import 'focusable_settings_tile.dart';
+import 'ha_phone_setup_dialog.dart';
 
 /// Home Assistant pop-ups (doorbell, laundry done, arrivals...). LTvLauncher speaks the protocol of Home
 /// Assistant's built-in "Notifications for Android TV / Fire TV" integration, so nothing extra is needed there.
@@ -113,6 +114,14 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
     }
   }
 
+  Future<void> _setUpFromPhone() async {
+    final received = await showDialog<bool>(context: context, builder: (_) => HaPhoneSetupDialog(channel: _channel));
+    if (received == true) {
+      await _load();
+      if (mounted) setState(() => _panelSaved = "Received the address and token from your phone");
+    }
+  }
+
   Future<void> _test() async {
     final shown = await _channel.sendHaTestNotification();
     if (mounted) {
@@ -163,6 +172,11 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
                     title: const Text("Right at the right edge opens the panel"),
                     secondary: const Icon(Icons.dashboard_outlined),
                   ),
+                ),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.qr_code_2),
+                  title: Text("Set up from your phone", style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: _setUpFromPhone,
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),

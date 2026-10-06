@@ -173,6 +173,14 @@ class FLauncherChannel {
 
   Future<void> openHaPanel() async => await _methodChannel.invokeMethod("openHaPanel");
 
+  /// Starts the phone setup page and returns its one-time link (for the QR code), or null without a network.
+  Future<String?> startHaSetup() async => await _methodChannel.invokeMethod<String>("startHaSetup");
+
+  Future<void> stopHaSetup() async => await _methodChannel.invokeMethod("stopHaSetup");
+
+  /// True once a phone has sent the address and token through the setup page.
+  Future<bool> getHaSetupReceived() async => await _methodChannel.invokeMethod<bool>("getHaSetupReceived") ?? false;
+
   Future<Map<dynamic, dynamic>> getHaStatusConfig() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getHaStatusConfig") ?? {};
 

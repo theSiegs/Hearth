@@ -36,6 +36,25 @@ public class HaPanelActivity extends Activity {
     /** Long-lived tokens don't expire; tell the frontend so, so it never asks to refresh. */
     private static final long TOKEN_LIFETIME_SECONDS = 10L * 365 * 24 * 3600;
 
+    /**
+     * Left with nothing further left closes the panel, like Right does for Settings. Only the page knows the layout,
+     * so it decides: it closes unless a focusable element sits to the left on the same line, or the focus is on a
+     * slider or text field, which use Left themselves.
+     */
+    private static final String LEFT_EDGE_SCRIPT = "(function(){"
+            + "if(window.__hearthLeftEdge)return;window.__hearthLeftEdge=true;"
+            + "function active(){var a=document.activeElement;while(a&&a.shadowRoot&&a.shadowRoot.activeElement)a=a.shadowRoot.activeElement;return a;}"
+            + "function rects(root,out){var els=root.querySelectorAll('*');for(var i=0;i<els.length;i++){var el=els[i];"
+            + "if(el.shadowRoot)rects(el.shadowRoot,out);"
+            + "if(el.tabIndex>=0&&!el.disabled){var r=el.getBoundingClientRect();if(r.width>0&&r.height>0)out.push(r);}}return out;}"
+            + "window.addEventListener('keydown',function(e){if(e.key!=='ArrowLeft')return;var a=active();"
+            + "if(a&&a!==document.body&&a!==document.documentElement){"
+            + "if(a.matches('input,textarea,select,[role=slider],ha-slider,md-slider'))return;"
+            + "var r=a.getBoundingClientRect();"
+            + "if(rects(document,[]).some(function(o){return o.right<=r.left+1&&o.bottom>r.top&&o.top<r.bottom;}))return;}"
+            + "e.preventDefault();e.stopPropagation();hearthPanel.close();},true);"
+            + "})();";
+
     private WebView mWebView;
     private String mToken;
 
@@ -97,7 +116,13 @@ public class HaPanelActivity extends Activity {
         settings.setDomStorageEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         mWebView.addJavascriptInterface(new ExternalApp(), "externalApp");
+        mWebView.addJavascriptInterface(new PanelBridge(), "hearthPanel");
         mWebView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                view.evaluateJavascript(LEFT_EDGE_SCRIPT, null);
+            }
+
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
@@ -156,6 +181,13 @@ public class HaPanelActivity extends Activity {
         runOnUiThread(() -> {
             if (mWebView != null) mWebView.evaluateJavascript(script, null);
         });
+    }
+
+    private class PanelBridge {
+        @JavascriptInterface
+        public void close() {
+            runOnUiThread(HaPanelActivity.this::finish);
+        }
     }
 
     /** What the Home Assistant frontend looks for as {@code window.externalApp}. */
