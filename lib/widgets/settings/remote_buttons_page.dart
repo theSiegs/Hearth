@@ -153,6 +153,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
         children: [
           _option(context, "Open an app…", "app"),
           if (inputs.isNotEmpty) _option(context, "Switch to a TV input…", "input"),
+          _option(context, "Home Assistant…", "ha"),
           _option(context, "Switch profile (Google TV)", "profiles"),
           _option(context, "Hearth home", "home"),
           _option(context, "Sleep", "sleep"),
@@ -183,6 +184,8 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
           ),
         );
         return input == null ? null : {"type": "input", "target": input.id, "label": input.label};
+      case "ha":
+        return _pickHaEntity();
       case "profiles":
         return {"type": "profiles", "label": "Switch profile"};
       case "home":
@@ -193,6 +196,30 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
         return {"type": "settings", "label": "Android settings"};
     }
     return null;
+  }
+
+  /// Scenes and scripts run; lights, switches and the like toggle. Needs the Home Assistant panel's sign-in.
+  Future<Map<String, dynamic>?> _pickHaEntity() async {
+    List<dynamic> entities = const [];
+    try {
+      entities = json.decode(await FLauncherChannel().getHaEntities()) as List<dynamic>;
+    } catch (_) {}
+    if (!mounted) return null;
+    if (entities.isEmpty) {
+      _showMessage("Connect Home Assistant first",
+          "Set up the Home Assistant panel (Settings > Home Assistant > Set up from your phone), then try again.");
+      return null;
+    }
+    const verbs = {"scene": "Scene", "script": "Run", "button": "Press", "input_button": "Press"};
+    String describe(Map e) => "${verbs[e["domain"]] ?? "Toggle"}: ${e["name"]}";
+    final Map? picked = await showDialog<Map>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text("Home Assistant"),
+        children: [for (final e in entities.cast<Map>()) _option(context, describe(e), e)],
+      ),
+    );
+    return picked == null ? null : {"type": "ha", "target": picked["entity_id"], "label": describe(picked)};
   }
 
   Widget _option<T>(BuildContext context, String label, T value) => SimpleDialogOption(

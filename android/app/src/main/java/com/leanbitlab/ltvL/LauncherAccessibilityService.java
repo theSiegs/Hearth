@@ -284,6 +284,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     static final String HOME_FIX_SEEN_KEY = "home_button_fix_seen";
 
+    /** True while the service is actually connected; Android can kill it while Settings still shows it on. */
+    static boolean isRunning() {
+        return sInstance != null;
+    }
+
     static boolean wasHomeButtonFixSeen(Context context) {
         return context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).getBoolean(HOME_FIX_SEEN_KEY, false);
     }

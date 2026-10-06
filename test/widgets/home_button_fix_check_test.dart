@@ -54,6 +54,11 @@ void main() {
     expect(channel.opened, 1);
   });
 
+  testWidgets('explains a service Android lists as on but that is not running', (tester) async {
+    await _pump(tester, _FakeChannel({'enabled': false, 'listedButStopped': true, 'seenBefore': true, 'restricted': false}));
+    expect(find.textContaining('still lists it as on'), findsOneWidget);
+  });
+
   testWidgets('shows the adb command when Android restricts the app', (tester) async {
     await _pump(tester, _FakeChannel({'enabled': false, 'seenBefore': true, 'restricted': true}));
     expect(find.textContaining('ACCESS_RESTRICTED_SETTINGS allow'), findsOneWidget);

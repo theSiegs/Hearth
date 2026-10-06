@@ -173,6 +173,9 @@ class FLauncherChannel {
 
   Future<void> openHaPanel() async => await _methodChannel.invokeMethod("openHaPanel");
 
+  /// JSON list of {entity_id, name, domain} a remote button can run; empty without a Home Assistant sign-in.
+  Future<String> getHaEntities() async => await _methodChannel.invokeMethod<String>("getHaEntities") ?? "[]";
+
   /// Starts the phone setup page and returns its one-time link (for the QR code), or null without a network.
   Future<String?> startHaSetup() async => await _methodChannel.invokeMethod<String>("startHaSetup");
 

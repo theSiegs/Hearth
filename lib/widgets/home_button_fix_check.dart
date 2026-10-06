@@ -52,7 +52,7 @@ class _HomeButtonFixCheckState extends State<HomeButtonFixCheck> with WidgetsBin
       final bool lost = status["seenBefore"] == true && status["enabled"] == false;
       if (!lost || !mounted || _shown) return;
       _shown = true;
-      await _showDialog(status["restricted"] == true);
+      await _showDialog(status["restricted"] == true, stuck: status["listedButStopped"] == true);
     } catch (_) {
       // No platform side (tests) or an older Android: nothing to warn about.
     } finally {
@@ -60,7 +60,7 @@ class _HomeButtonFixCheckState extends State<HomeButtonFixCheck> with WidgetsBin
     }
   }
 
-  Future<void> _showDialog(bool restricted) async {
+  Future<void> _showDialog(bool restricted, {bool stuck = false}) async {
     final String command = 'adb shell appops set com.leanbitlab.ltvL ACCESS_RESTRICTED_SETTINGS allow';
     WidgetsBinding.instance.addPostFrameCallback((_) => _openButtonFocus.requestFocus());
     final String? choice = await showDialog<String>(
@@ -76,6 +76,14 @@ class _HomeButtonFixCheckState extends State<HomeButtonFixCheck> with WidgetsBin
               'button may open Google TV instead of Hearth, and profile switches aren\'t followed.',
               style: TextStyle(fontSize: 13, height: 1.4),
             ),
+            if (stuck) ...[
+              const SizedBox(height: 12),
+              const Text(
+                'Android still lists it as on, but it isn\'t running. Turn Hearth off and on again in '
+                'Accessibility settings to restart it.',
+                style: TextStyle(fontSize: 13, height: 1.4),
+              ),
+            ],
             if (restricted) ...[
               const SizedBox(height: 12),
               const Text(
