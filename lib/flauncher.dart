@@ -17,6 +17,7 @@
  */
 
 
+import 'package:collection/collection.dart';
 import 'package:flauncher/actions.dart';
 import 'package:flauncher/custom_traversal_policy.dart';
 import 'package:flauncher/providers/apps_service.dart';
@@ -24,6 +25,7 @@ import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flauncher/providers/wallpaper_service.dart';
 import 'package:flauncher/widgets/apps_grid.dart';
 import 'package:flauncher/widgets/category_row.dart';
+import 'package:flauncher/widgets/home_dock.dart';
 import 'package:flauncher/widgets/launcher_alternative_view.dart';
 import 'package:flauncher/widgets/focus_aware_app_bar.dart';
 import 'package:flutter/material.dart';
@@ -44,6 +46,38 @@ class FLauncher extends StatefulWidget {
 
 class _FLauncherState extends State<FLauncher> {
   final GlobalKey<FocusAwareAppBarState> _appBarKey = GlobalKey();
+  final ScrollController _scrollController = ScrollController();
+
+  /// Wraps the dock layout's first screen (Continue Watching + dock).
+  final FocusNode _firstScreenFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addListener(_onFocusMoved);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeListener(_onFocusMoved);
+    _firstScreenFocusNode.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Cards centre themselves vertically when focused, which would scroll the dock layout's
+  /// first screen partway off the top. While focus is on that screen, keep the page at the top.
+  void _onFocusMoved() {
+    if (!_firstScreenFocusNode.hasFocus) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Unconditional: the card's own scroll animation has only just started, and this replaces it.
+      if (mounted && _firstScreenFocusNode.hasFocus && _scrollController.hasClients) {
+        _scrollController.animateTo(0, duration: const Duration(milliseconds: 150), curve: Curves.easeInOut);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) => Actions(
@@ -80,20 +114,25 @@ class _FLauncherState extends State<FLauncher> {
                       return Selector<WatchNextService, bool>(
                         selector: (_, watchNext) => watchNext.programs.isNotEmpty,
                         builder: (context, hasContinuingPrograms, _) =>
-                            Selector<SettingsService, ({bool show, int order})>(
+                            Selector<SettingsService, ({bool show, int order, bool dock})>(
                               selector: (_, settings) => (
                                 show: settings.showContinueWatching,
                                 order: settings.continueWatchingOrder,
+                                dock: settings.dockEnabled,
                               ),
-                              builder: (context, cwSettings, _) =>
+                              builder: (context, cwSettings, _) => LayoutBuilder(
+                                builder: (context, constraints) =>
                                   SingleChildScrollView(
+                                    controller: _scrollController,
                                     physics: const ClampingScrollPhysics(),
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        _sections(
+                                        _home(
                                             appsService.launcherSections,
+                                            viewportHeight: constraints.maxHeight,
+                                            dockEnabled: cwSettings.dock,
                                             continueWatchingActive:
                                                 cwSettings.show &&
                                                 hasContinuingPrograms,
@@ -102,6 +141,7 @@ class _FLauncherState extends State<FLauncher> {
                                       ],
                                     ),
                                   ),
+                              ),
                             ),
                     );
                     }
@@ -118,13 +158,63 @@ class _FLauncherState extends State<FLauncher> {
     ),
   );
 
+  /// With the dock on and something in Favorites, the first screen shows the wallpaper with
+  /// Continue Watching and the Favorites dock along the bottom; the other sections follow below.
+  /// Otherwise it's the classic list of sections.
+  Widget _home(
+    List<LauncherSection> sections, {
+    required double viewportHeight,
+    required bool dockEnabled,
+    required bool continueWatchingActive,
+    required int continueWatchingOrder,
+  }) {
+    final Category? favorites = dockEnabled
+        ? sections.whereType<Category>().firstWhereOrNull((c) => c.name == 'Favorites' && c.applications.isNotEmpty)
+        : null;
+    if (favorites == null) {
+      return _sections(sections,
+          continueWatchingActive: continueWatchingActive, continueWatchingOrder: continueWatchingOrder);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          constraints: BoxConstraints(minHeight: viewportHeight),
+          alignment: Alignment.bottomCenter,
+          child: Focus(
+            focusNode: _firstScreenFocusNode,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (continueWatchingActive) const ContinueWatchingRow(isFirstSection: true),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 24),
+                  child: HomeDock(
+                    key: Key(favorites.id.toString()),
+                    category: favorites,
+                    applications: favorites.applications,
+                    isFirstSection: !continueWatchingActive,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        _sections(sections.where((s) => s != favorites).toList(), firstCategoryAlreadyFound: true),
+      ],
+    );
+  }
+
   Widget _sections(
     List<LauncherSection> sections, {
     bool continueWatchingActive = false,
     int continueWatchingOrder = 0,
+    bool firstCategoryAlreadyFound = false,
   }) {
     List<Widget> children = [];
-    bool firstCategoryFound = false;
+    bool firstCategoryFound = firstCategoryAlreadyFound;
     bool cwInserted = false;
 
     int sectionIdx = 0;

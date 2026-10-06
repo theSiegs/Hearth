@@ -33,11 +33,19 @@ class CategoryRow extends StatelessWidget
 
   final bool isFirstSection;
 
+  /// False inside the dock, which has no heading.
+  final bool showTitle;
+
+  /// Size the row to its apps instead of the full width, so a short dock stays centred.
+  final bool shrinkWrap;
+
   CategoryRow({
     Key? key,
     required this.category,
     required this.applications,
     this.isFirstSection = false,
+    this.showTitle = true,
+    this.shrinkWrap = false,
   }) : super(key: key);
 
   @override
@@ -50,6 +58,7 @@ class CategoryRow extends StatelessWidget
       categoryContent = SizedBox(
         height: category.rowHeight.toDouble(),
         child: ListView.custom(
+          shrinkWrap: shrinkWrap,
           clipBehavior: Clip.none,
           padding: const EdgeInsets.all(8),
           scrollDirection: Axis.horizontal,
@@ -75,6 +84,10 @@ class CategoryRow extends StatelessWidget
           )
         )
       );
+    }
+
+    if (!showTitle) {
+      return categoryContent;
     }
 
     return Column(

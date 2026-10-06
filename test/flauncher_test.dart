@@ -35,6 +35,7 @@ import 'package:flauncher/widgets/apps_grid.dart';
 import 'package:flauncher/widgets/category_row.dart';
 import 'package:flauncher/widgets/app_card.dart';
 import 'package:flauncher/widgets/focus_aware_app_bar.dart';
+import 'package:flauncher/widgets/home_dock.dart';
 import 'package:flauncher/widgets/settings/settings_panel_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -109,6 +110,54 @@ void main() {
     expect(find.byType(CategoryRow), findsOneWidget);
     expect(find.byType(AppsGrid), findsOneWidget);
     expect(find.text("This category is empty."), findsNWidgets(2));
+  });
+
+  testWidgets("Dock shows Favorites along the bottom of the first screen", (tester) async {
+    final appsService = mkAppService();
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    final applicationsCategory = fakeCategory(name: "Applications", order: 1);
+    favoritesCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.1", name: "FLauncher 1"));
+    applicationsCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.2", name: "FLauncher 2"));
+    when(appsService.launcherSections).thenReturn([favoritesCategory, applicationsCategory]);
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+
+    expect(find.byType(HomeDock), findsOneWidget);
+    expect(find.descendant(of: find.byType(HomeDock), matching: find.byKey(Key("me.efesser.flauncher.1"))),
+        findsOneWidget);
+    // The dock has no heading; the sections below it keep theirs.
+    expect(find.text("Favorites"), findsNothing);
+    expect(find.text("Applications"), findsOneWidget);
+    // The dock sits at the bottom of the first screen and the other sections start below it.
+    final screenHeight = tester.getSize(find.byType(FLauncher)).height;
+    final dockBottom = tester.getBottomLeft(find.byType(HomeDock)).dy;
+    expect(dockBottom, closeTo(screenHeight - 24, 1));
+    expect(tester.getTopLeft(find.byType(AppsGrid)).dy, greaterThan(dockBottom));
+  });
+
+  testWidgets("Dock falls back to the classic layout while Favorites is empty", (tester) async {
+    final appsService = mkAppService();
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    final applicationsCategory = fakeCategory(name: "Applications", order: 1);
+    applicationsCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.2", name: "FLauncher 2"));
+    when(appsService.launcherSections).thenReturn([favoritesCategory, applicationsCategory]);
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+
+    expect(find.byType(HomeDock), findsNothing);
+    expect(find.text("Favorites"), findsOneWidget);
+  });
+
+  test("Dock corners follow the theme", () {
+    expect(dockRadiusForTheme('classic'), 0);
+    expect(dockRadiusForTheme('minimal'), 4 + kDockInnerPadding);
+    expect(dockRadiusForTheme('modern'), 8 + kDockInnerPadding);
+    expect(dockRadiusForTheme('squircle'), 24 + kDockInnerPadding);
+    expect(dockRadiusForTheme('unknown'), dockRadiusForTheme('modern'));
   });
 
   testWidgets("Home page displays background image", (tester) async {
@@ -607,6 +656,10 @@ SettingsService mkSettingsService() {
   when(settingsService.appSelectorTransitionAnimationEnabled).thenReturn(true);
   when(settingsService.showContinueWatching).thenReturn(false);
   when(settingsService.continueWatchingOrder).thenReturn(0);
+  when(settingsService.dockEnabled).thenReturn(false);
+  when(settingsService.dockBlurEnabled).thenReturn(true);
+  when(settingsService.dockDarkBackground).thenReturn(false);
+  when(settingsService.dockShadowEnabled).thenReturn(true);
   when(settingsService.showNotificationsWidgetInStatusBar).thenReturn(true);
   when(settingsService.autoHideNotificationsWidget).thenReturn(false);
   when(settingsService.showWeatherInStatusBar).thenReturn(false);

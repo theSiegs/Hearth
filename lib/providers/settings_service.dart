@@ -49,6 +49,10 @@ const String _screensaverClockStyleKey = "screensaver_clock_style";
 const String _timeBasedWallpaperEnabledKey = "time_based_wallpaper_enabled";
 const String _bingWallpaperEnabledKey = "bing_wallpaper_enabled";
 const String _matchSelectedAppBackgroundKey = "match_selected_app_background";
+const String _dockEnabledKey = "dock_enabled";
+const String _dockBlurEnabledKey = "dock_blur_enabled";
+const String _dockDarkBackgroundKey = "dock_dark_background";
+const String _dockShadowEnabledKey = "dock_shadow_enabled";
 const String _showInputsWidgetInStatusBarKey = "show_inputs_widget_in_status_bar";
 const String _showContinueWatchingKey = "show_continue_watching";
 const String _continueWatchingCardSizeKey = "continue_watching_card_size";
@@ -475,6 +479,36 @@ class SettingsService extends ChangeNotifier {
 
   Future<void> setMatchSelectedAppBackground(bool enabled) async {
     await _sharedPreferences.setBool(_matchSelectedAppBackgroundKey, enabled);
+    notifyListeners();
+  }
+
+  /// Favorites shown as a frosted dock at the bottom of the first screen, with
+  /// Continue Watching above it and the other sections below.
+  bool get dockEnabled => _sharedPreferences.getBool(_dockEnabledKey) ?? true;
+
+  Future<void> setDockEnabled(bool enabled) async {
+    await _sharedPreferences.setBool(_dockEnabledKey, enabled);
+    notifyListeners();
+  }
+
+  bool get dockBlurEnabled => _sharedPreferences.getBool(_dockBlurEnabledKey) ?? true;
+
+  Future<void> setDockBlurEnabled(bool enabled) async {
+    await _sharedPreferences.setBool(_dockBlurEnabledKey, enabled);
+    notifyListeners();
+  }
+
+  bool get dockDarkBackground => _sharedPreferences.getBool(_dockDarkBackgroundKey) ?? false;
+
+  Future<void> setDockDarkBackground(bool enabled) async {
+    await _sharedPreferences.setBool(_dockDarkBackgroundKey, enabled);
+    notifyListeners();
+  }
+
+  bool get dockShadowEnabled => _sharedPreferences.getBool(_dockShadowEnabledKey) ?? true;
+
+  Future<void> setDockShadowEnabled(bool enabled) async {
+    await _sharedPreferences.setBool(_dockShadowEnabledKey, enabled);
     notifyListeners();
   }
 
