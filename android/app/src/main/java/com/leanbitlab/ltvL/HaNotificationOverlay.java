@@ -141,7 +141,7 @@ final class HaNotificationOverlay {
             picture.setScaleType(ImageView.ScaleType.CENTER_CROP);
             picture.setBackgroundColor(Color.BLACK);
             if (image != null) picture.setImageBitmap(image);
-            card.addView(picture, new LinearLayout.LayoutParams(dp(480), dp(270)));
+            card.addView(picture, new LinearLayout.LayoutParams(dp(400), dp(225)));
             refreshCamera(card, picture, n.camera);
         } else if (image != null) {
             ImageView picture = new ImageView(mService);
@@ -194,7 +194,7 @@ final class HaNotificationOverlay {
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         row.addView(texts, textParams);
 
-        int width = n.camera != null ? dp(480) : image != null ? dp(360) : LinearLayout.LayoutParams.WRAP_CONTENT;
+        int width = n.camera != null ? dp(400) : image != null ? dp(360) : LinearLayout.LayoutParams.WRAP_CONTENT;
         if (!isBlank(n.title) || !isBlank(n.message)) {
             card.addView(row, new LinearLayout.LayoutParams(width, LinearLayout.LayoutParams.WRAP_CONTENT));
         }
@@ -220,39 +220,48 @@ final class HaNotificationOverlay {
         });
     }
 
+    /**
+     * The card's buttons plus a Close button, which starts with the focus: an action like "Unlock" should take a
+     * deliberate press, never a stray OK.
+     */
     private View buildButtons(HaNotificationServer.Notification n, int accent) {
         LinearLayout buttons = new LinearLayout(mService);
         buttons.setOrientation(LinearLayout.HORIZONTAL);
         buttons.setGravity(Gravity.END);
         buttons.setPadding(dp(12), 0, dp(12), dp(12));
         for (org.json.JSONObject action : n.actions) {
-            TextView button = new TextView(mService);
-            button.setText(action.optString("title"));
-            button.setTextColor(TEXT);
-            button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-            button.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-            button.setPadding(dp(18), dp(10), dp(18), dp(10));
-            button.setFocusable(true);
-            button.setBackground(buttonBackground(accent));
-            button.setOnClickListener(v -> {
+            addButton(buttons, action.optString("title"), accent, () -> {
                 run(action);
                 next();
             });
-            button.setOnKeyListener((v, keyCode, event) -> {
-                if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
-                    next();
-                    return true;
-                }
-                return false;
-            });
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            params.setMarginStart(dp(8));
-            buttons.addView(button, params);
         }
-        View first = buttons.getChildAt(0);
-        first.post(first::requestFocus);
+        View close = addButton(buttons, "Close", accent, this::next);
+        close.post(close::requestFocus);
         return buttons;
+    }
+
+    private View addButton(LinearLayout buttons, String title, int accent, Runnable onPress) {
+        TextView button = new TextView(mService);
+        button.setText(title);
+        button.setTextColor(TEXT);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        button.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        button.setPadding(dp(18), dp(10), dp(18), dp(10));
+        button.setFocusable(true);
+        button.setBackground(buttonBackground(accent));
+        button.setOnClickListener(v -> onPress.run());
+        button.setOnKeyListener((v, keyCode, event) -> {
+            if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
+                next();
+                return true;
+            }
+            return false;
+        });
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.setMarginStart(dp(8));
+        buttons.addView(button, params);
+        return button;
     }
 
     private void run(org.json.JSONObject action) {
