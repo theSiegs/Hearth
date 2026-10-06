@@ -11,9 +11,11 @@ Element? findAppCardByPackageName(WidgetTester tester, String packageName) {
   return null;
 }
 
+/// The status bar's leftmost button, where Up from the first section lands (the profile button;
+/// there's no Settings gear any more).
 Element? findSettingsIcon(WidgetTester tester) {
   try {
-    return tester.element(find.byIcon(Icons.settings_outlined));
+    return tester.element(find.byIcon(Icons.people_outline));
   } catch (e) {
     return null;
   }

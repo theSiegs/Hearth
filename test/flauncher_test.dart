@@ -292,7 +292,7 @@ void main() {
     expect(find.byType(Image), findsNothing);
   });
 
-  testWidgets("Pressing select on settings icon opens SettingsPanel", (tester) async {
+  testWidgets("Pressing Left on the status bar's first button opens SettingsPanel", (tester) async {
     final appsService = mkAppService();
     when(appsService.launcherSections).thenReturn([
       fakeCategory(name: "Favorites", order: 0),
@@ -304,9 +304,31 @@ void main() {
     settingsNode!.requestFocus();
     await tester.pump();
 
-    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
 
+    expect(find.byType(SettingsPanelPage), findsOneWidget);
+  });
+
+  testWidgets("Pressing Left on the first app of a row opens SettingsPanel", (tester) async {
+    final appsService = mkAppService();
+    final favorites = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    favorites.applications.add(fakeApp(packageName: "me.efesser.flauncher.1", name: "FLauncher 1"));
+    favorites.applications.add(fakeApp(packageName: "me.efesser.flauncher.2", name: "FLauncher 2"));
+    when(appsService.launcherSections).thenReturn([favorites]);
+    await _pumpWidgetWith(tester, appsService);
+    expect(isAppCardFocused(tester, "me.efesser.flauncher.1"), isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    // Left from the second app just moves to the first.
+    expect(find.byType(SettingsPanelPage), findsNothing);
+    expect(isAppCardFocused(tester, "me.efesser.flauncher.1"), isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
     expect(find.byType(SettingsPanelPage), findsOneWidget);
   });
 
@@ -661,10 +683,10 @@ void main() {
     await tester.pump();
     expect(isAppCardFocused(tester, "me.efesser.music1"), isTrue);
 
-    // check if going left on the first app stays on the same app
+    // going left on the first app opens Settings rather than leaving the row
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-    await tester.pump();
-    expect(isAppCardFocused(tester, "me.efesser.music1"), isTrue);
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsPanelPage), findsOneWidget);
   });
 
   testWidgets("Moving right or up can go the settings icon", (tester) async {

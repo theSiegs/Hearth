@@ -1,3 +1,4 @@
+import 'package:flauncher/actions.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/models/watch_next_program.dart';
 import 'package:flauncher/providers/apps_service.dart';
@@ -158,18 +159,24 @@ void main() {
   });
 
   group('WatchNextCard animations', () {
-    testWidgets('edge bump animation triggers on left boundary', (tester) async {
+    testWidgets('Left on the first card asks to open Settings instead of bumping', (tester) async {
       final program = _fakeProgram(id: 1, packageName: 'app.one', title: 'Video 1');
+      var settingsRequested = false;
 
       await tester.pumpWidget(
         _buildTestWidget(
-          child: WatchNextCard(
-            program: program,
-            appsService: appsService,
-            watchNextService: watchNextService,
-            isFirstInRow: true,
-            isLastInRow: false,
-            autofocus: true,
+          child: Actions(
+            actions: <Type, Action<Intent>>{
+              OpenSettingsIntent: CallbackAction<OpenSettingsIntent>(onInvoke: (_) => settingsRequested = true),
+            },
+            child: WatchNextCard(
+              program: program,
+              appsService: appsService,
+              watchNextService: watchNextService,
+              isFirstInRow: true,
+              isLastInRow: false,
+              autofocus: true,
+            ),
           ),
           settingsService: settingsService,
           watchNextService: watchNextService,
@@ -182,19 +189,13 @@ void main() {
       final transformsBefore = tester.widgetList<Transform>(find.byType(Transform));
       expect(transformsBefore.any((t) => t.transform.getTranslation().x != 0), isFalse);
 
-      // Press Left arrow to trigger bump
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      // Bump animation should translate with negative x offset
+      expect(settingsRequested, isTrue);
       final transformsDuring = tester.widgetList<Transform>(find.byType(Transform));
-      expect(transformsDuring.any((t) => t.transform.getTranslation().x < 0), isTrue);
-
-      // Advance animation back to rest
-      await tester.pump(const Duration(milliseconds: 200));
-      final transformsAfter = tester.widgetList<Transform>(find.byType(Transform));
-      expect(transformsAfter.any((t) => t.transform.getTranslation().x != 0), isFalse);
+      expect(transformsDuring.any((t) => t.transform.getTranslation().x != 0), isFalse);
     });
 
     testWidgets('edge bump animation triggers on right boundary', (tester) async {

@@ -9,6 +9,7 @@ import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'daily_data_usage_widget.dart';
@@ -60,8 +61,16 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
     super.dispose();
   }
 
+  /// Focuses the status bar's leftmost button (the profile button; Settings itself opens with Left).
   void focusSettings() {
     _settingsFocusNode.requestFocus();
+  }
+
+  /// Opens Settings, asking for the parent PIN first in kids profiles.
+  Future<void> openSettings() async {
+    if (await requireParent(context) && context.mounted) {
+      showDialog(context: context, builder: (_) => const SettingsPanel());
+    }
   }
 
   @override
@@ -97,22 +106,23 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
           elevation: 0,
           scrolledUnderElevation: 0,
           backgroundColor: Colors.transparent,
-          // Left side: Settings, Network indicator, WiFi usage
+          // Left side: profile, inputs, notifications, network. There's no Settings button:
+          // pressing Left at the left edge (here or on the home screen) opens Settings.
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Settings button (moved to left side)
-              _FocusableIconButton(
-                icon: Icons.settings_outlined,
-                focusNode: _settingsFocusNode,
-                onPressed: () async {
-                  if (await requireParent(context) && context.mounted) {
-                    showDialog(context: context, builder: (_) => const SettingsPanel());
+              Focus(
+                canRequestFocus: false,
+                skipTraversal: true,
+                onKeyEvent: (_, event) {
+                  if (event.logicalKey != LogicalKeyboardKey.arrowLeft || event is KeyUpEvent) {
+                    return KeyEventResult.ignored;
                   }
+                  if (event is KeyDownEvent) openSettings();
+                  return KeyEventResult.handled;
                 },
+                child: _ProfileButton(focusNode: _settingsFocusNode),
               ),
-              const SizedBox(width: 16),
-              const _ProfileButton(),
               Selector<SettingsService, bool>(
                 selector: (_, settings) => settings.showInputsWidgetInStatusBar,
                 builder: (context, showInputs, _) => showInputs
@@ -307,11 +317,14 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
 
 /// Opens Google TV's profile chooser and shows the active profile's name.
 class _ProfileButton extends StatelessWidget {
-  const _ProfileButton();
+  final FocusNode? focusNode;
+
+  const _ProfileButton({this.focusNode});
 
   @override
   Widget build(BuildContext context) => _FocusableIconButton(
         icon: Icons.people_outline,
+        focusNode: focusNode,
         label: context.select<ProfileService?, String?>((p) => p?.activeProfileName),
         onPressed: () => FLauncherChannel().openProfileChooser(),
       );
