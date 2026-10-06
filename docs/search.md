@@ -34,6 +34,9 @@ TV's internet address when it asks them something.
   shows only films and shows.
 - Wikidata limits how often it can be asked. Hearth waits until you pause typing and caches results, but very rapid
   searching can be slowed down.
+- Direct buttons exist for Netflix, Apple TV, HBO Max and Paramount+. Disney+ no longer opens titles by the ids Wikidata
+  has, so Disney+ titles open through Google TV's page (one extra press on its Watch now). Apple TV starts playing the
+  title rather than showing its page. Paramount+ ids are rare in Wikidata, so its button seldom appears.
 - Links into each app depend on that app's own link format, which can change in an app update (the same kind of
   fragility as [Profile Pairing](profile-pairing.md)). When an app can't open a link, use Google TV's page instead.
 
