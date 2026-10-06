@@ -40,6 +40,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private String mPendingProfile;
     private long mPendingProfileAt = 0;
     private long mProfileCommittedAt = 0;
+    /** Whether Google TV is suspending apps (a kids profile), as last seen; null until first checked. */
+    private Boolean mKidsState;
 
     private final LauncherApps.Callback mSuspensionCallback = new LauncherApps.Callback() {
         @Override public void onPackageRemoved(String packageName, UserHandle user) {}
@@ -63,6 +65,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         sInstance = this;
+        mKidsState = hasSuspendedApps(this);
         getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).edit().putBoolean(HOME_FIX_SEEN_KEY, true).apply();
         mIdleHandler.postDelayed(mIdleCheck, IDLE_CHECK_MS);
         mHaOverlay = new HaNotificationOverlay(this);
@@ -107,8 +110,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
             mHaStatus.onProfileChanged();
         }
         commitPendingProfile();
-        // Switched by some path we didn't see: better no name than a wrong one.
-        if (SystemClock.elapsedRealtime() - mProfileCommittedAt > PROFILE_CLICK_WINDOW_MS) {
+        // Suspensions also change when apps are installed, updated or re-approved, so only a flip between a kids
+        // profile and a grown-up one means a switch we didn't see: then better no name than a wrong one.
+        boolean kids = hasSuspendedApps(this);
+        boolean flipped = mKidsState != null && mKidsState != kids;
+        mKidsState = kids;
+        if (flipped && SystemClock.elapsedRealtime() - mProfileCommittedAt > PROFILE_CLICK_WINDOW_MS) {
             setActiveProfileName(null);
         }
         if (mPendingBounceAt != 0 && SystemClock.elapsedRealtime() - mPendingBounceAt < PENDING_BOUNCE_WINDOW_MS
@@ -490,6 +497,18 @@ public class LauncherAccessibilityService extends AccessibilityService {
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(intent);
+    }
+
+    /** Whether any launchable app is suspended: Google TV does that only in kids profiles. */
+    static boolean hasSuspendedApps(Context context) {
+        PackageManager pm = context.getPackageManager();
+        for (String category : new String[]{Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER}) {
+            for (android.content.pm.ResolveInfo info : pm.queryIntentActivities(
+                    new Intent(Intent.ACTION_MAIN).addCategory(category), 0)) {
+                if ((info.activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SUSPENDED) != 0) return true;
+            }
+        }
+        return false;
     }
 
     static boolean isSuspended(Context context) {
