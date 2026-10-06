@@ -208,6 +208,11 @@ class _FLauncherState extends State<FLauncher> {
           continueWatchingActive: continueWatchingActive, continueWatchingOrder: continueWatchingOrder);
     }
 
+    // Empty sections (often "Non-TV Apps") are left out below the dock; they'd only say "This category is empty".
+    // With a single section left, its heading is dropped too.
+    final List<LauncherSection> belowDock =
+        sections.where((s) => s != favorites && !(s is Category && s.applications.isEmpty)).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -236,7 +241,7 @@ class _FLauncherState extends State<FLauncher> {
         ),
         Focus(
           focusNode: _belowDockFocusNode,
-          child: _sections(sections.where((s) => s != favorites).toList(), firstCategoryAlreadyFound: true),
+          child: _sections(belowDock, firstCategoryAlreadyFound: true, showTitles: belowDock.whereType<Category>().length > 1),
         ),
       ],
     );
@@ -247,6 +252,7 @@ class _FLauncherState extends State<FLauncher> {
     bool continueWatchingActive = false,
     int continueWatchingOrder = 0,
     bool firstCategoryAlreadyFound = false,
+    bool showTitles = true,
   }) {
     List<Widget> children = [];
     bool firstCategoryFound = firstCategoryAlreadyFound;
@@ -282,7 +288,8 @@ class _FLauncherState extends State<FLauncher> {
               key: sectionKey,
               category: category,
               applications: category.applications,
-              isFirstSection: isFirstSection
+              isFirstSection: isFirstSection,
+              showTitle: showTitles
           );
           break;
         case CategoryType.grid:
@@ -290,7 +297,8 @@ class _FLauncherState extends State<FLauncher> {
               key: sectionKey,
               category: category,
               applications: category.applications,
-              isFirstSection: isFirstSection
+              isFirstSection: isFirstSection,
+              showTitle: showTitles
           );
           break;
       }

@@ -35,11 +35,15 @@ class AppsGrid extends StatelessWidget
 
   final bool isFirstSection;
 
+  /// False when the section is the only one below the dock, where a heading adds nothing.
+  final bool showTitle;
+
   AppsGrid({
     Key? key,
     required this.category,
     required this.applications,
     this.isFirstSection = false,
+    this.showTitle = true,
   }) : super(key: key);
 
   @override
@@ -78,6 +82,10 @@ class AppsGrid extends StatelessWidget
           }
         )
       );
+    }
+
+    if (!showTitle) {
+      return categoryContent;
     }
 
     return Column(

@@ -127,9 +127,9 @@ void main() {
     expect(find.byType(HomeDock), findsOneWidget);
     expect(find.descendant(of: find.byType(HomeDock), matching: find.byKey(Key("me.efesser.flauncher.1"))),
         findsOneWidget);
-    // The dock has no heading; the sections below it keep theirs.
+    // The dock has no heading, and neither does a lone section below it.
     expect(find.text("Favorites"), findsNothing);
-    expect(find.text("Applications"), findsOneWidget);
+    expect(find.text("Applications"), findsNothing);
     // The dock sits at the bottom of the first screen and the other sections start below it.
     final screenHeight = tester.getSize(find.byType(FLauncher)).height;
     final dockBottom = tester.getBottomLeft(find.byType(HomeDock)).dy;
@@ -158,6 +158,42 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
     await tester.pumpAndSettle();
     expect(blurOpacity(), 0);
+  });
+
+  testWidgets("Dock layout leaves out empty sections", (tester) async {
+    final appsService = mkAppService();
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    final tvAppsCategory = fakeCategory(name: "TV Apps", order: 1);
+    final nonTvAppsCategory = fakeCategory(name: "Non-TV Apps", order: 2);
+    favoritesCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.1", name: "FLauncher 1"));
+    tvAppsCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.2", name: "FLauncher 2"));
+    when(appsService.launcherSections).thenReturn([favoritesCategory, tvAppsCategory, nonTvAppsCategory]);
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+
+    expect(find.byKey(Key("me.efesser.flauncher.2")), findsOneWidget);
+    expect(find.text("Non-TV Apps"), findsNothing);
+    expect(find.text("This category is empty."), findsNothing);
+  });
+
+  testWidgets("Sections below the dock keep their headings when there are several", (tester) async {
+    final appsService = mkAppService();
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    final tvAppsCategory = fakeCategory(name: "TV Apps", order: 1);
+    final gamesCategory = fakeCategory(name: "Games", order: 2, type: CategoryType.row);
+    favoritesCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.1", name: "FLauncher 1"));
+    tvAppsCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.2", name: "FLauncher 2"));
+    gamesCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.3", name: "FLauncher 3"));
+    when(appsService.launcherSections).thenReturn([favoritesCategory, tvAppsCategory, gamesCategory]);
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+
+    expect(find.text("TV Apps"), findsOneWidget);
+    expect(find.text("Games"), findsOneWidget);
   });
 
   testWidgets("Dock falls back to the classic layout while Favorites is empty", (tester) async {
