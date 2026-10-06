@@ -144,11 +144,34 @@ class _FLauncherState extends State<FLauncher> {
         return KeyEventResult.handled;
       };
 
+  /// From Continue Watching: Down swaps the dock back in; Up goes to the top bar and puts the dock back in place
+  /// behind it, so Continue Watching only shows while it's being browsed.
+  KeyEventResult _recentsKey(FocusNode node, KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      if (event is KeyDownEvent) _setShowingRecents(false);
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      if (event is KeyDownEvent) {
+        _appBarKey.currentState?.focusSettings();
+        setState(() => _showingRecents = false);
+      }
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   @override
   Widget build(BuildContext context) => Actions(
     actions: <Type, Action<Intent>>{
       MoveFocusToSettingsIntent: CallbackAction<MoveFocusToSettingsIntent>(
-        onInvoke: (_) => _appBarKey.currentState?.focusSettings(),
+        onInvoke: (_) {
+          _appBarKey.currentState?.focusSettings();
+          // Continue Watching only shows while it's being browsed; the dock comes back behind the top bar.
+          if (_showingRecents) setState(() => _showingRecents = false);
+          return null;
+        },
       ),
       OpenSettingsIntent: CallbackAction<OpenSettingsIntent>(
         onInvoke: (_) => _appBarKey.currentState?.openSettings(),
@@ -285,7 +308,7 @@ class _FLauncherState extends State<FLauncher> {
                     excluding: !showRecents,
                     child: Focus(
                       focusNode: _recentsFocusNode,
-                      onKeyEvent: _swapOn(LogicalKeyboardKey.arrowDown, false),
+                      onKeyEvent: _recentsKey,
                       child: _swapAnimation(
                         visible: showRecents,
                         hiddenOffset: const Offset(0, 0.25),
