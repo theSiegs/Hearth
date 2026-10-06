@@ -133,7 +133,8 @@ class _SearchPageState extends State<SearchPage> {
             Expanded(
               child: ListView(
                 children: [
-                  if (_loading) const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
+                  if (_loading)
+                    const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
                   if (_error != null) Padding(padding: const EdgeInsets.all(16), child: Text(_error!)),
                   if (!_loading && _error == null && _query.length >= 2 && _results.isEmpty)
                     Padding(
@@ -161,7 +162,11 @@ class _SearchPageState extends State<SearchPage> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    Text("Titles from Wikidata. Only your search text is sent.",
+                    Text(
+                        _tmdb.enabled
+                            ? "Titles from Wikidata; posters and where it's streaming from TMDB (via JustWatch). "
+                                "This product uses the TMDB API but is not endorsed or certified by TMDB."
+                            : "Titles from Wikidata. Only your search text is sent.",
                         style: textTheme.bodySmall?.copyWith(color: Colors.white38)),
                     const SizedBox(height: 32),
                   ],
@@ -175,6 +180,9 @@ class _SearchPageState extends State<SearchPage> {
   }
 }
 
+/// Posters and "streaming on" (TMDB), when a key is built in.
+final TmdbClient _tmdb = TmdbClient();
+
 class _ResultRow extends StatelessWidget {
   final SearchResult result;
   final bool Function(String packageName) installed;
@@ -187,36 +195,70 @@ class _ResultRow extends StatelessWidget {
     final channel = FLauncherChannel();
     final textTheme = Theme.of(context).textTheme;
     final offers = result.offers.where((offer) => installed(offer.service.packageName)).toList();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(result.year != null ? "${result.title} (${result.year})" : result.title, style: textTheme.titleLarge),
-          if (result.description != null)
-            Text(result.description!, style: textTheme.bodyMedium?.copyWith(color: Colors.white60)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
+    return FutureBuilder<TitleDetails?>(
+      future: _tmdb.details(result),
+      builder: (context, snapshot) {
+        final details = snapshot.data;
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final offer in offers)
-                SearchChip(
-                  icon: Icons.play_arrow_rounded,
-                  label: offer.service.name,
-                  onPressed: () => open(() => channel.openLinkInApp(offer.service.packageName, offer.link)),
+              if (_tmdb.enabled) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    width: 72,
+                    height: 108,
+                    color: Colors.white10,
+                    child: details?.posterUrl != null
+                        ? Image.network(details!.posterUrl!,
+                            fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink())
+                        : const Icon(Icons.movie_outlined, color: Colors.white24),
+                  ),
                 ),
-              SearchChip(
-                icon: Icons.info_outline,
-                label: offers.isEmpty ? "Where to watch (Google TV)" : "More on Google TV",
-                onPressed: () => open(() => result.googleTvLink != null
-                    ? channel.openGoogleTv(link: result.googleTvLink)
-                    : channel.openGoogleTv(query: result.title)),
-              ),
+                const SizedBox(width: 16),
+              ],
+              Expanded(child: _details(context, textTheme, offers, channel, details)),
             ],
           ),
-        ],
-      ),
+        );
+      },
+    );
+  }
+
+  Widget _details(BuildContext context, TextTheme textTheme, List<SearchOffer> offers, FLauncherChannel channel,
+      TitleDetails? details) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(result.year != null ? "${result.title} (${result.year})" : result.title, style: textTheme.titleLarge),
+        if (result.description != null)
+          Text(result.description!, style: textTheme.bodyMedium?.copyWith(color: Colors.white60)),
+        if (details != null && details.streamingOn.isNotEmpty)
+          Text("Streaming on ${details.streamingOn.take(4).join(", ")}",
+              style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            for (final offer in offers)
+              SearchChip(
+                icon: Icons.play_arrow_rounded,
+                label: offer.service.name,
+                onPressed: () => open(() => channel.openLinkInApp(offer.service.packageName, offer.link)),
+              ),
+            SearchChip(
+              icon: Icons.info_outline,
+              label: offers.isEmpty ? "Where to watch (Google TV)" : "More on Google TV",
+              onPressed: () => open(() => result.googleTvLink != null
+                  ? channel.openGoogleTv(link: result.googleTvLink)
+                  : channel.openGoogleTv(query: result.title)),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
