@@ -62,7 +62,7 @@ class InterfaceSettingsPage extends StatelessWidget {
                   onPressed: () => Navigator.of(context).pushNamed(ThemesPage.routeName),
                 ),
                 FocusableSettingsTile(
-                  leading: const Icon(Icons.dock),
+                  leading: const Icon(Icons.call_to_action_outlined),
                   title: Text("Appearance", style: Theme.of(context).textTheme.bodyMedium),
                   onPressed: () => Navigator.of(context).pushNamed(AppearancePanelPage.routeName),
                 ),

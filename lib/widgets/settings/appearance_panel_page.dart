@@ -45,7 +45,7 @@ class AppearancePanelPage extends StatelessWidget {
                 value: dockEnabled,
                 onChanged: settingsService.setDockEnabled,
                 title: Text("Favorites dock", style: bodyMedium),
-                secondary: const Icon(Icons.dock),
+                secondary: const Icon(Icons.call_to_action_outlined),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
