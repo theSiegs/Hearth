@@ -313,9 +313,10 @@ class _AppCardState extends State<AppCard> with TickerProviderStateMixin {
                                   onTap: () => _onPressed(context, LogicalKeyboardKey.enter),
                                   onLongPress: () => _onLongPress(context, LogicalKeyboardKey.enter),
                                   onFocusChange: (focused) {
-                                    if (focused) {
-                                      context.read<WallpaperService?>()?.onAppFocused(widget.application.packageName);
-                                    }
+                                    // Only scroll on gaining focus: scrolling as a card loses it (say, to a
+                                    // Settings panel opening over the home screen) moved the page behind the panel.
+                                    if (!focused) return;
+                                    context.read<WallpaperService?>()?.onAppFocused(widget.application.packageName);
                                     Scrollable.ensureVisible(
                                       context,
                                       // This specific alignment value is not only
