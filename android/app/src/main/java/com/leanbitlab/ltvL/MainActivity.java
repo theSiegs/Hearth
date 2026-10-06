@@ -1492,14 +1492,15 @@ public class MainActivity extends FlutterActivity {
         return true;
     }
 
-    /// Launches the system package installer for an APK previously downloaded by UpdateService,
-    /// via FileProvider so the installer (a separate app) can read the file across the
-    /// scoped-storage boundary.
+    /// Installs an APK previously downloaded by UpdateService through a store-style session (so the app isn't
+    /// left "restricted"), falling back to the system package installer via FileProvider so the installer
+    /// (a separate app) can read the file across the scoped-storage boundary.
     private boolean installApk(String path) {
         if (path == null) return false;
         try {
             java.io.File apkFile = new java.io.File(path);
             if (!apkFile.exists()) return false;
+            if (SessionInstaller.install(this, apkFile)) return true;
 
             Uri apkUri = androidx.core.content.FileProvider.getUriForFile(
                     this, getPackageName() + ".fileprovider", apkFile);
