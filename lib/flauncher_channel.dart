@@ -428,4 +428,8 @@ class FLauncherChannel {
       return false;
     }
   }
+
+  /// {versionName, versionCode} of an installed app, or null when it isn't installed.
+  Future<Map<dynamic, dynamic>?> getPackageVersion(String packageName) async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getPackageVersion", packageName);
 }

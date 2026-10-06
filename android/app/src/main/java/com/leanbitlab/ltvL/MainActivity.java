@@ -315,6 +315,18 @@ public class MainActivity extends FlutterActivity {
                 case "checkInstallPermission" -> result.success(checkInstallPermission());
                 case "requestInstallPermission" -> result.success(requestInstallPermission());
                 case "installApk" -> result.success(installApk(call.argument("path")));
+                case "getPackageVersion" -> {
+                    try {
+                        android.content.pm.PackageInfo info =
+                                getPackageManager().getPackageInfo((String) call.arguments(), 0);
+                        Map<String, Object> version = new HashMap<>();
+                        version.put("versionName", info.versionName);
+                        version.put("versionCode", info.getLongVersionCode());
+                        result.success(version);
+                    } catch (PackageManager.NameNotFoundException e) {
+                        result.success(null);
+                    }
+                }
                 case "playClickSound" -> {
                     getWindow().getDecorView().playSoundEffect(android.view.SoundEffectConstants.CLICK);
                     result.success(null);
