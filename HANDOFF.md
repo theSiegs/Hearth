@@ -24,6 +24,13 @@
 >   Hearth fetches it with no cookies/referrer, https only (http only on the LAN), downscaled and disk-cached 30 days.
 >   **TODO:** fetch remote artwork anonymously (e.g. through a self-hosted image proxy on the home network) so the
 >   artwork hosts don't see the TV's IP and what's on the row.
+> - **Favorites dock** (branch `feature/modern-layout`, ported from arclauncher without its DB change): when Favorites
+>   has apps, the first screen is wallpaper with Continue Watching and a frosted Favorites dock (`HomeDock`) along the
+>   bottom; other sections follow below. Dock corners follow the theme (`dockRadiusForTheme`). Settings → Interface →
+>   Appearance turns it off or changes blur/dark/shadow. While focus is on that first screen the page is held at the top
+>   (cards otherwise centre themselves). Still to port: enhanced focus, menus, performance, video wallpaper.
+> - Debug builds install as a separate app (`com.leanbitlab.ltvL.debug`); to test the real launcher on the emulator,
+>   install the release APK.
 
 **Repo:** `C:\Users\alex\dev\Hearth` (formerly `dev\LtvLauncher`; local clone of `github.com/theSiegs/Hearth`, formerly `theSiegs/LtvLauncher`, a personal fork of `LeanBitLab/LtvLauncher`, itself a fork of the open-source `FLauncher` Android TV launcher — Flutter/Dart app + thin native Android layer)
 
