@@ -695,10 +695,8 @@ class _AppCardState extends State<AppCard> with TickerProviderStateMixin {
   KeyEventResult _onPressed(BuildContext context, LogicalKeyboardKey? key) {
     if (!_moving) {
       if (key == LogicalKeyboardKey.arrowLeft && widget.isFirstInRow) {
-        _bumpDirection = -1.0;
-        if (!_bumpController.isAnimating) {
-          _bumpController.forward(from: 0.0);
-        }
+        // All the way left opens Settings.
+        Actions.maybeInvoke(context, const OpenSettingsIntent());
         return KeyEventResult.handled;
       } else if (key == LogicalKeyboardKey.arrowRight && widget.isLastInRow) {
         _bumpDirection = 1.0;

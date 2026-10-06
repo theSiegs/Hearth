@@ -55,7 +55,7 @@ void main() {
     );
   }
 
-  testWidgets('FocusAwareAppBar renders settings button and date/time widgets', (WidgetTester tester) async {
+  testWidgets('FocusAwareAppBar renders the profile button (no Settings gear) and date/time widgets', (WidgetTester tester) async {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
@@ -68,7 +68,8 @@ void main() {
       )
     );
 
-    expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.settings_outlined), findsNothing);
+    expect(find.byIcon(Icons.people_outline), findsOneWidget);
     expect(find.byKey(const Key('statusbar_date')), findsOneWidget);
     expect(find.byKey(const Key('statusbar_clock')), findsOneWidget);
   });

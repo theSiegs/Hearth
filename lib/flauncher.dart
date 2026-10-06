@@ -149,6 +149,9 @@ class _FLauncherState extends State<FLauncher> {
       MoveFocusToSettingsIntent: CallbackAction<MoveFocusToSettingsIntent>(
         onInvoke: (_) => _appBarKey.currentState?.focusSettings(),
       ),
+      OpenSettingsIntent: CallbackAction<OpenSettingsIntent>(
+        onInvoke: (_) => _appBarKey.currentState?.openSettings(),
+      ),
     },
     child: FocusTraversalGroup(
       policy: RowByRowTraversalPolicy(),
