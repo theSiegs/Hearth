@@ -176,6 +176,10 @@ public class MainActivity extends FlutterActivity {
                     HaPanelActivity.setConfig(this, call.argument("token"), call.argument("dashboard"));
                     result.success(null);
                 }
+                case "getHaEntities" -> HaApi.EXECUTOR.execute(() -> {
+                    String entities = HaApi.actionableEntities(this).toString();
+                    runOnUiThread(() -> result.success(entities));
+                });
                 case "startHaSetup" -> result.success(HaSetupServer.start(this));
                 case "stopHaSetup" -> {
                     HaSetupServer.stop();
@@ -249,7 +253,9 @@ public class MainActivity extends FlutterActivity {
                 case "requestAccessibilityPermission" -> result.success(openAccessibilitySettings());
                 case "getHomeButtonFixStatus" -> {
                     Map<String, Object> status = new HashMap<>();
-                    status.put("enabled", isAccessibilityServiceEnabled());
+                    boolean listed = isAccessibilityServiceEnabled();
+                    status.put("enabled", listed && LauncherAccessibilityService.isRunning());
+                    status.put("listedButStopped", listed && !LauncherAccessibilityService.isRunning());
                     status.put("seenBefore", LauncherAccessibilityService.wasHomeButtonFixSeen(this));
                     status.put("restricted", mayHaveRestrictedSettings());
                     result.success(status);

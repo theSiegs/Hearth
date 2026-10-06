@@ -19,6 +19,9 @@ import java.util.Map;
  * Receives Home Assistant's "Notifications for Android TV / Fire TV" pushes (the PiPup-style protocol on port
  * 7676): a GET as the connection test, then a POST of multipart/form-data with msg, title, duration, position,
  * bkgcolor, transparency, fontsize, interrupt, and optional "filename" (icon) and "filename2" (image) files.
+ * Hearth also takes two fields of its own, which Home Assistant can send with a rest_command:
+ * "camera" (a camera entity shown live in the card, picture-in-picture style) and "actions" (a JSON list of
+ * up to three buttons, each {"title", "service": "domain.service", "data": {...}}, run with the panel's token).
  * Only accepts connections from the local network.
  */
 final class HaNotificationServer {
@@ -35,6 +38,10 @@ final class HaNotificationServer {
         int transparency = 0;
         byte[] icon;
         byte[] image;
+        /** A camera entity to show live in the card, or null. */
+        String camera;
+        /** Buttons, each {"title", "service", "data"}; empty for an ordinary notification. */
+        final java.util.List<org.json.JSONObject> actions = new java.util.ArrayList<>();
     }
 
     interface Listener {
@@ -126,7 +133,8 @@ final class HaNotificationServer {
         }
         byte[] body = readExactly(in, length);
         Notification notification = parse(headers.getOrDefault("content-type", ""), body);
-        if (notification == null || (isBlank(notification.message) && isBlank(notification.title))) {
+        if (notification == null
+                || (isBlank(notification.message) && isBlank(notification.title) && isBlank(notification.camera))) {
             respond(socket.getOutputStream(), 400, "Missing msg");
             return;
         }
@@ -169,6 +177,21 @@ final class HaNotificationServer {
         n.transparency = clamp(intValue(fields, "transparency", 1), 1, 5);
         n.icon = fields.get("filename");
         n.image = fields.get("filename2");
+        n.camera = text(fields, "camera");
+        if (n.camera != null && !n.camera.matches("camera\\.[a-z0-9_]+")) n.camera = null;
+        String actions = text(fields, "actions");
+        if (actions != null && !actions.isEmpty()) {
+            try {
+                org.json.JSONArray list = new org.json.JSONArray(actions);
+                for (int i = 0; i < list.length() && n.actions.size() < 3; i++) {
+                    org.json.JSONObject action = list.getJSONObject(i);
+                    if (!isBlank(action.optString("title")) && action.optString("service").matches("[a-z_]+\\.[a-z0-9_]+")) {
+                        n.actions.add(action);
+                    }
+                }
+            } catch (org.json.JSONException ignored) {
+            }
+        }
         return n;
     }
 

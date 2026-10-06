@@ -10,7 +10,9 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.TypedValue;
+import android.graphics.drawable.StateListDrawable;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
@@ -21,8 +23,9 @@ import java.util.ArrayDeque;
 
 /**
  * Shows Home Assistant notifications as a Google TV style card over whatever is playing. Drawn as an
- * accessibility overlay, so it needs no "display over other apps" permission and never takes focus.
- * Notifications queue and show one at a time.
+ * accessibility overlay, so it needs no "display over other apps" permission. A card takes focus only when it
+ * has buttons (so the remote can press them; Back dismisses it), and a camera card refreshes its picture every
+ * second, picture-in-picture style. Notifications queue and show one at a time.
  */
 final class HaNotificationOverlay {
     private static final int CARD = Color.parseColor("#1F2023");
@@ -35,6 +38,12 @@ final class HaNotificationOverlay {
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final ArrayDeque<HaNotificationServer.Notification> mQueue = new ArrayDeque<>();
     private View mShowing;
+    /** Fetches camera pictures, so a slow camera never holds up button presses. */
+    private final java.util.concurrent.ExecutorService mCameraExecutor =
+            java.util.concurrent.Executors.newSingleThreadExecutor();
+    private static final long CAMERA_REFRESH_MS = 1000;
+    /** Cards with buttons stay up at least this long, so there's time to reach the remote. */
+    private static final int MIN_ACTION_SECONDS = 30;
 
     HaNotificationOverlay(AccessibilityService service) {
         mService = service;
@@ -60,26 +69,29 @@ final class HaNotificationOverlay {
         if (n == null) return;
         try {
             View card = buildCard(n);
+            int flags = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN;
+            if (n.actions.isEmpty()) flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
             WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                     WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
-                    WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                            | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-                    PixelFormat.TRANSLUCENT);
+                    WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY, flags, PixelFormat.TRANSLUCENT);
             params.gravity = gravity(n.position);
             params.x = dp(32);
             params.y = dp(32);
             params.windowAnimations = android.R.style.Animation_Toast;
             mWindowManager.addView(card, params);
             mShowing = card;
-            mHandler.postDelayed(() -> {
-                hide();
-                showNext();
-            }, n.durationSeconds * 1000L);
+            int seconds = n.actions.isEmpty() ? n.durationSeconds : Math.max(n.durationSeconds, MIN_ACTION_SECONDS);
+            mHandler.postDelayed(this::next, seconds * 1000L);
         } catch (Exception e) {
             mShowing = null;
             showNext();
         }
+    }
+
+    private void next() {
+        mHandler.removeCallbacksAndMessages(null);
+        hide();
+        showNext();
     }
 
     private void hide() {
@@ -123,7 +135,15 @@ final class HaNotificationOverlay {
         card.setClipToOutline(true);
 
         Bitmap image = decode(n.image);
-        if (image != null) {
+        boolean wide = image != null || n.camera != null;
+        if (n.camera != null) {
+            ImageView picture = new ImageView(mService);
+            picture.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            picture.setBackgroundColor(Color.BLACK);
+            if (image != null) picture.setImageBitmap(image);
+            card.addView(picture, new LinearLayout.LayoutParams(dp(480), dp(270)));
+            refreshCamera(card, picture, n.camera);
+        } else if (image != null) {
             ImageView picture = new ImageView(mService);
             picture.setImageBitmap(image);
             picture.setAdjustViewBounds(true);
@@ -158,7 +178,7 @@ final class HaNotificationOverlay {
             title.setTextColor(TEXT);
             title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
             title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-            title.setMaxWidth(dp(image != null ? 300 : 420));
+            title.setMaxWidth(dp(wide ? 300 : 420));
             texts.addView(title);
         }
         if (n.message != null && !n.message.isEmpty()) {
@@ -167,18 +187,95 @@ final class HaNotificationOverlay {
             message.setTextColor(n.title == null || n.title.isEmpty() ? TEXT : TEXT_DIM);
             message.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
             message.setMaxLines(4);
-            message.setMaxWidth(dp(image != null ? 300 : 420));
+            message.setMaxWidth(dp(wide ? 300 : 420));
             texts.addView(message);
         }
         LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         row.addView(texts, textParams);
 
-        card.addView(row, new LinearLayout.LayoutParams(image != null ? dp(360) : LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT));
+        int width = n.camera != null ? dp(480) : image != null ? dp(360) : LinearLayout.LayoutParams.WRAP_CONTENT;
+        if (!isBlank(n.title) || !isBlank(n.message)) {
+            card.addView(row, new LinearLayout.LayoutParams(width, LinearLayout.LayoutParams.WRAP_CONTENT));
+        }
+        if (!n.actions.isEmpty()) {
+            card.addView(buildButtons(n, accent), new LinearLayout.LayoutParams(width, LinearLayout.LayoutParams.WRAP_CONTENT));
+        }
         card.setMinimumWidth(dp(280));
         texts.setMinimumWidth(dp(200));
         return card;
+    }
+
+    /** Reloads the camera picture every second while this card is showing. */
+    private void refreshCamera(View card, ImageView picture, String camera) {
+        mCameraExecutor.execute(() -> {
+            Bitmap frame = decode(HaApi.cameraImage(mService, camera));
+            mHandler.post(() -> {
+                if (mShowing != card) return;
+                if (frame != null) picture.setImageBitmap(frame);
+                mHandler.postDelayed(() -> {
+                    if (mShowing == card) refreshCamera(card, picture, camera);
+                }, CAMERA_REFRESH_MS);
+            });
+        });
+    }
+
+    private View buildButtons(HaNotificationServer.Notification n, int accent) {
+        LinearLayout buttons = new LinearLayout(mService);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+        buttons.setGravity(Gravity.END);
+        buttons.setPadding(dp(12), 0, dp(12), dp(12));
+        for (org.json.JSONObject action : n.actions) {
+            TextView button = new TextView(mService);
+            button.setText(action.optString("title"));
+            button.setTextColor(TEXT);
+            button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+            button.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            button.setPadding(dp(18), dp(10), dp(18), dp(10));
+            button.setFocusable(true);
+            button.setBackground(buttonBackground(accent));
+            button.setOnClickListener(v -> {
+                run(action);
+                next();
+            });
+            button.setOnKeyListener((v, keyCode, event) -> {
+                if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
+                    next();
+                    return true;
+                }
+                return false;
+            });
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            params.setMarginStart(dp(8));
+            buttons.addView(button, params);
+        }
+        View first = buttons.getChildAt(0);
+        first.post(first::requestFocus);
+        return buttons;
+    }
+
+    private void run(org.json.JSONObject action) {
+        String[] service = action.optString("service").split("\\.", 2);
+        org.json.JSONObject data = action.optJSONObject("data");
+        HaApi.EXECUTOR.execute(() -> HaApi.callService(mService, service[0], service[1], data));
+    }
+
+    private android.graphics.drawable.Drawable buttonBackground(int accent) {
+        GradientDrawable focused = new GradientDrawable();
+        focused.setColor(accent);
+        focused.setCornerRadius(dp(20));
+        GradientDrawable normal = new GradientDrawable();
+        normal.setColor(Color.parseColor("#33FFFFFF"));
+        normal.setCornerRadius(dp(20));
+        StateListDrawable states = new StateListDrawable();
+        states.addState(new int[]{android.R.attr.state_focused}, focused);
+        states.addState(new int[]{}, normal);
+        return states;
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
     }
 
     private Bitmap decode(byte[] bytes) {

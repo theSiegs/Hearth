@@ -17,7 +17,8 @@ import java.util.Map;
 /**
  * Remote button remapping, run from the accessibility service (the only place that sees remote keys
  * before apps and the system do). Stored as JSON: {"keyCode": {"short": action, "long": action}},
- * where an action is {"type": ..., "target": ..., "label": ...}.
+ * where an action is {"type": ..., "target": ..., "label": ...}. Type "ha" runs a Home Assistant entity (target is
+ * its entity ID) through the panel's token.
  */
 final class ButtonMapper {
     static final String MAPPINGS_KEY = "button_mappings";
@@ -115,6 +116,19 @@ final class ButtonMapper {
             case "sleep":
                 service.sleepNow();
                 return;
+            case "ha": {
+                // A Home Assistant entity: toggled, or turned on for scenes and scripts
+                String haService = HaApi.serviceFor(target.contains(".") ? target.substring(0, target.indexOf('.')) : "");
+                if (haService == null) return;
+                String[] parts = haService.split("\\.", 2);
+                HaApi.EXECUTOR.execute(() -> {
+                    try {
+                        HaApi.callService(service, parts[0], parts[1], new JSONObject().put("entity_id", target));
+                    } catch (JSONException ignored) {
+                    }
+                });
+                return;
+            }
             default:
                 return;
         }
