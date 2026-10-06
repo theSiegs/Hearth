@@ -102,9 +102,9 @@ For contributors. Checked on a Google TV (Android 14) in October 2026; apps chan
 |:---|:---|:---|:---|
 | Netflix | `com.netflix.ninja` | Spoken text through Hearth voice: "Choose a Profile", then "<name>", "N of M profiles" as focus moves | Down/Up until the spoken name matches, then OK |
 | Disney+ | `com.disney.disneyplus` | Tiles labelled "Access <name>'s profile" | Clicks the tile |
-| Apple TV | `com.apple.atve.androidtv.appletv` | With screen-reader mode on: "Who's Watching?" and a Button per profile | Clicks the button; falls back to Right/Left and OK |
+| Apple TV | `com.apple.atve.androidtv.appletv` | With screen-reader mode on: "Who's Watching?" and a Button per profile (the first also reads the heading; the name is the last part) | Clicks the button; falls back to Right/Left and OK |
 | HBO Max | `com.wbd.stream` | With screen-reader mode on (and an accessibility *tool*): announcements like "Who's Watching?. <name> Button, 1 of 4" | Right/Left until the announced name matches, then OK |
-| Paramount+ | `com.cbs.ott` | `profile_avatar` views labelled with the profile name | Clicks the tile |
+| Paramount+ | `com.cbs.ott` | Tiles tagged `profile_avatar` (a plain tag since October 2026, `com.cbs.ott:id/profile_avatar` before) with the name on the tile or its first child | Clicks the tile |
 
 To add an app: find what its picker exposes (`adb shell uiautomator dump`, or the accessibility events it sends
 with screen-reader mode on), add its package to `ProfilePairing.APPS`, and teach `ProfilePairingService` to spot
