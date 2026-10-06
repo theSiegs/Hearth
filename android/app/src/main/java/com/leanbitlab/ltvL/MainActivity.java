@@ -152,7 +152,53 @@ public class MainActivity extends FlutterActivity {
                 case "openProfileChooser" -> result.success(openProfileChooser());
                 case "isGoogleTv" -> result.success(isGoogleTv());
                 case "getSupportedAbis" -> result.success(java.util.Arrays.asList(Build.SUPPORTED_ABIS));
-                case "isKidsProfile" -> result.success(isKidsProfile());
+                case "isKidsProfile" -> {
+                    boolean kids = isKidsProfile();
+                    ProfilePairing.rememberHearthProfile(
+                            this, LauncherAccessibilityService.getActiveProfileName(this), kids);
+                    result.success(kids);
+                }
+                case "getProfilePairingApps" -> {
+                    List<Map<String, Object>> apps = new ArrayList<>();
+                    for (String pkg : ProfilePairing.APPS) {
+                        Map<String, Object> app = new HashMap<>();
+                        app.put("packageName", pkg);
+                        try {
+                            ApplicationInfo info = getPackageManager().getApplicationInfo(pkg, 0);
+                            app.put("label", getPackageManager().getApplicationLabel(info).toString());
+                            app.put("installed", true);
+                        } catch (PackageManager.NameNotFoundException e) {
+                            app.put("label", ProfilePairing.displayName(pkg));
+                            app.put("installed", false);
+                        }
+                        app.put("seenProfiles", ProfilePairing.getSeenNames(this, pkg));
+                        apps.add(app);
+                    }
+                    result.success(apps);
+                }
+                case "getProfilePairingChoices" -> {
+                    String pkg = call.arguments();
+                    List<String> seen = ProfilePairing.getSeenNames(this, pkg);
+                    List<String> hearthProfiles = ProfilePairing.getHearthProfiles(this);
+                    String active = LauncherAccessibilityService.getActiveProfileName(this);
+                    if (active != null && !hearthProfiles.contains(active)) hearthProfiles.add(active);
+                    List<Map<String, Object>> choices = new ArrayList<>();
+                    for (String hearth : hearthProfiles) {
+                        Map<String, Object> choice = new HashMap<>();
+                        choice.put("hearthProfile", hearth);
+                        choice.put("kids", ProfilePairing.isKids(this, hearth));
+                        choice.put("mode", ProfilePairing.getMode(this, pkg, hearth));
+                        choice.put("chosenProfile", ProfilePairing.getChosenProfile(this, pkg, hearth));
+                        choice.put("autoMatch", ProfilePairing.bestMatch(hearth, seen));
+                        choices.add(choice);
+                    }
+                    result.success(choices);
+                }
+                case "setProfilePairingChoice" -> {
+                    ProfilePairing.setChoice(this, call.argument("packageName"), call.argument("hearthProfile"),
+                            call.argument("mode"), call.argument("appProfile"));
+                    result.success(null);
+                }
                 case "getHaNotificationsEnabled" -> result.success(LauncherAccessibilityService.isHaNotificationsEnabled(this));
                 case "setHaNotificationsEnabled" -> {
                     Boolean enabled = call.arguments();

@@ -68,6 +68,15 @@ public class ProfilePairingService extends AccessibilityService {
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private Session mSession;
     private View mCover;
+    private TextView mCoverTitle;
+    private View mBanner;
+
+    /** How a launch ended: a profile was picked; the picker is left to the user; or nothing to tell them. */
+    private static final int PICKED = 0;
+    private static final int NO_MATCH = 1;
+    private static final int QUIET = 2;
+    private static final long NO_MATCH_MESSAGE_MS = 2_000;
+    private static final long BANNER_MS = 8_000;
 
     /** One app launch. Main thread only. */
     private static final class Session {
@@ -88,6 +97,7 @@ public class ProfilePairingService extends AccessibilityService {
         String pendingName;
         int probes;
         boolean appShown;
+        String pickedName;
 
         Session(String pkg, String hearthProfile) {
             this.pkg = pkg;
@@ -111,6 +121,8 @@ public class ProfilePairingService extends AccessibilityService {
         if (service == null || packageName == null || !ProfilePairing.supports(packageName)) return;
         String hearthProfile = LauncherAccessibilityService.getActiveProfileName(context);
         if (hearthProfile == null || hearthProfile.isEmpty()) return;
+        ProfilePairing.rememberHearthProfile(context, hearthProfile, null);
+        if (ProfilePairing.MODE_PICKER.equals(ProfilePairing.getMode(context, packageName, hearthProfile))) return;
         if (ProfilePairing.NETFLIX.equals(packageName) && !isVoiceDefault(context)) {
             Log.i(TAG, "Netflix skipped: Hearth's voice isn't the text-to-speech engine");
             return;
@@ -138,6 +150,7 @@ public class ProfilePairingService extends AccessibilityService {
         if (sInstance == this) sInstance = null;
         mHandler.removeCallbacksAndMessages(null);
         hideCover();
+        hideBanner();
         super.onDestroy();
     }
 
@@ -173,10 +186,10 @@ public class ProfilePairingService extends AccessibilityService {
         if (mSession == null) setMode(false, false);
     };
 
-    private final Runnable mTimeout = () -> finish(false, "timed out");
+    private final Runnable mTimeout = () -> finish(NO_MATCH, "timed out");
 
     private void begin(String pkg, String hearthProfile) {
-        if (mSession != null) finish(false, "replaced");
+        if (mSession != null) finish(QUIET, "replaced");
         mHandler.removeCallbacks(mGoIdle);
         hideCover();
         mSession = new Session(pkg, hearthProfile);
@@ -185,7 +198,7 @@ public class ProfilePairingService extends AccessibilityService {
         Log.i(TAG, "Watching " + pkg + " for " + hearthProfile);
     }
 
-    private void finish(boolean picked, String why) {
+    private void finish(int outcome, String why) {
         Session s = mSession;
         if (s == null) return;
         mSession = null;
@@ -194,8 +207,19 @@ public class ProfilePairingService extends AccessibilityService {
         mHandler.removeCallbacks(mScan);
         mHandler.removeCallbacks(mDeliverPending);
         mHandler.removeCallbacks(mMaxProbe);
-        Log.i(TAG, (picked ? "Picked" : "Stopped") + " in " + s.pkg + ": " + why);
-        if (picked) mHandler.postDelayed(this::hideCover, COVER_AFTER_PICK_MS); else hideCover();
+        Log.i(TAG, (outcome == PICKED ? "Picked" : "Stopped") + " in " + s.pkg + ": " + why);
+        if (outcome == PICKED) {
+            mHandler.postDelayed(() -> {
+                hideCover();
+                announceMatch(s);
+            }, COVER_AFTER_PICK_MS);
+        } else if (outcome == NO_MATCH && s.pickerSeen && mCoverTitle != null) {
+            // Say why the picker is staying up, then get out of the way.
+            mCoverTitle.setText("No matching profile for " + s.hearthProfile + ". Choose one on the next screen.");
+            mHandler.postDelayed(this::hideCover, NO_MATCH_MESSAGE_MS);
+        } else {
+            hideCover();
+        }
         mHandler.postDelayed(mGoIdle, IDLE_AFTER_MS);
     }
 
@@ -222,7 +246,7 @@ public class ProfilePairingService extends AccessibilityService {
             if (s.pickerSeen && type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && eventPkg != null
                     && !eventPkg.toString().startsWith(getPackageName())
                     && !"com.android.systemui".contentEquals(eventPkg)) {
-                finish(false, "left for " + eventPkg);
+                finish(QUIET, "left for " + eventPkg);
             }
             return;
         }
@@ -322,7 +346,7 @@ public class ProfilePairingService extends AccessibilityService {
             pickerFound();
             rest = text.substring(watching + "watching?".length()).replaceFirst("^[\\s.,]+", "");
         } else if (!s.pickerSeen) {
-            if (s.probes > 0) finish(false, "HBO Max opened without its picker");
+            if (s.probes > 0) finish(QUIET, "HBO Max opened without its picker");
             return;
         }
         Matcher item = MAX_ITEM.matcher(rest);
@@ -376,11 +400,12 @@ public class ProfilePairingService extends AccessibilityService {
         String target = ProfilePairing.choose(this, s.pkg, s.hearthProfile, known);
         if (target != null && ProfilePairing.normalize(target).equals(ProfilePairing.normalize(name))) {
             pressKey(0);
-            finish(true, "chose " + name);
+            s.pickedName = name;
+            finish(PICKED, "chose " + name);
             return;
         }
         if (complete && target == null) {
-            finish(false, "no profile matches " + s.hearthProfile + " in " + s.names.keySet());
+            finish(NO_MATCH, "no profile matches " + s.hearthProfile + " in " + s.names.keySet());
             return;
         }
         Integer targetIndex = target != null ? s.names.get(target) : null;
@@ -407,7 +432,7 @@ public class ProfilePairingService extends AccessibilityService {
 
     private void step(Session s) {
         if (s.reversals > 2 || ++s.steps > MAX_STEPS) {
-            finish(false, "couldn't find the profile for " + s.hearthProfile);
+            finish(NO_MATCH, "couldn't find the profile for " + s.hearthProfile);
             return;
         }
         s.waitingForStep = true;
@@ -450,7 +475,7 @@ public class ProfilePairingService extends AccessibilityService {
         collect(s.pkg, root, tiles, pickerTitle, new int[1], 0);
         if (tiles.isEmpty() || (ProfilePairing.APPLE_TV.equals(s.pkg) && !pickerTitle[0])) {
             if (s.checkingClick || s.clickTried) {
-                if (s.pickerSeen) finish(true, "picker closed");
+                if (s.pickerSeen) finish(PICKED, "picker closed");
             }
             return;
         }
@@ -460,7 +485,7 @@ public class ProfilePairingService extends AccessibilityService {
         ProfilePairing.rememberNames(this, s.pkg, names, true);
         String target = ProfilePairing.choose(this, s.pkg, s.hearthProfile, names);
         if (target == null) {
-            finish(false, "no profile matches " + s.hearthProfile + " in " + names);
+            finish(NO_MATCH, "no profile matches " + s.hearthProfile + " in " + names);
             return;
         }
         int targetIndex = names.indexOf(target);
@@ -470,6 +495,7 @@ public class ProfilePairingService extends AccessibilityService {
                     && tiles.get(targetIndex).clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
                 // Done if the picker goes away; otherwise fall back to the D-pad.
                 Log.i(TAG, "Clicked " + target + " of " + names);
+                s.pickedName = target;
                 s.checkingClick = true;
                 mHandler.postDelayed(() -> {
                     Session now = mSession;
@@ -490,13 +516,14 @@ public class ProfilePairingService extends AccessibilityService {
         }
         if (focused == targetIndex) {
             pressKey(0);
-            finish(true, "chose " + target);
+            s.pickedName = target;
+            finish(PICKED, "chose " + target);
         } else if (focused >= 0 && ++s.steps <= MAX_STEPS) {
             pressKey(targetIndex > focused ? 1 : -1);
             s.scanScheduled = true;
             mHandler.postDelayed(mScan, SCAN_DELAY_MS * 2);
         } else {
-            finish(false, "couldn't move to " + target);
+            finish(NO_MATCH, "couldn't move to " + target);
         }
     }
 
@@ -607,6 +634,7 @@ public class ProfilePairingService extends AccessibilityService {
                     PixelFormat.TRANSLUCENT);
             getSystemService(WindowManager.class).addView(box, params);
             mCover = box;
+            mCoverTitle = title;
         } catch (Exception e) {
             Log.w(TAG, "Cover card failed", e);
         }
@@ -619,6 +647,52 @@ public class ProfilePairingService extends AccessibilityService {
         } catch (Exception ignored) {
         }
         mCover = null;
+        mCoverTitle = null;
+    }
+
+    /** The first time Hearth picks a profile by name match for an app, says which, and where to change it. */
+    private void announceMatch(Session s) {
+        if (s.pickedName == null
+                || !ProfilePairing.MODE_AUTO.equals(ProfilePairing.getMode(this, s.pkg, s.hearthProfile))
+                || !ProfilePairing.announceOnce(this, s.pkg, s.hearthProfile)) {
+            return;
+        }
+        hideBanner();
+        try {
+            TextView text = new TextView(this);
+            text.setText("Hearth opened " + appLabel(s.pkg) + " as “" + s.pickedName + "” for "
+                    + s.hearthProfile + ". To change it: Hearth Settings → Profile Pairing.");
+            text.setTextColor(Color.WHITE);
+            text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+            text.setPadding(dp(24), dp(14), dp(24), dp(14));
+            GradientDrawable background = new GradientDrawable();
+            background.setCornerRadius(dp(12));
+            background.setColor(Color.parseColor("#E6202024"));
+            background.setStroke(dp(2), accentColor());
+            text.setBackground(background);
+
+            WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                    PixelFormat.TRANSLUCENT);
+            params.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+            params.y = dp(48);
+            getSystemService(WindowManager.class).addView(text, params);
+            mBanner = text;
+            mHandler.postDelayed(this::hideBanner, BANNER_MS);
+        } catch (Exception e) {
+            Log.w(TAG, "Match notice failed", e);
+        }
+    }
+
+    private void hideBanner() {
+        if (mBanner == null) return;
+        try {
+            getSystemService(WindowManager.class).removeView(mBanner);
+        } catch (Exception ignored) {
+        }
+        mBanner = null;
     }
 
     private String appLabel(String pkg) {
