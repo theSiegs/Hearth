@@ -253,6 +253,12 @@ class SettingsService extends ChangeNotifier {
     _backButtonAction = _sharedPreferences.getString(_backButtonActionKey) ?? BACK_BUTTON_ACTION_NOTHING;
     _dateFormat = _sharedPreferences.getString(_dateFormatKey) ?? defaultDateFormat;
     _timeFormat = _sharedPreferences.getString(_timeFormatKey) ?? defaultTimeFormat;
+    // The old defaults ("Tuesday 6", "16:23") got saved along with profile layouts and backups without anyone
+    // choosing them: treat that pair as never chosen, so the US default ("Tue, Oct 6", "4:23 PM") applies.
+    if (_dateFormat == "EEEE d" && _timeFormat == "H:mm") {
+      _dateFormat = defaultDateFormat;
+      _timeFormat = defaultTimeFormat;
+    }
     _dataUsagePeriod = _sharedPreferences.getString(_dataUsagePeriodKey) ?? DATA_USAGE_DAILY;
     _showDataWidgetInStatusBar = _sharedPreferences.getBool(_showDataWidgetInStatusBarKey) ?? false;
     _showNetworkIndicatorInStatusBar = _sharedPreferences.getBool(_showNetworkIndicatorInStatusBarKey) ?? true;
