@@ -37,6 +37,7 @@ import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 
 import 'package:flauncher/widgets/settings/companion_apps_page.dart';
+import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
 import 'focusable_settings_tile.dart';
 
 class SettingsPanelPage extends StatelessWidget {
@@ -110,6 +111,11 @@ class SettingsPanelPage extends StatelessWidget {
                   leading: const Icon(Icons.accessibility_new),
                   title: Text(localizations.accessibility, style: Theme.of(context).textTheme.bodyMedium),
                   onPressed: () => Navigator.of(context).pushNamed(AccessibilityPage.routeName),
+                ),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.checklist),
+                  title: Text("Setup checklist", style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => Navigator.of(context).pushNamed(SetupChecklistPage.routeName),
                 ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.settings_remote_outlined),
