@@ -284,6 +284,26 @@ void main() {
       expect(notificationsService.notifications.length, 2);
     });
 
+    test('permanent notifications with no title or text are never listed or counted', () async {
+      when(mockChannel.checkNotificationListenerPermission())
+          .thenAnswer((_) async => true);
+      when(mockChannel.getActiveNotifications())
+          .thenAnswer((_) async => [
+                // Google TV's own background entries: permanent and blank
+                {'packageName': 'com.google.android.apps.tv.launcherx', 'key': 'gtv_1', 'title': '', 'text': '', 'isClearable': false},
+                {'packageName': 'com.google.android.apps.tv.launcherx', 'key': 'gtv_2', 'isClearable': false},
+                {'packageName': 'com.google.android.youtube', 'key': 'yt_1', 'title': 'Video', 'isClearable': true},
+              ]);
+
+      notificationsService = NotificationsService(mockChannel);
+      while (!notificationsService.initialized) {
+        await Future.delayed(Duration.zero);
+      }
+
+      expect(notificationsService.notifications.length, 1);
+      expect(notificationsService.notifications.first.packageName, 'com.google.android.youtube');
+    });
+
     test('blockPackage and unblockPackage filters out notifications from blocked apps', () async {
       when(mockChannel.checkNotificationListenerPermission())
           .thenAnswer((_) async => true);
