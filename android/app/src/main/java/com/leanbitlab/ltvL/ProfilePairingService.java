@@ -685,7 +685,7 @@ public class ProfilePairingService extends AccessibilityService {
             LinearLayout box = new LinearLayout(c);
             box.setOrientation(LinearLayout.VERTICAL);
             box.setGravity(Gravity.CENTER);
-            box.setBackgroundColor(Color.parseColor("#F20E0E12"));
+            box.setBackgroundColor(Color.parseColor("#FF0E0E12"));  // fully opaque: the picker moving underneath shouldn't show
 
             ProgressBar spinner = new ProgressBar(c);
             box.addView(spinner, new LinearLayout.LayoutParams(dp(48), dp(48)));
