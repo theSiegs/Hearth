@@ -227,6 +227,17 @@ public class MainActivity extends FlutterActivity {
                 case "requestOverlayPermission" -> result.success(requestOverlayPermission());
                 case "checkAccessibilityPermission" -> result.success(isAccessibilityServiceEnabled());
                 case "requestAccessibilityPermission" -> result.success(openAccessibilitySettings());
+                case "getHomeButtonFixStatus" -> {
+                    Map<String, Object> status = new HashMap<>();
+                    status.put("enabled", isAccessibilityServiceEnabled());
+                    status.put("seenBefore", LauncherAccessibilityService.wasHomeButtonFixSeen(this));
+                    status.put("restricted", mayHaveRestrictedSettings());
+                    result.success(status);
+                }
+                case "forgetHomeButtonFix" -> {
+                    LauncherAccessibilityService.forgetHomeButtonFix(this);
+                    result.success(null);
+                }
                 case "checkWatchNextPermission" -> result.success(checkWatchNextPermission());
                 case "requestWatchNextPermission" -> {
                     if (checkWatchNextPermission()) {
@@ -1656,6 +1667,24 @@ public class MainActivity extends FlutterActivity {
             }
         }
         return false;
+    }
+
+    /**
+     * Android 13+ marks an app installed from a downloaded APK (as the in-app updater does) as restricted:
+     * its accessibility service can't be switched on, from the Settings screen or by `settings put`,
+     * until `adb shell appops set <package> ACCESS_RESTRICTED_SETTINGS allow`. Apps can't read that app op
+     * (it needs a system permission), so this only says whether the last install came from a file, which is
+     * when Android applies the restriction.
+     */
+    private boolean mayHaveRestrictedSettings() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false;
+        try {
+            int source = getPackageManager().getInstallSourceInfo(getPackageName()).getPackageSource();
+            return source == PackageInstaller.PACKAGE_SOURCE_LOCAL_FILE
+                    || source == PackageInstaller.PACKAGE_SOURCE_DOWNLOADED_FILE;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private boolean openAccessibilitySettings() {
