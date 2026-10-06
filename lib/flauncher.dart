@@ -209,7 +209,8 @@ class _FLauncherState extends State<FLauncher> {
     }
 
     // Empty sections (often "Non-TV Apps") are left out below the dock; they'd only say "This category is empty".
-    // With a single section left, its heading is dropped too.
+    // With a single section left, its heading is dropped too. Everything below the dock wraps as a grid,
+    // so a "row" section doesn't become one long sideways-scrolling strip.
     final List<LauncherSection> belowDock =
         sections.where((s) => s != favorites && !(s is Category && s.applications.isEmpty)).toList();
 
@@ -241,7 +242,8 @@ class _FLauncherState extends State<FLauncher> {
         ),
         Focus(
           focusNode: _belowDockFocusNode,
-          child: _sections(belowDock, firstCategoryAlreadyFound: true, showTitles: belowDock.whereType<Category>().length > 1),
+          child: _sections(belowDock, firstCategoryAlreadyFound: true,
+              showTitles: belowDock.whereType<Category>().length > 1, allGrids: true),
         ),
       ],
     );
@@ -253,6 +255,7 @@ class _FLauncherState extends State<FLauncher> {
     int continueWatchingOrder = 0,
     bool firstCategoryAlreadyFound = false,
     bool showTitles = true,
+    bool allGrids = false,
   }) {
     List<Widget> children = [];
     bool firstCategoryFound = firstCategoryAlreadyFound;
@@ -282,7 +285,7 @@ class _FLauncherState extends State<FLauncher> {
       bool isFirstSection = !firstCategoryFound;
       if (isFirstSection) firstCategoryFound = true;
 
-      switch (category.type) {
+      switch (allGrids ? CategoryType.grid : category.type) {
         case CategoryType.row:
           categoryWidget = CategoryRow(
               key: sectionKey,

@@ -194,6 +194,9 @@ void main() {
 
     expect(find.text("TV Apps"), findsOneWidget);
     expect(find.text("Games"), findsOneWidget);
+    // "Games" is a row section, but below the dock it wraps as a grid; the dock is the only row.
+    expect(find.byType(AppsGrid), findsNWidgets(2));
+    expect(find.byType(CategoryRow), findsOneWidget);
   });
 
   testWidgets("Dock falls back to the classic layout while Favorites is empty", (tester) async {
