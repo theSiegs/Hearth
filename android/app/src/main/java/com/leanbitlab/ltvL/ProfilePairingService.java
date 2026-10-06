@@ -129,14 +129,25 @@ public class ProfilePairingService extends AccessibilityService {
     /** Called by Hearth just before it opens {@code packageName}. */
     static void onAppLaunching(Context context, String packageName) {
         ProfilePairingService service = sInstance;
-        if (service == null || packageName == null || !ProfilePairing.supports(packageName)
-                || !ProfilePairing.isAppEnabled(context, packageName)) {
+        if (packageName == null || !ProfilePairing.supports(packageName)) return;
+        if (service == null) {
+            Log.i(TAG, packageName + " skipped: Profile Pairing isn't running");
+            return;
+        }
+        if (!ProfilePairing.isAppEnabled(context, packageName)) {
+            Log.i(TAG, packageName + " skipped: turned off for this app");
             return;
         }
         String hearthProfile = LauncherAccessibilityService.getActiveProfileName(context);
-        if (hearthProfile == null || hearthProfile.isEmpty()) return;
+        if (hearthProfile == null || hearthProfile.isEmpty()) {
+            Log.i(TAG, packageName + " skipped: the Google TV profile isn't known");
+            return;
+        }
         ProfilePairing.rememberHearthProfile(context, hearthProfile, null);
-        if (ProfilePairing.MODE_PICKER.equals(ProfilePairing.getMode(context, packageName, hearthProfile))) return;
+        if (ProfilePairing.MODE_PICKER.equals(ProfilePairing.getMode(context, packageName, hearthProfile))) {
+            Log.i(TAG, packageName + " skipped: " + hearthProfile + " always gets the picker");
+            return;
+        }
         if (ProfilePairing.NETFLIX.equals(packageName) && !isVoiceDefault(context)) {
             Log.i(TAG, "Netflix skipped: Hearth's voice isn't the text-to-speech engine");
             return;
@@ -575,9 +586,14 @@ public class ProfilePairingService extends AccessibilityService {
                 }
                 break;
             case ProfilePairing.PARAMOUNT:
+                // "com.cbs.ott:id/profile_avatar" with the name on it (2025), or a Compose "profile_avatar" tile
+                // with the name on a child (October 2026).
                 String id = node.getViewIdResourceName();
-                if (id != null && id.endsWith("/profile_avatar") && desc != null && desc.length() > 0) {
-                    tiles.add(new Tile(desc.toString().trim(), node, clickableOf(node)));
+                if (id != null && (id.equals("profile_avatar") || id.endsWith("/profile_avatar"))) {
+                    String name = desc != null && desc.length() > 0 ? desc.toString().trim() : firstLabel(node, 0);
+                    if (name != null && !name.toLowerCase(Locale.ROOT).contains("add profile")) {
+                        tiles.add(new Tile(name, node, clickableOf(node)));
+                    }
                 }
                 break;
             case ProfilePairing.APPLE_TV:
@@ -585,13 +601,29 @@ public class ProfilePairingService extends AccessibilityService {
                 CharSequence cls = node.getClassName();
                 if (cls != null && cls.toString().endsWith("Button") && !label.isEmpty()
                         && !label.toLowerCase(Locale.ROOT).contains("add profile")) {
-                    tiles.add(new Tile(label, node, clickableOf(node)));
+                    // The first tile also reads the heading: "Who's Watching?, Select an account or sign in, Alex".
+                    String[] parts = label.split(",\\s*");
+                    tiles.add(new Tile(parts[parts.length - 1].trim(), node, clickableOf(node)));
                 }
                 break;
         }
         for (int i = 0; i < node.getChildCount(); i++) {
             collect(pkg, node.getChild(i), tiles, pickerTitle, visited, depth + 1);
         }
+    }
+
+    /** The first content description or text under a node. */
+    private static String firstLabel(AccessibilityNodeInfo node, int depth) {
+        if (node == null || depth > 4) return null;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo child = node.getChild(i);
+            if (child == null) continue;
+            CharSequence label = child.getContentDescription() != null ? child.getContentDescription() : child.getText();
+            if (label != null && label.toString().trim().length() > 0) return label.toString().trim();
+            String deeper = firstLabel(child, depth + 1);
+            if (deeper != null) return deeper;
+        }
+        return null;
     }
 
     private static AccessibilityNodeInfo clickableOf(AccessibilityNodeInfo node) {
