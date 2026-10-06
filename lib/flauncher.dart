@@ -22,6 +22,7 @@ import 'dart:ui' as ui;
 import 'package:collection/collection.dart';
 import 'package:flauncher/actions.dart';
 import 'package:flauncher/custom_traversal_policy.dart';
+import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flauncher/providers/wallpaper_service.dart';
@@ -151,6 +152,9 @@ class _FLauncherState extends State<FLauncher> {
       ),
       OpenSettingsIntent: CallbackAction<OpenSettingsIntent>(
         onInvoke: (_) => _appBarKey.currentState?.openSettings(),
+      ),
+      OpenHaPanelIntent: CallbackAction<OpenHaPanelIntent>(
+        onInvoke: (_) => FLauncherChannel().openHaPanel(),
       ),
     },
     child: FocusTraversalGroup(

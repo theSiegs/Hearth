@@ -92,6 +92,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".HaPanelActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@style/HaPanelTheme" />
+
         <service
             android:name=".ClockScreensaverService"
             android:exported="true"

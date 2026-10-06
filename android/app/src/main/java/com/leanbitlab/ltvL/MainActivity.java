@@ -166,6 +166,20 @@ public class MainActivity extends FlutterActivity {
                     result.success(LauncherAccessibilityService.showHaNotification(test));
                 }
                 case "getLocalIpAddress" -> result.success(getLocalIpAddress());
+                case "getHaPanelConfig" -> {
+                    Map<String, Object> config = new HashMap<>();
+                    config.put("hasToken", HaPanelActivity.hasToken(this));
+                    config.put("dashboard", HaPanelActivity.getDashboard(this));
+                    result.success(config);
+                }
+                case "setHaPanelConfig" -> {
+                    HaPanelActivity.setConfig(this, call.argument("token"), call.argument("dashboard"));
+                    result.success(null);
+                }
+                case "openHaPanel" -> {
+                    startActivity(new Intent(this, HaPanelActivity.class));
+                    result.success(null);
+                }
                 case "getHaStatusConfig" -> {
                     android.content.SharedPreferences prefs =
                             getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, MODE_PRIVATE);

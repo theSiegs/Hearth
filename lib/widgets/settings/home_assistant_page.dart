@@ -16,8 +16,10 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../flauncher_channel.dart';
+import '../../providers/settings_service.dart';
 import '../rounded_switch_list_tile.dart';
 import 'focusable_settings_tile.dart';
 
@@ -41,11 +43,17 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
   final TextEditingController _url = TextEditingController();
   final TextEditingController _webhook = TextEditingController();
   String? _statusSaved;
+  final TextEditingController _panelToken = TextEditingController();
+  final TextEditingController _panelDashboard = TextEditingController();
+  bool _panelHasToken = false;
+  String? _panelSaved;
 
   @override
   void dispose() {
     _url.dispose();
     _webhook.dispose();
+    _panelToken.dispose();
+    _panelDashboard.dispose();
     super.dispose();
   }
 
@@ -61,6 +69,7 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
       final ip = await _channel.getLocalIpAddress();
       final config = await _channel.getHaStatusConfig();
       final access = await _channel.checkNotificationListenerPermission();
+      final panel = await _channel.getHaPanelConfig();
       if (mounted) {
         setState(() {
           _enabled = enabled;
@@ -68,6 +77,8 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
           _url.text = config["url"] as String? ?? "";
           _webhook.text = config["webhookId"] as String? ?? "";
           _notificationAccess = access;
+          _panelHasToken = panel["hasToken"] == true;
+          _panelDashboard.text = panel["dashboard"] as String? ?? "";
         });
       }
     } catch (_) {}
@@ -84,6 +95,21 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
     await _channel.setHaStatusConfig(url.isEmpty ? null : url, webhook.isEmpty ? null : webhook);
     if (mounted) {
       setState(() => _statusSaved = url.isEmpty || webhook.isEmpty ? "Status reporting is off" : "Saved: reporting to Home Assistant");
+    }
+  }
+
+  /// Saves the panel's dashboard path, and the token if one was typed (the saved token is never shown again).
+  Future<void> _savePanel() async {
+    final token = _panelToken.text.trim();
+    await _channel.setHaPanelConfig(token: token.isEmpty ? null : token, dashboard: _panelDashboard.text.trim());
+    _panelToken.clear();
+    final panel = await _channel.getHaPanelConfig();
+    if (mounted) {
+      setState(() {
+        _panelHasToken = panel["hasToken"] == true;
+        _panelDashboard.text = panel["dashboard"] as String? ?? "";
+        _panelSaved = _panelHasToken ? "Saved" : "Saved. Add an access token to sign in.";
+      });
     }
   }
 
@@ -124,6 +150,58 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Text(_testResult!, style: small?.copyWith(color: Colors.orangeAccent)),
                   ),
+                const Divider(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                  child: Text("Home Assistant panel", style: Theme.of(context).textTheme.titleMedium),
+                ),
+                Selector<SettingsService, bool>(
+                  selector: (_, settings) => settings.haPanelEnabled,
+                  builder: (context, panelEnabled, _) => RoundedSwitchListTile(
+                    value: panelEnabled,
+                    onChanged: (enabled) => context.read<SettingsService>().setHaPanelEnabled(enabled),
+                    title: const Text("Right at the right edge opens the panel"),
+                    secondary: const Icon(Icons.dashboard_outlined),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: _panelToken,
+                        obscureText: true,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          labelText: "Long-lived access token",
+                          hintText: _panelHasToken ? "Saved (type a new one to replace it)" : null,
+                        ),
+                      ),
+                      TextField(
+                        controller: _panelDashboard,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _savePanel(),
+                        decoration: const InputDecoration(labelText: "Dashboard", hintText: "hearth-tv/family_room"),
+                      ),
+                    ],
+                  ),
+                ),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.save_outlined),
+                  title: Text("Save panel settings", style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: _savePanel,
+                ),
+                if (_panelSaved != null)
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: Text(_panelSaved!, style: small)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    "On for this profile only. The panel shows a dashboard from the address below, signed in with "
+                    "the token. Create the token in Home Assistant while logged in as a non-admin user made for "
+                    "this TV (profile page, Security tab).",
+                    style: small,
+                  ),
+                ),
                 const Divider(),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),

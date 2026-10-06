@@ -33,4 +33,16 @@
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
     </style>
+    <!-- The Home Assistant panel: a dark, translucent window on the right edge (dark so the
+         dashboard follows prefers-color-scheme: dark). -->
+    <style name="HaPanelTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@style/HaPanelAnimation</item>
+    </style>
+    <style name="HaPanelAnimation">
+        <item name="android:activityOpenEnterAnimation">@anim/ha_panel_in</item>
+        <item name="android:activityCloseExitAnimation">@anim/ha_panel_out</item>
+    </style>
 </resources>
