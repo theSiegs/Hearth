@@ -74,7 +74,7 @@ Deleted `android/app/src/main/java/me/efesser/flauncher/` — a dead duplicate o
 - Native additions in `android/app/src/main/java/com/leanbitlab/ltvL/MainActivity.java`: `checkInstallPermission`, `requestInstallPermission`, `installApk` (via `FileProvider`, since direct `file://` URIs don't work across the scoped-storage boundary on modern Android).
 - New `<provider>` (`FileProvider`) + `android/app/src/main/res/xml/provider_paths.xml` in the manifest, pointing at the app's external-files `updates/` directory (matches where `UpdateService` downloads the APK).
 - UI: `lib/widgets/settings/update_dialog.dart`, reachable from Settings → "Check for Updates" (shows changelog, download progress, install button).
-- This mirrors the GitHub-Releases-as-update-channel model already used for Alex's SmartTube/YouTube+ fork, just implemented directly against the GitHub API instead of a separate update-manifest file.
+- This mirrors the GitHub-Releases-as-update-channel model already used for Alex's SmartTube fork (HearthTube, formerly YouTube+), just implemented directly against the GitHub API instead of a separate update-manifest file.
 
 ## Build/test verification (this was NOT skipped)
 
