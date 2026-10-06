@@ -330,6 +330,12 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
     expect(find.byType(SettingsPanelPage), findsOneWidget);
+
+    // Right with nothing to the right closes Settings and returns to the same app.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsPanelPage), findsNothing);
+    expect(isAppCardFocused(tester, "me.efesser.flauncher.1"), isTrue);
   });
 
   testWidgets("Pressing select on app opens ApplicationInfoPanel", (tester) async {
