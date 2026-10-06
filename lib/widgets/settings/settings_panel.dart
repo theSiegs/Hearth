@@ -49,6 +49,7 @@ import 'package:flauncher/widgets/settings/continue_watching_max_items_page.dart
 import 'package:flauncher/widgets/settings/continue_watching_apps_page.dart';
 import 'package:flauncher/models/app.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class SettingsPanel extends StatefulWidget {
   final String? initialRoute;
@@ -79,7 +80,11 @@ class _SettingsPanelState extends State<SettingsPanel> {
             SidePanelDialog(
               width: 350,
               isRightSide: false,
-              child: Navigator(
+              child: Focus(
+                canRequestFocus: false,
+                skipTraversal: true,
+                onKeyEvent: _closeOnRightAtEdge,
+                child: Navigator(
                 key: _navigatorKey,
                 initialRoute: widget.initialRoute ?? SettingsPanelPage.routeName,
                 onGenerateRoute: (settings) {
@@ -152,10 +157,25 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 },
               ),
             ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  /// Right moves within the panel when there's something to the right; otherwise it closes the
+  /// panel, and focus goes back to the home screen where it was. Pages that use Right themselves
+  /// (Applications' tabs, reordering sections) get the key first.
+  KeyEventResult _closeOnRightAtEdge(FocusNode node, KeyEvent event) {
+    if (event.logicalKey != LogicalKeyboardKey.arrowRight || event is KeyUpEvent) {
+      return KeyEventResult.ignored;
+    }
+    final focused = FocusManager.instance.primaryFocus;
+    if (event is KeyDownEvent && (focused == null || !focused.focusInDirection(TraversalDirection.right))) {
+      Navigator.of(context).pop();
+    }
+    return KeyEventResult.handled;
   }
 }
 
