@@ -49,6 +49,16 @@ class SettingsPanelPage extends StatelessWidget {
 
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 4, bottom: 8),
+          child: Image.asset(
+            "assets/logo.png",
+            key: const Key("settings_logo"),
+            height: 56,
+            filterQuality: FilterQuality.medium,
+            semanticLabel: "Hearth",
+          ),
+        ),
         Text(localizations.settings, style: Theme.of(context).textTheme.titleLarge),
         const Divider(),
         Expanded(

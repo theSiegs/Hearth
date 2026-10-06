@@ -49,6 +49,20 @@ void main() {
     binding.platformDispatcher.textScaleFactorTestValue = 0.8;
   });
 
+  testWidgets("shows the Hearth logo above the title", (tester) async {
+    final settingsService = MockSettingsService();
+    final appsService = MockAppsService();
+    when(appsService.launcherSections).thenReturn([]);
+    when(appsService.applications).thenReturn([]);
+    when(settingsService.appHighlightAnimationEnabled).thenReturn(true);
+
+    await _pumpWidgetWithProviders(tester, settingsService, appsService);
+
+    expect(find.byKey(Key("settings_logo")), findsOneWidget);
+    expect(tester.getTopLeft(find.byKey(Key("settings_logo"))).dy,
+        lessThan(tester.getTopLeft(find.text("Settings")).dy));
+  });
+
   testWidgets("'Applications' opens ApplicationsPanelPage", (tester) async {
     final settingsService = MockSettingsService();
     final appsService = MockAppsService();
