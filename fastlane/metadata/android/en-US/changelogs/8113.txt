@@ -1,0 +1,5 @@
+- First Hearth release: new name, icon and banner, and the Hearth logo in Settings.
+- Favorites dock: a frosted bar along the bottom of a clean, wallpaper-first home screen. Up swaps in Continue Watching; Down brings the dock back.
+- Continue Watching shows cover art again. Below the dock, apps wrap as a grid over a blurred wallpaper.
+- Left at the left edge opens Settings (no more gear); Right closes it. New Appearance settings for the dock.
+- Persistent notifications can now be dismissed. Updates pick the right APK for this device.
