@@ -271,7 +271,7 @@ public class MainActivity extends FlutterActivity {
                     result.success(status);
                 }
                 case "openTextToSpeechSettings" -> result.success(
-                        tryStartActivity(new Intent("com.android.settings.TTS_SETTINGS"))
+                        tryStartActivity(new Intent("android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                                 || openAccessibilitySettings());
                 case "checkWatchNextPermission" -> result.success(checkWatchNextPermission());
                 case "requestWatchNextPermission" -> {

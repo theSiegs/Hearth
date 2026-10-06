@@ -17,6 +17,7 @@
  */
 
 import 'package:flauncher/widgets/settings/companion_apps_page.dart';
+import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
 import 'package:flauncher/widgets/settings/home_assistant_page.dart';
 import 'package:flauncher/widgets/settings/remote_buttons_page.dart';
 import 'package:flauncher/widgets/side_panel_dialog.dart';
@@ -125,6 +126,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       return _FastPageRoute(builder: (_) => const AppearancePanelPage());
                     case AccentColorPage.routeName:
                       return _FastPageRoute(builder: (_) => AccentColorPage());
+                    case SetupChecklistPage.routeName:
+                      return _FastPageRoute(builder: (_) => const SetupChecklistPage());
                     case CompanionAppsPage.routeName:
                       return _FastPageRoute(builder: (_) => const CompanionAppsPage());
                     case HomeAssistantPage.routeName:
