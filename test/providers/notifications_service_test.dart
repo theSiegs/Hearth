@@ -319,4 +319,43 @@ void main() {
       expect(notificationsService.notifications.length, 3);
     });
   });
+
+  group('Dismissing persistent notifications', () {
+    Map<String, Object> persistent(String key) =>
+        {'key': key, 'packageName': 'org.smarttube.plus', 'title': 'Background service', 'text': '', 'isClearable': false};
+
+    Future<NotificationsService> ready() async {
+      when(mockChannel.checkNotificationListenerPermission()).thenAnswer((_) async => true);
+      when(mockChannel.dismissNotification(any)).thenAnswer((_) async => true);
+      final service = NotificationsService(mockChannel);
+      while (!service.initialized) {
+        await Future.delayed(Duration.zero);
+      }
+      return service;
+    }
+
+    test('hides a persistent notification on dismiss instead of asking Android to cancel it', () async {
+      when(mockChannel.getActiveNotifications()).thenAnswer((_) async => [persistent('k1')]);
+      final service = await ready();
+      expect(service.notifications.map((n) => n.key), ['k1']);
+
+      await service.dismiss('k1');
+
+      expect(service.notifications, isEmpty);
+      verifyNever(mockChannel.dismissNotification(any));
+    });
+
+    test('shows it again once its app has removed it and posts it anew', () async {
+      when(mockChannel.getActiveNotifications()).thenAnswer((_) async => [persistent('k1')]);
+      final service = await ready();
+      await service.dismiss('k1');
+
+      streamController.add([]);
+      await Future.delayed(Duration.zero);
+      streamController.add([persistent('k1')]);
+      await Future.delayed(Duration.zero);
+
+      expect(service.notifications.map((n) => n.key), ['k1']);
+    });
+  });
 }

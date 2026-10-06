@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:collection/collection.dart';
 
 import 'package:flutter/widgets.dart';
 import 'package:flauncher/flauncher_channel.dart';
@@ -30,6 +31,8 @@ class NotificationItem {
   }
 }
 
+const String _hiddenPersistentKeysPref = 'hidden_persistent_notification_keys';
+
 class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
   final FLauncherChannel _channel;
   Map<String, int> _notificationCounts = {};
@@ -40,6 +43,10 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
   bool _systemPopupEnabled = false;
   bool _hidePersistentNotifications = false;
   Set<String> _blockedPackages = {};
+
+  /// Persistent notifications (foreground services and the like) that Android won't let a launcher
+  /// cancel. Dismissing one hides it here until its app removes it.
+  Set<String> _hiddenPersistentKeys = {};
   bool _initialized = false;
   StreamSubscription? _subscription;
   int _callCount = 0;
@@ -74,6 +81,7 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
     _hidePersistentNotifications = _prefs?.getBool('hide_persistent_notifications') ?? false;
     final blockedList = _prefs?.getStringList('blocked_notification_packages') ?? [];
     _blockedPackages = blockedList.toSet();
+    _hiddenPersistentKeys = (_prefs?.getStringList(_hiddenPersistentKeysPref) ?? []).toSet();
 
     final bool allowed = await _channel.checkNotificationListenerPermission();
     if (localCallCount != _callCount) return;
@@ -137,6 +145,12 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
 
   void _updateNotificationCounts(List<Map<dynamic, dynamic>> list) {
     _rawList = list;
+    // Forget hidden notifications once their app has removed them, so a new one shows again.
+    final activeKeys = list.map((item) => item['key']).whereType<String>().toSet();
+    if (_hiddenPersistentKeys.any((key) => !activeKeys.contains(key))) {
+      _hiddenPersistentKeys = _hiddenPersistentKeys.intersection(activeKeys);
+      _prefs?.setStringList(_hiddenPersistentKeysPref, _hiddenPersistentKeys.toList());
+    }
     _processNotifications();
   }
 
@@ -166,7 +180,8 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
         }
       } else {
         final notification = NotificationItem.fromMap(item);
-        if (_hidePersistentNotifications && !notification.isClearable) {
+        if (!notification.isClearable &&
+            (_hidePersistentNotifications || _hiddenPersistentKeys.contains(notification.key))) {
           continue;
         }
         newNotifications.add(notification);
@@ -282,6 +297,12 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> dismiss(String key) async {
+    final notification = _notifications.firstWhereOrNull((n) => n.key == key);
+    if (notification != null && !notification.isClearable) {
+      // Android ignores a launcher's request to cancel these, so hide it on our side.
+      await _hidePersistent([key]);
+      return;
+    }
     final bool success = await _channel.dismissNotification(key);
     if (success) {
       await refreshNotifications();
@@ -289,10 +310,20 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> dismissAll() async {
+    final persistentKeys = _notifications.where((n) => !n.isClearable).map((n) => n.key).toList();
+    if (persistentKeys.isNotEmpty) {
+      await _hidePersistent(persistentKeys);
+    }
     final bool success = await _channel.dismissAllNotifications();
     if (success) {
       await refreshNotifications();
     }
+  }
+
+  Future<void> _hidePersistent(List<String> keys) async {
+    _hiddenPersistentKeys.addAll(keys);
+    await _prefs?.setStringList(_hiddenPersistentKeysPref, _hiddenPersistentKeys.toList());
+    _processNotifications();
   }
 
   @override
