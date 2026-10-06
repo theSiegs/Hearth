@@ -21,7 +21,8 @@ import java.util.Calendar;
  * Shares Hearth's state with HearthTube, so it can follow the profile and match Hearth's look.
  *
  * content://com.leanbitlab.ltvL.profile/active returns one row: the profile name (null when Hearth couldn't tell),
- * accent color ("7C4DFF"), time format ("HH:mm"), app language ("" = the system's), whether a parent PIN is set,
+ * accent color ("7C4DFF"), time format ("h:mm a") and date format ("EEE, MMM d") as intl/ICU patterns (Hearth's
+ * defaults when the user never changed them), app language ("" = the system's), whether a parent PIN is set,
  * the gradient's id and a stamp that changes when the wallpaper picture does (0 = no picture, use the gradient).
  * None of it is secret: it's all on screen in Hearth. The wallpaper picture itself is at .../wallpaper.
  *
@@ -30,7 +31,11 @@ import java.util.Calendar;
  */
 public class ProfileProvider extends ContentProvider {
     private static final String[] COLUMNS = {
-            "name", "accent_color", "time_format", "app_language", "has_parent_pin", "gradient_uuid", "wallpaper_stamp"};
+            "name", "accent_color", "time_format", "app_language", "has_parent_pin", "gradient_uuid", "wallpaper_stamp",
+            "date_format"};
+    // SettingsService.defaultTimeFormat / defaultDateFormat
+    private static final String DEFAULT_TIME_FORMAT = "h:mm a";
+    private static final String DEFAULT_DATE_FORMAT = "EEE, MMM d";
     private static final String HEARTHTUBE = "com.thesiegs.hearthtube";
     private static final int MAX_PIN_TRIES = 5;
     private static final long PIN_LOCKOUT_MS = 60_000;
@@ -62,11 +67,12 @@ public class ProfileProvider extends ContentProvider {
         cursor.addRow(new Object[]{
                 LauncherAccessibilityService.getActiveProfileName(context),
                 prefs.getString("flutter.accent_color", null),
-                prefs.getString("flutter.time_format", null),
+                prefs.getString("flutter.time_format", DEFAULT_TIME_FORMAT),
                 prefs.getString("flutter.app_language", ""),
                 prefs.getString("flutter.device_parent_pin_hash", null) != null ? 1 : 0,
                 prefs.getString("flutter.gradient_uuid", null),
-                wallpaper != null ? wallpaper.lastModified() : 0});
+                wallpaper != null ? wallpaper.lastModified() : 0,
+                prefs.getString("flutter.date_format", DEFAULT_DATE_FORMAT)});
         cursor.setNotificationUri(context.getContentResolver(), activeUri(context));
         return cursor;
     }
