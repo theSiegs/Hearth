@@ -15,7 +15,7 @@ Element? findAppCardByPackageName(WidgetTester tester, String packageName) {
 /// there's no Settings gear any more).
 Element? findSettingsIcon(WidgetTester tester) {
   try {
-    return tester.element(find.byIcon(Icons.people_outline));
+    return tester.element(find.byIcon(Icons.person));
   } catch (e) {
     return null;
   }

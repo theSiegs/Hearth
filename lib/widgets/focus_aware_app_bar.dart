@@ -14,7 +14,6 @@ import 'package:provider/provider.dart';
 
 import 'daily_data_usage_widget.dart';
 import 'date_time_widget.dart';
-import 'network_widget.dart';
 import 'weather_status_bar_widget.dart';
 
 class FocusAwareAppBar extends StatefulWidget implements PreferredSizeWidget
@@ -99,14 +98,13 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
       },
       child: RepaintBoundary(
         child: AppBar(
-          // Line the settings glyph up with the left edge of the app tiles below
-          // (sections indent 16 + 8 card margin + 8 tile inset = 32dp; the icon
-          // button adds 4 padding + 2 border + 2 glyph inset, so start at 24).
-          titleSpacing: 24,
+          // Line the profile circle up with the left edge of the app tiles below
+          // (sections indent 16 + 8 card margin + 8 tile inset = 32dp).
+          titleSpacing: 32,
           elevation: 0,
           scrolledUnderElevation: 0,
           backgroundColor: Colors.transparent,
-          // Left side: profile, inputs, notifications, network. There's no Settings button:
+          // Left side: profile, inputs, notifications. There's no Settings button:
           // pressing Left at the left edge (here or on the home screen) opens Settings.
           title: Row(
             mainAxisSize: MainAxisSize.min,
@@ -134,7 +132,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                             children: [
                               const SizedBox(width: 16),
                               _FocusableIconButton(
-                                icon: Icons.tv_outlined,
+                                icon: Icons.tv,
                                 focusNode: _inputsFocusNode,
                                 onPressed: () => showDialog(
                                   context: context,
@@ -169,7 +167,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                               children: [
                                 const SizedBox(width: 16),
                                 _FocusableIconButton(
-                                  icon: count > 0 ? Icons.notifications_active_outlined : Icons.notifications_outlined,
+                                  icon: count > 0 ? Icons.notifications_active : Icons.notifications,
                                   focusNode: _notificationsFocusNode,
                                   badgeCount: count,
                                   onPressed: () => showDialog(
@@ -187,16 +185,6 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                 },
               ),
               const SizedBox(width: 16),
-              // Network indicator (conditionally shown)
-              Selector<SettingsService, bool>(
-                selector: (_, settings) => settings.showNetworkIndicatorInStatusBar,
-                builder: (context, showNetwork, _) => showNetwork
-                  ? const Padding(
-                      padding: EdgeInsets.only(right: 12),
-                      child: NetworkWidget(),
-                    )
-                  : const SizedBox.shrink(),
-              ),
               // Data usage widget
               Selector<SettingsService, bool>(
                 selector: (_, settings) => settings.showDataWidgetInStatusBar,
@@ -323,7 +311,7 @@ class _ProfileButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _FocusableIconButton(
-        icon: Icons.people_outline,
+        icon: Icons.person,
         focusNode: focusNode,
         label: context.select<ProfileService?, String?>((p) => p?.activeProfileName),
         onPressed: () => FLauncherChannel().openProfileChooser(),
@@ -345,6 +333,7 @@ class _FocusableIconButton extends StatefulWidget {
 }
 
 class _FocusableIconButtonState extends State<_FocusableIconButton> {
+  static const double _circleSize = 44;
   bool _focused = false;
 
   @override
@@ -363,53 +352,40 @@ class _FocusableIconButtonState extends State<_FocusableIconButton> {
           focusColor: Colors.transparent,
           hoverColor: Colors.transparent,
           highlightColor: Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            padding: const EdgeInsets.all(4),  // Match network indicator padding
-            decoration: BoxDecoration(
-              color: _focused ? Colors.black.withOpacity(0.3) : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-              // Always reserve the border width: a BoxDecoration border adds to the
-              // Container's padding, so toggling it between null and 2px would resize
-              // the button and shift its siblings horizontally on every focus change.
-              border: Border.all(
-                color: _focused ? Theme.of(context).colorScheme.primary : Colors.transparent,
-                width: 2,
-              ),
-              boxShadow: _focused
-                ? const [BoxShadow(color: Colors.black54, blurRadius: 8, spreadRadius: 1)]
-                : null,
-            ),
-            child: widget.badgeCount > 0
-              ? Badge(
-                  label: Text(widget.badgeCount.toString(), style: const TextStyle(color: Colors.white)),
-                  backgroundColor: Colors.red,
-                  child: Icon(widget.icon,
-                    shadows: const [
-                      Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 2))
-                    ],
+          customBorder: const StadiumBorder(),
+          // HearthTube's style: a dark circle with a filled icon, the accent color when focused, and the label
+          // (the profile name) beside the circle.
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Badge(
+                isLabelVisible: widget.badgeCount > 0,
+                label: Text(widget.badgeCount.toString(), style: const TextStyle(color: Colors.white)),
+                backgroundColor: Colors.red,
+                offset: const Offset(-2, 2),
+                child: Container(
+                  width: _circleSize,
+                  height: _circleSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _focused ? Theme.of(context).colorScheme.primary : const Color(0xE6202024),
+                    boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 2))],
                   ),
-                )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(widget.icon,
-                      shadows: const [
-                        Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 2))
-                      ],
-                    ),
-                    if (widget.label != null) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        widget.label!,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          shadows: const [Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 2))],
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                    ],
-                  ],
+                  child: Icon(widget.icon, size: 26, color: Colors.white),
                 ),
+              ),
+              if (widget.label != null) ...[
+                const SizedBox(width: 12),
+                Text(
+                  widget.label!,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: _focused ? FontWeight.w600 : FontWeight.w400,
+                    shadows: const [Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 2))],
+                  ),
+                ),
+                const SizedBox(width: 4),
+              ],
+            ],
           ),
         ),
       ),
