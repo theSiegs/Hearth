@@ -27,6 +27,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'flauncher.dart';
+import 'widgets/home_button_fix_check.dart';
 
 class FLauncherApp extends StatelessWidget
 {
@@ -145,7 +146,7 @@ class FLauncherApp extends StatelessWidget
       home: Builder(
         builder: (context) => PopScope(
           canPop: false,
-          child: FLauncher(),
+          child: HomeButtonFixCheck(child: FLauncher()),
           onPopInvoked: (didPop) {
             LauncherState launcherState = context.read<LauncherState>();
             launcherState.handleBackNavigation(context);

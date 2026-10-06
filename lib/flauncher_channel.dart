@@ -241,6 +241,14 @@ class FLauncherChannel {
   Future<bool> checkAccessibilityPermission() async =>
       await _methodChannel.invokeMethod("checkAccessibilityPermission");
 
+  /// {enabled, seenBefore, restricted}: whether Home Button Fix is on, whether it has ever been on here,
+  /// and whether Android may block turning it on (last installed from an APK file, e.g. by the updater).
+  Future<Map<dynamic, dynamic>> getHomeButtonFixStatus() async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getHomeButtonFixStatus") ?? {};
+
+  /// Stops the "Home Button Fix is off" reminder until the service is turned on again.
+  Future<void> forgetHomeButtonFix() async => await _methodChannel.invokeMethod("forgetHomeButtonFix");
+
   Future<bool> requestAccessibilityPermission() async {
     final bool? success = await _methodChannel.invokeMethod<bool>("requestAccessibilityPermission");
     return success ?? false;

@@ -91,7 +91,8 @@ class HearthAboutDialog extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               const Text(
-                "A fork of LTvLauncher by LeanBitLab",
+                "A fork of LTvLauncher by LeanBitLab, with parts of Arc Launcher",
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white70,
                   fontSize: 13,
@@ -119,11 +120,21 @@ class HearthAboutDialog extends StatelessWidget {
               ),
               const SizedBox(height: 14),
 
-              // Social Links Section
+              _AboutButton(
+                icon: Icons.code,
+                iconColor: Colors.white70,
+                label: "Hearth on GitHub",
+                accentColor: accentColor,
+                autofocus: true,
+                onPressed: () => FLauncherChannel().openUrl("https://github.com/theSiegs/Hearth"),
+              ),
+              const SizedBox(height: 14),
+
+              // Hearth stands on these projects (all GPL-3.0).
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  "Community & Links",
+                  "Credits",
                   style: TextStyle(
                     color: Colors.white54,
                     fontSize: 11,
@@ -133,67 +144,45 @@ class HearthAboutDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-
-              // Official Website
-              _AboutButton(
-                icon: Icons.language,
-                iconColor: const Color(0xFF7C4DFF),
-                label: "Website",
-                accentColor: accentColor,
-                autofocus: true,
-                onPressed: () {
-                  FLauncherChannel().openUrl("https://leanbitlab.github.io/LeanBitLab/");
-                },
-              ),
-              const SizedBox(height: 6),
-
-              // Source Code / GitHub
-              _AboutButton(
-                icon: Icons.code,
-                iconColor: Colors.white70,
-                label: "Hearth on GitHub",
-                accentColor: accentColor,
-                onPressed: () {
-                  FLauncherChannel().openUrl("https://github.com/theSiegs/Hearth");
-                },
-              ),
-              const SizedBox(height: 6),
-
-              // Upstream project
               _AboutButton(
                 icon: Icons.call_split,
                 iconColor: Colors.white70,
-                label: "LTvLauncher (upstream)",
+                label: "LTvLauncher · LeanBitLab",
                 accentColor: accentColor,
-                onPressed: () {
-                  FLauncherChannel().openUrl("https://github.com/leanbitlab-org/LtvLauncher");
-                },
+                onPressed: () => FLauncherChannel().openUrl("https://github.com/leanbitlab-org/LtvLauncher"),
               ),
               const SizedBox(height: 6),
-
-              // Telegram Channel
               _AboutButton(
-                icon: Icons.send_rounded,
-                iconColor: const Color(0xFF2CA5E0),
-                label: "Telegram (@LeanBitLab)",
+                icon: Icons.dock,
+                iconColor: Colors.white70,
+                label: "Arc Launcher · Badis Meddouri",
                 accentColor: accentColor,
-                onPressed: () {
-                  FLauncherChannel().openUrl("https://t.me/LeanBitLab");
-                },
+                onPressed: () => FLauncherChannel().openUrl("https://github.com/meddouribadis/arclauncher"),
               ),
               const SizedBox(height: 6),
-
-              // Reddit Community
               _AboutButton(
-                icon: Icons.forum_rounded,
-                iconColor: const Color(0xFFFF4500),
-                label: "Reddit (r/LeanBitLab_)",
+                icon: Icons.history,
+                iconColor: Colors.white70,
+                label: "FLauncher · Étienne Fesser",
                 accentColor: accentColor,
-                onPressed: () {
-                  FLauncherChannel().openUrl("https://www.reddit.com/r/LeanBitLab_/");
-                },
+                onPressed: () => FLauncherChannel().openUrl("https://gitlab.com/flauncher/flauncher"),
+              ),
+              const SizedBox(height: 6),
+              _AboutButton(
+                icon: Icons.history,
+                iconColor: Colors.white70,
+                label: "FLauncher fork · osrosal",
+                accentColor: accentColor,
+                onPressed: () => FLauncherChannel().openUrl("https://github.com/osrosal/flauncher"),
               ),
               const SizedBox(height: 10),
+
+              const Text(
+                "Free software under the GNU GPL v3, like the projects it builds on.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white38, fontSize: 10),
+              ),
+              const SizedBox(height: 6),
 
               // Close Action
               TextButton(
@@ -262,12 +251,15 @@ class _AboutButtonState extends State<_AboutButton> {
               children: [
                 Icon(widget.icon, size: 16, color: _focused ? Colors.white : widget.iconColor),
                 const SizedBox(width: 8),
-                Text(
+                Flexible(
+                  child: Text(
                   widget.label,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 13,
                     fontWeight: _focused ? FontWeight.bold : FontWeight.w500,
+                  ),
                   ),
                 ),
               ],
