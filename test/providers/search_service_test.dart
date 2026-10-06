@@ -48,7 +48,7 @@ void main() {
 
   test("links Google TV's page by Knowledge Graph id", () {
     final bluey = SearchService.parseResults(hits, entities).last;
-    expect(bluey.offers.single.link, "https://www.disneyplus.com/series/x/1xy9TAOQ0M3r");
+    expect(bluey.offers, isEmpty, reason: "Disney+ titles go through Google TV's page");
     expect(bluey.googleTvLink, "https://tv.google.com/asset/%2Fg%2F11g9dfjk4n");
   });
 
@@ -62,6 +62,16 @@ void main() {
     expect((await service.search("Stranger ")).length, 2);
     expect(calls, 2);
     expect(await service.search("s"), isEmpty);
+  });
+
+  test("matches TMDB provider names to apps", () {
+    final netflix = streamingServices.first;
+    expect(netflix.matches("Netflix Standard with Ads"), isTrue);
+    expect(netflix.matches("Hulu"), isFalse);
+    final max = streamingServices.firstWhere((s) => s.name == "HBO Max");
+    expect(max.matches("Max"), isTrue);
+    expect(max.matches("Max Amazon Channel"), isTrue);
+    expect(max.matches("MGM Plus"), isFalse);
   });
 
   group("TMDB", () {

@@ -36,11 +36,18 @@ class _SearchPageState extends State<SearchPage> {
   // Down leaves the text field for the results (a text field keeps the arrow keys for its cursor otherwise).
   late final FocusNode _field = FocusNode(onKeyEvent: (node, event) {
     if (event is! KeyUpEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) {
-      node.focusInDirection(TraversalDirection.down);
+      if (_firstResult.context != null) {
+        _firstResult.requestFocus();
+      } else {
+        node.focusInDirection(TraversalDirection.down);
+      }
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
   });
+
+  /// The first result's first button, where Down from the text field goes.
+  final FocusNode _firstResult = FocusNode();
   Timer? _debounce;
   String _query = "";
   List<SearchResult> _results = [];
@@ -55,6 +62,7 @@ class _SearchPageState extends State<SearchPage> {
     _debounce?.cancel();
     _text.dispose();
     _field.dispose();
+    _firstResult.dispose();
     super.dispose();
   }
 
@@ -142,7 +150,12 @@ class _SearchPageState extends State<SearchPage> {
                       padding: const EdgeInsets.all(16),
                       child: Text("No films or shows found for \"$_query\".", style: textTheme.bodyLarge),
                     ),
-                  for (final result in _results) _ResultRow(result: result, installed: installed, open: _open),
+                  for (final (index, result) in _results.indexed)
+                    _ResultRow(
+                        result: result,
+                        installed: installed,
+                        open: _open,
+                        firstFocus: index == 0 ? _firstResult : null),
                   if (_query.length >= 2) ...[
                     const Divider(height: 32),
                     Wrap(
@@ -153,7 +166,8 @@ class _SearchPageState extends State<SearchPage> {
                           SearchChip(
                             icon: Icons.smart_display_outlined,
                             label: "Search HearthTube for \"$_query\"",
-                            onPressed: () => _open(() => _channel.searchInApp(_hearthTube, _query)),
+                            onPressed: () => _open(() => _channel.openLinkInApp(_hearthTube,
+                                "https://www.youtube.com/results?search_query=${Uri.encodeQueryComponent(_query)}")),
                           ),
                         SearchChip(
                           icon: Icons.travel_explore,
@@ -194,8 +208,9 @@ class _ResultRow extends StatelessWidget {
   final SearchResult result;
   final bool Function(String packageName) installed;
   final Future<void> Function(Future<bool> Function() action) open;
+  final FocusNode? firstFocus;
 
-  const _ResultRow({required this.result, required this.installed, required this.open});
+  const _ResultRow({required this.result, required this.installed, required this.open, this.firstFocus});
 
   @override
   Widget build(BuildContext context) {
@@ -234,8 +249,13 @@ class _ResultRow extends StatelessWidget {
     );
   }
 
-  Widget _details(BuildContext context, TextTheme textTheme, List<SearchOffer> offers, FLauncherChannel channel,
+  Widget _details(BuildContext context, TextTheme textTheme, List<SearchOffer> allOffers, FLauncherChannel channel,
       TitleDetails? details) {
+    // When TMDB says where it's streaming, skip apps that only have a catalog page for it (e.g. Apple TV for a
+    // Netflix show).
+    final offers = details == null || details.streamingOn.isEmpty
+        ? allOffers
+        : allOffers.where((offer) => details.streamingOn.any((name) => offer.service.matches(name))).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -250,13 +270,15 @@ class _ResultRow extends StatelessWidget {
           spacing: 12,
           runSpacing: 8,
           children: [
-            for (final offer in offers)
+            for (final (index, offer) in offers.indexed)
               SearchChip(
+                focusNode: index == 0 ? firstFocus : null,
                 icon: Icons.play_arrow_rounded,
                 label: offer.service.name,
                 onPressed: () => open(() => channel.openLinkInApp(offer.service.packageName, offer.link)),
               ),
             SearchChip(
+              focusNode: offers.isEmpty ? firstFocus : null,
               icon: Icons.info_outline,
               label: offers.isEmpty ? "Where to watch (Google TV)" : "More on Google TV",
               onPressed: () => open(() => result.googleTvLink != null
@@ -275,8 +297,9 @@ class SearchChip extends StatefulWidget {
   final IconData icon;
   final String label;
   final VoidCallback onPressed;
+  final FocusNode? focusNode;
 
-  const SearchChip({super.key, required this.icon, required this.label, required this.onPressed});
+  const SearchChip({super.key, required this.icon, required this.label, required this.onPressed, this.focusNode});
 
   @override
   State<SearchChip> createState() => _SearchChipState();
@@ -294,6 +317,7 @@ class _SearchChipState extends State<SearchChip> {
         ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) => widget.onPressed()),
       },
       child: Focus(
+        focusNode: widget.focusNode,
         onFocusChange: (focused) {
           setState(() => _focused = focused);
           if (focused) Scrollable.ensureVisible(context, alignment: 0.5, duration: const Duration(milliseconds: 100));

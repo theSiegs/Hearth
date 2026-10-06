@@ -454,6 +454,8 @@ public class ProfilePairingService extends AccessibilityService {
             finish(NO_MATCH, "no profile matches " + s.hearthProfile + " in " + s.names.keySet());
             return;
         }
+        // Only positions heard this launch steer: Netflix's spoken "N of M" doesn't reliably match which way Up and
+        // Down move (tested October 2026, steering by the remembered order bounced between two profiles).
         Integer targetIndex = target != null ? s.names.get(target) : null;
         if (targetIndex != null && index > 0) {
             s.direction = targetIndex > index ? 1 : -1;

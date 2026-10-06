@@ -13,6 +13,19 @@ class StreamingService {
   final String Function(String property, String id) link;
 
   const StreamingService(this.name, this.packageName, this.properties, this.link);
+
+  /// Whether a TMDB provider name ("Netflix Standard with Ads", "Apple TV+", "Max", "Paramount Plus") is this service.
+  bool matches(String providerName) {
+    final p = providerName.toLowerCase();
+    return switch (packageName) {
+      "com.netflix.ninja" => p.startsWith("netflix"),
+      "com.apple.atve.androidtv.appletv" => p.startsWith("apple tv"),
+      "com.wbd.stream" => p == "max" || p.startsWith("hbo max") || p.startsWith("max "),
+      "com.cbs.ott" => p.startsWith("paramount"),
+      "com.disney.disneyplus" => p.startsWith("disney"),
+      _ => false,
+    };
+  }
 }
 
 const _netflix = StreamingService("Netflix", "com.netflix.ninja", ["P1874"], _netflixLink);
@@ -22,7 +35,9 @@ const _max = StreamingService("HBO Max", "com.wbd.stream", ["P8298"], _maxLink);
 const _paramount = StreamingService("Paramount+", "com.cbs.ott", ["P13147"], _paramountLink);
 
 /// Services in the order results list them.
-const List<StreamingService> streamingServices = [_netflix, _disney, _appleTv, _max, _paramount];
+// Disney+ isn't listed: the app no longer opens titles by the ids Wikidata has (tested October 2026; it showed the Series page),
+// so Disney+ titles go through Google TV's page, whose Watch now uses Disney's current links.
+const List<StreamingService> streamingServices = [_netflix, _appleTv, _max, _paramount];
 
 String _netflixLink(String property, String id) => "https://www.netflix.com/title/$id";
 String _disneyLink(String property, String id) =>
