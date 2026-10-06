@@ -9,7 +9,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/theSiegs/Hearth?style=flat-square&color=4f46e5&label=Release)](https://github.com/theSiegs/Hearth/releases/latest)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL_v3-blue.svg?style=flat-square)](LICENSE)
 
-[Features](#features) • [Download](#download) • [Setup](#setup) • [Profile Pairing](docs/profile-pairing.md) • [Home Assistant](docs/home-assistant.md) • [Credits](#credits)
+[Features](#features) • [Download](#download) • [Setup](#setup) • [Profile Pairing](docs/profile-pairing.md) • [Search](docs/search.md) • [Home Assistant](docs/home-assistant.md) • [Credits](#credits)
 
 </div>
 
@@ -45,6 +45,11 @@ analytics and no trackers.
   > way, Hearth leaves the app's own picker up. Pull requests that repair or add apps are welcome.
 - **Sleep when idle:** put the TV to sleep after a stretch with no remote presses (playing video counts as
   activity).
+
+### Search
+- **Find films and shows** from the search circle in the top bar, with posters and where they're streaming, and
+  open them straight in the app that has them (or on Google TV's page). Titles come from Wikidata, posters from TMDB.
+  [How it works and its limits](docs/search.md)
 
 ### Home Assistant
 - **Notifications on the TV**, compatible with Home Assistant's *Notifications for Android TV / Fire TV*
@@ -127,9 +132,10 @@ In a kids profile, ask a parent to approve Hearth in that profile's app list, an
 
 ## Privacy
 
-Hearth has no ads, analytics or trackers. It talks to the internet only to check GitHub for updates, and to
-fetch weather if you turn weather on. Home Assistant features talk only to your own Home Assistant, on your
-home network. Profile Pairing reads only the streaming apps' "Who's watching?" screens, only right after Hearth
+Hearth has no ads, analytics or trackers. It talks to the internet only to check GitHub for updates, to fetch
+weather if you turn weather on, and to look up titles when you search. Home Assistant features talk only to your own Home Assistant, on your
+home network. Search sends only your search text to Wikidata, and (when posters are on) each result's TMDB id
+to TMDB. Profile Pairing reads only the streaming apps' "Who's watching?" screens, only right after Hearth
 opens them, and keeps nothing but the profile names it saw, on the TV.
 
 **Hearth voice** is a text-to-speech engine inside Hearth that Profile Pairing uses to hear Netflix's profile
