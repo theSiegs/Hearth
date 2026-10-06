@@ -54,6 +54,12 @@ class _FLauncherState extends State<FLauncher> {
   /// Wraps the dock layout's first screen (Continue Watching + dock).
   final FocusNode _firstScreenFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
 
+  /// Wraps the sections below the dock.
+  final FocusNode _belowDockFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
+
+  /// Focus is in the sections below the dock, so the wallpaper is blurred behind them.
+  bool _browsingBelowDock = false;
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +70,7 @@ class _FLauncherState extends State<FLauncher> {
   void dispose() {
     FocusManager.instance.removeListener(_onFocusMoved);
     _firstScreenFocusNode.dispose();
+    _belowDockFocusNode.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -71,6 +78,13 @@ class _FLauncherState extends State<FLauncher> {
   /// Cards centre themselves vertically when focused, which would scroll the dock layout's
   /// first screen partway off the top. While focus is on that screen, keep the page at the top.
   void _onFocusMoved() {
+    // Focus moving into a settings panel or the app bar leaves the blur as it was,
+    // unless the dock layout itself has gone (dock switched off, or Favorites emptied).
+    final bool dockLayoutGone = _belowDockFocusNode.context == null;
+    if (_belowDockFocusNode.hasFocus != _browsingBelowDock &&
+        (_belowDockFocusNode.hasFocus || _firstScreenFocusNode.hasFocus || dockLayoutGone)) {
+      setState(() => _browsingBelowDock = _belowDockFocusNode.hasFocus);
+    }
     if (!_firstScreenFocusNode.hasFocus) {
       return;
     }
@@ -96,6 +110,21 @@ class _FLauncherState extends State<FLauncher> {
           RepaintBoundary(
             child: Consumer<WallpaperService>(
               builder: (_, wallpaperService, __) => _wallpaper(context, wallpaperService)
+            ),
+          ),
+          // Below the dock, the wallpaper blurs so the rows of apps stand out (from arclauncher).
+          Selector2<SettingsService, WallpaperService, bool>(
+            selector: (_, settings, wallpaper) => settings.blurWallpaperBelowDock && wallpaper.focusedAppColor == null,
+            builder: (_, blurEnabled, __) => Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedOpacity(
+                  key: const Key("below_dock_blur"),
+                  opacity: blurEnabled && _browsingBelowDock ? 1 : 0,
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  child: const CachedBlurBackdrop(sigma: 10, child: SizedBox.expand()),
+                ),
+              ),
             ),
           ),
           Consumer<LauncherState>(
@@ -205,7 +234,10 @@ class _FLauncherState extends State<FLauncher> {
             ),
           ),
         ),
-        _sections(sections.where((s) => s != favorites).toList(), firstCategoryAlreadyFound: true),
+        Focus(
+          focusNode: _belowDockFocusNode,
+          child: _sections(sections.where((s) => s != favorites).toList(), firstCategoryAlreadyFound: true),
+        ),
       ],
     );
   }

@@ -28,7 +28,7 @@
 >   has apps, the first screen is wallpaper with Continue Watching and a frosted Favorites dock (`HomeDock`) along the
 >   bottom; other sections follow below. Dock corners follow the theme (`dockRadiusForTheme`). Settings → Interface →
 >   Appearance turns it off or changes blur/dark/shadow. While focus is on that first screen the page is held at the top
->   (cards otherwise centre themselves). The dock blur and gradient wallpapers are drawn once and cached (arclauncher perf work). Enhanced focus was skipped: LTv already has zoom, dimming and the double outline. Still to port: menus, other performance items, video wallpaper.
+>   (cards otherwise centre themselves). The dock blur and gradient wallpapers are drawn once and cached (arclauncher perf work), and the wallpaper blurs while browsing the sections below the dock (Appearance toggle). Enhanced focus was skipped: LTv already has zoom, dimming and the double outline. Still to port: video wallpaper (maybe), merging the TV and non-TV app sections.
 > - Debug builds install as a separate app (`com.leanbitlab.ltvL.debug`); to test the real launcher on the emulator,
 >   install the release APK.
 
