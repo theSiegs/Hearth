@@ -322,7 +322,7 @@ void main() {
 
   group('Dismissing persistent notifications', () {
     Map<String, Object> persistent(String key) =>
-        {'key': key, 'packageName': 'org.smarttube.plus', 'title': 'Background service', 'text': '', 'isClearable': false};
+        {'key': key, 'packageName': 'com.thesiegs.hearthtube', 'title': 'Background service', 'text': '', 'isClearable': false};
 
     Future<NotificationsService> ready() async {
       when(mockChannel.checkNotificationListenerPermission()).thenAnswer((_) async => true);

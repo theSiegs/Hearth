@@ -12,7 +12,7 @@ void main() {
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       const MethodChannel('me.efesser.flauncher/method'),
       (call) async => call.method == "getButtonMappings"
-          ? '{"183":{"name":"KEYCODE_PROG_RED","short":{"type":"app","target":"org.smarttube.plus","label":"YouTube+"}}}'
+          ? '{"183":{"name":"KEYCODE_PROG_RED","short":{"type":"app","target":"com.thesiegs.hearthtube","label":"HearthTube"}}}'
           : null,
     );
     addTearDown(() => tester.binding.defaultBinaryMessenger
@@ -25,7 +25,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text("Remap a button"), findsOneWidget);
-    expect(find.textContaining("Red\nPress: YouTube+"), findsOneWidget);
+    expect(find.textContaining("Red\nPress: HearthTube"), findsOneWidget);
     expect(find.textContaining("Hold: Normal"), findsOneWidget);
   });
 }
