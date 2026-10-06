@@ -27,6 +27,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 
 // Date format presets
 const List<(String format, String example)> dateFormatPresets = [
+  ('EEE, MMM d', 'Fri, Jan 17'),
   ('EEEE d', 'Friday 17'),
   ('E d', 'Fri 17'),
   ('dd/MM/y', '17/01/2026'),

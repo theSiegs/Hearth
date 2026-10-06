@@ -69,7 +69,7 @@ void main() {
     );
 
     expect(find.byIcon(Icons.settings_outlined), findsNothing);
-    expect(find.byIcon(Icons.people_outline), findsOneWidget);
+    expect(find.byIcon(Icons.person), findsOneWidget);
     expect(find.byKey(const Key('statusbar_date')), findsOneWidget);
     expect(find.byKey(const Key('statusbar_clock')), findsOneWidget);
   });
@@ -121,7 +121,7 @@ void main() {
       )
     );
 
-    expect(find.byIcon(Icons.tv_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.tv), findsOneWidget);
 
     // Case 2: showInputsWidgetInStatusBar is false, and hasInputs is true
     await tester.pumpWidget(Container()); // fully unmount previous tree
@@ -144,7 +144,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.tv_outlined), findsNothing);
+    expect(find.byIcon(Icons.tv), findsNothing);
   });
 
   testWidgets('FocusAwareAppBar auto-hide notification bell logic', (WidgetTester tester) async {
@@ -166,8 +166,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.notifications_outlined), findsNothing);
-    expect(find.byIcon(Icons.notifications_active_outlined), findsNothing);
+    expect(find.byIcon(Icons.notifications), findsNothing);
+    expect(find.byIcon(Icons.notifications_active), findsNothing);
 
     // Case 2: autoHideNotificationsWidget is true, notification count is > 0
     await tester.pumpWidget(Container()); // fully unmount previous tree
@@ -195,6 +195,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.notifications_active_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.notifications_active), findsOneWidget);
   });
 }

@@ -101,8 +101,8 @@ const String ACCENT_COLOR_ROSE = "FF4081";
 const String ACCENT_COLOR_ICE_BLUE = "80D8FF";
 
 class SettingsService extends ChangeNotifier {
-  static final defaultDateFormat = "EEEE d";
-  static final defaultTimeFormat = "H:mm";
+  static final defaultDateFormat = "EEE, MMM d";
+  static final defaultTimeFormat = "h:mm a";
   final SharedPreferences _sharedPreferences;
 
   late bool _appHighlightAnimationEnabled;
