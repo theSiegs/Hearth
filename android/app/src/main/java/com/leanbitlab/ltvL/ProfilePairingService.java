@@ -129,7 +129,10 @@ public class ProfilePairingService extends AccessibilityService {
     /** Called by Hearth just before it opens {@code packageName}. */
     static void onAppLaunching(Context context, String packageName) {
         ProfilePairingService service = sInstance;
-        if (service == null || packageName == null || !ProfilePairing.supports(packageName)) return;
+        if (service == null || packageName == null || !ProfilePairing.supports(packageName)
+                || !ProfilePairing.isAppEnabled(context, packageName)) {
+            return;
+        }
         String hearthProfile = LauncherAccessibilityService.getActiveProfileName(context);
         if (hearthProfile == null || hearthProfile.isEmpty()) return;
         ProfilePairing.rememberHearthProfile(context, hearthProfile, null);

@@ -104,19 +104,6 @@
             android:excludeFromRecents="true"
             android:theme="@style/HaPanelTheme" />
 
-        <service
-            android:name=".ClockScreensaverService"
-            android:exported="true"
-            android:label="Hearth Clock"
-            android:permission="android.permission.BIND_DREAM_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.dreams.DreamService" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <meta-data
-                android:name="android.service.dream"
-                android:resource="@xml/screensaver" />
-        </service>
 
         <service
             android:name=".LauncherNotificationListenerService"
