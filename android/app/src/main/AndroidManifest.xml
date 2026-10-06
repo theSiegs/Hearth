@@ -171,6 +171,12 @@
                 android:resource="@xml/provider_paths" />
         </provider>
 
+        <!-- Active Google TV profile and accent color, read by HearthTube to follow the profile -->
+        <provider
+            android:name=".ProfileProvider"
+            android:authorities="${applicationId}.profile"
+            android:exported="true" />
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

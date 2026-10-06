@@ -249,6 +249,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private void setActiveProfileName(String name) {
         getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE).edit().putString(PROFILE_NAME_KEY, name).apply();
         if (mHaStatus != null) mHaStatus.onProfileChanged();
+        ProfileProvider.notifyChanged(this);
     }
 
     static String getActiveProfileName(Context context) {
