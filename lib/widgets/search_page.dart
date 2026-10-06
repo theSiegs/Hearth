@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/search_service.dart';
+import 'package:flauncher/providers/settings_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -163,7 +164,7 @@ class _SearchPageState extends State<SearchPage> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                        _tmdb.enabled
+                        _tmdbFor(context).enabled
                             ? "Titles from Wikidata; posters and where it's streaming from TMDB (via JustWatch). "
                                 "This product uses the TMDB API but is not endorsed or certified by TMDB."
                             : "Titles from Wikidata. Only your search text is sent.",
@@ -181,7 +182,13 @@ class _SearchPageState extends State<SearchPage> {
 }
 
 /// Posters and "streaming on" (TMDB), when a key is built in.
-final TmdbClient _tmdb = TmdbClient();
+final Map<String, TmdbClient> _tmdbClients = {};
+
+/// The user's own TMDB key (Settings → Search) when set, otherwise the one built into this release.
+TmdbClient _tmdbFor(BuildContext context) {
+  final userKey = context.read<SettingsService>().tmdbApiKey;
+  return _tmdbClients[userKey] ??= userKey.isEmpty ? TmdbClient() : TmdbClient(apiKey: userKey);
+}
 
 class _ResultRow extends StatelessWidget {
   final SearchResult result;
@@ -196,7 +203,7 @@ class _ResultRow extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final offers = result.offers.where((offer) => installed(offer.service.packageName)).toList();
     return FutureBuilder<TitleDetails?>(
-      future: _tmdb.details(result),
+      future: _tmdbFor(context).details(result),
       builder: (context, snapshot) {
         final details = snapshot.data;
         return Padding(
@@ -204,7 +211,7 @@ class _ResultRow extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (_tmdb.enabled) ...[
+              if (_tmdbFor(context).enabled) ...[
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Container(

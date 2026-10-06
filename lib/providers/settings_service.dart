@@ -68,6 +68,7 @@ const String _hiddenWatchNextPackagesKey = "hidden_watch_next_packages";
 const String _startOnBootKey = "start_on_boot";
 // device_ prefix: shared by all profiles, never part of a per-profile layout
 const String _parentPinHashKey = "device_parent_pin_hash";
+const String _tmdbApiKeyKey = "tmdb_api_key";
 const String _showNotificationsWidgetInStatusBarKey = "show_notifications_widget_in_status_bar";
 const String _autoHideNotificationsWidgetKey = "auto_hide_notifications_widget";
 const String _appLanguageKey = "app_language";
@@ -192,6 +193,18 @@ class SettingsService extends ChangeNotifier {
   List<String> get hiddenWatchNextProgramIds => List.unmodifiable(_hiddenWatchNextProgramIds);
   List<String> get hiddenWatchNextPackages => List.unmodifiable(_hiddenWatchNextPackages);
   bool get startOnBoot => _startOnBoot;
+
+  /// A TMDB API key the user added for search posters (Settings → Search); empty when none. Not in backups.
+  String get tmdbApiKey => _sharedPreferences.getString(_tmdbApiKeyKey) ?? "";
+
+  Future<void> setTmdbApiKey(String key) async {
+    if (key.trim().isEmpty) {
+      await _sharedPreferences.remove(_tmdbApiKeyKey);
+    } else {
+      await _sharedPreferences.setString(_tmdbApiKeyKey, key.trim());
+    }
+    notifyListeners();
+  }
 
   bool get hasParentPin => _sharedPreferences.getString(_parentPinHashKey) != null;
 

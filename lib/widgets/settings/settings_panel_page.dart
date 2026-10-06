@@ -38,6 +38,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 
 import 'package:flauncher/widgets/settings/companion_apps_page.dart';
 import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
+import 'package:flauncher/widgets/settings/search_settings_page.dart';
 import 'package:flauncher/widgets/settings/profile_pairing_page.dart';
 import 'focusable_settings_tile.dart';
 
@@ -122,6 +123,11 @@ class SettingsPanelPage extends StatelessWidget {
                   leading: const Icon(Icons.switch_account),
                   title: Text("Profile Pairing", style: Theme.of(context).textTheme.bodyMedium),
                   onPressed: () => _openProfilePairing(context),
+                ),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.search),
+                  title: Text("Search", style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => Navigator.of(context).pushNamed(SearchSettingsPage.routeName),
                 ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.settings_remote_outlined),
