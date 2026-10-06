@@ -64,15 +64,16 @@ public class ProfileProvider extends ContentProvider {
         SharedPreferences prefs = flutterPrefs(context);
         File wallpaper = currentWallpaper(context);
         MatrixCursor cursor = new MatrixCursor(COLUMNS, 1);
+        String[] formats = dateTimeFormats(prefs);
         cursor.addRow(new Object[]{
                 LauncherAccessibilityService.getActiveProfileName(context),
                 prefs.getString("flutter.accent_color", null),
-                prefs.getString("flutter.time_format", DEFAULT_TIME_FORMAT),
+                formats[1],
                 prefs.getString("flutter.app_language", ""),
                 prefs.getString("flutter.device_parent_pin_hash", null) != null ? 1 : 0,
                 prefs.getString("flutter.gradient_uuid", null),
                 wallpaper != null ? wallpaper.lastModified() : 0,
-                prefs.getString("flutter.date_format", DEFAULT_DATE_FORMAT)});
+                formats[0]});
         cursor.setNotificationUri(context.getContentResolver(), activeUri(context));
         return cursor;
     }
@@ -170,6 +171,14 @@ public class ProfileProvider extends ContentProvider {
     // shared_preferences stores Flutter keys in this file with a "flutter." prefix.
     private static SharedPreferences flutterPrefs(Context context) {
         return context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE);
+    }
+
+    /** {date, time} formats; the old saved defaults count as never chosen (as in SettingsService). */
+    private static String[] dateTimeFormats(SharedPreferences prefs) {
+        String date = prefs.getString("flutter.date_format", DEFAULT_DATE_FORMAT);
+        String time = prefs.getString("flutter.time_format", DEFAULT_TIME_FORMAT);
+        if ("EEEE d".equals(date) && "H:mm".equals(time)) return new String[]{DEFAULT_DATE_FORMAT, DEFAULT_TIME_FORMAT};
+        return new String[]{date, time};
     }
 
     @Override
