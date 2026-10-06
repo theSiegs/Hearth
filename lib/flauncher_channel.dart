@@ -142,6 +142,23 @@ class FLauncherChannel {
   Future<Map<dynamic, dynamic>> getProfilePairingStatus() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getProfilePairingStatus") ?? {};
 
+  /// The streaming apps Profile Pairing handles: [{packageName, label, installed, seenProfiles}].
+  Future<List<Map<dynamic, dynamic>>> getProfilePairingApps() async =>
+      await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getProfilePairingApps") ?? [];
+
+  /// Each known Hearth profile's choice for one app: [{hearthProfile, kids, mode, chosenProfile, autoMatch}],
+  /// where mode is "auto", "profile" or "picker".
+  Future<List<Map<dynamic, dynamic>>> getProfilePairingChoices(String packageName) async =>
+      await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getProfilePairingChoices", packageName) ?? [];
+
+  Future<void> setProfilePairingChoice(String packageName, String hearthProfile, String mode, String? appProfile) async =>
+      await _methodChannel.invokeMethod("setProfilePairingChoice", {
+        "packageName": packageName,
+        "hearthProfile": hearthProfile,
+        "mode": mode,
+        "appProfile": appProfile,
+      });
+
   Future<bool> openTextToSpeechSettings() async =>
       await _methodChannel.invokeMethod<bool>("openTextToSpeechSettings") ?? false;
 

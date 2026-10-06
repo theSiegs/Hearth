@@ -38,6 +38,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 
 import 'package:flauncher/widgets/settings/companion_apps_page.dart';
 import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
+import 'package:flauncher/widgets/settings/profile_pairing_page.dart';
 import 'focusable_settings_tile.dart';
 
 class SettingsPanelPage extends StatelessWidget {
@@ -118,6 +119,11 @@ class SettingsPanelPage extends StatelessWidget {
                   onPressed: () => Navigator.of(context).pushNamed(SetupChecklistPage.routeName),
                 ),
                 FocusableSettingsTile(
+                  leading: const Icon(Icons.switch_account),
+                  title: Text("Profile Pairing", style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => _openProfilePairing(context),
+                ),
+                FocusableSettingsTile(
                   leading: const Icon(Icons.settings_remote_outlined),
                   title: Text("Remote buttons", style: Theme.of(context).textTheme.bodyMedium),
                   onPressed: () => Navigator.of(context).pushNamed(RemoteButtonsPage.routeName),
@@ -176,6 +182,23 @@ class SettingsPanelPage extends StatelessWidget {
   }
 
   /// Parent PIN guards launcher settings and app menus in Google TV kids profiles.
+  /// Pairings decide which streaming profile kids land in, so the parent PIN guards them when one is set.
+  Future<void> _openProfilePairing(BuildContext context) async {
+    final settings = context.read<SettingsService>();
+    if (settings.hasParentPin) {
+      final String? pin = await showDialog<String>(
+        context: context,
+        builder: (_) => ParentPinDialog(
+          title: "Parent PIN",
+          subtitle: "Enter the parent PIN to change Profile Pairing",
+          verify: settings.verifyParentPin,
+        ),
+      );
+      if (pin == null || !context.mounted) return;
+    }
+    Navigator.of(context).pushNamed(ProfilePairingPage.routeName);
+  }
+
   Future<void> _editParentPin(BuildContext context) async {
     final settings = context.read<SettingsService>();
     if (settings.hasParentPin) {
