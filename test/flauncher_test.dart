@@ -175,7 +175,8 @@ void main() {
 
     await _pumpWidgetWithProviders(tester, mkWallpaperService(false), appsService, mkSettingsService());
 
-    expect(tester.widget(find.byKey(Key("background"))), isA<Container>());
+    expect(find.byKey(Key("background")), findsOneWidget);
+    expect(find.byType(Image), findsNothing);
   });
 
   testWidgets("Pressing select on settings icon opens SettingsPanel", (tester) async {

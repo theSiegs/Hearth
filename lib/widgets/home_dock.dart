@@ -15,11 +15,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'dart:ui' as ui;
-
 import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/widgets/cached_blur_backdrop.dart';
 import 'package:flauncher/widgets/category_row.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -85,7 +84,7 @@ class HomeDock extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: borderRadius,
-                child: blur ? BackdropFilter(filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12), child: panel) : panel,
+                child: blur ? CachedBlurBackdrop(sigma: 12, child: panel) : panel,
               ),
             ),
           ),
