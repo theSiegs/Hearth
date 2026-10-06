@@ -36,6 +36,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 
+import 'package:flauncher/widgets/settings/companion_apps_page.dart';
 import 'focusable_settings_tile.dart';
 
 class SettingsPanelPage extends StatelessWidget {
@@ -135,6 +136,11 @@ class SettingsPanelPage extends StatelessWidget {
                     context: context,
                     builder: (_) => const UpdateDialog(),
                   ),
+                ),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.extension_outlined),
+                  title: Text("Companion apps", style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => Navigator.of(context).pushNamed(CompanionAppsPage.routeName),
                 ),
                 const Divider(),
                 FocusableSettingsTile(
