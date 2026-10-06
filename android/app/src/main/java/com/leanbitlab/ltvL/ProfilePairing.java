@@ -193,16 +193,24 @@ final class ProfilePairing {
         return tie ? null : best;
     }
 
-    /** 3: same name; 2: same first name ("Alex" / "Alex Morgan"); 1: one name contains the other; 0: no match. */
+    /**
+     * How well two profile names match: 5 same name; 4 same first name ("Alex" / "Alex Morgan"); 3 one name
+     * contains the other; 2 one first name starts with the other, a nickname ("Sam" / "Samantha", "Jo" /
+     * "Josephine"); 1 same first three letters ("Tony" / "Riley"); 0 no match.
+     */
     static int matchScore(String a, String b) {
         String x = normalize(a);
         String y = normalize(b);
         if (x.isEmpty() || y.isEmpty()) return 0;
-        if (x.equals(y)) return 3;
+        if (x.equals(y)) return 5;
         String xFirst = x.split(" ")[0];
         String yFirst = y.split(" ")[0];
-        if (xFirst.equals(yFirst)) return 2;
-        if ((" " + x + " ").contains(" " + y + " ") || (" " + y + " ").contains(" " + x + " ")) return 1;
+        if (xFirst.equals(yFirst)) return 4;
+        if ((" " + x + " ").contains(" " + y + " ") || (" " + y + " ").contains(" " + x + " ")) return 3;
+        String shorter = xFirst.length() <= yFirst.length() ? xFirst : yFirst;
+        String longer = shorter == xFirst ? yFirst : xFirst;
+        if (shorter.length() >= 3 && longer.startsWith(shorter)) return 2;
+        if (shorter.length() >= 3 && longer.startsWith(shorter.substring(0, 3))) return 1;
         return 0;
     }
 

@@ -98,6 +98,8 @@ public class ProfilePairingService extends AccessibilityService {
         int probes;
         boolean appShown;
         String pickedName;
+        /** Where we believe focus is, for apps that don't report it (-1: unknown). */
+        int assumedFocus = -1;
 
         Session(String pkg, String hearthProfile) {
             this.pkg = pkg;
@@ -510,6 +512,14 @@ public class ProfilePairingService extends AccessibilityService {
             return;
         }
         pickerFound();
+        // Screen order (left to right, then top to bottom), so Right/Left moves match the list.
+        tiles.sort((a, b) -> {
+            android.graphics.Rect ra = new android.graphics.Rect();
+            android.graphics.Rect rb = new android.graphics.Rect();
+            a.node.getBoundsInScreen(ra);
+            b.node.getBoundsInScreen(rb);
+            return ra.top / 100 != rb.top / 100 ? Integer.compare(ra.top, rb.top) : Integer.compare(ra.left, rb.left);
+        });
         List<String> names = new ArrayList<>();
         for (Tile tile : tiles) names.add(tile.name);
         ProfilePairing.rememberNames(this, s.pkg, names, true);
@@ -519,7 +529,8 @@ public class ProfilePairingService extends AccessibilityService {
             return;
         }
         int targetIndex = names.indexOf(target);
-        if (!s.clickTried) {
+        // Apple TV opens whichever tile is focused whatever node is clicked, so move focus there instead.
+        if (!s.clickTried && !ProfilePairing.APPLE_TV.equals(s.pkg)) {
             s.clickTried = true;
             if (tiles.get(targetIndex).clickable != null
                     && tiles.get(targetIndex).clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
@@ -544,12 +555,19 @@ public class ProfilePairingService extends AccessibilityService {
                 break;
             }
         }
+        if (focused < 0 && ProfilePairing.APPLE_TV.equals(s.pkg)) {
+            // Apple TV doesn't report focus; its picker opens on the first tile, so count our own presses from there.
+            if (s.assumedFocus < 0) s.assumedFocus = 0;
+            focused = s.assumedFocus;
+        }
         if (focused == targetIndex) {
             pressKey(0);
             s.pickedName = target;
             finish(PICKED, "chose " + target);
         } else if (focused >= 0 && ++s.steps <= MAX_STEPS) {
-            pressKey(targetIndex > focused ? 1 : -1);
+            int direction = targetIndex > focused ? 1 : -1;
+            if (s.assumedFocus >= 0) s.assumedFocus += direction;
+            pressKey(direction);
             s.scanScheduled = true;
             mHandler.postDelayed(mScan, SCAN_DELAY_MS * 2);
         } else {
