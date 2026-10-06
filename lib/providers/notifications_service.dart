@@ -180,6 +180,8 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
         }
       } else {
         final notification = NotificationItem.fromMap(item);
+        // Permanent and blank (Google TV's own background entries): nothing to show or dismiss, so never list them.
+        if (!notification.isClearable && notification.title.trim().isEmpty && notification.text.trim().isEmpty) continue;
         if (!notification.isClearable &&
             (_hidePersistentNotifications || _hiddenPersistentKeys.contains(notification.key))) {
           continue;
