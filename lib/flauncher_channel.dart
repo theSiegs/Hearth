@@ -142,6 +142,18 @@ class FLauncherChannel {
   Future<Map<dynamic, dynamic>> getProfilePairingStatus() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getProfilePairingStatus") ?? {};
 
+  /// Opens a link in a specific app (a search result's title page). False when the app can't open it.
+  Future<bool> openLinkInApp(String packageName, String link) async =>
+      await _methodChannel.invokeMethod<bool>("openLinkInApp", {"packageName": packageName, "link": link}) ?? false;
+
+  /// Opens an app's own search for the text. False when the app has no search to open.
+  Future<bool> searchInApp(String packageName, String query) async =>
+      await _methodChannel.invokeMethod<bool>("searchInApp", {"packageName": packageName, "query": query}) ?? false;
+
+  /// Google TV's page for a title ([link]), or Google TV's search for [query].
+  Future<bool> openGoogleTv({String? link, String? query}) async =>
+      await _methodChannel.invokeMethod<bool>("openGoogleTv", {"link": link, "query": query}) ?? false;
+
   Future<void> setProfilePairingAppEnabled(String packageName, bool enabled) async =>
       await _methodChannel.invokeMethod("setProfilePairingAppEnabled", {"packageName": packageName, "enabled": enabled});
 
