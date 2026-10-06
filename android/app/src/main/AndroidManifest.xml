@@ -60,6 +60,10 @@
         <intent>
             <action android:name="android.intent.action.GET_CONTENT" />
         </intent>
+        <!-- Hearth voice passes speech on to Google's voice -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
     </queries>
 
     <application
@@ -142,6 +146,30 @@
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
+        </service>
+        <service
+            android:name=".ProfilePairingService"
+            android:label="Hearth Profile Pairing"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/profile_pairing_config" />
+        </service>
+        <service
+            android:name=".HearthVoiceService"
+            android:label="Hearth voice"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.TTS_SERVICE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.speech.tts"
+                android:resource="@xml/hearth_voice_engine" />
         </service>
 
         <receiver

@@ -21,6 +21,8 @@ class AccessibilityPage extends StatefulWidget {
 class _AccessibilityPageState extends State<AccessibilityPage> with WidgetsBindingObserver {
   bool _accessibilityEnabled = false;
   bool _isGoogleTv = false;
+  bool _profilePairingEnabled = false;
+  bool _hearthVoiceDefault = false;
 
   @override
   void initState() {
@@ -52,6 +54,16 @@ class _AccessibilityPageState extends State<AccessibilityPage> with WidgetsBindi
       if (mounted) {
         setState(() {
           _accessibilityEnabled = enabled;
+        });
+      }
+    } catch (_) {}
+
+    try {
+      final status = await FLauncherChannel().getProfilePairingStatus();
+      if (mounted) {
+        setState(() {
+          _profilePairingEnabled = status["enabled"] == true;
+          _hearthVoiceDefault = status["voiceDefault"] == true;
         });
       }
     } catch (_) {}
@@ -151,6 +163,50 @@ class _AccessibilityPageState extends State<AccessibilityPage> with WidgetsBindi
                       _showAccessibilityPermissionGuide(context);
                     }
                   },
+                ),
+                const SizedBox(height: 8),
+                FocusableSettingsTile(
+                  leading: Icon(
+                    Icons.switch_account,
+                    color: _profilePairingEnabled ? Colors.green : Colors.white54,
+                  ),
+                  title: Text("Profile Pairing", style: Theme.of(context).textTheme.bodyMedium),
+                  trailing: Text(
+                    _profilePairingEnabled ? localizations.enabled : localizations.disabled,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: _profilePairingEnabled ? Colors.green : Colors.white54,
+                        ),
+                  ),
+                  onPressed: () => FLauncherChannel().requestAccessibilityPermission(),
+                ),
+                if (_profilePairingEnabled) ...[
+                  const SizedBox(height: 8),
+                  FocusableSettingsTile(
+                    leading: Icon(
+                      Icons.record_voice_over,
+                      color: _hearthVoiceDefault ? Colors.green : Colors.orange,
+                    ),
+                    title: Text("Hearth voice (for Netflix)", style: Theme.of(context).textTheme.bodyMedium),
+                    trailing: Text(
+                      _hearthVoiceDefault ? "In use" : "Not chosen",
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: _hearthVoiceDefault ? Colors.green : Colors.orange,
+                          ),
+                    ),
+                    onPressed: () => FLauncherChannel().openTextToSpeechSettings(),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    'Profile Pairing picks the right profile on the "Who\'s watching?" screen of Netflix, Disney+, '
+                    'Apple TV, HBO Max and Paramount+ when Hearth opens them. Turn on "Hearth Profile Pairing" '
+                    'under Accessibility; for Netflix, also choose "Hearth voice" as the text-to-speech engine '
+                    '(other apps still speak with Google\'s voice).',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 FocusableSettingsTile(

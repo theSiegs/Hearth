@@ -138,6 +138,13 @@ class FLauncherChannel {
 
   Future<bool> isKidsProfile() async => await _methodChannel.invokeMethod<bool>("isKidsProfile") ?? false;
 
+  /// Profile Pairing's state: {enabled, voiceDefault}.
+  Future<Map<dynamic, dynamic>> getProfilePairingStatus() async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getProfilePairingStatus") ?? {};
+
+  Future<bool> openTextToSpeechSettings() async =>
+      await _methodChannel.invokeMethod<bool>("openTextToSpeechSettings") ?? false;
+
   Future<int> getIdleStandbyMinutes() async => await _methodChannel.invokeMethod<int>("getIdleStandbyMinutes") ?? 0;
 
   Future<void> setIdleStandbyMinutes(int minutes) async =>

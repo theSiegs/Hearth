@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Profile Pairing: reads streaming apps' "Who's watching?" screens, only while Hearth opens one of them.
+     Spoken feedback and event types are switched on at run time for those launches; isAccessibilityTool is
+     what HBO Max checks before describing its picker. -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeAnnouncement"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:canRequestTouchExplorationMode="true"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/profile_pairing_description"
+    android:isAccessibilityTool="true"
+    android:notificationTimeout="0" />
