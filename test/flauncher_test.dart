@@ -22,6 +22,7 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/gradients.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/models/category.dart';
+import 'package:flauncher/models/watch_next_program.dart';
 import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flauncher/providers/network_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
@@ -36,6 +37,7 @@ import 'package:flauncher/widgets/category_row.dart';
 import 'package:flauncher/widgets/app_card.dart';
 import 'package:flauncher/widgets/focus_aware_app_bar.dart';
 import 'package:flauncher/widgets/home_dock.dart';
+import 'package:flauncher/widgets/continue_watching_row.dart';
 import 'package:flauncher/widgets/settings/settings_panel_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -197,6 +199,55 @@ void main() {
     // "Games" is a row section, but below the dock it wraps as a grid; the dock is the only row.
     expect(find.byType(AppsGrid), findsNWidgets(2));
     expect(find.byType(CategoryRow), findsOneWidget);
+  });
+
+  testWidgets("Up from the dock swaps it for Continue Watching, and Down swaps back", (tester) async {
+    final appsService = mkAppService();
+    when(appsService.applications).thenReturn([]);
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    favoritesCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.1", name: "FLauncher 1"));
+    when(appsService.launcherSections).thenReturn([favoritesCategory]);
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+    when(settingsService.showContinueWatching).thenReturn(true);
+    when(settingsService.hiddenWatchNextProgramIds).thenReturn([]);
+    when(settingsService.hiddenWatchNextPackages).thenReturn([]);
+    when(settingsService.continueWatchingMaxItems).thenReturn(10);
+    when(settingsService.continueWatchingCardSize).thenReturn('normal');
+    when(settingsService.continueWatchingShowProgress).thenReturn(true);
+    when(settingsService.continueWatchingShowPercentage).thenReturn(true);
+    when(settingsService.continueWatchingShowDescription).thenReturn(true);
+    final watchNextService = mkWatchNextService();
+    when(watchNextService.hasPermission).thenReturn(true);
+    when(watchNextService.programs).thenReturn([
+      WatchNextProgram(
+        id: 1, packageName: "com.example.video", title: "Big Buck Bunny", description: "", watchNextType: 0,
+        lastEngagementTime: 0, playbackPosition: 50, duration: 100, intentUri: "intent://x", posterArtUri: "",
+      ),
+    ]);
+
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService,
+        watchNextService: watchNextService);
+
+    bool recentsFocused() => FocusManager.instance.primaryFocus?.context
+            ?.findAncestorWidgetOfExactType<ContinueWatchingRow>() != null;
+    double recentsOpacity() => tester
+        .widget<AnimatedOpacity>(find.ancestor(of: find.byKey(Key("home_recents")), matching: find.byType(AnimatedOpacity)).first)
+        .opacity;
+
+    // The first screen starts on the dock, with Continue Watching hidden.
+    expect(getFocusNodeForApp(tester, "me.efesser.flauncher.1")!.hasFocus, isTrue);
+    expect(recentsOpacity(), 0);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(recentsFocused(), isTrue);
+    expect(recentsOpacity(), 1);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(getFocusNodeForApp(tester, "me.efesser.flauncher.1")!.hasFocus, isTrue);
+    expect(recentsOpacity(), 0);
   });
 
   testWidgets("Dock falls back to the classic layout while Favorites is empty", (tester) async {
@@ -792,8 +843,9 @@ Future<void> _pumpWidgetWithProviders(
   WidgetTester tester,
   WallpaperService wallpaperService,
   AppsService appsService,
-  SettingsService settingsService,
-) async {
+  SettingsService settingsService, {
+  WatchNextService? watchNextService,
+}) async {
   tester.view.physicalSize = const Size(1920, 1080);
   tester.view.devicePixelRatio = 1.0;
   await tester.pumpWidget(
@@ -804,7 +856,7 @@ Future<void> _pumpWidgetWithProviders(
         ChangeNotifierProvider<SettingsService>.value(value: settingsService),
         ChangeNotifierProvider<TvInputsService>.value(value: mkTvInputsService()),
         ChangeNotifierProvider<NotificationsService>.value(value: mkNotificationsService()),
-        ChangeNotifierProvider<WatchNextService>.value(value: mkWatchNextService()),
+        ChangeNotifierProvider<WatchNextService>.value(value: watchNextService ?? mkWatchNextService()),
         ChangeNotifierProvider<WeatherService>.value(value: mkWeatherService()),
         ChangeNotifierProvider(create: (_) => LauncherState()),
         ChangeNotifierProvider(create: (_) => NetworkService(FLauncherChannel())),

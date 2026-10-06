@@ -32,6 +32,7 @@ import 'package:flauncher/widgets/home_dock.dart';
 import 'package:flauncher/widgets/launcher_alternative_view.dart';
 import 'package:flauncher/widgets/focus_aware_app_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/widgets/continue_watching_row.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
@@ -60,6 +61,13 @@ class _FLauncherState extends State<FLauncher> {
   /// Focus is in the sections below the dock, so the wallpaper is blurred behind them.
   bool _browsingBelowDock = false;
 
+  /// On the dock layout's first screen, the dock and Continue Watching take turns: Up from the dock
+  /// slides the dock away and shows Continue Watching; Down from there brings the dock back.
+  bool _showingRecents = false;
+  final FocusNode _dockFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
+  final FocusNode _recentsFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
+  FocusNode? _lastDockFocus;
+
   @override
   void initState() {
     super.initState();
@@ -71,6 +79,8 @@ class _FLauncherState extends State<FLauncher> {
     FocusManager.instance.removeListener(_onFocusMoved);
     _firstScreenFocusNode.dispose();
     _belowDockFocusNode.dispose();
+    _dockFocusNode.dispose();
+    _recentsFocusNode.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -78,6 +88,9 @@ class _FLauncherState extends State<FLauncher> {
   /// Cards centre themselves vertically when focused, which would scroll the dock layout's
   /// first screen partway off the top. While focus is on that screen, keep the page at the top.
   void _onFocusMoved() {
+    if (_dockFocusNode.hasFocus) {
+      _lastDockFocus = FocusManager.instance.primaryFocus;
+    }
     // Focus moving into a settings panel or the app bar leaves the blur as it was,
     // unless the dock layout itself has gone (dock switched off, or Favorites emptied).
     final bool dockLayoutGone = _belowDockFocusNode.context == null;
@@ -95,6 +108,40 @@ class _FLauncherState extends State<FLauncher> {
       }
     });
   }
+
+  void _setShowingRecents(bool show) {
+    if (show == _showingRecents) return;
+    setState(() => _showingRecents = show);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      FocusNode? target;
+      if (show) {
+        target = _firstFocusable(_recentsFocusNode);
+        if (target == null) {
+          // Nothing to show after all (e.g. every program is hidden): stay on the dock.
+          setState(() => _showingRecents = false);
+          return;
+        }
+      } else {
+        final last = _lastDockFocus;
+        target = last != null && last.context != null && _dockFocusNode.descendants.contains(last)
+            ? last
+            : _firstFocusable(_dockFocusNode);
+      }
+      target?.requestFocus();
+    });
+  }
+
+  static FocusNode? _firstFocusable(FocusNode parent) =>
+      parent.descendants.firstWhereOrNull((n) => n.canRequestFocus && !n.skipTraversal && n.context != null);
+
+  /// Up (or Down) swaps the dock and Continue Watching; any other key is left for normal navigation.
+  KeyEventResult Function(FocusNode, KeyEvent) _swapOn(LogicalKeyboardKey key, bool showRecents) =>
+      (node, event) {
+        if (event.logicalKey != key || event is KeyUpEvent) return KeyEventResult.ignored;
+        if (event is KeyDownEvent) _setShowingRecents(showRecents);
+        return KeyEventResult.handled;
+      };
 
   @override
   Widget build(BuildContext context) => Actions(
@@ -211,6 +258,7 @@ class _FLauncherState extends State<FLauncher> {
     // Empty sections (often "Non-TV Apps") are left out below the dock; they'd only say "This category is empty".
     // With a single section left, its heading is dropped too. Everything below the dock wraps as a grid,
     // so a "row" section doesn't become one long sideways-scrolling strip.
+    final bool showRecents = continueWatchingActive && _showingRecents;
     final List<LauncherSection> belowDock =
         sections.where((s) => s != favorites && !(s is Category && s.applications.isEmpty)).toList();
 
@@ -222,18 +270,44 @@ class _FLauncherState extends State<FLauncher> {
           alignment: Alignment.bottomCenter,
           child: Focus(
             focusNode: _firstScreenFocusNode,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Stack(
+              alignment: Alignment.bottomCenter,
               children: [
-                if (continueWatchingActive) const ContinueWatchingRow(isFirstSection: true),
-                Padding(
-                  padding: const EdgeInsets.only(top: 8, bottom: 24),
-                  child: HomeDock(
-                    key: Key(favorites.id.toString()),
-                    category: favorites,
-                    applications: favorites.applications,
-                    isFirstSection: !continueWatchingActive,
+                if (continueWatchingActive)
+                  ExcludeFocus(
+                    excluding: !showRecents,
+                    child: Focus(
+                      focusNode: _recentsFocusNode,
+                      onKeyEvent: _swapOn(LogicalKeyboardKey.arrowDown, false),
+                      child: _swapAnimation(
+                        visible: showRecents,
+                        hiddenOffset: const Offset(0, 0.25),
+                        child: const Padding(
+                          padding: EdgeInsets.only(bottom: 24),
+                          child: ContinueWatchingRow(key: Key("home_recents"), isFirstSection: true),
+                        ),
+                      ),
+                    ),
+                  ),
+                ExcludeFocus(
+                  excluding: showRecents,
+                  child: Focus(
+                    focusNode: _dockFocusNode,
+                    onKeyEvent: continueWatchingActive ? _swapOn(LogicalKeyboardKey.arrowUp, true) : null,
+                    child: _swapAnimation(
+                      visible: !showRecents,
+                      // Far enough to slide the dock off the bottom of the screen.
+                      hiddenOffset: const Offset(0, 1.6),
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 8, bottom: 24),
+                        child: HomeDock(
+                          key: Key(favorites.id.toString()),
+                          category: favorites,
+                          applications: favorites.applications,
+                          isFirstSection: !continueWatchingActive,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -248,6 +322,18 @@ class _FLauncherState extends State<FLauncher> {
       ],
     );
   }
+
+  Widget _swapAnimation({required bool visible, required Offset hiddenOffset, required Widget child}) =>
+      AnimatedSlide(
+        offset: visible ? Offset.zero : hiddenOffset,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        child: AnimatedOpacity(
+          opacity: visible ? 1 : 0,
+          duration: const Duration(milliseconds: 250),
+          child: child,
+        ),
+      );
 
   Widget _sections(
     List<LauncherSection> sections, {
