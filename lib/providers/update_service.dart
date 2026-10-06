@@ -42,6 +42,47 @@ class UpdateInfo {
   });
 }
 
+const _abiPattern = r"(arm64-v8a|armeabi-v7a|armeabi|x86_64|x86)";
+
+/// Compares dotted versions numerically ("2026.10.05" > "2026.10.03+8112"); a leading "v" and any
+/// non-digits in a part are ignored, and missing parts count as 0.
+int compareVersions(String left, String right) {
+  List<int> parts(String version) {
+    var v = version.trim();
+    if (v.startsWith("v") || v.startsWith("V")) v = v.substring(1);
+    return v.split(RegExp(r"[.+]")).map((p) => int.tryParse(p.replaceAll(RegExp(r"[^0-9]"), "")) ?? 0).toList();
+  }
+
+  final l = parts(left), r = parts(right);
+  for (var i = 0; i < (l.length > r.length ? l.length : r.length); i++) {
+    final a = i < l.length ? l[i] : 0, b = i < r.length ? r[i] : 0;
+    if (a != b) return a.compareTo(b);
+  }
+  return 0;
+}
+
+/// The ABI token may sit anywhere between separators: "LTvLauncher-armeabi-v7a-release.apk", "app-arm64-v8a.apk".
+/// Picks the release APK for this device: one built for its ABIs (in preference order), else a universal APK.
+/// Never returns an APK built for another ABI — it would fail to install (e.g. arm64 on a 32-bit stick).
+Map<String, dynamic>? pickApkAsset(List<dynamic> assets, List<String> deviceAbis) {
+  final apks = assets
+      .whereType<Map<String, dynamic>>()
+      .where((a) => (a['name'] as String? ?? "").toLowerCase().endsWith(".apk") && a['browser_download_url'] is String)
+      .toList();
+  String? abiOf(Map<String, dynamic> asset) =>
+      RegExp(r"(?:^|[-_.])" "$_abiPattern" r"(?=[-_.])", caseSensitive: false).firstMatch(asset['name'] as String)?.group(1)?.toLowerCase();
+
+  for (final abi in deviceAbis) {
+    for (final apk in apks) {
+      if (abiOf(apk) == abi.toLowerCase()) return apk;
+    }
+  }
+  for (final apk in apks) {
+    if (abiOf(apk) == null) return apk;
+  }
+  return null;
+}
+
 /// Checks GitHub Releases for newer builds of this launcher and installs
 /// them via the system package installer. Only talks to:
 ///  - api.github.com (release metadata)
@@ -50,7 +91,9 @@ class UpdateInfo {
 class UpdateService extends ChangeNotifier {
   static const String _repoOwner = "theSiegs";
   static const String _repoName = "Hearth";
-  static const String _releasesUrl = "https://api.github.com/repos/$_repoOwner/$_repoName/releases/latest";
+  // The full list, not /latest: drafts and pre-releases are skipped here, and the newest stable release with an
+  // APK for this device wins.
+  static const String _releasesUrl = "https://api.github.com/repos/$_repoOwner/$_repoName/releases?per_page=20";
 
   final FLauncherChannel _channel;
 
@@ -74,7 +117,7 @@ class UpdateService extends ChangeNotifier {
   Future<void> _loadCurrentVersion() async {
     try {
       final info = await PackageInfo.fromPlatform();
-      _currentVersion = info.version;
+      _currentVersion = info.buildNumber.isEmpty ? info.version : "${info.version}+${info.buildNumber}";
     } catch (e) {
       developer.log("Failed to read current version", name: "UpdateService", error: e);
     }
@@ -100,26 +143,33 @@ class UpdateService extends ChangeNotifier {
       }
 
       final body = await response.transform(utf8.decoder).join();
-      final Map<String, dynamic> json = jsonDecode(body) as Map<String, dynamic>;
+      final List<dynamic> releases = jsonDecode(body) as List<dynamic>;
+      final List<String> abis = await _channel.getSupportedAbis();
 
-      final String tagName = (json['tag_name'] as String?) ?? "";
-      final String normalizedTag = tagName.startsWith("v") ? tagName.substring(1) : tagName;
-      final String changelog = (json['body'] as String?) ?? "";
-      final List<dynamic> assets = (json['assets'] as List<dynamic>?) ?? [];
+      Map<String, dynamic>? release;
+      Map<String, dynamic>? apkAsset;
+      for (final candidate in releases.whereType<Map<String, dynamic>>()) {
+        if (candidate['draft'] == true || candidate['prerelease'] == true) continue;
+        final asset = pickApkAsset((candidate['assets'] as List<dynamic>?) ?? [], abis);
+        if (asset != null) {
+          release = candidate;
+          apkAsset = asset;
+          break;
+        }
+      }
 
-      final apkAsset = assets.cast<Map<String, dynamic>>().firstWhere(
-            (a) => (a['name'] as String? ?? "").toLowerCase().endsWith(".apk"),
-            orElse: () => <String, dynamic>{},
-          );
-
-      if (apkAsset.isEmpty || normalizedTag.isEmpty) {
+      if (release == null || apkAsset == null) {
         _status = UpdateStatus.error;
-        _errorMessage = "No APK asset found on the latest release";
+        _errorMessage = "No release has an APK for this device";
         notifyListeners();
         return;
       }
 
-      if (normalizedTag == _currentVersion) {
+      final String tagName = (release['tag_name'] as String?) ?? "";
+      final String normalizedTag = tagName.startsWith("v") ? tagName.substring(1) : tagName;
+      final String changelog = (release['body'] as String?) ?? "";
+
+      if (compareVersions(normalizedTag, _currentVersion) <= 0) {
         _status = UpdateStatus.upToDate;
         notifyListeners();
         return;
@@ -158,7 +208,7 @@ class UpdateService extends ChangeNotifier {
         await updatesDir.create(recursive: true);
       }
 
-      final apkFile = File("${updatesDir.path}/ltvlauncher-${info.tagName}.apk");
+      final apkFile = File("${updatesDir.path}/hearth-${info.tagName}.apk");
       if (await apkFile.exists()) {
         await apkFile.delete();
       }

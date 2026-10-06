@@ -151,6 +151,7 @@ public class MainActivity extends FlutterActivity {
                 case "openDefaultLauncherSettings" -> result.success(openDefaultLauncherSettings());
                 case "openProfileChooser" -> result.success(openProfileChooser());
                 case "isGoogleTv" -> result.success(isGoogleTv());
+                case "getSupportedAbis" -> result.success(java.util.Arrays.asList(Build.SUPPORTED_ABIS));
                 case "isKidsProfile" -> result.success(isKidsProfile());
                 case "getHaNotificationsEnabled" -> result.success(LauncherAccessibilityService.isHaNotificationsEnabled(this));
                 case "setHaNotificationsEnabled" -> {

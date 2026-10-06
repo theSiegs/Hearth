@@ -171,6 +171,10 @@ class FLauncherChannel {
 
   Future<String?> getLocalIpAddress() async => await _methodChannel.invokeMethod<String>("getLocalIpAddress");
 
+  /// Device ABIs in preference order (Build.SUPPORTED_ABIS).
+  Future<List<String>> getSupportedAbis() async =>
+      (await _methodChannel.invokeListMethod<String>("getSupportedAbis")) ?? const [];
+
   Future<bool> isGoogleTv() async => await _methodChannel.invokeMethod("isGoogleTv") ?? false;
 
   Future<void> playClickSound() async {
