@@ -100,6 +100,7 @@ public class ProfilePairingService extends AccessibilityService {
         String pickedName;
         /** Where we believe focus is, for apps that don't report it (-1: unknown). */
         int assumedFocus = -1;
+        boolean reachedEnd;
 
         Session(String pkg, String hearthProfile) {
             this.pkg = pkg;
@@ -325,6 +326,8 @@ public class ProfilePairingService extends AccessibilityService {
             return;
         }
         if (!s.pickerSeen || t.isEmpty()) return;
+        // Hints and settings Netflix also reads out, not profile names.
+        if (lower.startsWith("press ") || lower.startsWith("audio description")) return;
         Matcher count = NETFLIX_COUNT.matcher(t);
         if (count.find()) {
             String name = count.group(1).trim();
@@ -430,6 +433,17 @@ public class ProfilePairingService extends AccessibilityService {
         Set<String> known = new LinkedHashSet<>(s.names.keySet());
         known.addAll(ProfilePairing.getSeenNames(this, s.pkg));
         String target = ProfilePairing.choose(this, s.pkg, s.hearthProfile, known);
+        // Until Hearth has heard the whole list once (for the Profile Pairing menu and nickname matches), walk to
+        // the end first, then come back to the right profile.
+        Log.i(TAG, "Focused " + name + " (" + index + " of " + count + ")");
+        if (count > 0 && index == count) s.reachedEnd = true;
+        boolean learning = !complete && count > 0 && ProfilePairing.getSeenNames(this, s.pkg).size() < count
+                && !s.reachedEnd && s.reversals == 0;
+        if (learning) {
+            s.direction = 1;
+            step(s);
+            return;
+        }
         if (target != null && ProfilePairing.normalize(target).equals(ProfilePairing.normalize(name))) {
             pressKey(0);
             s.pickedName = name;
