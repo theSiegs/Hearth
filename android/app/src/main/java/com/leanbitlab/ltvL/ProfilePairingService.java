@@ -1,0 +1,647 @@
+package com.leanbitlab.ltvL;
+
+import android.accessibilityservice.AccessibilityService;
+import android.accessibilityservice.AccessibilityServiceInfo;
+import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.PixelFormat;
+import android.graphics.drawable.GradientDrawable;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
+import android.util.Log;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.View;
+import android.view.WindowManager;
+import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityWindowInfo;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * "Profile Pairing": when Hearth opens a streaming app, picks the app profile paired with the active Hearth profile
+ * on the app's "Who's watching?" screen, behind a cover card ("Opening Netflix as Alex…").
+ *
+ * Dormant (no events) until Hearth opens a supported app. For that launch it reads the picker the way each app
+ * allows: Disney+ and Paramount+ label their tiles; Apple TV and HBO Max only describe their picker to a screen
+ * reader, so the service briefly declares spoken feedback (HBO Max also needs isAccessibilityTool, set in the
+ * config); Netflix only speaks its picker, through the default text-to-speech engine, which Hearth's silent
+ * {@link HearthVoiceService} must be. It then clicks the tile, or moves with the D-pad until the focused name is
+ * the right one and presses OK.
+ */
+public class ProfilePairingService extends AccessibilityService {
+    static final String TAG = "HearthPairing";
+    private static final long WAIT_FOR_PICKER_MS = 25_000;
+    private static final long PICK_TIMEOUT_MS = 15_000;
+    private static final long STEP_TIMEOUT_MS = 2_500;
+    private static final long SCAN_DELAY_MS = 300;
+    private static final long CLICK_CHECK_MS = 1_500;
+    private static final long NAME_WAIT_MS = 600;
+    private static final long COVER_AFTER_PICK_MS = 1_500;
+    private static final long IDLE_AFTER_MS = 3_000;
+    private static final long[] MAX_PROBES_MS = {5_000, 9_000};
+    private static final int MAX_STEPS = 16;
+    private static final int MAX_NODES = 800;
+
+    private static final Pattern NETFLIX_COUNT = Pattern.compile("(?i)^(.*?)[,.]?\\s*(\\d+) of (\\d+) profiles?");
+    private static final Pattern MAX_ITEM = Pattern.compile("(?i)^\\s*(.+?)\\s+Button\\b[,.]?\\s*(\\d+)\\s+of\\s+(\\d+)");
+    private static final Pattern DISNEY_TILE = Pattern.compile("(?i)^Access (.+)'s profile$");
+
+    private static volatile ProfilePairingService sInstance;
+
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
+    private Session mSession;
+    private View mCover;
+
+    /** One app launch. Main thread only. */
+    private static final class Session {
+        final String pkg;
+        final String hearthProfile;
+        boolean pickerSeen;
+        // Apps read through nodes
+        boolean clickTried;
+        boolean checkingClick;
+        boolean scanScheduled;
+        // Apps read one focused name at a time (Netflix, HBO Max, Apple TV without a working click)
+        final Map<String, Integer> names = new LinkedHashMap<>();
+        String current;
+        int direction = 1;
+        int reversals;
+        int steps;
+        boolean waitingForStep;
+        String pendingName;
+        int probes;
+        boolean appShown;
+
+        Session(String pkg, String hearthProfile) {
+            this.pkg = pkg;
+            this.hearthProfile = hearthProfile;
+        }
+    }
+
+    static boolean isRunning() {
+        return sInstance != null;
+    }
+
+    /** Whether Hearth's voice is the default text-to-speech engine (Netflix's picker can only be heard). */
+    static boolean isVoiceDefault(Context context) {
+        return context.getPackageName().equals(
+                Settings.Secure.getString(context.getContentResolver(), "tts_default_synth"));
+    }
+
+    /** Called by Hearth just before it opens {@code packageName}. */
+    static void onAppLaunching(Context context, String packageName) {
+        ProfilePairingService service = sInstance;
+        if (service == null || packageName == null || !ProfilePairing.supports(packageName)) return;
+        String hearthProfile = LauncherAccessibilityService.getActiveProfileName(context);
+        if (hearthProfile == null || hearthProfile.isEmpty()) return;
+        if (ProfilePairing.NETFLIX.equals(packageName) && !isVoiceDefault(context)) {
+            Log.i(TAG, "Netflix skipped: Hearth's voice isn't the text-to-speech engine");
+            return;
+        }
+        Runnable begin = () -> service.begin(packageName, hearthProfile);
+        if (Looper.myLooper() == Looper.getMainLooper()) begin.run(); else service.mHandler.post(begin);
+    }
+
+    /** Text an app asked Hearth's voice to say (worker thread). */
+    static void onSpeech(String callerPackage, String text) {
+        ProfilePairingService service = sInstance;
+        if (service == null || text == null) return;
+        service.mHandler.post(() -> service.handleSpeech(callerPackage, text));
+    }
+
+    @Override
+    protected void onServiceConnected() {
+        super.onServiceConnected();
+        sInstance = this;
+        setMode(false, false);
+    }
+
+    @Override
+    public void onDestroy() {
+        if (sInstance == this) sInstance = null;
+        mHandler.removeCallbacksAndMessages(null);
+        hideCover();
+        super.onDestroy();
+    }
+
+    @Override
+    public void onInterrupt() {
+    }
+
+    private static boolean needsScreenReaderMode(String pkg) {
+        return ProfilePairing.NETFLIX.equals(pkg) || ProfilePairing.APPLE_TV.equals(pkg)
+                || ProfilePairing.MAX.equals(pkg);
+    }
+
+    /**
+     * Listens to the app only during a launch. Screen-reader mode (spoken feedback) makes Netflix, Apple TV and HBO
+     * Max describe their pickers; it's on only for those launches so apps aren't otherwise in screen-reader mode.
+     */
+    private void setMode(boolean listening, boolean screenReader) {
+        AccessibilityServiceInfo info = getServiceInfo();
+        if (info == null) return;
+        info.eventTypes = listening ? AccessibilityEvent.TYPES_ALL_MASK : 0;
+        info.feedbackType = screenReader
+                ? AccessibilityServiceInfo.FEEDBACK_SPOKEN : AccessibilityServiceInfo.FEEDBACK_GENERIC;
+        int readerFlags = AccessibilityServiceInfo.FLAG_REQUEST_TOUCH_EXPLORATION_MODE;
+        int listenFlags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
+                | AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
+                | AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
+        info.flags = (listening ? listenFlags : 0) | (screenReader ? readerFlags : 0);
+        info.notificationTimeout = 0;
+        setServiceInfo(info);
+    }
+
+    private final Runnable mGoIdle = () -> {
+        if (mSession == null) setMode(false, false);
+    };
+
+    private final Runnable mTimeout = () -> finish(false, "timed out");
+
+    private void begin(String pkg, String hearthProfile) {
+        if (mSession != null) finish(false, "replaced");
+        mHandler.removeCallbacks(mGoIdle);
+        hideCover();
+        mSession = new Session(pkg, hearthProfile);
+        setMode(true, needsScreenReaderMode(pkg));
+        mHandler.postDelayed(mTimeout, WAIT_FOR_PICKER_MS);
+        Log.i(TAG, "Watching " + pkg + " for " + hearthProfile);
+    }
+
+    private void finish(boolean picked, String why) {
+        Session s = mSession;
+        if (s == null) return;
+        mSession = null;
+        mHandler.removeCallbacks(mTimeout);
+        mHandler.removeCallbacks(mStepTimeout);
+        mHandler.removeCallbacks(mScan);
+        mHandler.removeCallbacks(mDeliverPending);
+        mHandler.removeCallbacks(mMaxProbe);
+        Log.i(TAG, (picked ? "Picked" : "Stopped") + " in " + s.pkg + ": " + why);
+        if (picked) mHandler.postDelayed(this::hideCover, COVER_AFTER_PICK_MS); else hideCover();
+        mHandler.postDelayed(mGoIdle, IDLE_AFTER_MS);
+    }
+
+    private void pickerFound() {
+        Session s = mSession;
+        if (s == null || s.pickerSeen) return;
+        s.pickerSeen = true;
+        mHandler.removeCallbacks(mTimeout);
+        mHandler.removeCallbacks(mMaxProbe);
+        mHandler.postDelayed(mTimeout, PICK_TIMEOUT_MS);
+        showCover(s);
+    }
+
+    // ---- Events ----
+
+    @Override
+    public void onAccessibilityEvent(AccessibilityEvent event) {
+        Session s = mSession;
+        if (s == null) return;
+        CharSequence eventPkg = event.getPackageName();
+        int type = event.getEventType();
+        if (eventPkg == null || !s.pkg.contentEquals(eventPkg)) {
+            // Another app came to the front once the picker was up: the user went elsewhere.
+            if (s.pickerSeen && type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && eventPkg != null
+                    && !eventPkg.toString().startsWith(getPackageName())
+                    && !"com.android.systemui".contentEquals(eventPkg)) {
+                finish(false, "left for " + eventPkg);
+            }
+            return;
+        }
+        if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && !s.appShown) {
+            s.appShown = true;
+            if (ProfilePairing.MAX.equals(s.pkg)) scheduleMaxProbe(s);
+        }
+        switch (s.pkg) {
+            case ProfilePairing.MAX:
+                if (type == AccessibilityEvent.TYPE_ANNOUNCEMENT) {
+                    String text = eventText(event);
+                    if (!text.isEmpty()) handleMaxText(text);
+                }
+                break;
+            case ProfilePairing.NETFLIX:
+                break;
+            default:
+                if (!s.scanScheduled && !s.checkingClick) {
+                    s.scanScheduled = true;
+                    mHandler.postDelayed(mScan, SCAN_DELAY_MS);
+                }
+        }
+    }
+
+    private static String eventText(AccessibilityEvent event) {
+        StringBuilder out = new StringBuilder();
+        for (CharSequence t : event.getText()) {
+            if (t != null) out.append(t).append(' ');
+        }
+        if (out.length() == 0 && event.getContentDescription() != null) out.append(event.getContentDescription());
+        return out.toString().trim();
+    }
+
+    // ---- Netflix: hears the picker through Hearth's voice ----
+
+    private void handleSpeech(String callerPackage, String text) {
+        Session s = mSession;
+        if (s == null || !ProfilePairing.NETFLIX.equals(s.pkg) || !s.pkg.equals(callerPackage)) return;
+        String t = text.trim();
+        String lower = t.toLowerCase(Locale.ROOT);
+        if (lower.contains("choose a profile") || lower.contains("profile selection")
+                || lower.contains("who's watching")) {
+            pickerFound();
+            return;
+        }
+        if (!s.pickerSeen || t.isEmpty()) return;
+        Matcher count = NETFLIX_COUNT.matcher(t);
+        if (count.find()) {
+            String name = count.group(1).trim();
+            if (name.isEmpty()) name = s.pendingName;
+            mHandler.removeCallbacks(mDeliverPending);
+            s.pendingName = null;
+            if (name != null) {
+                onFocusedName(name, Integer.parseInt(count.group(2)), Integer.parseInt(count.group(3)));
+            }
+            return;
+        }
+        // A name; its "N of M profiles" usually follows right after.
+        s.pendingName = t;
+        mHandler.removeCallbacks(mDeliverPending);
+        mHandler.postDelayed(mDeliverPending, NAME_WAIT_MS);
+    }
+
+    private final Runnable mDeliverPending = () -> {
+        Session s = mSession;
+        if (s == null || s.pendingName == null) return;
+        String name = s.pendingName;
+        s.pendingName = null;
+        onFocusedName(name, -1, -1);
+    };
+
+    // ---- HBO Max: announces the focused tile ("Who's Watching?. Alex Button, 1 of 4") ----
+
+    private final Runnable mMaxProbe = () -> {
+        Session s = mSession;
+        if (s == null || s.pickerSeen) return;
+        // Max announces the picker only when focus moves; a Right press shows whether it's up.
+        s.probes++;
+        Log.i(TAG, "HBO Max: probing for the picker");
+        pressKey(1);
+        scheduleMaxProbe(s);
+    };
+
+    private void scheduleMaxProbe(Session s) {
+        if (s.probes < MAX_PROBES_MS.length) {
+            long delay = MAX_PROBES_MS[s.probes] - (s.probes == 0 ? 0 : MAX_PROBES_MS[s.probes - 1]);
+            mHandler.postDelayed(mMaxProbe, delay);
+        }
+    }
+
+    private void handleMaxText(String text) {
+        Session s = mSession;
+        if (s == null) return;
+        String rest = text;
+        int watching = text.toLowerCase(Locale.ROOT).indexOf("watching?");
+        if (watching >= 0) {
+            pickerFound();
+            rest = text.substring(watching + "watching?".length()).replaceFirst("^[\\s.,]+", "");
+        } else if (!s.pickerSeen) {
+            if (s.probes > 0) finish(false, "HBO Max opened without its picker");
+            return;
+        }
+        Matcher item = MAX_ITEM.matcher(rest);
+        if (!item.find()) return;
+        String name = item.group(1).split(",")[0].trim();
+        onFocusedName(name, Integer.parseInt(item.group(2)), Integer.parseInt(item.group(3)));
+    }
+
+    // ---- Apps read one focused name at a time ----
+
+    private boolean forwardIsDown(Session s) {
+        return ProfilePairing.NETFLIX.equals(s.pkg);
+    }
+
+    private void pressKey(int direction) {
+        Session s = mSession;
+        if (s == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
+        int action;
+        if (direction == 0) {
+            action = GLOBAL_ACTION_DPAD_CENTER;
+        } else if (forwardIsDown(s)) {
+            action = direction > 0 ? GLOBAL_ACTION_DPAD_DOWN : GLOBAL_ACTION_DPAD_UP;
+        } else {
+            action = direction > 0 ? GLOBAL_ACTION_DPAD_RIGHT : GLOBAL_ACTION_DPAD_LEFT;
+        }
+        performGlobalAction(action);
+    }
+
+    private final Runnable mStepTimeout = () -> {
+        // No new name after a move: focus was already at the end of the row.
+        Session s = mSession;
+        if (s == null || !s.waitingForStep) return;
+        s.waitingForStep = false;
+        reverse(s);
+    };
+
+    private void onFocusedName(String name, int index, int count) {
+        Session s = mSession;
+        if (s == null) return;
+        if (!s.pickerSeen) pickerFound();
+        mHandler.removeCallbacks(mStepTimeout);
+        boolean moved = !name.equals(s.current);
+        s.waitingForStep = false;
+        s.current = name;
+        if (index > 0) s.names.put(name, index);
+        boolean complete = count > 0 && s.names.size() >= count;
+        if (index > 0) ProfilePairing.rememberNames(this, s.pkg, orderedNames(s), complete);
+
+        Set<String> known = new LinkedHashSet<>(s.names.keySet());
+        known.addAll(ProfilePairing.getSeenNames(this, s.pkg));
+        String target = ProfilePairing.choose(this, s.pkg, s.hearthProfile, known);
+        if (target != null && ProfilePairing.normalize(target).equals(ProfilePairing.normalize(name))) {
+            pressKey(0);
+            finish(true, "chose " + name);
+            return;
+        }
+        if (complete && target == null) {
+            finish(false, "no profile matches " + s.hearthProfile + " in " + s.names.keySet());
+            return;
+        }
+        Integer targetIndex = target != null ? s.names.get(target) : null;
+        if (targetIndex != null && index > 0) {
+            s.direction = targetIndex > index ? 1 : -1;
+        } else if (!moved && s.steps > 0) {
+            reverse(s);
+            return;
+        } else if (count > 0 && index == count && s.direction > 0) {
+            s.direction = -1;
+            s.reversals++;
+        } else if (index == 1 && s.direction < 0) {
+            s.direction = 1;
+            s.reversals++;
+        }
+        step(s);
+    }
+
+    private void reverse(Session s) {
+        s.direction = -s.direction;
+        s.reversals++;
+        step(s);
+    }
+
+    private void step(Session s) {
+        if (s.reversals > 2 || ++s.steps > MAX_STEPS) {
+            finish(false, "couldn't find the profile for " + s.hearthProfile);
+            return;
+        }
+        s.waitingForStep = true;
+        pressKey(s.direction);
+        mHandler.postDelayed(mStepTimeout, STEP_TIMEOUT_MS);
+    }
+
+    private static List<String> orderedNames(Session s) {
+        List<Map.Entry<String, Integer>> entries = new ArrayList<>(s.names.entrySet());
+        entries.sort((a, b) -> Integer.compare(a.getValue(), b.getValue()));
+        List<String> names = new ArrayList<>();
+        for (Map.Entry<String, Integer> e : entries) names.add(e.getKey());
+        return names;
+    }
+
+    // ---- Disney+, Paramount+, Apple TV: tiles in the node tree ----
+
+    private static final class Tile {
+        final String name;
+        final AccessibilityNodeInfo node;
+        final AccessibilityNodeInfo clickable;
+
+        Tile(String name, AccessibilityNodeInfo node, AccessibilityNodeInfo clickable) {
+            this.name = name;
+            this.node = node;
+            this.clickable = clickable;
+        }
+    }
+
+    private final Runnable mScan = this::scan;
+
+    private void scan() {
+        Session s = mSession;
+        if (s == null) return;
+        s.scanScheduled = false;
+        AccessibilityNodeInfo root = rootOf(s.pkg);
+        if (root == null) return;
+        List<Tile> tiles = new ArrayList<>();
+        boolean[] pickerTitle = new boolean[1];
+        collect(s.pkg, root, tiles, pickerTitle, new int[1], 0);
+        if (tiles.isEmpty() || (ProfilePairing.APPLE_TV.equals(s.pkg) && !pickerTitle[0])) {
+            if (s.checkingClick || s.clickTried) {
+                if (s.pickerSeen) finish(true, "picker closed");
+            }
+            return;
+        }
+        pickerFound();
+        List<String> names = new ArrayList<>();
+        for (Tile tile : tiles) names.add(tile.name);
+        ProfilePairing.rememberNames(this, s.pkg, names, true);
+        String target = ProfilePairing.choose(this, s.pkg, s.hearthProfile, names);
+        if (target == null) {
+            finish(false, "no profile matches " + s.hearthProfile + " in " + names);
+            return;
+        }
+        int targetIndex = names.indexOf(target);
+        if (!s.clickTried) {
+            s.clickTried = true;
+            if (tiles.get(targetIndex).clickable != null
+                    && tiles.get(targetIndex).clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                // Done if the picker goes away; otherwise fall back to the D-pad.
+                Log.i(TAG, "Clicked " + target + " of " + names);
+                s.checkingClick = true;
+                mHandler.postDelayed(() -> {
+                    Session now = mSession;
+                    if (now == null) return;
+                    now.checkingClick = false;
+                    scan();
+                }, CLICK_CHECK_MS);
+                return;
+            }
+        }
+        int focused = -1;
+        for (int i = 0; i < tiles.size(); i++) {
+            if (hasFocus(tiles.get(i).node, 0) || (tiles.get(i).clickable != null
+                    && hasFocus(tiles.get(i).clickable, 0))) {
+                focused = i;
+                break;
+            }
+        }
+        if (focused == targetIndex) {
+            pressKey(0);
+            finish(true, "chose " + target);
+        } else if (focused >= 0 && ++s.steps <= MAX_STEPS) {
+            pressKey(targetIndex > focused ? 1 : -1);
+            s.scanScheduled = true;
+            mHandler.postDelayed(mScan, SCAN_DELAY_MS * 2);
+        } else {
+            finish(false, "couldn't move to " + target);
+        }
+    }
+
+    private AccessibilityNodeInfo rootOf(String pkg) {
+        try {
+            for (AccessibilityWindowInfo window : getWindows()) {
+                AccessibilityNodeInfo root = window.getRoot();
+                if (root != null && root.getPackageName() != null && pkg.contentEquals(root.getPackageName())) {
+                    return root;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        AccessibilityNodeInfo active = getRootInActiveWindow();
+        return active != null && active.getPackageName() != null && pkg.contentEquals(active.getPackageName())
+                ? active : null;
+    }
+
+    private static void collect(String pkg, AccessibilityNodeInfo node, List<Tile> tiles, boolean[] pickerTitle,
+                                int[] visited, int depth) {
+        if (node == null || depth > 40 || visited[0]++ > MAX_NODES) return;
+        CharSequence text = node.getText();
+        CharSequence desc = node.getContentDescription();
+        String label = text != null ? text.toString().trim() : desc != null ? desc.toString().trim() : "";
+        switch (pkg) {
+            case ProfilePairing.DISNEY:
+                if (desc != null) {
+                    Matcher m = DISNEY_TILE.matcher(desc.toString().trim());
+                    if (m.matches()) tiles.add(new Tile(m.group(1), node, clickableOf(node)));
+                }
+                break;
+            case ProfilePairing.PARAMOUNT:
+                String id = node.getViewIdResourceName();
+                if (id != null && id.endsWith("/profile_avatar") && desc != null && desc.length() > 0) {
+                    tiles.add(new Tile(desc.toString().trim(), node, clickableOf(node)));
+                }
+                break;
+            case ProfilePairing.APPLE_TV:
+                if (label.toLowerCase(Locale.ROOT).contains("who's watching")) pickerTitle[0] = true;
+                CharSequence cls = node.getClassName();
+                if (cls != null && cls.toString().endsWith("Button") && !label.isEmpty()
+                        && !label.toLowerCase(Locale.ROOT).contains("add profile")) {
+                    tiles.add(new Tile(label, node, clickableOf(node)));
+                }
+                break;
+        }
+        for (int i = 0; i < node.getChildCount(); i++) {
+            collect(pkg, node.getChild(i), tiles, pickerTitle, visited, depth + 1);
+        }
+    }
+
+    private static AccessibilityNodeInfo clickableOf(AccessibilityNodeInfo node) {
+        AccessibilityNodeInfo n = node;
+        for (int i = 0; n != null && i < 6; i++) {
+            if (n.isClickable()) return n;
+            n = n.getParent();
+        }
+        return node;
+    }
+
+    private static boolean hasFocus(AccessibilityNodeInfo node, int depth) {
+        if (node == null || depth > 4) return false;
+        if (node.isFocused() || node.isAccessibilityFocused()) return true;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            if (hasFocus(node.getChild(i), depth + 1)) return true;
+        }
+        return false;
+    }
+
+    // ---- Cover card ----
+
+    private void showCover(Session s) {
+        if (mCover != null) return;
+        try {
+            Context c = this;
+            LinearLayout box = new LinearLayout(c);
+            box.setOrientation(LinearLayout.VERTICAL);
+            box.setGravity(Gravity.CENTER);
+            box.setBackgroundColor(Color.parseColor("#F20E0E12"));
+
+            ProgressBar spinner = new ProgressBar(c);
+            box.addView(spinner, new LinearLayout.LayoutParams(dp(48), dp(48)));
+
+            TextView title = new TextView(c);
+            title.setText("Opening " + appLabel(s.pkg) + " as " + s.hearthProfile + "…");
+            title.setTextColor(Color.WHITE);
+            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);
+            title.setGravity(Gravity.CENTER);
+            LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            titleParams.topMargin = dp(20);
+            box.addView(title, titleParams);
+
+            View bar = new View(c);
+            GradientDrawable accent = new GradientDrawable();
+            accent.setCornerRadius(dp(2));
+            accent.setColor(accentColor());
+            bar.setBackground(accent);
+            LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(dp(64), dp(4));
+            barParams.topMargin = dp(16);
+            box.addView(bar, barParams);
+
+            WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+                    WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                            | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    PixelFormat.TRANSLUCENT);
+            getSystemService(WindowManager.class).addView(box, params);
+            mCover = box;
+        } catch (Exception e) {
+            Log.w(TAG, "Cover card failed", e);
+        }
+    }
+
+    private void hideCover() {
+        if (mCover == null) return;
+        try {
+            getSystemService(WindowManager.class).removeView(mCover);
+        } catch (Exception ignored) {
+        }
+        mCover = null;
+    }
+
+    private String appLabel(String pkg) {
+        try {
+            PackageManager pm = getPackageManager();
+            ApplicationInfo info = pm.getApplicationInfo(pkg, 0);
+            return pm.getApplicationLabel(info).toString();
+        } catch (Exception e) {
+            return "the app";
+        }
+    }
+
+    private int accentColor() {
+        String hex = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+                .getString("flutter.accent_color", null);
+        try {
+            if (hex != null) return Color.parseColor("#" + hex.replace("#", ""));
+        } catch (Exception ignored) {
+        }
+        return Color.parseColor("#7C4DFF");
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+}

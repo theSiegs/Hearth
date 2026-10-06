@@ -264,6 +264,15 @@ public class MainActivity extends FlutterActivity {
                     LauncherAccessibilityService.forgetHomeButtonFix(this);
                     result.success(null);
                 }
+                case "getProfilePairingStatus" -> {
+                    Map<String, Object> status = new HashMap<>();
+                    status.put("enabled", ProfilePairingService.isRunning());
+                    status.put("voiceDefault", ProfilePairingService.isVoiceDefault(this));
+                    result.success(status);
+                }
+                case "openTextToSpeechSettings" -> result.success(
+                        tryStartActivity(new Intent("com.android.settings.TTS_SETTINGS"))
+                                || openAccessibilitySettings());
                 case "checkWatchNextPermission" -> result.success(checkWatchNextPermission());
                 case "requestWatchNextPermission" -> {
                     if (checkWatchNextPermission()) {
@@ -657,6 +666,7 @@ public class MainActivity extends FlutterActivity {
             intent = packageManager.getLaunchIntentForPackage(packageName);
         }
 
+        if (intent != null) ProfilePairingService.onAppLaunching(this, packageName);
         return tryStartActivity(intent);
     }
 
@@ -1660,11 +1670,20 @@ public class MainActivity extends FlutterActivity {
             Intent intent = Intent.parseUri(intentUri, Intent.URI_INTENT_SCHEME);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             intent.setSelector(null);
+            ProfilePairingService.onAppLaunching(this, packageOf(intent));
             return tryStartActivity(intent);
         } catch (Exception e) {
             e.printStackTrace();
         }
         return false;
+    }
+
+    /** The app an intent opens, for Profile Pairing. */
+    private String packageOf(Intent intent) {
+        if (intent.getPackage() != null) return intent.getPackage();
+        if (intent.getComponent() != null) return intent.getComponent().getPackageName();
+        ResolveInfo info = getPackageManager().resolveActivity(intent, 0);
+        return info != null && info.activityInfo != null ? info.activityInfo.packageName : null;
     }
 
     private boolean isAccessibilityServiceEnabled() {
