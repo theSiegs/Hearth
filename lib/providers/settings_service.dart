@@ -54,6 +54,7 @@ const String _dockBlurEnabledKey = "dock_blur_enabled";
 const String _dockDarkBackgroundKey = "dock_dark_background";
 const String _dockShadowEnabledKey = "dock_shadow_enabled";
 const String _blurWallpaperBelowDockKey = "blur_wallpaper_below_dock";
+const String _haPanelEnabledKey = "ha_panel_enabled";
 const String _showInputsWidgetInStatusBarKey = "show_inputs_widget_in_status_bar";
 const String _showContinueWatchingKey = "show_continue_watching";
 const String _continueWatchingCardSizeKey = "continue_watching_card_size";
@@ -518,6 +519,14 @@ class SettingsService extends ChangeNotifier {
 
   Future<void> setBlurWallpaperBelowDock(bool enabled) async {
     await _sharedPreferences.setBool(_blurWallpaperBelowDockKey, enabled);
+    notifyListeners();
+  }
+
+  /// Right at the right edge of the home screen opens the Home Assistant panel. Per profile, off by default.
+  bool get haPanelEnabled => _sharedPreferences.getBool(_haPanelEnabledKey) ?? false;
+
+  Future<void> setHaPanelEnabled(bool enabled) async {
+    await _sharedPreferences.setBool(_haPanelEnabledKey, enabled);
     notifyListeners();
   }
 

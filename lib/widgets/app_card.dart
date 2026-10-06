@@ -700,6 +700,11 @@ class _AppCardState extends State<AppCard> with TickerProviderStateMixin {
         Actions.maybeInvoke(context, const OpenSettingsIntent());
         return KeyEventResult.handled;
       } else if (key == LogicalKeyboardKey.arrowRight && widget.isLastInRow) {
+        if (context.read<SettingsService>().haPanelEnabled) {
+          // All the way right opens the Home Assistant panel when it's turned on.
+          Actions.maybeInvoke(context, const OpenHaPanelIntent());
+          return KeyEventResult.handled;
+        }
         _bumpDirection = 1.0;
         if (!_bumpController.isAnimating) {
           _bumpController.forward(from: 0.0);

@@ -77,6 +77,11 @@ class OpenSettingsIntent extends Intent {
   const OpenSettingsIntent();
 }
 
+/// Opens the Home Assistant panel; sent by pressing Right at the right edge of the home screen when the panel is on.
+class OpenHaPanelIntent extends Intent {
+  const OpenHaPanelIntent();
+}
+
 class BackIntent extends Intent {
   const BackIntent();
 }

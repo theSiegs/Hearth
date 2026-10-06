@@ -338,6 +338,38 @@ void main() {
     expect(isAppCardFocused(tester, "me.efesser.flauncher.1"), isTrue);
   });
 
+  testWidgets("Pressing Right on the last app of a row opens the Home Assistant panel when it's on", (tester) async {
+    final calls = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('me.efesser.flauncher/method'), (call) async {
+      calls.add(call.method);
+      // Permission checks the home screen makes on its own answer "no".
+      return call.method.startsWith("check") ? false : null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('me.efesser.flauncher/method'), null));
+    final appsService = mkAppService();
+    final favorites = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    favorites.applications.add(fakeApp(packageName: "me.efesser.flauncher.1", name: "FLauncher 1"));
+    favorites.applications.add(fakeApp(packageName: "me.efesser.flauncher.2", name: "FLauncher 2"));
+    when(appsService.launcherSections).thenReturn([favorites]);
+    final settingsService = mkSettingsService();
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+
+    // Off (the default): Right at the edge stays put.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(isAppCardFocused(tester, "me.efesser.flauncher.2"), isTrue);
+    expect(calls, isNot(contains("openHaPanel")));
+
+    when(settingsService.haPanelEnabled).thenReturn(true);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(calls, contains("openHaPanel"));
+  });
+
   testWidgets("Pressing select on app opens ApplicationInfoPanel", (tester) async {
     final appsService = mkAppService();
     final app = fakeApp(
@@ -803,6 +835,7 @@ SettingsService mkSettingsService() {
   when(settingsService.dockDarkBackground).thenReturn(false);
   when(settingsService.dockShadowEnabled).thenReturn(true);
   when(settingsService.blurWallpaperBelowDock).thenReturn(true);
+  when(settingsService.haPanelEnabled).thenReturn(false);
   when(settingsService.showNotificationsWidgetInStatusBar).thenReturn(true);
   when(settingsService.autoHideNotificationsWidget).thenReturn(false);
   when(settingsService.showWeatherInStatusBar).thenReturn(false);

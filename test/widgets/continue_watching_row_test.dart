@@ -73,6 +73,7 @@ void main() {
     appsService = MockAppsService();
 
     when(settingsService.showContinueWatching).thenReturn(true);
+    when(settingsService.haPanelEnabled).thenReturn(false);
     when(settingsService.hiddenWatchNextProgramIds).thenReturn([]);
     when(settingsService.hiddenWatchNextPackages).thenReturn([]);
     when(settingsService.continueWatchingMaxItems).thenReturn(10);

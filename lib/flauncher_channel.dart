@@ -163,6 +163,16 @@ class FLauncherChannel {
   Future<bool> sendHaTestNotification() async =>
       await _methodChannel.invokeMethod<bool>("sendHaTestNotification") ?? false;
 
+  /// {hasToken, dashboard}: the Home Assistant panel's sign-in and dashboard path (the token itself stays native).
+  Future<Map<dynamic, dynamic>> getHaPanelConfig() async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getHaPanelConfig") ?? {};
+
+  /// Null leaves a value unchanged; an empty token removes it.
+  Future<void> setHaPanelConfig({String? token, String? dashboard}) async =>
+      await _methodChannel.invokeMethod("setHaPanelConfig", {"token": token, "dashboard": dashboard});
+
+  Future<void> openHaPanel() async => await _methodChannel.invokeMethod("openHaPanel");
+
   Future<Map<dynamic, dynamic>> getHaStatusConfig() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getHaStatusConfig") ?? {};
 
