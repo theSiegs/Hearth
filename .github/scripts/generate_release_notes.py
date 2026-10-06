@@ -103,11 +103,7 @@ def main():
     size_armv7 = find_apk_size("Hearth-armeabi-v7a-release.apk", "app-armeabi-v7a-release.apk")
     size_arm64 = find_apk_size("Hearth-arm64-v8a-release.apk", "app-arm64-v8a-release.apk")
 
-    release_notes = f"""### 💖 Support Our Work
-
-As an open-source, community-funded project, we operate on a very limited budget. If LTvLauncher helps you daily, please consider supporting us on [GitHub Sponsors](https://github.com/sponsors/LeanBitLab) or [Open Collective](https://opencollective.com/leanbitlab-org). Sharing LTvLauncher with friends and family makes a huge difference!
-
-## 🚀 What's New
+    release_notes = f"""## 🚀 What's New
 
 ### ✨ Highlights & Changes
 {changelog}
@@ -119,6 +115,8 @@ As an open-source, community-funded project, we operate on a very limited budget
 | **`Hearth-universal-release.apk`** | All Android TV & Fire TV devices (Universal) | All | {size_universal} |
 | **`Hearth-arm64-v8a-release.apk`** | Chromecast with Google TV, Nvidia Shield, modern TVs | 64-bit ARM (`arm64-v8a`) | {size_arm64} |
 | **`Hearth-armeabi-v7a-release.apk`** | Fire TV Stick (Lite, 4K, 4K Max), older smart TVs | 32-bit ARM (`armeabi-v7a`) | {size_armv7} |
+
+Already using Hearth? It updates itself: Settings → Check for Updates. New here? See the [setup guide](https://github.com/theSiegs/Hearth#setup).
 """
 
     with open("release_notes.md", "w") as f:
