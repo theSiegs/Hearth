@@ -180,7 +180,7 @@
                 android:resource="@xml/provider_paths" />
         </provider>
 
-        <!-- Active Google TV profile and accent color, read by HearthTube to follow the profile -->
+        <!-- Active Google TV profile, look and parent PIN check, read by HearthTube (ProfileProvider) -->
         <provider
             android:name=".ProfileProvider"
             android:authorities="${applicationId}.profile"
