@@ -142,7 +142,10 @@ class FLauncherChannel {
   Future<Map<dynamic, dynamic>> getProfilePairingStatus() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getProfilePairingStatus") ?? {};
 
-  /// The streaming apps Profile Pairing handles: [{packageName, label, installed, seenProfiles}].
+  Future<void> setProfilePairingAppEnabled(String packageName, bool enabled) async =>
+      await _methodChannel.invokeMethod("setProfilePairingAppEnabled", {"packageName": packageName, "enabled": enabled});
+
+  /// The streaming apps Profile Pairing handles: [{packageName, label, installed, seenProfiles, enabled}].
   Future<List<Map<dynamic, dynamic>>> getProfilePairingApps() async =>
       await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getProfilePairingApps") ?? [];
 

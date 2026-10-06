@@ -68,6 +68,17 @@ final class ProfilePairing {
         return CHOICE_PREFIX + packageName + "|" + hearthProfile;
     }
 
+    private static final String DISABLED_PREFIX = "disabled|";
+
+    /** Whether Profile Pairing handles this app at all (on unless turned off in Settings → Profile Pairing). */
+    static boolean isAppEnabled(Context context, String packageName) {
+        return !prefs(context).getBoolean(DISABLED_PREFIX + packageName, false);
+    }
+
+    static void setAppEnabled(Context context, String packageName, boolean enabled) {
+        prefs(context).edit().putBoolean(DISABLED_PREFIX + packageName, !enabled).apply();
+    }
+
     /** MODE_AUTO, MODE_PROFILE or MODE_PICKER. */
     static String getMode(Context context, String packageName, String hearthProfile) {
         String saved = prefs(context).getString(choiceKey(packageName, hearthProfile), null);

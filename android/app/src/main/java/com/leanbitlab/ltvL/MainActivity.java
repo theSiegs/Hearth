@@ -172,6 +172,7 @@ public class MainActivity extends FlutterActivity {
                             app.put("installed", false);
                         }
                         app.put("seenProfiles", ProfilePairing.getSeenNames(this, pkg));
+                        app.put("enabled", ProfilePairing.isAppEnabled(this, pkg));
                         apps.add(app);
                     }
                     result.success(apps);
@@ -193,6 +194,11 @@ public class MainActivity extends FlutterActivity {
                         choices.add(choice);
                     }
                     result.success(choices);
+                }
+                case "setProfilePairingAppEnabled" -> {
+                    Boolean enabled = call.argument("enabled");
+                    ProfilePairing.setAppEnabled(this, call.argument("packageName"), enabled == null || enabled);
+                    result.success(null);
                 }
                 case "setProfilePairingChoice" -> {
                     ProfilePairing.setChoice(this, call.argument("packageName"), call.argument("hearthProfile"),
@@ -1295,6 +1301,14 @@ public class MainActivity extends FlutterActivity {
     }
 
     private boolean openScreensaverSettings() {
+        // Google TV's own screensaver settings (source such as Google Photos, slideshow speed), with a live preview.
+        Intent photosIntent = new Intent("dreamx.two.panel.SETTINGS")
+                .setPackage("com.google.android.apps.tv.dreamx")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        if (photosIntent.resolveActivity(getPackageManager()) != null && tryStartActivity(photosIntent)) {
+            return true;
+        }
+
         // 0. Google TV: the screensaver is "Ambient mode". Its own task, so a Settings screen left open
         // earlier doesn't come back up in its place.
         Intent ambientIntent = new Intent("com.google.android.tv.settings.ambient")

@@ -21,7 +21,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'focusable_settings_tile.dart';
-import 'screensaver_clock_style_page.dart';
 
 class DisplaySettingsPage extends StatelessWidget {
   static const String routeName = "display_settings_panel";
@@ -43,13 +42,17 @@ class DisplaySettingsPage extends StatelessWidget {
                 FocusableSettingsTile(
                   autofocus: true,
                   leading: const Icon(Icons.screenshot_monitor),
-                  title: Text(localizations.screensaverSettings, style: Theme.of(context).textTheme.bodyMedium),
+                  title: Text("Screensaver (Google Photos)", style: Theme.of(context).textTheme.bodyMedium),
                   onPressed: () => _openScreensaverSettings(),
                 ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.watch_later_outlined),
-                  title: Text(localizations.screensaverClockStyle, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(ScreensaverClockStylePage.routeName),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                  child: Text(
+                    "Hearth uses Google TV's screensaver. Choose Google Photos (and which albums) or another source "
+                    "there.",
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
                 const _IdleStandbyTile(),
               ],

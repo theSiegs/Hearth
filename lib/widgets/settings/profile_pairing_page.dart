@@ -99,7 +99,8 @@ class _ProfilePairingPageState extends State<ProfilePairingPage> {
                           trailing: app["installed"] == true ? const Icon(Icons.chevron_right) : null,
                           onPressed: app["installed"] == true
                               ? () async {
-                                  await Navigator.of(context).pushNamed(ProfilePairingAppPage.routeName, arguments: app);
+                                  await Navigator.of(context)
+                                      .pushNamed(ProfilePairingAppPage.routeName, arguments: app);
                                   _load();
                                 }
                               : null,
@@ -125,6 +126,7 @@ class _ProfilePairingPageState extends State<ProfilePairingPage> {
 
   String _appStatus(Map<dynamic, dynamic> app) {
     if (app["installed"] != true) return "Not installed";
+    if (app["enabled"] == false) return "Off: the app's own picker shows";
     final seen = (app["seenProfiles"] as List?)?.length ?? 0;
     if (seen == 0) return "Open it once from Hearth so Hearth can learn its profiles";
     return "$seen profile${seen == 1 ? '' : 's'} found";
@@ -146,6 +148,13 @@ class ProfilePairingAppPage extends StatefulWidget {
 class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
   final FLauncherChannel _channel = FLauncherChannel();
   List<PairingChoice>? _choices;
+  late bool _enabled = widget.app["enabled"] != false;
+
+  Future<void> _toggleEnabled() async {
+    final enabled = !_enabled;
+    await _channel.setProfilePairingAppEnabled(_packageName, enabled);
+    if (mounted) setState(() => _enabled = enabled);
+  }
 
   String get _packageName => widget.app["packageName"] as String;
 
@@ -214,20 +223,32 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
               : SingleChildScrollView(
                   child: Column(
                     children: [
-                      for (final (index, choice) in choices.indexed)
-                        FocusableSettingsTile(
-                          autofocus: index == 0,
-                          leading: Icon(choice.kids ? Icons.child_care : Icons.person_outline),
-                          title: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(choice.hearthProfile + (choice.kids ? " (kids)" : ""), style: textTheme.bodyMedium),
-                              Text(choice.summary, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
-                            ],
-                          ),
-                          trailing: const Icon(Icons.chevron_right),
-                          onPressed: () => _change(choice),
+                      FocusableSettingsTile(
+                        autofocus: true,
+                        leading: Icon(Icons.switch_account, color: _enabled ? Colors.green : Colors.white54),
+                        title: Text("Pair profiles in ${widget.app["label"]}", style: textTheme.bodyMedium),
+                        trailing: Text(
+                          _enabled ? "On" : "Off",
+                          style: textTheme.bodySmall?.copyWith(color: _enabled ? Colors.green : Colors.white54),
                         ),
+                        onPressed: _toggleEnabled,
+                      ),
+                      if (_enabled) const Divider(),
+                      if (_enabled)
+                        for (final choice in choices)
+                          FocusableSettingsTile(
+                            leading: Icon(choice.kids ? Icons.child_care : Icons.person_outline),
+                            title: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(choice.hearthProfile + (choice.kids ? " (kids)" : ""),
+                                    style: textTheme.bodyMedium),
+                                Text(choice.summary, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
+                              ],
+                            ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onPressed: () => _change(choice),
+                          ),
                       const SizedBox(height: 16),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
