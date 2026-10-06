@@ -84,6 +84,11 @@ public class MainActivity extends FlutterActivity {
     private final String WEATHER_EVENT_CHANNEL = "me.efesser.flauncher/event_weather";
     private final String WATCH_NEXT_EVENT_CHANNEL = "me.efesser.flauncher/event_watch_next";
     private MethodChannel.Result pendingPermissionResult;
+    private MethodChannel mMethodChannel;
+    private MethodChannel.Result mPendingVoiceResult;
+    private static final int VOICE_REQUEST = 4242;
+    /** Intent extra asking Hearth to open its search: "voice" to start listening right away. */
+    static final String EXTRA_OPEN_SEARCH = "hearth_open_search";
     private static final ExecutorService sIoExecutor = Executors.newFixedThreadPool(4);
 
     @Override
@@ -93,7 +98,14 @@ public class MainActivity extends FlutterActivity {
 
         BinaryMessenger messenger = flutterEngine.getDartExecutor().getBinaryMessenger();
 
-        new MethodChannel(messenger, METHOD_CHANNEL).setMethodCallHandler((call, result) -> {
+        mMethodChannel = new MethodChannel(messenger, METHOD_CHANNEL);
+        // Opened by the remote's search button: Flutter picks this up with takePendingSearch once it's running.
+        String coldSearch = getIntent() != null ? getIntent().getStringExtra(EXTRA_OPEN_SEARCH) : null;
+        if (coldSearch != null) {
+            mPendingSearch = coldSearch;
+            getIntent().removeExtra(EXTRA_OPEN_SEARCH);
+        }
+        mMethodChannel.setMethodCallHandler((call, result) -> {
             switch (call.method) {
                 case "getApplications" -> result.success(getApplications());
                 case "getApplicationBanner" -> result.success(getApplicationBanner(call.arguments()));
@@ -157,6 +169,12 @@ public class MainActivity extends FlutterActivity {
                     ProfilePairing.rememberHearthProfile(
                             this, LauncherAccessibilityService.getActiveProfileName(this), kids);
                     result.success(kids);
+                }
+                case "voiceSearch" -> startVoiceSearch(result);
+                case "takePendingSearch" -> {
+                    String pending = mPendingSearch;
+                    mPendingSearch = null;
+                    result.success(pending);
                 }
                 case "openLinkInApp" -> {
                     // A search result: the app's own link for the title, opened in that app (Profile Pairing first).
@@ -1783,6 +1801,57 @@ public class MainActivity extends FlutterActivity {
             e.printStackTrace();
         }
         return false;
+    }
+
+    /** A search request from the remote ("voice" or "text") not yet picked up by Flutter. */
+    private String mPendingSearch;
+
+    /** Listens with the TV's speech recognizer (Google's on Google TV) and resolves with what was said, or null. */
+    private void startVoiceSearch(MethodChannel.Result result) {
+        if (mPendingVoiceResult != null) mPendingVoiceResult.success(null);
+        Intent intent = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        android.speech.RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
+                .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Search films and shows")
+                .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+        try {
+            mPendingVoiceResult = result;
+            startActivityForResult(intent, VOICE_REQUEST);
+        } catch (Exception e) {
+            mPendingVoiceResult = null;
+            result.success(null);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == VOICE_REQUEST) {
+            MethodChannel.Result pending = mPendingVoiceResult;
+            mPendingVoiceResult = null;
+            String text = null;
+            if (resultCode == RESULT_OK && data != null) {
+                List<String> said = data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);
+                if (said != null && !said.isEmpty()) text = said.get(0);
+            }
+            if (pending != null) pending.success(text);
+            return;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @Override
+    protected void onNewIntent(@NonNull Intent intent) {
+        super.onNewIntent(intent);
+        handleSearchIntent(intent);
+    }
+
+    /** The remote's search/mic button (mapped in Remote buttons) opens Hearth's search. */
+    private void handleSearchIntent(Intent intent) {
+        String mode = intent != null ? intent.getStringExtra(EXTRA_OPEN_SEARCH) : null;
+        if (mode == null) return;
+        intent.removeExtra(EXTRA_OPEN_SEARCH);
+        mPendingSearch = mode;
+        if (mMethodChannel != null) mMethodChannel.invokeMethod("openSearch", mode);
     }
 
     /** The app an intent opens, for Profile Pairing. */

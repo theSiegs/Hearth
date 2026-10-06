@@ -113,6 +113,11 @@ final class ButtonMapper {
             case "settings":
                 intent = new Intent(Settings.ACTION_SETTINGS);
                 break;
+            case "search":
+                // Hearth's search, listening right away (target "voice") or with the keyboard ("text")
+                intent = new Intent(service, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        .putExtra(MainActivity.EXTRA_OPEN_SEARCH, "text".equals(target) ? "text" : "voice");
+                break;
             case "sleep":
                 service.sleepNow();
                 return;

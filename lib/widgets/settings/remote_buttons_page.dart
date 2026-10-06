@@ -155,6 +155,8 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
           if (inputs.isNotEmpty) _option(context, "Switch to a TV input…", "input"),
           _option(context, "Home Assistant…", "ha"),
           _option(context, "Switch profile (Google TV)", "profiles"),
+          _option(context, "Hearth search (voice)", "search_voice"),
+          _option(context, "Hearth search (keyboard)", "search_text"),
           _option(context, "Hearth home", "home"),
           _option(context, "Sleep", "sleep"),
           _option(context, "Android settings", "settings"),
@@ -188,6 +190,10 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
         return _pickHaEntity();
       case "profiles":
         return {"type": "profiles", "label": "Switch profile"};
+      case "search_voice":
+        return {"type": "search", "target": "voice", "label": "Hearth search (voice)"};
+      case "search_text":
+        return {"type": "search", "target": "text", "label": "Hearth search (keyboard)"};
       case "home":
         return {"type": "home", "label": "Hearth home"};
       case "sleep":

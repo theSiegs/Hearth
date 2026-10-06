@@ -15,12 +15,15 @@ const _hearthTube = "com.thesiegs.hearthtube";
 class SearchPage extends StatefulWidget {
   final SearchService? service;
 
-  const SearchPage({super.key, this.service});
+  /// Start listening for a spoken search as soon as the page opens (the remote's mic/search button).
+  final bool voice;
 
-  static Future<void> open(BuildContext context) => Navigator.of(context).push(PageRouteBuilder(
+  const SearchPage({super.key, this.service, this.voice = false});
+
+  static Future<void> open(BuildContext context, {bool voice = false}) => Navigator.of(context).push(PageRouteBuilder(
         opaque: false,
         transitionDuration: const Duration(milliseconds: 150),
-        pageBuilder: (_, __, ___) => const SearchPage(),
+        pageBuilder: (_, __, ___) => SearchPage(voice: voice),
         transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
       ));
 
@@ -34,7 +37,13 @@ class _SearchPageState extends State<SearchPage> {
   final FLauncherChannel _channel = FLauncherChannel();
   final TextEditingController _text = TextEditingController();
   // Down leaves the text field for the results (a text field keeps the arrow keys for its cursor otherwise).
+  // OK on the field brings up the on-screen keyboard (a TV remote has no other way to ask for it).
   late final FocusNode _field = FocusNode(onKeyEvent: (node, event) {
+    if (event is KeyDownEvent &&
+        (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter)) {
+      _showKeyboard();
+      return KeyEventResult.handled;
+    }
     if (event is! KeyUpEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) {
       if (_firstResult.context != null) {
         _firstResult.requestFocus();
@@ -56,6 +65,45 @@ class _SearchPageState extends State<SearchPage> {
   int _generation = 0;
 
   SearchService get _service => widget.service ?? _sharedService;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.voice) {
+        _listen();
+      } else {
+        _showKeyboard();
+      }
+    });
+  }
+
+  void _showKeyboard() {
+    _field.requestFocus();
+    SystemChannels.textInput.invokeMethod("TextInput.show");
+  }
+
+  bool _listening = false;
+
+  /// Asks the TV's speech recognizer for the search text, then searches it.
+  Future<void> _listen() async {
+    if (_listening) return;
+    setState(() => _listening = true);
+    String? said;
+    try {
+      said = await _channel.voiceSearch();
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() => _listening = false);
+    if (said == null || said.trim().isEmpty) {
+      _field.requestFocus();
+      return;
+    }
+    _text.text = said.trim();
+    _debounce?.cancel();
+    await _search(said);
+    if (mounted && _firstResult.context != null) _firstResult.requestFocus();
+  }
 
   @override
   void dispose() {
@@ -119,24 +167,45 @@ class _SearchPageState extends State<SearchPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              controller: _text,
-              focusNode: _field,
-              autofocus: true,
-              textInputAction: TextInputAction.search,
-              onChanged: _onChanged,
-              onSubmitted: (text) {
-                _debounce?.cancel();
-                _search(text);
-              },
-              style: textTheme.headlineSmall,
-              decoration: InputDecoration(
-                hintText: "Search films and shows",
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.08),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: BorderSide.none),
-              ),
+            Row(
+              children: [
+                Image.asset("assets/logo.png", height: 40, filterQuality: FilterQuality.medium),
+                const SizedBox(width: 16),
+                Text("Search", style: textTheme.titleLarge),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                _MicButton(listening: _listening, onPressed: _listen),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextField(
+                    controller: _text,
+                    focusNode: _field,
+                    autofocus: !widget.voice,
+                    textInputAction: TextInputAction.search,
+                    onChanged: _onChanged,
+                    onSubmitted: (text) {
+                      _debounce?.cancel();
+                      _search(text);
+                    },
+                    style: textTheme.headlineSmall,
+                    decoration: InputDecoration(
+                      hintText: _listening ? "Listening\u2026" : "Search films and shows (OK for the keyboard)",
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.08),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(28),
+                          borderSide: const BorderSide(color: Colors.transparent, width: 2)),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(28),
+                          borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2)),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             Expanded(
@@ -339,6 +408,47 @@ class _SearchChipState extends State<SearchChip> {
                 Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 16)),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The microphone circle next to the search box, in the top bar's style.
+class _MicButton extends StatefulWidget {
+  final bool listening;
+  final VoidCallback onPressed;
+
+  const _MicButton({required this.listening, required this.onPressed});
+
+  @override
+  State<_MicButton> createState() => _MicButtonState();
+}
+
+class _MicButtonState extends State<_MicButton> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Actions(
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => widget.onPressed()),
+        ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) => widget.onPressed()),
+      },
+      child: Focus(
+        onFocusChange: (focused) => setState(() => _focused = focused),
+        child: GestureDetector(
+          onTap: widget.onPressed,
+          child: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _focused || widget.listening ? accent : const Color(0xE6202024),
+            ),
+            child: Icon(widget.listening ? Icons.graphic_eq : Icons.mic, color: Colors.white, size: 28),
           ),
         ),
       ),
