@@ -296,8 +296,11 @@ class _FLauncherState extends State<FLauncher> {
                     onKeyEvent: continueWatchingActive ? _swapOn(LogicalKeyboardKey.arrowUp, true) : null,
                     child: _swapAnimation(
                       visible: !showRecents,
-                      // Far enough to slide the dock off the bottom of the screen.
+                      // Far enough to slide the dock off the bottom of the screen, so it needn't fade too.
+                      // (A fade would paint the dock once, off-screen, and its frosted backdrop would stay
+                      // sampled from there.)
                       hiddenOffset: const Offset(0, 1.6),
+                      fade: false,
                       child: Padding(
                         padding: const EdgeInsets.only(top: 8, bottom: 24),
                         child: HomeDock(
@@ -323,16 +326,19 @@ class _FLauncherState extends State<FLauncher> {
     );
   }
 
-  Widget _swapAnimation({required bool visible, required Offset hiddenOffset, required Widget child}) =>
+  Widget _swapAnimation(
+          {required bool visible, required Offset hiddenOffset, required Widget child, bool fade = true}) =>
       AnimatedSlide(
         offset: visible ? Offset.zero : hiddenOffset,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOutCubic,
-        child: AnimatedOpacity(
-          opacity: visible ? 1 : 0,
-          duration: const Duration(milliseconds: 250),
-          child: child,
-        ),
+        child: fade
+            ? AnimatedOpacity(
+                opacity: visible ? 1 : 0,
+                duration: const Duration(milliseconds: 250),
+                child: child,
+              )
+            : child,
       );
 
   Widget _sections(
