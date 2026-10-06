@@ -105,8 +105,19 @@ public class ProfilePairingService extends AccessibilityService {
         }
     }
 
+    /** The app whose launch Profile Pairing is handling right now, or null. Read from Hearth voice's thread. */
+    private static volatile String sListeningTo;
+
     static boolean isRunning() {
         return sInstance != null;
+    }
+
+    /**
+     * Whether Profile Pairing wants to hear this app right now. Only then does Hearth voice keep the app's speech
+     * to itself; otherwise it speaks normally, so a screen reader user still hears every app.
+     */
+    static boolean isListeningTo(String packageName) {
+        return packageName != null && packageName.equals(sListeningTo);
     }
 
     /** Whether Hearth's voice is the default text-to-speech engine (Netflix's picker can only be heard). */
@@ -148,6 +159,7 @@ public class ProfilePairingService extends AccessibilityService {
     @Override
     public void onDestroy() {
         if (sInstance == this) sInstance = null;
+        sListeningTo = null;
         mHandler.removeCallbacksAndMessages(null);
         hideCover();
         hideBanner();
@@ -183,7 +195,10 @@ public class ProfilePairingService extends AccessibilityService {
     }
 
     private final Runnable mGoIdle = () -> {
-        if (mSession == null) setMode(false, false);
+        if (mSession != null) return;
+        setMode(false, false);
+        // The app stops speaking once screen-reader mode is off; until then Hearth voice keeps it quiet.
+        sListeningTo = null;
     };
 
     private final Runnable mTimeout = () -> finish(NO_MATCH, "timed out");
@@ -193,6 +208,7 @@ public class ProfilePairingService extends AccessibilityService {
         mHandler.removeCallbacks(mGoIdle);
         hideCover();
         mSession = new Session(pkg, hearthProfile);
+        sListeningTo = pkg;
         setMode(true, needsScreenReaderMode(pkg));
         mHandler.postDelayed(mTimeout, WAIT_FOR_PICKER_MS);
         Log.i(TAG, "Watching " + pkg + " for " + hearthProfile);
