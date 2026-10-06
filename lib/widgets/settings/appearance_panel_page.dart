@@ -74,6 +74,12 @@ class AppearancePanelPage extends StatelessWidget {
                   title: Text("Dock shadow", style: bodyMedium),
                   secondary: const Icon(Icons.layers_outlined),
                 ),
+                RoundedSwitchListTile(
+                  value: settingsService.blurWallpaperBelowDock,
+                  onChanged: settingsService.setBlurWallpaperBelowDock,
+                  title: Text("Blur wallpaper below the dock", style: bodyMedium),
+                  secondary: const Icon(Icons.lens_blur),
+                ),
               ],
             ],
           ),

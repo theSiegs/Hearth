@@ -137,6 +137,29 @@ void main() {
     expect(tester.getTopLeft(find.byType(AppsGrid)).dy, greaterThan(dockBottom));
   });
 
+  testWidgets("Wallpaper blurs while browsing the sections below the dock", (tester) async {
+    final appsService = mkAppService();
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    final applicationsCategory = fakeCategory(name: "Applications", order: 1);
+    favoritesCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.1", name: "FLauncher 1"));
+    applicationsCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.2", name: "FLauncher 2"));
+    when(appsService.launcherSections).thenReturn([favoritesCategory, applicationsCategory]);
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+
+    double blurOpacity() => tester.widget<AnimatedOpacity>(find.byKey(Key("below_dock_blur"))).opacity;
+    expect(blurOpacity(), 0);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(blurOpacity(), 1);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(blurOpacity(), 0);
+  });
+
   testWidgets("Dock falls back to the classic layout while Favorites is empty", (tester) async {
     final appsService = mkAppService();
     final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
@@ -661,6 +684,7 @@ SettingsService mkSettingsService() {
   when(settingsService.dockBlurEnabled).thenReturn(true);
   when(settingsService.dockDarkBackground).thenReturn(false);
   when(settingsService.dockShadowEnabled).thenReturn(true);
+  when(settingsService.blurWallpaperBelowDock).thenReturn(true);
   when(settingsService.showNotificationsWidgetInStatusBar).thenReturn(true);
   when(settingsService.autoHideNotificationsWidget).thenReturn(false);
   when(settingsService.showWeatherInStatusBar).thenReturn(false);

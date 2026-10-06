@@ -53,6 +53,7 @@ const String _dockEnabledKey = "dock_enabled";
 const String _dockBlurEnabledKey = "dock_blur_enabled";
 const String _dockDarkBackgroundKey = "dock_dark_background";
 const String _dockShadowEnabledKey = "dock_shadow_enabled";
+const String _blurWallpaperBelowDockKey = "blur_wallpaper_below_dock";
 const String _showInputsWidgetInStatusBarKey = "show_inputs_widget_in_status_bar";
 const String _showContinueWatchingKey = "show_continue_watching";
 const String _continueWatchingCardSizeKey = "continue_watching_card_size";
@@ -509,6 +510,14 @@ class SettingsService extends ChangeNotifier {
 
   Future<void> setDockShadowEnabled(bool enabled) async {
     await _sharedPreferences.setBool(_dockShadowEnabledKey, enabled);
+    notifyListeners();
+  }
+
+  /// Blur the wallpaper while browsing the sections below the dock.
+  bool get blurWallpaperBelowDock => _sharedPreferences.getBool(_blurWallpaperBelowDockKey) ?? true;
+
+  Future<void> setBlurWallpaperBelowDock(bool enabled) async {
+    await _sharedPreferences.setBool(_blurWallpaperBelowDockKey, enabled);
     notifyListeners();
   }
 
