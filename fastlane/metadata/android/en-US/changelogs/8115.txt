@@ -1,7 +1,0 @@
-- Profile Pairing: Hearth opens Netflix, Disney+, Apple TV, HBO Max and Paramount+ in the profile that goes with your Google TV profile, behind an "Opening Netflix as John…" card. Matches names by itself; change pairings in Settings → Profile Pairing. Netflix also needs "Hearth voice" (see the setup checklist).
-- Setup checklist (Settings): each Android setting Hearth needs, with a card saying exactly what to pick on the next screen.
-- Companion apps (Settings): install and update HearthTube. HearthTube now follows Hearth's profile, clock, language and wallpaper.
-- Home Assistant panel: Right at the right edge slides in your dashboard (turn it on per profile; set it up by scanning a QR code with your phone).
-- Home Assistant notifications can show a live camera and up to three buttons; remote buttons can run Home Assistant scenes, scripts and toggles.
-- Updates now install the way app stores do, so Home Button Fix stays on after updating, and later updates usually install without asking. Hearth warns you if Home Button Fix was switched off.
-- Google TV's blank permanent notifications no longer show in the bell. About now credits LTvLauncher, Arc Launcher and FLauncher.
