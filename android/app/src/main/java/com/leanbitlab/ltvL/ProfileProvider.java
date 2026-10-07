@@ -41,9 +41,9 @@ public class ProfileProvider extends ContentProvider {
     private static final String[] COLUMNS = {
             "name", "accent_color", "time_format", "app_language", "has_parent_pin", "gradient_uuid", "wallpaper_stamp",
             "date_format", "kids_profile", "screen_time_up", "service_running", "profile_id", "contract_version",
-            "profile_ready", "switch_generation"};
+            "profile_ready", "switch_generation", "updates_hearthtube"};
     /** docs/provider-contract.md: bumped when a column's meaning changes or one is added or removed. */
-    static final int CONTRACT_VERSION = 3;
+    static final int CONTRACT_VERSION = 4;
     // SettingsService.defaultTimeFormat / defaultDateFormat
     private static final String DEFAULT_TIME_FORMAT = "h:mm a";
     private static final String DEFAULT_DATE_FORMAT = "EEE, MMM d";
@@ -103,7 +103,8 @@ public class ProfileProvider extends ContentProvider {
                 LauncherAccessibilityService.getActiveProfileKey(context),
                 CONTRACT_VERSION,
                 LauncherAccessibilityService.isProfileReady(context) ? 1 : 0,
-                LauncherAccessibilityService.getProfileGeneration(context)};
+                LauncherAccessibilityService.getProfileGeneration(context),
+                CompanionApps.updatesHearthTube(context) ? 1 : 0};
     }
 
     static String[] columns() {

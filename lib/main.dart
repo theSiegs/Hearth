@@ -22,6 +22,7 @@ import 'dart:ui';
 import 'package:flauncher/database.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/apps_service.dart';
+import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flauncher/providers/network_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
@@ -119,6 +120,11 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => WatchNextService(fLauncherChannel)),
         ChangeNotifierProvider(create: (_) => WeatherService(fLauncherChannel, sharedPreferences: sharedPreferences)),
         ChangeNotifierProvider(create: (_) => UpdateService(fLauncherChannel)),
+        // Hearth is the TV's updater for its companion apps (checks in the background)
+        Provider<CompanionUpdater>(
+            create: (_) => CompanionUpdater(fLauncherChannel)..start(),
+            dispose: (_, updater) => updater.dispose(),
+            lazy: false),
         ChangeNotifierProvider(
             create: (context) {
               final backupService = Provider.of<BackupService>(context, listen: false);

@@ -458,6 +458,12 @@ public class MainActivity extends FlutterActivity {
                 case "checkInstallPermission" -> result.success(checkInstallPermission());
                 case "requestInstallPermission" -> result.success(requestInstallPermission());
                 case "installApk" -> result.success(installApk(call.argument("path")));
+                case "isInstalledByHearth" -> result.success(CompanionApps.installedByHearth(this, call.arguments()));
+                case "getForegroundPackage" -> result.success(LauncherAccessibilityService.foregroundPackage());
+                case "companionSettingsChanged" -> {
+                    ProfileProvider.notifyChanged(this);  // updates_hearthtube
+                    result.success(null);
+                }
                 case "getPackageVersion" -> {
                     try {
                         android.content.pm.PackageInfo info =

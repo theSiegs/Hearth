@@ -104,8 +104,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     private final LauncherApps.Callback mSuspensionCallback = new LauncherApps.Callback() {
         @Override public void onPackageRemoved(String packageName, UserHandle user) {}
-        @Override public void onPackageAdded(String packageName, UserHandle user) {}
-        @Override public void onPackageChanged(String packageName, UserHandle user) {}
+        @Override public void onPackageAdded(String packageName, UserHandle user) {
+            onCompanionChanged(packageName);
+        }
+        @Override public void onPackageChanged(String packageName, UserHandle user) {
+            onCompanionChanged(packageName);
+        }
         @Override public void onPackagesAvailable(String[] packageNames, UserHandle user, boolean replacing) {}
         @Override public void onPackagesUnavailable(String[] packageNames, UserHandle user, boolean replacing) {}
 
@@ -119,6 +123,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
             onProfileChanged();
         }
     };
+
+    /** HearthTube installed or updated: whether Hearth keeps it up to date may have changed (updates_hearthtube). */
+    private void onCompanionChanged(String packageName) {
+        if (CompanionApps.HEARTHTUBE.equals(packageName)) ProfileProvider.notifyChanged(this);
+    }
 
     @Override
     protected void onServiceConnected() {
@@ -628,6 +637,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     private static final long KIDS_HOME_GRACE_MS = 1_500;
     private String mLastWindowPackage;
+
+    /** The app whose window was last in front (null before the service has seen one). */
+    static String foregroundPackage() {
+        LauncherAccessibilityService service = sInstance;
+        return service != null ? service.mLastWindowPackage : null;
+    }
     private final Runnable mKidsHomeTakeOver = () -> {
         // Not if Google TV put a screen of its own up (time up, PIN...) or the kid opened an app meanwhile
         if (canTakeOver() && !mGoogleTvScreenInFront && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage)) {

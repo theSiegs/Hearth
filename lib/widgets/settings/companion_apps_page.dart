@@ -1,64 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
 
 import 'package:flauncher/flauncher_channel.dart';
-import 'package:flauncher/providers/update_service.dart';
+import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 
 import 'focusable_settings_tile.dart';
 
-/// An app made to go with Hearth, installed and updated from its GitHub releases.
-class CompanionApp {
-  final String name;
-  final String packageName;
-  final String description;
-  final String repo;
-
-  /// Release asset listing versions as {"<versionName>": {"versionCode": n}, ...}; without one, the release
-  /// name or tag is compared with the installed version name.
-  final String? versionManifest;
-
-  const CompanionApp({
-    required this.name,
-    required this.packageName,
-    required this.description,
-    required this.repo,
-    this.versionManifest,
-  });
-}
-
-const List<CompanionApp> companionApps = [
-  CompanionApp(
-    name: "HearthTube",
-    packageName: "com.thesiegs.hearthtube",
-    description: "YouTube for Hearth; follows your Hearth profile",
-    repo: "theSiegs/HearthTube",
-    versionManifest: "hearthtube.json",
-  ),
-];
-
-/// The newest version in a version manifest: (versionName, versionCode), or null if it lists none.
-(String, int)? newestInManifest(Map<String, dynamic> manifest) {
-  (String, int)? newest;
-  manifest.forEach((name, entry) {
-    if (entry is Map && entry['versionCode'] is int) {
-      final code = entry['versionCode'] as int;
-      if (newest == null || code > newest!.$2) newest = (name, code);
-    }
-  });
-  return newest;
-}
-
-class _Release {
-  final String versionName;
-  final int? versionCode;
-  final String apkUrl;
-  final int apkSize;
-
-  _Release(this.versionName, this.versionCode, this.apkUrl, this.apkSize);
-}
+export 'package:flauncher/providers/companion_updater.dart' show CompanionApp, companionApps, newestInManifest;
 
 enum _State { checking, notInstalled, upToDate, updateAvailable, downloading, installing, error }
 
@@ -75,7 +23,9 @@ class _CompanionAppsPageState extends State<CompanionAppsPage> with WidgetsBindi
   final FLauncherChannel _channel = FLauncherChannel();
   final Map<String, _State> _states = {};
   final Map<String, Map<dynamic, dynamic>?> _installed = {};
-  final Map<String, _Release?> _releases = {};
+  final Map<String, CompanionRelease?> _releases = {};
+  late final CompanionUpdater _updater = CompanionUpdater(_channel);
+  bool? _autoUpdate;
   final Map<String, double> _progress = {};
   final Map<String, String> _errors = {};
   Timer? _installWatch;
@@ -87,6 +37,9 @@ class _CompanionAppsPageState extends State<CompanionAppsPage> with WidgetsBindi
     for (final app in companionApps) {
       _check(app);
     }
+    _updater.autoUpdateEnabled().then((on) {
+      if (mounted) setState(() => _autoUpdate = on);
+    });
   }
 
   @override
@@ -152,7 +105,7 @@ class _CompanionAppsPageState extends State<CompanionAppsPage> with WidgetsBindi
     _set(app, _State.checking);
     try {
       _installed[app.packageName] = await _channel.getPackageVersion(app.packageName);
-      _releases[app.packageName] = await _latestRelease(app);
+      _releases[app.packageName] = await _updater.latestRelease(app);
       _settle(app);
     } catch (e) {
       _set(app, _State.error, error: "Couldn't check for updates");
@@ -168,11 +121,7 @@ class _CompanionAppsPageState extends State<CompanionAppsPage> with WidgetsBindi
     } else if (release == null) {
       _set(app, _State.upToDate);
     } else {
-      final installedCode = installed['versionCode'] as int? ?? 0;
-      final newer = release.versionCode != null
-          ? release.versionCode! > installedCode
-          : compareVersions(release.versionName, installed['versionName'] as String? ?? "") > 0;
-      _set(app, newer ? _State.updateAvailable : _State.upToDate);
+      _set(app, release.isNewerThan(installed) ? _State.updateAvailable : _State.upToDate);
     }
   }
 
@@ -183,40 +132,6 @@ class _CompanionAppsPageState extends State<CompanionAppsPage> with WidgetsBindi
     final state = _states[app.packageName];
     if (state == _State.installing && now?['versionCode'] == before) return;
     if (state != _State.downloading && state != _State.checking) _settle(app);
-  }
-
-  Future<_Release?> _latestRelease(CompanionApp app) async {
-    final releases = await _getJson("https://api.github.com/repos/${app.repo}/releases?per_page=10") as List<dynamic>;
-    final abis = await _channel.getSupportedAbis();
-    for (final release in releases.whereType<Map<String, dynamic>>()) {
-      if (release['draft'] == true || release['prerelease'] == true) continue;
-      final assets = (release['assets'] as List<dynamic>?) ?? [];
-      final apk = pickApkAsset(assets, abis);
-      if (apk == null) continue;
-      String versionName = (release['name'] as String?)?.replaceFirst(RegExp(r"^\D+"), "") ?? "";
-      if (versionName.isEmpty) versionName = release['tag_name'] as String? ?? "";
-      int? versionCode;
-      final manifestAsset = assets
-          .whereType<Map<String, dynamic>>()
-          .where((a) => a['name'] == app.versionManifest)
-          .firstOrNull;
-      if (manifestAsset != null) {
-        final manifest = await _getJson(manifestAsset['browser_download_url'] as String);
-        final newest = manifest is Map<String, dynamic> ? newestInManifest(manifest) : null;
-        if (newest != null) (versionName, versionCode) = newest;
-      }
-      return _Release(versionName, versionCode, apk['browser_download_url'] as String, apk['size'] as int? ?? 0);
-    }
-    return null;
-  }
-
-  Future<dynamic> _getJson(String url) async {
-    final request = await HttpClient().getUrl(Uri.parse(url));
-    request.headers.set(HttpHeaders.acceptHeader, "application/vnd.github+json");
-    request.headers.set(HttpHeaders.userAgentHeader, "Hearth-CompanionApps");
-    final response = await request.close();
-    if (response.statusCode != 200) throw HttpException("HTTP ${response.statusCode}", uri: Uri.parse(url));
-    return jsonDecode(await response.transform(utf8.decoder).join());
   }
 
   Future<void> _install(CompanionApp app) async {
@@ -230,24 +145,9 @@ class _CompanionAppsPageState extends State<CompanionAppsPage> with WidgetsBindi
     }
     _set(app, _State.downloading);
     try {
-      final dir = await getExternalStorageDirectory();
-      if (dir == null) throw Exception("No storage for the download");
-      final updates = Directory("${dir.path}/updates");
-      await updates.create(recursive: true);
-      final apk = File("${updates.path}/${app.packageName}.apk");
-      final request = await HttpClient().getUrl(Uri.parse(release.apkUrl));
-      request.headers.set(HttpHeaders.userAgentHeader, "Hearth-CompanionApps");
-      final response = await request.close();
-      if (response.statusCode != 200) throw Exception("Download failed (${response.statusCode})");
-      final total = release.apkSize > 0 ? release.apkSize : response.contentLength;
-      final sink = apk.openWrite();
-      var received = 0;
-      await response.listen((chunk) {
-        sink.add(chunk);
-        received += chunk.length;
-        if (total > 0 && mounted) setState(() => _progress[app.packageName] = received / total);
-      }).asFuture();
-      await sink.close();
+      final apk = await _updater.download(app, release, onProgress: (fraction) {
+        if (mounted) setState(() => _progress[app.packageName] = fraction);
+      });
 
       _set(app, _State.installing);
       if (!await _channel.installApk(apk.path)) throw Exception("The installer didn't start");
@@ -279,12 +179,33 @@ class _CompanionAppsPageState extends State<CompanionAppsPage> with WidgetsBindi
             child: Column(
               children: [
                 for (final (index, app) in companionApps.indexed) _tile(context, app, index == 0),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.system_update_outlined),
+                  title: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Update automatically", style: textTheme.bodyMedium),
+                      Text(
+                        "Hearth checks daily and installs updates to apps it installed, when they're not in use",
+                        style: textTheme.bodySmall?.copyWith(color: Colors.white54),
+                      ),
+                    ],
+                  ),
+                  trailing: Switch(value: _autoUpdate ?? false, onChanged: null),
+                  onPressed: _autoUpdate == null
+                      ? null
+                      : () async {
+                          final on = !_autoUpdate!;
+                          setState(() => _autoUpdate = on);
+                          await _updater.setAutoUpdate(on);
+                        },
+                ),
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Text(
-                    "Installed from each app's GitHub releases. After Hearth installs an app once, "
-                    "its updates usually install without asking.",
+                    "Installed from each app's GitHub releases. After Hearth installs or updates an app once, "
+                    "its updates install without asking, and the app leaves updating to Hearth.",
                     style: textTheme.bodySmall?.copyWith(color: Colors.white54),
                     textAlign: TextAlign.center,
                   ),

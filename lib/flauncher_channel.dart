@@ -140,6 +140,16 @@ class FLauncherChannel {
   /// per-profile things are saved under it. Null when Hearth can't tell.
   Future<String?> getActiveProfileKey() async => await _methodChannel.invokeMethod<String>("getActiveProfileKey");
 
+  /// Hearth is the app's installer of record, so Android lets Hearth update it without asking.
+  Future<bool> isInstalledByHearth(String packageName) async =>
+      await _methodChannel.invokeMethod<bool>("isInstalledByHearth", packageName) ?? false;
+
+  /// The app whose window is in front (as Hearth's accessibility service last saw it), or null.
+  Future<String?> getForegroundPackage() async => await _methodChannel.invokeMethod<String>("getForegroundPackage");
+
+  /// The companion update setting changed (HearthTube reads it from Hearth's provider).
+  Future<void> companionSettingsChanged() async => await _methodChannel.invokeMethod("companionSettingsChanged");
+
   /// After a profile change: what only Hearth's native side knows is in (another profile's agent has reported its
   /// Continue Watching, or that profile can't have an agent).
   Future<bool> isProfileDataReady() async => await _methodChannel.invokeMethod<bool>("isProfileDataReady") ?? true;
