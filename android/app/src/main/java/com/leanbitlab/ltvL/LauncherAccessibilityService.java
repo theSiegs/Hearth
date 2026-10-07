@@ -197,7 +197,15 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
         String packageName = pkg.toString();
         String className = cls.toString();
-        mChooserOnScreen = GOOGLE_TV_PACKAGE.equals(packageName) && isChooser(className);
+        // The chooser stays "open" while Google TV lays its account check / PIN screens over it; it's over once
+        // Google TV's home or any other app comes up.
+        if (GOOGLE_TV_PACKAGE.equals(packageName) && isChooser(className)) {
+            mChooserOnScreen = true;
+        } else if (GOOGLE_TV_HOME_ACTIVITY.equals(className)
+                || (!GOOGLE_TV_PACKAGE.equals(packageName) && !"com.android.systemui".equals(packageName)
+                    && !"android".equals(packageName))) {
+            mChooserOnScreen = false;
+        }
 
         if (GOOGLE_TV_PACKAGE.equals(packageName)) {
             if (className.startsWith(GOOGLE_TV_WELLBEING_PREFIX)) {
