@@ -4,6 +4,8 @@ import 'dart:io' show Platform;
 import 'dart:typed_data';
 import 'package:flutter/widgets.dart';
 import 'package:flauncher/flauncher_channel.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/watch_next_program.dart';
 
 class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
@@ -27,7 +29,64 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
     _init();
   }
 
-  List<WatchNextProgram> get programs => List.unmodifiable(_programs);
+  /// The programs the active Google TV profile watched (see [_ownership]).
+  List<WatchNextProgram> get programs => List.unmodifiable(_programs.where(_visibleToActiveProfile));
+
+  // All Google TV profiles share one Android user and so one Watch Next list. When an entry appears or is watched
+  // again, Hearth gives it to the profile that last used that app on the TV (so watching on a phone lands with
+  // whoever last used the app here), and shows each profile its own. Entries from before tracking are hidden.
+  static const _ownershipKey = "watch_next_owners";
+  Map<String, dynamic> _ownership = {};
+  bool _ownershipLoaded = false;
+  String? _activeProfile;
+
+  static String _key(WatchNextProgram p) => "${p.packageName}|${p.id}";
+
+  bool _visibleToActiveProfile(WatchNextProgram p) {
+    final owner = (_ownership[_key(p)] as Map?)?["owner"] as String?;
+    if (!_ownershipLoaded) return true;
+    if (owner == null || _activeProfile == null) return false;
+    return owner == _activeProfile;
+  }
+
+  /// Records the active profile as the owner of entries that are new or were watched again since last time.
+  Future<void> _trackOwners(List<WatchNextProgram> programs) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (!_ownershipLoaded) {
+        final raw = prefs.getString(_ownershipKey);
+        _ownership = raw == null ? {} : (jsonDecode(raw) as Map).cast<String, dynamic>();
+        _ownershipLoaded = true;
+        if (raw == null) {
+          // First run: what's already there predates tracking, so it has no owner.
+          for (final p in programs) {
+            _ownership[_key(p)] = {"owner": null, "t": p.lastEngagementTime};
+          }
+        }
+      }
+      _activeProfile = await _channel.getActiveProfileName();
+      final appUsers = await _channel.getAppLastProfiles();
+      bool changed = false;
+      final keys = <String>{};
+      for (final p in programs) {
+        final key = _key(p);
+        keys.add(key);
+        final entry = _ownership[key] as Map?;
+        if (entry == null || entry["t"] != p.lastEngagementTime) {
+          _ownership[key] = {
+            "owner": appUsers[p.packageName] as String? ?? _activeProfile ?? entry?["owner"],
+            "t": p.lastEngagementTime,
+          };
+          changed = true;
+        }
+      }
+      final before = _ownership.length;
+      _ownership.removeWhere((key, _) => !keys.contains(key));
+      if (changed || _ownership.length != before) await prefs.setString(_ownershipKey, jsonEncode(_ownership));
+    } catch (e) {
+      log('Failed to track Continue Watching owners', name: 'WatchNextService', error: e);
+    }
+  }
   bool get initialized => _initialized;
   bool get hasPermission => _hasPermission;
 
@@ -113,6 +172,8 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
         return b.id.compareTo(a.id);
       });
 
+      if (!_isTest) await _trackOwners(newPrograms);
+      if (callSnapshot != _callCount) return;
       _programs = newPrograms;
       if (callSnapshot == _callCount) notifyListeners();
       unawaited(_loadPosters(newPrograms, callSnapshot));

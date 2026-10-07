@@ -142,6 +142,10 @@ class FLauncherChannel {
   Future<Map<dynamic, dynamic>> getProfilePairingStatus() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getProfilePairingStatus") ?? {};
 
+  /// For each app, the Google TV profile that last had it in front on the TV.
+  Future<Map<dynamic, dynamic>> getAppLastProfiles() async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getAppLastProfiles") ?? {};
+
   /// Listens with the TV's speech recognizer; what was said, or null when cancelled or nothing was heard.
   Future<String?> voiceSearch() async => await _methodChannel.invokeMethod<String>("voiceSearch");
 

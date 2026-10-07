@@ -40,7 +40,10 @@ class ContinueWatchingRow extends StatelessWidget {
             .where((p) =>
                 !hiddenProgramIds.contains(p.id.toString()) &&
                 !hiddenPackages.contains(p.packageName) &&
-                !appsService.applications.any((app) => app.packageName == p.packageName && app.hidden))
+                !appsService.applications.any((app) => app.packageName == p.packageName && app.hidden) &&
+                // Apps this profile can't open (blocked in a kids profile) aren't in the list at all.
+                (appsService.applications.isEmpty ||
+                    appsService.applications.any((app) => app.packageName == p.packageName)))
             .toList();
 
         final maxItems = settingsService.continueWatchingMaxItems;

@@ -171,6 +171,10 @@ public class MainActivity extends FlutterActivity {
                     result.success(kids);
                 }
                 case "voiceSearch" -> startVoiceSearch(result);
+                case "getAppLastProfiles" -> {
+                    Map<String, Object> users = new HashMap<>(getSharedPreferences("ltv_app_last_profile", MODE_PRIVATE).getAll());
+                    result.success(users);
+                }
                 case "takePendingSearch" -> {
                     String pending = mPendingSearch;
                     mPendingSearch = null;
