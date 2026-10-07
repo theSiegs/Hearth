@@ -187,6 +187,11 @@ public class MainActivity extends FlutterActivity {
                     String link = call.argument("link");
                     Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(link)).setPackage(pkg)
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    Boolean inProfile = ProfileApps.open(this, intent);
+                    if (inProfile != null) {
+                        result.success(inProfile);
+                        return;
+                    }
                     boolean ok = intent.resolveActivity(getPackageManager()) != null;
                     if (ok) {
                         ProfilePairingService.onAppLaunching(this, pkg);
@@ -199,6 +204,11 @@ public class MainActivity extends FlutterActivity {
                     Intent intent = new Intent(Intent.ACTION_SEARCH).setPackage(pkg)
                             .putExtra(android.app.SearchManager.QUERY, (String) call.argument("query"))
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    Boolean inProfile = ProfileApps.open(this, intent);
+                    if (inProfile != null) {
+                        result.success(inProfile);
+                        return;
+                    }
                     boolean ok = intent.resolveActivity(getPackageManager()) != null;
                     if (ok) {
                         ProfilePairingService.onAppLaunching(this, pkg);
@@ -755,28 +765,6 @@ public class MainActivity extends FlutterActivity {
         return activities;
     }
 
-    // The active kids profile's approved apps, read once per app listing (buildAppMap runs per app, in parallel)
-    private volatile java.util.Set<String> mApprovedApps;
-    private volatile boolean mApprovedKids;
-    private volatile long mApprovedAt = 0;
-    private static final long APPROVED_CACHE_MS = 2_000;
-
-    /**
-     * Whether a parent approved this app for the active profile (always, in a grown-up profile). Unlike being
-     * suspended, this holds at bedtime too. Without readable approvals, an app Google TV hasn't blocked counts.
-     */
-    private boolean isApproved(String packageName, boolean suspended) {
-        long now = android.os.SystemClock.elapsedRealtime();
-        if (now - mApprovedAt > APPROVED_CACHE_MS) {
-            mApprovedKids = ProfileUsers.isKids(this);
-            mApprovedApps = mApprovedKids ? ProfileUsers.activeApprovedApps(this) : null;
-            mApprovedAt = now;
-        }
-        if (!mApprovedKids) return true;
-        java.util.Set<String> approved = mApprovedApps;
-        return approved != null ? approved.contains(packageName) : !suspended;
-    }
-
     private Map<String, Serializable> buildAppMap(ActivityInfo activityInfo, boolean sideloaded, String action) {
         PackageManager packageManager = getPackageManager();
 
@@ -797,8 +785,12 @@ public class MainActivity extends FlutterActivity {
         appMap.put("packageName", activityInfo.packageName);
         appMap.put("version", applicationVersionName);
         appMap.put("sideloaded", sideloaded);
+        // Another profile on: its own user's copies count (Google TV blocks the owner's while it's on). Approved =
+        // that profile has the app (a kid's parent approved it); suspended = blocked there (screen time) or absent.
+        int profileState = ProfileApps.state(this, activityInfo.packageName);
+        if (profileState != ProfileApps.OWNER) suspended = profileState != ProfileApps.AVAILABLE;
         appMap.put("suspended", suspended);
-        appMap.put("approved", isApproved(activityInfo.packageName, suspended));
+        appMap.put("approved", profileState != ProfileApps.ABSENT);
 
         if (action != null) {
             appMap.put("action", action);
@@ -815,6 +807,9 @@ public class MainActivity extends FlutterActivity {
     }
 
     private boolean launchApp(String packageName) {
+        // Another profile on: its own copy, in its user
+        Boolean inProfile = ProfileApps.launch(this, packageName);
+        if (inProfile != null) return inProfile;
         PackageManager packageManager = getPackageManager();
         Intent intent = packageManager.getLeanbackLaunchIntentForPackage(packageName);
 
@@ -1827,6 +1822,9 @@ public class MainActivity extends FlutterActivity {
             Intent intent = Intent.parseUri(intentUri, Intent.URI_INTENT_SCHEME);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             intent.setSelector(null);
+            // Another profile on: its copy of the app, in its user
+            Boolean inProfile = ProfileApps.open(this, intent);
+            if (inProfile != null) return inProfile;
             ProfilePairingService.onAppLaunching(this, packageOf(intent));
             return tryStartActivity(intent);
         } catch (Exception e) {

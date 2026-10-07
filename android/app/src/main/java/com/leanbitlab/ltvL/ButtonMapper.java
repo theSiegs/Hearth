@@ -94,6 +94,8 @@ final class ButtonMapper {
         Intent intent = null;
         switch (type) {
             case "app": {
+                // Another profile on: its own copy, in its user
+                if (ProfileApps.launch(service, target) != null) return;
                 PackageManager pm = service.getPackageManager();
                 intent = pm.getLeanbackLaunchIntentForPackage(target);
                 if (intent == null) intent = pm.getLaunchIntentForPackage(target);

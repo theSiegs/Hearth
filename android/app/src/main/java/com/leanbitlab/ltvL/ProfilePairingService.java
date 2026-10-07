@@ -137,6 +137,8 @@ public class ProfilePairingService extends AccessibilityService {
     static void onAppLaunching(Context context, String packageName) {
         ProfilePairingService service = sInstance;
         if (packageName == null || !ProfilePairing.supports(packageName)) return;
+        // Another profile's copies of the apps have their own logins: nothing to pick
+        if (ProfileApps.activeProfileUser(context) != null) return;
         if (service == null) {
             Log.i(TAG, packageName + " skipped: Profile Pairing isn't running");
             return;
