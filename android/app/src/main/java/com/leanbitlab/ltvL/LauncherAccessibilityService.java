@@ -135,6 +135,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         boolean kids = hasSuspendedApps(this);
         boolean flipped = mKidsState != null && mKidsState != kids;
         mKidsState = kids;
+        if (flipped) ProfileProvider.notifyChanged(this);  // kids_profile changed
         if (flipped && SystemClock.elapsedRealtime() - mProfileCommittedAt > PROFILE_CLICK_WINDOW_MS) {
             // A switch we didn't see: better no name than a wrong one
             android.util.Log.i(PROFILE_TAG, "Kids/grown-up switch without a chooser pick: profile unknown");
@@ -215,8 +216,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (GOOGLE_TV_PACKAGE.equals(packageName)) {
             boolean wellbeing = className.startsWith(GOOGLE_TV_WELLBEING_PREFIX);
             if (wellbeing) {
+                boolean changed = !mScreenTimeLock;
                 mScreenTimeLock = true;
                 if (mHaStatus != null) mHaStatus.setScreenTimeLock(true);
+                if (changed) ProfileProvider.notifyChanged(this);
             }
             reportScreenTimeText(className, event, wellbeing);
             if (isChooser(className)) {
@@ -367,8 +370,16 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
     }
 
+    /** Google TV is showing (or last showed) a kids screen time / bedtime lock; for HearthTube via ProfileProvider. */
+    static boolean isScreenTimeUp() {
+        LauncherAccessibilityService service = sInstance;
+        return service != null && service.mScreenTimeLock;
+    }
+
     private void clearScreenTimeLock() {
+        boolean changed = mScreenTimeLock;
         mScreenTimeLock = false;
+        if (changed) ProfileProvider.notifyChanged(this);
         if (mHaStatus != null) {
             mHaStatus.setScreenTimeLock(false);
             mHaStatus.onProfileChanged();
