@@ -205,12 +205,17 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mLastWindowPackage = packageName;
         // The chooser stays "open" while Google TV lays its account check / PIN screens over it; it's over once
         // Google TV's home or any other app comes up.
+        boolean wasOnScreen = mChooserOnScreen;
         if (GOOGLE_TV_PACKAGE.equals(packageName) && isChooser(className)) {
             mChooserOnScreen = true;
         } else if (GOOGLE_TV_HOME_ACTIVITY.equals(className)
                 || (!GOOGLE_TV_PACKAGE.equals(packageName) && !"com.android.systemui".equals(packageName)
                     && !"android".equals(packageName))) {
             mChooserOnScreen = false;
+        }
+        if (wasOnScreen != mChooserOnScreen) {
+            android.util.Log.i(PROFILE_TAG, "chooser " + (mChooserOnScreen ? "open" : "closed") + " (" + packageName
+                    + "/" + className + ")");
         }
 
         if (GOOGLE_TV_PACKAGE.equals(packageName)) {
@@ -340,6 +345,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
     }
 
     private void onGoogleTvViewEvent(AccessibilityEvent event) {
+        if (mChooserOnScreen || SystemClock.elapsedRealtime() - mChooserOpenedAt < 10_000) {
+            // Diagnosing missed picks: everything Google TV reports while its chooser is up.
+            android.util.Log.i(PROFILE_TAG, "chooser event " + AccessibilityEvent.eventTypeToString(event.getEventType())
+                    + " class=" + event.getClassName() + " text=" + event.getText() + " desc="
+                    + event.getContentDescription() + " onScreen=" + mChooserOnScreen);
+        }
         if (event.getText() == null || event.getText().isEmpty()) return;
         String label = event.getText().get(0) != null ? event.getText().get(0).toString().trim() : "";
         // Only the round profile tiles; skip "Add account" and "Manage accounts"
