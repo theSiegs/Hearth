@@ -68,6 +68,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final String PROFILE_KEY_KEY = "key";
     private static final String PROFILE_GENERATION_KEY = "generation";
     private static final String PROFILE_READY_KEY = "ready_key";
+    /** ProfileTransitionOverlay.maxWait: the longest a profile change keeps profile_ready at 0. */
+    private static final long PROFILE_READY_FALLBACK_MS = 4_000;
+    private final Runnable mReadyFallback = () -> setProfileReady(this, getActiveProfileKey(this));
     private static final long PROFILE_CLICK_WINDOW_MS = 60_000;
     private static final long CHOOSER_INITIAL_FOCUS_MS = 1_500;
     private long mChooserOpenedAt = 0;
@@ -165,6 +168,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mIdleHandler.removeCallbacks(mProfileUserRecheck);
         mIdleHandler.removeCallbacks(mSettleCheck);
         mIdleHandler.removeCallbacks(mReadChooser);
+        mIdleHandler.removeCallbacks(mReadyFallback);
         if (mHaServer != null) mHaServer.stop();
         if (mHaStatus != null) mHaStatus.stop();
         try {
@@ -254,6 +258,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
         SharedPreferences profilePrefs = getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE);
         profilePrefs.edit().putInt(PROFILE_GENERATION_KEY, profilePrefs.getInt(PROFILE_GENERATION_KEY, 0) + 1)
                 .remove(PROFILE_READY_KEY).apply();
+        // Flutter's welcome card says sooner when the home finishes first; with Hearth off screen (asleep, after a
+        // restart) nothing would, so ready after the card's own limit regardless
+        mIdleHandler.removeCallbacks(mReadyFallback);
+        mIdleHandler.postDelayed(mReadyFallback, PROFILE_READY_FALLBACK_MS);
         if (!ProfileUsers.key(serial).equals(getActiveProfileKey(this))) {
             getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE).edit().putString(PROFILE_KEY_KEY, ProfileUsers.key(serial)).apply();
             ProfileProvider.notifyChanged(this);
