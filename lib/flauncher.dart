@@ -89,17 +89,17 @@ class _FLauncherState extends State<FLauncher> {
       } catch (_) {}
     });
     _profileService = context.read<ProfileService?>();
-    _lastProfile = _profileService?.activeProfileName;
+    _lastProfile = _profileService?.activeProfileKey;
     _profileService?.addListener(_onProfileChanged);
   }
 
   /// Arriving in a profile, the selection starts on the first dock app, or the first app when there's no dock.
   void _onProfileChanged() {
-    final name = _profileService?.activeProfileName;
-    if (name == null || name == _lastProfile) return;
-    _lastProfile = name;
+    final key = _profileService?.activeProfileKey;
+    if (key == null || key == _lastProfile) return;
+    _lastProfile = key;
     if (_showingRecents) setState(() => _showingRecents = false);
-    // Keep trying for a few seconds: the profile's layout (its own dock) and app list load after the name changes,
+    // Keep trying for a few seconds: the profile's layout (its own dock) and app list load after the profile changes,
     // and focus comes back to the top bar (where the profile switch started), which would hide the dock.
     var landed = false;
     for (final ms in const [300, 1200, 2500, 4000]) {

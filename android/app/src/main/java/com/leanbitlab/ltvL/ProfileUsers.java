@@ -50,6 +50,75 @@ final class ProfileUsers {
         }
     }
 
+    private static final String KEY_PREFIX = "user:";
+
+    /**
+     * A profile's lasting key ("user:11"): what Hearth stores per-profile things under, so renaming a profile in
+     * Google TV doesn't orphan them. Null for UNKNOWN.
+     */
+    static String key(long serial) {
+        return serial == UNKNOWN ? null : KEY_PREFIX + serial;
+    }
+
+    /**
+     * The name to show for a key: the profile's learned name ("Profile 11" until it has one), or the key itself
+     * for a name saved before keys.
+     */
+    static String displayName(Context context, String key) {
+        if (key == null || !key.startsWith(KEY_PREFIX)) return key;
+        try {
+            long serial = Long.parseLong(key.substring(KEY_PREFIX.length()));
+            String name = getName(context, serial);
+            return name != null ? name : "Profile " + serial;
+        } catch (NumberFormatException e) {
+            return key;
+        }
+    }
+
+    private static final String KIDS_PREFIX = "kids|";
+    private static final String SCREEN_TIME_SERIAL = "screen_time_up_serial";
+
+    /**
+     * Whether the active profile is a kids profile. Google TV suspends the apps a parent hasn't approved there, so
+     * a kids profile is one seen with suspended apps; once seen (see {@link #markKids}), it stays one even if a
+     * parent approves every app. Unmarked profiles fall back to the suspension check.
+     */
+    static boolean isKids(Context context) {
+        long serial = activeSerial(context);
+        if (serial != UNKNOWN && prefs(context).getBoolean(KIDS_PREFIX + serial, false)) return true;
+        return anySuspended(context.getPackageManager());
+    }
+
+    /** Remembers that this serial is a kids profile, for good (Google TV doesn't turn one into a grown-up's). */
+    static boolean markKids(Context context, long serial) {
+        if (serial == UNKNOWN || prefs(context).getBoolean(KIDS_PREFIX + serial, false)) return false;
+        prefs(context).edit().putBoolean(KIDS_PREFIX + serial, true).apply();
+        return true;
+    }
+
+    /** Whether any launchable app is suspended: Google TV does that only in kids profiles. */
+    static boolean anySuspended(android.content.pm.PackageManager pm) {
+        for (String category : new String[]{android.content.Intent.CATEGORY_LEANBACK_LAUNCHER,
+                android.content.Intent.CATEGORY_LAUNCHER}) {
+            for (android.content.pm.ResolveInfo info : pm.queryIntentActivities(
+                    new android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(category), 0)) {
+                if ((info.activityInfo.applicationInfo.flags & android.content.pm.ApplicationInfo.FLAG_SUSPENDED) != 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** The serial whose screen time was up when last seen (UNKNOWN: none), so a service restart keeps the lock. */
+    static long screenTimeUpSerial(Context context) {
+        return prefs(context).getLong(SCREEN_TIME_SERIAL, UNKNOWN);
+    }
+
+    static void setScreenTimeUpSerial(Context context, long serial) {
+        prefs(context).edit().putLong(SCREEN_TIME_SERIAL, serial).apply();
+    }
+
     /** The TV owner's serial (Hearth runs as the owner). */
     static long ownerSerial(Context context) {
         UserManager users = (UserManager) context.getSystemService(Context.USER_SERVICE);

@@ -24,8 +24,12 @@ import java.util.Calendar;
  * accent color ("7C4DFF"), time format ("h:mm a") and date format ("EEE, MMM d") as intl/ICU patterns (Hearth's
  * defaults when the user never changed them), app language ("" = the system's), whether a parent PIN is set,
  * the gradient's id and a stamp that changes when the wallpaper picture does (0 = no picture, use the gradient),
- * kids_profile (1 in a Google TV kids profile) and screen_time_up (1 while Google TV's bedtime / time's up lock is on,
- * cleared by a profile pick or a kids/grown-up switch); observers are notified when either changes.
+ * kids_profile (1 in a Google TV kids profile; once seen, a profile stays one even if every app gets approved),
+ * screen_time_up (1 while Google TV's bedtime / time's up lock is on, until a profile switch; kept across Hearth
+ * restarts), service_running (1 while Hearth's accessibility service runs: without it Hearth sees no switches and no
+ * screen time, so kids_profile / screen_time_up can't be trusted) and profile_id (the Google TV profile's lasting
+ * key, "user:11", set before the name is known and unchanged by renames: what to save per-profile things under);
+ * observers are notified when any of these change.
  * None of it is secret: it's all on screen in Hearth. The wallpaper picture itself is at .../wallpaper.
  *
  * One call, for HearthTube only: "verify_parent_pin" checks a PIN without ever handing out the PIN or its hash
@@ -34,7 +38,7 @@ import java.util.Calendar;
 public class ProfileProvider extends ContentProvider {
     private static final String[] COLUMNS = {
             "name", "accent_color", "time_format", "app_language", "has_parent_pin", "gradient_uuid", "wallpaper_stamp",
-            "date_format", "kids_profile", "screen_time_up"};
+            "date_format", "kids_profile", "screen_time_up", "service_running", "profile_id"};
     // SettingsService.defaultTimeFormat / defaultDateFormat
     private static final String DEFAULT_TIME_FORMAT = "h:mm a";
     private static final String DEFAULT_DATE_FORMAT = "EEE, MMM d";
@@ -76,8 +80,10 @@ public class ProfileProvider extends ContentProvider {
                 prefs.getString("flutter.gradient_uuid", null),
                 wallpaper != null ? wallpaper.lastModified() : 0,
                 formats[0],
-                HaStatusReporter.isKidsProfile(context.getPackageManager()) ? 1 : 0,
-                LauncherAccessibilityService.isScreenTimeUp() ? 1 : 0});
+                ProfileUsers.isKids(context) ? 1 : 0,
+                LauncherAccessibilityService.isScreenTimeUp() ? 1 : 0,
+                LauncherAccessibilityService.isRunning() ? 1 : 0,
+                LauncherAccessibilityService.getActiveProfileKey(context)});
         cursor.setNotificationUri(context.getContentResolver(), activeUri(context));
         return cursor;
     }

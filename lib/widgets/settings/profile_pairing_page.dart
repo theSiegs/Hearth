@@ -6,7 +6,11 @@ import 'setup_checklist_page.dart';
 
 /// One Google TV profile's pairing in one streaming app.
 class PairingChoice {
+  /// The key the choice is saved under (the Google TV profile, renames aside).
   final String hearthProfile;
+
+  /// The profile's name, to show.
+  final String displayName;
   final bool kids;
 
   /// "auto" (match by name), "profile" (a chosen app profile) or "picker" (always show the app's picker).
@@ -16,6 +20,7 @@ class PairingChoice {
 
   PairingChoice.fromMap(Map<dynamic, dynamic> map)
       : hearthProfile = map["hearthProfile"] as String,
+        displayName = map["displayName"] as String? ?? map["hearthProfile"] as String,
         kids = map["kids"] == true,
         mode = map["mode"] as String? ?? "auto",
         chosenProfile = map["chosenProfile"] as String?,
@@ -185,7 +190,7 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
     final picked = await showDialog<(String, String?, String)>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: Text("${choice.hearthProfile} in $label"),
+        title: Text("${choice.displayName} in $label"),
         children: [
           for (final option in options)
             SimpleDialogOption(
@@ -241,7 +246,7 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
                             title: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(choice.hearthProfile + (choice.kids ? " (kids)" : ""),
+                                Text(choice.displayName + (choice.kids ? " (kids)" : ""),
                                     style: textTheme.bodyMedium),
                                 Text(choice.summary, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
                               ],

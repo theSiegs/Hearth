@@ -53,41 +53,85 @@ void main() {
 
   test("first profile seen takes ownership of the current layout", () async {
     when(channel.getActiveProfileName()).thenAnswer((_) async => "Alex");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:0");
     final backup = _RecordingBackupService(database, prefs, {});
 
     final service = build(backup);
     await service.check();
 
     expect(service.activeProfileName, "Alex");
-    expect(backup.calls, ["load Alex"]);
-    expect(prefs.getString(ProfileService.layoutOwnerKey), "Alex");
+    expect(service.activeProfileKey, "user:0");
+    expect(backup.calls, ["load user:0", "load Alex"]);
+    expect(prefs.getString(ProfileService.layoutOwnerKey), "user:0");
     verifyNever(appsService.refreshState());
   });
 
   test("switching saves the outgoing layout and restores the incoming one", () async {
-    await prefs.setString(ProfileService.layoutOwnerKey, "Alex");
+    await prefs.setString(ProfileService.layoutOwnerKey, "user:0");
     when(channel.getActiveProfileName()).thenAnswer((_) async => "Riley");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:10");
     when(channel.isKidsProfile()).thenAnswer((_) async => true);
-    final backup = _RecordingBackupService(database, prefs, {"Riley"});
+    final backup = _RecordingBackupService(database, prefs, {"user:10"});
 
     final service = build(backup);
     await service.check();
 
-    expect(backup.calls, ["save Alex", "load Riley"]);
+    expect(backup.calls, ["save user:0", "load user:10"]);
     expect(service.isKidsProfile, isTrue);
-    expect(prefs.getString(ProfileService.layoutOwnerKey), "Riley");
+    expect(prefs.getString(ProfileService.layoutOwnerKey), "user:10");
     verify(appsService.refreshState()).called(1);
   });
 
-  test("an unknown profile leaves the layout alone", () async {
-    await prefs.setString(ProfileService.layoutOwnerKey, "Alex");
+  test("a profile not named yet still gets its own layout", () async {
+    await prefs.setString(ProfileService.layoutOwnerKey, "user:0");
     when(channel.getActiveProfileName()).thenAnswer((_) async => null);
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:11");
+    final backup = _RecordingBackupService(database, prefs, {"user:11"});
+
+    final service = build(backup);
+    await service.check();
+
+    expect(backup.calls, ["save user:0", "load user:11"]);
+    expect(prefs.getString(ProfileService.layoutOwnerKey), "user:11");
+  });
+
+  test("a layout owned by this profile's name (from before keys) stays and moves to its key", () async {
+    await prefs.setString(ProfileService.layoutOwnerKey, "Alex");
+    when(channel.getActiveProfileName()).thenAnswer((_) async => "Alex");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:0");
     final backup = _RecordingBackupService(database, prefs, {});
 
     final service = build(backup);
     await service.check();
 
     expect(backup.calls, isEmpty);
-    expect(prefs.getString(ProfileService.layoutOwnerKey), "Alex");
+    expect(prefs.getString(ProfileService.layoutOwnerKey), "user:0");
+  });
+
+  test("switching to a profile whose layout was saved under its name restores that layout", () async {
+    await prefs.setString(ProfileService.layoutOwnerKey, "user:0");
+    when(channel.getActiveProfileName()).thenAnswer((_) async => "Riley");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:10");
+    final backup = _RecordingBackupService(database, prefs, {"Riley"});
+
+    final service = build(backup);
+    await service.check();
+
+    expect(backup.calls, ["save user:0", "load user:10", "load Riley"]);
+    expect(prefs.getString(ProfileService.layoutOwnerKey), "user:10");
+    verify(appsService.refreshState()).called(1);
+  });
+
+  test("an unknown profile leaves the layout alone", () async {
+    await prefs.setString(ProfileService.layoutOwnerKey, "user:0");
+    when(channel.getActiveProfileName()).thenAnswer((_) async => null);
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => null);
+    final backup = _RecordingBackupService(database, prefs, {});
+
+    final service = build(backup);
+    await service.check();
+
+    expect(backup.calls, isEmpty);
+    expect(prefs.getString(ProfileService.layoutOwnerKey), "user:0");
   });
 }

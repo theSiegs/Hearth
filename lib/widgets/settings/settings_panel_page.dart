@@ -186,21 +186,9 @@ class SettingsPanelPage extends StatelessWidget {
     );
   }
 
-  /// Parent PIN guards launcher settings and app menus in Google TV kids profiles.
-  /// Pairings decide which streaming profile kids land in, so the parent PIN guards them when one is set.
+  /// No PIN of its own: in a kids profile, Settings already took the parent PIN to get here, and grown-up profiles
+  /// are only reached past Google TV's PIN.
   Future<void> _openProfilePairing(BuildContext context) async {
-    final settings = context.read<SettingsService>();
-    if (settings.hasParentPin) {
-      final String? pin = await showDialog<String>(
-        context: context,
-        builder: (_) => ParentPinDialog(
-          title: "Parent PIN",
-          subtitle: "Enter the parent PIN to change Profile Pairing",
-          verify: settings.verifyParentPin,
-        ),
-      );
-      if (pin == null || !context.mounted) return;
-    }
     Navigator.of(context).pushNamed(ProfilePairingPage.routeName);
   }
 
