@@ -99,6 +99,7 @@ public class MainActivity extends FlutterActivity {
         BinaryMessenger messenger = flutterEngine.getDartExecutor().getBinaryMessenger();
 
         mMethodChannel = new MethodChannel(messenger, METHOD_CHANNEL);
+        sMethodChannel = new java.lang.ref.WeakReference<>(mMethodChannel);
         // Opened by the remote's search button: Flutter picks this up with takePendingSearch once it's running.
         String coldSearch = getIntent() != null ? getIntent().getStringExtra(EXTRA_OPEN_SEARCH) : null;
         if (coldSearch != null) {
@@ -1805,6 +1806,15 @@ public class MainActivity extends FlutterActivity {
             e.printStackTrace();
         }
         return false;
+    }
+
+    private static java.lang.ref.WeakReference<MethodChannel> sMethodChannel;
+
+    /** Tells Flutter the active profile changed (it also re-reads it whenever Hearth comes back). */
+    static void notifyProfileChanged() {
+        MethodChannel channel = sMethodChannel != null ? sMethodChannel.get() : null;
+        if (channel == null) return;
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> channel.invokeMethod("profileChanged", null));
     }
 
     /** Whether Hearth is the screen in front (between onResume and onPause). */

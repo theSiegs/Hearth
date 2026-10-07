@@ -44,6 +44,8 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
 
   ProfileService(this._channel, this._sharedPreferences, this._backupService, this._settingsService, this._appsService) {
     WidgetsBinding.instance.addObserver(this);
+    // A switch can land while Hearth is already in front
+    FLauncherChannel.listenForProfileChanges(check);
     check();
   }
 

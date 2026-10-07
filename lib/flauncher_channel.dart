@@ -154,8 +154,23 @@ class FLauncherChannel {
 
   /// Calls [onOpenSearch] ("voice" or "text") when the remote's mapped search button is pressed.
   static void listenForSearch(void Function(String mode) onOpenSearch) {
+    _onOpenSearch = onOpenSearch;
+    _listen();
+  }
+
+  /// Calls [onProfileChanged] when the accessibility service sees the active Google TV profile change.
+  static void listenForProfileChanges(void Function() onProfileChanged) {
+    _onProfileChanged = onProfileChanged;
+    _listen();
+  }
+
+  static void Function(String mode)? _onOpenSearch;
+  static void Function()? _onProfileChanged;
+
+  static void _listen() {
     _methodChannel.setMethodCallHandler((call) async {
-      if (call.method == "openSearch") onOpenSearch(call.arguments as String? ?? "text");
+      if (call.method == "openSearch") _onOpenSearch?.call(call.arguments as String? ?? "text");
+      if (call.method == "profileChanged") _onProfileChanged?.call();
       return null;
     });
   }
