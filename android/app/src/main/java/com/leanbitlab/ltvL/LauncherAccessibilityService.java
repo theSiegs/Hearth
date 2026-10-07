@@ -273,7 +273,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 mFirstFocusLabel = label;
                 mFirstFocusAt = now;
             }
-        } else if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+        } else if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED && mChooserOnScreen) {
+            // Only clicks in the chooser: Google TV's other screens (its keyboard, menus) click LinearLayouts too.
             android.util.Log.i(PROFILE_TAG, "Picked " + label);
             mPendingProfile = label;
             mPendingProfileAt = now;
