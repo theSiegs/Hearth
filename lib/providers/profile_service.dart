@@ -121,7 +121,36 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
     await _appsService.addAllToCategory(apps.take(6), dock);
   }
 
-  Future<void> check() => _checking ??= _check().whenComplete(() => _checking = null);
+  Future<void> check() => _checking ??= _check().whenComplete(() {
+        _checking = null;
+        // Whatever this check found, its profile's layout is now in place
+        final bool changed = !_settledOnce || _layoutReadyKey != _activeProfileKey;
+        _settledOnce = true;
+        _layoutReadyKey = _activeProfileKey;
+        if (changed) notifyListeners();
+      });
+
+  bool _settledOnce = false;
+
+  /// The first profile check since Hearth started is done (until then the home shows placeholders).
+  bool get settledOnce => _settledOnce;
+
+  String? _layoutReadyKey;
+
+  /// This profile's layout has been restored (after a switch to it).
+  bool layoutReadyFor(String key) => _layoutReadyKey == key;
+
+  ProfileTransition? _transition;
+
+  /// A switch to another profile that Hearth's home is still catching up with (see ProfileTransitionOverlay).
+  ProfileTransition? get transition => _transition;
+
+  /// The switch is complete (or given up on): the home shows.
+  void endTransition(ProfileTransition transition) {
+    if (_transition != transition) return;
+    _transition = null;
+    notifyListeners();
+  }
 
   Future<void> _check() async {
     String? name;
@@ -135,6 +164,11 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
       return;
     }
 
+    // A switch from one known profile to another (not Hearth starting up): the welcome card covers the catch-up
+    if (_activeProfileKey != null && key != null && key != _activeProfileKey) {
+      _transition = ProfileTransition(key, DateTime.now());
+      _layoutReadyKey = null;
+    }
     bool changed = name != _activeProfileName || key != _activeProfileKey || kids != _isKidsProfile;
     _activeProfileName = name;
     _activeProfileKey = key;
@@ -169,4 +203,12 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
       developer.log("Failed to switch profile layout", name: "ProfileService", error: e, stackTrace: stack);
     }
   }
+}
+
+/// A switch to the profile [key], begun at [startedAt].
+class ProfileTransition {
+  final String key;
+  final DateTime startedAt;
+
+  ProfileTransition(this.key, this.startedAt);
 }

@@ -358,6 +358,18 @@ public class MainActivity extends FlutterActivity {
                 }
                 case "getActiveProfileName" -> result.success(LauncherAccessibilityService.getActiveProfileName(this));
                 case "getActiveProfileKey" -> result.success(LauncherAccessibilityService.getActiveProfileKey(this));
+                case "isProfileDataReady" -> {
+                    // What only Java knows for a profile change: another profile's agent has reported (or it
+                    // can't have one)
+                    android.os.UserHandle profileUser = ProfileApps.activeProfileUser(this);
+                    long serial = ProfileUsers.settledSerial(this);
+                    result.success(profileUser == null || AgentHub.hasReported(serial)
+                            || !AgentHub.canHaveAgent(this, profileUser));
+                }
+                case "setProfileReady" -> {
+                    LauncherAccessibilityService.setProfileReady(this, call.arguments());
+                    result.success(null);
+                }
                 case "getProfileAvatar" -> {
                     String name = call.arguments();
                     Map<String, Object> avatar = new HashMap<>();

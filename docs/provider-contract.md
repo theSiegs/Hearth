@@ -4,7 +4,7 @@ Hearth shares its state with other apps (today: HearthTube) through one content 
 contract: what each column means, when it changes, and what callers may rely on. The provider's `contract_version`
 column says which version of this page it implements.
 
-**Current version: 2** (Hearth 2026.10, `ProfileProvider.CONTRACT_VERSION`).
+**Current version: 3** (Hearth 2026.10, `ProfileProvider.CONTRACT_VERSION`).
 
 Change rules: adding, removing or changing the meaning of a column or call bumps the version and gets a line in
 the history below. A reader that sees a newer version than it knows keeps using the columns it understands; columns
@@ -44,7 +44,9 @@ installed in a profile user would answer with defaults only; check `service_runn
 | `app_language` | text | Hearth's language ("de", "pt-BR"…), or "" to follow the system's. |
 | `gradient_uuid` | text or null | The gradient Hearth shows when it has no wallpaper picture. |
 | `wallpaper_stamp` | integer | Changes whenever the wallpaper picture does (its file time); 0 when Hearth shows a gradient. Re-read `/wallpaper` when it changes. |
-| `contract_version` | integer | This page's version (2). Missing on Hearth builds from before version 2. |
+| `profile_ready` | 0/1 | 1 once Hearth's home is complete for the active profile after a switch or start: its layout restored, its Continue Watching read, and (for a profile other than the owner's) its Hearth agent heard from, or 4 seconds passed. Back to 0 at the next switch. Act on profile-specific state when this turns 1, not on the first change of `profile_id`. |
+| `switch_generation` | integer | Goes up by one at every profile switch (and when Hearth starts). Tells a new visit to a profile from the same one. |
+| `contract_version` | integer | This page's version (3). Missing on Hearth builds from before version 2. |
 
 None of these are secret: everything is on screen in Hearth.
 
@@ -57,6 +59,7 @@ a minute.
 
 ## History
 
+- **3** (2026-10-07): added `profile_ready` and `switch_generation`.
 - **2** (2026-10-07): added `service_running`, `profile_id`, `contract_version`. `kids_profile` now means Family Link
   supervision (was: some app is blocked). `screen_time_up` also comes from the kid's approved apps and clears when
   they're unblocked (was: only Google TV's screens, cleared only by a profile switch). `name` may be null after a

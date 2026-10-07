@@ -140,6 +140,13 @@ class FLauncherChannel {
   /// per-profile things are saved under it. Null when Hearth can't tell.
   Future<String?> getActiveProfileKey() async => await _methodChannel.invokeMethod<String>("getActiveProfileKey");
 
+  /// After a profile change: what only Hearth's native side knows is in (another profile's agent has reported its
+  /// Continue Watching, or that profile can't have an agent).
+  Future<bool> isProfileDataReady() async => await _methodChannel.invokeMethod<bool>("isProfileDataReady") ?? true;
+
+  /// Hearth's home is complete for this profile (shared with HearthTube as profile_ready).
+  Future<void> setProfileReady(String key) async => await _methodChannel.invokeMethod("setProfileReady", key);
+
   /// A Google TV profile's photo (PNG, cropped from its chooser) and when it last changed (0: no photo).
   Future<({Uint8List? png, int modified})> getProfileAvatar(String name) async {
     final map = await _methodChannel.invokeMapMethod<String, dynamic>("getProfileAvatar", name);
