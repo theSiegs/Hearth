@@ -18,7 +18,8 @@ import java.util.Map;
  * The switchboard: Google TV runs every profile but the owner's in its own profile user, with its own copies of the
  * apps (a kid's are the ones a parent approved), and blocks the owner's copies while such a profile is on. So while
  * one is active, Hearth shows that user's apps and opens them there (LauncherApps.startMainActivity, which reaches
- * the profiles of Hearth's user). Only an app's main screen can be opened in another user, no deep links.
+ * the profiles of Hearth's user). Only an app's main screen can be opened in another user directly; deep links go
+ * through that profile's Hearth agent (AgentHub).
  */
 final class ProfileApps {
     /** Not for the active profile: the owner's own apps apply. */
@@ -103,12 +104,21 @@ final class ProfileApps {
 
     /**
      * Opens what the intent points at in the active profile's user. Null when the owner's profile is on (start it
-     * as usual). Its own deep links can't reach another user from here, so the app opens at its main screen.
+     * as usual). Deep links can't reach another user from here, so they go through that profile's Hearth agent
+     * (AgentHub); without one the app opens at its main screen. False when that profile doesn't have the app.
      */
     static Boolean open(Context context, android.content.Intent intent) {
         if (intent == null) return null;
+        UserHandle user = activeProfileUser(context);
+        if (user == null) return null;
         String pkg = intent.getPackage() != null ? intent.getPackage()
                 : intent.getComponent() != null ? intent.getComponent().getPackageName() : null;
+        // Through that profile's agent the exact link opens; without one, the app's main screen
+        long serial = ProfileUsers.settledSerial(context);
+        if (pkg != null && apps(context, user).containsKey(pkg)
+                && AgentHub.open(context, serial, user, intent.toUri(android.content.Intent.URI_INTENT_SCHEME))) {
+            return true;
+        }
         return launch(context, pkg);
     }
 

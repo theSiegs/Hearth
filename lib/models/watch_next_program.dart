@@ -12,6 +12,9 @@ class WatchNextProgram {
   final String intentUri;
   final String posterArtUri;
 
+  /// Reported by the active profile's Hearth agent from its own user: already this profile's, no owner to work out.
+  final bool profileOwned;
+
   /// Downscaled poster art, filled in after the row first appears.
   Uint8List? posterBytes;
 
@@ -26,6 +29,7 @@ class WatchNextProgram {
     required this.duration,
     required this.intentUri,
     required this.posterArtUri,
+    this.profileOwned = false,
     this.posterBytes,
   });
 
@@ -41,6 +45,7 @@ class WatchNextProgram {
       duration: (map['duration'] as num?)?.toInt() ?? 0,
       intentUri: map['intentUri'] as String? ?? '',
       posterArtUri: map['posterArtUri'] as String? ?? '',
+      profileOwned: map['profileOwned'] == true,
     );
   }
 }
