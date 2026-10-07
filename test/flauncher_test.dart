@@ -180,7 +180,7 @@ void main() {
     expect(find.text("This category is empty."), findsNothing);
   });
 
-  testWidgets("Sections below the dock keep their headings when there are several", (tester) async {
+  testWidgets("Sections below the dock have no headings", (tester) async {
     final appsService = mkAppService();
     final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
     final tvAppsCategory = fakeCategory(name: "TV Apps", order: 1);
@@ -194,8 +194,8 @@ void main() {
 
     await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
 
-    expect(find.text("TV Apps"), findsOneWidget);
-    expect(find.text("Games"), findsOneWidget);
+    expect(find.text("TV Apps"), findsNothing);
+    expect(find.text("Games"), findsNothing);
     // "Games" is a row section, but below the dock it wraps as a grid; the dock is the only row.
     expect(find.byType(AppsGrid), findsNWidgets(2));
     expect(find.byType(CategoryRow), findsOneWidget);
@@ -250,7 +250,7 @@ void main() {
     expect(recentsOpacity(), 0);
   });
 
-  testWidgets("Dock falls back to the classic layout while Favorites is empty", (tester) async {
+  testWidgets("With nothing usable in Favorites, the dock layout shows one untitled grid", (tester) async {
     final appsService = mkAppService();
     final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
     final applicationsCategory = fakeCategory(name: "Applications", order: 1);
@@ -262,7 +262,20 @@ void main() {
     await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
 
     expect(find.byType(HomeDock), findsNothing);
-    expect(find.text("Favorites"), findsOneWidget);
+    expect(find.text("Favorites"), findsNothing);
+    expect(find.text("Applications"), findsNothing);
+    expect(find.text("FLauncher 2"), findsOneWidget);
+  });
+
+  testWidgets("With nothing to open, the dock layout says so", (tester) async {
+    final appsService = mkAppService();
+    when(appsService.launcherSections).thenReturn([fakeCategory(name: "Favorites", order: 0, type: CategoryType.row)]);
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+
+    expect(find.text("Nothing to watch right now"), findsOneWidget);
   });
 
   test("Dock corners follow the theme", () {
