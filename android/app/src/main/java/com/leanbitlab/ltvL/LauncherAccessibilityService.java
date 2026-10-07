@@ -208,10 +208,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
 
         if (GOOGLE_TV_PACKAGE.equals(packageName)) {
-            if (className.startsWith(GOOGLE_TV_WELLBEING_PREFIX)) {
+            boolean wellbeing = className.startsWith(GOOGLE_TV_WELLBEING_PREFIX);
+            if (wellbeing) {
                 mScreenTimeLock = true;
                 if (mHaStatus != null) mHaStatus.setScreenTimeLock(true);
             }
+            reportScreenTimeText(className, event, wellbeing);
             if (isChooser(className)) {
                 long now = SystemClock.elapsedRealtime();
                 if (mFirstFocusLabel != null && now - mFirstFocusAt < CHOOSER_INITIAL_FOCUS_MS) {
@@ -265,6 +267,18 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // The screen time lock only clears on a profile switch: failing safe beats covering a time up screen.
         if (packageName.equals(getPackageName()) || isLaunchableApp(packageName)) {
             mGoogleTvScreenInFront = false;
+        }
+    }
+
+    /**
+     * Reads why and for how long from a screen time screen, or from one of Google TV's warnings that time is
+     * running out (those aren't in the wellbeing classes). Other Google TV text is ignored.
+     */
+    private void reportScreenTimeText(String className, AccessibilityEvent event, boolean wellbeing) {
+        if (mHaStatus == null) return;
+        ScreenTimeScreen screen = ScreenTimeScreen.parse(className, event.getText());
+        if (wellbeing || screen.isScreenTimeText() && screen.minutesLeft != null) {
+            mHaStatus.setScreenTime(screen);
         }
     }
 

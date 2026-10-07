@@ -14,6 +14,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -46,6 +47,8 @@ final class HaStatusReporter {
     private String mForegroundPackage;
     private boolean mScreenOn = true;
     private boolean mScreenTimeLock = false;
+    private ScreenTimeScreen mScreenTime;
+    private long mScreenTimeSeenAt;
     private String mLastSent;
 
     private final MediaController.Callback mControllerCallback = new MediaController.Callback() {
@@ -147,8 +150,17 @@ final class HaStatusReporter {
         }
     }
 
+    /** What Google TV last said about screen time: why it locks and how long is left. */
+    void setScreenTime(ScreenTimeScreen screen) {
+        mScreenTime = screen;
+        mScreenTimeSeenAt = System.currentTimeMillis();
+        scheduleSend();
+    }
+
     /** Profile name or kids state may have changed. */
     void onProfileChanged() {
+        // A new profile has its own limits: what the last screen said no longer applies
+        mScreenTime = null;
         scheduleSend();
     }
 
@@ -191,8 +203,17 @@ final class HaStatusReporter {
         status.put("app_package", mForegroundPackage == null ? JSONObject.NULL : mForegroundPackage);
         status.put("app", mForegroundPackage == null ? JSONObject.NULL : label(pm, mForegroundPackage));
         status.put("profile", nullable(LauncherAccessibilityService.getActiveProfileName(mContext)));
-        status.put("kids_profile", isKidsProfile(pm));
+        boolean kids = isKidsProfile(pm);
+        status.put("kids_profile", kids);
         status.put("screen_time_up", mScreenTimeLock);
+        // Minutes are as Google TV stated them at screen_time_seen_at (epoch ms); Home Assistant can count down.
+        // screen_time_text is Google TV's own wording, so what it says can be checked against the parsing.
+        status.put("screen_time_reason", mScreenTime == null ? JSONObject.NULL : mScreenTime.reason.id);
+        status.put("screen_time_minutes_left", mScreenTime == null || mScreenTime.minutesLeft == null
+                ? JSONObject.NULL : mScreenTime.minutesLeft);
+        status.put("screen_time_text", mScreenTime == null ? JSONObject.NULL : mScreenTime.text);
+        status.put("screen_time_seen_at", mScreenTime == null ? JSONObject.NULL : mScreenTimeSeenAt);
+        status.put("allowed_apps", kids ? allowedApps(pm) : JSONObject.NULL);
 
         MediaController playing = primaryController();
         String state = "idle";
@@ -263,6 +284,20 @@ final class HaStatusReporter {
             }
         }
         return false;
+    }
+
+    /** The apps this kids profile can open: every launchable app Google TV hasn't suspended. */
+    private static JSONArray allowedApps(PackageManager pm) {
+        java.util.TreeSet<String> names = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        for (String category : new String[]{Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER}) {
+            Intent intent = new Intent(Intent.ACTION_MAIN).addCategory(category);
+            for (ResolveInfo info : pm.queryIntentActivities(intent, 0)) {
+                if ((info.activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SUSPENDED) == 0) {
+                    names.add(label(pm, info.activityInfo.packageName));
+                }
+            }
+        }
+        return new JSONArray(names);
     }
 
     private void post(String url, String body) {
