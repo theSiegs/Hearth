@@ -38,6 +38,7 @@ import 'package:provider/provider.dart';
 import 'package:flauncher/widgets/continue_watching_row.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 
 import 'models/category.dart';
@@ -69,6 +70,12 @@ class _FLauncherState extends State<FLauncher> {
   final FocusNode _recentsFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
   FocusNode? _lastDockFocus;
 
+  /// Wraps the single apps grid shown when there's no dock.
+  final FocusNode _appsGridFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
+
+  ProfileService? _profileService;
+  String? _lastProfile;
+
   @override
   void initState() {
     super.initState();
@@ -81,6 +88,26 @@ class _FLauncherState extends State<FLauncher> {
         if (pending != null) _openSearch(pending);
       } catch (_) {}
     });
+    _profileService = context.read<ProfileService?>();
+    _lastProfile = _profileService?.activeProfileName;
+    _profileService?.addListener(_onProfileChanged);
+  }
+
+  /// Arriving in a profile, the selection starts on the first dock app, or the first app when there's no dock.
+  void _onProfileChanged() {
+    final name = _profileService?.activeProfileName;
+    if (name == null || name == _lastProfile) return;
+    _lastProfile = name;
+    if (_showingRecents) setState(() => _showingRecents = false);
+    // Twice: the profile's layout (its own dock) loads just after the name changes.
+    for (final delay in const [Duration(milliseconds: 300), Duration(milliseconds: 1200)]) {
+      Future.delayed(delay, () {
+        if (!mounted) return;
+        final target = _firstFocusable(_dockFocusNode) ?? _firstFocusable(_appsGridFocusNode) ??
+            _firstFocusable(_belowDockFocusNode);
+        target?.requestFocus();
+      });
+    }
   }
 
   bool _searchOpen = false;
@@ -98,6 +125,8 @@ class _FLauncherState extends State<FLauncher> {
   @override
   void dispose() {
     FocusManager.instance.removeListener(_onFocusMoved);
+    _profileService?.removeListener(_onProfileChanged);
+    _appsGridFocusNode.dispose();
     _firstScreenFocusNode.dispose();
     _belowDockFocusNode.dispose();
     _dockFocusNode.dispose();
@@ -302,11 +331,14 @@ class _FLauncherState extends State<FLauncher> {
       // TV Apps / Non-TV Apps / Favorites split, or a friendly card when there's nothing at all.
       final usable = sections.where((s) => !(s is Category && (s.applications.isEmpty || s.name == 'Favorites'))).toList();
       if (usable.isEmpty && !continueWatchingActive) return _nothingToWatch(viewportHeight);
-      return _sections(usable,
-          continueWatchingActive: continueWatchingActive,
-          continueWatchingOrder: continueWatchingOrder,
-          showTitles: false,
-          allGrids: true);
+      return Focus(
+        focusNode: _appsGridFocusNode,
+        child: _sections(usable,
+            continueWatchingActive: continueWatchingActive,
+            continueWatchingOrder: continueWatchingOrder,
+            showTitles: false,
+            allGrids: true),
+      );
     }
 
     // Empty sections (often "Non-TV Apps") are left out below the dock; they'd only say "This category is empty".
