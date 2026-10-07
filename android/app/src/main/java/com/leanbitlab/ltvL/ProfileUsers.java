@@ -75,25 +75,53 @@ final class ProfileUsers {
         }
     }
 
-    private static final String KIDS_PREFIX = "kids|";
     private static final String SCREEN_TIME_SERIAL = "screen_time_up_serial";
 
     /**
-     * Whether the active profile is a kids profile. Google TV suspends the apps a parent hasn't approved there, so
-     * a kids profile is one seen with suspended apps; once seen (see {@link #markKids}), it stays one even if a
-     * parent approves every app. Unmarked profiles fall back to the suspension check.
+     * Restrictions Family Link puts on a supervised (kids) profile's user, whatever the parent allows: on the
+     * test TV every kids profile has all of them and the owner none. (Unknown sources is left out: a parent
+     * can allow it.)
+     */
+    private static final String[] SUPERVISION_RESTRICTIONS = {
+            "no_config_credentials", "no_grant_admin", "no_add_managed_profile"};
+
+    /**
+     * Whether the active profile is a kids profile: its user is supervised by Family Link (Google's own record,
+     * readable for the profiles of Hearth's user), not merely missing some app approvals. Only when that can't
+     * be read does it fall back to Google TV suspending unapproved apps.
      */
     static boolean isKids(Context context) {
-        long serial = activeSerial(context);
-        if (serial != UNKNOWN && prefs(context).getBoolean(KIDS_PREFIX + serial, false)) return true;
-        return anySuspended(context.getPackageManager());
+        Boolean supervised = isSupervised(context, activeSerialForKids(context));
+        return supervised != null ? supervised : anySuspended(context.getPackageManager());
     }
 
-    /** Remembers that this serial is a kids profile, for good (Google TV doesn't turn one into a grown-up's). */
-    static boolean markKids(Context context, long serial) {
-        if (serial == UNKNOWN || prefs(context).getBoolean(KIDS_PREFIX + serial, false)) return false;
-        prefs(context).edit().putBoolean(KIDS_PREFIX + serial, true).apply();
-        return true;
+    /** The settled active serial (as Hearth's service last saw it), else a fresh read. */
+    private static long activeSerialForKids(Context context) {
+        String key = LauncherAccessibilityService.getActiveProfileKey(context);
+        if (key != null && key.startsWith(KEY_PREFIX)) {
+            try {
+                return Long.parseLong(key.substring(KEY_PREFIX.length()));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return activeSerial(context);
+    }
+
+    /** Whether this profile's user carries Family Link's supervision restrictions; null when that can't be read. */
+    static Boolean isSupervised(Context context, long serial) {
+        UserManager users = (UserManager) context.getSystemService(Context.USER_SERVICE);
+        if (users == null || serial == UNKNOWN) return null;
+        try {
+            UserHandle user = users.getUserForSerialNumber(serial);
+            if (user == null) return null;
+            android.os.Bundle restrictions = users.getUserRestrictions(user);
+            for (String restriction : SUPERVISION_RESTRICTIONS) {
+                if (restrictions.getBoolean(restriction, false)) return true;
+            }
+            return false;
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     /** Whether any launchable app is suspended: Google TV does that only in kids profiles. */
