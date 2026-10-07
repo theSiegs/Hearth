@@ -1,25 +1,35 @@
-Hearth is a quiet, ad-free interface for Google TV: your wallpaper, a dock of favorites, and what you were watching. No ads, no analytics, no trackers.
+LTvLauncher is a fork of FLauncher - an open-source alternative launcher for Android TV.
 
-Made for families:
-- Follows Google TV's own profiles: each person gets their own home screen and dock.
-- Kids profiles: unapproved apps stay hidden, and Hearth's settings need the parent PIN.
-- Profile Pairing: opens a number of apps (Disney+, Netflix and more) straight into the right profile.
-- Sleep the TV after a stretch with no remote presses.
+This customized version introduces usability enhancements and UX improvements.
 
-Home screen:
-- A dock of favorite apps; Up for Continue Watching with cover art, Down for all apps.
-- Left at the left edge opens Settings; Right at the right edge opens your Home Assistant dashboard.
-- Accent colors, card styles, day/night and OLED-black wallpapers, custom banners.
+Key Features & Enhancements:
 
-Home Assistant:
-- Notifications over any app, compatible with the "Notifications for Android TV / Fire TV" integration, plus live camera cards and action buttons.
-- Slide-in dashboard panel, set up by scanning a QR code with your phone.
-- Remote buttons that run scenes, scripts and toggles; TV status pushed to a webhook.
+- Data Usage Widget - Track daily Internet consumption directly from the status bar.
+- Inbuilt OLED Screensaver - Minimal screensaver with 30s clock position shifting to prevent burn-in.
+- Easy WiFi Access - Network indicator doubles as a shortcut to system WiFi settings.
+- Quick Presets - Select Time/Date formats and Category names from a list (No keyboard required).
+- Time-Based Wallpaper - Automatically switch between day and night backgrounds.
+- Pitch Black Wallpaper - Added a true black gradient background option.
+- Enhanced Focus Indicator - New double-border design ensures perfect visibility on any background.
+- Smart Navigation - Fixed "bounce back" issues and optimized focus traversal for a smoother experience.
+- Refined Settings - Reorganized menus with a new "Miscellaneous" section and unified focus styles.
+- Accent Color Support - Personalize the UI with multiple color presets.
+- Improved Sorting - Easily reorder categories using Left/Right arrow keys instead of finicky gestures.
+- Left Side Settings - Reorganized settings panel now opens on the left for better reach.
+- Brightness Scheduler (Experimental) - Automatically adjust system brightness based on time of day (Requires WRITE_SETTINGS permission via ADB).
+- New Category - Added "Favorites".
+- Optimizations - Improved performance with aggressive icon caching and code cleanups.
 
-Also:
-- Home Button Fix makes the Home button open Hearth on Google TV.
-- Setup checklist that walks through every Android setting Hearth needs.
-- Updates from inside Hearth; install and update HearthTube from Settings → Companion apps.
-- Notifications panel, weather, TV input switching, daily settings backups.
+Original FLauncher Features:
 
-Hearth is a fork of LTvLauncher by LeanBitLab, with ideas from Arc Launcher by Badis Meddouri, both built on FLauncher by etienn01 and osrosal. Licensed GPL-3.0.
+- No ads
+- Customizable categories
+- Manually reorder apps within categories
+- Wallpaper support
+- Open "Android Settings"
+- Open "App info"
+- Uninstall app
+- Clock
+- Switch between row and grid for categories
+- Support for non-TV (sideloaded) apps
+- Navigation sound feedback
