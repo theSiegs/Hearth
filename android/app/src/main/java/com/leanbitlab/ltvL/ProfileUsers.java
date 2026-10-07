@@ -11,7 +11,8 @@ import java.util.Map;
 
 /**
  * Google TV runs every profile but the TV owner's as a hidden Android profile user (type com.android.tv.profile)
- * and keeps only the active one's user running: started on a switch in, stopped on a switch out. So the active
+ * and keeps only the active one's user running: started on a switch in, stopped on a switch out. (That's how every
+ * Google TV with profiles does it: Android 12 and later; Android 11 uses quiet mode instead.) So the active
  * profile can be read at any time, keyed by the user's serial number (which never changes), and Android announces
  * switches with PROFILE_ACCESSIBLE / PROFILE_INACCESSIBLE. The users' own names are all "configured_user", so each
  * serial's profile name is still learned from Google TV's chooser, once.
@@ -27,19 +28,19 @@ final class ProfileUsers {
     }
 
     /**
-     * The active profile's serial: the running profile user's, or the owner's when none runs. UNKNOWN on a TV
-     * without profile users, or mid-switch (two running).
+     * The active profile's serial: the running profile user's, or the owner's when none runs (always, on a TV
+     * without profiles). UNKNOWN mid-switch (two running).
      */
     static long activeSerial(Context context) {
         UserManager users = (UserManager) context.getSystemService(Context.USER_SERVICE);
         if (users == null) return UNKNOWN;
         try {
             List<UserHandle> profiles = users.getUserProfiles();
-            if (profiles.size() < 2) return UNKNOWN;
             UserHandle me = Process.myUserHandle();
             UserHandle running = null;
             for (UserHandle profile : profiles) {
-                if (profile.equals(me) || !users.isUserRunning(profile)) continue;
+                // Android 11's Google TV switches by quiet mode rather than by stopping users
+                if (profile.equals(me) || !users.isUserRunning(profile) || users.isQuietModeEnabled(profile)) continue;
                 if (running != null) return UNKNOWN;
                 running = profile;
             }
@@ -64,13 +65,17 @@ final class ProfileUsers {
         return serial == UNKNOWN ? null : prefs(context).getString(NAME_PREFIX + serial, null);
     }
 
-    /** Whether this name was learned for a different serial. */
-    static boolean isOtherProfile(Context context, long serial, String name) {
-        if (name == null) return false;
+    /** The serial this name was learned for, or UNKNOWN. */
+    static long serialOf(Context context, String name) {
         for (Map.Entry<String, ?> entry : prefs(context).getAll().entrySet()) {
-            if (name.equals(entry.getValue()) && !entry.getKey().equals(NAME_PREFIX + serial)) return true;
+            if (name != null && name.equals(entry.getValue()) && entry.getKey().startsWith(NAME_PREFIX)) {
+                try {
+                    return Long.parseLong(entry.getKey().substring(NAME_PREFIX.length()));
+                } catch (NumberFormatException ignored) {
+                }
+            }
         }
-        return false;
+        return UNKNOWN;
     }
 
     /** Remembers which profile a serial is; a name moves off any other serial (profile names are unique). */
