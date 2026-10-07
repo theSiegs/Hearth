@@ -49,6 +49,11 @@ public class AgentService extends Service {
 
     private static volatile String sPendingOpen;
     private static volatile String sListeningTo;
+    private static volatile boolean sConnected;
+    private static final String HEARTH_ROW = "hearth_row";
+    private static final java.util.concurrent.atomic.AtomicLong sPinIds = new java.util.concurrent.atomic.AtomicLong();
+    private static final java.util.Map<Long, java.util.concurrent.BlockingQueue<JSONObject>> sPinReplies =
+            new java.util.concurrent.ConcurrentHashMap<>();
     private static volatile AgentService sInstance;
 
     private HandlerThread mThread;
@@ -96,6 +101,67 @@ public class AgentService extends Service {
     static void relaySpeech(String packageName, String text) {
         AgentService service = sInstance;
         if (service != null && text != null) service.send(json("type", "speech", "package", packageName, "text", text));
+    }
+
+    /**
+     * Hearth's provider row as Hearth last sent it, in ProfileProvider's column order, for the provider here (a kid's
+     * HearthTube in this user can't reach Hearth's). service_running says whether this agent is connected to
+     * Hearth now; there's no wallpaper picture here (wallpaper_stamp 0: the gradient). Defaults before the first.
+     */
+    static Object[] mirroredRow(Context context) {
+        String[] columns = ProfileProvider.columns();
+        Object[] values = new Object[columns.length];
+        JSONObject row = null;
+        try {
+            String saved = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(HEARTH_ROW, null);
+            if (saved != null) row = new JSONObject(saved);
+        } catch (Exception ignored) {
+        }
+        for (int i = 0; i < columns.length; i++) {
+            Object value = row != null && !row.isNull(columns[i]) ? row.opt(columns[i]) : null;
+            switch (columns[i]) {
+                case "service_running":
+                    value = sConnected && row != null ? 1 : 0;
+                    break;
+                case "wallpaper_stamp":
+                    value = 0;
+                    break;
+                case "contract_version":
+                    value = ProfileProvider.CONTRACT_VERSION;
+                    break;
+                default:
+                    break;
+            }
+            values[i] = value;
+        }
+        return values;
+    }
+
+    /** Checks a PIN with Hearth (it stays there); null when Hearth doesn't answer within a few seconds. */
+    static android.os.Bundle verifyPinWithHearth(String pin) {
+        AgentService service = sInstance;
+        if (service == null || service.mOut == null) return null;
+        long id = sPinIds.incrementAndGet();
+        java.util.concurrent.BlockingQueue<JSONObject> reply = new java.util.concurrent.ArrayBlockingQueue<>(1);
+        sPinReplies.put(id, reply);
+        try {
+            service.send(json("type", "verifyPin", "id", id, "pin", pin));
+            JSONObject answer = reply.poll(3, java.util.concurrent.TimeUnit.SECONDS);
+            if (answer == null) return null;
+            android.os.Bundle result = new android.os.Bundle();
+            result.putBoolean("ok", answer.optBoolean("ok"));
+            if (answer.optInt("wait") > 0) result.putInt("wait_seconds", answer.optInt("wait"));
+            return result;
+        } catch (InterruptedException e) {
+            return null;
+        } finally {
+            sPinReplies.remove(id);
+        }
+    }
+
+    private void onConnectionChanged(boolean connected) {
+        sConnected = connected;
+        getContentResolver().notifyChange(ProfileProvider.activeUri(this), null);
     }
 
     /** What Hearth asked to open, once (AgentActivity polls for it). */
@@ -189,6 +255,7 @@ public class AgentService extends Service {
                     if ("welcome".equals(reply.optString("type"))) {
                         Log.i(TAG, "Connected to Hearth as serial " + serial);
                         mOut = out;
+                        onConnectionChanged(true);
                         mHandler.post(mSendWatchNext);
                         mHandler.postDelayed(mPing, PING_MS);
                         String line;
@@ -199,6 +266,16 @@ public class AgentService extends Service {
                                 sPendingOpen = message.optString("intent");
                             } else if ("listen".equals(type)) {
                                 sListeningTo = message.isNull("package") ? null : message.optString("package");
+                            } else if ("hearth".equals(type)) {
+                                JSONObject row = message.optJSONObject("row");
+                                if (row != null) {
+                                    getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                                            .putString(HEARTH_ROW, row.toString()).apply();
+                                    getContentResolver().notifyChange(ProfileProvider.activeUri(this), null);
+                                }
+                            } else if ("pinResult".equals(type)) {
+                                java.util.concurrent.BlockingQueue<JSONObject> pinReply = sPinReplies.get(message.optLong("id"));
+                                if (pinReply != null) pinReply.offer(message);
                             }
                         }
                     } else {
@@ -207,8 +284,10 @@ public class AgentService extends Service {
                 } catch (Exception e) {
                     Log.i(TAG, "Hearth unreachable: " + e.getMessage());
                 } finally {
+                    boolean wasConnected = mOut != null;
                     mOut = null;
                     sListeningTo = null;
+                    if (wasConnected) onConnectionChanged(false);
                     mHandler.removeCallbacks(mPing);
                 }
             }
