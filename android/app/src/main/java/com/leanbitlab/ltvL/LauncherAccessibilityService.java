@@ -149,6 +149,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mIdleHandler.removeCallbacks(mReadScreenTime);
         mIdleHandler.removeCallbacks(mProfileUserRecheck);
         mIdleHandler.removeCallbacks(mSettleCheck);
+        mIdleHandler.removeCallbacks(mReadChooser);
         if (mHaServer != null) mHaServer.stop();
         if (mHaStatus != null) mHaStatus.stop();
         try {
@@ -294,6 +295,119 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
     }
 
+    // Once the chooser has laid out (and its focus animation settled): which tile is the current account, and
+    // photos for profiles that have none yet (or a week-old one).
+    private static final long CHOOSER_READ_DELAY_MS = 1_200;
+    private final Runnable mReadChooser = this::readChooser;
+
+    private void readChooser() {
+        android.view.accessibility.AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null || !mChooserOnScreen
+                || !GOOGLE_TV_PACKAGE.contentEquals(root.getPackageName() != null ? root.getPackageName() : "")) {
+            android.util.Log.i(PROFILE_TAG, "Chooser not readable (" + (root == null ? "no window" : root.getPackageName())
+                    + ", on screen " + mChooserOnScreen + ")");
+            return;
+        }
+        java.util.List<String> names = new java.util.ArrayList<>();
+        java.util.List<android.graphics.Rect> photos = new java.util.ArrayList<>();
+        collectChooserTiles(root, names, photos, 0);
+        java.util.Map<String, android.graphics.Rect> due = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < names.size(); i++) {
+            if (ProfileAvatars.isDue(this, names.get(i))) due.put(names.get(i), photos.get(i));
+        }
+        android.util.Log.i(PROFILE_TAG, "Chooser shows " + names + "; photos due: " + due.keySet());
+        android.os.PowerManager power = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+        if (due.isEmpty() || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R
+                || power == null || !power.isInteractive()) {
+            return;
+        }
+        takeScreenshot(android.view.Display.DEFAULT_DISPLAY, getMainExecutor(), new TakeScreenshotCallback() {
+            @Override
+            public void onSuccess(ScreenshotResult result) {
+                final android.hardware.HardwareBuffer buffer = result.getHardwareBuffer();
+                // Cropping and saving off the main thread; the full screenshot is never kept.
+                new Thread(() -> {
+                    android.graphics.Bitmap hardware = android.graphics.Bitmap.wrapHardwareBuffer(buffer, result.getColorSpace());
+                    android.graphics.Bitmap screen = hardware != null
+                            ? hardware.copy(android.graphics.Bitmap.Config.ARGB_8888, false) : null;
+                    if (hardware != null) hardware.recycle();
+                    buffer.close();
+                    if (screen == null) return;
+                    boolean saved = false;
+                    for (java.util.Map.Entry<String, android.graphics.Rect> photo : due.entrySet()) {
+                        if (ProfileAvatars.save(LauncherAccessibilityService.this, photo.getKey(), screen, photo.getValue())) {
+                            saved = true;
+                        } else {
+                            android.util.Log.i(PROFILE_TAG, "No usable photo for " + photo.getKey());
+                        }
+                    }
+                    screen.recycle();
+                    if (saved) MainActivity.notifyProfileChanged();
+                }, "ProfilePhotos").start();
+            }
+
+            @Override
+            public void onFailure(int errorCode) {
+                android.util.Log.i(PROFILE_TAG, "Profile photo screenshot failed: " + errorCode);
+            }
+        });
+    }
+
+    /** The first ImageView in a node's subtree. */
+    private static android.view.accessibility.AccessibilityNodeInfo findImage(
+            android.view.accessibility.AccessibilityNodeInfo node, int depth) {
+        if (node == null || depth > 6) return null;
+        if ("android.widget.ImageView".contentEquals(node.getClassName() != null ? node.getClassName() : "")) return node;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            android.view.accessibility.AccessibilityNodeInfo image = findImage(node.getChild(i), depth + 1);
+            if (image != null) return image;
+        }
+        return null;
+    }
+
+    /**
+     * The chooser's profile tiles: a focusable LinearLayout holding the photo (an ImageView, a few frames down)
+     * and the name (TextView), "Add account" aside. The current account's tile says so in its description ("... select to
+     * continue with current account"), which names the running profile user without relying on focus.
+     */
+    private void collectChooserTiles(android.view.accessibility.AccessibilityNodeInfo node, java.util.List<String> names,
+            java.util.List<android.graphics.Rect> photos, int depth) {
+        if (node == null || depth > 20) return;
+        if ("android.widget.LinearLayout".contentEquals(node.getClassName() != null ? node.getClassName() : "")
+                && node.isFocusable()) {
+            String name = null;
+            android.graphics.Rect photo = null;
+            for (int i = 0; i < node.getChildCount(); i++) {
+                android.view.accessibility.AccessibilityNodeInfo child = node.getChild(i);
+                if (child == null || child.getClassName() == null) continue;
+                if ("android.widget.TextView".contentEquals(child.getClassName()) && child.getText() != null) {
+                    name = child.getText().toString().trim();
+                } else if (photo == null) {
+                    android.view.accessibility.AccessibilityNodeInfo image = findImage(child, 0);
+                    if (image != null) {
+                        photo = new android.graphics.Rect();
+                        image.getBoundsInScreen(photo);
+                    }
+                }
+            }
+            if (name != null && !name.isEmpty() && photo != null
+                    && !name.toLowerCase(java.util.Locale.ROOT).contains("account")) {
+                names.add(name);
+                photos.add(photo);
+                CharSequence desc = node.getContentDescription();
+                if (desc != null && desc.toString().toLowerCase(java.util.Locale.ROOT).contains("current account")
+                        && mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN
+                        && !name.equals(ProfileUsers.getName(this, mActiveSerial))) {
+                    nameSerial(mActiveSerial, name, "chooser's current account");
+                }
+            }
+            return;
+        }
+        for (int i = 0; i < node.getChildCount(); i++) {
+            collectChooserTiles(node.getChild(i), names, photos, depth + 1);
+        }
+    }
+
     /** Learns a serial's profile name; the active profile takes it on if that's the serial. */
     private void nameSerial(long serial, String name, String how) {
         android.util.Log.i(PROFILE_TAG, "Serial " + serial + " is " + name + " (" + how + ")");
@@ -382,6 +496,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
             }
             reportScreenTimeText(className, event, wellbeing);
             if (isChooser(className)) {
+                mIdleHandler.removeCallbacks(mReadChooser);
+                mIdleHandler.postDelayed(mReadChooser, CHOOSER_READ_DELAY_MS);
                 long now = SystemClock.elapsedRealtime();
                 if (mFirstFocusLabel != null && now - mFirstFocusAt < CHOOSER_INITIAL_FOCUS_MS) {
                     // Initial focus was reported before the window change
