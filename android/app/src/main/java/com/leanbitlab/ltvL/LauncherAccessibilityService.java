@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.LauncherApps;
 import android.content.pm.PackageManager;
@@ -243,6 +244,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (mHaStatus != null && (packageName.equals(getPackageName()) || isLaunchableApp(packageName))) {
             mHaStatus.setForegroundPackage(packageName);
         }
+        if (!packageName.equals(getPackageName()) && isLaunchableApp(packageName)) {
+            rememberAppUser(this, packageName);
+        }
 
         // The screen time lock only clears on a profile switch: failing safe beats covering a time up screen.
         if (packageName.equals(getPackageName()) || isLaunchableApp(packageName)) {
@@ -303,6 +307,21 @@ public class LauncherAccessibilityService extends AccessibilityService {
         getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE).edit().putString(PROFILE_NAME_KEY, name).apply();
         if (mHaStatus != null) mHaStatus.onProfileChanged();
         ProfileProvider.notifyChanged(this);
+    }
+
+    private static final String APP_USERS_PREFS = "ltv_app_last_profile";
+
+    /** Records that the active Google TV profile is using this app (for Continue Watching ownership). */
+    private static void rememberAppUser(Context context, String packageName) {
+        String profile = getActiveProfileName(context);
+        if (profile == null) return;
+        SharedPreferences prefs = context.getSharedPreferences(APP_USERS_PREFS, MODE_PRIVATE);
+        if (!profile.equals(prefs.getString(packageName, null))) prefs.edit().putString(packageName, profile).apply();
+    }
+
+    /** The Google TV profile that last had this app in front on the TV, or null. */
+    static String getAppLastProfile(Context context, String packageName) {
+        return context.getSharedPreferences(APP_USERS_PREFS, MODE_PRIVATE).getString(packageName, null);
     }
 
     static String getActiveProfileName(Context context) {
