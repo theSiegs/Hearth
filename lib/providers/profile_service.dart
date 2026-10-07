@@ -17,6 +17,8 @@
 
 import 'dart:developer' as developer;
 
+import 'package:collection/collection.dart';
+
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -61,6 +63,18 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) check();
   }
 
+  /// A profile can open none of its Favorites (a kids profile, where Google TV blocks unapproved apps), which
+  /// would leave it without a dock: start its dock with the apps it can open.
+  Future<void> _fillEmptyDock() async {
+    if (!_isKidsProfile || !_appsService.initialized) return;
+    final favorites = _appsService.categories.firstWhereOrNull((c) => c.name == 'Favorites');
+    if (favorites != null && favorites.applications.isNotEmpty) return;
+    final apps = _appsService.applications.where((a) => !a.hidden && a.packageName != 'com.android.vending').toList();
+    if (apps.isEmpty) return;
+    final dock = favorites ?? await _appsService.getOrCreateFavoritesCategory();
+    await _appsService.addAllToCategory(apps.take(6), dock);
+  }
+
   Future<void> check() => _checking ??= _check().whenComplete(() => _checking = null);
 
   Future<void> _check() async {
@@ -82,7 +96,10 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
     if (name == null) return;
 
     final String? owner = _sharedPreferences.getString(layoutOwnerKey);
-    if (owner == name) return;
+    if (owner == name) {
+      await _fillEmptyDock();
+      return;
+    }
 
     try {
       if (owner != null) {
@@ -93,6 +110,7 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
         await _appsService.refreshState();
       }
       await _sharedPreferences.setString(layoutOwnerKey, name);
+      await _fillEmptyDock();
     } catch (e, stack) {
       developer.log("Failed to switch profile layout", name: "ProfileService", error: e, stackTrace: stack);
     }
