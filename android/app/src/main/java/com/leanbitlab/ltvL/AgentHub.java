@@ -38,7 +38,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * Agent to Hearth: {"type":"hello","serial":n,"key":"…","voiceDefault":bool}, {"type":"watchNext","rows":[…]},
  * {"type":"ping"}, {"type":"opened","ok":bool}, {"type":"speech","package":"…","text":"…"} (what an app said through
  * Hearth's voice there, for Profile Pairing). Hearth to agent: {"type":"welcome"}, {"type":"open","intent":"intent:…"},
- * {"type":"listen","package":"…" or null} (the app Profile Pairing is handling, whose speech to relay).
+ * {"type":"listen","package":"…" or null} (the app Profile Pairing is handling, whose speech to relay),
+ * {"type":"hearth","row":{column: value}} (Hearth's provider row, mirrored by the agent's provider there) and
+ * {"type":"pinResult","id":n,"ok":bool,"wait":s} answering an agent's {"type":"verifyPin","id":n,"pin":"…"}.
  */
 final class AgentHub {
     static final int PORT = 47474;
@@ -121,6 +123,7 @@ final class AgentHub {
             sVoiceDefault.put(serial, hello.optBoolean("voiceDefault"));
             connection.send(new JSONObject().put("type", "welcome"));
             connection.send(new JSONObject().put("type", "listen").put("package", sListening != null ? sListening : JSONObject.NULL));
+            connection.send(hearthState(sContext));
             Log.i(TAG, "Agent for serial " + serial + " connected (Hearth voice there: " + hello.optBoolean("voiceDefault") + ")");
             String line;
             while ((line = in.readLine()) != null) {
@@ -134,6 +137,13 @@ final class AgentHub {
                         // Only the app Profile Pairing is handling (ProfilePairingService checks too)
                         String pkg = message.optString("package");
                         if (pkg.equals(sListening)) ProfilePairingService.onSpeech(pkg, message.optString("text"));
+                        break;
+                    }
+                    case "verifyPin": {
+                        // A kid's HearthTube checking the parent PIN through its agent (PINs stay with Hearth)
+                        android.os.Bundle result = ProfileProvider.verifyParentPin(sContext, message.optString("pin"));
+                        connection.send(new JSONObject().put("type", "pinResult").put("id", message.optLong("id"))
+                                .put("ok", result.getBoolean("ok")).put("wait", result.getInt("wait_seconds", 0)));
                         break;
                     }
                     case "opened":
@@ -182,6 +192,26 @@ final class AgentHub {
 
     static Uri watchNextUri(Context context) {
         return Uri.parse("content://" + context.getPackageName() + ".profile/agent_watch_next");
+    }
+
+    /** Hearth's provider row as a message for the agents. */
+    private static JSONObject hearthState(Context context) throws org.json.JSONException {
+        JSONObject row = new JSONObject();
+        String[] columns = ProfileProvider.columns();
+        Object[] values = ProfileProvider.row(context);
+        for (int i = 0; i < columns.length; i++) row.put(columns[i], values[i] != null ? values[i] : JSONObject.NULL);
+        return new JSONObject().put("type", "hearth").put("row", row);
+    }
+
+    /** Hearth's provider row changed: the agents' copies follow. */
+    static void pushHearthState(Context context) {
+        if (sConnections.isEmpty() || sContext == null) return;
+        try {
+            JSONObject state = hearthState(sContext);
+            for (Connection connection : sConnections.values()) connection.send(state);
+        } catch (Exception e) {
+            Log.w(TAG, "Couldn't send Hearth's state to the agents: " + e);
+        }
     }
 
     /** Hearth's voice is the text-to-speech engine in that profile's user, as its agent reported. */

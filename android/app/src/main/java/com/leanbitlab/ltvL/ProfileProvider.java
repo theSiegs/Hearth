@@ -51,8 +51,9 @@ public class ProfileProvider extends ContentProvider {
     private static final int MAX_PIN_TRIES = 5;
     private static final long PIN_LOCKOUT_MS = 60_000;
 
-    private int mWrongPins;
-    private long mPinLockedUntil;
+    // One lockout for every way in (HearthTube here, or a kid's HearthTube through that profile's agent)
+    private static int sWrongPins;
+    private static long sPinLockedUntil;
 
     /** content://<package>.profile/active (debug builds have a ".debug" package suffix). */
     static Uri activeUri(Context context) {
@@ -62,6 +63,8 @@ public class ProfileProvider extends ContentProvider {
     /** Tells apps observing {@link #activeUri} that the profile changed. */
     static void notifyChanged(Context context) {
         context.getContentResolver().notifyChange(activeUri(context), null);
+        // And to the agents, whose provider mirrors this one in the other profiles' users
+        AgentHub.pushHearthState(context);
     }
 
     @Override
@@ -72,11 +75,20 @@ public class ProfileProvider extends ContentProvider {
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
         Context context = getContext();
+        MatrixCursor cursor = new MatrixCursor(COLUMNS, 1);
+        // In another profile's user Hearth is that profile's agent: it answers with Hearth's own row, as Hearth last
+        // sent it (a kid's HearthTube there can't reach Hearth's provider in the owner's user)
+        cursor.addRow(AgentService.isAgent(context) ? AgentService.mirroredRow(context) : row(context));
+        cursor.setNotificationUri(context.getContentResolver(), activeUri(context));
+        return cursor;
+    }
+
+    /** The /active row's values, in {@link #COLUMNS} order (as Hearth itself, in the owner's user). */
+    static Object[] row(Context context) {
         SharedPreferences prefs = flutterPrefs(context);
         File wallpaper = currentWallpaper(context);
-        MatrixCursor cursor = new MatrixCursor(COLUMNS, 1);
         String[] formats = dateTimeFormats(prefs);
-        cursor.addRow(new Object[]{
+        return new Object[]{
                 LauncherAccessibilityService.getActiveProfileName(context),
                 prefs.getString("flutter.accent_color", null),
                 formats[1],
@@ -91,9 +103,11 @@ public class ProfileProvider extends ContentProvider {
                 LauncherAccessibilityService.getActiveProfileKey(context),
                 CONTRACT_VERSION,
                 LauncherAccessibilityService.isProfileReady(context) ? 1 : 0,
-                LauncherAccessibilityService.getProfileGeneration(context)});
-        cursor.setNotificationUri(context.getContentResolver(), activeUri(context));
-        return cursor;
+                LauncherAccessibilityService.getProfileGeneration(context)};
+    }
+
+    static String[] columns() {
+        return COLUMNS.clone();
     }
 
     @Override
@@ -118,7 +132,9 @@ public class ProfileProvider extends ContentProvider {
         }
 
         if ("verify_parent_pin".equals(method)) {
-            return verifyParentPin(arg);
+            // An agent asks Hearth (the PIN lives only there); null when Hearth doesn't answer
+            return AgentService.isAgent(getContext()) ? AgentService.verifyPinWithHearth(arg)
+                    : verifyParentPin(getContext(), arg);
         }
 
         return null;
@@ -155,24 +171,25 @@ public class ProfileProvider extends ContentProvider {
         return false;
     }
 
-    private synchronized Bundle verifyParentPin(String pin) {
+    /** Checks a PIN against Hearth's parent PIN (in the owner's user), with the shared lockout. */
+    static synchronized Bundle verifyParentPin(Context context, String pin) {
         Bundle result = new Bundle();
         long now = SystemClock.elapsedRealtime();
 
-        if (now < mPinLockedUntil) {
+        if (now < sPinLockedUntil) {
             result.putBoolean("ok", false);
-            result.putInt("wait_seconds", (int) ((mPinLockedUntil - now + 999) / 1000));
+            result.putInt("wait_seconds", (int) ((sPinLockedUntil - now + 999) / 1000));
             return result;
         }
 
-        String hash = flutterPrefs(getContext()).getString("flutter.device_parent_pin_hash", null);
+        String hash = flutterPrefs(context).getString("flutter.device_parent_pin_hash", null);
         boolean ok = hash != null && pin != null && hash.equals(hashPin(pin));
 
         if (ok) {
-            mWrongPins = 0;
-        } else if (++mWrongPins >= MAX_PIN_TRIES) {
-            mWrongPins = 0;
-            mPinLockedUntil = now + PIN_LOCKOUT_MS;
+            sWrongPins = 0;
+        } else if (++sWrongPins >= MAX_PIN_TRIES) {
+            sWrongPins = 0;
+            sPinLockedUntil = now + PIN_LOCKOUT_MS;
         }
 
         result.putBoolean("ok", ok);

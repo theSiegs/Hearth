@@ -18,9 +18,13 @@ are never reused for a different meaning.
   (`FileNotFoundException` when Hearth shows a gradient instead).
 - Observers registered on `/active` are notified whenever a column changes.
 
-**Only from Hearth's own Android user.** Android refuses provider access across users, so an app running in a
-Google TV profile user (a kid's own copy of an app) can't reach Hearth, which runs in the owner's user (0). A Hearth
-installed in a profile user would answer with defaults only; check `service_running`.
+**In the owner's user, and in profiles through Hearth's agent.** Android refuses provider access across users,
+so an app running in a Google TV profile user (a kid's own copy of an app) can't reach Hearth, which runs in the
+owner's user (0). Where a parent has approved Hearth for that profile, Hearth runs there as the profile's agent and
+its provider answers with Hearth's own row as Hearth last sent it, except: `service_running` is 1 only while the
+agent is connected to Hearth, `wallpaper_stamp` is always 0 (no picture there: use the gradient) and `/wallpaper`
+has no file. `verify_parent_pin` is relayed to Hearth (the PIN never leaves it) and returns null when Hearth doesn't
+answer within a few seconds. Without an agent, a Hearth installed there answers with defaults only.
 
 **Checking it's really Hearth.** The provider belongs to `com.leanbitlab.ltvL` signed with one of:
 - release: `0438047b1a5eefe8693cad8f2b57189a418337bbcbd3c7dbdb79d20884beaf6e`
