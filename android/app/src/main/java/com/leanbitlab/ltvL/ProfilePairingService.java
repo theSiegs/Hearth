@@ -287,6 +287,11 @@ public class ProfilePairingService extends AccessibilityService {
             s.appShown = true;
             if (ProfilePairing.MAX.equals(s.pkg)) scheduleMaxProbe(s);
         }
+        if (ProfilePairing.APPLE_TV.equals(s.pkg) && type != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+            // Research: does Apple TV say which tile is highlighted (focus/announcement events)? Its node tree doesn't.
+            Log.i(TAG, "Apple TV event " + AccessibilityEvent.eventTypeToString(type) + " text=[" + eventText(event)
+                    + "] class=" + event.getClassName());
+        }
         switch (s.pkg) {
             case ProfilePairing.MAX:
                 if (type == AccessibilityEvent.TYPE_ANNOUNCEMENT) {
@@ -317,6 +322,9 @@ public class ProfilePairingService extends AccessibilityService {
 
     private void handleSpeech(String callerPackage, String text) {
         Session s = mSession;
+        if (s != null && ProfilePairing.APPLE_TV.equals(s.pkg) && s.pkg.equals(callerPackage)) {
+            Log.i(TAG, "Apple TV said: " + text);  // research: does it speak the highlighted tile?
+        }
         if (s == null || !ProfilePairing.NETFLIX.equals(s.pkg) || !s.pkg.equals(callerPackage)) return;
         String t = text.trim();
         String lower = t.toLowerCase(Locale.ROOT);
@@ -570,6 +578,11 @@ public class ProfilePairingService extends AccessibilityService {
                 focused = i;
                 break;
             }
+        }
+        if (focused < 0 && ProfilePairing.APPLE_TV.equals(s.pkg) && ProfilePairing.isKids(this, s.hearthProfile)) {
+            // Blind counting can't check itself: never risk opening a grown-up's profile for a kid.
+            finish(NO_MATCH, "Apple TV doesn't say which tile is highlighted; not guessing for a kids profile");
+            return;
         }
         if (focused < 0 && ProfilePairing.APPLE_TV.equals(s.pkg)) {
             // Apple TV doesn't report focus; its picker opens on the first tile, so count our own presses from there.
