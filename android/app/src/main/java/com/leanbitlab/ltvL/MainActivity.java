@@ -755,6 +755,28 @@ public class MainActivity extends FlutterActivity {
         return activities;
     }
 
+    // The active kids profile's approved apps, read once per app listing (buildAppMap runs per app, in parallel)
+    private volatile java.util.Set<String> mApprovedApps;
+    private volatile boolean mApprovedKids;
+    private volatile long mApprovedAt = 0;
+    private static final long APPROVED_CACHE_MS = 2_000;
+
+    /**
+     * Whether a parent approved this app for the active profile (always, in a grown-up profile). Unlike being
+     * suspended, this holds at bedtime too. Without readable approvals, an app Google TV hasn't blocked counts.
+     */
+    private boolean isApproved(String packageName, boolean suspended) {
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (now - mApprovedAt > APPROVED_CACHE_MS) {
+            mApprovedKids = ProfileUsers.isKids(this);
+            mApprovedApps = mApprovedKids ? ProfileUsers.activeApprovedApps(this) : null;
+            mApprovedAt = now;
+        }
+        if (!mApprovedKids) return true;
+        java.util.Set<String> approved = mApprovedApps;
+        return approved != null ? approved.contains(packageName) : !suspended;
+    }
+
     private Map<String, Serializable> buildAppMap(ActivityInfo activityInfo, boolean sideloaded, String action) {
         PackageManager packageManager = getPackageManager();
 
@@ -776,6 +798,7 @@ public class MainActivity extends FlutterActivity {
         appMap.put("version", applicationVersionName);
         appMap.put("sideloaded", sideloaded);
         appMap.put("suspended", suspended);
+        appMap.put("approved", isApproved(activityInfo.packageName, suspended));
 
         if (action != null) {
             appMap.put("action", action);

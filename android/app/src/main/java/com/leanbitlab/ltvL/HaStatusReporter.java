@@ -219,7 +219,7 @@ final class HaStatusReporter {
         status.put("screen_time_text", mScreenTime == null ? JSONObject.NULL : mScreenTime.text);
         status.put("screen_time_seen_at", mScreenTime == null ? JSONObject.NULL : mScreenTimeSeenAt);
         status.put("screen_time_unlocks_at", mScreenTime == null ? JSONObject.NULL : nullable(mScreenTime.unlocksAt));
-        status.put("allowed_apps", kids ? allowedApps(pm, mContext.getPackageName()) : JSONObject.NULL);
+        status.put("allowed_apps", kids ? allowedApps(mContext, pm) : JSONObject.NULL);
 
         MediaController playing = primaryController();
         String state = "idle";
@@ -281,10 +281,20 @@ final class HaStatusReporter {
         }
     }
 
-    /** Google TV kids profiles suspend every app a parent hasn't approved. */
-    /** The apps this kids profile can open: every launchable app Google TV hasn't suspended, Hearth aside. */
-    private static JSONArray allowedApps(PackageManager pm, String ownPackage) {
+    /**
+     * The apps a parent approved for this kids profile (also at bedtime, when Google TV blocks them all), Hearth
+     * aside. Falls back to the apps Google TV hasn't blocked when the approvals can't be read.
+     */
+    private static JSONArray allowedApps(Context context, PackageManager pm) {
+        String ownPackage = context.getPackageName();
         java.util.TreeSet<String> names = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        java.util.Set<String> approved = ProfileUsers.activeApprovedApps(context);
+        if (approved != null) {
+            for (String pkg : approved) {
+                if (!ownPackage.equals(pkg)) names.add(label(pm, pkg));
+            }
+            return new JSONArray(names);
+        }
         for (String category : new String[]{Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER}) {
             Intent intent = new Intent(Intent.ACTION_MAIN).addCategory(category);
             for (ResolveInfo info : pm.queryIntentActivities(intent, 0)) {

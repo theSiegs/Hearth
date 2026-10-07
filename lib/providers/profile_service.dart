@@ -24,6 +24,7 @@ import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../flauncher_channel.dart';
+import '../models/app.dart';
 import 'apps_service.dart';
 import 'backup_service.dart';
 import 'settings_service.dart';
@@ -108,9 +109,12 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _fillEmptyDock() async {
     if (!_isKidsProfile || !_appsService.initialized) return;
     final favorites = _appsService.categories.firstWhereOrNull((c) => c.name == 'Favorites');
-    if (favorites != null && favorites.applications.isNotEmpty) return;
+    // What the dock holds, not what it shows: at bedtime Google TV blocks every app and the dock shows none
+    bool inDock(App a) => favorites != null && a.categoryOrders.containsKey(favorites.id);
+    if (_appsService.applications.any((a) => inDock(a) && a.approved && !a.hidden)) return;
     final apps = _appsService.applications
-        .where((a) => !a.hidden && !a.suspended && a.packageName != 'com.android.vending')
+        // Approved rather than unblocked, for the same reason
+        .where((a) => !a.hidden && a.approved && !inDock(a) && a.packageName != 'com.android.vending')
         .toList();
     if (apps.isEmpty) return;
     final dock = favorites ?? await _appsService.getOrCreateFavoritesCategory();

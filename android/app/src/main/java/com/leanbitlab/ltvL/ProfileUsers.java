@@ -91,12 +91,71 @@ final class ProfileUsers {
      * be read does it fall back to Google TV suspending unapproved apps.
      */
     static boolean isKids(Context context) {
-        Boolean supervised = isSupervised(context, activeSerialForKids(context));
+        Boolean supervised = isSupervised(context, settledSerial(context));
         return supervised != null ? supervised : anySuspended(context.getPackageManager());
     }
 
+    /**
+     * The apps a kids profile may open: approving an app installs it into that profile's user, so they're the
+     * user's launchable apps. Null when they can't be read (or for the owner, who has every app).
+     */
+    static java.util.Set<String> approvedApps(Context context, long serial) {
+        UserManager users = (UserManager) context.getSystemService(Context.USER_SERVICE);
+        android.content.pm.LauncherApps launcherApps =
+                (android.content.pm.LauncherApps) context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
+        if (users == null || launcherApps == null || serial == UNKNOWN) return null;
+        try {
+            UserHandle user = users.getUserForSerialNumber(serial);
+            if (user == null || user.equals(Process.myUserHandle())) return null;
+            java.util.Set<String> packages = new java.util.TreeSet<>();
+            for (android.content.pm.LauncherActivityInfo activity : launcherApps.getActivityList(null, user)) {
+                packages.add(activity.getComponentName().getPackageName());
+            }
+            return packages;
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /** The active profile's approved apps ({@link #approvedApps}); null for a grown-up or when unreadable. */
+    static java.util.Set<String> activeApprovedApps(Context context) {
+        long serial = settledSerial(context);
+        return Boolean.TRUE.equals(isSupervised(context, serial)) ? approvedApps(context, serial) : null;
+    }
+
+    /** Never blocked by Google TV (Hearth is the home app, HearthTube a device admin), so no sign of screen time. */
+    private static final java.util.Set<String> NEVER_BLOCKED = new java.util.HashSet<>(java.util.Arrays.asList(
+            "com.android.vending", "com.thesiegs.hearthtube"));
+
+    /**
+     * Whether this kids profile's screen time is up (bedtime, daily limit): Google TV then blocks even the apps a
+     * parent approved. False for a grown-up profile; null when it can't tell (no approved app to look at, or the
+     * apps can't be read), and only Google TV's own screens say.
+     */
+    static Boolean isScreenTimeUp(Context context, long serial) {
+        Boolean supervised = isSupervised(context, serial);
+        if (supervised == null) return null;
+        if (!supervised) return false;
+        java.util.Set<String> approved = approvedApps(context, serial);
+        if (approved == null) return null;
+        android.content.pm.PackageManager pm = context.getPackageManager();
+        int checked = 0;
+        int blocked = 0;
+        for (String pkg : approved) {
+            if (NEVER_BLOCKED.contains(pkg) || pkg.equals(context.getPackageName())) continue;
+            try {
+                android.content.pm.ApplicationInfo info = pm.getApplicationInfo(pkg, 0);
+                checked++;
+                if ((info.flags & android.content.pm.ApplicationInfo.FLAG_SUSPENDED) != 0) blocked++;
+            } catch (android.content.pm.PackageManager.NameNotFoundException ignored) {
+            }
+        }
+        // All of them: right after a switch some can still carry the last profile's state
+        return checked == 0 ? null : blocked == checked;
+    }
+
     /** The settled active serial (as Hearth's service last saw it), else a fresh read. */
-    private static long activeSerialForKids(Context context) {
+    static long settledSerial(Context context) {
         String key = LauncherAccessibilityService.getActiveProfileKey(context);
         if (key != null && key.startsWith(KEY_PREFIX)) {
             try {
