@@ -1,0 +1,66 @@
+# Hearth's profile provider: the contract
+
+Hearth shares its state with other apps (today: HearthTube) through one content provider. This page is the
+contract: what each column means, when it changes, and what callers may rely on. The provider's `contract_version`
+column says which version of this page it implements.
+
+**Current version: 2** (Hearth 2026.10, `ProfileProvider.CONTRACT_VERSION`).
+
+Change rules: adding, removing or changing the meaning of a column or call bumps the version and gets a line in
+the history below. A reader that sees a newer version than it knows keeps using the columns it understands; columns
+are never reused for a different meaning.
+
+## Where
+
+- Authority: `com.leanbitlab.ltvL.profile` (debug builds: `com.leanbitlab.ltvL.debug.profile`).
+- `content://com.leanbitlab.ltvL.profile/active`: one row, the columns below.
+- `content://com.leanbitlab.ltvL.profile/wallpaper`: Hearth's current wallpaper picture, read-only
+  (`FileNotFoundException` when Hearth shows a gradient instead).
+- Observers registered on `/active` are notified whenever a column changes.
+
+**Only from Hearth's own Android user.** Android refuses provider access across users, so an app running in a
+Google TV profile user (a kid's own copy of an app) can't reach Hearth, which runs in the owner's user (0). A Hearth
+installed in a profile user would answer with defaults only; check `service_running`.
+
+**Checking it's really Hearth.** The provider belongs to `com.leanbitlab.ltvL` signed with one of:
+- release: `0438047b1a5eefe8693cad8f2b57189a418337bbcbd3c7dbdb79d20884beaf6e`
+- debug: `6748528ff4d17fd57c30b6c5d522c467920d9951ea5d208597f91b66df9a2bfe`
+
+(SHA-256 of the signing certificate.)
+
+## Columns of `/active`
+
+| Column | Type | Meaning |
+|---|---|---|
+| `name` | text or null | The active Google TV profile's name as Google TV's profile chooser shows it ("Alex"). Null while Hearth hasn't learned it yet (each profile is named the first time the chooser shows it) or can't tell. For display only: key things by `profile_id`. |
+| `profile_id` | text or null | The active profile's lasting key: `user:<serial>` of its Google TV profile user (`user:0` is the TV owner). Set before `name` is known and unchanged when the profile is renamed. What to save per-profile things under. Null until Hearth has read it. |
+| `kids_profile` | 0/1 | 1 in a Google TV kids profile: the active profile user carries Family Link's supervision restrictions. Independent of which apps a parent approved, and of screen time. |
+| `screen_time_up` | 0/1 | 1 while Google TV's kids screen time is up (bedtime, daily limit): seen from its time's-up / bedtime screens, or from the kid's approved apps being blocked in the kid's own profile user. Back to 0 when they're unblocked (bedtime over, bonus time) or the profile changes. Kept across Hearth restarts. Always 0 outside kids profiles. |
+| `service_running` | 0/1 | 1 while Hearth's accessibility service runs. Without it Hearth sees no profile switches and no screen time, so `profile_id`, `name`, `kids_profile` and `screen_time_up` can't be trusted: treat 0 as "Hearth isn't watching". |
+| `has_parent_pin` | 0/1 | Hearth has a parent PIN (Settings → Parent PIN); `verify_parent_pin` can check one. |
+| `accent_color` | text or null | Hearth's accent color as `RRGGBB` hex ("7C4DFF"), or null for Hearth's default. |
+| `time_format` | text | Clock format as an ICU / intl pattern; Hearth's default "h:mm a" when never changed. |
+| `date_format` | text | Date format as an ICU / intl pattern; Hearth's default "EEE, MMM d" when never changed. |
+| `app_language` | text | Hearth's language ("de", "pt-BR"…), or "" to follow the system's. |
+| `gradient_uuid` | text or null | The gradient Hearth shows when it has no wallpaper picture. |
+| `wallpaper_stamp` | integer | Changes whenever the wallpaper picture does (its file time); 0 when Hearth shows a gradient. Re-read `/wallpaper` when it changes. |
+| `contract_version` | integer | This page's version (2). Missing on Hearth builds from before version 2. |
+
+None of these are secret: everything is on screen in Hearth.
+
+## Calls
+
+`call(uri /active, "verify_parent_pin", pin, null)`: checks a PIN against Hearth's parent PIN without handing out
+the PIN or its hash. Only for `com.thesiegs.hearthtube` signed with one of the two certificates above; anyone else
+gets null. Returns a Bundle: `ok` (boolean), and when locked, `wait_seconds` (int): five wrong tries lock checks for
+a minute.
+
+## History
+
+- **2** (2026-10-07): added `service_running`, `profile_id`, `contract_version`. `kids_profile` now means Family Link
+  supervision (was: some app is blocked). `screen_time_up` also comes from the kid's approved apps and clears when
+  they're unblocked (was: only Google TV's screens, cleared only by a profile switch). `name` may be null after a
+  switch until Hearth learns it. `verify_parent_pin` checks the caller's signing certificate too.
+- **1** (before 2026-10-07, no `contract_version` column): `name`, `accent_color`, `time_format`, `date_format`,
+  `app_language`, `has_parent_pin`, `gradient_uuid`, `wallpaper_stamp`, `kids_profile`, `screen_time_up`;
+  `verify_parent_pin` by package name.

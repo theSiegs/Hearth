@@ -25,20 +25,24 @@ import java.util.Calendar;
  * defaults when the user never changed them), app language ("" = the system's), whether a parent PIN is set,
  * the gradient's id and a stamp that changes when the wallpaper picture does (0 = no picture, use the gradient),
  * kids_profile (1 in a Google TV kids profile: one Family Link supervises, whatever apps a parent approved),
- * screen_time_up (1 while Google TV's bedtime / time's up lock is on, until a profile switch; kept across Hearth
- * restarts), service_running (1 while Hearth's accessibility service runs: without it Hearth sees no switches and no
+ * screen_time_up (1 while Google TV's bedtime / time's up lock is on: its screens, or the kid's approved apps blocked
+ * in the kid's own profile user; cleared when they're unblocked or the profile changes; kept across Hearth restarts), service_running (1 while Hearth's accessibility service runs: without it Hearth sees no switches and no
  * screen time, so kids_profile / screen_time_up can't be trusted) and profile_id (the Google TV profile's lasting
  * key, "user:11", set before the name is known and unchanged by renames: what to save per-profile things under);
  * observers are notified when any of these change.
  * None of it is secret: it's all on screen in Hearth. The wallpaper picture itself is at .../wallpaper.
  *
- * One call, for HearthTube only: "verify_parent_pin" checks a PIN without ever handing out the PIN or its hash
- * (5 wrong tries lock it for a minute).
+ * One call, for HearthTube only (by package and signing certificate): "verify_parent_pin" checks a PIN without ever
+ * handing out the PIN or its hash (5 wrong tries lock it for a minute).
+ *
+ * The full contract, column by column, is docs/provider-contract.md; contract_version says which one this is.
  */
 public class ProfileProvider extends ContentProvider {
     private static final String[] COLUMNS = {
             "name", "accent_color", "time_format", "app_language", "has_parent_pin", "gradient_uuid", "wallpaper_stamp",
-            "date_format", "kids_profile", "screen_time_up", "service_running", "profile_id"};
+            "date_format", "kids_profile", "screen_time_up", "service_running", "profile_id", "contract_version"};
+    /** docs/provider-contract.md: bumped when a column's meaning changes or one is added or removed. */
+    static final int CONTRACT_VERSION = 2;
     // SettingsService.defaultTimeFormat / defaultDateFormat
     private static final String DEFAULT_TIME_FORMAT = "h:mm a";
     private static final String DEFAULT_DATE_FORMAT = "EEE, MMM d";
@@ -83,7 +87,8 @@ public class ProfileProvider extends ContentProvider {
                 ProfileUsers.isKids(context) ? 1 : 0,
                 LauncherAccessibilityService.isScreenTimeUp() ? 1 : 0,
                 LauncherAccessibilityService.isRunning() ? 1 : 0,
-                LauncherAccessibilityService.getActiveProfileKey(context)});
+                LauncherAccessibilityService.getActiveProfileKey(context),
+                CONTRACT_VERSION});
         cursor.setNotificationUri(context.getContentResolver(), activeUri(context));
         return cursor;
     }
@@ -105,7 +110,7 @@ public class ProfileProvider extends ContentProvider {
 
     @Override
     public Bundle call(String method, String arg, Bundle extras) {
-        if (!HEARTHTUBE.equals(getCallingPackage())) {
+        if (!HEARTHTUBE.equals(getCallingPackage()) || !isTrustedHearthTube(getContext(), HEARTHTUBE)) {
             return null;
         }
 
@@ -114,6 +119,37 @@ public class ProfileProvider extends ContentProvider {
         }
 
         return null;
+    }
+
+    // SHA-256 of the certificates HearthTube may be signed with: Alex's debug key (HearthTube's releases) and his
+    // release key (Hearth's).
+    private static final java.util.Set<String> TRUSTED_CERTS = new java.util.HashSet<>(java.util.Arrays.asList(
+            "6748528ff4d17fd57c30b6c5d522c467920d9951ea5d208597f91b66df9a2bfe",
+            "0438047b1a5eefe8693cad8f2b57189a418337bbcbd3c7dbdb79d20884beaf6e"));
+
+    /** The package is signed with one of Alex's keys, so another app can't pose as HearthTube to guess PINs. */
+    private static boolean isTrustedHearthTube(Context context, String packageName) {
+        try {
+            android.content.pm.Signature[] signatures;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                android.content.pm.SigningInfo info = context.getPackageManager()
+                        .getPackageInfo(packageName, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES).signingInfo;
+                if (info == null || info.hasMultipleSigners()) return false;
+                signatures = info.getSigningCertificateHistory();
+            } else {
+                signatures = context.getPackageManager()
+                        .getPackageInfo(packageName, android.content.pm.PackageManager.GET_SIGNATURES).signatures;
+            }
+            if (signatures == null) return false;
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            for (android.content.pm.Signature signature : signatures) {
+                StringBuilder hex = new StringBuilder();
+                for (byte b : sha256.digest(signature.toByteArray())) hex.append(String.format("%02x", b));
+                if (TRUSTED_CERTS.contains(hex.toString())) return true;
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 
     private synchronized Bundle verifyParentPin(String pin) {
