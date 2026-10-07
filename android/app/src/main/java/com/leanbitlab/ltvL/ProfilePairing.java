@@ -148,12 +148,6 @@ final class ProfilePairing {
         return prefs(context).getBoolean(KIDS_PREFIX + hearthProfile, false);
     }
 
-    /** Whether Hearth has seen this profile to be a grown-up's (not just never seen it as a kids profile). */
-    static boolean isKnownGrownUp(Context context, String hearthProfile) {
-        SharedPreferences p = prefs(context);
-        return p.contains(KIDS_PREFIX + hearthProfile) && !p.getBoolean(KIDS_PREFIX + hearthProfile, false);
-    }
-
     private static List<String> readList(String json) {
         List<String> names = new ArrayList<>();
         try {
