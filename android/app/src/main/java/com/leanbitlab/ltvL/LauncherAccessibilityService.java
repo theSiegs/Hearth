@@ -45,6 +45,16 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private boolean mChooserOnScreen;
     private long mLastChooserFocusAt = 0;
     private static final String PROFILE_TAG = "HearthProfile";
+    /** How long after Google's last setup screen Hearth keeps out of the way (refreshed by each setup screen). */
+    private static final long GOOGLE_SETUP_HOLD_MS = 2 * 60_000;
+    private long mGoogleSetupUntil = 0;
+
+    private static boolean isGoogleSetupScreen(String className) {
+        String c = className.toLowerCase(java.util.Locale.ROOT);
+        // Not the account check Google TV runs on every chooser visit (AccountVerification/Reauth), or Hearth
+        // would hold back after ordinary switches.
+        return c.contains(".onboarding.") || c.contains("setup") || c.contains("createpin");
+    }
     /** Whether Google TV is suspending apps (a kids profile), as last seen; null until first checked. */
     private Boolean mKidsState;
 
@@ -200,12 +210,20 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 mFirstFocusLabel = null;
             }
 
+            // Google's own setup flows (a new kids profile's onboarding, sign-in, PIN creation) open Google TV's
+            // home behind themselves; Hearth stays out of the way until they're done.
+            if (isGoogleSetupScreen(className)) {
+                mGoogleSetupUntil = SystemClock.elapsedRealtime() + GOOGLE_SETUP_HOLD_MS;
+                android.util.Log.i(PROFILE_TAG, "Google TV setup in progress: " + className);
+            }
             if (GOOGLE_TV_HOME_ACTIVITY.equals(className)) {
                 commitPendingProfile();
                 mGoogleTvScreenInFront = false;
                 // Google TV opens its own home by component after a profile switch, on Back from apps, etc.,
                 // ignoring the default home app. Bring the launcher back whenever that's allowed.
-                if (canTakeOver()) {
+                if (SystemClock.elapsedRealtime() < mGoogleSetupUntil) {
+                    android.util.Log.i(PROFILE_TAG, "Not taking over: Google TV setup in progress");
+                } else if (canTakeOver()) {
                     openLauncher();
                 } else {
                     mPendingBounceAt = SystemClock.elapsedRealtime();
