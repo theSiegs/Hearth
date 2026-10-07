@@ -7,6 +7,8 @@ import 'package:flauncher/models/watch_next_program.dart';
 import '../mocks.mocks.dart';
 
 void main() {
+  // A day after the test programs' engagement times (Sep 2020), so none counts as old
+  DateTime clock() => DateTime.fromMillisecondsSinceEpoch(1600000000000 + const Duration(days: 1).inMilliseconds);
   late MockFLauncherChannel mockChannel;
   late StreamController<dynamic> watchNextStreamController;
   late WatchNextService watchNextService;
@@ -29,7 +31,7 @@ void main() {
 
   group('WatchNextService Initialization', () {
     test('initializes with empty programs list', () async {
-      watchNextService = WatchNextService(mockChannel);
+      watchNextService = WatchNextService(mockChannel, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -39,7 +41,7 @@ void main() {
     });
 
     test('refreshes watch next programs when event stream emits change', () async {
-      watchNextService = WatchNextService(mockChannel);
+      watchNextService = WatchNextService(mockChannel, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -89,7 +91,7 @@ void main() {
 
       when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => fakePrograms);
 
-      watchNextService = WatchNextService(mockChannel);
+      watchNextService = WatchNextService(mockChannel, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -130,7 +132,7 @@ void main() {
 
       when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => fakePrograms);
 
-      watchNextService = WatchNextService(mockChannel);
+      watchNextService = WatchNextService(mockChannel, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -142,7 +144,7 @@ void main() {
     test('handles missing permission by setting hasPermission to false and clearing programs', () async {
       when(mockChannel.checkWatchNextPermission()).thenAnswer((_) async => false);
 
-      watchNextService = WatchNextService(mockChannel);
+      watchNextService = WatchNextService(mockChannel, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -156,7 +158,7 @@ void main() {
     test('handles channel getWatchNextPrograms error gracefully without throwing', () async {
       when(mockChannel.getWatchNextPrograms()).thenThrow(Exception('Channel failure'));
 
-      watchNextService = WatchNextService(mockChannel);
+      watchNextService = WatchNextService(mockChannel, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -169,7 +171,7 @@ void main() {
   group('WatchNextService Permissions', () {
     test('checkPermission queries channel directly', () async {
       when(mockChannel.checkWatchNextPermission()).thenAnswer((_) async => false);
-      watchNextService = WatchNextService(mockChannel);
+      watchNextService = WatchNextService(mockChannel, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -180,7 +182,7 @@ void main() {
 
     test('requestPermission requests channel permission and refreshes on grant', () async {
       when(mockChannel.requestWatchNextPermission()).thenAnswer((_) async => true);
-      watchNextService = WatchNextService(mockChannel);
+      watchNextService = WatchNextService(mockChannel, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -192,7 +194,7 @@ void main() {
 
     test('requestPermission returns false when denied', () async {
       when(mockChannel.requestWatchNextPermission()).thenAnswer((_) async => false);
-      watchNextService = WatchNextService(mockChannel);
+      watchNextService = WatchNextService(mockChannel, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -205,7 +207,7 @@ void main() {
 
   group('WatchNextService launch', () {
     test('launches program via channel intentUri', () async {
-      watchNextService = WatchNextService(mockChannel);
+      watchNextService = WatchNextService(mockChannel, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -232,7 +234,7 @@ void main() {
     });
 
     test('fallback launches app packageName when intentUri empty', () async {
-      watchNextService = WatchNextService(mockChannel);
+      watchNextService = WatchNextService(mockChannel, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -259,7 +261,7 @@ void main() {
     });
 
     test('fallback launches app packageName when intentUri returns false', () async {
-      watchNextService = WatchNextService(mockChannel);
+      watchNextService = WatchNextService(mockChannel, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -307,7 +309,7 @@ void main() {
       when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => fakePrograms);
       when(mockChannel.deleteWatchNextProgram(42)).thenAnswer((_) async => true);
 
-      watchNextService = WatchNextService(mockChannel);
+      watchNextService = WatchNextService(mockChannel, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -338,7 +340,7 @@ void main() {
         };
 
     Future<WatchNextService> ready() async {
-      final service = WatchNextService(mockChannel);
+      final service = WatchNextService(mockChannel, clock: clock);
       while (!service.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -373,6 +375,86 @@ void main() {
       final service = await ready();
 
       expect(service.programs.single.posterBytes, isNull);
+    });
+  });
+
+  group('Continue Watching row selection', () {
+    final now = DateTime.utc(2026, 10, 7, 12);
+    WatchNextProgram program(int id, String pkg, {required Duration ago, int type = 0, int position = 100, int duration = 1000}) =>
+        WatchNextProgram(
+          id: id,
+          packageName: pkg,
+          title: 'Title $id',
+          description: '',
+          watchNextType: type,
+          lastEngagementTime: now.subtract(ago).millisecondsSinceEpoch,
+          playbackPosition: position,
+          duration: duration,
+          intentUri: '',
+          posterArtUri: '',
+        );
+    List<int> ids(Iterable<WatchNextProgram> programs) => programs.map((p) => p.id).toList();
+
+    test('keeps at most three entries from one app, newest first', () {
+      final programs = [
+        for (var i = 1; i <= 5; i++) program(i, 'disney', ago: Duration(hours: i)),
+        program(6, 'netflix', ago: const Duration(hours: 6)),
+      ];
+      expect(ids(WatchNextService.selectForRow(programs, now)), [1, 2, 3, 6]);
+    });
+
+    test('drops entries left part-way more than 60 days ago', () {
+      final programs = [
+        program(1, 'apple', ago: const Duration(days: 59)),
+        program(2, 'apple', ago: const Duration(days: 61)),
+      ];
+      expect(ids(WatchNextService.selectForRow(programs, now)), [1]);
+    });
+
+    test('drops not-started entries (next episode, new, watchlist) after 30 days', () {
+      final programs = [
+        program(1, 'apple', ago: const Duration(days: 29), type: 1, position: 0),
+        program(2, 'apple', ago: const Duration(days: 31), type: 1, position: 0),
+        program(3, 'apple', ago: const Duration(days: 31), type: 3, position: 0),
+        program(4, 'apple', ago: const Duration(days: 31)),
+      ];
+      expect(ids(WatchNextService.selectForRow(programs, now)), [1, 4]);
+    });
+
+    test('drops finished entries', () {
+      final programs = [
+        program(1, 'max', ago: const Duration(hours: 1), position: 960, duration: 1000),
+        program(2, 'max', ago: const Duration(hours: 2), position: 500, duration: 1000),
+        program(3, 'max', ago: const Duration(hours: 3), position: 960, duration: 0),
+      ];
+      expect(ids(WatchNextService.selectForRow(programs, now)), [2, 3]);
+    });
+
+    test('reads engagement times in seconds too', () {
+      final seconds = WatchNextProgram(
+        id: 1,
+        packageName: 'netflix',
+        title: '',
+        description: '',
+        watchNextType: 0,
+        lastEngagementTime: now.subtract(const Duration(days: 61)).millisecondsSinceEpoch ~/ 1000,
+        playbackPosition: 1,
+        duration: 10,
+        intentUri: '',
+        posterArtUri: '',
+      );
+      expect(WatchNextService.selectForRow([seconds], now), isEmpty);
+    });
+
+    test('an old entry from one app frees its place for another of the same app', () {
+      final programs = [
+        program(1, 'disney', ago: const Duration(days: 1)),
+        program(2, 'disney', ago: const Duration(days: 1), position: 999),
+        program(3, 'disney', ago: const Duration(days: 2)),
+        program(4, 'disney', ago: const Duration(days: 3)),
+        program(5, 'disney', ago: const Duration(days: 4)),
+      ];
+      expect(ids(WatchNextService.selectForRow(programs, now)), [1, 3, 4]);
     });
   });
 }

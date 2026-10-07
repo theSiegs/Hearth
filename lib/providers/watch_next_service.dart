@@ -22,20 +22,69 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
 
   bool get _isTest => Platform.environment.containsKey('FLUTTER_TEST');
 
-  WatchNextService(this._channel) {
+  /// The time "now" for hiding old entries (tests fix it).
+  final DateTime Function() _clock;
+
+  WatchNextService(this._channel, {DateTime Function()? clock}) : _clock = clock ?? DateTime.now {
     if (!_isTest) {
       WidgetsBinding.instance.addObserver(this);
     }
     _init();
   }
 
-  /// The programs the active Google TV profile watched (see [_ownership]).
-  List<WatchNextProgram> get programs => List.unmodifiable(_programs.where(_visibleToActiveProfile));
+  /// What Continue Watching shows: the programs the active Google TV profile watched (see [_ownership]), without
+  /// old or finished ones, and no more than [maxPerApp] from one app (see [selectForRow]).
+  List<WatchNextProgram> get programs => List.unmodifiable(selectForRow(_programs.where(_visibleToActiveProfile), _clock()));
+
+  /// At most this many entries from one app, so one app can't fill the row.
+  static const int maxPerApp = 3;
+
+  /// An entry left part-way is dropped after this long without being watched.
+  static const Duration continueMaxAge = Duration(days: 60);
+
+  /// An entry not started yet (next episode, new, watchlist) is dropped sooner.
+  static const Duration upNextMaxAge = Duration(days: 30);
+
+  /// Watched this far, it's finished (apps don't always remove those).
+  static const double finishedFraction = 0.95;
+
+  /// From [programs] (newest first), the ones worth showing at [now]: not old, not finished, [maxPerApp] per app.
+  static List<WatchNextProgram> selectForRow(Iterable<WatchNextProgram> programs, DateTime now) {
+    final shown = <WatchNextProgram>[];
+    final perApp = <String, int>{};
+    for (final p in programs) {
+      if (_isOld(p, now) || _isFinished(p)) continue;
+      final count = perApp[p.packageName] ?? 0;
+      if (count >= maxPerApp) continue;
+      perApp[p.packageName] = count + 1;
+      shown.add(p);
+    }
+    return shown;
+  }
+
+  /// Engagement time in milliseconds (some apps write seconds); 0 when unknown.
+  static int _engagementMillis(WatchNextProgram p) {
+    final t = p.lastEngagementTime;
+    return t > 0 && t < 10000000000 ? t * 1000 : t;
+  }
+
+  static bool _isOld(WatchNextProgram p, DateTime now) {
+    final t = _engagementMillis(p);
+    if (t <= 0) return false;
+    // WATCH_NEXT_TYPE_CONTINUE is 0; next episode, new and watchlist entries haven't been started
+    final maxAge = p.watchNextType == 0 ? continueMaxAge : upNextMaxAge;
+    return now.millisecondsSinceEpoch - t > maxAge.inMilliseconds;
+  }
+
+  static bool _isFinished(WatchNextProgram p) =>
+      p.watchNextType == 0 && p.duration > 0 && p.playbackPosition >= p.duration * finishedFraction;
 
   // All Google TV profiles share one Android user and so one Watch Next list. When an entry appears or is watched
   // again, Hearth gives it to the profile that last used that app on the TV (so watching on a phone lands with
-  // whoever last used the app here), and shows each profile its own. Entries from before tracking are hidden.
-  static const _ownershipKey = "watch_next_owners";
+  // whoever last used the app here), and shows each profile its own. Entries from before tracking are hidden, and
+  // so are changes to an app no profile has used here since: better hidden than shown to the wrong person.
+  // Version 2 started over: owners given before Hearth knew profiles by their lasting key could be wrong.
+  static const _ownershipKey = "watch_next_owners_v2";
   Map<String, dynamic> _ownership = {};
   bool _ownershipLoaded = false;
   // The active profile's key (owners are saved by key), and its name: owners saved before keys are names.
@@ -60,6 +109,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
         _ownership = raw == null ? {} : (jsonDecode(raw) as Map).cast<String, dynamic>();
         _ownershipLoaded = true;
         if (raw == null) {
+          await prefs.remove("watch_next_owners"); // version 1
           // First run: what's already there predates tracking, so it has no owner.
           for (final p in programs) {
             _ownership[_key(p)] = {"owner": null, "t": p.lastEngagementTime};
@@ -76,8 +126,10 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
         keys.add(key);
         final entry = _ownership[key] as Map?;
         if (entry == null || entry["t"] != p.lastEngagementTime) {
+          // Only an app user known by profile key (names were saved before keys, when they could be wrong)
+          final appUser = appUsers[p.packageName] as String?;
           _ownership[key] = {
-            "owner": appUsers[p.packageName] as String? ?? _activeProfile ?? entry?["owner"],
+            "owner": appUser != null && appUser.startsWith("user:") ? appUser : entry?["owner"],
             "t": p.lastEngagementTime,
           };
           changed = true;
