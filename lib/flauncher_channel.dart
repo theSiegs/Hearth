@@ -136,6 +136,12 @@ class FLauncherChannel {
 
   Future<String?> getActiveProfileName() async => await _methodChannel.invokeMethod<String>("getActiveProfileName");
 
+  /// A Google TV profile's photo (PNG, cropped from its chooser) and when it last changed (0: no photo).
+  Future<({Uint8List? png, int modified})> getProfileAvatar(String name) async {
+    final map = await _methodChannel.invokeMapMethod<String, dynamic>("getProfileAvatar", name);
+    return (png: map?["png"] as Uint8List?, modified: (map?["modified"] as int?) ?? 0);
+  }
+
   Future<bool> isKidsProfile() async => await _methodChannel.invokeMethod<bool>("isKidsProfile") ?? false;
 
   /// Profile Pairing's state: {enabled, voiceDefault}.

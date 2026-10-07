@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Which screen is in front and focus/click/scroll events (for idle standby and Google TV's profile
-     chooser). Window content is read only from Google TV's own screen time screens (why and until when). -->
+     chooser). Window content is read only from Google TV's own screen time screens (why and until when) and its
+     profile chooser (names, and a screenshot cropped to the profile photos, when one is missing or a week old). -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged|typeViewFocused|typeViewClicked|typeViewScrolled"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagRequestFilterKeyEvents"
+    android:accessibilityFlags="flagRequestFilterKeyEvents|flagIncludeNotImportantViews"
     android:canRequestFilterKeyEvents="true"
     android:canRetrieveWindowContent="true"
+    android:canTakeScreenshot="true"
     android:notificationTimeout="0" />

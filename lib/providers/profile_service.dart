@@ -16,6 +16,7 @@
  */
 
 import 'dart:developer' as developer;
+import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 
@@ -52,6 +53,33 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
   String? get activeProfileName => _activeProfileName;
 
   bool get isKidsProfile => _isKidsProfile;
+
+  Uint8List? _avatar;
+  String? _avatarName;
+  int _avatarModified = 0;
+
+  /// The active profile's Google TV photo (PNG), once Hearth has seen it in the profile chooser.
+  Uint8List? get activeProfileAvatar => _avatar;
+
+  /// Whether the photo changed.
+  Future<bool> _loadAvatar(String? name) async {
+    if (name == null) {
+      final bool had = _avatar != null;
+      _avatar = null;
+      _avatarName = null;
+      return had;
+    }
+    try {
+      final avatar = await _channel.getProfileAvatar(name);
+      if (name == _avatarName && avatar.modified == _avatarModified) return false;
+      _avatar = avatar.png;
+      _avatarName = name;
+      _avatarModified = avatar.modified;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   @override
   void dispose() {
@@ -96,9 +124,10 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
       return;
     }
 
-    final bool changed = name != _activeProfileName || kids != _isKidsProfile;
+    bool changed = name != _activeProfileName || kids != _isKidsProfile;
     _activeProfileName = name;
     _isKidsProfile = kids;
+    changed = await _loadAvatar(name) || changed;
     if (changed) notifyListeners();
 
     // Unknown profile (switched some way we couldn't see): leave the layout alone rather than guess.

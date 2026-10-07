@@ -344,6 +344,13 @@ public class MainActivity extends FlutterActivity {
                     result.success(null);
                 }
                 case "getActiveProfileName" -> result.success(LauncherAccessibilityService.getActiveProfileName(this));
+                case "getProfileAvatar" -> {
+                    String name = call.arguments();
+                    Map<String, Object> avatar = new HashMap<>();
+                    avatar.put("modified", ProfileAvatars.modified(this, name));
+                    avatar.put("png", ProfileAvatars.read(this, name));
+                    result.success(avatar);
+                }
                 case "openWifiSettings" -> result.success(openWifiSettings());
                 case "openVpnSettings" -> result.success(openVpnSettings());
                 case "getTvInputs" -> result.success(getTvInputs());

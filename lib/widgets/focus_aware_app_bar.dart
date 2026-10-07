@@ -335,6 +335,7 @@ class _ProfileButton extends StatelessWidget {
   Widget build(BuildContext context) => _FocusableIconButton(
         icon: Icons.person,
         focusNode: focusNode,
+        image: context.select<ProfileService?, Uint8List?>((p) => p?.activeProfileAvatar),
         label: context.select<ProfileService?, String?>((p) => p?.activeProfileName),
         onPressed: () => FLauncherChannel().openProfileChooser(),
       );
@@ -347,8 +348,11 @@ class _FocusableIconButton extends StatefulWidget {
   final FocusNode? focusNode;
   final int badgeCount;
   final String? label;
+  /// Shown in the circle instead of the icon (a profile photo, PNG).
+  final Uint8List? image;
 
-  const _FocusableIconButton({super.key, required this.icon, required this.onPressed, this.focusNode, this.badgeCount = 0, this.label});
+  const _FocusableIconButton(
+      {super.key, required this.icon, required this.onPressed, this.focusNode, this.badgeCount = 0, this.label, this.image});
 
   @override
   State<_FocusableIconButton> createState() => _FocusableIconButtonState();
@@ -393,7 +397,11 @@ class _FocusableIconButtonState extends State<_FocusableIconButton> {
                     color: _focused ? Theme.of(context).colorScheme.primary : const Color(0xE6202024),
                     boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 2))],
                   ),
-                  child: Icon(widget.icon, size: 26, color: Colors.white),
+                  // A photo sits inside the accent ring when focused
+                  padding: widget.image != null && _focused ? const EdgeInsets.all(3) : EdgeInsets.zero,
+                  child: widget.image != null
+                      ? ClipOval(child: Image.memory(widget.image!, fit: BoxFit.cover, gaplessPlayback: true))
+                      : Icon(widget.icon, size: 26, color: Colors.white),
                 ),
               ),
               if (widget.label != null) ...[
