@@ -28,8 +28,40 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private boolean mGoogleTvScreenInFront = false;
     private long mPendingBounceAt = 0;
 
-    // Google TV offers no API for the active profile. Every switch goes through its chooser, which opens
-    // with the current profile focused and reports the picked tile in a click event, so track it there.
+    // Which profile is active comes from Google TV's profile users (ProfileUsers), keyed by serial; their names
+    // come from Google TV's chooser, which opens with the current profile focused and reports the picked tile in
+    // a click event. On a TV without profile users the chooser alone tracks the profile.
+    private long mActiveSerial = ProfileUsers.UNKNOWN;
+    // The last profile switch seen in the profile users, and the last chooser pick: whichever comes second pairs
+    // the new serial with the picked name.
+    private long mSwitchedSerial = ProfileUsers.UNKNOWN;
+    private long mSwitchedAt = 0;
+    private String mLastPick;
+    private boolean mLastPickClicked;
+    private long mLastPickAt = 0;
+    private static final long PROFILE_USER_RECHECK_MS = 1_500;
+    private static final long PROFILE_SETTLE_MS = 2_000;
+    private static final long OWNER_SETTLE_MS = 5_000;
+    private long mCandidateSerial = ProfileUsers.UNKNOWN;
+    private long mCandidateAt = 0;
+    private final Runnable mSettleCheck = () -> checkProfileUser("settled");
+    private int mProfileUserRechecks = 0;
+    private final Runnable mProfileUserRecheck = new Runnable() {
+        @Override
+        public void run() {
+            checkProfileUser("recheck");
+            if (--mProfileUserRechecks > 0) mIdleHandler.postDelayed(this, PROFILE_USER_RECHECK_MS);
+        }
+    };
+    private final BroadcastReceiver mProfileUserReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            UserHandle user = intent.getParcelableExtra(Intent.EXTRA_USER);
+            checkProfileUser(intent.getAction() + " " + user);
+            // A stopping user can still count as running for a moment
+            scheduleProfileUserRechecks();
+        }
+    };
     private static final String GOOGLE_TV_CHOOSER_ACTIVITY = GOOGLE_TV_PACKAGE + ".profile.chooser.ProfileChooserActivity";
     private static final String PROFILE_PREFS = "ltv_active_profile";
     private static final String PROFILE_NAME_KEY = "name";
@@ -88,10 +120,15 @@ public class LauncherAccessibilityService extends AccessibilityService {
         super.onServiceConnected();
         sInstance = this;
         mKidsState = hasSuspendedApps(this);
+        android.content.IntentFilter userFilter = new android.content.IntentFilter(ProfileUsers.ACTION_PROFILE_ACCESSIBLE);
+        userFilter.addAction(ProfileUsers.ACTION_PROFILE_INACCESSIBLE);
+        registerReceiver(mProfileUserReceiver, userFilter);
+        checkProfileUser("service start");
         // Starting up (after an update, say) in a kids profile with a grown-up's name stored: the switch happened
-        // while Hearth wasn't watching, so no name beats a wrong one.
+        // while Hearth wasn't watching, so no name beats a wrong one. (Profile users settle that above, when known.)
         String stored = getActiveProfileName(this);
-        if (mKidsState && stored != null && ProfilePairing.isKnownGrownUp(this, stored)) {
+        if (mActiveSerial == ProfileUsers.UNKNOWN && mKidsState && stored != null
+                && ProfilePairing.isKnownGrownUp(this, stored)) {
             android.util.Log.i(PROFILE_TAG, "Started in a kids profile with grown-up " + stored + " stored: profile unknown");
             setActiveProfileName(null);
         }
@@ -116,10 +153,16 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mIdleHandler.removeCallbacks(mIdleCheck);
         mIdleHandler.removeCallbacks(mKidsHomeTakeOver);
         mIdleHandler.removeCallbacks(mReadScreenTime);
+        mIdleHandler.removeCallbacks(mProfileUserRecheck);
+        mIdleHandler.removeCallbacks(mSettleCheck);
         if (mHaServer != null) mHaServer.stop();
         if (mHaStatus != null) mHaStatus.stop();
         try {
             unregisterReceiver(mScreenReceiver);
+        } catch (Exception ignored) {
+        }
+        try {
+            unregisterReceiver(mProfileUserReceiver);
         } catch (Exception ignored) {
         }
         if (mHaOverlay != null) mHaOverlay.dismissAll();
@@ -139,13 +182,15 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // whenever its time up screen opens, so only a chooser pick or a flip between a kids profile and a
         // grown-up one is a switch. Anything else must leave the screen time lock alone.
         boolean picked = commitPendingProfile();
+        checkProfileUser("apps suspended/unsuspended");
         boolean kids = hasSuspendedApps(this);
         boolean flipped = mKidsState != null && mKidsState != kids;
         mKidsState = kids;
         if (flipped) ProfileProvider.notifyChanged(this);  // kids_profile changed
         String current = getActiveProfileName(this);
         if (current != null && (picked || !flipped)) ProfilePairing.rememberHearthProfile(this, current, kids);
-        if (flipped && SystemClock.elapsedRealtime() - mProfileCommittedAt > PROFILE_CLICK_WINDOW_MS) {
+        if (flipped && mActiveSerial == ProfileUsers.UNKNOWN
+                && SystemClock.elapsedRealtime() - mProfileCommittedAt > PROFILE_CLICK_WINDOW_MS) {
             // A switch we didn't see: better no name than a wrong one
             android.util.Log.i(PROFILE_TAG, "Kids/grown-up switch without a chooser pick: profile unknown");
             setActiveProfileName(null);
@@ -159,6 +204,99 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 && canTakeOver()) {
             mPendingBounceAt = 0;
             openLauncher();
+        }
+    }
+
+    /** Reads which profile user is running and follows a switch there. */
+    private void checkProfileUser(String why) {
+        long serial = ProfileUsers.activeSerial(this);
+        if (serial == ProfileUsers.UNKNOWN) return;
+        if (serial == mActiveSerial) {
+            mCandidateSerial = ProfileUsers.UNKNOWN;
+            return;
+        }
+        if (mActiveSerial != ProfileUsers.UNKNOWN) {
+            // Mid-switch Google TV may stop one profile user before starting the next, which reads as the owner
+            // for a moment: act on a new serial only once it has held for a while (longer for the owner).
+            long now = SystemClock.elapsedRealtime();
+            long settle = serial == ProfileUsers.ownerSerial(this) ? OWNER_SETTLE_MS : PROFILE_SETTLE_MS;
+            if (serial != mCandidateSerial) {
+                mCandidateSerial = serial;
+                mCandidateAt = now;
+            }
+            if (now - mCandidateAt < settle) {
+                mIdleHandler.removeCallbacks(mSettleCheck);
+                mIdleHandler.postDelayed(mSettleCheck, settle - (now - mCandidateAt));
+                return;
+            }
+        }
+        mCandidateSerial = ProfileUsers.UNKNOWN;
+        long previous = mActiveSerial;
+        mActiveSerial = serial;
+        String known = ProfileUsers.getName(this, serial);
+        android.util.Log.i(PROFILE_TAG, "Profile user is now serial " + serial + " (" + known + ", " + why + ")");
+        if (previous == ProfileUsers.UNKNOWN) {
+            // Starting up: whoever this serial is. Not learned yet: keep the stored name, unconfirmed, unless it's
+            // known to be another profile's.
+            String stored = getActiveProfileName(this);
+            android.util.Log.i(PROFILE_TAG, "Stored profile: " + stored);
+            if (known != null && !known.equals(stored)) {
+                setActiveProfileName(known);
+            } else if (known == null && ProfileUsers.isOtherProfile(this, serial, stored)) {
+                android.util.Log.i(PROFILE_TAG, stored + " is another profile: profile unknown");
+                setActiveProfileName(null);
+            }
+            return;
+        }
+        // A switch, seen whether or not Hearth saw the chooser
+        long now = SystemClock.elapsedRealtime();
+        mSwitchedSerial = serial;
+        mSwitchedAt = now;
+        learnProfileUserName();
+        String name = ProfileUsers.getName(this, serial);
+        if (name == null) {
+            android.util.Log.i(PROFILE_TAG, "Switched to serial " + serial + ", not named yet: profile unknown");
+        }
+        mProfileCommittedAt = now;
+        setActiveProfileName(name);
+        if (name != null) ProfilePairing.rememberHearthProfile(this, name, null);
+        clearScreenTimeLock();
+    }
+
+    private void scheduleProfileUserRechecks() {
+        mProfileUserRechecks = 3;
+        mIdleHandler.removeCallbacks(mProfileUserRecheck);
+        mIdleHandler.postDelayed(mProfileUserRecheck, PROFILE_USER_RECHECK_MS);
+    }
+
+    /** Pairs a switch in the profile users with the chooser pick that made it, whichever came first. */
+    private void learnProfileUserName() {
+        long now = SystemClock.elapsedRealtime();
+        if (mLastPick == null || mSwitchedSerial == ProfileUsers.UNKNOWN
+                || now - mLastPickAt > PROFILE_CLICK_WINDOW_MS || now - mSwitchedAt > PROFILE_CLICK_WINDOW_MS) {
+            return;
+        }
+        String existing = ProfileUsers.getName(this, mSwitchedSerial);
+        if (existing == null || mLastPickClicked) {
+            android.util.Log.i(PROFILE_TAG, "Serial " + mSwitchedSerial + " is " + mLastPick);
+            ProfileUsers.setName(this, mSwitchedSerial, mLastPick);
+        } else if (!existing.equals(mLastPick)) {
+            // Only a guess from the last focused tile: the name learned for this serial wins
+            android.util.Log.i(PROFILE_TAG, "Serial " + mSwitchedSerial + " stays " + existing);
+            if (mSwitchedSerial == mActiveSerial) setActiveProfileName(existing);
+        }
+        mLastPick = null;
+        mSwitchedSerial = ProfileUsers.UNKNOWN;
+    }
+
+    /** The chooser opened on the current profile: that's who the running profile user is. */
+    private void onChooserOpenedOn(String label) {
+        android.util.Log.i(PROFILE_TAG, "Chooser opened on " + label);
+        setActiveProfileName(label);
+        checkProfileUser("chooser opened");
+        if (mActiveSerial != ProfileUsers.UNKNOWN && !label.equals(ProfileUsers.getName(this, mActiveSerial))) {
+            android.util.Log.i(PROFILE_TAG, "Serial " + mActiveSerial + " is " + label + " (chooser focus)");
+            ProfileUsers.setName(this, mActiveSerial, label);
         }
     }
 
@@ -242,8 +380,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 long now = SystemClock.elapsedRealtime();
                 if (mFirstFocusLabel != null && now - mFirstFocusAt < CHOOSER_INITIAL_FOCUS_MS) {
                     // Initial focus was reported before the window change
-                    android.util.Log.i(PROFILE_TAG, "Chooser opened on " + mFirstFocusLabel);
-                    setActiveProfileName(mFirstFocusLabel);
+                    onChooserOpenedOn(mFirstFocusLabel);
                     mChooserOpenedAt = 0;
                 } else {
                     mChooserOpenedAt = now;
@@ -260,6 +397,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             if (GOOGLE_TV_HOME_ACTIVITY.equals(className)) {
                 // A new profile's home: the last one's screen time no longer applies (its own comes up next)
                 if (commitPendingProfile()) clearScreenTimeLock();
+                checkProfileUser("Google TV home");
                 mGoogleTvScreenInFront = false;
                 // Google TV opens its own home by component after a profile switch, on Back from apps, etc.,
                 // ignoring the default home app. Bring the launcher back whenever that's allowed.
@@ -373,8 +511,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             // The chooser opens with the current profile focused; later focus moves are just browsing.
             if (mChooserOpenedAt != 0 && now - mChooserOpenedAt < CHOOSER_INITIAL_FOCUS_MS) {
                 mChooserOpenedAt = 0;
-                android.util.Log.i(PROFILE_TAG, "Chooser opened on " + label);
-                setActiveProfileName(label);
+                onChooserOpenedOn(label);
             } else {
                 mFirstFocusLabel = label;
                 mFirstFocusAt = now;
@@ -407,8 +544,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private boolean commitPendingProfile() {
         long now = SystemClock.elapsedRealtime();
         String chosen = null;
+        boolean clicked = false;
         if (mPendingProfile != null && now - mPendingProfileAt < PROFILE_CLICK_WINDOW_MS) {
             chosen = mPendingProfile;
+            clicked = true;
         } else if (mLastChooserFocus != null && now - mLastChooserFocusAt < PROFILE_CLICK_WINDOW_MS) {
             chosen = mLastChooserFocus;
             android.util.Log.i(PROFILE_TAG, "No click seen; using the last focused tile: " + chosen);
@@ -417,6 +556,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
             android.util.Log.i(PROFILE_TAG, "Profile is now " + chosen);
             setActiveProfileName(chosen);
             mProfileCommittedAt = now;
+            mLastPick = chosen;
+            mLastPickClicked = clicked;
+            mLastPickAt = now;
+            // The profile user may have switched already
+            checkProfileUser("chooser pick");
+            learnProfileUserName();
         }
         mPendingProfile = null;
         mLastChooserFocus = null;
@@ -427,6 +572,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE).edit().putString(PROFILE_NAME_KEY, name).apply();
         if (mHaStatus != null) mHaStatus.onProfileChanged();
         ProfileProvider.notifyChanged(this);
+        MainActivity.notifyProfileChanged();
     }
 
     private static final String APP_USERS_PREFS = "ltv_app_last_profile";
@@ -467,6 +613,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         @Override
         public void run() {
             checkIdle();
+            // In case a switch broadcast was missed
+            checkProfileUser("periodic check");
             mIdleHandler.postDelayed(this, IDLE_CHECK_MS);
         }
     };
