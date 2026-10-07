@@ -123,9 +123,9 @@ final class ProfileUsers {
         return Boolean.TRUE.equals(isSupervised(context, serial)) ? approvedApps(context, serial) : null;
     }
 
-    /** Never blocked by Google TV (Hearth is the home app, HearthTube a device admin), so no sign of screen time. */
+    /** Never blocked by Google TV (Hearth is the home app), so no sign of screen time. */
     private static final java.util.Set<String> NEVER_BLOCKED = new java.util.HashSet<>(java.util.Arrays.asList(
-            "com.android.vending", "com.thesiegs.hearthtube"));
+            "com.android.vending"));
 
     /**
      * Whether this kids profile's screen time is up (bedtime, daily limit): Google TV then blocks even the apps a

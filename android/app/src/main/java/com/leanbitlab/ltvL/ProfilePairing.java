@@ -191,10 +191,11 @@ final class ProfilePairing {
 
     /**
      * The picker name to choose among {@code names} for the Hearth profile {@code key} (named {@code hearthName}):
-     * the chosen profile when the picker has it, otherwise (match by name) the single best match. Null when the
-     * picker should be left to the user.
+     * the chosen profile when the picker has it, otherwise (match by name) the single best match, which for a kids
+     * profile must be the same name or first name. Null when the picker should be left to the user.
      */
-    static String choose(Context context, String packageName, String key, String hearthName, Collection<String> names) {
+    static String choose(Context context, String packageName, String key, String hearthName, Collection<String> names,
+            boolean kids) {
         String mode = getMode(context, packageName, key);
         if (MODE_PICKER.equals(mode)) return null;
         if (MODE_PROFILE.equals(mode)) {
@@ -204,8 +205,15 @@ final class ProfilePairing {
             }
             return null;
         }
-        return hearthName == null ? null : bestMatch(hearthName, names);
+        if (hearthName == null) return null;
+        String match = bestMatch(hearthName, names);
+        // A kid only ever lands in a profile named for them: the same name or first name, never a near miss
+        // ("Jo" / "Henry") that could be a grown-up's
+        return match != null && kids && matchScore(hearthName, match) < KIDS_MIN_SCORE ? null : match;
     }
+
+    /** The weakest name match automatic pairing accepts for a kids profile (4: same first name). */
+    static final int KIDS_MIN_SCORE = 4;
 
     /** The single best name match, or null when nothing matches or two names match equally well. */
     static String bestMatch(String hearthProfile, Collection<String> names) {

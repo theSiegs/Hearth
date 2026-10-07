@@ -84,6 +84,8 @@ public class ProfilePairingService extends AccessibilityService {
         /** The Google TV profile's key (its choices are saved under it) and name (to match and to show). */
         final String key;
         final String hearthProfile;
+        /** A kids profile: name matches must be close (see ProfilePairing.choose). */
+        boolean kids;
         boolean pickerSeen;
         // Apps read through nodes
         boolean clickTried;
@@ -137,8 +139,6 @@ public class ProfilePairingService extends AccessibilityService {
     static void onAppLaunching(Context context, String packageName) {
         ProfilePairingService service = sInstance;
         if (packageName == null || !ProfilePairing.supports(packageName)) return;
-        // Another profile's copies of the apps have their own logins: nothing to pick
-        if (ProfileApps.activeProfileUser(context) != null) return;
         if (service == null) {
             Log.i(TAG, packageName + " skipped: Profile Pairing isn't running");
             return;
@@ -165,7 +165,11 @@ public class ProfilePairingService extends AccessibilityService {
             return;
         }
         String hearthProfile = name != null && !name.isEmpty() ? name : ProfileUsers.displayName(context, key);
-        if (ProfilePairing.NETFLIX.equals(packageName) && !isVoiceDefault(context)) {
+        // Netflix speaks through its own user's engine: another profile's agent says whether that's Hearth's voice
+        android.os.UserHandle profileUser = ProfileApps.activeProfileUser(context);
+        boolean voice = profileUser != null
+                ? AgentHub.isVoiceDefault(ProfileUsers.settledSerial(context)) : isVoiceDefault(context);
+        if (ProfilePairing.NETFLIX.equals(packageName) && !voice) {
             Log.i(TAG, "Netflix skipped: Hearth's voice isn't the text-to-speech engine");
             return;
         }
@@ -190,7 +194,7 @@ public class ProfilePairingService extends AccessibilityService {
     @Override
     public void onDestroy() {
         if (sInstance == this) sInstance = null;
-        sListeningTo = null;
+        setListeningTo(null);
         mHandler.removeCallbacksAndMessages(null);
         hideCover();
         hideBanner();
@@ -229,8 +233,14 @@ public class ProfilePairingService extends AccessibilityService {
         if (mSession != null) return;
         setMode(false, false);
         // The app stops speaking once screen-reader mode is off; until then Hearth voice keeps it quiet.
-        sListeningTo = null;
+        setListeningTo(null);
     };
+
+    /** Which app Hearth's voice hands to Profile Pairing: here, and in another profile's user through its agent. */
+    private static void setListeningTo(String pkg) {
+        sListeningTo = pkg;
+        AgentHub.setListening(pkg);
+    }
 
     private final Runnable mTimeout = () -> finish(NO_MATCH, "timed out");
 
@@ -239,7 +249,8 @@ public class ProfilePairingService extends AccessibilityService {
         mHandler.removeCallbacks(mGoIdle);
         hideCover();
         mSession = new Session(pkg, key, hearthProfile);
-        sListeningTo = pkg;
+        mSession.kids = ProfileUsers.isKids(this);
+        setListeningTo(pkg);
         setMode(true, needsScreenReaderMode(pkg));
         mHandler.postDelayed(mTimeout, WAIT_FOR_PICKER_MS);
         Log.i(TAG, "Watching " + pkg + " for " + hearthProfile);
@@ -458,7 +469,7 @@ public class ProfilePairingService extends AccessibilityService {
 
         Set<String> known = new LinkedHashSet<>(s.names.keySet());
         known.addAll(ProfilePairing.getSeenNames(this, s.pkg));
-        String target = ProfilePairing.choose(this, s.pkg, s.key, s.hearthProfile, known);
+        String target = ProfilePairing.choose(this, s.pkg, s.key, s.hearthProfile, known, s.kids);
         // Until Hearth has heard the whole list once (for the Profile Pairing menu and nickname matches), walk to
         // the end first, then come back to the right profile.
         Log.i(TAG, "Focused " + name + " (" + index + " of " + count + ")");
@@ -565,7 +576,7 @@ public class ProfilePairingService extends AccessibilityService {
         List<String> names = new ArrayList<>();
         for (Tile tile : tiles) names.add(tile.name);
         ProfilePairing.rememberNames(this, s.pkg, names, true);
-        String target = ProfilePairing.choose(this, s.pkg, s.key, s.hearthProfile, names);
+        String target = ProfilePairing.choose(this, s.pkg, s.key, s.hearthProfile, names, s.kids);
         if (target == null) {
             finish(NO_MATCH, "no profile matches " + s.hearthProfile + " in " + names);
             return;

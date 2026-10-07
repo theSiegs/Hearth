@@ -90,6 +90,13 @@ final class ProfileApps {
     static Boolean launch(Context context, String packageName) {
         UserHandle user = activeProfileUser(context);
         if (user == null || packageName == null) return null;
+        if (!apps(context, user).containsKey(packageName)) return false;
+        // This profile's own pairing (its copies may be signed in to an account with everyone's profiles)
+        ProfilePairingService.onAppLaunching(context, packageName);
+        return startMain(context, user, packageName);
+    }
+
+    private static boolean startMain(Context context, UserHandle user, String packageName) {
         LauncherActivityInfo activity = apps(context, user).get(packageName);
         if (activity == null) return false;
         try {
@@ -115,11 +122,10 @@ final class ProfileApps {
                 : intent.getComponent() != null ? intent.getComponent().getPackageName() : null;
         // Through that profile's agent the exact link opens; without one, the app's main screen
         long serial = ProfileUsers.settledSerial(context);
-        if (pkg != null && apps(context, user).containsKey(pkg)
-                && AgentHub.open(context, serial, user, intent.toUri(android.content.Intent.URI_INTENT_SCHEME))) {
-            return true;
-        }
-        return launch(context, pkg);
+        if (pkg == null || !apps(context, user).containsKey(pkg)) return false;
+        ProfilePairingService.onAppLaunching(context, pkg);
+        return AgentHub.open(context, serial, user, intent.toUri(android.content.Intent.URI_INTENT_SCHEME))
+                || startMain(context, user, pkg);
     }
 
     /** The packages the active profile's user can open (null for the owner's profile). */
