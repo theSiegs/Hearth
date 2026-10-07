@@ -91,8 +91,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // Starting up (after an update, say) in a kids profile with a grown-up's name stored: the switch happened
         // while Hearth wasn't watching, so no name beats a wrong one.
         String stored = getActiveProfileName(this);
-        if (mKidsState && stored != null && ProfilePairing.getHearthProfiles(this).contains(stored)
-                && !ProfilePairing.isKids(this, stored)) {
+        if (mKidsState && stored != null && ProfilePairing.isKnownGrownUp(this, stored)) {
             android.util.Log.i(PROFILE_TAG, "Started in a kids profile with grown-up " + stored + " stored: profile unknown");
             setActiveProfileName(null);
         }
@@ -144,6 +143,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         boolean flipped = mKidsState != null && mKidsState != kids;
         mKidsState = kids;
         if (flipped) ProfileProvider.notifyChanged(this);  // kids_profile changed
+        String current = getActiveProfileName(this);
+        if (current != null && (picked || !flipped)) ProfilePairing.rememberHearthProfile(this, current, kids);
         if (flipped && SystemClock.elapsedRealtime() - mProfileCommittedAt > PROFILE_CLICK_WINDOW_MS) {
             // A switch we didn't see: better no name than a wrong one
             android.util.Log.i(PROFILE_TAG, "Kids/grown-up switch without a chooser pick: profile unknown");
