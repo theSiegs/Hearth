@@ -88,6 +88,14 @@ public class LauncherAccessibilityService extends AccessibilityService {
         super.onServiceConnected();
         sInstance = this;
         mKidsState = hasSuspendedApps(this);
+        // Starting up (after an update, say) in a kids profile with a grown-up's name stored: the switch happened
+        // while Hearth wasn't watching, so no name beats a wrong one.
+        String stored = getActiveProfileName(this);
+        if (mKidsState && stored != null && ProfilePairing.getHearthProfiles(this).contains(stored)
+                && !ProfilePairing.isKids(this, stored)) {
+            android.util.Log.i(PROFILE_TAG, "Started in a kids profile with grown-up " + stored + " stored: profile unknown");
+            setActiveProfileName(null);
+        }
         getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).edit().putBoolean(HOME_FIX_SEEN_KEY, true).apply();
         mIdleHandler.postDelayed(mIdleCheck, IDLE_CHECK_MS);
         mHaOverlay = new HaNotificationOverlay(this);
