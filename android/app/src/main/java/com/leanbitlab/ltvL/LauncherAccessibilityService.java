@@ -210,7 +210,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
             mChooserOnScreen = true;
         } else if (GOOGLE_TV_HOME_ACTIVITY.equals(className)
                 || (!GOOGLE_TV_PACKAGE.equals(packageName) && !"com.android.systemui".equals(packageName)
-                    && !"android".equals(packageName))) {
+                    && !"android".equals(packageName) && !packageName.equals(getPackageName()))) {
+            // Not Hearth's own windows: Hearth reports window changes as it goes behind the chooser.
+            // (Coming back to Hearth without a pick is handled below: it cancels the pending pick.)
             mChooserOnScreen = false;
         }
         if (wasOnScreen != mChooserOnScreen) {
@@ -345,12 +347,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     }
 
     private void onGoogleTvViewEvent(AccessibilityEvent event) {
-        if (mChooserOnScreen || SystemClock.elapsedRealtime() - mChooserOpenedAt < 10_000) {
-            // Diagnosing missed picks: everything Google TV reports while its chooser is up.
-            android.util.Log.i(PROFILE_TAG, "chooser event " + AccessibilityEvent.eventTypeToString(event.getEventType())
-                    + " class=" + event.getClassName() + " text=" + event.getText() + " desc="
-                    + event.getContentDescription() + " onScreen=" + mChooserOnScreen);
-        }
+        // Never log these events' text: while the chooser is up they include Google TV's PIN keypad.
         if (event.getText() == null || event.getText().isEmpty()) return;
         String label = event.getText().get(0) != null ? event.getText().get(0).toString().trim() : "";
         // Only the round profile tiles; skip "Add account" and "Manage accounts"
