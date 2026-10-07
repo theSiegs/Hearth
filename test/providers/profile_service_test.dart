@@ -134,4 +134,44 @@ void main() {
     expect(backup.calls, isEmpty);
     expect(prefs.getString(ProfileService.layoutOwnerKey), "user:0");
   });
+
+  test("starting up shows no welcome card, but counts as settled once checked", () async {
+    when(channel.getActiveProfileName()).thenAnswer((_) async => "Alex");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:0");
+    final service = build(_RecordingBackupService(database, prefs, {}));
+    expect(service.settledOnce, isFalse);
+
+    await service.check();
+
+    expect(service.transition, isNull);
+    expect(service.settledOnce, isTrue);
+    expect(service.layoutReadyFor("user:0"), isTrue);
+  });
+
+  test("a switch to another profile starts a welcome card that ends when told", () async {
+    when(channel.getActiveProfileName()).thenAnswer((_) async => "Alex");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:0");
+    final service = build(_RecordingBackupService(database, prefs, {}));
+    await service.check();
+
+    when(channel.getActiveProfileName()).thenAnswer((_) async => null);
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:11");
+    await service.check();
+
+    final transition = service.transition;
+    expect(transition?.key, "user:11");
+    expect(service.layoutReadyFor("user:11"), isTrue);
+    service.endTransition(transition!);
+    expect(service.transition, isNull);
+  });
+
+  test("checking the same profile again starts no welcome card", () async {
+    when(channel.getActiveProfileName()).thenAnswer((_) async => "Alex");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:0");
+    final service = build(_RecordingBackupService(database, prefs, {}));
+    await service.check();
+    await service.check();
+
+    expect(service.transition, isNull);
+  });
 }

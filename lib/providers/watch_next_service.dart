@@ -146,6 +146,18 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
   bool get initialized => _initialized;
+
+  String? _refreshedFor;
+
+  /// The profile (key) the programs were last read for: after a switch, the row is this profile's once it matches.
+  String? get refreshedFor => _refreshedFor;
+
+  final Set<String> _postersTried = {};
+
+  /// The first few cards' posters are in (or failed, or there are none): what a profile switch waits for.
+  bool get postersSettled => programs
+      .take(3)
+      .every((p) => p.posterArtUri.isEmpty || p.posterBytes != null || _postersTried.contains(p.posterArtUri));
   bool get hasPermission => _hasPermission;
 
   Future<void> _init() async {
@@ -230,9 +242,14 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
         return b.id.compareTo(a.id);
       });
 
+      String? refreshedFor;
+      try {
+        refreshedFor = await _channel.getActiveProfileKey();
+      } catch (_) {}
       if (!_isTest) await _trackOwners(newPrograms);
       if (callSnapshot != _callCount) return;
       _programs = newPrograms;
+      _refreshedFor = refreshedFor;
       if (callSnapshot == _callCount) notifyListeners();
       unawaited(_loadPosters(newPrograms, callSnapshot));
     } catch (e) {
@@ -257,12 +274,18 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
         final program = queue.removeAt(0);
         try {
           final bytes = await _channel.getWatchNextPoster(program.posterArtUri).timeout(const Duration(seconds: 20));
-          if (bytes == null || bytes.isEmpty) continue;
+          _postersTried.add(program.posterArtUri);
+          if (bytes == null || bytes.isEmpty) {
+            if (callSnapshot == _callCount) notifyListeners();
+            continue;
+          }
           _posters[program.posterArtUri] = bytes;
           program.posterBytes = bytes;
           if (callSnapshot == _callCount) notifyListeners();
         } catch (e) {
           log('Failed to load poster for ${program.title}', name: 'WatchNextService', error: e);
+          _postersTried.add(program.posterArtUri);
+          if (callSnapshot == _callCount) notifyListeners();
         }
       }
     }

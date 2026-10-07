@@ -172,6 +172,21 @@ final class AgentHub {
         return Uri.parse("content://" + context.getPackageName() + ".profile/agent_watch_next");
     }
 
+    /** The profile's agent has reported its Watch Next at least once since Hearth started. */
+    static boolean hasReported(long serial) {
+        return sWatchNext.containsKey(serial);
+    }
+
+    /** Hearth is installed for that profile, so it can have an agent (a parent approved it there). */
+    static boolean canHaveAgent(Context context, UserHandle user) {
+        try {
+            LauncherApps launcherApps = (LauncherApps) context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
+            return !launcherApps.getActivityList(context.getPackageName(), user).isEmpty();
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
     static boolean isConnected(long serial) {
         return sConnections.containsKey(serial);
     }

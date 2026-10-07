@@ -66,6 +66,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final String PROFILE_PREFS = "ltv_active_profile";
     private static final String PROFILE_NAME_KEY = "name";
     private static final String PROFILE_KEY_KEY = "key";
+    private static final String PROFILE_GENERATION_KEY = "generation";
+    private static final String PROFILE_READY_KEY = "ready_key";
     private static final long PROFILE_CLICK_WINDOW_MS = 60_000;
     private static final long CHOOSER_INITIAL_FOCUS_MS = 1_500;
     private long mChooserOpenedAt = 0;
@@ -248,6 +250,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mCandidateSerial = ProfileUsers.UNKNOWN;
         long previous = mActiveSerial;
         mActiveSerial = serial;
+        // A new profile (or Hearth starting): not ready until Flutter says its home is complete
+        SharedPreferences profilePrefs = getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE);
+        profilePrefs.edit().putInt(PROFILE_GENERATION_KEY, profilePrefs.getInt(PROFILE_GENERATION_KEY, 0) + 1)
+                .remove(PROFILE_READY_KEY).apply();
         if (!ProfileUsers.key(serial).equals(getActiveProfileKey(this))) {
             getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE).edit().putString(PROFILE_KEY_KEY, ProfileUsers.key(serial)).apply();
             ProfileProvider.notifyChanged(this);
@@ -541,6 +547,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
             if (GOOGLE_TV_HOME_ACTIVITY.equals(className)) {
                 // A new profile's home: the last one's screen time no longer applies (its own comes up next)
                 if (commitPendingProfile()) clearScreenTimeLock();
+                // Google TV only opens its home once a switch is done: take the new profile user now, before
+                // Hearth takes over, so Hearth never comes up showing the last profile (see readiness)
+                if (mCandidateSerial != ProfileUsers.UNKNOWN) mCandidateAt -= OWNER_SETTLE_MS;
                 checkProfileUser("Google TV home");
                 updateScreenTimeLock("Google TV home");
                 mGoogleTvScreenInFront = false;
@@ -776,6 +785,24 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     static String getActiveProfileName(Context context) {
         return context.getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE).getString(PROFILE_NAME_KEY, null);
+    }
+
+    /** Counts profile changes (and Hearth starts): HearthTube can tell a new profile from the same one. */
+    static int getProfileGeneration(Context context) {
+        return context.getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE).getInt(PROFILE_GENERATION_KEY, 0);
+    }
+
+    /** Whether Hearth's home is complete for the active profile (Flutter reports it, see ProfileTransitionOverlay). */
+    static boolean isProfileReady(Context context) {
+        String key = getActiveProfileKey(context);
+        return key != null && key.equals(context.getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE)
+                .getString(PROFILE_READY_KEY, null));
+    }
+
+    static void setProfileReady(Context context, String key) {
+        if (key == null || !key.equals(getActiveProfileKey(context))) return;
+        context.getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE).edit().putString(PROFILE_READY_KEY, key).apply();
+        ProfileProvider.notifyChanged(context);
     }
 
     /** The active profile's lasting key ({@link ProfileUsers#key}), known even before its name; null until read. */

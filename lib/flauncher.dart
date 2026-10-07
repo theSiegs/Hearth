@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/widgets/profile_transition_overlay.dart';
 import 'dart:ui' as ui;
 
 import 'package:collection/collection.dart';
@@ -279,7 +280,11 @@ class _FLauncherState extends State<FLauncher> {
                       body: Padding(
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                           child: Consumer<AppsService>(builder: (context, appsService, _) {
-                            if (appsService.initialized) {
+                            // Starting up: placeholders until both the apps and the profile (its layout) are in,
+                            // so the home doesn't reshuffle in front of anyone
+                            final bool profileSettled =
+                                context.select<ProfileService?, bool>((p) => p?.settledOnce ?? true);
+                            if (appsService.initialized && profileSettled) {
                               return Selector<WatchNextService, bool>(
                                 selector: (_, watchNext) => watchNext.programs.isNotEmpty,
                                 builder: (context, hasContinuingPrograms, _) =>
@@ -310,7 +315,9 @@ class _FLauncherState extends State<FLauncher> {
                             } else {
                               return _emptyState(context);
                             }
-                          }))))
+                          })))),
+              // A profile switch: the welcome card until this profile's home is complete
+              Positioned.fill(child: ProfileTransitionOverlay(channel: FLauncherChannel())),
             ])),
       );
 
@@ -571,17 +578,33 @@ class _FLauncherState extends State<FLauncher> {
     );
   }
 
+  /// Starting up: the dock's shape with empty tiles, where the dock will be, instead of a spinner.
   Widget _emptyState(BuildContext context) {
-    AppLocalizations localizations = AppLocalizations.of(context)!;
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 16),
-          Text(localizations.loading, style: Theme.of(context).textTheme.titleLarge),
-        ],
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 32),
+        child: Container(
+          key: const Key("home_placeholder"),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.black26,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white10, width: 1.5),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(
+              4,
+              (i) => Container(
+                width: 160,
+                height: 90,
+                margin: EdgeInsets.only(left: i == 0 ? 0 : 12),
+                decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
