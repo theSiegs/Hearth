@@ -1,3 +1,4 @@
+import 'package:flauncher/actions.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
@@ -97,7 +98,20 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
 
         return widget!;
       },
-      child: RepaintBoundary(
+      // Right past the last button opens the Home Assistant panel (when it's on), as it does from the dock.
+      child: Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: (node, event) {
+          if (event.logicalKey != LogicalKeyboardKey.arrowRight || event is KeyUpEvent) return KeyEventResult.ignored;
+          final focused = FocusManager.instance.primaryFocus;
+          if (focused == null || focused.focusInDirection(TraversalDirection.right)) return KeyEventResult.handled;
+          if (event is KeyDownEvent && context.read<SettingsService>().haPanelEnabled) {
+            Actions.maybeInvoke(context, const OpenHaPanelIntent());
+          }
+          return KeyEventResult.handled;
+        },
+        child: RepaintBoundary(
         child: AppBar(
           // Line the profile circle up with the left edge of the app tiles below
           // (sections indent 16 + 8 card margin + 8 tile inset = 32dp).
@@ -305,6 +319,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
             ),
           ],
         ),
+      ),
       ),
     );
   }

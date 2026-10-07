@@ -85,6 +85,9 @@ class _FLauncherState extends State<FLauncher> {
 
   bool _searchOpen = false;
 
+  /// Focus is in the top bar: the dock and Continue Watching are hidden.
+  bool _topBarFocused = false;
+
   Future<void> _openSearch(String mode) async {
     if (!mounted || _searchOpen) return;
     _searchOpen = true;
@@ -108,6 +111,18 @@ class _FLauncherState extends State<FLauncher> {
   void _onFocusMoved() {
     if (_dockFocusNode.hasFocus) {
       _lastDockFocus = FocusManager.instance.primaryFocus;
+    }
+    // With the top bar focused, the first screen is just the wallpaper: dock and Continue Watching slide away and
+    // come back when focus comes down again.
+    final focusContext = FocusManager.instance.primaryFocus?.context;
+    final bool inTopBar = focusContext != null &&
+        focusContext.mounted &&
+        focusContext.findAncestorWidgetOfExactType<FocusAwareAppBar>() != null;
+    if (inTopBar != _topBarFocused) {
+      setState(() {
+        _topBarFocused = inTopBar;
+        if (inTopBar) _showingRecents = false;
+      });
     }
     // Focus moving into a settings panel or the app bar leaves the blur as it was,
     // unless the dock layout itself has gone (dock switched off, or Favorites emptied).
@@ -323,7 +338,7 @@ class _FLauncherState extends State<FLauncher> {
                     focusNode: _dockFocusNode,
                     onKeyEvent: continueWatchingActive ? _swapOn(LogicalKeyboardKey.arrowUp, true) : null,
                     child: _swapAnimation(
-                      visible: !showRecents,
+                      visible: !showRecents && !_topBarFocused,
                       // Far enough to slide the dock off the bottom of the screen, so it needn't fade too.
                       // (A fade would paint the dock once, off-screen, and its frosted backdrop would stay
                       // sampled from there.)

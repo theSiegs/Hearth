@@ -176,7 +176,7 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
   }
 }
 
-class _Keypad extends StatelessWidget {
+class _Keypad extends StatefulWidget {
   final void Function(String) onDigit;
   final VoidCallback onBackspace;
 
@@ -190,24 +190,90 @@ class _Keypad extends StatelessWidget {
   ];
 
   @override
+  State<_Keypad> createState() => _KeypadState();
+}
+
+/// Moves the selection itself, key by key: it stops at the keypad's edges and skips the empty corner, so it can
+/// never leave the keypad (with nothing else on the screen to land on, the selection would vanish).
+class _KeypadState extends State<_Keypad> {
+  late final List<List<FocusNode?>> _nodes = [
+    for (final row in _Keypad._layout) [for (final label in row) label.isEmpty ? null : FocusNode()],
+  ];
+
+  @override
+  void dispose() {
+    for (final row in _nodes) {
+      for (final node in row) {
+        node?.dispose();
+      }
+    }
+    super.dispose();
+  }
+
+  KeyEventResult _move(KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    final (dr, dc) = switch (event.logicalKey) {
+      LogicalKeyboardKey.arrowUp => (-1, 0),
+      LogicalKeyboardKey.arrowDown => (1, 0),
+      LogicalKeyboardKey.arrowLeft => (0, -1),
+      LogicalKeyboardKey.arrowRight => (0, 1),
+      _ => (0, 0),
+    };
+    if (dr == 0 && dc == 0) return KeyEventResult.ignored;
+    for (int r = 0; r < _nodes.length; r++) {
+      for (int c = 0; c < _nodes[r].length; c++) {
+        if (_nodes[r][c]?.hasFocus != true) continue;
+        // Step in the direction until a key, or stay put at the edge.
+        int nr = r + dr, nc = c + dc;
+        // Up or down onto the empty corner: the nearest key in that row (Down from 7 is 0).
+        if (dr != 0 && nr >= 0 && nr < _nodes.length && _nodes[nr][nc] == null) {
+          for (final offset in [1, -1, 2, -2]) {
+            final alt = nc + offset;
+            if (alt >= 0 && alt < _nodes[nr].length && _nodes[nr][alt] != null) {
+              _nodes[nr][alt]!.requestFocus();
+              return KeyEventResult.handled;
+            }
+          }
+        }
+        while (nr >= 0 && nr < _nodes.length && nc >= 0 && nc < _nodes[nr].length) {
+          final next = _nodes[nr][nc];
+          if (next != null) {
+            next.requestFocus();
+            break;
+          }
+          nr += dr;
+          nc += dc;
+        }
+        return KeyEventResult.handled;
+      }
+    }
+    _nodes[0][0]?.requestFocus();
+    return KeyEventResult.handled;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return FocusTraversalGroup(
-      policy: ReadingOrderTraversalPolicy(),
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: (_, event) => _move(event),
       child: Column(
         children: [
-          for (int row = 0; row < _layout.length; row++)
+          for (int row = 0; row < _Keypad._layout.length; row++)
             Row(
               children: [
                 for (int col = 0; col < 3; col++)
                   Padding(
                     padding: const EdgeInsets.all(7),
-                    child: _layout[row][col].isEmpty
+                    child: _Keypad._layout[row][col].isEmpty
                         ? const SizedBox(width: 56, height: 56)
                         : _KeypadButton(
-                            label: _layout[row][col],
+                            label: _Keypad._layout[row][col],
+                            focusNode: _nodes[row][col],
                             autofocus: row == 0 && col == 0,
-                            onPressed: () =>
-                                _layout[row][col] == "⌫" ? onBackspace() : onDigit(_layout[row][col]),
+                            onPressed: () => _Keypad._layout[row][col] == "⌫"
+                                ? widget.onBackspace()
+                                : widget.onDigit(_Keypad._layout[row][col]),
                           ),
                   ),
               ],
@@ -222,8 +288,9 @@ class _KeypadButton extends StatefulWidget {
   final String label;
   final VoidCallback onPressed;
   final bool autofocus;
+  final FocusNode? focusNode;
 
-  const _KeypadButton({required this.label, required this.onPressed, this.autofocus = false});
+  const _KeypadButton({required this.label, required this.onPressed, this.autofocus = false, this.focusNode});
 
   @override
   State<_KeypadButton> createState() => _KeypadButtonState();
@@ -240,6 +307,7 @@ class _KeypadButtonState extends State<_KeypadButton> {
         ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) => widget.onPressed()),
       },
       child: Focus(
+        focusNode: widget.focusNode,
         autofocus: widget.autofocus,
         onFocusChange: (focused) => setState(() => _focused = focused),
         child: GestureDetector(
