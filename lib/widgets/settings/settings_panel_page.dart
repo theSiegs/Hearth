@@ -63,7 +63,6 @@ class SettingsPanelPage extends StatelessWidget {
             semanticLabel: "Hearth",
           ),
         ),
-        Text(localizations.settings, style: Theme.of(context).textTheme.titleLarge),
         const Divider(),
         Expanded(
           child: SingleChildScrollView(

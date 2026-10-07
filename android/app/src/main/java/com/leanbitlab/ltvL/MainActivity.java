@@ -1803,6 +1803,25 @@ public class MainActivity extends FlutterActivity {
         return false;
     }
 
+    /** Whether Hearth is the screen in front (between onResume and onPause). */
+    private static volatile boolean sInFront;
+
+    static boolean isInFront() {
+        return sInFront;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        sInFront = true;
+    }
+
+    @Override
+    protected void onPause() {
+        sInFront = false;
+        super.onPause();
+    }
+
     /** A search request from the remote ("voice" or "text") not yet picked up by Flutter. */
     private String mPendingSearch;
 

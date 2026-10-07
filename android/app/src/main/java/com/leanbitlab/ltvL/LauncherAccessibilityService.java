@@ -40,6 +40,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private String mPendingProfile;
     private long mPendingProfileAt = 0;
     private long mProfileCommittedAt = 0;
+    private String mLastChooserFocus;
+    /** Google TV's profile chooser is the window in front. */
+    private boolean mChooserOnScreen;
+    private long mLastChooserFocusAt = 0;
+    private static final String PROFILE_TAG = "HearthProfile";
     /** Whether Google TV is suspending apps (a kids profile), as last seen; null until first checked. */
     private Boolean mKidsState;
 
@@ -116,6 +121,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         boolean flipped = mKidsState != null && mKidsState != kids;
         mKidsState = kids;
         if (flipped && SystemClock.elapsedRealtime() - mProfileCommittedAt > PROFILE_CLICK_WINDOW_MS) {
+            android.util.Log.i(PROFILE_TAG, "Kids/grown-up switch without a chooser pick: profile unknown");
             setActiveProfileName(null);
         }
         if (mPendingBounceAt != 0 && SystemClock.elapsedRealtime() - mPendingBounceAt < PENDING_BOUNCE_WINDOW_MS
@@ -174,6 +180,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
         String packageName = pkg.toString();
         String className = cls.toString();
+        mChooserOnScreen = GOOGLE_TV_PACKAGE.equals(packageName) && GOOGLE_TV_CHOOSER_ACTIVITY.equals(className);
 
         if (GOOGLE_TV_PACKAGE.equals(packageName)) {
             if (className.startsWith(GOOGLE_TV_WELLBEING_PREFIX)) {
@@ -184,6 +191,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 long now = SystemClock.elapsedRealtime();
                 if (mFirstFocusLabel != null && now - mFirstFocusAt < CHOOSER_INITIAL_FOCUS_MS) {
                     // Initial focus was reported before the window change
+                    android.util.Log.i(PROFILE_TAG, "Chooser opened on " + mFirstFocusLabel);
                     setActiveProfileName(mFirstFocusLabel);
                     mChooserOpenedAt = 0;
                 } else {
@@ -212,6 +220,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (packageName.equals(getPackageName())) {
             // Back in the launcher without Google TV's home in between: the switch was cancelled.
             mPendingProfile = null;
+            mLastChooserFocus = null;
         }
         if (mHaStatus != null && (packageName.equals(getPackageName()) || isLaunchableApp(packageName))) {
             mHaStatus.setForegroundPackage(packageName);
@@ -232,26 +241,43 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
         long now = SystemClock.elapsedRealtime();
         if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_FOCUSED) {
+            // OK picks the focused tile, and Google TV doesn't always report the click: remember the last one.
+            if (mChooserOnScreen) {
+                mLastChooserFocus = label;
+                mLastChooserFocusAt = now;
+            }
             // The chooser opens with the current profile focused; later focus moves are just browsing.
             if (mChooserOpenedAt != 0 && now - mChooserOpenedAt < CHOOSER_INITIAL_FOCUS_MS) {
                 mChooserOpenedAt = 0;
+                android.util.Log.i(PROFILE_TAG, "Chooser opened on " + label);
                 setActiveProfileName(label);
             } else {
                 mFirstFocusLabel = label;
                 mFirstFocusAt = now;
             }
         } else if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+            android.util.Log.i(PROFILE_TAG, "Picked " + label);
             mPendingProfile = label;
             mPendingProfileAt = now;
         }
     }
 
     private void commitPendingProfile() {
-        if (mPendingProfile != null && SystemClock.elapsedRealtime() - mPendingProfileAt < PROFILE_CLICK_WINDOW_MS) {
-            setActiveProfileName(mPendingProfile);
-            mProfileCommittedAt = SystemClock.elapsedRealtime();
+        long now = SystemClock.elapsedRealtime();
+        String chosen = null;
+        if (mPendingProfile != null && now - mPendingProfileAt < PROFILE_CLICK_WINDOW_MS) {
+            chosen = mPendingProfile;
+        } else if (mLastChooserFocus != null && now - mLastChooserFocusAt < PROFILE_CLICK_WINDOW_MS) {
+            chosen = mLastChooserFocus;
+            android.util.Log.i(PROFILE_TAG, "No click seen; using the last focused tile: " + chosen);
+        }
+        if (chosen != null) {
+            android.util.Log.i(PROFILE_TAG, "Profile is now " + chosen);
+            setActiveProfileName(chosen);
+            mProfileCommittedAt = now;
         }
         mPendingProfile = null;
+        mLastChooserFocus = null;
     }
 
     private void setActiveProfileName(String name) {
@@ -474,6 +500,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
     protected boolean onKeyEvent(KeyEvent event) {
         onUserInput();
         if (handleRemap(event)) return true;
+        // Google TV can open its screens (a kids profile's PIN screen, the chooser) behind Hearth; with Hearth in
+        // front none of them is showing, so Home stays with Hearth instead of waking them.
+        if (MainActivity.isInFront()) mGoogleTvScreenInFront = false;
+        if (event.getKeyCode() == KeyEvent.KEYCODE_HOME && event.getAction() == KeyEvent.ACTION_DOWN) {
+            android.util.Log.i("HearthHome", "Home: screenTimeLock=" + mScreenTimeLock + " suspended=" + isSuspended(this)
+                    + " googleTvInFront=" + mGoogleTvScreenInFront + " hearthInFront=" + MainActivity.isInFront());
+        }
         if (event.getKeyCode() == KeyEvent.KEYCODE_HOME && canTakeOver() && !mGoogleTvScreenInFront) {
             if (event.getAction() == KeyEvent.ACTION_DOWN) {
                 openLauncher();
