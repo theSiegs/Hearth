@@ -99,13 +99,18 @@ class _FLauncherState extends State<FLauncher> {
     if (name == null || name == _lastProfile) return;
     _lastProfile = name;
     if (_showingRecents) setState(() => _showingRecents = false);
-    // Twice: the profile's layout (its own dock) loads just after the name changes.
-    for (final delay in const [Duration(milliseconds: 300), Duration(milliseconds: 1200)]) {
-      Future.delayed(delay, () {
-        if (!mounted) return;
+    // Keep trying for a few seconds: the profile's layout (its own dock) and app list load after the name changes,
+    // and focus comes back to the top bar (where the profile switch started), which would hide the dock.
+    var landed = false;
+    for (final ms in const [300, 1200, 2500, 4000]) {
+      Future.delayed(Duration(milliseconds: ms), () {
+        if (!mounted || landed) return;
         final target = _firstFocusable(_dockFocusNode) ?? _firstFocusable(_appsGridFocusNode) ??
             _firstFocusable(_belowDockFocusNode);
-        target?.requestFocus();
+        if (target != null) {
+          target.requestFocus();
+          landed = _dockFocusNode.hasFocus || _appsGridFocusNode.hasFocus || _belowDockFocusNode.hasFocus;
+        }
       });
     }
   }
