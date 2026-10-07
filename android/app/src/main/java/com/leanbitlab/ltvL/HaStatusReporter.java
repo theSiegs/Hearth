@@ -157,6 +157,11 @@ final class HaStatusReporter {
         scheduleSend();
     }
 
+    /** Google TV suspended or released apps: the allowed apps may have changed. */
+    void onAppsChanged() {
+        scheduleSend();
+    }
+
     /** Profile name or kids state may have changed. */
     void onProfileChanged() {
         // A new profile has its own limits: what the last screen said no longer applies
@@ -213,7 +218,8 @@ final class HaStatusReporter {
                 ? JSONObject.NULL : mScreenTime.minutesLeft);
         status.put("screen_time_text", mScreenTime == null ? JSONObject.NULL : mScreenTime.text);
         status.put("screen_time_seen_at", mScreenTime == null ? JSONObject.NULL : mScreenTimeSeenAt);
-        status.put("allowed_apps", kids ? allowedApps(pm) : JSONObject.NULL);
+        status.put("screen_time_unlocks_at", mScreenTime == null ? JSONObject.NULL : nullable(mScreenTime.unlocksAt));
+        status.put("allowed_apps", kids ? allowedApps(pm, mContext.getPackageName()) : JSONObject.NULL);
 
         MediaController playing = primaryController();
         String state = "idle";
@@ -286,13 +292,14 @@ final class HaStatusReporter {
         return false;
     }
 
-    /** The apps this kids profile can open: every launchable app Google TV hasn't suspended. */
-    private static JSONArray allowedApps(PackageManager pm) {
+    /** The apps this kids profile can open: every launchable app Google TV hasn't suspended, Hearth aside. */
+    private static JSONArray allowedApps(PackageManager pm, String ownPackage) {
         java.util.TreeSet<String> names = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         for (String category : new String[]{Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER}) {
             Intent intent = new Intent(Intent.ACTION_MAIN).addCategory(category);
             for (ResolveInfo info : pm.queryIntentActivities(intent, 0)) {
-                if ((info.activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SUSPENDED) == 0) {
+                if ((info.activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SUSPENDED) == 0
+                        && !ownPackage.equals(info.activityInfo.packageName)) {
                     names.add(label(pm, info.activityInfo.packageName));
                 }
             }

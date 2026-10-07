@@ -107,6 +107,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     public void onDestroy() {
         if (sInstance == this) sInstance = null;
         mIdleHandler.removeCallbacks(mIdleCheck);
+        mIdleHandler.removeCallbacks(mKidsHomeTakeOver);
+        mIdleHandler.removeCallbacks(mReadScreenTime);
         if (mHaServer != null) mHaServer.stop();
         if (mHaStatus != null) mHaStatus.stop();
         try {
@@ -126,20 +128,22 @@ public class LauncherAccessibilityService extends AccessibilityService {
      * its home first and lifts suspensions a moment later, so retry a bounce we held back.
      */
     private void onProfileChanged() {
-        mScreenTimeLock = false;
-        if (mHaStatus != null) {
-            mHaStatus.setScreenTimeLock(false);
-            mHaStatus.onProfileChanged();
-        }
-        commitPendingProfile();
-        // Suspensions also change when apps are installed, updated or re-approved, so only a flip between a kids
-        // profile and a grown-up one means a switch we didn't see: then better no name than a wrong one.
+        // Suspensions also change when apps are installed, updated or re-approved, and Google TV re-suspends apps
+        // whenever its time up screen opens, so only a chooser pick or a flip between a kids profile and a
+        // grown-up one is a switch. Anything else must leave the screen time lock alone.
+        boolean picked = commitPendingProfile();
         boolean kids = hasSuspendedApps(this);
         boolean flipped = mKidsState != null && mKidsState != kids;
         mKidsState = kids;
         if (flipped && SystemClock.elapsedRealtime() - mProfileCommittedAt > PROFILE_CLICK_WINDOW_MS) {
+            // A switch we didn't see: better no name than a wrong one
             android.util.Log.i(PROFILE_TAG, "Kids/grown-up switch without a chooser pick: profile unknown");
             setActiveProfileName(null);
+        }
+        if (picked || flipped || !kids) {
+            clearScreenTimeLock();
+        } else if (mHaStatus != null) {
+            mHaStatus.onAppsChanged();
         }
         if (mPendingBounceAt != 0 && SystemClock.elapsedRealtime() - mPendingBounceAt < PENDING_BOUNCE_WINDOW_MS
                 && canTakeOver()) {
@@ -197,6 +201,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
         String packageName = pkg.toString();
         String className = cls.toString();
+        mLastWindowPackage = packageName;
         // The chooser stays "open" while Google TV lays its account check / PIN screens over it; it's over once
         // Google TV's home or any other app comes up.
         if (GOOGLE_TV_PACKAGE.equals(packageName) && isChooser(className)) {
@@ -234,12 +239,19 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 android.util.Log.i(PROFILE_TAG, "Google TV setup in progress: " + className);
             }
             if (GOOGLE_TV_HOME_ACTIVITY.equals(className)) {
-                commitPendingProfile();
+                // A new profile's home: the last one's screen time no longer applies (its own comes up next)
+                if (commitPendingProfile()) clearScreenTimeLock();
                 mGoogleTvScreenInFront = false;
                 // Google TV opens its own home by component after a profile switch, on Back from apps, etc.,
                 // ignoring the default home app. Bring the launcher back whenever that's allowed.
                 if (SystemClock.elapsedRealtime() < mGoogleSetupUntil) {
                     android.util.Log.i(PROFILE_TAG, "Not taking over: Google TV setup in progress");
+                } else if (canTakeOver() && hasSuspendedApps(this)) {
+                    // A kids profile: Google TV opens its time up / bedtime screen from its home a moment after
+                    // the home itself, and covering the home first would hide it (Hearth, the home app, can't be
+                    // suspended). Take over only if the home is still what's in front.
+                    mIdleHandler.removeCallbacks(mKidsHomeTakeOver);
+                    mIdleHandler.postDelayed(mKidsHomeTakeOver, KIDS_HOME_GRACE_MS);
                 } else if (canTakeOver()) {
                     openLauncher();
                 } else {
@@ -280,6 +292,48 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (wellbeing || screen.isScreenTimeText() && screen.minutesLeft != null) {
             mHaStatus.setScreenTime(screen);
         }
+        if (wellbeing) {
+            // The window event carries no text ("Time for bed" etc. are in its views), and the views are only
+            // laid out a moment later.
+            mIdleHandler.removeCallbacks(mReadScreenTime);
+            mScreenTimeClass = className;
+            mIdleHandler.postDelayed(mReadScreenTime, SCREEN_TIME_READ_DELAY_MS);
+        }
+    }
+
+    private static final long KIDS_HOME_GRACE_MS = 1_500;
+    private String mLastWindowPackage;
+    private final Runnable mKidsHomeTakeOver = () -> {
+        // Not if Google TV put a screen of its own up (time up, PIN...) or the kid opened an app meanwhile
+        if (canTakeOver() && !mGoogleTvScreenInFront && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage)) {
+            openLauncher();
+        }
+    };
+
+    private static final long SCREEN_TIME_READ_DELAY_MS = 700;
+    private String mScreenTimeClass;
+    private final Runnable mReadScreenTime = this::readScreenTime;
+
+    private void readScreenTime() {
+        if (mHaStatus == null) return;
+        android.view.accessibility.AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null || !GOOGLE_TV_PACKAGE.contentEquals(root.getPackageName() != null ? root.getPackageName() : "")) {
+            return;
+        }
+        java.util.List<CharSequence> texts = new java.util.ArrayList<>();
+        collectTexts(root, texts, 0);
+        if (!texts.isEmpty()) mHaStatus.setScreenTime(ScreenTimeScreen.parse(mScreenTimeClass, texts));
+    }
+
+    /** The visible text views of a window, in screen order (button labels are content descriptions, so left out). */
+    private static void collectTexts(android.view.accessibility.AccessibilityNodeInfo node, java.util.List<CharSequence> out,
+            int depth) {
+        if (node == null || depth > 30 || !node.isVisibleToUser()) return;
+        CharSequence text = node.getText();
+        if (text != null && text.length() > 0) out.add(text);
+        for (int i = 0; i < node.getChildCount(); i++) {
+            collectTexts(node.getChild(i), out, depth + 1);
+        }
     }
 
     private void onGoogleTvViewEvent(AccessibilityEvent event) {
@@ -313,7 +367,16 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
     }
 
-    private void commitPendingProfile() {
+    private void clearScreenTimeLock() {
+        mScreenTimeLock = false;
+        if (mHaStatus != null) {
+            mHaStatus.setScreenTimeLock(false);
+            mHaStatus.onProfileChanged();
+        }
+    }
+
+    /** Settles a profile picked in the chooser, if any; whether one was. */
+    private boolean commitPendingProfile() {
         long now = SystemClock.elapsedRealtime();
         String chosen = null;
         if (mPendingProfile != null && now - mPendingProfileAt < PROFILE_CLICK_WINDOW_MS) {
@@ -329,6 +392,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         mPendingProfile = null;
         mLastChooserFocus = null;
+        return chosen != null;
     }
 
     private void setActiveProfileName(String name) {
