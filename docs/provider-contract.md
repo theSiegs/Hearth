@@ -4,7 +4,7 @@ Hearth shares its state with other apps (today: HearthTube) through one content 
 contract: what each column means, when it changes, and what callers may rely on. The provider's `contract_version`
 column says which version of this page it implements.
 
-**Current version: 3** (Hearth 2026.10, `ProfileProvider.CONTRACT_VERSION`).
+**Current version: 4** (Hearth 2026.10, `ProfileProvider.CONTRACT_VERSION`).
 
 Change rules: adding, removing or changing the meaning of a column or call bumps the version and gets a line in
 the history below. A reader that sees a newer version than it knows keeps using the columns it understands; columns
@@ -50,7 +50,8 @@ answer within a few seconds. Without an agent, a Hearth installed there answers 
 | `wallpaper_stamp` | integer | Changes whenever the wallpaper picture does (its file time); 0 when Hearth shows a gradient. Re-read `/wallpaper` when it changes. |
 | `profile_ready` | 0/1 | 1 once Hearth's home is complete for the active profile after a switch or start: its layout restored, its Continue Watching read, and (for a profile other than the owner's) its Hearth agent heard from, or 4 seconds passed. Back to 0 at the next switch. Act on profile-specific state when this turns 1, not on the first change of `profile_id`. |
 | `switch_generation` | integer | Goes up by one at every profile switch (and when Hearth starts). Tells a new visit to a profile from the same one. |
-| `contract_version` | integer | This page's version (3). Missing on Hearth builds from before version 2. |
+| `updates_hearthtube` | 0/1 | 1 while Hearth keeps HearthTube up to date: automatic companion updates are on (Settings → Companion apps; on by default when Hearth installed HearthTube) and Hearth is HearthTube's installer of record, so Android lets it update without asking. HearthTube's own updater steps aside meanwhile. Changes when the setting does or HearthTube is installed or updated. |
+| `contract_version` | integer | This page's version (4). Missing on Hearth builds from before version 2. |
 
 None of these are secret: everything is on screen in Hearth.
 
@@ -63,6 +64,8 @@ a minute.
 
 ## History
 
+- **4** (2026-10-07): added `updates_hearthtube`. `profile_ready` also turns 1 at most 4 s after a change with
+  Hearth off screen.
 - **3** (2026-10-07): added `profile_ready` and `switch_generation`.
 - **2** (2026-10-07): added `service_running`, `profile_id`, `contract_version`. `kids_profile` now means Family Link
   supervision (was: some app is blocked). `screen_time_up` also comes from the kid's approved apps and clears when
