@@ -60,7 +60,12 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // A profile switch always ends with the launcher coming back to the front.
-    if (state == AppLifecycleState.resumed) check();
+    if (state == AppLifecycleState.resumed) {
+      // Kids profiles' blocked apps change with approvals and with bedtime/screen-time limits, and Android doesn't
+      // always say so: re-read them whenever Hearth comes back, so the dock never offers a blocked app.
+      if (_isKidsProfile) _appsService.refreshState();
+      check();
+    }
   }
 
   /// A profile can open none of its Favorites (a kids profile, where Google TV blocks unapproved apps), which
@@ -69,7 +74,9 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
     if (!_isKidsProfile || !_appsService.initialized) return;
     final favorites = _appsService.categories.firstWhereOrNull((c) => c.name == 'Favorites');
     if (favorites != null && favorites.applications.isNotEmpty) return;
-    final apps = _appsService.applications.where((a) => !a.hidden && a.packageName != 'com.android.vending').toList();
+    final apps = _appsService.applications
+        .where((a) => !a.hidden && !a.suspended && a.packageName != 'com.android.vending')
+        .toList();
     if (apps.isEmpty) return;
     final dock = favorites ?? await _appsService.getOrCreateFavoritesCategory();
     await _appsService.addAllToCategory(apps.take(6), dock);
