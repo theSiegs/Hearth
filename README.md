@@ -1,157 +1,230 @@
+# LTvLauncher
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner_dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset=".github/assets/banner_light.svg">
+  <img alt="LTvLauncher Banner" src=".github/assets/banner_light.svg">
+</picture>
+
 <div align="center">
 
-<img src="assets/logo.png" alt="Hearth" height="96">
+[![Latest Release](https://img.shields.io/github/v/release/leanbitlab-org/LtvLauncher?style=flat-square&color=4f46e5&label=Release)](https://github.com/leanbitlab-org/LtvLauncher/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/leanbitlab-org/LtvLauncher/total?style=flat-square&color=059669&label=Downloads)](https://github.com/leanbitlab-org/LtvLauncher/releases)
+[![Stars](https://img.shields.io/github/stars/leanbitlab-org/LtvLauncher?style=flat-square&color=dc2626&label=Stars)](https://github.com/leanbitlab-org/LtvLauncher/stargazers)
+[![License: GPL v3](https://img.shields.io/badge/License-GPL_v3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
+[![Sponsor](https://img.shields.io/badge/Sponsor-LeanBitLab-db2777?style=flat-square&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/LeanBitLab)
+[![Donate on Open Collective](https://img.shields.io/badge/Donate-Open_Collective-1f6feb?style=flat-square&logo=opencollective&logoColor=white)](https://opencollective.com/leanbitlab-org)
 
-# Hearth
+**A fast, private, and customizable open-source launcher for Android TV.**  
+*Forked from [FLauncher](https://github.com/osrosal/flauncher) (originally by [etienn01](https://gitlab.com/flauncher/flauncher)).*
 
-**A calm, family-friendly home screen for Google TV and Android TV.**
-
-[![Latest Release](https://img.shields.io/github/v/release/theSiegs/Hearth?style=flat-square&color=4f46e5&label=Release)](https://github.com/theSiegs/Hearth/releases/latest)
-[![License: GPL v3](https://img.shields.io/badge/License-GPL_v3-blue.svg?style=flat-square)](LICENSE)
-
-[Features](#features) • [Download](#download) • [Setup](#setup) • [Profile Pairing](docs/profile-pairing.md) • [Search](docs/search.md) • [Home Assistant](docs/home-assistant.md) • [Credits](#credits)
+[Screenshots](#-screenshots) • [Download APKs](#-download) • [Features](#-features) • [Setup Guide](#-setup-guide) • [Community](#-community--contributing) • [Other Projects](https://github.com/LeanBitLab#-android-projects)
 
 </div>
 
 ---
 
-Hearth is a quiet, ad-free interface for Google TV: your wallpaper, a dock of favorites, and what you were
-watching. It follows Google TV's own profiles, so each person (and each kid) gets their own home screen, and it
-can open a number of apps (Disney+, Netflix and more) straight into the right profile. It has no ads, no
-analytics and no trackers.
+## 🚀 Overview
 
-<!-- TODO screenshots: home with dock, Continue Watching, Settings panel, Setup checklist, Profile Pairing, HA panel -->
+**LTvLauncher** is an open-source, private, and ad-free launcher designed specifically for Android TV, Google TV, and Fire TV devices. Built with Flutter, it delivers a responsive, remote-friendly interface focused on simplicity, speed, and deep customization.
 
-## Features
+With native D-pad navigation, recency-sorted Continue Watching rows, customizable categories, dynamic weather & status bar widgets, TV input source switching, system-wide notification overlays, and OLED screensavers, LTvLauncher gives you total control over your TV home screen without intrusive ads or algorithmic noise.
 
-### Home screen
-- **Wallpaper first.** A dock of favorite apps along the bottom; press Up for Continue Watching (with
-  cover art, most recent first) and Down for all apps, as a grid over a blurred wallpaper.
-- **Settings on the left, Home Assistant on the right.** Left at the left edge opens Settings; Right at the
-  right edge opens your Home Assistant dashboard (if turned on for that profile).
-- **Themes and appearance:** accent colors, card styles, day/night wallpapers, an OLED-friendly black background,
-  and custom banners for apps that lack one.
+---
 
-### Made for families
-- **Google TV profiles, followed automatically.** Hearth knows which Google TV profile is active and gives each
-  one its own layout of apps and dock.
-- **Kids profiles:** apps a kids profile hasn't approved stay hidden, and Hearth's settings need the parent PIN.
-- **Profile Pairing:** when Hearth opens Netflix, Disney+, Apple TV, HBO Max or Paramount+, it picks the matching
-  profile on the app's "Who's watching?" screen for you, behind an "Opening Netflix as John…" card. No more
-  landing in the wrong profile, or kids in a grown-up one. [How it works](docs/profile-pairing.md)
-  > [!WARNING]
-  > Profile Pairing is a bit fragile. It reads each app's profile screen the way a screen reader would, so an app
-  > update can change that screen and break pairing for that app until Hearth catches up. When it can't find its
-  > way, Hearth leaves the app's own picker up. Pull requests that repair or add apps are welcome.
-- **Sleep when idle:** put the TV to sleep after a stretch with no remote presses (playing video counts as
-  activity).
+## 📸 Screenshots
 
-### Search
-- **Find films and shows** from the search circle in the top bar, with posters and where they're streaming, and
-  open them straight in the app that has them (or on Google TV's page). Titles come from Wikidata, posters from TMDB.
-  [How it works and its limits](docs/search.md)
+<table>
+  <tr>
+    <td align="center"><b>Home Screen</b></td>
+    <td align="center"><b>Settings Overview</b></td>
+    <td align="center"><b>Category & Layout</b></td>
+    <td align="center"><b>Accessibility & Remap</b></td>
+    <td align="center"><b>OLED Screensaver</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/screenshot_1.png" width="180" alt="Home Screen"/></td>
+    <td><img src="docs/images/screenshot_2.png" width="180" alt="Settings Overview"/></td>
+    <td><img src="docs/images/screenshot_3.png" width="180" alt="Category & Layout"/></td>
+    <td><img src="docs/images/screenshot_4.png" width="180" alt="Accessibility & Remap"/></td>
+    <td><img src="docs/images/screensaver.gif" width="180" alt="OLED Screensaver"/></td>
+  </tr>
+</table>
 
-### Home Assistant
-- **Notifications on the TV**, compatible with Home Assistant's *Notifications for Android TV / Fire TV*
-  integration, plus Hearth extras: a live camera picture in the card and up to three buttons that run
-  Home Assistant actions (for example "Unlock the door" from a doorbell alert).
-- **Dashboard panel:** a slide-in panel with your scenes and room controls, set up by scanning a QR code with
-  your phone (no typing tokens with a remote).
-- **Remote buttons:** map a remote button (press or hold) to a Home Assistant scene, script or toggle.
-- **TV status** pushed to Home Assistant: the app in front, what's playing, the profile, screen on/off.
+---
 
-[Home Assistant guide](docs/home-assistant.md)
+## ✨ Features
 
-### Remote, apps and updates
-- **Home Button Fix:** on Google TV the Home button opens Hearth instead of Google's home screen. Hearth warns
-  you if Android switched it off (for example after an update).
-- **Remote buttons:** remap buttons to apps, inputs, profiles, Home, Settings, sleep or Home Assistant.
-- **Setup checklist:** every Android setting Hearth needs, with a card that tells you exactly what to pick on the
-  next screen before it opens it.
-- **Updates from inside Hearth,** installed the way app stores install them, so Android keeps Hearth's
-  accessibility features switched on after an update. After the first update, later ones usually install
-  without asking.
-- **Companion apps:** install and update [HearthTube](https://github.com/theSiegs/HearthTube) (YouTube for
-  Hearth) from Settings. HearthTube follows Hearth's profile, clock, language and wallpaper, and can check
-  Hearth's parent PIN.
-- **Notifications** panel and pop-ups, weather (built in, or from Breezy Weather), TV input switching, and daily
-  automatic backups of your settings.
+### 🎬 Continue Watching & Channels
+- **Smart Recency Sorting**: Automatically aggregates and sorts Watch Next program cards by their latest playback timestamp, ensuring your most recently watched shows and movies always appear first.
+- **Theme-Adaptive Cards**: Media cards automatically adapt to the active visual style, including glowing focus indicators, border outlines, and corner radiuses.
+- **Clean Settings Configuration**: Toggle the Continue Watching channel directly from Settings without cluttering the home screen with persistent permission warnings.
 
-## Download
+### 🌤️ Status Bar & Weather Integration
+- **Breezy Weather Integration**: Seamless support for local weather forecasts via Breezy Weather and Open-Meteo.
+- **Smart Unit Conversion**: Automatic Kelvin-to-Celsius/Fahrenheit auto-detection and conversion to prevent temperature anomalies.
+- **Weather Indicators**: Configurable precipitation/rain warning icons and customizable refresh intervals.
+- **Live Data Consumption Tracker**: Monitor daily network bandwidth (WiFi, Ethernet, or Mobile) directly from the status bar.
+- **Quick WiFi Shortcut**: Network status icon doubles as a 1-click shortcut to system WiFi settings.
+- **Stable Focus Traversal**: Precise remote focus alignment preventing focus jumps when navigating the status bar.
 
-Get the latest APK from [Releases](https://github.com/theSiegs/Hearth/releases/latest):
+### 🔔 System Notifications & TV Keypad Control
+- **Global Floating Overlays**: Receive real-time notification alerts overlaid across any running TV app.
+- **Notification Drawer**: Dedicated remote-friendly panel to view, inspect, and manage system notifications.
+- **Intuitive Blocked Apps Manager**: Clean TV remote D-pad controls (Up/Down navigation, Left/Right quick removal, and Clear All) to block unwanted notifications.
 
-| File | For |
-|:---|:---|
-| `Hearth-armeabi-v7a-release.apk` | Most streaming sticks: onn 4K, Fire TV Stick, older TVs (32-bit ARM) |
-| `Hearth-arm64-v8a-release.apk` | Chromecast with Google TV, Nvidia Shield, newer TVs (64-bit ARM) |
-| `Hearth-universal-release.apk` | Any device, if you're not sure (larger) |
+### 🎨 Themes, Customization & Banners
+- **4 Distinct Visual Themes**: Choose between **Modern / Default**, **Premium**, **Classic**, and **Capsule** card styles.
+- **Accent Color Engine**: Personalize the launcher with multiple vibrant color swatches and presets.
+- **Dynamic Wallpapers**: Time-based automatic switching between day and night backgrounds, or a true pitch-black background for OLED displays.
+- **Custom Banner Support**: Assign custom banner images to sideloaded and unthemed Android TV apps.
+- **High-Visibility Focus Indicators**: Double-border focus indicator ensuring sharp cursor visibility on any background, complete with edge bump resistance.
 
-Install it with a file manager or the Downloader app. Once installed, Hearth updates itself
-(Settings → Check for Updates).
+### 📺 TV Inputs & Accessibility
+- **Hardware Input Source Selector**: Quickly switch between HDMI 1, HDMI 2, AV, and component inputs directly from the launcher.
+- **Built-in Home Button Fix**: Seamless accessibility remapper service for Google TV and Fire TV devices that override default launchers.
+- **Burn-in Protection Screensaver**: Minimal OLED screensaver with 30-second clock position shifting.
+- **Audio Feedback**: Remote key navigation sound feedback.
+
+### 💾 Privacy & Data Management
+- **100% Ad-Free & Private**: No analytics, no ads, no trackers, zero network telemetry.
+- **Multiple Backups & Restore Dialog**: Export configuration backups with timestamps and restore them via a D-pad friendly picker.
+- **Category Customization**: Reorder, rename, hide, and organize apps in grid or row layouts with remote arrow keys.
+
+---
+
+## 📥 Download
+
+<table border="0">
+  <tr>
+    <td align="center" valign="middle">
+      <a href="https://github.com/leanbitlab-org/LtvLauncher/releases/latest">
+        <img alt="Get it on GitHub" src=".github/assets/get_it_on_github.png" height="75">
+      </a>
+    </td>
+    <td align="center" valign="middle">
+      <a href="https://apt.izzysoft.de/fdroid/index/apk/com.leanbitlab.ltvL">
+        <img alt="Get it on IzzyOnDroid" src=".github/assets/IzzyOnDroid.png" height="75">
+      </a>
+    </td>
+    <td align="center" valign="middle">
+      <a href="https://go.aftvnews.com">
+        <img alt="Downloader Code: 7259827" src=".github/assets/get_it_on_downloader.png" height="75">
+      </a>
+    </td>
+    <td align="center" valign="middle">
+      <a href="https://github.com/leanbitlab-org/LtvLauncher/releases">
+        <img alt="Pre-release" src=".github/badges/prerelease.png" height="75">
+      </a>
+    </td>
+  </tr>
+</table>
+
+### Architecture Matrix
+
+| File | Target Devices | Architecture |
+|:---|:---|:---|
+| **`LTvLauncher-universal-release.apk`** | **Recommended** for any Android TV or Fire TV device | Universal |
+| **`LTvLauncher-arm64-v8a-release.apk`** | Chromecast with Google TV (4K/HD), Nvidia Shield TV, newer smart TVs | 64-bit ARM (`arm64-v8a`) |
+| **`LTvLauncher-armeabi-v7a-release.apk`** | Fire TV Stick (Lite, 4K, 4K Max), older smart TVs, budget boxes | 32-bit ARM (`armeabi-v7a`) |
+
+> [!TIP]
+> **Fast Installation via the Downloader App (Fire TV & Android TV)**:
+> 1. Open the **Downloader** app by AFTVnews on your TV (available on Amazon Appstore & Google Play Store).
+> 2. Enter quick code **`7259827`** in the URL / search box.
+> 3. Downloader will automatically download and prompt you to install the latest LTvLauncher release.
+
+---
+
+## 🛠️ Setup Guide
+
+### Method 1: Via Built-in Settings (Recommended for Android TV)
+This is the easiest and native way:
+1. Open **Settings -> Accessibility -> Set as default launcher**.
+2. Select **LTvLauncher** from the system home app picker or default apps list.
 
 > [!NOTE]
-> Android 13 and later "restrict" apps installed from a downloaded file, and Google TV has no on-screen way to lift
-> that, so Hearth's accessibility features (Home Button Fix, Profile Pairing) may refuse to turn on after a first
-> install from a downloaded APK. If that happens, run this once from a computer:
-> `adb shell appops set com.leanbitlab.ltvL ACCESS_RESTRICTED_SETTINGS allow`.
-> Updates installed from inside Hearth don't have this problem.
+> On **Google TV**, the stock launcher (`com.google.android.apps.tv.launcherx`) registers its HOME intent with priority 2, which overrides third-party launcher selections. If your device returns to Google TV when pressing Home, use **Method 2**.
 
-## Setup
+### Method 2: Home Button Fix (Google TV & Fire TV)
+If your device blocks changing the default launcher, use LTvLauncher's built-in Home Button Fix:
+1. Open **Settings -> Accessibility**.
+2. Select **Home Button Fix (Google TV)**.
+3. Turn on the accessibility service for **LTvLauncher** in your system settings.
 
-Open **Settings → Setup checklist** and work down the list. Each step explains what to choose, then opens the
-right Android screen:
+Once enabled, LTvLauncher automatically intercepts Home button presses and brings you straight to your custom home screen.
 
-| Step | Why |
-|:---|:---|
-| Hearth as the home app | Keeps kids profiles from blocking Hearth |
-| Home Button Fix | The Home button opens Hearth |
-| Notification access | Notifications and "now playing" |
-| Installing updates | Hearth can update itself and install companion apps |
-| Profile Pairing *(optional)* | Opens streaming apps in the right profile |
-| Hearth voice *(optional)* | Lets Profile Pairing read Netflix's profile screen |
+### Method 3: Remap the Home button via Key Mapper
+If you prefer key remapping:
+1. Install [Key Mapper](https://github.com/keymapperorg/KeyMapper).
+2. Create a trigger for your remote's **Home** button.
+3. Bind the action to launch **LTvLauncher**.
 
-In a kids profile, ask a parent to approve Hearth in that profile's app list, and set a parent PIN in
-**Settings → Parent PIN** from a grown-up profile.
+### Method 4: Disable the default launcher via ADB
 
-<details>
-<summary>Other ways to make Home open Hearth</summary>
+> [!WARNING]
+> Disabling system packages carries risks. Proceed with caution and ensure you have ADB debugging enabled on your TV.
 
-- **Key Mapper:** map the remote's Home button to open Hearth with
-  [Key Mapper](https://github.com/keymapperorg/KeyMapper).
-- **Disable Google TV's home (advanced, at your own risk):**
-  ```shell
-  adb shell pm disable-user --user 0 com.google.android.apps.tv.launcherx
-  adb shell pm disable-user --user 0 com.google.android.tungsten.setupwraith
-  # undo:
-  adb shell pm enable com.google.android.apps.tv.launcherx
-  adb shell pm enable com.google.android.tungsten.setupwraith
-  ```
-  Google TV profiles and kids features depend on Google TV's home, so Hearth doesn't recommend this.
-</details>
+Connect your computer to your TV via ADB (`adb connect <tv-ip-address>`) and run:
 
-## Privacy
+```shell
+# Disable the default Google TV launcher
+$ adb shell pm disable-user --user 0 com.google.android.apps.tv.launcherx
 
-Hearth has no ads, analytics or trackers. It talks to the internet only to check GitHub for updates, to fetch
-weather if you turn weather on, and to look up titles when you search. Home Assistant features talk only to your own Home Assistant, on your
-home network. Search sends only your search text to Wikidata, and (when posters are on) each result's TMDB id
-to TMDB. Profile Pairing reads only the streaming apps' "Who's watching?" screens, only right after Hearth
-opens them, and keeps nothing but the profile names it saw, on the TV.
+# Disable setup fallback to prevent auto-reenabling
+$ adb shell pm disable-user --user 0 com.google.android.tungsten.setupwraith
+```
 
-**Hearth voice** is a text-to-speech engine inside Hearth that Profile Pairing uses to hear Netflix's profile
-screen. It keeps nothing and sends nothing anywhere: what the streaming apps say goes only to Profile Pairing (and
-is never read aloud), and every other app's speech is handed to Google's voice. Turning Profile Pairing off
-switches this listening off too: Hearth voice then just passes all speech to Google's voice. To stop using it
-entirely, choose Google again under Settings → Accessibility → Text to speech.
-[More about Hearth voice](docs/profile-pairing.md#why-netflix-needs-hearth-voice)
+To re-enable the default launcher at any time:
+```shell
+$ adb shell pm enable com.google.android.apps.tv.launcherx
+$ adb shell pm enable com.google.android.tungsten.setupwraith
+```
 
-## Credits
+---
 
-Hearth is a fork of [LTvLauncher](https://github.com/leanbitlab-org/LtvLauncher) by LeanBitLab, with ideas from
-[Arc Launcher](https://github.com/meddouribadis/arclauncher) by Badis Meddouri. Both build on
-[FLauncher](https://gitlab.com/flauncher/flauncher) by etienn01 and its [fork](https://github.com/osrosal/flauncher)
-by osrosal. Thank you to all of them.
+## 📱 More Android Projects by LeanBitLab
 
-## License
+Discover our complete suite of privacy-first, open-source Android applications and utilities:  
+👉 **[Explore All LeanBitLab Android Projects](https://github.com/LeanBitLab#-android-projects)**
 
-GPL-3.0. See [LICENSE](LICENSE).
+---
+
+## 🤝 Community & Contributing
+
+- **Bug Reports & Feature Requests**: [Open a GitHub Issue](https://github.com/leanbitlab-org/LtvLauncher/issues)
+- **Discussions & Feedback**: [GitHub Discussions](https://github.com/leanbitlab-org/LtvLauncher/discussions)
+- **Official Telegram Channel**: [@LeanBitLab](https://t.me/leanbitlab)
+
+---
+
+## 💖 Support the Project
+
+Building and maintaining a lightweight, ad-free Android TV launcher requires hardware testing across various TV chipsets, display profiles, and continuous development.
+
+If LTvLauncher improves your daily TV experience, please consider supporting our work!
+
+<div align="left">
+  <a href="https://github.com/sponsors/LeanBitLab">
+    <img src="https://img.shields.io/static/v1?label=Sponsor%20on%20GitHub&message=%E2%9D%A4&logo=GitHub&color=%23db2777" height="38" alt="Sponsor LeanBitLab on GitHub"/>
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://opencollective.com/leanbitlab-org">
+    <img src="https://img.shields.io/static/v1?label=Donate%20on&message=Open%20Collective&logo=opencollective&logoColor=white&color=%231f6feb" height="38" alt="Donate to LeanBitLab on Open Collective"/>
+  </a>
+</div>
+
+---
+
+## 📜 Credits & Acknowledgments
+
+- **[FLauncher](https://gitlab.com/flauncher/flauncher)** by [etienn01](https://github.com/etienn01) — The original TV launcher project.
+- **[FLauncher (Fork)](https://github.com/osrosal/flauncher)** by [osrosal](https://github.com/osrosal) — The foundation for this fork.
+- All [contributors](https://github.com/leanbitlab-org/LtvLauncher/graphs/contributors) and open-source supporters!
+
+---
+
+## ⚖️ License
+
+LTvLauncher is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.  
+See the [LICENSE](LICENSE) file for details.
