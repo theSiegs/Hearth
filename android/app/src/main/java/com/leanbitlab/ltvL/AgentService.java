@@ -48,6 +48,7 @@ public class AgentService extends Service {
     private static final long PING_MS = 30_000;
 
     private static volatile String sPendingOpen;
+    private static volatile String sListeningTo;
     private static volatile AgentService sInstance;
 
     private HandlerThread mThread;
@@ -84,6 +85,17 @@ public class AgentService extends Service {
         prefs.edit().putString(KEY, key).apply();
         AgentService service = sInstance;
         if (service != null) service.reconnect();
+    }
+
+    /** Hearth's Profile Pairing is handling this app: Hearth's voice here relays what it says (HearthVoiceService). */
+    static boolean isListeningTo(String packageName) {
+        return packageName != null && packageName.equals(sListeningTo);
+    }
+
+    /** Relays what an app said through Hearth's voice here to Profile Pairing in Hearth. */
+    static void relaySpeech(String packageName, String text) {
+        AgentService service = sInstance;
+        if (service != null && text != null) service.send(json("type", "speech", "package", packageName, "text", text));
     }
 
     /** What Hearth asked to open, once (AgentActivity polls for it). */
@@ -169,7 +181,10 @@ public class AgentService extends Service {
                 try (Socket socket = new Socket(InetAddress.getByName("127.0.0.1"), AgentHub.PORT)) {
                     PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                     BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-                    out.println(new JSONObject().put("type", "hello").put("serial", serial).put("key", key));
+                    boolean voiceDefault = getPackageName().equals(android.provider.Settings.Secure.getString(
+                            getContentResolver(), "tts_default_synth"));
+                    out.println(new JSONObject().put("type", "hello").put("serial", serial).put("key", key)
+                            .put("voiceDefault", voiceDefault));
                     JSONObject reply = new JSONObject(in.readLine());
                     if ("welcome".equals(reply.optString("type"))) {
                         Log.i(TAG, "Connected to Hearth as serial " + serial);
@@ -179,7 +194,12 @@ public class AgentService extends Service {
                         String line;
                         while ((line = in.readLine()) != null) {
                             JSONObject message = new JSONObject(line);
-                            if ("open".equals(message.optString("type"))) sPendingOpen = message.optString("intent");
+                            String type = message.optString("type");
+                            if ("open".equals(type)) {
+                                sPendingOpen = message.optString("intent");
+                            } else if ("listen".equals(type)) {
+                                sListeningTo = message.isNull("package") ? null : message.optString("package");
+                            }
                         }
                     } else {
                         Log.i(TAG, "Hearth refused this agent's key");
@@ -188,6 +208,7 @@ public class AgentService extends Service {
                     Log.i(TAG, "Hearth unreachable: " + e.getMessage());
                 } finally {
                     mOut = null;
+                    sListeningTo = null;
                     mHandler.removeCallbacks(mPing);
                 }
             }

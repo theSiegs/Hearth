@@ -24,7 +24,8 @@ import java.util.concurrent.TimeUnit;
  * "Hearth voice", a text-to-speech engine for Profile Pairing. Netflix describes its "Who's watching?" screen only
  * by speaking it through the default engine, so while Profile Pairing handles an app's launch this engine hears what
  * that app says and keeps it quiet. Everything else, including the same apps at any other time (for someone using a
- * screen reader), is passed on to Google's voice.
+ * screen reader), is passed on to Google's voice. In another profile's user, where Hearth runs as that profile's
+ * agent, what the app says is relayed to Profile Pairing in Hearth (AgentService).
  */
 public class HearthVoiceService extends TextToSpeechService {
     private static final String TAG = "HearthVoice";
@@ -105,6 +106,12 @@ public class HearthVoiceService extends TextToSpeechService {
         String caller = getPackageManager().getNameForUid(request.getCallerUid());
         if (ProfilePairingService.isListeningTo(caller)) {
             ProfilePairingService.onSpeech(caller, text != null ? text.toString() : null);
+            silence(callback);
+            return;
+        }
+        // In another profile's user (Hearth as its agent): Profile Pairing runs in Hearth, so relay it there
+        if (AgentService.isListeningTo(caller)) {
+            AgentService.relaySpeech(caller, text != null ? text.toString() : null);
             silence(callback);
             return;
         }

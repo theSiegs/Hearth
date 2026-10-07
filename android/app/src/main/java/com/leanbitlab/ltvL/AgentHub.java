@@ -35,8 +35,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * object per line. Each profile's agent proves itself with a key Hearth hands it when it starts it (in the launch's
  * source bounds, the only thing a launch into another user carries), so another app on the TV can't pose as one.
  *
- * Agent to Hearth: {"type":"hello","serial":n,"key":"…"}, {"type":"watchNext","rows":[…]}, {"type":"ping"},
- * {"type":"opened","ok":bool}. Hearth to agent: {"type":"welcome"}, {"type":"open","intent":"intent:…"}.
+ * Agent to Hearth: {"type":"hello","serial":n,"key":"…","voiceDefault":bool}, {"type":"watchNext","rows":[…]},
+ * {"type":"ping"}, {"type":"opened","ok":bool}, {"type":"speech","package":"…","text":"…"} (what an app said through
+ * Hearth's voice there, for Profile Pairing). Hearth to agent: {"type":"welcome"}, {"type":"open","intent":"intent:…"},
+ * {"type":"listen","package":"…" or null} (the app Profile Pairing is handling, whose speech to relay).
  */
 final class AgentHub {
     static final int PORT = 47474;
@@ -50,6 +52,8 @@ final class AgentHub {
     private static boolean sStarted;
     private static final Map<Long, Connection> sConnections = new ConcurrentHashMap<>();
     private static final Map<Long, List<Map<String, Object>>> sWatchNext = new ConcurrentHashMap<>();
+    private static final Map<Long, Boolean> sVoiceDefault = new ConcurrentHashMap<>();
+    private static volatile String sListening;
 
     private static final class Connection {
         final long serial;
@@ -114,8 +118,10 @@ final class AgentHub {
             connection = new Connection(serial, socket, out);
             Connection old = sConnections.put(serial, connection);
             if (old != null) closeQuietly(old.socket);
+            sVoiceDefault.put(serial, hello.optBoolean("voiceDefault"));
             connection.send(new JSONObject().put("type", "welcome"));
-            Log.i(TAG, "Agent for serial " + serial + " connected");
+            connection.send(new JSONObject().put("type", "listen").put("package", sListening != null ? sListening : JSONObject.NULL));
+            Log.i(TAG, "Agent for serial " + serial + " connected (Hearth voice there: " + hello.optBoolean("voiceDefault") + ")");
             String line;
             while ((line = in.readLine()) != null) {
                 JSONObject message = new JSONObject(line);
@@ -124,6 +130,12 @@ final class AgentHub {
                         sWatchNext.put(serial, rows(serial, message.optJSONArray("rows")));
                         notifyWatchNextChanged();
                         break;
+                    case "speech": {
+                        // Only the app Profile Pairing is handling (ProfilePairingService checks too)
+                        String pkg = message.optString("package");
+                        if (pkg.equals(sListening)) ProfilePairingService.onSpeech(pkg, message.optString("text"));
+                        break;
+                    }
                     case "opened":
                         Log.i(TAG, "Agent for serial " + serial + " opened: " + message.optBoolean("ok"));
                         break;
@@ -170,6 +182,25 @@ final class AgentHub {
 
     static Uri watchNextUri(Context context) {
         return Uri.parse("content://" + context.getPackageName() + ".profile/agent_watch_next");
+    }
+
+    /** Hearth's voice is the text-to-speech engine in that profile's user, as its agent reported. */
+    static boolean isVoiceDefault(long serial) {
+        return Boolean.TRUE.equals(sVoiceDefault.get(serial));
+    }
+
+    /**
+     * The app Profile Pairing is handling (null: none): every agent relays what that app says through Hearth's voice
+     * in its user.
+     */
+    static void setListening(String pkg) {
+        sListening = pkg;
+        for (Connection connection : sConnections.values()) {
+            try {
+                connection.send(new JSONObject().put("type", "listen").put("package", pkg != null ? pkg : JSONObject.NULL));
+            } catch (Exception ignored) {
+            }
+        }
     }
 
     /** The profile's agent has reported its Watch Next at least once since Hearth started. */
