@@ -42,8 +42,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final long PROFILE_USER_RECHECK_MS = 1_500;
     private static final long PROFILE_SETTLE_MS = 2_000;
     private static final long OWNER_SETTLE_MS = 5_000;
-    private long mActiveSince = 0;
-    private static final long KIDS_SETTLE_MS = 10_000;
     private long mCandidateSerial = ProfileUsers.UNKNOWN;
     private long mCandidateAt = 0;
     private final Runnable mSettleCheck = () -> checkProfileUser("settled");
@@ -190,7 +188,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // between a kids profile and a grown-up one) may lift the screen time lock.
         boolean picked = commitPendingProfile();
         checkProfileUser("apps suspended/unsuspended");
-        markKidsIfSettled();
         boolean kids = ProfileUsers.isKids(this);
         boolean flipped = mKidsState != null && mKidsState != kids;
         mKidsState = kids;
@@ -247,7 +244,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mCandidateSerial = ProfileUsers.UNKNOWN;
         long previous = mActiveSerial;
         mActiveSerial = serial;
-        mActiveSince = SystemClock.elapsedRealtime();
         if (!ProfileUsers.key(serial).equals(getActiveProfileKey(this))) {
             getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE).edit().putString(PROFILE_KEY_KEY, ProfileUsers.key(serial)).apply();
             ProfileProvider.notifyChanged(this);
@@ -270,22 +266,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (previous != ProfileUsers.UNKNOWN) {
             clearScreenTimeLock();
             retryPendingBounce();
-        }
-    }
-
-    /**
-     * Apps suspended in a profile that has been on for a while: a kids profile, for good. (Right after a switch
-     * the last profile's suspensions can still be in place.)
-     */
-    private void markKidsIfSettled() {
-        if (mActiveSerial == ProfileUsers.UNKNOWN || mCandidateSerial != ProfileUsers.UNKNOWN
-                || SystemClock.elapsedRealtime() - mActiveSince < KIDS_SETTLE_MS
-                || !ProfileUsers.anySuspended(getPackageManager())) {
-            return;
-        }
-        if (ProfileUsers.markKids(this, mActiveSerial)) {
-            android.util.Log.i(PROFILE_TAG, "Serial " + mActiveSerial + " is a kids profile");
-            ProfileProvider.notifyChanged(this);
         }
     }
 
@@ -784,7 +764,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
             checkIdle();
             // In case a switch broadcast was missed
             checkProfileUser("periodic check");
-            markKidsIfSettled();
             mIdleHandler.postDelayed(this, IDLE_CHECK_MS);
         }
     };

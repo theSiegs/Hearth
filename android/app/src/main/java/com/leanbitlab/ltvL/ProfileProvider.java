@@ -24,7 +24,7 @@ import java.util.Calendar;
  * accent color ("7C4DFF"), time format ("h:mm a") and date format ("EEE, MMM d") as intl/ICU patterns (Hearth's
  * defaults when the user never changed them), app language ("" = the system's), whether a parent PIN is set,
  * the gradient's id and a stamp that changes when the wallpaper picture does (0 = no picture, use the gradient),
- * kids_profile (1 in a Google TV kids profile; once seen, a profile stays one even if every app gets approved),
+ * kids_profile (1 in a Google TV kids profile: one Family Link supervises, whatever apps a parent approved),
  * screen_time_up (1 while Google TV's bedtime / time's up lock is on, until a profile switch; kept across Hearth
  * restarts), service_running (1 while Hearth's accessibility service runs: without it Hearth sees no switches and no
  * screen time, so kids_profile / screen_time_up can't be trusted) and profile_id (the Google TV profile's lasting
