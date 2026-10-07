@@ -296,7 +296,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     }
 
     // Once the chooser has laid out (and its focus animation settled): which tile is the current account, and
-    // photos for profiles that have none yet (or a week-old one).
+    // photos for profiles that have none yet or weren't checked today.
     private static final long CHOOSER_READ_DELAY_MS = 1_200;
     private final Runnable mReadChooser = this::readChooser;
 
@@ -335,9 +335,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
                     if (screen == null) return;
                     boolean saved = false;
                     for (java.util.Map.Entry<String, android.graphics.Rect> photo : due.entrySet()) {
-                        if (ProfileAvatars.save(LauncherAccessibilityService.this, photo.getKey(), screen, photo.getValue())) {
+                        int outcome = ProfileAvatars.save(LauncherAccessibilityService.this, photo.getKey(), screen,
+                                photo.getValue());
+                        if (outcome == ProfileAvatars.SAVED) {
+                            android.util.Log.i(PROFILE_TAG, "New photo for " + photo.getKey());
                             saved = true;
-                        } else {
+                        } else if (outcome == ProfileAvatars.FAILED) {
                             android.util.Log.i(PROFILE_TAG, "No usable photo for " + photo.getKey());
                         }
                     }
