@@ -50,11 +50,17 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final long GOOGLE_SETUP_HOLD_MS = 2 * 60_000;
     private long mGoogleSetupUntil = 0;
 
+    /** Google TV's profile chooser, in either form (ProfileChooserActivity or ProfileChooserTransparentActivity). */
+    private static boolean isChooser(String className) {
+        return className.startsWith(GOOGLE_TV_PACKAGE + ".profile.chooser.ProfileChooser");
+    }
+
     private static boolean isGoogleSetupScreen(String className) {
         String c = className.toLowerCase(java.util.Locale.ROOT);
         // Not the account check Google TV runs on every chooser visit (AccountVerification/Reauth), or Hearth
         // would hold back after ordinary switches.
-        return c.contains(".onboarding.") || c.contains("setup") || c.contains("createpin");
+        // Nor the PIN prompt (CreatePinActivity) Google TV shows on every switch into or out of a kids profile.
+        return c.contains(".onboarding.") || c.contains("setup");
     }
     /** Whether Google TV is suspending apps (a kids profile), as last seen; null until first checked. */
     private Boolean mKidsState;
@@ -191,14 +197,14 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
         String packageName = pkg.toString();
         String className = cls.toString();
-        mChooserOnScreen = GOOGLE_TV_PACKAGE.equals(packageName) && GOOGLE_TV_CHOOSER_ACTIVITY.equals(className);
+        mChooserOnScreen = GOOGLE_TV_PACKAGE.equals(packageName) && isChooser(className);
 
         if (GOOGLE_TV_PACKAGE.equals(packageName)) {
             if (className.startsWith(GOOGLE_TV_WELLBEING_PREFIX)) {
                 mScreenTimeLock = true;
                 if (mHaStatus != null) mHaStatus.setScreenTimeLock(true);
             }
-            if (GOOGLE_TV_CHOOSER_ACTIVITY.equals(className)) {
+            if (isChooser(className)) {
                 long now = SystemClock.elapsedRealtime();
                 if (mFirstFocusLabel != null && now - mFirstFocusAt < CHOOSER_INITIAL_FOCUS_MS) {
                     // Initial focus was reported before the window change
