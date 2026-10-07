@@ -14,6 +14,11 @@ public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (!Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) return;
+        // In another Google TV profile's user, this is that profile starting: its agent goes with it
+        if (AgentService.isAgent(context)) {
+            AgentService.start(context);
+            return;
+        }
         // shared_preferences stores Flutter keys in this file with a "flutter." prefix.
         boolean enabled = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
                 .getBoolean("flutter.start_on_boot", false);

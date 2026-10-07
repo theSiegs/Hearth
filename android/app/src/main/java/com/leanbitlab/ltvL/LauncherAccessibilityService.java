@@ -127,6 +127,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         userFilter.addAction(Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE);
         registerReceiver(mProfileUserReceiver, userFilter);
         checkProfileUser("service start");
+        // Hearth's agents in the other profiles' users report and open things through this
+        AgentHub.start(this);
         // Restarted (Android killed the service, an update) while this profile's screen time was up: still up,
         // until Google TV says otherwise or the profile changes.
         if (mActiveSerial != ProfileUsers.UNKNOWN && ProfileUsers.screenTimeUpSerial(this) == mActiveSerial) {

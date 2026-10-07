@@ -94,6 +94,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
   static String _key(WatchNextProgram p) => "${p.packageName}|${p.id}";
 
   bool _visibleToActiveProfile(WatchNextProgram p) {
+    if (p.profileOwned) return true;
     final owner = (_ownership[_key(p)] as Map?)?["owner"] as String?;
     if (!_ownershipLoaded) return true;
     if (owner == null || _activeProfile == null) return false;
@@ -122,6 +123,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
       bool changed = false;
       final keys = <String>{};
       for (final p in programs) {
+        if (p.profileOwned) continue;
         final key = _key(p);
         keys.add(key);
         final entry = _ownership[key] as Map?;
@@ -136,7 +138,8 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
         }
       }
       final before = _ownership.length;
-      _ownership.removeWhere((key, _) => !keys.contains(key));
+      // Only the owner's own list says which of its entries are gone; another profile's (from its agent) doesn't
+      if (!programs.any((p) => p.profileOwned)) _ownership.removeWhere((key, _) => !keys.contains(key));
       if (changed || _ownership.length != before) await prefs.setString(_ownershipKey, jsonEncode(_ownership));
     } catch (e) {
       log('Failed to track Continue Watching owners', name: 'WatchNextService', error: e);
