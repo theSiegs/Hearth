@@ -28,8 +28,12 @@ class App
 
   bool sideloaded;
 
-  /// Blocked in the current Google TV profile (kids profile without approval). Not persisted.
+  /// Blocked in the current Google TV profile (kids profile without approval, or its screen time is up). Not persisted.
   bool suspended = false;
+
+  /// A parent approved it for the current Google TV kids profile (always true for grown-ups). Unlike [suspended],
+  /// it stays true while screen time is up. Not persisted.
+  bool approved = true;
 
   Map<int, int> categoryOrders;
 
@@ -54,6 +58,7 @@ class App
     hidden = false,
     sideloaded = data['sideloaded'] as bool? ?? false,
     suspended = data['suspended'] as bool? ?? false,
+    approved = data['approved'] as bool? ?? true,
     categoryOrders = <int, int>{} {
     if (data.containsKey('action')) {
       action = data['action'] as String?;

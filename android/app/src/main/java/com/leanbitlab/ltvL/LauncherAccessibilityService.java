@@ -133,6 +133,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             android.util.Log.i(PROFILE_TAG, "Screen time was up before the restart: still up");
             mScreenTimeLock = true;
         }
+        updateScreenTimeLock("service start");
         getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).edit().putBoolean(HOME_FIX_SEEN_KEY, true).apply();
         mIdleHandler.postDelayed(mIdleCheck, IDLE_CHECK_MS);
         mHaOverlay = new HaNotificationOverlay(this);
@@ -201,6 +202,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         } else if (mHaStatus != null) {
             mHaStatus.onAppsChanged();
         }
+        updateScreenTimeLock("apps blocked/unblocked");
         retryPendingBounce();
     }
 
@@ -265,6 +267,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         if (previous != ProfileUsers.UNKNOWN) {
             clearScreenTimeLock();
+            updateScreenTimeLock("profile switch");
             retryPendingBounce();
         }
     }
@@ -487,6 +490,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         String packageName = pkg.toString();
         String className = cls.toString();
         mLastWindowPackage = packageName;
+        mWellbeingInFront = GOOGLE_TV_PACKAGE.equals(packageName) && className.startsWith(GOOGLE_TV_WELLBEING_PREFIX);
         // The chooser stays "open" while Google TV lays its account check / PIN screens over it; it's over once
         // Google TV's home or any other app comes up.
         boolean wasOnScreen = mChooserOnScreen;
@@ -508,11 +512,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (GOOGLE_TV_PACKAGE.equals(packageName)) {
             boolean wellbeing = className.startsWith(GOOGLE_TV_WELLBEING_PREFIX);
             if (wellbeing) {
-                boolean changed = !mScreenTimeLock;
-                mScreenTimeLock = true;
-                ProfileUsers.setScreenTimeUpSerial(this, mActiveSerial);
-                if (mHaStatus != null) mHaStatus.setScreenTimeLock(true);
-                if (changed) ProfileProvider.notifyChanged(this);
+                mWellbeingSeenAt = SystemClock.elapsedRealtime();
+                setScreenTimeLock();
             }
             reportScreenTimeText(className, event, wellbeing);
             if (isChooser(className)) {
@@ -539,15 +540,16 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 // A new profile's home: the last one's screen time no longer applies (its own comes up next)
                 if (commitPendingProfile()) clearScreenTimeLock();
                 checkProfileUser("Google TV home");
+                updateScreenTimeLock("Google TV home");
                 mGoogleTvScreenInFront = false;
                 // Google TV opens its own home by component after a profile switch, on Back from apps, etc.,
                 // ignoring the default home app. Bring the launcher back whenever that's allowed.
                 if (SystemClock.elapsedRealtime() < mGoogleSetupUntil) {
                     android.util.Log.i(PROFILE_TAG, "Not taking over: Google TV setup in progress");
-                } else if (canTakeOver() && ProfileUsers.isKids(this)) {
-                    // A kids profile: Google TV opens its time up / bedtime screen from its home a moment after
-                    // the home itself, and covering the home first would hide it (Hearth, the home app, can't be
-                    // suspended). Take over only if the home is still what's in front.
+                } else if (canTakeOver() && ProfileUsers.isKids(this) && !mScreenTimeKnown) {
+                    // A kids profile whose screen time the apps can't tell: Google TV opens its time up / bedtime
+                    // screen from its home a moment after the home itself, and covering the home first would hide
+                    // it (Hearth, the home app, can't be suspended). Take over only if the home is still in front.
                     mIdleHandler.removeCallbacks(mKidsHomeTakeOver);
                     mIdleHandler.postDelayed(mKidsHomeTakeOver, KIDS_HOME_GRACE_MS);
                 } else if (canTakeOver()) {
@@ -671,6 +673,42 @@ public class LauncherAccessibilityService extends AccessibilityService {
         return service != null && service.mScreenTimeLock;
     }
 
+    private void setScreenTimeLock() {
+        boolean changed = !mScreenTimeLock;
+        mScreenTimeLock = true;
+        ProfileUsers.setScreenTimeUpSerial(this, mActiveSerial);
+        if (mHaStatus != null) mHaStatus.setScreenTimeLock(true);
+        if (changed) ProfileProvider.notifyChanged(this);
+    }
+
+    // When Google TV last showed a time up / bedtime screen; it blocks the apps a moment around that, so the apps'
+    // state doesn't overrule the screen for a while.
+    private long mWellbeingSeenAt = 0;
+    /** Google TV's time up / bedtime screen is the window in front: never lift the lock under it. */
+    private boolean mWellbeingInFront = false;
+    private static final long WELLBEING_TRUST_MS = 15_000;
+    /** The apps' state settled screen time the last time it was checked (see ProfileUsers.isScreenTimeUp). */
+    private boolean mScreenTimeKnown = false;
+
+    /**
+     * Screen time from the apps: in a kids profile Google TV blocks even the approved apps while time is up, and
+     * unblocks them when it isn't (bedtime over, bonus time), so the lock follows that, seen or not. When the apps
+     * can't tell, Google TV's own screens decide as before.
+     */
+    private void updateScreenTimeLock(String why) {
+        if (mActiveSerial == ProfileUsers.UNKNOWN || mCandidateSerial != ProfileUsers.UNKNOWN) return;
+        Boolean up = ProfileUsers.isScreenTimeUp(this, mActiveSerial);
+        mScreenTimeKnown = up != null;
+        if (up == null || up == mScreenTimeLock) return;
+        if (up) {
+            android.util.Log.i(PROFILE_TAG, "Screen time is up: the approved apps are blocked (" + why + ")");
+            setScreenTimeLock();
+        } else if (!mWellbeingInFront && SystemClock.elapsedRealtime() - mWellbeingSeenAt > WELLBEING_TRUST_MS) {
+            android.util.Log.i(PROFILE_TAG, "Screen time is over: the approved apps are unblocked (" + why + ")");
+            clearScreenTimeLock();
+        }
+    }
+
     private void clearScreenTimeLock() {
         boolean changed = mScreenTimeLock;
         mScreenTimeLock = false;
@@ -764,6 +802,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             checkIdle();
             // In case a switch broadcast was missed
             checkProfileUser("periodic check");
+            updateScreenTimeLock("periodic check");
             mIdleHandler.postDelayed(this, IDLE_CHECK_MS);
         }
     };
@@ -809,7 +848,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             return;
         }
         android.media.AudioManager audio = (android.media.AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        if (audio != null && audio.isMusicActive()) {
+        if (isMediaPlaying() || audio != null && audio.isMusicActive()) {
             // Watching something counts as activity
             onUserInput();
             return;
@@ -825,6 +864,26 @@ public class LauncherAccessibilityService extends AccessibilityService {
             android.widget.Toast.makeText(this, "No activity: going to sleep in 1 minute. Press any button to stay on.",
                     android.widget.Toast.LENGTH_LONG).show();
         }
+    }
+
+    /**
+     * An app reports playing through its media session (video apps often don't play on the music stream, which
+     * is all isMusicActive sees). Needs Hearth's notification access; false without it.
+     */
+    private boolean isMediaPlaying() {
+        android.media.session.MediaSessionManager sessions =
+                (android.media.session.MediaSessionManager) getSystemService(Context.MEDIA_SESSION_SERVICE);
+        if (sessions == null) return false;
+        try {
+            for (android.media.session.MediaController controller : sessions.getActiveSessions(
+                    new android.content.ComponentName(this, LauncherNotificationListenerService.class))) {
+                android.media.session.PlaybackState state = controller.getPlaybackState();
+                if (state != null && state.getState() == android.media.session.PlaybackState.STATE_PLAYING) return true;
+            }
+        } catch (SecurityException e) {
+            return false;
+        }
+        return false;
     }
 
     void sleepNow() {

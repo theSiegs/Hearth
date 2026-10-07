@@ -386,6 +386,7 @@ class AppsService extends ChangeNotifier {
           application.sideloaded = applicationFromSystem['sideloaded'];
         }
         application.suspended = applicationFromSystem['suspended'] as bool? ?? false;
+        application.approved = applicationFromSystem['approved'] as bool? ?? true;
       }
 
       if (_categoriesById.isNotEmpty) {
