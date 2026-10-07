@@ -42,6 +42,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final long PROFILE_USER_RECHECK_MS = 1_500;
     private static final long PROFILE_SETTLE_MS = 2_000;
     private static final long OWNER_SETTLE_MS = 5_000;
+    private long mActiveSince = 0;
+    private static final long KIDS_SETTLE_MS = 10_000;
     private long mCandidateSerial = ProfileUsers.UNKNOWN;
     private long mCandidateAt = 0;
     private final Runnable mSettleCheck = () -> checkProfileUser("settled");
@@ -65,6 +67,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final String GOOGLE_TV_CHOOSER_ACTIVITY = GOOGLE_TV_PACKAGE + ".profile.chooser.ProfileChooserActivity";
     private static final String PROFILE_PREFS = "ltv_active_profile";
     private static final String PROFILE_NAME_KEY = "name";
+    private static final String PROFILE_KEY_KEY = "key";
     private static final long PROFILE_CLICK_WINDOW_MS = 60_000;
     private static final long CHOOSER_INITIAL_FOCUS_MS = 1_500;
     private long mChooserOpenedAt = 0;
@@ -118,7 +121,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         sInstance = this;
-        mKidsState = hasSuspendedApps(this);
+        mKidsState = ProfileUsers.isKids(this);
         android.content.IntentFilter userFilter = new android.content.IntentFilter(ProfileUsers.ACTION_PROFILE_ACCESSIBLE);
         userFilter.addAction(ProfileUsers.ACTION_PROFILE_INACCESSIBLE);
         // Android 11's Google TV toggles quiet mode instead
@@ -126,12 +129,20 @@ public class LauncherAccessibilityService extends AccessibilityService {
         userFilter.addAction(Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE);
         registerReceiver(mProfileUserReceiver, userFilter);
         checkProfileUser("service start");
+        // Restarted (Android killed the service, an update) while this profile's screen time was up: still up,
+        // until Google TV says otherwise or the profile changes.
+        if (mActiveSerial != ProfileUsers.UNKNOWN && ProfileUsers.screenTimeUpSerial(this) == mActiveSerial) {
+            android.util.Log.i(PROFILE_TAG, "Screen time was up before the restart: still up");
+            mScreenTimeLock = true;
+        }
         getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).edit().putBoolean(HOME_FIX_SEEN_KEY, true).apply();
         mIdleHandler.postDelayed(mIdleCheck, IDLE_CHECK_MS);
         mHaOverlay = new HaNotificationOverlay(this);
         updateHaServer();
         mHaStatus = new HaStatusReporter(this);
         mHaStatus.start();
+        if (mScreenTimeLock) mHaStatus.setScreenTimeLock(true);
+        ProfileProvider.notifyChanged(this);  // service_running
         android.content.IntentFilter screenFilter = new android.content.IntentFilter(Intent.ACTION_SCREEN_ON);
         screenFilter.addAction(Intent.ACTION_SCREEN_OFF);
         registerReceiver(mScreenReceiver, screenFilter);
@@ -144,6 +155,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     @Override
     public void onDestroy() {
         if (sInstance == this) sInstance = null;
+        ProfileProvider.notifyChanged(this);  // service_running
         mIdleHandler.removeCallbacks(mIdleCheck);
         mIdleHandler.removeCallbacks(mKidsHomeTakeOver);
         mIdleHandler.removeCallbacks(mReadScreenTime);
@@ -178,14 +190,14 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // between a kids profile and a grown-up one) may lift the screen time lock.
         boolean picked = commitPendingProfile();
         checkProfileUser("apps suspended/unsuspended");
-        boolean kids = hasSuspendedApps(this);
+        markKidsIfSettled();
+        boolean kids = ProfileUsers.isKids(this);
         boolean flipped = mKidsState != null && mKidsState != kids;
         mKidsState = kids;
         if (flipped) ProfileProvider.notifyChanged(this);  // kids_profile changed
-        // Not mid-switch, when the name may still be the last profile's
-        String current = getActiveProfileName(this);
-        if (current != null && mCandidateSerial == ProfileUsers.UNKNOWN) {
-            ProfilePairing.rememberHearthProfile(this, current, kids);
+        // Not mid-switch, when the kids state may still be the last profile's
+        if (mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN) {
+            ProfilePairing.rememberHearthProfile(this, ProfileUsers.key(mActiveSerial), kids);
         }
         if (picked || flipped || !kids) {
             clearScreenTimeLock();
@@ -235,6 +247,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mCandidateSerial = ProfileUsers.UNKNOWN;
         long previous = mActiveSerial;
         mActiveSerial = serial;
+        mActiveSince = SystemClock.elapsedRealtime();
+        if (!ProfileUsers.key(serial).equals(getActiveProfileKey(this))) {
+            getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE).edit().putString(PROFILE_KEY_KEY, ProfileUsers.key(serial)).apply();
+            ProfileProvider.notifyChanged(this);
+            MainActivity.notifyProfileChanged();
+        }
         android.util.Log.i(PROFILE_TAG, "Profile user is now serial " + serial + " ("
                 + ProfileUsers.getName(this, serial) + ", " + why + ")");
         if (previous != ProfileUsers.UNKNOWN) {
@@ -252,6 +270,22 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (previous != ProfileUsers.UNKNOWN) {
             clearScreenTimeLock();
             retryPendingBounce();
+        }
+    }
+
+    /**
+     * Apps suspended in a profile that has been on for a while: a kids profile, for good. (Right after a switch
+     * the last profile's suspensions can still be in place.)
+     */
+    private void markKidsIfSettled() {
+        if (mActiveSerial == ProfileUsers.UNKNOWN || mCandidateSerial != ProfileUsers.UNKNOWN
+                || SystemClock.elapsedRealtime() - mActiveSince < KIDS_SETTLE_MS
+                || !ProfileUsers.anySuspended(getPackageManager())) {
+            return;
+        }
+        if (ProfileUsers.markKids(this, mActiveSerial)) {
+            android.util.Log.i(PROFILE_TAG, "Serial " + mActiveSerial + " is a kids profile");
+            ProfileProvider.notifyChanged(this);
         }
     }
 
@@ -415,9 +449,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private void nameSerial(long serial, String name, String how) {
         android.util.Log.i(PROFILE_TAG, "Serial " + serial + " is " + name + " (" + how + ")");
         ProfileUsers.setName(this, serial, name);
+        // Pairings saved under the name, before profiles had keys
+        ProfilePairing.adoptNameChoices(this, ProfileUsers.key(serial), name);
         if (serial == mActiveSerial) {
             setActiveProfileName(name);
-            ProfilePairing.rememberHearthProfile(this, name, hasSuspendedApps(this));
+            ProfilePairing.rememberHearthProfile(this, ProfileUsers.key(serial), ProfileUsers.isKids(this));
         }
     }
 
@@ -494,6 +530,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             if (wellbeing) {
                 boolean changed = !mScreenTimeLock;
                 mScreenTimeLock = true;
+                ProfileUsers.setScreenTimeUpSerial(this, mActiveSerial);
                 if (mHaStatus != null) mHaStatus.setScreenTimeLock(true);
                 if (changed) ProfileProvider.notifyChanged(this);
             }
@@ -527,7 +564,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 // ignoring the default home app. Bring the launcher back whenever that's allowed.
                 if (SystemClock.elapsedRealtime() < mGoogleSetupUntil) {
                     android.util.Log.i(PROFILE_TAG, "Not taking over: Google TV setup in progress");
-                } else if (canTakeOver() && hasSuspendedApps(this)) {
+                } else if (canTakeOver() && ProfileUsers.isKids(this)) {
                     // A kids profile: Google TV opens its time up / bedtime screen from its home a moment after
                     // the home itself, and covering the home first would hide it (Hearth, the home app, can't be
                     // suspended). Take over only if the home is still what's in front.
@@ -657,6 +694,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private void clearScreenTimeLock() {
         boolean changed = mScreenTimeLock;
         mScreenTimeLock = false;
+        if (changed) ProfileUsers.setScreenTimeUpSerial(this, ProfileUsers.UNKNOWN);
         if (changed) ProfileProvider.notifyChanged(this);
         if (mHaStatus != null) {
             mHaStatus.setScreenTimeLock(false);
@@ -703,21 +741,26 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     private static final String APP_USERS_PREFS = "ltv_app_last_profile";
 
-    /** Records that the active Google TV profile is using this app (for Continue Watching ownership). */
+    /** Records that the active Google TV profile (its key) is using this app (for Continue Watching ownership). */
     private static void rememberAppUser(Context context, String packageName) {
-        String profile = getActiveProfileName(context);
+        String profile = getActiveProfileKey(context);
         if (profile == null) return;
         SharedPreferences prefs = context.getSharedPreferences(APP_USERS_PREFS, MODE_PRIVATE);
         if (!profile.equals(prefs.getString(packageName, null))) prefs.edit().putString(packageName, profile).apply();
     }
 
-    /** The Google TV profile that last had this app in front on the TV, or null. */
+    /** The Google TV profile (key; a name for apps last used before keys) that last had this app in front, or null. */
     static String getAppLastProfile(Context context, String packageName) {
         return context.getSharedPreferences(APP_USERS_PREFS, MODE_PRIVATE).getString(packageName, null);
     }
 
     static String getActiveProfileName(Context context) {
         return context.getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE).getString(PROFILE_NAME_KEY, null);
+    }
+
+    /** The active profile's lasting key ({@link ProfileUsers#key}), known even before its name; null until read. */
+    static String getActiveProfileKey(Context context) {
+        return context.getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE).getString(PROFILE_KEY_KEY, null);
     }
 
     @Override
@@ -741,6 +784,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             checkIdle();
             // In case a switch broadcast was missed
             checkProfileUser("periodic check");
+            markKidsIfSettled();
             mIdleHandler.postDelayed(this, IDLE_CHECK_MS);
         }
     };
@@ -964,17 +1008,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
         startActivity(intent);
     }
 
-    /** Whether any launchable app is suspended: Google TV does that only in kids profiles. */
-    static boolean hasSuspendedApps(Context context) {
-        PackageManager pm = context.getPackageManager();
-        for (String category : new String[]{Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER}) {
-            for (android.content.pm.ResolveInfo info : pm.queryIntentActivities(
-                    new Intent(Intent.ACTION_MAIN).addCategory(category), 0)) {
-                if ((info.activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SUSPENDED) != 0) return true;
-            }
-        }
-        return false;
-    }
 
     static boolean isSuspended(Context context) {
         try {

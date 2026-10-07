@@ -17,6 +17,9 @@ import java.util.Set;
  * For each app and Hearth profile the choice (set in Settings → Profile Pairing) is one of: match by name (the
  * default: "Alex" matches "Alex" and "Alex Morgan"), a specific app profile, or always show the app's picker.
  * Also remembers the names each app's picker showed and the Hearth profiles seen, for that menu.
+ *
+ * Hearth profiles are stored by their key ({@link ProfileUsers#key}, the Google TV profile user's serial), so a
+ * renamed profile keeps its choices; the name is only for matching app profiles and for showing.
  */
 final class ProfilePairing {
     static final String NETFLIX = "com.netflix.ninja";
@@ -127,16 +130,44 @@ final class ProfilePairing {
         prefs(context).edit().putString(SEEN_PREFIX + packageName, new JSONArray(merged).toString()).apply();
     }
 
-    /** Remembers a Google TV profile Hearth has seen, and whether it is a kids profile. */
-    static void rememberHearthProfile(Context context, String name, Boolean kids) {
-        if (name == null || name.isEmpty()) return;
+    /** Remembers a Google TV profile (by key) Hearth has seen, and whether it is a kids profile. */
+    static void rememberHearthProfile(Context context, String key, Boolean kids) {
+        if (key == null || key.isEmpty()) return;
         List<String> known = getHearthProfiles(context);
         SharedPreferences.Editor editor = prefs(context).edit();
-        if (!known.contains(name)) {
-            known.add(name);
+        if (!known.contains(key)) {
+            known.add(key);
             editor.putString(HEARTH_PROFILES, new JSONArray(known).toString());
         }
-        if (kids != null) editor.putBoolean(KIDS_PREFIX + name, kids);
+        if (kids != null) editor.putBoolean(KIDS_PREFIX + key, kids);
+        editor.apply();
+    }
+
+    /**
+     * Choices saved before profiles had keys were saved under the profile's name: the first time a key gets its
+     * name, they move to the key (unless the key already has its own).
+     */
+    static void adoptNameChoices(Context context, String key, String name) {
+        if (key == null || name == null || name.equals(key)) return;
+        SharedPreferences prefs = prefs(context);
+        List<String> known = getHearthProfiles(context);
+        if (!known.contains(name)) return;
+        SharedPreferences.Editor editor = prefs.edit();
+        String suffix = "|" + name;
+        for (java.util.Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
+            String k = entry.getKey();
+            if (!k.endsWith(suffix) || k.startsWith(SEEN_PREFIX) || k.startsWith(DISABLED_PREFIX)) continue;
+            String moved = k.substring(0, k.length() - name.length()) + key;
+            if (!prefs.contains(moved)) {
+                Object value = entry.getValue();
+                if (value instanceof Boolean) editor.putBoolean(moved, (Boolean) value);
+                else if (value instanceof String) editor.putString(moved, (String) value);
+            }
+            editor.remove(k);
+        }
+        known.remove(name);
+        if (!known.contains(key)) known.add(key);
+        editor.putString(HEARTH_PROFILES, new JSONArray(known).toString());
         editor.apply();
     }
 
@@ -159,20 +190,21 @@ final class ProfilePairing {
     }
 
     /**
-     * The picker name to choose among {@code names} for {@code hearthProfile}: the chosen profile when the picker has
-     * it, otherwise (match by name) the single best match. Null when the picker should be left to the user.
+     * The picker name to choose among {@code names} for the Hearth profile {@code key} (named {@code hearthName}):
+     * the chosen profile when the picker has it, otherwise (match by name) the single best match. Null when the
+     * picker should be left to the user.
      */
-    static String choose(Context context, String packageName, String hearthProfile, Collection<String> names) {
-        String mode = getMode(context, packageName, hearthProfile);
+    static String choose(Context context, String packageName, String key, String hearthName, Collection<String> names) {
+        String mode = getMode(context, packageName, key);
         if (MODE_PICKER.equals(mode)) return null;
         if (MODE_PROFILE.equals(mode)) {
-            String chosen = getChosenProfile(context, packageName, hearthProfile);
+            String chosen = getChosenProfile(context, packageName, key);
             for (String name : names) {
                 if (normalize(name).equals(normalize(chosen))) return name;
             }
             return null;
         }
-        return bestMatch(hearthProfile, names);
+        return hearthName == null ? null : bestMatch(hearthName, names);
     }
 
     /** The single best name match, or null when nothing matches or two names match equally well. */

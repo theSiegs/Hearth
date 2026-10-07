@@ -1,3 +1,4 @@
+import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/settings/launcher_sections_panel_page.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
 import 'package:flutter/material.dart';
@@ -28,10 +29,14 @@ Widget categoryContainerEmptyState(BuildContext context) {
               clipBehavior: Clip.antiAlias,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               child: InkWell(
-                onTap: () => showDialog(
-                  context: context,
-                  builder: (_) => SettingsPanel(initialRoute: LauncherSectionsPanelPage.routeName),
-                ),
+                // Settings take the parent PIN in kids profiles, from here too
+                onTap: () async {
+                  if (!await requireParent(context) || !context.mounted) return;
+                  showDialog(
+                    context: context,
+                    builder: (_) => SettingsPanel(initialRoute: LauncherSectionsPanelPage.routeName),
+                  );
+                },
                 child: Padding(
                   padding: EdgeInsets.all(8),
                   child: Center(

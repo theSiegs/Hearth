@@ -208,7 +208,7 @@ final class HaStatusReporter {
         status.put("app_package", mForegroundPackage == null ? JSONObject.NULL : mForegroundPackage);
         status.put("app", mForegroundPackage == null ? JSONObject.NULL : label(pm, mForegroundPackage));
         status.put("profile", nullable(LauncherAccessibilityService.getActiveProfileName(mContext)));
-        boolean kids = isKidsProfile(pm);
+        boolean kids = ProfileUsers.isKids(mContext);
         status.put("kids_profile", kids);
         status.put("screen_time_up", mScreenTimeLock);
         // Minutes are as Google TV stated them at screen_time_seen_at (epoch ms); Home Assistant can count down.
@@ -282,16 +282,6 @@ final class HaStatusReporter {
     }
 
     /** Google TV kids profiles suspend every app a parent hasn't approved. */
-    static boolean isKidsProfile(PackageManager pm) {
-        for (String category : new String[]{Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER}) {
-            Intent intent = new Intent(Intent.ACTION_MAIN).addCategory(category);
-            for (ResolveInfo info : pm.queryIntentActivities(intent, 0)) {
-                if ((info.activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SUSPENDED) != 0) return true;
-            }
-        }
-        return false;
-    }
-
     /** The apps this kids profile can open: every launchable app Google TV hasn't suspended, Hearth aside. */
     private static JSONArray allowedApps(PackageManager pm, String ownPackage) {
         java.util.TreeSet<String> names = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);

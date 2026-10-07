@@ -81,6 +81,8 @@ public class ProfilePairingService extends AccessibilityService {
     /** One app launch. Main thread only. */
     private static final class Session {
         final String pkg;
+        /** The Google TV profile's key (its choices are saved under it) and name (to match and to show). */
+        final String key;
         final String hearthProfile;
         boolean pickerSeen;
         // Apps read through nodes
@@ -103,8 +105,9 @@ public class ProfilePairingService extends AccessibilityService {
         String highlighted;
         boolean reachedEnd;
 
-        Session(String pkg, String hearthProfile) {
+        Session(String pkg, String key, String hearthProfile) {
             this.pkg = pkg;
+            this.key = key;
             this.hearthProfile = hearthProfile;
         }
     }
@@ -142,21 +145,29 @@ public class ProfilePairingService extends AccessibilityService {
             Log.i(TAG, packageName + " skipped: turned off for this app");
             return;
         }
-        String hearthProfile = LauncherAccessibilityService.getActiveProfileName(context);
-        if (hearthProfile == null || hearthProfile.isEmpty()) {
+        String key = LauncherAccessibilityService.getActiveProfileKey(context);
+        if (key == null) {
             Log.i(TAG, packageName + " skipped: the Google TV profile isn't known");
             return;
         }
-        ProfilePairing.rememberHearthProfile(context, hearthProfile, null);
-        if (ProfilePairing.MODE_PICKER.equals(ProfilePairing.getMode(context, packageName, hearthProfile))) {
-            Log.i(TAG, packageName + " skipped: " + hearthProfile + " always gets the picker");
+        ProfilePairing.rememberHearthProfile(context, key, null);
+        String mode = ProfilePairing.getMode(context, packageName, key);
+        String name = LauncherAccessibilityService.getActiveProfileName(context);
+        if (ProfilePairing.MODE_PICKER.equals(mode)) {
+            Log.i(TAG, packageName + " skipped: " + key + " always gets the picker");
             return;
         }
+        // Without a name only a chosen app profile can be picked (matching needs the name)
+        if ((name == null || name.isEmpty()) && !ProfilePairing.MODE_PROFILE.equals(mode)) {
+            Log.i(TAG, packageName + " skipped: " + key + " isn't named yet");
+            return;
+        }
+        String hearthProfile = name != null && !name.isEmpty() ? name : ProfileUsers.displayName(context, key);
         if (ProfilePairing.NETFLIX.equals(packageName) && !isVoiceDefault(context)) {
             Log.i(TAG, "Netflix skipped: Hearth's voice isn't the text-to-speech engine");
             return;
         }
-        Runnable begin = () -> service.begin(packageName, hearthProfile);
+        Runnable begin = () -> service.begin(packageName, key, hearthProfile);
         if (Looper.myLooper() == Looper.getMainLooper()) begin.run(); else service.mHandler.post(begin);
     }
 
@@ -221,11 +232,11 @@ public class ProfilePairingService extends AccessibilityService {
 
     private final Runnable mTimeout = () -> finish(NO_MATCH, "timed out");
 
-    private void begin(String pkg, String hearthProfile) {
+    private void begin(String pkg, String key, String hearthProfile) {
         if (mSession != null) finish(QUIET, "replaced");
         mHandler.removeCallbacks(mGoIdle);
         hideCover();
-        mSession = new Session(pkg, hearthProfile);
+        mSession = new Session(pkg, key, hearthProfile);
         sListeningTo = pkg;
         setMode(true, needsScreenReaderMode(pkg));
         mHandler.postDelayed(mTimeout, WAIT_FOR_PICKER_MS);
@@ -445,7 +456,7 @@ public class ProfilePairingService extends AccessibilityService {
 
         Set<String> known = new LinkedHashSet<>(s.names.keySet());
         known.addAll(ProfilePairing.getSeenNames(this, s.pkg));
-        String target = ProfilePairing.choose(this, s.pkg, s.hearthProfile, known);
+        String target = ProfilePairing.choose(this, s.pkg, s.key, s.hearthProfile, known);
         // Until Hearth has heard the whole list once (for the Profile Pairing menu and nickname matches), walk to
         // the end first, then come back to the right profile.
         Log.i(TAG, "Focused " + name + " (" + index + " of " + count + ")");
@@ -552,7 +563,7 @@ public class ProfilePairingService extends AccessibilityService {
         List<String> names = new ArrayList<>();
         for (Tile tile : tiles) names.add(tile.name);
         ProfilePairing.rememberNames(this, s.pkg, names, true);
-        String target = ProfilePairing.choose(this, s.pkg, s.hearthProfile, names);
+        String target = ProfilePairing.choose(this, s.pkg, s.key, s.hearthProfile, names);
         if (target == null) {
             finish(NO_MATCH, "no profile matches " + s.hearthProfile + " in " + names);
             return;
@@ -760,8 +771,8 @@ public class ProfilePairingService extends AccessibilityService {
     /** The first time Hearth picks a profile by name match for an app, says which, and where to change it. */
     private void announceMatch(Session s) {
         if (s.pickedName == null
-                || !ProfilePairing.MODE_AUTO.equals(ProfilePairing.getMode(this, s.pkg, s.hearthProfile))
-                || !ProfilePairing.announceOnce(this, s.pkg, s.hearthProfile)) {
+                || !ProfilePairing.MODE_AUTO.equals(ProfilePairing.getMode(this, s.pkg, s.key))
+                || !ProfilePairing.announceOnce(this, s.pkg, s.key)) {
             return;
         }
         hideBanner();

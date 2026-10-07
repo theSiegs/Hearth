@@ -168,7 +168,7 @@ public class MainActivity extends FlutterActivity {
                 case "isKidsProfile" -> {
                     boolean kids = isKidsProfile();
                     ProfilePairing.rememberHearthProfile(
-                            this, LauncherAccessibilityService.getActiveProfileName(this), kids);
+                            this, LauncherAccessibilityService.getActiveProfileKey(this), kids);
                     result.success(kids);
                 }
                 case "voiceSearch" -> startVoiceSearch(result);
@@ -239,16 +239,19 @@ public class MainActivity extends FlutterActivity {
                     String pkg = call.arguments();
                     List<String> seen = ProfilePairing.getSeenNames(this, pkg);
                     List<String> hearthProfiles = ProfilePairing.getHearthProfiles(this);
-                    String active = LauncherAccessibilityService.getActiveProfileName(this);
+                    String active = LauncherAccessibilityService.getActiveProfileKey(this);
                     if (active != null && !hearthProfiles.contains(active)) hearthProfiles.add(active);
                     List<Map<String, Object>> choices = new ArrayList<>();
+                    // hearthProfile is the key choices are saved under; displayName is what to show
                     for (String hearth : hearthProfiles) {
+                        String name = ProfileUsers.displayName(this, hearth);
                         Map<String, Object> choice = new HashMap<>();
                         choice.put("hearthProfile", hearth);
+                        choice.put("displayName", name);
                         choice.put("kids", ProfilePairing.isKids(this, hearth));
                         choice.put("mode", ProfilePairing.getMode(this, pkg, hearth));
                         choice.put("chosenProfile", ProfilePairing.getChosenProfile(this, pkg, hearth));
-                        choice.put("autoMatch", ProfilePairing.bestMatch(hearth, seen));
+                        choice.put("autoMatch", ProfilePairing.bestMatch(name, seen));
                         choices.add(choice);
                     }
                     result.success(choices);
@@ -344,6 +347,7 @@ public class MainActivity extends FlutterActivity {
                     result.success(null);
                 }
                 case "getActiveProfileName" -> result.success(LauncherAccessibilityService.getActiveProfileName(this));
+                case "getActiveProfileKey" -> result.success(LauncherAccessibilityService.getActiveProfileKey(this));
                 case "getProfileAvatar" -> {
                     String name = call.arguments();
                     Map<String, Object> avatar = new HashMap<>();
@@ -1286,16 +1290,9 @@ public class MainActivity extends FlutterActivity {
         return tryStartActivity(new Intent(Settings.ACTION_SYNC_SETTINGS));
     }
 
-    // Google TV kids profiles suspend every app a parent hasn't approved; adult profiles suspend none.
+    // Google TV kids profiles suspend every app a parent hasn't approved; once seen, a profile stays a kids one.
     private boolean isKidsProfile() {
-        for (boolean sideloaded : new boolean[]{false, true}) {
-            for (ResolveInfo info : queryIntentActivities(sideloaded)) {
-                if ((info.activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SUSPENDED) != 0) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return ProfileUsers.isKids(this);
     }
 
     /** The TV's LAN address, for the Home Assistant integration's host field. */

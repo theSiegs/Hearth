@@ -52,6 +52,11 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
 
   String? get activeProfileName => _activeProfileName;
 
+  String? _activeProfileKey;
+
+  /// The active profile's lasting key ("user:11"): set before its name is known, unchanged by renames.
+  String? get activeProfileKey => _activeProfileKey;
+
   bool get isKidsProfile => _isKidsProfile;
 
   Uint8List? _avatar;
@@ -116,25 +121,31 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _check() async {
     String? name;
+    String? key;
     bool kids = false;
     try {
       name = await _channel.getActiveProfileName();
+      key = await _channel.getActiveProfileKey();
       kids = await _channel.isKidsProfile();
     } catch (_) {
       return;
     }
 
-    bool changed = name != _activeProfileName || kids != _isKidsProfile;
+    bool changed = name != _activeProfileName || key != _activeProfileKey || kids != _isKidsProfile;
     _activeProfileName = name;
+    _activeProfileKey = key;
     _isKidsProfile = kids;
     changed = await _loadAvatar(name) || changed;
     if (changed) notifyListeners();
 
-    // Unknown profile (switched some way we couldn't see): leave the layout alone rather than guess.
-    if (name == null) return;
+    // Unknown profile (Hearth can't tell yet): leave the layout alone rather than guess.
+    if (key == null) return;
 
+    // Layouts are saved under the profile's key; before keys they were saved under its name, so an owner that is
+    // this profile's name is this profile, and a layout saved under the name is its own.
     final String? owner = _sharedPreferences.getString(layoutOwnerKey);
-    if (owner == name) {
+    if (owner == key || (owner != null && owner == name)) {
+      if (owner != key) await _sharedPreferences.setString(layoutOwnerKey, key);
       await _fillEmptyDock();
       return;
     }
@@ -144,10 +155,11 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
         await _backupService.saveProfileLayout(owner, _settingsService);
       }
       // A profile seen for the first time starts from the current layout.
-      if (await _backupService.loadProfileLayout(name, _settingsService)) {
+      if (await _backupService.loadProfileLayout(key, _settingsService) ||
+          (name != null && await _backupService.loadProfileLayout(name, _settingsService))) {
         await _appsService.refreshState();
       }
-      await _sharedPreferences.setString(layoutOwnerKey, name);
+      await _sharedPreferences.setString(layoutOwnerKey, key);
       await _fillEmptyDock();
     } catch (e, stack) {
       developer.log("Failed to switch profile layout", name: "ProfileService", error: e, stackTrace: stack);

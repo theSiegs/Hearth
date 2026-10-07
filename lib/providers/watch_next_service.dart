@@ -38,7 +38,9 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
   static const _ownershipKey = "watch_next_owners";
   Map<String, dynamic> _ownership = {};
   bool _ownershipLoaded = false;
+  // The active profile's key (owners are saved by key), and its name: owners saved before keys are names.
   String? _activeProfile;
+  String? _activeProfileName;
 
   static String _key(WatchNextProgram p) => "${p.packageName}|${p.id}";
 
@@ -46,7 +48,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
     final owner = (_ownership[_key(p)] as Map?)?["owner"] as String?;
     if (!_ownershipLoaded) return true;
     if (owner == null || _activeProfile == null) return false;
-    return owner == _activeProfile;
+    return owner == _activeProfile || (_activeProfileName != null && owner == _activeProfileName);
   }
 
   /// Records the active profile as the owner of entries that are new or were watched again since last time.
@@ -64,7 +66,8 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
           }
         }
       }
-      _activeProfile = await _channel.getActiveProfileName();
+      _activeProfile = await _channel.getActiveProfileKey();
+      _activeProfileName = await _channel.getActiveProfileName();
       final appUsers = await _channel.getAppLastProfiles();
       bool changed = false;
       final keys = <String>{};
