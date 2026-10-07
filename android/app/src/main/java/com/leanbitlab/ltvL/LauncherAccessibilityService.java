@@ -311,18 +311,17 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     /** The chooser opened on the current profile: that's who the running profile user is. */
     private void onChooserOpenedOn(String label) {
-        android.util.Log.i(PROFILE_TAG, "Chooser opened on " + label);
+        // Not a name: the chooser re-reports focus when it comes back (from its PIN screen, say) on whatever tile
+        // was being browsed. Names come only from the tile marked current account (collectChooserTiles).
+        android.util.Log.i(PROFILE_TAG, "Chooser focus on open: " + label);
         checkProfileUser("chooser opened");
-        // Not mid-switch, when the running user may not be the one the chooser shows yet
-        if (mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN
-                && !label.equals(ProfileUsers.getName(this, mActiveSerial))) {
-            nameSerial(mActiveSerial, label, "chooser focus");
-        }
     }
 
     // Once the chooser has laid out (and its focus animation settled): which tile is the current account, and
     // photos for profiles that have none yet or weren't checked today.
     private static final long CHOOSER_READ_DELAY_MS = 1_200;
+    /** The chooser tile marked current account, as last read. */
+    private String mCurrentTile;
     private final Runnable mReadChooser = this::readChooser;
 
     private void readChooser() {
@@ -335,10 +334,15 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         java.util.List<String> names = new java.util.ArrayList<>();
         java.util.List<android.graphics.Rect> photos = new java.util.ArrayList<>();
+        mCurrentTile = null;
         collectChooserTiles(root, names, photos, 0);
+        // Only the current account's tile: it's the highlighted one, without the lock Google TV puts on other
+        // PIN-protected profiles' tiles (or their dimming), so each profile's photo is taken while it's on
         java.util.Map<String, android.graphics.Rect> due = new java.util.LinkedHashMap<>();
         for (int i = 0; i < names.size(); i++) {
-            if (ProfileAvatars.isDue(this, names.get(i))) due.put(names.get(i), photos.get(i));
+            if (names.get(i).equals(mCurrentTile) && ProfileAvatars.isDue(this, names.get(i))) {
+                due.put(names.get(i), photos.get(i));
+            }
         }
         android.util.Log.i(PROFILE_TAG, "Chooser shows " + names + "; photos due: " + due.keySet());
         android.os.PowerManager power = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
@@ -423,10 +427,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 names.add(name);
                 photos.add(photo);
                 CharSequence desc = node.getContentDescription();
-                if (desc != null && desc.toString().toLowerCase(java.util.Locale.ROOT).contains("current account")
-                        && mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN
-                        && !name.equals(ProfileUsers.getName(this, mActiveSerial))) {
-                    nameSerial(mActiveSerial, name, "chooser's current account");
+                if (desc != null && desc.toString().toLowerCase(java.util.Locale.ROOT).contains("current account")) {
+                    mCurrentTile = name;
+                    if (mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN
+                            && !name.equals(ProfileUsers.getName(this, mActiveSerial))) {
+                        nameSerial(mActiveSerial, name, "chooser's current account");
+                    }
                 }
             }
             return;

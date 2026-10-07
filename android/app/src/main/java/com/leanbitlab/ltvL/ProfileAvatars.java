@@ -36,7 +36,16 @@ final class ProfileAvatars {
         } catch (java.io.UnsupportedEncodingException e) {
             safe = Integer.toHexString(name.hashCode());
         }
-        return new File(new File(context.getFilesDir(), "profile_avatars"), safe + ".png");
+        // v2: photos taken before only the current account's tile counted could carry Google TV's PIN lock badge
+        File old = new File(context.getFilesDir(), "profile_avatars");
+        if (old.isDirectory()) {
+            File[] files = old.listFiles();
+            if (files != null) for (File f : files) //noinspection ResultOfMethodCallIgnored
+                f.delete();
+            //noinspection ResultOfMethodCallIgnored
+            old.delete();
+        }
+        return new File(new File(context.getFilesDir(), "profile_avatars_v2"), safe + ".png");
     }
 
     /** No photo yet for this profile, or it's due a refresh. */
