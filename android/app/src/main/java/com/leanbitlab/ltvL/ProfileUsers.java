@@ -129,26 +129,34 @@ final class ProfileUsers {
 
     /**
      * Whether this kids profile's screen time is up (bedtime, daily limit): Google TV then blocks even the apps a
-     * parent approved. False for a grown-up profile; null when it can't tell (no approved app to look at, or the
-     * apps can't be read), and only Google TV's own screens say.
+     * parent approved, in the kid's own profile user, where Google TV runs them. (In Hearth's user every app is
+     * blocked throughout a kids profile, so that says nothing.) False for a grown-up profile; null when it can't
+     * tell (no approved app to look at, or the apps can't be read), and only Google TV's own screens say.
      */
     static Boolean isScreenTimeUp(Context context, long serial) {
         Boolean supervised = isSupervised(context, serial);
         if (supervised == null) return null;
         if (!supervised) return false;
-        java.util.Set<String> approved = approvedApps(context, serial);
-        if (approved == null) return null;
-        android.content.pm.PackageManager pm = context.getPackageManager();
+        UserManager users = (UserManager) context.getSystemService(Context.USER_SERVICE);
+        android.content.pm.LauncherApps launcherApps =
+                (android.content.pm.LauncherApps) context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
+        if (users == null || launcherApps == null) return null;
         int checked = 0;
         int blocked = 0;
-        for (String pkg : approved) {
-            if (NEVER_BLOCKED.contains(pkg) || pkg.equals(context.getPackageName())) continue;
-            try {
-                android.content.pm.ApplicationInfo info = pm.getApplicationInfo(pkg, 0);
+        try {
+            UserHandle user = users.getUserForSerialNumber(serial);
+            if (user == null || user.equals(Process.myUserHandle())) return null;
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            for (android.content.pm.LauncherActivityInfo activity : launcherApps.getActivityList(null, user)) {
+                String pkg = activity.getComponentName().getPackageName();
+                if (NEVER_BLOCKED.contains(pkg) || pkg.equals(context.getPackageName()) || !seen.add(pkg)) continue;
                 checked++;
-                if ((info.flags & android.content.pm.ApplicationInfo.FLAG_SUSPENDED) != 0) blocked++;
-            } catch (android.content.pm.PackageManager.NameNotFoundException ignored) {
+                if ((activity.getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_SUSPENDED) != 0) {
+                    blocked++;
+                }
             }
+        } catch (RuntimeException e) {
+            return null;
         }
         // All of them: right after a switch some can still carry the last profile's state
         return checked == 0 ? null : blocked == checked;
