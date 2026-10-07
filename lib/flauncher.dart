@@ -293,9 +293,20 @@ class _FLauncherState extends State<FLauncher> {
     final Category? favorites = dockEnabled
         ? sections.whereType<Category>().firstWhereOrNull((c) => c.name == 'Favorites' && c.applications.isNotEmpty)
         : null;
-    if (favorites == null) {
+    if (favorites == null && !dockEnabled) {
       return _sections(sections,
           continueWatchingActive: continueWatchingActive, continueWatchingOrder: continueWatchingOrder);
+    }
+    if (favorites == null) {
+      // No dock (nothing in Favorites this profile can open): one untitled grid of the apps it can open, never the
+      // TV Apps / Non-TV Apps / Favorites split, or a friendly card when there's nothing at all.
+      final usable = sections.where((s) => !(s is Category && (s.applications.isEmpty || s.name == 'Favorites'))).toList();
+      if (usable.isEmpty && !continueWatchingActive) return _nothingToWatch(viewportHeight);
+      return _sections(usable,
+          continueWatchingActive: continueWatchingActive,
+          continueWatchingOrder: continueWatchingOrder,
+          showTitles: false,
+          allGrids: true);
     }
 
     // Empty sections (often "Non-TV Apps") are left out below the dock; they'd only say "This category is empty".
@@ -363,11 +374,33 @@ class _FLauncherState extends State<FLauncher> {
         Focus(
           focusNode: _belowDockFocusNode,
           child: _sections(belowDock,
-              firstCategoryAlreadyFound: true, showTitles: belowDock.whereType<Category>().length > 1, allGrids: true),
+              firstCategoryAlreadyFound: true, showTitles: false, allGrids: true),
         ),
       ],
     );
   }
+
+  /// Shown when the profile can open nothing at all (a kids profile at bedtime, or before apps are approved).
+  Widget _nothingToWatch(double viewportHeight) => Container(
+        key: const Key("nothing_to_watch"),
+        height: viewportHeight,
+        alignment: Alignment.center,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 28),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.55),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.nightlight_round, color: Colors.white70, size: 40),
+              SizedBox(height: 12),
+              Text("Nothing to watch right now", style: TextStyle(color: Colors.white, fontSize: 24)),
+            ],
+          ),
+        ),
+      );
 
   Widget _swapAnimation(
           {required bool visible, required Offset hiddenOffset, required Widget child, bool fade = true}) =>
