@@ -99,7 +99,8 @@ public class ProfilePairingService extends AccessibilityService {
         boolean appShown;
         String pickedName;
         /** Where we believe focus is, for apps that don't report it (-1: unknown). */
-        int assumedFocus = -1;
+        /** Apple TV: the tile its last accessibility-focus event named, or null while waiting for one. */
+        String highlighted;
         boolean reachedEnd;
 
         Session(String pkg, String hearthProfile) {
@@ -287,10 +288,17 @@ public class ProfilePairingService extends AccessibilityService {
             s.appShown = true;
             if (ProfilePairing.MAX.equals(s.pkg)) scheduleMaxProbe(s);
         }
-        if (ProfilePairing.APPLE_TV.equals(s.pkg) && type != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
-            // Research: does Apple TV say which tile is highlighted (focus/announcement events)? Its node tree doesn't.
-            Log.i(TAG, "Apple TV event " + AccessibilityEvent.eventTypeToString(type) + " text=[" + eventText(event)
-                    + "] class=" + event.getClassName());
+        if (ProfilePairing.APPLE_TV.equals(s.pkg) && type == AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED) {
+            // The highlighted profile tile: a Button whose description ends with the name ("Who's Watching?, Select
+            // an account or sign in, Alex" for the first tile, just "Sam" for the others).
+            AccessibilityNodeInfo source = event.getSource();
+            CharSequence desc = source != null ? source.getContentDescription() : null;
+            if (source != null && desc != null && source.getClassName() != null
+                    && source.getClassName().toString().endsWith("Button")) {
+                String[] parts = desc.toString().split(",\\s*");
+                s.highlighted = parts[parts.length - 1].trim();
+                Log.i(TAG, "Apple TV highlights " + s.highlighted);
+            }
         }
         switch (s.pkg) {
             case ProfilePairing.MAX:
@@ -322,9 +330,6 @@ public class ProfilePairingService extends AccessibilityService {
 
     private void handleSpeech(String callerPackage, String text) {
         Session s = mSession;
-        if (s != null && ProfilePairing.APPLE_TV.equals(s.pkg) && s.pkg.equals(callerPackage)) {
-            Log.i(TAG, "Apple TV said: " + text);  // research: does it speak the highlighted tile?
-        }
         if (s == null || !ProfilePairing.NETFLIX.equals(s.pkg) || !s.pkg.equals(callerPackage)) return;
         String t = text.trim();
         String lower = t.toLowerCase(Locale.ROOT);
@@ -579,24 +584,28 @@ public class ProfilePairingService extends AccessibilityService {
                 break;
             }
         }
-        if (focused < 0 && ProfilePairing.APPLE_TV.equals(s.pkg) && ProfilePairing.isKids(this, s.hearthProfile)) {
-            // Blind counting can't check itself: never risk opening a grown-up's profile for a kid.
-            finish(NO_MATCH, "Apple TV doesn't say which tile is highlighted; not guessing for a kids profile");
-            return;
-        }
-        if (focused < 0 && ProfilePairing.APPLE_TV.equals(s.pkg)) {
-            // Apple TV doesn't report focus; its picker opens on the first tile, so count our own presses from there.
-            if (s.assumedFocus < 0) s.assumedFocus = 0;
-            focused = s.assumedFocus;
+        if (ProfilePairing.APPLE_TV.equals(s.pkg)) {
+            // Apple TV's tiles don't report focus, but its accessibility-focus events name the highlighted tile.
+            // Until one arrives after the last press, wait: never press OK on a tile Hearth hasn't seen highlighted.
+            if (s.highlighted == null) return;
+            focused = -1;
+            for (int i = 0; i < tiles.size(); i++) {
+                if (ProfilePairing.normalize(tiles.get(i).name).equals(ProfilePairing.normalize(s.highlighted))) {
+                    focused = i;
+                    break;
+                }
+            }
         }
         if (focused == targetIndex) {
             pressKey(0);
             s.pickedName = target;
             finish(PICKED, "chose " + target);
         } else if (focused >= 0 && ++s.steps <= MAX_STEPS) {
-            int direction = targetIndex > focused ? 1 : -1;
-            if (s.assumedFocus >= 0) s.assumedFocus += direction;
-            pressKey(direction);
+            pressKey(targetIndex > focused ? 1 : -1);
+            if (ProfilePairing.APPLE_TV.equals(s.pkg)) {
+                s.highlighted = null;  // the next focus event says where the highlight landed
+                return;
+            }
             s.scanScheduled = true;
             mHandler.postDelayed(mScan, SCAN_DELAY_MS * 2);
         } else {
