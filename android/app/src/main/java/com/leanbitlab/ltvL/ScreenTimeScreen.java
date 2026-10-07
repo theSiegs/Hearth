@@ -26,22 +26,30 @@ final class ScreenTimeScreen {
     private static final Pattern HOURS = Pattern.compile("(\\d+)\\s*(?:hours?|hrs?|h)\\b");
     private static final Pattern MINUTES = Pattern.compile("(\\d+)\\s*(?:minutes?|mins?|m)\\b");
     private static final Pattern TIME_UP = Pattern.compile("time'?s up|time is up|out of time|no time left|time limit reached");
+    // "Time for bed", "Bedtime", "Bed time" (not "embedded")
+    private static final Pattern BED = Pattern.compile("\\bbed|downtime");
+    // Google TV's bedtime screen: "This device unlocks at 6:00 AM"
+    private static final Pattern UNLOCKS_AT = Pattern.compile(
+            "unlocks? at (\\d{1,2}(?::\\d{2})?\\s*(?:[ap]\\.?m\\.?)?)", Pattern.CASE_INSENSITIVE);
 
     final Reason reason;
     /** Minutes left as the screen states them; 0 when time is up; null when it states none. */
     final Integer minutesLeft;
+    /** When the TV unlocks again as the screen states it (e.g. "6:00 AM"); null when it states none. */
+    final String unlocksAt;
     /** The screen's own text, for seeing what Google TV actually says. */
     final String text;
 
-    private ScreenTimeScreen(Reason reason, Integer minutesLeft, String text) {
+    private ScreenTimeScreen(Reason reason, Integer minutesLeft, String unlocksAt, String text) {
         this.reason = reason;
         this.minutesLeft = minutesLeft;
+        this.unlocksAt = unlocksAt;
         this.text = text;
     }
 
     /**
      * @param className the Google TV window class; kept because it can name the reason when the text doesn't
-     * @param texts the screen's text (accessibility event text)
+     * @param texts the screen's text (the accessibility event's, or the window's own text views)
      */
     static ScreenTimeScreen parse(String className, List<CharSequence> texts) {
         StringBuilder joined = new StringBuilder();
@@ -56,7 +64,7 @@ final class ScreenTimeScreen {
         String lower = (text + " " + (className == null ? "" : className)).toLowerCase(Locale.ROOT);
 
         Reason reason = Reason.UNKNOWN;
-        if (lower.contains("bedtime") || lower.contains("downtime") || lower.contains("bed time")) {
+        if (BED.matcher(lower).find()) {
             reason = Reason.BEDTIME;
         } else if (lower.contains("daily limit") || lower.contains("dailylimit") || lower.contains("screen time")
                 || lower.contains("screentime") || lower.contains("time limit")) {
@@ -64,7 +72,8 @@ final class ScreenTimeScreen {
         }
 
         Integer minutes = null;
-        if (TIME_UP.matcher(lower).find()) {
+        // A time up screen (kids.wellbeing.timeupdialog.*) means none left, whatever its wording
+        if (TIME_UP.matcher(lower).find() || lower.contains(".timeup")) {
             minutes = 0;
         } else {
             Matcher hours = HOURS.matcher(lower);
@@ -76,7 +85,9 @@ final class ScreenTimeScreen {
                         + (hasMinutes ? Integer.parseInt(mins.group(1)) : 0);
             }
         }
-        return new ScreenTimeScreen(reason, minutes, text);
+        Matcher unlocks = UNLOCKS_AT.matcher(text);
+        String unlocksAt = unlocks.find() ? unlocks.group(1).trim() : null;
+        return new ScreenTimeScreen(reason, minutes, unlocksAt, text);
     }
 
     /**
