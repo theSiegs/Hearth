@@ -41,24 +41,74 @@ import java.util.Map;
 import java.util.Objects;
 
 public class LauncherAccessibilityService extends AccessibilityService {
+    private static final String TAG = "HearthProfile";
+
     static final String GOOGLE_TV_PACKAGE = "com.google.android.apps.tv.launcherx";
     private static final String GOOGLE_TV_HOME_ACTIVITY = GOOGLE_TV_PACKAGE + ".home.HomeActivity";
+    static final String GOOGLE_TV_CHOOSER_ACTIVITY = GOOGLE_TV_PACKAGE + ".profile.chooser.ProfileChooserActivity";
     // Kids screen time / bedtime screens
     private static final String GOOGLE_TV_WELLBEING_PREFIX = GOOGLE_TV_PACKAGE + ".kids.wellbeing.";
+    // The class names Google TV's views report to accessibility
+    private static final String IMAGE_VIEW = "android.widget.ImageView";
+    private static final String LINEAR_LAYOUT = "android.widget.LinearLayout";
+    private static final String TEXT_VIEW = "android.widget.TextView";
+
+    private static final String PROFILE_PREFS = "ltv_active_profile";
+    private static final String PROFILE_NAME_KEY = "name";
+    private static final String PROFILE_KEY_KEY = "key";
+    private static final String PROFILE_GENERATION_KEY = "generation";
+    private static final String PROFILE_READY_KEY = "ready_key";
+    private static final String APP_USERS_PREFS = "ltv_app_last_profile";
+    static final String DEVICE_PREFS = "ltv_device";
+    static final String IDLE_MINUTES_KEY = "idle_standby_minutes";
+    static final String HOME_FIX_SEEN_KEY = "home_button_fix_seen";
+    static final String HA_ENABLED_KEY = "ha_notifications_enabled";
+
     private static final long PENDING_BOUNCE_WINDOW_MS = 10_000;
     // How long "use Google TV for now" holds off the automatic bounce-back (the parent returns sooner via Home).
     private static final long GOOGLE_TV_ALLOW_MS = 10 * 60 * 1000L;
+    /** How long after Google's last setup screen Hearth keeps out of the way (refreshed by each setup screen). */
+    private static final long GOOGLE_SETUP_HOLD_MS = 2 * 60_000;
+    private static final long KIDS_HOME_GRACE_MS = 1_500;
+    private static final long PROFILE_USER_RECHECK_MS = 1_500;
+    private static final long PROFILE_SETTLE_MS = 2_000;
+    private static final long OWNER_SETTLE_MS = 5_000;
+    /** ProfileTransitionOverlay.maxWait: the longest a profile change keeps profile_ready at 0. */
+    private static final long PROFILE_READY_FALLBACK_MS = 4_000;
+    private static final long PROFILE_CLICK_WINDOW_MS = 60_000;
+    // The chooser is read once it has laid out and its focus animation has settled
+    private static final long CHOOSER_READ_DELAY_MS = 1_200;
+    private static final long SCREEN_TIME_READ_DELAY_MS = 700;
+    private static final long WELLBEING_TRUST_MS = 15_000;
+    private static final long IDLE_CHECK_MS = 30_000;
+    private static final long IDLE_WARNING_MS = 60_000;
+    private static final long LONG_PRESS_MS = 600;
 
     // Volatile: ProfileProvider's binder calls and AgentHub's socket threads read it too
     private static volatile LauncherAccessibilityService sInstance;
+    // > now while the parent chose to use Google TV for a while: the automatic bounce-back pauses until then.
+    private static volatile long sAllowGoogleTvUntil = 0;
+
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     // Set while Google TV shows a screen time screen: the launcher must never cover it. Volatile, as sInstance.
     private volatile boolean mScreenTimeLock = false;
     // Google TV's own screens (profile chooser, PIN, time up...) are in front: leave Home to Google TV.
     private boolean mGoogleTvScreenInFront = false;
     private long mPendingBounceAt = 0;
-    // > now while the parent chose to use Google TV for a while: the automatic bounce-back pauses until then.
-    private static volatile long sAllowGoogleTvUntil = 0;
+    private long mGoogleSetupUntil = 0;
+    // When Google TV last showed a time up / bedtime screen; it blocks the apps a moment around that, so the apps'
+    // state doesn't overrule the screen for a while.
+    private long mWellbeingSeenAt = 0;
+    /** Google TV's time up / bedtime screen is the window in front: never lift the lock under it. */
+    private boolean mWellbeingInFront = false;
+    /** The apps' state settled screen time the last time it was checked (see ProfileUsers.isScreenTimeUp). */
+    private boolean mScreenTimeKnown = false;
+    private String mScreenTimeClass;
+    /** Whether Google TV is suspending apps (a kids profile), as last seen; null until first checked. */
+    private Boolean mKidsState;
+    private String mLastWindowPackage;
+    private String mLastAppPackage;
 
     // The active profile user's serial (ProfileUsers); names are learned from the chooser's current-account tile
     // and picks.
@@ -70,21 +120,61 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private String mLastPick;
     private boolean mLastPickClicked;
     private long mLastPickAt = 0;
-    private static final long PROFILE_USER_RECHECK_MS = 1_500;
-    private static final long PROFILE_SETTLE_MS = 2_000;
-    private static final long OWNER_SETTLE_MS = 5_000;
     private long mCandidateSerial = ProfileUsers.UNKNOWN;
     private long mCandidateAt = 0;
     /** Google TV's home came up while this candidate was waiting: it's taken without waiting any longer. */
     private boolean mCandidateSettled;
-    private final Runnable mSettleCheck = () -> checkProfileUser("settled");
     private int mProfileUserRechecks = 0;
+    private String mPendingProfile;
+    private long mPendingProfileAt = 0;
+    private String mLastChooserFocus;
+    private long mLastChooserFocusAt = 0;
+    /** Google TV's profile chooser is the window in front. */
+    private boolean mChooserOnScreen;
+
+    private HaStatusReporter mHaStatus;
+    private HaNotificationServer mHaServer;
+    private HaNotificationOverlay mHaOverlay;
+
+    // Idle standby
+    private long mLastInputAt = SystemClock.elapsedRealtime();
+    private boolean mIdleWarned = false;
+
+    // Remote button remapping
+    private KeyCaptureCallback mCapture;
+    private int mHeldKey = KeyEvent.KEYCODE_UNKNOWN;
+    private boolean mLongPressFired = false;
+
+    private final Runnable mSettleCheck = () -> checkProfileUser("settled");
     private final Runnable mProfileUserRecheck = new Runnable() {
         @Override
         public void run() {
             checkProfileUser("recheck");
             if (--mProfileUserRechecks > 0) mHandler.postDelayed(this, PROFILE_USER_RECHECK_MS);
         }
+    };
+    private final Runnable mReadyFallback = () -> setProfileReady(this, getActiveProfileKey(this));
+    private final Runnable mReadChooser = this::readChooser;
+    private final Runnable mReadScreenTime = this::readScreenTime;
+    private final Runnable mKidsHomeTakeOver = () -> {
+        // Not if Google TV put a screen of its own up (time up, PIN...) or the kid opened an app meanwhile
+        if (autoTakeOverAllowed() && !mGoogleTvScreenInFront && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage)) {
+            openLauncher();
+        }
+    };
+    private final Runnable mPeriodicCheck = new Runnable() {
+        @Override
+        public void run() {
+            checkIdle();
+            // In case a switch broadcast was missed
+            checkProfileUser("periodic check");
+            updateScreenTimeLock("periodic check");
+            mHandler.postDelayed(this, IDLE_CHECK_MS);
+        }
+    };
+    private final Runnable mLongPress = () -> {
+        mLongPressFired = true;
+        runMapping(mHeldKey, ButtonMapper.PRESS_LONG);
     };
     private final BroadcastReceiver mProfileUserReceiver = new BroadcastReceiver() {
         @Override
@@ -95,52 +185,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
             scheduleProfileUserRechecks();
         }
     };
-    static final String GOOGLE_TV_CHOOSER_ACTIVITY = GOOGLE_TV_PACKAGE + ".profile.chooser.ProfileChooserActivity";
-    private static final String PROFILE_PREFS = "ltv_active_profile";
-    private static final String PROFILE_NAME_KEY = "name";
-    private static final String PROFILE_KEY_KEY = "key";
-    private static final String PROFILE_GENERATION_KEY = "generation";
-    private static final String PROFILE_READY_KEY = "ready_key";
-    /** ProfileTransitionOverlay.maxWait: the longest a profile change keeps profile_ready at 0. */
-    private static final long PROFILE_READY_FALLBACK_MS = 4_000;
-    private final Runnable mReadyFallback = () -> setProfileReady(this, getActiveProfileKey(this));
-    private static final long PROFILE_CLICK_WINDOW_MS = 60_000;
-    private String mPendingProfile;
-    private long mPendingProfileAt = 0;
-    private String mLastChooserFocus;
-    /** Google TV's profile chooser is the window in front. */
-    private boolean mChooserOnScreen;
-    private long mLastChooserFocusAt = 0;
-    private static final String TAG = "HearthProfile";
-    // The class names Google TV's views report to accessibility
-    private static final String IMAGE_VIEW = "android.widget.ImageView";
-    private static final String LINEAR_LAYOUT = "android.widget.LinearLayout";
-    private static final String TEXT_VIEW = "android.widget.TextView";
-    /** How long after Google's last setup screen Hearth keeps out of the way (refreshed by each setup screen). */
-    private static final long GOOGLE_SETUP_HOLD_MS = 2 * 60_000;
-    private long mGoogleSetupUntil = 0;
-
-    /** Opens Google TV's own profile chooser. Not a public API, so starting it can fail. */
-    static Intent profileChooserIntent() {
-        return new Intent("com.google.android.gms.account.ProfilePickerDelegation")
-                .setClassName(GOOGLE_TV_PACKAGE, GOOGLE_TV_CHOOSER_ACTIVITY);
-    }
-
-    /** Google TV's profile chooser, in either form (ProfileChooserActivity or ProfileChooserTransparentActivity). */
-    private static boolean isChooser(String className) {
-        return className.startsWith(GOOGLE_TV_PACKAGE + ".profile.chooser.ProfileChooser");
-    }
-
-    private static boolean isGoogleSetupScreen(String className) {
-        String c = className.toLowerCase(Locale.ROOT);
-        // Not the account check Google TV runs on every chooser visit (AccountVerification/Reauth), or Hearth
-        // would hold back after ordinary switches.
-        // Nor the PIN prompt (CreatePinActivity) Google TV shows on every switch into or out of a kids profile.
-        return c.contains(".onboarding.") || c.contains("setup");
-    }
-    /** Whether Google TV is suspending apps (a kids profile), as last seen; null until first checked. */
-    private Boolean mKidsState;
-
+    private final BroadcastReceiver mScreenReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (mHaStatus != null) mHaStatus.setScreenOn(Intent.ACTION_SCREEN_ON.equals(intent.getAction()));
+        }
+    };
     private final LauncherApps.Callback mSuspensionCallback = new LauncherApps.Callback() {
         @Override public void onPackageRemoved(String packageName, UserHandle user) {}
         @Override public void onPackageAdded(String packageName, UserHandle user) {
@@ -162,6 +212,25 @@ public class LauncherAccessibilityService extends AccessibilityService {
             onSuspensionsChanged();
         }
     };
+
+    /** Opens Google TV's own profile chooser. Not a public API, so starting it can fail. */
+    static Intent profileChooserIntent() {
+        return new Intent("com.google.android.gms.account.ProfilePickerDelegation")
+                .setClassName(GOOGLE_TV_PACKAGE, GOOGLE_TV_CHOOSER_ACTIVITY);
+    }
+
+    /** Google TV's profile chooser, in either form (ProfileChooserActivity or ProfileChooserTransparentActivity). */
+    private static boolean isChooser(String className) {
+        return className.startsWith(GOOGLE_TV_PACKAGE + ".profile.chooser.ProfileChooser");
+    }
+
+    private static boolean isGoogleSetupScreen(String className) {
+        String c = className.toLowerCase(Locale.ROOT);
+        // Not the account check Google TV runs on every chooser visit (AccountVerification/Reauth), or Hearth
+        // would hold back after ordinary switches.
+        // Nor the PIN prompt (CreatePinActivity) Google TV shows on every switch into or out of a kids profile.
+        return c.contains(".onboarding.") || c.contains("setup");
+    }
 
     /** HearthTube installed or updated: whether Hearth keeps it up to date may have changed (updates_hearthtube). */
     private void onCompanionChanged(String packageName) {
@@ -379,11 +448,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
         return named;
     }
 
-    // Once the chooser has laid out (and its focus animation settled): which tile is the current account, and
-    // photos for profiles that have none yet or weren't checked today.
-    private static final long CHOOSER_READ_DELAY_MS = 1_200;
-    private final Runnable mReadChooser = this::readChooser;
-
+    /**
+     * Once the chooser has laid out: which tile is the current account, and photos for profiles that have none
+     * yet or weren't checked today.
+     */
     private void readChooser() {
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null || !mChooserOnScreen
@@ -676,10 +744,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
     }
 
-    private static final long KIDS_HOME_GRACE_MS = 1_500;
-    private String mLastWindowPackage;
-    private String mLastAppPackage;
-
     /** The app last in front (Hearth included), ignoring windows that come up over it (keyboard, pop-ups). */
     static String appInFront() {
         LauncherAccessibilityService service = sInstance;
@@ -691,16 +755,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
         LauncherAccessibilityService service = sInstance;
         return service != null ? service.mLastWindowPackage : null;
     }
-    private final Runnable mKidsHomeTakeOver = () -> {
-        // Not if Google TV put a screen of its own up (time up, PIN...) or the kid opened an app meanwhile
-        if (autoTakeOverAllowed() && !mGoogleTvScreenInFront && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage)) {
-            openLauncher();
-        }
-    };
-
-    private static final long SCREEN_TIME_READ_DELAY_MS = 700;
-    private String mScreenTimeClass;
-    private final Runnable mReadScreenTime = this::readScreenTime;
 
     private void readScreenTime() {
         if (mHaStatus == null) return;
@@ -759,15 +813,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (mHaStatus != null) mHaStatus.setScreenTimeLock(true);
         if (changed) ProfileProvider.notifyChanged(this);
     }
-
-    // When Google TV last showed a time up / bedtime screen; it blocks the apps a moment around that, so the apps'
-    // state doesn't overrule the screen for a while.
-    private long mWellbeingSeenAt = 0;
-    /** Google TV's time up / bedtime screen is the window in front: never lift the lock under it. */
-    private boolean mWellbeingInFront = false;
-    private static final long WELLBEING_TRUST_MS = 15_000;
-    /** The apps' state settled screen time the last time it was checked (see ProfileUsers.isScreenTimeUp). */
-    private boolean mScreenTimeKnown = false;
 
     /**
      * Screen time from the apps: in a kids profile Google TV blocks even the approved apps while time is up, and
@@ -837,8 +882,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
         MainActivity.notifyProfileChanged();
     }
 
-    private static final String APP_USERS_PREFS = "ltv_app_last_profile";
-
     /** Records that the active Google TV profile (its key) is using this app (for Continue Watching ownership). */
     private static void rememberAppUser(Context context, String packageName) {
         String profile = getActiveProfileKey(context);
@@ -886,31 +929,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     public void onInterrupt() {
     }
 
-    // --- Idle standby: sleep after N minutes without a remote press, unless something is playing ---
-
-    static final String DEVICE_PREFS = "ltv_device";
-    static final String IDLE_MINUTES_KEY = "idle_standby_minutes";
-    private static final long IDLE_CHECK_MS = 30_000;
-    private static final long IDLE_WARNING_MS = 60_000;
-
-    private final Handler mHandler = new Handler(Looper.getMainLooper());
-    private long mLastInputAt = SystemClock.elapsedRealtime();
-    private boolean mIdleWarned = false;
-
-    private final Runnable mPeriodicCheck = new Runnable() {
-        @Override
-        public void run() {
-            checkIdle();
-            // In case a switch broadcast was missed
-            checkProfileUser("periodic check");
-            updateScreenTimeLock("periodic check");
-            mHandler.postDelayed(this, IDLE_CHECK_MS);
-        }
-    };
-
     // --- Home Button Fix lost: an update (or anything else) turned the service off after it had been on ---
-
-    static final String HOME_FIX_SEEN_KEY = "home_button_fix_seen";
 
     /** True while the service is actually connected; Android can kill it while Settings still shows it on. */
     static boolean isRunning() {
@@ -925,6 +944,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     static void forgetHomeButtonFix(Context context) {
         context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).edit().remove(HOME_FIX_SEEN_KEY).apply();
     }
+
+    // --- Idle standby: sleep after N minutes without a remote press, unless something is playing ---
 
     static int getIdleStandbyMinutes(Context context) {
         return context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).getInt(IDLE_MINUTES_KEY, 0);
@@ -994,15 +1015,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     // --- Home Assistant notifications ("Notifications for Android TV / Fire TV" protocol, port 7676) ---
 
-    static final String HA_ENABLED_KEY = "ha_notifications_enabled";
-    private HaStatusReporter mHaStatus;
-    private final BroadcastReceiver mScreenReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (mHaStatus != null) mHaStatus.setScreenOn(Intent.ACTION_SCREEN_ON.equals(intent.getAction()));
-        }
-    };
-
     /** Status reporting to a Home Assistant webhook; empty values turn it off. */
     static void setHaStatusConfig(Context context, String baseUrl, String webhookId) {
         context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).edit()
@@ -1012,8 +1024,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
         LauncherAccessibilityService service = sInstance;
         if (service != null && service.mHaStatus != null) service.mHaStatus.start();
     }
-    private HaNotificationServer mHaServer;
-    private HaNotificationOverlay mHaOverlay;
 
     static boolean isHaNotificationsEnabled(Context context) {
         return context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).getBoolean(HA_ENABLED_KEY, false);
@@ -1049,15 +1059,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
     interface KeyCaptureCallback {
         void onCaptured(int keyCode);
     }
-
-    private static final long LONG_PRESS_MS = 600;
-    private KeyCaptureCallback mCapture;
-    private int mHeldKey = KeyEvent.KEYCODE_UNKNOWN;
-    private boolean mLongPressFired = false;
-    private final Runnable mLongPress = () -> {
-        mLongPressFired = true;
-        runMapping(mHeldKey, ButtonMapper.PRESS_LONG);
-    };
 
     /** The next remote button press is reported instead of acted on. False when the service isn't running. */
     static boolean captureNextKey(KeyCaptureCallback callback) {
@@ -1164,7 +1165,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(intent);
     }
-
 
     static boolean isSuspended(Context context) {
         try {
