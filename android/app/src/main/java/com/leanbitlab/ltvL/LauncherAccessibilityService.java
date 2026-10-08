@@ -60,9 +60,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final String PROFILE_READY_KEY = "ready_key";
     private static final String APP_USERS_PREFS = "ltv_app_last_profile";
     static final String DEVICE_PREFS = "ltv_device";
-    static final String IDLE_MINUTES_KEY = "idle_standby_minutes";
-    static final String HOME_FIX_SEEN_KEY = "home_button_fix_seen";
-    static final String HA_ENABLED_KEY = "ha_notifications_enabled";
+    private static final String IDLE_MINUTES_KEY = "idle_standby_minutes";
+    private static final String HOME_FIX_SEEN_KEY = "home_button_fix_seen";
+    private static final String HA_ENABLED_KEY = "ha_notifications_enabled";
 
     private static final long PENDING_BOUNCE_WINDOW_MS = 10_000;
     // How long "use Google TV for now" holds off the automatic bounce-back (the parent returns sooner via Home).
@@ -1166,7 +1166,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         startActivity(intent);
     }
 
-    static boolean isSuspended(Context context) {
+    private static boolean isSuspended(Context context) {
         try {
             ApplicationInfo info = context.getPackageManager().getApplicationInfo(context.getPackageName(), 0);
             return (info.flags & ApplicationInfo.FLAG_SUSPENDED) != 0;

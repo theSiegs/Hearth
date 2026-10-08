@@ -23,7 +23,7 @@ import java.util.Map;
  * its entity ID) through the panel's token.
  */
 final class ButtonMapper {
-    static final String MAPPINGS_KEY = "button_mappings";
+    private static final String MAPPINGS_KEY = "button_mappings";
     static final String PRESS_SHORT = "short";
     static final String PRESS_LONG = "long";
 
