@@ -26,7 +26,7 @@ import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'app_icon.dart';
-import 'focusable_settings_tile.dart';
+import 'blocked_apps_section.dart';
 
 class ContinueWatchingAppsPage extends StatelessWidget {
   static const String routeName = "continue_watching_apps_panel";
@@ -72,146 +72,27 @@ class ContinueWatchingAppsPage extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             children: [
-              // --- SECTION 1: BLOCKED APPS ---
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-                child: Text(
-                  'Blocked from Continue Watching (${blockedPackages.length})',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+              BlockedAppsSection(
+                title: 'Blocked from Continue Watching (${blockedPackages.length})',
+                apps: knownBlockedApps,
+                missingPackages: unknownBlockedPkg,
+                blockedLabel: 'Blocked from Continue Watching',
+                unblockLabel: 'Unblock',
+                unblockAllLabel: 'Unblock All Apps',
+                appIcon: Icons.tv,
+                emptyIcon: Icons.check_circle_outline,
+                emptyTitle: 'No Blocked Apps',
+                emptyMessage: 'All supported apps can show items in Continue Watching.',
+                onUnblock: (pkg) => watchNextService.setPackageHidden(settingsService, pkg, false),
+                onUnblockAll: () => watchNextService.unhideAll(settingsService),
               ),
-              if (blockedPackages.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.04),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.white12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.check_circle_outline, color: Colors.green, size: 28),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'No Blocked Apps',
-                                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'All supported apps can show items in Continue Watching.',
-                                style: theme.textTheme.bodySmall?.copyWith(color: Colors.white54),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else ...[
-                ...knownBlockedApps.map((app) => FocusableSettingsTile(
-                      leading: AppIcon(app.packageName, size: 32, borderRadius: 6, placeholder: const Icon(Icons.tv, size: 32)),
-                      title: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(app.name, style: theme.textTheme.bodyMedium),
-                          const SizedBox(height: 2),
-                          const Text(
-                            'Blocked from Continue Watching',
-                            style: TextStyle(color: Colors.redAccent, fontSize: 11),
-                          ),
-                        ],
-                      ),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.redAccent.withOpacity(0.5)),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.lock_open, size: 14, color: Colors.redAccent),
-                            SizedBox(width: 4),
-                            Text(
-                              'Unblock',
-                              style: TextStyle(
-                                color: Colors.redAccent,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      onPressed: () => watchNextService.setPackageHidden(settingsService, app.packageName, false),
-                    )),
-                ...unknownBlockedPkg.map((pkg) => FocusableSettingsTile(
-                      leading: const Icon(Icons.tv, size: 32),
-                      title: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(pkg, style: theme.textTheme.bodyMedium),
-                          const SizedBox(height: 2),
-                          const Text(
-                            'Blocked from Continue Watching',
-                            style: TextStyle(color: Colors.redAccent, fontSize: 11),
-                          ),
-                        ],
-                      ),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.redAccent.withOpacity(0.5)),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.lock_open, size: 14, color: Colors.redAccent),
-                            SizedBox(width: 4),
-                            Text(
-                              'Unblock',
-                              style: TextStyle(
-                                color: Colors.redAccent,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      onPressed: () => watchNextService.setPackageHidden(settingsService, pkg, false),
-                    )),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.clear_all, color: Colors.orange),
-                  title: Text(
-                    'Unblock All Apps',
-                    style: theme.textTheme.bodyMedium?.copyWith(color: Colors.orange),
-                  ),
-                  onPressed: () => watchNextService.unhideAll(settingsService),
-                ),
-              ],
 
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Divider(),
               ),
 
-              // --- SECTION 2: APPS WITH CONTINUE WATCHING CONTENT ---
+              // --- APPS WITH CONTINUE WATCHING CONTENT ---
               Padding(
                 padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
                 child: Column(
@@ -293,7 +174,7 @@ class ContinueWatchingAppsPage extends StatelessWidget {
                 child: Divider(),
               ),
 
-              // --- SECTION 3: ALL INSTALLED APPLICATIONS ---
+              // --- ALL INSTALLED APPLICATIONS ---
               Padding(
                 padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
                 child: Column(
