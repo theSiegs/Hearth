@@ -33,6 +33,8 @@ import 'package:flauncher/widgets/settings/settings_page.dart';
 class StatusBarPanelPage extends StatelessWidget {
   static const String routeName = "status_bar_panel";
 
+  const StatusBarPanelPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     AppLocalizations localizations = AppLocalizations.of(context)!;

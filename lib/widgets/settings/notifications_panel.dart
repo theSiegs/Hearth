@@ -11,7 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 class NotificationsPanel extends StatelessWidget {
-  const NotificationsPanel({Key? key}) : super(key: key);
+  const NotificationsPanel({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -30,7 +30,7 @@ import 'package:flauncher/widgets/settings/settings_page.dart';
 class BlockedNotificationsPage extends StatelessWidget {
   static const String routeName = "blocked_notifications_panel";
 
-  const BlockedNotificationsPage({Key? key}) : super(key: key);
+  const BlockedNotificationsPage({super.key});
 
   @override
   Widget build(BuildContext context) {

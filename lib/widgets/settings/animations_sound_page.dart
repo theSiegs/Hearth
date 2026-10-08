@@ -28,7 +28,7 @@ class AnimationsSoundPage extends StatelessWidget {
   static const String routeName = "misc_panel";
   static const String title = "Animations & sound";
 
-  const AnimationsSoundPage({Key? key}) : super(key: key);
+  const AnimationsSoundPage({super.key});
 
   @override
   Widget build(BuildContext context) {
