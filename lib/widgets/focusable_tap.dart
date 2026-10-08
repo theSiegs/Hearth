@@ -67,6 +67,9 @@ class _FocusableTapState extends State<FocusableTap> {
                 onTap: widget.onPressed,
                 // The Focus above takes focus; the InkWell would be a second stop.
                 canRequestFocus: false,
+                // The builder draws the focused look; only a tap's splash comes from the InkWell.
+                hoverColor: Colors.transparent,
+                highlightColor: Colors.transparent,
                 customBorder: widget.splashShape,
                 child: child,
               ),
