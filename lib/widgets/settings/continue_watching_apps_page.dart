@@ -16,8 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'dart:typed_data';
-
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -27,6 +25,7 @@ import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
+import 'app_icon.dart';
 import 'focusable_settings_tile.dart';
 
 class ContinueWatchingAppsPage extends StatelessWidget {
@@ -120,23 +119,7 @@ class ContinueWatchingAppsPage extends StatelessWidget {
                 )
               else ...[
                 ...knownBlockedApps.map((app) => FocusableSettingsTile(
-                      leading: FutureBuilder<Uint8List>(
-                        future: appsService.getAppIcon(app.packageName),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                            return ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: Image.memory(
-                                snapshot.data!,
-                                width: 32,
-                                height: 32,
-                                fit: BoxFit.cover,
-                              ),
-                            );
-                          }
-                          return const Icon(Icons.tv, size: 32);
-                        },
-                      ),
+                      leading: AppIcon(app.packageName, size: 32, borderRadius: 6, placeholder: const Icon(Icons.tv, size: 32)),
                       title: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
@@ -301,23 +284,7 @@ class ContinueWatchingAppsPage extends StatelessWidget {
                         ),
                       ],
                     ),
-                    secondary: FutureBuilder<Uint8List>(
-                      future: appsService.getAppIcon(pkg),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
-                            child: Image.memory(
-                              snapshot.data!,
-                              width: 32,
-                              height: 32,
-                              fit: BoxFit.cover,
-                            ),
-                          );
-                        }
-                        return const Icon(Icons.tv, size: 32);
-                      },
-                    ),
+                    secondary: AppIcon(pkg, size: 32, borderRadius: 6, placeholder: const Icon(Icons.tv, size: 32)),
                   );
                 }),
 
@@ -369,23 +336,7 @@ class ContinueWatchingAppsPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  secondary: FutureBuilder<Uint8List>(
-                    future: appsService.getAppIcon(app.packageName),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image.memory(
-                            snapshot.data!,
-                            width: 32,
-                            height: 32,
-                            fit: BoxFit.cover,
-                          ),
-                        );
-                      }
-                      return const Icon(Icons.tv, size: 32);
-                    },
-                  ),
+                  secondary: AppIcon(app.packageName, size: 32, borderRadius: 6, placeholder: const Icon(Icons.tv, size: 32)),
                 );
               }),
             ],

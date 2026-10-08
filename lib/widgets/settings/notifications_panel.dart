@@ -3,6 +3,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/models/app.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/notifications_service.dart';
+import 'package:flauncher/widgets/settings/app_icon.dart';
 import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
 import 'package:flauncher/widgets/side_panel_dialog.dart';
 import 'package:flutter/material.dart';
@@ -165,22 +166,7 @@ class NotificationsPanel extends StatelessWidget {
                                       },
                                       child: FocusableSettingsTile(
                                         autofocus: index == 0,
-                                        leading: FutureBuilder<dynamic>(
-                                          future: appsService.getAppIcon(notification.packageName),
-                                          builder: (context, snapshot) {
-                                            if (snapshot.hasData) {
-                                              return ClipRRect(
-                                                borderRadius: BorderRadius.circular(6),
-                                                child: Image.memory(
-                                                  snapshot.data,
-                                                  width: 36,
-                                                  height: 36,
-                                                ),
-                                              );
-                                            }
-                                            return const Icon(Icons.android, size: 36);
-                                          },
-                                        ),
+                                        leading: AppIcon(notification.packageName, size: 36, borderRadius: 6),
                                         title: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
@@ -301,25 +287,8 @@ class NotificationsPanel extends StatelessWidget {
       builder: (dialogCtx) => AlertDialog(
         title: Row(
           children: [
-            FutureBuilder<dynamic>(
-              future: appsService.getAppIcon(notification.packageName),
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Image.memory(
-                        snapshot.data,
-                        width: 28,
-                        height: 28,
-                      ),
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
+            AppIcon(notification.packageName, size: 28, borderRadius: 6, placeholder: const SizedBox.shrink()),
+            const SizedBox(width: 12),
             Expanded(child: Text(appName, overflow: TextOverflow.ellipsis)),
           ],
         ),

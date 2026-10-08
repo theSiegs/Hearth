@@ -21,6 +21,7 @@ import 'package:flauncher/models/app.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/notifications_service.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
+import 'package:flauncher/widgets/settings/app_icon.dart';
 import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -110,22 +111,7 @@ class BlockedNotificationsPage extends StatelessWidget {
                     )
                   else ...[
                     ...blockedApps.map((app) => FocusableSettingsTile(
-                          leading: FutureBuilder<dynamic>(
-                            future: appsService.getAppIcon(app.packageName),
-                            builder: (context, snapshot) {
-                              if (snapshot.hasData) {
-                                return ClipRRect(
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: Image.memory(
-                                    snapshot.data,
-                                    width: 32,
-                                    height: 32,
-                                  ),
-                                );
-                              }
-                              return const Icon(Icons.android, size: 32);
-                            },
-                          ),
+                          leading: AppIcon(app.packageName, size: 32, borderRadius: 6),
                           title: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
@@ -264,22 +250,7 @@ class BlockedNotificationsPage extends StatelessWidget {
                           ),
                         ],
                       ),
-                      secondary: FutureBuilder<dynamic>(
-                        future: appsService.getAppIcon(app.packageName),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasData) {
-                            return ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: Image.memory(
-                                snapshot.data,
-                                width: 32,
-                                height: 32,
-                              ),
-                            );
-                          }
-                          return const Icon(Icons.android, size: 32);
-                        },
-                      ),
+                      secondary: AppIcon(app.packageName, size: 32, borderRadius: 6),
                     );
                   }),
                 ],
