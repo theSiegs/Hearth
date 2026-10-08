@@ -630,23 +630,19 @@ public class ProfilePairingService extends AccessibilityService {
             }
         }
         int focused = -1;
-        for (int i = 0; i < tiles.size(); i++) {
-            if (hasFocus(tiles.get(i).node, 0) || (tiles.get(i).clickable != null
-                    && hasFocus(tiles.get(i).clickable, 0))) {
-                focused = i;
-                break;
-            }
-        }
         if (ProfilePairing.APPLE_TV.equals(s.pkg)) {
             // Apple TV's tiles don't report focus, but its accessibility-focus events name the highlighted tile.
             // Until one arrives after the last press, wait: never press OK on a tile Hearth hasn't seen highlighted.
             if (s.highlighted == null) return;
-            focused = -1;
-            for (int i = 0; i < tiles.size(); i++) {
+            for (int i = 0; i < tiles.size() && focused < 0; i++) {
                 if (ProfilePairing.normalize(tiles.get(i).name).equals(ProfilePairing.normalize(s.highlighted))) {
                     focused = i;
-                    break;
                 }
+            }
+        } else {
+            for (int i = 0; i < tiles.size() && focused < 0; i++) {
+                Tile tile = tiles.get(i);
+                if (hasFocus(tile.node, 0) || (tile.clickable != null && hasFocus(tile.clickable, 0))) focused = i;
             }
         }
         if (focused == targetIndex) {
