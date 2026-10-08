@@ -65,7 +65,7 @@ class CompanionRelease {
   }
 }
 
-/// Finds, downloads and installs companion app releases, for the Companion apps page and on its own: Hearth is the
+/// Finds, downloads and installs companion app releases, for the Updates page and on its own: Hearth is the
 /// TV's one updater for its companions. In the background it checks at start and then daily, and installs only where
 /// Android lets Hearth update without asking (it's the app's installer of record) and while the app isn't in front.
 class CompanionUpdater {

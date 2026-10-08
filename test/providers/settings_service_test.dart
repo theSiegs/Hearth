@@ -322,7 +322,6 @@ void main() async {
       final sp = await SharedPreferences.getInstance();
       final service = SettingsService(sp);
 
-      expect(service.continueWatchingCardSize, "normal");
       expect(service.continueWatchingCardHeight, 135);
       expect(service.continueWatchingMaxItems, 15);
       expect(service.continueWatchingShowProgress, isTrue);
@@ -340,7 +339,7 @@ void main() async {
       await service.hideWatchNextProgram(123);
       await service.hideWatchNextPackage("com.test.app");
 
-      expect(service.continueWatchingCardSize, "110");
+      expect(sp.getString("continue_watching_card_size"), "110");
       expect(service.continueWatchingCardHeight, 110);
       expect(service.continueWatchingMaxItems, 20);
       expect(service.continueWatchingShowProgress, isFalse);

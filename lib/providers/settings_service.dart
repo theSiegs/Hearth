@@ -200,7 +200,6 @@ class SettingsService extends ChangeNotifier {
 
   bool get showInputsWidgetInStatusBar => _showInputsWidgetInStatusBar;
   bool get showContinueWatching => _showContinueWatching;
-  String get continueWatchingCardSize => _continueWatchingCardSize;
 
   /// The Continue Watching cards' height, in dp.
   int get continueWatchingCardHeight => _continueWatchingCardHeight;
