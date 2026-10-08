@@ -13,8 +13,8 @@ import '../../mocks.mocks.dart';
 void main() {
   setUpAll(() async {
     final binding = TestWidgetsFlutterBinding.ensureInitialized();
-    binding.window.physicalSizeTestValue = const Size(1280, 720);
-    binding.window.devicePixelRatioTestValue = 1.0;
+    binding.platformDispatcher.implicitView!.physicalSize = const Size(1280, 720);
+    binding.platformDispatcher.implicitView!.devicePixelRatio = 1.0;
   });
 
   testWidgets("Left/Right arrow keys switch categories in ApplicationsPanelPage", (tester) async {
