@@ -32,6 +32,8 @@ import '../../models/category.dart';
 class LauncherSectionsPanelPage extends StatefulWidget {
   static const String routeName = "launcher_sections_panel";
 
+  const LauncherSectionsPanelPage({super.key});
+
   @override
   State<LauncherSectionsPanelPage> createState() => _LauncherSectionsPanelPageState();
 }

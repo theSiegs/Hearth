@@ -13,7 +13,7 @@ import 'package:flauncher/widgets/settings/settings_page.dart';
 class BackupRestorePage extends StatelessWidget {
   static const String routeName = "backup_restore_panel";
 
-  const BackupRestorePage({Key? key}) : super(key: key);
+  const BackupRestorePage({super.key});
 
   @override
   Widget build(BuildContext context) {

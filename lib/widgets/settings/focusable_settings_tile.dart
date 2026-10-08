@@ -8,13 +8,13 @@ class FocusableSettingsTile extends StatefulWidget {
   final bool autofocus;
 
   const FocusableSettingsTile({
-    Key? key,
+    super.key,
     required this.title,
     this.leading,
     this.trailing,
     this.onPressed,
     this.autofocus = false,
-  }) : super(key: key);
+  });
 
   @override
   State<FocusableSettingsTile> createState() => _FocusableSettingsTileState();

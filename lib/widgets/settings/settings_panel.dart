@@ -61,7 +61,7 @@ import 'package:flutter/services.dart';
 class SettingsPanel extends StatefulWidget {
   final String? initialRoute;
 
-  const SettingsPanel({Key? key, this.initialRoute}) : super(key: key);
+  const SettingsPanel({super.key, this.initialRoute});
 
   @override
   State<SettingsPanel> createState() => _SettingsPanelState();
@@ -79,8 +79,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async => !await _navigatorKey.currentState!.maybePop(),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final poppedInside = await _navigatorKey.currentState!.maybePop();
+        if (!poppedInside && context.mounted) Navigator.of(context).pop();
+      },
       child: SidePanelOverlay(
         width: 350,
         child: Focus(
@@ -95,38 +100,38 @@ class _SettingsPanelState extends State<SettingsPanel> {
               onGenerateRoute: (settings) {
                 switch (settings.name) {
                   case SettingsPanelPage.routeName:
-                    return _FastPageRoute(builder: (_) => SettingsPanelPage());
+                    return _FastPageRoute(builder: (_) => const SettingsPanelPage());
                   case SystemSettingsPage.routeName:
-                    return _FastPageRoute(builder: (_) => SystemSettingsPage());
+                    return _FastPageRoute(builder: (_) => const SystemSettingsPage());
                   case HomeScreenSettingsPage.routeName:
-                    return _FastPageRoute(builder: (_) => HomeScreenSettingsPage());
+                    return _FastPageRoute(builder: (_) => const HomeScreenSettingsPage());
                   case WallpaperPanelPage.routeName:
-                    return _FastPageRoute(builder: (_) => WallpaperPanelPage());
+                    return _FastPageRoute(builder: (_) => const WallpaperPanelPage());
                   case StatusBarPanelPage.routeName:
-                    return _FastPageRoute(builder: (_) => StatusBarPanelPage());
+                    return _FastPageRoute(builder: (_) => const StatusBarPanelPage());
                   case GradientPanelPage.routeName:
-                    return _FastPageRoute(builder: (_) => GradientPanelPage());
+                    return _FastPageRoute(builder: (_) => const GradientPanelPage());
                   case ApplicationsPanelPage.routeName:
-                    return _FastPageRoute(builder: (_) => ApplicationsPanelPage());
+                    return _FastPageRoute(builder: (_) => const ApplicationsPanelPage());
                   case LauncherSectionsPanelPage.routeName:
-                    return _FastPageRoute(builder: (_) => LauncherSectionsPanelPage());
+                    return _FastPageRoute(builder: (_) => const LauncherSectionsPanelPage());
                   case LauncherSectionPanelPage.routeName:
                     return _FastPageRoute(
                         builder: (_) => LauncherSectionPanelPage(sectionIndex: settings.arguments as int?));
                   case DataUsagePeriodPage.routeName:
-                    return _FastPageRoute(builder: (_) => DataUsagePeriodPage());
+                    return _FastPageRoute(builder: (_) => const DataUsagePeriodPage());
                   case BackButtonActionPage.routeName:
-                    return _FastPageRoute(builder: (_) => BackButtonActionPage());
+                    return _FastPageRoute(builder: (_) => const BackButtonActionPage());
                   case DateTimeFormatPage.routeName:
-                    return _FastPageRoute(builder: (_) => DateTimeFormatPage());
+                    return _FastPageRoute(builder: (_) => const DateTimeFormatPage());
                   case AnimationsSoundPage.routeName:
-                    return _FastPageRoute(builder: (_) => AnimationsSoundPage());
+                    return _FastPageRoute(builder: (_) => const AnimationsSoundPage());
                   case CardStylePage.routeName:
                     return _FastPageRoute(builder: (_) => const CardStylePage());
                   case DockLabelsPage.routeName:
                     return _FastPageRoute(builder: (_) => const DockLabelsPage());
                   case AccentColorPage.routeName:
-                    return _FastPageRoute(builder: (_) => AccentColorPage());
+                    return _FastPageRoute(builder: (_) => const AccentColorPage());
                   case ProfilePairingPage.routeName:
                     return _FastPageRoute(builder: (_) => const ProfilePairingPage());
                   case ProfilePairingAppPage.routeName:

@@ -14,7 +14,7 @@ class AppDetailsPage extends StatelessWidget {
 
   final App application;
 
-  const AppDetailsPage({Key? key, required this.application}) : super(key: key);
+  const AppDetailsPage({super.key, required this.application});
 
   @override
   Widget build(BuildContext context) {

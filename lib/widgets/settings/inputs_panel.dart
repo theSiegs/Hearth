@@ -7,7 +7,7 @@ import 'package:flauncher/models/tv_input.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 
 class InputsPanel extends StatelessWidget {
-  const InputsPanel({Key? key}) : super(key: key);
+  const InputsPanel({super.key});
 
   @override
   Widget build(BuildContext context) {

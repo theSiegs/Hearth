@@ -106,8 +106,8 @@ class _IdleStandbyTileState extends State<_IdleStandbyTile> {
         children: [
           for (final option in _options)
             SimpleDialogOption(
-              child: Text(_label(option), style: Theme.of(context).textTheme.bodyMedium),
               onPressed: () => Navigator.of(context).pop(option),
+              child: Text(_label(option), style: Theme.of(context).textTheme.bodyMedium),
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),

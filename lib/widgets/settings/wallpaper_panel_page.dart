@@ -30,6 +30,8 @@ import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 class WallpaperPanelPage extends StatelessWidget {
   static const String routeName = "wallpaper_panel";
 
+  const WallpaperPanelPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     AppLocalizations localizations = AppLocalizations.of(context)!;
