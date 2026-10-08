@@ -293,7 +293,8 @@ void main() async {
       expect(service.continueWatchingCardSize, "normal");
       expect(service.continueWatchingMaxItems, 15);
       expect(service.continueWatchingShowProgress, isTrue);
-      expect(service.continueWatchingShowPercentage, isTrue);
+      // The progress bar says it; the percentage badge is opt-in
+      expect(service.continueWatchingShowPercentage, isFalse);
       expect(service.continueWatchingShowDescription, isTrue);
       expect(service.hiddenWatchNextProgramIds, isEmpty);
       expect(service.hiddenWatchNextPackages, isEmpty);
@@ -301,7 +302,7 @@ void main() async {
       await service.setContinueWatchingCardSize("compact");
       await service.setContinueWatchingMaxItems(20);
       await service.setContinueWatchingShowProgress(false);
-      await service.setContinueWatchingShowPercentage(false);
+      await service.setContinueWatchingShowPercentage(true);
       await service.setContinueWatchingShowDescription(false);
       await service.hideWatchNextProgram(123);
       await service.hideWatchNextPackage("com.test.app");
@@ -309,7 +310,7 @@ void main() async {
       expect(service.continueWatchingCardSize, "compact");
       expect(service.continueWatchingMaxItems, 20);
       expect(service.continueWatchingShowProgress, isFalse);
-      expect(service.continueWatchingShowPercentage, isFalse);
+      expect(service.continueWatchingShowPercentage, isTrue);
       expect(service.continueWatchingShowDescription, isFalse);
       expect(service.hiddenWatchNextProgramIds, contains("123"));
       expect(service.hiddenWatchNextPackages, contains("com.test.app"));
