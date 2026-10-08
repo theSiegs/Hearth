@@ -177,7 +177,6 @@ class LauncherSectionPanelPage extends StatelessWidget {
                   Divider(),
                   if (creating) ...[
                     _listTile(
-                      context,
                       Text(localizations.type),
                       Padding(
                         padding: EdgeInsets.only(top: 4),
@@ -394,7 +393,6 @@ class _CategorySettingsState extends State<_CategorySettings> {
       child: Column(
         children: [
           _listTile(
-              context,
               Text(localizations.name),
               Padding(
                   padding: EdgeInsets.only(top: 4),
@@ -430,7 +428,6 @@ class _CategorySettingsState extends State<_CategorySettings> {
                   ))),
           if (!sectionNamePresets.contains(_name) || _name.isEmpty)
             _listTile(
-                context,
                 Text('Custom Name'),
                 Padding(
                     padding: EdgeInsets.only(top: 4),
@@ -448,7 +445,6 @@ class _CategorySettingsState extends State<_CategorySettings> {
                       },
                     ))),
           _listTile(
-              context,
               Text(localizations.sort),
               Padding(
                   padding: EdgeInsets.only(top: 4),
@@ -482,7 +478,6 @@ class _CategorySettingsState extends State<_CategorySettings> {
                         )
                       ]))),
           _listTile(
-              context,
               Text(localizations.layout),
               Padding(
                   padding: EdgeInsets.only(top: 4),
@@ -511,7 +506,6 @@ class _CategorySettingsState extends State<_CategorySettings> {
                       ]))),
           if (_categoryType == CategoryType.grid)
             _listTile(
-                context,
                 Text(localizations.columnCount),
                 Padding(
                     padding: EdgeInsets.only(top: 4),
@@ -540,7 +534,6 @@ class _CategorySettingsState extends State<_CategorySettings> {
                         }))),
           if (_categoryType == CategoryType.row)
             _listTile(
-                context,
                 Text(localizations.rowHeight),
                 Padding(
                     padding: EdgeInsets.only(top: 4),
@@ -678,7 +671,6 @@ class _LauncherSpacerSettingsState extends State<_LauncherSpacerSettings> {
     AppLocalizations localizations = AppLocalizations.of(context)!;
 
     return _listTile(
-        context,
         Text(localizations.height),
         Padding(
             padding: EdgeInsets.only(top: 4),
@@ -727,12 +719,11 @@ class _LauncherSpacerSettingsState extends State<_LauncherSpacerSettings> {
   }
 }
 
-Widget _listTile(BuildContext context, Widget title, Widget subtitle, {Widget? trailing}) => Material(
+Widget _listTile(Widget title, Widget subtitle) => Material(
     type: MaterialType.transparency,
     child: ListTile(
       dense: true,
       minVerticalPadding: 8,
       title: title,
       subtitle: subtitle,
-      trailing: trailing,
     ));
