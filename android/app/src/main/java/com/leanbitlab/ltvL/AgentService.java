@@ -14,10 +14,12 @@ import android.database.ContentObserver;
 import android.graphics.Rect;
 import android.media.tv.TvContract;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Process;
+import android.os.UserHandle;
 import android.os.UserManager;
 import android.util.Log;
 
@@ -25,14 +27,22 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Hearth as an agent: when Hearth runs in another Google TV profile's user (one a parent approved Hearth for), it
@@ -44,19 +54,20 @@ public class AgentService extends Service {
     private static final String TAG = "HearthAgent";
     private static final String PREFS = "ltv_agent";
     private static final String KEY = "key";
+    private static final String HEARTH_ROW = "hearth_row";
     private static final String CHANNEL = "hearth_agent";
     private static final long RETRY_MS = 5_000;
     private static final long PING_MS = 30_000;
+    private static final long WATCH_NEXT_DEBOUNCE_MS = 1_000;
+    private static final long PIN_REPLY_SECONDS = 3;
     // About a minute of owner-Hearth being unreachable before the agent checks whether it was actually uninstalled.
     private static final int SELF_CLEAN_AFTER_FAILURES = 12;
 
+    private static final AtomicLong sPinIds = new AtomicLong();
+    private static final Map<Long, BlockingQueue<JSONObject>> sPinReplies = new ConcurrentHashMap<>();
     private static volatile String sPendingOpen;
     private static volatile String sListeningTo;
     private static volatile boolean sConnected;
-    private static final String HEARTH_ROW = "hearth_row";
-    private static final java.util.concurrent.atomic.AtomicLong sPinIds = new java.util.concurrent.atomic.AtomicLong();
-    private static final java.util.Map<Long, java.util.concurrent.BlockingQueue<JSONObject>> sPinReplies =
-            new java.util.concurrent.ConcurrentHashMap<>();
     private static volatile AgentService sInstance;
 
     private HandlerThread mThread;
@@ -144,17 +155,17 @@ public class AgentService extends Service {
     }
 
     /** Checks a PIN with Hearth (it stays there); null when Hearth doesn't answer within a few seconds. */
-    static android.os.Bundle verifyPinWithHearth(String pin) {
+    static Bundle verifyPinWithHearth(String pin) {
         AgentService service = sInstance;
         if (service == null || service.mOut == null) return null;
         long id = sPinIds.incrementAndGet();
-        java.util.concurrent.BlockingQueue<JSONObject> reply = new java.util.concurrent.ArrayBlockingQueue<>(1);
+        BlockingQueue<JSONObject> reply = new ArrayBlockingQueue<>(1);
         sPinReplies.put(id, reply);
         try {
             service.send(json("type", "verifyPin", "id", id, "pin", pin));
-            JSONObject answer = reply.poll(3, java.util.concurrent.TimeUnit.SECONDS);
+            JSONObject answer = reply.poll(PIN_REPLY_SECONDS, TimeUnit.SECONDS);
             if (answer == null) return null;
-            android.os.Bundle result = new android.os.Bundle();
+            Bundle result = new Bundle();
             result.putBoolean("ok", answer.optBoolean("ok"));
             if (answer.optInt("wait") > 0) result.putInt("wait_seconds", answer.optInt("wait"));
             return result;
@@ -207,7 +218,7 @@ public class AgentService extends Service {
             @Override
             public void onChange(boolean selfChange) {
                 mHandler.removeCallbacks(mSendWatchNext);
-                mHandler.postDelayed(mSendWatchNext, 1_000);
+                mHandler.postDelayed(mSendWatchNext, WATCH_NEXT_DEBOUNCE_MS);
             }
         };
         try {
@@ -250,60 +261,8 @@ public class AgentService extends Service {
         while (mRunning) {
             String key = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null);
             if (key != null) {
-                boolean connected = false;
-                try (Socket socket = new Socket(InetAddress.getByName("127.0.0.1"), AgentHub.PORT)) {
-                    mSocket = socket;
-                    if (!mRunning) return;
-                    PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                    BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-                    boolean voiceDefault = getPackageName().equals(android.provider.Settings.Secure.getString(
-                            getContentResolver(), "tts_default_synth"));
-                    out.println(new JSONObject().put("type", "hello").put("serial", serial).put("key", key)
-                            .put("voiceDefault", voiceDefault));
-                    JSONObject reply = new JSONObject(in.readLine());
-                    if ("welcome".equals(reply.optString("type"))) {
-                        Log.i(TAG, "Connected to Hearth as serial " + serial);
-                        mOut = out;
-                        connected = true;
-                        onConnectionChanged(true);
-                        mHandler.post(mSendWatchNext);
-                        mHandler.postDelayed(mPing, PING_MS);
-                        String line;
-                        while ((line = in.readLine()) != null) {
-                            JSONObject message = new JSONObject(line);
-                            String type = message.optString("type");
-                            if ("open".equals(type)) {
-                                sPendingOpen = message.optString("intent");
-                            } else if ("listen".equals(type)) {
-                                sListeningTo = message.isNull("package") ? null : message.optString("package");
-                                Log.i(TAG, "Listening to " + sListeningTo);
-                            } else if ("hearth".equals(type)) {
-                                JSONObject row = message.optJSONObject("row");
-                                if (row != null) {
-                                    getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-                                            .putString(HEARTH_ROW, row.toString()).apply();
-                                    getContentResolver().notifyChange(ProfileProvider.activeUri(this), null);
-                                }
-                            } else if ("pinResult".equals(type)) {
-                                java.util.concurrent.BlockingQueue<JSONObject> pinReply = sPinReplies.get(message.optLong("id"));
-                                if (pinReply != null) pinReply.offer(message);
-                            } else if ("adbKey".equals(type)) {
-                                storeSharedKey(message.optString("priv"), message.optString("pub"));
-                            }
-                        }
-                    } else {
-                        Log.i(TAG, "Hearth refused this agent's key");
-                    }
-                } catch (Exception e) {
-                    Log.i(TAG, "Hearth unreachable: " + e.getMessage());
-                } finally {
-                    mSocket = null;
-                    boolean wasConnected = mOut != null;
-                    mOut = null;
-                    sListeningTo = null;
-                    if (wasConnected) onConnectionChanged(false);
-                    mHandler.removeCallbacks(mPing);
-                }
+                boolean connected = session(serial, key);
+                if (!mRunning) return;
                 if (connected) {
                     mFailedConnects = 0;
                 } else {
@@ -319,6 +278,74 @@ public class AgentService extends Service {
                     return;
                 }
             }
+        }
+    }
+
+    /** One connection to Hearth, handled until it ends. Returns whether Hearth accepted this agent. */
+    private boolean session(long serial, String key) {
+        boolean connected = false;
+        try (Socket socket = new Socket(InetAddress.getByName("127.0.0.1"), AgentHub.PORT)) {
+            mSocket = socket;
+            if (!mRunning) return false;
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+            out.println(new JSONObject().put("type", "hello").put("serial", serial).put("key", key)
+                    .put("voiceDefault", ProfilePairingService.isVoiceDefault(this)));
+            JSONObject reply = new JSONObject(in.readLine());
+            if (!"welcome".equals(reply.optString("type"))) {
+                Log.i(TAG, "Hearth refused this agent's key");
+                return false;
+            }
+            Log.i(TAG, "Connected to Hearth as serial " + serial);
+            mOut = out;
+            connected = true;
+            onConnectionChanged(true);
+            mHandler.post(mSendWatchNext);
+            mHandler.postDelayed(mPing, PING_MS);
+            String line;
+            while ((line = in.readLine()) != null) onMessage(new JSONObject(line));
+        } catch (Exception e) {
+            Log.i(TAG, "Hearth unreachable: " + e.getMessage());
+        } finally {
+            mSocket = null;
+            boolean wasConnected = mOut != null;
+            mOut = null;
+            sListeningTo = null;
+            if (wasConnected) onConnectionChanged(false);
+            mHandler.removeCallbacks(mPing);
+        }
+        return connected;
+    }
+
+    /** One message from Hearth (the protocol is in {@link AgentHub}). */
+    private void onMessage(JSONObject message) {
+        switch (message.optString("type")) {
+            case "open":
+                sPendingOpen = message.optString("intent");
+                break;
+            case "listen":
+                sListeningTo = message.isNull("package") ? null : message.optString("package");
+                Log.i(TAG, "Listening to " + sListeningTo);
+                break;
+            case "hearth": {
+                JSONObject row = message.optJSONObject("row");
+                if (row != null) {
+                    getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                            .putString(HEARTH_ROW, row.toString()).apply();
+                    getContentResolver().notifyChange(ProfileProvider.activeUri(this), null);
+                }
+                break;
+            }
+            case "pinResult": {
+                BlockingQueue<JSONObject> reply = sPinReplies.get(message.optLong("id"));
+                if (reply != null) reply.offer(message);
+                break;
+            }
+            case "adbKey":
+                storeSharedKey(message.optString("priv"), message.optString("pub"));
+                break;
+            default:
+                break;
         }
     }
 
@@ -342,10 +369,7 @@ public class AgentService extends Service {
     private final Runnable mSendWatchNext = () -> {
         JSONArray rows = new JSONArray();
         for (Map<String, Object> row : WatchNextRows.read(this)) rows.put(new JSONObject(row));
-        try {
-            send(new JSONObject().put("type", "watchNext").put("rows", rows));
-        } catch (Exception ignored) {
-        }
+        send(json("type", "watchNext", "rows", rows));
     };
 
     private final Runnable mPing = new Runnable() {
@@ -360,19 +384,19 @@ public class AgentService extends Service {
     private void storeSharedKey(String priv, String pub) {
         if (priv == null || priv.isEmpty() || pub == null || pub.isEmpty()) return;
         try {
-            java.io.File dir = new java.io.File(getFilesDir(), "selfadb");
+            File dir = new File(getFilesDir(), "selfadb");
             if (!dir.exists() && !dir.mkdirs()) return;
-            java.io.File pk = new java.io.File(dir, "adbkey");
+            File pk = new File(dir, "adbkey");
             if (pk.exists()) return; // write once
             write(pk, priv);
-            write(new java.io.File(dir, "adbkey.pub"), pub);
+            write(new File(dir, "adbkey.pub"), pub);
         } catch (Exception e) {
             Log.w(TAG, "couldn't store the shared key: " + e);
         }
     }
 
-    private static void write(java.io.File f, String text) throws Exception {
-        try (java.io.FileOutputStream o = new java.io.FileOutputStream(f)) {
+    private static void write(File f, String text) throws IOException {
+        try (FileOutputStream o = new FileOutputStream(f)) {
             o.write(text.getBytes(StandardCharsets.UTF_8));
         }
     }
@@ -385,7 +409,7 @@ public class AgentService extends Service {
      */
     private void maybeSelfClean() {
         if (mSelfCleaned || mFailedConnects < SELF_CLEAN_AFTER_FAILURES) return;
-        java.io.File priv = new java.io.File(new java.io.File(getFilesDir(), "selfadb"), "adbkey");
+        File priv = new File(new File(getFilesDir(), "selfadb"), "adbkey");
         if (!priv.exists()) return; // no shared key -> no shell; nothing we can do
         try (SelfAdb shell = SelfAdb.open(this)) {
             String owner = shell.run("pm list packages --user 0 " + ProfileAppAccess.HEARTH);
@@ -407,10 +431,9 @@ public class AgentService extends Service {
     /** This agent's own profile user id (for {@code pm --user}); -1 if unknown. */
     private int userIdSelf() {
         try {
-            return (int) android.os.UserHandle.class.getMethod("getIdentifier").invoke(Process.myUserHandle());
-        } catch (Throwable t) {
-            java.util.regex.Matcher m =
-                    java.util.regex.Pattern.compile("\\d+").matcher(String.valueOf(Process.myUserHandle()));
+            return (int) UserHandle.class.getMethod("getIdentifier").invoke(Process.myUserHandle());
+        } catch (Exception e) {
+            Matcher m = Pattern.compile("\\d+").matcher(String.valueOf(Process.myUserHandle()));
             return m.find() ? Integer.parseInt(m.group()) : -1;
         }
     }
