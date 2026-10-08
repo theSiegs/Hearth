@@ -28,6 +28,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:provider/provider.dart';
+import 'package:transparent_image/transparent_image.dart';
 
 import '../mocks.dart';
 import '../mocks.mocks.dart';
@@ -39,6 +40,17 @@ void main() {
     binding.window.devicePixelRatioTestValue = 1.0;
     // Scale-down the font size because the font 'Ahem' used when running tests is much wider than Roboto
     binding.platformDispatcher.textScaleFactorTestValue = 0.8;
+  });
+
+  testWidgets("shows the card's image beside the name", (tester) async {
+    final appsService = MockAppsService();
+    final app = fakeApp(packageName: "me.efesser.flauncher", name: "FLauncher", version: "1.0.0");
+    when(appsService.applications).thenReturn([app]);
+    final image = MemoryImage(kTransparentImage);
+    await _pumpWidgetWithProviders(tester, appsService, null, app, image: image);
+
+    expect(find.byWidgetPredicate((widget) => widget is Image && widget.image == image), findsOneWidget);
+    expect(find.byIcon(Icons.image_not_supported_outlined), findsNothing);
   });
 
   testWidgets("'Open' calls launchApp on AppsService", (tester) async {
@@ -143,8 +155,9 @@ Future<void> _pumpWidgetWithProviders(
   WidgetTester tester,
   AppsService appsService,
   Category? category,
-  App application,
-) async {
+  App application, {
+  ImageProvider? image,
+}) async {
   when(appsService.isAppInFavorites(application)).thenReturn(false);
   when(appsService.hasCustomBanner(application.packageName)).thenAnswer((_) async => false);
   when(appsService.getAppIcon(application.packageName)).thenAnswer((_) async => Uint8List(0));
@@ -165,6 +178,7 @@ Future<void> _pumpWidgetWithProviders(
         home: ApplicationInfoPanel(
           category: category,
           application: application,
+          image: image,
         ),
       ),
     ),
