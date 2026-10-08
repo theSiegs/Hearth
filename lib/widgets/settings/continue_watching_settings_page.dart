@@ -136,7 +136,6 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
             padding: EdgeInsets.symmetric(vertical: 4),
             child: Divider(),
           ),
-          // Card Size
           FocusableSettingsTile(
             leading: const Icon(Icons.aspect_ratio_outlined),
             title: Text('Card Size', style: Theme.of(context).textTheme.bodyMedium),
@@ -146,7 +145,6 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
             ),
             onPressed: () => Navigator.of(context).pushNamed(ContinueWatchingCardSizePage.routeName),
           ),
-          // Max items
           FocusableSettingsTile(
             leading: const Icon(Icons.format_list_numbered_outlined),
             title: Text('Maximum Items', style: Theme.of(context).textTheme.bodyMedium),
@@ -156,28 +154,24 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
             ),
             onPressed: () => Navigator.of(context).pushNamed(ContinueWatchingMaxItemsPage.routeName),
           ),
-          // Show progress bar
           RoundedSwitchListTile(
             value: settingsService.continueWatchingShowProgress,
             onChanged: (v) => settingsService.setContinueWatchingShowProgress(v),
             title: Text('Playback Progress Bar', style: Theme.of(context).textTheme.bodyMedium),
             secondary: const Icon(Icons.linear_scale_outlined),
           ),
-          // Show percentage badge
           RoundedSwitchListTile(
             value: settingsService.continueWatchingShowPercentage,
             onChanged: (v) => settingsService.setContinueWatchingShowPercentage(v),
             title: Text('Playback Percentage', style: Theme.of(context).textTheme.bodyMedium),
             secondary: const Icon(Icons.percent_outlined),
           ),
-          // Show description
           RoundedSwitchListTile(
             value: settingsService.continueWatchingShowDescription,
             onChanged: (v) => settingsService.setContinueWatchingShowDescription(v),
             title: Text('Episode & Video Details', style: Theme.of(context).textTheme.bodyMedium),
             secondary: const Icon(Icons.subtitles_outlined),
           ),
-          // App Management (Apps & Blocked Content)
           FocusableSettingsTile(
             leading: const Icon(Icons.apps_outlined),
             title: Text('Apps with Continue Watching', style: Theme.of(context).textTheme.bodyMedium),
@@ -189,7 +183,6 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
             ),
             onPressed: () => Navigator.of(context).pushNamed(ContinueWatchingAppsPage.routeName),
           ),
-          // Hidden individual programs
           if (hiddenProgramsCount > 0)
             FocusableSettingsTile(
               leading: const Icon(Icons.restore, color: Colors.orangeAccent),
@@ -216,7 +209,6 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
           padding: EdgeInsets.symmetric(vertical: 4),
           child: Divider(),
         ),
-        // Watch Next Permission
         FocusableSettingsTile(
           leading: const Icon(Icons.security),
           title: Text(

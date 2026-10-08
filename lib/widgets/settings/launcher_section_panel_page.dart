@@ -28,8 +28,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import '../../models/category.dart';
 import 'settings_page.dart';
 
-// Section name presets for TV remote-friendly selection
-// First 2 are special auto-populating categories
+/// Name choices for a new section; the first two fill themselves (see _save).
 const List<String> sectionNamePresets = [
   'TV Apps', // Auto: non-sideloaded apps
   'Non-TV Apps', // Auto: sideloaded apps
@@ -340,7 +339,6 @@ class _CategorySettingsState extends State<_CategorySettings> {
       _columnsCount = _category!.columnsCount;
       _rowHeight = _category!.rowHeight;
     } else {
-      // Default to "Favorites" when creating a new section
       _name = 'Favorites';
     }
 
@@ -627,7 +625,6 @@ class _LauncherSpacerSettingsState extends State<_LauncherSpacerSettings> {
 
   late bool _creating;
 
-  // Need preset values for the dropdown
   final List<int> _spacerHeightPresets = [10, 20, 30, 40, 50, 75, 100, 150];
 
   _LauncherSpacerSettingsState() : _numberValue = 10;
@@ -646,7 +643,6 @@ class _LauncherSpacerSettingsState extends State<_LauncherSpacerSettings> {
 
     _numberValue = height;
 
-    // Ensure the current value is in our presets, if not add it
     if (!_spacerHeightPresets.contains(_numberValue)) {
       _spacerHeightPresets.add(_numberValue);
       _spacerHeightPresets.sort();

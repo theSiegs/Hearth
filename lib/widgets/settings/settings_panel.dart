@@ -194,9 +194,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
     );
   }
 
-  /// Right moves within the panel when there's something to the right; otherwise it closes the
-  /// panel, and focus goes back to the home screen where it was. Pages that use Right themselves
-  /// (Applications' tabs, reordering sections) get the key first.
+  /// Right closes the panel unless focus can move right inside it.
   KeyEventResult _closeOnRightAtEdge(FocusNode node, KeyEvent event) {
     if (event.logicalKey != LogicalKeyboardKey.arrowRight || event is KeyUpEvent) {
       return KeyEventResult.ignored;
@@ -209,7 +207,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
   }
 }
 
-/// A snappy page route with zero transition delay for instant, glitch-free TV navigation.
+/// A page route with no transition animation.
 class _FastPageRoute<T> extends PageRouteBuilder<T> {
   _FastPageRoute({required Widget Function(BuildContext) builder})
       : super(

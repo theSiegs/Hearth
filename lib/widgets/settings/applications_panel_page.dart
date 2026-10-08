@@ -313,7 +313,7 @@ class _EmptyListPlaceholderState extends State<_EmptyListPlaceholder> {
         child: Center(
           child: Text(
             widget.message,
-            style: const TextStyle(color: Colors.white60), // Basic styling
+            style: const TextStyle(color: Colors.white60),
           ),
         ),
       ),
