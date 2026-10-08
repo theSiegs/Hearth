@@ -57,16 +57,14 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
   }
 
-  Map<String, int> get notificationCounts => Map.unmodifiable(_notificationCounts);
   List<NotificationItem> get notifications => List.unmodifiable(_notifications);
   bool get hasPermission => _hasPermission;
   bool get hasOverlayPermission => _hasOverlayPermission;
   bool get systemPopupEnabled => _systemPopupEnabled;
   bool get hidePersistentNotifications => _hidePersistentNotifications;
   Set<String> get blockedPackages => Set.unmodifiable(_blockedPackages);
+  @visibleForTesting
   bool get initialized => _initialized;
-
-  bool isPackageBlocked(String packageName) => _blockedPackages.contains(packageName);
 
   int getNotificationCount(String packageName) {
     return _notificationCounts[packageName] ?? 0;
@@ -138,36 +136,22 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
 
     for (final item in _rawList) {
       final String? pkg = item['packageName'] as String?;
-      final int? count = item['count'] as int?;
       if (pkg == null) continue;
 
       if (_blockedPackages.contains(pkg)) {
         continue;
       }
 
-      if (count != null) {
-        newCounts[pkg] = count;
-        for (int i = 0; i < count; i++) {
-          newNotifications.add(NotificationItem(
-            key: '${pkg}_$i',
-            packageName: pkg,
-            title: 'Notification',
-            text: 'Content',
-            isClearable: true,
-          ));
-        }
-      } else {
-        final notification = NotificationItem.fromMap(item);
-        // Permanent and blank (Google TV's own background entries): nothing to show or dismiss, so never list them.
-        if (!notification.isClearable && notification.title.trim().isEmpty && notification.text.trim().isEmpty) continue;
-        if (!notification.isClearable &&
-            (_hidePersistentNotifications || _hiddenPersistentKeys.contains(notification.key))) {
-          continue;
-        }
-        newNotifications.add(notification);
-        if (notification.isClearable) {
-          newCounts[pkg] = (newCounts[pkg] ?? 0) + 1;
-        }
+      final notification = NotificationItem.fromMap(item);
+      // Permanent and blank (Google TV's own background entries): nothing to show or dismiss, so never list them.
+      if (!notification.isClearable && notification.title.trim().isEmpty && notification.text.trim().isEmpty) continue;
+      if (!notification.isClearable &&
+          (_hidePersistentNotifications || _hiddenPersistentKeys.contains(notification.key))) {
+        continue;
+      }
+      newNotifications.add(notification);
+      if (notification.isClearable) {
+        newCounts[pkg] = (newCounts[pkg] ?? 0) + 1;
       }
     }
 
@@ -210,16 +194,6 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> setHidePersistentNotifications(bool hide) async {
     _hidePersistentNotifications = hide;
     await _prefs?.setBool('hide_persistent_notifications', hide);
-    _processNotifications();
-  }
-
-  Future<void> toggleBlockPackage(String packageName) async {
-    if (_blockedPackages.contains(packageName)) {
-      _blockedPackages.remove(packageName);
-    } else {
-      _blockedPackages.add(packageName);
-    }
-    await _prefs?.setStringList('blocked_notification_packages', _blockedPackages.toList());
     _processNotifications();
   }
 
