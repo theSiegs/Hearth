@@ -121,6 +121,17 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
     await _appsService.addAllToCategory(apps.take(6), dock);
   }
 
+  /// SharedPreferences key prefix: this kids profile has had its first look (one per profile key).
+  static const String kidsLookGivenKeyPrefix = "kids_look_given_";
+
+  /// A kids profile starts with Bing's photo of the day as its wallpaper, once: after that its look is its own
+  /// to change (in its Settings, past the parent PIN).
+  Future<void> _giveKidsTheirFirstLook(String key) async {
+    if (!_isKidsProfile || _sharedPreferences.getBool("$kidsLookGivenKeyPrefix$key") == true) return;
+    await _settingsService.setBingWallpaperEnabled(true);
+    await _sharedPreferences.setBool("$kidsLookGivenKeyPrefix$key", true);
+  }
+
   Future<void> check() => _checking ??= _check().whenComplete(() {
         _checking = null;
         // Whatever this check found, its profile's layout is now in place
@@ -185,6 +196,7 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
     if (owner == key || (owner != null && owner == name)) {
       if (owner != key) await _sharedPreferences.setString(layoutOwnerKey, key);
       await _fillEmptyDock();
+      await _giveKidsTheirFirstLook(key);
       return;
     }
 
@@ -199,6 +211,7 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
       }
       await _sharedPreferences.setString(layoutOwnerKey, key);
       await _fillEmptyDock();
+      await _giveKidsTheirFirstLook(key);
     } catch (e, stack) {
       developer.log("Failed to switch profile layout", name: "ProfileService", error: e, stackTrace: stack);
     }
