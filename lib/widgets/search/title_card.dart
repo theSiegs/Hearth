@@ -171,14 +171,20 @@ class _TitleCardState extends State<TitleCard> {
   }
 }
 
-/// The card at the end of a row that opens everything ("More results", "See all").
+/// The card at the end of a row that opens everything ("More results", "See all"), or hands the search on
+/// ("Ask Google").
 class MoreCard extends StatefulWidget {
   final String label;
   final String detail;
   final double height;
+
+  /// Null: a little wider than tall (height x 1.2).
+  final double? width;
+  final IconData icon;
   final VoidCallback onPressed;
   final FocusNode? focusNode;
   final bool autofocus;
+  final ValueChanged<bool>? onFocusChange;
 
   const MoreCard(
       {super.key,
@@ -186,8 +192,11 @@ class MoreCard extends StatefulWidget {
       required this.detail,
       required this.onPressed,
       this.height = 135,
+      this.width,
+      this.icon = Icons.grid_view_rounded,
       this.focusNode,
-      this.autofocus = false});
+      this.autofocus = false,
+      this.onFocusChange});
 
   @override
   State<MoreCard> createState() => _MoreCardState();
@@ -209,6 +218,7 @@ class _MoreCardState extends State<MoreCard> {
         autofocus: widget.autofocus,
         onFocusChange: (focused) {
           setState(() => _focused = focused);
+          widget.onFocusChange?.call(focused);
           if (focused) Scrollable.ensureVisible(context, alignment: 0.5, duration: const Duration(milliseconds: 120));
         },
         child: GestureDetector(
@@ -217,7 +227,8 @@ class _MoreCardState extends State<MoreCard> {
             scale: _focused ? 1.06 : 1.0,
             duration: const Duration(milliseconds: 120),
             child: Container(
-              width: widget.height * 1.2,
+              width: widget.width ?? widget.height * 1.2,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               height: widget.height,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(_focused ? 0.18 : 0.12),
@@ -227,11 +238,14 @@ class _MoreCardState extends State<MoreCard> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.grid_view_rounded, size: 30, color: Colors.white),
+                  Icon(widget.icon, size: 30, color: Colors.white),
                   const SizedBox(height: 8),
                   Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
                   if (widget.detail.isNotEmpty)
-                    Text(widget.detail, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                    Text(widget.detail,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 ],
               ),
             ),

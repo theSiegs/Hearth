@@ -41,6 +41,8 @@ class RemoteButtonsPage extends StatefulWidget {
 class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
   static const _press = "short";
   static const _hold = "long";
+  static const Map<String, dynamic> _searchVoice = {"type": "search", "target": "voice", "label": "Hearth search (voice)"};
+  static const Map<String, dynamic> _assistant = {"type": "assistant", "label": "Google Assistant (Gemini)"};
 
   Map<String, dynamic> _mappings = {};
   final Map<String, String> _names = {};
@@ -126,6 +128,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
         children: [
           _option(context, "Press: ${_actionLabel(entry[_press] as Map<String, dynamic>?)}", _press),
           _option(context, "Hold: ${_actionLabel(entry[_hold] as Map<String, dynamic>?)}", _hold),
+          _option(context, "Tap for Hearth search, hold for Google", "searchPreset"),
           _option(context, "Only on Hearth's home screen: ${entry["homeOnly"] == true ? "On" : "Off"}", "homeOnly"),
           if (_mappings.containsKey(keyCode)) _option(context, "Restore normal button", "remove"),
         ],
@@ -135,6 +138,12 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
 
     if (choice == "remove") {
       _mappings.remove(keyCode);
+    } else if (choice == "searchPreset") {
+      // The mic button's split: a tap finds something to watch in Hearth, a hold is Google's assistant as before
+      entry[_press] = _searchVoice;
+      entry[_hold] = _assistant;
+      entry["name"] = _names[keyCode] ?? entry["name"];
+      _mappings[keyCode] = entry;
     } else if (choice == "homeOnly") {
       // In apps the button keeps its normal job (the mic button opens Google's assistant there)
       entry["homeOnly"] = entry["homeOnly"] != true;
@@ -145,6 +154,15 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
       if (action == null) return;
       entry[choice] = action;
       entry["name"] = _names[keyCode] ?? entry["name"];
+      // A remapped button runs its press on release even when held, so the assistant button would lose Google's
+      // assistant entirely: keep it on hold unless a hold was chosen
+      final rawName = (entry["name"] as String? ?? "").toUpperCase();
+      if (choice == _press &&
+          action["type"] == "search" &&
+          entry[_hold] == null &&
+          (rawName.contains("ASSIST") || rawName.contains("SEARCH") || rawName.contains("VOICE"))) {
+        entry[_hold] = _assistant;
+      }
       _mappings[keyCode] = entry;
     }
     await _save();
@@ -198,11 +216,11 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
       case "profiles":
         return {"type": "profiles", "label": "Switch profile"};
       case "search_voice":
-        return {"type": "search", "target": "voice", "label": "Hearth search (voice)"};
+        return _searchVoice;
       case "search_text":
         return {"type": "search", "target": "text", "label": "Hearth search (keyboard)"};
       case "assistant":
-        return {"type": "assistant", "label": "Google Assistant (Gemini)"};
+        return _assistant;
       case "home":
         return {"type": "home", "label": "Hearth home"};
       case "sleep":

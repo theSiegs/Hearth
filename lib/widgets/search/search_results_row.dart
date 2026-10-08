@@ -18,6 +18,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../flauncher_channel.dart';
 import '../../providers/home_search.dart';
 import '../../providers/search_service.dart';
 import 'open_title.dart';
@@ -25,8 +26,10 @@ import 'search_grid_page.dart';
 import 'title_card.dart';
 
 /// Search results in Continue Watching's spot: the titles watchable now in the TV's apps, the focused one's name
-/// and details above them (as HearthTube does), and a "More results" card for everything (the grid). Up goes to the
-/// top bar; Back (Android's, which the home routes to HomeSearch.backHandler) ends the search.
+/// and details above them (as HearthTube does), a "More results" card for everything (the grid), and last "Ask
+/// Google", which hands the same words to Google TV's search (the forecast, questions, anything that isn't a show).
+/// Hearth never guesses which a search was: with no titles found, Ask Google is the card that has focus. Up goes to
+/// the top bar; Back (Android's, which the home routes to HomeSearch.backHandler) ends the search.
 class SearchResultsRow extends StatefulWidget {
   final VoidCallback onUp;
 
@@ -41,6 +44,7 @@ class SearchResultsRow extends StatefulWidget {
 
 class _SearchResultsRowState extends State<SearchResultsRow> {
   TitleMatch? _focused;
+  bool _askFocused = false;
 
   String _watchOn(TitleMatch m) {
     final names = appsFor(m).map((a) => a.name).toList();
@@ -56,6 +60,11 @@ class _SearchResultsRowState extends State<SearchResultsRow> {
     SearchGridPage.open(context);
   }
 
+  /// Google TV's own search for the same words: it answers in its own full-screen page, and Back comes back here.
+  Future<void> _askGoogle(String query) async {
+    await FLauncherChannel().openGoogleTv(query: query);
+  }
+
   @override
   Widget build(BuildContext context) {
     final search = context.watch<HomeSearch>();
@@ -66,7 +75,11 @@ class _SearchResultsRowState extends State<SearchResultsRow> {
 
     final String heading;
     final String detail;
-    if (search.loading) {
+    final bool nothingFound = !search.loading && (search.error != null || search.matches.isEmpty);
+    if (_askFocused && !search.loading) {
+      heading = "Ask Google “${search.query}”";
+      detail = "For questions, the weather and anything else that isn't a show";
+    } else if (search.loading) {
       heading = "Searching for “${search.query}”…";
       detail = "";
     } else if (search.error != null) {
@@ -137,7 +150,12 @@ class _SearchResultsRowState extends State<SearchResultsRow> {
                             imageUrl: match.imageUrl,
                             packageName: appsFor(match).firstOrNull?.packageName,
                             onFocusChange: (on) {
-                              if (on) setState(() => _focused = match);
+                              if (on) {
+                                setState(() {
+                                  _focused = match;
+                                  _askFocused = false;
+                                });
+                              }
                             },
                             onPressed: () => _open(match),
                           ),
@@ -146,12 +164,27 @@ class _SearchResultsRowState extends State<SearchResultsRow> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: MoreCard(
-                            autofocus: row.isEmpty,
+                            autofocus: row.isEmpty && !nothingFound,
                             label: "More results",
                             detail: "${search.matches.length} titles",
                             onPressed: _openGrid,
+                            onFocusChange: (on) {
+                              if (on) setState(() => _askFocused = false);
+                            },
                           ),
                         ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: MoreCard(
+                          autofocus: nothingFound,
+                          width: 240,
+                          icon: Icons.keyboard_voice_outlined,
+                          label: "Ask Google",
+                          detail: "“${search.query}”",
+                          onPressed: () => _askGoogle(search.query),
+                          onFocusChange: (on) => setState(() => _askFocused = on),
+                        ),
+                      ),
                     ],
                   ),
           ),
