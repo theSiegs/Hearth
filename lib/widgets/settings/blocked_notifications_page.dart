@@ -22,7 +22,7 @@ import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/notifications_service.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flauncher/widgets/settings/app_icon.dart';
-import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
+import 'package:flauncher/widgets/settings/blocked_apps_section.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -64,146 +64,27 @@ class BlockedNotificationsPage extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 children: [
-                  // --- SECTION 1: BLOCKED APPS ---
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-                    child: Text(
-                      "${localizations.blockedNotificationApps} (${blockedPackages.length})",
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  BlockedAppsSection(
+                    title: "${localizations.blockedNotificationApps} (${blockedPackages.length})",
+                    apps: blockedApps,
+                    missingPackages: unknownBlockedPkg,
+                    blockedLabel: localizations.notificationsBlocked,
+                    unblockLabel: localizations.unblockAppNotifications,
+                    unblockAllLabel: localizations.unblockAll,
+                    appIcon: Icons.android,
+                    emptyIcon: Icons.notifications_active_outlined,
+                    emptyTitle: localizations.noBlockedApps,
+                    emptyMessage: localizations.noBlockedAppsDesc,
+                    onUnblock: notificationsService.unblockPackage,
+                    onUnblockAll: notificationsService.unblockAllPackages,
                   ),
-                  if (blockedPackages.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.04),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.white12),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.notifications_active_outlined, color: Colors.green, size: 28),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    localizations.noBlockedApps,
-                                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    localizations.noBlockedAppsDesc,
-                                    style: theme.textTheme.bodySmall?.copyWith(color: Colors.white54),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  else ...[
-                    ...blockedApps.map((app) => FocusableSettingsTile(
-                          leading: AppIcon(app.packageName, size: 32, borderRadius: 6),
-                          title: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(app.name, style: theme.textTheme.bodyMedium),
-                              const SizedBox(height: 2),
-                              Text(
-                                localizations.notificationsBlocked,
-                                style: theme.textTheme.bodySmall?.copyWith(color: Colors.redAccent),
-                              ),
-                            ],
-                          ),
-                          trailing: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.redAccent.withOpacity(0.5)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.lock_open, size: 14, color: Colors.redAccent),
-                                const SizedBox(width: 4),
-                                Text(
-                                  localizations.unblockAppNotifications,
-                                  style: const TextStyle(
-                                    color: Colors.redAccent,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          onPressed: () => notificationsService.unblockPackage(app.packageName),
-                        )),
-                    ...unknownBlockedPkg.map((pkg) => FocusableSettingsTile(
-                          leading: const Icon(Icons.android, size: 32),
-                          title: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(pkg, style: theme.textTheme.bodyMedium),
-                              const SizedBox(height: 2),
-                              Text(
-                                localizations.notificationsBlocked,
-                                style: theme.textTheme.bodySmall?.copyWith(color: Colors.redAccent),
-                              ),
-                            ],
-                          ),
-                          trailing: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.redAccent.withOpacity(0.5)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.lock_open, size: 14, color: Colors.redAccent),
-                                const SizedBox(width: 4),
-                                Text(
-                                  localizations.unblockAppNotifications,
-                                  style: const TextStyle(
-                                    color: Colors.redAccent,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          onPressed: () => notificationsService.unblockPackage(pkg),
-                        )),
-                    FocusableSettingsTile(
-                      leading: const Icon(Icons.clear_all, color: Colors.orange),
-                      title: Text(
-                        localizations.unblockAll,
-                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.orange),
-                      ),
-                      onPressed: () => notificationsService.unblockAllPackages(),
-                    ),
-                  ],
 
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
                     child: Divider(),
                   ),
 
-                  // --- SECTION 2: ALL APPLICATIONS ---
+                  // --- ALL APPLICATIONS ---
                   Padding(
                     padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
                     child: Column(
