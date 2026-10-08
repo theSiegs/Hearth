@@ -919,6 +919,19 @@ public class MainActivity extends FlutterActivity {
         return success;
     }
 
+    /** Starts the first of the intents that opens, skipping nulls; false when none does. */
+    private boolean startFirst(Intent... intents) {
+        for (Intent intent : intents) {
+            if (intent != null && tryStartActivity(intent)) return true;
+        }
+        return false;
+    }
+
+    /** The intent, or null (skipped by startFirst) when no activity Hearth can see handles it. */
+    private Intent ifResolves(Intent intent) {
+        return intent.resolveActivity(getPackageManager()) != null ? intent : null;
+    }
+
     private byte[] drawableToByteArray(Drawable drawable) {
         try {
             if (drawable.getIntrinsicWidth() <= 0 || drawable.getIntrinsicHeight() <= 0) {
@@ -1098,20 +1111,9 @@ public class MainActivity extends FlutterActivity {
     }
 
     private boolean openDefaultLauncherSettings() {
-        // 1. Try Android TV home settings
-        Intent homeIntent = new Intent(Settings.ACTION_HOME_SETTINGS);
-        if (tryStartActivity(homeIntent)) {
-            return true;
-        }
-
-        // 2. Try manage default apps settings
-        Intent defaultAppsIntent = new Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS);
-        if (tryStartActivity(defaultAppsIntent)) {
-            return true;
-        }
-
-        // 3. Fallback to main settings
-        return launchActivityFromAction(Settings.ACTION_SETTINGS);
+        return startFirst(new Intent(Settings.ACTION_HOME_SETTINGS),
+                new Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS),
+                new Intent(Settings.ACTION_SETTINGS));
     }
 
     // Google TV's own profile switcher: switching here is what applies kids profile restrictions system-wide.
@@ -1120,10 +1122,7 @@ public class MainActivity extends FlutterActivity {
         Intent chooser = new Intent("com.google.android.gms.account.ProfilePickerDelegation")
                 .setClassName(LauncherAccessibilityService.GOOGLE_TV_PACKAGE,
                         LauncherAccessibilityService.GOOGLE_TV_PACKAGE + ".profile.chooser.ProfileChooserActivity");
-        if (tryStartActivity(chooser)) {
-            return true;
-        }
-        return tryStartActivity(new Intent(Settings.ACTION_SYNC_SETTINGS));
+        return startFirst(chooser, new Intent(Settings.ACTION_SYNC_SETTINGS));
     }
 
     /**
@@ -1203,25 +1202,13 @@ public class MainActivity extends FlutterActivity {
             if (launch == null) return false;
             intent = launch.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
         }
-        try {
-            startActivity(intent);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
+        return tryStartActivity(intent);
     }
 
     /** Opens Android's uninstall screen for Hearth itself. The Settings flow runs the profile cleanup first. */
     private boolean uninstallSelf() {
-        try {
-            android.content.Intent intent = new android.content.Intent(
-                    android.content.Intent.ACTION_DELETE, android.net.Uri.parse("package:" + getPackageName()));
-            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
+        return tryStartActivity(new Intent(Intent.ACTION_DELETE, Uri.parse("package:" + getPackageName()))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 
     /** The SUPERVISED kid profiles' user ids — Family Link-supervised profiles of this user. */
@@ -1342,46 +1329,19 @@ public class MainActivity extends FlutterActivity {
     }
 
     private boolean openScreensaverSettings() {
-        // Google TV's own screensaver settings (source such as Google Photos, slideshow speed), with a live preview.
-        Intent photosIntent = new Intent("dreamx.two.panel.SETTINGS")
-                .setPackage("com.google.android.apps.tv.dreamx")
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        if (photosIntent.resolveActivity(getPackageManager()) != null && tryStartActivity(photosIntent)) {
-            return true;
-        }
-
-        // 0. Google TV: the screensaver is "Ambient mode". Its own task, so a Settings screen left open
-        // earlier doesn't come back up in its place.
-        Intent ambientIntent = new Intent("com.google.android.tv.settings.ambient")
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        if (ambientIntent.resolveActivity(getPackageManager()) != null && tryStartActivity(ambientIntent)) {
-            return true;
-        }
-
-        // 1. Try Android TV specific screensaver settings (DaydreamActivity - from
-        // Aerial Views)
-        Intent tvIntent = new Intent(Intent.ACTION_MAIN);
-        tvIntent.setClassName("com.android.tv.settings",
-                "com.android.tv.settings.device.display.daydream.DaydreamActivity");
-        if (tryStartActivity(tvIntent)) {
-            return true;
-        }
-
-        // 2. Try standard Android screensaver/dream settings
-        Intent dreamIntent = new Intent(Settings.ACTION_DREAM_SETTINGS);
-        if (tryStartActivity(dreamIntent)) {
-            return true;
-        }
-
-        // 3. FALLBACK: Try Display Settings (often contains screensaver on newer
-        // Android TV/Google TV)
-        Intent displayIntent = new Intent(Settings.ACTION_DISPLAY_SETTINGS);
-        if (tryStartActivity(displayIntent)) {
-            return true;
-        }
-
-        // 4. Final fallback - open main settings
-        return launchActivityFromAction(Settings.ACTION_SETTINGS);
+        // Google TV's screensaver settings, then Ambient mode, then the stock dream / display / main settings.
+        // The first two get their own task, so a Settings screen left open earlier doesn't come back up instead.
+        return startFirst(
+                ifResolves(new Intent("dreamx.two.panel.SETTINGS")
+                        .setPackage("com.google.android.apps.tv.dreamx")
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK)),
+                ifResolves(new Intent("com.google.android.tv.settings.ambient")
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK)),
+                new Intent(Intent.ACTION_MAIN).setClassName("com.android.tv.settings",
+                        "com.android.tv.settings.device.display.daydream.DaydreamActivity"),
+                new Intent(Settings.ACTION_DREAM_SETTINGS),
+                new Intent(Settings.ACTION_DISPLAY_SETTINGS),
+                new Intent(Settings.ACTION_SETTINGS));
     }
 
     private List<Map<String, Object>> getTvInputs() {
@@ -1561,26 +1521,13 @@ public class MainActivity extends FlutterActivity {
     }
 
     private boolean requestOverlayPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            try {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:" + getPackageName()));
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-                return true;
-            } catch (Exception e) {
-                try {
-                    Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
-                    return true;
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    return false;
-                }
-            }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return true;
         }
-        return true;
+        return startFirst(
+                new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 
     private boolean checkInstallPermission() {
@@ -1592,15 +1539,8 @@ public class MainActivity extends FlutterActivity {
 
     private boolean requestInstallPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            try {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                        Uri.parse("package:" + getPackageName()));
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                return tryStartActivity(intent);
-            } catch (Exception e) {
-                e.printStackTrace();
-                return false;
-            }
+            return tryStartActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:" + getPackageName())).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         }
         return true;
     }
@@ -1837,19 +1777,8 @@ public class MainActivity extends FlutterActivity {
     }
 
     private boolean openAccessibilitySettings() {
-        try {
-            Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            if (tryStartActivity(intent)) {
-                return true;
-            }
-        } catch (Exception ignored) {}
-        try {
-            Intent intent = new Intent(Settings.ACTION_SETTINGS);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            return tryStartActivity(intent);
-        } catch (Exception ignored) {}
-        return false;
+        return startFirst(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 
     private boolean checkWatchNextPermission() {
