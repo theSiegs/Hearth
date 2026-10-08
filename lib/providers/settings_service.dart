@@ -110,6 +110,11 @@ class SettingsService extends ChangeNotifier {
   /// The defaults before 2026-10, which older backups and profile layouts saved as if they'd been chosen.
   static const _oldDefaultDateFormat = "EEEE d";
   static const _oldDefaultTimeFormat = "H:mm";
+
+  static const _defaultContinueWatchingCardHeight = 135;
+
+  /// Card sizes were saved by name before a height could be picked; these are the heights they drew.
+  static const _legacyContinueWatchingCardHeights = {"compact": 112, "normal": 135, "large": 157};
   final SharedPreferences _sharedPreferences;
 
   late bool _appHighlightAnimationEnabled;
@@ -137,6 +142,7 @@ class SettingsService extends ChangeNotifier {
   late bool _showInputsWidgetInStatusBar;
   late bool _showContinueWatching;
   late String _continueWatchingCardSize;
+  late int _continueWatchingCardHeight;
   late int _continueWatchingMaxItems;
   late bool _continueWatchingShowProgress;
   late bool _continueWatchingShowPercentage;
@@ -191,6 +197,9 @@ class SettingsService extends ChangeNotifier {
   bool get showInputsWidgetInStatusBar => _showInputsWidgetInStatusBar;
   bool get showContinueWatching => _showContinueWatching;
   String get continueWatchingCardSize => _continueWatchingCardSize;
+
+  /// The Continue Watching cards' height, in dp.
+  int get continueWatchingCardHeight => _continueWatchingCardHeight;
   int get continueWatchingMaxItems => _continueWatchingMaxItems;
   bool get continueWatchingShowProgress => _continueWatchingShowProgress;
   bool get continueWatchingShowPercentage => _continueWatchingShowPercentage;
@@ -307,6 +316,9 @@ class SettingsService extends ChangeNotifier {
     _showInputsWidgetInStatusBar = _sharedPreferences.getBool(_showInputsWidgetInStatusBarKey) ?? true;
     _showContinueWatching = _sharedPreferences.getBool(_showContinueWatchingKey) ?? false;
     _continueWatchingCardSize = _sharedPreferences.getString(_continueWatchingCardSizeKey) ?? "normal";
+    _continueWatchingCardHeight = int.tryParse(_continueWatchingCardSize) ??
+        _legacyContinueWatchingCardHeights[_continueWatchingCardSize] ??
+        _defaultContinueWatchingCardHeight;
     _continueWatchingMaxItems = _sharedPreferences.getInt(_continueWatchingMaxItemsKey) ?? 15;
     _continueWatchingShowProgress = _sharedPreferences.getBool(_continueWatchingShowProgressKey) ?? true;
     _continueWatchingShowPercentage = _sharedPreferences.getBool(_continueWatchingShowPercentageKey) ?? false;
@@ -586,9 +598,10 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setContinueWatchingCardSize(String size) async {
-    await _sharedPreferences.setString(_continueWatchingCardSizeKey, size);
-    _continueWatchingCardSize = size;
+  Future<void> setContinueWatchingCardHeight(int height) async {
+    await _sharedPreferences.setString(_continueWatchingCardSizeKey, height.toString());
+    _continueWatchingCardSize = height.toString();
+    _continueWatchingCardHeight = height;
     notifyListeners();
   }
 

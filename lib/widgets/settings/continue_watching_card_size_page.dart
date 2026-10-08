@@ -45,13 +45,10 @@ class ContinueWatchingCardSizePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Selector<SettingsService, String>(
-      selector: (_, settingsService) => settingsService.continueWatchingCardSize,
-      builder: (context, currentSizeStr, _) {
+    return Selector<SettingsService, int>(
+      selector: (_, settingsService) => settingsService.continueWatchingCardHeight,
+      builder: (context, currentHeight, _) {
         final settingsService = context.read<SettingsService>();
-        final int currentHeight = int.tryParse(currentSizeStr) ??
-            (currentSizeStr == 'compact' ? 112 : (currentSizeStr == 'large' ? 157 : 135));
-
         return SettingsPage(
           title: 'Card Size',
           children: [
@@ -61,7 +58,7 @@ class ContinueWatchingCardSizePage extends StatelessWidget {
                 subtitle: subtitle,
                 value: height,
                 groupValue: currentHeight,
-                onChanged: (height) => settingsService.setContinueWatchingCardSize(height.toString()),
+                onChanged: (height) => settingsService.setContinueWatchingCardHeight(height),
               ),
           ],
         );
