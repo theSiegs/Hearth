@@ -19,8 +19,6 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:typed_data';
 
-import 'package:collection/collection.dart';
-
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -111,7 +109,7 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
   /// would leave it without a dock: start its dock with the apps it can open.
   Future<void> _fillEmptyDock() async {
     if (!_isKidsProfile || !_appsService.initialized) return;
-    final favorites = _appsService.categories.firstWhereOrNull((c) => c.name == 'Favorites');
+    final favorites = _appsService.favoritesCategory;
     // What the dock holds, not what it shows: at bedtime Google TV blocks every app and the dock shows none
     bool inDock(App a) => favorites != null && a.categoryOrders.containsKey(favorites.id);
     if (_appsService.applications.any((a) => inDock(a) && a.approved && !a.hidden)) return;

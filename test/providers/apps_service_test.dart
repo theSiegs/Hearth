@@ -308,6 +308,21 @@ void main() {
       expect(saved.sort.value, CategorySort.manual);
     });
 
+    test("favoritesCategory is the category named Favorites, once there is one", () async {
+      final channel = MockFLauncherChannel();
+      final database = MockFLauncherDatabase();
+      var nextId = 1;
+      when(database.insertCategory(any)).thenAnswer((_) => Future.value(nextId++));
+
+      final appsService = await _buildInitialisedAppsService(channel, database);
+      await appsService.addCategory(AppsService.tvAppsName);
+      expect(appsService.favoritesCategory, equals(null));
+
+      await appsService.addCategory(AppsService.favoritesName);
+      expect(appsService.favoritesCategory?.id, 2);
+      expect((await appsService.getOrCreateFavoritesCategory()).id, 2);
+    });
+
     test(
         "newly installed app missing AppsCategories row receives category assignment",
         () async {
