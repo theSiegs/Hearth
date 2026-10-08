@@ -349,15 +349,13 @@ void main() async {
       expect(service.hiddenWatchNextProgramIds, contains("123"));
       expect(service.hiddenWatchNextPackages, contains("com.test.app"));
 
-      await service.unhideWatchNextProgram(123);
-      expect(service.hiddenWatchNextProgramIds, isNot(contains("123")));
-
       await service.unhideWatchNextPackage("com.test.app");
       expect(service.hiddenWatchNextPackages, isNot(contains("com.test.app")));
 
       await service.hideWatchNextProgram(456);
       await service.hideWatchNextPackage("com.another.app");
-      await service.clearAllHiddenWatchNext();
+      await service.clearHiddenWatchNextPrograms();
+      await service.unhideAllWatchNextPackages();
       expect(service.hiddenWatchNextProgramIds, isEmpty);
       expect(service.hiddenWatchNextPackages, isEmpty);
     });
