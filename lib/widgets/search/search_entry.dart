@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../flauncher_channel.dart';
+import '../focusable_tap.dart';
 
 /// Where a search is typed or spoken, over the home: Google's own on-screen keyboard (also what a phone's Google
 /// TV app or a paired keyboard types into) and the mic for Google's speech recognizer. Submitting hands the text
@@ -158,41 +159,26 @@ class _SearchEntryState extends State<SearchEntry> {
   }
 }
 
-class _MicButton extends StatefulWidget {
+class _MicButton extends StatelessWidget {
   final bool listening;
   final VoidCallback onPressed;
 
   const _MicButton({required this.listening, required this.onPressed});
 
   @override
-  State<_MicButton> createState() => _MicButtonState();
-}
-
-class _MicButtonState extends State<_MicButton> {
-  bool _focused = false;
-
-  @override
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
-    return Actions(
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => widget.onPressed()),
-      },
-      child: Focus(
-        onFocusChange: (focused) => setState(() => _focused = focused),
-        child: GestureDetector(
-          onTap: widget.onPressed,
-          child: Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: widget.listening ? accent : (_focused ? accent.withOpacity(0.6) : const Color(0xEE1E2026)),
-              border: Border.all(color: _focused ? accent : Colors.transparent, width: 2),
-            ),
-            child: Icon(widget.listening ? Icons.mic : Icons.mic_none, color: Colors.white, size: 28),
-          ),
+    return FocusableTap(
+      onPressed: onPressed,
+      builder: (context, focused) => Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: listening ? accent : (focused ? accent.withOpacity(0.6) : const Color(0xEE1E2026)),
+          border: Border.all(color: focused ? accent : Colors.transparent, width: 2),
         ),
+        child: Icon(listening ? Icons.mic : Icons.mic_none, color: Colors.white, size: 28),
       ),
     );
   }

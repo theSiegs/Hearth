@@ -20,6 +20,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/apps_service.dart';
+import '../focusable_tap.dart';
 
 /// A wide card in the house style shared with Continue Watching and HearthTube: the picture, the app's icon in the
 /// corner, the title and one line of detail over the bottom, an accent ring and a slight lift when focused.
@@ -56,7 +57,6 @@ class TitleCard extends StatefulWidget {
 }
 
 class _TitleCardState extends State<TitleCard> {
-  bool _focused = false;
   Uint8List? _icon;
 
   @override
@@ -87,81 +87,71 @@ class _TitleCardState extends State<TitleCard> {
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
     final textTheme = Theme.of(context).textTheme;
-    return Actions(
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => widget.onPressed()),
-        ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) => widget.onPressed()),
+    return FocusableTap(
+      autofocus: widget.autofocus,
+      focusNode: widget.focusNode,
+      onPressed: widget.onPressed,
+      onFocusChange: (focused) {
+        widget.onFocusChange?.call(focused);
+        if (focused) Scrollable.ensureVisible(context, alignment: 0.5, duration: const Duration(milliseconds: 120));
       },
-      child: Focus(
-        autofocus: widget.autofocus,
-        focusNode: widget.focusNode,
-        onFocusChange: (focused) {
-          setState(() => _focused = focused);
-          widget.onFocusChange?.call(focused);
-          if (focused) Scrollable.ensureVisible(context, alignment: 0.5, duration: const Duration(milliseconds: 120));
-        },
-        onKeyEvent: (_, event) => KeyEventResult.ignored,
-        child: GestureDetector(
-          onTap: widget.onPressed,
-          child: AnimatedScale(
-            scale: _focused ? 1.06 : 1.0,
-            duration: const Duration(milliseconds: 120),
-            child: Container(
-              width: widget.width,
-              height: widget.height,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2A2D33),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _focused ? accent : Colors.white.withOpacity(0.08), width: _focused ? 3 : 1),
-                boxShadow: _focused ? [BoxShadow(color: accent.withOpacity(0.35), blurRadius: 16)] : null,
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (widget.imageUrl != null)
-                    Image.network(widget.imageUrl!,
-                        fit: BoxFit.cover,
-                        cacheWidth: (widget.width * MediaQuery.devicePixelRatioOf(context)).round(),
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink())
-                  else
-                    const Center(child: Icon(Icons.movie_outlined, size: 40, color: Colors.white24)),
-                  if (_icon != null)
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: Image.memory(_icon!, width: 28, height: 28, fit: BoxFit.contain),
-                      ),
-                    ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-                      color: Colors.black.withOpacity(0.65),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(widget.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: textTheme.titleSmall?.copyWith(fontSize: 16, fontWeight: FontWeight.w500)),
-                          if (widget.detail.isNotEmpty)
-                            Text(widget.detail,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: textTheme.bodySmall?.copyWith(fontSize: 13, color: Colors.white70)),
-                        ],
-                      ),
-                    ),
+      builder: (context, focused) => AnimatedScale(
+        scale: focused ? 1.06 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        child: Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            color: const Color(0xFF2A2D33),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: focused ? accent : Colors.white.withOpacity(0.08), width: focused ? 3 : 1),
+            boxShadow: focused ? [BoxShadow(color: accent.withOpacity(0.35), blurRadius: 16)] : null,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (widget.imageUrl != null)
+                Image.network(widget.imageUrl!,
+                    fit: BoxFit.cover,
+                    cacheWidth: (widget.width * MediaQuery.devicePixelRatioOf(context)).round(),
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink())
+              else
+                const Center(child: Icon(Icons.movie_outlined, size: 40, color: Colors.white24)),
+              if (_icon != null)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.memory(_icon!, width: 28, height: 28, fit: BoxFit.contain),
                   ),
-                ],
+                ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+                  color: Colors.black.withOpacity(0.65),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(widget.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleSmall?.copyWith(fontSize: 16, fontWeight: FontWeight.w500)),
+                      if (widget.detail.isNotEmpty)
+                        Text(widget.detail,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodySmall?.copyWith(fontSize: 13, color: Colors.white70)),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -171,7 +161,7 @@ class _TitleCardState extends State<TitleCard> {
 
 /// The card at the end of a row that opens everything ("More results", "See all"), or hands the search on
 /// ("Ask Google").
-class MoreCard extends StatefulWidget {
+class MoreCard extends StatelessWidget {
   final String label;
   final String detail;
   final double height;
@@ -197,56 +187,40 @@ class MoreCard extends StatefulWidget {
       this.onFocusChange});
 
   @override
-  State<MoreCard> createState() => _MoreCardState();
-}
-
-class _MoreCardState extends State<MoreCard> {
-  bool _focused = false;
-
-  @override
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
-    return Actions(
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => widget.onPressed()),
-        ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) => widget.onPressed()),
+    return FocusableTap(
+      focusNode: focusNode,
+      autofocus: autofocus,
+      onPressed: onPressed,
+      onFocusChange: (focused) {
+        onFocusChange?.call(focused);
+        if (focused) Scrollable.ensureVisible(context, alignment: 0.5, duration: const Duration(milliseconds: 120));
       },
-      child: Focus(
-        focusNode: widget.focusNode,
-        autofocus: widget.autofocus,
-        onFocusChange: (focused) {
-          setState(() => _focused = focused);
-          widget.onFocusChange?.call(focused);
-          if (focused) Scrollable.ensureVisible(context, alignment: 0.5, duration: const Duration(milliseconds: 120));
-        },
-        child: GestureDetector(
-          onTap: widget.onPressed,
-          child: AnimatedScale(
-            scale: _focused ? 1.06 : 1.0,
-            duration: const Duration(milliseconds: 120),
-            child: Container(
-              width: widget.width ?? widget.height * 1.2,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              height: widget.height,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(_focused ? 0.18 : 0.12),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _focused ? accent : Colors.white.withOpacity(0.2), width: _focused ? 3 : 1),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(widget.icon, size: 30, color: Colors.white),
-                  const SizedBox(height: 8),
-                  Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
-                  if (widget.detail.isNotEmpty)
-                    Text(widget.detail,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                ],
-              ),
-            ),
+      builder: (context, focused) => AnimatedScale(
+        scale: focused ? 1.06 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        child: Container(
+          width: width ?? height * 1.2,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          height: height,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(focused ? 0.18 : 0.12),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: focused ? accent : Colors.white.withOpacity(0.2), width: focused ? 3 : 1),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 30, color: Colors.white),
+              const SizedBox(height: 8),
+              Text(label, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
+              if (detail.isNotEmpty)
+                Text(detail,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            ],
           ),
         ),
       ),
