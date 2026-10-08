@@ -205,7 +205,7 @@ public class ProfilePairingService extends AccessibilityService {
     public void onInterrupt() {
     }
 
-    private static boolean needsScreenReaderMode(String pkg) {
+    static boolean needsScreenReaderMode(String pkg) {
         return ProfilePairing.NETFLIX.equals(pkg) || ProfilePairing.APPLE_TV.equals(pkg)
                 || ProfilePairing.MAX.equals(pkg);
     }
