@@ -254,6 +254,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notificationAccess => 'الوصول إلى الإشعارات';
 
   @override
+  String get watchNextAccess => 'الوصول إلى Watch Next';
+
+  @override
   String get granted => 'مُمنوح';
 
   @override

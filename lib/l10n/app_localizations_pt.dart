@@ -254,6 +254,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get notificationAccess => 'Acesso a notificações';
 
   @override
+  String get watchNextAccess => 'Acesso ao Watch Next';
+
+  @override
   String get granted => 'Concedido';
 
   @override

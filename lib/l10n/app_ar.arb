@@ -113,6 +113,7 @@
     "accentColor": "لون التمييز",
     "dataUsagePeriod": "فترة استخدام البيانات",
     "notificationAccess": "الوصول إلى الإشعارات",
+    "watchNextAccess": "الوصول إلى Watch Next",
     "granted": "مُمنوح",
     "permissionRequired": "الإذن مطلوب",
     "systemWidePopupAlert": "تنبيه منبثق على مستوى النظام",

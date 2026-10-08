@@ -254,6 +254,9 @@ class AppLocalizationsUk extends AppLocalizations {
   String get notificationAccess => 'Доступ до сповіщень';
 
   @override
+  String get watchNextAccess => 'Доступ до Watch Next';
+
+  @override
   String get granted => 'Надано';
 
   @override

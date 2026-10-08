@@ -113,6 +113,7 @@
     "accentColor": "Vurgu Rengi",
     "dataUsagePeriod": "Veri Kullanım Dönemi",
     "notificationAccess": "Bildirim Erişimi",
+    "watchNextAccess": "Watch Next Erişimi",
     "granted": "Verildi",
     "permissionRequired": "İzin Gerekli",
     "systemWidePopupAlert": "Sistem Geneli Açılır Pencere Uyarısı",

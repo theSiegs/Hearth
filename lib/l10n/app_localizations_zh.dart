@@ -254,6 +254,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationAccess => '通知访问权限';
 
   @override
+  String get watchNextAccess => 'Watch Next 访问权限';
+
+  @override
   String get granted => '已授予';
 
   @override

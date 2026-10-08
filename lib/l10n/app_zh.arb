@@ -113,6 +113,7 @@
     "accentColor": "强调色",
     "dataUsagePeriod": "数据使用周期",
     "notificationAccess": "通知访问权限",
+    "watchNextAccess": "Watch Next 访问权限",
     "granted": "已授予",
     "permissionRequired": "需要权限",
     "systemWidePopupAlert": "全局弹窗提醒",

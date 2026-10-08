@@ -188,7 +188,7 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
         FocusableSettingsTile(
           leading: const Icon(Icons.security),
           title: Text(
-            localizations.notificationAccess.replaceAll('Notification', 'Watch Next'),
+            localizations.watchNextAccess,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           trailing: Text(

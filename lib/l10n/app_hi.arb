@@ -113,6 +113,7 @@
     "accentColor": "एक्सेंट रंग",
     "dataUsagePeriod": "डेटा उपयोग अवधि",
     "notificationAccess": "सूचना पहुंच",
+    "watchNextAccess": "Watch Next पहुंच",
     "granted": "प्रदान किया गया",
     "permissionRequired": "अनुमति आवश्यक है",
     "systemWidePopupAlert": "सिस्टम-वाइड पॉपअप अलर्ट",

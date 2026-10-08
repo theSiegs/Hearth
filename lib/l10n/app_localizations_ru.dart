@@ -254,6 +254,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get notificationAccess => 'Доступ к уведомлениям';
 
   @override
+  String get watchNextAccess => 'Доступ к Watch Next';
+
+  @override
   String get granted => 'Предоставлено';
 
   @override

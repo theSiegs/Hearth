@@ -254,6 +254,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get notificationAccess => '알림 액세스';
 
   @override
+  String get watchNextAccess => 'Watch Next 액세스';
+
+  @override
   String get granted => '부여됨';
 
   @override

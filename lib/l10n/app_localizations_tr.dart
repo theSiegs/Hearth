@@ -254,6 +254,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get notificationAccess => 'Bildirim Erişimi';
 
   @override
+  String get watchNextAccess => 'Watch Next Erişimi';
+
+  @override
   String get granted => 'Verildi';
 
   @override
