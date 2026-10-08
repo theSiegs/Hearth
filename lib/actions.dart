@@ -78,6 +78,11 @@ class OpenSettingsIntent extends Intent {
 }
 
 /// Opens the Home Assistant panel; sent by pressing Right at the right edge of the home screen when the panel is on.
+/// Down from the top bar: back to Continue Watching or the dock, rather than whatever is nearest on screen.
+class LeaveTopBarIntent extends Intent {
+  const LeaveTopBarIntent();
+}
+
 class OpenHaPanelIntent extends Intent {
   const OpenHaPanelIntent();
 }

@@ -100,6 +100,12 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
         canRequestFocus: false,
         skipTraversal: true,
         onKeyEvent: (node, event) {
+          // Down goes back to the home screen's first row (the home decides which: see LeaveTopBarIntent)
+          if (event.logicalKey == LogicalKeyboardKey.arrowDown && event is! KeyUpEvent) {
+            return Actions.maybeInvoke(context, const LeaveTopBarIntent()) == true
+                ? KeyEventResult.handled
+                : KeyEventResult.ignored;
+          }
           if (event.logicalKey != LogicalKeyboardKey.arrowRight || event is KeyUpEvent) return KeyEventResult.ignored;
           final focused = FocusManager.instance.primaryFocus;
           if (focused == null || focused.focusInDirection(TraversalDirection.right)) return KeyEventResult.handled;
