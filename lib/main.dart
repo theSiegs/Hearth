@@ -16,7 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'dart:async';
 import 'dart:ui';
 
 import 'package:flauncher/database.dart';
@@ -45,7 +44,7 @@ import 'flauncher_app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  initializeDateFormatting();
+  await initializeDateFormatting();
 
   // Configure LRU Image Cache bounds to preserve RAM on Android TV devices
   PaintingBinding.instance.imageCache.maximumSizeBytes = 50 * 1024 * 1024; // 50MB max RAM
@@ -54,11 +53,11 @@ Future<void> main() async {
   // Global Error Boundary & Crash Protection
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
-    debugPrint('FLauncher Error Boundary: ${details.exception}');
+    debugPrint('Hearth error boundary: ${details.exception}');
   };
 
   PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
-    debugPrint('FLauncher Platform Error Boundary: $error');
+    debugPrint('Hearth uncaught error: $error\n$stack');
     return true; // handled, don't crash process
   };
 
@@ -98,14 +97,16 @@ Future<void> main() async {
 
   runApp(MultiProvider(
       providers: [
-        Provider<BackupService>(
-          create: (_) => BackupService(fLauncherDatabase, sharedPreferences),
-        ),
         ChangeNotifierProvider(
             create: (_) => SettingsService(sharedPreferences),
             lazy: false),
+        Provider<BackupService>(
+            create: (context) =>
+                BackupService(fLauncherDatabase, sharedPreferences)..start(context.read<SettingsService>()),
+            dispose: (_, backupService) => backupService.dispose(),
+            lazy: false),
         ChangeNotifierProvider(create: (_) => AppsService(fLauncherChannel, fLauncherDatabase)),
-        ChangeNotifierProvider(create: (_) => LauncherState()),
+        ChangeNotifierProvider(create: (context) => LauncherState()..refresh(context.read<AppsService>())),
         ChangeNotifierProvider(create: (_) => NetworkService(fLauncherChannel)),
         ChangeNotifierProvider(
             create: (context) {
@@ -131,16 +132,8 @@ Future<void> main() async {
             dispose: (_, updater) => updater.dispose(),
             lazy: false),
         ChangeNotifierProvider(
-            create: (context) {
-              final backupService = Provider.of<BackupService>(context, listen: false);
-              final settingsService = Provider.of<SettingsService>(context, listen: false);
-              final appsService = Provider.of<AppsService>(context, listen: false);
-              // Daily automatic backup, checked at start and then hourly while the launcher runs
-              backupService.autoBackupIfDue(settingsService).catchError((_) => null);
-              Timer.periodic(const Duration(hours: 1),
-                  (_) => backupService.autoBackupIfDue(settingsService).catchError((_) => null));
-              return ProfileService(fLauncherChannel, sharedPreferences, backupService, settingsService, appsService);
-            },
+            create: (context) => ProfileService(fLauncherChannel, sharedPreferences, context.read<BackupService>(),
+                context.read<SettingsService>(), context.read<AppsService>()),
             lazy: false),
       ],
       child: FLauncherApp()

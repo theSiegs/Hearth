@@ -176,6 +176,8 @@ void main() {
   });
 
   group("automatic backup", () {
+    setUp(() => sharedPreferences.clear());
+
     test("writes once per interval and keeps only the newest copies", () async {
       final settingsService = SettingsService(sharedPreferences);
       final start = DateTime(2026, 10, 1, 9);
@@ -196,6 +198,16 @@ void main() {
       // Listed alongside manual backups so they can be restored
       final listed = await backupService.getBackupFiles();
       expect(listed.where((e) => e.name.startsWith("ltv_backup_auto_")).length, 7);
+    });
+
+    test("start backs up at once when one is due", () async {
+      backupService.start(SettingsService(sharedPreferences));
+      addTearDown(backupService.dispose);
+      for (int i = 0; i < 100 && sharedPreferences.getInt("device_last_auto_backup") == null; i++) {
+        await Future.delayed(const Duration(milliseconds: 10));
+      }
+
+      expect(tempDir.listSync().where((f) => f.path.contains("ltv_backup_auto_")), hasLength(1));
     });
   });
 

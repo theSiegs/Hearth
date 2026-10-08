@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
@@ -14,7 +15,25 @@ class BackupService {
   final FLauncherDatabase _database;
   final SharedPreferences _sharedPreferences;
 
+  Timer? _autoBackupTimer;
+
   BackupService(this._database, this._sharedPreferences);
+
+  /// Daily automatic backups: checked now and then hourly until [dispose].
+  void start(SettingsService settingsService) {
+    _autoBackupTimer?.cancel();
+    void check() => autoBackupIfDue(settingsService).catchError((Object e) {
+          developer.log("Automatic backup failed", name: "BackupService", error: e);
+          return null;
+        });
+    check();
+    _autoBackupTimer = Timer.periodic(const Duration(hours: 1), (_) => check());
+  }
+
+  void dispose() {
+    _autoBackupTimer?.cancel();
+    _autoBackupTimer = null;
+  }
 
   /// Hearth's own folders that can hold backups, best first: Downloads, external files, documents.
   Future<List<Directory>> _appDirectories() async {

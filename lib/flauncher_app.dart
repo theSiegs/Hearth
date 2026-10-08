@@ -17,7 +17,6 @@
  */
 
 import 'package:flauncher/actions.dart';
-import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flutter/material.dart';
@@ -49,10 +48,6 @@ class FLauncherApp extends StatelessWidget
 
   @override
   Widget build(BuildContext context) {
-    AppsService appsService = context.read<AppsService>();
-    LauncherState launcherState = context.read<LauncherState>();
-    launcherState.refresh(appsService);
-
     return Selector<SettingsService, (Color, Locale?)>(
       selector: (_, settings) => (settings.accentColor, settings.appLocale),
       builder: (context, tuple, _) {
