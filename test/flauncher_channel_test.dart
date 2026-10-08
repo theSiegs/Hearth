@@ -20,6 +20,8 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+TestDefaultBinaryMessenger get _messenger => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+
 void main() {
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +29,7 @@ void main() {
 
   test("getApplications", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
-    channel.setMockMethodCallHandler((call) async {
+    _messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == "getApplications") {
         return [
           {'packageName': 'me.efesser.flauncher'}
@@ -47,7 +49,7 @@ void main() {
   test("launchApp", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
     String? packageName;
-    channel.setMockMethodCallHandler((call) async {
+    _messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == "launchApp") {
         packageName = call.arguments as String;
         return;
@@ -64,7 +66,7 @@ void main() {
   test("openSettings", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
     bool called = false;
-    channel.setMockMethodCallHandler((call) async {
+    _messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == "openSettings") {
         called = true;
         return;
@@ -81,7 +83,7 @@ void main() {
   test("openAppInfo", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
     String? packageName;
-    channel.setMockMethodCallHandler((call) async {
+    _messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == "openAppInfo") {
         packageName = call.arguments as String;
         return;
@@ -98,7 +100,7 @@ void main() {
   test("uninstallApp", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
     String? packageName;
-    channel.setMockMethodCallHandler((call) async {
+    _messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == "uninstallApp") {
         packageName = call.arguments as String;
         return;
@@ -114,7 +116,7 @@ void main() {
 
   test("isDefaultLauncher", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
-    channel.setMockMethodCallHandler((call) async {
+    _messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == "isDefaultLauncher") {
         return true;
       }
@@ -129,7 +131,7 @@ void main() {
 
   test("checkForGetContentAvailability", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
-    channel.setMockMethodCallHandler((call) async {
+    _messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == "checkForGetContentAvailability") {
         return true;
       }
@@ -145,7 +147,7 @@ void main() {
   test("startAmbientMode", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
     bool called = false;
-    channel.setMockMethodCallHandler((call) async {
+    _messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == "startAmbientMode") {
         called = true;
         return;
@@ -161,7 +163,7 @@ void main() {
 
   test("getDailyDataUsage success", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
-    channel.setMockMethodCallHandler((call) async {
+    _messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == "getDailyDataUsage") {
         return 12345;
       }
@@ -176,7 +178,7 @@ void main() {
 
   test("getDailyDataUsage platform exception", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
-    channel.setMockMethodCallHandler((call) async {
+    _messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == "getDailyDataUsage") {
         throw PlatformException(code: "ERROR");
       }
@@ -191,7 +193,7 @@ void main() {
 
   test("getWeeklyDataUsage success", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
-    channel.setMockMethodCallHandler((call) async {
+    _messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == "getWeeklyDataUsage") {
         return 67890;
       }
@@ -206,7 +208,7 @@ void main() {
 
   test("getWeeklyDataUsage platform exception", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
-    channel.setMockMethodCallHandler((call) async {
+    _messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == "getWeeklyDataUsage") {
         throw PlatformException(code: "ERROR");
       }
@@ -221,7 +223,7 @@ void main() {
 
   test("getMonthlyDataUsage success", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
-    channel.setMockMethodCallHandler((call) async {
+    _messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == "getMonthlyDataUsage") {
         return 99999;
       }
@@ -236,7 +238,7 @@ void main() {
 
   test("getMonthlyDataUsage platform exception", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
-    channel.setMockMethodCallHandler((call) async {
+    _messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == "getMonthlyDataUsage") {
         throw PlatformException(code: "ERROR");
       }
@@ -271,7 +273,7 @@ void main() {
   test("openVpnSettings", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
     bool called = false;
-    channel.setMockMethodCallHandler((call) async {
+    _messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == "openVpnSettings") {
         called = true;
         return;
