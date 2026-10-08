@@ -56,6 +56,8 @@ final class AgentHub {
     private static final Map<Long, List<Map<String, Object>>> sWatchNext = new ConcurrentHashMap<>();
     private static final Map<Long, Boolean> sVoiceDefault = new ConcurrentHashMap<>();
     private static volatile String sListening;
+    private static final java.util.concurrent.ExecutorService SENDER =
+            java.util.concurrent.Executors.newSingleThreadExecutor();
 
     private static final class Connection {
         final long serial;
@@ -68,8 +70,17 @@ final class AgentHub {
             this.out = out;
         }
 
-        synchronized void send(JSONObject message) {
-            out.println(message.toString());
+        /**
+         * Queues the message for the agent. Writes go out on a background thread, in order: callers are often on
+         * the main thread, where Android refuses socket writes (NetworkOnMainThreadException).
+         */
+        void send(JSONObject message) {
+            final String line = message.toString();
+            SENDER.execute(() -> {
+                synchronized (this) {
+                    out.println(line);
+                }
+            });
         }
     }
 
