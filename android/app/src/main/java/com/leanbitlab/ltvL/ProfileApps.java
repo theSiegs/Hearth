@@ -2,6 +2,7 @@ package com.leanbitlab.ltvL;
 
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.LauncherActivityInfo;
 import android.content.pm.LauncherApps;
@@ -121,7 +122,7 @@ final class ProfileApps {
      * as usual). Deep links can't reach another user from here, so they go through that profile's Hearth agent
      * (AgentHub); without one the app opens at its main screen. False when that profile doesn't have the app.
      */
-    static Boolean open(Context context, android.content.Intent intent) {
+    static Boolean open(Context context, Intent intent) {
         if (intent == null) return null;
         UserHandle user = activeProfileUser(context);
         if (user == null) return null;
@@ -131,7 +132,7 @@ final class ProfileApps {
         long serial = ProfileUsers.settledSerial(context);
         if (pkg == null || !apps(context, user).containsKey(pkg)) return false;
         ProfilePairingService.onAppLaunching(context, pkg);
-        return AgentHub.open(context, serial, user, intent.toUri(android.content.Intent.URI_INTENT_SCHEME))
+        return AgentHub.open(context, serial, user, intent.toUri(Intent.URI_INTENT_SCHEME))
                 || startMain(context, user, pkg);
     }
 }

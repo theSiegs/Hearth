@@ -7,10 +7,13 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.graphics.Rect;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
+import android.os.UserHandle;
 import android.provider.Settings;
 import android.util.Log;
 import android.util.TypedValue;
@@ -90,7 +93,7 @@ public class ProfilePairingService extends AccessibilityService {
         boolean kids;
         boolean pickerSeen;
         boolean signingIn;
-        final long startedAt = android.os.SystemClock.elapsedRealtime();
+        final long startedAt = SystemClock.elapsedRealtime();
         // Apps read through nodes
         boolean clickTried;
         boolean checkingClick;
@@ -170,7 +173,7 @@ public class ProfilePairingService extends AccessibilityService {
         }
         String hearthProfile = name != null && !name.isEmpty() ? name : ProfileUsers.displayName(context, key);
         // Netflix speaks through its own user's engine: another profile's agent says whether that's Hearth's voice
-        android.os.UserHandle profileUser = ProfileApps.activeProfileUser(context);
+        UserHandle profileUser = ProfileApps.activeProfileUser(context);
         boolean voice = profileUser != null
                 ? AgentHub.isVoiceDefault(ProfileUsers.settledSerial(context)) : isVoiceDefault(context);
         if (ProfilePairing.NETFLIX.equals(packageName) && !voice) {
@@ -403,7 +406,7 @@ public class ProfilePairingService extends AccessibilityService {
      * (a code entered on a phone can take minutes, with the app silent meanwhile).
      */
     private void stillSigningIn(Session s) {
-        long left = WAIT_THROUGH_SIGN_IN_MS - (android.os.SystemClock.elapsedRealtime() - s.startedAt);
+        long left = WAIT_THROUGH_SIGN_IN_MS - (SystemClock.elapsedRealtime() - s.startedAt);
         if (left <= WAIT_FOR_PICKER_MS) return;
         if (!s.signingIn) Log.i(TAG, "Signing in to " + s.pkg + ": waiting for its picker");
         s.signingIn = true;
@@ -596,8 +599,8 @@ public class ProfilePairingService extends AccessibilityService {
         pickerFound();
         // Screen order (left to right, then top to bottom), so Right/Left moves match the list.
         tiles.sort((a, b) -> {
-            android.graphics.Rect ra = new android.graphics.Rect();
-            android.graphics.Rect rb = new android.graphics.Rect();
+            Rect ra = new Rect();
+            Rect rb = new Rect();
             a.node.getBoundsInScreen(ra);
             b.node.getBoundsInScreen(rb);
             return ra.top / 100 != rb.top / 100 ? Integer.compare(ra.top, rb.top) : Integer.compare(ra.left, rb.left);

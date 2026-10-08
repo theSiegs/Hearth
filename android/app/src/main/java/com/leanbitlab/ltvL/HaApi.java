@@ -13,6 +13,8 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -45,7 +47,7 @@ final class HaApi {
         if (raw == null) return result;
         try {
             JSONArray states = new JSONArray(new String(raw, StandardCharsets.UTF_8));
-            java.util.List<JSONObject> list = new java.util.ArrayList<>();
+            List<JSONObject> list = new ArrayList<>();
             for (int i = 0; i < states.length(); i++) {
                 JSONObject state = states.getJSONObject(i);
                 String id = state.getString("entity_id");

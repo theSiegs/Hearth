@@ -12,6 +12,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Collections;
@@ -94,7 +95,7 @@ final class HaSetupServer {
             try (Socket socket = server.accept()) {
                 socket.setSoTimeout(10_000);
                 handle(socket);
-            } catch (java.net.SocketTimeoutException ignored) {
+            } catch (SocketTimeoutException ignored) {
             } catch (IOException e) {
                 if (!server.isClosed()) Log.w(TAG, "Request failed", e);
             }

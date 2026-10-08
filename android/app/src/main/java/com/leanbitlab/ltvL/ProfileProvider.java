@@ -3,9 +3,13 @@ package com.leanbitlab.ltvL;
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
+import android.content.pm.SigningInfo;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
@@ -15,7 +19,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Shares Hearth's state with HearthTube, so it can follow the profile and match Hearth's look.
@@ -142,26 +149,26 @@ public class ProfileProvider extends ContentProvider {
 
     // SHA-256 of the certificates HearthTube may be signed with: the debug key HearthTube's releases are signed
     // with, and Hearth's release key.
-    private static final java.util.Set<String> TRUSTED_CERTS = new java.util.HashSet<>(java.util.Arrays.asList(
+    private static final Set<String> TRUSTED_CERTS = new HashSet<>(Arrays.asList(
             "6748528ff4d17fd57c30b6c5d522c467920d9951ea5d208597f91b66df9a2bfe",
             "0438047b1a5eefe8693cad8f2b57189a418337bbcbd3c7dbdb79d20884beaf6e"));
 
     /** HearthTube is signed with one of the trusted certificates, so another app can't pose as it to guess PINs. */
     private static boolean isTrustedHearthTube(Context context) {
         try {
-            android.content.pm.Signature[] signatures;
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                android.content.pm.SigningInfo info = context.getPackageManager()
-                        .getPackageInfo(CompanionApps.HEARTHTUBE, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES).signingInfo;
+            Signature[] signatures;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                SigningInfo info = context.getPackageManager()
+                        .getPackageInfo(CompanionApps.HEARTHTUBE, PackageManager.GET_SIGNING_CERTIFICATES).signingInfo;
                 if (info == null || info.hasMultipleSigners()) return false;
                 signatures = info.getSigningCertificateHistory();
             } else {
                 signatures = context.getPackageManager()
-                        .getPackageInfo(CompanionApps.HEARTHTUBE, android.content.pm.PackageManager.GET_SIGNATURES).signatures;
+                        .getPackageInfo(CompanionApps.HEARTHTUBE, PackageManager.GET_SIGNATURES).signatures;
             }
             if (signatures == null) return false;
             MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
-            for (android.content.pm.Signature signature : signatures) {
+            for (Signature signature : signatures) {
                 if (TRUSTED_CERTS.contains(Hex.of(sha256.digest(signature.toByteArray())))) return true;
             }
         } catch (Exception e) {
