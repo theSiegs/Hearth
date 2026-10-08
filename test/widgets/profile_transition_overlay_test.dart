@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/widgets/profile_transition_overlay.dart';
 import 'package:flutter/material.dart';
@@ -7,67 +5,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:provider/provider.dart';
 
+import '../helpers.dart';
 import '../mocks.mocks.dart';
 
-/// Just the switch state the overlay reads, with real notifications.
-class _FakeProfiles extends ChangeNotifier implements ProfileService {
-  ProfileTransition? _transition;
-  String? _incoming;
-  String? _layoutReadyKey;
-  final List<ProfileTransition> ended = [];
-
-  void pick(String? name) {
-    _incoming = name;
-    notifyListeners();
-  }
-
-  void begin(ProfileTransition transition) {
-    _transition = transition;
-    _incoming = null;
-    notifyListeners();
-  }
-
-  void layoutReady(String key) {
-    _layoutReadyKey = key;
-    notifyListeners();
-  }
-
-  @override
-  ProfileTransition? get transition => _transition;
-
-  @override
-  String? get incomingName => _incoming;
-
-  @override
-  Uint8List? get incomingAvatar => null;
-
-  @override
-  String? get activeProfileName => _transition?.pickedName;
-
-  @override
-  Uint8List? get activeProfileAvatar => null;
-
-  @override
-  bool layoutReadyFor(String key) => _layoutReadyKey == key;
-
-  @override
-  void endTransition(ProfileTransition transition) {
-    if (_transition != transition) return;
-    ended.add(transition);
-    _transition = null;
-    notifyListeners();
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
 void main() {
-  late _FakeProfiles profiles;
+  late FakeProfileService profiles;
   late MockFLauncherChannel channel;
 
   setUp(() {
-    profiles = _FakeProfiles();
+    profiles = FakeProfileService(activeKey: "user:0", activeName: "Alex");
     channel = MockFLauncherChannel();
     when(channel.setProfileReady(any)).thenAnswer((_) async {});
   });
@@ -107,8 +53,7 @@ void main() {
     when(channel.isProfileDataReady()).thenAnswer((_) async => true);
     await pumpOverlay(tester);
 
-    final transition = ProfileTransition("user:11", DateTime.now(), "Sam");
-    profiles.begin(transition);
+    final transition = profiles.switchTo("user:11", "Sam");
     await tester.pump();
     await tester.pump();
 
@@ -116,7 +61,7 @@ void main() {
     expect(cardFocused(), isTrue);
     expect(tester.widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator)).value, 0.75);
 
-    profiles.layoutReady("user:11");
+    profiles.layoutReady();
     await tester.pump();
     await tester.pump();
 
@@ -129,8 +74,7 @@ void main() {
     when(channel.isProfileDataReady()).thenAnswer((_) async => false);
     await pumpOverlay(tester);
 
-    final transition = ProfileTransition("user:11", DateTime.now(), "Sam");
-    profiles.begin(transition);
+    final transition = profiles.switchTo("user:11", "Sam");
     await tester.pump();
 
     expect(find.text("Hi, Sam"), findsOneWidget);

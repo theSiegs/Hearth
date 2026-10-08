@@ -90,6 +90,9 @@ class _FLauncherState extends State<FLauncher> {
   ProfileService? _profileService;
   String? _lastProfile;
 
+  /// A profile just switched to, until the selection has landed on its home.
+  String? _landingProfile;
+
   @override
   void initState() {
     super.initState();
@@ -112,27 +115,29 @@ class _FLauncherState extends State<FLauncher> {
 
   /// Arriving in a profile, the selection starts on the first dock app, or the first app when there's no dock.
   void _onProfileChanged() {
-    final key = _profileService?.activeProfileKey;
-    if (key == null || key == _lastProfile) return;
-    _lastProfile = key;
-    if (_showingRecents) setState(() => _showingRecents = false);
-    // Another profile, another person: their search isn't this one's
-    if (_homeSearch?.active ?? false) _endSearch(focusDock: false);
-    // Keep trying for a few seconds: the profile's layout (its own dock) and app list load after the profile changes,
-    // and focus comes back to the top bar (where the profile switch started), which would hide the dock.
-    var landed = false;
-    for (final ms in const [300, 1200, 2500, 4000]) {
-      Future.delayed(Duration(milliseconds: ms), () {
-        // Not while another page is open over the home (search, settings): it keeps its focus
-        if (!mounted || landed || _searchTyping || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
-        final target = _firstFocusable(_dockFocusNode) ?? _firstFocusable(_appsGridFocusNode) ??
-            _firstFocusable(_belowDockFocusNode);
-        if (target != null) {
-          target.requestFocus();
-          landed = _dockFocusNode.hasFocus || _appsGridFocusNode.hasFocus || _belowDockFocusNode.hasFocus;
-        }
-      });
+    final profiles = _profileService;
+    if (profiles == null) return;
+    final key = profiles.activeProfileKey;
+    if (key != null && key != _lastProfile) {
+      _lastProfile = key;
+      _landingProfile = key;
+      if (_showingRecents) setState(() => _showingRecents = false);
+      // Another profile, another person: their search isn't this one's
+      if (_homeSearch?.active ?? false) _endSearch(focusDock: false);
     }
+    // Once, when the welcome card is gone and the profile's layout (its own dock) is in; the card holds focus till then.
+    final landing = _landingProfile;
+    if (landing == null || profiles.transition != null || !profiles.layoutReadyFor(landing)) return;
+    _landingProfile = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _landOnHome());
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  void _landOnHome() {
+    // Not while another page is open over the home (search, settings): it keeps its focus
+    if (!mounted || _searchTyping || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
+    (_firstFocusable(_dockFocusNode) ?? _firstFocusable(_appsGridFocusNode) ?? _firstFocusable(_belowDockFocusNode))
+        ?.requestFocus();
   }
 
   /// Focus is in the top bar: the dock and Continue Watching are hidden.

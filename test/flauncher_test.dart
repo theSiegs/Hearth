@@ -25,6 +25,7 @@ import 'package:flauncher/models/category.dart';
 import 'package:flauncher/models/watch_next_program.dart';
 import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flauncher/providers/network_service.dart';
+import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/tv_inputs_service.dart';
 import 'package:flauncher/providers/wallpaper_service.dart';
@@ -248,6 +249,49 @@ void main() {
     await tester.pumpAndSettle();
     expect(getFocusNodeForApp(tester, "me.efesser.flauncher.1")!.hasFocus, isTrue);
     expect(recentsOpacity(), 0);
+  });
+
+  testWidgets("After a profile switch, focus lands on the dock once the welcome card goes", (tester) async {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('me.efesser.flauncher/method'), (call) async {
+      // The other profile's native data is in; permission checks answer "no".
+      if (call.method == "isProfileDataReady") return true;
+      return call.method.startsWith("check") ? false : null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('me.efesser.flauncher/method'), null));
+    final appsService = mkAppService();
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    final applicationsCategory = fakeCategory(name: "Applications", order: 1);
+    favoritesCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.1", name: "FLauncher 1"));
+    applicationsCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.2", name: "FLauncher 2"));
+    when(appsService.launcherSections).thenReturn([favoritesCategory, applicationsCategory]);
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+    final watchNextService = mkWatchNextService();
+    when(watchNextService.refreshedFor).thenReturn("user:11");
+    when(watchNextService.postersSettled).thenReturn(true);
+    final profiles = FakeProfileService(activeKey: "user:0", activeName: "Alex");
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService,
+        watchNextService: watchNextService, profileService: profiles);
+
+    // The switch starts from the profile button
+    getProfileFocusNode(tester)!.requestFocus();
+    await tester.pump();
+
+    profiles.switchTo("user:11", "Sam");
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // The card holds focus while the profile's layout loads
+    expect(find.text("Hi, Sam"), findsOneWidget);
+    expect(isAppCardFocused(tester, "me.efesser.flauncher.1"), isFalse);
+
+    profiles.layoutReady();
+    await tester.pumpAndSettle();
+
+    expect(find.text("Hi, Sam"), findsNothing);
+    expect(isAppCardFocused(tester, "me.efesser.flauncher.1"), isTrue);
   });
 
   testWidgets("With nothing usable in Favorites, the dock layout shows one untitled grid", (tester) async {
@@ -920,6 +964,7 @@ Future<void> _pumpWidgetWithProviders(
   AppsService appsService,
   SettingsService settingsService, {
   WatchNextService? watchNextService,
+  ProfileService? profileService,
 }) async {
   tester.view.physicalSize = const Size(1920, 1080);
   tester.view.devicePixelRatio = 1.0;
@@ -935,6 +980,7 @@ Future<void> _pumpWidgetWithProviders(
         ChangeNotifierProvider<WeatherService>.value(value: mkWeatherService()),
         ChangeNotifierProvider(create: (_) => LauncherState()),
         ChangeNotifierProvider(create: (_) => NetworkService(FLauncherChannel())),
+        if (profileService != null) ChangeNotifierProvider<ProfileService>.value(value: profileService),
       ],
       builder: (_, __) => MaterialApp(
         localizationsDelegates: const [
