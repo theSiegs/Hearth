@@ -135,6 +135,16 @@ public final class ProfileAppAccess {
         return log;
     }
 
+    /**
+     * Automatic, safe self-cleanup used when Hearth is being removed (a profile's agent found owner-Hearth gone):
+     * releases any keep flag and uninstalls Hearth's own apps for that one profile, so Google TV's launcher drops
+     * them. Removal-only (it never installs or protects), so no parent confirmation is needed — this is the undo that
+     * must be able to run on its own to avoid leaving zombies behind.
+     */
+    public static List<String> cleanupUser(Context context, ShellRunner shell, int userId) throws Exception {
+        return removeFromProfiles(context, shell, java.util.Collections.singletonList(userId), true);
+    }
+
     /** Read-only: for the given profiles, which have Hearth / HearthTube and whether each is kept (flagged). */
     public static List<AppStatus> state(Context context, ShellRunner shell, List<Integer> userIds) throws Exception {
         String apk = context.getPackageCodePath();

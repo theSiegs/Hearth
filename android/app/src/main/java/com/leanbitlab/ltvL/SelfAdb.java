@@ -62,6 +62,34 @@ public final class SelfAdb implements ProfileAppAccess.ShellRunner, AutoCloseabl
         return new SelfAdb(Dadb.create(HOST, PORT, keyPair));
     }
 
+    /**
+     * Owner-Hearth's adb key material ({private, public} PEM), or null if it hasn't connected yet. Shared with the
+     * profile agents over the loopback channel so that, if owner-Hearth is ever uninstalled, an agent can still use
+     * this already-authorized key to clean up its profile (see AgentService). Loopback-only, so it never leaves the
+     * device.
+     */
+    static String[] keyMaterial(Context context) {
+        try {
+            java.io.File dir = new java.io.File(context.getFilesDir(), "selfadb");
+            java.io.File priv = new java.io.File(dir, "adbkey");
+            java.io.File pub = new java.io.File(dir, "adbkey.pub");
+            if (!priv.exists() || !pub.exists()) return null;
+            return new String[]{readFile(priv), readFile(pub)};
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String readFile(java.io.File f) throws Exception {
+        try (java.io.FileInputStream in = new java.io.FileInputStream(f);
+             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+            byte[] buf = new byte[4096];
+            int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            return out.toString("UTF-8");
+        }
+    }
+
     @Override
     public String run(String command) throws Exception {
         AdbShellResponse response = dadb.shell(command);

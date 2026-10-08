@@ -46,6 +46,8 @@ public class AgentService extends Service {
     private static final String CHANNEL = "hearth_agent";
     private static final long RETRY_MS = 5_000;
     private static final long PING_MS = 30_000;
+    // About a minute of owner-Hearth being unreachable before the agent checks whether it was actually uninstalled.
+    private static final int SELF_CLEAN_AFTER_FAILURES = 12;
 
     private static volatile String sPendingOpen;
     private static volatile String sListeningTo;
@@ -59,6 +61,8 @@ public class AgentService extends Service {
     private HandlerThread mThread;
     private Handler mHandler;
     private volatile boolean mRunning;
+    private int mFailedConnects = 0;
+    private volatile boolean mSelfCleaned = false;
     private volatile PrintWriter mOut;
     private ContentObserver mWatchNextObserver;
 
@@ -244,6 +248,7 @@ public class AgentService extends Service {
         while (mRunning) {
             String key = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null);
             if (key != null) {
+                boolean connected = false;
                 try (Socket socket = new Socket(InetAddress.getByName("127.0.0.1"), AgentHub.PORT)) {
                     PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                     BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
@@ -255,6 +260,7 @@ public class AgentService extends Service {
                     if ("welcome".equals(reply.optString("type"))) {
                         Log.i(TAG, "Connected to Hearth as serial " + serial);
                         mOut = out;
+                        connected = true;
                         onConnectionChanged(true);
                         mHandler.post(mSendWatchNext);
                         mHandler.postDelayed(mPing, PING_MS);
@@ -277,6 +283,8 @@ public class AgentService extends Service {
                             } else if ("pinResult".equals(type)) {
                                 java.util.concurrent.BlockingQueue<JSONObject> pinReply = sPinReplies.get(message.optLong("id"));
                                 if (pinReply != null) pinReply.offer(message);
+                            } else if ("adbKey".equals(type)) {
+                                storeSharedKey(message.optString("priv"), message.optString("pub"));
                             }
                         }
                     } else {
@@ -290,6 +298,12 @@ public class AgentService extends Service {
                     sListeningTo = null;
                     if (wasConnected) onConnectionChanged(false);
                     mHandler.removeCallbacks(mPing);
+                }
+                if (connected) {
+                    mFailedConnects = 0;
+                } else {
+                    mFailedConnects++;
+                    maybeSelfClean();
                 }
             }
             synchronized (this) {
@@ -330,6 +344,65 @@ public class AgentService extends Service {
             mHandler.postDelayed(this, PING_MS);
         }
     };
+
+    /** Stores owner-Hearth's shared adb key (received over the channel) so the agent can self-adb if Hearth is gone. */
+    private void storeSharedKey(String priv, String pub) {
+        if (priv == null || priv.isEmpty() || pub == null || pub.isEmpty()) return;
+        try {
+            java.io.File dir = new java.io.File(getFilesDir(), "selfadb");
+            if (!dir.exists() && !dir.mkdirs()) return;
+            java.io.File pk = new java.io.File(dir, "adbkey");
+            if (pk.exists()) return; // write once
+            write(pk, priv);
+            write(new java.io.File(dir, "adbkey.pub"), pub);
+        } catch (Exception e) {
+            Log.w(TAG, "couldn't store the shared key: " + e);
+        }
+    }
+
+    private static void write(java.io.File f, String text) throws Exception {
+        try (java.io.FileOutputStream o = new java.io.FileOutputStream(f)) {
+            o.write(text.getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    /**
+     * When owner-Hearth has been unreachable for a while, check — as the shell user, via the shared key — whether it
+     * is really gone from the owner (user 0). If it was uninstalled, release THIS profile's Hearth/HearthTube so
+     * Google TV's launcher removes them at the next profile start; that way a plain Android uninstall of Hearth
+     * doesn't leave zombie copies behind. If owner-Hearth is still installed (just not running), do nothing.
+     */
+    private void maybeSelfClean() {
+        if (mSelfCleaned || mFailedConnects < SELF_CLEAN_AFTER_FAILURES) return;
+        java.io.File priv = new java.io.File(new java.io.File(getFilesDir(), "selfadb"), "adbkey");
+        if (!priv.exists()) return; // no shared key -> no shell; nothing we can do
+        try (SelfAdb shell = SelfAdb.open(this)) {
+            String owner = shell.run("pm list packages --user 0 " + ProfileAppAccess.HEARTH);
+            if (owner != null && owner.contains("package:" + ProfileAppAccess.HEARTH)) {
+                mFailedConnects = 0; // owner-Hearth is still installed, just down; leave everything alone
+                return;
+            }
+            int me = userIdSelf();
+            if (me > 0) {
+                ProfileAppAccess.cleanupUser(this, shell, me);
+                mSelfCleaned = true;
+                Log.i(TAG, "owner Hearth is gone; released this profile's copies for the launcher to remove");
+            }
+        } catch (Exception e) {
+            Log.i(TAG, "self-clean check failed (will retry later): " + e.getMessage());
+        }
+    }
+
+    /** This agent's own profile user id (for {@code pm --user}); -1 if unknown. */
+    private int userIdSelf() {
+        try {
+            return (int) android.os.UserHandle.class.getMethod("getIdentifier").invoke(Process.myUserHandle());
+        } catch (Throwable t) {
+            java.util.regex.Matcher m =
+                    java.util.regex.Pattern.compile("\\d+").matcher(String.valueOf(Process.myUserHandle()));
+            return m.find() ? Integer.parseInt(m.group()) : -1;
+        }
+    }
 
     private static JSONObject json(Object... pairs) {
         try {
