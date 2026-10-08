@@ -1,6 +1,5 @@
 import 'package:flauncher/actions.dart';
 import 'package:flauncher/flauncher_channel.dart';
-import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
 import 'package:flauncher/widgets/settings/inputs_panel.dart';
 import 'package:flauncher/widgets/settings/notifications_panel.dart';
@@ -67,11 +66,9 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
     _settingsFocusNode.requestFocus();
   }
 
-  /// Opens Settings, asking for the parent PIN first in kids profiles.
+  /// Opens Settings. In kids profiles its risky parts ask for the parent PIN themselves (settings_lock.dart).
   Future<void> openSettings() async {
-    if (await requireParent(context) && context.mounted) {
-      showDialog(context: context, builder: (_) => const SettingsPanel());
-    }
+    showDialog(context: context, builder: (_) => const SettingsPanel());
   }
 
   @override

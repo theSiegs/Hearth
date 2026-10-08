@@ -28,6 +28,7 @@ import 'package:flutter/material.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 
 import 'focusable_settings_tile.dart';
+import 'settings_lock.dart';
 
 /// The top of Settings: eight groups, each a page of its own.
 class SettingsPanelPage extends StatelessWidget {
@@ -38,6 +39,8 @@ class SettingsPanelPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     AppLocalizations localizations = AppLocalizations.of(context)!;
+    // In a kids profile everything but Profiles (switching) and Home screen (their own look) needs the parent PIN
+    final bool locked = settingsLocked(context);
 
     return Column(
       children: [
@@ -66,7 +69,8 @@ class SettingsPanelPage extends StatelessWidget {
                 FocusableSettingsTile(
                   leading: const Icon(Icons.apps),
                   title: Text(localizations.applications, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(ApplicationsPanelPage.routeName),
+                  trailing: lockedTrailing(context, locked: locked),
+                  onPressed: () => openLocked(context, ApplicationsPanelPage.routeName),
                 ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.auto_awesome_mosaic_outlined),
@@ -76,27 +80,32 @@ class SettingsPanelPage extends StatelessWidget {
                 FocusableSettingsTile(
                   leading: const Icon(Icons.settings_remote_outlined),
                   title: Text("Remote & search", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(RemoteSearchSettingsPage.routeName),
+                  trailing: lockedTrailing(context, locked: locked),
+                  onPressed: () => openLocked(context, RemoteSearchSettingsPage.routeName),
                 ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.notifications_active_outlined),
                   title: Text(localizations.notifications, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(NotificationsSettingsPage.routeName),
+                  trailing: lockedTrailing(context, locked: locked),
+                  onPressed: () => openLocked(context, NotificationsSettingsPage.routeName),
                 ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.home_outlined),
                   title: Text("Home Assistant", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(HomeAssistantPage.routeName),
+                  trailing: lockedTrailing(context, locked: locked),
+                  onPressed: () => openLocked(context, HomeAssistantPage.routeName),
                 ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.tv),
                   title: Text(DisplaySettingsPage.title, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(DisplaySettingsPage.routeName),
+                  trailing: lockedTrailing(context, locked: locked),
+                  onPressed: () => openLocked(context, DisplaySettingsPage.routeName),
                 ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.settings_suggest_outlined),
                   title: Text(localizations.system, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(GeneralSettingsPage.routeName),
+                  trailing: lockedTrailing(context, locked: locked),
+                  onPressed: () => openLocked(context, GeneralSettingsPage.routeName),
                 ),
               ],
             ),

@@ -18,6 +18,7 @@
 
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/widgets/settings/applications_panel_page.dart';
 import 'package:flauncher/widgets/settings/interface_settings_page.dart';
 import 'package:flauncher/widgets/settings/general_settings_page.dart';
@@ -99,6 +100,30 @@ void main() {
     });
   }
 
+  testWidgets("in a kids profile, Settings opens with the risky groups locked", (tester) async {
+    final profiles = MockProfileService();
+    when(profiles.isKidsProfile).thenReturn(true);
+    when(profiles.activeProfileName).thenReturn("Sam");
+    await _pumpWidgetWithProviders(tester, _settings(), _apps(), profiles: profiles);
+
+    // Profiles and Home screen open freely; the other six show a lock
+    expect(find.byIcon(Icons.lock_outline), findsNWidgets(6));
+    await tester.ensureVisible(find.text("Applications"));
+    await tester.tap(find.text("Applications"));
+    await tester.pumpAndSettle();
+    expect(find.text("Ask a parent"), findsOneWidget); // no parent PIN set: it says so instead of opening
+    expect(find.byKey(Key(ApplicationsPanelPage.routeName)), findsNothing);
+  });
+
+  testWidgets("in a grown-up profile nothing is locked", (tester) async {
+    final profiles = MockProfileService();
+    when(profiles.isKidsProfile).thenReturn(false);
+    when(profiles.activeProfileName).thenReturn("Alex");
+    await _pumpWidgetWithProviders(tester, _settings(), _apps(), profiles: profiles);
+
+    expect(find.byIcon(Icons.lock_outline), findsNothing);
+  });
+
   testWidgets("System has About and Support & Donate", (tester) async {
     final settingsService = _settings();
     when(settingsService.accentColorHex).thenReturn("7C4DFF");
@@ -150,6 +175,7 @@ Future<void> _pumpWidgetWithProviders(
   SettingsService settingsService,
   AppsService appsService, {
   Widget? home,
+  ProfileService? profiles,
 }) async {
   when(settingsService.hasParentPin).thenReturn(false);
   await tester.pumpWidget(
@@ -157,6 +183,7 @@ Future<void> _pumpWidgetWithProviders(
       providers: [
         ChangeNotifierProvider<SettingsService>.value(value: settingsService),
         ChangeNotifierProvider<AppsService>.value(value: appsService),
+        if (profiles != null) ChangeNotifierProvider<ProfileService>.value(value: profiles),
       ],
       builder: (_, __) => MaterialApp(
         localizationsDelegates: const [
