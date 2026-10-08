@@ -113,6 +113,35 @@ adb (including on new profiles) and screen time still applies. Costs: a Play Con
 Play (the owner copy can stay on GitHub + in-app updater). Verify first: whether a supervised child account can
 join/receive a closed-track app (supervised accounts may not opt into testing tracks).
 
+## No-adb path being pursued: the Hearth agent as the in-profile installer
+
+Hearth already has the two pieces (so this is extension, not new infrastructure):
+- `AgentHub` — owner-Hearth listens on `127.0.0.1:47474`; each kid-user agent connects over loopback, the one channel
+  users share (JSON lines today; can carry APK bytes).
+- `SessionInstaller` — installs an APK into the **current** user via a store-source `PackageInstaller` session
+  (`PACKAGE_SOURCE_STORE`, `USER_ACTION_NOT_REQUIRED` for updates of apps Hearth installed). An agent calling it
+  installs into its own kid user with no adb (unknown sources is on for users 10/11; off for 12).
+
+Design, per existing profile where Hearth is present:
+1. **Hearth self-protects, no adb:** on first run in the kid user the agent fires `ACTION_ADD_DEVICE_ADMIN` for
+   `AgentAdminReceiver`; the parent taps Activate once on screen (`no_grant_admin` doesn't block this). The reconcile
+   then keeps Hearth ("has active device admin") with no adb and no block-uninstall flag.
+2. **HearthTube, no adb:** owner-Hearth streams `HearthTube.apk` to the agent over `AgentHub`; the agent reinstalls it
+   with `SessionInstaller` on each profile start (the agent already starts with the profile via `BootReceiver`), since
+   the reconcile removes it ~3 s after start.
+
+Hard limit (honest): loopback can't bootstrap a user that has **no Hearth yet** — `AgentHub.launchAgent` starts the
+agent only `if Hearth is installed there`. So the **first** Hearth copy in a brand-new profile still needs one manual
+placement (adb `install-existing`, or Play approval). After that one touch the profile self-sustains with no further
+adb. (This is where a one-command "adb once per new profile" helper fits.)
+
+Unknowns to de-risk on the TV before building:
+- Is an agent-initiated store-source install **silent to Family Link** (no per-install notification), unlike
+  `pm install-existing`? If yes, the per-start HearthTube reinstall is acceptable; if not, give HearthTube its own
+  no-policy admin receiver (fork change) and activate it once like Hearth, instead of reinstalling.
+- Is the `ACTION_ADD_DEVICE_ADMIN` consent screen reachable and does it stick in the PIN-gated kids UI? (Test on user
+  13, which has Hearth installed but is not yet an admin.)
+
 ## The agent's jobs without Hearth in the kid's profile
 
 Still needs a one-time adb grant and can't cover everything, so it doesn't remove the adb dependency:
