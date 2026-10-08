@@ -11,8 +11,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/widgets/continue_watching_grid_page.dart';
+import 'package:flauncher/widgets/search/title_card.dart';
 
-class ContinueWatchingRow extends StatelessWidget {
+class ContinueWatchingRow extends StatefulWidget {
   final bool isFirstSection;
 
   const ContinueWatchingRow({
@@ -21,7 +23,37 @@ class ContinueWatchingRow extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<ContinueWatchingRow> createState() => _ContinueWatchingRowState();
+}
+
+/// "S3 E12 · 14 min left · Disney+": what's shown under a program's name, above the row and in the grid.
+String watchNextDetail(WatchNextProgram program, AppsService appsService) {
+  final description = program.description.trim();
+  final parts = <String>[
+    if (description.isNotEmpty && description.toLowerCase() != program.title.trim().toLowerCase()) description,
+  ];
+  if (program.duration > 0 && program.playbackPosition > 0 && program.playbackPosition < program.duration) {
+    final minutes = ((program.duration - program.playbackPosition) / 60000).ceil();
+    parts.add(minutes >= 60 ? "${minutes ~/ 60} h ${minutes % 60} min left" : "$minutes min left");
+  }
+  final app = appsService.applications.where((a) => a.packageName == program.packageName).firstOrNull;
+  if (app != null) parts.add(app.name);
+  return parts.join(" \u00b7 ");
+}
+
+class _ContinueWatchingRowState extends State<ContinueWatchingRow> {
+  /// The focused program, named above the cards (as HearthTube and search do).
+  final ValueNotifier<WatchNextProgram?> _focused = ValueNotifier(null);
+
+  @override
+  void dispose() {
+    _focused.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isFirstSection = widget.isFirstSection;
     final settingsService = Provider.of<SettingsService>(context);
     if (!settingsService.showContinueWatching) {
       return const SizedBox.shrink();
@@ -46,6 +78,8 @@ class ContinueWatchingRow extends StatelessWidget {
                     appsService.applications.any((app) => app.packageName == p.packageName && !app.suspended)))
             .toList();
 
+        // "See all" shows every one, beyond the row's limit
+        final allPrograms = programs;
         final maxItems = settingsService.continueWatchingMaxItems;
         if (maxItems > 0 && programs.length > maxItems) {
           programs = programs.sublist(0, maxItems);
@@ -80,44 +114,49 @@ class ContinueWatchingRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Selector<SettingsService, (bool, bool)>(
-                selector: (context, service) =>
-                    (service.showCategoryTitles, service.showCategoryAppCount),
-                builder: (context, settings, _) {
-                  final (showCategoryTitles, showCategoryAppCount) = settings;
-                  if (showCategoryTitles) {
-                    return Padding(
-                      padding: const EdgeInsets.only(left: 16, bottom: 8),
-                      child: Row(
-                        children: [
-                          Text(
-                            AppLocalizations.of(context)!.continueWatching,
-                            style: Theme.of(context).textTheme.titleLarge!.copyWith(
-                              shadows: [
-                                const Shadow(
-                                  color: Colors.black54,
-                                  offset: Offset(1, 1),
-                                  blurRadius: 8,
-                                )
-                              ],
-                            ),
-                          ),
-                          if (showCategoryAppCount) ...[
-                            const SizedBox(width: 8),
+              Selector<SettingsService, bool>(
+                selector: (context, service) => service.showCategoryTitles,
+                builder: (context, showCategoryTitles, _) {
+                  final shadow = [const Shadow(color: Colors.black54, offset: Offset(1, 1), blurRadius: 8)];
+                  return ValueListenableBuilder<WatchNextProgram?>(
+                    valueListenable: _focused,
+                    builder: (context, focused, _) {
+                      final program = programs.contains(focused) ? focused! : programs.first;
+                      final detail = watchNextDetail(program, appsService);
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 16, bottom: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (showCategoryTitles)
+                              Text(
+                                AppLocalizations.of(context)!.continueWatching.toUpperCase(),
+                                style: Theme.of(context).textTheme.labelLarge!.copyWith(
+                                    color: Colors.white70, letterSpacing: 1.0, shadows: shadow),
+                              ),
                             Text(
-                              '•  ${programs.length}',
+                              program.title.trim(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: Theme.of(context)
                                   .textTheme
-                                  .bodyMedium!
-                                  .copyWith(color: Colors.white54),
+                                  .headlineSmall!
+                                  .copyWith(fontWeight: FontWeight.w700, shadows: shadow),
+                            ),
+                            Text(
+                              detail.isEmpty ? " " : detail,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge!
+                                  .copyWith(color: Colors.white70, shadows: shadow),
                             ),
                           ],
-                        ],
-                      ),
-                    );
-                  }
-
-                  return const SizedBox.shrink();
+                        ),
+                      );
+                    },
+                  );
                 },
               ),
               SizedBox(
@@ -127,8 +166,37 @@ class ContinueWatchingRow extends StatelessWidget {
                   padding: const EdgeInsets.all(8),
                   physics: const ClampingScrollPhysics(),
                   scrollDirection: Axis.horizontal,
-                  itemCount: programs.length,
+                  itemCount: programs.length + 1,
                   itemBuilder: (context, index) {
+                    // Last: "See all", every program in a grid
+                    if (index == programs.length) {
+                      return Padding(
+                        key: const ValueKey("see_all"),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Center(
+                          child: Focus(
+                            canRequestFocus: false,
+                            skipTraversal: true,
+                            onKeyEvent: (_, event) {
+                              // All the way right still opens the Home Assistant panel when it's on
+                              if (event is KeyDownEvent &&
+                                  event.logicalKey == LogicalKeyboardKey.arrowRight &&
+                                  context.read<SettingsService>().haPanelEnabled) {
+                                Actions.maybeInvoke(context, const OpenHaPanelIntent());
+                                return KeyEventResult.handled;
+                              }
+                              return KeyEventResult.ignored;
+                            },
+                            child: MoreCard(
+                              label: "See all",
+                              detail: "${allPrograms.length} in progress",
+                              height: cardHeight,
+                              onPressed: () => ContinueWatchingGridPage.open(context, allPrograms),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
                     final program = programs[index];
                     return Padding(
                       key: ValueKey(program.id),
@@ -140,8 +208,9 @@ class ContinueWatchingRow extends StatelessWidget {
                           watchNextService: watchNextService,
                           handleUpNavigationToSettings: isFirstSection,
                           isFirstInRow: index == 0,
-                          isLastInRow: index == programs.length - 1,
+                          isLastInRow: false,
                           autofocus: index == 0,
+                          onFocused: (p) => _focused.value = p,
                         ),
                       ),
                     );
@@ -165,6 +234,9 @@ class WatchNextCard extends StatefulWidget {
   final bool isLastInRow;
   final bool autofocus;
 
+  /// Called when this card gains focus (the row names it above the cards).
+  final ValueChanged<WatchNextProgram>? onFocused;
+
   const WatchNextCard({
     Key? key,
     required this.program,
@@ -174,6 +246,7 @@ class WatchNextCard extends StatefulWidget {
     this.isFirstInRow = false,
     this.isLastInRow = false,
     this.autofocus = false,
+    this.onFocused,
   }) : super(key: key);
 
   @override
@@ -236,6 +309,7 @@ class _WatchNextCardState extends State<WatchNextCard> with TickerProviderStateM
   void _onFocusChange() {
     setState(() {});
     if (_focusNode.hasFocus) {
+      widget.onFocused?.call(widget.program);
       Scrollable.ensureVisible(
         context,
         alignment: 0.5,
@@ -651,7 +725,7 @@ class _WatchNextCardState extends State<WatchNextCard> with TickerProviderStateM
                                         '${(progress * 100).round()}%',
                                         style: theme.textTheme.bodySmall?.copyWith(
                                           color: accentColor,
-                                          fontSize: 10.5,
+                                          fontSize: 13,
                                           fontWeight: FontWeight.w700,
                                         ),
                                       ),
@@ -665,7 +739,7 @@ class _WatchNextCardState extends State<WatchNextCard> with TickerProviderStateM
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w700,
-                                  fontSize: 13.5,
+                                  fontSize: 16,
                                   height: 1.25,
                                 ),
                                 maxLines: (showDescription &&
@@ -685,7 +759,7 @@ class _WatchNextCardState extends State<WatchNextCard> with TickerProviderStateM
                                   widget.program.description.trim(),
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: Colors.white60,
-                                    fontSize: 10.5,
+                                    fontSize: 13,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,

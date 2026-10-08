@@ -96,14 +96,13 @@ void main() {
   });
 
   group('ContinueWatchingRow header', () {
-    testWidgets('respects showCategoryTitles and showCategoryAppCount', (tester) async {
+    testWidgets('names the focused program above the cards, under the section label', (tester) async {
       final programs = [
         _fakeProgram(id: 1, packageName: 'app.one', title: 'Video 1'),
         _fakeProgram(id: 2, packageName: 'app.two', title: 'Video 2'),
       ];
       when(watchNextService.programs).thenReturn(programs);
       when(settingsService.showCategoryTitles).thenReturn(true);
-      when(settingsService.showCategoryAppCount).thenReturn(false);
 
       await tester.pumpWidget(
         _buildTestWidget(
@@ -115,11 +114,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Continue Watching'), findsOneWidget);
-      expect(find.text('•  2'), findsNothing);
+      expect(find.text('CONTINUE WATCHING'), findsOneWidget);
+      // The first card has focus: its name is the heading (and on its card)
+      expect(find.text('Video 1'), findsNWidgets(2));
 
-      // Now toggle showCategoryAppCount to true
-      when(settingsService.showCategoryAppCount).thenReturn(true);
+      // Section titles off: no label, the program is still named
+      when(settingsService.showCategoryTitles).thenReturn(false);
       await tester.pumpWidget(
         _buildTestWidget(
           child: const ContinueWatchingRow(),
@@ -129,11 +129,11 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-
-      expect(find.text('•  2'), findsOneWidget);
+      expect(find.text('CONTINUE WATCHING'), findsNothing);
+      expect(find.text('Video 1'), findsNWidgets(2));
     });
 
-    testWidgets('passes isFirstInRow and isLastInRow to items', (tester) async {
+    testWidgets('ends with See all, so no program is last in the row', (tester) async {
       final programs = [
         _fakeProgram(id: 1, packageName: 'app.one', title: 'Video 1'),
         _fakeProgram(id: 2, packageName: 'app.two', title: 'Video 2'),
@@ -153,9 +153,10 @@ void main() {
       final cards = tester.widgetList<WatchNextCard>(find.byType(WatchNextCard)).toList();
       expect(cards.length, equals(2));
       expect(cards[0].isFirstInRow, isTrue);
-      expect(cards[0].isLastInRow, isFalse);
       expect(cards[1].isFirstInRow, isFalse);
-      expect(cards[1].isLastInRow, isTrue);
+      expect(cards.any((c) => c.isLastInRow), isFalse);
+      expect(find.text('See all'), findsOneWidget);
+      expect(find.text('2 in progress'), findsOneWidget);
     });
   });
 
