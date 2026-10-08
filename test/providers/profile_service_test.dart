@@ -82,6 +82,34 @@ void main() {
     verify(appsService.refreshState()).called(1);
   });
 
+  test("a kids profile starts with Bing's photo once, then keeps its own choice", () async {
+    await prefs.setString(ProfileService.layoutOwnerKey, "user:0");
+    when(channel.getActiveProfileName()).thenAnswer((_) async => "Jordan");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:10");
+    when(channel.isKidsProfile()).thenAnswer((_) async => true);
+    when(appsService.initialized).thenReturn(false);
+    final settings = SettingsService(prefs);
+    final service = ProfileService(channel, prefs, _RecordingBackupService(database, prefs, {"user:10"}), settings, appsService);
+
+    await service.check();
+    expect(settings.bingWallpaperEnabled, isTrue);
+
+    // Turned off in his Settings: it stays off when he comes back
+    await settings.setBingWallpaperEnabled(false);
+    await service.check();
+    expect(settings.bingWallpaperEnabled, isFalse);
+  });
+
+  test("a grown-up profile's wallpaper is left alone", () async {
+    when(channel.getActiveProfileName()).thenAnswer((_) async => "Alex");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:0");
+    final settings = SettingsService(prefs);
+    final service = ProfileService(channel, prefs, _RecordingBackupService(database, prefs, {}), settings, appsService);
+
+    await service.check();
+    expect(settings.bingWallpaperEnabled, isFalse);
+  });
+
   test("a profile not named yet still gets its own layout", () async {
     await prefs.setString(ProfileService.layoutOwnerKey, "user:0");
     when(channel.getActiveProfileName()).thenAnswer((_) async => null);
