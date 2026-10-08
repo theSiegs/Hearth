@@ -163,7 +163,6 @@ public class MainActivity extends FlutterActivity {
                 }
                 case "openDefaultLauncherSettings" -> result.success(openDefaultLauncherSettings());
                 case "openProfileChooser" -> result.success(openProfileChooser());
-                case "isGoogleTv" -> result.success(isGoogleTv());
                 case "getSupportedAbis" -> result.success(java.util.Arrays.asList(Build.SUPPORTED_ABIS));
                 case "isKidsProfile" -> {
                     boolean kids = isKidsProfile();
@@ -404,7 +403,6 @@ public class MainActivity extends FlutterActivity {
                 case "dismissAllNotifications" -> result.success(dismissAllNotifications());
                 case "checkOverlayPermission" -> result.success(checkOverlayPermission());
                 case "requestOverlayPermission" -> result.success(requestOverlayPermission());
-                case "checkAccessibilityPermission" -> result.success(isAccessibilityServiceEnabled());
                 case "requestAccessibilityPermission" -> result.success(openAccessibilitySettings());
                 case "getHomeButtonFixStatus" -> {
                     Map<String, Object> status = new HashMap<>();
@@ -466,7 +464,6 @@ public class MainActivity extends FlutterActivity {
                 case "getLatestWeatherData" -> result.success(getLatestWeatherData());
                 case "isBreezyWeatherInstalled" -> result.success(isBreezyWeatherInstalled());
                 case "openBreezyWeather" -> result.success(openBreezyWeather());
-                case "getPackageName" -> result.success(getPackageName());
                 case "checkInstallPermission" -> result.success(checkInstallPermission());
                 case "requestInstallPermission" -> result.success(requestInstallPermission());
                 case "installApk" -> result.success(installApk(call.argument("path")));
@@ -1506,15 +1503,6 @@ public class MainActivity extends FlutterActivity {
         } catch (Exception ignored) {
         }
         return null;
-    }
-
-    private boolean isGoogleTv() {
-        try {
-            getPackageManager().getPackageInfo(LauncherAccessibilityService.GOOGLE_TV_PACKAGE, 0);
-            return true;
-        } catch (PackageManager.NameNotFoundException e) {
-            return false;
-        }
     }
 
     private boolean openWifiSettings() {
