@@ -4,24 +4,19 @@ import 'package:flutter/material.dart';
 class SidePanelDialog extends StatelessWidget {
   final Widget child;
   final double width;
-  final bool isRightSide;
 
   const SidePanelDialog({
     super.key,
     required this.child,
     this.width = 250,
-    this.isRightSide = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final borderRadius = BorderRadius.horizontal(
-      right: isRightSide ? Radius.zero : const Radius.circular(24),
-      left: isRightSide ? const Radius.circular(24) : Radius.zero,
-    );
+    const borderRadius = BorderRadius.horizontal(right: Radius.circular(24));
 
     return Align(
-      alignment: isRightSide ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: Alignment.centerLeft,
       child: Material(
         color: const Color(0xFF0F0F0F),
         elevation: 24,
