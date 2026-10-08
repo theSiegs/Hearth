@@ -35,7 +35,6 @@ import android.util.Log;
 import android.media.tv.TvInputManager;
 import android.media.tv.TvInputInfo;
 import android.media.tv.TvContract;
-import android.database.ContentObserver;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -60,16 +59,16 @@ import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.EventChannel;
+import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 
 import java.io.Serializable;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import android.service.notification.StatusBarNotification;
 
 public class MainActivity extends FlutterActivity {
     private static final String TAG = "HearthMain";
@@ -107,489 +106,385 @@ public class MainActivity extends FlutterActivity {
         handleSearchIntent(getIntent());
         mMethodChannel = new MethodChannel(messenger, METHOD_CHANNEL);
         sMethodChannel = new java.lang.ref.WeakReference<>(mMethodChannel);
-        mMethodChannel.setMethodCallHandler((call, result) -> {
-            switch (call.method) {
-                case "getApplications" -> sAppsLoader.execute(() -> {
-                    List<Map<String, Serializable>> applications = getApplications();
-                    runOnUiThread(() -> result.success(applications));
-                });
-                case "getApplicationBanner" -> result.success(appImage(call.arguments(), true));
-                case "getApplicationIcon" -> result.success(appImage(call.arguments(), false));
-                case "launchActivityFromAction" -> result.success(launchActivityFromAction(call.arguments()));
-                case "launchApp" -> result.success(launchApp(call.arguments()));
-                case "openUrl" -> result.success(openUrl(call.arguments()));
-                case "openSettings" -> result.success(openSettings());
-                case "openScreensaverSettings" -> result.success(openScreensaverSettings());
-                case "openAppInfo" -> result.success(openAppInfo(call.arguments()));
-                case "uninstallApp" -> result.success(uninstallApp(call.arguments()));
-                case "isDefaultLauncher" -> result.success(isDefaultLauncher());
-                case "checkForGetContentAvailability" -> result.success(checkForGetContentAvailability());
-                case "startAmbientMode" -> result.success(startAmbientMode());
-                case "getActiveNetworkInformation" -> result.success(getActiveNetworkInformation());
-                case "getDailyDataUsage", "getWeeklyDataUsage", "getMonthlyDataUsage" -> {
-                    long usage = dataUsageSince(periodStart(call.method));
-                    if (usage == -1) {
-                        result.error("PERMISSION_DENIED", "Usage stats permission not granted", null);
-                    } else {
-                        result.success(usage);
-                    }
-                }
-                case "checkUsageStatsPermission" -> result.success(checkUsageStatsPermission());
-                case "requestUsageStatsPermission" -> {
-                    requestUsageStatsPermission();
-                    result.success(null);
-                }
-                case "checkWriteSettingsPermission" -> result.success(checkWriteSettingsPermission());
-                case "requestWriteSettingsPermission" -> result.success(requestWriteSettingsPermission());
-                case "setSystemBrightness" -> {
-                    Integer brightness = call.argument("brightness");
-                    if (brightness != null) {
-                        result.success(setSystemBrightness(brightness));
-                    } else {
-                        result.error("INVALID_ARGUMENT", "Missing brightness", null);
-                    }
-                }
-                case "openDefaultLauncherSettings" -> result.success(openDefaultLauncherSettings());
-                case "openProfileChooser" -> result.success(openProfileChooser());
-                case "getSupportedAbis" -> result.success(java.util.Arrays.asList(Build.SUPPORTED_ABIS));
-                case "isKidsProfile" -> {
-                    boolean kids = ProfileUsers.isKids(this);
-                    ProfilePairing.rememberHearthProfile(
-                            this, LauncherAccessibilityService.getActiveProfileKey(this), kids);
-                    result.success(kids);
-                }
-                // Parent-controlled "Add / Remove Hearth from other profiles" (a Settings action) and a read-only
-                // state view. The work, and the one-time "Allow debugging?" consent, live in ProfileAppAccess /
-                // SelfAdb. Off the main thread (adb I/O); parent-confirmed because these fire only from the Settings
-                // row. addHearthToProfiles' argument is whether to include the other adult profiles too.
-                case "addHearthToProfiles" -> {
-                    boolean includeAdults = Boolean.TRUE.equals(call.arguments());
-                    sIoExecutor.execute(() -> runAddToProfiles(includeAdults, result));
-                }
-                case "removeHearthFromProfiles" -> sIoExecutor.execute(() -> runRemoveFromProfiles(result));
-                case "getHearthProfilesState" -> sIoExecutor.execute(() -> runProfilesState(result));
-                case "uninstallHearth" -> result.success(uninstallSelf());
-                case "openGoogleTvHome" -> result.success(openGoogleTvHome());
-                case "voiceSearch" -> startVoiceSearch(result);
-                case "getAppLastProfiles" -> {
-                    Map<String, Object> users = new HashMap<>(getSharedPreferences("ltv_app_last_profile", MODE_PRIVATE).getAll());
-                    result.success(users);
-                }
-                case "takePendingSearch" -> {
-                    String pending = mPendingSearch;
-                    mPendingSearch = null;
-                    result.success(pending);
-                }
-                case "openLinkInApp" -> {
-                    // A search result: the app's own link for the title, opened in that app (Profile Pairing first).
-                    String pkg = call.argument("packageName");
-                    String link = call.argument("link");
-                    result.success(openInApp(new Intent(Intent.ACTION_VIEW, Uri.parse(link)).setPackage(pkg)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), pkg));
-                }
-                case "searchInApp" -> {
-                    String pkg = call.argument("packageName");
-                    Intent intent = new Intent(Intent.ACTION_SEARCH).setPackage(pkg)
-                            .putExtra(android.app.SearchManager.QUERY, (String) call.argument("query"))
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    Boolean inProfile = ProfileApps.open(this, intent);
-                    if (inProfile != null) {
-                        result.success(inProfile);
-                        return;
-                    }
-                    boolean ok = intent.resolveActivity(getPackageManager()) != null;
-                    if (ok) {
-                        ProfilePairingService.onAppLaunching(this, pkg);
-                        ok = tryStartActivity(intent);
-                    }
-                    result.success(ok);
-                }
-                case "openGoogleTv" -> {
-                    // Google TV's page for a title (by Knowledge Graph link), or its search for the text.
-                    String link = call.argument("link");
-                    Intent intent = link != null
-                            ? new Intent(Intent.ACTION_VIEW, Uri.parse(link))
-                                    .setPackage(LauncherAccessibilityService.GOOGLE_TV_PACKAGE)
-                            : new Intent("android.search.action.GLOBAL_SEARCH")
-                                    .putExtra(android.app.SearchManager.QUERY, (String) call.argument("query"));
-                    result.success(tryStartActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
-                }
-                case "getProfilePairingApps" -> {
-                    List<Map<String, Object>> apps = new ArrayList<>();
-                    for (String pkg : ProfilePairing.APPS) {
-                        Map<String, Object> app = new HashMap<>();
-                        app.put("packageName", pkg);
-                        try {
-                            ApplicationInfo info = getPackageManager().getApplicationInfo(pkg, 0);
-                            app.put("label", getPackageManager().getApplicationLabel(info).toString());
-                            app.put("installed", true);
-                        } catch (PackageManager.NameNotFoundException e) {
-                            app.put("label", ProfilePairing.displayName(pkg));
-                            app.put("installed", false);
-                        }
-                        app.put("seenProfiles", ProfilePairing.getSeenNames(this, pkg));
-                        app.put("enabled", ProfilePairing.isAppEnabled(this, pkg));
-                        apps.add(app);
-                    }
-                    result.success(apps);
-                }
-                case "getProfilePairingChoices" -> {
-                    String pkg = call.arguments();
-                    List<String> seen = ProfilePairing.getSeenNames(this, pkg);
-                    List<String> hearthProfiles = ProfilePairing.getHearthProfiles(this);
-                    String active = LauncherAccessibilityService.getActiveProfileKey(this);
-                    if (active != null && !hearthProfiles.contains(active)) hearthProfiles.add(active);
-                    List<Map<String, Object>> choices = new ArrayList<>();
-                    // hearthProfile is the key choices are saved under; displayName is what to show
-                    for (String hearth : hearthProfiles) {
-                        String name = ProfileUsers.displayName(this, hearth);
-                        Map<String, Object> choice = new HashMap<>();
-                        choice.put("hearthProfile", hearth);
-                        choice.put("displayName", name);
-                        choice.put("kids", ProfilePairing.isKids(this, hearth));
-                        choice.put("mode", ProfilePairing.getMode(this, pkg, hearth));
-                        choice.put("chosenProfile", ProfilePairing.getChosenProfile(this, pkg, hearth));
-                        choice.put("autoMatch", ProfilePairing.bestMatch(name, seen));
-                        choices.add(choice);
-                    }
-                    result.success(choices);
-                }
-                case "setProfilePairingAppEnabled" -> {
-                    Boolean enabled = call.argument("enabled");
-                    ProfilePairing.setAppEnabled(this, call.argument("packageName"), enabled == null || enabled);
-                    result.success(null);
-                }
-                case "setProfilePairingChoice" -> {
-                    ProfilePairing.setChoice(this, call.argument("packageName"), call.argument("hearthProfile"),
-                            call.argument("mode"), call.argument("appProfile"));
-                    result.success(null);
-                }
-                case "getHaNotificationsEnabled" -> result.success(LauncherAccessibilityService.isHaNotificationsEnabled(this));
-                case "setHaNotificationsEnabled" -> {
-                    Boolean enabled = call.arguments();
-                    LauncherAccessibilityService.setHaNotificationsEnabled(this, enabled != null && enabled);
-                    result.success(null);
-                }
-                case "sendHaTestNotification" -> {
-                    HaNotificationServer.Notification test = new HaNotificationServer.Notification();
-                    test.title = "Home Assistant";
-                    test.message = "Test notification from Hearth";
-                    result.success(LauncherAccessibilityService.showHaNotification(test));
-                }
-                case "getLocalIpAddress" -> result.success(getLocalIpAddress());
-                case "getHaPanelConfig" -> {
-                    Map<String, Object> config = new HashMap<>();
-                    config.put("hasToken", HaPanelActivity.hasToken(this));
-                    config.put("dashboard", HaPanelActivity.getDashboard(this));
-                    result.success(config);
-                }
-                case "setHaPanelConfig" -> {
-                    HaPanelActivity.setConfig(this, call.argument("token"), call.argument("dashboard"));
-                    result.success(null);
-                }
-                case "getHaEntities" -> HaApi.EXECUTOR.execute(() -> {
-                    String entities = HaApi.actionableEntities(this).toString();
-                    runOnUiThread(() -> result.success(entities));
-                });
-                case "startHaSetup" -> result.success(HaSetupServer.start(this));
-                case "stopHaSetup" -> {
-                    HaSetupServer.stop();
-                    result.success(null);
-                }
-                case "getHaSetupReceived" -> result.success(HaSetupServer.received());
-                case "openHaPanel" -> {
-                    startActivity(new Intent(this, HaPanelActivity.class));
-                    result.success(null);
-                }
-                case "getHaStatusConfig" -> {
-                    android.content.SharedPreferences prefs =
-                            getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, MODE_PRIVATE);
-                    Map<String, Object> config = new HashMap<>();
-                    config.put("url", prefs.getString(HaStatusReporter.URL_KEY, null));
-                    config.put("webhookId", prefs.getString(HaStatusReporter.WEBHOOK_KEY, null));
-                    result.success(config);
-                }
-                case "setHaStatusConfig" -> {
-                    LauncherAccessibilityService.setHaStatusConfig(this, call.argument("url"), call.argument("webhookId"));
-                    result.success(null);
-                }
-                case "getButtonMappings" -> result.success(ButtonMapper.getJson(this));
-                case "setButtonMappings" -> {
-                    try {
-                        ButtonMapper.setJson(this, call.arguments());
-                        result.success(null);
-                    } catch (Exception e) {
-                        result.error("INVALID_ARGUMENT", e.getMessage(), null);
-                    }
-                }
-                case "captureButton" -> {
-                    boolean started = LauncherAccessibilityService.captureNextKey(keyCode -> {
-                        Map<String, Object> captured = new HashMap<>();
-                        captured.put("keyCode", keyCode);
-                        captured.put("name", ButtonMapper.keyName(keyCode));
-                        captured.put("remappable", ButtonMapper.isRemappable(keyCode));
-                        result.success(captured);
-                    });
-                    if (!started) {
-                        result.error("SERVICE_OFF", "Home Button Fix (accessibility service) is not running", null);
-                    }
-                }
-                case "cancelButtonCapture" -> {
-                    LauncherAccessibilityService.cancelCapture();
-                    result.success(null);
-                }
-                case "getIdleStandbyMinutes" -> result.success(LauncherAccessibilityService.getIdleStandbyMinutes(this));
-                case "setIdleStandbyMinutes" -> {
-                    Integer minutes = call.arguments();
-                    LauncherAccessibilityService.setIdleStandbyMinutes(this, minutes != null ? minutes : 0);
-                    result.success(null);
-                }
-                case "getActiveProfileName" -> result.success(LauncherAccessibilityService.getActiveProfileName(this));
-                case "getActiveProfileKey" -> result.success(LauncherAccessibilityService.getActiveProfileKey(this));
-                case "isProfileDataReady" -> {
-                    // What only Java knows for a profile change: another profile's agent has reported (or it
-                    // can't have one)
-                    android.os.UserHandle profileUser = ProfileApps.activeProfileUser(this);
-                    long serial = ProfileUsers.settledSerial(this);
-                    result.success(profileUser == null || AgentHub.hasReported(serial)
-                            || !AgentHub.canHaveAgent(this, profileUser));
-                }
-                case "setProfileReady" -> {
-                    LauncherAccessibilityService.setProfileReady(this, call.arguments());
-                    result.success(null);
-                }
-                case "getProfileAvatar" -> {
-                    String name = call.arguments();
-                    Map<String, Object> avatar = new HashMap<>();
-                    avatar.put("modified", ProfileAvatars.modified(this, name));
-                    avatar.put("png", ProfileAvatars.read(this, name));
-                    result.success(avatar);
-                }
-                case "openWifiSettings" -> result.success(openWifiSettings());
-                case "openVpnSettings" -> result.success(openVpnSettings());
-                case "getTvInputs" -> result.success(getTvInputs());
-                case "launchTvInput" -> result.success(launchTvInput(call.arguments()));
-                case "checkNotificationListenerPermission" -> result.success(checkNotificationListenerPermission());
-                case "requestNotificationListenerPermission" -> result.success(requestNotificationListenerPermission());
-                case "openAppNotificationSettings" -> result.success(openAppNotificationSettings());
-                case "getActiveNotifications" -> result.success(getActiveNotifications());
-                case "dismissNotification" -> {
-                    String key = call.argument("key");
-                    result.success(dismissNotification(key));
-                }
-                case "dismissAllNotifications" -> result.success(dismissAllNotifications());
-                case "checkOverlayPermission" -> result.success(checkOverlayPermission());
-                case "requestOverlayPermission" -> result.success(requestOverlayPermission());
-                case "requestAccessibilityPermission" -> result.success(openAccessibilitySettings());
-                case "getHomeButtonFixStatus" -> {
-                    Map<String, Object> status = new HashMap<>();
-                    boolean listed = isAccessibilityServiceEnabled();
-                    status.put("enabled", listed && LauncherAccessibilityService.isRunning());
-                    status.put("listedButStopped", listed && !LauncherAccessibilityService.isRunning());
-                    status.put("seenBefore", LauncherAccessibilityService.wasHomeButtonFixSeen(this));
-                    status.put("restricted", mayHaveRestrictedSettings());
-                    result.success(status);
-                }
-                case "forgetHomeButtonFix" -> {
-                    LauncherAccessibilityService.forgetHomeButtonFix(this);
-                    result.success(null);
-                }
-                case "getProfilePairingStatus" -> {
-                    Map<String, Object> status = new HashMap<>();
-                    status.put("enabled", ProfilePairingService.isRunning());
-                    status.put("voiceDefault", ProfilePairingService.isVoiceDefault(this));
-                    result.success(status);
-                }
-                case "openTextToSpeechSettings" -> result.success(
-                        tryStartActivity(new Intent("android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                                || openAccessibilitySettings());
-                case "checkWatchNextPermission" -> result.success(checkWatchNextPermission());
-                case "requestWatchNextPermission" -> {
-                    if (checkWatchNextPermission()) {
-                        result.success(true);
-                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        if (pendingPermissionResult != null) {
-                            result.error("ALREADY_REQUESTING", "A permission request is already in progress", null);
-                        } else {
-                            pendingPermissionResult = result;
-                            requestPermissions(new String[]{"android.permission.READ_TV_LISTINGS"}, 1002);
-                        }
-                    } else {
-                        result.success(true);
-                    }
-                }
-                case "getWatchNextPrograms" -> result.success(getWatchNextPrograms());
-                case "getWatchNextPoster" -> {
-                    String posterArtUri = call.argument("posterArtUri");
-                    sIoExecutor.execute(() -> {
-                        byte[] posterBytes = WatchNextPosters.load(getApplicationContext(), posterArtUri);
-                        runOnUiThread(() -> result.success(posterBytes));
-                    });
-                }
-                case "deleteWatchNextProgram" -> {
-                    Number id = call.argument("id");
-                    if (id != null) {
-                        result.success(deleteWatchNextProgram(id.longValue()));
-                    } else {
-                        result.error("INVALID_ARGUMENT", "Missing id", null);
-                    }
-                }
-                case "launchWatchNextProgram" -> {
-                    String intentUri = call.argument("intentUri");
-                    result.success(launchWatchNextProgram(intentUri));
-                }
-                case "getLatestWeatherData" -> result.success(getLatestWeatherData());
-                case "isBreezyWeatherInstalled" -> result.success(isBreezyWeatherInstalled());
-                case "openBreezyWeather" -> result.success(openBreezyWeather());
-                case "checkInstallPermission" -> result.success(checkInstallPermission());
-                case "requestInstallPermission" -> result.success(requestInstallPermission());
-                case "installApk" -> result.success(installApk(call.argument("path")));
-                case "isInstalledByHearth" -> result.success(CompanionApps.installedByHearth(this, call.arguments()));
-                case "getForegroundPackage" -> result.success(LauncherAccessibilityService.foregroundPackage());
-                case "companionSettingsChanged" -> {
-                    ProfileProvider.notifyChanged(this);  // updates_hearthtube
-                    result.success(null);
-                }
-                case "getPackageVersion" -> result.success(getPackageVersion(call.arguments()));
-                case "playClickSound" -> {
-                    getWindow().getDecorView().playSoundEffect(android.view.SoundEffectConstants.CLICK);
-                    result.success(null);
-                }
-                default -> result.notImplemented();
-            }
-        });
+        mMethodChannel.setMethodCallHandler(this::onMethodCall);
 
-        new EventChannel(messenger, APPS_EVENT_CHANNEL).setStreamHandler(
-                new LauncherAppsEventStreamHandler(this));
-
-        new EventChannel(messenger, NETWORK_EVENT_CHANNEL).setStreamHandler(
-                new NetworkEventStreamHandler(this));
-
+        new EventChannel(messenger, APPS_EVENT_CHANNEL).setStreamHandler(new LauncherAppsEventStreamHandler(this));
+        new EventChannel(messenger, NETWORK_EVENT_CHANNEL).setStreamHandler(new NetworkEventStreamHandler(this));
         new EventChannel(messenger, NOTIFICATIONS_EVENT_CHANNEL).setStreamHandler(
-                new EventChannel.StreamHandler() {
-                    private LauncherNotificationListenerService.NotificationListener listener;
+                new NotificationsEventStreamHandler(this));
+        new EventChannel(messenger, WEATHER_EVENT_CHANNEL).setStreamHandler(new WeatherEventStreamHandler(this));
+        new EventChannel(messenger, WATCH_NEXT_EVENT_CHANNEL).setStreamHandler(new WatchNextEventStreamHandler(this));
+    }
 
-                    @Override
-                    public void onListen(Object arguments, EventChannel.EventSink events) {
-                        listener = () -> {
-                            runOnUiThread(() -> {
-                                try {
-                                    events.success(getActiveNotifications());
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
-                            });
-                        };
-                        LauncherNotificationListenerService.registerListener(listener);
-                        // Send current state immediately
-                        listener.onNotificationChanged();
-                    }
-
-                    @Override
-                    public void onCancel(Object arguments) {
-                        if (listener != null) {
-                            LauncherNotificationListenerService.unregisterListener(listener);
-                            listener = null;
-                        }
-                    }
+    private void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
+        switch (call.method) {
+            case "getApplications" -> answerFrom(sAppsLoader, result, this::getApplications);
+            case "getApplicationBanner" -> result.success(appImage(call.arguments(), true));
+            case "getApplicationIcon" -> result.success(appImage(call.arguments(), false));
+            case "launchActivityFromAction" -> result.success(launchActivityFromAction(call.arguments()));
+            case "launchApp" -> result.success(launchApp(call.arguments()));
+            case "openUrl" -> result.success(openUrl(call.arguments()));
+            case "openSettings" -> result.success(openSettings());
+            case "openScreensaverSettings" -> result.success(openScreensaverSettings());
+            case "openAppInfo" -> result.success(openAppInfo(call.arguments()));
+            case "uninstallApp" -> result.success(uninstallApp(call.arguments()));
+            case "isDefaultLauncher" -> result.success(isDefaultLauncher());
+            case "checkForGetContentAvailability" -> result.success(checkForGetContentAvailability());
+            case "startAmbientMode" -> result.success(startAmbientMode());
+            case "getActiveNetworkInformation" -> result.success(getActiveNetworkInformation());
+            case "getDailyDataUsage", "getWeeklyDataUsage", "getMonthlyDataUsage" -> answerDataUsage(call.method, result);
+            case "checkUsageStatsPermission" -> result.success(checkUsageStatsPermission());
+            case "requestUsageStatsPermission" -> {
+                requestUsageStatsPermission();
+                result.success(null);
+            }
+            case "checkWriteSettingsPermission" -> result.success(checkWriteSettingsPermission());
+            case "requestWriteSettingsPermission" -> result.success(requestWriteSettingsPermission());
+            case "setSystemBrightness" -> {
+                Integer brightness = call.argument("brightness");
+                if (brightness != null) {
+                    result.success(setSystemBrightness(brightness));
+                } else {
+                    result.error("INVALID_ARGUMENT", "Missing brightness", null);
                 }
-        );
-
-        new EventChannel(messenger, WEATHER_EVENT_CHANNEL).setStreamHandler(
-                new EventChannel.StreamHandler() {
-                    @Override
-                    public void onListen(Object arguments, EventChannel.EventSink events) {
-                        WeatherReceiver.setListener(weatherJson -> {
-                            runOnUiThread(() -> {
-                                try {
-                                    events.success(weatherJson);
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
-                            });
-                        });
-                        String latest = getLatestWeatherData();
-                        if (latest != null) {
-                            events.success(latest);
-                        }
-                    }
-
-                    @Override
-                    public void onCancel(Object arguments) {
-                        WeatherReceiver.setListener(null);
-                    }
+            }
+            case "openDefaultLauncherSettings" -> result.success(openDefaultLauncherSettings());
+            case "openProfileChooser" -> result.success(openProfileChooser());
+            case "getSupportedAbis" -> result.success(java.util.Arrays.asList(Build.SUPPORTED_ABIS));
+            case "isKidsProfile" -> {
+                boolean kids = ProfileUsers.isKids(this);
+                ProfilePairing.rememberHearthProfile(
+                        this, LauncherAccessibilityService.getActiveProfileKey(this), kids);
+                result.success(kids);
+            }
+            // Parent-controlled "Add / Remove Hearth from other profiles" (a Settings action) and a read-only
+            // state view. The work, and the one-time "Allow debugging?" consent, live in ProfileAppAccess /
+            // SelfAdb. Off the main thread (adb I/O); parent-confirmed because these fire only from the Settings
+            // row. addHearthToProfiles' argument is whether to include the other adult profiles too.
+            case "addHearthToProfiles" -> {
+                boolean includeAdults = Boolean.TRUE.equals(call.arguments());
+                sIoExecutor.execute(() -> runAddToProfiles(includeAdults, result));
+            }
+            case "removeHearthFromProfiles" -> sIoExecutor.execute(() -> runRemoveFromProfiles(result));
+            case "getHearthProfilesState" -> sIoExecutor.execute(() -> runProfilesState(result));
+            case "uninstallHearth" -> result.success(uninstallSelf());
+            case "openGoogleTvHome" -> result.success(openGoogleTvHome());
+            case "voiceSearch" -> startVoiceSearch(result);
+            case "getAppLastProfiles" -> {
+                Map<String, Object> users = new HashMap<>(getSharedPreferences("ltv_app_last_profile", MODE_PRIVATE).getAll());
+                result.success(users);
+            }
+            case "takePendingSearch" -> {
+                String pending = mPendingSearch;
+                mPendingSearch = null;
+                result.success(pending);
+            }
+            case "openLinkInApp" -> result.success(openLinkInApp(call.argument("packageName"), call.argument("link")));
+            case "searchInApp" -> {
+                String pkg = call.argument("packageName");
+                Intent intent = new Intent(Intent.ACTION_SEARCH).setPackage(pkg)
+                        .putExtra(android.app.SearchManager.QUERY, (String) call.argument("query"))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                Boolean inProfile = ProfileApps.open(this, intent);
+                if (inProfile != null) {
+                    result.success(inProfile);
+                    return;
                 }
-        );
-
-        new EventChannel(messenger, WATCH_NEXT_EVENT_CHANNEL).setStreamHandler(
-                new EventChannel.StreamHandler() {
-                    private ContentObserver watchNextObserver;
-                    private boolean isObserverRegistered = false;
-                    private Runnable debounceRunnable;
-                    private final Handler mainHandler = new Handler(Looper.getMainLooper());
-
-                    @Override
-                    public void onListen(Object arguments, EventChannel.EventSink events) {
-                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-                            return; // Watch Next is unsupported on Android < 8.0 (API < 26)
-                        }
-
-                        watchNextObserver = new ContentObserver(mainHandler) {
-                            @Override
-                            public void onChange(boolean selfChange, Uri uri) {
-                                super.onChange(selfChange, uri);
-                                if (debounceRunnable != null) {
-                                    mainHandler.removeCallbacks(debounceRunnable);
-                                }
-                                debounceRunnable = () -> {
-                                    try {
-                                        events.success(true);
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
-                                    }
-                                };
-                                mainHandler.postDelayed(debounceRunnable, 500);
-                            }
-                        };
-
-                        registerWatchNextObserverApi26();
-                    }
-
-                    @RequiresApi(Build.VERSION_CODES.O)
-                    private void registerWatchNextObserverApi26() {
-                        try {
-                            getContentResolver().registerContentObserver(
-                                    TvContract.WatchNextPrograms.CONTENT_URI,
-                                    true,
-                                    watchNextObserver
-                            );
-                            // Another profile's Continue Watching, as its agent reports it
-                            getContentResolver().registerContentObserver(
-                                    AgentHub.watchNextUri(MainActivity.this), false, watchNextObserver);
-                            isObserverRegistered = true;
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-
-                    @Override
-                    public void onCancel(Object arguments) {
-                        if (debounceRunnable != null) {
-                            mainHandler.removeCallbacks(debounceRunnable);
-                            debounceRunnable = null;
-                        }
-                        if (isObserverRegistered && watchNextObserver != null) {
-                            try {
-                                getContentResolver().unregisterContentObserver(watchNextObserver);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                            isObserverRegistered = false;
-                        }
-                        watchNextObserver = null;
-                    }
+                boolean ok = intent.resolveActivity(getPackageManager()) != null;
+                if (ok) {
+                    ProfilePairingService.onAppLaunching(this, pkg);
+                    ok = tryStartActivity(intent);
                 }
-        );
+                result.success(ok);
+            }
+            case "openGoogleTv" -> result.success(openGoogleTv(call.argument("link"), call.argument("query")));
+            case "getProfilePairingApps" -> result.success(getProfilePairingApps());
+            case "getProfilePairingChoices" -> result.success(getProfilePairingChoices(call.arguments()));
+            case "setProfilePairingAppEnabled" -> {
+                Boolean enabled = call.argument("enabled");
+                ProfilePairing.setAppEnabled(this, call.argument("packageName"), enabled == null || enabled);
+                result.success(null);
+            }
+            case "setProfilePairingChoice" -> {
+                ProfilePairing.setChoice(this, call.argument("packageName"), call.argument("hearthProfile"),
+                        call.argument("mode"), call.argument("appProfile"));
+                result.success(null);
+            }
+            case "getHaNotificationsEnabled" -> result.success(LauncherAccessibilityService.isHaNotificationsEnabled(this));
+            case "setHaNotificationsEnabled" -> {
+                Boolean enabled = call.arguments();
+                LauncherAccessibilityService.setHaNotificationsEnabled(this, enabled != null && enabled);
+                result.success(null);
+            }
+            case "sendHaTestNotification" -> result.success(sendHaTestNotification());
+            case "getLocalIpAddress" -> result.success(getLocalIpAddress());
+            case "getHaPanelConfig" -> result.success(getHaPanelConfig());
+            case "setHaPanelConfig" -> {
+                HaPanelActivity.setConfig(this, call.argument("token"), call.argument("dashboard"));
+                result.success(null);
+            }
+            case "getHaEntities" -> answerFrom(HaApi.EXECUTOR, result, () -> HaApi.actionableEntities(this).toString());
+            case "startHaSetup" -> result.success(HaSetupServer.start(this));
+            case "stopHaSetup" -> {
+                HaSetupServer.stop();
+                result.success(null);
+            }
+            case "getHaSetupReceived" -> result.success(HaSetupServer.received());
+            case "openHaPanel" -> {
+                startActivity(new Intent(this, HaPanelActivity.class));
+                result.success(null);
+            }
+            case "getHaStatusConfig" -> result.success(getHaStatusConfig());
+            case "setHaStatusConfig" -> {
+                LauncherAccessibilityService.setHaStatusConfig(this, call.argument("url"), call.argument("webhookId"));
+                result.success(null);
+            }
+            case "getButtonMappings" -> result.success(ButtonMapper.getJson(this));
+            case "setButtonMappings" -> setButtonMappings(call.arguments(), result);
+            case "captureButton" -> captureButton(result);
+            case "cancelButtonCapture" -> {
+                LauncherAccessibilityService.cancelCapture();
+                result.success(null);
+            }
+            case "getIdleStandbyMinutes" -> result.success(LauncherAccessibilityService.getIdleStandbyMinutes(this));
+            case "setIdleStandbyMinutes" -> {
+                Integer minutes = call.arguments();
+                LauncherAccessibilityService.setIdleStandbyMinutes(this, minutes != null ? minutes : 0);
+                result.success(null);
+            }
+            case "getActiveProfileName" -> result.success(LauncherAccessibilityService.getActiveProfileName(this));
+            case "getActiveProfileKey" -> result.success(LauncherAccessibilityService.getActiveProfileKey(this));
+            case "isProfileDataReady" -> result.success(isProfileDataReady());
+            case "setProfileReady" -> {
+                LauncherAccessibilityService.setProfileReady(this, call.arguments());
+                result.success(null);
+            }
+            case "getProfileAvatar" -> result.success(getProfileAvatar(call.arguments()));
+            case "openWifiSettings" -> result.success(openWifiSettings());
+            case "openVpnSettings" -> result.success(openVpnSettings());
+            case "getTvInputs" -> result.success(getTvInputs());
+            case "launchTvInput" -> result.success(launchTvInput(call.arguments()));
+            case "checkNotificationListenerPermission" -> result.success(checkNotificationListenerPermission());
+            case "requestNotificationListenerPermission" -> result.success(requestNotificationListenerPermission());
+            case "openAppNotificationSettings" -> result.success(openAppNotificationSettings());
+            case "getActiveNotifications" -> result.success(NotificationsEventStreamHandler.activeNotifications());
+            case "dismissNotification" -> result.success(dismissNotification(call.argument("key")));
+            case "dismissAllNotifications" -> result.success(dismissAllNotifications());
+            case "checkOverlayPermission" -> result.success(checkOverlayPermission());
+            case "requestOverlayPermission" -> result.success(requestOverlayPermission());
+            case "requestAccessibilityPermission" -> result.success(openAccessibilitySettings());
+            case "getHomeButtonFixStatus" -> result.success(getHomeButtonFixStatus());
+            case "forgetHomeButtonFix" -> {
+                LauncherAccessibilityService.forgetHomeButtonFix(this);
+                result.success(null);
+            }
+            case "getProfilePairingStatus" -> result.success(getProfilePairingStatus());
+            case "openTextToSpeechSettings" -> result.success(openTextToSpeechSettings());
+            case "checkWatchNextPermission" -> result.success(checkWatchNextPermission());
+            case "requestWatchNextPermission" -> requestWatchNextPermission(result);
+            case "getWatchNextPrograms" -> result.success(getWatchNextPrograms());
+            case "getWatchNextPoster" -> {
+                String posterArtUri = call.argument("posterArtUri");
+                answerFrom(sIoExecutor, result, () -> WatchNextPosters.load(getApplicationContext(), posterArtUri));
+            }
+            case "deleteWatchNextProgram" -> deleteWatchNextProgram(call.argument("id"), result);
+            case "launchWatchNextProgram" -> result.success(launchWatchNextProgram(call.argument("intentUri")));
+            case "getLatestWeatherData" -> result.success(WeatherEventStreamHandler.latestWeather(this));
+            case "isBreezyWeatherInstalled" -> result.success(isBreezyWeatherInstalled());
+            case "openBreezyWeather" -> result.success(openBreezyWeather());
+            case "checkInstallPermission" -> result.success(checkInstallPermission());
+            case "requestInstallPermission" -> result.success(requestInstallPermission());
+            case "installApk" -> result.success(installApk(call.argument("path")));
+            case "isInstalledByHearth" -> result.success(CompanionApps.installedByHearth(this, call.arguments()));
+            case "getForegroundPackage" -> result.success(LauncherAccessibilityService.foregroundPackage());
+            case "companionSettingsChanged" -> {
+                ProfileProvider.notifyChanged(this);  // updates_hearthtube
+                result.success(null);
+            }
+            case "getPackageVersion" -> result.success(getPackageVersion(call.arguments()));
+            case "playClickSound" -> {
+                getWindow().getDecorView().playSoundEffect(android.view.SoundEffectConstants.CLICK);
+                result.success(null);
+            }
+            default -> result.notImplemented();
+        }
+    }
+
+    /** A channel call's answer, worked out off the main thread. */
+    private interface Answer {
+        Object get();
+    }
+
+    /** Works the answer out on the executor and sends it from the main thread, where results must go. */
+    private void answerFrom(Executor executor, MethodChannel.Result result, Answer answer) {
+        executor.execute(() -> {
+            Object value = answer.get();
+            runOnUiThread(() -> result.success(value));
+        });
+    }
+
+    private void answerDataUsage(String method, MethodChannel.Result result) {
+        long usage = dataUsageSince(periodStart(method));
+        if (usage == -1) {
+            result.error("PERMISSION_DENIED", "Usage stats permission not granted", null);
+        } else {
+            result.success(usage);
+        }
+    }
+
+    /** A search result: the app's own link for the title, opened in that app (Profile Pairing first). */
+    private boolean openLinkInApp(String pkg, String link) {
+        return openInApp(new Intent(Intent.ACTION_VIEW, Uri.parse(link)).setPackage(pkg)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), pkg);
+    }
+
+    /** Google TV's page for a title (by Knowledge Graph link), or its search for the text. */
+    private boolean openGoogleTv(String link, String query) {
+        Intent intent = link != null
+                ? new Intent(Intent.ACTION_VIEW, Uri.parse(link))
+                        .setPackage(LauncherAccessibilityService.GOOGLE_TV_PACKAGE)
+                : new Intent("android.search.action.GLOBAL_SEARCH")
+                        .putExtra(android.app.SearchManager.QUERY, query);
+        return tryStartActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    }
+
+    private List<Map<String, Object>> getProfilePairingApps() {
+        List<Map<String, Object>> apps = new ArrayList<>();
+        for (String pkg : ProfilePairing.APPS) {
+            Map<String, Object> app = new HashMap<>();
+            app.put("packageName", pkg);
+            try {
+                ApplicationInfo info = getPackageManager().getApplicationInfo(pkg, 0);
+                app.put("label", getPackageManager().getApplicationLabel(info).toString());
+                app.put("installed", true);
+            } catch (PackageManager.NameNotFoundException e) {
+                app.put("label", ProfilePairing.displayName(pkg));
+                app.put("installed", false);
+            }
+            app.put("seenProfiles", ProfilePairing.getSeenNames(this, pkg));
+            app.put("enabled", ProfilePairing.isAppEnabled(this, pkg));
+            apps.add(app);
+        }
+        return apps;
+    }
+
+    private List<Map<String, Object>> getProfilePairingChoices(String pkg) {
+        List<String> seen = ProfilePairing.getSeenNames(this, pkg);
+        List<String> hearthProfiles = ProfilePairing.getHearthProfiles(this);
+        String active = LauncherAccessibilityService.getActiveProfileKey(this);
+        if (active != null && !hearthProfiles.contains(active)) hearthProfiles.add(active);
+        List<Map<String, Object>> choices = new ArrayList<>();
+        // hearthProfile is the key choices are saved under; displayName is what to show
+        for (String hearth : hearthProfiles) {
+            String name = ProfileUsers.displayName(this, hearth);
+            Map<String, Object> choice = new HashMap<>();
+            choice.put("hearthProfile", hearth);
+            choice.put("displayName", name);
+            choice.put("kids", ProfilePairing.isKids(this, hearth));
+            choice.put("mode", ProfilePairing.getMode(this, pkg, hearth));
+            choice.put("chosenProfile", ProfilePairing.getChosenProfile(this, pkg, hearth));
+            choice.put("autoMatch", ProfilePairing.bestMatch(name, seen));
+            choices.add(choice);
+        }
+        return choices;
+    }
+
+    private boolean sendHaTestNotification() {
+        HaNotificationServer.Notification test = new HaNotificationServer.Notification();
+        test.title = "Home Assistant";
+        test.message = "Test notification from Hearth";
+        return LauncherAccessibilityService.showHaNotification(test);
+    }
+
+    private Map<String, Object> getHaPanelConfig() {
+        Map<String, Object> config = new HashMap<>();
+        config.put("hasToken", HaPanelActivity.hasToken(this));
+        config.put("dashboard", HaPanelActivity.getDashboard(this));
+        return config;
+    }
+
+    private Map<String, Object> getHaStatusConfig() {
+        android.content.SharedPreferences prefs =
+                getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, MODE_PRIVATE);
+        Map<String, Object> config = new HashMap<>();
+        config.put("url", prefs.getString(HaStatusReporter.URL_KEY, null));
+        config.put("webhookId", prefs.getString(HaStatusReporter.WEBHOOK_KEY, null));
+        return config;
+    }
+
+    private void setButtonMappings(Object json, MethodChannel.Result result) {
+        try {
+            ButtonMapper.setJson(this, (String) json);
+            result.success(null);
+        } catch (Exception e) {
+            result.error("INVALID_ARGUMENT", e.getMessage(), null);
+        }
+    }
+
+    /** Answers with the next key pressed, once the accessibility service hears it. */
+    private void captureButton(MethodChannel.Result result) {
+        boolean started = LauncherAccessibilityService.captureNextKey(keyCode -> {
+            Map<String, Object> captured = new HashMap<>();
+            captured.put("keyCode", keyCode);
+            captured.put("name", ButtonMapper.keyName(keyCode));
+            captured.put("remappable", ButtonMapper.isRemappable(keyCode));
+            result.success(captured);
+        });
+        if (!started) {
+            result.error("SERVICE_OFF", "Home Button Fix (accessibility service) is not running", null);
+        }
+    }
+
+    /** What only Java knows for a profile change: another profile's agent has reported (or it can't have one). */
+    private boolean isProfileDataReady() {
+        android.os.UserHandle profileUser = ProfileApps.activeProfileUser(this);
+        long serial = ProfileUsers.settledSerial(this);
+        return profileUser == null || AgentHub.hasReported(serial) || !AgentHub.canHaveAgent(this, profileUser);
+    }
+
+    private Map<String, Object> getProfileAvatar(String name) {
+        Map<String, Object> avatar = new HashMap<>();
+        avatar.put("modified", ProfileAvatars.modified(this, name));
+        avatar.put("png", ProfileAvatars.read(this, name));
+        return avatar;
+    }
+
+    private Map<String, Object> getHomeButtonFixStatus() {
+        Map<String, Object> status = new HashMap<>();
+        boolean listed = isAccessibilityServiceEnabled();
+        status.put("enabled", listed && LauncherAccessibilityService.isRunning());
+        status.put("listedButStopped", listed && !LauncherAccessibilityService.isRunning());
+        status.put("seenBefore", LauncherAccessibilityService.wasHomeButtonFixSeen(this));
+        status.put("restricted", mayHaveRestrictedSettings());
+        return status;
+    }
+
+    private Map<String, Object> getProfilePairingStatus() {
+        Map<String, Object> status = new HashMap<>();
+        status.put("enabled", ProfilePairingService.isRunning());
+        status.put("voiceDefault", ProfilePairingService.isVoiceDefault(this));
+        return status;
+    }
+
+    private boolean openTextToSpeechSettings() {
+        return tryStartActivity(new Intent("android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                || openAccessibilitySettings();
+    }
+
+    /** Answers once the user has picked, in onRequestPermissionsResult, unless it's already granted. */
+    private void requestWatchNextPermission(MethodChannel.Result result) {
+        if (checkWatchNextPermission()) {
+            result.success(true);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (pendingPermissionResult != null) {
+                result.error("ALREADY_REQUESTING", "A permission request is already in progress", null);
+            } else {
+                pendingPermissionResult = result;
+                requestPermissions(new String[]{"android.permission.READ_TV_LISTINGS"}, 1002);
+            }
+        } else {
+            result.success(true);
+        }
     }
 
     /**
@@ -1381,41 +1276,6 @@ public class MainActivity extends FlutterActivity {
         }
     }
 
-    private List<Map<String, Object>> getActiveNotifications() {
-        List<Map<String, Object>> list = new ArrayList<>();
-        LauncherNotificationListenerService service = LauncherNotificationListenerService.getInstance();
-        if (service == null) {
-            return list;
-        }
-        try {
-            StatusBarNotification[] sbns = service.getActiveNotifications();
-            if (sbns != null) {
-                for (StatusBarNotification sbn : sbns) {
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("key", sbn.getKey());
-                    map.put("packageName", sbn.getPackageName());
-                    
-                    android.app.Notification notification = sbn.getNotification();
-                    String title = "";
-                    String text = "";
-                    if (notification != null && notification.extras != null) {
-                        CharSequence titleChar = notification.extras.getCharSequence(android.app.Notification.EXTRA_TITLE);
-                        CharSequence textChar = notification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT);
-                        if (titleChar != null) title = titleChar.toString();
-                        if (textChar != null) text = textChar.toString();
-                    }
-                    map.put("title", title);
-                    map.put("text", text);
-                    map.put("isClearable", sbn.isClearable());
-                    list.add(map);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return list;
-    }
-
     private boolean dismissNotification(String key) {
         LauncherNotificationListenerService service = LauncherNotificationListenerService.getInstance();
         if (service == null || key == null) {
@@ -1509,11 +1369,12 @@ public class MainActivity extends FlutterActivity {
         return WatchNextRows.read(this);
     }
 
-    private boolean deleteWatchNextProgram(long id) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            return false;
+    private void deleteWatchNextProgram(Number id, MethodChannel.Result result) {
+        if (id == null) {
+            result.error("INVALID_ARGUMENT", "Missing id", null);
+        } else {
+            result.success(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && deleteWatchNextProgramApi26(id.longValue()));
         }
-        return deleteWatchNextProgramApi26(id);
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -1747,11 +1608,6 @@ public class MainActivity extends FlutterActivity {
         } catch (PackageManager.NameNotFoundException e) {
             return null;
         }
-    }
-
-    private String getLatestWeatherData() {
-        android.content.SharedPreferences prefs = getSharedPreferences(WeatherReceiver.PREFS_NAME, Context.MODE_PRIVATE);
-        return prefs.getString(WeatherReceiver.KEY_WEATHER_JSON, null);
     }
 
     private boolean isBreezyWeatherInstalled() {
