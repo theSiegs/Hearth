@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import '../mock_channel.dart';
 import '../mocks.mocks.dart';
 
 void main() {
@@ -14,7 +15,7 @@ void main() {
 
     setUp(() async {
       SharedPreferencesStorePlatform.instance = InMemorySharedPreferencesStore.empty();
-      channel = MockFLauncherChannel();
+      channel = mockChannelForAppsService();
       database = MockFLauncherDatabase();
 
       when(channel.getApplications()).thenAnswer((_) => Future.value([]));

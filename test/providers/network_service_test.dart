@@ -19,6 +19,7 @@ void main() {
         .thenAnswer((_) async => false);
     when(mockChannel.addNetworkChangedListener(any)).thenAnswer((invocation) {
       networkListener = invocation.positionalArguments[0] as void Function(Map<String, dynamic>);
+      return const Stream<void>.empty().listen(null);
     });
     networkService = NetworkService(mockChannel);
   });

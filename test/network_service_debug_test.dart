@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flauncher/providers/network_service.dart';
 import 'package:flauncher/flauncher_channel.dart';
@@ -5,7 +7,8 @@ import 'package:mockito/mockito.dart';
 
 class MockFlauncherChannel extends Mock implements FLauncherChannel {
   @override
-  void addNetworkChangedListener(Function(Map<String, dynamic>) listener) {}
+  StreamSubscription addNetworkChangedListener(Function(Map<String, dynamic>) listener) =>
+      const Stream<void>.empty().listen(null);
   
   @override
   Future<Map<String, dynamic>> getActiveNetworkInformation() async {

@@ -17,7 +17,6 @@
  */
 
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 
@@ -231,7 +230,12 @@ class FLauncherChannel {
     _listen();
   }
 
+  static bool _listening = false;
+
+  /// Installs the handler for the calls the Android side makes into Flutter (once; the listeners above share it).
   static void _listen() {
+    if (_listening) return;
+    _listening = true;
     _methodChannel.setMethodCallHandler((call) async {
       if (call.method == "openSearch") _onOpenSearch?.call(call.arguments as String? ?? "text");
       if (call.method == "profileChanged") _onProfileChanged?.call();
@@ -343,13 +347,13 @@ class FLauncherChannel {
 
   Future<void> startAmbientMode() async => await _methodChannel.invokeMethod("startAmbientMode");
 
-  void addAppsChangedListener(void Function(Map<String, dynamic>) listener) =>
+  StreamSubscription addAppsChangedListener(void Function(Map<String, dynamic>) listener) =>
       _appsEventChannel.receiveBroadcastStream().listen((event) {
         Map<dynamic, dynamic> eventMap = event;
         listener(eventMap.cast<String, dynamic>());
       });
 
-  void addNetworkChangedListener(void Function(Map<String, dynamic>) listener) =>
+  StreamSubscription addNetworkChangedListener(void Function(Map<String, dynamic>) listener) =>
       _networkEventChannel.receiveBroadcastStream().listen((event) {
         Map<dynamic, dynamic> eventMap = event;
         listener(eventMap.cast<String, dynamic>());

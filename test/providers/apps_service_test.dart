@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../mock_channel.dart';
 import '../mocks.mocks.dart';
 
 void main() {
@@ -18,7 +19,7 @@ void main() {
 
   group("removeCustomAppBanner", () {
     test("removes custom banner and deletes file if it exists", () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
       final appsService = await _buildInitialisedAppsService(channel, database);
 
@@ -41,7 +42,7 @@ void main() {
     });
 
     test("handles file deletion errors gracefully", () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
       final appsService = await _buildInitialisedAppsService(channel, database);
 
@@ -62,7 +63,7 @@ void main() {
     });
 
     test("works when custom banner path is null", () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
       final appsService = await _buildInitialisedAppsService(channel, database);
 
@@ -83,7 +84,7 @@ void main() {
 
   group("AppsService Category Integration", () {
     test("loads categories with apps correctly", () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
 
       final testApp1 = App(
@@ -185,7 +186,7 @@ void main() {
 
     test("saveApplicationOrderInCategory updates local categoryOrders map",
         () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
 
       final testApp1 = App(
@@ -248,7 +249,7 @@ void main() {
     });
 
     test("sortCategory sorts alphabetically case-insensitively", () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
 
       final appB =
@@ -274,7 +275,7 @@ void main() {
 
     test("default categories places TV Apps section before Non-TV Apps section",
         () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
 
       when(database.insertCategory(any)).thenAnswer((inv) {
@@ -292,7 +293,7 @@ void main() {
     });
 
     test("addCategory saves the section's type and layout, not just its name", () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
       when(database.insertCategory(any)).thenAnswer((_) => Future.value(7));
 
@@ -307,7 +308,7 @@ void main() {
     });
 
     test("addCategory passes a database failure on and adds nothing", () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
       when(database.insertCategory(any)).thenAnswer((_) => Future.error(StateError("disk full")));
 
@@ -318,7 +319,7 @@ void main() {
     });
 
     test("favoritesCategory is the category named Favorites, once there is one", () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
       var nextId = 1;
       when(database.insertCategory(any)).thenAnswer((_) => Future.value(nextId++));
@@ -335,7 +336,7 @@ void main() {
     test(
         "newly installed app missing AppsCategories row receives category assignment",
         () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
 
       final orderedApp = App(
@@ -418,7 +419,7 @@ void main() {
     test(
         "existing app with zero categories (removed by user) is not re-added on initialization",
         () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
 
       final orderedApp = App(
@@ -486,7 +487,7 @@ void main() {
     test(
         "newly installed hidden app is categorized in database but not shown in category",
         () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
 
       final visibleApp = App(
@@ -557,7 +558,7 @@ void main() {
 
     test("multiple newly installed apps receive deterministic non-conflicting orders",
         () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
 
       final orphanB = App(
@@ -622,7 +623,7 @@ void main() {
 
     test("newly installed sideloaded app is assigned to Non-TV Apps category",
         () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
 
       final sideloadedApp = App(
@@ -681,7 +682,7 @@ void main() {
     });
 
     test("sortCategory does not throw when manual order is missing", () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
 
       final appWithOrder = App(
@@ -707,7 +708,7 @@ void main() {
     });
 
     test("sortCategory last-used ordering is unchanged", () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
 
       final older = App(
@@ -730,7 +731,7 @@ void main() {
     test(
         "existing install with Non-TV Apps above TV Apps is reordered so TV Apps is on top",
         () async {
-      final channel = MockFLauncherChannel();
+      final channel = mockChannelForAppsService();
       final database = MockFLauncherDatabase();
 
       final nonTvCat = Category(id: 1, name: "Non-TV Apps", order: 0);
@@ -772,7 +773,7 @@ void main() {
     final systemApp = {'packageName': 'app.tv', 'name': 'TV App', 'version': '1.0.0', 'sideloaded': false};
 
     Future<AppsService> build({bool hidden = false}) async {
-      channel = MockFLauncherChannel();
+      channel = mockChannelForAppsService();
       database = MockFLauncherDatabase();
       final app = App(packageName: 'app.tv', name: 'TV App', version: '1.0.0', hidden: hidden);
       when(channel.getApplications()).thenAnswer((_) async => [systemApp]);
@@ -780,6 +781,7 @@ void main() {
       when(channel.getApplicationBanner(any)).thenAnswer((_) async => Uint8List(0));
       when(channel.addAppsChangedListener(any)).thenAnswer((invocation) {
         onAppsChanged = invocation.positionalArguments[0];
+        return const Stream<void>.empty().listen(null);
       });
       when(database.getApplications()).thenAnswer((_) async => [app]);
       when(database.getCategories())

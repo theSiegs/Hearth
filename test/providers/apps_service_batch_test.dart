@@ -6,6 +6,7 @@ import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:drift/drift.dart';
 
+import '../mock_channel.dart';
 import '../mocks.mocks.dart';
 
 void main() {
@@ -15,7 +16,7 @@ void main() {
 
   setUp(() async {
     database = FLauncherDatabase.inMemory();
-    mockChannel = MockFLauncherChannel();
+    mockChannel = mockChannelForAppsService();
 
     // Minimal mock for getApplications to avoid crash in _refreshState
     when(mockChannel.getApplications()).thenAnswer((_) async => []);
