@@ -2,13 +2,19 @@ package com.leanbitlab.ltvL;
 
 import android.util.Log;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -37,7 +43,7 @@ final class HaNotificationServer {
         /** A camera entity to show live in the card, or null. */
         String camera;
         /** Buttons, each {"title", "service", "data"}; empty for an ordinary notification. */
-        final java.util.List<org.json.JSONObject> actions = new java.util.ArrayList<>();
+        final List<JSONObject> actions = new ArrayList<>();
     }
 
     interface Listener {
@@ -150,14 +156,14 @@ final class HaNotificationServer {
         String actions = text(fields, "actions");
         if (actions != null && !actions.isEmpty()) {
             try {
-                org.json.JSONArray list = new org.json.JSONArray(actions);
+                JSONArray list = new JSONArray(actions);
                 for (int i = 0; i < list.length() && n.actions.size() < 3; i++) {
-                    org.json.JSONObject action = list.getJSONObject(i);
+                    JSONObject action = list.getJSONObject(i);
                     if (!isBlank(action.optString("title")) && action.optString("service").matches("[a-z_]+\\.[a-z0-9_]+")) {
                         n.actions.add(action);
                     }
                 }
-            } catch (org.json.JSONException e) {
+            } catch (JSONException e) {
                 Log.w(TAG, "Ignoring the notification's actions: not a JSON list of buttons", e);
             }
         }

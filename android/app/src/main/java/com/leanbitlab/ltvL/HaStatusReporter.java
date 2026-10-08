@@ -23,6 +23,8 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -327,8 +329,8 @@ final class HaStatusReporter {
      */
     private static JSONArray allowedApps(Context context, PackageManager pm) {
         String ownPackage = context.getPackageName();
-        java.util.TreeSet<String> names = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-        java.util.Set<String> approved = ProfileUsers.activeApprovedApps(context);
+        TreeSet<String> names = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        Set<String> approved = ProfileUsers.activeApprovedApps(context);
         if (approved != null) {
             for (String pkg : approved) {
                 if (!ownPackage.equals(pkg)) names.add(label(pm, pkg));

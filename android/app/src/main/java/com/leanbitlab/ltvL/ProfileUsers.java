@@ -7,11 +7,14 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.LauncherActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.os.Bundle;
 import android.os.Process;
 import android.os.UserHandle;
 import android.os.UserManager;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -120,7 +123,7 @@ final class ProfileUsers {
     }
 
     /** Never blocked by Google TV (Hearth is the home app), so no sign of screen time. */
-    private static final java.util.Set<String> NEVER_BLOCKED = new java.util.HashSet<>(java.util.Arrays.asList(
+    private static final Set<String> NEVER_BLOCKED = new HashSet<>(Arrays.asList(
             "com.android.vending"));
 
     /**
@@ -168,7 +171,7 @@ final class ProfileUsers {
         try {
             UserHandle user = users.getUserForSerialNumber(serial);
             if (user == null) return null;
-            android.os.Bundle restrictions = users.getUserRestrictions(user);
+            Bundle restrictions = users.getUserRestrictions(user);
             for (String restriction : SUPERVISION_RESTRICTIONS) {
                 if (restrictions.getBoolean(restriction, false)) return true;
             }

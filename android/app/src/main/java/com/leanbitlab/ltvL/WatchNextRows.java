@@ -1,6 +1,7 @@
 package com.leanbitlab.ltvL;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.media.tv.TvContract;
 import android.os.Build;
 import android.util.Log;
@@ -17,7 +18,7 @@ final class WatchNextRows {
     private WatchNextRows() {
     }
 
-    static String cursorStringOrEmpty(android.database.Cursor cursor, String column) {
+    static String cursorStringOrEmpty(Cursor cursor, String column) {
         String val = cursor.getString(cursor.getColumnIndexOrThrow(column));
         return val != null ? val : "";
     }
@@ -45,7 +46,7 @@ final class WatchNextRows {
             TvContract.WatchNextPrograms.COLUMN_THUMBNAIL_URI
         };
 
-        try (android.database.Cursor cursor = context.getContentResolver().query(
+        try (Cursor cursor = context.getContentResolver().query(
                 TvContract.WatchNextPrograms.CONTENT_URI,
                 projection,
                 null,

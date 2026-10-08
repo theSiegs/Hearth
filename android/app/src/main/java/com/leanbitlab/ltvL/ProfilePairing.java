@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -154,7 +155,7 @@ final class ProfilePairing {
         if (!known.contains(name)) return;
         SharedPreferences.Editor editor = prefs.edit();
         String suffix = "|" + name;
-        for (java.util.Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
+        for (Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
             String k = entry.getKey();
             if (!k.endsWith(suffix) || k.startsWith(SEEN_PREFIX) || k.startsWith(DISABLED_PREFIX)) continue;
             String moved = k.substring(0, k.length() - name.length()) + key;

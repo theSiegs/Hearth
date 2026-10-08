@@ -6,12 +6,13 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.StateListDrawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.util.TypedValue;
-import android.graphics.drawable.StateListDrawable;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
@@ -19,6 +20,8 @@ import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import org.json.JSONObject;
 
 import java.util.ArrayDeque;
 import java.util.concurrent.ExecutorService;
@@ -244,7 +247,7 @@ final class HaNotificationOverlay {
         buttons.setOrientation(LinearLayout.HORIZONTAL);
         buttons.setGravity(Gravity.END);
         buttons.setPadding(dp(12), 0, dp(12), dp(12));
-        for (org.json.JSONObject action : n.actions) {
+        for (JSONObject action : n.actions) {
             addButton(buttons, action.optString("title"), accent, () -> {
                 run(action);
                 next();
@@ -279,13 +282,13 @@ final class HaNotificationOverlay {
         return button;
     }
 
-    private void run(org.json.JSONObject action) {
+    private void run(JSONObject action) {
         String[] service = action.optString("service").split("\\.", 2);
-        org.json.JSONObject data = action.optJSONObject("data");
+        JSONObject data = action.optJSONObject("data");
         HaApi.EXECUTOR.execute(() -> HaApi.callService(mService, service[0], service[1], data));
     }
 
-    private android.graphics.drawable.Drawable buttonBackground(int accent) {
+    private Drawable buttonBackground(int accent) {
         GradientDrawable focused = new GradientDrawable();
         focused.setColor(accent);
         focused.setCornerRadius(dp(20));

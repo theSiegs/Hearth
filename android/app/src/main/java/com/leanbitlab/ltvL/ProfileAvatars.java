@@ -2,6 +2,7 @@ package com.leanbitlab.ltvL;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
@@ -12,6 +13,7 @@ import android.util.Log;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.file.Files;
 
@@ -38,7 +40,7 @@ final class ProfileAvatars {
         String safe;
         try {
             safe = URLEncoder.encode(name, "UTF-8");
-        } catch (java.io.UnsupportedEncodingException e) {
+        } catch (UnsupportedEncodingException e) {
             safe = Integer.toHexString(name.hashCode());
         }
         return new File(new File(context.getFilesDir(), "profile_avatars_v2"), safe + ".png");
@@ -128,7 +130,7 @@ final class ProfileAvatars {
      */
     private static boolean looksSame(File saved, Bitmap fresh) {
         if (!saved.exists()) return false;
-        Bitmap old = android.graphics.BitmapFactory.decodeFile(saved.getPath());
+        Bitmap old = BitmapFactory.decodeFile(saved.getPath());
         if (old == null || old.getWidth() != fresh.getWidth() || old.getHeight() != fresh.getHeight()) return false;
         int differing = 0;
         int samples = 0;
