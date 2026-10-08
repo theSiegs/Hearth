@@ -113,6 +113,7 @@
     "accentColor": "Couleur d'accentuation",
     "dataUsagePeriod": "Période d'utilisation des données",
     "notificationAccess": "Accès aux notifications",
+    "watchNextAccess": "Accès à Watch Next",
     "granted": "Accordé",
     "permissionRequired": "Autorisation requise",
     "systemWidePopupAlert": "Alerte contextuelle à l'échelle du système",

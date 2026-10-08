@@ -113,6 +113,7 @@
     "accentColor": "Акцентный цвет",
     "dataUsagePeriod": "Период использования данных",
     "notificationAccess": "Доступ к уведомлениям",
+    "watchNextAccess": "Доступ к Watch Next",
     "granted": "Предоставлено",
     "permissionRequired": "Требуется разрешение",
     "systemWidePopupAlert": "Системное всплывающее предупреждение",

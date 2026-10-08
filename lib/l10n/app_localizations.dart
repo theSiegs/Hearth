@@ -593,6 +593,12 @@ abstract class AppLocalizations {
   /// **'Notification Access'**
   String get notificationAccess;
 
+  /// Continue Watching settings: the row that opens the Watch Next permission (the Android TV feature name stays untranslated)
+  ///
+  /// In en, this message translates to:
+  /// **'Watch Next Access'**
+  String get watchNextAccess;
+
   /// No description provided for @granted.
   ///
   /// In en, this message translates to:

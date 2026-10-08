@@ -113,6 +113,7 @@
     "accentColor": "アクセントカラー",
     "dataUsagePeriod": "データ使用期間",
     "notificationAccess": "通知アクセス",
+    "watchNextAccess": "Watch Next へのアクセス",
     "granted": "許可済み",
     "permissionRequired": "権限が必要です",
     "systemWidePopupAlert": "システム全体のポップアップアラート",

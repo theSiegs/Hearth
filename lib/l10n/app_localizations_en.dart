@@ -254,6 +254,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationAccess => 'Notification Access';
 
   @override
+  String get watchNextAccess => 'Watch Next Access';
+
+  @override
   String get granted => 'Granted';
 
   @override

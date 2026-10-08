@@ -113,6 +113,10 @@
     "accentColor": "Accent Color",
     "dataUsagePeriod": "Data Usage Period",
     "notificationAccess": "Notification Access",
+    "watchNextAccess": "Watch Next Access",
+    "@watchNextAccess": {
+        "description": "Continue Watching settings: the row that opens the Watch Next permission (the Android TV feature name stays untranslated)"
+    },
     "granted": "Granted",
     "permissionRequired": "Permission Required",
     "systemWidePopupAlert": "System-wide Popup Alert",

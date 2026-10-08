@@ -113,6 +113,7 @@
     "accentColor": "강조 색상",
     "dataUsagePeriod": "데이터 사용 기간",
     "notificationAccess": "알림 액세스",
+    "watchNextAccess": "Watch Next 액세스",
     "granted": "부여됨",
     "permissionRequired": "권한 필요",
     "systemWidePopupAlert": "시스템 전체 팝업 알림",

@@ -254,6 +254,9 @@ class AppLocalizationsHi extends AppLocalizations {
   String get notificationAccess => 'सूचना पहुंच';
 
   @override
+  String get watchNextAccess => 'Watch Next पहुंच';
+
+  @override
   String get granted => 'प्रदान किया गया';
 
   @override
