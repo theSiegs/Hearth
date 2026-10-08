@@ -67,6 +67,14 @@ profiles (an app may remove its own admin); shell cannot do it for a non-test ad
 
 ## Status
 
-Prototype / reference. The command sequences and the orphan-trap behavior are validated on the TV; the self-adb
-transport (embedding `dadb`, the key-authorize flow, reboot/TLS handling) is the remaining piece to build in the
-Hearth app. This lives under `tool/` so it does not collide with that app-layer work.
+Validated end-to-end on a supervised Android-14 emulator (user 10 with the GMS profile owner, `launcherx` present)
+by running this script: `state`, `add` (install-existing + block-uninstall, both protected), the orphan-trap
+refusal (`DELETE_FAILED_OWNER_BLOCKED`), a clean `remove` (lift flag then uninstall), and a repeatable re-add.
+
+The launcher's reconcile itself is verified on the real TV (logcat), not on the emulator: it is
+chooser/supervision-driven and does not fire from a headless `start-user`, so the emulator validates the
+provisioning mechanics while the TV validates the removal trigger.
+
+Remaining to build in the Hearth app: the self-adb transport (embed `dadb`, the one-time on-screen key-authorize,
+wireless-debug/TLS + reboot handling) and the Add/Remove/state Settings rows. This lives under `tool/` so it does
+not collide with that app-layer work.

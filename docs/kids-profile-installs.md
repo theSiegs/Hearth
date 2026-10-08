@@ -34,6 +34,10 @@ Per-user state: a non-system app not in the target is `installed=false` for the 
 omits it; `pm list packages -u --user N` still lists it because the APK belongs to user 0). `pm install-existing
 --user N <pkg>` puts it back (one Family Link notification each) until that profile next starts.
 
+The reconcile is not guaranteed on every start: on the TV, one switch into a kid profile logged nothing while the
+next switch ran it (the first start was skipped). So protection must be set proactively and kept in place, never
+timed to catch a particular start.
+
 ## What keeps them in — both need adb
 
 Both are set over adb and then persist across reboots (no adb at each boot), but a **new** kid profile needs the step
@@ -193,6 +197,10 @@ SecurityException). So protect **both** apps with the reversible block-uninstall
 flag before any uninstall, and have Hearth run Remove before it can be uninstalled itself. The device admin set on
 Hearth in users 10/11/12 during testing should be cleared by Hearth calling `removeActiveAdmin()` on itself from its
 agent in each profile (shell can't).
+
+The full add → orphan-trap → remove → re-add lifecycle has since been validated end-to-end on an Android-14 emulator
+(GMS-supervised user 10, `launcherx` present) by running the prototype script; the launcher reconcile itself stays
+TV-verified (it is chooser/supervision-driven and does not fire from a headless `start-user`).
 
 ## The agent's jobs without Hearth in the kid's profile
 
