@@ -3,9 +3,11 @@ package com.leanbitlab.ltvL;
 import android.content.Context;
 import android.content.pm.LauncherApps;
 import android.os.UserHandle;
+import android.util.Log;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -13,6 +15,8 @@ import io.flutter.plugin.common.EventChannel;
 
 public class LauncherAppsEventStreamHandler implements EventChannel.StreamHandler
 {
+    private static final String TAG = "HearthAppsEvents";
+
     private final LauncherApps _launcherApps;
     private final MainActivity _activity;
 
@@ -31,7 +35,7 @@ public class LauncherAppsEventStreamHandler implements EventChannel.StreamHandle
             try {
                 _launcherApps.unregisterCallback(_launcherAppsCallback);
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.w(TAG, "Couldn't unregister the apps callback", e);
             }
             _launcherAppsCallback = null;
         }
@@ -44,6 +48,14 @@ public class LauncherAppsEventStreamHandler implements EventChannel.StreamHandle
         _launcherApps.registerCallback(_launcherAppsCallback);
     }
 
+    /** An event for Dart: {"action": action}, plus {key: value} when a key is given. */
+    private static Map<String, Object> event(String action, String key, Object value)
+    {
+        Map<String, Object> event = new HashMap<>();
+        event.put("action", action);
+        if (key != null) event.put(key, value);
+        return event;
+    }
 
     private class LauncherAppsCallback extends LauncherApps.Callback
     {
@@ -56,11 +68,7 @@ public class LauncherAppsEventStreamHandler implements EventChannel.StreamHandle
 
         @Override
         public void onPackageRemoved(String packageName, UserHandle user) {
-            _activity.runOnUiThread(() -> {
-                try {
-                    _eventSink.success(new java.util.HashMap<String, Object>() {{ put("action", "PACKAGE_REMOVED"); put("packageName", packageName); }});
-                } catch (Exception ignored) {}
-            });
+            send(event("PACKAGE_REMOVED", "packageName", packageName));
         }
 
         @Override
@@ -68,11 +76,7 @@ public class LauncherAppsEventStreamHandler implements EventChannel.StreamHandle
             Map<String, Serializable> application = _activity.getApplication(packageName);
 
             if (!application.isEmpty()) {
-                _activity.runOnUiThread(() -> {
-                    try {
-                        _eventSink.success(new java.util.HashMap<String, Object>() {{ put("action", "PACKAGE_ADDED"); put("activityInfo", application); }});
-                    } catch (Exception ignored) {}
-                });
+                send(event("PACKAGE_ADDED", "activityInfo", application));
             }
         }
 
@@ -81,11 +85,7 @@ public class LauncherAppsEventStreamHandler implements EventChannel.StreamHandle
             Map<String, Serializable> application = _activity.getApplication(packageName);
 
             if (!application.isEmpty()) {
-                _activity.runOnUiThread(() -> {
-                    try {
-                        _eventSink.success(new java.util.HashMap<String, Object>() {{ put("action", "PACKAGE_CHANGED"); put("activityInfo", application); }});
-                    } catch (Exception ignored) {}
-                });
+                send(event("PACKAGE_CHANGED", "activityInfo", application));
             }
         }
 
@@ -102,11 +102,7 @@ public class LauncherAppsEventStreamHandler implements EventChannel.StreamHandle
             }
 
             if (!applications.isEmpty()) {
-                _activity.runOnUiThread(() -> {
-                    try {
-                        _eventSink.success(new java.util.HashMap<String, Object>() {{ put("action", "PACKAGES_AVAILABLE"); put("activitiesInfo", applications); }});
-                    } catch (Exception ignored) {}
-                });
+                send(event("PACKAGES_AVAILABLE", "activitiesInfo", applications));
             }
         }
 
@@ -117,19 +113,21 @@ public class LauncherAppsEventStreamHandler implements EventChannel.StreamHandle
         // Switching Google TV profiles suspends/unsuspends apps for kids profiles.
         @Override
         public void onPackagesSuspended(String[] packageNames, UserHandle user) {
-            sendSuspensionChanged();
+            send(event("PACKAGES_SUSPENSION_CHANGED", null, null));
         }
 
         @Override
         public void onPackagesUnsuspended(String[] packageNames, UserHandle user) {
-            sendSuspensionChanged();
+            send(event("PACKAGES_SUSPENSION_CHANGED", null, null));
         }
 
-        private void sendSuspensionChanged() {
+        private void send(Map<String, Object> event) {
             _activity.runOnUiThread(() -> {
                 try {
-                    _eventSink.success(new java.util.HashMap<String, Object>() {{ put("action", "PACKAGES_SUSPENSION_CHANGED"); }});
-                } catch (Exception ignored) {}
+                    _eventSink.success(event);
+                } catch (Exception e) {
+                    Log.w(TAG, "Couldn't send " + event.get("action") + " to Dart", e);
+                }
             });
         }
     }
