@@ -70,6 +70,7 @@ const String _startOnBootKey = "start_on_boot";
 const String _parentPinHashKey = "device_parent_pin_hash";
 // A TMDB key users could once type in; search now uses the one built into the release only
 const String _retiredTmdbApiKeyKey = "tmdb_api_key";
+const String _oldDateTimeDefaultsClearedKey = "device_old_date_time_defaults_cleared";
 const String _showNotificationsWidgetInStatusBarKey = "show_notifications_widget_in_status_bar";
 const String _autoHideNotificationsWidgetKey = "auto_hide_notifications_widget";
 const String _appLanguageKey = "app_language";
@@ -105,6 +106,10 @@ const String ACCENT_COLOR_ICE_BLUE = "80D8FF";
 class SettingsService extends ChangeNotifier {
   static final defaultDateFormat = "EEE, MMM d";
   static final defaultTimeFormat = "h:mm a";
+
+  /// The defaults before 2026-10, which older backups and profile layouts saved as if they'd been chosen.
+  static const _oldDefaultDateFormat = "EEEE d";
+  static const _oldDefaultTimeFormat = "H:mm";
   final SharedPreferences _sharedPreferences;
 
   late bool _appHighlightAnimationEnabled;
@@ -249,8 +254,32 @@ class SettingsService extends ChangeNotifier {
     if (_sharedPreferences.containsKey(_retiredTmdbApiKeyKey)) {
       unawaited(_sharedPreferences.remove(_retiredTmdbApiKeyKey));
     }
+    _clearOldDateTimeDefaults();
     reload();
   }
+
+  /// Once per TV: the old default date and time, restored from a layout or backup that saved them as if chosen,
+  /// count as never chosen. After that, choosing that pair sticks.
+  void _clearOldDateTimeDefaults() {
+    if (_sharedPreferences.getBool(_oldDateTimeDefaultsClearedKey) == true) return;
+    if (_sharedPreferences.getString(_dateFormatKey) == _oldDefaultDateFormat &&
+        _sharedPreferences.getString(_timeFormatKey) == _oldDefaultTimeFormat) {
+      unawaited(_sharedPreferences.remove(_dateFormatKey));
+      unawaited(_sharedPreferences.remove(_timeFormatKey));
+    }
+    unawaited(_sharedPreferences.setBool(_oldDateTimeDefaultsClearedKey, true));
+  }
+
+  /// In settings saved before backups held only chosen settings, the old default date and time weren't a choice.
+  static void forgetOldDefaults(Map<String, dynamic> settings) {
+    if (settings[_dateFormatKey] == _oldDefaultDateFormat && settings[_timeFormatKey] == _oldDefaultTimeFormat) {
+      settings.remove(_dateFormatKey);
+      settings.remove(_timeFormatKey);
+    }
+  }
+
+  /// The keys of the settings [exportSettingsMap] covers, whether set or not.
+  Set<String> get settingKeys => {...exportSettingsMap().keys, _gradientUuidKey};
 
   void reload() {
     _appHighlightAnimationEnabled = _sharedPreferences.getBool(_appHighlightAnimationEnabledKey) ?? true;
@@ -268,12 +297,6 @@ class SettingsService extends ChangeNotifier {
     _backButtonAction = _sharedPreferences.getString(_backButtonActionKey) ?? BACK_BUTTON_ACTION_NOTHING;
     _dateFormat = _sharedPreferences.getString(_dateFormatKey) ?? defaultDateFormat;
     _timeFormat = _sharedPreferences.getString(_timeFormatKey) ?? defaultTimeFormat;
-    // The old defaults ("Tuesday 6", "16:23") got saved along with profile layouts and backups without anyone
-    // choosing them: treat that pair as never chosen, so the US default ("Tue, Oct 6", "4:23 PM") applies.
-    if (_dateFormat == "EEEE d" && _timeFormat == "H:mm") {
-      _dateFormat = defaultDateFormat;
-      _timeFormat = defaultTimeFormat;
-    }
     _dataUsagePeriod = _sharedPreferences.getString(_dataUsagePeriodKey) ?? DATA_USAGE_DAILY;
     _pushToAdultProfiles = _sharedPreferences.getBool(_pushToAdultProfilesKey) ?? true;
     _showDataWidgetInStatusBar = _sharedPreferences.getBool(_showDataWidgetInStatusBarKey) ?? false;

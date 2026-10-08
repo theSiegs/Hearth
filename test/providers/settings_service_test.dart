@@ -222,6 +222,25 @@ void main() async {
     });
   });
 
+  group("old default date and time", () {
+    test("are cleared once per TV", () async {
+      await sharedPreferences.setString("date_format", "EEEE d");
+      await sharedPreferences.setString("time_format", "H:mm");
+      final settingsService = SettingsService(sharedPreferences);
+      expect(settingsService.dateFormat, SettingsService.defaultDateFormat);
+      expect(settingsService.timeFormat, SettingsService.defaultTimeFormat);
+    });
+
+    test("stick when chosen after that", () async {
+      final first = SettingsService(sharedPreferences);
+      await first.setDateTimeFormat("EEEE d", "H:mm");
+      final again = SettingsService(sharedPreferences);
+      again.reload();
+      expect(again.dateFormat, "EEEE d");
+      expect(again.timeFormat, "H:mm");
+    });
+  });
+
   group("retired TMDB key", () {
     test("a key typed in before is removed at startup", () async {
       await sharedPreferences.setString("tmdb_api_key", "abc");
