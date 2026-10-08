@@ -35,7 +35,7 @@ final class HaStatusReporter {
     // HaConfig's keys, under the names the activity and the accessibility service use
     static final String URL_KEY = HaConfig.URL_KEY;
     static final String WEBHOOK_KEY = HaConfig.WEBHOOK_KEY;
-    private static final String TAG = "LTvHaStatus";
+    private static final String TAG = "HearthHaStatus";
     private static final long DEBOUNCE_MS = 1_500;
     private static final long HEARTBEAT_MS = 10 * 60_000;
 
