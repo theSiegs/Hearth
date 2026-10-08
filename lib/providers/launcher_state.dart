@@ -22,7 +22,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
-import '../widgets/settings/back_button_actions.dart';
 import 'apps_service.dart';
 
 class LauncherState extends ChangeNotifier
@@ -65,10 +64,10 @@ class LauncherState extends ChangeNotifier
       String action = settingsService.backButtonAction;
 
       switch (action) {
-        case BACK_BUTTON_ACTION_CLOCK:
+        case backButtonActionClock:
           launcherState.toggleLauncherVisibility();
           break;
-        case BACK_BUTTON_ACTION_SCREENSAVER:
+        case backButtonActionScreensaver:
           appsService.startAmbientMode();
           break;
       }
