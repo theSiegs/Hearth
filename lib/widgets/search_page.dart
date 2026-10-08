@@ -250,7 +250,7 @@ class _SearchPageState extends State<SearchPage> {
                     },
                     style: textTheme.headlineSmall,
                     decoration: InputDecoration(
-                      hintText: _listening ? "Listening\u2026" : "Search films and shows (OK for the keyboard)",
+                      hintText: _listening ? "Listening\u2026" : "Search films and shows",
                       prefixIcon: const Icon(Icons.search),
                       filled: true,
                       fillColor: Colors.white.withOpacity(0.08),
