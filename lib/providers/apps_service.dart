@@ -75,7 +75,7 @@ class AppsService extends ChangeNotifier {
     _pendingReorderFocusCategoryId = null;
   }
 
-  void setPendingReorderFocus(String packageName, int categoryId, int index) {
+  void setPendingReorderFocus(String packageName, int categoryId) {
     _pendingReorderFocusPackage = packageName;
     _pendingReorderFocusCategoryId = categoryId;
   }

@@ -120,7 +120,7 @@ class CategoryRow extends StatelessWidget
     }
 
     final appsService = context.read<AppsService>();
-    appsService.setPendingReorderFocus(movingApp.packageName, category.id, newIndex);
+    appsService.setPendingReorderFocus(movingApp.packageName, category.id);
     appsService.reorderApplication(category, index, newIndex);
   }
 
