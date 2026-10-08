@@ -569,7 +569,6 @@ class _FLauncherState extends State<FLauncher> {
                         child: HomeDock(
                           key: Key(favorites.id.toString()),
                           category: favorites,
-                          applications: favorites.applications,
                           isFirstSection: !continueWatchingActive,
                         ),
                       ),
@@ -667,7 +666,6 @@ class _FLauncherState extends State<FLauncher> {
           categoryWidget = CategoryRow(
               key: sectionKey,
               category: category,
-              applications: category.applications,
               isFirstSection: isFirstSection,
               showTitle: showTitles);
           break;
@@ -675,7 +673,6 @@ class _FLauncherState extends State<FLauncher> {
           categoryWidget = AppsGrid(
               key: sectionKey,
               category: category,
-              applications: category.applications,
               isFirstSection: isFirstSection,
               showTitle: showTitles);
           break;

@@ -30,7 +30,6 @@ import 'category_container_common.dart';
 class AppsGrid extends StatelessWidget
 {
   final Category category;
-  final List<App> applications;
 
   final bool isFirstSection;
 
@@ -40,13 +39,13 @@ class AppsGrid extends StatelessWidget
   const AppsGrid({
     super.key,
     required this.category,
-    required this.applications,
     this.isFirstSection = false,
     this.showTitle = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    final applications = category.applications;
     Widget categoryContent;
     if (applications.isEmpty) {
       categoryContent = categoryContainerEmptyState(context);
@@ -98,11 +97,12 @@ class AppsGrid extends StatelessWidget
 
   int? _findChildIndex(Key key) {
     final valueKey = key as ValueKey<String>;
-    final index = applications.indexWhere((app) => app.packageName == valueKey.value);
+    final index = category.applications.indexWhere((app) => app.packageName == valueKey.value);
     return index >= 0 ? index : null;
   }
 
   void _onMove(BuildContext context, AxisDirection direction, App movingApp) {
+    final applications = category.applications;
     final index = applications.indexOf(movingApp);
     if (index == -1) return;
 
