@@ -22,8 +22,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 
+/// Animations and the key click (under Look). The label and outline switches that used to be here are with the dock.
 class MiscPanelPage extends StatelessWidget {
   static const String routeName = "misc_panel";
+  static const String title = "Animations & sound";
 
   const MiscPanelPage({Key? key}) : super(key: key);
 
@@ -34,7 +36,7 @@ class MiscPanelPage extends StatelessWidget {
 
     return Column(
       children: [
-        Text(localizations.miscellaneous, style: Theme.of(context).textTheme.titleLarge),
+        Text(title, style: Theme.of(context).textTheme.titleLarge),
         const Divider(),
         Expanded(
           child: ListView(
@@ -52,30 +54,6 @@ class MiscPanelPage extends StatelessWidget {
                 onChanged: (value) => settingsService.setAppKeyClickEnabled(value),
                 title: Text(localizations.appKeyClick, style: Theme.of(context).textTheme.bodyMedium),
                 secondary: const Icon(Icons.notifications_active),
-              ),
-              RoundedSwitchListTile(
-                value: settingsService.showCategoryTitles,
-                onChanged: (value) => settingsService.setShowCategoryTitles(value),
-                title: Text(localizations.showCategoryTitles, style: Theme.of(context).textTheme.bodyMedium),
-                secondary: const Icon(Icons.abc),
-              ),
-              RoundedSwitchListTile(
-                value: settingsService.showCategoryAppCount,
-                onChanged: (value) => settingsService.setShowCategoryAppCount(value),
-                title: Text(localizations.showCategoryAppCount, style: Theme.of(context).textTheme.bodyMedium),
-                secondary: const Icon(Icons.numbers),
-              ),
-              RoundedSwitchListTile(
-                value: settingsService.showAppNamesBelowIcons,
-                onChanged: (value) => settingsService.setShowAppNamesBelowIcons(value),
-                title: Text(localizations.showAppNamesBelowIcons, style: Theme.of(context).textTheme.bodyMedium),
-                secondary: const Icon(Icons.subtitles),
-              ),
-              RoundedSwitchListTile(
-                value: settingsService.hideHighlightOutlineOnHomescreen,
-                onChanged: (value) => settingsService.setHideHighlightOutlineOnHomescreen(value),
-                title: Text(localizations.hideHighlightOutlineOnHomescreen, style: Theme.of(context).textTheme.bodyMedium),
-                secondary: const Icon(Icons.border_clear),
               ),
               RoundedSwitchListTile(
                 value: settingsService.appSelectorTransitionAnimationEnabled,

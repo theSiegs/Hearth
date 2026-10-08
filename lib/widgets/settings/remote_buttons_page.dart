@@ -102,7 +102,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
 
     final result = captured!;
     if (result.containsKey("error")) {
-      _showMessage("Turn on Home Button Fix first", "Remapping needs Settings > Accessibility > Home Button Fix.");
+      _showMessage("Turn on Home Button Fix first", "Remapping needs Home Button Fix (Settings > System > Setup & permissions).");
       return;
     }
     final String keyCode = "${result["keyCode"]}";
@@ -276,7 +276,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Text(
-                    "Needs Home Button Fix (Settings > Accessibility). A button with only a Hold action does that "
+                    "Needs Home Button Fix (Settings > System > Setup & permissions). A button with only a Hold action does that "
                     "action on a press too. Remaps pause while a kids screen time screen is showing.",
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
                     textAlign: TextAlign.center,

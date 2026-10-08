@@ -40,7 +40,9 @@ import 'package:flauncher/widgets/settings/interface_settings_page.dart';
 import 'package:flauncher/widgets/settings/general_settings_page.dart';
 import 'package:flauncher/widgets/settings/themes_page.dart';
 import 'package:flauncher/widgets/settings/appearance_panel_page.dart';
-import 'package:flauncher/widgets/settings/accessibility_page.dart';
+import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
+import 'package:flauncher/widgets/settings/look_settings_page.dart';
+import 'package:flauncher/widgets/settings/remote_search_settings_page.dart';
 import 'package:flauncher/widgets/settings/backup_restore_page.dart';
 import 'package:flauncher/widgets/settings/app_language_page.dart';
 import 'package:flauncher/widgets/settings/blocked_notifications_page.dart';
@@ -140,8 +142,20 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       return _FastPageRoute(builder: (_) => const HomeAssistantPage());
                     case RemoteButtonsPage.routeName:
                       return _FastPageRoute(builder: (_) => const RemoteButtonsPage());
-                    case AccessibilityPage.routeName:
-                      return _FastPageRoute(builder: (_) => const AccessibilityPage());
+                    case ProfilesSettingsPage.routeName:
+                      return _FastPageRoute(builder: (_) => const ProfilesSettingsPage());
+                    case LookSettingsPage.routeName:
+                      return _FastPageRoute(builder: (_) => const LookSettingsPage());
+                    case RemoteSearchSettingsPage.routeName:
+                      return _FastPageRoute(builder: (_) => const RemoteSearchSettingsPage());
+                    case WeatherSettingsPage.routeName:
+                      return _FastPageRoute(builder: (_) => const WeatherSettingsPage());
+                    case HaNotificationsPage.routeName:
+                      return _FastPageRoute(builder: (_) => const HaNotificationsPage());
+                    case HaPanelPage.routeName:
+                      return _FastPageRoute(builder: (_) => const HaPanelPage());
+                    case HaStatusPage.routeName:
+                      return _FastPageRoute(builder: (_) => const HaStatusPage());
                     case BackupRestorePage.routeName:
                       return _FastPageRoute(builder: (_) => const BackupRestorePage());
                     case AppLanguagePage.routeName:

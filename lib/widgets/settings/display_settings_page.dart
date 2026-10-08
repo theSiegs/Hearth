@@ -19,11 +19,15 @@
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'focusable_settings_tile.dart';
 
+/// TV & power: the screensaver, sleeping when idle, and Android's own settings.
 class DisplaySettingsPage extends StatelessWidget {
   static const String routeName = "display_settings_panel";
+  static const String title = "TV & power";
 
   const DisplaySettingsPage({super.key});
 
@@ -33,7 +37,7 @@ class DisplaySettingsPage extends StatelessWidget {
 
     return Column(
       children: [
-        Text(localizations.displayAndScreensaver, style: Theme.of(context).textTheme.titleLarge),
+        Text(title, style: Theme.of(context).textTheme.titleLarge),
         const Divider(),
         Expanded(
           child: SingleChildScrollView(
@@ -55,6 +59,11 @@ class DisplaySettingsPage extends StatelessWidget {
                   ),
                 ),
                 const _IdleStandbyTile(),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.settings_outlined),
+                  title: Text(localizations.systemSettings, style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => context.read<AppsService>().openSettings(),
+                ),
               ],
             ),
           ),
@@ -109,7 +118,7 @@ class _IdleStandbyTileState extends State<_IdleStandbyTile> {
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-            child: Text("Playing video or music counts as activity. Needs Home Button Fix (Settings > Accessibility).",
+            child: Text("Playing video or music counts as activity. Needs Home Button Fix (Settings > System > Setup & permissions).",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54)),
           ),
         ],

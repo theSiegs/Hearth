@@ -21,6 +21,8 @@ import 'package:flauncher/providers/open_meteo_client.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
+import 'package:flauncher/widgets/settings/date_time_format_page.dart';
+import 'package:flauncher/widgets/settings/data_usage_period_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
@@ -63,12 +65,23 @@ class StatusBarPanelPage extends StatelessWidget {
                   title: Text(localizations.time),
                   secondary: Icon(Icons.watch_later_outlined)
                 ),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.date_range),
+                  title: Text(localizations.dateAndTimeFormat, style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => Navigator.of(context).pushNamed(DateTimeFormatPage.routeName),
+                ),
                 RoundedSwitchListTile(
                   value: settingsService.showDataWidgetInStatusBar,
                   onChanged: (value) => settingsService.setShowDataWidgetInStatusBar(value),
                   title: Text(localizations.dataUsage),
                   secondary: Icon(Icons.data_usage)
                 ),
+                if (settingsService.showDataWidgetInStatusBar)
+                  FocusableSettingsTile(
+                    leading: const Icon(Icons.date_range_outlined),
+                    title: Text(localizations.dataUsagePeriod, style: Theme.of(context).textTheme.bodyMedium),
+                    onPressed: () => Navigator.of(context).pushNamed(DataUsagePeriodPage.routeName),
+                  ),
                 RoundedSwitchListTile(
                   value: settingsService.showNetworkIndicatorInStatusBar,
                   onChanged: (value) => settingsService.setShowNetworkIndicatorInStatusBar(value),
@@ -95,63 +108,99 @@ class StatusBarPanelPage extends StatelessWidget {
                     secondary: Icon(Icons.notifications_paused_outlined),
                   ),
                 Divider(),
-                RoundedSwitchListTile(
-                  value: settingsService.showWeatherInStatusBar,
-                  onChanged: (value) => settingsService.setShowWeatherInStatusBar(value),
-                  title: Text(localizations.weather),
-                  secondary: Icon(Icons.wb_sunny_outlined),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.wb_sunny_outlined),
+                  title: Text(localizations.weather, style: Theme.of(context).textTheme.bodyMedium),
+                  trailing: Text(settingsService.showWeatherInStatusBar ? localizations.enabled : localizations.disabled,
+                      style: Theme.of(context).textTheme.bodySmall),
+                  onPressed: () => Navigator.of(context).pushNamed(WeatherSettingsPage.routeName),
                 ),
-                if (settingsService.showWeatherInStatusBar) ...[
-                  RoundedSwitchListTile(
-                    value: settingsService.showWeatherWarnings,
-                    onChanged: (value) => settingsService.setShowWeatherWarnings(value),
-                    title: Text(localizations.showWeatherWarnings),
-                    secondary: Icon(Icons.thunderstorm_outlined),
-                  ),
-                  FocusableSettingsTile(
-                    leading: const Icon(Icons.thermostat_outlined),
-                    title: Text(
-                      "${localizations.temperatureUnit}: ${settingsService.useFahrenheit ? localizations.fahrenheit : localizations.celsius}",
-                    ),
-                    onPressed: () {
-                      final next = settingsService.useFahrenheit
-                          ? TEMPERATURE_UNIT_CELSIUS
-                          : TEMPERATURE_UNIT_FAHRENHEIT;
-                      settingsService.setTemperatureUnit(next);
-                    },
-                  ),
-                  Consumer<WeatherService>(
-                    builder: (context, weatherService, _) {
-                      final place = weatherService.location;
-                      return Column(
-                        children: [
-                          FocusableSettingsTile(
-                            leading: const Icon(Icons.place_outlined),
-                            title: Text(place == null ? "Weather location: not set" : "Weather location: ${place.displayName}"),
-                            onPressed: () async {
-                              final picked = await showDialog<WeatherPlace>(
-                                context: context,
-                                builder: (_) => WeatherLocationDialog(weatherService: weatherService),
-                              );
-                              if (picked != null) await weatherService.setLocation(picked);
-                            },
-                          ),
-                          if (place != null && weatherService.builtInError)
-                            _weatherHint(context, "Couldn't load the weather. It will retry automatically."),
-                          if (place == null && !weatherService.hasWeather)
-                            _weatherHint(context,
-                                "Choose a weather location above (weather from Open-Meteo, free, no account). "
-                                "Without one, weather comes from the Breezy Weather app if it's installed with Gadgetbridge sharing on."),
-                        ],
-                      );
-                    },
-                  ),
-                ],
               ],
             ),
           ),
         ],
       );
+  }
+
+}
+
+/// Weather in the status bar: on/off, warnings, unit and location.
+class WeatherSettingsPage extends StatelessWidget {
+  static const String routeName = "weather_settings";
+
+  const WeatherSettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    AppLocalizations localizations = AppLocalizations.of(context)!;
+    SettingsService settingsService = Provider.of(context);
+
+    return Column(
+      children: [
+        Text(localizations.weather, style: Theme.of(context).textTheme.titleLarge),
+        const Divider(),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              RoundedSwitchListTile(
+                autofocus: true,
+                value: settingsService.showWeatherInStatusBar,
+                onChanged: (value) => settingsService.setShowWeatherInStatusBar(value),
+                title: Text(localizations.weather),
+                secondary: Icon(Icons.wb_sunny_outlined),
+              ),
+              if (settingsService.showWeatherInStatusBar) ...[
+                RoundedSwitchListTile(
+                  value: settingsService.showWeatherWarnings,
+                  onChanged: (value) => settingsService.setShowWeatherWarnings(value),
+                  title: Text(localizations.showWeatherWarnings),
+                  secondary: Icon(Icons.thunderstorm_outlined),
+                ),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.thermostat_outlined),
+                  title: Text(
+                    "${localizations.temperatureUnit}: ${settingsService.useFahrenheit ? localizations.fahrenheit : localizations.celsius}",
+                  ),
+                  onPressed: () {
+                    final next = settingsService.useFahrenheit
+                        ? TEMPERATURE_UNIT_CELSIUS
+                        : TEMPERATURE_UNIT_FAHRENHEIT;
+                    settingsService.setTemperatureUnit(next);
+                  },
+                ),
+                Consumer<WeatherService>(
+                  builder: (context, weatherService, _) {
+                    final place = weatherService.location;
+                    return Column(
+                      children: [
+                        FocusableSettingsTile(
+                          leading: const Icon(Icons.place_outlined),
+                          title: Text(place == null ? "Weather location: not set" : "Weather location: ${place.displayName}"),
+                          onPressed: () async {
+                            final picked = await showDialog<WeatherPlace>(
+                              context: context,
+                              builder: (_) => WeatherLocationDialog(weatherService: weatherService),
+                            );
+                            if (picked != null) await weatherService.setLocation(picked);
+                          },
+                        ),
+                        if (place != null && weatherService.builtInError)
+                          _weatherHint(context, "Couldn't load the weather. It will retry automatically."),
+                        if (place == null && !weatherService.hasWeather)
+                          _weatherHint(context,
+                              "Choose a weather location above (weather from Open-Meteo, free, no account). "
+                              "Without one, weather comes from the Breezy Weather app if it's installed with Gadgetbridge sharing on."),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _weatherHint(BuildContext context, String text) => Padding(

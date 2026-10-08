@@ -21,12 +21,9 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'focusable_settings_tile.dart';
 import 'launcher_sections_panel_page.dart';
 import 'continue_watching_settings_page.dart';
-import 'themes_page.dart';
-import 'appearance_panel_page.dart';
-import 'accent_color_page.dart';
 import 'wallpaper_panel_page.dart';
+import 'look_settings_page.dart';
 import 'status_bar_panel_page.dart';
-import 'misc_panel_page.dart';
 
 class InterfaceSettingsPage extends StatelessWidget {
   static const String routeName = "interface_settings_panel";
@@ -39,7 +36,7 @@ class InterfaceSettingsPage extends StatelessWidget {
 
     return Column(
       children: [
-        Text(localizations.interface, style: Theme.of(context).textTheme.titleLarge),
+        Text("Home screen", style: Theme.of(context).textTheme.titleLarge),
         const Divider(),
         Expanded(
           child: SingleChildScrollView(
@@ -57,19 +54,9 @@ class InterfaceSettingsPage extends StatelessWidget {
                   onPressed: () => Navigator.of(context).pushNamed(ContinueWatchingSettingsPage.routeName),
                 ),
                 FocusableSettingsTile(
-                  leading: const Icon(Icons.crop_square),
-                  title: Text(localizations.themes, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(ThemesPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.call_to_action_outlined),
-                  title: Text("Appearance", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(AppearancePanelPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.palette_outlined),
-                  title: Text(localizations.accentColor, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(AccentColorPage.routeName),
+                  leading: const Icon(Icons.style_outlined),
+                  title: Text("Look", style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => Navigator.of(context).pushNamed(LookSettingsPage.routeName),
                 ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.wallpaper_outlined),
@@ -80,11 +67,6 @@ class InterfaceSettingsPage extends StatelessWidget {
                   leading: const Icon(Icons.tips_and_updates),
                   title: Text(localizations.statusBar, style: Theme.of(context).textTheme.bodyMedium),
                   onPressed: () => Navigator.of(context).pushNamed(StatusBarPanelPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.animation),
-                  title: Text(localizations.miscellaneous, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(MiscPanelPage.routeName),
                 ),
               ],
             ),
