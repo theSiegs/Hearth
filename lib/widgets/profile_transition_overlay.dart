@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -26,6 +25,8 @@ class ProfileTransitionOverlay extends StatefulWidget {
 }
 
 class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
+  ProfileService? _profiles;
+  WatchNextService? _watchNext;
   ProfileTransition? _current;
   ProfileTransition? _ended;
   bool _dataReady = false;
@@ -35,7 +36,32 @@ class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
   final FocusNode _focusNode = FocusNode(debugLabel: "profile_transition");
 
   @override
+  void initState() {
+    super.initState();
+    _profiles = context.read<ProfileService?>();
+    _watchNext = context.read<WatchNextService?>();
+    _profiles?.addListener(_onChanged);
+    _watchNext?.addListener(_onChanged);
+    _sync();
+  }
+
+  // The incoming card asks for focus again whenever the home rebuilds under it.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _holdIncomingFocus();
+  }
+
+  @override
+  void didUpdateWidget(ProfileTransitionOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _holdIncomingFocus();
+  }
+
+  @override
   void dispose() {
+    _profiles?.removeListener(_onChanged);
+    _watchNext?.removeListener(_onChanged);
     _poll?.cancel();
     _deadline?.cancel();
     _focusNode.dispose();
@@ -45,6 +71,36 @@ class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
   /// No other page (search, settings) is open over the home: only then does the card take focus.
   bool _homeOnTop() => ModalRoute.of(context)?.isCurrent ?? true;
 
+  void _onChanged() {
+    if (!mounted) return;
+    _sync();
+    setState(() {});
+  }
+
+  /// Starts a switch's checks when it begins and ends it once every step is in (or time is up).
+  void _sync() {
+    final profiles = _profiles;
+    if (profiles == null) return;
+    final transition = profiles.transition;
+    if (transition == null || transition == _ended) {
+      _holdIncomingFocus();
+      return;
+    }
+    if (transition != _current) _start(transition);
+    if (_progress(profiles, transition) == 1 || _timedOut) _finish(profiles, transition);
+  }
+
+  /// A profile picked in the chooser and not confirmed yet: its card is up, and takes focus.
+  void _holdIncomingFocus() {
+    final profiles = _profiles;
+    if (profiles == null || profiles.incomingName == null || _focusNode.hasFocus) return;
+    final transition = profiles.transition;
+    if (transition != null && transition != _ended) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && profiles.incomingName != null && _homeOnTop()) _focusNode.requestFocus();
+    });
+  }
+
   void _start(ProfileTransition transition) {
     _current = transition;
     _dataReady = false;
@@ -53,7 +109,9 @@ class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
     _deadline?.cancel();
     final remaining = ProfileTransitionOverlay.maxWait - DateTime.now().difference(transition.startedAt);
     _deadline = Timer(remaining.isNegative ? Duration.zero : remaining, () {
-      if (mounted && _current == transition) setState(() => _timedOut = true);
+      if (!mounted || _current != transition) return;
+      _timedOut = true;
+      _onChanged();
     });
     _poll = Timer.periodic(const Duration(milliseconds: 250), (_) => _checkData(transition));
     _checkData(transition);
@@ -72,8 +130,23 @@ class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
     if (!mounted || _current != transition) return;
     if (ready) {
       _poll?.cancel();
-      if (!_dataReady) setState(() => _dataReady = true);
+      if (!_dataReady) {
+        _dataReady = true;
+        _onChanged();
+      }
     }
+  }
+
+  /// How far the switch to [transition] has got, from 0 to 1.
+  double _progress(ProfileService profiles, ProfileTransition transition) {
+    final watchNext = _watchNext;
+    final steps = <bool>[
+      profiles.layoutReadyFor(transition.key),
+      _dataReady,
+      watchNext == null || watchNext.refreshedFor == transition.key,
+      watchNext == null || (watchNext.refreshedFor == transition.key && watchNext.postersSettled),
+    ];
+    return steps.where((s) => s).length / steps.length;
   }
 
   void _finish(ProfileService profiles, ProfileTransition transition) {
@@ -89,37 +162,21 @@ class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    final profiles = context.watch<ProfileService?>();
-    final watchNext = context.watch<WatchNextService?>();
-    final transition = profiles?.transition;
+    final profiles = _profiles;
     if (profiles == null) return const SizedBox.shrink();
-    if (transition == null || transition == _ended) {
+    final transition = profiles.transition;
+    if (transition == null) {
       // Picked in the chooser, not confirmed yet: the card shows already, its progress not started
       final incoming = profiles.incomingName;
       if (incoming == null) return const SizedBox.shrink();
-      if (!_focusNode.hasFocus) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && profiles.incomingName != null && _homeOnTop()) _focusNode.requestFocus();
-        });
-      }
       return _card(context, incoming, profiles.incomingAvatar, 0);
     }
-    if (transition != _current) _start(transition);
-
-    final steps = <bool>[
-      profiles.layoutReadyFor(transition.key),
-      _dataReady,
-      watchNext == null || watchNext.refreshedFor == transition.key,
-      watchNext == null || (watchNext.refreshedFor == transition.key && watchNext.postersSettled),
-    ];
-    final done = steps.where((s) => s).length;
-    if (done == steps.length || _timedOut) _finish(profiles, transition);
-
+    // An ended switch stays drawn until ProfileService clears it, after this frame.
     return _card(
       context,
       profiles.activeProfileName ?? transition.pickedName,
       profiles.activeProfileAvatar ?? transition.pickedAvatar,
-      done / steps.length,
+      _progress(profiles, transition),
     );
   }
 
