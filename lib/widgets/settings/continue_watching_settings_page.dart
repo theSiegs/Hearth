@@ -117,18 +117,8 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
             }
             settingsService.setShowContinueWatching(value);
           },
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(localizations.showContinueWatchingOnHome, style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 2),
-              Text(
-                localizations.continueWatchingDescription,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
-              ),
-            ],
-          ),
+          title: Text(localizations.showContinueWatchingOnHome, style: Theme.of(context).textTheme.bodyMedium),
+          subtitle: Text(localizations.continueWatchingDescription),
           secondary: const Icon(Icons.play_circle_outline),
         ),
         if (settingsService.showContinueWatching) ...[
