@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/companion_updater.dart';
+import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -184,26 +185,17 @@ class _UpdatesPageState extends State<UpdatesPage> with WidgetsBindingObserver {
           onPressed: () => showDialog(context: context, builder: (_) => const UpdateDialog()),
         ),
         for (final app in companionApps) _tile(context, app),
-        FocusableSettingsTile(
-          leading: const Icon(Icons.system_update_outlined),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Update automatically", style: textTheme.bodyMedium),
-              Text(
-                "Hearth checks daily and installs updates to apps it installed, when they're not in use",
-                style: textTheme.bodySmall?.copyWith(color: Colors.white54),
-              ),
-            ],
-          ),
-          trailing: Switch(value: _autoUpdate ?? false, onChanged: null),
-          onPressed: _autoUpdate == null
+        RoundedSwitchListTile(
+          value: _autoUpdate ?? false,
+          onChanged: _autoUpdate == null
               ? null
-              : () async {
-                  final on = !_autoUpdate!;
+              : (on) async {
                   setState(() => _autoUpdate = on);
                   await _updater.setAutoUpdate(on);
                 },
+          title: Text("Update automatically", style: textTheme.bodyMedium),
+          subtitle: const Text("Hearth checks daily and installs updates to apps it installed, when they're not in use"),
+          secondary: const Icon(Icons.system_update_outlined),
         ),
         const SizedBox(height: 16),
         Padding(

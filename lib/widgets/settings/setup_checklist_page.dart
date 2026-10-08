@@ -1,6 +1,7 @@
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -226,12 +227,11 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
     final localizations = AppLocalizations.of(context)!;
     final settings = context.watch<SettingsService>();
     final on = settings.startOnBoot;
-    return FocusableSettingsTile(
-      leading: Icon(Icons.power_settings_new, color: on ? Colors.green : null),
+    return RoundedSwitchListTile(
+      value: on,
+      onChanged: (start) => settings.setStartOnBoot(start),
       title: Text(localizations.startOnBoot, style: Theme.of(context).textTheme.bodyMedium),
-      trailing: Text(on ? localizations.enabled : localizations.disabled,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: on ? Colors.green : Colors.white54)),
-      onPressed: () => settings.setStartOnBoot(!on),
+      secondary: Icon(Icons.power_settings_new, color: on ? Colors.green : null),
     );
   }
 
