@@ -10,6 +10,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.telephony.TelephonyManager;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 
@@ -19,6 +20,8 @@ import java.util.Objects;
 
 public class NetworkUtils
 {
+    private static final String TAG = "HearthNetwork";
+
     // Aligned with NetworkType enum value indices, on file lib/providers/network_service.dart
     public static final int NETWORK_TYPE_CELLULAR = 0;
     public static final int NETWORK_TYPE_WIFI = 1;
@@ -68,7 +71,7 @@ public class NetworkUtils
                         }
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    Log.w(TAG, "Couldn't read the Wi-Fi signal level", e);
                 }
             }
 
@@ -156,7 +159,7 @@ public class NetworkUtils
                         }
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    Log.w(TAG, "Couldn't read the Wi-Fi signal level", e);
                 }
             }
         }
@@ -250,7 +253,7 @@ public class NetworkUtils
                         }
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    Log.w(TAG, "Couldn't read the Wi-Fi signal level", e);
                 }
 
                 networkType = NETWORK_TYPE_WIFI;

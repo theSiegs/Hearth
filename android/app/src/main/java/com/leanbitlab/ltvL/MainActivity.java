@@ -744,7 +744,7 @@ public class MainActivity extends FlutterActivity {
                 return NetworkUtils.getNetworkInformation(this, connectivityManager.getActiveNetworkInfo());
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "Couldn't read the active network", e);
             Map<String, Object> map = new java.util.HashMap<>();
             map.put(NetworkUtils.KEY_NETWORK_TYPE, NetworkUtils.NETWORK_TYPE_UNKNOWN);
             map.put(NetworkUtils.KEY_NETWORK_ACCESS, false);
