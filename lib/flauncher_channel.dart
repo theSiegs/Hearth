@@ -189,6 +189,11 @@ class FLauncherChannel {
   /// other profiles are cleaned up before Hearth goes (otherwise the kids' copies would be left behind).
   Future<void> uninstallHearth() async => await _methodChannel.invokeMethod("uninstallHearth");
 
+  /// Hands control to Google TV's own home so the parent can use the native interface for a bit. Hearth stops
+  /// bouncing back on its own until they press the Home button (or a short window passes). False if it couldn't open.
+  Future<bool> openGoogleTvHome() async =>
+      await _methodChannel.invokeMethod<bool>("openGoogleTvHome") ?? false;
+
   /// Profile Pairing's state: {enabled, voiceDefault}.
   Future<Map<dynamic, dynamic>> getProfilePairingStatus() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getProfilePairingStatus") ?? {};

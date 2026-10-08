@@ -19,6 +19,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     // Kids screen time / bedtime screens
     private static final String GOOGLE_TV_WELLBEING_PREFIX = GOOGLE_TV_PACKAGE + ".kids.wellbeing.";
     private static final long PENDING_BOUNCE_WINDOW_MS = 10_000;
+    // How long "use Google TV for now" holds off the automatic bounce-back (the parent returns sooner via Home).
+    private static final long GOOGLE_TV_ALLOW_MS = 10 * 60 * 1000L;
 
     private static LauncherAccessibilityService sInstance;
 
@@ -27,6 +29,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     // Google TV's own screens (profile chooser, PIN, time up...) are in front: leave Home to Google TV.
     private boolean mGoogleTvScreenInFront = false;
     private long mPendingBounceAt = 0;
+    // > now while the parent chose to use Google TV for a while: the automatic bounce-back pauses until then.
+    private static volatile long sAllowGoogleTvUntil = 0;
 
     // Which profile is active comes from Google TV's profile users (ProfileUsers), keyed by serial; their names
     // come from Google TV's chooser, which opens with the current profile focused and reports the picked tile in
@@ -225,7 +229,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     private void retryPendingBounce() {
         if (mPendingBounceAt != 0 && SystemClock.elapsedRealtime() - mPendingBounceAt < PENDING_BOUNCE_WINDOW_MS
-                && canTakeOver()) {
+                && autoTakeOverAllowed()) {
             mPendingBounceAt = 0;
             openLauncher();
         }
@@ -580,13 +584,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 // ignoring the default home app. Bring the launcher back whenever that's allowed.
                 if (SystemClock.elapsedRealtime() < mGoogleSetupUntil) {
                     android.util.Log.i(PROFILE_TAG, "Not taking over: Google TV setup in progress");
-                } else if (canTakeOver() && ProfileUsers.isKids(this) && !mScreenTimeKnown) {
+                } else if (autoTakeOverAllowed() && ProfileUsers.isKids(this) && !mScreenTimeKnown) {
                     // A kids profile whose screen time the apps can't tell: Google TV opens its time up / bedtime
                     // screen from its home a moment after the home itself, and covering the home first would hide
                     // it (Hearth, the home app, can't be suspended). Take over only if the home is still in front.
                     mIdleHandler.removeCallbacks(mKidsHomeTakeOver);
                     mIdleHandler.postDelayed(mKidsHomeTakeOver, KIDS_HOME_GRACE_MS);
-                } else if (canTakeOver()) {
+                } else if (autoTakeOverAllowed()) {
                     openLauncher();
                 } else {
                     mPendingBounceAt = SystemClock.elapsedRealtime();
@@ -645,7 +649,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     }
     private final Runnable mKidsHomeTakeOver = () -> {
         // Not if Google TV put a screen of its own up (time up, PIN...) or the kid opened an app meanwhile
-        if (canTakeOver() && !mGoogleTvScreenInFront && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage)) {
+        if (autoTakeOverAllowed() && !mGoogleTvScreenInFront && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage)) {
             openLauncher();
         }
     };
@@ -1094,12 +1098,28 @@ public class LauncherAccessibilityService extends AccessibilityService {
         return !mScreenTimeLock && !isSuspended(this);
     }
 
+    /**
+     * Like {@link #canTakeOver()}, but also false while the parent chose to use Google TV for a while (see
+     * {@link #allowGoogleTvTemporarily()}). The AUTOMATIC bounce-backs use this so Hearth stops grabbing the screen;
+     * the Home button keeps using canTakeOver(), so the parent can always get back to Hearth.
+     */
+    private boolean autoTakeOverAllowed() {
+        return canTakeOver() && SystemClock.elapsedRealtime() >= sAllowGoogleTvUntil;
+    }
+
+    /** The parent picked "use Google TV for now": hold off the automatic bounce-back until they return or it lapses. */
+    static void allowGoogleTvTemporarily() {
+        sAllowGoogleTvUntil = SystemClock.elapsedRealtime() + GOOGLE_TV_ALLOW_MS;
+    }
+
     private boolean isLaunchableApp(String packageName) {
         PackageManager pm = getPackageManager();
         return pm.getLeanbackLaunchIntentForPackage(packageName) != null || pm.getLaunchIntentForPackage(packageName) != null;
     }
 
     private void openLauncher() {
+        // Returning to Hearth (the Home button, or any explicit open) ends a "use Google TV for now" window.
+        sAllowGoogleTvUntil = 0;
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(intent);

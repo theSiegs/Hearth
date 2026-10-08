@@ -182,6 +182,7 @@ public class MainActivity extends FlutterActivity {
                 case "removeHearthFromProfiles" -> sIoExecutor.execute(() -> runRemoveFromProfiles(result));
                 case "getHearthProfilesState" -> sIoExecutor.execute(() -> runProfilesState(result));
                 case "uninstallHearth" -> result.success(uninstallSelf());
+                case "openGoogleTvHome" -> result.success(openGoogleTvHome());
                 case "voiceSearch" -> startVoiceSearch(result);
                 case "getAppLastProfiles" -> {
                     Map<String, Object> users = new HashMap<>(getSharedPreferences("ltv_app_last_profile", MODE_PRIVATE).getAll());
@@ -1396,6 +1397,32 @@ public class MainActivity extends FlutterActivity {
             runOnUiThread(() -> result.success(rows));
         } catch (Exception e) {
             runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
+        }
+    }
+
+    /**
+     * Hands control to Google TV's own home for a while so the parent can use the native interface. Hearth's
+     * accessibility service stops bouncing back automatically until the Home button is pressed (or a short window
+     * passes); see {@link LauncherAccessibilityService#allowGoogleTvTemporarily()}.
+     */
+    private boolean openGoogleTvHome() {
+        final String googleTv = "com.google.android.apps.tv.launcherx";
+        LauncherAccessibilityService.allowGoogleTvTemporarily();
+        android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_MAIN)
+                .addCategory(android.content.Intent.CATEGORY_HOME)
+                .setPackage(googleTv)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (intent.resolveActivity(getPackageManager()) == null) {
+            android.content.Intent launch = getPackageManager().getLeanbackLaunchIntentForPackage(googleTv);
+            if (launch == null) launch = getPackageManager().getLaunchIntentForPackage(googleTv);
+            if (launch == null) return false;
+            intent = launch.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+        }
+        try {
+            startActivity(intent);
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 
