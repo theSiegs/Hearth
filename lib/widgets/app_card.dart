@@ -44,7 +44,6 @@ class AppCard extends StatefulWidget
   final void Function(AxisDirection) onMove;
   final VoidCallback onMoveEnd;
   final VoidCallback? onMoveCancel;
-  final int index;
   final bool handleUpNavigationToSettings;
   final bool isFirstInRow;
   final bool isLastInRow;
@@ -57,7 +56,6 @@ class AppCard extends StatefulWidget
     required this.onMove,
     required this.onMoveEnd,
     this.onMoveCancel,
-    this.index = 0,
     this.handleUpNavigationToSettings = false,
     this.isFirstInRow = false,
     this.isLastInRow = false,

@@ -63,20 +63,16 @@ class AppsService extends ChangeNotifier {
 
   String? _pendingReorderFocusPackage;
   int? _pendingReorderFocusCategoryId;
-  int? _pendingReorderFocusIndex;
   String? get pendingReorderFocusPackage => _pendingReorderFocusPackage;
   int? get pendingReorderFocusCategoryId => _pendingReorderFocusCategoryId;
-  int? get pendingReorderFocusIndex => _pendingReorderFocusIndex;
   void clearPendingReorderFocusPackage() {
     _pendingReorderFocusPackage = null;
     _pendingReorderFocusCategoryId = null;
-    _pendingReorderFocusIndex = null;
   }
 
   void setPendingReorderFocus(String packageName, int categoryId, int index) {
     _pendingReorderFocusPackage = packageName;
     _pendingReorderFocusCategoryId = categoryId;
-    _pendingReorderFocusIndex = index;
   }
 
   List<App> get applications => UnmodifiableListView(

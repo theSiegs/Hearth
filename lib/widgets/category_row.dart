@@ -69,7 +69,6 @@ class CategoryRow extends StatelessWidget
                 key: Key(applications[index].packageName),
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: AppCard(
-                  index: index,
                   category: category,
                   application: applications[index],
                   autofocus: index == 0,
