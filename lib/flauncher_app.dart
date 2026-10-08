@@ -30,6 +30,12 @@ import 'flauncher.dart';
 import 'widgets/home_button_fix_check.dart';
 import 'providers/home_search.dart';
 
+/// Cards and dialogs.
+const Color _surfaceColor = Color(0xFF0F0F0F);
+
+/// Behind them: the page and the canvas.
+const Color _backgroundColor = Color(0xFF0A0A0A);
+
 class FLauncherApp extends StatelessWidget
 {
   static const PrioritizedIntents _backIntents = PrioritizedIntents(orderedIntents: [
@@ -37,7 +43,9 @@ class FLauncherApp extends StatelessWidget
     BackIntent()
   ]);
 
-  const FLauncherApp();
+  static final Typography _typography = Typography.material2018();
+
+  const FLauncherApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -52,111 +60,109 @@ class FLauncherApp extends StatelessWidget
         final appLocale = tuple.$2;
 
         return MaterialApp(
-      locale: appLocale,
-      scrollBehavior: const MaterialScrollBehavior().copyWith(
-        overscroll: false,
-      ),
-      shortcuts: {
-        ...WidgetsApp.defaultShortcuts,
-        const SingleActivator(LogicalKeyboardKey.escape): _backIntents,
-        const SingleActivator(LogicalKeyboardKey.gameButtonB): _backIntents,
-        const SingleActivator(LogicalKeyboardKey.select): const ActivateIntent(),
-        const SingleActivator(LogicalKeyboardKey.enter): const ActivateIntent(),
-        const SingleActivator(LogicalKeyboardKey.numpadEnter): const ActivateIntent(),
-        const SingleActivator(LogicalKeyboardKey.gameButtonA): const ActivateIntent(),
-        const SingleActivator(LogicalKeyboardKey.gameButtonSelect): const ActivateIntent(),
-      },
-      actions: {
-        ...WidgetsApp.defaultActions,
-        BackIntent: BackAction(context),
-        DirectionalFocusIntent: SoundFeedbackDirectionalFocusAction(context)
-      },
-      localizationsDelegates: [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      title: 'FLauncher',
-        theme: ThemeData(
-          useMaterial3: true,
-          brightness: Brightness.dark,
-          // Use ColorScheme based on accent color
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: accentColor,
-            brightness: Brightness.dark,
-            primary: accentColor,
-            secondary: accentColor,
-            surface: const Color(0xFF0F0F0F),
-            background: const Color(0xFF0A0A0A),
+          locale: appLocale,
+          scrollBehavior: const MaterialScrollBehavior().copyWith(
+            overscroll: false,
           ),
-          cardColor: const Color(0xFF0F0F0F), // Dark surface color
-          canvasColor: const Color(0xFF0A0A0A), // Dark background
-          dialogBackgroundColor: const Color(0xFF0F0F0F),
-          scaffoldBackgroundColor: const Color(0xFF0A0A0A), // Dark background
-          splashFactory: NoSplash.splashFactory,
-          highlightColor: Colors.transparent,
-          splashColor: Colors.transparent,
-          textButtonTheme: TextButtonThemeData(
+          shortcuts: {
+            ...WidgetsApp.defaultShortcuts,
+            const SingleActivator(LogicalKeyboardKey.escape): _backIntents,
+            const SingleActivator(LogicalKeyboardKey.gameButtonB): _backIntents,
+            const SingleActivator(LogicalKeyboardKey.select): const ActivateIntent(),
+            const SingleActivator(LogicalKeyboardKey.enter): const ActivateIntent(),
+            const SingleActivator(LogicalKeyboardKey.numpadEnter): const ActivateIntent(),
+            const SingleActivator(LogicalKeyboardKey.gameButtonA): const ActivateIntent(),
+            const SingleActivator(LogicalKeyboardKey.gameButtonSelect): const ActivateIntent(),
+          },
+          actions: {
+            ...WidgetsApp.defaultActions,
+            BackIntent: BackAction(context),
+            DirectionalFocusIntent: SoundFeedbackDirectionalFocusAction(context)
+          },
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          title: 'Hearth',
+          theme: ThemeData(
+            useMaterial3: true,
+            brightness: Brightness.dark,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: accentColor,
+              brightness: Brightness.dark,
+              primary: accentColor,
+              secondary: accentColor,
+              surface: _surfaceColor,
+            ),
+            cardColor: _surfaceColor,
+            canvasColor: _backgroundColor,
+            dialogBackgroundColor: _surfaceColor,
+            scaffoldBackgroundColor: _backgroundColor,
+            splashFactory: NoSplash.splashFactory,
+            highlightColor: Colors.transparent,
+            splashColor: Colors.transparent,
+            textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor: Colors.white, // Revert to white for settings list
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 splashFactory: NoSplash.splashFactory,
-              )
+              ),
+            ),
+            dialogTheme: DialogTheme(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              backgroundColor: _surfaceColor,
+              titleTextStyle: _typography.white.titleLarge,
+              contentTextStyle: _typography.white.bodyMedium,
+            ),
+            appBarTheme: const AppBarTheme(elevation: 0, backgroundColor: Colors.transparent),
+            typography: _typography,
+            inputDecorationTheme: InputDecorationTheme(
+              focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white)),
+              labelStyle: _typography.white.bodyMedium,
+            ),
+            textSelectionTheme: TextSelectionThemeData(
+              cursorColor: accentColor,
+              selectionColor: accentColor.withOpacity(0.4),
+              selectionHandleColor: accentColor,
+            ),
+            indicatorColor: accentColor,
+            progressIndicatorTheme: ProgressIndicatorThemeData(color: accentColor),
+            sliderTheme: SliderThemeData(
+              activeTrackColor: accentColor,
+              thumbColor: accentColor,
+              inactiveTrackColor: accentColor.withOpacity(0.3),
+            ),
+            toggleButtonsTheme: ToggleButtonsThemeData(
+              selectedColor: accentColor,
+              fillColor: accentColor.withOpacity(0.1),
+            ),
+            switchTheme: SwitchThemeData(
+              thumbColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) return accentColor;
+                return null;
+              }),
+              trackColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) return accentColor.withOpacity(0.5);
+                return null;
+              }),
+            ),
           ),
-          dialogTheme: DialogTheme(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            backgroundColor: const Color(0xFF0F0F0F),
-            titleTextStyle: Typography.material2018().white.titleLarge,
-            contentTextStyle: Typography.material2018().white.bodyMedium,
+          home: Builder(
+            builder: (context) => PopScope(
+              canPop: false,
+              onPopInvokedWithResult: (didPop, _) {
+                // A search closes first (the box, then the search itself)
+                if (context.read<HomeSearch?>()?.backHandler?.call() ?? false) return;
+                LauncherState launcherState = context.read<LauncherState>();
+                launcherState.handleBackNavigation(context);
+              },
+              child: HomeButtonFixCheck(child: FLauncher()),
+            ),
           ),
-          appBarTheme: const AppBarTheme(elevation: 0, backgroundColor: Colors.transparent),
-          typography: Typography.material2018(),
-          inputDecorationTheme: InputDecorationTheme(
-            focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white)),
-            labelStyle: Typography.material2018().white.bodyMedium,
-          ),
-          textSelectionTheme: TextSelectionThemeData(
-            cursorColor: accentColor,
-            selectionColor: accentColor.withOpacity(0.4),
-            selectionHandleColor: accentColor,
-          ),
-          // Override indicator colors for focus
-          indicatorColor: accentColor,
-          progressIndicatorTheme: ProgressIndicatorThemeData(color: accentColor),
-          sliderTheme: SliderThemeData(
-            activeTrackColor: accentColor,
-            thumbColor: accentColor,
-            inactiveTrackColor: accentColor.withOpacity(0.3),
-          ),
-          toggleButtonsTheme: ToggleButtonsThemeData(
-            selectedColor: accentColor,
-            fillColor: accentColor.withOpacity(0.1),
-          ),
-          switchTheme: SwitchThemeData(
-            thumbColor: MaterialStateProperty.resolveWith((states) {
-              if (states.contains(MaterialState.selected)) return accentColor;
-              return null;
-            }),
-            trackColor: MaterialStateProperty.resolveWith((states) {
-              if (states.contains(MaterialState.selected)) return accentColor.withOpacity(0.5);
-              return null;
-            }),
-          ),
-        ),
-      home: Builder(
-        builder: (context) => PopScope(
-          canPop: false,
-          child: HomeButtonFixCheck(child: FLauncher()),
-          onPopInvoked: (didPop) {
-            // A search closes first (the box, then the search itself)
-            if (context.read<HomeSearch?>()?.backHandler?.call() ?? false) return;
-            LauncherState launcherState = context.read<LauncherState>();
-            launcherState.handleBackNavigation(context);
-          }
-        )
-      ),
-      );
-    });
+        );
+      },
+    );
   }
 }
