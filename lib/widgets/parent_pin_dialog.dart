@@ -22,6 +22,7 @@ import 'package:provider/provider.dart';
 import '../providers/profile_service.dart';
 import '../providers/settings_service.dart';
 import 'focusable_tap.dart';
+import 'settings/message_dialog.dart';
 
 // Google TV's dark PIN keypad
 const _background = Color(0xFF111111);
@@ -37,15 +38,10 @@ Future<bool> requireParent(BuildContext context) async {
 
   final settings = context.read<SettingsService>();
   if (!settings.hasParentPin) {
-    await showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Ask a parent"),
-        content: const Text(
-            "Launcher settings are locked in kids profiles. A parent can set a PIN in Settings → Profiles → Parent PIN from their own profile."),
-        actions: [TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(), child: const Text("OK"))],
-      ),
-    );
+    await showMessageDialog(context,
+        title: "Ask a parent",
+        message: "Launcher settings are locked in kids profiles. A parent can set a PIN in Settings → Profiles → "
+            "Parent PIN from their own profile.");
     return false;
   }
 
