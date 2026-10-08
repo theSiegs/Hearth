@@ -165,10 +165,11 @@ class FLauncherChannel {
 
   Future<bool> isKidsProfile() async => await _methodChannel.invokeMethod<bool>("isKidsProfile") ?? false;
 
-  /// Parent-initiated: add Hearth and HearthTube to every kids profile and protect them from Google TV's
+  /// Parent-initiated: add Hearth and HearthTube to every supervised kids profile and protect them from Google TV's
   /// profile-start uninstall. Returns a short log of what was done. The first time, the TV shows a one-time
   /// "Allow debugging?" prompt the parent approves; until then this throws a PlatformException (code "SELF_ADB").
-  /// Only ever touches Hearth's own two apps.
+  /// Only ever touches Hearth's own two apps. Adding sends one Family Link "app added" notification per kid — the
+  /// Settings screen's confirmation copy should tell the parent to expect that.
   Future<List<String>> addHearthToKidsProfiles() async =>
       await _methodChannel.invokeListMethod<String>("addHearthToKidsProfiles") ?? [];
 

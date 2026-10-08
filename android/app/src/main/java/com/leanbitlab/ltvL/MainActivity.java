@@ -1343,9 +1343,10 @@ public class MainActivity extends FlutterActivity {
      */
     private void runKidsProvision(boolean add, io.flutter.plugin.common.MethodChannel.Result result) {
         try (SelfAdb shell = SelfAdb.open(this)) {
+            java.util.List<Integer> kids = supervisedKidUserIds();
             java.util.List<String> log = add
-                    ? KidsAppAccess.addToKidsProfiles(this, shell, true)
-                    : KidsAppAccess.removeFromKidsProfiles(this, shell, true);
+                    ? KidsAppAccess.addToKidsProfiles(this, shell, kids, true)
+                    : KidsAppAccess.removeFromKidsProfiles(this, shell, kids, true);
             runOnUiThread(() -> result.success(log));
         } catch (Exception e) {
             runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
@@ -1355,8 +1356,9 @@ public class MainActivity extends FlutterActivity {
     /** Read-only: which kids profiles currently have Hearth / HearthTube (and whether protected), for Settings. */
     private void runKidsAppsState(io.flutter.plugin.common.MethodChannel.Result result) {
         try (SelfAdb shell = SelfAdb.open(this)) {
+            java.util.List<Integer> kids = supervisedKidUserIds();
             java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
-            for (KidsAppAccess.AppStatus s : KidsAppAccess.state(this, shell)) {
+            for (KidsAppAccess.AppStatus s : KidsAppAccess.state(this, shell, kids)) {
                 java.util.Map<String, Object> row = new java.util.HashMap<>();
                 row.put("userId", s.userId);
                 row.put("packageName", s.packageName);
@@ -1367,6 +1369,37 @@ public class MainActivity extends FlutterActivity {
             runOnUiThread(() -> result.success(rows));
         } catch (Exception e) {
             runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
+        }
+    }
+
+    /**
+     * The SUPERVISED kid profiles' user ids — the only profiles the kids-app provisioning ever touches. Enumerates
+     * this user's profiles and keeps the ones Family Link supervises ({@link ProfileUsers#isSupervised}), so grown-up
+     * and half-provisioned profiles are never affected.
+     */
+    private java.util.List<Integer> supervisedKidUserIds() {
+        java.util.List<Integer> ids = new java.util.ArrayList<>();
+        android.os.UserManager um = (android.os.UserManager) getSystemService(android.content.Context.USER_SERVICE);
+        if (um == null) return ids;
+        android.os.UserHandle me = android.os.Process.myUserHandle();
+        for (android.os.UserHandle profile : um.getUserProfiles()) {
+            if (profile.equals(me)) continue;
+            long serial = um.getSerialNumberForUser(profile);
+            if (!Boolean.TRUE.equals(ProfileUsers.isSupervised(this, serial))) continue;
+            int userId = userIdOf(profile);
+            if (userId >= 0) ids.add(userId);
+        }
+        return ids;
+    }
+
+    /** The integer user id behind a {@link android.os.UserHandle} (needed for {@code pm --user}); -1 if unknown. */
+    private static int userIdOf(android.os.UserHandle handle) {
+        try {
+            // UserHandle.getIdentifier() is @hide, so reach it reflectively; fall back to parsing "UserHandle{N}".
+            return (int) android.os.UserHandle.class.getMethod("getIdentifier").invoke(handle);
+        } catch (Throwable t) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d+").matcher(String.valueOf(handle));
+            return m.find() ? Integer.parseInt(m.group()) : -1;
         }
     }
 

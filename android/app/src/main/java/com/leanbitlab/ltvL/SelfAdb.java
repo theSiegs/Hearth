@@ -51,6 +51,9 @@ public final class SelfAdb implements KidsAppAccess.ShellRunner, AutoCloseable {
         File privateKey = new File(dir, "adbkey");
         File publicKey = new File(dir, "adbkey.pub");
         // Generate Hearth's key once and reuse it, so the parent's "Always allow" sticks across runs.
+        // NOTE: AdbKeyPair.generate/read and Dadb.create are Kotlin companion functions. If the pinned dadb build
+        // does not mark them @JvmStatic, Java needs AdbKeyPair.Companion.generate(...)/read(...) and
+        // Dadb.Companion.create(...). The first Gradle build will say which; adjust here only.
         if (!privateKey.exists() || !publicKey.exists()) {
             AdbKeyPair.generate(privateKey, publicKey);
         }
