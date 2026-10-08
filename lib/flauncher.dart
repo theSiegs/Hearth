@@ -481,7 +481,9 @@ class _FLauncherState extends State<FLauncher> {
     required int continueWatchingOrder,
   }) {
     final Category? favorites = dockEnabled
-        ? sections.whereType<Category>().firstWhereOrNull((c) => c.name == 'Favorites' && c.applications.isNotEmpty)
+        ? sections
+            .whereType<Category>()
+            .firstWhereOrNull((c) => c.name == AppsService.favoritesName && c.applications.isNotEmpty)
         : null;
     if (favorites == null && !dockEnabled) {
       return _sections(sections,
@@ -490,7 +492,9 @@ class _FLauncherState extends State<FLauncher> {
     if (favorites == null) {
       // No dock (nothing in Favorites this profile can open): one untitled grid of the apps it can open, never the
       // TV Apps / Non-TV Apps / Favorites split, or a friendly card when there's nothing at all.
-      final usable = sections.where((s) => !(s is Category && (s.applications.isEmpty || s.name == 'Favorites'))).toList();
+      final usable = sections
+          .where((s) => !(s is Category && (s.applications.isEmpty || s.name == AppsService.favoritesName)))
+          .toList();
       if (usable.isEmpty && !continueWatchingActive) return _nothingToWatch(viewportHeight);
       return Focus(
         focusNode: _appsGridFocusNode,
