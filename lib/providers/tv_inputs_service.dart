@@ -5,21 +5,13 @@ import 'package:flauncher/models/tv_input.dart';
 class TvInputsService extends ChangeNotifier {
   final FLauncherChannel _channel;
   List<TvInput> _inputs = [];
-  bool _initialized = false;
 
   TvInputsService(this._channel) {
-    _init();
+    refreshInputs();
   }
 
   List<TvInput> get inputs => List.unmodifiable(_inputs);
   bool get hasInputs => _inputs.isNotEmpty;
-  bool get initialized => _initialized;
-
-  Future<void> _init() async {
-    await refreshInputs();
-    _initialized = true;
-    notifyListeners();
-  }
 
   Future<void> refreshInputs() async {
     final List<Map<dynamic, dynamic>> rawInputs = await _channel.getTvInputs();

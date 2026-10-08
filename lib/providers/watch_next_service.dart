@@ -139,6 +139,8 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
       log('Failed to track Continue Watching owners', name: 'WatchNextService', error: e);
     }
   }
+
+  @visibleForTesting
   bool get initialized => _initialized;
 
   String? _refreshedFor;
