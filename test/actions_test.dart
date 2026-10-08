@@ -1,4 +1,5 @@
 import 'package:flauncher/actions.dart';
+import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,9 +11,11 @@ import 'mocks.mocks.dart';
 void main() {
   group('SoundFeedbackDirectionalFocusAction', () {
     late MockSettingsService mockSettingsService;
+    late MockFLauncherChannel mockChannel;
 
     setUp(() {
       mockSettingsService = MockSettingsService();
+      mockChannel = MockFLauncherChannel();
     });
 
     testWidgets('plays sound when appKeyClickEnabled is true', (WidgetTester tester) async {
@@ -24,6 +27,7 @@ void main() {
         MaterialApp(
           home: MultiProvider(
             providers: [
+              Provider<FLauncherChannel>.value(value: mockChannel),
               ChangeNotifierProvider<SettingsService>.value(value: mockSettingsService),
             ],
             child: Builder(
@@ -50,6 +54,7 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(mockSettingsService.appKeyClickEnabled).called(1);
+      verify(mockChannel.playClickSound()).called(1);
     });
 
     testWidgets('silent for tap when appKeyClickEnabled is false', (WidgetTester tester) async {
@@ -61,6 +66,7 @@ void main() {
         MaterialApp(
           home: MultiProvider(
             providers: [
+              Provider<FLauncherChannel>.value(value: mockChannel),
               ChangeNotifierProvider<SettingsService>.value(value: mockSettingsService),
             ],
             child: Builder(
@@ -87,6 +93,7 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(mockSettingsService.appKeyClickEnabled).called(1);
+      verifyNever(mockChannel.playClickSound());
     });
   });
 }

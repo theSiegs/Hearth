@@ -24,7 +24,7 @@ class UpdatesPage extends StatefulWidget {
 }
 
 class _UpdatesPageState extends State<UpdatesPage> with WidgetsBindingObserver {
-  final FLauncherChannel _channel = FLauncherChannel();
+  late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   final Map<String, _State> _states = {};
   final Map<String, Map<dynamic, dynamic>?> _installed = {};
   final Map<String, CompanionRelease?> _releases = {};

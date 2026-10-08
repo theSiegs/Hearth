@@ -989,9 +989,12 @@ Future<void> _pumpWidgetWithProviders(
 }) async {
   tester.view.physicalSize = const Size(1920, 1080);
   tester.view.devicePixelRatio = 1.0;
+  // A real channel: tests that need the TV's answers mock the method channel itself.
+  final channel = FLauncherChannel();
   await tester.pumpWidget(
     MultiProvider(
       providers: [
+        Provider<FLauncherChannel>.value(value: channel),
         ChangeNotifierProvider<WallpaperService>.value(value: wallpaperService),
         ChangeNotifierProvider<AppsService>.value(value: appsService),
         ChangeNotifierProvider<SettingsService>.value(value: settingsService),
@@ -1000,7 +1003,7 @@ Future<void> _pumpWidgetWithProviders(
         ChangeNotifierProvider<WatchNextService>.value(value: watchNextService ?? mkWatchNextService()),
         ChangeNotifierProvider<WeatherService>.value(value: mkWeatherService()),
         ChangeNotifierProvider(create: (_) => LauncherState()),
-        ChangeNotifierProvider(create: (_) => NetworkService(FLauncherChannel())),
+        ChangeNotifierProvider(create: (_) => NetworkService(channel)),
         if (profileService != null) ChangeNotifierProvider<ProfileService>.value(value: profileService),
       ],
       builder: (_, __) => MaterialApp(

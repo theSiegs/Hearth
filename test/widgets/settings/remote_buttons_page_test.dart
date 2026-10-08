@@ -1,3 +1,4 @@
+import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/tv_inputs_service.dart';
 import 'package:flauncher/widgets/settings/remote_buttons_page.dart';
@@ -33,6 +34,7 @@ void main() {
 
     await tester.pumpWidget(MultiProvider(
       providers: [
+        Provider<FLauncherChannel>.value(value: FLauncherChannel()),
         ChangeNotifierProvider<AppsService>.value(value: MockAppsService()),
         ChangeNotifierProvider<TvInputsService>.value(value: tvInputsService),
       ],

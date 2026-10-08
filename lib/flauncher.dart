@@ -104,9 +104,10 @@ class _FLauncherState extends State<FLauncher> {
     FocusManager.instance.addListener(_onFocusMoved);
     // The remote's mapped search button: open search, by voice or keyboard.
     FLauncherChannel.listenForSearch(_openSearch);
+    final channel = context.read<FLauncherChannel>();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
-        final pending = await FLauncherChannel().takePendingSearch();
+        final pending = await channel.takePendingSearch();
         if (pending != null) _openSearch(pending);
       } catch (_) {}
     });
@@ -385,7 +386,7 @@ class _FLauncherState extends State<FLauncher> {
           ),
           LeaveTopBarIntent: CallbackAction<LeaveTopBarIntent>(onInvoke: (_) => _leaveTopBar()),
           OpenHaPanelIntent: CallbackAction<OpenHaPanelIntent>(
-            onInvoke: (_) => FLauncherChannel().openHaPanel(),
+            onInvoke: (_) => context.read<FLauncherChannel>().openHaPanel(),
           ),
         },
         child: FocusTraversalGroup(
@@ -438,7 +439,7 @@ class _FLauncherState extends State<FLauncher> {
                   ),
                 ),
               // A profile switch: the welcome card until this profile's home is complete
-              Positioned.fill(child: ProfileTransitionOverlay(channel: FLauncherChannel())),
+              Positioned.fill(child: ProfileTransitionOverlay(channel: context.read<FLauncherChannel>())),
             ])),
       );
 

@@ -38,7 +38,7 @@ class HomeAssistantPage extends StatefulWidget {
 }
 
 class _HomeAssistantPageState extends State<HomeAssistantPage> {
-  final _channel = FLauncherChannel();
+  late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   bool? _notifications;
   bool? _reporting;
 
@@ -118,7 +118,7 @@ class HaNotificationsPage extends StatefulWidget {
 }
 
 class _HaNotificationsPageState extends State<HaNotificationsPage> {
-  final _channel = FLauncherChannel();
+  late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   bool _enabled = false;
   String? _ip;
   String? _testResult;
@@ -202,7 +202,7 @@ class HaPanelPage extends StatefulWidget {
 }
 
 class _HaPanelPageState extends State<HaPanelPage> {
-  final _channel = FLauncherChannel();
+  late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   final TextEditingController _panelToken = TextEditingController();
   final TextEditingController _panelDashboard = TextEditingController();
   bool _panelHasToken = false;
@@ -327,7 +327,7 @@ class HaStatusPage extends StatefulWidget {
 }
 
 class _HaStatusPageState extends State<HaStatusPage> with WidgetsBindingObserver {
-  final _channel = FLauncherChannel();
+  late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   final TextEditingController _url = TextEditingController();
   final TextEditingController _webhook = TextEditingController();
   bool _notificationAccess = false;

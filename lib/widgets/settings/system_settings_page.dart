@@ -26,6 +26,7 @@ import 'setup_checklist_page.dart';
 import 'backup_restore_page.dart';
 import 'app_language_page.dart';
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:provider/provider.dart';
 import 'settings_page.dart';
 
 class SystemSettingsPage extends StatelessWidget {
@@ -59,7 +60,7 @@ class SystemSettingsPage extends StatelessWidget {
         FocusableSettingsTile(
           leading: const Icon(Icons.tv_outlined),
           title: Text("Use Google TV for now", style: Theme.of(context).textTheme.bodyMedium),
-          onPressed: () => FLauncherChannel().openGoogleTvHome(),
+          onPressed: () => context.read<FLauncherChannel>().openGoogleTvHome(),
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.settings_backup_restore),

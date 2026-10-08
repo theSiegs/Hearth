@@ -22,7 +22,7 @@ class FamilyAppsPage extends StatefulWidget {
 }
 
 class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObserver {
-  final FLauncherChannel _channel = FLauncherChannel();
+  late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   List<Map<dynamic, dynamic>>? _state;
   bool _busy = false;
 

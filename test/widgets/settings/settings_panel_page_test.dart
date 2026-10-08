@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/profile_service.dart';
@@ -191,6 +192,7 @@ Future<void> _pumpWidgetWithProviders(
   await tester.pumpWidget(
     MultiProvider(
       providers: [
+        Provider<FLauncherChannel>.value(value: FLauncherChannel()),
         ChangeNotifierProvider<SettingsService>.value(value: settingsService),
         ChangeNotifierProvider<AppsService>.value(value: appsService),
         if (profiles != null) ChangeNotifierProvider<ProfileService>.value(value: profiles),

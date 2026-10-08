@@ -46,7 +46,7 @@ class ProfilesSettingsPage extends StatelessWidget {
           leading: const Icon(Icons.people_outline),
           title: Text("Switch profile", style: textTheme.bodyMedium),
           trailing: Text(activeProfileLabel(context) ?? "", style: textTheme.bodySmall),
-          onPressed: () => FLauncherChannel().openProfileChooser(),
+          onPressed: () => context.read<FLauncherChannel>().openProfileChooser(),
         ),
         // No PIN of its own: in a kids profile, Settings already took the parent PIN to get here, and
         // grown-up profiles are only reached past Google TV's PIN.

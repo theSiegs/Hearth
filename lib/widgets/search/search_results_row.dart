@@ -62,7 +62,7 @@ class _SearchResultsRowState extends State<SearchResultsRow> {
 
   /// Google TV's own search for the same words: it answers in its own full-screen page, and Back comes back here.
   Future<void> _askGoogle(String query) async {
-    await FLauncherChannel().openGoogleTv(query: query);
+    await context.read<FLauncherChannel>().openGoogleTv(query: query);
   }
 
   @override

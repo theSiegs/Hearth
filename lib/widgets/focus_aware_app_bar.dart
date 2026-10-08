@@ -335,7 +335,7 @@ class _ProfileButton extends StatelessWidget {
         focusNode: focusNode,
         image: context.select<ProfileService?, Uint8List?>((p) => p?.activeProfileAvatar),
         label: context.select<ProfileService?, String?>((p) => p?.activeProfileName),
-        onPressed: () => FLauncherChannel().openProfileChooser(),
+        onPressed: () => context.read<FLauncherChannel>().openProfileChooser(),
       );
 }
 

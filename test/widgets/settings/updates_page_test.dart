@@ -17,6 +17,7 @@
 
 import 'dart:async';
 
+import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flauncher/widgets/settings/updates_page.dart';
 import 'package:flutter/material.dart';
@@ -47,8 +48,11 @@ void main() {
     addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(_channel, null));
     final updater = _FakeCompanionUpdater();
 
-    await tester.pumpWidget(Provider<CompanionUpdater>.value(
-      value: updater,
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        Provider<FLauncherChannel>.value(value: FLauncherChannel()),
+        Provider<CompanionUpdater>.value(value: updater),
+      ],
       child: const MaterialApp(home: Scaffold(body: UpdatesPage())),
     ));
     await tester.pumpAndSettle();

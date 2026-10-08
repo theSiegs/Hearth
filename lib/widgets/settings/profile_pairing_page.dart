@@ -1,6 +1,7 @@
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
 import 'setup_checklist_page.dart';
@@ -47,7 +48,7 @@ class ProfilePairingPage extends StatefulWidget {
 }
 
 class _ProfilePairingPageState extends State<ProfilePairingPage> {
-  final FLauncherChannel _channel = FLauncherChannel();
+  late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   List<Map<dynamic, dynamic>>? _apps;
   bool _serviceOn = true;
 
@@ -147,7 +148,7 @@ class ProfilePairingAppPage extends StatefulWidget {
 }
 
 class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
-  final FLauncherChannel _channel = FLauncherChannel();
+  late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   List<PairingChoice>? _choices;
   late bool _enabled = widget.app["enabled"] != false;
 
