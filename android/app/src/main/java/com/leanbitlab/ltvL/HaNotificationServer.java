@@ -23,7 +23,7 @@ import java.util.Map;
  */
 final class HaNotificationServer {
     static final int PORT = 7676;
-    private static final String TAG = "LTvHaNotify";
+    private static final String TAG = "HearthHaNotify";
     private static final int MAX_BODY_BYTES = 10 * 1024 * 1024;
 
     static final class Notification {
@@ -54,7 +54,7 @@ final class HaNotificationServer {
 
     synchronized void start() {
         if (mThread != null) return;
-        mThread = new Thread(this::run, "LTvHaNotify");
+        mThread = new Thread(this::run, "HearthHaNotify");
         mThread.setDaemon(true);
         mThread.start();
     }
@@ -97,7 +97,7 @@ final class HaNotificationServer {
         if (request == null) return;
         if (!"POST".equals(request.method)) {
             // Home Assistant's connection test
-            MiniHttp.respond(out, 200, "LTvLauncher");
+            MiniHttp.respond(out, 200, "Hearth");
             return;
         }
 
