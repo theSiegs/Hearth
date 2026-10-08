@@ -10,6 +10,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
@@ -21,6 +22,8 @@ import io.flutter.plugin.common.EventChannel;
 
 public class NetworkEventStreamHandler implements EventChannel.StreamHandler
 {
+    private static final String TAG = "HearthNetwork";
+
     private final ConnectivityManager _connectivityManager;
     private final Context _context;
     private final Handler _handler;
@@ -60,7 +63,7 @@ public class NetworkEventStreamHandler implements EventChannel.StreamHandler
             }
         }
         catch (RuntimeException e) {
-            e.printStackTrace();
+            Log.e(TAG, "Couldn't listen for network changes", e);
         }
     }
 
@@ -80,7 +83,7 @@ public class NetworkEventStreamHandler implements EventChannel.StreamHandler
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "Couldn't stop listening for network changes", e);
         }
     }
 
