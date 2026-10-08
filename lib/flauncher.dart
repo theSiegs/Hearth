@@ -410,43 +410,8 @@ class _FLauncherState extends State<FLauncher> {
                       appBar: FocusAwareAppBar(key: _appBarKey),
                       body: Padding(
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                          child: Consumer<AppsService>(builder: (context, appsService, _) {
-                            // Starting up: placeholders until both the apps and the profile (its layout) are in,
-                            // so the home doesn't reshuffle in front of anyone
-                            final bool profileSettled =
-                                context.select<ProfileService?, bool>((p) => p?.settledOnce ?? true);
-                            if (appsService.initialized && profileSettled) {
-                              return Selector<WatchNextService, bool>(
-                                selector: (_, watchNext) => watchNext.programs.isNotEmpty,
-                                builder: (context, hasContinuingPrograms, _) =>
-                                    Selector<SettingsService, ({bool show, int order, bool dock})>(
-                                  selector: (_, settings) => (
-                                    show: settings.showContinueWatching,
-                                    order: settings.continueWatchingOrder,
-                                    dock: settings.dockEnabled,
-                                  ),
-                                  builder: (context, cwSettings, _) => LayoutBuilder(
-                                    builder: (context, constraints) => SingleChildScrollView(
-                                      controller: _scrollController,
-                                      physics: const ClampingScrollPhysics(),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          _home(appsService.launcherSections,
-                                              viewportHeight: constraints.maxHeight,
-                                              dockEnabled: cwSettings.dock,
-                                              continueWatchingActive: cwSettings.show && hasContinuingPrograms,
-                                              continueWatchingOrder: cwSettings.order),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            } else {
-                              return _emptyState(context);
-                            }
-                          })))),
+                          child: Consumer<AppsService>(
+                              builder: (context, appsService, _) => _homeBody(context, appsService))))),
               // Typing or saying a search, over the home
               if (_searchTyping)
                 Positioned.fill(
@@ -465,6 +430,34 @@ class _FLauncherState extends State<FLauncher> {
               Positioned.fill(child: ProfileTransitionOverlay(channel: FLauncherChannel())),
             ])),
       );
+
+  /// The scrolling home, once the apps and the profile are in.
+  Widget _homeBody(BuildContext context, AppsService appsService) {
+    // Starting up: placeholders until both the apps and the profile (its layout) are in,
+    // so the home doesn't reshuffle in front of anyone
+    final bool profileSettled = context.select<ProfileService?, bool>((p) => p?.settledOnce ?? true);
+    if (!appsService.initialized || !profileSettled) {
+      return _emptyState(context);
+    }
+    return Selector2<SettingsService, WatchNextService, ({bool continueWatching, int order, bool dock})>(
+      selector: (_, settings, watchNext) => (
+        continueWatching: settings.showContinueWatching && watchNext.programs.isNotEmpty,
+        order: settings.continueWatchingOrder,
+        dock: settings.dockEnabled,
+      ),
+      builder: (context, home, _) => LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          controller: _scrollController,
+          physics: const ClampingScrollPhysics(),
+          child: _home(appsService.launcherSections,
+              viewportHeight: constraints.maxHeight,
+              dockEnabled: home.dock,
+              continueWatchingActive: home.continueWatching,
+              continueWatchingOrder: home.order),
+        ),
+      ),
+    );
+  }
 
   /// With the dock on and something in Favorites, the first screen shows the wallpaper with
   /// Continue Watching and the Favorites dock along the bottom; the other sections follow below.
