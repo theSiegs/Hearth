@@ -17,6 +17,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../../flauncher_channel.dart';
 import '../focusable_tap.dart';
@@ -40,7 +41,7 @@ class SearchEntry extends StatefulWidget {
 }
 
 class _SearchEntryState extends State<SearchEntry> {
-  final FLauncherChannel _channel = FLauncherChannel();
+  late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   late final TextEditingController _text = TextEditingController(text: widget.initialText)
     ..selection = TextSelection(baseOffset: 0, extentOffset: widget.initialText.length);
   late final FocusNode _field = FocusNode(onKeyEvent: (node, event) {
