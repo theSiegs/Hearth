@@ -21,6 +21,8 @@ import 'package:provider/provider.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/update_service.dart';
 
+import 'hearth_dialog.dart';
+
 class UpdateDialog extends StatefulWidget {
   const UpdateDialog({super.key});
 
@@ -29,8 +31,6 @@ class UpdateDialog extends StatefulWidget {
 }
 
 class _UpdateDialogState extends State<UpdateDialog> {
-  Color _hexToColor(String hex) => Color(int.parse('FF$hex', radix: 16));
-
   @override
   void initState() {
     super.initState();
@@ -39,49 +39,39 @@ class _UpdateDialogState extends State<UpdateDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = _hexToColor(context.watch<SettingsService>().accentColorHex);
+    final accentColor = context.select((SettingsService s) => s.accentColor);
     final updateService = context.watch<UpdateService>();
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
+    return HearthDialogFrame(
+      width: 460,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Container(
-        width: 460,
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0F0F0F),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.12), width: 1),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
+      maxHeightFactor: 0.85,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.system_update_outlined, color: Colors.white, size: 24),
-                  SizedBox(width: 8),
-                  Text(
-                    "Check for Updates",
-                    style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
+              Icon(Icons.system_update_outlined, color: Colors.white, size: 24),
+              SizedBox(width: 8),
               Text(
-                "Current version: ${updateService.currentVersion}",
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                "Check for Updates",
+                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 16),
-              _buildBody(context, updateService, accentColor),
-              const SizedBox(height: 16),
-              _buildActions(context, updateService, accentColor),
             ],
           ),
-        ),
+          const SizedBox(height: 6),
+          Text(
+            "Current version: ${updateService.currentVersion}",
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          _buildBody(context, updateService, accentColor),
+          const SizedBox(height: 16),
+          _buildActions(context, updateService),
+        ],
       ),
     );
   }
@@ -175,34 +165,34 @@ class _UpdateDialogState extends State<UpdateDialog> {
     }
   }
 
-  Widget _buildActions(BuildContext context, UpdateService service, Color accentColor) {
+  Widget _buildActions(BuildContext context, UpdateService service) {
     final actions = <Widget>[];
 
     switch (service.status) {
       case UpdateStatus.available:
-        actions.add(_ActionButton(
+        actions.add(FocusableDialogButton(
           icon: Icons.download,
           label: "Download & Install",
-          accentColor: accentColor,
+          compact: true,
           autofocus: true,
           onPressed: () => service.downloadAndInstall(),
         ));
         break;
       case UpdateStatus.readyToInstall:
-        actions.add(_ActionButton(
+        actions.add(FocusableDialogButton(
           icon: Icons.refresh,
           label: "Retry Install",
-          accentColor: accentColor,
+          compact: true,
           autofocus: true,
           onPressed: () => service.retryInstall(),
         ));
         break;
       case UpdateStatus.error:
       case UpdateStatus.upToDate:
-        actions.add(_ActionButton(
+        actions.add(FocusableDialogButton(
           icon: Icons.refresh,
           label: "Check Again",
-          accentColor: accentColor,
+          compact: true,
           autofocus: true,
           onPressed: () => service.checkForUpdate(),
         ));
@@ -211,10 +201,10 @@ class _UpdateDialogState extends State<UpdateDialog> {
         break;
     }
 
-    actions.add(_ActionButton(
+    actions.add(FocusableDialogButton(
       icon: Icons.close,
       label: "Close",
-      accentColor: accentColor,
+      compact: true,
       autofocus: actions.isEmpty,
       onPressed: () => Navigator.of(context).pop(),
     ));
@@ -227,64 +217,6 @@ class _UpdateDialogState extends State<UpdateDialog> {
           actions[i],
         ],
       ],
-    );
-  }
-}
-
-class _ActionButton extends StatefulWidget {
-  final IconData icon;
-  final String label;
-  final Color accentColor;
-  final VoidCallback onPressed;
-  final bool autofocus;
-
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.accentColor,
-    required this.onPressed,
-    this.autofocus = false,
-  });
-
-  @override
-  State<_ActionButton> createState() => _ActionButtonState();
-}
-
-class _ActionButtonState extends State<_ActionButton> {
-  bool _focused = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Actions(
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => widget.onPressed()),
-        ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) => widget.onPressed()),
-      },
-      child: Focus(
-        autofocus: widget.autofocus,
-        onFocusChange: (hasFocus) => setState(() => _focused = hasFocus),
-        child: GestureDetector(
-          onTap: widget.onPressed,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: _focused ? widget.accentColor.withOpacity(0.3) : Colors.white.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _focused ? Colors.white : Colors.transparent, width: _focused ? 2 : 0),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(widget.icon, size: 16, color: Colors.white70),
-                const SizedBox(width: 6),
-                Text(widget.label,
-                    style: TextStyle(
-                        color: Colors.white, fontSize: 12, fontWeight: _focused ? FontWeight.bold : FontWeight.w500)),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
