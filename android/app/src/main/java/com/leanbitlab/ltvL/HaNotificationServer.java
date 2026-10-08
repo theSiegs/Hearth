@@ -35,7 +35,6 @@ final class HaNotificationServer {
         int durationSeconds = 5;
         int position = 2; // top-right
         String backgroundColor;
-        int transparency = 0;
         byte[] icon;
         byte[] image;
         /** A camera entity to show live in the card, or null. */
@@ -174,7 +173,6 @@ final class HaNotificationServer {
         n.durationSeconds = clamp(intValue(fields, "duration", 5), 1, 120);
         n.position = clamp(intValue(fields, "position", 2), 0, 4);
         n.backgroundColor = text(fields, "bkgcolor");
-        n.transparency = clamp(intValue(fields, "transparency", 1), 1, 5);
         n.icon = fields.get("filename");
         n.image = fields.get("filename2");
         n.camera = text(fields, "camera");

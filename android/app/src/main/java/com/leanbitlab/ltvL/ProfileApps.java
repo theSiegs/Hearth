@@ -11,7 +11,6 @@ import android.os.UserHandle;
 import android.os.UserManager;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -126,11 +125,5 @@ final class ProfileApps {
         ProfilePairingService.onAppLaunching(context, pkg);
         return AgentHub.open(context, serial, user, intent.toUri(android.content.Intent.URI_INTENT_SCHEME))
                 || startMain(context, user, pkg);
-    }
-
-    /** The packages the active profile's user can open (null for the owner's profile). */
-    static List<String> packages(Context context) {
-        UserHandle user = activeProfileUser(context);
-        return user == null ? null : new java.util.ArrayList<>(apps(context, user).keySet());
     }
 }
