@@ -172,10 +172,7 @@ class ContinueWatchingAppsPage extends StatelessWidget {
                           ],
                         ),
                       ),
-                      onPressed: () {
-                        settingsService.unhideWatchNextPackage(app.packageName);
-                        watchNextService.refresh();
-                      },
+                      onPressed: () => watchNextService.setPackageHidden(settingsService, app.packageName, false),
                     )),
                 ...unknownBlockedPkg.map((pkg) => FocusableSettingsTile(
                       leading: const Icon(Icons.tv, size: 32),
@@ -214,10 +211,7 @@ class ContinueWatchingAppsPage extends StatelessWidget {
                           ],
                         ),
                       ),
-                      onPressed: () {
-                        settingsService.unhideWatchNextPackage(pkg);
-                        watchNextService.refresh();
-                      },
+                      onPressed: () => watchNextService.setPackageHidden(settingsService, pkg, false),
                     )),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.clear_all, color: Colors.orange),
@@ -225,10 +219,7 @@ class ContinueWatchingAppsPage extends StatelessWidget {
                     'Unblock All Apps',
                     style: theme.textTheme.bodyMedium?.copyWith(color: Colors.orange),
                   ),
-                  onPressed: () {
-                    settingsService.unhideAllWatchNextPackages();
-                    watchNextService.refresh();
-                  },
+                  onPressed: () => watchNextService.unhideAll(settingsService),
                 ),
               ],
 
@@ -292,14 +283,7 @@ class ContinueWatchingAppsPage extends StatelessWidget {
 
                   return RoundedSwitchListTile(
                     value: !isBlocked,
-                    onChanged: (allowed) {
-                      if (allowed) {
-                        settingsService.unhideWatchNextPackage(pkg);
-                      } else {
-                        settingsService.hideWatchNextPackage(pkg);
-                      }
-                      watchNextService.refresh();
-                    },
+                    onChanged: (allowed) => watchNextService.setPackageHidden(settingsService, pkg, !allowed),
                     title: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
@@ -369,14 +353,7 @@ class ContinueWatchingAppsPage extends StatelessWidget {
 
                 return RoundedSwitchListTile(
                   value: !isBlocked,
-                  onChanged: (allowed) {
-                    if (allowed) {
-                      settingsService.unhideWatchNextPackage(app.packageName);
-                    } else {
-                      settingsService.hideWatchNextPackage(app.packageName);
-                    }
-                    watchNextService.refresh();
-                  },
+                  onChanged: (allowed) => watchNextService.setPackageHidden(settingsService, app.packageName, !allowed),
                   title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
