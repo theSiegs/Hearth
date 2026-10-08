@@ -98,6 +98,69 @@ void main() {
       expect(details.streamingOn, ["Disney Plus", "Hulu"]);
     });
 
+    test("splits what comes with a service from what's to rent or buy", () {
+      final details = TmdbClient.parseDetails({
+        "watch/providers": {
+          "results": {
+            "US": {
+              "flatrate": [
+                {"provider_name": "Netflix"}
+              ],
+              "ads": [
+                {"provider_name": "Tubi TV"}
+              ],
+              "rent": [
+                {"provider_name": "Google Play Movies"},
+                {"provider_name": "Amazon Video"}
+              ],
+              "buy": [
+                {"provider_name": "Google Play Movies"},
+                {"provider_name": "Netflix"}
+              ]
+            }
+          }
+        }
+      });
+      expect(details.included, ["Netflix", "Tubi TV"]);
+      // Netflix includes it, so it isn't also "to buy" there
+      expect(details.rentOrBuy, ["Google Play Movies", "Amazon Video"]);
+    });
+
+    test("names TMDB's providers by their TV apps", () {
+      expect(providerApp("Netflix Standard with Ads")?.packageName, "com.netflix.ninja");
+      expect(providerApp("Max")?.name, "HBO Max");
+      expect(providerApp("Maxdome"), isNull);
+      expect(providerApp("Amazon Prime Video")?.name, "Prime Video");
+      expect(providerApp("Google Play Movies")?.name, "Google TV");
+      expect(providerApp("Crunchyroll"), isNull);
+    });
+
+    test("puts what an installed app includes first, and keeps the rest quiet", () {
+      const result = SearchResult(wikidataId: "Q1", title: "A Show");
+      const details = TitleDetails(
+        included: ["Netflix", "Hulu", "Crunchyroll"],
+        rentOrBuy: ["Google Play Movies", "Amazon Video"],
+      );
+      bool installed(String pkg) => pkg == "com.netflix.ninja" || pkg == "com.google.android.videos";
+      final availability = Availability.of(result, details, installed);
+      expect(availability.watchable, isTrue);
+      expect(availability.included.map((a) => a.name), ["Netflix"]);
+      expect(availability.rentOrBuy.map((a) => a.name), ["Google TV"]); // Prime Video isn't installed
+      expect(availability.elsewhere, ["Hulu", "Crunchyroll"]);
+
+      final notHere = Availability.of(result, details, (_) => false);
+      expect(notHere.watchable, isFalse);
+      expect(notHere.elsewhere, ["Netflix", "Hulu", "Crunchyroll"]);
+    });
+
+    test("without TMDB, the installed apps Wikidata links count as included", () {
+      final bluey = SearchService.parseResults(hits, entities).last;
+      final linked = bluey.offers.map((o) => o.service.packageName).toSet();
+      final availability = Availability.of(bluey, null, linked.contains);
+      expect(availability.watchable, linked.any((pkg) => providerApps.any((a) => a.packageName == pkg)));
+      expect(Availability.of(bluey, null, (_) => false).watchable, isFalse);
+    });
+
     test("sends nothing without a key", () async {
       var calls = 0;
       final client = TmdbClient(apiKey: "", getJson: (_) async => calls++);
