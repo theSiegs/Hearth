@@ -18,6 +18,8 @@
 import 'package:flutter/material.dart';
 
 /// A title, a message and OK. True when it was closed with OK rather than Back.
+///
+/// OK starts focused, so the remote's OK button closes it right away.
 Future<bool> showMessageDialog(BuildContext context, {required String title, required String message}) async {
   final ok = await showDialog<bool>(
     context: context,
@@ -26,6 +28,7 @@ Future<bool> showMessageDialog(BuildContext context, {required String title, req
       content: Text(message),
       actions: [
         TextButton(
+          autofocus: true,
           onPressed: () => Navigator.of(dialogContext).pop(true),
           child: const Text("OK"),
         ),
