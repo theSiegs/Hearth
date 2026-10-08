@@ -92,7 +92,7 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
                 itemCount: displaySections.length,
                 itemBuilder: (context, index) {
                   final section = displaySections[index];
-                  return _section(context, section, index, displaySections.length, displaySections, settingsService);
+                  return _section(context, section, displaySections, settingsService);
                 },
               ),
             );
@@ -137,8 +137,6 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
   Widget _section(
     BuildContext context,
     LauncherSection section,
-    int index,
-    int totalCount,
     List<LauncherSection> displaySections,
     SettingsService? settingsService,
   ) {

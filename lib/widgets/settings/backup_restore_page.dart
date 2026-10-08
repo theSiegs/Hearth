@@ -38,7 +38,7 @@ class BackupRestorePage extends StatelessWidget {
                 FocusableSettingsTile(
                   leading: const Icon(Icons.share),
                   title: Text(localizations.shareBackup, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => _share(context, localizations),
+                  onPressed: () => _share(context),
                 ),
               ],
             ),
@@ -48,7 +48,7 @@ class BackupRestorePage extends StatelessWidget {
     );
   }
 
-  Future<void> _share(BuildContext context, AppLocalizations localizations) async {
+  Future<void> _share(BuildContext context) async {
     try {
       final settingsService = context.read<SettingsService>();
       final pathStr = await context.read<BackupService>().exportBackup(settingsService);
