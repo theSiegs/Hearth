@@ -504,22 +504,18 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
   }
 
   Future<void> _showPanel(BuildContext context) async {
-    if (!await requireParent(context) || !context.mounted) return;
-    try {
-      final result = await showDialog<ApplicationInfoPanelResult>(
-        context: context,
-        builder: (context) => ApplicationInfoPanel(
-          category: widget.category,
-          application: widget.application,
-          image: _image,
-        ),
-      );
-      if (result == ApplicationInfoPanelResult.reorderApp) {
-        setState(() => _moving = true);
-      }
-    } catch (e, stackTrace) {
-      print('Error showing panel: $e');
-      print('Stack trace: $stackTrace');
+    final bool allowed = await requireParent(context);
+    if (!allowed || !context.mounted) return;
+    final result = await showDialog<ApplicationInfoPanelResult>(
+      context: context,
+      builder: (context) => ApplicationInfoPanel(
+        category: widget.category,
+        application: widget.application,
+        image: _image,
+      ),
+    );
+    if (result == ApplicationInfoPanelResult.reorderApp && mounted) {
+      setState(() => _moving = true);
     }
   }
 }

@@ -33,7 +33,8 @@ Widget categoryContainerEmptyState(BuildContext context) {
               child: InkWell(
                 // Settings take the parent PIN in kids profiles, from here too
                 onTap: () async {
-                  if (!await requireParent(context) || !context.mounted) return;
+                  final bool allowed = await requireParent(context);
+                  if (!allowed || !context.mounted) return;
                   showDialog(
                     context: context,
                     builder: (_) => SettingsPanel(initialRoute: LauncherSectionsPanelPage.routeName),
