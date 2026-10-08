@@ -160,8 +160,6 @@ class BackupService {
   /// Snapshot of categories, apps, spacers, and settings. With [profileOnly], device-wide settings are left out
   /// so a per-profile layout never carries them between profiles.
   Future<Map<String, dynamic>> buildBackupData(SettingsService settingsService, [bool profileOnly = false]) async {
-
-    // 1. Fetch complete settings
     final Map<String, dynamic> settingsMap = {};
     settingsMap.addAll(settingsService.exportSettingsMap());
     final Set<String> keys = _sharedPreferences.getKeys();
@@ -175,13 +173,11 @@ class BackupService {
       settingsMap.removeWhere((key, _) => isDeviceLevelKey(key));
     }
 
-    // 2. Fetch database tables
     final List<Category> categories = await _database.getCategories();
     final List<App> apps = await _database.getApplications();
     final List<AppCategory> appsCategories = await _database.getAppsCategories();
     final List<LauncherSpacer> spacers = await _database.getLauncherSpacers();
 
-    // 3. Serialize everything
     return {
       "version": 1,
       "settings": settingsMap,
@@ -232,22 +228,18 @@ class BackupService {
       throw FormatException("Invalid backup file version");
     }
 
-    // 1. Restore SharedPreferences
     final Map<String, dynamic> settingsMap = Map<String, dynamic>.from(backupData["settings"] as Map);
     if (profileOnly) {
       settingsMap.removeWhere((key, _) => isDeviceLevelKey(key));
     }
     await settingsService.importSettingsMap(settingsMap);
 
-    // 2. Restore database tables in a single transaction
     await _database.transaction(() async {
-      // Clear existing records
       await _database.customStatement('DELETE FROM apps_categories;');
       await _database.customStatement('DELETE FROM launcher_spacers;');
       await _database.customStatement('DELETE FROM categories;');
       await _database.customStatement('DELETE FROM apps;');
 
-      // Insert Apps
       final List<dynamic> appsJson = backupData["apps"] as List;
       final List<AppsCompanion> appsCompanions = appsJson.map((a) {
         final Map<String, dynamic> map = Map<String, dynamic>.from(a as Map);
@@ -264,7 +256,6 @@ class BackupService {
         batch.insertAll(_database.apps, appsCompanions);
       });
 
-      // Insert Categories
       final List<dynamic> categoriesJson = backupData["categories"] as List;
       final List<CategoriesCompanion> categoriesCompanions = categoriesJson.map((c) {
         final Map<String, dynamic> map = Map<String, dynamic>.from(c as Map);
@@ -292,7 +283,6 @@ class BackupService {
         batch.insertAll(_database.categories, categoriesCompanions);
       });
 
-      // Insert AppsCategories
       final List<dynamic> appsCategoriesJson = backupData["appsCategories"] as List;
       final List<AppsCategoriesCompanion> appsCategoriesCompanions = appsCategoriesJson.map((ac) {
         final Map<String, dynamic> map = Map<String, dynamic>.from(ac as Map);
@@ -306,7 +296,6 @@ class BackupService {
         batch.insertAll(_database.appsCategories, appsCategoriesCompanions);
       });
 
-      // Insert Spacers
       final List<dynamic> spacersJson = backupData["spacers"] as List;
       final List<LauncherSpacersCompanion> spacersCompanions = spacersJson.map((s) {
         final Map<String, dynamic> map = Map<String, dynamic>.from(s as Map);
