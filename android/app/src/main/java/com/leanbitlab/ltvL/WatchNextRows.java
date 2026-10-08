@@ -14,6 +14,11 @@ import java.util.Map;
 /** Reads Android TV's Watch Next list of the calling user (Hearth's own, or an agent's in a profile user). */
 final class WatchNextRows {
     private static final String TAG = "HearthWatchNext";
+    /** Rows read from the provider, newest first, before sorting and trimming. */
+    private static final int MAX_SCANNED = 100;
+    private static final int MAX_ROWS = 20;
+    /** An engagement time below this is in seconds: as milliseconds it would fall in early 1970. */
+    private static final long SECONDS_CUTOFF = 10_000_000_000L;
 
     private WatchNextRows() {
     }
@@ -23,7 +28,7 @@ final class WatchNextRows {
         return val != null ? val : "";
     }
 
-    /** This user's Watch Next programs, most recently engaged first (at most 20), as maps for Flutter. */
+    /** This user's Watch Next programs, most recently engaged first (at most MAX_ROWS), as maps for Flutter. */
     static List<Map<String, Object>> read(Context context) {
         List<Map<String, Object>> list = new ArrayList<>();
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
@@ -57,16 +62,15 @@ final class WatchNextRows {
                 return list;
             }
 
-            final int maxFetch = 100;
             int row = 0;
-            while (row < maxFetch && cursor.moveToNext()) {
+            while (row < MAX_SCANNED && cursor.moveToNext()) {
                 row++;
 
                 long time = 0;
                 int timeCol = cursor.getColumnIndex(TvContract.WatchNextPrograms.COLUMN_LAST_ENGAGEMENT_TIME_UTC_MILLIS);
                 if (timeCol != -1 && !cursor.isNull(timeCol)) {
                     time = cursor.getLong(timeCol);
-                    if (time > 0 && time < 10000000000L) {
+                    if (time > 0 && time < SECONDS_CUTOFF) {
                         time *= 1000L;
                     }
                 }
@@ -108,8 +112,7 @@ final class WatchNextRows {
                 list.add(map);
             }
 
-            // Explicitly sort descending by last engagement time (most recently watched first),
-            // and fallback to ID descending if timestamps are identical.
+            // Re-sort: some times were converted from seconds above; ties go to the newer id.
             list.sort((a, b) -> {
                 long timeA = (Long) a.get("lastEngagementTime");
                 long timeB = (Long) b.get("lastEngagementTime");
@@ -121,8 +124,8 @@ final class WatchNextRows {
                 return Long.compare(idB, idA);
             });
 
-            if (list.size() > 20) {
-                list = new ArrayList<>(list.subList(0, 20));
+            if (list.size() > MAX_ROWS) {
+                list = new ArrayList<>(list.subList(0, MAX_ROWS));
             }
         } catch (Exception e) {
             Log.w(TAG, "Couldn't read Watch Next", e);

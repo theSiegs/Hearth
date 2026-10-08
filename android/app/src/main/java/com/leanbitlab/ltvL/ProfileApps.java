@@ -128,7 +128,6 @@ final class ProfileApps {
         if (user == null) return null;
         String pkg = intent.getPackage() != null ? intent.getPackage()
                 : intent.getComponent() != null ? intent.getComponent().getPackageName() : null;
-        // Through that profile's agent the exact link opens; without one, the app's main screen
         long serial = ProfileUsers.settledSerial(context);
         if (pkg == null || !apps(context, user).containsKey(pkg)) return false;
         ProfilePairingService.onAppLaunching(context, pkg);
