@@ -34,12 +34,14 @@ class ApplicationInfoPanel extends StatefulWidget
 {
   final Category? category;
   final App application;
-  final ImageProvider? applicationIcon;
+
+  /// The card's banner or icon, shown beside the app's name.
+  final ImageProvider? image;
 
   const ApplicationInfoPanel({
     required this.category,
     required this.application,
-    this.applicationIcon
+    this.image
   });
 
   @override
@@ -69,8 +71,12 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
           children: [
             Row(
               children: [
-                if (widget.applicationIcon != null)
-                  Image(image: widget.applicationIcon!, width: 50)
+                if (widget.image != null)
+                  Image(
+                    image: widget.image!,
+                    width: 50,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported_outlined),
+                  )
                 else
                   const Icon(Icons.image_not_supported_outlined),
                 const SizedBox(width: 8),

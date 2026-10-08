@@ -73,6 +73,8 @@ class _AppCardState extends State<AppCard> with TickerProviderStateMixin {
   late FocusNode _focusNode;
 
   late Future<(AppImageType, ImageProvider)> _appImageLoadFuture;
+  /// The loaded banner or icon, for the info panel.
+  ImageProvider? _image;
   late final AnimationController _animation = AnimationController(
     vsync: this,
     duration: const Duration(
@@ -525,7 +527,9 @@ class _AppCardState extends State<AppCard> with TickerProviderStateMixin {
       bytes = await service.getAppIcon(widget.application.packageName);
     }
 
-    return (type, MemoryImage(bytes));
+    final image = MemoryImage(bytes);
+    _image = image;
+    return (type, image);
   }
 
   Widget _appImage()
@@ -782,6 +786,7 @@ class _AppCardState extends State<AppCard> with TickerProviderStateMixin {
         builder: (context) => ApplicationInfoPanel(
           category: widget.category,
           application: widget.application,
+          image: _image,
         ),
       );
       if (result == ApplicationInfoPanelResult.reorderApp) {
