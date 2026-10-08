@@ -39,6 +39,9 @@ final class HaNotificationOverlay {
     private static final int TEXT = Color.parseColor("#E8EAED");
     private static final int TEXT_DIM = Color.parseColor("#BDC1C6");
     private static final int DEFAULT_ACCENT = Color.parseColor("#8AB4F8");
+    private static final long CAMERA_REFRESH_MS = 1000;
+    /** Cards with buttons stay up at least this long, so there's time to reach the remote. */
+    private static final int MIN_ACTION_SECONDS = 30;
 
     private final AccessibilityService mService;
     private final WindowManager mWindowManager;
@@ -50,9 +53,6 @@ final class HaNotificationOverlay {
      * shut down by dismissAll(). Main thread only.
      */
     private ExecutorService mCameraExecutor;
-    private static final long CAMERA_REFRESH_MS = 1000;
-    /** Cards with buttons stay up at least this long, so there's time to reach the remote. */
-    private static final int MIN_ACTION_SECONDS = 30;
 
     HaNotificationOverlay(AccessibilityService service) {
         mService = service;

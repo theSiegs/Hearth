@@ -34,12 +34,16 @@ final class ProfilePairing {
     static final String MODE_PROFILE = "profile";
     static final String MODE_PICKER = "picker";
 
+    /** The weakest name match automatic pairing accepts for a kids profile (4: same first name). */
+    static final int KIDS_MIN_SCORE = 4;
+
     private static final String PREFS = "profile_pairing";
     private static final String CHOICE_PREFIX = "override|";
     private static final String SEEN_PREFIX = "seen|";
     private static final String ANNOUNCED_PREFIX = "announced|";
     private static final String HEARTH_PROFILES = "hearth_profiles";
     private static final String KIDS_PREFIX = "kids|";
+    private static final String DISABLED_PREFIX = "disabled|";
     /** Stored for "always show the picker"; any other stored value is an app profile name. */
     private static final String PICKER_VALUE = "\u0000picker";
 
@@ -71,8 +75,6 @@ final class ProfilePairing {
     private static String choiceKey(String packageName, String hearthProfile) {
         return CHOICE_PREFIX + packageName + "|" + hearthProfile;
     }
-
-    private static final String DISABLED_PREFIX = "disabled|";
 
     /** Whether Profile Pairing handles this app at all (on unless turned off in Settings → Profile Pairing). */
     static boolean isAppEnabled(Context context, String packageName) {
@@ -212,9 +214,6 @@ final class ProfilePairing {
         // ("Jo" / "Joe") that could be a grown-up's
         return match != null && kids && matchScore(hearthName, match) < KIDS_MIN_SCORE ? null : match;
     }
-
-    /** The weakest name match automatic pairing accepts for a kids profile (4: same first name). */
-    static final int KIDS_MIN_SCORE = 4;
 
     /** The single best name match, or null when nothing matches or two names match equally well. */
     static String bestMatch(String hearthProfile, Collection<String> names) {

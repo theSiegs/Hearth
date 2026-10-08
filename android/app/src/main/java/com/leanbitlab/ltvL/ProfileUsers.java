@@ -34,6 +34,20 @@ final class ProfileUsers {
     static final String ACTION_PROFILE_INACCESSIBLE = "android.intent.action.PROFILE_INACCESSIBLE";
     private static final String PREFS = "ltv_profile_users";
     private static final String NAME_PREFIX = "name|";
+    private static final String KEY_PREFIX = "user:";
+    private static final String SCREEN_TIME_SERIAL = "screen_time_up_serial";
+
+    /**
+     * Restrictions Family Link puts on a supervised (kids) profile's user, whatever the parent allows: on the
+     * test TV every kids profile has all of them and the owner none. (Unknown sources is left out: a parent
+     * can allow it.)
+     */
+    private static final String[] SUPERVISION_RESTRICTIONS = {
+            "no_config_credentials", "no_grant_admin", "no_add_managed_profile"};
+
+    /** Never blocked by Google TV (Hearth is the home app), so no sign of screen time. */
+    private static final Set<String> NEVER_BLOCKED = new HashSet<>(Arrays.asList(
+            "com.android.vending"));
 
     private ProfileUsers() {
     }
@@ -61,8 +75,6 @@ final class ProfileUsers {
         }
     }
 
-    private static final String KEY_PREFIX = "user:";
-
     /**
      * A profile's lasting key ("user:11"): what Hearth stores per-profile things under, so renaming a profile in
      * Google TV doesn't orphan them. Null for UNKNOWN.
@@ -85,16 +97,6 @@ final class ProfileUsers {
             return key;
         }
     }
-
-    private static final String SCREEN_TIME_SERIAL = "screen_time_up_serial";
-
-    /**
-     * Restrictions Family Link puts on a supervised (kids) profile's user, whatever the parent allows: on the
-     * test TV every kids profile has all of them and the owner none. (Unknown sources is left out: a parent
-     * can allow it.)
-     */
-    private static final String[] SUPERVISION_RESTRICTIONS = {
-            "no_config_credentials", "no_grant_admin", "no_add_managed_profile"};
 
     /**
      * Whether the active profile is a kids profile: its user is supervised by Family Link (Google's own record,
@@ -121,10 +123,6 @@ final class ProfileUsers {
         long serial = settledSerial(context);
         return Boolean.TRUE.equals(isSupervised(context, serial)) ? approvedApps(context, serial) : null;
     }
-
-    /** Never blocked by Google TV (Hearth is the home app), so no sign of screen time. */
-    private static final Set<String> NEVER_BLOCKED = new HashSet<>(Arrays.asList(
-            "com.android.vending"));
 
     /**
      * Whether this kids profile's screen time is up (bedtime, daily limit): Google TV then blocks even the apps a

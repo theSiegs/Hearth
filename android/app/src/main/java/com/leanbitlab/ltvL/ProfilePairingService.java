@@ -63,25 +63,27 @@ public class ProfilePairingService extends AccessibilityService {
     private static final long[] MAX_PROBES_MS = {5_000, 9_000};
     private static final int MAX_STEPS = 16;
     private static final int MAX_NODES = 800;
+    private static final long NO_MATCH_MESSAGE_MS = 2_000;
+    private static final long BANNER_MS = 8_000;
+
+    /** How a launch ended: a profile was picked; the picker is left to the user; or nothing to tell them. */
+    private static final int PICKED = 0;
+    private static final int NO_MATCH = 1;
+    private static final int QUIET = 2;
 
     private static final Pattern NETFLIX_COUNT = Pattern.compile("(?i)^(.*?)[,.]?\\s*(\\d+) of (\\d+) profiles?");
     private static final Pattern MAX_ITEM = Pattern.compile("(?i)^\\s*(.+?)\\s+Button\\b[,.]?\\s*(\\d+)\\s+of\\s+(\\d+)");
     private static final Pattern DISNEY_TILE = Pattern.compile("(?i)^Access (.+)'s profile$");
 
     private static volatile ProfilePairingService sInstance;
+    /** The app whose launch Profile Pairing is handling right now, or null. Read from Hearth voice's thread. */
+    private static volatile String sListeningTo;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private Session mSession;
     private View mCover;
     private TextView mCoverTitle;
     private View mBanner;
-
-    /** How a launch ended: a profile was picked; the picker is left to the user; or nothing to tell them. */
-    private static final int PICKED = 0;
-    private static final int NO_MATCH = 1;
-    private static final int QUIET = 2;
-    private static final long NO_MATCH_MESSAGE_MS = 2_000;
-    private static final long BANNER_MS = 8_000;
 
     /** One app launch. Main thread only. */
     private static final class Session {
@@ -120,9 +122,6 @@ public class ProfilePairingService extends AccessibilityService {
             this.hearthProfile = hearthProfile;
         }
     }
-
-    /** The app whose launch Profile Pairing is handling right now, or null. Read from Hearth voice's thread. */
-    private static volatile String sListeningTo;
 
     static boolean isRunning() {
         return sInstance != null;
