@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.tv.TvContract;
+import android.net.Uri;
 import android.provider.Settings;
 import android.view.KeyEvent;
 
@@ -123,6 +124,14 @@ final class ButtonMapper {
                 intent = new Intent(Settings.ACTION_SETTINGS);
                 break;
             case "search":
+                // In HearthTube, its own search (YouTube's videos; it hands everything else to Google): its voice
+                // search link, or its search screen with the keyboard
+                if (CompanionApps.HEARTHTUBE.equals(LauncherAccessibilityService.appInFront())) {
+                    intent = new Intent(Intent.ACTION_VIEW, Uri.parse("text".equals(target)
+                            ? "youtube://search?q=" : "youtube://search?launch=voice"))
+                            .setPackage(CompanionApps.HEARTHTUBE);
+                    if (intent.resolveActivity(service.getPackageManager()) != null) break;
+                }
                 // Hearth's search, listening right away (target "voice") or with the keyboard ("text")
                 intent = new Intent(service, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
                         .putExtra(MainActivity.EXTRA_OPEN_SEARCH, "text".equals(target) ? "text" : "voice");
