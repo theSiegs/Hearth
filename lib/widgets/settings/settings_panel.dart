@@ -18,6 +18,7 @@
 
 import 'package:flauncher/widgets/settings/companion_apps_page.dart';
 import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
+import 'package:flauncher/widgets/settings/family_apps_page.dart';
 import 'package:flauncher/widgets/settings/search_settings_page.dart';
 import 'package:flauncher/widgets/settings/profile_pairing_page.dart';
 import 'package:flauncher/widgets/settings/home_assistant_page.dart';
@@ -146,6 +147,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       return _FastPageRoute(builder: (_) => const SearchSettingsPage());
                     case SetupChecklistPage.routeName:
                       return _FastPageRoute(builder: (_) => const SetupChecklistPage());
+                    case FamilyAppsPage.routeName:
+                      return _FastPageRoute(builder: (_) => const FamilyAppsPage());
                     case CompanionAppsPage.routeName:
                       return _FastPageRoute(builder: (_) => const CompanionAppsPage());
                     case HomeAssistantPage.routeName:

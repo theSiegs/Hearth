@@ -135,6 +135,12 @@ final class AgentHub {
             connection.send(new JSONObject().put("type", "welcome"));
             connection.send(new JSONObject().put("type", "listen").put("package", sListening != null ? sListening : JSONObject.NULL));
             connection.send(hearthState(sContext));
+            // Share owner-Hearth's already-authorized adb key over this loopback channel, so if Hearth is ever
+            // uninstalled from the owner the agent can still clean up its own profile (see AgentService). Local only.
+            String[] adbKey = SelfAdb.keyMaterial(sContext);
+            if (adbKey != null) {
+                connection.send(new JSONObject().put("type", "adbKey").put("priv", adbKey[0]).put("pub", adbKey[1]));
+            }
             Log.i(TAG, "Agent for serial " + serial + " connected (Hearth voice there: " + hello.optBoolean("voiceDefault") + ")");
             String line;
             while ((line = in.readLine()) != null) {
