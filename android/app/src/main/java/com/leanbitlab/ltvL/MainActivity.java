@@ -163,16 +163,6 @@ public class MainActivity extends FlutterActivity {
                 requestUsageStatsPermission();
                 result.success(null);
             }
-            case "checkWriteSettingsPermission" -> result.success(checkWriteSettingsPermission());
-            case "requestWriteSettingsPermission" -> result.success(requestWriteSettingsPermission());
-            case "setSystemBrightness" -> {
-                Integer brightness = call.argument("brightness");
-                if (brightness != null) {
-                    result.success(setSystemBrightness(brightness));
-                } else {
-                    result.error("INVALID_ARGUMENT", "Missing brightness", null);
-                }
-            }
             case "openDefaultLauncherSettings" -> result.success(openDefaultLauncherSettings());
             case "openProfileChooser" -> result.success(openProfileChooser());
             case "getSupportedAbis" -> result.success(Arrays.asList(Build.SUPPORTED_ABIS));
@@ -890,61 +880,6 @@ public class MainActivity extends FlutterActivity {
     private void requestUsageStatsPermission() {
         Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
         tryStartActivity(intent);
-    }
-
-    private boolean checkWriteSettingsPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            return Settings.System.canWrite(this);
-        }
-        return true;
-    }
-
-    private boolean requestWriteSettingsPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            try {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS,
-                        Uri.parse("package:" + getPackageName()));
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                if (tryStartActivity(intent)) {
-                    return true;
-                }
-            } catch (Exception ignored) {}
-            try {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                if (tryStartActivity(intent)) {
-                    return true;
-                }
-            } catch (Exception ignored) {}
-            try {
-                Intent intent = new Intent(Settings.ACTION_SETTINGS);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                return tryStartActivity(intent);
-            } catch (Exception ignored) {}
-            return false;
-        }
-        return true;
-    }
-
-    private boolean setSystemBrightness(int brightness) {
-        if (checkWriteSettingsPermission()) {
-            try {
-                android.content.ContentResolver resolver = getContentResolver();
-                // 1. Standard Android brightness
-                Settings.System.putInt(resolver, Settings.System.SCREEN_BRIGHTNESS_MODE, Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL);
-                Settings.System.putInt(resolver, Settings.System.SCREEN_BRIGHTNESS, brightness);
-                
-                // 2. Try common TV "Backlight" keys (Vendor specific)
-                Settings.System.putInt(resolver, "backlight", brightness);
-                Settings.System.putInt(resolver, "backlight_level", brightness);
-                
-                return true;
-            } catch (Exception e) {
-                // Ignore errors on specific keys as they may not exist
-                return true; 
-            }
-        }
-        return false;
     }
 
     private boolean openDefaultLauncherSettings() {
