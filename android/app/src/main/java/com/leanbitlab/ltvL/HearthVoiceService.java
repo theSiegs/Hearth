@@ -115,6 +115,13 @@ public class HearthVoiceService extends TextToSpeechService {
             silence(callback);
             return;
         }
+        // In a kids profile, the picker apps stay in screen-reader mode after a pick: Android shares accessibility
+        // state with the profile but doesn't tell its apps when Hearth turns screen-reader mode off again. Nobody
+        // there uses a screen reader, so their speech goes nowhere rather than out loud.
+        if (AgentService.isAgent(this) && ProfilePairingService.needsScreenReaderMode(caller)) {
+            silence(callback);
+            return;
+        }
         if (text == null || !mForwardReady || !forward(text, request, callback)) silence(callback);
     }
 

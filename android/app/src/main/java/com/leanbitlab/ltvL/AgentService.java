@@ -266,6 +266,7 @@ public class AgentService extends Service {
                                 sPendingOpen = message.optString("intent");
                             } else if ("listen".equals(type)) {
                                 sListeningTo = message.isNull("package") ? null : message.optString("package");
+                                Log.i(TAG, "Listening to " + sListeningTo);
                             } else if ("hearth".equals(type)) {
                                 JSONObject row = message.optJSONObject("row");
                                 if (row != null) {
