@@ -171,6 +171,18 @@ public class MainActivity extends FlutterActivity {
                             this, LauncherAccessibilityService.getActiveProfileKey(this), kids);
                     result.success(kids);
                 }
+                // Parent-controlled "Add / Remove Hearth from other profiles" (a Settings action) and a read-only
+                // state view. The work, and the one-time "Allow debugging?" consent, live in ProfileAppAccess /
+                // SelfAdb. Off the main thread (adb I/O); parent-confirmed because these fire only from the Settings
+                // row. addHearthToProfiles' argument is whether to include the other adult profiles too.
+                case "addHearthToProfiles" -> {
+                    boolean includeAdults = Boolean.TRUE.equals(call.arguments());
+                    sIoExecutor.execute(() -> runAddToProfiles(includeAdults, result));
+                }
+                case "removeHearthFromProfiles" -> sIoExecutor.execute(() -> runRemoveFromProfiles(result));
+                case "getHearthProfilesState" -> sIoExecutor.execute(() -> runProfilesState(result));
+                case "uninstallHearth" -> result.success(uninstallSelf());
+                case "openGoogleTvHome" -> result.success(openGoogleTvHome());
                 case "voiceSearch" -> startVoiceSearch(result);
                 case "getAppLastProfiles" -> {
                     Map<String, Object> users = new HashMap<>(getSharedPreferences("ltv_app_last_profile", MODE_PRIVATE).getAll());
@@ -1327,6 +1339,163 @@ public class MainActivity extends FlutterActivity {
             return true;
         }
         return tryStartActivity(new Intent(Settings.ACTION_SYNC_SETTINGS));
+    }
+
+    /**
+     * Parent-initiated add/remove of Hearth's own apps in the kids profiles, over Hearth's loopback adb
+     * ({@link SelfAdb}). Reached only from the Settings rows, so {@code confirmedByParent} is true. Returns the log
+     * of what was done; a first-run "Allow debugging?" that hasn't been approved surfaces as an error the UI explains.
+     */
+    /**
+     * Parent-initiated add of Hearth's apps to the other profiles, over Hearth's loopback adb ({@link SelfAdb}):
+     * always the supervised kids (kept installed so the launcher can't strip them), and — when {@code includeAdults}
+     * — the other adult profiles too (plain install). Reached only from the Settings action, so parent-confirmed.
+     */
+    private void runAddToProfiles(boolean includeAdults, io.flutter.plugin.common.MethodChannel.Result result) {
+        try (SelfAdb shell = SelfAdb.open(this)) {
+            java.util.List<String> log = new java.util.ArrayList<>(
+                    ProfileAppAccess.addToProfiles(this, shell, supervisedKidUserIds(), true, true));
+            if (includeAdults) {
+                log.addAll(ProfileAppAccess.addToProfiles(this, shell, adultProfileUserIds(), false, true));
+            }
+            runOnUiThread(() -> result.success(log));
+        } catch (Exception e) {
+            runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
+        }
+    }
+
+    /** Parent-initiated removal from every other profile (kids and adults): the clean undo of add. */
+    private void runRemoveFromProfiles(io.flutter.plugin.common.MethodChannel.Result result) {
+        try (SelfAdb shell = SelfAdb.open(this)) {
+            java.util.List<Integer> all = new java.util.ArrayList<>(supervisedKidUserIds());
+            all.addAll(adultProfileUserIds());
+            java.util.List<String> log = ProfileAppAccess.removeFromProfiles(this, shell, all, true);
+            runOnUiThread(() -> result.success(log));
+        } catch (Exception e) {
+            runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
+        }
+    }
+
+    /** Read-only: Hearth/HearthTube state across the other profiles, each row tagged supervised (kid) or not. */
+    private void runProfilesState(io.flutter.plugin.common.MethodChannel.Result result) {
+        try (SelfAdb shell = SelfAdb.open(this)) {
+            java.util.List<Integer> kids = supervisedKidUserIds();
+            java.util.List<Integer> all = new java.util.ArrayList<>(kids);
+            all.addAll(adultProfileUserIds());
+            java.util.Map<Integer, String> names = profileDisplayNames();
+            java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
+            for (ProfileAppAccess.AppStatus s : ProfileAppAccess.state(this, shell, all)) {
+                java.util.Map<String, Object> row = new java.util.HashMap<>();
+                row.put("userId", s.userId);
+                row.put("packageName", s.packageName);
+                row.put("installed", s.installed);
+                row.put("protected", s.protectedFromRemoval);
+                row.put("supervised", kids.contains(s.userId));
+                row.put("name", names.get(s.userId));
+                rows.add(row);
+            }
+            runOnUiThread(() -> result.success(rows));
+        } catch (Exception e) {
+            runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
+        }
+    }
+
+    /**
+     * Hands control to Google TV's own home for a while so the parent can use the native interface. Hearth's
+     * accessibility service stops bouncing back automatically until the Home button is pressed (or a short window
+     * passes); see {@link LauncherAccessibilityService#allowGoogleTvTemporarily()}.
+     */
+    private boolean openGoogleTvHome() {
+        final String googleTv = "com.google.android.apps.tv.launcherx";
+        LauncherAccessibilityService.allowGoogleTvTemporarily();
+        android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_MAIN)
+                .addCategory(android.content.Intent.CATEGORY_HOME)
+                .setPackage(googleTv)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (intent.resolveActivity(getPackageManager()) == null) {
+            android.content.Intent launch = getPackageManager().getLeanbackLaunchIntentForPackage(googleTv);
+            if (launch == null) launch = getPackageManager().getLaunchIntentForPackage(googleTv);
+            if (launch == null) return false;
+            intent = launch.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+        }
+        try {
+            startActivity(intent);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Opens Android's uninstall screen for Hearth itself. The Settings flow runs the profile cleanup first. */
+    private boolean uninstallSelf() {
+        try {
+            android.content.Intent intent = new android.content.Intent(
+                    android.content.Intent.ACTION_DELETE, android.net.Uri.parse("package:" + getPackageName()));
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** The SUPERVISED kid profiles' user ids — Family Link-supervised profiles of this user. */
+    private java.util.List<Integer> supervisedKidUserIds() {
+        return profileUserIds(true);
+    }
+
+    /** The OTHER ADULT profiles' user ids — secondary profiles that are NOT supervised (grown-ups). */
+    private java.util.List<Integer> adultProfileUserIds() {
+        return profileUserIds(false);
+    }
+
+    /**
+     * This user's other profiles, filtered by supervision: {@code wantSupervised} true returns the Family Link kids,
+     * false the non-supervised adult profiles. The owner is always excluded.
+     * NOTE: the adult branch is unverified on a real 2-adult TV (no test device yet); confirm getUserProfiles()
+     * returns adult Google TV profiles there.
+     */
+    private java.util.List<Integer> profileUserIds(boolean wantSupervised) {
+        java.util.List<Integer> ids = new java.util.ArrayList<>();
+        android.os.UserManager um = (android.os.UserManager) getSystemService(android.content.Context.USER_SERVICE);
+        if (um == null) return ids;
+        android.os.UserHandle me = android.os.Process.myUserHandle();
+        for (android.os.UserHandle profile : um.getUserProfiles()) {
+            if (profile.equals(me)) continue;
+            long serial = um.getSerialNumberForUser(profile);
+            boolean supervised = Boolean.TRUE.equals(ProfileUsers.isSupervised(this, serial));
+            if (supervised != wantSupervised) continue;
+            int userId = userIdOf(profile);
+            if (userId >= 0) ids.add(userId);
+        }
+        return ids;
+    }
+
+    /** The integer user id behind a {@link android.os.UserHandle} (needed for {@code pm --user}); -1 if unknown. */
+    private static int userIdOf(android.os.UserHandle handle) {
+        try {
+            // UserHandle.getIdentifier() is @hide, so reach it reflectively; fall back to parsing "UserHandle{N}".
+            return (int) android.os.UserHandle.class.getMethod("getIdentifier").invoke(handle);
+        } catch (Throwable t) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d+").matcher(String.valueOf(handle));
+            return m.find() ? Integer.parseInt(m.group()) : -1;
+        }
+    }
+
+    /** Best display name per profile user id (the name Hearth learned from Google TV's chooser), for the list. */
+    private java.util.Map<Integer, String> profileDisplayNames() {
+        java.util.Map<Integer, String> names = new java.util.HashMap<>();
+        android.os.UserManager um = (android.os.UserManager) getSystemService(android.content.Context.USER_SERVICE);
+        if (um == null) return names;
+        android.os.UserHandle me = android.os.Process.myUserHandle();
+        for (android.os.UserHandle profile : um.getUserProfiles()) {
+            if (profile.equals(me)) continue;
+            int userId = userIdOf(profile);
+            if (userId < 0) continue;
+            String name = ProfileUsers.getName(this, um.getSerialNumberForUser(profile));
+            if (name != null && !name.isEmpty()) names.put(userId, name);
+        }
+        return names;
     }
 
     // Google TV kids profiles suspend every app a parent hasn't approved; once seen, a profile stays a kids one.

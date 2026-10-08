@@ -165,6 +165,35 @@ class FLauncherChannel {
 
   Future<bool> isKidsProfile() async => await _methodChannel.invokeMethod<bool>("isKidsProfile") ?? false;
 
+  /// Parent-initiated: add Hearth and HearthTube to the TV's other Google TV profiles. Supervised kids profiles are
+  /// kept installed (protected from Google TV's profile-start uninstall); when [includeAdults] is true, the other
+  /// adult profiles get a plain install too (the launcher leaves theirs alone). Returns a short log of what was done.
+  /// The first time, the TV shows a one-time "Allow debugging?" prompt the parent approves; until then this throws a
+  /// PlatformException (code "SELF_ADB"). Only ever touches Hearth's own two apps. Adding sends one Family Link
+  /// "app added" notification per kid — the Settings confirmation copy should say so.
+  Future<List<String>> addHearthToProfiles({required bool includeAdults}) async =>
+      await _methodChannel.invokeListMethod<String>("addHearthToProfiles", includeAdults) ?? [];
+
+  /// Parent-initiated: release any keep-installed flag and uninstall Hearth and HearthTube from every other profile
+  /// (kids and adults) — the clean undo of [addHearthToProfiles], and what must run before Hearth itself is
+  /// uninstalled.
+  Future<List<String>> removeHearthFromProfiles() async =>
+      await _methodChannel.invokeListMethod<String>("removeHearthFromProfiles") ?? [];
+
+  /// Read-only: for each other profile, [{userId, packageName, installed, protected, supervised}] — so Settings can
+  /// show exactly where Hearth's apps are and nothing is hidden.
+  Future<List<Map<dynamic, dynamic>>> getHearthProfilesState() async =>
+      await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getHearthProfilesState") ?? [];
+
+  /// Opens Android's uninstall screen for Hearth itself. Call [removeHearthFromProfiles] first so the copies on the
+  /// other profiles are cleaned up before Hearth goes (otherwise the kids' copies would be left behind).
+  Future<void> uninstallHearth() async => await _methodChannel.invokeMethod("uninstallHearth");
+
+  /// Hands control to Google TV's own home so the parent can use the native interface for a bit. Hearth stops
+  /// bouncing back on its own until they press the Home button (or a short window passes). False if it couldn't open.
+  Future<bool> openGoogleTvHome() async =>
+      await _methodChannel.invokeMethod<bool>("openGoogleTvHome") ?? false;
+
   /// Profile Pairing's state: {enabled, voiceDefault}.
   Future<Map<dynamic, dynamic>> getProfilePairingStatus() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getProfilePairingStatus") ?? {};

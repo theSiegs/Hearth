@@ -26,6 +26,7 @@ import 'flauncher_about_dialog.dart';
 import 'setup_checklist_page.dart';
 import 'backup_restore_page.dart';
 import 'app_language_page.dart';
+import 'package:flauncher/flauncher_channel.dart';
 
 class GeneralSettingsPage extends StatelessWidget {
   static const String routeName = "general_settings_panel";
@@ -59,6 +60,11 @@ class GeneralSettingsPage extends StatelessWidget {
                   leading: const Icon(Icons.system_update_outlined),
                   title: Text(CompanionAppsPage.title, style: Theme.of(context).textTheme.bodyMedium),
                   onPressed: () => Navigator.of(context).pushNamed(CompanionAppsPage.routeName),
+                ),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.tv_outlined),
+                  title: Text("Use Google TV for now", style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => FLauncherChannel().openGoogleTvHome(),
                 ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.settings_backup_restore),
