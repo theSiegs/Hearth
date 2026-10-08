@@ -218,12 +218,10 @@ public class ProfileProvider extends ContentProvider {
         return plain.exists() ? plain : null;
     }
 
-    /** {date, time} formats; the old saved defaults count as never chosen (as in SettingsService). */
+    /** {date, time} formats. */
     private static String[] dateTimeFormats(Context context) {
-        String date = FlutterPrefs.getString(context, "date_format", DEFAULT_DATE_FORMAT);
-        String time = FlutterPrefs.getString(context, "time_format", DEFAULT_TIME_FORMAT);
-        if ("EEEE d".equals(date) && "H:mm".equals(time)) return new String[]{DEFAULT_DATE_FORMAT, DEFAULT_TIME_FORMAT};
-        return new String[]{date, time};
+        return new String[]{FlutterPrefs.getString(context, "date_format", DEFAULT_DATE_FORMAT),
+                FlutterPrefs.getString(context, "time_format", DEFAULT_TIME_FORMAT)};
     }
 
     @Override

@@ -226,4 +226,44 @@ void main() {
       expect(await backupService.loadProfileLayout("New Person", settingsService), isFalse);
     });
   });
+
+  group("settings at their defaults", () {
+    setUp(() => sharedPreferences.clear());
+
+    test("aren't exported, and the export says so", () async {
+      final settingsService = SettingsService(sharedPreferences);
+      await settingsService.setAppLanguage("fr");
+      final data = await backupService.buildBackupData(settingsService);
+      expect(data["onlyChosenSettings"], isTrue);
+      expect(data["settings"]["app_language"], "fr");
+      expect((data["settings"] as Map).containsKey("date_format"), isFalse);
+    });
+
+    test("go back to their defaults on restore", () async {
+      final settingsService = SettingsService(sharedPreferences);
+      final data = await backupService.buildBackupData(settingsService);
+      await settingsService.setAppLanguage("fr");
+      await backupService.restoreBackupData(data, settingsService);
+      expect(settingsService.appLanguage, "");
+    });
+
+    test("an older export's old default date and time count as never chosen", () async {
+      final settingsService = SettingsService(sharedPreferences);
+      final data = await backupService.buildBackupData(settingsService);
+      data.remove("onlyChosenSettings");
+      data["settings"] = {...data["settings"] as Map<String, dynamic>, "date_format": "EEEE d", "time_format": "H:mm"};
+      await backupService.restoreBackupData(data, settingsService);
+      expect(settingsService.dateFormat, SettingsService.defaultDateFormat);
+      expect(settingsService.timeFormat, SettingsService.defaultTimeFormat);
+    });
+
+    test("a newer export keeps that date and time when they were chosen", () async {
+      final settingsService = SettingsService(sharedPreferences);
+      await settingsService.setDateTimeFormat("EEEE d", "H:mm");
+      final data = await backupService.buildBackupData(settingsService);
+      await backupService.restoreBackupData(data, settingsService);
+      expect(settingsService.dateFormat, "EEEE d");
+      expect(settingsService.timeFormat, "H:mm");
+    });
+  });
 }

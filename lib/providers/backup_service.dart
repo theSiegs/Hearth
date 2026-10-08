@@ -160,8 +160,8 @@ class BackupService {
   /// Snapshot of categories, apps, spacers, and settings. With [profileOnly], device-wide settings are left out
   /// so a per-profile layout never carries them between profiles.
   Future<Map<String, dynamic>> buildBackupData(SettingsService settingsService, [bool profileOnly = false]) async {
+    // Only what's stored: a setting at its default isn't saved, so a later default change still applies
     final Map<String, dynamic> settingsMap = {};
-    settingsMap.addAll(settingsService.exportSettingsMap());
     final Set<String> keys = _sharedPreferences.getKeys();
     for (final key in keys) {
       final value = _sharedPreferences.get(key);
@@ -180,6 +180,7 @@ class BackupService {
 
     return {
       "version": 1,
+      "onlyChosenSettings": true,
       "settings": settingsMap,
       "apps": apps.map((a) => {
         "packageName": a.packageName,
@@ -231,6 +232,11 @@ class BackupService {
     final Map<String, dynamic> settingsMap = Map<String, dynamic>.from(backupData["settings"] as Map);
     if (profileOnly) {
       settingsMap.removeWhere((key, _) => isDeviceLevelKey(key));
+    }
+    if (backupData["onlyChosenSettings"] != true) SettingsService.forgetOldDefaults(settingsMap);
+    // A setting the backup doesn't carry was at its default
+    for (final key in settingsService.settingKeys) {
+      if (!settingsMap.containsKey(key) && !isDeviceLevelKey(key)) await _sharedPreferences.remove(key);
     }
     await settingsService.importSettingsMap(settingsMap);
 
