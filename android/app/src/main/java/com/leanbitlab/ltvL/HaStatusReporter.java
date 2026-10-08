@@ -2,7 +2,6 @@ package com.leanbitlab.ltvL;
 
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -291,13 +290,10 @@ final class HaStatusReporter {
             }
             return new JSONArray(names);
         }
-        for (String category : new String[]{Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER}) {
-            Intent intent = new Intent(Intent.ACTION_MAIN).addCategory(category);
-            for (ResolveInfo info : pm.queryIntentActivities(intent, 0)) {
-                if ((info.activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SUSPENDED) == 0
-                        && !ownPackage.equals(info.activityInfo.packageName)) {
-                    names.add(label(pm, info.activityInfo.packageName));
-                }
+        for (ResolveInfo info : ProfileUsers.launchables(pm)) {
+            if ((info.activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SUSPENDED) == 0
+                    && !ownPackage.equals(info.activityInfo.packageName)) {
+                names.add(label(pm, info.activityInfo.packageName));
             }
         }
         return new JSONArray(names);
