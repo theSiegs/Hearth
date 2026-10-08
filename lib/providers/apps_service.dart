@@ -42,6 +42,7 @@ class AppsService extends ChangeNotifier {
   final FLauncherDatabase _database;
 
   bool _initialized = false;
+  StreamSubscription? _appsChangedSubscription;
 
   final List<LauncherSection> _launcherSections = [];
   Map<String, App> _applications = {};
@@ -92,6 +93,12 @@ class AppsService extends ChangeNotifier {
     _init();
   }
 
+  @override
+  void dispose() {
+    _appsChangedSubscription?.cancel();
+    super.dispose();
+  }
+
   Future<void> _init() async {
     await _refreshState(shouldNotifyListeners: false);
     if (_database.wasCreated) {
@@ -100,9 +107,10 @@ class AppsService extends ChangeNotifier {
       await _ensureTvAppsSectionOrder();
     }
 
-    _fLauncherChannel.addAppsChangedListener((event) => _onAppsChanged(event).catchError((Object e, StackTrace stack) {
-          developer.log("Failed to apply an app change", name: "AppsService", error: e, stackTrace: stack);
-        }));
+    _appsChangedSubscription = _fLauncherChannel
+        .addAppsChangedListener((event) => _onAppsChanged(event).catchError((Object e, StackTrace stack) {
+              developer.log("Failed to apply an app change", name: "AppsService", error: e, stackTrace: stack);
+            }));
 
     _initialized = true;
     notifyListeners();

@@ -69,6 +69,7 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver
   bool                _hasUsageStatsPermission;
   bool                _vpnActive;
   Timer?              _usageTimer;
+  StreamSubscription? _networkChangedSubscription;
   int                 _callCount = 0;
   int                 _usageCallCount = 0;
 
@@ -82,7 +83,7 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver
         _hasUsageStatsPermission = false,
         _vpnActive = false
   {
-    _channel.addNetworkChangedListener(_onNetworkChanged);
+    _networkChangedSubscription = _channel.addNetworkChangedListener(_onNetworkChanged);
 
     _channel
         .getActiveNetworkInformation()
@@ -169,6 +170,7 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _usageTimer?.cancel();
+    _networkChangedSubscription?.cancel();
     super.dispose();
   }
 
