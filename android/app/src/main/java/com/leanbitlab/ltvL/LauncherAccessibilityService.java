@@ -38,6 +38,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 public class LauncherAccessibilityService extends AccessibilityService {
     static final String GOOGLE_TV_PACKAGE = "com.google.android.apps.tv.launcherx";
@@ -74,6 +75,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final long OWNER_SETTLE_MS = 5_000;
     private long mCandidateSerial = ProfileUsers.UNKNOWN;
     private long mCandidateAt = 0;
+    /** Google TV's home came up while this candidate was waiting: it's taken without waiting any longer. */
+    private boolean mCandidateSettled;
     private final Runnable mSettleCheck = () -> checkProfileUser("settled");
     private int mProfileUserRechecks = 0;
     private final Runnable mProfileUserRecheck = new Runnable() {
@@ -263,6 +266,15 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     /** Reads which profile user is running and follows a switch there. */
     private void checkProfileUser(String why) {
+        checkProfileUser(why, false);
+    }
+
+    /**
+     * Reads which profile user is running and follows a switch there. settleNow: Google TV's home is up, which it
+     * only opens once a switch is done, so the waiting candidate needn't hold any longer.
+     */
+    private void checkProfileUser(String why, boolean settleNow) {
+        if (settleNow && mCandidateSerial != ProfileUsers.UNKNOWN) mCandidateSettled = true;
         long serial = ProfileUsers.activeSerial(this);
         if (serial == ProfileUsers.UNKNOWN) return;
         if (serial == mActiveSerial) {
@@ -275,50 +287,55 @@ public class LauncherAccessibilityService extends AccessibilityService {
             // and never on the owner while the chooser is still up (Google TV's home only opens after the switch).
             long now = SystemClock.elapsedRealtime();
             boolean owner = serial == ProfileUsers.ownerSerial(this);
-            long settle = owner ? OWNER_SETTLE_MS : PROFILE_SETTLE_MS;
             if (serial != mCandidateSerial) {
                 mCandidateSerial = serial;
                 mCandidateAt = now;
+                mCandidateSettled = false;
             }
-            if (now - mCandidateAt < settle || owner && mChooserOnScreen) {
-                if (now - mCandidateAt >= settle) {
-                    // Rechecked when the chooser closes
-                    return;
-                }
+            long wait = (owner ? OWNER_SETTLE_MS : PROFILE_SETTLE_MS) - (now - mCandidateAt);
+            if (wait > 0 && !mCandidateSettled) {
                 mHandler.removeCallbacks(mSettleCheck);
-                mHandler.postDelayed(mSettleCheck, settle - (now - mCandidateAt));
+                mHandler.postDelayed(mSettleCheck, wait);
                 return;
             }
+            // Rechecked when the chooser closes
+            if (owner && mChooserOnScreen) return;
         }
         mCandidateSerial = ProfileUsers.UNKNOWN;
         long previous = mActiveSerial;
         mActiveSerial = serial;
         // A new profile (or Hearth starting): not ready until Flutter says its home is complete
-        SharedPreferences profilePrefs = getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE);
-        profilePrefs.edit().putInt(PROFILE_GENERATION_KEY, profilePrefs.getInt(PROFILE_GENERATION_KEY, 0) + 1)
-                .remove(PROFILE_READY_KEY).apply();
+        String key = ProfileUsers.key(serial);
+        SharedPreferences prefs = getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE);
+        boolean keyChanged = !key.equals(prefs.getString(PROFILE_KEY_KEY, null));
+        prefs.edit()
+                .putInt(PROFILE_GENERATION_KEY, prefs.getInt(PROFILE_GENERATION_KEY, 0) + 1)
+                .remove(PROFILE_READY_KEY)
+                .putString(PROFILE_KEY_KEY, key)
+                .apply();
         // Flutter's welcome card says sooner when the home finishes first; with Hearth off screen (asleep, after a
         // restart) nothing would, so ready after the card's own limit regardless
         mHandler.removeCallbacks(mReadyFallback);
         mHandler.postDelayed(mReadyFallback, PROFILE_READY_FALLBACK_MS);
-        if (!ProfileUsers.key(serial).equals(getActiveProfileKey(this))) {
-            getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE).edit().putString(PROFILE_KEY_KEY, ProfileUsers.key(serial)).apply();
-            ProfileProvider.notifyChanged(this);
-            MainActivity.notifyProfileChanged();
-        }
         Log.i(TAG, "Profile user is now serial " + serial + " ("
                 + ProfileUsers.getName(this, serial) + ", " + why + ")");
+        boolean named = false;
         if (previous != ProfileUsers.UNKNOWN) {
             // A switch, seen whether or not Hearth saw the chooser: pair it with the pick that made it, if any
             mSwitchedSerial = serial;
             mSwitchedAt = SystemClock.elapsedRealtime();
-            learnProfileUserName();
+            named = learnProfileUserName();
         }
         // Not named yet: no name until the chooser shows who this is, rather than a guess
         String name = ProfileUsers.getName(this, serial);
         if (name == null) Log.i(TAG, "Serial " + serial + " not named yet: profile unknown");
-        if (name == null ? getActiveProfileName(this) != null : !name.equals(getActiveProfileName(this))) {
+        // HearthTube, the agents and Flutter hear once, with key and name in place: setActiveProfileName tells them
+        // (here, or above when the pick named this serial); a new key under the same name tells them itself
+        if (!Objects.equals(name, getActiveProfileName(this))) {
             setActiveProfileName(name);
+        } else if (keyChanged && !named) {
+            ProfileProvider.notifyChanged(this);
+            MainActivity.notifyProfileChanged();
         }
         if (previous != ProfileUsers.UNKNOWN) {
             clearScreenTimeLock();
@@ -333,13 +350,17 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mHandler.postDelayed(mProfileUserRecheck, PROFILE_USER_RECHECK_MS);
     }
 
-    /** Pairs a switch in the profile users with the chooser pick that made it, whichever came first. */
-    private void learnProfileUserName() {
+    /**
+     * Pairs a switch in the profile users with the chooser pick that made it, whichever came first. Returns whether
+     * it named the switched serial.
+     */
+    private boolean learnProfileUserName() {
         long now = SystemClock.elapsedRealtime();
         if (mLastPick == null || mSwitchedSerial == ProfileUsers.UNKNOWN
                 || now - mLastPickAt > PROFILE_CLICK_WINDOW_MS || now - mSwitchedAt > PROFILE_CLICK_WINDOW_MS) {
-            return;
+            return false;
         }
+        boolean named = false;
         String existing = ProfileUsers.getName(this, mSwitchedSerial);
         long owner = ProfileUsers.serialOf(this, mLastPick);
         if (!mLastPickClicked && owner != ProfileUsers.UNKNOWN && owner != mSwitchedSerial) {
@@ -348,19 +369,19 @@ public class LauncherAccessibilityService extends AccessibilityService {
                     + ": that's serial " + owner);
         } else if (existing == null || mLastPickClicked && !existing.equals(mLastPick)) {
             nameSerial(mSwitchedSerial, mLastPick, "pick");
+            named = true;
         } else if (!existing.equals(mLastPick)) {
             // Only a guess from the last focused tile: the name learned for this serial wins
             Log.i(TAG, "Serial " + mSwitchedSerial + " stays " + existing);
         }
         mLastPick = null;
         mSwitchedSerial = ProfileUsers.UNKNOWN;
+        return named;
     }
 
     // Once the chooser has laid out (and its focus animation settled): which tile is the current account, and
     // photos for profiles that have none yet or weren't checked today.
     private static final long CHOOSER_READ_DELAY_MS = 1_200;
-    /** The chooser tile marked current account, as last read. */
-    private String mCurrentTile;
     private final Runnable mReadChooser = this::readChooser;
 
     private void readChooser() {
@@ -373,13 +394,17 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         List<String> names = new ArrayList<>();
         List<Rect> photos = new ArrayList<>();
-        mCurrentTile = null;
-        collectChooserTiles(root, names, photos, 0);
+        String current = collectChooserTiles(root, names, photos, 0);
+        // The current account's tile names the running profile user, unless a switch is still settling
+        if (current != null && mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN
+                && !current.equals(ProfileUsers.getName(this, mActiveSerial))) {
+            nameSerial(mActiveSerial, current, "chooser's current account");
+        }
         // Only the current account's tile: it's the highlighted one, without the lock Google TV puts on other
         // PIN-protected profiles' tiles (or their dimming), so each profile's photo is taken while it's on
         Map<String, Rect> due = new LinkedHashMap<>();
         for (int i = 0; i < names.size(); i++) {
-            if (names.get(i).equals(mCurrentTile) && ProfileAvatars.isDue(this, names.get(i))) {
+            if (names.get(i).equals(current) && ProfileAvatars.isDue(this, names.get(i))) {
                 due.put(names.get(i), photos.get(i));
             }
         }
@@ -435,14 +460,15 @@ public class LauncherAccessibilityService extends AccessibilityService {
     }
 
     /**
-     * The chooser's profile tiles: a focusable LinearLayout holding the photo (an ImageView, a few frames down)
-     * and the name (TextView), "Add account" aside. The current account's tile says so in its description ("... select to
+     * Adds the chooser's profile tiles to names and photos, and returns the one marked current account (null if
+     * none). A tile is a focusable LinearLayout holding the photo (an ImageView, a few frames down) and the name
+     * (TextView), "Add account" aside. The current account's tile says so in its description ("... select to
      * continue with current account"), which names the running profile user without relying on focus.
      */
-    private void collectChooserTiles(AccessibilityNodeInfo node, List<String> names, List<Rect> photos, int depth) {
-        if (node == null || depth > 20) return;
-        if (TextUtils.equals(LINEAR_LAYOUT, node.getClassName())
-                && node.isFocusable()) {
+    private static String collectChooserTiles(AccessibilityNodeInfo node, List<String> names, List<Rect> photos,
+            int depth) {
+        if (node == null || depth > 20) return null;
+        if (TextUtils.equals(LINEAR_LAYOUT, node.getClassName()) && node.isFocusable()) {
             String name = null;
             Rect photo = null;
             for (int i = 0; i < node.getChildCount(); i++) {
@@ -463,19 +489,16 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 names.add(name);
                 photos.add(photo);
                 CharSequence desc = node.getContentDescription();
-                if (desc != null && desc.toString().toLowerCase(Locale.ROOT).contains("current account")) {
-                    mCurrentTile = name;
-                    if (mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN
-                            && !name.equals(ProfileUsers.getName(this, mActiveSerial))) {
-                        nameSerial(mActiveSerial, name, "chooser's current account");
-                    }
-                }
+                if (desc != null && desc.toString().toLowerCase(Locale.ROOT).contains("current account")) return name;
             }
-            return;
+            return null;
         }
+        String current = null;
         for (int i = 0; i < node.getChildCount(); i++) {
-            collectChooserTiles(node.getChild(i), names, photos, depth + 1);
+            String found = collectChooserTiles(node.getChild(i), names, photos, depth + 1);
+            if (found != null) current = found;
         }
+        return current;
     }
 
     /** Learns a serial's profile name; the active profile takes it on if that's the serial. */
@@ -584,8 +607,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 if (commitPendingProfile()) clearScreenTimeLock();
                 // Google TV only opens its home once a switch is done: take the new profile user now, before
                 // Hearth takes over, so Hearth never comes up showing the last profile
-                if (mCandidateSerial != ProfileUsers.UNKNOWN) mCandidateAt -= OWNER_SETTLE_MS;
-                checkProfileUser("Google TV home");
+                checkProfileUser("Google TV home", true);
                 updateScreenTimeLock("Google TV home");
                 mGoogleTvScreenInFront = false;
                 // Google TV opens its own home by component after a profile switch, on Back from apps, etc.,
