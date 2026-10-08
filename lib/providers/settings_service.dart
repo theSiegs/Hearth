@@ -68,7 +68,8 @@ const String _hiddenWatchNextPackagesKey = "hidden_watch_next_packages";
 const String _startOnBootKey = "start_on_boot";
 // device_ prefix: shared by all profiles, never part of a per-profile layout
 const String _parentPinHashKey = "device_parent_pin_hash";
-const String _tmdbApiKeyKey = "tmdb_api_key";
+// A TMDB key users could once type in; search now uses the one built into the release only
+const String _retiredTmdbApiKeyKey = "tmdb_api_key";
 const String _showNotificationsWidgetInStatusBarKey = "show_notifications_widget_in_status_bar";
 const String _autoHideNotificationsWidgetKey = "auto_hide_notifications_widget";
 const String _appLanguageKey = "app_language";
@@ -198,17 +199,6 @@ class SettingsService extends ChangeNotifier {
   /// profiles, so another adult doesn't have to sideload it themselves. Adult profiles need no keep-installed flag.
   bool get pushToAdultProfiles => _pushToAdultProfiles;
 
-  /// A TMDB API key the user added for search posters (Settings → Search); empty when none. Not in backups.
-  String get tmdbApiKey => _sharedPreferences.getString(_tmdbApiKeyKey) ?? "";
-
-  Future<void> setTmdbApiKey(String key) async {
-    if (key.trim().isEmpty) {
-      await _sharedPreferences.remove(_tmdbApiKeyKey);
-    } else {
-      await _sharedPreferences.setString(_tmdbApiKeyKey, key.trim());
-    }
-    notifyListeners();
-  }
 
   bool get hasParentPin => _sharedPreferences.getString(_parentPinHashKey) != null;
 
@@ -256,6 +246,9 @@ class SettingsService extends ChangeNotifier {
   }
 
   SettingsService(this._sharedPreferences) {
+    if (_sharedPreferences.containsKey(_retiredTmdbApiKeyKey)) {
+      unawaited(_sharedPreferences.remove(_retiredTmdbApiKeyKey));
+    }
     reload();
   }
 
@@ -355,6 +348,7 @@ class SettingsService extends ChangeNotifier {
     for (final entry in settingsMap.entries) {
       final key = entry.key;
       final value = entry.value;
+      if (key == _retiredTmdbApiKeyKey) continue; // old backups and layouts may still carry it
       if (value is bool) {
         await _sharedPreferences.setBool(key, value);
       } else if (value is int) {

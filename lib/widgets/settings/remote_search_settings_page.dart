@@ -21,7 +21,6 @@ import 'package:flutter/material.dart';
 import 'back_button_action_page.dart';
 import 'focusable_settings_tile.dart';
 import 'remote_buttons_page.dart';
-import 'search_settings_page.dart';
 import 'settings_page.dart';
 
 /// The remote's buttons (remapping, what Back does on the home screen) and Hearth's search.
@@ -47,11 +46,6 @@ class RemoteSearchSettingsPage extends StatelessWidget {
           leading: const Icon(Icons.arrow_back),
           title: Text(localizations.backButtonAction, style: textTheme.bodyMedium),
           onPressed: () => Navigator.of(context).pushNamed(BackButtonActionPage.routeName),
-        ),
-        FocusableSettingsTile(
-          leading: const Icon(Icons.search),
-          title: Text("Search", style: textTheme.bodyMedium),
-          onPressed: () => Navigator.of(context).pushNamed(SearchSettingsPage.routeName),
         ),
       ],
     );
