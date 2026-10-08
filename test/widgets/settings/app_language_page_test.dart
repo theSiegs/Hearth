@@ -48,6 +48,14 @@ void main() {
     expect(find.text('German'), findsOneWidget);
   });
 
+  testWidgets('focus starts on the chosen language, even the last one', (WidgetTester tester) async {
+    await settingsService.setAppLanguage('ko');
+    await tester.pumpWidget(buildSubject());
+    await tester.pumpAndSettle();
+
+    expect(Focus.of(tester.element(find.text('Korean'))).hasFocus, isTrue);
+  });
+
   testWidgets('tapping Spanish option updates appLanguage preference to es', (WidgetTester tester) async {
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
