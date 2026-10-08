@@ -9,6 +9,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.util.TypedValue;
 import android.graphics.drawable.StateListDrawable;
 import android.view.Gravity;
@@ -30,6 +31,7 @@ import java.util.concurrent.Executors;
  * second, picture-in-picture style. Notifications queue and show one at a time.
  */
 final class HaNotificationOverlay {
+    private static final String TAG = "HearthHaOverlay";
     private static final int CARD = Color.parseColor("#1F2023");
     private static final int TEXT = Color.parseColor("#E8EAED");
     private static final int TEXT_DIM = Color.parseColor("#BDC1C6");
@@ -92,6 +94,7 @@ final class HaNotificationOverlay {
             int seconds = n.actions.isEmpty() ? n.durationSeconds : Math.max(n.durationSeconds, MIN_ACTION_SECONDS);
             mHandler.postDelayed(this::next, seconds * 1000L);
         } catch (Exception e) {
+            Log.w(TAG, "Couldn't show a Home Assistant notification", e);
             mShowing = null;
             showNext();
         }

@@ -178,7 +178,8 @@ final class HaSetupServer {
                     if (address instanceof Inet4Address && address.isSiteLocalAddress()) return address.getHostAddress();
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Log.w(TAG, "Couldn't read the TV's network address", e);
         }
         return null;
     }

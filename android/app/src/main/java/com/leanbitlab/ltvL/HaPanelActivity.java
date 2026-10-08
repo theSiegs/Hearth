@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -29,6 +30,7 @@ import org.json.JSONObject;
  * (the same one the Home Assistant Companion app uses), so there is never a login screen.
  */
 public class HaPanelActivity extends Activity {
+    private static final String TAG = "HearthHaPanel";
     static final String DASHBOARD_KEY = "ha_panel_dashboard";
     static final String DEFAULT_DASHBOARD = "lovelace";
     private static final int PANEL_WIDTH_DP = 350;
@@ -191,7 +193,8 @@ public class HaPanelActivity extends Activity {
                 auth.put("access_token", mToken);
                 auth.put("expires_in", TOKEN_LIFETIME_SECONDS);
                 callJs(callback + "(true, " + auth + ");");
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                Log.w(TAG, "Couldn't answer the dashboard's sign-in request", e);
             }
         }
 
@@ -199,7 +202,8 @@ public class HaPanelActivity extends Activity {
         public void revokeExternalAuth(String payload) {
             try {
                 callJs(new JSONObject(payload).getString("callback") + "(true);");
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                Log.w(TAG, "Couldn't answer the dashboard's sign-out request", e);
             }
         }
 
@@ -222,7 +226,8 @@ public class HaPanelActivity extends Activity {
                 reply.put("success", true);
                 reply.put("result", config);
                 callJs("window.externalBus(" + reply + ");");
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                Log.w(TAG, "Couldn't answer the dashboard's config request", e);
             }
         }
     }

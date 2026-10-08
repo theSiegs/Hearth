@@ -3,6 +3,7 @@ package com.leanbitlab.ltvL;
 import android.content.Context;
 import android.media.tv.TvContract;
 import android.os.Build;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,6 +12,8 @@ import java.util.Map;
 
 /** Reads Android TV's Watch Next list of the calling user (Hearth's own, or an agent's in a profile user). */
 final class WatchNextRows {
+    private static final String TAG = "HearthWatchNext";
+
     private WatchNextRows() {
     }
 
@@ -121,7 +124,7 @@ final class WatchNextRows {
                 list = new ArrayList<>(list.subList(0, 20));
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "Couldn't read Watch Next", e);
         }
 
         return list;

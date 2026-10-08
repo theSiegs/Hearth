@@ -8,6 +8,7 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Shader;
+import android.util.Log;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -20,6 +21,7 @@ import java.nio.file.Files;
  * changed Google photo comes through once Google TV has it.
  */
 final class ProfileAvatars {
+    private static final String TAG = "HearthAvatars";
     private static final long REFRESH_MS = 24L * 60 * 60_000;
     static final int FAILED = 0;
     static final int UNCHANGED = 1;
@@ -73,6 +75,7 @@ final class ProfileAvatars {
         try {
             return Files.readAllBytes(f.toPath());
         } catch (Exception e) {
+            Log.w(TAG, "Couldn't read the photo of " + name, e);
             return null;
         }
     }
@@ -113,6 +116,7 @@ final class ProfileAvatars {
         try (FileOutputStream stream = new FileOutputStream(tmp)) {
             out.compress(Bitmap.CompressFormat.PNG, 100, stream);
         } catch (Exception e) {
+            Log.w(TAG, "Couldn't save the photo of " + name, e);
             return FAILED;
         }
         return tmp.renameTo(f) ? SAVED : FAILED;
