@@ -2,17 +2,40 @@ package com.leanbitlab.ltvL;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.LauncherApps;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Rect;
+import android.hardware.HardwareBuffer;
+import android.media.AudioManager;
+import android.media.session.MediaController;
+import android.media.session.MediaSessionManager;
+import android.media.session.PlaybackState;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.PowerManager;
 import android.os.SystemClock;
 import android.os.UserHandle;
+import android.util.Log;
+import android.view.Display;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.widget.Toast;
 
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class LauncherAccessibilityService extends AccessibilityService {
@@ -101,7 +124,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     }
 
     private static boolean isGoogleSetupScreen(String className) {
-        String c = className.toLowerCase(java.util.Locale.ROOT);
+        String c = className.toLowerCase(Locale.ROOT);
         // Not the account check Google TV runs on every chooser visit (AccountVerification/Reauth), or Hearth
         // would hold back after ordinary switches.
         // Nor the PIN prompt (CreatePinActivity) Google TV shows on every switch into or out of a kids profile.
@@ -142,7 +165,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         super.onServiceConnected();
         sInstance = this;
         mKidsState = ProfileUsers.isKids(this);
-        android.content.IntentFilter userFilter = new android.content.IntentFilter(ProfileUsers.ACTION_PROFILE_ACCESSIBLE);
+        IntentFilter userFilter = new IntentFilter(ProfileUsers.ACTION_PROFILE_ACCESSIBLE);
         userFilter.addAction(ProfileUsers.ACTION_PROFILE_INACCESSIBLE);
         // Android 11's Google TV toggles quiet mode instead
         userFilter.addAction(Intent.ACTION_MANAGED_PROFILE_AVAILABLE);
@@ -154,7 +177,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // Restarted (Android killed the service, an update) while this profile's screen time was up: still up,
         // until Google TV says otherwise or the profile changes.
         if (mActiveSerial != ProfileUsers.UNKNOWN && ProfileUsers.screenTimeUpSerial(this) == mActiveSerial) {
-            android.util.Log.i(PROFILE_TAG, "Screen time was up before the restart: still up");
+            Log.i(PROFILE_TAG, "Screen time was up before the restart: still up");
             mScreenTimeLock = true;
         }
         updateScreenTimeLock("service start");
@@ -166,7 +189,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mHaStatus.start();
         if (mScreenTimeLock) mHaStatus.setScreenTimeLock(true);
         ProfileProvider.notifyChanged(this);  // service_running
-        android.content.IntentFilter screenFilter = new android.content.IntentFilter(Intent.ACTION_SCREEN_ON);
+        IntentFilter screenFilter = new IntentFilter(Intent.ACTION_SCREEN_ON);
         screenFilter.addAction(Intent.ACTION_SCREEN_OFF);
         registerReceiver(mScreenReceiver, screenFilter);
         LauncherApps launcherApps = (LauncherApps) getSystemService(Context.LAUNCHER_APPS_SERVICE);
@@ -278,7 +301,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             ProfileProvider.notifyChanged(this);
             MainActivity.notifyProfileChanged();
         }
-        android.util.Log.i(PROFILE_TAG, "Profile user is now serial " + serial + " ("
+        Log.i(PROFILE_TAG, "Profile user is now serial " + serial + " ("
                 + ProfileUsers.getName(this, serial) + ", " + why + ")");
         if (previous != ProfileUsers.UNKNOWN) {
             // A switch, seen whether or not Hearth saw the chooser: pair it with the pick that made it, if any
@@ -288,7 +311,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         // Not named yet: no name until the chooser shows who this is, rather than a guess
         String name = ProfileUsers.getName(this, serial);
-        if (name == null) android.util.Log.i(PROFILE_TAG, "Serial " + serial + " not named yet: profile unknown");
+        if (name == null) Log.i(PROFILE_TAG, "Serial " + serial + " not named yet: profile unknown");
         if (name == null ? getActiveProfileName(this) != null : !name.equals(getActiveProfileName(this))) {
             setActiveProfileName(name);
         }
@@ -316,13 +339,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
         long owner = ProfileUsers.serialOf(this, mLastPick);
         if (!mLastPickClicked && owner != ProfileUsers.UNKNOWN && owner != mSwitchedSerial) {
             // A guess naming a profile already known to be another serial
-            android.util.Log.i(PROFILE_TAG, "Not naming serial " + mSwitchedSerial + " " + mLastPick
+            Log.i(PROFILE_TAG, "Not naming serial " + mSwitchedSerial + " " + mLastPick
                     + ": that's serial " + owner);
         } else if (existing == null || mLastPickClicked && !existing.equals(mLastPick)) {
             nameSerial(mSwitchedSerial, mLastPick, "pick");
         } else if (!existing.equals(mLastPick)) {
             // Only a guess from the last focused tile: the name learned for this serial wins
-            android.util.Log.i(PROFILE_TAG, "Serial " + mSwitchedSerial + " stays " + existing);
+            Log.i(PROFILE_TAG, "Serial " + mSwitchedSerial + " stays " + existing);
         }
         mLastPick = null;
         mSwitchedSerial = ProfileUsers.UNKNOWN;
@@ -336,52 +359,51 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private final Runnable mReadChooser = this::readChooser;
 
     private void readChooser() {
-        android.view.accessibility.AccessibilityNodeInfo root = getRootInActiveWindow();
+        AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null || !mChooserOnScreen
                 || !GOOGLE_TV_PACKAGE.contentEquals(root.getPackageName() != null ? root.getPackageName() : "")) {
-            android.util.Log.i(PROFILE_TAG, "Chooser not readable (" + (root == null ? "no window" : root.getPackageName())
+            Log.i(PROFILE_TAG, "Chooser not readable (" + (root == null ? "no window" : root.getPackageName())
                     + ", on screen " + mChooserOnScreen + ")");
             return;
         }
-        java.util.List<String> names = new java.util.ArrayList<>();
-        java.util.List<android.graphics.Rect> photos = new java.util.ArrayList<>();
+        List<String> names = new ArrayList<>();
+        List<Rect> photos = new ArrayList<>();
         mCurrentTile = null;
         collectChooserTiles(root, names, photos, 0);
         // Only the current account's tile: it's the highlighted one, without the lock Google TV puts on other
         // PIN-protected profiles' tiles (or their dimming), so each profile's photo is taken while it's on
-        java.util.Map<String, android.graphics.Rect> due = new java.util.LinkedHashMap<>();
+        Map<String, Rect> due = new LinkedHashMap<>();
         for (int i = 0; i < names.size(); i++) {
             if (names.get(i).equals(mCurrentTile) && ProfileAvatars.isDue(this, names.get(i))) {
                 due.put(names.get(i), photos.get(i));
             }
         }
-        android.util.Log.i(PROFILE_TAG, "Chooser shows " + names + "; photos due: " + due.keySet());
-        android.os.PowerManager power = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
-        if (due.isEmpty() || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R
+        Log.i(PROFILE_TAG, "Chooser shows " + names + "; photos due: " + due.keySet());
+        PowerManager power = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        if (due.isEmpty() || Build.VERSION.SDK_INT < Build.VERSION_CODES.R
                 || power == null || !power.isInteractive()) {
             return;
         }
-        takeScreenshot(android.view.Display.DEFAULT_DISPLAY, getMainExecutor(), new TakeScreenshotCallback() {
+        takeScreenshot(Display.DEFAULT_DISPLAY, getMainExecutor(), new TakeScreenshotCallback() {
             @Override
             public void onSuccess(ScreenshotResult result) {
-                final android.hardware.HardwareBuffer buffer = result.getHardwareBuffer();
+                final HardwareBuffer buffer = result.getHardwareBuffer();
                 // Cropping and saving off the main thread; the full screenshot is never kept.
                 new Thread(() -> {
-                    android.graphics.Bitmap hardware = android.graphics.Bitmap.wrapHardwareBuffer(buffer, result.getColorSpace());
-                    android.graphics.Bitmap screen = hardware != null
-                            ? hardware.copy(android.graphics.Bitmap.Config.ARGB_8888, false) : null;
+                    Bitmap hardware = Bitmap.wrapHardwareBuffer(buffer, result.getColorSpace());
+                    Bitmap screen = hardware != null ? hardware.copy(Bitmap.Config.ARGB_8888, false) : null;
                     if (hardware != null) hardware.recycle();
                     buffer.close();
                     if (screen == null) return;
                     boolean saved = false;
-                    for (java.util.Map.Entry<String, android.graphics.Rect> photo : due.entrySet()) {
+                    for (Map.Entry<String, Rect> photo : due.entrySet()) {
                         int outcome = ProfileAvatars.save(LauncherAccessibilityService.this, photo.getKey(), screen,
                                 photo.getValue());
                         if (outcome == ProfileAvatars.SAVED) {
-                            android.util.Log.i(PROFILE_TAG, "New photo for " + photo.getKey());
+                            Log.i(PROFILE_TAG, "New photo for " + photo.getKey());
                             saved = true;
                         } else if (outcome == ProfileAvatars.FAILED) {
-                            android.util.Log.i(PROFILE_TAG, "No usable photo for " + photo.getKey());
+                            Log.i(PROFILE_TAG, "No usable photo for " + photo.getKey());
                         }
                     }
                     screen.recycle();
@@ -391,18 +413,17 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
             @Override
             public void onFailure(int errorCode) {
-                android.util.Log.i(PROFILE_TAG, "Profile photo screenshot failed: " + errorCode);
+                Log.i(PROFILE_TAG, "Profile photo screenshot failed: " + errorCode);
             }
         });
     }
 
     /** The first ImageView in a node's subtree. */
-    private static android.view.accessibility.AccessibilityNodeInfo findImage(
-            android.view.accessibility.AccessibilityNodeInfo node, int depth) {
+    private static AccessibilityNodeInfo findImage(AccessibilityNodeInfo node, int depth) {
         if (node == null || depth > 6) return null;
         if ("android.widget.ImageView".contentEquals(node.getClassName() != null ? node.getClassName() : "")) return node;
         for (int i = 0; i < node.getChildCount(); i++) {
-            android.view.accessibility.AccessibilityNodeInfo image = findImage(node.getChild(i), depth + 1);
+            AccessibilityNodeInfo image = findImage(node.getChild(i), depth + 1);
             if (image != null) return image;
         }
         return null;
@@ -413,32 +434,31 @@ public class LauncherAccessibilityService extends AccessibilityService {
      * and the name (TextView), "Add account" aside. The current account's tile says so in its description ("... select to
      * continue with current account"), which names the running profile user without relying on focus.
      */
-    private void collectChooserTiles(android.view.accessibility.AccessibilityNodeInfo node, java.util.List<String> names,
-            java.util.List<android.graphics.Rect> photos, int depth) {
+    private void collectChooserTiles(AccessibilityNodeInfo node, List<String> names, List<Rect> photos, int depth) {
         if (node == null || depth > 20) return;
         if ("android.widget.LinearLayout".contentEquals(node.getClassName() != null ? node.getClassName() : "")
                 && node.isFocusable()) {
             String name = null;
-            android.graphics.Rect photo = null;
+            Rect photo = null;
             for (int i = 0; i < node.getChildCount(); i++) {
-                android.view.accessibility.AccessibilityNodeInfo child = node.getChild(i);
+                AccessibilityNodeInfo child = node.getChild(i);
                 if (child == null || child.getClassName() == null) continue;
                 if ("android.widget.TextView".contentEquals(child.getClassName()) && child.getText() != null) {
                     name = child.getText().toString().trim();
                 } else if (photo == null) {
-                    android.view.accessibility.AccessibilityNodeInfo image = findImage(child, 0);
+                    AccessibilityNodeInfo image = findImage(child, 0);
                     if (image != null) {
-                        photo = new android.graphics.Rect();
+                        photo = new Rect();
                         image.getBoundsInScreen(photo);
                     }
                 }
             }
             if (name != null && !name.isEmpty() && photo != null
-                    && !name.toLowerCase(java.util.Locale.ROOT).contains("account")) {
+                    && !name.toLowerCase(Locale.ROOT).contains("account")) {
                 names.add(name);
                 photos.add(photo);
                 CharSequence desc = node.getContentDescription();
-                if (desc != null && desc.toString().toLowerCase(java.util.Locale.ROOT).contains("current account")) {
+                if (desc != null && desc.toString().toLowerCase(Locale.ROOT).contains("current account")) {
                     mCurrentTile = name;
                     if (mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN
                             && !name.equals(ProfileUsers.getName(this, mActiveSerial))) {
@@ -455,7 +475,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     /** Learns a serial's profile name; the active profile takes it on if that's the serial. */
     private void nameSerial(long serial, String name, String how) {
-        android.util.Log.i(PROFILE_TAG, "Serial " + serial + " is " + name + " (" + how + ")");
+        Log.i(PROFILE_TAG, "Serial " + serial + " is " + name + " (" + how + ")");
         ProfileUsers.setName(this, serial, name);
         // Migrate pairings saved under the profile's name to its key
         ProfilePairing.adoptNameChoices(this, ProfileUsers.key(serial), name);
@@ -530,7 +550,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             mChooserOnScreen = false;
         }
         if (wasOnScreen != mChooserOnScreen) {
-            android.util.Log.i(PROFILE_TAG, "chooser " + (mChooserOnScreen ? "open" : "closed") + " (" + packageName
+            Log.i(PROFILE_TAG, "chooser " + (mChooserOnScreen ? "open" : "closed") + " (" + packageName
                     + "/" + className + ")");
             if (!mChooserOnScreen) checkProfileUser("chooser closed");
         }
@@ -552,7 +572,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             // home behind themselves; Hearth stays out of the way until they're done.
             if (isGoogleSetupScreen(className)) {
                 mGoogleSetupUntil = SystemClock.elapsedRealtime() + GOOGLE_SETUP_HOLD_MS;
-                android.util.Log.i(PROFILE_TAG, "Google TV setup in progress: " + className);
+                Log.i(PROFILE_TAG, "Google TV setup in progress: " + className);
             }
             if (GOOGLE_TV_HOME_ACTIVITY.equals(className)) {
                 // A new profile's home: the last one's screen time no longer applies (its own comes up next)
@@ -566,7 +586,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 // Google TV opens its own home by component after a profile switch, on Back from apps, etc.,
                 // ignoring the default home app. Bring the launcher back whenever that's allowed.
                 if (SystemClock.elapsedRealtime() < mGoogleSetupUntil) {
-                    android.util.Log.i(PROFILE_TAG, "Not taking over: Google TV setup in progress");
+                    Log.i(PROFILE_TAG, "Not taking over: Google TV setup in progress");
                 } else if (autoTakeOverAllowed() && ProfileUsers.isKids(this) && !mScreenTimeKnown) {
                     // A kids profile whose screen time the apps can't tell: Google TV opens its time up / bedtime
                     // screen from its home a moment after the home itself, and covering the home first would hide
@@ -650,18 +670,17 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     private void readScreenTime() {
         if (mHaStatus == null) return;
-        android.view.accessibility.AccessibilityNodeInfo root = getRootInActiveWindow();
+        AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null || !GOOGLE_TV_PACKAGE.contentEquals(root.getPackageName() != null ? root.getPackageName() : "")) {
             return;
         }
-        java.util.List<CharSequence> texts = new java.util.ArrayList<>();
+        List<CharSequence> texts = new ArrayList<>();
         collectTexts(root, texts, 0);
         if (!texts.isEmpty()) mHaStatus.setScreenTime(ScreenTimeScreen.parse(mScreenTimeClass, texts));
     }
 
     /** The visible text views of a window, in screen order (button labels are content descriptions, so left out). */
-    private static void collectTexts(android.view.accessibility.AccessibilityNodeInfo node, java.util.List<CharSequence> out,
-            int depth) {
+    private static void collectTexts(AccessibilityNodeInfo node, List<CharSequence> out, int depth) {
         if (node == null || depth > 30 || !node.isVisibleToUser()) return;
         CharSequence text = node.getText();
         if (text != null && text.length() > 0) out.add(text);
@@ -676,7 +695,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         String label = event.getText().get(0) != null ? event.getText().get(0).toString().trim() : "";
         // Only the round profile tiles; skip "Add account" and "Manage accounts"
         if (label.isEmpty() || !"android.widget.LinearLayout".contentEquals(event.getClassName() != null ? event.getClassName() : "")) return;
-        if (label.toLowerCase(java.util.Locale.ROOT).contains("account")) return;
+        if (label.toLowerCase(Locale.ROOT).contains("account")) return;
 
         long now = SystemClock.elapsedRealtime();
         if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_FOCUSED) {
@@ -687,7 +706,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             }
         } else if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED && mChooserOnScreen) {
             // Only clicks in the chooser: Google TV's other screens (its keyboard, menus) click LinearLayouts too.
-            android.util.Log.i(PROFILE_TAG, "Picked " + label);
+            Log.i(PROFILE_TAG, "Picked " + label);
             mPendingProfile = label;
             mPendingProfileAt = now;
         }
@@ -727,10 +746,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mScreenTimeKnown = up != null;
         if (up == null || up == mScreenTimeLock) return;
         if (up) {
-            android.util.Log.i(PROFILE_TAG, "Screen time is up: the approved apps are blocked (" + why + ")");
+            Log.i(PROFILE_TAG, "Screen time is up: the approved apps are blocked (" + why + ")");
             setScreenTimeLock();
         } else if (!mWellbeingInFront && SystemClock.elapsedRealtime() - mWellbeingSeenAt > WELLBEING_TRUST_MS) {
-            android.util.Log.i(PROFILE_TAG, "Screen time is over: the approved apps are unblocked (" + why + ")");
+            Log.i(PROFILE_TAG, "Screen time is over: the approved apps are unblocked (" + why + ")");
             clearScreenTimeLock();
         }
     }
@@ -756,10 +775,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
             clicked = true;
         } else if (mLastChooserFocus != null && now - mLastChooserFocusAt < PROFILE_CLICK_WINDOW_MS) {
             chosen = mLastChooserFocus;
-            android.util.Log.i(PROFILE_TAG, "No click seen; using the last focused tile: " + chosen);
+            Log.i(PROFILE_TAG, "No click seen; using the last focused tile: " + chosen);
         }
         if (chosen != null) {
-            android.util.Log.i(PROFILE_TAG, "Pick settled: " + chosen);
+            Log.i(PROFILE_TAG, "Pick settled: " + chosen);
             // Picking the profile that's already on (or backing out of the chooser) starts no profile user
             if (chosen.equals(ProfileUsers.getName(this, mActiveSerial)) && mCandidateSerial == ProfileUsers.UNKNOWN) {
                 chosen = null;
@@ -840,7 +859,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final long IDLE_CHECK_MS = 30_000;
     private static final long IDLE_WARNING_MS = 60_000;
 
-    private final android.os.Handler mHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
     private long mLastInputAt = SystemClock.elapsedRealtime();
     private boolean mIdleWarned = false;
 
@@ -890,12 +909,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     private void checkIdle() {
         int minutes = getIdleStandbyMinutes(this);
-        android.os.PowerManager power = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+        PowerManager power = (PowerManager) getSystemService(Context.POWER_SERVICE);
         if (minutes <= 0 || power == null || !power.isInteractive()) {
             onUserInput();
             return;
         }
-        android.media.AudioManager audio = (android.media.AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        AudioManager audio = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         if (isMediaPlaying() || audio != null && audio.isMusicActive()) {
             // Watching something counts as activity
             onUserInput();
@@ -909,8 +928,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
             sleepNow();
         } else if (!mIdleWarned && idleFor >= limit - IDLE_WARNING_MS) {
             mIdleWarned = true;
-            android.widget.Toast.makeText(this, "No activity: going to sleep in 1 minute. Press any button to stay on.",
-                    android.widget.Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "No activity: going to sleep in 1 minute. Press any button to stay on.",
+                    Toast.LENGTH_LONG).show();
         }
     }
 
@@ -919,14 +938,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
      * is all isMusicActive sees). Needs Hearth's notification access; false without it.
      */
     private boolean isMediaPlaying() {
-        android.media.session.MediaSessionManager sessions =
-                (android.media.session.MediaSessionManager) getSystemService(Context.MEDIA_SESSION_SERVICE);
+        MediaSessionManager sessions = (MediaSessionManager) getSystemService(Context.MEDIA_SESSION_SERVICE);
         if (sessions == null) return false;
         try {
-            for (android.media.session.MediaController controller : sessions.getActiveSessions(
-                    new android.content.ComponentName(this, LauncherNotificationListenerService.class))) {
-                android.media.session.PlaybackState state = controller.getPlaybackState();
-                if (state != null && state.getState() == android.media.session.PlaybackState.STATE_PLAYING) return true;
+            for (MediaController controller : sessions.getActiveSessions(
+                    new ComponentName(this, LauncherNotificationListenerService.class))) {
+                PlaybackState state = controller.getPlaybackState();
+                if (state != null && state.getState() == PlaybackState.STATE_PLAYING) return true;
             }
         } catch (SecurityException e) {
             return false;
@@ -935,7 +953,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     }
 
     void sleepNow() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);
         }
     }
@@ -1021,10 +1039,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
     }
 
     private void runMapping(int keyCode, String press) {
-        java.util.Map<String, org.json.JSONObject> mapping = ButtonMapper.forKey(this, keyCode);
+        Map<String, JSONObject> mapping = ButtonMapper.forKey(this, keyCode);
         if (mapping == null) return;
         // Only a long press set: fall back to it for short presses too, rather than swallowing the button
-        org.json.JSONObject action = mapping.containsKey(press) ? mapping.get(press) : mapping.values().iterator().next();
+        JSONObject action = mapping.containsKey(press) ? mapping.get(press) : mapping.values().iterator().next();
         ButtonMapper.run(this, action);
     }
 
@@ -1041,7 +1059,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         // Never let remaps get around a screen time screen
         if (mScreenTimeLock || !ButtonMapper.isRemappable(keyCode)) return false;
-        java.util.Map<String, org.json.JSONObject> mapping = ButtonMapper.forKey(this, keyCode);
+        Map<String, JSONObject> mapping = ButtonMapper.forKey(this, keyCode);
         if (mapping == null) return false;
         // "Only on Hearth's home screen": in an app the button does its normal job. The press that started on
         // Hearth finishes there (its release follows its press even if Hearth just left the front).
@@ -1069,7 +1087,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // front none of them is showing, so Home stays with Hearth instead of waking them.
         if (MainActivity.isInFront()) mGoogleTvScreenInFront = false;
         if (event.getKeyCode() == KeyEvent.KEYCODE_HOME && event.getAction() == KeyEvent.ACTION_DOWN) {
-            android.util.Log.i("HearthHome", "Home: screenTimeLock=" + mScreenTimeLock + " suspended=" + isSuspended(this)
+            Log.i("HearthHome", "Home: screenTimeLock=" + mScreenTimeLock + " suspended=" + isSuspended(this)
                     + " googleTvInFront=" + mGoogleTvScreenInFront + " hearthInFront=" + MainActivity.isInFront());
         }
         if (event.getKeyCode() == KeyEvent.KEYCODE_HOME && canTakeOver() && !mGoogleTvScreenInFront) {
