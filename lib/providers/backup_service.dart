@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:flauncher/database.dart';
@@ -15,38 +16,27 @@ class BackupService {
 
   BackupService(this._database, this._sharedPreferences);
 
-  /// Gets the path to the backup file.
-  /// Tries Downloads folder first, falls back to external files directory.
-  Future<File> getBackupFile() async {
-    Directory? dir;
-    try {
-      dir = await getDownloadsDirectory();
-    } catch (_) {
-      // Ignored, fallback below
-    }
-    if (dir == null) {
+  /// Hearth's own folders that can hold backups, best first: Downloads, external files, documents.
+  Future<List<Directory>> _appDirectories() async {
+    final List<Directory> dirs = [];
+    for (final lookup in [getDownloadsDirectory, getExternalStorageDirectory, getApplicationDocumentsDirectory]) {
       try {
-        dir = await getExternalStorageDirectory();
-      } catch (_) {
-        // Ignored, fallback below
+        final dir = await lookup();
+        if (dir != null) dirs.add(dir);
+      } catch (e) {
+        developer.log("Backup folder lookup failed", name: "BackupService", error: e);
       }
     }
-    if (dir == null) {
-      try {
-        dir = await getApplicationDocumentsDirectory();
-      } catch (_) {
-        // Ignored
-      }
-    }
-    if (dir == null) {
-      throw const FileSystemException("Could not find any suitable directory for backup");
-    }
-    return File(path.join(dir.path, 'ltv_backup.json'));
+    return dirs;
   }
 
+  /// Where a new backup is written.
   Future<Directory> getBackupDirectory() async {
-    final file = await getBackupFile();
-    return file.parent;
+    final dirs = await _appDirectories();
+    if (dirs.isEmpty) {
+      throw const FileSystemException("Could not find any suitable directory for backup");
+    }
+    return dirs.first;
   }
 
   /// Discovers all possible directories where backup files may reside:
@@ -63,15 +53,7 @@ class BackupService {
       }
     }
 
-    try {
-      addDir(await getDownloadsDirectory());
-    } catch (_) {}
-    try {
-      addDir(await getExternalStorageDirectory());
-    } catch (_) {}
-    try {
-      addDir(await getApplicationDocumentsDirectory());
-    } catch (_) {}
+    (await _appDirectories()).forEach(addDir);
 
     final standardPaths = [
       '/storage/emulated/0/Download',
@@ -106,7 +88,9 @@ class BackupService {
           }
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      developer.log("Couldn't list /storage", name: "BackupService", error: e);
+    }
 
     return dirs;
   }
@@ -133,11 +117,16 @@ class BackupService {
                   lastModified: lastModified,
                   size: size,
                 ));
-              } catch (_) {}
+              } catch (e) {
+                developer.log("Couldn't read ${entity.path}", name: "BackupService", error: e);
+              }
             }
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        // Folders Hearth may not read (shared storage without the permission) are skipped
+        developer.log("Couldn't list ${dir.path}", name: "BackupService", error: e);
+      }
     }
 
     // Sort by modification date (newest first)
@@ -146,7 +135,7 @@ class BackupService {
   }
 
   /// Exports categories, apps, spacers, and settings to a JSON file.
-  Future<String> exportBackup([SettingsService? settingsService]) async {
+  Future<String> exportBackup(SettingsService settingsService) async {
     final Directory dir = await getBackupDirectory();
     final filename = 'ltv_backup_${_timestamp(DateTime.now())}.json';
     final File file = File(path.join(dir.path, filename));
@@ -161,20 +150,20 @@ class BackupService {
         final publicFile = File(path.join(downloadDir.path, filename));
         await publicFile.writeAsString(jsonStr);
       }
-    } catch (_) {}
+    } catch (e) {
+      developer.log("Couldn't copy the backup to Download", name: "BackupService", error: e);
+    }
 
     return file.path;
   }
 
   /// Snapshot of categories, apps, spacers, and settings. With [profileOnly], device-wide settings are left out
   /// so a per-profile layout never carries them between profiles.
-  Future<Map<String, dynamic>> buildBackupData([SettingsService? settingsService, bool profileOnly = false]) async {
+  Future<Map<String, dynamic>> buildBackupData(SettingsService settingsService, [bool profileOnly = false]) async {
 
     // 1. Fetch complete settings
     final Map<String, dynamic> settingsMap = {};
-    if (settingsService != null) {
-      settingsMap.addAll(settingsService.exportSettingsMap());
-    }
+    settingsMap.addAll(settingsService.exportSettingsMap());
     final Set<String> keys = _sharedPreferences.getKeys();
     for (final key in keys) {
       final value = _sharedPreferences.get(key);
@@ -226,16 +215,7 @@ class BackupService {
   }
 
   /// Imports categories, apps, spacers, and settings from the JSON file.
-  /// If [file] is not provided, tries to import the latest backup file.
-  Future<void> importBackup([File? file, SettingsService? settingsService]) async {
-    File? backupFile = file;
-    if (backupFile == null) {
-      final List<BackupFileEntry> backups = await getBackupFiles();
-      if (backups.isEmpty) {
-        throw FileNotFoundException("No backup files found");
-      }
-      backupFile = backups.first.file;
-    }
+  Future<void> importBackup(File backupFile, SettingsService settingsService) async {
     if (!await backupFile.exists()) {
       throw FileNotFoundException("Backup file not found at ${backupFile.path}");
     }
@@ -246,8 +226,8 @@ class BackupService {
   }
 
   /// Replaces the launcher layout and settings with [backupData]. With [profileOnly], device-wide settings are kept.
-  Future<void> restoreBackupData(Map<String, dynamic> backupData,
-      [SettingsService? settingsService, bool profileOnly = false]) async {
+  Future<void> restoreBackupData(Map<String, dynamic> backupData, SettingsService settingsService,
+      [bool profileOnly = false]) async {
     if (backupData["version"] != 1) {
       throw FormatException("Invalid backup file version");
     }
@@ -257,25 +237,7 @@ class BackupService {
     if (profileOnly) {
       settingsMap.removeWhere((key, _) => isDeviceLevelKey(key));
     }
-    if (settingsService != null) {
-      await settingsService.importSettingsMap(settingsMap);
-    } else {
-      for (final entry in settingsMap.entries) {
-        final key = entry.key;
-        final value = entry.value;
-        if (value is bool) {
-          await _sharedPreferences.setBool(key, value);
-        } else if (value is int) {
-          await _sharedPreferences.setInt(key, value);
-        } else if (value is double) {
-          await _sharedPreferences.setDouble(key, value);
-        } else if (value is String) {
-          await _sharedPreferences.setString(key, value);
-        } else if (value is List) {
-          await _sharedPreferences.setStringList(key, value.map((e) => e.toString()).toList());
-        }
-      }
-    }
+    await settingsService.importSettingsMap(settingsMap);
 
     // 2. Restore database tables in a single transaction
     await _database.transaction(() async {
@@ -394,7 +356,9 @@ class BackupService {
     for (final old in autoBackups.skip(keep)) {
       try {
         await old.delete();
-      } catch (_) {}
+      } catch (e) {
+        developer.log("Couldn't delete an old automatic backup", name: "BackupService", error: e);
+      }
     }
     return file;
   }
