@@ -1058,6 +1058,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (mScreenTimeLock || !ButtonMapper.isRemappable(keyCode)) return false;
         java.util.Map<String, org.json.JSONObject> mapping = ButtonMapper.forKey(this, keyCode);
         if (mapping == null) return false;
+        // "Only on Hearth's home screen": in an app the button does its normal job. The press that started on
+        // Hearth finishes there (its release follows its press even if Hearth just left the front).
+        if (ButtonMapper.homeOnly(this, keyCode) && !MainActivity.isInFront() && mHeldKey != keyCode) return false;
 
         if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
             mHeldKey = keyCode;
