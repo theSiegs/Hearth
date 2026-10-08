@@ -25,7 +25,6 @@ import 'package:provider/provider.dart';
 
 import '../models/app.dart';
 import '../models/category.dart';
-import '../providers/settings_service.dart';
 import 'category_container_common.dart';
 
 class AppsGrid extends StatelessWidget
@@ -90,39 +89,7 @@ class AppsGrid extends StatelessWidget
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Selector<SettingsService, (bool, bool)>(
-          selector: (context, service) =>
-              (service.showCategoryTitles, service.showCategoryAppCount),
-          builder: (context, settings, _) {
-            final (showCategoriesTitle, showCategoryAppCount) = settings;
-            if (showCategoriesTitle) {
-              return Padding(
-                padding: const EdgeInsets.only(left: 16, bottom: 8),
-                child: Row(
-                  children: [
-                    Text(category.name,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge!
-                          .copyWith(shadows: [const Shadow(color: Colors.black54, offset: Offset(1, 1), blurRadius: 8)])
-                    ),
-                    if (showCategoryAppCount) ...[
-                      const SizedBox(width: 8),
-                      Text('•  ${applications.length}',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium!
-                            .copyWith(color: Colors.white54)
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            }
-
-            return const SizedBox.shrink();
-          }
-        ),
+        CategoryHeader(title: category.name, count: applications.length),
         categoryContent
       ],
     );

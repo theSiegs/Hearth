@@ -2,6 +2,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/apps_grid.dart';
+import 'package:flauncher/widgets/category_container_common.dart';
 import 'package:flauncher/widgets/category_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -84,6 +85,18 @@ void main() {
       expect(find.text('TV Apps'), findsOneWidget);
       expect(find.text('•  0'), findsOneWidget);
     });
+  });
+
+  testWidgets('CategoryHeader shows nothing while section titles are off', (tester) async {
+    when(settingsService.showCategoryTitles).thenReturn(false);
+    when(settingsService.showCategoryAppCount).thenReturn(true);
+
+    await tester.pumpWidget(
+      _buildTestWidget(const CategoryHeader(title: 'TV Apps', count: 3), settingsService),
+    );
+
+    expect(find.text('TV Apps'), findsNothing);
+    expect(find.text('•  3'), findsNothing);
   });
 
   group('AppsGrid app count display', () {
