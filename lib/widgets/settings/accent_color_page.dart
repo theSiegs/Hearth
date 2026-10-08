@@ -21,6 +21,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/settings_service.dart';
+import '../focusable_tap.dart';
 import 'settings_page.dart';
 
 class AccentColorPage extends StatelessWidget {
@@ -126,7 +127,7 @@ class AccentColorPage extends StatelessWidget {
   }
 }
 
-class _ColorTile extends StatefulWidget {
+class _ColorTile extends StatelessWidget {
   final Color color;
   final String name;
   final bool isSelected;
@@ -142,61 +143,45 @@ class _ColorTile extends StatefulWidget {
   });
 
   @override
-  State<_ColorTile> createState() => _ColorTileState();
-}
-
-class _ColorTileState extends State<_ColorTile> {
-  bool _focused = false;
-
-  @override
   Widget build(BuildContext context) {
-    final isLightColor = widget.color.computeLuminance() > 0.5;
+    final isLightColor = color.computeLuminance() > 0.5;
     final iconColor = isLightColor ? Colors.black : Colors.white;
 
-    return Actions(
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => widget.onTap()),
-        ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) => widget.onTap()),
-      },
-      child: Focus(
-        autofocus: widget.autofocus,
-        onFocusChange: (hasFocus) => setState(() => _focused = hasFocus),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: Container(
-            decoration: BoxDecoration(
-              color: widget.color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: _focused ? Colors.white : (widget.isSelected ? widget.color : Colors.transparent),
-                width: _focused ? 2.5 : (widget.isSelected ? 2 : 0),
-              ),
-              boxShadow: _focused ? [BoxShadow(color: widget.color.withOpacity(0.5), blurRadius: 8)] : null,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: widget.color,
-                    shape: BoxShape.circle,
-                  ),
-                  child: widget.isSelected ? Icon(Icons.check, color: iconColor, size: 10) : null,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  widget.name,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: _focused || widget.isSelected ? FontWeight.bold : FontWeight.w500,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
+    return FocusableTap(
+      autofocus: autofocus,
+      onPressed: onTap,
+      builder: (context, focused) => Container(
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: focused ? Colors.white : (isSelected ? color : Colors.transparent),
+            width: focused ? 2.5 : (isSelected ? 2 : 0),
           ),
+          boxShadow: focused ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 8)] : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+              child: isSelected ? Icon(Icons.check, color: iconColor, size: 10) : null,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              name,
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: focused || isSelected ? FontWeight.bold : FontWeight.w500,
+                fontSize: 13,
+              ),
+            ),
+          ],
         ),
       ),
     );
