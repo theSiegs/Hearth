@@ -106,6 +106,27 @@ void main() {
       expect(notificationsService.hasPermission, true);
       expect(notified, true);
     });
+
+    test('both checks at once, as on resume, pick up newly granted permissions', () async {
+      notificationsService = NotificationsService(mockChannel);
+      while (!notificationsService.initialized) {
+        await Future.delayed(Duration.zero);
+      }
+      when(mockChannel.checkNotificationListenerPermission()).thenAnswer((_) async => true);
+      when(mockChannel.checkOverlayPermission()).thenAnswer((_) async => true);
+      when(mockChannel.getActiveNotifications()).thenAnswer((_) async => [
+            {'packageName': 'com.netflix.ninja', 'key': 'net_1', 'title': 'Netflix', 'isClearable': true},
+          ]);
+
+      final permission = notificationsService.checkPermission();
+      final overlay = notificationsService.checkOverlayPermission();
+      await Future.wait([permission, overlay]);
+
+      expect(notificationsService.hasPermission, isTrue);
+      expect(notificationsService.hasOverlayPermission, isTrue);
+      expect(notificationsService.notifications.map((n) => n.key), ['net_1']);
+      verify(mockChannel.addNotificationsChangedListener(any)).called(1);
+    });
   });
 
   group('Notification Updates', () {
