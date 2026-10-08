@@ -259,6 +259,16 @@ void main() {
       expect(settingsService.appLanguage, "");
     });
 
+    test("include the dock and Home Assistant panel, so a profile's layout doesn't keep another's", () async {
+      final settingsService = SettingsService(sharedPreferences);
+      final layout = await backupService.buildBackupData(settingsService, true);
+      await settingsService.setDockEnabled(false);
+      await settingsService.setHaPanelEnabled(true);
+      await backupService.restoreBackupData(layout, settingsService, true);
+      expect(settingsService.dockEnabled, isTrue);
+      expect(settingsService.haPanelEnabled, isFalse);
+    });
+
     test("an older export's old default date and time count as never chosen", () async {
       final settingsService = SettingsService(sharedPreferences);
       final data = await backupService.buildBackupData(settingsService);
