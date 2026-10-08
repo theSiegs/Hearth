@@ -103,8 +103,8 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    final String? label = event.logicalKey.keyLabel;
-    if (label != null && label.length == 1 && RegExp(r'[0-9]').hasMatch(label)) {
+    final String label = event.logicalKey.keyLabel;
+    if (label.length == 1 && RegExp(r'[0-9]').hasMatch(label)) {
       _onDigit(label);
       return KeyEventResult.handled;
     }
@@ -252,6 +252,18 @@ class _KeypadState extends State<_Keypad> {
     return KeyEventResult.handled;
   }
 
+  Widget _button(String label, FocusNode? focusNode, {required bool autofocus}) {
+    if (label.isEmpty) {
+      return const SizedBox(width: 56, height: 56);
+    }
+    return _KeypadButton(
+      label: label,
+      focusNode: focusNode,
+      autofocus: autofocus,
+      onPressed: () => label == "⌫" ? widget.onBackspace() : widget.onDigit(label),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Focus(
@@ -263,19 +275,10 @@ class _KeypadState extends State<_Keypad> {
           for (int row = 0; row < _Keypad._layout.length; row++)
             Row(
               children: [
-                for (int col = 0; col < 3; col++)
+                for (int col = 0; col < _Keypad._layout[row].length; col++)
                   Padding(
                     padding: const EdgeInsets.all(7),
-                    child: _Keypad._layout[row][col].isEmpty
-                        ? const SizedBox(width: 56, height: 56)
-                        : _KeypadButton(
-                            label: _Keypad._layout[row][col],
-                            focusNode: _nodes[row][col],
-                            autofocus: row == 0 && col == 0,
-                            onPressed: () => _Keypad._layout[row][col] == "⌫"
-                                ? widget.onBackspace()
-                                : widget.onDigit(_Keypad._layout[row][col]),
-                          ),
+                    child: _button(_Keypad._layout[row][col], _nodes[row][col], autofocus: row == 0 && col == 0),
                   ),
               ],
             ),
