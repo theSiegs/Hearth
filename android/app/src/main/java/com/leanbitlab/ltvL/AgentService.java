@@ -25,6 +25,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.InetAddress;
@@ -64,6 +65,7 @@ public class AgentService extends Service {
     private int mFailedConnects = 0;
     private volatile boolean mSelfCleaned = false;
     private volatile PrintWriter mOut;
+    private volatile Socket mSocket;
     private ContentObserver mWatchNextObserver;
 
     /** Whether Hearth is running in a profile user other than the owner's (the system user), as an agent. */
@@ -250,6 +252,8 @@ public class AgentService extends Service {
             if (key != null) {
                 boolean connected = false;
                 try (Socket socket = new Socket(InetAddress.getByName("127.0.0.1"), AgentHub.PORT)) {
+                    mSocket = socket;
+                    if (!mRunning) return;
                     PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                     BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
                     boolean voiceDefault = getPackageName().equals(android.provider.Settings.Secure.getString(
@@ -293,6 +297,7 @@ public class AgentService extends Service {
                 } catch (Exception e) {
                     Log.i(TAG, "Hearth unreachable: " + e.getMessage());
                 } finally {
+                    mSocket = null;
                     boolean wasConnected = mOut != null;
                     mOut = null;
                     sListeningTo = null;
@@ -307,6 +312,7 @@ public class AgentService extends Service {
                 }
             }
             synchronized (this) {
+                if (!mRunning) return;
                 try {
                     wait(RETRY_MS);
                 } catch (InterruptedException e) {
@@ -320,12 +326,17 @@ public class AgentService extends Service {
         notifyAll();
     }
 
+    /**
+     * Queues the message for Hearth on the agent's thread, in order: callers include the main thread, where Android
+     * refuses socket writes (NetworkOnMainThreadException).
+     */
     private void send(JSONObject message) {
-        PrintWriter out = mOut;
-        if (out == null || message == null) return;
-        synchronized (out) {
-            out.println(message.toString());
-        }
+        if (message == null || mOut == null) return;
+        String line = message.toString();
+        mHandler.post(() -> {
+            PrintWriter out = mOut;
+            if (out != null) out.println(line);
+        });
     }
 
     private final Runnable mSendWatchNext = () -> {
@@ -417,6 +428,15 @@ public class AgentService extends Service {
     @Override
     public void onDestroy() {
         mRunning = false;
+        // Ends the socket thread's read, so it stops handling Hearth's messages and Hearth sees the agent go.
+        Socket socket = mSocket;
+        if (socket != null) {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                Log.w(TAG, "Couldn't close the connection to Hearth: " + e);
+            }
+        }
         reconnect();
         if (mWatchNextObserver != null) getContentResolver().unregisterContentObserver(mWatchNextObserver);
         if (mThread != null) mThread.quitSafely();
