@@ -21,6 +21,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/notifications_service.dart';
+import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'adb_command_dialog.dart';
 import 'focusable_settings_tile.dart';
 import 'settings_page.dart';
@@ -95,16 +96,11 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> w
               },
             ),
             if (service.hasPermission) ...[
-              FocusableSettingsTile(
-                leading: const Icon(Icons.notifications_paused_outlined),
+              RoundedSwitchListTile(
+                value: service.hidePersistentNotifications,
+                onChanged: (hide) => service.setHidePersistentNotifications(hide),
                 title: Text(localizations.hidePersistentNotifications, style: Theme.of(context).textTheme.bodyMedium),
-                trailing: Text(
-                  service.hidePersistentNotifications ? localizations.enabled : localizations.disabled,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: service.hidePersistentNotifications ? Colors.green : Colors.grey,
-                      ),
-                ),
-                onPressed: () => service.setHidePersistentNotifications(!service.hidePersistentNotifications),
+                secondary: const Icon(Icons.notifications_paused_outlined),
               ),
               FocusableSettingsTile(
                 leading: const Icon(Icons.block),

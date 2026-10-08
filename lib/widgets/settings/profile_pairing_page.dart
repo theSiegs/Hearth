@@ -1,4 +1,5 @@
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
 
 import 'focusable_settings_tile.dart';
@@ -150,8 +151,7 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
   List<PairingChoice>? _choices;
   late bool _enabled = widget.app["enabled"] != false;
 
-  Future<void> _toggleEnabled() async {
-    final enabled = !_enabled;
+  Future<void> _setEnabled(bool enabled) async {
     await _channel.setProfilePairingAppEnabled(_packageName, enabled);
     if (mounted) setState(() => _enabled = enabled);
   }
@@ -220,15 +220,12 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
           : SingleChildScrollView(
               child: Column(
                 children: [
-                  FocusableSettingsTile(
+                  RoundedSwitchListTile(
                     autofocus: true,
-                    leading: Icon(Icons.switch_account, color: _enabled ? Colors.green : Colors.white54),
+                    value: _enabled,
+                    onChanged: _setEnabled,
                     title: Text("Pair profiles in ${widget.app["label"]}", style: textTheme.bodyMedium),
-                    trailing: Text(
-                      _enabled ? "On" : "Off",
-                      style: textTheme.bodySmall?.copyWith(color: _enabled ? Colors.green : Colors.white54),
-                    ),
-                    onPressed: _toggleEnabled,
+                    secondary: Icon(Icons.switch_account, color: _enabled ? Colors.green : Colors.white54),
                   ),
                   if (_enabled) const Divider(),
                   if (_enabled)
