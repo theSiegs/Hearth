@@ -20,6 +20,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/home_search.dart';
 import '../../providers/search_service.dart';
+import '../focusable_tap.dart';
 import 'open_title.dart';
 import 'title_card.dart';
 
@@ -165,7 +166,7 @@ class _SearchGridPageState extends State<SearchGridPage> {
 }
 
 /// A HearthTube-style pill: white when selected, see-through otherwise; focusing it selects it.
-class _Pill extends StatefulWidget {
+class _Pill extends StatelessWidget {
   final String label;
   final int count;
   final bool selected;
@@ -180,43 +181,27 @@ class _Pill extends StatefulWidget {
       this.autofocus = false});
 
   @override
-  State<_Pill> createState() => _PillState();
-}
-
-class _PillState extends State<_Pill> {
-  bool _focused = false;
-
-  @override
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
-    final fg = widget.selected ? Colors.black : Colors.white;
-    return Actions(
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => widget.onSelected()),
+    final fg = selected ? Colors.black : Colors.white;
+    return FocusableTap(
+      autofocus: autofocus,
+      onPressed: onSelected,
+      onFocusChange: (focused) {
+        if (focused) onSelected();
       },
-      child: Focus(
-        autofocus: widget.autofocus,
-        onFocusChange: (focused) {
-          setState(() => _focused = focused);
-          if (focused) widget.onSelected();
-        },
-        onKeyEvent: (_, __) => KeyEventResult.ignored,
-        child: GestureDetector(
-          onTap: widget.onSelected,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
-            decoration: BoxDecoration(
-              color: widget.selected ? Colors.white : Colors.white.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: _focused ? accent : Colors.white.withOpacity(0.15), width: _focused ? 3 : 1),
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(widget.label, style: TextStyle(color: fg, fontSize: 17, fontWeight: FontWeight.w500)),
-              const SizedBox(width: 8),
-              Text("${widget.count}", style: TextStyle(color: fg.withOpacity(0.6), fontSize: 14)),
-            ]),
-          ),
+      builder: (context, focused) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.white.withOpacity(0.10),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: focused ? accent : Colors.white.withOpacity(0.15), width: focused ? 3 : 1),
         ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Text(label, style: TextStyle(color: fg, fontSize: 17, fontWeight: FontWeight.w500)),
+          const SizedBox(width: 8),
+          Text("$count", style: TextStyle(color: fg.withOpacity(0.6), fontSize: 14)),
+        ]),
       ),
     );
   }
