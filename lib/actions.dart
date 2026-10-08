@@ -17,7 +17,6 @@
  */
 
 import 'package:flauncher/flauncher_channel.dart';
-import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flutter/material.dart';
@@ -42,8 +41,8 @@ class SoundFeedbackDirectionalFocusAction extends DirectionalFocusAction {
     }
   }
 
-  /// copied from Feedback.forTap, omitting playing a sound
-  static void silentForTap(BuildContext context) async {
+  /// Feedback.forTap without the click sound.
+  static void silentForTap(BuildContext context) {
     context.findRenderObject()!.sendSemanticsEvent(const TapSemanticEvent());
   }
 }
@@ -82,12 +81,12 @@ class StartSearchIntent extends Intent {
   const StartSearchIntent();
 }
 
-/// Opens the Home Assistant panel; sent by pressing Right at the right edge of the home screen when the panel is on.
 /// Down from the top bar: back to Continue Watching or the dock, rather than whatever is nearest on screen.
 class LeaveTopBarIntent extends Intent {
   const LeaveTopBarIntent();
 }
 
+/// Opens the Home Assistant panel; sent by pressing Right at the right edge of the home screen when the panel is on.
 class OpenHaPanelIntent extends Intent {
   const OpenHaPanelIntent();
 }
@@ -96,4 +95,3 @@ class BackIntent extends Intent {
   const BackIntent();
 }
 
-Future<bool> isDefaultLauncher(BuildContext context) async => await context.read<AppsService>().isDefaultLauncher();
