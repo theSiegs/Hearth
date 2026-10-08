@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
 import 'package:flauncher/models/watch_next_program.dart';
+import 'package:flauncher/providers/settings_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../mocks.mocks.dart';
 
@@ -451,6 +452,28 @@ void main() {
 
       final service = await ready();
       expect(titles(service), ['Show 1']);
+    });
+  });
+
+  group('WatchNextService hidden apps', () {
+    test('setPackageHidden and unhideAll save the choice and re-read the list', () async {
+      final settings = SettingsService(await SharedPreferences.getInstance());
+      final service = WatchNextService(mockChannel, clock: clock);
+      while (!service.initialized) {
+        await Future.delayed(Duration.zero);
+      }
+      clearInteractions(mockChannel);
+
+      await service.setPackageHidden(settings, 'com.netflix.mediaclient', true);
+      expect(settings.hiddenWatchNextPackages, ['com.netflix.mediaclient']);
+
+      await service.setPackageHidden(settings, 'com.netflix.mediaclient', false);
+      expect(settings.hiddenWatchNextPackages, isEmpty);
+
+      await service.setPackageHidden(settings, 'com.example.tv', true);
+      await service.unhideAll(settings);
+      expect(settings.hiddenWatchNextPackages, isEmpty);
+      verify(mockChannel.getWatchNextPrograms()).called(4);
     });
   });
 

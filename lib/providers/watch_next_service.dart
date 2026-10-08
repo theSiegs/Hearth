@@ -6,6 +6,7 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/watch_next_program.dart';
+import 'settings_service.dart';
 
 class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
   final FLauncherChannel _channel;
@@ -281,6 +282,22 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
       await refresh();
     }
     return granted;
+  }
+
+  /// Hides or shows an app's entries (the choice is kept in [settings]) and re-reads the list.
+  Future<void> setPackageHidden(SettingsService settings, String packageName, bool hidden) async {
+    if (hidden) {
+      await settings.hideWatchNextPackage(packageName);
+    } else {
+      await settings.unhideWatchNextPackage(packageName);
+    }
+    await refresh();
+  }
+
+  /// Shows every app's entries again.
+  Future<void> unhideAll(SettingsService settings) async {
+    await settings.unhideAllWatchNextPackages();
+    await refresh();
   }
 
   Future<bool> launch(WatchNextProgram program) async {
