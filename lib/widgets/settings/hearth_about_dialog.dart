@@ -19,6 +19,7 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:provider/provider.dart';
 
 import 'hearth_dialog.dart';
 
@@ -93,7 +94,7 @@ class HearthAboutDialog extends StatelessWidget {
             icon: Icons.code,
             label: "Hearth on GitHub",
             autofocus: true,
-            onPressed: () => FLauncherChannel().openUrl("https://github.com/theSiegs/Hearth"),
+            onPressed: () => context.read<FLauncherChannel>().openUrl("https://github.com/theSiegs/Hearth"),
           ),
           const SizedBox(height: 14),
 
@@ -114,25 +115,25 @@ class HearthAboutDialog extends StatelessWidget {
           FocusableDialogButton(
             icon: Icons.call_split,
             label: "LTvLauncher · LeanBitLab",
-            onPressed: () => FLauncherChannel().openUrl("https://github.com/leanbitlab-org/LtvLauncher"),
+            onPressed: () => context.read<FLauncherChannel>().openUrl("https://github.com/leanbitlab-org/LtvLauncher"),
           ),
           const SizedBox(height: 6),
           FocusableDialogButton(
             icon: Icons.dock,
             label: "Arc Launcher · Badis Meddouri",
-            onPressed: () => FLauncherChannel().openUrl("https://github.com/meddouribadis/arclauncher"),
+            onPressed: () => context.read<FLauncherChannel>().openUrl("https://github.com/meddouribadis/arclauncher"),
           ),
           const SizedBox(height: 6),
           FocusableDialogButton(
             icon: Icons.history,
             label: "FLauncher · Étienne Fesser",
-            onPressed: () => FLauncherChannel().openUrl("https://gitlab.com/flauncher/flauncher"),
+            onPressed: () => context.read<FLauncherChannel>().openUrl("https://gitlab.com/flauncher/flauncher"),
           ),
           const SizedBox(height: 6),
           FocusableDialogButton(
             icon: Icons.history,
             label: "FLauncher fork · osrosal",
-            onPressed: () => FLauncherChannel().openUrl("https://github.com/osrosal/flauncher"),
+            onPressed: () => context.read<FLauncherChannel>().openUrl("https://github.com/osrosal/flauncher"),
           ),
           const SizedBox(height: 10),
           const Text(
