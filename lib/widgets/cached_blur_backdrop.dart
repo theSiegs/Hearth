@@ -51,7 +51,7 @@ class _CachedBlurBackdropState extends State<CachedBlurBackdrop> {
   int _builtVersion = -1;
   String? _builtGradientId;
   double _builtSigma = -1;
-  bool _building = false;
+  bool _makingSnapshot = false;
 
   @override
   void dispose() {
@@ -64,9 +64,10 @@ class _CachedBlurBackdropState extends State<CachedBlurBackdrop> {
         child: widget.child,
       );
 
-  Future<void> _build(WallpaperService service, Size size, double dpr) async {
-    if (_building) return;
-    _building = true;
+  Future<void> _makeSnapshot(WallpaperService service, Size size, double dpr) async {
+    if (_makingSnapshot) return;
+    _makingSnapshot = true;
+    ui.Image? source;
     try {
       final pxWidth = (size.width * dpr).round();
       final pxHeight = (size.height * dpr).round();
@@ -74,7 +75,7 @@ class _CachedBlurBackdropState extends State<CachedBlurBackdrop> {
       final sigma = widget.sigma;
 
       final provider = service.wallpaper;
-      final ui.Image? source = provider != null ? await _resolveImage(provider) : null;
+      source = provider != null ? await _resolveImage(provider) : null;
 
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
@@ -117,10 +118,12 @@ class _CachedBlurBackdropState extends State<CachedBlurBackdrop> {
     } catch (_) {
       // Keep the live blur if the wallpaper can't be decoded.
     } finally {
-      _building = false;
+      source?.dispose();
+      _makingSnapshot = false;
     }
   }
 
+  /// Decodes [provider]; the caller disposes the image it gets.
   Future<ui.Image> _resolveImage(ImageProvider provider) {
     final completer = Completer<ui.Image>();
     final stream = provider.resolve(ImageConfiguration.empty);
@@ -156,7 +159,7 @@ class _CachedBlurBackdropState extends State<CachedBlurBackdrop> {
         _builtSigma != widget.sigma;
     if (stale && screen.width > 0 && screen.height > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _build(service, screen, dpr);
+        if (mounted) _makeSnapshot(service, screen, dpr);
       });
     }
 
