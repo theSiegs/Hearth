@@ -208,7 +208,7 @@ final class ProfilePairing {
         if (hearthName == null) return null;
         String match = bestMatch(hearthName, names);
         // A kid only ever lands in a profile named for them: the same name or first name, never a near miss
-        // ("Jo" / "Henry") that could be a grown-up's
+        // ("Jo" / "Joe") that could be a grown-up's
         return match != null && kids && matchScore(hearthName, match) < KIDS_MIN_SCORE ? null : match;
     }
 
@@ -236,7 +236,7 @@ final class ProfilePairing {
     /**
      * How well two profile names match: 5 same name; 4 same first name ("Alex" / "Alex Morgan"); 3 one name
      * contains the other; 2 one first name starts with the other, a nickname ("Sam" / "Samantha", "Jo" /
-     * "Josephine"); 1 same first three letters ("Tony" / "Riley"); 0 no match.
+     * "Josephine"); 1 same first three letters ("Tony" / "Tonia"); 0 no match.
      */
     static int matchScore(String a, String b) {
         String x = normalize(a);
