@@ -55,7 +55,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         @Override
         public void run() {
             checkProfileUser("recheck");
-            if (--mProfileUserRechecks > 0) mIdleHandler.postDelayed(this, PROFILE_USER_RECHECK_MS);
+            if (--mProfileUserRechecks > 0) mHandler.postDelayed(this, PROFILE_USER_RECHECK_MS);
         }
     };
     private final BroadcastReceiver mProfileUserReceiver = new BroadcastReceiver() {
@@ -122,12 +122,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
         @Override
         public void onPackagesSuspended(String[] packageNames, UserHandle user) {
-            onProfileChanged();
+            onSuspensionsChanged();
         }
 
         @Override
         public void onPackagesUnsuspended(String[] packageNames, UserHandle user) {
-            onProfileChanged();
+            onSuspensionsChanged();
         }
     };
 
@@ -158,7 +158,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         updateScreenTimeLock("service start");
         getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).edit().putBoolean(HOME_FIX_SEEN_KEY, true).apply();
-        mIdleHandler.postDelayed(mIdleCheck, IDLE_CHECK_MS);
+        mHandler.postDelayed(mPeriodicCheck, IDLE_CHECK_MS);
         mHaOverlay = new HaNotificationOverlay(this);
         updateHaServer();
         mHaStatus = new HaStatusReporter(this);
@@ -178,13 +178,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
     public void onDestroy() {
         if (sInstance == this) sInstance = null;
         ProfileProvider.notifyChanged(this);  // service_running
-        mIdleHandler.removeCallbacks(mIdleCheck);
-        mIdleHandler.removeCallbacks(mKidsHomeTakeOver);
-        mIdleHandler.removeCallbacks(mReadScreenTime);
-        mIdleHandler.removeCallbacks(mProfileUserRecheck);
-        mIdleHandler.removeCallbacks(mSettleCheck);
-        mIdleHandler.removeCallbacks(mReadChooser);
-        mIdleHandler.removeCallbacks(mReadyFallback);
+        mHandler.removeCallbacks(mPeriodicCheck);
+        mHandler.removeCallbacks(mKidsHomeTakeOver);
+        mHandler.removeCallbacks(mReadScreenTime);
+        mHandler.removeCallbacks(mProfileUserRecheck);
+        mHandler.removeCallbacks(mSettleCheck);
+        mHandler.removeCallbacks(mReadChooser);
+        mHandler.removeCallbacks(mReadyFallback);
         if (mHaServer != null) mHaServer.stop();
         if (mHaStatus != null) mHaStatus.stop();
         try {
@@ -207,7 +207,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
      * A Google TV profile switch changes which apps are suspended. Leaving a kids profile, Google TV opens
      * its home first and lifts suspensions a moment later, so retry a bounce we held back.
      */
-    private void onProfileChanged() {
+    private void onSuspensionsChanged() {
         // Suspensions also change when apps are installed, updated or re-approved, and Google TV re-suspends apps
         // whenever its time up screen opens, so only a switch (a chooser pick, a new profile user, or a flip
         // between a kids profile and a grown-up one) may lift the screen time lock.
@@ -262,8 +262,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
                     // Rechecked when the chooser closes
                     return;
                 }
-                mIdleHandler.removeCallbacks(mSettleCheck);
-                mIdleHandler.postDelayed(mSettleCheck, settle - (now - mCandidateAt));
+                mHandler.removeCallbacks(mSettleCheck);
+                mHandler.postDelayed(mSettleCheck, settle - (now - mCandidateAt));
                 return;
             }
         }
@@ -276,8 +276,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 .remove(PROFILE_READY_KEY).apply();
         // Flutter's welcome card says sooner when the home finishes first; with Hearth off screen (asleep, after a
         // restart) nothing would, so ready after the card's own limit regardless
-        mIdleHandler.removeCallbacks(mReadyFallback);
-        mIdleHandler.postDelayed(mReadyFallback, PROFILE_READY_FALLBACK_MS);
+        mHandler.removeCallbacks(mReadyFallback);
+        mHandler.postDelayed(mReadyFallback, PROFILE_READY_FALLBACK_MS);
         if (!ProfileUsers.key(serial).equals(getActiveProfileKey(this))) {
             getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE).edit().putString(PROFILE_KEY_KEY, ProfileUsers.key(serial)).apply();
             ProfileProvider.notifyChanged(this);
@@ -306,8 +306,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     private void scheduleProfileUserRechecks() {
         mProfileUserRechecks = 3;
-        mIdleHandler.removeCallbacks(mProfileUserRecheck);
-        mIdleHandler.postDelayed(mProfileUserRecheck, PROFILE_USER_RECHECK_MS);
+        mHandler.removeCallbacks(mProfileUserRecheck);
+        mHandler.postDelayed(mProfileUserRecheck, PROFILE_USER_RECHECK_MS);
     }
 
     /** Pairs a switch in the profile users with the chooser pick that made it, whichever came first. */
@@ -475,7 +475,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         public void onReceive(Context context, Intent intent) {
             LauncherAccessibilityService service = sInstance;
             if (service != null) {
-                service.onProfileChanged();
+                service.onSuspensionsChanged();
             }
         }
     }
@@ -548,8 +548,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
             }
             reportScreenTimeText(className, event, wellbeing);
             if (isChooser(className)) {
-                mIdleHandler.removeCallbacks(mReadChooser);
-                mIdleHandler.postDelayed(mReadChooser, CHOOSER_READ_DELAY_MS);
+                mHandler.removeCallbacks(mReadChooser);
+                mHandler.postDelayed(mReadChooser, CHOOSER_READ_DELAY_MS);
                 checkProfileUser("chooser opened");
             }
 
@@ -576,8 +576,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
                     // A kids profile whose screen time the apps can't tell: Google TV opens its time up / bedtime
                     // screen from its home a moment after the home itself, and covering the home first would hide
                     // it (Hearth, the home app, can't be suspended). Take over only if the home is still in front.
-                    mIdleHandler.removeCallbacks(mKidsHomeTakeOver);
-                    mIdleHandler.postDelayed(mKidsHomeTakeOver, KIDS_HOME_GRACE_MS);
+                    mHandler.removeCallbacks(mKidsHomeTakeOver);
+                    mHandler.postDelayed(mKidsHomeTakeOver, KIDS_HOME_GRACE_MS);
                 } else if (autoTakeOverAllowed()) {
                     openLauncher();
                 } else {
@@ -621,9 +621,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (wellbeing) {
             // The window event carries no text ("Time for bed" etc. are in its views), and the views are only
             // laid out a moment later.
-            mIdleHandler.removeCallbacks(mReadScreenTime);
+            mHandler.removeCallbacks(mReadScreenTime);
             mScreenTimeClass = className;
-            mIdleHandler.postDelayed(mReadScreenTime, SCREEN_TIME_READ_DELAY_MS);
+            mHandler.postDelayed(mReadScreenTime, SCREEN_TIME_READ_DELAY_MS);
         }
     }
 
@@ -845,18 +845,18 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final long IDLE_CHECK_MS = 30_000;
     private static final long IDLE_WARNING_MS = 60_000;
 
-    private final android.os.Handler mIdleHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final android.os.Handler mHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private long mLastInputAt = SystemClock.elapsedRealtime();
     private boolean mIdleWarned = false;
 
-    private final Runnable mIdleCheck = new Runnable() {
+    private final Runnable mPeriodicCheck = new Runnable() {
         @Override
         public void run() {
             checkIdle();
             // In case a switch broadcast was missed
             checkProfileUser("periodic check");
             updateScreenTimeLock("periodic check");
-            mIdleHandler.postDelayed(this, IDLE_CHECK_MS);
+            mHandler.postDelayed(this, IDLE_CHECK_MS);
         }
     };
 
@@ -1056,10 +1056,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
             mHeldKey = keyCode;
             mLongPressFired = false;
             if (mapping.containsKey(ButtonMapper.PRESS_LONG)) {
-                mIdleHandler.postDelayed(mLongPress, LONG_PRESS_MS);
+                mHandler.postDelayed(mLongPress, LONG_PRESS_MS);
             }
         } else if (event.getAction() == KeyEvent.ACTION_UP && keyCode == mHeldKey) {
-            mIdleHandler.removeCallbacks(mLongPress);
+            mHandler.removeCallbacks(mLongPress);
             if (!mLongPressFired) runMapping(keyCode, ButtonMapper.PRESS_SHORT);
             mHeldKey = KeyEvent.KEYCODE_UNKNOWN;
         }
