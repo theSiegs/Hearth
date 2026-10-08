@@ -26,26 +26,37 @@ final class ProfileAvatars {
     static final int SAVED = 2;
     private static final int SIZE = 128;
 
+    private static boolean sLegacyDropped;
+
     private ProfileAvatars() {
     }
 
     private static File file(Context context, String name) {
+        dropLegacyPhotos(context);
         String safe;
         try {
             safe = URLEncoder.encode(name, "UTF-8");
         } catch (java.io.UnsupportedEncodingException e) {
             safe = Integer.toHexString(name.hashCode());
         }
-        // v2: photos taken before only the current account's tile counted could carry Google TV's PIN lock badge
-        File old = new File(context.getFilesDir(), "profile_avatars");
-        if (old.isDirectory()) {
-            File[] files = old.listFiles();
-            if (files != null) for (File f : files) //noinspection ResultOfMethodCallIgnored
-                f.delete();
-            //noinspection ResultOfMethodCallIgnored
-            old.delete();
-        }
         return new File(new File(context.getFilesDir(), "profile_avatars_v2"), safe + ".png");
+    }
+
+    /** Pre-v2 photos could include Google TV's PIN lock badge. Runs once per process. */
+    private static synchronized void dropLegacyPhotos(Context context) {
+        if (sLegacyDropped) return;
+        sLegacyDropped = true;
+        File old = new File(context.getFilesDir(), "profile_avatars");
+        if (!old.isDirectory()) return;
+        File[] files = old.listFiles();
+        if (files != null) {
+            for (File f : files) {
+                //noinspection ResultOfMethodCallIgnored
+                f.delete();
+            }
+        }
+        //noinspection ResultOfMethodCallIgnored
+        old.delete();
     }
 
     /** No photo yet for this profile, or it's due a refresh. */
