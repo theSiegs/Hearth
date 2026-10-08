@@ -308,6 +308,17 @@ void main() {
       expect(saved.sort.value, CategorySort.manual);
     });
 
+    test("addCategory passes a database failure on and adds nothing", () async {
+      final channel = MockFLauncherChannel();
+      final database = MockFLauncherDatabase();
+      when(database.insertCategory(any)).thenAnswer((_) => Future.error(StateError("disk full")));
+
+      final appsService = await _buildInitialisedAppsService(channel, database);
+
+      await expectLater(appsService.addCategory("Movies"), throwsStateError);
+      expect(appsService.launcherSections, isEmpty);
+    });
+
     test("favoritesCategory is the category named Favorites, once there is one", () async {
       final channel = MockFLauncherChannel();
       final database = MockFLauncherDatabase();
