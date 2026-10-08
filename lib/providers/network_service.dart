@@ -107,9 +107,15 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver
     }
   }
 
-  void _checkPermissionAndStartPolling() async {
+  Future<void> _checkPermissionAndStartPolling() async {
     final localCallCount = ++_callCount;
-    final bool allowed = await _channel.checkUsageStatsPermission();
+    final bool allowed;
+    try {
+      allowed = await _channel.checkUsageStatsPermission();
+    } catch (e) {
+      log("Failed to check the usage stats permission", name: "NetworkService", error: e);
+      return;
+    }
     if (localCallCount != _callCount) return;
 
     _hasUsageStatsPermission = allowed;
@@ -130,9 +136,7 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver
   }
 
   // Call this when app resumes
-  Future<void> refreshPermissionAndUsage() async {
-    _checkPermissionAndStartPolling();
-  }
+  Future<void> refreshPermissionAndUsage() => _checkPermissionAndStartPolling();
 
   Future<void> openWifiSettings() async {
     await _channel.openWifiSettings();
@@ -144,7 +148,13 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver
 
   Future<void> _fetchUsage() async {
      final localCallCount = ++_usageCallCount;
-     int usage = await _channel.getDailyDataUsage();
+     final int usage;
+     try {
+       usage = await _channel.getDailyDataUsage();
+     } catch (e) {
+       log("Failed to read the daily data usage", name: "NetworkService", error: e);
+       return;
+     }
      if (localCallCount != _usageCallCount) return;
 
      if (usage != -1) {
