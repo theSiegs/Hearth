@@ -1,6 +1,7 @@
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:provider/provider.dart';
 
 /// Warns when Home Button Fix (the accessibility service) has been on before but is off now, which is what an
 /// update does: Android switches the service off, and an APK installed by the in-app updater is also marked
@@ -20,7 +21,7 @@ class HomeButtonFixCheck extends StatefulWidget {
 }
 
 class _HomeButtonFixCheckState extends State<HomeButtonFixCheck> with WidgetsBindingObserver {
-  late final FLauncherChannel _channel = widget.channel ?? FLauncherChannel();
+  late final FLauncherChannel _channel;
   bool _shown = false;
   bool _checking = false;
   // The debug build has its own package name. Read ahead so the dialog doesn't wait for it.
@@ -29,6 +30,7 @@ class _HomeButtonFixCheckState extends State<HomeButtonFixCheck> with WidgetsBin
   @override
   void initState() {
     super.initState();
+    _channel = widget.channel ?? context.read<FLauncherChannel>();
     WidgetsBinding.instance.addObserver(this);
     _readPackageName();
     // Let the home screen load and focus its first tile before the dialog takes focus.

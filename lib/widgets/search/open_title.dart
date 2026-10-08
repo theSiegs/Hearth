@@ -17,6 +17,7 @@
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../flauncher_channel.dart';
 import '../../providers/search_service.dart';
@@ -32,27 +33,26 @@ List<ProviderApp> appsFor(TitleMatch match, {bool rentOrBuy = false}) {
 
 /// Opens [match] in [app]: its page there when Wikidata links one, else the app's own search for the title, else
 /// Google TV's page for it.
-Future<bool> openIn(TitleMatch match, ProviderApp app, {FLauncherChannel? channel}) async {
-  final c = channel ?? FLauncherChannel();
+Future<bool> openIn(TitleMatch match, ProviderApp app, FLauncherChannel channel) async {
   final offer = match.result.offers.firstWhereOrNull((o) => o.service.packageName == app.packageName);
-  if (offer != null && await c.openLinkInApp(app.packageName, offer.link)) return true;
-  if (await c.searchInApp(app.packageName, match.result.title)) return true;
-  return openOnGoogleTv(match, channel: c);
+  if (offer != null && await channel.openLinkInApp(app.packageName, offer.link)) return true;
+  if (await channel.searchInApp(app.packageName, match.result.title)) return true;
+  return openOnGoogleTv(match, channel);
 }
 
 /// Google TV's page for the title (every way to watch it), or its search when there's no Google id.
-Future<bool> openOnGoogleTv(TitleMatch match, {FLauncherChannel? channel}) {
-  final c = channel ?? FLauncherChannel();
+Future<bool> openOnGoogleTv(TitleMatch match, FLauncherChannel channel) {
   return match.result.googleTvLink != null
-      ? c.openGoogleTv(link: match.result.googleTvLink)
-      : c.openGoogleTv(query: match.result.title);
+      ? channel.openGoogleTv(link: match.result.googleTvLink)
+      : channel.openGoogleTv(query: match.result.title);
 }
 
 /// What pressing a card does: straight into the one app that has it, or a short "Watch on" choice when several
 /// do (and "More ways to watch" for Google TV's page). True when something opened.
 Future<bool> openTitle(BuildContext context, TitleMatch match, {bool rentOrBuy = false}) async {
+  final channel = context.read<FLauncherChannel>();
   final apps = appsFor(match, rentOrBuy: rentOrBuy);
-  if (apps.length == 1) return openIn(match, apps.first);
+  if (apps.length == 1) return openIn(match, apps.first, channel);
   final choice = await showDialog<Object>(
     context: context,
     builder: (context) => AlertDialog(
@@ -81,7 +81,7 @@ Future<bool> openTitle(BuildContext context, TitleMatch match, {bool rentOrBuy =
       ),
     ),
   );
-  if (choice is ProviderApp) return openIn(match, choice);
-  if (choice == "google") return openOnGoogleTv(match);
+  if (choice is ProviderApp) return openIn(match, choice, channel);
+  if (choice == "google") return openOnGoogleTv(match, channel);
   return false;
 }

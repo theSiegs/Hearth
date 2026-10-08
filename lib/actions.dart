@@ -34,7 +34,7 @@ class SoundFeedbackDirectionalFocusAction extends DirectionalFocusAction {
 
     SettingsService settingsService = context.read<SettingsService>();
     if (settingsService.appKeyClickEnabled) {
-      FLauncherChannel().playClickSound();
+      context.read<FLauncherChannel>().playClickSound();
       Feedback.forTap(context);
     } else {
       silentForTap(context);

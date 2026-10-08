@@ -150,12 +150,13 @@ class SetupChecklistPage extends StatefulWidget {
 }
 
 class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBindingObserver {
-  final FLauncherChannel _channel = FLauncherChannel();
+  late final FLauncherChannel _channel;
   List<SetupStep>? _steps;
 
   @override
   void initState() {
     super.initState();
+    _channel = context.read<FLauncherChannel>();
     WidgetsBinding.instance.addObserver(this);
     _refresh();
   }

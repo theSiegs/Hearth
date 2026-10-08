@@ -43,7 +43,7 @@ class TvPowerSettingsPage extends StatelessWidget {
           autofocus: true,
           leading: const Icon(Icons.screenshot_monitor),
           title: Text("Screensaver (Google Photos)", style: Theme.of(context).textTheme.bodyMedium),
-          onPressed: () => FLauncherChannel().openScreensaverSettings(),
+          onPressed: () => context.read<FLauncherChannel>().openScreensaverSettings(),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
@@ -76,12 +76,13 @@ class _IdleStandbyTile extends StatefulWidget {
 
 class _IdleStandbyTileState extends State<_IdleStandbyTile> {
   static const List<int> _options = [0, 15, 30, 60, 120, 240];
+  late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   int _minutes = 0;
 
   @override
   void initState() {
     super.initState();
-    FLauncherChannel().getIdleStandbyMinutes().then((m) {
+    _channel.getIdleStandbyMinutes().then((m) {
       if (mounted) setState(() => _minutes = m);
     }).catchError((_) {});
   }
@@ -113,7 +114,7 @@ class _IdleStandbyTileState extends State<_IdleStandbyTile> {
       ),
     );
     if (picked == null) return;
-    await FLauncherChannel().setIdleStandbyMinutes(picked);
+    await _channel.setIdleStandbyMinutes(picked);
     if (mounted) setState(() => _minutes = picked);
   }
 

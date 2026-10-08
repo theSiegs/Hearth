@@ -18,6 +18,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../flauncher_channel.dart';
 import '../../providers/home_search.dart';
 import '../../providers/search_service.dart';
 import '../focusable_tap.dart';
@@ -65,7 +66,7 @@ class _SearchGridPageState extends State<SearchGridPage> {
     final Future<bool> opening = switch (tab) {
       _Tab.watchNow => openTitle(context, m),
       _Tab.rentOrBuy => openTitle(context, m, rentOrBuy: true),
-      _Tab.otherApps => openOnGoogleTv(m),
+      _Tab.otherApps => openOnGoogleTv(m, context.read<FLauncherChannel>()),
     };
     if (await opening && mounted) Navigator.of(context).pop();
   }

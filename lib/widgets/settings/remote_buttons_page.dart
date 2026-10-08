@@ -48,6 +48,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
   static const Map<String, dynamic> _searchVoice = {"type": "search", "target": "voice", "label": "Hearth search (voice)"};
   static const Map<String, dynamic> _assistant = {"type": "assistant", "label": "Google Assistant (Gemini)"};
 
+  late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   Map<String, dynamic> _mappings = {};
   final Map<String, String> _names = {};
 
@@ -59,13 +60,13 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
 
   Future<void> _load() async {
     try {
-      final decoded = json.decode(await FLauncherChannel().getButtonMappings()) as Map<String, dynamic>;
+      final decoded = json.decode(await _channel.getButtonMappings()) as Map<String, dynamic>;
       if (mounted) setState(() => _mappings = decoded);
     } catch (_) {}
   }
 
   Future<void> _save() async {
-    await FLauncherChannel().setButtonMappings(json.encode(_mappings));
+    await _channel.setButtonMappings(json.encode(_mappings));
     if (mounted) setState(() {});
   }
 
@@ -78,11 +79,10 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
   String _actionLabel(Map<String, dynamic>? action) => action == null ? "Normal" : (action["label"] as String? ?? "?");
 
   Future<void> _addButton() async {
-    final channel = FLauncherChannel();
     Map<dynamic, dynamic>? captured;
     bool cancelled = false;
 
-    final capture = channel.captureButton().then((value) {
+    final capture = _channel.captureButton().then((value) {
       captured = value;
       if (mounted && !cancelled) Navigator.of(context).pop();
     }).catchError((Object e) {
@@ -100,7 +100,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
     );
     if (captured == null) {
       cancelled = true;
-      await channel.cancelButtonCapture().catchError((_) {});
+      await _channel.cancelButtonCapture().catchError((_) {});
       return;
     }
     await capture;
@@ -242,7 +242,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
   Future<Map<String, dynamic>?> _pickHaEntity() async {
     List<dynamic> entities = const [];
     try {
-      entities = json.decode(await FLauncherChannel().getHaEntities()) as List<dynamic>;
+      entities = json.decode(await _channel.getHaEntities()) as List<dynamic>;
     } catch (_) {}
     if (!mounted) return null;
     if (entities.isEmpty) {
