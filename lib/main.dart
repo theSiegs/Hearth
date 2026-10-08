@@ -120,13 +120,10 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => UpdateService(fLauncherChannel)),
         // The home's search (top bar, results row, results grid)
         ChangeNotifierProvider(create: (context) {
-          final settings = Provider.of<SettingsService>(context, listen: false);
           final apps = Provider.of<AppsService>(context, listen: false);
-          final clients = <String, TmdbClient>{};
-          // The user's own TMDB key (Settings > Search) when set, else the one built into this release
-          TmdbClient tmdb() => clients[settings.tmdbApiKey] ??=
-              settings.tmdbApiKey.isEmpty ? TmdbClient() : TmdbClient(apiKey: settings.tmdbApiKey);
-          return HomeSearch(tmdb: tmdb, installed: (pkg) => apps.getApp(pkg) != null);
+          // TMDB with the key built into this release (the TMDB_API_KEY secret); off without one
+          final tmdb = TmdbClient();
+          return HomeSearch(tmdb: () => tmdb, installed: (pkg) => apps.getApp(pkg) != null);
         }),
         // Hearth is the TV's updater for its companion apps (checks in the background)
         Provider<CompanionUpdater>(

@@ -222,6 +222,22 @@ void main() async {
     });
   });
 
+  group("retired TMDB key", () {
+    test("a key typed in before is removed at startup", () async {
+      await sharedPreferences.setString("tmdb_api_key", "abc");
+      SettingsService(sharedPreferences);
+      await Future<void>.delayed(Duration.zero);
+      expect(sharedPreferences.containsKey("tmdb_api_key"), isFalse);
+    });
+
+    test("an old backup's key is not imported", () async {
+      final service = SettingsService(sharedPreferences);
+      await service.importSettingsMap({"tmdb_api_key": "abc", "app_language": "fr"});
+      expect(sharedPreferences.containsKey("tmdb_api_key"), isFalse);
+      expect(service.appLanguage, "fr");
+    });
+  });
+
   group("accentColor safety", () {
     test("returns fallback color if accentColorHex is malformed", () async {
       final sp = await SharedPreferences.getInstance();
