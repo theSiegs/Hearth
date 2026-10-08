@@ -3,7 +3,6 @@ package com.leanbitlab.ltvL;
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
@@ -84,16 +83,15 @@ public class ProfileProvider extends ContentProvider {
 
     /** The /active row's values, in {@link #COLUMNS} order (as Hearth itself, in the owner's user). */
     static Object[] row(Context context) {
-        SharedPreferences prefs = flutterPrefs(context);
         File wallpaper = currentWallpaper(context);
-        String[] formats = dateTimeFormats(prefs);
+        String[] formats = dateTimeFormats(context);
         return new Object[]{
                 LauncherAccessibilityService.getActiveProfileName(context),
-                prefs.getString("flutter.accent_color", null),
+                FlutterPrefs.getString(context, "accent_color", null),
                 formats[1],
-                prefs.getString("flutter.app_language", ""),
-                prefs.getString("flutter.device_parent_pin_hash", null) != null ? 1 : 0,
-                prefs.getString("flutter.gradient_uuid", null),
+                FlutterPrefs.getString(context, "app_language", ""),
+                FlutterPrefs.getString(context, "device_parent_pin_hash", null) != null ? 1 : 0,
+                FlutterPrefs.getString(context, "gradient_uuid", null),
                 wallpaper != null ? wallpaper.lastModified() : 0,
                 formats[0],
                 ProfileUsers.isKids(context) ? 1 : 0,
@@ -182,7 +180,7 @@ public class ProfileProvider extends ContentProvider {
             return result;
         }
 
-        String hash = flutterPrefs(context).getString("flutter.device_parent_pin_hash", null);
+        String hash = FlutterPrefs.getString(context, "device_parent_pin_hash", null);
         boolean ok = hash != null && pin != null && hash.equals(hashPin(pin));
 
         if (ok) {
@@ -213,17 +211,16 @@ public class ProfileProvider extends ContentProvider {
 
     /** The picture Hearth shows right now, picked like WallpaperService._updateWallpaper. Null = the gradient. */
     private static File currentWallpaper(Context context) {
-        SharedPreferences prefs = flutterPrefs(context);
         // path_provider's getApplicationDocumentsDirectory()
         File dir = new File(context.getApplicationInfo().dataDir, "app_flutter");
         File bing = new File(dir, "wallpaper_bing");
         File plain = new File(dir, "wallpaper");
 
-        if (prefs.getBoolean("flutter.bing_wallpaper_enabled", false) && bing.exists()) {
+        if (FlutterPrefs.getBoolean(context, "bing_wallpaper_enabled", false) && bing.exists()) {
             return bing;
         }
 
-        if (prefs.getBoolean("flutter.time_based_wallpaper_enabled", false)) {
+        if (FlutterPrefs.getBoolean(context, "time_based_wallpaper_enabled", false)) {
             int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
             File timed = new File(dir, hour >= 6 && hour < 18 ? "wallpaper_day" : "wallpaper_night");
             if (timed.exists()) {
@@ -234,15 +231,10 @@ public class ProfileProvider extends ContentProvider {
         return plain.exists() ? plain : null;
     }
 
-    // shared_preferences stores Flutter keys in this file with a "flutter." prefix.
-    private static SharedPreferences flutterPrefs(Context context) {
-        return context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE);
-    }
-
     /** {date, time} formats; the old saved defaults count as never chosen (as in SettingsService). */
-    private static String[] dateTimeFormats(SharedPreferences prefs) {
-        String date = prefs.getString("flutter.date_format", DEFAULT_DATE_FORMAT);
-        String time = prefs.getString("flutter.time_format", DEFAULT_TIME_FORMAT);
+    private static String[] dateTimeFormats(Context context) {
+        String date = FlutterPrefs.getString(context, "date_format", DEFAULT_DATE_FORMAT);
+        String time = FlutterPrefs.getString(context, "time_format", DEFAULT_TIME_FORMAT);
         if ("EEEE d".equals(date) && "H:mm".equals(time)) return new String[]{DEFAULT_DATE_FORMAT, DEFAULT_TIME_FORMAT};
         return new String[]{date, time};
     }

@@ -19,10 +19,7 @@ public class BootReceiver extends BroadcastReceiver {
             AgentService.start(context);
             return;
         }
-        // shared_preferences stores Flutter keys in this file with a "flutter." prefix.
-        boolean enabled = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-                .getBoolean("flutter.start_on_boot", false);
-        if (!enabled) return;
+        if (!FlutterPrefs.getBoolean(context, "start_on_boot", false)) return;
         context.startActivity(new Intent(context, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 }

@@ -1,7 +1,6 @@
 package com.leanbitlab.ltvL;
 
 import android.app.Notification;
-import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -142,8 +141,7 @@ public class LauncherNotificationListenerService extends NotificationListenerSer
     /** Popups are on, Hearth may draw over apps, and it's not ongoing, a service's, or media playback. */
     private boolean shouldPopUp(StatusBarNotification sbn) {
         if (sbn == null || sbn.isOngoing()) return false;
-        SharedPreferences prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE);
-        if (!prefs.getBoolean("flutter.system_notifications_popup", false) || !canShowPopup()) return false;
+        if (!FlutterPrefs.getBoolean(this, "system_notifications_popup", false) || !canShowPopup()) return false;
         Notification notification = sbn.getNotification();
         if (notification == null) return false;
         if (Notification.CATEGORY_SERVICE.equals(notification.category)

@@ -862,8 +862,7 @@ public class ProfilePairingService extends AccessibilityService {
     }
 
     private int accentColor() {
-        String hex = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-                .getString("flutter.accent_color", null);
+        String hex = FlutterPrefs.getString(this, "accent_color", null);
         try {
             if (hex != null) return Color.parseColor("#" + hex.replace("#", ""));
         } catch (Exception ignored) {
