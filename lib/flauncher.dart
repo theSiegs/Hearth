@@ -105,7 +105,8 @@ class _FLauncherState extends State<FLauncher> {
     var landed = false;
     for (final ms in const [300, 1200, 2500, 4000]) {
       Future.delayed(Duration(milliseconds: ms), () {
-        if (!mounted || landed) return;
+        // Not while another page is open over the home (search, settings): it keeps its focus
+        if (!mounted || landed || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
         final target = _firstFocusable(_dockFocusNode) ?? _firstFocusable(_appsGridFocusNode) ??
             _firstFocusable(_belowDockFocusNode);
         if (target != null) {
