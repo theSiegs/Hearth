@@ -23,6 +23,7 @@ import 'package:provider/provider.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'focusable_settings_tile.dart';
+import 'setup_checklist_page.dart';
 
 /// TV & power: the screensaver, sleeping when idle, and Android's own settings.
 class DisplaySettingsPage extends StatelessWidget {
@@ -118,7 +119,7 @@ class _IdleStandbyTileState extends State<_IdleStandbyTile> {
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-            child: Text("Playing video or music counts as activity. Needs Home Button Fix (Settings > System > Setup & permissions).",
+            child: Text("Playing video or music counts as activity. Needs Home Button Fix (${SetupChecklistPage.breadcrumb}).",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54)),
           ),
         ],
