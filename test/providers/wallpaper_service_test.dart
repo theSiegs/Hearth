@@ -30,6 +30,8 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import '../mocks.mocks.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late final _MockPathProviderPlatform pathProviderPlatform;
   setUpAll(() {
     pathProviderPlatform = _MockPathProviderPlatform();
@@ -116,6 +118,14 @@ void main() {
 
       expect(gradient.uuid, FLauncherGradients.grassShampoo.uuid);
     });
+  });
+
+  test("the day and night wallpapers swap at 06:00 and 18:00", () {
+    expect(WallpaperService.nextDayNightSwitch(DateTime(2026, 10, 8, 2, 30)), DateTime(2026, 10, 8, 6));
+    expect(WallpaperService.nextDayNightSwitch(DateTime(2026, 10, 8, 6)), DateTime(2026, 10, 8, 18));
+    expect(WallpaperService.nextDayNightSwitch(DateTime(2026, 10, 8, 17, 59)), DateTime(2026, 10, 8, 18));
+    expect(WallpaperService.nextDayNightSwitch(DateTime(2026, 10, 8, 18)), DateTime(2026, 10, 9, 6));
+    expect(WallpaperService.nextDayNightSwitch(DateTime(2026, 10, 31, 23)), DateTime(2026, 11, 1, 6));
   });
 
   group("dominantBackgroundColor", () {

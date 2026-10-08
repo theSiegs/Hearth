@@ -25,13 +25,12 @@ import 'dart:ui' as ui;
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/gradients.dart';
 import 'package:flauncher/providers/settings_service.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/painting.dart' show HSLColor;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
-class WallpaperService extends ChangeNotifier {
+class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
   final FLauncherChannel _fLauncherChannel;
   final SettingsService _settingsService;
 
@@ -94,7 +93,7 @@ class WallpaperService extends ChangeNotifier {
   late File _wallpaperNightFile;
   late File _wallpaperBingFile;
   late File _wallpaperBingDateFile;
-  Timer? _timer;
+  Timer? _dayNightTimer;
   Timer? _bingTimer;
   bool _bingRefreshInFlight = false;
 
@@ -117,6 +116,7 @@ class WallpaperService extends ChangeNotifier {
     _wallpaper = null
   {
     _settingsService.addListener(_onSettingsChanged);
+    WidgetsBinding.instance.addObserver(this);
     _init();
   }
 
@@ -142,9 +142,19 @@ class WallpaperService extends ChangeNotifier {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // The switch timer runs late when the TV has slept, so check again on coming back
+    if (state == AppLifecycleState.resumed && _dayNightTimer != null) {
+      _updateWallpaper();
+      _scheduleDayNightSwitch();
+    }
+  }
+
+  @override
   void dispose() {
     _settingsService.removeListener(_onSettingsChanged);
-    _timer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _dayNightTimer?.cancel();
     _bingTimer?.cancel();
     super.dispose();
   }
@@ -168,13 +178,11 @@ class WallpaperService extends ChangeNotifier {
   }
 
   void _updateTimerState() {
-    final timeBasedEnabled = _settingsService.timeBasedWallpaperEnabled;
-    final needsMinuteTimer = timeBasedEnabled;
-    if (needsMinuteTimer && (_timer == null || !_timer!.isActive)) {
-      _timer = Timer.periodic(const Duration(minutes: 1), (_) => _updateWallpaper());
-    } else if (!needsMinuteTimer && _timer != null) {
-      _timer?.cancel();
-      _timer = null;
+    if (_settingsService.timeBasedWallpaperEnabled) {
+      _scheduleDayNightSwitch();
+    } else {
+      _dayNightTimer?.cancel();
+      _dayNightTimer = null;
     }
 
     final bingEnabled = _settingsService.bingWallpaperEnabled;
@@ -184,6 +192,25 @@ class WallpaperService extends ChangeNotifier {
       _bingTimer?.cancel();
       _bingTimer = null;
     }
+  }
+
+  /// The next 06:00 or 18:00 after [now], where the day and night wallpapers swap.
+  @visibleForTesting
+  static DateTime nextDayNightSwitch(DateTime now) {
+    final morning = DateTime(now.year, now.month, now.day, 6);
+    final evening = DateTime(now.year, now.month, now.day, 18);
+    if (now.isBefore(morning)) return morning;
+    if (now.isBefore(evening)) return evening;
+    return DateTime(now.year, now.month, now.day + 1, 6);
+  }
+
+  void _scheduleDayNightSwitch() {
+    _dayNightTimer?.cancel();
+    final now = DateTime.now();
+    _dayNightTimer = Timer(nextDayNightSwitch(now).difference(now), () {
+      _updateWallpaper();
+      _scheduleDayNightSwitch();
+    });
   }
 
   Future<void> _updateWallpaper({bool force = false}) async {
@@ -240,8 +267,8 @@ class WallpaperService extends ChangeNotifier {
   Future<void> refreshBingWallpaper({bool force = false}) async {
     if (_bingRefreshInFlight) return;
     _bingRefreshInFlight = true;
+    final httpClient = HttpClient();
     try {
-      final httpClient = HttpClient();
       final metaRequest = await httpClient
           .getUrl(Uri.parse("https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=en-US"));
       final metaResponse = await metaRequest.close();
@@ -279,6 +306,7 @@ class WallpaperService extends ChangeNotifier {
       _bingWallpaperError = true;
       notifyListeners();
     } finally {
+      httpClient.close();
       _bingRefreshInFlight = false;
     }
   }
@@ -321,7 +349,7 @@ class WallpaperService extends ChangeNotifier {
       await _wallpaperFile.delete();
     }
 
-    _settingsService.setGradientUuid(fLauncherGradient.uuid);
+    await _settingsService.setGradientUuid(fLauncherGradient.uuid);
     notifyListeners();
   }
 }
