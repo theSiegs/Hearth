@@ -18,6 +18,7 @@
 
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -273,7 +274,7 @@ class LauncherSectionPanelPage extends StatelessWidget {
                           onPressed: () async {
                             state.setDeleted();
                             await context.read<AppsService>().deleteSection(sectionIndex!);
-                            Navigator.of(context).pop();
+                            if (context.mounted) Navigator.of(context).pop();
                           },
                           child: Text(localizations.delete),
                         ))
@@ -591,30 +592,18 @@ class _CategorySettingsState extends State<_CategorySettings> {
 
   Future<void> _save() async {
     final AppsService service = context.read();
+    final _SettingsState state = context.read();
     if (_creating) {
       int categoryId = await service.addCategory(_name,
           sort: _categorySort, type: _categoryType, columnsCount: _columnsCount, rowHeight: _rowHeight);
 
-      // Auto-populate special categories
       if (_name == 'TV Apps' || _name == 'Non-TV Apps') {
-        try {
-          // Find the actual category object using the ID we just got
-          final createdCategory = service.categories.firstWhere((c) => c.id == categoryId);
-          await service.autoPopulateCategory(createdCategory);
-        } catch (e) {
-          // Ignore error if category not found immediately
-        }
+        final createdCategory = service.categories.firstWhereOrNull((c) => c.id == categoryId);
+        if (createdCategory != null) await service.autoPopulateCategory(createdCategory);
       }
 
-      _SettingsState state = context.read();
-      try {
-        // Try to find the section we just created to set it as active
-        final createdSection = service.launcherSections.firstWhere((s) => s is Category && s.id == categoryId);
-        state.setLauncherSection(createdSection);
-      } catch (e) {
-        // Fallback to first section
-        state.setLauncherSection(service.launcherSections[0]);
-      }
+      final createdSection = service.launcherSections.firstWhereOrNull((s) => s is Category && s.id == categoryId);
+      state.setLauncherSection(createdSection ?? service.launcherSections[0]);
     } else {
       await service.updateCategory(_category!.id, _name, _categorySort, _categoryType, _columnsCount, _rowHeight);
 
@@ -704,10 +693,10 @@ class _LauncherSpacerSettingsState extends State<_LauncherSpacerSettings> {
 
   Future<void> _save() async {
     AppsService service = context.read();
+    final _SettingsState state = context.read();
     if (_creating) {
       await service.addSpacer(_numberValue);
 
-      _SettingsState state = context.read();
       int index = service.launcherSections.length - 1;
       state.setLauncherSection(service.launcherSections[index]);
     } else {
