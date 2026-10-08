@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
-import 'dart:io' show Platform;
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/models/weather_data.dart';
 import 'package:flutter/widgets.dart';
@@ -11,7 +10,7 @@ import 'open_meteo_client.dart';
 
 class WeatherService extends ChangeNotifier with WidgetsBindingObserver {
   final FLauncherChannel _channel;
-  final SharedPreferences? _sharedPreferences;
+  final SharedPreferences _sharedPreferences;
   final OpenMeteoClient _openMeteo;
   // Shared by every profile: weather is about the house, not the person
   static const String locationKey = "device_weather_location";
@@ -27,25 +26,23 @@ class WeatherService extends ChangeNotifier with WidgetsBindingObserver {
   bool _isBreezyInstalled = false;
   bool _initialized = false;
 
-  bool get _isTest => Platform.environment.containsKey('FLUTTER_TEST');
-
-  WeatherService(this._channel, {SharedPreferences? sharedPreferences, OpenMeteoClient? openMeteo})
+  WeatherService(this._channel, {required SharedPreferences sharedPreferences, OpenMeteoClient? openMeteo})
       : _sharedPreferences = sharedPreferences,
         _openMeteo = openMeteo ?? OpenMeteoClient() {
-    if (!_isTest) {
-      WidgetsBinding.instance.addObserver(this);
-    }
+    WidgetsBinding.instance.addObserver(this);
     _init();
   }
 
   WeatherData? get weatherData => _weatherData;
+  @visibleForTesting
   bool get isBreezyInstalled => _isBreezyInstalled;
+  @visibleForTesting
   bool get initialized => _initialized;
   bool get hasWeather => _weatherData != null;
 
   /// Location for built-in weather (Open-Meteo); null means weather comes from Breezy Weather, if installed.
   WeatherPlace? get location {
-    final raw = _sharedPreferences?.getString(locationKey);
+    final raw = _sharedPreferences.getString(locationKey);
     if (raw == null) return null;
     try {
       return WeatherPlace.fromJson(jsonDecode(raw) as Map<String, dynamic>);
@@ -60,11 +57,11 @@ class WeatherService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> setLocation(WeatherPlace? place) async {
     if (place == null) {
-      await _sharedPreferences?.remove(locationKey);
+      await _sharedPreferences.remove(locationKey);
       _weatherData = null;
       _lastJson = null;
     } else {
-      await _sharedPreferences?.setString(locationKey, jsonEncode(place.toJson()));
+      await _sharedPreferences.setString(locationKey, jsonEncode(place.toJson()));
     }
     _lastBuiltInFetch = null;
     await _fetchLatest();
@@ -160,14 +157,9 @@ class WeatherService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  Future<bool> openBreezyWeather() async {
-    try {
-      return await _channel.openBreezyWeather();
-    } catch (e) {
-      return false;
-    }
-  }
+  Future<bool> openBreezyWeather() => _channel.openBreezyWeather();
 
+  @visibleForTesting
   Future<void> refresh() async {
     await _fetchLatest();
     notifyListeners();
@@ -175,9 +167,7 @@ class WeatherService extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    if (!_isTest) {
-      WidgetsBinding.instance.removeObserver(this);
-    }
+    WidgetsBinding.instance.removeObserver(this);
     _refreshTimer?.cancel();
     _subscription?.cancel();
     super.dispose();
