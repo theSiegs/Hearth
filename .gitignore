@@ -70,16 +70,15 @@ test-reports/
 pdocs/
 Pdoc/
 scratch/
-test/app_card_long_press_test.dart
 
-# Drift Generated Schemas & Mockito Mocks
-drift_schemas/
+# Drift migration helpers & Mockito mocks (generated; drift_schemas/ is tracked)
 test/generated_migrations/
 test/mocks.mocks.dart
 
 # Local Tools, Libs & Scripts
 *.py
 !.github/scripts/**/*.py
+!tool/*.py
 sqlite_lib/
 com.leanbitlab.ltvL.yml
 *.db
