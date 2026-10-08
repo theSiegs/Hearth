@@ -249,6 +249,25 @@ void main() {
     expect(usage, -1);
   });
 
+  test("openScreensaverSettings", () async {
+    const channel = MethodChannel('me.efesser.flauncher/method');
+    final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    bool called = false;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == "openScreensaverSettings") {
+        called = true;
+        return true;
+      }
+      fail("Unhandled method name");
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+    final opened = await FLauncherChannel().openScreensaverSettings();
+
+    expect(called, isTrue);
+    expect(opened, isTrue);
+  });
+
   test("openVpnSettings", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
     bool called = false;
