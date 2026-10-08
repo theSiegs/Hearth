@@ -27,6 +27,7 @@ import 'package:drift/drift.dart';
 import 'package:flauncher/database.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flutter/foundation.dart' hide Category;
+import 'package:path_provider/path_provider.dart';
 import 'package:pool/pool.dart';
 
 import '../models/app.dart';
@@ -543,6 +544,18 @@ class AppsService extends ChangeNotifier {
     await prefs.setString('custom_banner_$packageName', imagePath);
     _bannerCache.remove(packageName);
     notifyListeners();
+  }
+
+  /// Copies a picked image into the documents folder as the app's custom banner, then deletes the picked file
+  /// (the image picker's temporary copy).
+  Future<void> setCustomAppBannerFromFile(String packageName, String pickedPath) async {
+    final docDir = await getApplicationDocumentsDirectory();
+    // Sanitize package name for filename
+    final safePackageName = packageName.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
+    final savedImage = File('${docDir.path}/custom_banner_$safePackageName.png');
+    await File(pickedPath).copy(savedImage.path);
+    await File(pickedPath).delete();
+    await setCustomAppBanner(packageName, savedImage.path);
   }
 
   Future<void> removeCustomAppBanner(String packageName) async {

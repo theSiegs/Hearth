@@ -1,10 +1,10 @@
 import 'dart:io';
 
-import 'package:drift/drift.dart';
 import 'package:flauncher/database.dart';
 import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:flauncher/providers/apps_service.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -78,6 +78,46 @@ void main() {
       await appsService.removeCustomAppBanner('test.app');
 
       expect(prefs.containsKey('custom_banner_test.app'), isFalse);
+      expect(notified, isTrue);
+    });
+  });
+
+  group("setCustomAppBannerFromFile", () {
+    const pathProvider = MethodChannel('plugins.flutter.io/path_provider');
+    late Directory documents;
+    late Directory pickerCache;
+
+    setUp(() async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      documents = await Directory.systemTemp.createTemp('hearth_banner_documents');
+      pickerCache = await Directory.systemTemp.createTemp('hearth_banner_picked');
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(pathProvider, (_) async => documents.path);
+    });
+
+    tearDown(() async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(pathProvider, null);
+      await documents.delete(recursive: true);
+      await pickerCache.delete(recursive: true);
+    });
+
+    test("copies the picked image to documents under a safe name, deletes the pick and uses the copy", () async {
+      final appsService = await _buildInitialisedAppsService(mockChannelForAppsService(), MockFLauncherDatabase());
+      final picked = await File('${pickerCache.path}/picked.jpg').writeAsBytes([1, 2, 3]);
+
+      var notified = false;
+      appsService.addListener(() {
+        notified = true;
+      });
+
+      await appsService.setCustomAppBannerFromFile('com.example/tv app', picked.path);
+
+      final saved = File('${documents.path}/custom_banner_com.example_tv_app.png');
+      expect(await saved.readAsBytes(), [1, 2, 3]);
+      expect(await picked.exists(), isFalse);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('custom_banner_com.example/tv app'), saved.path);
+      expect(await appsService.hasCustomBanner('com.example/tv app'), isTrue);
       expect(notified, isTrue);
     });
   });
