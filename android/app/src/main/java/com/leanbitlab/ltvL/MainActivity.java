@@ -28,7 +28,6 @@ import android.graphics.Canvas;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
-import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
@@ -52,7 +51,6 @@ import java.io.ByteArrayOutputStream;
 import android.app.usage.NetworkStats;
 import android.app.usage.NetworkStatsManager;
 import android.app.AppOpsManager;
-import android.os.RemoteException;
 
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
@@ -60,12 +58,7 @@ import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.MethodChannel;
 
-import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
@@ -74,7 +67,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import android.service.notification.StatusBarNotification;
-import android.content.ComponentName;
 
 public class MainActivity extends FlutterActivity {
     private final String METHOD_CHANNEL = "me.efesser.flauncher/method";
@@ -165,7 +157,7 @@ public class MainActivity extends FlutterActivity {
                 case "openProfileChooser" -> result.success(openProfileChooser());
                 case "getSupportedAbis" -> result.success(java.util.Arrays.asList(Build.SUPPORTED_ABIS));
                 case "isKidsProfile" -> {
-                    boolean kids = isKidsProfile();
+                    boolean kids = ProfileUsers.isKids(this);
                     ProfilePairing.rememberHearthProfile(
                             this, LauncherAccessibilityService.getActiveProfileKey(this), kids);
                     result.success(kids);
@@ -983,40 +975,6 @@ public class MainActivity extends FlutterActivity {
         }
     }
 
-    private int getActiveNetworkTransportType() {
-        try {
-            ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-            if (connectivityManager == null) return -1;
-            
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                android.net.Network activeNetwork = connectivityManager.getActiveNetwork();
-                if (activeNetwork != null) {
-                    NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(activeNetwork);
-                    if (capabilities != null) {
-                        if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                            return ConnectivityManager.TYPE_WIFI;
-                        } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
-                            return ConnectivityManager.TYPE_MOBILE;
-                        } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
-                            return ConnectivityManager.TYPE_ETHERNET;
-                        } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
-                            return ConnectivityManager.TYPE_VPN;
-                        }
-                    }
-                }
-            } else {
-                // noinspection deprecation
-                android.net.NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
-                if (activeNetworkInfo != null) {
-                    return activeNetworkInfo.getType();
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return -1;
-    }
-
     private long getDailyDataUsage() {
         if (!checkUsageStatsPermission()) {
             return -1;
@@ -1482,11 +1440,6 @@ public class MainActivity extends FlutterActivity {
             if (name != null && !name.isEmpty()) names.put(userId, name);
         }
         return names;
-    }
-
-    // Google TV kids profiles suspend every app a parent hasn't approved; once seen, a profile stays a kids one.
-    private boolean isKidsProfile() {
-        return ProfileUsers.isKids(this);
     }
 
     /** The TV's LAN address, for the Home Assistant integration's host field. */
