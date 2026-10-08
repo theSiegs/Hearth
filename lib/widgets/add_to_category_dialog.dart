@@ -30,7 +30,7 @@ class AddToCategoryDialog extends StatelessWidget {
                   localizations.withEllipsisAddTo,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 Expanded(
                   child: ListView.builder(
                     itemCount: categories.length,
@@ -38,7 +38,7 @@ class AddToCategoryDialog extends StatelessWidget {
                       final category = categories[index];
                       return Card(
                         clipBehavior: Clip.antiAlias,
-                        margin: EdgeInsets.only(bottom: 8),
+                        margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
                           onTap: () async {
                             await context.read<AppsService>().addToCategory(selectedApplication, category);

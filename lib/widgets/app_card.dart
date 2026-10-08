@@ -274,7 +274,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
               // Centred; this also keeps the first section's title clear of the app bar.
               alignment: 0.5,
               curve: Curves.easeInOut,
-              duration: Duration(milliseconds: 100)
+              duration: const Duration(milliseconds: 100)
             );
           },
           child: _appImage(),
@@ -423,7 +423,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
           child: Ink(
             decoration: ShapeDecoration(
               color: Theme.of(context).primaryColor.withOpacity(0.8),
-              shape: CircleBorder()
+              shape: const CircleBorder()
             ),
             child: SizedBox(
               height: 36,
@@ -431,7 +431,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
               child: IconButton(
                 icon: Icon(icon, size: 24),
                 onPressed: onTap,
-                padding: EdgeInsets.all(0)
+                padding: const EdgeInsets.all(0)
               )
             )
           )
