@@ -67,12 +67,18 @@ class _FLauncherState extends State<FLauncher> {
   /// Focus is in the sections below the dock, so the wallpaper is blurred behind them.
   bool _browsingBelowDock = false;
 
+  /// Focus is in the top bar: the dock and Continue Watching are hidden.
+  bool _topBarFocused = false;
+
   /// On the dock layout's first screen, the dock and Continue Watching take turns: Up from the dock
   /// slides the dock away and shows Continue Watching; Down from there brings the dock back.
   bool _showingRecents = false;
   final FocusNode _dockFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
   final FocusNode _recentsFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
   FocusNode? _lastDockFocus;
+
+  /// Continue Watching has something to show (set as the home builds).
+  bool _recentsAvailable = false;
 
   /// A search's results are in the dock's spot (Continue Watching's place), as Continue Watching takes it.
   bool _showingSearch = false;
@@ -139,9 +145,6 @@ class _FLauncherState extends State<FLauncher> {
     (_firstFocusable(_dockFocusNode) ?? _firstFocusable(_appsGridFocusNode) ?? _firstFocusable(_belowDockFocusNode))
         ?.requestFocus();
   }
-
-  /// Focus is in the top bar: the dock and Continue Watching are hidden.
-  bool _topBarFocused = false;
 
   /// Opens the search box over the home: the keyboard, or listening right away for [mode] "voice" (the remote's
   /// voice search). It starts from the current search, to edit it.
@@ -238,15 +241,19 @@ class _FLauncherState extends State<FLauncher> {
     super.dispose();
   }
 
-  /// Cards centre themselves vertically when focused, which would scroll the dock layout's
-  /// first screen partway off the top. While focus is on that screen, keep the page at the top.
   void _onFocusMoved() {
     if (_dockFocusNode.hasFocus) {
       _lastDockFocus = FocusManager.instance.primaryFocus;
     }
-    // With the top bar focused, the first screen is just the wallpaper: dock and Continue Watching slide away and
-    // come back when focus comes down again. Focus leaving the home screen (Settings, a dialog, the Home Assistant
-    // panel) leaves it as it was.
+    _followTopBarFocus();
+    _followBelowDockFocus();
+    _keepFirstScreenAtTop();
+  }
+
+  /// With the top bar focused, the first screen is just the wallpaper: dock and Continue Watching slide away and
+  /// come back when focus comes down again. Focus leaving the home screen (Settings, a dialog, the Home Assistant
+  /// panel) leaves it as it was.
+  void _followTopBarFocus() {
     final focusContext = FocusManager.instance.primaryFocus?.context;
     final bool inHome = focusContext != null &&
         focusContext.mounted &&
@@ -258,13 +265,21 @@ class _FLauncherState extends State<FLauncher> {
         if (inTopBar) _showingRecents = false;
       });
     }
-    // Focus moving into a settings panel or the app bar leaves the blur as it was,
-    // unless the dock layout itself has gone (dock switched off, or Favorites emptied).
+  }
+
+  /// The wallpaper blurs while focus is below the dock. Focus moving into a settings panel or the app bar leaves
+  /// the blur as it was, unless the dock layout itself has gone (dock switched off, or Favorites emptied).
+  void _followBelowDockFocus() {
     final bool dockLayoutGone = _belowDockFocusNode.context == null;
     if (_belowDockFocusNode.hasFocus != _browsingBelowDock &&
         (_belowDockFocusNode.hasFocus || _firstScreenFocusNode.hasFocus || dockLayoutGone)) {
       setState(() => _browsingBelowDock = _belowDockFocusNode.hasFocus);
     }
+  }
+
+  /// Cards centre themselves vertically when focused, which would scroll the dock layout's
+  /// first screen partway off the top. While focus is on that screen, keep the page at the top.
+  void _keepFirstScreenAtTop() {
     if (!_firstScreenFocusNode.hasFocus) {
       return;
     }
@@ -296,9 +311,6 @@ class _FLauncherState extends State<FLauncher> {
       }
     });
   }
-
-  /// Continue Watching has something to show (set as the home builds).
-  bool _recentsAvailable = false;
 
   /// Down from the top bar lands on Continue Watching when it has something, else on the dock where it was last.
   /// The dock is slid away (not unfocusable) while the top bar has focus, so plain Down would pick whatever is
@@ -332,12 +344,12 @@ class _FLauncherState extends State<FLauncher> {
   static FocusNode? _firstFocusable(FocusNode parent) =>
       parent.descendants.firstWhereOrNull((n) => n.canRequestFocus && !n.skipTraversal && n.context != null);
 
-  /// Up (or Down) swaps the dock and Continue Watching; any other key is left for normal navigation.
-  KeyEventResult Function(FocusNode, KeyEvent) _swapOn(LogicalKeyboardKey key, bool showRecents) => (node, event) {
-        if (event.logicalKey != key || event is KeyUpEvent) return KeyEventResult.ignored;
-        if (event is KeyDownEvent) _setShowingRecents(showRecents);
-        return KeyEventResult.handled;
-      };
+  /// Up from the dock swaps in Continue Watching; any other key is left for normal navigation.
+  KeyEventResult _recentsUpFromDock(FocusNode node, KeyEvent event) {
+    if (event.logicalKey != LogicalKeyboardKey.arrowUp || event is KeyUpEvent) return KeyEventResult.ignored;
+    if (event is KeyDownEvent) _setShowingRecents(true);
+    return KeyEventResult.handled;
+  }
 
   /// From Continue Watching: Down swaps the dock back in; Up goes to the top bar and puts the dock back in place
   /// behind it, so Continue Watching only shows while it's being browsed.
@@ -554,7 +566,7 @@ class _FLauncherState extends State<FLauncher> {
                     // Up from the dock: the search's results while there's a search, else Continue Watching
                     onKeyEvent: (search?.active ?? false)
                         ? _searchUpFromDock
-                        : (continueWatchingActive ? _swapOn(LogicalKeyboardKey.arrowUp, true) : null),
+                        : (continueWatchingActive ? _recentsUpFromDock : null),
                     child: _swapAnimation(
                       visible: !showRecents && !showSearch && !_topBarFocused,
                       // Far enough to slide the dock off the bottom of the screen, so it needn't fade too.
