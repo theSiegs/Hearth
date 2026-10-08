@@ -18,6 +18,7 @@
 
 package com.leanbitlab.ltvL;
 
+import android.Manifest;
 import android.app.NotificationManager;
 import android.content.ComponentName;
 import android.content.Context;
@@ -859,18 +860,9 @@ public class MainActivity extends FlutterActivity {
         }
 
         if (mode == AppOpsManager.MODE_DEFAULT) {
-            try {
-                NetworkStatsManager networkStatsManager = (NetworkStatsManager) getSystemService(Context.NETWORK_STATS_SERVICE);
-                if (networkStatsManager != null) {
-                    long now = System.currentTimeMillis();
-                    networkStatsManager.querySummaryForDevice(ConnectivityManager.TYPE_WIFI, null, now - 1, now);
-                    return true;
-                }
-            } catch (SecurityException e) {
-                return false;
-            } catch (Exception e) {
-                return true;
-            }
+            // The app op was never set either way, so the permission's own grant decides.
+            return checkPermission(Manifest.permission.PACKAGE_USAGE_STATS, android.os.Process.myPid(),
+                    android.os.Process.myUid()) == PackageManager.PERMISSION_GRANTED;
         }
 
         return false;
