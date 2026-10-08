@@ -34,6 +34,6 @@ void main() {
 
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
-    expect(settingsService.accentColorHex, ACCENT_COLOR_TEAL);
+    expect(settingsService.accentColorHex, accentColorTeal);
   });
 }

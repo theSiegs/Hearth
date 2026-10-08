@@ -181,7 +181,7 @@ void main() async {
       await sp1.clear();
       final service1 = SettingsService(sp1);
 
-      await service1.setAccentColor(ACCENT_COLOR_TEAL);
+      await service1.setAccentColor(accentColorTeal);
       await service1.setAppHighlightAnimationEnabled(false);
       await service1.setAppKeyClickEnabled(false);
       await service1.setAutoHideAppBarEnabled(true);
@@ -194,14 +194,14 @@ void main() async {
         for (final key in service1.settingKeys)
           if (sp1.get(key) != null) key: sp1.get(key),
       };
-      expect(exported["accent_color"], ACCENT_COLOR_TEAL);
+      expect(exported["accent_color"], accentColorTeal);
       expect(exported["app_banner_shape"], "legacy");
 
       await sp1.clear();
       final service2 = SettingsService(sp1);
       await service2.importSettingsMap(exported);
 
-      expect(service2.accentColorHex, ACCENT_COLOR_TEAL);
+      expect(service2.accentColorHex, accentColorTeal);
       expect(service2.appHighlightAnimationEnabled, isFalse);
       expect(service2.appKeyClickEnabled, isFalse);
       expect(service2.autoHideAppBarEnabled, isTrue);
@@ -265,7 +265,7 @@ void main() async {
     });
 
     test("accentColorFromHex reads a preset and falls back on a malformed hex", () {
-      expect(accentColorFromHex(ACCENT_COLOR_TEAL), const Color(0xFF00BFA5));
+      expect(accentColorFromHex(accentColorTeal), const Color(0xFF00BFA5));
       expect(accentColorFromHex("12345G"), const Color(0xFF7C4DFF));
     });
   });
@@ -302,7 +302,7 @@ void main() async {
       final service = SettingsService(sp);
       expect(service.showWeatherInStatusBar, isFalse);
       expect(service.showWeatherWarnings, isTrue);
-      expect(service.temperatureUnit, TEMPERATURE_UNIT_CELSIUS);
+      expect(service.temperatureUnit, temperatureUnitCelsius);
       expect(service.useFahrenheit, isFalse);
     });
 
@@ -312,11 +312,11 @@ void main() async {
 
       await service.setShowWeatherInStatusBar(true);
       await service.setShowWeatherWarnings(false);
-      await service.setTemperatureUnit(TEMPERATURE_UNIT_FAHRENHEIT);
+      await service.setTemperatureUnit(temperatureUnitFahrenheit);
 
       expect(service.showWeatherInStatusBar, isTrue);
       expect(service.showWeatherWarnings, isFalse);
-      expect(service.temperatureUnit, TEMPERATURE_UNIT_FAHRENHEIT);
+      expect(service.temperatureUnit, temperatureUnitFahrenheit);
       expect(service.useFahrenheit, isTrue);
     });
   });

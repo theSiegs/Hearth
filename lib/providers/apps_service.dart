@@ -782,10 +782,10 @@ class AppsService extends ChangeNotifier {
   }
 
   Future<int> addCategory(String categoryName,
-      {CategorySort sort = Category.Sort,
-      CategoryType type = Category.Type,
-      int columnsCount = Category.ColumnsCount,
-      int rowHeight = Category.RowHeight,
+      {CategorySort sort = Category.defaultSort,
+      CategoryType type = Category.defaultType,
+      int columnsCount = Category.defaultColumnsCount,
+      int rowHeight = Category.defaultRowHeight,
       bool shouldNotifyListeners = true}) async {
     int order = _launcherSections.length;
     // Persist every column so a restart doesn't fall back to the table defaults.

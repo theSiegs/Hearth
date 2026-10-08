@@ -150,7 +150,7 @@ class WeatherSettingsPage extends StatelessWidget {
               "${localizations.temperatureUnit}: ${settingsService.useFahrenheit ? localizations.fahrenheit : localizations.celsius}",
             ),
             onPressed: () {
-              final next = settingsService.useFahrenheit ? TEMPERATURE_UNIT_CELSIUS : TEMPERATURE_UNIT_FAHRENHEIT;
+              final next = settingsService.useFahrenheit ? temperatureUnitCelsius : temperatureUnitFahrenheit;
               settingsService.setTemperatureUnit(next);
             },
           ),

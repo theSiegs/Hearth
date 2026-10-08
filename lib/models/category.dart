@@ -22,8 +22,8 @@ import 'app.dart';
 
 enum LauncherSectionType
 {
-  Category,
-  Spacer
+  category,
+  spacer
 }
 
 enum CategorySort
@@ -53,10 +53,10 @@ class LauncherSection
 
 class Category extends LauncherSection
 {
-  static const int          ColumnsCount  = 6;
-  static const int          RowHeight     = 110;
-  static const CategorySort Sort          = CategorySort.manual;
-  static const CategoryType Type          = CategoryType.row;
+  static const int          defaultColumnsCount  = 6;
+  static const int          defaultRowHeight     = 110;
+  static const CategorySort defaultSort          = CategorySort.manual;
+  static const CategoryType defaultType          = CategoryType.row;
 
   int columnsCount;
 
@@ -74,10 +74,10 @@ class Category extends LauncherSection
     required this.name,
     super.id,
     super.order,
-    this.columnsCount = Category.ColumnsCount,
-    this.rowHeight = Category.RowHeight,
-    this.sort = Category.Sort,
-    this.type = Category.Type
+    this.columnsCount = Category.defaultColumnsCount,
+    this.rowHeight = Category.defaultRowHeight,
+    this.sort = Category.defaultSort,
+    this.type = Category.defaultType
   }):   applications = [];
 
   Category.withApplications({
@@ -85,10 +85,10 @@ class Category extends LauncherSection
     required this.applications,
     super.id,
     super.order,
-    this.columnsCount = Category.ColumnsCount,
-    this.rowHeight = Category.RowHeight,
-    this.sort = Category.Sort,
-    this.type = Category.Type
+    this.columnsCount = Category.defaultColumnsCount,
+    this.rowHeight = Category.defaultRowHeight,
+    this.sort = Category.defaultSort,
+    this.type = Category.defaultType
   });
 
   Category unmodifiable() {

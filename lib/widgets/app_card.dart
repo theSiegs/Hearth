@@ -285,10 +285,10 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
     Uint8List bytes = Uint8List(0);
 
     bytes = await service.getAppBanner(widget.application.packageName);
-    AppImageType type = AppImageType.Banner;
+    AppImageType type = AppImageType.banner;
 
     if (bytes.isEmpty) {
-      type = AppImageType.Icon;
+      type = AppImageType.icon;
       bytes = await service.getAppIcon(widget.application.packageName);
     }
 
@@ -308,7 +308,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
           final record = snapshot.data;
           if (record == null) return const SizedBox();
 
-          if (record.$1 == AppImageType.Banner) {
+          if (record.$1 == AppImageType.banner) {
             return Ink.image(
               image: record.$2,
               fit: BoxFit.cover,

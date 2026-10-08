@@ -24,37 +24,37 @@ import 'package:flutter/material.dart';
 
 enum NetworkType
 {
-  Cellular,
-  Wifi,
-  Vpn,
-  Wired,
-  Unknown
+  cellular,
+  wifi,
+  vpn,
+  wired,
+  unknown
 }
 
 // https://developer.android.com/reference/android/telephony/TelephonyManager#NETWORK_TYPE_CDMA
 enum CellularNetworkType
 {
-  Unknown,  // 0
-  Gprs,     // 1
-  Edge,     // 2
-  Umts,     // 3
-  Cdma,     // 4
-  EvdoZero, // 5
-  EvdoA,    // 6
-  Unused_1, // 7
-  Hsdpa,    // 8
-  Hsupa,    // 9
-  Hspa,     // 10
-  Iden,     // 11
-  EvdoB,    // 12
-  Lte,      // 13
-  Ehrpd,    // 14
-  Hspap,    // 15
-  Gsm,      // 16
-  TdScdma,  // 17
-  Iwlan,    // 18
-  Unused_2, // 19
-  Nr,       // 20
+  unknown,  // 0
+  gprs,     // 1
+  edge,     // 2
+  umts,     // 3
+  cdma,     // 4
+  evdoZero, // 5
+  evdoA,    // 6
+  unused1, // 7
+  hsdpa,    // 8
+  hsupa,    // 9
+  hspa,     // 10
+  iden,     // 11
+  evdoB,    // 12
+  lte,      // 13
+  ehrpd,    // 14
+  hspap,    // 15
+  gsm,      // 16
+  tdScdma,  // 17
+  iwlan,    // 18
+  unused2, // 19
+  nr,       // 20
 }
 
 class NetworkService extends ChangeNotifier with WidgetsBindingObserver
@@ -76,8 +76,8 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver
 
   NetworkService(this._channel) :
         _hasInternetAccess = false,
-        _cellularNetworkType = CellularNetworkType.Unknown,
-        _networkType = NetworkType.Unknown,
+        _cellularNetworkType = CellularNetworkType.unknown,
+        _networkType = NetworkType.unknown,
         _wirelessNetworkSignalLevel = 0,
         _dailyDataUsage = 0,
         _hasUsageStatsPermission = false,
@@ -194,11 +194,11 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver
 
   CellularNetworkType _getCellularNetworkType(int index) {
     if (index < 0 || index >= CellularNetworkType.values.length) {
-      return CellularNetworkType.Unknown;
+      return CellularNetworkType.unknown;
     }
     CellularNetworkType type = CellularNetworkType.values[index];
-    if (type == CellularNetworkType.Unused_1 || type == CellularNetworkType.Unused_2) {
-      type = CellularNetworkType.Unknown;
+    if (type == CellularNetworkType.unused1 || type == CellularNetworkType.unused2) {
+      type = CellularNetworkType.unknown;
     }
 
     return type;
@@ -212,11 +212,11 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver
       if (networkTypeInt >= 0 && networkTypeInt < NetworkType.values.length) {
         _networkType = NetworkType.values[networkTypeInt];
       } else {
-        _networkType = NetworkType.Unknown;
+        _networkType = NetworkType.unknown;
       }
       _vpnActive = map["vpnActive"] as bool? ?? false;
 
-      if (_networkType == NetworkType.Cellular || _networkType == NetworkType.Wifi) {
+      if (_networkType == NetworkType.cellular || _networkType == NetworkType.wifi) {
         _wirelessNetworkSignalLevel = (map["wirelessSignalLevel"] as num?)?.toInt() ?? 0;
       }
       log("NetworkService: parsed type $_networkType, signal $_wirelessNetworkSignalLevel, vpn $_vpnActive");
@@ -233,7 +233,7 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver
         break;
       case "NETWORK_UNAVAILABLE":
         _hasInternetAccess = false;
-        _networkType = NetworkType.Unknown;
+        _networkType = NetworkType.unknown;
         _vpnActive = false;
         break;
       case "CAPABILITIES_CHANGED":

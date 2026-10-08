@@ -96,10 +96,10 @@ void main() {
     await database.insertCategory(CategoriesCompanion.insert(name: "Test", order: 0));
 
     final category = (await database.getCategories()).single;
-    expect(category.rowHeight, Category.RowHeight);
-    expect(category.columnsCount, Category.ColumnsCount);
-    expect(category.sort, Category.Sort);
-    expect(category.type, Category.Type);
+    expect(category.rowHeight, Category.defaultRowHeight);
+    expect(category.columnsCount, Category.defaultColumnsCount);
+    expect(category.sort, Category.defaultSort);
+    expect(category.type, Category.defaultType);
   });
 
   test("deleteCategory", () async {
