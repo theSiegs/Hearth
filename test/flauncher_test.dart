@@ -836,6 +836,7 @@ SettingsService mkSettingsService() {
   when(settingsService.showDateInStatusBar).thenReturn(true);
   when(settingsService.showTimeInStatusBar).thenReturn(true);
   when(settingsService.accentColorHex).thenReturn('00ff00');
+  when(settingsService.accentColor).thenReturn(const Color(0xFF00FF00));
   when(settingsService.hasParentPin).thenReturn(false);
   when(settingsService.showAppNamesBelowIcons).thenReturn(true);
   when(settingsService.themes).thenReturn('classic');

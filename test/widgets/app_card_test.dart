@@ -44,7 +44,7 @@ void main() {
     when(mockSettingsService.hideHighlightOutlineOnHomescreen).thenReturn(false);
     when(mockSettingsService.appHighlightAnimationEnabled).thenReturn(true);
     when(mockSettingsService.appSelectorTransitionAnimationEnabled).thenReturn(true);
-    when(mockSettingsService.accentColorHex).thenReturn('000000');
+    when(mockSettingsService.accentColor).thenReturn(const Color(0xFF000000));
     mockNotificationsService = MockNotificationsService();
     when(mockNotificationsService.getNotificationCount(any)).thenReturn(0);
   });
