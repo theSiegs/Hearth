@@ -7,7 +7,3 @@ analyzer:
     - test/generated_migrations
     - build/**
     - android/**
-
-linter:
-  rules:
-    await_only_futures # Why is this an option?
