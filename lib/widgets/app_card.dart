@@ -266,18 +266,12 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
           onTap: () => _onPressed(context, LogicalKeyboardKey.enter),
           onLongPress: () => _onLongPress(context, LogicalKeyboardKey.enter),
           onFocusChange: (focused) {
-            // Only scroll on gaining focus: scrolling as a card loses it (say, to a
-            // Settings panel opening over the home screen) moved the page behind the panel.
+            // Scroll only on gaining focus, so a panel opening over the home doesn't move the page.
             if (!focused) return;
             context.read<WallpaperService?>()?.onAppFocused(widget.application.packageName);
             Scrollable.ensureVisible(
               context,
-              // This specific alignment value is not only
-              // to center the focused card in the row while
-              // scrolling, but to prevent the topmost category
-              // title to be hidden by the content above it when
-              // scrolling from the app bar. How it relates to this,
-              // I don't know
+              // Centred; this also keeps the first section's title clear of the app bar.
               alignment: 0.5,
               curve: Curves.easeInOut,
               duration: Duration(milliseconds: 100)
