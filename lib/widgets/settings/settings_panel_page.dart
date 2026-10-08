@@ -39,8 +39,10 @@ class SettingsPanelPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     AppLocalizations localizations = AppLocalizations.of(context)!;
-    // In a kids profile everything but Profiles (switching) and Home screen (their own look) needs the parent PIN
+    // In a kids profile only Profiles (switching) and Home screen (their own look) show, until a parent opens
+    // Parent settings with the PIN; then everything shows until the panel closes, starting from Applications.
     final bool locked = settingsLocked(context);
+    final bool justUnlocked = settingsUnlocked(context);
 
     return Column(
       children: [
@@ -60,53 +62,58 @@ class SettingsPanelPage extends StatelessWidget {
             child: Column(
               children: [
                 FocusableSettingsTile(
-                  autofocus: true,
+                  autofocus: !justUnlocked,
                   leading: const Icon(Icons.people_outline),
                   title: Text("Profiles", style: Theme.of(context).textTheme.bodyMedium),
                   trailing: Text(ProfilesSettingsPage.activeProfileLabel(context) ?? "", style: Theme.of(context).textTheme.bodySmall),
                   onPressed: () => Navigator.of(context).pushNamed(ProfilesSettingsPage.routeName),
                 ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.apps),
-                  title: Text(localizations.applications, style: Theme.of(context).textTheme.bodyMedium),
-                  trailing: lockedTrailing(context, locked: locked),
-                  onPressed: () => openLocked(context, ApplicationsPanelPage.routeName),
-                ),
+                if (!locked)
+                  FocusableSettingsTile(
+                    autofocus: justUnlocked,
+                    leading: const Icon(Icons.apps),
+                    title: Text(localizations.applications, style: Theme.of(context).textTheme.bodyMedium),
+                    onPressed: () => Navigator.of(context).pushNamed(ApplicationsPanelPage.routeName),
+                  ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.auto_awesome_mosaic_outlined),
                   title: Text("Home screen", style: Theme.of(context).textTheme.bodyMedium),
                   onPressed: () => Navigator.of(context).pushNamed(InterfaceSettingsPage.routeName),
                 ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.settings_remote_outlined),
-                  title: Text("Remote & search", style: Theme.of(context).textTheme.bodyMedium),
-                  trailing: lockedTrailing(context, locked: locked),
-                  onPressed: () => openLocked(context, RemoteSearchSettingsPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.notifications_active_outlined),
-                  title: Text(localizations.notifications, style: Theme.of(context).textTheme.bodyMedium),
-                  trailing: lockedTrailing(context, locked: locked),
-                  onPressed: () => openLocked(context, NotificationsSettingsPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.home_outlined),
-                  title: Text("Home Assistant", style: Theme.of(context).textTheme.bodyMedium),
-                  trailing: lockedTrailing(context, locked: locked),
-                  onPressed: () => openLocked(context, HomeAssistantPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.tv),
-                  title: Text(DisplaySettingsPage.title, style: Theme.of(context).textTheme.bodyMedium),
-                  trailing: lockedTrailing(context, locked: locked),
-                  onPressed: () => openLocked(context, DisplaySettingsPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.settings_suggest_outlined),
-                  title: Text(localizations.system, style: Theme.of(context).textTheme.bodyMedium),
-                  trailing: lockedTrailing(context, locked: locked),
-                  onPressed: () => openLocked(context, GeneralSettingsPage.routeName),
-                ),
+                if (!locked) ...[
+                  FocusableSettingsTile(
+                    leading: const Icon(Icons.settings_remote_outlined),
+                    title: Text("Remote & search", style: Theme.of(context).textTheme.bodyMedium),
+                    onPressed: () => Navigator.of(context).pushNamed(RemoteSearchSettingsPage.routeName),
+                  ),
+                  FocusableSettingsTile(
+                    leading: const Icon(Icons.notifications_active_outlined),
+                    title: Text(localizations.notifications, style: Theme.of(context).textTheme.bodyMedium),
+                    onPressed: () => Navigator.of(context).pushNamed(NotificationsSettingsPage.routeName),
+                  ),
+                  FocusableSettingsTile(
+                    leading: const Icon(Icons.home_outlined),
+                    title: Text("Home Assistant", style: Theme.of(context).textTheme.bodyMedium),
+                    onPressed: () => Navigator.of(context).pushNamed(HomeAssistantPage.routeName),
+                  ),
+                  FocusableSettingsTile(
+                    leading: const Icon(Icons.tv),
+                    title: Text(DisplaySettingsPage.title, style: Theme.of(context).textTheme.bodyMedium),
+                    onPressed: () => Navigator.of(context).pushNamed(DisplaySettingsPage.routeName),
+                  ),
+                  FocusableSettingsTile(
+                    leading: const Icon(Icons.settings_suggest_outlined),
+                    title: Text(localizations.system, style: Theme.of(context).textTheme.bodyMedium),
+                    onPressed: () => Navigator.of(context).pushNamed(GeneralSettingsPage.routeName),
+                  ),
+                ],
+                // A kids profile sees only its own things, and one way in for a parent
+                if (locked)
+                  FocusableSettingsTile(
+                    leading: const Icon(Icons.lock_outline),
+                    title: Text("Parent settings", style: Theme.of(context).textTheme.bodyMedium),
+                    onPressed: () => unlockSettings(context),
+                  ),
               ],
             ),
           ),

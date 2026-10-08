@@ -20,9 +20,9 @@ import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-/// Settings in a kids profile: open without the parent PIN, with the parts that could undo a parent's setup
-/// (apps, the remote, permissions, Home Assistant, Android's settings...) locked. One PIN unlocks every locked part
-/// until the panel closes.
+/// Settings in a kids profile: open without the parent PIN, showing only what's the kid's own (switching profile,
+/// the home screen's look) and a "Parent settings" row. The parent PIN there shows everything else (apps, the remote,
+/// permissions, Home Assistant, Android's settings...) until the panel closes.
 class SettingsUnlock extends InheritedNotifier<ValueNotifier<bool>> {
   const SettingsUnlock({super.key, required ValueNotifier<bool> super.notifier, required super.child});
 
@@ -50,11 +50,5 @@ Future<bool> unlockSettings(BuildContext context) async {
   return ok;
 }
 
-/// Opens [route] in the settings panel, past the parent PIN when it's locked.
-Future<void> openLocked(BuildContext context, String route) async {
-  if (await unlockSettings(context) && context.mounted) Navigator.of(context).pushNamed(route);
-}
-
-/// A row's trailing widget: a lock while the row is locked, else [trailing].
-Widget? lockedTrailing(BuildContext context, {required bool locked, Widget? trailing}) =>
-    locked ? const Icon(Icons.lock_outline, size: 18, color: Colors.white54) : trailing;
+/// A parent unlocked Settings in this kids profile since the panel opened (the newly shown rows take focus).
+bool settingsUnlocked(BuildContext context) => SettingsUnlock._of(context)?.value == true;

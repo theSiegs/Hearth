@@ -100,19 +100,22 @@ void main() {
     });
   }
 
-  testWidgets("in a kids profile, Settings opens with the risky groups locked", (tester) async {
+  testWidgets("in a kids profile, Settings shows the kid's own groups and Parent settings", (tester) async {
     final profiles = MockProfileService();
     when(profiles.isKidsProfile).thenReturn(true);
     when(profiles.activeProfileName).thenReturn("Sam");
     await _pumpWidgetWithProviders(tester, _settings(), _apps(), profiles: profiles);
 
-    // Profiles and Home screen open freely; the other six show a lock
-    expect(find.byIcon(Icons.lock_outline), findsNWidgets(6));
-    await tester.ensureVisible(find.text("Applications"));
-    await tester.tap(find.text("Applications"));
+    final titles = tester
+        .widgetList<FocusableSettingsTile>(find.byType(FocusableSettingsTile))
+        .map((tile) => ((tile.title as Text).data))
+        .toList();
+    expect(titles, ["Profiles", "Home screen", "Parent settings"]);
+
+    // No parent PIN set yet: it says to ask a parent, and nothing more shows
+    await tester.tap(find.text("Parent settings"));
     await tester.pumpAndSettle();
-    expect(find.text("Ask a parent"), findsOneWidget); // no parent PIN set: it says so instead of opening
-    expect(find.byKey(Key(ApplicationsPanelPage.routeName)), findsNothing);
+    expect(find.text("Ask a parent"), findsOneWidget);
   });
 
   testWidgets("in a grown-up profile nothing is locked", (tester) async {
@@ -121,7 +124,8 @@ void main() {
     when(profiles.activeProfileName).thenReturn("Alex");
     await _pumpWidgetWithProviders(tester, _settings(), _apps(), profiles: profiles);
 
-    expect(find.byIcon(Icons.lock_outline), findsNothing);
+    expect(find.text("Parent settings"), findsNothing);
+    expect(find.text("System"), findsOneWidget);
   });
 
   testWidgets("System has About and Support & Donate", (tester) async {

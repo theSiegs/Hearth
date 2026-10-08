@@ -34,6 +34,7 @@ class InterfaceSettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     AppLocalizations localizations = AppLocalizations.of(context)!;
+    final bool locked = settingsLocked(context);
 
     return Column(
       children: [
@@ -43,14 +44,15 @@ class InterfaceSettingsPage extends StatelessWidget {
           child: SingleChildScrollView(
             child: Column(
               children: [
-                FocusableSettingsTile(
+                // Sections are a parent's to change (as on the home screen itself): hidden in a locked kids profile
+                if (!locked) FocusableSettingsTile(
                   autofocus: true,
                   leading: const Icon(Icons.category),
                   title: Text(localizations.launcherSections, style: Theme.of(context).textTheme.bodyMedium),
-                  trailing: lockedTrailing(context, locked: settingsLocked(context)),
-                  onPressed: () => openLocked(context, LauncherSectionsPanelPage.routeName),
+                  onPressed: () => Navigator.of(context).pushNamed(LauncherSectionsPanelPage.routeName),
                 ),
                 FocusableSettingsTile(
+                  autofocus: locked,
                   leading: const Icon(Icons.play_circle_outline),
                   title: Text(localizations.continueWatching, style: Theme.of(context).textTheme.bodyMedium),
                   onPressed: () => Navigator.of(context).pushNamed(ContinueWatchingSettingsPage.routeName),
