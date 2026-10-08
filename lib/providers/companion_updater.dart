@@ -1,11 +1,9 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 
 import 'package:flauncher/flauncher_channel.dart';
-import 'package:flauncher/providers/update_service.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:flauncher/providers/github_releases.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// An app made to go with Hearth, installed and updated from its GitHub releases.
@@ -75,6 +73,7 @@ class CompanionUpdater {
   static const String autoUpdateKey = "companion_auto_update";
   static const String _lastCheckKey = "companion_last_auto_check";
   static const Duration _checkEvery = Duration(hours: 24);
+  static const String _userAgent = "Hearth-CompanionApps";
 
   final FLauncherChannel _channel;
   Timer? _timer;
@@ -135,57 +134,26 @@ class CompanionUpdater {
 
   /// The newest non-draft, non-prerelease release with an APK for this TV, or null.
   Future<CompanionRelease?> latestRelease(CompanionApp app) async {
-    final releases = await _getJson("https://api.github.com/repos/${app.repo}/releases?per_page=10") as List<dynamic>;
-    final abis = await _channel.getSupportedAbis();
-    for (final release in releases.whereType<Map<String, dynamic>>()) {
-      if (release['draft'] == true || release['prerelease'] == true) continue;
-      final assets = (release['assets'] as List<dynamic>?) ?? [];
-      final apk = pickApkAsset(assets, abis);
-      if (apk == null) continue;
-      String versionName = (release['name'] as String?)?.replaceFirst(RegExp(r"^\D+"), "") ?? "";
-      if (versionName.isEmpty) versionName = release['tag_name'] as String? ?? "";
-      int? versionCode;
-      final manifestAsset =
-          assets.whereType<Map<String, dynamic>>().where((a) => a['name'] == app.versionManifest).firstOrNull;
-      if (manifestAsset != null) {
-        final manifest = await _getJson(manifestAsset['browser_download_url'] as String);
-        final newest = manifest is Map<String, dynamic> ? newestInManifest(manifest) : null;
-        if (newest != null) (versionName, versionCode) = newest;
-      }
-      return CompanionRelease(versionName, versionCode, apk['browser_download_url'] as String, apk['size'] as int? ?? 0);
+    final releases = GitHubReleases(app.repo, userAgent: _userAgent);
+    final release = await releases.latestWithApk(await _channel.getSupportedAbis(), perPage: 10);
+    if (release == null) return null;
+    String versionName = release.name.replaceFirst(RegExp(r"^\D+"), "");
+    if (versionName.isEmpty) versionName = release.tagName;
+    int? versionCode;
+    final manifestAsset = release.assets.where((a) => a['name'] == app.versionManifest).firstOrNull;
+    if (manifestAsset != null) {
+      final manifest = await releases.getJson(Uri.parse(manifestAsset['browser_download_url'] as String));
+      final newest = manifest is Map<String, dynamic> ? newestInManifest(manifest) : null;
+      if (newest != null) (versionName, versionCode) = newest;
     }
-    return null;
+    return CompanionRelease(versionName, versionCode, release.apkUrl, release.apkSize);
   }
 
   /// Downloads the release's APK, reporting progress (0–1) when the size is known.
   Future<File> download(CompanionApp app, CompanionRelease release, {void Function(double)? onProgress}) async {
-    final dir = await getExternalStorageDirectory();
-    if (dir == null) throw Exception("No storage for the download");
-    final updates = Directory("${dir.path}/updates");
-    await updates.create(recursive: true);
-    final apk = File("${updates.path}/${app.packageName}.apk");
-    final request = await HttpClient().getUrl(Uri.parse(release.apkUrl));
-    request.headers.set(HttpHeaders.userAgentHeader, "Hearth-CompanionApps");
-    final response = await request.close();
-    if (response.statusCode != 200) throw Exception("Download failed (${response.statusCode})");
-    final total = release.apkSize > 0 ? release.apkSize : response.contentLength;
-    final sink = apk.openWrite();
-    var received = 0;
-    await response.listen((chunk) {
-      sink.add(chunk);
-      received += chunk.length;
-      if (total > 0) onProgress?.call(received / total);
-    }).asFuture();
-    await sink.close();
+    final apk = await downloadedApkFile("${app.packageName}.apk");
+    await GitHubReleases(app.repo, userAgent: _userAgent)
+        .download(release.apkUrl, apk, size: release.apkSize, onProgress: onProgress);
     return apk;
-  }
-
-  Future<dynamic> _getJson(String url) async {
-    final request = await HttpClient().getUrl(Uri.parse(url));
-    request.headers.set(HttpHeaders.acceptHeader, "application/vnd.github+json");
-    request.headers.set(HttpHeaders.userAgentHeader, "Hearth-CompanionApps");
-    final response = await request.close();
-    if (response.statusCode != 200) throw HttpException("HTTP ${response.statusCode}", uri: Uri.parse(url));
-    return jsonDecode(await response.transform(utf8.decoder).join());
   }
 }
