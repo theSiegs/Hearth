@@ -29,8 +29,8 @@ import '../../models/category.dart';
 // Section name presets for TV remote-friendly selection
 // First 2 are special auto-populating categories
 const List<String> sectionNamePresets = [
-  'TV Apps',             // Auto: non-sideloaded apps
-  'Non-TV Apps',         // Auto: sideloaded apps
+  'TV Apps', // Auto: non-sideloaded apps
+  'Non-TV Apps', // Auto: sideloaded apps
   'Movies & Shows',
   'Music',
   'Games',
@@ -43,8 +43,7 @@ const List<String> sectionNamePresets = [
   'Custom...',
 ];
 
-class _SettingsState extends ChangeNotifier
-{
+class _SettingsState extends ChangeNotifier {
   bool _changed;
   bool _creating;
   bool _deleted;
@@ -61,13 +60,12 @@ class _SettingsState extends ChangeNotifier
   LauncherSection? get launcherSection => _section;
   LauncherSectionType get sectionType => _sectionType;
 
-  _SettingsState(AppsService appsService, int? sectionIndex):
-      _changed = false,
-      _creating = false,
-      _deleted = false,
-      _valid = false,
-      _sectionType = LauncherSectionType.Category
-  {
+  _SettingsState(AppsService appsService, int? sectionIndex)
+      : _changed = false,
+        _creating = false,
+        _deleted = false,
+        _valid = false,
+        _sectionType = LauncherSectionType.Category {
     LauncherSection? launcherSection;
     List<LauncherSection> sections = appsService.launcherSections;
     if (sectionIndex != null && sectionIndex < sections.length) {
@@ -81,8 +79,7 @@ class _SettingsState extends ChangeNotifier
     _deleted = true;
   }
 
-  void setFlags(bool valid, bool changed)
-  {
+  void setFlags(bool valid, bool changed) {
     if (_valid != valid || _changed != changed) {
       _valid = valid;
       _changed = changed;
@@ -91,8 +88,7 @@ class _SettingsState extends ChangeNotifier
     }
   }
 
-  void setLauncherSection(LauncherSection? section, {bool shouldNotifyListeners = true})
-  {
+  void setLauncherSection(LauncherSection? section, {bool shouldNotifyListeners = true}) {
     _section = section;
 
     _changed = false;
@@ -102,8 +98,7 @@ class _SettingsState extends ChangeNotifier
 
     if (section == null) {
       _creating = true;
-    }
-    else if (section is LauncherSpacer) {
+    } else if (section is LauncherSpacer) {
       _sectionType = LauncherSectionType.Spacer;
     }
 
@@ -115,8 +110,7 @@ class _SettingsState extends ChangeNotifier
     }
   }
 
-  void setSectionType(LauncherSectionType sectionType)
-  {
+  void setSectionType(LauncherSectionType sectionType) {
     assert(_creating);
 
     _changed = false;
@@ -135,196 +129,175 @@ class _SettingsState extends ChangeNotifier
   }
 }
 
-class LauncherSectionPanelPage extends StatelessWidget
-{
+class LauncherSectionPanelPage extends StatelessWidget {
   static const String routeName = "section_panel";
 
   final int? sectionIndex;
 
-  LauncherSectionPanelPage({Key? key, this.sectionIndex}): super(key: key);
+  LauncherSectionPanelPage({Key? key, this.sectionIndex}) : super(key: key);
 
   Widget build(BuildContext context) {
     AppLocalizations localizations = AppLocalizations.of(context)!;
 
     return ChangeNotifierProvider(
-      create: (_) {
-        AppsService service = context.read();
-        return _SettingsState(service, sectionIndex);
-      },
-      builder: (context, _) => Selector<_SettingsState, LauncherSectionType>(
-        selector: (_, state) => state.sectionType,
-        builder: (_, sectionType, __)  {
-          _SettingsState state = context.read();
-          LauncherSection? launcherSection = state.launcherSection;
+        create: (_) {
+          AppsService service = context.read();
+          return _SettingsState(service, sectionIndex);
+        },
+        builder: (context, _) => Selector<_SettingsState, LauncherSectionType>(
+            selector: (_, state) => state.sectionType,
+            builder: (_, sectionType, __) {
+              _SettingsState state = context.read();
+              LauncherSection? launcherSection = state.launcherSection;
 
-          if (state.deleted) {
-            return Container();
-          }
+              if (state.deleted) {
+                return Container();
+              }
 
-          bool creating = state.creating;
-          Widget sectionSpecificSettings;
+              bool creating = state.creating;
+              Widget sectionSpecificSettings;
 
-          if (sectionType == LauncherSectionType.Category) {
-            sectionSpecificSettings = _CategorySettings(
-              category: launcherSection as Category?,
-            );
-          }
-          else {
-            sectionSpecificSettings = _LauncherSpacerSettings(
-                spacer: launcherSection as LauncherSpacer?
-            );
-          }
+              if (sectionType == LauncherSectionType.Category) {
+                sectionSpecificSettings = _CategorySettings(
+                  category: launcherSection as Category?,
+                );
+              } else {
+                sectionSpecificSettings = _LauncherSpacerSettings(spacer: launcherSection as LauncherSpacer?);
+              }
 
-          String title = localizations.newSection;
-          if (!creating) {
-            title = localizations.modifySection;
-          }
+              String title = localizations.newSection;
+              if (!creating) {
+                title = localizations.modifySection;
+              }
 
-          return SingleChildScrollView(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
-                Divider(),
-                if (creating) ...[
-                  _listTile(
-                    context,
-                    Text(localizations.type),
-                    Padding(
-                      padding: EdgeInsets.only(top: 4),
-                      child: DropdownButtonFormField<LauncherSectionType>(
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(),
-                          focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        isDense: true,
-                        isExpanded: true,
-                        value: sectionType,
-                        onChanged: (value) {
-                          if (value != null) {
-                            state.setSectionType(value);
-                          }
-                        },
-                        items: [
-                          DropdownMenuItem(
-                            value: LauncherSectionType.Category,
-                            child: Text(localizations.category, style: Theme.of(context).textTheme.bodySmall),
-                          ),
-                          DropdownMenuItem(
-                            value: LauncherSectionType.Spacer,
-                            child: Text(localizations.spacer, style: Theme.of(context).textTheme.bodySmall),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+              return SingleChildScrollView(
+                padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  Text(title, style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
                   Divider(),
-                ],
-                sectionSpecificSettings,
-                Divider(),
-              Selector<_SettingsState, bool>(
-                selector: (context, state) => (state.valid && state.changed),
-                builder: (context, canSave, _) {
-                  void Function()? onSavePressed;
-                  if (canSave) {
-                    onSavePressed = () {
-                      if (state.onSave != null) {
-                        state.onSave!();
-                      }
-                    };
-                  }
-
-                  return Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: FilledButton(
-                      style: ButtonStyle(
-                        backgroundColor: MaterialStateProperty.resolveWith((states) {
-                          if (states.contains(MaterialState.disabled)) {
-                            return Colors.white10;
-                          }
-                          return Color(0xFF6366F1); // Indigo (Modern Primary)
-                        }),
-                        foregroundColor: MaterialStateProperty.resolveWith((states) {
-                           if (states.contains(MaterialState.disabled)) {
-                             return Colors.white38;
-                           }
-                           return Colors.white;
-                        }),
-                        shape: MaterialStatePropertyAll(
-                          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                  if (creating) ...[
+                    _listTile(
+                      context,
+                      Text(localizations.type),
+                      Padding(
+                        padding: EdgeInsets.only(top: 4),
+                        child: DropdownButtonFormField<LauncherSectionType>(
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                          isDense: true,
+                          isExpanded: true,
+                          value: sectionType,
+                          onChanged: (value) {
+                            if (value != null) {
+                              state.setSectionType(value);
+                            }
+                          },
+                          items: [
+                            DropdownMenuItem(
+                              value: LauncherSectionType.Category,
+                              child: Text(localizations.category, style: Theme.of(context).textTheme.bodySmall),
+                            ),
+                            DropdownMenuItem(
+                              value: LauncherSectionType.Spacer,
+                              child: Text(localizations.spacer, style: Theme.of(context).textTheme.bodySmall),
+                            ),
+                          ],
                         ),
-                        side: MaterialStateProperty.resolveWith((states) {
-                          if (states.contains(MaterialState.focused)) {
-                            return BorderSide(color: Colors.white, width: 2);
-                          }
-                          return null;
-                        }),
-                        elevation: MaterialStatePropertyAll(0),
-                        padding: MaterialStatePropertyAll(EdgeInsets.symmetric(vertical: 12))
                       ),
-                      onPressed: onSavePressed,
-                      child: Text(localizations.save),
-                    )
-                  );
-                }
-              ),
-
-              if (!creating)
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: FilledButton(
-                    style: ButtonStyle(
-                      backgroundColor: MaterialStatePropertyAll(Color(0xFF27272A)), // Zinc 800
-                      foregroundColor: MaterialStatePropertyAll(Color(0xFFEF4444)), // Red 500
-                      shape: MaterialStatePropertyAll(
-                          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
-                      ),
-                      side: MaterialStateProperty.resolveWith((states) {
-                        if (states.contains(MaterialState.focused)) {
-                          return BorderSide(color: Colors.white, width: 2);
-                        }
-                        return null;
-                      }),
-                      elevation: MaterialStatePropertyAll(0),
-                      padding: MaterialStatePropertyAll(EdgeInsets.symmetric(vertical: 12))
                     ),
-                    onPressed: () async {
-                      state.setDeleted();
-                      await context.read<AppsService>().deleteSection(sectionIndex!);
-                      Navigator.of(context).pop();
-                    },
-                    child: Text(localizations.delete),
-                  )
-                )
-              ]
-            ),
-          );
-        }
-      )
-    );
+                    Divider(),
+                  ],
+                  sectionSpecificSettings,
+                  Divider(),
+                  Selector<_SettingsState, bool>(
+                      selector: (context, state) => (state.valid && state.changed),
+                      builder: (context, canSave, _) {
+                        void Function()? onSavePressed;
+                        if (canSave) {
+                          onSavePressed = () {
+                            if (state.onSave != null) {
+                              state.onSave!();
+                            }
+                          };
+                        }
+
+                        return Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: FilledButton(
+                              style: ButtonStyle(
+                                  backgroundColor: MaterialStateProperty.resolveWith((states) {
+                                    if (states.contains(MaterialState.disabled)) {
+                                      return Colors.white10;
+                                    }
+                                    return Color(0xFF6366F1); // Indigo (Modern Primary)
+                                  }),
+                                  foregroundColor: MaterialStateProperty.resolveWith((states) {
+                                    if (states.contains(MaterialState.disabled)) {
+                                      return Colors.white38;
+                                    }
+                                    return Colors.white;
+                                  }),
+                                  shape: MaterialStatePropertyAll(
+                                      RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                                  side: MaterialStateProperty.resolveWith((states) {
+                                    if (states.contains(MaterialState.focused)) {
+                                      return BorderSide(color: Colors.white, width: 2);
+                                    }
+                                    return null;
+                                  }),
+                                  elevation: MaterialStatePropertyAll(0),
+                                  padding: MaterialStatePropertyAll(EdgeInsets.symmetric(vertical: 12))),
+                              onPressed: onSavePressed,
+                              child: Text(localizations.save),
+                            ));
+                      }),
+                  if (!creating)
+                    Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: FilledButton(
+                          style: ButtonStyle(
+                              backgroundColor: MaterialStatePropertyAll(Color(0xFF27272A)), // Zinc 800
+                              foregroundColor: MaterialStatePropertyAll(Color(0xFFEF4444)), // Red 500
+                              shape: MaterialStatePropertyAll(
+                                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                              side: MaterialStateProperty.resolveWith((states) {
+                                if (states.contains(MaterialState.focused)) {
+                                  return BorderSide(color: Colors.white, width: 2);
+                                }
+                                return null;
+                              }),
+                              elevation: MaterialStatePropertyAll(0),
+                              padding: MaterialStatePropertyAll(EdgeInsets.symmetric(vertical: 12))),
+                          onPressed: () async {
+                            state.setDeleted();
+                            await context.read<AppsService>().deleteSection(sectionIndex!);
+                            Navigator.of(context).pop();
+                          },
+                          child: Text(localizations.delete),
+                        ))
+                ]),
+              );
+            }));
   }
 }
 
-class _CategorySettings extends StatefulWidget
-{
+class _CategorySettings extends StatefulWidget {
   final Category? category;
 
-  const _CategorySettings({
-    this.category
-  });
+  const _CategorySettings({this.category});
 
   @override
   State<StatefulWidget> createState() => _CategorySettingsState();
 }
 
-class _CategorySettingsState extends State<_CategorySettings>
-{
+class _CategorySettingsState extends State<_CategorySettings> {
   final FocusNode _textFieldFocusNode;
-  
+
   late final TextEditingController _nameController;
-  
+
   bool _ignoreTextFieldKeyEvent;
   CategorySort _categorySort;
   CategoryType _categoryType;
@@ -336,8 +309,8 @@ class _CategorySettingsState extends State<_CategorySettings>
 
   late bool _creating;
 
-  _CategorySettingsState():
-        _ignoreTextFieldKeyEvent = false,
+  _CategorySettingsState()
+      : _ignoreTextFieldKeyEvent = false,
         _categorySort = Category.Sort,
         _categoryType = Category.Type,
         _columnsCount = Category.ColumnsCount,
@@ -383,7 +356,8 @@ class _CategorySettingsState extends State<_CategorySettings>
 
     final FocusScopeNode focusScopeNode = FocusScope.of(context);
     focusScopeNode.onKeyEvent = (node, keyEvent) {
-      if (_textFieldFocusNode.hasFocus && (keyEvent.logicalKey == LogicalKeyboardKey.arrowUp || keyEvent.logicalKey == LogicalKeyboardKey.arrowDown)) {
+      if (_textFieldFocusNode.hasFocus &&
+          (keyEvent.logicalKey == LogicalKeyboardKey.arrowUp || keyEvent.logicalKey == LogicalKeyboardKey.arrowDown)) {
         if (!_ignoreTextFieldKeyEvent) {
           if (keyEvent.logicalKey == LogicalKeyboardKey.arrowUp) {
             _textFieldFocusNode.previousFocus();
@@ -394,8 +368,7 @@ class _CategorySettingsState extends State<_CategorySettings>
         }
 
         _ignoreTextFieldKeyEvent = false;
-      }
-      else {
+      } else {
         _ignoreTextFieldKeyEvent = true;
       }
 
@@ -406,7 +379,7 @@ class _CategorySettingsState extends State<_CategorySettings>
   @override
   Widget build(BuildContext context) {
     AppLocalizations localizations = AppLocalizations.of(context)!;
-    
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -421,201 +394,185 @@ class _CategorySettingsState extends State<_CategorySettings>
       child: Column(
         children: [
           _listTile(
-            context,
-            Text(localizations.name),
-          Padding(
-            padding: EdgeInsets.only(top: 4),
-            child: DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-              autofocus: _creating,
-              isDense: true,
-              isExpanded: true,
-              value: sectionNamePresets.contains(_name) ? _name : 'Custom...',
-              hint: Text(_name.isEmpty ? 'Select a name' : _name, style: Theme.of(context).textTheme.bodySmall),
-              onChanged: (value) {
-                setState(() {
-                  if (value == 'Custom...') {
-                    _name = '';
-                    _nameController.text = '';
-                  } else if (value != null) {
-                    _name = value;
-                    _nameController.text = value;
-                  }
-                });
-                _notifyChange();
-              },
-              items: sectionNamePresets.map((name) => DropdownMenuItem(
-                value: name,
-                child: Text(name, style: Theme.of(context).textTheme.bodySmall),
-              )).toList(),
-            )
-          )
-        ),
-        if (!sectionNamePresets.contains(_name) || _name.isEmpty)
+              context,
+              Text(localizations.name),
+              Padding(
+                  padding: EdgeInsets.only(top: 4),
+                  child: DropdownButtonFormField<String>(
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(),
+                      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    autofocus: _creating,
+                    isDense: true,
+                    isExpanded: true,
+                    value: sectionNamePresets.contains(_name) ? _name : 'Custom...',
+                    hint: Text(_name.isEmpty ? 'Select a name' : _name, style: Theme.of(context).textTheme.bodySmall),
+                    onChanged: (value) {
+                      setState(() {
+                        if (value == 'Custom...') {
+                          _name = '';
+                          _nameController.text = '';
+                        } else if (value != null) {
+                          _name = value;
+                          _nameController.text = value;
+                        }
+                      });
+                      _notifyChange();
+                    },
+                    items: sectionNamePresets
+                        .map((name) => DropdownMenuItem(
+                              value: name,
+                              child: Text(name, style: Theme.of(context).textTheme.bodySmall),
+                            ))
+                        .toList(),
+                  ))),
+          if (!sectionNamePresets.contains(_name) || _name.isEmpty)
+            _listTile(
+                context,
+                Text('Custom Name'),
+                Padding(
+                    padding: EdgeInsets.only(top: 4),
+                    child: TextFormField(
+                      controller: _nameController,
+                      focusNode: _textFieldFocusNode,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      onChanged: (value) {
+                        _name = value;
+                        _notifyChange();
+                      },
+                    ))),
           _listTile(
-            context,
-            Text('Custom Name'),
-            Padding(
-              padding: EdgeInsets.only(top: 4),
-              child: TextFormField(
-                controller: _nameController,
-                focusNode: _textFieldFocusNode,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-                onChanged: (value) {
-                  _name = value;
-                  _notifyChange();
-                },
-              )
-            )
-          ),
-        _listTile(
-          context,
-          Text(localizations.sort),
-          Padding(
-            padding: EdgeInsets.only(top: 4),
-            child: DropdownButtonFormField<CategorySort>(
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-              isDense: true,
-              isExpanded: true,
-              value: _categorySort,
-              onChanged: (value) {
-                setState(() {
-                  _categorySort = value!;
-                });
-                _notifyChange();
-              },
-              items: [
-                DropdownMenuItem(
-                  value: CategorySort.alphabetical,
-                  child: Text(localizations.alphabetical, style: Theme.of(context).textTheme.bodySmall),
-                ),
-                DropdownMenuItem(
-                  value: CategorySort.manual,
-                  child: Text(localizations.manual, style: Theme.of(context).textTheme.bodySmall),
-                ),
-                DropdownMenuItem(
-                  value: CategorySort.lastUsed,
-                  child: Text('Last Used', style: Theme.of(context).textTheme.bodySmall),
-                )
-              ]
-            )
-          )
-        ),
-        _listTile(
-          context,
-          Text(localizations.layout),
-          Padding(
-            padding: EdgeInsets.only(top: 4),
-            child: DropdownButtonFormField<CategoryType>(
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-              value: _categoryType,
-              onChanged: (value) {
-                setState(() {
-                  _categoryType = value!;
-                });
-                _notifyChange();
-              },
-              isDense: true,
-              isExpanded: true,
-              items: [
-                DropdownMenuItem(
-                  value: CategoryType.row,
-                  child: Text(localizations.row, style: Theme.of(context).textTheme.bodySmall)
-                ),
-                DropdownMenuItem(
-                  value: CategoryType.grid,
-                  child: Text(localizations.grid, style: Theme.of(context).textTheme.bodySmall)
-                )
-              ]
-            )
-          )
-        ),
-        if (_categoryType == CategoryType.grid)
+              context,
+              Text(localizations.sort),
+              Padding(
+                  padding: EdgeInsets.only(top: 4),
+                  child: DropdownButtonFormField<CategorySort>(
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      isDense: true,
+                      isExpanded: true,
+                      value: _categorySort,
+                      onChanged: (value) {
+                        setState(() {
+                          _categorySort = value!;
+                        });
+                        _notifyChange();
+                      },
+                      items: [
+                        DropdownMenuItem(
+                          value: CategorySort.alphabetical,
+                          child: Text(localizations.alphabetical, style: Theme.of(context).textTheme.bodySmall),
+                        ),
+                        DropdownMenuItem(
+                          value: CategorySort.manual,
+                          child: Text(localizations.manual, style: Theme.of(context).textTheme.bodySmall),
+                        ),
+                        DropdownMenuItem(
+                          value: CategorySort.lastUsed,
+                          child: Text('Last Used', style: Theme.of(context).textTheme.bodySmall),
+                        )
+                      ]))),
           _listTile(
-            context,
-            Text(localizations.columnCount),
-            Padding(
-              padding: EdgeInsets.only(top: 4),
-              child: DropdownButtonFormField<int>(
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-                value: _columnsCount,
-                isDense: true,
-                isExpanded: true,
-                items: [for (int i = 5; i <= 10; i++) i]
-                    .map(
-                      (value) => DropdownMenuItem(
-                    value: value,
-                    child: Text(value.toString(), style: Theme.of(context).textTheme.bodySmall),
-                  ),
-                ).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _columnsCount = value!;
-                  });
-                  _notifyChange();
-                }
-              )
-            )
-          ),
-        if (_categoryType == CategoryType.row)
-          _listTile(
-            context,
-            Text(localizations.rowHeight),
-            Padding(
-              padding: EdgeInsets.only(top: 4),
-              child: DropdownButtonFormField<int>(
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-                value: _rowHeight,
-                isDense: true,
-                isExpanded: true,
-                items: [for (int i = 80; i <= 150; i += 10) i]
-                    .map(
-                      (value) => DropdownMenuItem(
-                    value: value,
-                    child: Text(value.toString(), style: Theme.of(context).textTheme.bodySmall),
-                  ),
-                ).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _rowHeight = value!;
-                  });
-                  _notifyChange();
-                }
-              )
-            )
-          )
-      ],
-    ),
-  );
-}
+              context,
+              Text(localizations.layout),
+              Padding(
+                  padding: EdgeInsets.only(top: 4),
+                  child: DropdownButtonFormField<CategoryType>(
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      value: _categoryType,
+                      onChanged: (value) {
+                        setState(() {
+                          _categoryType = value!;
+                        });
+                        _notifyChange();
+                      },
+                      isDense: true,
+                      isExpanded: true,
+                      items: [
+                        DropdownMenuItem(
+                            value: CategoryType.row,
+                            child: Text(localizations.row, style: Theme.of(context).textTheme.bodySmall)),
+                        DropdownMenuItem(
+                            value: CategoryType.grid,
+                            child: Text(localizations.grid, style: Theme.of(context).textTheme.bodySmall))
+                      ]))),
+          if (_categoryType == CategoryType.grid)
+            _listTile(
+                context,
+                Text(localizations.columnCount),
+                Padding(
+                    padding: EdgeInsets.only(top: 4),
+                    child: DropdownButtonFormField<int>(
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                          focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        value: _columnsCount,
+                        isDense: true,
+                        isExpanded: true,
+                        items: [for (int i = 5; i <= 10; i++) i]
+                            .map(
+                              (value) => DropdownMenuItem(
+                                value: value,
+                                child: Text(value.toString(), style: Theme.of(context).textTheme.bodySmall),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _columnsCount = value!;
+                          });
+                          _notifyChange();
+                        }))),
+          if (_categoryType == CategoryType.row)
+            _listTile(
+                context,
+                Text(localizations.rowHeight),
+                Padding(
+                    padding: EdgeInsets.only(top: 4),
+                    child: DropdownButtonFormField<int>(
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                          focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        value: _rowHeight,
+                        isDense: true,
+                        isExpanded: true,
+                        items: [for (int i = 80; i <= 150; i += 10) i]
+                            .map(
+                              (value) => DropdownMenuItem(
+                                value: value,
+                                child: Text(value.toString(), style: Theme.of(context).textTheme.bodySmall),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _rowHeight = value!;
+                          });
+                          _notifyChange();
+                        })))
+        ],
+      ),
+    );
+  }
 
-  void _notifyChange()
-  {
-
+  void _notifyChange() {
     String initialName = "";
     CategorySort initialSort = Category.Sort;
     CategoryType initialType = Category.Type;
@@ -629,21 +586,21 @@ class _CategorySettingsState extends State<_CategorySettings>
       initialRowHeight = _category!.rowHeight;
     }
 
-    bool dirty = initialSort != _categorySort || initialType != _categoryType
-        || initialColumnsCount != _columnsCount
-        || initialRowHeight != _rowHeight || initialName != _name ;
+    bool dirty = initialSort != _categorySort ||
+        initialType != _categoryType ||
+        initialColumnsCount != _columnsCount ||
+        initialRowHeight != _rowHeight ||
+        initialName != _name;
 
     _SettingsState state = context.read();
     state.setFlags(_name.isNotEmpty, dirty);
   }
 
-  Future<void> _save() async
-  {
+  Future<void> _save() async {
     final AppsService service = context.read();
     if (_creating) {
-      int categoryId = await service.addCategory(_name, sort: _categorySort, type: _categoryType,
-          columnsCount: _columnsCount, rowHeight: _rowHeight
-      );
+      int categoryId = await service.addCategory(_name,
+          sort: _categorySort, type: _categoryType, columnsCount: _columnsCount, rowHeight: _rowHeight);
 
       // Auto-populate special categories
       if (_name == 'TV Apps' || _name == 'Non-TV Apps') {
@@ -658,26 +615,22 @@ class _CategorySettingsState extends State<_CategorySettings>
 
       _SettingsState state = context.read();
       try {
-         // Try to find the section we just created to set it as active
-         final createdSection = service.launcherSections.firstWhere((s) => s is Category && s.id == categoryId);
-         state.setLauncherSection(createdSection);
+        // Try to find the section we just created to set it as active
+        final createdSection = service.launcherSections.firstWhere((s) => s is Category && s.id == categoryId);
+        state.setLauncherSection(createdSection);
       } catch (e) {
-         // Fallback to first section
-         state.setLauncherSection(service.launcherSections[0]);
+        // Fallback to first section
+        state.setLauncherSection(service.launcherSections[0]);
       }
-    }
-    else {
-      await service.updateCategory(_category!.id, _name, _categorySort,
-          _categoryType, _columnsCount, _rowHeight
-      );
+    } else {
+      await service.updateCategory(_category!.id, _name, _categorySort, _categoryType, _columnsCount, _rowHeight);
 
       _notifyChange();
     }
   }
 }
 
-class _LauncherSpacerSettings extends StatefulWidget
-{
+class _LauncherSpacerSettings extends StatefulWidget {
   final LauncherSpacer? spacer;
 
   const _LauncherSpacerSettings({this.spacer});
@@ -686,18 +639,16 @@ class _LauncherSpacerSettings extends StatefulWidget
   State<StatefulWidget> createState() => _LauncherSpacerSettingsState();
 }
 
-class _LauncherSpacerSettingsState extends State<_LauncherSpacerSettings>
-{
+class _LauncherSpacerSettingsState extends State<_LauncherSpacerSettings> {
   int _numberValue;
   LauncherSpacer? _spacer;
 
   late bool _creating;
-  
+
   // Need preset values for the dropdown
   final List<int> _spacerHeightPresets = [10, 20, 30, 40, 50, 75, 100, 150];
 
-  _LauncherSpacerSettingsState():
-    _numberValue = 10;
+  _LauncherSpacerSettingsState() : _numberValue = 10;
 
   @override
   void initState() {
@@ -712,13 +663,13 @@ class _LauncherSpacerSettingsState extends State<_LauncherSpacerSettings>
     }
 
     _numberValue = height;
-    
+
     // Ensure the current value is in our presets, if not add it
     if (!_spacerHeightPresets.contains(_numberValue)) {
       _spacerHeightPresets.add(_numberValue);
       _spacerHeightPresets.sort();
     }
-    
+
     context.read<_SettingsState>().onSave = _save;
   }
 
@@ -727,43 +678,39 @@ class _LauncherSpacerSettingsState extends State<_LauncherSpacerSettings>
     AppLocalizations localizations = AppLocalizations.of(context)!;
 
     return _listTile(
-      context,
-      Text(localizations.height),
-      Padding(
-        padding: EdgeInsets.only(top: 4),
-        child: DropdownButtonFormField<int>(
-          decoration: InputDecoration(
-            border: OutlineInputBorder(),
-            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          ),
-          isDense: true,
-          isExpanded: true,
-          value: _numberValue,
-          onChanged: (value) {
-            setState(() {
-              _numberValue = value!;
-            });
-            _notifyChange();
-          },
-          items: _spacerHeightPresets.map((height) {
-            return DropdownMenuItem<int>(
-              value: height,
-              child: Text(height.toString(), style: Theme.of(context).textTheme.bodySmall),
-            );
-          }).toList(),
-        )
-      )
-    );
+        context,
+        Text(localizations.height),
+        Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: DropdownButtonFormField<int>(
+              decoration: InputDecoration(
+                border: OutlineInputBorder(),
+                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              isDense: true,
+              isExpanded: true,
+              value: _numberValue,
+              onChanged: (value) {
+                setState(() {
+                  _numberValue = value!;
+                });
+                _notifyChange();
+              },
+              items: _spacerHeightPresets.map((height) {
+                return DropdownMenuItem<int>(
+                  value: height,
+                  child: Text(height.toString(), style: Theme.of(context).textTheme.bodySmall),
+                );
+              }).toList(),
+            )));
   }
 
-  void _notifyChange()
-  {
+  void _notifyChange() {
     context.read<_SettingsState>().setFlags(true, _numberValue != _spacer?.height);
   }
 
-  Future<void> _save() async
-  {
+  Future<void> _save() async {
     AppsService service = context.read();
     if (_creating) {
       await service.addSpacer(_numberValue);
@@ -771,8 +718,7 @@ class _LauncherSpacerSettingsState extends State<_LauncherSpacerSettings>
       _SettingsState state = context.read();
       int index = service.launcherSections.length - 1;
       state.setLauncherSection(service.launcherSections[index]);
-    }
-    else {
+    } else {
       assert(_spacer != null);
       await service.updateSpacerHeight(_spacer!, _numberValue);
 
@@ -789,5 +735,4 @@ Widget _listTile(BuildContext context, Widget title, Widget subtitle, {Widget? t
       title: title,
       subtitle: subtitle,
       trailing: trailing,
-    )
-);
+    ));
