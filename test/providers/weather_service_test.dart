@@ -3,7 +3,6 @@ import 'package:flauncher/models/weather_data.dart';
 import 'package:flauncher/providers/open_meteo_client.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
@@ -26,6 +25,7 @@ void main() {
   late MockFLauncherChannel mockChannel;
   late StreamController<dynamic> weatherStreamController;
   late WeatherService weatherService;
+  late SharedPreferences prefs;
 
   const validWeatherJson = '''
   {
@@ -45,7 +45,9 @@ void main() {
   }
   ''';
 
-  setUp(() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
     mockChannel = MockFLauncherChannel();
     weatherStreamController = StreamController<dynamic>.broadcast();
 
@@ -64,7 +66,7 @@ void main() {
 
   group('WeatherService', () {
     test('initializes with cached data and Breezy installed status', () async {
-      weatherService = WeatherService(mockChannel);
+      weatherService = WeatherService(mockChannel, sharedPreferences: prefs);
       while (!weatherService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -79,7 +81,7 @@ void main() {
     });
 
     test('updates weather data when stream emits new json', () async {
-      weatherService = WeatherService(mockChannel);
+      weatherService = WeatherService(mockChannel, sharedPreferences: prefs);
       while (!weatherService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -109,7 +111,7 @@ void main() {
     });
 
     test('openBreezyWeather calls channel method', () async {
-      weatherService = WeatherService(mockChannel);
+      weatherService = WeatherService(mockChannel, sharedPreferences: prefs);
       while (!weatherService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -120,7 +122,7 @@ void main() {
     });
 
     test('deduplicates identical weather json without notifying listeners', () async {
-      weatherService = WeatherService(mockChannel);
+      weatherService = WeatherService(mockChannel, sharedPreferences: prefs);
       while (!weatherService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -138,7 +140,7 @@ void main() {
     });
 
     test('refreshes weather on app lifecycle resumed', () async {
-      weatherService = WeatherService(mockChannel);
+      weatherService = WeatherService(mockChannel, sharedPreferences: prefs);
       while (!weatherService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -163,8 +165,6 @@ void main() {
   });
 
   test("a chosen location replaces Breezy data with built-in weather", () async {
-    SharedPreferencesStorePlatform.instance = InMemorySharedPreferencesStore.empty();
-    final prefs = await SharedPreferences.getInstance();
     final openMeteo = _FakeOpenMeteo();
     weatherService = WeatherService(mockChannel, sharedPreferences: prefs, openMeteo: openMeteo);
     while (!weatherService.initialized) {
