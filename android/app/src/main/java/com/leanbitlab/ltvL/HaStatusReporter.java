@@ -41,7 +41,8 @@ final class HaStatusReporter {
 
     private final Context mContext;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
-    private final ExecutorService mSender = Executors.newSingleThreadExecutor();
+    /** Builds and posts the status (see sender()); stop() shuts it down. Main thread only. */
+    private ExecutorService mSender;
     private final List<MediaController> mControllers = new ArrayList<>();
     private MediaSessionManager mSessionManager;
     private String mForegroundPackage;
@@ -49,8 +50,8 @@ final class HaStatusReporter {
     private boolean mScreenTimeLock = false;
     private ScreenTimeScreen mScreenTime;
     private long mScreenTimeSeenAt;
-    /** The last body sent; used on the sender thread only. */
-    private String mLastSent;
+    /** The last body sent; used on the sender thread (a new one after a restart, hence volatile). */
+    private volatile String mLastSent;
 
     /** What the reporter knows, copied on the main thread so the status can be built on the sender thread. */
     private static final class Snapshot {
@@ -141,7 +142,6 @@ final class HaStatusReporter {
 
     void stop() {
         mHandler.removeCallbacks(mHeartbeat);
-        mHandler.removeCallbacks(mSend);
         if (mSessionManager != null) {
             try {
                 mSessionManager.removeOnActiveSessionsChangedListener(mSessionsListener);
@@ -150,6 +150,13 @@ final class HaStatusReporter {
             mSessionManager = null;
         }
         setControllers(null);
+        // After setControllers, which schedules a send: nothing goes out once stopped
+        mHandler.removeCallbacks(mSend);
+        if (mSender != null) {
+            // A post under way still finishes
+            mSender.shutdown();
+            mSender = null;
+        }
     }
 
     void setForegroundPackage(String packageName) {
@@ -214,7 +221,7 @@ final class HaStatusReporter {
         if (url == null) return;
         Snapshot snapshot = new Snapshot(this, primaryController());
         // Labels, the profile and the allowed apps take PackageManager and UserManager calls: off the main thread
-        mSender.execute(() -> {
+        sender().execute(() -> {
             String body;
             try {
                 body = buildStatus(snapshot).toString();
@@ -226,6 +233,12 @@ final class HaStatusReporter {
             mLastSent = body;
             post(url, body);
         });
+    }
+
+    /** Made on first use: a change can schedule a send without start(), e.g. once the setup page saves the address. */
+    private ExecutorService sender() {
+        if (mSender == null) mSender = Executors.newSingleThreadExecutor(r -> new Thread(r, "HearthHaStatus"));
+        return mSender;
     }
 
     private JSONObject buildStatus(Snapshot s) throws JSONException {
