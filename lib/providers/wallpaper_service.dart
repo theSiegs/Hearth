@@ -134,7 +134,7 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
       _lastBingEnabled = bingEnabled;
       _updateTimerState();
       if (bingChanged && bingEnabled) {
-        refreshBingWallpaper(force: true);
+        refreshBingWallpaper();
       } else {
         _updateWallpaper();
       }
@@ -264,7 +264,7 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Downloads Bing's current "Photo of the Day" and sets it as the wallpaper.
   /// Talks only to bing.com; nothing else, no analytics.
-  Future<void> refreshBingWallpaper({bool force = false}) async {
+  Future<void> refreshBingWallpaper() async {
     if (_bingRefreshInFlight) return;
     _bingRefreshInFlight = true;
     final httpClient = HttpClient();
