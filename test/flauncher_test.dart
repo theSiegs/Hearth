@@ -212,7 +212,7 @@ void main() {
     when(settingsService.hiddenWatchNextProgramIds).thenReturn([]);
     when(settingsService.hiddenWatchNextPackages).thenReturn([]);
     when(settingsService.continueWatchingMaxItems).thenReturn(10);
-    when(settingsService.continueWatchingCardSize).thenReturn('normal');
+    when(settingsService.continueWatchingCardHeight).thenReturn(135);
     when(settingsService.continueWatchingShowProgress).thenReturn(true);
     when(settingsService.continueWatchingShowPercentage).thenReturn(true);
     when(settingsService.continueWatchingShowDescription).thenReturn(true);

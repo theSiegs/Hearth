@@ -81,24 +81,7 @@ class _ContinueWatchingRowState extends State<ContinueWatchingRow> {
           return const SizedBox.shrink();
         }
 
-        double cardHeight;
-        final int? customHeight = int.tryParse(settingsService.continueWatchingCardSize);
-        if (customHeight != null) {
-          cardHeight = customHeight.toDouble();
-        } else {
-          switch (settingsService.continueWatchingCardSize) {
-            case 'compact':
-              cardHeight = 112.0;
-              break;
-            case 'large':
-              cardHeight = 157.0;
-              break;
-            case 'normal':
-            default:
-              cardHeight = 135.0;
-              break;
-          }
-        }
+        final double cardHeight = settingsService.continueWatchingCardHeight.toDouble();
         final double rowHeight = cardHeight + 36.0;
 
         return Padding(
@@ -352,35 +335,12 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
     final bool appHighlightAnimationEnabled = context.select<SettingsService, bool>((s) => s.appHighlightAnimationEnabled);
     final bool hideHighlightOutlineOnHomescreen = context.select<SettingsService, bool>((s) => s.hideHighlightOutlineOnHomescreen);
     final bool appSelectorTransitionAnimationEnabled = context.select<SettingsService, bool>((s) => s.appSelectorTransitionAnimationEnabled);
-    final String cardSize = context.select<SettingsService, String>((s) => s.continueWatchingCardSize);
+    final double cardHeight = context.select<SettingsService, int>((s) => s.continueWatchingCardHeight).toDouble();
+    final double cardWidth = (cardHeight * 16 / 9).roundToDouble();
     final bool showProgress = context.select<SettingsService, bool>((s) => s.continueWatchingShowProgress);
     final bool showPercentage = context.select<SettingsService, bool>((s) => s.continueWatchingShowPercentage);
     final bool showDescription = context.select<SettingsService, bool>((s) => s.continueWatchingShowDescription);
     final Duration focusDuration = appSelectorTransitionAnimationEnabled ? const Duration(milliseconds: 200) : Duration.zero;
-
-    double cardWidth;
-    double cardHeight;
-    final int? customHeight = int.tryParse(cardSize);
-    if (customHeight != null) {
-      cardHeight = customHeight.toDouble();
-      cardWidth = (cardHeight * 16 / 9).roundToDouble();
-    } else {
-      switch (cardSize) {
-        case 'compact':
-          cardWidth = 200.0;
-          cardHeight = 112.0;
-          break;
-        case 'large':
-          cardWidth = 280.0;
-          cardHeight = 157.0;
-          break;
-        case 'normal':
-        default:
-          cardWidth = 240.0;
-          cardHeight = 135.0;
-          break;
-      }
-    }
 
     final bool shouldHighlight = _shouldHighlight();
     final double scale = shouldHighlight ? style.focusScaleFor(cardWidth) : 1.0;

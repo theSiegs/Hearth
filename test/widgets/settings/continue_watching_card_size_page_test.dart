@@ -44,6 +44,5 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(settingsService.continueWatchingCardHeight, 110);
-    expect(settingsService.continueWatchingCardSize, "110");
   });
 }
