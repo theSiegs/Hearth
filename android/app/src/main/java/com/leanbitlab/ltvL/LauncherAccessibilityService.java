@@ -76,10 +76,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final long PROFILE_READY_FALLBACK_MS = 4_000;
     private final Runnable mReadyFallback = () -> setProfileReady(this, getActiveProfileKey(this));
     private static final long PROFILE_CLICK_WINDOW_MS = 60_000;
-    private static final long CHOOSER_INITIAL_FOCUS_MS = 1_500;
-    private long mChooserOpenedAt = 0;
-    private String mFirstFocusLabel;
-    private long mFirstFocusAt = 0;
     private String mPendingProfile;
     private long mPendingProfileAt = 0;
     private String mLastChooserFocus;
@@ -330,14 +326,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mSwitchedSerial = ProfileUsers.UNKNOWN;
     }
 
-    /** The chooser opened on the current profile: that's who the running profile user is. */
-    private void onChooserOpenedOn(String label) {
-        // Not a name: the chooser re-reports focus when it comes back (from its PIN screen, say) on whatever tile
-        // was being browsed. Names come only from the tile marked current account (collectChooserTiles).
-        android.util.Log.i(PROFILE_TAG, "Chooser focus on open: " + label);
-        checkProfileUser("chooser opened");
-    }
-
     // Once the chooser has laid out (and its focus animation settled): which tile is the current account, and
     // photos for profiles that have none yet or weren't checked today.
     private static final long CHOOSER_READ_DELAY_MS = 1_200;
@@ -556,15 +544,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             if (isChooser(className)) {
                 mIdleHandler.removeCallbacks(mReadChooser);
                 mIdleHandler.postDelayed(mReadChooser, CHOOSER_READ_DELAY_MS);
-                long now = SystemClock.elapsedRealtime();
-                if (mFirstFocusLabel != null && now - mFirstFocusAt < CHOOSER_INITIAL_FOCUS_MS) {
-                    // Initial focus was reported before the window change
-                    onChooserOpenedOn(mFirstFocusLabel);
-                    mChooserOpenedAt = 0;
-                } else {
-                    mChooserOpenedAt = now;
-                }
-                mFirstFocusLabel = null;
+                checkProfileUser("chooser opened");
             }
 
             // Google's own setup flows (a new kids profile's onboarding, sign-in, PIN creation) open Google TV's
@@ -703,14 +683,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
             if (mChooserOnScreen) {
                 mLastChooserFocus = label;
                 mLastChooserFocusAt = now;
-            }
-            // The chooser opens with the current profile focused; later focus moves are just browsing.
-            if (mChooserOpenedAt != 0 && now - mChooserOpenedAt < CHOOSER_INITIAL_FOCUS_MS) {
-                mChooserOpenedAt = 0;
-                onChooserOpenedOn(label);
-            } else {
-                mFirstFocusLabel = label;
-                mFirstFocusAt = now;
             }
         } else if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED && mChooserOnScreen) {
             // Only clicks in the chooser: Google TV's other screens (its keyboard, menus) click LinearLayouts too.
