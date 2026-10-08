@@ -84,6 +84,36 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
     await _run(() => _channel.removeHearthFromProfiles(), "Remove");
   }
 
+  /// Uninstall Hearth the safe way: clean up the other profiles first (so nothing is left behind), then open
+  /// Android's uninstall screen for Hearth itself. If the cleanup can't run yet, stop and ask for the approval
+  /// rather than uninstall into a half-cleaned state.
+  Future<void> _uninstallHearth() async {
+    final go = await _confirm(
+      title: "Uninstall Hearth",
+      lines: [
+        "This first removes Hearth and HearthTube from your other profiles, then uninstalls Hearth from this one.",
+        "Uninstalling here — rather than from Android's settings — makes sure nothing is left behind on the kids' profiles.",
+      ],
+      action: "Uninstall",
+    );
+    if (go != true) return;
+    setState(() => _busy = true);
+    try {
+      await _channel.removeHearthFromProfiles();
+    } on PlatformException {
+      if (mounted) {
+        setState(() => _busy = false);
+        await _showLog("Finish the one-time approval first", [
+          "Hearth couldn't clean up the other profiles yet — it needs the one-time \"Allow debugging?\" approval on the TV.",
+          "Approve it, then try Uninstall again, so nothing is left on the kids' profiles.",
+        ]);
+      }
+      return;
+    }
+    if (mounted) setState(() => _busy = false);
+    await _channel.uninstallHearth();
+  }
+
   Future<void> _run(Future<List<String>> Function() action, String label) async {
     setState(() => _busy = true);
     try {
@@ -191,6 +221,12 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
                   title: Text("Remove Hearth from other profiles", style: textTheme.bodyMedium),
                   trailing: const Icon(Icons.chevron_right, color: Colors.white54),
                   onPressed: _busy ? null : () => _remove(),
+                ),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.delete_outline),
+                  title: Text("Uninstall Hearth", style: textTheme.bodyMedium),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                  onPressed: _busy ? null : () => _uninstallHearth(),
                 ),
                 FocusableSettingsTile(
                   leading: Icon(Icons.person_outline, color: adultsOn ? Colors.green : null),

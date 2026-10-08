@@ -185,6 +185,10 @@ class FLauncherChannel {
   Future<List<Map<dynamic, dynamic>>> getHearthProfilesState() async =>
       await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getHearthProfilesState") ?? [];
 
+  /// Opens Android's uninstall screen for Hearth itself. Call [removeHearthFromProfiles] first so the copies on the
+  /// other profiles are cleaned up before Hearth goes (otherwise the kids' copies would be left behind).
+  Future<void> uninstallHearth() async => await _methodChannel.invokeMethod("uninstallHearth");
+
   /// Profile Pairing's state: {enabled, voiceDefault}.
   Future<Map<dynamic, dynamic>> getProfilePairingStatus() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getProfilePairingStatus") ?? {};
