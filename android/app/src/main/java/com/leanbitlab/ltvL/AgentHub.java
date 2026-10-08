@@ -1,15 +1,18 @@
 package com.leanbitlab.ltvL;
 
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.LauncherActivityInfo;
 import android.content.pm.LauncherApps;
 import android.graphics.Rect;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.UserHandle;
 import android.util.Log;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -27,6 +30,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Hearth's side (the owner's user) of its agents: Hearth itself, running in each other Google TV profile's user
@@ -56,8 +61,7 @@ final class AgentHub {
     private static final Map<Long, List<Map<String, Object>>> sWatchNext = new ConcurrentHashMap<>();
     private static final Map<Long, Boolean> sVoiceDefault = new ConcurrentHashMap<>();
     private static volatile String sListening;
-    private static final java.util.concurrent.ExecutorService SENDER =
-            java.util.concurrent.Executors.newSingleThreadExecutor();
+    private static final ExecutorService SENDER = Executors.newSingleThreadExecutor();
 
     private static final class Connection {
         final long serial;
@@ -71,16 +75,12 @@ final class AgentHub {
         }
 
         /**
-         * Queues the message for the agent. Writes go out on a background thread, in order: callers are often on
+         * Queues the message for the agent. Writes go out on one background thread, in order: callers are often on
          * the main thread, where Android refuses socket writes (NetworkOnMainThreadException).
          */
         void send(JSONObject message) {
             final String line = message.toString();
-            SENDER.execute(() -> {
-                synchronized (this) {
-                    out.println(line);
-                }
-            });
+            SENDER.execute(() -> out.println(line));
         }
     }
 
@@ -121,7 +121,7 @@ final class AgentHub {
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             JSONObject hello = new JSONObject(in.readLine());
             long serial = hello.optLong("serial", -1);
-            String key = keyFor(serial, false);
+            String key = keyFor(sContext, serial, false);
             if (!"hello".equals(hello.optString("type")) || key == null || !key.equals(hello.optString("key"))) {
                 Log.i(TAG, "Agent for serial " + serial + " refused: no or wrong key");
                 out.println(new JSONObject().put("type", "denied").toString());
@@ -132,8 +132,8 @@ final class AgentHub {
             Connection old = sConnections.put(serial, connection);
             if (old != null) closeQuietly(old.socket);
             sVoiceDefault.put(serial, hello.optBoolean("voiceDefault"));
-            connection.send(new JSONObject().put("type", "welcome"));
-            connection.send(new JSONObject().put("type", "listen").put("package", sListening != null ? sListening : JSONObject.NULL));
+            connection.send(json("type", "welcome"));
+            connection.send(listenMessage(sListening));
             connection.send(hearthState(sContext));
             // Share owner-Hearth's already-authorized adb key over this loopback channel, so if Hearth is ever
             // uninstalled from the owner the agent can still clean up its own profile (see AgentService). Local only.
@@ -158,7 +158,7 @@ final class AgentHub {
                     }
                     case "verifyPin": {
                         // A kid's HearthTube checking the parent PIN through its agent (PINs stay with Hearth)
-                        android.os.Bundle result = ProfileProvider.verifyParentPin(sContext, message.optString("pin"));
+                        Bundle result = ProfileProvider.verifyParentPin(sContext, message.optString("pin"));
                         connection.send(new JSONObject().put("type", "pinResult").put("id", message.optLong("id"))
                                 .put("ok", result.getBoolean("ok")).put("wait", result.getInt("wait_seconds", 0)));
                         break;
@@ -212,7 +212,7 @@ final class AgentHub {
     }
 
     /** Hearth's provider row as a message for the agents. */
-    private static JSONObject hearthState(Context context) throws org.json.JSONException {
+    private static JSONObject hearthState(Context context) throws JSONException {
         JSONObject row = new JSONObject();
         String[] columns = ProfileProvider.columns();
         Object[] values = ProfileProvider.row(context);
@@ -222,9 +222,9 @@ final class AgentHub {
 
     /** Hearth's provider row changed: the agents' copies follow. */
     static void pushHearthState(Context context) {
-        if (sConnections.isEmpty() || sContext == null) return;
+        if (sConnections.isEmpty()) return;
         try {
-            JSONObject state = hearthState(sContext);
+            JSONObject state = hearthState(context);
             for (Connection connection : sConnections.values()) connection.send(state);
         } catch (Exception e) {
             Log.w(TAG, "Couldn't send Hearth's state to the agents: " + e);
@@ -242,12 +242,12 @@ final class AgentHub {
      */
     static void setListening(String pkg) {
         sListening = pkg;
-        for (Connection connection : sConnections.values()) {
-            try {
-                connection.send(new JSONObject().put("type", "listen").put("package", pkg != null ? pkg : JSONObject.NULL));
-            } catch (Exception ignored) {
-            }
-        }
+        JSONObject message = listenMessage(pkg);
+        for (Connection connection : sConnections.values()) connection.send(message);
+    }
+
+    private static JSONObject listenMessage(String pkg) {
+        return json("type", "listen", "package", pkg != null ? pkg : JSONObject.NULL);
     }
 
     /** The profile's agent has reported its Watch Next at least once since Hearth started. */
@@ -258,11 +258,17 @@ final class AgentHub {
     /** Hearth is installed for that profile, so it can have an agent (a parent approved it there). */
     static boolean canHaveAgent(Context context, UserHandle user) {
         try {
-            LauncherApps launcherApps = (LauncherApps) context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
-            return !launcherApps.getActivityList(context.getPackageName(), user).isEmpty();
+            return ownActivity(context, user) != null;
         } catch (RuntimeException e) {
             return false;
         }
+    }
+
+    /** Hearth's own launcher activity in that user; null when Hearth isn't installed there. */
+    private static ComponentName ownActivity(Context context, UserHandle user) {
+        LauncherApps launcherApps = (LauncherApps) context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
+        List<LauncherActivityInfo> activities = launcherApps.getActivityList(context.getPackageName(), user);
+        return activities.isEmpty() ? null : activities.get(0).getComponentName();
     }
 
     static boolean isConnected(long serial) {
@@ -283,11 +289,7 @@ final class AgentHub {
     static boolean open(Context context, long serial, UserHandle user, String intentUri) {
         Connection connection = sConnections.get(serial);
         if (connection == null) return false;
-        try {
-            connection.send(new JSONObject().put("type", "open").put("intent", intentUri));
-        } catch (Exception e) {
-            return false;
-        }
+        connection.send(json("type", "open", "intent", intentUri));
         return launchAgent(context, serial, user);
     }
 
@@ -303,13 +305,13 @@ final class AgentHub {
 
     private static boolean launchAgent(Context context, long serial, UserHandle user) {
         try {
-            LauncherApps launcherApps = (LauncherApps) context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
-            List<LauncherActivityInfo> activities = launcherApps.getActivityList(context.getPackageName(), user);
-            if (activities.isEmpty()) {
+            ComponentName activity = ownActivity(context, user);
+            if (activity == null) {
                 Log.i(TAG, "Hearth isn't installed for serial " + serial + ": no agent");
                 return false;
             }
-            launcherApps.startMainActivity(activities.get(0).getComponentName(), user, keyRect(context, serial), null);
+            LauncherApps launcherApps = (LauncherApps) context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
+            launcherApps.startMainActivity(activity, user, keyRect(context, serial), null);
             return true;
         } catch (RuntimeException e) {
             Log.i(TAG, "Couldn't start the agent for serial " + serial + ": " + e);
@@ -318,8 +320,7 @@ final class AgentHub {
     }
 
     /** The profile's agent key ("l,t,r,b" of a Rect), made the first time; null when absent and not to be made. */
-    private static synchronized String keyFor(long serial, boolean create) {
-        Context context = sContext;
+    private static synchronized String keyFor(Context context, long serial, boolean create) {
         if (context == null || serial < 0) return null;
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         String key = prefs.getString(KEY_PREFIX + serial, null);
@@ -332,10 +333,20 @@ final class AgentHub {
     }
 
     private static Rect keyRect(Context context, long serial) {
-        if (sContext == null) sContext = context.getApplicationContext();
-        String[] parts = keyFor(serial, true).split(",");
+        String[] parts = keyFor(context, serial, true).split(",");
         return new Rect(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]), Integer.parseInt(parts[2]),
                 Integer.parseInt(parts[3]));
+    }
+
+    /** A message from name/value pairs. put throws only for a NaN or infinite number, which no message here holds. */
+    private static JSONObject json(Object... pairs) {
+        try {
+            JSONObject object = new JSONObject();
+            for (int i = 0; i + 1 < pairs.length; i += 2) object.put((String) pairs[i], pairs[i + 1]);
+            return object;
+        } catch (JSONException e) {
+            throw new IllegalArgumentException(e);
+        }
     }
 
     private static void closeQuietly(Socket socket) {
