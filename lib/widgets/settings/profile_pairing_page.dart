@@ -35,7 +35,7 @@ class PairingChoice {
       };
 }
 
-/// Settings → Profile Pairing: which profile each streaming app opens for each Google TV profile.
+/// Profile Pairing (under Profiles): which profile each streaming app opens for each Google TV profile.
 class ProfilePairingPage extends StatefulWidget {
   static const String routeName = "profile_pairing";
 

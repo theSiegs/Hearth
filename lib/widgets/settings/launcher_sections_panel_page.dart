@@ -194,7 +194,6 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
               return KeyEventResult.handled;
             }
           } else {
-            // Not Moving
             if (event.logicalKey == LogicalKeyboardKey.arrowLeft || event.logicalKey == LogicalKeyboardKey.arrowRight) {
               setState(() {
                 _movingSection = section;
@@ -217,7 +216,6 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
         child: Builder(builder: (context) {
           final bool focused = Focus.of(context).hasFocus;
 
-          // Determine colors based on state
           final Color backgroundColor =
               isMoving ? colorScheme.primaryContainer : (focused ? Colors.white10 : Colors.transparent);
 
@@ -258,14 +256,11 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
               ),
               child: Row(
                 children: [
-                  // Drag Handle Icon
                   Icon(
                     isMoving ? Icons.drag_indicator : Icons.drag_handle,
                     color: iconColor,
                   ),
                   const SizedBox(width: 16),
-
-                  // Section Title
                   Expanded(
                     child: Text(
                       title,
@@ -275,8 +270,6 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
                       ),
                     ),
                   ),
-
-                  // Move Indicators
                   if (isMoving) ...[
                     Icon(Icons.keyboard_arrow_up, color: textColor),
                     const SizedBox(width: 4),

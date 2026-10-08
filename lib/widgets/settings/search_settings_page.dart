@@ -5,7 +5,8 @@ import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
 
-/// Settings → Search: where search results come from, and an optional TMDB key of the user's own for posters.
+/// Search settings (under Remote & search): where search results come from, and an optional TMDB key of the user's
+/// own for posters.
 class SearchSettingsPage extends StatelessWidget {
   static const String routeName = "search_settings";
 

@@ -42,14 +42,11 @@ class ContinueWatchingAppsPage extends StatelessWidget {
 
     final blockedPackages = settingsService.hiddenWatchNextPackages.toSet();
 
-    // Packages that currently have active Watch Next items
     final activePackages = watchNextService.programs.map((p) => p.packageName).toSet().toList();
 
-    // All installed apps sorted alphabetically
     final allApps = List<App>.from(appsService.applications)
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
-    // Blocked apps that are known installed apps
     final knownBlockedApps = allApps.where((a) => blockedPackages.contains(a.packageName)).toList();
     final knownBlockedPkg = knownBlockedApps.map((a) => a.packageName).toSet();
     final unknownBlockedPkg = blockedPackages.where((p) => !knownBlockedPkg.contains(p)).toList();

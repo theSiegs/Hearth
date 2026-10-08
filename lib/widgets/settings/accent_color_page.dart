@@ -26,7 +26,6 @@ import 'settings_page.dart';
 class AccentColorPage extends StatelessWidget {
   static const String routeName = "accent_color_panel";
 
-  // Define accent color presets with names
   static const List<(String hex, String name)> colorPresets = [
     (ACCENT_COLOR_PURPLE, 'Purple'),
     (ACCENT_COLOR_TEAL, 'Teal'),
@@ -86,7 +85,6 @@ class AccentColorPage extends StatelessWidget {
                   },
                 ),
               ),
-              // Minimalist Accent Preview Indicator
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Container(

@@ -23,7 +23,7 @@ import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'settings_page.dart';
 
-/// Animations and the key click (under Look). The label and outline switches that used to be here are with the dock.
+/// Animations and the key click (under Look).
 class AnimationsSoundPage extends StatelessWidget {
   static const String routeName = "misc_panel";
   static const String title = "Animations & sound";
