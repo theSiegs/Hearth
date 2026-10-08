@@ -214,13 +214,16 @@ class SearchService {
 class TitleDetails {
   final String? posterUrl;
 
+  /// A wide still (16:9), for cards shaped like Continue Watching's.
+  final String? backdropUrl;
+
   /// Services where it comes with the service: by subscription, free, or free with ads, as TMDB names them.
   final List<String> included;
 
   /// Stores where it can be rented or bought (and isn't also included there).
   final List<String> rentOrBuy;
 
-  const TitleDetails({this.posterUrl, this.included = const [], this.rentOrBuy = const []});
+  const TitleDetails({this.posterUrl, this.backdropUrl, this.included = const [], this.rentOrBuy = const []});
 
   /// Included services (the name older code used: "streaming on").
   List<String> get streamingOn => included;
@@ -363,6 +366,7 @@ class TmdbClient {
 
   static TitleDetails parseDetails(Map json) {
     final poster = json["poster_path"];
+    final backdrop = json["backdrop_path"];
     List<String> names(String kind) {
       final list = SearchService._at(json, ["watch/providers", "results", "US", kind]);
       return list is List ? list.map((p) => p is Map ? p["provider_name"] : null).whereType<String>().toList() : [];
@@ -372,8 +376,28 @@ class TmdbClient {
     final rentOrBuy = <String>{...names("rent"), ...names("buy")}.where((n) => !included.contains(n)).toList();
     return TitleDetails(
       posterUrl: poster is String ? "https://image.tmdb.org/t/p/w185$poster" : null,
+      backdropUrl: backdrop is String ? "https://image.tmdb.org/t/p/w500$backdrop" : null,
       included: included,
       rentOrBuy: rentOrBuy,
     );
   }
+}
+
+/// One search result as Hearth shows it: the title, TMDB's details (null without a key or an answer), and where it
+/// can be watched on this TV.
+class TitleMatch {
+  final SearchResult result;
+  final TitleDetails? details;
+  final Availability availability;
+
+  const TitleMatch(this.result, this.details, this.availability);
+
+  /// "2022 · Series", "2014 · Film": what the card's second line says.
+  String get meta {
+    final kind = result.tmdbId == null ? null : (result.tmdbIsMovie ? "Film" : "Series");
+    return [if (result.year != null) "${result.year}", if (kind != null) kind].join(" · ");
+  }
+
+  /// The best picture for a wide card: TMDB's still, else its poster.
+  String? get imageUrl => details?.backdropUrl ?? details?.posterUrl;
 }

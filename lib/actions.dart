@@ -77,6 +77,11 @@ class OpenSettingsIntent extends Intent {
   const OpenSettingsIntent();
 }
 
+/// The top bar's search button: type (or edit) a search over the home.
+class StartSearchIntent extends Intent {
+  const StartSearchIntent();
+}
+
 /// Opens the Home Assistant panel; sent by pressing Right at the right edge of the home screen when the panel is on.
 /// Down from the top bar: back to Continue Watching or the dock, rather than whatever is nearest on screen.
 class LeaveTopBarIntent extends Intent {

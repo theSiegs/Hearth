@@ -32,7 +32,10 @@ import 'package:flauncher/widgets/category_row.dart';
 import 'package:flauncher/widgets/home_dock.dart';
 import 'package:flauncher/widgets/launcher_alternative_view.dart';
 import 'package:flauncher/widgets/focus_aware_app_bar.dart';
-import 'package:flauncher/widgets/search_page.dart';
+import 'package:flauncher/providers/home_search.dart';
+import 'package:flauncher/widgets/search/search_entry.dart';
+import 'package:flauncher/widgets/search/search_grid_page.dart';
+import 'package:flauncher/widgets/search/search_results_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -71,6 +74,16 @@ class _FLauncherState extends State<FLauncher> {
   final FocusNode _recentsFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
   FocusNode? _lastDockFocus;
 
+  /// A search's results are in the dock's spot (Continue Watching's place), as Continue Watching takes it.
+  bool _showingSearch = false;
+  final FocusNode _searchRowFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
+
+  /// The search box is open over the home (typing, or listening when [_searchVoice]).
+  bool _searchTyping = false;
+  bool _searchVoice = false;
+  HomeSearch? _homeSearch;
+  bool _awaitingResults = false;
+
   /// Wraps the single apps grid shown when there's no dock.
   final FocusNode _appsGridFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
 
@@ -89,6 +102,9 @@ class _FLauncherState extends State<FLauncher> {
         if (pending != null) _openSearch(pending);
       } catch (_) {}
     });
+    _homeSearch = context.read<HomeSearch?>();
+    _homeSearch?.addListener(_onSearchChanged);
+    _homeSearch?.backHandler = _searchBack;
     _profileService = context.read<ProfileService?>();
     _lastProfile = _profileService?.activeProfileKey;
     _profileService?.addListener(_onProfileChanged);
@@ -100,13 +116,15 @@ class _FLauncherState extends State<FLauncher> {
     if (key == null || key == _lastProfile) return;
     _lastProfile = key;
     if (_showingRecents) setState(() => _showingRecents = false);
+    // Another profile, another person: their search isn't this one's
+    if (_homeSearch?.active ?? false) _endSearch(focusDock: false);
     // Keep trying for a few seconds: the profile's layout (its own dock) and app list load after the profile changes,
     // and focus comes back to the top bar (where the profile switch started), which would hide the dock.
     var landed = false;
     for (final ms in const [300, 1200, 2500, 4000]) {
       Future.delayed(Duration(milliseconds: ms), () {
         // Not while another page is open over the home (search, settings): it keeps its focus
-        if (!mounted || landed || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
+        if (!mounted || landed || _searchTyping || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
         final target = _firstFocusable(_dockFocusNode) ?? _firstFocusable(_appsGridFocusNode) ??
             _firstFocusable(_belowDockFocusNode);
         if (target != null) {
@@ -117,22 +135,95 @@ class _FLauncherState extends State<FLauncher> {
     }
   }
 
-  bool _searchOpen = false;
-
   /// Focus is in the top bar: the dock and Continue Watching are hidden.
   bool _topBarFocused = false;
 
-  Future<void> _openSearch(String mode) async {
-    if (!mounted || _searchOpen) return;
-    _searchOpen = true;
-    await SearchPage.open(context, voice: mode == "voice");
-    _searchOpen = false;
+  /// Opens the search box over the home: the keyboard, or listening right away for [mode] "voice" (the remote's
+  /// voice search). It starts from the current search, to edit it.
+  void _openSearch(String mode) {
+    if (!mounted) return;
+    setState(() {
+      _searchTyping = true;
+      _searchVoice = mode == "voice";
+    });
+  }
+
+  void _submitSearch(String text) {
+    setState(() => _searchTyping = false);
+    _awaitingResults = true;
+    // Focus waits on the search button until the results are in, then moves to them (_onSearchChanged)
+    _appBarKey.currentState?.focusSearch();
+    _homeSearch?.search(text);
+  }
+
+  void _cancelSearchEntry() {
+    setState(() => _searchTyping = false);
+    _appBarKey.currentState?.focusSearch();
+  }
+
+  void _onSearchChanged() {
+    final search = _homeSearch;
+    if (!mounted || search == null || !_awaitingResults || search.loading || !search.active) return;
+    _awaitingResults = false;
+    // No dock on this layout: no row to show them in, so the grid
+    if (_firstFocusable(_dockFocusNode) == null) {
+      SearchGridPage.open(context);
+      return;
+    }
+    _setShowingSearch(true);
+  }
+
+  /// Results in the dock's spot (true), or the dock back (false); focus goes with them.
+  void _setShowingSearch(bool show) {
+    setState(() {
+      _showingSearch = show;
+      if (show) _showingRecents = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (show) {
+        (_firstFocusable(_searchRowFocusNode) ?? _firstFocusable(_dockFocusNode))?.requestFocus();
+      } else {
+        _focusDock();
+      }
+    });
+  }
+
+  /// Android's Back while searching: closes the search box, else ends the search. False when there's no search.
+  bool _searchBack() {
+    if (_searchTyping) {
+      _cancelSearchEntry();
+      return true;
+    }
+    if (_homeSearch?.active ?? false) {
+      _endSearch();
+      return true;
+    }
+    return false;
+  }
+
+  /// Back from the results: the search ends and the home is as it was.
+  void _endSearch({bool focusDock = true}) {
+    _awaitingResults = false;
+    _homeSearch?.clear();
+    setState(() => _showingSearch = false);
+    if (focusDock) WidgetsBinding.instance.addPostFrameCallback((_) => _focusDock());
+  }
+
+  /// Keys on the results row besides Back and Up: Down brings the dock back (the search stays, a press of Up away).
+  KeyEventResult _searchRowKey(FocusNode node, KeyEvent event) {
+    if (event.logicalKey != LogicalKeyboardKey.arrowDown || event is KeyUpEvent) return KeyEventResult.ignored;
+    if (event is KeyDownEvent) _setShowingSearch(false);
+    return KeyEventResult.handled;
   }
 
   @override
   void dispose() {
     FocusManager.instance.removeListener(_onFocusMoved);
     _profileService?.removeListener(_onProfileChanged);
+    _homeSearch?.removeListener(_onSearchChanged);
+    if (_homeSearch?.backHandler == _searchBack) _homeSearch?.backHandler = null;
+    _searchRowFocusNode.dispose();
     _appsGridFocusNode.dispose();
     _firstScreenFocusNode.dispose();
     _belowDockFocusNode.dispose();
@@ -209,7 +300,9 @@ class _FLauncherState extends State<FLauncher> {
   /// nearest on screen: the grid below, scrolling the page down. True when it handled the key.
   bool _leaveTopBar() {
     if (_firstFocusable(_dockFocusNode) == null) return false; // no dock: normal navigation
-    if (_recentsAvailable) {
+    if (_homeSearch?.active ?? false) {
+      _setShowingSearch(true);
+    } else if (_recentsAvailable) {
       _setShowingRecents(true);
     } else {
       _focusDock();
@@ -223,6 +316,12 @@ class _FLauncherState extends State<FLauncher> {
         ? last
         : _firstFocusable(_dockFocusNode);
     target?.requestFocus();
+  }
+
+  KeyEventResult _searchUpFromDock(FocusNode node, KeyEvent event) {
+    if (event.logicalKey != LogicalKeyboardKey.arrowUp || event is KeyUpEvent) return KeyEventResult.ignored;
+    if (event is KeyDownEvent) _setShowingSearch(true);
+    return KeyEventResult.handled;
   }
 
   static FocusNode? _firstFocusable(FocusNode parent) =>
@@ -264,6 +363,7 @@ class _FLauncherState extends State<FLauncher> {
               return null;
             },
           ),
+          StartSearchIntent: CallbackAction<StartSearchIntent>(onInvoke: (_) => _openSearch("text")),
           OpenSettingsIntent: CallbackAction<OpenSettingsIntent>(
             onInvoke: (_) => _appBarKey.currentState?.openSettings(),
           ),
@@ -342,6 +442,20 @@ class _FLauncherState extends State<FLauncher> {
                               return _emptyState(context);
                             }
                           })))),
+              // Typing or saying a search, over the home
+              if (_searchTyping)
+                Positioned.fill(
+                  child: Container(
+                    color: Colors.black.withOpacity(0.55),
+                    child: SearchEntry(
+                      key: ValueKey(_searchVoice),
+                      initialText: _homeSearch?.query ?? "",
+                      voice: _searchVoice,
+                      onSubmit: _submitSearch,
+                      onCancel: _cancelSearchEntry,
+                    ),
+                  ),
+                ),
               // A profile switch: the welcome card until this profile's home is complete
               Positioned.fill(child: ProfileTransitionOverlay(channel: FLauncherChannel())),
             ])),
@@ -382,7 +496,9 @@ class _FLauncherState extends State<FLauncher> {
     // Empty sections (often "Non-TV Apps") are left out below the dock; they'd only say "This category is empty".
     // With a single section left, its heading is dropped too. Everything below the dock wraps as a grid,
     // so a "row" section doesn't become one long sideways-scrolling strip.
-    final bool showRecents = continueWatchingActive && _showingRecents;
+    final search = context.watch<HomeSearch?>();
+    final bool showSearch = (search?.active ?? false) && _showingSearch;
+    final bool showRecents = continueWatchingActive && _showingRecents && !showSearch;
     _recentsAvailable = continueWatchingActive;
     final List<LauncherSection> belowDock =
         sections.where((s) => s != favorites && !(s is Category && s.applications.isEmpty)).toList();
@@ -414,13 +530,35 @@ class _FLauncherState extends State<FLauncher> {
                       ),
                     ),
                   ),
+                // A search's results, in Continue Watching's place (they stay up while the top bar has focus)
+                if (search?.active ?? false)
+                  ExcludeFocus(
+                    excluding: !showSearch,
+                    child: Focus(
+                      focusNode: _searchRowFocusNode,
+                      onKeyEvent: _searchRowKey,
+                      child: _swapAnimation(
+                        visible: showSearch,
+                        hiddenOffset: const Offset(0, 0.25),
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          child: SearchResultsRow(
+                            onUp: () => _appBarKey.currentState?.focusSearch(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ExcludeFocus(
-                  excluding: showRecents,
+                  excluding: showRecents || showSearch,
                   child: Focus(
                     focusNode: _dockFocusNode,
-                    onKeyEvent: continueWatchingActive ? _swapOn(LogicalKeyboardKey.arrowUp, true) : null,
+                    // Up from the dock: the search's results while there's a search, else Continue Watching
+                    onKeyEvent: (search?.active ?? false)
+                        ? _searchUpFromDock
+                        : (continueWatchingActive ? _swapOn(LogicalKeyboardKey.arrowUp, true) : null),
                     child: _swapAnimation(
-                      visible: !showRecents && !_topBarFocused,
+                      visible: !showRecents && !showSearch && !_topBarFocused,
                       // Far enough to slide the dock off the bottom of the screen, so it needn't fade too.
                       // (A fade would paint the dock once, off-screen, and its frosted backdrop would stay
                       // sampled from there.)

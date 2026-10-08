@@ -21,6 +21,8 @@ import 'dart:ui';
 
 import 'package:flauncher/database.dart';
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/providers/home_search.dart';
+import 'package:flauncher/providers/search_service.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flauncher/providers/launcher_state.dart';
@@ -120,6 +122,16 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => WatchNextService(fLauncherChannel)),
         ChangeNotifierProvider(create: (_) => WeatherService(fLauncherChannel, sharedPreferences: sharedPreferences)),
         ChangeNotifierProvider(create: (_) => UpdateService(fLauncherChannel)),
+        // The home's search (top bar, results row, results grid)
+        ChangeNotifierProvider(create: (context) {
+          final settings = Provider.of<SettingsService>(context, listen: false);
+          final apps = Provider.of<AppsService>(context, listen: false);
+          final clients = <String, TmdbClient>{};
+          // The user's own TMDB key (Settings > Search) when set, else the one built into this release
+          TmdbClient tmdb() => clients[settings.tmdbApiKey] ??=
+              settings.tmdbApiKey.isEmpty ? TmdbClient() : TmdbClient(apiKey: settings.tmdbApiKey);
+          return HomeSearch(tmdb: tmdb, installed: (pkg) => apps.getApp(pkg) != null);
+        }),
         // Hearth is the TV's updater for its companion apps (checks in the background)
         Provider<CompanionUpdater>(
             create: (_) => CompanionUpdater(fLauncherChannel)..start(),

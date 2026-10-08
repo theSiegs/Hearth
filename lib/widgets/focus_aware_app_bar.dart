@@ -14,7 +14,7 @@ import 'package:provider/provider.dart';
 
 import 'daily_data_usage_widget.dart';
 import 'date_time_widget.dart';
-import 'search_page.dart';
+import '../providers/home_search.dart';
 import 'weather_status_bar_widget.dart';
 
 class FocusAwareAppBar extends StatefulWidget implements PreferredSizeWidget
@@ -50,6 +50,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
     _inputsFocusNode = FocusNode();
     _notificationsFocusNode = FocusNode();
     _weatherFocusNode = FocusNode();
+    _searchFocusNode = FocusNode();
   }
 
   @override
@@ -58,7 +59,15 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
     _inputsFocusNode.dispose();
     _notificationsFocusNode.dispose();
     _weatherFocusNode.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  late final FocusNode _searchFocusNode;
+
+  /// Focuses the search button (or the current search's pill).
+  void focusSearch() {
+    _searchFocusNode.requestFocus();
   }
 
   /// Focuses the status bar's leftmost button (the profile button; Settings itself opens with Left).
@@ -203,11 +212,22 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                 },
               ),
               const SizedBox(width: 16),
-              _FocusableIconButton(
-                key: const Key("statusbar_search"),
-                icon: Icons.search,
-                onPressed: () => SearchPage.open(context),
-              ),
+              // Search: the magnifier, or the current search as a white pill (press to edit it)
+              Builder(builder: (context) {
+                final query = context.select<HomeSearch?, String>((s) => s?.query ?? "");
+                return query.isEmpty
+                    ? _FocusableIconButton(
+                        key: const Key("statusbar_search"),
+                        focusNode: _searchFocusNode,
+                        icon: Icons.search,
+                        onPressed: () => Actions.maybeInvoke(context, const StartSearchIntent()),
+                      )
+                    : _SearchPill(
+                        focusNode: _searchFocusNode,
+                        query: query,
+                        onPressed: () => Actions.maybeInvoke(context, const StartSearchIntent()),
+                      );
+              }),
               const SizedBox(width: 16),
               // Data usage widget
               Selector<SettingsService, bool>(
@@ -419,6 +439,62 @@ class _FocusableIconButtonState extends State<_FocusableIconButton> {
                 const SizedBox(width: 4),
               ],
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The current search in the top bar: a white pill with the query, as HearthTube shows its selected tab. Pressing
+/// it reopens the search box to change the search.
+class _SearchPill extends StatefulWidget {
+  final String query;
+  final VoidCallback onPressed;
+  final FocusNode? focusNode;
+
+  const _SearchPill({required this.query, required this.onPressed, this.focusNode});
+
+  @override
+  State<_SearchPill> createState() => _SearchPillState();
+}
+
+class _SearchPillState extends State<_SearchPill> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Actions(
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => widget.onPressed()),
+        ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) => widget.onPressed()),
+      },
+      child: Focus(
+        focusNode: widget.focusNode,
+        onFocusChange: (hasFocus) => setState(() => _focused = hasFocus),
+        child: GestureDetector(
+          onTap: widget.onPressed,
+          child: Container(
+            height: 44,
+            constraints: const BoxConstraints(maxWidth: 320),
+            padding: const EdgeInsets.only(left: 12, right: 18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: _focused ? accent : Colors.white, width: 3),
+              boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 2))],
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.search, size: 22, color: Colors.black87),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(widget.query,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.black, fontSize: 17, fontWeight: FontWeight.w500)),
+              ),
+            ]),
           ),
         ),
       ),
