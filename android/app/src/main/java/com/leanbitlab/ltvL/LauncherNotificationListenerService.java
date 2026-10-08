@@ -1,27 +1,44 @@
 package com.leanbitlab.ltvL;
 
 import android.app.Notification;
+import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.view.Gravity;
-import android.view.WindowManager;
+import android.provider.Settings;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
+import android.util.Log;
+import android.view.Gravity;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class LauncherNotificationListenerService extends NotificationListenerService {
+    private static final String TAG = "HearthNotifications";
+    private static final long POPUP_MS = 4_000;
+
     public interface NotificationListener {
         void onNotificationChanged();
     }
 
     private static final List<NotificationListener> listeners = new ArrayList<>();
     private static LauncherNotificationListenerService instance = null;
+
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     public static void registerListener(NotificationListener listener) {
         synchronized (listeners) {
@@ -76,7 +93,7 @@ public class LauncherNotificationListenerService extends NotificationListenerSer
 
     private boolean canShowPopup() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            return android.provider.Settings.canDrawOverlays(this);
+            return Settings.canDrawOverlays(this);
         }
         return true;
     }
@@ -85,170 +102,130 @@ public class LauncherNotificationListenerService extends NotificationListenerSer
         return (int) (dp * getResources().getDisplayMetrics().density);
     }
 
+    /** Pops up a new notification for a few seconds in the top corner, when that's turned on. */
     private void showNotificationPopup(StatusBarNotification sbn) {
-        if (sbn == null || sbn.isOngoing()) {
-            return;
-        }
-
-        android.content.SharedPreferences prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE);
-        boolean enabled = prefs.getBoolean("flutter.system_notifications_popup", false);
-        if (!enabled) {
-            return;
-        }
-
-        if (!canShowPopup()) {
-            return;
-        }
-
-        android.app.Notification notification = sbn.getNotification();
-        if (notification == null) return;
-
-        // Filter out service and media transport notifications
-        String category = notification.category;
-        if (android.app.Notification.CATEGORY_SERVICE.equals(category) ||
-            android.app.Notification.CATEGORY_TRANSPORT.equals(category)) {
-            return;
-        }
-
-        Bundle extras = notification.extras;
-        if (extras == null) return;
-
-        // Filter out media sessions (playback)
-        if (extras.containsKey(android.app.Notification.EXTRA_MEDIA_SESSION)) {
-            return;
-        }
-
+        if (!shouldPopUp(sbn)) return;
+        Bundle extras = sbn.getNotification().extras;
         CharSequence titleChar = extras.getCharSequence(Notification.EXTRA_TITLE);
         CharSequence textChar = extras.getCharSequence(Notification.EXTRA_TEXT);
+        String title = titleChar != null ? titleChar.toString().trim() : "";
+        String text = textChar != null ? textChar.toString().trim() : "";
+        if (title.isEmpty() && text.isEmpty()) return;
 
-        final String title = titleChar != null ? titleChar.toString().trim() : "";
-        final String text = textChar != null ? textChar.toString().trim() : "";
-
-        if (title.isEmpty() && text.isEmpty()) {
-            return;
-        }
-
-        final String packageName = sbn.getPackageName();
-        final PackageManager pm = getPackageManager();
+        String packageName = sbn.getPackageName();
+        PackageManager pm = getPackageManager();
         String appLabel = packageName;
         Drawable appIcon = null;
         try {
-            android.content.pm.ApplicationInfo appInfo = pm.getApplicationInfo(packageName, 0);
+            ApplicationInfo appInfo = pm.getApplicationInfo(packageName, 0);
             appLabel = pm.getApplicationLabel(appInfo).toString().trim();
             appIcon = pm.getApplicationIcon(appInfo);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "No label or icon for " + packageName, e);
         }
 
-        // Filter out generic app running notifications where title/text are just the app label
-        if (title.equalsIgnoreCase(appLabel) && (text.isEmpty() || text.equalsIgnoreCase(appLabel))) {
-            return;
-        }
-        if (title.equalsIgnoreCase(packageName) && (text.isEmpty() || text.equalsIgnoreCase(packageName))) {
-            return;
-        }
+        // Generic "app is running" notifications whose title and text are just the app's name
+        if (title.equalsIgnoreCase(appLabel) && (text.isEmpty() || text.equalsIgnoreCase(appLabel))) return;
+        if (title.equalsIgnoreCase(packageName) && (text.isEmpty() || text.equalsIgnoreCase(packageName))) return;
 
-        final String finalAppLabel = appLabel;
-        final Drawable finalAppIcon = appIcon;
-
-        final WindowManager windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        if (windowManager == null) return;
-
-        new Handler(Looper.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    android.widget.LinearLayout container = new android.widget.LinearLayout(LauncherNotificationListenerService.this);
-                    container.setOrientation(android.widget.LinearLayout.HORIZONTAL);
-                    container.setGravity(Gravity.CENTER_VERTICAL);
-                    int pad = dpToPx(16);
-                    container.setPadding(pad, pad, pad, pad);
-
-                    android.graphics.drawable.GradientDrawable background = new android.graphics.drawable.GradientDrawable();
-                    background.setColor(android.graphics.Color.parseColor("#E01E1E1E"));
-                    background.setCornerRadius(dpToPx(12));
-                    background.setStroke(dpToPx(1), android.graphics.Color.parseColor("#44FFFFFF"));
-                    container.setBackground(background);
-
-                    android.widget.ImageView iconView = new android.widget.ImageView(LauncherNotificationListenerService.this);
-                    if (finalAppIcon != null) {
-                        iconView.setImageDrawable(finalAppIcon);
-                    }
-                    android.widget.LinearLayout.LayoutParams iconParams = new android.widget.LinearLayout.LayoutParams(dpToPx(40), dpToPx(40));
-                    iconParams.rightMargin = dpToPx(12);
-                    iconView.setLayoutParams(iconParams);
-                    container.addView(iconView);
-
-                    android.widget.LinearLayout textContainer = new android.widget.LinearLayout(LauncherNotificationListenerService.this);
-                    textContainer.setOrientation(android.widget.LinearLayout.VERTICAL);
-                    android.widget.LinearLayout.LayoutParams textContainerParams = new android.widget.LinearLayout.LayoutParams(
-                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                    );
-                    textContainer.setLayoutParams(textContainerParams);
-
-                    android.widget.TextView titleView = new android.widget.TextView(LauncherNotificationListenerService.this);
-                    String headerText = finalAppLabel;
-                    if (title != null && !title.isEmpty()) {
-                        headerText += " • " + title;
-                    }
-                    titleView.setText(headerText);
-                    titleView.setTextColor(android.graphics.Color.WHITE);
-                    titleView.setTextSize(14);
-                    titleView.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-                    textContainer.addView(titleView);
-
-                    if (text != null && !text.isEmpty()) {
-                        android.widget.TextView bodyView = new android.widget.TextView(LauncherNotificationListenerService.this);
-                        bodyView.setText(text);
-                        bodyView.setTextColor(android.graphics.Color.parseColor("#CCCCCC"));
-                        bodyView.setTextSize(13);
-                        android.widget.LinearLayout.LayoutParams bodyParams = new android.widget.LinearLayout.LayoutParams(
-                                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-                                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                        );
-                        bodyParams.topMargin = dpToPx(4);
-                        bodyView.setLayoutParams(bodyParams);
-                        textContainer.addView(bodyView);
-                    }
-
-                    container.addView(textContainer);
-
-                    int layoutFlag;
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        layoutFlag = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-                    } else {
-                        layoutFlag = WindowManager.LayoutParams.TYPE_PHONE;
-                    }
-
-                    WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                            WindowManager.LayoutParams.WRAP_CONTENT,
-                            WindowManager.LayoutParams.WRAP_CONTENT,
-                            layoutFlag,
-                            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
-                            PixelFormat.TRANSLUCENT
-                    );
-
-                    params.gravity = Gravity.TOP | Gravity.END;
-                    params.x = dpToPx(24);
-                    params.y = dpToPx(24);
-
-                    windowManager.addView(container, params);
-
-                    new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                windowManager.removeView(container);
-                            } catch (Exception e) {
-                            }
-                        }
-                    }, 4000);
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+        String label = appLabel;
+        Drawable icon = appIcon;
+        mHandler.post(() -> {
+            try {
+                showFor(buildPopup(label, icon, title, text), POPUP_MS);
+            } catch (Exception e) {
+                Log.w(TAG, "Couldn't show the notification popup", e);
             }
         });
+    }
+
+    /** Popups are on, Hearth may draw over apps, and it's not ongoing, a service's, or media playback. */
+    private boolean shouldPopUp(StatusBarNotification sbn) {
+        if (sbn == null || sbn.isOngoing()) return false;
+        SharedPreferences prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE);
+        if (!prefs.getBoolean("flutter.system_notifications_popup", false) || !canShowPopup()) return false;
+        Notification notification = sbn.getNotification();
+        if (notification == null) return false;
+        if (Notification.CATEGORY_SERVICE.equals(notification.category)
+                || Notification.CATEGORY_TRANSPORT.equals(notification.category)) {
+            return false;
+        }
+        return notification.extras != null && !notification.extras.containsKey(Notification.EXTRA_MEDIA_SESSION);
+    }
+
+    /** The app's icon, then "App • Title" over the text, on a dark rounded card. */
+    private View buildPopup(String appLabel, Drawable appIcon, String title, String text) {
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.HORIZONTAL);
+        container.setGravity(Gravity.CENTER_VERTICAL);
+        int pad = dpToPx(16);
+        container.setPadding(pad, pad, pad, pad);
+
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(Color.parseColor("#E01E1E1E"));
+        background.setCornerRadius(dpToPx(12));
+        background.setStroke(dpToPx(1), Color.parseColor("#44FFFFFF"));
+        container.setBackground(background);
+
+        ImageView iconView = new ImageView(this);
+        if (appIcon != null) {
+            iconView.setImageDrawable(appIcon);
+        }
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dpToPx(40), dpToPx(40));
+        iconParams.rightMargin = dpToPx(12);
+        iconView.setLayoutParams(iconParams);
+        container.addView(iconView);
+
+        LinearLayout textContainer = new LinearLayout(this);
+        textContainer.setOrientation(LinearLayout.VERTICAL);
+        textContainer.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        TextView titleView = new TextView(this);
+        titleView.setText(title.isEmpty() ? appLabel : appLabel + " • " + title);
+        titleView.setTextColor(Color.WHITE);
+        titleView.setTextSize(14);
+        titleView.setTypeface(Typeface.DEFAULT_BOLD);
+        textContainer.addView(titleView);
+
+        if (!text.isEmpty()) {
+            TextView bodyView = new TextView(this);
+            bodyView.setText(text);
+            bodyView.setTextColor(Color.parseColor("#CCCCCC"));
+            bodyView.setTextSize(13);
+            LinearLayout.LayoutParams bodyParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            bodyParams.topMargin = dpToPx(4);
+            bodyView.setLayoutParams(bodyParams);
+            textContainer.addView(bodyView);
+        }
+
+        container.addView(textContainer);
+        return container;
+    }
+
+    /** Shows the popup in the top-right corner, over any app, and takes it down after {@code ms}. */
+    private void showFor(View popup, long ms) {
+        int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                type,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
+                PixelFormat.TRANSLUCENT);
+        params.gravity = Gravity.TOP | Gravity.END;
+        params.x = dpToPx(24);
+        params.y = dpToPx(24);
+
+        WindowManager windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        windowManager.addView(popup, params);
+        mHandler.postDelayed(() -> {
+            try {
+                windowManager.removeView(popup);
+            } catch (Exception e) {
+                Log.w(TAG, "Couldn't take the notification popup down", e);
+            }
+        }, ms);
     }
 }
