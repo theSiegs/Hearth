@@ -48,19 +48,24 @@ objected to device admin; he rejected reinstalling at every profile start (one F
 - Developer verification (2026): adb installs are exempt; outside Play, enforcement covers phones and tablets in
   select regions; a free limited-distribution account covers up to 20 devices.
 
-## Open, in priority order
+Answered (see docs/kids-profile-installs.md): what removes the apps and how — launcherx's name-based reconcile against
+`targetPackagesForProfile` (non-system → `PackageInstaller.uninstall`, system → disable), target list from GMS
+supervision; device admin and block-uninstall both block it (block-uninstall tested: survives a user stop/start) but
+both need adb per profile; `no_grant_admin` does not block device-admin activation; unknown sources on for users
+10/11, off for 12.
 
-1. Does block-uninstall hold against launcherx? Test with HearthTube in one kid's user: watch for
-   `DELETE_FAILED_OWNER_BLOCKED`, and check launcherx doesn't fall back to disabling it ("disabling/uninstalling").
-   Then across a reboot and a HearthTube update.
-2. launcherx teardown (pull its APK from the TV, jadx): how `targetPackagesForProfile` is built, every exemption
-   besides `isSystem`, what it does when the uninstall fails, whether it or Play services suspends apps at bedtime.
-3. Who suspends at bedtime (launcherx or Play services)? Decides whether screen time still covers uninstall-blocked
-   apps. logcat at bedtime: `Cannot suspend package "…": blocked by admin`.
-4. Cross-user agent jobs: `INTERACT_ACROSS_USERS` + `content://10@android.media.tv/watch_next_program` (TvProvider's
-   own checks); deep links into another user without `INTERACT_ACROSS_USERS_FULL`.
-5. Community reports of `b/427107950` / `TvProfileHelper` removing sideloaded apps, now that pages load (the cloud
-   session couldn't reach XDA, Google Nest Community, Reddit, support.google.com).
+## Open, in priority order (now all about no-adb)
+
+1. **Private/closed Play track eligibility** — can a supervised child account receive a closed-track app? If yes,
+   that's the robust no-adb path: approved → auto-installed via `installExistingPackage` → kept, even on new profiles,
+   screen time intact. Researchable without the TV.
+2. **On-device device-admin route** — does a kid profile have any in-profile installer to place the APK, and can the
+   `ACTION_ADD_DEVICE_ADMIN` consent be reached in the PIN-gated kids UI within the ~3 s before the reconcile? Needs a
+   hands-on test on the TV.
+3. Does block-uninstall survive a HearthTube **update** and a **bedtime** suspend? (Holds across a user stop/start.)
+   Watch `Cannot suspend package "…": blocked by admin`.
+4. Cross-user agent jobs: `INTERACT_ACROSS_USERS` + `content://N@android.media.tv/watch_next_program` (TvProvider's
+   own checks); deep links without `INTERACT_ACROSS_USERS_FULL`.
 
 ## Continuing it
 
