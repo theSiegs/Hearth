@@ -21,6 +21,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/profile_service.dart';
 import '../providers/settings_service.dart';
+import 'focusable_tap.dart';
 
 // Google TV's dark PIN keypad
 const _background = Color(0xFF111111);
@@ -284,7 +285,7 @@ class _KeypadState extends State<_Keypad> {
   }
 }
 
-class _KeypadButton extends StatefulWidget {
+class _KeypadButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
   final bool autofocus;
@@ -293,35 +294,18 @@ class _KeypadButton extends StatefulWidget {
   const _KeypadButton({required this.label, required this.onPressed, this.autofocus = false, this.focusNode});
 
   @override
-  State<_KeypadButton> createState() => _KeypadButtonState();
-}
-
-class _KeypadButtonState extends State<_KeypadButton> {
-  bool _focused = false;
-
-  @override
   Widget build(BuildContext context) {
-    return Actions(
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => widget.onPressed()),
-        ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) => widget.onPressed()),
-      },
-      child: Focus(
-        focusNode: widget.focusNode,
-        autofocus: widget.autofocus,
-        onFocusChange: (focused) => setState(() => _focused = focused),
-        child: GestureDetector(
-          onTap: widget.onPressed,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            width: 56,
-            height: 56,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: _focused ? _keyFocused : _key),
-            child: Text(widget.label,
-                style: TextStyle(color: _focused ? Colors.black87 : Colors.white, fontSize: 22)),
-          ),
-        ),
+    return FocusableTap(
+      focusNode: focusNode,
+      autofocus: autofocus,
+      onPressed: onPressed,
+      builder: (context, focused) => AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        width: 56,
+        height: 56,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: focused ? _keyFocused : _key),
+        child: Text(label, style: TextStyle(color: focused ? Colors.black87 : Colors.white, fontSize: 22)),
       ),
     );
   }
