@@ -185,6 +185,15 @@ Open items:
 - This is a deliberate privileged-helper capability (owner-authorized adb key); scope it behind an explicit setup
   step in Hearth.
 
+Prototype + what's proven (2026-10-08): [tool/kids_provision](../tool/kids_provision/README.md) has the commented
+add/remove/state command logic Hearth would run as shell, with the uninstall-order safety and manual-undo commands.
+Confirmed on the TV: a block-uninstall-protected copy can't be uninstalled until the flag is lifted
+(`DELETE_FAILED_OWNER_BLOCKED`), and shell can't clear a non-test device admin (`dpm remove-active-admin`
+SecurityException). So protect **both** apps with the reversible block-uninstall flag (not device admin), lift the
+flag before any uninstall, and have Hearth run Remove before it can be uninstalled itself. The device admin set on
+Hearth in users 10/11/12 during testing should be cleared by Hearth calling `removeActiveAdmin()` on itself from its
+agent in each profile (shell can't).
+
 ## The agent's jobs without Hearth in the kid's profile
 
 Still needs a one-time adb grant and can't cover everything, so it doesn't remove the adb dependency:
