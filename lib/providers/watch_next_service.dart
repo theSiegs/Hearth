@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:developer';
-import 'dart:io' show Platform;
 import 'dart:typed_data';
 import 'package:flutter/widgets.dart';
 import 'package:flauncher/flauncher_channel.dart';
@@ -20,15 +19,11 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
   bool _isFetching = false;
   bool _hasPendingRefresh = false;
 
-  bool get _isTest => Platform.environment.containsKey('FLUTTER_TEST');
-
   /// The time "now" for hiding old entries (tests fix it).
   final DateTime Function() _clock;
 
   WatchNextService(this._channel, {DateTime Function()? clock}) : _clock = clock ?? DateTime.now {
-    if (!_isTest) {
-      WidgetsBinding.instance.addObserver(this);
-    }
+    WidgetsBinding.instance.addObserver(this);
     _init();
   }
 
@@ -230,7 +225,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
       } catch (e) {
         log('Failed to read the active profile', name: 'WatchNextService', error: e);
       }
-      if (!_isTest) await _trackOwners(newPrograms);
+      await _trackOwners(newPrograms);
       _programs = newPrograms;
       _refreshedFor = refreshedFor;
       notifyListeners();
@@ -314,9 +309,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    if (!_isTest) {
-      WidgetsBinding.instance.removeObserver(this);
-    }
+    WidgetsBinding.instance.removeObserver(this);
     _watchNextSubscription?.cancel();
     _refreshTimer?.cancel();
     super.dispose();

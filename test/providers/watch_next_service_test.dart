@@ -4,9 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
 import 'package:flauncher/models/watch_next_program.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../mocks.mocks.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   // A day after the test programs' engagement times (Sep 2020), so none counts as old
   DateTime clock() => DateTime.fromMillisecondsSinceEpoch(1600000000000 + const Duration(days: 1).inMilliseconds);
   late MockFLauncherChannel mockChannel;
@@ -14,9 +17,22 @@ void main() {
   late WatchNextService watchNextService;
 
   setUp(() {
+    // Ownership tracking has started (no stored owners), and the active profile last used every test app
+    SharedPreferences.setMockInitialValues({'watch_next_owners_v2': '{}'});
     mockChannel = MockFLauncherChannel();
     watchNextStreamController = StreamController<dynamic>.broadcast();
     // Default stubs
+    when(mockChannel.getActiveProfileKey()).thenAnswer((_) async => 'user:0');
+    when(mockChannel.getAppLastProfiles()).thenAnswer((_) async => {
+          for (final pkg in [
+            'com.google.android.youtube.tv',
+            'com.netflix.mediaclient',
+            'com.lagradost.cloudstream3',
+            'in.startv.hotstar',
+            'com.example.tv',
+          ])
+            pkg: 'user:0',
+        });
     when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => []);
     when(mockChannel.checkWatchNextPermission()).thenAnswer((_) async => true);
     when(mockChannel.addWatchNextChangedListener(any)).thenAnswer((invocation) {
@@ -375,6 +391,66 @@ void main() {
       final service = await ready();
 
       expect(service.programs.single.posterBytes, isNull);
+    });
+  });
+
+  group('WatchNextService ownership', () {
+    Map<String, Object> entry(int id, String pkg, {int time = 1600000000000}) => {
+          'id': id,
+          'packageName': pkg,
+          'title': 'Show $id',
+          'description': '',
+          'watchNextType': 1,
+          'lastEngagementTime': time,
+          'playbackPosition': 0,
+          'duration': 0,
+          'intentUri': '',
+          'posterArtUri': '',
+        };
+    List<String> titles(WatchNextService service) => service.programs.map((p) => p.title).toList();
+
+    Future<WatchNextService> ready() async {
+      final service = WatchNextService(mockChannel, clock: clock);
+      while (!service.initialized) {
+        await Future.delayed(Duration.zero);
+      }
+      return service;
+    }
+
+    test('each profile sees the entries from apps it last used here', () async {
+      when(mockChannel.getWatchNextPrograms())
+          .thenAnswer((_) async => [entry(1, 'com.netflix.mediaclient'), entry(2, 'com.disney.disneyplus')]);
+      when(mockChannel.getAppLastProfiles())
+          .thenAnswer((_) async => {'com.netflix.mediaclient': 'user:0', 'com.disney.disneyplus': 'user:10'});
+
+      final service = await ready();
+      expect(titles(service), ['Show 1']);
+
+      when(mockChannel.getActiveProfileKey()).thenAnswer((_) async => 'user:10');
+      await service.refresh();
+      expect(titles(service), ['Show 2']);
+    });
+
+    test('entries already there when tracking starts belong to no one until watched again', () async {
+      SharedPreferences.setMockInitialValues({});
+      when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => [entry(1, 'com.netflix.mediaclient')]);
+
+      final service = await ready();
+      expect(service.programs, isEmpty);
+
+      when(mockChannel.getWatchNextPrograms())
+          .thenAnswer((_) async => [entry(1, 'com.netflix.mediaclient', time: 1600000060000)]);
+      await service.refresh();
+      expect(titles(service), ['Show 1']);
+    });
+
+    test("an entry from the active profile's own agent is always shown", () async {
+      when(mockChannel.getWatchNextPrograms())
+          .thenAnswer((_) async => [entry(1, 'com.disney.disneyplus')..['profileOwned'] = true]);
+      when(mockChannel.getAppLastProfiles()).thenAnswer((_) async => {'com.disney.disneyplus': 'user:10'});
+
+      final service = await ready();
+      expect(titles(service), ['Show 1']);
     });
   });
 
