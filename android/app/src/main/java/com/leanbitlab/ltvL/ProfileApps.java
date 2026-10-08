@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.LauncherActivityInfo;
 import android.content.pm.LauncherApps;
-import android.os.Process;
 import android.os.SystemClock;
 import android.os.UserHandle;
 import android.os.UserManager;
@@ -40,14 +39,26 @@ final class ProfileApps {
 
     /** The active profile's user when it isn't Hearth's own (the owner's) and is running; else null. */
     static UserHandle activeProfileUser(Context context) {
-        long serial = ProfileUsers.settledSerial(context);
-        if (serial == ProfileUsers.UNKNOWN) return null;
+        UserHandle user = ProfileUsers.otherUser(context, ProfileUsers.settledSerial(context));
+        if (user == null) return null;
         UserManager users = (UserManager) context.getSystemService(Context.USER_SERVICE);
-        if (users == null) return null;
         try {
-            UserHandle user = users.getUserForSerialNumber(serial);
-            if (user == null || user.equals(Process.myUserHandle()) || !users.isUserRunning(user)) return null;
-            return user;
+            return users.isUserRunning(user) ? user : null;
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /** A user's launchable apps by package (its first activity for each), read now; null when they can't be read. */
+    static Map<String, LauncherActivityInfo> readApps(Context context, UserHandle user) {
+        LauncherApps launcherApps = (LauncherApps) context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
+        if (launcherApps == null) return null;
+        try {
+            Map<String, LauncherActivityInfo> apps = new HashMap<>();
+            for (LauncherActivityInfo activity : launcherApps.getActivityList(null, user)) {
+                apps.putIfAbsent(activity.getComponentName().getPackageName(), activity);
+            }
+            return apps;
         } catch (RuntimeException e) {
             return null;
         }
@@ -57,16 +68,8 @@ final class ProfileApps {
     private static synchronized Map<String, LauncherActivityInfo> apps(Context context, UserHandle user) {
         long now = SystemClock.elapsedRealtime();
         if (user.equals(sCachedUser) && sCachedApps != null && now - sCachedAt < CACHE_MS) return sCachedApps;
-        Map<String, LauncherActivityInfo> apps = new HashMap<>();
-        LauncherApps launcherApps = (LauncherApps) context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
-        try {
-            if (launcherApps != null) {
-                for (LauncherActivityInfo activity : launcherApps.getActivityList(null, user)) {
-                    apps.putIfAbsent(activity.getComponentName().getPackageName(), activity);
-                }
-            }
-        } catch (RuntimeException ignored) {
-        }
+        Map<String, LauncherActivityInfo> apps = readApps(context, user);
+        if (apps == null) apps = new HashMap<>();
         sCachedUser = user;
         sCachedApps = apps;
         sCachedAt = now;

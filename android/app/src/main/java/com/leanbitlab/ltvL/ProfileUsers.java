@@ -1,13 +1,21 @@
 package com.leanbitlab.ltvL;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.LauncherActivityInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.os.Process;
 import android.os.UserHandle;
 import android.os.UserManager;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Google TV runs every profile but the TV owner's as a hidden Android profile user (type com.android.tv.profile)
@@ -99,26 +107,14 @@ final class ProfileUsers {
      * The apps a kids profile may open: approving an app installs it into that profile's user, so they're the
      * user's launchable apps. Null when they can't be read (or for the owner, who has every app).
      */
-    static java.util.Set<String> approvedApps(Context context, long serial) {
-        UserManager users = (UserManager) context.getSystemService(Context.USER_SERVICE);
-        android.content.pm.LauncherApps launcherApps =
-                (android.content.pm.LauncherApps) context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
-        if (users == null || launcherApps == null || serial == UNKNOWN) return null;
-        try {
-            UserHandle user = users.getUserForSerialNumber(serial);
-            if (user == null || user.equals(Process.myUserHandle())) return null;
-            java.util.Set<String> packages = new java.util.TreeSet<>();
-            for (android.content.pm.LauncherActivityInfo activity : launcherApps.getActivityList(null, user)) {
-                packages.add(activity.getComponentName().getPackageName());
-            }
-            return packages;
-        } catch (RuntimeException e) {
-            return null;
-        }
+    static Set<String> approvedApps(Context context, long serial) {
+        UserHandle user = otherUser(context, serial);
+        Map<String, LauncherActivityInfo> apps = user != null ? ProfileApps.readApps(context, user) : null;
+        return apps != null ? new TreeSet<>(apps.keySet()) : null;
     }
 
     /** The active profile's approved apps ({@link #approvedApps}); null for a grown-up or when unreadable. */
-    static java.util.Set<String> activeApprovedApps(Context context) {
+    static Set<String> activeApprovedApps(Context context) {
         long serial = settledSerial(context);
         return Boolean.TRUE.equals(isSupervised(context, serial)) ? approvedApps(context, serial) : null;
     }
@@ -137,26 +133,17 @@ final class ProfileUsers {
         Boolean supervised = isSupervised(context, serial);
         if (supervised == null) return null;
         if (!supervised) return false;
-        UserManager users = (UserManager) context.getSystemService(Context.USER_SERVICE);
-        android.content.pm.LauncherApps launcherApps =
-                (android.content.pm.LauncherApps) context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
-        if (users == null || launcherApps == null) return null;
+        UserHandle user = otherUser(context, serial);
+        // Read fresh, not from ProfileApps' cache: this runs right after suspensions change
+        Map<String, LauncherActivityInfo> apps = user != null ? ProfileApps.readApps(context, user) : null;
+        if (apps == null) return null;
         int checked = 0;
         int blocked = 0;
-        try {
-            UserHandle user = users.getUserForSerialNumber(serial);
-            if (user == null || user.equals(Process.myUserHandle())) return null;
-            java.util.Set<String> seen = new java.util.HashSet<>();
-            for (android.content.pm.LauncherActivityInfo activity : launcherApps.getActivityList(null, user)) {
-                String pkg = activity.getComponentName().getPackageName();
-                if (NEVER_BLOCKED.contains(pkg) || pkg.equals(context.getPackageName()) || !seen.add(pkg)) continue;
-                checked++;
-                if ((activity.getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_SUSPENDED) != 0) {
-                    blocked++;
-                }
-            }
-        } catch (RuntimeException e) {
-            return null;
+        for (Map.Entry<String, LauncherActivityInfo> app : apps.entrySet()) {
+            String pkg = app.getKey();
+            if (NEVER_BLOCKED.contains(pkg) || pkg.equals(context.getPackageName())) continue;
+            checked++;
+            if ((app.getValue().getApplicationInfo().flags & ApplicationInfo.FLAG_SUSPENDED) != 0) blocked++;
         }
         // All of them: right after a switch some can still carry the last profile's state
         return checked == 0 ? null : blocked == checked;
@@ -192,17 +179,32 @@ final class ProfileUsers {
     }
 
     /** Whether any launchable app is suspended: Google TV does that only in kids profiles. */
-    static boolean anySuspended(android.content.pm.PackageManager pm) {
-        for (String category : new String[]{android.content.Intent.CATEGORY_LEANBACK_LAUNCHER,
-                android.content.Intent.CATEGORY_LAUNCHER}) {
-            for (android.content.pm.ResolveInfo info : pm.queryIntentActivities(
-                    new android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(category), 0)) {
-                if ((info.activityInfo.applicationInfo.flags & android.content.pm.ApplicationInfo.FLAG_SUSPENDED) != 0) {
-                    return true;
-                }
-            }
+    static boolean anySuspended(PackageManager pm) {
+        for (ResolveInfo info : launchables(pm)) {
+            if ((info.activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SUSPENDED) != 0) return true;
         }
         return false;
+    }
+
+    /** The launchable activities in Hearth's own user: the TV ones, then the others (an app can be in both). */
+    static List<ResolveInfo> launchables(PackageManager pm) {
+        List<ResolveInfo> activities = new ArrayList<>();
+        for (String category : new String[]{Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER}) {
+            activities.addAll(pm.queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(category), 0));
+        }
+        return activities;
+    }
+
+    /** The user with this serial when it's another profile's, not Hearth's own; null when it can't be found. */
+    static UserHandle otherUser(Context context, long serial) {
+        UserManager users = (UserManager) context.getSystemService(Context.USER_SERVICE);
+        if (users == null || serial == UNKNOWN) return null;
+        try {
+            UserHandle user = users.getUserForSerialNumber(serial);
+            return user == null || user.equals(Process.myUserHandle()) ? null : user;
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     /** The serial whose screen time was up when last seen (UNKNOWN: none), so a service restart keeps the lock. */
