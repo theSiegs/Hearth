@@ -43,7 +43,7 @@ class AddToCategoryDialog extends StatelessWidget {
                         child: ListTile(
                           onTap: () async {
                             await context.read<AppsService>().addToCategory(selectedApplication, category);
-                            Navigator.of(context).pop();
+                            if (context.mounted) Navigator.of(context).pop();
                           },
                           title: Text(category.name),
                         ),

@@ -131,7 +131,7 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                      label: localizations.open,
                      onPressed: () async {
                        await context.read<AppsService>().launchApp(widget.application);
-                       Navigator.of(context).pop(ApplicationInfoPanelResult.none);
+                       if (context.mounted) Navigator.of(context).pop(ApplicationInfoPanelResult.none);
                      },
                    ),
                    // Favorites toggle button
@@ -144,7 +144,7 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                          label: isInFavorites ? 'Remove from Fav' : 'Add to Fav',
                          onPressed: () async {
                            await appsService.toggleFavorite(widget.application);
-                           Navigator.of(context).pop(ApplicationInfoPanelResult.none);
+                           if (context.mounted) Navigator.of(context).pop(ApplicationInfoPanelResult.none);
                          },
                        );
                      },
@@ -153,12 +153,13 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                      icon: widget.application.hidden ? Icons.visibility : Icons.visibility_off_outlined,
                      label: widget.application.hidden ? localizations.show : localizations.hide,
                      onPressed: () async {
+                       final appsService = context.read<AppsService>();
                        if (widget.application.hidden) {
-                         await context.read<AppsService>().showApplication(widget.application);
+                         await appsService.showApplication(widget.application);
                        } else {
-                         await context.read<AppsService>().hideApplication(widget.application);
+                         await appsService.hideApplication(widget.application);
                        }
-                       Navigator.of(context).pop(ApplicationInfoPanelResult.none);
+                       if (context.mounted) Navigator.of(context).pop(ApplicationInfoPanelResult.none);
                      },
                    ),
                    if (widget.category != null)
@@ -171,7 +172,7 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                          if (cat != null) {
                            await context.read<AppsService>().removeFromCategory(widget.application, cat);
                          }
-                         Navigator.of(context).pop(ApplicationInfoPanelResult.none);
+                         if (context.mounted) Navigator.of(context).pop(ApplicationInfoPanelResult.none);
                        },
                      ),
                    const Divider(),
@@ -186,6 +187,7 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                              icon: Icons.image_search,
                              label: 'Set Custom Banner',
                              onPressed: () async {
+                               final appsService = context.read<AppsService>();
                                try {
                                  final picker = ImagePicker();
                                  final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -198,11 +200,11 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                                    await File(pickedFile.path).copy(savedImage.path);
                                    // Clean up temp file from ImagePicker
                                    await File(pickedFile.path).delete();
-                                   await context.read<AppsService>().setCustomAppBanner(widget.application.packageName, savedImage.path);
+                                   await appsService.setCustomAppBanner(widget.application.packageName, savedImage.path);
+                                   if (!mounted) return;
                                    // Refresh the future to reflect the change
                                    setState(() {
-                                     _hasCustomBannerFuture = context.read<AppsService>()
-                                         .hasCustomBanner(widget.application.packageName);
+                                     _hasCustomBannerFuture = appsService.hasCustomBanner(widget.application.packageName);
                                    });
                                  }
                                } catch (e) {
@@ -220,12 +222,13 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                                icon: Icons.hide_image_outlined,
                                label: 'Clear Custom Banner',
                                onPressed: () async {
+                                 final appsService = context.read<AppsService>();
                                  try {
-                                   await context.read<AppsService>().removeCustomAppBanner(widget.application.packageName);
+                                   await appsService.removeCustomAppBanner(widget.application.packageName);
+                                   if (!mounted) return;
                                    // Refresh the future to reflect the change
                                    setState(() {
-                                     _hasCustomBannerFuture = context.read<AppsService>()
-                                         .hasCustomBanner(widget.application.packageName);
+                                     _hasCustomBannerFuture = appsService.hasCustomBanner(widget.application.packageName);
                                    });
                                  } catch (e) {
                                    if (context.mounted) {
@@ -252,7 +255,7 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                      label: localizations.uninstall,
                      onPressed: () async {
                        await context.read<AppsService>().uninstallApp(widget.application);
-                       Navigator.of(context).pop(ApplicationInfoPanelResult.none);
+                       if (context.mounted) Navigator.of(context).pop(ApplicationInfoPanelResult.none);
                      },
                    )
                  ]
