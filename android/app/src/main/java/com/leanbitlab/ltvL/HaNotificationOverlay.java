@@ -20,6 +20,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.util.ArrayDeque;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Shows Home Assistant notifications as a Google TV style card over whatever is playing. Drawn as an
@@ -38,9 +40,11 @@ final class HaNotificationOverlay {
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final ArrayDeque<HaNotificationServer.Notification> mQueue = new ArrayDeque<>();
     private View mShowing;
-    /** Fetches camera pictures, so a slow camera never holds up button presses. */
-    private final java.util.concurrent.ExecutorService mCameraExecutor =
-            java.util.concurrent.Executors.newSingleThreadExecutor();
+    /**
+     * Fetches camera pictures, so a slow camera never holds up button presses. Made by the first camera card and
+     * shut down by dismissAll(). Main thread only.
+     */
+    private ExecutorService mCameraExecutor;
     private static final long CAMERA_REFRESH_MS = 1000;
     /** Cards with buttons stay up at least this long, so there's time to reach the remote. */
     private static final int MIN_ACTION_SECONDS = 30;
@@ -58,10 +62,15 @@ final class HaNotificationOverlay {
         });
     }
 
+    /** Takes every card down and stops the camera thread; the next camera card starts a new one. */
     void dismissAll() {
         mHandler.removeCallbacksAndMessages(null);
         mQueue.clear();
         hide();
+        if (mCameraExecutor != null) {
+            mCameraExecutor.shutdown();
+            mCameraExecutor = null;
+        }
     }
 
     private void showNext() {
@@ -208,6 +217,9 @@ final class HaNotificationOverlay {
 
     /** Reloads the camera picture every second while this card is showing. */
     private void refreshCamera(View card, ImageView picture, String camera) {
+        if (mCameraExecutor == null) {
+            mCameraExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "HearthHaCamera"));
+        }
         mCameraExecutor.execute(() -> {
             Bitmap frame = decode(HaApi.cameraImage(mService, camera));
             mHandler.post(() -> {
