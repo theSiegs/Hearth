@@ -755,6 +755,68 @@ void main() {
       expect((appsService.launcherSections[1] as Category).name, "Non-TV Apps");
     });
   });
+
+  group("app changes from the system", () {
+    late MockFLauncherChannel channel;
+    late MockFLauncherDatabase database;
+    late void Function(Map<String, dynamic>) onAppsChanged;
+    final systemApp = {'packageName': 'app.tv', 'name': 'TV App', 'version': '1.0.0', 'sideloaded': false};
+
+    Future<AppsService> build() async {
+      channel = MockFLauncherChannel();
+      database = MockFLauncherDatabase();
+      final app = App(packageName: 'app.tv', name: 'TV App', version: '1.0.0', hidden: false);
+      when(channel.getApplications()).thenAnswer((_) async => [systemApp]);
+      when(channel.getApplicationIcon(any)).thenAnswer((_) async => Uint8List(0));
+      when(channel.getApplicationBanner(any)).thenAnswer((_) async => Uint8List(0));
+      when(channel.addAppsChangedListener(any)).thenAnswer((invocation) {
+        onAppsChanged = invocation.positionalArguments[0];
+      });
+      when(database.getApplications()).thenAnswer((_) async => [app]);
+      when(database.getCategories())
+          .thenAnswer((_) async => [Category(id: 1, name: AppsService.tvAppsName, order: 0)]);
+      when(database.getAppsCategories())
+          .thenAnswer((_) async => [AppCategory(categoryId: 1, appPackageName: 'app.tv', order: 0)]);
+      when(database.getLauncherSpacers()).thenAnswer((_) async => []);
+      when(database.transaction(any)).thenAnswer((invocation) => invocation.positionalArguments[0]());
+      when(database.persistApps(any)).thenAnswer((_) async {});
+      when(database.wasCreated).thenReturn(false);
+      final appsService = AppsService(channel, database);
+      while (!appsService.initialized) {
+        await Future.delayed(const Duration(milliseconds: 10));
+      }
+      return appsService;
+    }
+
+    test("an updated app takes the old one's place in its categories", () async {
+      final appsService = await build();
+      final before = appsService.categories.single.applications.single;
+
+      onAppsChanged({'action': 'PACKAGE_CHANGED', 'activityInfo': {...systemApp, 'version': '2.0.0'}});
+      await pumpEventQueue();
+
+      final after = appsService.categories.single.applications.single;
+      expect(after, isNot(same(before)));
+      expect(after.version, '2.0.0');
+      expect(after.categoryOrders, {1: 0});
+      expect(appsService.getApp('app.tv'), same(after));
+    });
+
+    test("apps coming back on external storage keep their place too", () async {
+      final appsService = await build();
+
+      onAppsChanged({
+        'action': 'PACKAGES_AVAILABLE',
+        'activitiesInfo': [
+          {...systemApp, 'version': '3.0.0'}
+        ],
+      });
+      await pumpEventQueue();
+
+      expect(appsService.categories.single.applications.map((a) => a.version), ['3.0.0']);
+      expect(appsService.getApp('app.tv')!.version, '3.0.0');
+    });
+  });
 }
 
 Future<AppsService> _buildInitialisedAppsService(
