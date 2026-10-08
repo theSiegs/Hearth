@@ -84,7 +84,7 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.dashboard_outlined),
-          title: Text("Dashboard panel", style: textTheme.bodyMedium),
+          title: Text(HaPanelPage.title, style: textTheme.bodyMedium),
           trailing: Text(_onOff(panel), style: textTheme.bodySmall),
           onPressed: () => _open(HaPanelPage.routeName),
         ),
@@ -190,6 +190,10 @@ class _HaNotificationsPageState extends State<HaNotificationsPage> {
 /// A Home Assistant dashboard that slides in from the right edge, signed in with a long-lived token.
 class HaPanelPage extends StatefulWidget {
   static const String routeName = "home_assistant_panel";
+  static const String title = "Dashboard panel";
+
+  /// Where this page is, for the hints on other pages that send people here.
+  static const String breadcrumb = "Settings > Home Assistant > $title";
 
   const HaPanelPage({super.key});
 
@@ -256,7 +260,7 @@ class _HaPanelPageState extends State<HaPanelPage> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text("Dashboard panel", style: Theme.of(context).textTheme.titleLarge),
+        Text(HaPanelPage.title, style: Theme.of(context).textTheme.titleLarge),
         const Divider(),
         Expanded(
           child: SingleChildScrollView(
