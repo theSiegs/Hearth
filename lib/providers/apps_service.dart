@@ -32,6 +32,11 @@ import '../models/app.dart';
 import '../models/category.dart';
 
 class AppsService extends ChangeNotifier {
+  /// The categories Hearth creates, and recognizes by name.
+  static const String favoritesName = "Favorites";
+  static const String tvAppsName = "TV Apps";
+  static const String nonTvAppsName = "Non-TV Apps";
+
   final FLauncherChannel _fLauncherChannel;
   final FLauncherDatabase _database;
 
@@ -241,7 +246,7 @@ class AppsService extends ChangeNotifier {
         .where((application) => application.sideloaded == true);
 
     return _database.transaction(() async {
-      int tvCategoryId = await addCategory("TV Apps",
+      int tvCategoryId = await addCategory(tvAppsName,
           type: CategoryType.grid, shouldNotifyListeners: false);
       if (tvApplications.isNotEmpty) {
         Category tvAppsCategory = _categoriesById[tvCategoryId]!;
@@ -250,7 +255,7 @@ class AppsService extends ChangeNotifier {
       }
 
       int nonTvCategoryId = await addCategory(
-        "Non-TV Apps",
+        nonTvAppsName,
         shouldNotifyListeners: false,
       );
       if (nonTvApplications.isNotEmpty) {
@@ -259,7 +264,7 @@ class AppsService extends ChangeNotifier {
             shouldNotifyListeners: false);
       }
 
-      await addCategory("Favorites", shouldNotifyListeners: false);
+      await addCategory(favoritesName, shouldNotifyListeners: false);
     });
   }
 
@@ -279,9 +284,9 @@ class AppsService extends ChangeNotifier {
       final section = _launcherSections[i];
       if (section is Category) {
         final name = section.name.toLowerCase();
-        if (name == "tv apps" || name == "tv applications") {
+        if (name == tvAppsName.toLowerCase() || name == "tv applications") {
           tvAppsIndex = i;
-        } else if (name == "non-tv apps" || name == "non-tv applications") {
+        } else if (name == nonTvAppsName.toLowerCase() || name == "non-tv applications") {
           nonTvAppsIndex = i;
         }
       }
@@ -500,17 +505,13 @@ class AppsService extends ChangeNotifier {
       for (var c in _categoriesById.values) {
         _categoriesByNameCache!.putIfAbsent(c.name.toLowerCase(), () => c);
       }
-      try {
-        _fallbackCategoryCache = _categoriesById.values.firstWhere(
-          (c) => c.name.toLowerCase() != 'favorites',
-          orElse: () => _categoriesById.values.first,
-        );
-      } catch (_) {
-        _fallbackCategoryCache = null;
-      }
+      _fallbackCategoryCache = _categoriesById.values.firstWhere(
+        (c) => c.name.toLowerCase() != favoritesName.toLowerCase(),
+        orElse: () => _categoriesById.values.first,
+      );
     }
 
-    final targetName = isSideloaded ? "non-tv apps" : "tv apps";
+    final targetName = (isSideloaded ? nonTvAppsName : tvAppsName).toLowerCase();
     return _categoriesByNameCache![targetName] ?? _fallbackCategoryCache;
   }
 
@@ -673,11 +674,11 @@ class AppsService extends ChangeNotifier {
     Iterable<App> appsToAdd;
 
     switch (actualCategory.name) {
-      case 'TV Apps':
+      case tvAppsName:
         appsToAdd =
             _applications.values.where((app) => !app.sideloaded && !app.hidden);
         break;
-      case 'Non-TV Apps':
+      case nonTvAppsName:
         appsToAdd =
             _applications.values.where((app) => app.sideloaded && !app.hidden);
         break;
@@ -688,29 +689,27 @@ class AppsService extends ChangeNotifier {
     await addAllToCategory(appsToAdd, actualCategory);
   }
 
-  // === FAVORITES METHODS ===
+  Category? get _favorites =>
+      _categoriesById.values.firstWhereOrNull((category) => category.name == favoritesName);
+
+  /// The Favorites category (the dock), if there is one.
+  Category? get favoritesCategory => _favorites?.unmodifiable();
 
   /// Gets the Favorites category, creating it if it doesn't exist
   Future<Category> getOrCreateFavoritesCategory() async {
-    // Look for existing Favorites category
-    Category? favorites = _categoriesById.values
-        .firstWhereOrNull((category) => category.name == 'Favorites');
-
+    final favorites = _favorites;
     if (favorites != null) {
       return favorites;
     }
 
-    // Create Favorites category if it doesn't exist
     int categoryId =
-        await addCategory('Favorites', shouldNotifyListeners: false);
+        await addCategory(favoritesName, shouldNotifyListeners: false);
     return _categoriesById[categoryId]!;
   }
 
   /// Checks if an app is in the Favorites category
   bool isAppInFavorites(App app) {
-    Category? favorites = _categoriesById.values
-        .firstWhereOrNull((category) => category.name == 'Favorites');
-
+    final favorites = _favorites;
     if (favorites == null) {
       return false;
     }
@@ -730,9 +729,7 @@ class AppsService extends ChangeNotifier {
 
   /// Removes an app from Favorites
   Future<void> removeFromFavorites(App app) async {
-    Category? favorites = _categoriesById.values
-        .firstWhereOrNull((category) => category.name == 'Favorites');
-
+    final favorites = _favorites;
     if (favorites != null) {
       await removeFromCategory(app, favorites);
     }
