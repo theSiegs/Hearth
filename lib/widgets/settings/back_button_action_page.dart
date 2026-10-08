@@ -1,5 +1,4 @@
 import 'package:flauncher/providers/settings_service.dart';
-import 'package:flauncher/widgets/settings/back_button_actions.dart';
 import 'package:flauncher/widgets/settings/settings_choice_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -19,9 +18,9 @@ class BackButtonActionPage extends StatelessWidget {
       return SettingsPage(
         title: localizations.backButtonAction,
         children: [
-          _choice(service, localizations.dialogOptionBackButtonActionDoNothing, BACK_BUTTON_ACTION_NOTHING),
-          _choice(service, localizations.dialogOptionBackButtonActionShowClock, BACK_BUTTON_ACTION_CLOCK),
-          _choice(service, localizations.dialogOptionBackButtonActionShowScreensaver, BACK_BUTTON_ACTION_SCREENSAVER),
+          _choice(service, localizations.dialogOptionBackButtonActionDoNothing, backButtonActionNothing),
+          _choice(service, localizations.dialogOptionBackButtonActionShowClock, backButtonActionClock),
+          _choice(service, localizations.dialogOptionBackButtonActionShowScreensaver, backButtonActionScreensaver),
         ],
       );
     });

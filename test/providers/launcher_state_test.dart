@@ -1,7 +1,6 @@
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flauncher/providers/settings_service.dart';
-import 'package:flauncher/widgets/settings/back_button_actions.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
@@ -44,8 +43,8 @@ void main() {
       );
     }
 
-    testWidgets('handleBackNavigation opens clock when action is BACK_BUTTON_ACTION_CLOCK', (WidgetTester tester) async {
-      when(mockSettingsService.backButtonAction).thenReturn(BACK_BUTTON_ACTION_CLOCK);
+    testWidgets('handleBackNavigation opens clock when action is backButtonActionClock', (WidgetTester tester) async {
+      when(mockSettingsService.backButtonAction).thenReturn(backButtonActionClock);
       when(mockAppsService.isDefaultLauncher()).thenAnswer((_) async => true);
 
       // Force refresh to apply isDefaultLauncher locally if not kDebugMode
@@ -60,8 +59,8 @@ void main() {
       expect(launcherState.launcherVisible, isFalse);
     });
 
-    testWidgets('handleBackNavigation starts screensaver when action is BACK_BUTTON_ACTION_SCREENSAVER', (WidgetTester tester) async {
-      when(mockSettingsService.backButtonAction).thenReturn(BACK_BUTTON_ACTION_SCREENSAVER);
+    testWidgets('handleBackNavigation starts screensaver when action is backButtonActionScreensaver', (WidgetTester tester) async {
+      when(mockSettingsService.backButtonAction).thenReturn(backButtonActionScreensaver);
       when(mockAppsService.isDefaultLauncher()).thenAnswer((_) async => true);
       when(mockAppsService.startAmbientMode()).thenAnswer((_) async {});
 
@@ -75,8 +74,8 @@ void main() {
       verify(mockAppsService.startAmbientMode()).called(1);
     });
 
-    testWidgets('handleBackNavigation does nothing when action is BACK_BUTTON_ACTION_NOTHING', (WidgetTester tester) async {
-      when(mockSettingsService.backButtonAction).thenReturn(BACK_BUTTON_ACTION_NOTHING);
+    testWidgets('handleBackNavigation does nothing when action is backButtonActionNothing', (WidgetTester tester) async {
+      when(mockSettingsService.backButtonAction).thenReturn(backButtonActionNothing);
       when(mockAppsService.isDefaultLauncher()).thenAnswer((_) async => true);
 
       // Force refresh

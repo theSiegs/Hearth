@@ -21,7 +21,6 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 
-import 'package:flauncher/widgets/settings/back_button_actions.dart';
 import 'package:flutter/material.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -77,6 +76,11 @@ const String _appLanguageKey = "app_language";
 const String _showWeatherInStatusBarKey = "show_weather_in_status_bar";
 const String _showWeatherWarningsKey = "show_weather_warnings";
 const String _temperatureUnitKey = "temperature_unit";
+
+// What Back does on the home screen
+const String backButtonActionNothing = "";
+const String backButtonActionClock = "CLOCK";
+const String backButtonActionScreensaver = "SCREENSAVER";
 
 const String TEMPERATURE_UNIT_CELSIUS = "celsius";
 const String TEMPERATURE_UNIT_FAHRENHEIT = "fahrenheit";
@@ -303,7 +307,7 @@ class SettingsService extends ChangeNotifier {
     _showDateInStatusBar = _sharedPreferences.getBool(_showDateInStatusBarKey) ?? true;
     _showTimeInStatusBar = _sharedPreferences.getBool(_showTimeInStatusBarKey) ?? true;
     _gradientUuid = _sharedPreferences.getString(_gradientUuidKey);
-    _backButtonAction = _sharedPreferences.getString(_backButtonActionKey) ?? BACK_BUTTON_ACTION_NOTHING;
+    _backButtonAction = _sharedPreferences.getString(_backButtonActionKey) ?? backButtonActionNothing;
     _dateFormat = _sharedPreferences.getString(_dateFormatKey) ?? defaultDateFormat;
     _timeFormat = _sharedPreferences.getString(_timeFormatKey) ?? defaultTimeFormat;
     _dataUsagePeriod = _sharedPreferences.getString(_dataUsagePeriodKey) ?? DATA_USAGE_DAILY;
