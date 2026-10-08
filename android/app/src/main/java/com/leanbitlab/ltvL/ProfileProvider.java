@@ -47,7 +47,6 @@ public class ProfileProvider extends ContentProvider {
     // SettingsService.defaultTimeFormat / defaultDateFormat
     private static final String DEFAULT_TIME_FORMAT = "h:mm a";
     private static final String DEFAULT_DATE_FORMAT = "EEE, MMM d";
-    private static final String HEARTHTUBE = "com.thesiegs.hearthtube";
     private static final int MAX_PIN_TRIES = 5;
     private static final long PIN_LOCKOUT_MS = 60_000;
 
@@ -128,7 +127,7 @@ public class ProfileProvider extends ContentProvider {
 
     @Override
     public Bundle call(String method, String arg, Bundle extras) {
-        if (!HEARTHTUBE.equals(getCallingPackage()) || !isTrustedHearthTube(getContext())) {
+        if (!CompanionApps.HEARTHTUBE.equals(getCallingPackage()) || !isTrustedHearthTube(getContext())) {
             return null;
         }
 
@@ -153,12 +152,12 @@ public class ProfileProvider extends ContentProvider {
             android.content.pm.Signature[] signatures;
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                 android.content.pm.SigningInfo info = context.getPackageManager()
-                        .getPackageInfo(HEARTHTUBE, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES).signingInfo;
+                        .getPackageInfo(CompanionApps.HEARTHTUBE, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES).signingInfo;
                 if (info == null || info.hasMultipleSigners()) return false;
                 signatures = info.getSigningCertificateHistory();
             } else {
                 signatures = context.getPackageManager()
-                        .getPackageInfo(HEARTHTUBE, android.content.pm.PackageManager.GET_SIGNATURES).signatures;
+                        .getPackageInfo(CompanionApps.HEARTHTUBE, android.content.pm.PackageManager.GET_SIGNATURES).signatures;
             }
             if (signatures == null) return false;
             MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
