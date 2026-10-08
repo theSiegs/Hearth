@@ -27,10 +27,11 @@ import 'wallpaper_panel_page.dart';
 import 'look_settings_page.dart';
 import 'status_bar_panel_page.dart';
 
-class InterfaceSettingsPage extends StatelessWidget {
+class HomeScreenSettingsPage extends StatelessWidget {
   static const String routeName = "interface_settings_panel";
+  static const String title = "Home screen";
 
-  const InterfaceSettingsPage({super.key});
+  const HomeScreenSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +39,7 @@ class InterfaceSettingsPage extends StatelessWidget {
     final bool locked = settingsLocked(context);
 
     return SettingsPage(
-      title: "Home screen",
+      title: title,
       children: [
         // Sections are a parent's to change (as on the home screen itself): hidden in a locked kids profile
         if (!locked)

@@ -1,6 +1,6 @@
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
-import 'package:flauncher/widgets/settings/themes_page.dart';
+import 'package:flauncher/widgets/settings/card_style_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,7 +30,7 @@ void main() {
       home: ChangeNotifierProvider<SettingsService>.value(
         value: settingsService,
         child: const Scaffold(
-          body: ThemesPage(),
+          body: CardStylePage(),
         ),
       ),
     );

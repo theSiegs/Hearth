@@ -21,17 +21,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'accent_color_page.dart';
-import 'appearance_panel_page.dart';
+import 'dock_labels_page.dart';
 import 'focusable_settings_tile.dart';
-import 'misc_panel_page.dart';
-import 'themes_page.dart';
+import 'animations_sound_page.dart';
+import 'card_style_page.dart';
 import 'settings_page.dart';
 
 /// How the home screen looks and feels: card style, accent color, the dock and labels, animations and sound.
 class LookSettingsPage extends StatelessWidget {
   static const String routeName = "look_settings";
 
-  /// ThemesPage's choices, by their saved value.
+  /// CardStylePage's choices, by their saved value.
   static const Map<String, String> cardStyles = {
     "modern": "Default",
     "premium": "Premium",
@@ -55,9 +55,9 @@ class LookSettingsPage extends StatelessWidget {
         FocusableSettingsTile(
           autofocus: true,
           leading: const Icon(Icons.crop_square),
-          title: Text("Card style", style: textTheme.bodyMedium),
+          title: Text(CardStylePage.title, style: textTheme.bodyMedium),
           trailing: Text(cardStyles[cardStyle] ?? "", style: textTheme.bodySmall),
-          onPressed: () => Navigator.of(context).pushNamed(ThemesPage.routeName),
+          onPressed: () => Navigator.of(context).pushNamed(CardStylePage.routeName),
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.palette_outlined),
@@ -66,13 +66,13 @@ class LookSettingsPage extends StatelessWidget {
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.call_to_action_outlined),
-          title: Text(AppearancePanelPage.title, style: textTheme.bodyMedium),
-          onPressed: () => Navigator.of(context).pushNamed(AppearancePanelPage.routeName),
+          title: Text(DockLabelsPage.title, style: textTheme.bodyMedium),
+          onPressed: () => Navigator.of(context).pushNamed(DockLabelsPage.routeName),
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.animation),
-          title: Text(MiscPanelPage.title, style: textTheme.bodyMedium),
-          onPressed: () => Navigator.of(context).pushNamed(MiscPanelPage.routeName),
+          title: Text(AnimationsSoundPage.title, style: textTheme.bodyMedium),
+          onPressed: () => Navigator.of(context).pushNamed(AnimationsSoundPage.routeName),
         ),
       ],
     );

@@ -24,11 +24,11 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'settings_page.dart';
 
 /// Animations and the key click (under Look). The label and outline switches that used to be here are with the dock.
-class MiscPanelPage extends StatelessWidget {
+class AnimationsSoundPage extends StatelessWidget {
   static const String routeName = "misc_panel";
   static const String title = "Animations & sound";
 
-  const MiscPanelPage({Key? key}) : super(key: key);
+  const AnimationsSoundPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

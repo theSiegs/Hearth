@@ -18,29 +18,28 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flauncher/l10n/app_localizations.dart';
 
 import '../../providers/settings_service.dart';
 import 'look_settings_page.dart';
 import 'settings_choice_tile.dart';
 import 'settings_page.dart';
 
-class ThemesPage extends StatelessWidget {
+class CardStylePage extends StatelessWidget {
   static const String routeName = "themes_panel";
+  static const String title = "Card style";
 
-  const ThemesPage({super.key});
+  const CardStylePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    AppLocalizations localizations = AppLocalizations.of(context)!;
     final current = context.select<SettingsService, String>((s) => s.themes);
 
     return SettingsPage(
-      title: localizations.themes,
+      title: title,
       children: [
-        for (final MapEntry(key: value, value: title) in LookSettingsPage.cardStyles.entries)
+        for (final MapEntry(key: value, value: label) in LookSettingsPage.cardStyles.entries)
           SettingsChoiceTile<String>(
-            title: title,
+            title: label,
             value: value,
             groupValue: current,
             onChanged: (value) => context.read<SettingsService>().setThemes(value),
