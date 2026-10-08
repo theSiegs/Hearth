@@ -17,8 +17,9 @@
  */
 
 import 'dart:async';
-import 'dart:io';
 import 'dart:collection';
+import 'dart:developer' as developer;
+import 'dart:io';
 import 'package:collection/collection.dart' as collection;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -42,12 +43,12 @@ class AppsService extends ChangeNotifier {
 
   bool _initialized = false;
 
-  List<LauncherSection> _launcherSections = List.empty(growable: true);
-  Map<String, App> _applications = Map();
-  Map<String, Uint8List> _iconCache = Map();
-  Map<String, Uint8List> _bannerCache = Map();
+  final List<LauncherSection> _launcherSections = [];
+  Map<String, App> _applications = {};
+  final Map<String, Uint8List> _iconCache = {};
+  final Map<String, Uint8List> _bannerCache = {};
 
-  Map<int, Category> _categoriesById = Map();
+  Map<int, Category> _categoriesById = {};
   Map<String, Category>? _categoriesByNameCache;
   Category? _fallbackCategoryCache;
 
@@ -100,80 +101,84 @@ class AppsService extends ChangeNotifier {
       await _ensureTvAppsSectionOrder();
     }
 
-    _fLauncherChannel.addAppsChangedListener((event) async {
-      String? changedPackageName;
-      if (event.containsKey('packageName')) {
-        changedPackageName = event['packageName'];
-      } else if (event.containsKey('activityInfo')) {
-        changedPackageName = event['activityInfo']['packageName'];
-      }
-
-      if (changedPackageName != null) {
-        _iconCache.remove(changedPackageName);
-        _bannerCache.remove(changedPackageName);
-      }
-
-      switch (event["action"]) {
-        case "PACKAGE_ADDED":
-        case "PACKAGE_CHANGED":
-          Map<dynamic, dynamic> applicationInfo = event['activityInfo'];
-          await _database.persistApps([_buildAppCompanion(applicationInfo)]);
-
-          App newApp = App.fromSystem(applicationInfo);
-          if (!_replaceApp(newApp)) {
-            final targetCategory =
-                _findTargetCategoryForNewApp(newApp.sideloaded);
-            if (targetCategory != null) {
-              await addToCategory(newApp, targetCategory,
-                  shouldNotifyListeners: false);
-            }
-          }
-          break;
-        case "PACKAGES_AVAILABLE":
-          List<dynamic> applicationsInfo = event["activitiesInfo"];
-          await _database
-              .persistApps((applicationsInfo).map(_buildAppCompanion));
-
-          for (Map<dynamic, dynamic> applicationInfo in applicationsInfo) {
-            App newApp = App.fromSystem(applicationInfo);
-            _replaceApp(newApp);
-            _iconCache.remove(newApp.packageName);
-            _bannerCache.remove(newApp.packageName);
-          }
-          break;
-        case "PACKAGES_SUSPENSION_CHANGED":
-          // A Google TV profile switch changed which apps are blocked: rebuild the rows.
-          await _refreshState(shouldNotifyListeners: false);
-          break;
-        case "PACKAGE_REMOVED":
-          String packageName = event['packageName'];
-          await _database.deleteApps([packageName]);
-
-          // Clear icon cache for removed app
-          _iconCache.remove(packageName);
-          _bannerCache.remove(packageName);
-
-          App? application = _applications.remove(packageName);
-
-          if (application != null) {
-            for (int categoryId in application.categoryOrders.keys) {
-              final category = _categoriesById[categoryId];
-              if (category != null) {
-                category.applications.remove(application);
-              }
-            }
-          }
-          break;
-      }
-
-      notifyListeners();
-    });
+    _fLauncherChannel.addAppsChangedListener((event) => _onAppsChanged(event).catchError((Object e, StackTrace stack) {
+          developer.log("Failed to apply an app change", name: "AppsService", error: e, stackTrace: stack);
+        }));
 
     _initialized = true;
     notifyListeners();
 
     // Pre-cache icons for visible apps
     _preCacheIcons();
+  }
+
+  Future<void> _onAppsChanged(Map<String, dynamic> event) async {
+    String? changedPackageName;
+    if (event.containsKey('packageName')) {
+      changedPackageName = event['packageName'];
+    } else if (event.containsKey('activityInfo')) {
+      changedPackageName = event['activityInfo']['packageName'];
+    }
+
+    if (changedPackageName != null) {
+      _iconCache.remove(changedPackageName);
+      _bannerCache.remove(changedPackageName);
+    }
+
+    switch (event["action"]) {
+      case "PACKAGE_ADDED":
+      case "PACKAGE_CHANGED":
+        Map<dynamic, dynamic> applicationInfo = event['activityInfo'];
+        await _database.persistApps([_buildAppCompanion(applicationInfo)]);
+
+        App newApp = App.fromSystem(applicationInfo);
+        if (!_replaceApp(newApp)) {
+          final targetCategory =
+              _findTargetCategoryForNewApp(newApp.sideloaded);
+          if (targetCategory != null) {
+            await addToCategory(newApp, targetCategory,
+                shouldNotifyListeners: false);
+          }
+        }
+        break;
+      case "PACKAGES_AVAILABLE":
+        List<dynamic> applicationsInfo = event["activitiesInfo"];
+        await _database
+            .persistApps((applicationsInfo).map(_buildAppCompanion));
+
+        for (Map<dynamic, dynamic> applicationInfo in applicationsInfo) {
+          App newApp = App.fromSystem(applicationInfo);
+          _replaceApp(newApp);
+          _iconCache.remove(newApp.packageName);
+          _bannerCache.remove(newApp.packageName);
+        }
+        break;
+      case "PACKAGES_SUSPENSION_CHANGED":
+        // A Google TV profile switch changed which apps are blocked: rebuild the rows.
+        await _refreshState(shouldNotifyListeners: false);
+        break;
+      case "PACKAGE_REMOVED":
+        String packageName = event['packageName'];
+        await _database.deleteApps([packageName]);
+
+        // Clear icon cache for removed app
+        _iconCache.remove(packageName);
+        _bannerCache.remove(packageName);
+
+        App? application = _applications.remove(packageName);
+
+        if (application != null) {
+          for (int categoryId in application.categoryOrders.keys) {
+            final category = _categoriesById[categoryId];
+            if (category != null) {
+              category.applications.remove(application);
+            }
+          }
+        }
+        break;
+    }
+
+    notifyListeners();
   }
 
   /// Puts [newApp] where the installed app of the same package was, keeping its hidden flag and categories.
@@ -213,15 +218,10 @@ class AppsService extends ChangeNotifier {
   }
 
   AppsCompanion _buildAppCompanion(dynamic data) {
-    String? version = data["version"];
-    if (version == null) {
-      version = "";
-    }
-
     return AppsCompanion(
         packageName: Value(data["packageName"]),
         name: Value(data["name"]),
-        version: Value(version),
+        version: Value(data["version"] ?? ""),
         hidden: const Value.absent());
   }
 
@@ -301,7 +301,7 @@ class AppsService extends ChangeNotifier {
     List<Map<dynamic, dynamic>> appsFromSystem =
         await _fLauncherChannel.getApplications();
     Iterable<MapEntry<String, (Map, AppsCompanion)>> appEntries =
-        appsFromSystem.map((appFromSystem) => new MapEntry(
+        appsFromSystem.map((appFromSystem) => MapEntry(
             appFromSystem['packageName'],
             (appFromSystem, _buildAppCompanion(appFromSystem))));
     Map<String, (Map, AppsCompanion)> appsFromSystemByPackageName =
@@ -913,10 +913,7 @@ class AppsService extends ChangeNotifier {
 
     for (int i = 0; i < _launcherSections.length; ++i) {
       LauncherSection section = _launcherSections[i];
-      // Update the order property on the object itself
-      if (section is Category)
-        section.order = i;
-      else if (section is LauncherSpacer) section.order = i;
+      section.order = i;
 
       if (section is Category) {
         orderedCategories

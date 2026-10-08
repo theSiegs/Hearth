@@ -72,25 +72,24 @@ class Category extends LauncherSection
 
   Category({
     required this.name,
-    int id = 0,
-    int order = 0,
+    super.id,
+    super.order,
     this.columnsCount = Category.ColumnsCount,
     this.rowHeight = Category.RowHeight,
     this.sort = Category.Sort,
     this.type = Category.Type
-  }):   applications = [],
-        super(id: id, order: order);
+  }):   applications = [];
 
   Category.withApplications({
     required this.name,
     required this.applications,
-    int id = 0,
-    int order = 0,
+    super.id,
+    super.order,
     this.columnsCount = Category.ColumnsCount,
     this.rowHeight = Category.RowHeight,
     this.sort = Category.Sort,
     this.type = Category.Type
-  }): super(id: id, order: order);
+  });
 
   Category unmodifiable() {
     return Category.withApplications(
@@ -110,10 +109,10 @@ class LauncherSpacer extends LauncherSection
   int height;
 
   LauncherSpacer({
-    int id = 0,
-    int order = 0,
+    super.id,
+    super.order,
     this.height = 0
-  }): super(id: id, order: order);
+  });
 }
 
 class ContinueWatchingSection extends LauncherSection
@@ -121,6 +120,6 @@ class ContinueWatchingSection extends LauncherSection
   static const int sectionId = -999;
 
   ContinueWatchingSection({
-    int order = 0,
-  }): super(id: sectionId, order: order);
+    super.order,
+  }): super(id: sectionId);
 }
