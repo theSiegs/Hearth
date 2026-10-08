@@ -24,6 +24,7 @@ import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'focusable_settings_tile.dart';
 import 'setup_checklist_page.dart';
+import 'settings_page.dart';
 
 /// TV & power: the screensaver, sleeping when idle, and Android's own settings.
 class DisplaySettingsPage extends StatelessWidget {
@@ -36,38 +37,29 @@ class DisplaySettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     AppLocalizations localizations = AppLocalizations.of(context)!;
 
-    return Column(
+    return SettingsPage(
+      title: title,
       children: [
-        Text(title, style: Theme.of(context).textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                FocusableSettingsTile(
-                  autofocus: true,
-                  leading: const Icon(Icons.screenshot_monitor),
-                  title: Text("Screensaver (Google Photos)", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => _openScreensaverSettings(),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                  child: Text(
-                    "Hearth uses Google TV's screensaver. Choose Google Photos (and which albums) or another source "
-                    "there.",
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const _IdleStandbyTile(),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.settings_outlined),
-                  title: Text(localizations.systemSettings, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => context.read<AppsService>().openSettings(),
-                ),
-              ],
-            ),
+        FocusableSettingsTile(
+          autofocus: true,
+          leading: const Icon(Icons.screenshot_monitor),
+          title: Text("Screensaver (Google Photos)", style: Theme.of(context).textTheme.bodyMedium),
+          onPressed: () => _openScreensaverSettings(),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+          child: Text(
+            "Hearth uses Google TV's screensaver. Choose Google Photos (and which albums) or another source "
+            "there.",
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
+            textAlign: TextAlign.center,
           ),
+        ),
+        const _IdleStandbyTile(),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.settings_outlined),
+          title: Text(localizations.systemSettings, style: Theme.of(context).textTheme.bodyMedium),
+          onPressed: () => context.read<AppsService>().openSettings(),
         ),
       ],
     );
@@ -119,7 +111,8 @@ class _IdleStandbyTileState extends State<_IdleStandbyTile> {
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-            child: Text("Playing video or music counts as activity. Needs Home Button Fix (${SetupChecklistPage.breadcrumb}).",
+            child: Text(
+                "Playing video or music counts as activity. Needs Home Button Fix (${SetupChecklistPage.breadcrumb}).",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54)),
           ),
         ],

@@ -56,17 +56,7 @@ class ContinueWatchingAppsPage extends StatelessWidget {
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-          child: Row(
-            children: [
-              Text(
-                'Continue Watching Apps',
-                style: theme.textTheme.titleLarge,
-              ),
-            ],
-          ),
-        ),
+        Text('Continue Watching Apps', style: theme.textTheme.titleLarge),
         const Divider(),
         Expanded(
           child: ListView(

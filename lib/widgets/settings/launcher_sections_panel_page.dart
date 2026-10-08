@@ -21,6 +21,7 @@ import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/settings/continue_watching_settings_page.dart';
 import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
 import 'package:flauncher/widgets/settings/launcher_section_panel_page.dart';
+import 'package:flauncher/widgets/settings/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -77,60 +78,61 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
     AppLocalizations localizations = AppLocalizations.of(context)!;
     final settingsService = Provider.of<SettingsService?>(context);
 
-    return Column(
-      children: [
-        Text(localizations.launcherSections, style: Theme.of(context).textTheme.titleLarge),
-        const Divider(),
-        Consumer<AppsService>(
-          builder: (_, service, __) {
-            final displaySections = _getDisplaySections(service.launcherSections, settingsService);
+    return SettingsPage.custom(
+      title: localizations.launcherSections,
+      body: Column(
+        children: [
+          Consumer<AppsService>(
+            builder: (_, service, __) {
+              final displaySections = _getDisplaySections(service.launcherSections, settingsService);
 
-            return Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.only(bottom: 80),
-                cacheExtent: 1000,
-                itemCount: displaySections.length,
-                itemBuilder: (context, index) {
-                  final section = displaySections[index];
-                  return _section(context, section, displaySections, settingsService);
-                },
+              return Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 80),
+                  cacheExtent: 1000,
+                  itemCount: displaySections.length,
+                  itemBuilder: (context, index) {
+                    final section = displaySections[index];
+                    return _section(context, section, displaySections, settingsService);
+                  },
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 4, width: 0),
+          FocusableSettingsTile(
+            leading: const Icon(Icons.add),
+            title: Text(localizations.addSection, style: Theme.of(context).textTheme.bodyMedium),
+            onPressed: () {
+              Navigator.pushNamed(context, LauncherSectionPanelPage.routeName);
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
               ),
-            );
-          },
-        ),
-        const SizedBox(height: 4, width: 0),
-        FocusableSettingsTile(
-          leading: const Icon(Icons.add),
-          title: Text(localizations.addSection, style: Theme.of(context).textTheme.bodyMedium),
-          onPressed: () {
-            Navigator.pushNamed(context, LauncherSectionPanelPage.routeName);
-          },
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline, size: 20, color: Colors.white70),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Select with ◄ / ► then use ▲ / ▼ to reorder',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white70,
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 20, color: Colors.white70),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Select with ◄ / ► then use ▲ / ▼ to reorder',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white70,
+                          ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -193,8 +195,7 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
             }
           } else {
             // Not Moving
-            if (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
-                event.logicalKey == LogicalKeyboardKey.arrowRight) {
+            if (event.logicalKey == LogicalKeyboardKey.arrowLeft || event.logicalKey == LogicalKeyboardKey.arrowRight) {
               setState(() {
                 _movingSection = section;
               });
@@ -214,85 +215,80 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
           return KeyEventResult.ignored;
         },
         child: Builder(builder: (context) {
-            final bool focused = Focus.of(context).hasFocus;
-            
-            // Determine colors based on state
-            final Color backgroundColor = isMoving 
-                ? colorScheme.primaryContainer 
-                : (focused ? Colors.white10 : Colors.transparent);
-            
-            final Color textColor = isMoving 
-                ? colorScheme.onPrimaryContainer 
-                : (focused ? Colors.white : Colors.white70);
-            
-            final Color iconColor = isMoving 
-                ? colorScheme.onPrimaryContainer 
-                : (focused ? colorScheme.primary : Colors.white38);
+          final bool focused = Focus.of(context).hasFocus;
 
-            return GestureDetector(
-              onTap: () {
-                if (isMoving) {
-                  _endMove();
+          // Determine colors based on state
+          final Color backgroundColor =
+              isMoving ? colorScheme.primaryContainer : (focused ? Colors.white10 : Colors.transparent);
+
+          final Color textColor = isMoving ? colorScheme.onPrimaryContainer : (focused ? Colors.white : Colors.white70);
+
+          final Color iconColor =
+              isMoving ? colorScheme.onPrimaryContainer : (focused ? colorScheme.primary : Colors.white38);
+
+          return GestureDetector(
+            onTap: () {
+              if (isMoving) {
+                _endMove();
+              } else {
+                if (section is ContinueWatchingSection) {
+                  Navigator.pushNamed(context, ContinueWatchingSettingsPage.routeName);
                 } else {
-                  if (section is ContinueWatchingSection) {
-                    Navigator.pushNamed(context, ContinueWatchingSettingsPage.routeName);
-                  } else {
-                    final idx = _appsService.launcherSections.indexOf(section);
-                    Navigator.pushNamed(context, LauncherSectionPanelPage.routeName, arguments: idx);
-                  }
+                  final idx = _appsService.launcherSections.indexOf(section);
+                  Navigator.pushNamed(context, LauncherSectionPanelPage.routeName, arguments: idx);
                 }
-              },
-              onLongPress: () {
-                if (!isMoving) {
-                  setState(() {
-                    _movingSection = section;
-                  });
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: (focused || isMoving) ? colorScheme.primary : Colors.transparent,
-                    width: 2,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    // Drag Handle Icon
-                    Icon(
-                      isMoving ? Icons.drag_indicator : Icons.drag_handle,
-                      color: iconColor,
-                    ),
-                    const SizedBox(width: 16),
-                    
-                    // Section Title
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: textColor,
-                          fontWeight: focused || isMoving ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                    ),
-                    
-                    // Move Indicators
-                    if (isMoving) ...[
-                      Icon(Icons.keyboard_arrow_up, color: textColor),
-                      const SizedBox(width: 4),
-                      Icon(Icons.keyboard_arrow_down, color: textColor),
-                    ] else ...[
-                      const Icon(Icons.chevron_right, color: Colors.white24),
-                    ],
-                  ],
+              }
+            },
+            onLongPress: () {
+              if (!isMoving) {
+                setState(() {
+                  _movingSection = section;
+                });
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: (focused || isMoving) ? colorScheme.primary : Colors.transparent,
+                  width: 2,
                 ),
               ),
-            );
-          }
-        ),
+              child: Row(
+                children: [
+                  // Drag Handle Icon
+                  Icon(
+                    isMoving ? Icons.drag_indicator : Icons.drag_handle,
+                    color: iconColor,
+                  ),
+                  const SizedBox(width: 16),
+
+                  // Section Title
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: textColor,
+                        fontWeight: focused || isMoving ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+
+                  // Move Indicators
+                  if (isMoving) ...[
+                    Icon(Icons.keyboard_arrow_up, color: textColor),
+                    const SizedBox(width: 4),
+                    Icon(Icons.keyboard_arrow_down, color: textColor),
+                  ] else ...[
+                    const Icon(Icons.chevron_right, color: Colors.white24),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }),
       ),
     );
   }

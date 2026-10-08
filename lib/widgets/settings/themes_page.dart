@@ -23,6 +23,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import '../../providers/settings_service.dart';
 import 'look_settings_page.dart';
 import 'settings_choice_tile.dart';
+import 'settings_page.dart';
 
 class ThemesPage extends StatelessWidget {
   static const String routeName = "themes_panel";
@@ -34,25 +35,16 @@ class ThemesPage extends StatelessWidget {
     AppLocalizations localizations = AppLocalizations.of(context)!;
     final current = context.select<SettingsService, String>((s) => s.themes);
 
-    return Column(
+    return SettingsPage(
+      title: localizations.themes,
       children: [
-        Text(localizations.themes, style: Theme.of(context).textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                for (final MapEntry(key: value, value: title) in LookSettingsPage.cardStyles.entries)
-                  SettingsChoiceTile<String>(
-                    title: title,
-                    value: value,
-                    groupValue: current,
-                    onChanged: (value) => context.read<SettingsService>().setThemes(value),
-                  ),
-              ],
-            ),
+        for (final MapEntry(key: value, value: title) in LookSettingsPage.cardStyles.entries)
+          SettingsChoiceTile<String>(
+            title: title,
+            value: value,
+            groupValue: current,
+            onChanged: (value) => context.read<SettingsService>().setThemes(value),
           ),
-        ),
       ],
     );
   }

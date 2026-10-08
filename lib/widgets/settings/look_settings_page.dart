@@ -25,6 +25,7 @@ import 'appearance_panel_page.dart';
 import 'focusable_settings_tile.dart';
 import 'misc_panel_page.dart';
 import 'themes_page.dart';
+import 'settings_page.dart';
 
 /// How the home screen looks and feels: card style, accent color, the dock and labels, animations and sound.
 class LookSettingsPage extends StatelessWidget {
@@ -48,39 +49,30 @@ class LookSettingsPage extends StatelessWidget {
     final localizations = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final cardStyle = context.select<SettingsService, String>((s) => s.themes);
-    return Column(
+    return SettingsPage(
+      title: "Look",
       children: [
-        Text("Look", style: textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                FocusableSettingsTile(
-                  autofocus: true,
-                  leading: const Icon(Icons.crop_square),
-                  title: Text("Card style", style: textTheme.bodyMedium),
-                  trailing: Text(cardStyles[cardStyle] ?? "", style: textTheme.bodySmall),
-                  onPressed: () => Navigator.of(context).pushNamed(ThemesPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.palette_outlined),
-                  title: Text(localizations.accentColor, style: textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(AccentColorPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.call_to_action_outlined),
-                  title: Text(AppearancePanelPage.title, style: textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(AppearancePanelPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.animation),
-                  title: Text(MiscPanelPage.title, style: textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(MiscPanelPage.routeName),
-                ),
-              ],
-            ),
-          ),
+        FocusableSettingsTile(
+          autofocus: true,
+          leading: const Icon(Icons.crop_square),
+          title: Text("Card style", style: textTheme.bodyMedium),
+          trailing: Text(cardStyles[cardStyle] ?? "", style: textTheme.bodySmall),
+          onPressed: () => Navigator.of(context).pushNamed(ThemesPage.routeName),
+        ),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.palette_outlined),
+          title: Text(localizations.accentColor, style: textTheme.bodyMedium),
+          onPressed: () => Navigator.of(context).pushNamed(AccentColorPage.routeName),
+        ),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.call_to_action_outlined),
+          title: Text(AppearancePanelPage.title, style: textTheme.bodyMedium),
+          onPressed: () => Navigator.of(context).pushNamed(AppearancePanelPage.routeName),
+        ),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.animation),
+          title: Text(MiscPanelPage.title, style: textTheme.bodyMedium),
+          onPressed: () => Navigator.of(context).pushNamed(MiscPanelPage.routeName),
         ),
       ],
     );

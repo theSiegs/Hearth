@@ -21,6 +21,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/settings_service.dart';
 import 'settings_choice_tile.dart';
+import 'settings_page.dart';
 
 class ContinueWatchingMaxItemsPage extends StatelessWidget {
   static const String routeName = "continue_watching_max_items_panel";
@@ -42,36 +43,17 @@ class ContinueWatchingMaxItemsPage extends StatelessWidget {
       builder: (context, currentCount, _) {
         final settingsService = context.read<SettingsService>();
 
-        return Column(
+        return SettingsPage(
+          title: 'Maximum Items',
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-              child: Row(
-                children: [
-                  Text(
-                    'Maximum Items',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ],
+            for (final (count, title, subtitle) in maxItemsPresets)
+              SettingsChoiceTile<int>(
+                title: title,
+                subtitle: subtitle,
+                value: count,
+                groupValue: currentCount,
+                onChanged: settingsService.setContinueWatchingMaxItems,
               ),
-            ),
-            const Divider(),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    for (final (count, title, subtitle) in maxItemsPresets)
-                      SettingsChoiceTile<int>(
-                        title: title,
-                        subtitle: subtitle,
-                        value: count,
-                        groupValue: currentCount,
-                        onChanged: settingsService.setContinueWatchingMaxItems,
-                      ),
-                  ],
-                ),
-              ),
-            ),
           ],
         );
       },

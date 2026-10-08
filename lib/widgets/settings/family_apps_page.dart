@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
+import 'settings_page.dart';
 
 /// Settings: put Hearth (and HearthTube) on the TV's other Google TV profiles, and take them off again — all
 /// parent-controlled. The parent presses Add or Remove; the first Add asks for the one-time on-screen
@@ -190,57 +191,49 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
     final textTheme = Theme.of(context).textTheme;
     final settings = context.watch<SettingsService>();
     final adultsOn = settings.pushToAdultProfiles;
-    return Column(
+    return SettingsPage(
+      title: FamilyAppsPage.title,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(FamilyAppsPage.title, style: textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                  child: Text(
-                    "Put Hearth and HearthTube on your other Google TV profiles. On kids' profiles this is needed "
-                    "for HearthTube to work and for Hearth to pick the right profile in Netflix, Disney+ and other "
-                    "apps. On adult profiles it's just a convenience, so they don't have to install them by hand.",
-                    style: textTheme.bodySmall?.copyWith(color: Colors.white70),
-                  ),
-                ),
-                FocusableSettingsTile(
-                  autofocus: true,
-                  leading: const Icon(Icons.group_add_outlined),
-                  title: Text("Add Hearth to other profiles", style: textTheme.bodyMedium),
-                  trailing: _busy
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.chevron_right, color: Colors.white54),
-                  onPressed: _busy ? null : () => _add(),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.group_remove_outlined),
-                  title: Text("Remove Hearth from other profiles", style: textTheme.bodyMedium),
-                  trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-                  onPressed: _busy ? null : () => _remove(),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.delete_outline),
-                  title: Text("Uninstall Hearth", style: textTheme.bodyMedium),
-                  trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-                  onPressed: _busy ? null : () => _uninstallHearth(),
-                ),
-                FocusableSettingsTile(
-                  leading: Icon(Icons.person_outline, color: adultsOn ? Colors.green : null),
-                  title: Text("Also set up other adult profiles", style: textTheme.bodyMedium),
-                  trailing: Text(adultsOn ? "On" : "Off",
-                      style: textTheme.bodySmall?.copyWith(color: adultsOn ? Colors.green : Colors.white54)),
-                  onPressed: () => settings.setPushToAdultProfiles(!adultsOn),
-                ),
-                const Divider(),
-                _stateSection(context),
-              ],
-            ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          child: Text(
+            "Put Hearth and HearthTube on your other Google TV profiles. On kids' profiles this is needed "
+            "for HearthTube to work and for Hearth to pick the right profile in Netflix, Disney+ and other "
+            "apps. On adult profiles it's just a convenience, so they don't have to install them by hand.",
+            style: textTheme.bodySmall?.copyWith(color: Colors.white70),
           ),
         ),
+        FocusableSettingsTile(
+          autofocus: true,
+          leading: const Icon(Icons.group_add_outlined),
+          title: Text("Add Hearth to other profiles", style: textTheme.bodyMedium),
+          trailing: _busy
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.chevron_right, color: Colors.white54),
+          onPressed: _busy ? null : () => _add(),
+        ),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.group_remove_outlined),
+          title: Text("Remove Hearth from other profiles", style: textTheme.bodyMedium),
+          trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+          onPressed: _busy ? null : () => _remove(),
+        ),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.delete_outline),
+          title: Text("Uninstall Hearth", style: textTheme.bodyMedium),
+          trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+          onPressed: _busy ? null : () => _uninstallHearth(),
+        ),
+        FocusableSettingsTile(
+          leading: Icon(Icons.person_outline, color: adultsOn ? Colors.green : null),
+          title: Text("Also set up other adult profiles", style: textTheme.bodyMedium),
+          trailing: Text(adultsOn ? "On" : "Off",
+              style: textTheme.bodySmall?.copyWith(color: adultsOn ? Colors.green : Colors.white54)),
+          onPressed: () => settings.setPushToAdultProfiles(!adultsOn),
+        ),
+        const Divider(),
+        _stateSection(context),
       ],
     );
   }

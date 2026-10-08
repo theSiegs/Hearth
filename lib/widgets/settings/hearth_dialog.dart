@@ -87,7 +87,8 @@ class _FocusableDialogButtonState extends State<FocusableDialogButton> {
   Widget build(BuildContext context) {
     final accentColor = context.select((SettingsService s) => s.accentColor);
     final compact = widget.compact;
-    final (verticalPadding, radius, tint, gap, fontSize) = compact ? (8.0, 8.0, 0.3, 6.0, 12.0) : (10.0, 10.0, 0.2, 8.0, 13.0);
+    final (verticalPadding, radius, tint, gap, fontSize) =
+        compact ? (8.0, 8.0, 0.3, 6.0, 12.0) : (10.0, 10.0, 0.2, 8.0, 13.0);
     final label = Text(
       widget.label,
       textAlign: TextAlign.center,

@@ -23,6 +23,7 @@ import '../../providers/settings_service.dart';
 import '../rounded_switch_list_tile.dart';
 import 'focusable_settings_tile.dart';
 import 'ha_phone_setup_dialog.dart';
+import 'settings_page.dart';
 import 'setup_checklist_page.dart';
 
 /// Home Assistant: its pop-ups on the TV, its dashboard panel, and the TV's status reported to it. Each has a page
@@ -71,36 +72,27 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final panel = context.select<SettingsService, bool>((s) => s.haPanelEnabled);
-    return Column(
+    return SettingsPage(
+      title: "Home Assistant",
       children: [
-        Text("Home Assistant", style: textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                FocusableSettingsTile(
-                  autofocus: true,
-                  leading: const Icon(Icons.notifications_active_outlined),
-                  title: Text("Notifications", style: textTheme.bodyMedium),
-                  trailing: Text(_onOff(_notifications), style: textTheme.bodySmall),
-                  onPressed: () => _open(HaNotificationsPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.dashboard_outlined),
-                  title: Text("Dashboard panel", style: textTheme.bodyMedium),
-                  trailing: Text(_onOff(panel), style: textTheme.bodySmall),
-                  onPressed: () => _open(HaPanelPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.sensors_outlined),
-                  title: Text("TV status", style: textTheme.bodyMedium),
-                  trailing: Text(_reporting == null ? "" : (_reporting! ? "Reporting" : "Off"), style: textTheme.bodySmall),
-                  onPressed: () => _open(HaStatusPage.routeName),
-                ),
-              ],
-            ),
-          ),
+        FocusableSettingsTile(
+          autofocus: true,
+          leading: const Icon(Icons.notifications_active_outlined),
+          title: Text("Notifications", style: textTheme.bodyMedium),
+          trailing: Text(_onOff(_notifications), style: textTheme.bodySmall),
+          onPressed: () => _open(HaNotificationsPage.routeName),
+        ),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.dashboard_outlined),
+          title: Text("Dashboard panel", style: textTheme.bodyMedium),
+          trailing: Text(_onOff(panel), style: textTheme.bodySmall),
+          onPressed: () => _open(HaPanelPage.routeName),
+        ),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.sensors_outlined),
+          title: Text("TV status", style: textTheme.bodyMedium),
+          trailing: Text(_reporting == null ? "" : (_reporting! ? "Reporting" : "Off"), style: textTheme.bodySmall),
+          onPressed: () => _open(HaStatusPage.routeName),
         ),
       ],
     );
@@ -165,40 +157,30 @@ class _HaNotificationsPageState extends State<HaNotificationsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return SettingsPage(
+      title: "Notifications",
       children: [
-        Text("Notifications", style: Theme.of(context).textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RoundedSwitchListTile(
-                  autofocus: true,
-                  value: _enabled,
-                  onChanged: _setEnabled,
-                  title: const Text("Show Home Assistant notifications"),
-                  secondary: const Icon(Icons.home_outlined),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.notifications_active_outlined),
-                  title: Text("Send a test notification", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: _test,
-                ),
-                if (_testResult != null) _note(context, _testResult!, color: Colors.orangeAccent),
-                const SizedBox(height: 8),
-                _note(
-                  context,
-                  "In Home Assistant, add the \"Notifications for Android TV / Fire TV\" integration with host "
-                  "${_ip ?? "(this TV's IP address)"}. Then send notifications to it from automations, for "
-                  "example for the doorbell or when the laundry is done.\n\n"
-                  "Only devices on your home network can send them (port 7676). Pop-ups appear over any app "
-                  "and need Home Button Fix (${SetupChecklistPage.breadcrumb}) to be on.",
-                ),
-              ],
-            ),
-          ),
+        RoundedSwitchListTile(
+          autofocus: true,
+          value: _enabled,
+          onChanged: _setEnabled,
+          title: const Text("Show Home Assistant notifications"),
+          secondary: const Icon(Icons.home_outlined),
+        ),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.notifications_active_outlined),
+          title: Text("Send a test notification", style: Theme.of(context).textTheme.bodyMedium),
+          onPressed: _test,
+        ),
+        if (_testResult != null) _note(context, _testResult!, color: Colors.orangeAccent),
+        const SizedBox(height: 8),
+        _note(
+          context,
+          "In Home Assistant, add the \"Notifications for Android TV / Fire TV\" integration with host "
+          "${_ip ?? "(this TV's IP address)"}. Then send notifications to it from automations, for "
+          "example for the doorbell or when the laundry is done.\n\n"
+          "Only devices on your home network can send them (port 7676). Pop-ups appear over any app "
+          "and need Home Button Fix (${SetupChecklistPage.breadcrumb}) to be on.",
         ),
       ],
     );
@@ -407,60 +389,50 @@ class _HaStatusPageState extends State<HaStatusPage> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return SettingsPage(
+      title: "TV status",
       children: [
-        Text("TV status", style: Theme.of(context).textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: _url,
-                        keyboardType: TextInputType.url,
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(labelText: "Home Assistant address", hintText: "http://192.168.1.10:8123"),
-                      ),
-                      TextField(
-                        controller: _webhook,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (_) => _saveStatus(),
-                        decoration: const InputDecoration(labelText: "Webhook ID"),
-                      ),
-                    ],
-                  ),
-                ),
-                // Focus starts here, not in a text field, so the keyboard doesn't pop up on the way in
-                FocusableSettingsTile(
-                  autofocus: true,
-                  leading: const Icon(Icons.save_outlined),
-                  title: Text("Save", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: _saveStatus,
-                ),
-                if (_statusSaved != null) _note(context, _statusSaved!),
-                FocusableSettingsTile(
-                  leading: Icon(Icons.music_note_outlined, color: _notificationAccess ? Colors.green : Colors.orange),
-                  title: Text(
-                    _notificationAccess ? "Now playing: on" : "Now playing: turn on notification access",
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  onPressed: () async {
-                    await _channel.requestNotificationListenerPermission();
-                  },
-                ),
-                _note(
-                  context,
-                  "The TV sends Home Assistant what's on: the app, what's playing, the Google TV profile, and "
-                  "kids screen time. It only sends to the address above, as changes happen.",
-                ),
-              ],
-            ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: [
+              TextField(
+                controller: _url,
+                keyboardType: TextInputType.url,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(labelText: "Home Assistant address", hintText: "http://192.168.1.10:8123"),
+              ),
+              TextField(
+                controller: _webhook,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _saveStatus(),
+                decoration: const InputDecoration(labelText: "Webhook ID"),
+              ),
+            ],
           ),
+        ),
+        // Focus starts here, not in a text field, so the keyboard doesn't pop up on the way in
+        FocusableSettingsTile(
+          autofocus: true,
+          leading: const Icon(Icons.save_outlined),
+          title: Text("Save", style: Theme.of(context).textTheme.bodyMedium),
+          onPressed: _saveStatus,
+        ),
+        if (_statusSaved != null) _note(context, _statusSaved!),
+        FocusableSettingsTile(
+          leading: Icon(Icons.music_note_outlined, color: _notificationAccess ? Colors.green : Colors.orange),
+          title: Text(
+            _notificationAccess ? "Now playing: on" : "Now playing: turn on notification access",
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          onPressed: () async {
+            await _channel.requestNotificationListenerPermission();
+          },
+        ),
+        _note(
+          context,
+          "The TV sends Home Assistant what's on: the app, what's playing, the Google TV profile, and "
+          "kids screen time. It only sends to the address above, as changes happen.",
         ),
       ],
     );

@@ -24,6 +24,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/widgets/settings/settings_page.dart';
 
 // Date format presets
 const List<(String format, String example)> dateFormatPresets = [
@@ -53,67 +54,58 @@ class DateTimeFormatPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     AppLocalizations localizations = AppLocalizations.of(context)!;
-    
-    return Consumer<SettingsService>(
-      builder: (context, service, _) {
-        // Focus starts on the chosen date format, or the first one when the saved format isn't a preset
-        final bool datePreset = dateFormatPresets.any((preset) => preset.$1 == service.dateFormat);
-        return Column(
-          children: [
-            Text(localizations.dateAndTimeFormat, style: Theme.of(context).textTheme.titleLarge),
-            const Divider(),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  _buildPreview(context, service.dateFormat, service.timeFormat),
-                  const SizedBox(height: 24),
-                  const Divider(),
-                  
-                  // Date format section
-                  Text(
-                    localizations.date,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  for (final (index, (format, example)) in dateFormatPresets.indexed)
-                    SettingsChoiceTile<String>(
-                      autofocus: format == service.dateFormat || (!datePreset && index == 0),
-                      title: example,
-                      subtitle: format,
-                      value: format,
-                      groupValue: service.dateFormat,
-                      onChanged: (format) => service.setDateTimeFormat(format, service.timeFormat),
-                    ),
-                  
-                  const SizedBox(height: 16),
-                  const Divider(),
-                  
-                  // Time format section
-                  Text(
-                    localizations.time,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  for (final (format, example) in timeFormatPresets)
-                    SettingsChoiceTile<String>(
-                      autofocus: false,
-                      title: example,
-                      subtitle: format,
-                      value: format,
-                      groupValue: service.timeFormat,
-                      onChanged: (format) => service.setDateTimeFormat(service.dateFormat, format),
-                    ),
-                  const SizedBox(height: 24),
-                ],
-              ),
+
+    return Consumer<SettingsService>(builder: (context, service, _) {
+      // Focus starts on the chosen date format, or the first one when the saved format isn't a preset
+      final bool datePreset = dateFormatPresets.any((preset) => preset.$1 == service.dateFormat);
+      return SettingsPage(
+        title: localizations.dateAndTimeFormat,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          _buildPreview(context, service.dateFormat, service.timeFormat),
+          const SizedBox(height: 24),
+          const Divider(),
+
+          // Date format section
+          Text(
+            localizations.date,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+
+          for (final (index, (format, example)) in dateFormatPresets.indexed)
+            SettingsChoiceTile<String>(
+              autofocus: format == service.dateFormat || (!datePreset && index == 0),
+              title: example,
+              subtitle: format,
+              value: format,
+              groupValue: service.dateFormat,
+              onChanged: (format) => service.setDateTimeFormat(format, service.timeFormat),
             ),
-          ],
-        );
-      }
-    );
+
+          const SizedBox(height: 16),
+          const Divider(),
+
+          // Time format section
+          Text(
+            localizations.time,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+
+          for (final (format, example) in timeFormatPresets)
+            SettingsChoiceTile<String>(
+              autofocus: false,
+              title: example,
+              subtitle: format,
+              value: format,
+              groupValue: service.timeFormat,
+              onChanged: (format) => service.setDateTimeFormat(service.dateFormat, format),
+            ),
+          const SizedBox(height: 24),
+        ],
+      );
+    });
   }
 
   Widget _buildPreview(BuildContext context, String dateFormat, String timeFormat) {
@@ -141,8 +133,8 @@ class DateTimeFormatPage extends StatelessWidget {
       child: Text(
         preview.isEmpty ? 'Select formats below' : preview,
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.bold,
-        ),
+              fontWeight: FontWeight.bold,
+            ),
         textAlign: TextAlign.center,
       ),
     );

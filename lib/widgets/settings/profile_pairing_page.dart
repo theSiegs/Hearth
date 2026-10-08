@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'focusable_settings_tile.dart';
 import 'setup_checklist_page.dart';
+import 'settings_page.dart';
 
 /// One Google TV profile's pairing in one streaming app.
 class PairingChoice {
@@ -71,61 +72,55 @@ class _ProfilePairingPageState extends State<ProfilePairingPage> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final apps = _apps;
-    return Column(
-      children: [
-        Text("Profile Pairing", style: textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: apps == null
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      if (!_serviceOn)
-                        FocusableSettingsTile(
-                          leading: const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-                          title: Text("Profile Pairing is off. Set it up", style: textTheme.bodyMedium),
-                          onPressed: () async {
-                            await Navigator.of(context).pushNamed(SetupChecklistPage.routeName);
-                            _load();
-                          },
-                        ),
-                      for (final (index, app) in apps.indexed)
-                        FocusableSettingsTile(
-                          autofocus: index == 0 && _serviceOn,
-                          leading: const Icon(Icons.live_tv_outlined),
-                          title: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(app["label"] as String, style: textTheme.bodyMedium),
-                              Text(_appStatus(app), style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
-                            ],
-                          ),
-                          trailing: app["installed"] == true ? const Icon(Icons.chevron_right) : null,
-                          onPressed: app["installed"] == true
-                              ? () async {
-                                  await Navigator.of(context)
-                                      .pushNamed(ProfilePairingAppPage.routeName, arguments: app);
-                                  _load();
-                                }
-                              : null,
-                        ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Text(
-                          "When Hearth opens one of these apps, it picks the app profile paired with the Google TV "
-                          "profile. Hearth matches names by itself (\"Alex\" goes with \"Alex Morgan\"); "
-                          "change any pairing here. Without a match, the app's own picker shows.",
-                          style: textTheme.bodySmall?.copyWith(color: Colors.white54),
-                          textAlign: TextAlign.center,
-                        ),
+    return SettingsPage.custom(
+      title: "Profile Pairing",
+      body: apps == null
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Column(
+                children: [
+                  if (!_serviceOn)
+                    FocusableSettingsTile(
+                      leading: const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                      title: Text("Profile Pairing is off. Set it up", style: textTheme.bodyMedium),
+                      onPressed: () async {
+                        await Navigator.of(context).pushNamed(SetupChecklistPage.routeName);
+                        _load();
+                      },
+                    ),
+                  for (final (index, app) in apps.indexed)
+                    FocusableSettingsTile(
+                      autofocus: index == 0 && _serviceOn,
+                      leading: const Icon(Icons.live_tv_outlined),
+                      title: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(app["label"] as String, style: textTheme.bodyMedium),
+                          Text(_appStatus(app), style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
+                        ],
                       ),
-                    ],
+                      trailing: app["installed"] == true ? const Icon(Icons.chevron_right) : null,
+                      onPressed: app["installed"] == true
+                          ? () async {
+                              await Navigator.of(context).pushNamed(ProfilePairingAppPage.routeName, arguments: app);
+                              _load();
+                            }
+                          : null,
+                    ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      "When Hearth opens one of these apps, it picks the app profile paired with the Google TV "
+                      "profile. Hearth matches names by itself (\"Alex\" goes with \"Alex Morgan\"); "
+                      "change any pairing here. Without a match, the app's own picker shows.",
+                      style: textTheme.bodySmall?.copyWith(color: Colors.white54),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                ),
-        ),
-      ],
+                ],
+              ),
+            ),
     );
   }
 
@@ -218,59 +213,53 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final choices = _choices;
-    return Column(
-      children: [
-        Text(widget.app["label"] as String, style: textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: choices == null
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      FocusableSettingsTile(
-                        autofocus: true,
-                        leading: Icon(Icons.switch_account, color: _enabled ? Colors.green : Colors.white54),
-                        title: Text("Pair profiles in ${widget.app["label"]}", style: textTheme.bodyMedium),
-                        trailing: Text(
-                          _enabled ? "On" : "Off",
-                          style: textTheme.bodySmall?.copyWith(color: _enabled ? Colors.green : Colors.white54),
-                        ),
-                        onPressed: _toggleEnabled,
-                      ),
-                      if (_enabled) const Divider(),
-                      if (_enabled)
-                        for (final choice in choices)
-                          FocusableSettingsTile(
-                            leading: Icon(choice.kids ? Icons.child_care : Icons.person_outline),
-                            title: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(choice.displayName + (choice.kids ? " (kids)" : ""),
-                                    style: textTheme.bodyMedium),
-                                Text(choice.summary, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
-                              ],
-                            ),
-                            trailing: const Icon(Icons.chevron_right),
-                            onPressed: () => _change(choice),
-                          ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Text(
-                          _seenProfiles.isEmpty
-                              ? "Hearth hasn't seen this app's profiles yet. Open it once from Hearth, then come back."
-                              : "Profiles in this app: ${_seenProfiles.join(", ")}. Google TV profiles appear here "
-                                  "once Hearth has seen them.",
-                          style: textTheme.bodySmall?.copyWith(color: Colors.white54),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
+    return SettingsPage.custom(
+      title: widget.app["label"] as String,
+      body: choices == null
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Column(
+                children: [
+                  FocusableSettingsTile(
+                    autofocus: true,
+                    leading: Icon(Icons.switch_account, color: _enabled ? Colors.green : Colors.white54),
+                    title: Text("Pair profiles in ${widget.app["label"]}", style: textTheme.bodyMedium),
+                    trailing: Text(
+                      _enabled ? "On" : "Off",
+                      style: textTheme.bodySmall?.copyWith(color: _enabled ? Colors.green : Colors.white54),
+                    ),
+                    onPressed: _toggleEnabled,
                   ),
-                ),
-        ),
-      ],
+                  if (_enabled) const Divider(),
+                  if (_enabled)
+                    for (final choice in choices)
+                      FocusableSettingsTile(
+                        leading: Icon(choice.kids ? Icons.child_care : Icons.person_outline),
+                        title: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(choice.displayName + (choice.kids ? " (kids)" : ""), style: textTheme.bodyMedium),
+                            Text(choice.summary, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
+                          ],
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onPressed: () => _change(choice),
+                      ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      _seenProfiles.isEmpty
+                          ? "Hearth hasn't seen this app's profiles yet. Open it once from Hearth, then come back."
+                          : "Profiles in this app: ${_seenProfiles.join(", ")}. Google TV profiles appear here "
+                              "once Hearth has seen them.",
+                      style: textTheme.bodySmall?.copyWith(color: Colors.white54),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }

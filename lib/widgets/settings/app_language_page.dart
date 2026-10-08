@@ -21,6 +21,7 @@ import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/settings/settings_choice_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flauncher/widgets/settings/settings_page.dart';
 
 class AppLanguagePage extends StatelessWidget {
   static const String routeName = "app_language_panel";
@@ -32,34 +33,24 @@ class AppLanguagePage extends StatelessWidget {
     AppLocalizations localizations = AppLocalizations.of(context)!;
     return Consumer<SettingsService>(
       builder: (context, service, _) {
-        return Column(
+        return SettingsPage(
+          title: localizations.appLanguage,
           children: [
-            Text(localizations.appLanguage, style: Theme.of(context).textTheme.titleLarge),
-            const Divider(),
-            Expanded(
-              // Built all at once, so the chosen language near the end can take focus.
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    _choice(service, localizations.systemDefault, ""),
-                    _choice(service, localizations.english, "en"),
-                    _choice(service, localizations.spanish, "es"),
-                    _choice(service, localizations.french, "fr"),
-                    _choice(service, localizations.german, "de"),
-                    _choice(service, localizations.italian, "it"),
-                    _choice(service, localizations.portuguese, "pt"),
-                    _choice(service, localizations.russian, "ru"),
-                    _choice(service, localizations.ukrainian, "uk"),
-                    _choice(service, localizations.turkish, "tr"),
-                    _choice(service, localizations.arabic, "ar"),
-                    _choice(service, localizations.hindi, "hi"),
-                    _choice(service, localizations.chinese, "zh"),
-                    _choice(service, localizations.japanese, "ja"),
-                    _choice(service, localizations.korean, "ko"),
-                  ],
-                ),
-              ),
-            ),
+            _choice(service, localizations.systemDefault, ""),
+            _choice(service, localizations.english, "en"),
+            _choice(service, localizations.spanish, "es"),
+            _choice(service, localizations.french, "fr"),
+            _choice(service, localizations.german, "de"),
+            _choice(service, localizations.italian, "it"),
+            _choice(service, localizations.portuguese, "pt"),
+            _choice(service, localizations.russian, "ru"),
+            _choice(service, localizations.ukrainian, "uk"),
+            _choice(service, localizations.turkish, "tr"),
+            _choice(service, localizations.arabic, "ar"),
+            _choice(service, localizations.hindi, "hi"),
+            _choice(service, localizations.chinese, "zh"),
+            _choice(service, localizations.japanese, "ja"),
+            _choice(service, localizations.korean, "ko"),
           ],
         );
       },
