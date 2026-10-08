@@ -21,6 +21,8 @@ import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 
 import '../../providers/settings_service.dart';
+import 'look_settings_page.dart';
+import 'settings_choice_tile.dart';
 
 class ThemesPage extends StatelessWidget {
   static const String routeName = "themes_panel";
@@ -30,178 +32,28 @@ class ThemesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     AppLocalizations localizations = AppLocalizations.of(context)!;
+    final current = context.select<SettingsService, String>((s) => s.themes);
 
-    return Selector<SettingsService, String>(
-      selector: (_, settingsService) => settingsService.themes,
-      builder: (context, currentShape, _) {
-        final settingsService = context.read<SettingsService>();
-
-        return Column(
-          children: [
-            Text(localizations.themes, style: Theme.of(context).textTheme.titleLarge),
-            const Divider(),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    _ShapeRadioTile(
-                      title: 'Default',
-                      value: 'modern',
-                      groupValue: currentShape,
-                      onChanged: (value) => settingsService.setThemes(value!),
-                      autofocus: currentShape == 'modern',
-                    ),
-                    _ShapeRadioTile(
-                      title: 'Premium',
-                      value: 'premium',
-                      groupValue: currentShape,
-                      onChanged: (value) => settingsService.setThemes(value!),
-                      autofocus: currentShape == 'premium',
-                    ),
-                    _ShapeRadioTile(
-                      title: 'Glow',
-                      value: 'glow',
-                      groupValue: currentShape,
-                      onChanged: (value) => settingsService.setThemes(value!),
-                      autofocus: currentShape == 'glow',
-                    ),
-                    _ShapeRadioTile(
-                      title: 'Squircle',
-                      value: 'squircle',
-                      groupValue: currentShape,
-                      onChanged: (value) => settingsService.setThemes(value!),
-                      autofocus: currentShape == 'squircle',
-                    ),
-                    _ShapeRadioTile(
-                      title: 'Classic',
-                      value: 'classic',
-                      groupValue: currentShape,
-                      onChanged: (value) => settingsService.setThemes(value!),
-                      autofocus: currentShape == 'classic',
-                    ),
-                    _ShapeRadioTile(
-                      title: 'Minimal',
-                      value: 'minimal',
-                      groupValue: currentShape,
-                      onChanged: (value) => settingsService.setThemes(value!),
-                      autofocus: currentShape == 'minimal',
-                    ),
-                    _ShapeRadioTile(
-                      title: 'Capsule',
-                      value: 'capsule',
-                      groupValue: currentShape,
-                      onChanged: (value) => settingsService.setThemes(value!),
-                      autofocus: currentShape == 'capsule',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _ShapeRadioTile extends StatefulWidget {
-  final String title;
-  final String value;
-  final String groupValue;
-  final ValueChanged<String?> onChanged;
-  final bool autofocus;
-
-  const _ShapeRadioTile({
-    required this.title,
-    required this.value,
-    required this.groupValue,
-    required this.onChanged,
-    this.autofocus = false,
-  });
-
-  @override
-  State<_ShapeRadioTile> createState() => _ShapeRadioTileState();
-}
-
-class _ShapeRadioTileState extends State<_ShapeRadioTile> {
-  bool _hasFocus = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final isSelected = widget.value == widget.groupValue;
-    final primaryColor = Theme.of(context).colorScheme.primary;
-
-    return RepaintBoundary(
-      child: Actions(
-        actions: <Type, Action<Intent>>{
-          ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
-            widget.onChanged(widget.value);
-            return null;
-          }),
-          ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) {
-            widget.onChanged(widget.value);
-            return null;
-          }),
-        },
-        child: Focus(
-          autofocus: widget.autofocus,
-          onFocusChange: (hasFocus) {
-            setState(() {
-              _hasFocus = hasFocus;
-            });
-            if (hasFocus) {
-              Scrollable.ensureVisible(
-                context,
-                alignment: 0.5,
-                duration: const Duration(milliseconds: 100),
-                curve: Curves.easeOut,
-              );
-            }
-          },
-          child: InkWell(
-            onTap: () {
-              widget.onChanged(widget.value);
-            },
-            focusColor: Colors.transparent,
-            hoverColor: Colors.transparent,
-            splashColor: Colors.transparent,
-            highlightColor: Colors.transparent,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: _hasFocus ? Colors.white.withOpacity(0.05) : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-                border: _hasFocus
-                    ? Border.all(color: primaryColor, width: 2)
-                    : Border.all(color: Colors.transparent, width: 2),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.title,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? Colors.white : Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ),
+    return Column(
+      children: [
+        Text(localizations.themes, style: Theme.of(context).textTheme.titleLarge),
+        const Divider(),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                for (final MapEntry(key: value, value: title) in LookSettingsPage.cardStyles.entries)
+                  SettingsChoiceTile<String>(
+                    title: title,
+                    value: value,
+                    groupValue: current,
+                    onChanged: (value) => context.read<SettingsService>().setThemes(value),
                   ),
-                  if (isSelected)
-                    Icon(Icons.check_circle, color: primaryColor)
-                  else
-                    Icon(Icons.circle_outlined, color: Colors.white38),
-                ],
-              ),
+              ],
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 }

@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/settings_service.dart';
+import 'settings_choice_tile.dart';
 
 class ContinueWatchingCardSizePage extends StatelessWidget {
   static const String routeName = "continue_watching_card_size_panel";
@@ -67,146 +68,22 @@ class ContinueWatchingCardSizePage extends StatelessWidget {
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
-                  children: cardSizePresets.map((preset) {
-                    final height = preset.$1;
-                    final title = preset.$2;
-                    final subtitle = preset.$3;
-                    final isSelected = currentHeight == height;
-
-                    return _CardSizeRadioTile(
-                      title: title,
-                      subtitle: subtitle,
-                      value: height.toString(),
-                      groupValue: currentHeight.toString(),
-                      isSelected: isSelected,
-                      autofocus: isSelected,
-                      onChanged: (value) {
-                        if (value != null) {
-                          settingsService.setContinueWatchingCardSize(value);
-                        }
-                      },
-                    );
-                  }).toList(),
+                  children: [
+                    for (final (height, title, subtitle) in cardSizePresets)
+                      SettingsChoiceTile<int>(
+                        title: title,
+                        subtitle: subtitle,
+                        value: height,
+                        groupValue: currentHeight,
+                        onChanged: (height) => settingsService.setContinueWatchingCardSize(height.toString()),
+                      ),
+                  ],
                 ),
               ),
             ),
           ],
         );
       },
-    );
-  }
-}
-
-class _CardSizeRadioTile extends StatefulWidget {
-  final String title;
-  final String subtitle;
-  final String value;
-  final String groupValue;
-  final bool isSelected;
-  final ValueChanged<String?> onChanged;
-  final bool autofocus;
-
-  const _CardSizeRadioTile({
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.groupValue,
-    required this.isSelected,
-    required this.onChanged,
-    this.autofocus = false,
-  });
-
-  @override
-  State<_CardSizeRadioTile> createState() => _CardSizeRadioTileState();
-}
-
-class _CardSizeRadioTileState extends State<_CardSizeRadioTile> {
-  bool _hasFocus = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
-
-    return RepaintBoundary(
-      child: Actions(
-        actions: <Type, Action<Intent>>{
-          ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
-            widget.onChanged(widget.value);
-            return null;
-          }),
-          ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) {
-            widget.onChanged(widget.value);
-            return null;
-          }),
-        },
-        child: Focus(
-          autofocus: widget.autofocus,
-          onFocusChange: (hasFocus) {
-            setState(() {
-              _hasFocus = hasFocus;
-            });
-            if (hasFocus) {
-              Scrollable.ensureVisible(
-                context,
-                alignment: 0.5,
-                duration: const Duration(milliseconds: 100),
-                curve: Curves.easeOut,
-              );
-            }
-          },
-          child: InkWell(
-            onTap: () {
-              widget.onChanged(widget.value);
-            },
-            focusColor: Colors.transparent,
-            hoverColor: Colors.transparent,
-            splashColor: Colors.transparent,
-            highlightColor: Colors.transparent,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: _hasFocus ? Colors.white.withOpacity(0.05) : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-                border: _hasFocus
-                    ? Border.all(color: primaryColor, width: 2)
-                    : Border.all(color: Colors.transparent, width: 2),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.title,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.normal,
-                                color: widget.isSelected ? Colors.white : Colors.white70,
-                                fontSize: 14,
-                              ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          widget.subtitle,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.white54,
-                                fontSize: 11,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (widget.isSelected)
-                    Icon(Icons.check_circle, color: primaryColor, size: 20)
-                  else
-                    const Icon(Icons.circle_outlined, color: Colors.white38, size: 20),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

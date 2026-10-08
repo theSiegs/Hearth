@@ -19,7 +19,7 @@
 import 'dart:io';
 
 import 'package:flauncher/providers/settings_service.dart';
-import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
+import 'package:flauncher/widgets/settings/settings_choice_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -45,20 +45,10 @@ const List<(String format, String example)> timeFormatPresets = [
   ('HH:mm', '15:45'),
 ];
 
-class DateTimeFormatPage extends StatefulWidget {
+class DateTimeFormatPage extends StatelessWidget {
   static const String routeName = "date_time_format_panel";
 
   const DateTimeFormatPage({Key? key}) : super(key: key);
-
-  @override
-  State<DateTimeFormatPage> createState() => _DateTimeFormatPageState();
-}
-
-class _DateTimeFormatPageState extends State<DateTimeFormatPage> {
-  // We read formatting directly from service, UI updates via Consumer if needed, 
-  // but since we push updates immediately, local state is redundant if using Consumer.
-  // However, for immediate feedback while typing/selecting, local state is fine or just read from provider.
-  // Let's use Consumer for the whole page.
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +56,8 @@ class _DateTimeFormatPageState extends State<DateTimeFormatPage> {
     
     return Consumer<SettingsService>(
       builder: (context, service, _) {
+        // Focus starts on the chosen date format, or the first one when the saved format isn't a preset
+        final bool datePreset = dateFormatPresets.any((preset) => preset.$1 == service.dateFormat);
         return Column(
           children: [
             Text(localizations.dateAndTimeFormat, style: Theme.of(context).textTheme.titleLarge),
@@ -85,24 +77,15 @@ class _DateTimeFormatPageState extends State<DateTimeFormatPage> {
                   ),
                   const SizedBox(height: 8),
                   
-                  ...dateFormatPresets.asMap().entries.map((entry) {
-                    final isSelected = service.dateFormat == entry.value.$1;
-                    return FocusableSettingsTile(
-                      autofocus: entry.key == 0,
-                      leading: Icon(
-                        isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                        color: isSelected ? Theme.of(context).colorScheme.secondary : Colors.grey,
-                      ),
-                      title: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(entry.value.$2),
-                          Text(entry.value.$1, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                        ],
-                      ),
-                      onPressed: () => service.setDateTimeFormat(entry.value.$1, service.timeFormat),
-                    );
-                  }),
+                  for (final (index, (format, example)) in dateFormatPresets.indexed)
+                    SettingsChoiceTile<String>(
+                      autofocus: format == service.dateFormat || (!datePreset && index == 0),
+                      title: example,
+                      subtitle: format,
+                      value: format,
+                      groupValue: service.dateFormat,
+                      onChanged: (format) => service.setDateTimeFormat(format, service.timeFormat),
+                    ),
                   
                   const SizedBox(height: 16),
                   const Divider(),
@@ -114,23 +97,15 @@ class _DateTimeFormatPageState extends State<DateTimeFormatPage> {
                   ),
                   const SizedBox(height: 8),
                   
-                  ...timeFormatPresets.map((preset) {
-                    final isSelected = service.timeFormat == preset.$1;
-                    return FocusableSettingsTile(
-                      leading: Icon(
-                        isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                        color: isSelected ? Theme.of(context).colorScheme.secondary : Colors.grey,
-                      ),
-                      title: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(preset.$2),
-                          Text(preset.$1, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                        ],
-                      ),
-                      onPressed: () => service.setDateTimeFormat(service.dateFormat, preset.$1),
-                    );
-                  }),
+                  for (final (format, example) in timeFormatPresets)
+                    SettingsChoiceTile<String>(
+                      autofocus: false,
+                      title: example,
+                      subtitle: format,
+                      value: format,
+                      groupValue: service.timeFormat,
+                      onChanged: (format) => service.setDateTimeFormat(service.dateFormat, format),
+                    ),
                   const SizedBox(height: 24),
                 ],
               ),
