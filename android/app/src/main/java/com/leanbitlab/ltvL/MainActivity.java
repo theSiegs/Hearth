@@ -32,7 +32,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
 import android.util.Log;
-import android.util.Pair;
 import android.media.tv.TvInputManager;
 import android.media.tv.TvInputInfo;
 import android.media.tv.TvContract;
@@ -44,11 +43,14 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.io.ByteArrayOutputStream;
 import android.app.usage.NetworkStats;
 import android.app.usage.NetworkStatsManager;
@@ -61,9 +63,8 @@ import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.MethodChannel;
 
 import java.io.Serializable;
-import java.util.concurrent.CompletionService;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -87,6 +88,10 @@ public class MainActivity extends FlutterActivity {
     /** Intent extra asking Hearth to open its search: "voice" to start listening right away. */
     static final String EXTRA_OPEN_SEARCH = "hearth_open_search";
     private static final ExecutorService sIoExecutor = Executors.newFixedThreadPool(4);
+    // Builds one app list at a time, so overlapping requests are answered in the order they came.
+    private static final ExecutorService sAppsLoader = Executors.newSingleThreadExecutor();
+    // The app list's PackageManager lookups, in parallel. Separate from sAppsLoader, which waits on them.
+    private static final ExecutorService sAppsExecutor = Executors.newFixedThreadPool(4);
 
     @Override
     public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
@@ -105,7 +110,10 @@ public class MainActivity extends FlutterActivity {
         }
         mMethodChannel.setMethodCallHandler((call, result) -> {
             switch (call.method) {
-                case "getApplications" -> result.success(getApplications());
+                case "getApplications" -> sAppsLoader.execute(() -> {
+                    List<Map<String, Serializable>> applications = getApplications();
+                    runOnUiThread(() -> result.success(applications));
+                });
                 case "getApplicationBanner" -> result.success(getApplicationBanner(call.arguments()));
                 case "getApplicationIcon" -> result.success(getApplicationIcon(call.arguments()));
                 case "launchActivityFromAction" -> result.success(launchActivityFromAction(call.arguments()));
@@ -585,93 +593,61 @@ public class MainActivity extends FlutterActivity {
         );
     }
 
+    /**
+     * Every launchable app: the TV (leanback) ones, then the others not already listed, plus Settings when neither
+     * list has it. The PackageManager lookups run in parallel on sAppsExecutor.
+     */
     private List<Map<String, Serializable>> getApplications() {
-        ExecutorService executor = Executors.newFixedThreadPool(4);
-        CompletionService<Pair<Boolean, List<ResolveInfo>>> queryIntentActivitiesCompletionService = new ExecutorCompletionService<>(
-                executor);
-        queryIntentActivitiesCompletionService.submit(() -> Pair.create(false, queryIntentActivities(false)));
-        queryIntentActivitiesCompletionService.submit(() -> Pair.create(true, queryIntentActivities(true)));
-        List<ResolveInfo> tvActivitiesInfo = null;
-        List<ResolveInfo> nonTvActivitiesInfo = null;
+        List<Map<String, Serializable>> applications = new ArrayList<>();
+        try {
+            List<Callable<List<ResolveInfo>>> queries = Arrays.asList(
+                    () -> queryIntentActivities(false), () -> queryIntentActivities(true));
+            List<Future<List<ResolveInfo>>> lists = sAppsExecutor.invokeAll(queries);
+            List<ResolveInfo> tvActivitiesInfo = resultOr(lists.get(0), Collections.emptyList());
+            List<ResolveInfo> nonTvActivitiesInfo = resultOr(lists.get(1), Collections.emptyList());
 
-        int completed = 0;
-        while (completed < 2) {
-            try {
-                var activitiesInfo = queryIntentActivitiesCompletionService.take().get();
-
-                if (!activitiesInfo.first) {
-                    tvActivitiesInfo = activitiesInfo.second;
-                } else {
-                    nonTvActivitiesInfo = activitiesInfo.second;
-                }
-            } catch (InterruptedException | ExecutionException ignored) {
-            } finally {
-                completed += 1;
-            }
-        }
-
-        if (tvActivitiesInfo == null) tvActivitiesInfo = Collections.emptyList();
-        if (nonTvActivitiesInfo == null) nonTvActivitiesInfo = Collections.emptyList();
-
-        CompletionService<Map<String, Serializable>> completionService = new ExecutorCompletionService<>(executor);
-
-        List<Map<String, Serializable>> applications = new ArrayList<>(
-                tvActivitiesInfo.size() + nonTvActivitiesInfo.size());
-
-        boolean settingsPresent = false;
-        int appCount = 0;
-        for (ResolveInfo tvActivityInfo : tvActivitiesInfo) {
-            if (!settingsPresent) {
-                settingsPresent = tvActivityInfo.activityInfo.packageName.equals("com.android.tv.settings");
-            }
-
-            completionService.submit(() -> buildAppMap(tvActivityInfo.activityInfo, false, null));
-            appCount += 1;
-        }
-
-        for (ResolveInfo nonTvActivityInfo : nonTvActivitiesInfo) {
-            boolean nonDuplicate = true;
-
-            if (!settingsPresent) {
-                settingsPresent = nonTvActivityInfo.activityInfo.packageName.equals("com.android.settings");
-            }
-
+            boolean settingsPresent = false;
+            Set<String> tvPackages = new HashSet<>();
+            List<Callable<Map<String, Serializable>>> builds = new ArrayList<>();
             for (ResolveInfo tvActivityInfo : tvActivitiesInfo) {
-                if (tvActivityInfo.activityInfo.packageName.equals(nonTvActivityInfo.activityInfo.packageName)) {
-                    nonDuplicate = false;
-                    break;
+                String packageName = tvActivityInfo.activityInfo.packageName;
+                settingsPresent |= packageName.equals("com.android.tv.settings");
+                tvPackages.add(packageName);
+                builds.add(() -> buildAppMap(tvActivityInfo.activityInfo, false, null));
+            }
+            for (ResolveInfo nonTvActivityInfo : nonTvActivitiesInfo) {
+                String packageName = nonTvActivityInfo.activityInfo.packageName;
+                settingsPresent |= packageName.equals("com.android.settings");
+                if (!tvPackages.contains(packageName)) {
+                    builds.add(() -> buildAppMap(nonTvActivityInfo.activityInfo, true, null));
                 }
             }
-
-            if (nonDuplicate) {
-                appCount += 1;
-                completionService.submit(() -> buildAppMap(nonTvActivityInfo.activityInfo, true, null));
+            for (Future<Map<String, Serializable>> app : sAppsExecutor.invokeAll(builds)) {
+                Map<String, Serializable> appMap = resultOr(app, null);
+                if (appMap != null) applications.add(appMap);
             }
-        }
 
-        while (appCount > 0) {
-            try {
-                Future<Map<String, Serializable>> appMap = completionService.take();
-                applications.add(appMap.get());
-            } catch (InterruptedException | ExecutionException ignored) {
-            } finally {
-                appCount -= 1;
+            if (!settingsPresent) {
+                ActivityInfo activityInfo = new Intent(Settings.ACTION_SETTINGS)
+                        .resolveActivityInfo(getPackageManager(), 0);
+                if (activityInfo != null) {
+                    applications.add(buildAppMap(activityInfo, false, Settings.ACTION_SETTINGS));
+                }
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
-
-        executor.shutdown();
-
-        if (!settingsPresent) {
-            PackageManager packageManager = getPackageManager();
-            Intent settingsIntent = new Intent(Settings.ACTION_SETTINGS);
-            ActivityInfo activityInfo = settingsIntent.resolveActivityInfo(packageManager, 0);
-
-            if (activityInfo != null) {
-                applications.add(buildAppMap(activityInfo, false, Settings.ACTION_SETTINGS));
-            }
-        }
-
         return applications;
+    }
+
+    /** The finished task's result, or fallback when it threw. */
+    private static <T> T resultOr(Future<T> future, T fallback) throws InterruptedException {
+        try {
+            return future.get();
+        } catch (ExecutionException e) {
+            Log.w(TAG, "App list lookup failed", e.getCause());
+            return fallback;
+        }
     }
 
     public Map<String, Serializable> getApplication(String packageName) {
