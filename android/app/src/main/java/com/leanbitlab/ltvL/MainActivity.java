@@ -19,29 +19,49 @@
 package com.leanbitlab.ltvL;
 
 import android.Manifest;
+import android.app.AppOpsManager;
 import android.app.NotificationManager;
+import android.app.SearchManager;
+import android.app.role.RoleManager;
+import android.app.usage.NetworkStats;
+import android.app.usage.NetworkStatsManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.*;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.media.tv.TvContract;
+import android.media.tv.TvInputInfo;
+import android.media.tv.TvInputManager;
 import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.Build;
-import android.provider.Settings;
-import android.util.Log;
-import android.media.tv.TvInputManager;
-import android.media.tv.TvInputInfo;
-import android.media.tv.TvContract;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Process;
+import android.os.UserHandle;
+import android.os.UserManager;
+import android.provider.Settings;
+import android.speech.RecognizerIntent;
+import android.util.Log;
+import android.view.SoundEffectConstants;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.core.content.FileProvider;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.Serializable;
+import java.lang.ref.WeakReference;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -51,10 +71,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.io.ByteArrayOutputStream;
-import android.app.usage.NetworkStats;
-import android.app.usage.NetworkStatsManager;
-import android.app.AppOpsManager;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
@@ -62,14 +86,6 @@ import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
-
-import java.io.Serializable;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 public class MainActivity extends FlutterActivity {
     /** Intent extra asking Hearth to open its search: "voice" to start listening right away. */
@@ -93,7 +109,7 @@ public class MainActivity extends FlutterActivity {
     // The app list's PackageManager lookups, in parallel. Separate from sAppsLoader, which waits on them.
     private static final ExecutorService sAppsExecutor = Executors.newFixedThreadPool(4);
 
-    private static java.lang.ref.WeakReference<MethodChannel> sMethodChannel;
+    private static WeakReference<MethodChannel> sMethodChannel;
     /** Whether Hearth is the screen in front (between onResume and onPause). */
     private static volatile boolean sInFront;
 
@@ -114,7 +130,7 @@ public class MainActivity extends FlutterActivity {
         // picks the search up with takePendingSearch rather than hearing openSearch.
         handleSearchIntent(getIntent());
         mMethodChannel = new MethodChannel(messenger, METHOD_CHANNEL);
-        sMethodChannel = new java.lang.ref.WeakReference<>(mMethodChannel);
+        sMethodChannel = new WeakReference<>(mMethodChannel);
         mMethodChannel.setMethodCallHandler(this::onMethodCall);
 
         new EventChannel(messenger, APPS_EVENT_CHANNEL).setStreamHandler(new LauncherAppsEventStreamHandler(this));
@@ -159,7 +175,7 @@ public class MainActivity extends FlutterActivity {
             }
             case "openDefaultLauncherSettings" -> result.success(openDefaultLauncherSettings());
             case "openProfileChooser" -> result.success(openProfileChooser());
-            case "getSupportedAbis" -> result.success(java.util.Arrays.asList(Build.SUPPORTED_ABIS));
+            case "getSupportedAbis" -> result.success(Arrays.asList(Build.SUPPORTED_ABIS));
             case "isKidsProfile" -> {
                 boolean kids = ProfileUsers.isKids(this);
                 ProfilePairing.rememberHearthProfile(
@@ -312,7 +328,7 @@ public class MainActivity extends FlutterActivity {
             }
             case "getPackageVersion" -> result.success(getPackageVersion(call.arguments()));
             case "playClickSound" -> {
-                getWindow().getDecorView().playSoundEffect(android.view.SoundEffectConstants.CLICK);
+                getWindow().getDecorView().playSoundEffect(SoundEffectConstants.CLICK);
                 result.success(null);
             }
             default -> result.notImplemented();
@@ -353,7 +369,7 @@ public class MainActivity extends FlutterActivity {
                 ? new Intent(Intent.ACTION_VIEW, Uri.parse(link))
                         .setPackage(LauncherAccessibilityService.GOOGLE_TV_PACKAGE)
                 : new Intent("android.search.action.GLOBAL_SEARCH")
-                        .putExtra(android.app.SearchManager.QUERY, query);
+                        .putExtra(SearchManager.QUERY, query);
         return tryStartActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 
@@ -413,8 +429,7 @@ public class MainActivity extends FlutterActivity {
     }
 
     private Map<String, Object> getHaStatusConfig() {
-        android.content.SharedPreferences prefs =
-                getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, MODE_PRIVATE);
+        SharedPreferences prefs = getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, MODE_PRIVATE);
         Map<String, Object> config = new HashMap<>();
         config.put("url", prefs.getString(HaStatusReporter.URL_KEY, null));
         config.put("webhookId", prefs.getString(HaStatusReporter.WEBHOOK_KEY, null));
@@ -446,7 +461,7 @@ public class MainActivity extends FlutterActivity {
 
     /** What only Java knows for a profile change: another profile's agent has reported (or it can't have one). */
     private boolean isProfileDataReady() {
-        android.os.UserHandle profileUser = ProfileApps.activeProfileUser(this);
+        UserHandle profileUser = ProfileApps.activeProfileUser(this);
         long serial = ProfileUsers.settledSerial(this);
         return profileUser == null || AgentHub.hasReported(serial) || !AgentHub.canHaveAgent(this, profileUser);
     }
@@ -554,7 +569,7 @@ public class MainActivity extends FlutterActivity {
     }
 
     public Map<String, Serializable> getApplication(String packageName) {
-        Map<String, Serializable> map = new java.util.HashMap<>();
+        Map<String, Serializable> map = new HashMap<>();
         if (packageName.equals(getPackageName())) {
             return map;
         }
@@ -714,9 +729,9 @@ public class MainActivity extends FlutterActivity {
         // On Google TV the Home intent always resolves to Google TV's own home (higher priority), so check the
         // role the user picked instead: holding it also keeps kids profiles from suspending the launcher.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            android.app.role.RoleManager roleManager = getSystemService(android.app.role.RoleManager.class);
-            if (roleManager != null && roleManager.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME)) {
-                return roleManager.isRoleHeld(android.app.role.RoleManager.ROLE_HOME);
+            RoleManager roleManager = getSystemService(RoleManager.class);
+            if (roleManager != null && roleManager.isRoleAvailable(RoleManager.ROLE_HOME)) {
+                return roleManager.isRoleHeld(RoleManager.ROLE_HOME);
             }
         }
         Intent intent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME);
@@ -857,10 +872,10 @@ public class MainActivity extends FlutterActivity {
         int mode;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             mode = appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
-                    android.os.Process.myUid(), getPackageName());
+                    Process.myUid(), getPackageName());
         } else {
             mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
-                    android.os.Process.myUid(), getPackageName());
+                    Process.myUid(), getPackageName());
         }
 
         if (mode == AppOpsManager.MODE_ALLOWED) {
@@ -869,8 +884,8 @@ public class MainActivity extends FlutterActivity {
 
         if (mode == AppOpsManager.MODE_DEFAULT) {
             // The app op was never set either way, so the permission's own grant decides.
-            return checkPermission(Manifest.permission.PACKAGE_USAGE_STATS, android.os.Process.myPid(),
-                    android.os.Process.myUid()) == PackageManager.PERMISSION_GRANTED;
+            return checkPermission(Manifest.permission.PACKAGE_USAGE_STATS, Process.myPid(),
+                    Process.myUid()) == PackageManager.PERMISSION_GRANTED;
         }
 
         return false;
@@ -961,9 +976,9 @@ public class MainActivity extends FlutterActivity {
      * always the supervised kids (kept installed so the launcher can't strip them), and — when {@code includeAdults}
      * — the other adult profiles too (plain install). Reached only from the Settings action, so parent-confirmed.
      */
-    private void runAddToProfiles(boolean includeAdults, io.flutter.plugin.common.MethodChannel.Result result) {
+    private void runAddToProfiles(boolean includeAdults, MethodChannel.Result result) {
         try (SelfAdb shell = SelfAdb.open(this)) {
-            java.util.List<String> log = new java.util.ArrayList<>(
+            List<String> log = new ArrayList<>(
                     ProfileAppAccess.addToProfiles(this, shell, supervisedKidUserIds(), true, true));
             if (includeAdults) {
                 log.addAll(ProfileAppAccess.addToProfiles(this, shell, adultProfileUserIds(), false, true));
@@ -975,11 +990,11 @@ public class MainActivity extends FlutterActivity {
     }
 
     /** Parent-initiated removal from every other profile (kids and adults): the clean undo of add. */
-    private void runRemoveFromProfiles(io.flutter.plugin.common.MethodChannel.Result result) {
+    private void runRemoveFromProfiles(MethodChannel.Result result) {
         try (SelfAdb shell = SelfAdb.open(this)) {
-            java.util.List<Integer> all = new java.util.ArrayList<>(supervisedKidUserIds());
+            List<Integer> all = new ArrayList<>(supervisedKidUserIds());
             all.addAll(adultProfileUserIds());
-            java.util.List<String> log = ProfileAppAccess.removeFromProfiles(this, shell, all, true);
+            List<String> log = ProfileAppAccess.removeFromProfiles(this, shell, all, true);
             runOnUiThread(() -> result.success(log));
         } catch (Exception e) {
             runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
@@ -987,15 +1002,15 @@ public class MainActivity extends FlutterActivity {
     }
 
     /** Read-only: Hearth/HearthTube state across the other profiles, each row tagged supervised (kid) or not. */
-    private void runProfilesState(io.flutter.plugin.common.MethodChannel.Result result) {
+    private void runProfilesState(MethodChannel.Result result) {
         try (SelfAdb shell = SelfAdb.open(this)) {
-            java.util.List<Integer> kids = supervisedKidUserIds();
-            java.util.List<Integer> all = new java.util.ArrayList<>(kids);
+            List<Integer> kids = supervisedKidUserIds();
+            List<Integer> all = new ArrayList<>(kids);
             all.addAll(adultProfileUserIds());
-            java.util.Map<Integer, String> names = profileDisplayNames();
-            java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
+            Map<Integer, String> names = profileDisplayNames();
+            List<Map<String, Object>> rows = new ArrayList<>();
             for (ProfileAppAccess.AppStatus s : ProfileAppAccess.state(this, shell, all)) {
-                java.util.Map<String, Object> row = new java.util.HashMap<>();
+                Map<String, Object> row = new HashMap<>();
                 row.put("userId", s.userId);
                 row.put("packageName", s.packageName);
                 row.put("installed", s.installed);
@@ -1016,17 +1031,17 @@ public class MainActivity extends FlutterActivity {
      * passes); see {@link LauncherAccessibilityService#allowGoogleTvTemporarily()}.
      */
     private boolean openGoogleTvHome() {
-        final String googleTv = "com.google.android.apps.tv.launcherx";
+        final String googleTv = LauncherAccessibilityService.GOOGLE_TV_PACKAGE;
         LauncherAccessibilityService.allowGoogleTvTemporarily();
-        android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_MAIN)
-                .addCategory(android.content.Intent.CATEGORY_HOME)
+        Intent intent = new Intent(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_HOME)
                 .setPackage(googleTv)
-                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         if (intent.resolveActivity(getPackageManager()) == null) {
-            android.content.Intent launch = getPackageManager().getLeanbackLaunchIntentForPackage(googleTv);
+            Intent launch = getPackageManager().getLeanbackLaunchIntentForPackage(googleTv);
             if (launch == null) launch = getPackageManager().getLaunchIntentForPackage(googleTv);
             if (launch == null) return false;
-            intent = launch.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent = launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         }
         return tryStartActivity(intent);
     }
@@ -1038,12 +1053,12 @@ public class MainActivity extends FlutterActivity {
     }
 
     /** The SUPERVISED kid profiles' user ids — Family Link-supervised profiles of this user. */
-    private java.util.List<Integer> supervisedKidUserIds() {
+    private List<Integer> supervisedKidUserIds() {
         return profileUserIds(true);
     }
 
     /** The OTHER ADULT profiles' user ids — secondary profiles that are NOT supervised (grown-ups). */
-    private java.util.List<Integer> adultProfileUserIds() {
+    private List<Integer> adultProfileUserIds() {
         return profileUserIds(false);
     }
 
@@ -1053,12 +1068,12 @@ public class MainActivity extends FlutterActivity {
      * NOTE: the adult branch is unverified on a real 2-adult TV (no test device yet); confirm getUserProfiles()
      * returns adult Google TV profiles there.
      */
-    private java.util.List<Integer> profileUserIds(boolean wantSupervised) {
-        java.util.List<Integer> ids = new java.util.ArrayList<>();
-        android.os.UserManager um = (android.os.UserManager) getSystemService(android.content.Context.USER_SERVICE);
+    private List<Integer> profileUserIds(boolean wantSupervised) {
+        List<Integer> ids = new ArrayList<>();
+        UserManager um = (UserManager) getSystemService(Context.USER_SERVICE);
         if (um == null) return ids;
-        android.os.UserHandle me = android.os.Process.myUserHandle();
-        for (android.os.UserHandle profile : um.getUserProfiles()) {
+        UserHandle me = Process.myUserHandle();
+        for (UserHandle profile : um.getUserProfiles()) {
             if (profile.equals(me)) continue;
             long serial = um.getSerialNumberForUser(profile);
             boolean supervised = Boolean.TRUE.equals(ProfileUsers.isSupervised(this, serial));
@@ -1069,24 +1084,24 @@ public class MainActivity extends FlutterActivity {
         return ids;
     }
 
-    /** The integer user id behind a {@link android.os.UserHandle} (needed for {@code pm --user}); -1 if unknown. */
-    private static int userIdOf(android.os.UserHandle handle) {
+    /** The integer user id behind a {@link UserHandle} (needed for {@code pm --user}); -1 if unknown. */
+    private static int userIdOf(UserHandle handle) {
         try {
             // UserHandle.getIdentifier() is @hide, so reach it reflectively; fall back to parsing "UserHandle{N}".
-            return (int) android.os.UserHandle.class.getMethod("getIdentifier").invoke(handle);
+            return (int) UserHandle.class.getMethod("getIdentifier").invoke(handle);
         } catch (Exception e) {
-            java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d+").matcher(String.valueOf(handle));
+            Matcher m = Pattern.compile("\\d+").matcher(String.valueOf(handle));
             return m.find() ? Integer.parseInt(m.group()) : -1;
         }
     }
 
     /** Best display name per profile user id (the name Hearth learned from Google TV's chooser), for the list. */
-    private java.util.Map<Integer, String> profileDisplayNames() {
-        java.util.Map<Integer, String> names = new java.util.HashMap<>();
-        android.os.UserManager um = (android.os.UserManager) getSystemService(android.content.Context.USER_SERVICE);
+    private Map<Integer, String> profileDisplayNames() {
+        Map<Integer, String> names = new HashMap<>();
+        UserManager um = (UserManager) getSystemService(Context.USER_SERVICE);
         if (um == null) return names;
-        android.os.UserHandle me = android.os.Process.myUserHandle();
-        for (android.os.UserHandle profile : um.getUserProfiles()) {
+        UserHandle me = Process.myUserHandle();
+        for (UserHandle profile : um.getUserProfiles()) {
             if (profile.equals(me)) continue;
             int userId = userIdOf(profile);
             if (userId < 0) continue;
@@ -1099,10 +1114,10 @@ public class MainActivity extends FlutterActivity {
     /** The TV's LAN address, for the Home Assistant integration's host field. */
     private String getLocalIpAddress() {
         try {
-            for (java.net.NetworkInterface nif : java.util.Collections.list(java.net.NetworkInterface.getNetworkInterfaces())) {
+            for (NetworkInterface nif : Collections.list(NetworkInterface.getNetworkInterfaces())) {
                 if (!nif.isUp() || nif.isLoopback()) continue;
-                for (java.net.InetAddress address : java.util.Collections.list(nif.getInetAddresses())) {
-                    if (address instanceof java.net.Inet4Address && address.isSiteLocalAddress()) {
+                for (InetAddress address : Collections.list(nif.getInetAddresses())) {
+                    if (address instanceof Inet4Address && address.isSiteLocalAddress()) {
                         return address.getHostAddress();
                     }
                 }
@@ -1342,11 +1357,11 @@ public class MainActivity extends FlutterActivity {
     private boolean installApk(String path) {
         if (path == null) return false;
         try {
-            java.io.File apkFile = new java.io.File(path);
+            File apkFile = new File(path);
             if (!apkFile.exists()) return false;
             if (SessionInstaller.install(this, apkFile)) return true;
 
-            Uri apkUri = androidx.core.content.FileProvider.getUriForFile(
+            Uri apkUri = FileProvider.getUriForFile(
                     this, getPackageName() + ".fileprovider", apkFile);
 
             Intent intent = new Intent(Intent.ACTION_VIEW);
@@ -1408,7 +1423,7 @@ public class MainActivity extends FlutterActivity {
     static void notifyProfileChanged() {
         MethodChannel channel = sMethodChannel != null ? sMethodChannel.get() : null;
         if (channel == null) return;
-        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> channel.invokeMethod("profileChanged", null));
+        new Handler(Looper.getMainLooper()).post(() -> channel.invokeMethod("profileChanged", null));
     }
 
     /**
@@ -1418,11 +1433,11 @@ public class MainActivity extends FlutterActivity {
     static void notifyProfileSwitching(String name) {
         MethodChannel channel = sMethodChannel != null ? sMethodChannel.get() : null;
         if (channel == null || name == null) return;
-        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> channel.invokeMethod("profileSwitching", name));
+        new Handler(Looper.getMainLooper()).post(() -> channel.invokeMethod("profileSwitching", name));
     }
 
     @Override
-    protected void onCreate(android.os.Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // In another Google TV profile's user Hearth is that profile's agent, not a home screen: the first time
         // it's started there it hides this screen from that profile's home and keeps a quiet connection instead.
@@ -1443,7 +1458,7 @@ public class MainActivity extends FlutterActivity {
         super.onResume();
         sInFront = true;
         // Another profile on: make sure its agent runs (starting it needs Hearth's window visible, as now)
-        android.os.UserHandle profileUser = ProfileApps.activeProfileUser(this);
+        UserHandle profileUser = ProfileApps.activeProfileUser(this);
         if (profileUser != null) AgentHub.ensureAgent(this, ProfileUsers.settledSerial(this), profileUser);
     }
 
@@ -1456,11 +1471,11 @@ public class MainActivity extends FlutterActivity {
     /** Listens with the TV's speech recognizer (Google's on Google TV) and resolves with what was said, or null. */
     private void startVoiceSearch(MethodChannel.Result result) {
         if (mPendingVoiceResult != null) mPendingVoiceResult.success(null);
-        Intent intent = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                        android.speech.RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
-                .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Search films and shows")
-                .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
+                .putExtra(RecognizerIntent.EXTRA_PROMPT, "Search films and shows")
+                .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
         try {
             mPendingVoiceResult = result;
             startActivityForResult(intent, VOICE_REQUEST);
@@ -1477,7 +1492,7 @@ public class MainActivity extends FlutterActivity {
             mPendingVoiceResult = null;
             String text = null;
             if (resultCode == RESULT_OK && data != null) {
-                List<String> said = data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);
+                List<String> said = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
                 if (said != null && !said.isEmpty()) text = said.get(0);
             }
             if (pending != null) pending.success(text);
