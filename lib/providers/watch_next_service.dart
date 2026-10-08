@@ -79,17 +79,13 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
   static bool _isFinished(WatchNextProgram p) =>
       p.watchNextType == 0 && p.duration > 0 && p.playbackPosition >= p.duration * finishedFraction;
 
-  // All Google TV profiles share one Android user and so one Watch Next list. When an entry appears or is watched
-  // again, Hearth gives it to the profile that last used that app on the TV (so watching on a phone lands with
-  // whoever last used the app here), and shows each profile its own. Entries from before tracking are hidden, and
-  // so are changes to an app no profile has used here since: better hidden than shown to the wrong person.
-  // Version 2 started over: owners given before Hearth knew profiles by their lasting key could be wrong.
+  // All Google TV profiles share one Watch Next list. An entry belongs to the profile that last used its app here;
+  // entries with no known owner are hidden.
   static const _ownershipKey = "watch_next_owners_v2";
   Map<String, dynamic> _ownership = {};
   bool _ownershipLoaded = false;
-  // The active profile's key (owners are saved by key), and its name: owners saved before keys are names.
+  // The active profile's key; owners are saved by key.
   String? _activeProfile;
-  String? _activeProfileName;
 
   static String _key(WatchNextProgram p) => "${p.packageName}|${p.id}";
 
@@ -98,7 +94,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
     final owner = (_ownership[_key(p)] as Map?)?["owner"] as String?;
     if (!_ownershipLoaded) return true;
     if (owner == null || _activeProfile == null) return false;
-    return owner == _activeProfile || (_activeProfileName != null && owner == _activeProfileName);
+    return owner == _activeProfile;
   }
 
   /// Records the active profile as the owner of entries that are new or were watched again since last time.
@@ -110,7 +106,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
         _ownership = raw == null ? {} : (jsonDecode(raw) as Map).cast<String, dynamic>();
         _ownershipLoaded = true;
         if (raw == null) {
-          await prefs.remove("watch_next_owners"); // version 1
+          await prefs.remove("watch_next_owners"); // drop the v1 store
           // First run: what's already there predates tracking, so it has no owner.
           for (final p in programs) {
             _ownership[_key(p)] = {"owner": null, "t": p.lastEngagementTime};
@@ -118,7 +114,6 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
         }
       }
       _activeProfile = await _channel.getActiveProfileKey();
-      _activeProfileName = await _channel.getActiveProfileName();
       final appUsers = await _channel.getAppLastProfiles();
       bool changed = false;
       final keys = <String>{};
@@ -128,7 +123,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
         keys.add(key);
         final entry = _ownership[key] as Map?;
         if (entry == null || entry["t"] != p.lastEngagementTime) {
-          // Only an app user known by profile key (names were saved before keys, when they could be wrong)
+          // Only a profile key ("user:11") makes an owner
           final appUser = appUsers[p.packageName] as String?;
           _ownership[key] = {
             "owner": appUser != null && appUser.startsWith("user:") ? appUser : entry?["owner"],
