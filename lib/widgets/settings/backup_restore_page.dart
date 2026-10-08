@@ -90,7 +90,7 @@ class BackupRestorePage extends StatelessWidget {
             constraints: const BoxConstraints(maxHeight: 300),
             child: FutureBuilder<List<BackupFileEntry>>(
               future: context.read<BackupService>().getBackupFiles(),
-              builder: (context, snapshot) {
+              builder: (_, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const SizedBox(
                     height: 100,
@@ -123,7 +123,7 @@ class BackupRestorePage extends StatelessWidget {
                   shrinkWrap: true,
                   cacheExtent: 1000,
                   itemCount: entries.length,
-                  itemBuilder: (context, index) {
+                  itemBuilder: (itemContext, index) {
                     final entry = entries[index];
                     return FocusableSettingsTile(
                       leading: const Icon(Icons.settings_backup_restore),
@@ -132,13 +132,13 @@ class BackupRestorePage extends StatelessWidget {
                         children: [
                           Text(
                             entry.name,
-                            style: Theme.of(context).textTheme.bodyMedium,
+                            style: Theme.of(itemContext).textTheme.bodyMedium,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
                           Text(
                             "${_formatDate(entry.lastModified)} (${_formatSize(entry.size)})",
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            style: Theme.of(itemContext).textTheme.bodySmall?.copyWith(
                                   color: Colors.grey,
                                 ),
                           ),
@@ -146,6 +146,7 @@ class BackupRestorePage extends StatelessWidget {
                       ),
                       onPressed: () {
                         Navigator.of(dialogContext).pop();
+                        // The page's context, as this list closes before the import ends
                         _confirmFileImport(context, localizations, entry);
                       },
                     );
