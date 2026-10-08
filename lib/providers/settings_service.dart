@@ -107,6 +107,9 @@ const String ACCENT_COLOR_AMBER = "FFAB00";
 const String ACCENT_COLOR_ROSE = "FF4081";
 const String ACCENT_COLOR_ICE_BLUE = "80D8FF";
 
+/// An "RRGGBB" accent hex as an opaque color; one that doesn't parse is purple.
+Color accentColorFromHex(String hex) => Color(int.tryParse("0xFF$hex") ?? 0xFF7C4DFF);
+
 class SettingsService extends ChangeNotifier {
   static final defaultDateFormat = "EEE, MMM d";
   static final defaultTimeFormat = "h:mm a";
@@ -336,7 +339,7 @@ class SettingsService extends ChangeNotifier {
 
   String get accentColorHex => _string(_accentColorKey, ACCENT_COLOR_PURPLE);
 
-  Color get accentColor => Color(int.tryParse("0xFF$accentColorHex") ?? 0xFF7C4DFF);
+  Color get accentColor => accentColorFromHex(accentColorHex);
 
   Future<void> importSettingsMap(Map<String, dynamic> settingsMap) async {
     for (final entry in settingsMap.entries) {
