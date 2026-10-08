@@ -17,6 +17,7 @@
  */
 
 import 'package:flauncher/database.dart';
+import 'package:flauncher/models/category.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/drift.dart' hide isNull;
 
@@ -89,6 +90,16 @@ void main() {
     final category = await database.customSelect("SELECT * FROM categories WHERE name = 'Test';").getSingle();
     expect(category.read<String>("name"), "Test");
     expect(category.read<int>("order"), 2);
+  });
+
+  test("a category saved with only a name gets Category's defaults", () async {
+    await database.insertCategory(CategoriesCompanion.insert(name: "Test", order: 0));
+
+    final category = (await database.getCategories()).single;
+    expect(category.rowHeight, Category.RowHeight);
+    expect(category.columnsCount, Category.ColumnsCount);
+    expect(category.sort, Category.Sort);
+    expect(category.type, Category.Type);
   });
 
   test("deleteCategory", () async {
