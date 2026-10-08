@@ -181,6 +181,7 @@ public class MainActivity extends FlutterActivity {
                 }
                 case "removeHearthFromProfiles" -> sIoExecutor.execute(() -> runRemoveFromProfiles(result));
                 case "getHearthProfilesState" -> sIoExecutor.execute(() -> runProfilesState(result));
+                case "uninstallHearth" -> result.success(uninstallSelf());
                 case "voiceSearch" -> startVoiceSearch(result);
                 case "getAppLastProfiles" -> {
                     Map<String, Object> users = new HashMap<>(getSharedPreferences("ltv_app_last_profile", MODE_PRIVATE).getAll());
@@ -1395,6 +1396,19 @@ public class MainActivity extends FlutterActivity {
             runOnUiThread(() -> result.success(rows));
         } catch (Exception e) {
             runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
+        }
+    }
+
+    /** Opens Android's uninstall screen for Hearth itself. The Settings flow runs the profile cleanup first. */
+    private boolean uninstallSelf() {
+        try {
+            android.content.Intent intent = new android.content.Intent(
+                    android.content.Intent.ACTION_DELETE, android.net.Uri.parse("package:" + getPackageName()));
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 
