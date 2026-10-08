@@ -1,6 +1,4 @@
 
-import 'dart:typed_data';
-
 import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:flauncher/providers/apps_service.dart';
@@ -8,6 +6,8 @@ import 'package:flauncher/widgets/add_to_category_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
+
+import 'app_icon.dart';
 
 class AppDetailsPage extends StatelessWidget {
   static const String routeName = "app_details_page";
@@ -26,15 +26,7 @@ class AppDetailsPage extends StatelessWidget {
       children: [
         Row(
           children: [
-            FutureBuilder<Uint8List>(
-              future: appsService.getAppIcon(application.packageName),
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  return Image.memory(snapshot.data!, width: 50, height: 50);
-                }
-                return const Icon(Icons.android, size: 50);
-              },
-            ),
+            AppIcon(application.packageName, size: 50),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
