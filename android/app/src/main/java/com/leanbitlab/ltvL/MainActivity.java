@@ -1653,29 +1653,19 @@ public class MainActivity extends FlutterActivity {
             return true;
         }
 
+        // This build's own listener only: the release and debug builds share a class name but not a package.
+        ComponentName listener = new ComponentName(this, LauncherNotificationListenerService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            if (nm != null) {
-                ComponentName cn = new ComponentName(this, LauncherNotificationListenerService.class);
-                if (nm.isNotificationListenerAccessGranted(cn)) {
-                    return true;
-                }
+            if (nm != null && nm.isNotificationListenerAccessGranted(listener)) {
+                return true;
             }
         }
 
-        String packageName = getPackageName();
         String flat = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
-        if (flat != null && !flat.isEmpty()) {
-            if (flat.contains(packageName) || flat.contains("com.leanbitlab.ltvL")) {
-                return true;
-            }
-            String[] names = flat.split(":");
-            for (String name : names) {
-                if (name.contains(packageName) || name.contains("com.leanbitlab.ltvL")) {
-                    return true;
-                }
-                ComponentName cn = ComponentName.unflattenFromString(name);
-                if (cn != null && (cn.getPackageName().equals(packageName) || cn.getPackageName().contains("leanbitlab"))) {
+        if (flat != null) {
+            for (String name : flat.split(":")) {
+                if (listener.equals(ComponentName.unflattenFromString(name))) {
                     return true;
                 }
             }
