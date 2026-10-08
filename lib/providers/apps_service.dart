@@ -57,7 +57,6 @@ class AppsService extends ChangeNotifier {
     _fallbackCategoryCache = null;
   }
 
-  // Cached SharedPreferences instance to avoid repeated disk I/O
   SharedPreferences? _prefs;
   Future<SharedPreferences> get _prefsAsync async {
     _prefs ??= await SharedPreferences.getInstance();
@@ -210,9 +209,7 @@ class AppsService extends ChangeNotifier {
         _applications.values.where((app) => !app.hidden).toList();
     final pool = Pool(10);
     for (var app in visibleApps) {
-      // Don't await, let it run in background with concurrency limit
       pool.withResource(() => getAppIcon(app.packageName));
-      // Also cache banner if it's likely to be needed soon
       pool.withResource(() => getAppBanner(app.packageName));
     }
   }
@@ -254,8 +251,7 @@ class AppsService extends ChangeNotifier {
     });
   }
 
-  /// Ensures that "TV Apps" section is placed above "Non-TV Apps" section by default.
-  /// This fixes existing installs where "Non-TV Apps" was previously created at order 0.
+  /// One-time migration: moves "TV Apps" above "Non-TV Apps".
   Future<void> _ensureTvAppsSectionOrder() async {
     final prefs = await _prefsAsync;
     const migrationKey = "tv_apps_section_order_default_v1";

@@ -234,8 +234,7 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
     // Unknown profile (Hearth can't tell yet): leave the layout alone rather than guess.
     if (key == null) return;
 
-    // Layouts are saved under the profile's key; before keys they were saved under its name, so an owner that is
-    // this profile's name is this profile, and a layout saved under the name is its own.
+    // Layouts are keyed by profile key; older ones by name, so a name match counts as this profile.
     final String? owner = _sharedPreferences.getString(layoutOwnerKey);
     if (owner == key || (owner != null && owner == name)) {
       if (owner != key) await _sharedPreferences.setString(layoutOwnerKey, key);
