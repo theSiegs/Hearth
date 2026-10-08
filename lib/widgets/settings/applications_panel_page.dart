@@ -43,10 +43,19 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
   bool _isSwitchingViaKeyboard = false;
 
   final List<_TabData> _tabs = [
-    _TabData(0, Icons.tv, (l) => l.tvApplications),
-    _TabData(1, Icons.android, (l) => l.nonTvApplications),
-    _TabData(2, Icons.star, (l) => l.favoriteApps),
-    _TabData(3, Icons.visibility_off_outlined, (l) => l.hiddenApplications),
+    _TabData(0, Icons.tv, (l) => l.tvApplications,
+        (apps) => apps.applications.where((app) => !app.sideloaded && !app.hidden).toList()),
+    _TabData(1, Icons.android, (l) => l.nonTvApplications,
+        (apps) => apps.applications.where((app) => app.sideloaded && !app.hidden).toList()),
+    _TabData(2, Icons.star, (l) => l.favoriteApps, (apps) {
+      final favorites = apps.categories.firstWhere(
+        (category) => category.name == 'Favorites',
+        orElse: () => Category(name: 'Favorites'),
+      );
+      return favorites.applications.where((app) => !app.hidden).toList();
+    }),
+    _TabData(3, Icons.visibility_off_outlined, (l) => l.hiddenApplications,
+        (apps) => apps.applications.where((app) => app.hidden).toList()),
   ];
 
   late List<FocusNode> _tabFocusNodes;
@@ -87,13 +96,13 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
         Expanded(
           child: Shortcuts(
             shortcuts: <LogicalKeySet, Intent>{
-              LogicalKeySet(LogicalKeyboardKey.arrowLeft): const ChangeTabIntent(-1),
-              LogicalKeySet(LogicalKeyboardKey.arrowRight): const ChangeTabIntent(1),
+              LogicalKeySet(LogicalKeyboardKey.arrowLeft): const _ChangeTabIntent(-1),
+              LogicalKeySet(LogicalKeyboardKey.arrowRight): const _ChangeTabIntent(1),
             },
             child: Actions(
               actions: <Type, Action<Intent>>{
-                ChangeTabIntent: ChangeTabAction(this),
-                MoveFocusToTabIntent: MoveFocusToTabAction(this),
+                _ChangeTabIntent: _ChangeTabAction(this),
+                _MoveFocusToTabIntent: _MoveFocusToTabAction(this),
               },
               child: _buildCurrentTab(),
             ),
@@ -115,8 +124,6 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
   }
 
   void changeTab(int direction) {
-    // ... (existing code, ensure it matches previous edits)
-
     final newIndex = (_selectedIndex + direction).clamp(0, _tabs.length - 1);
     if (newIndex != _selectedIndex) {
       final localizations = AppLocalizations.of(context)!;
@@ -156,15 +163,14 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
           child: Builder(builder: (context) {
             final focused = Focus.of(context).hasFocus;
             final selected = _selectedIndex == index;
-            return navButton(selected, focused, index, title, icon);
+            return _navButton(selected, focused, index, title, icon);
           }),
         ),
       ),
     );
   }
 
-  Widget navButton(bool selected, bool focused, int index, String title, IconData icon) {
-    // ... (same)
+  Widget _navButton(bool selected, bool focused, int index, String title, IconData icon) {
     return InkWell(
       canRequestFocus: false,
       focusColor: Colors.transparent,
@@ -192,141 +198,59 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
     );
   }
 
-  Widget _buildCurrentTab() {
-    // ... (same)
-    switch (_selectedIndex) {
-      case 0:
-        return _TVTab();
-      case 1:
-        return _SideloadedTab();
-      case 2:
-        return _FavoritesTab();
-      case 3:
-        return _HiddenTab();
-      default:
-        return Container();
-    }
-  }
+  // Keyed by tab, so each tab's list starts fresh and its first app takes focus
+  Widget _buildCurrentTab() => _AppsTab(_tabs[_selectedIndex].apps, key: ValueKey(_selectedIndex));
 }
 
 class _TabData {
   final int index;
   final IconData icon;
   final String Function(AppLocalizations) getTitle;
+  final List<App> Function(AppsService) apps;
 
-  _TabData(this.index, this.icon, this.getTitle);
+  _TabData(this.index, this.icon, this.getTitle, this.apps);
 }
 
-class MoveFocusToTabIntent extends Intent {
-  const MoveFocusToTabIntent();
+class _MoveFocusToTabIntent extends Intent {
+  const _MoveFocusToTabIntent();
 }
 
-class MoveFocusToTabAction extends Action<MoveFocusToTabIntent> {
+class _MoveFocusToTabAction extends Action<_MoveFocusToTabIntent> {
   final _ApplicationsPanelPageState state;
-  MoveFocusToTabAction(this.state);
+  _MoveFocusToTabAction(this.state);
   @override
-  Object? invoke(MoveFocusToTabIntent intent) {
+  Object? invoke(_MoveFocusToTabIntent intent) {
     state.focusCurrentTab();
     return null;
   }
 }
 
-class ChangeTabIntent extends Intent {
+class _ChangeTabIntent extends Intent {
   final int direction;
-  const ChangeTabIntent(this.direction);
+  const _ChangeTabIntent(this.direction);
 }
 
-class ChangeTabAction extends Action<ChangeTabIntent> {
+class _ChangeTabAction extends Action<_ChangeTabIntent> {
   final _ApplicationsPanelPageState state;
 
-  ChangeTabAction(this.state);
+  _ChangeTabAction(this.state);
 
   @override
-  Object? invoke(ChangeTabIntent intent) {
+  Object? invoke(_ChangeTabIntent intent) {
     state.changeTab(intent.direction);
     return null;
   }
 }
 
-class _TVTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Selector<AppsService, List<App>>(
-        selector: (_, appsService) => appsService.applications.where((app) => !app.sideloaded && !app.hidden).toList(),
-        builder: (context, applications, _) {
-          if (applications.isEmpty) {
-            return const _EmptyListPlaceholder("No applications found", autofocus: true);
-          }
-          return ListView(
-            children: applications
-                .asMap()
-                .entries
-                .map((entry) => EnsureVisible(
-                      key: ValueKey(entry.value.packageName),
-                      alignment: 0.5,
-                      child: _AppListItem(entry.value, autofocus: entry.key == 0, isFirst: entry.key == 0),
-                    ))
-                .toList(),
-          );
-        },
-      );
-}
+/// One tab's apps; the first one takes focus.
+class _AppsTab extends StatelessWidget {
+  final List<App> Function(AppsService) apps;
 
-class _SideloadedTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Selector<AppsService, List<App>>(
-        selector: (_, appsService) => appsService.applications.where((app) => app.sideloaded && !app.hidden).toList(),
-        builder: (context, applications, _) {
-          if (applications.isEmpty) {
-            return const _EmptyListPlaceholder("No applications found", autofocus: true);
-          }
-          return ListView(
-            children: applications
-                .asMap()
-                .entries
-                .map((entry) => EnsureVisible(
-                      key: ValueKey(entry.value.packageName),
-                      alignment: 0.5,
-                      child: _AppListItem(entry.value, autofocus: entry.key == 0, isFirst: entry.key == 0),
-                    ))
-                .toList(),
-          );
-        },
-      );
-}
+  const _AppsTab(this.apps, {super.key});
 
-class _FavoritesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Selector<AppsService, List<App>>(
-        selector: (_, appsService) {
-          final favorites = appsService.categories.firstWhere(
-            (category) => category.name == 'Favorites',
-            orElse: () => Category(name: 'Favorites'),
-          );
-          return favorites.applications.where((app) => !app.hidden).toList();
-        },
-        builder: (context, applications, _) {
-          if (applications.isEmpty) {
-            return const _EmptyListPlaceholder("No applications found", autofocus: true);
-          }
-          return ListView(
-            children: applications
-                .asMap()
-                .entries
-                .map((entry) => EnsureVisible(
-                      key: ValueKey(entry.value.packageName),
-                      alignment: 0.5,
-                      child: _AppListItem(entry.value, autofocus: entry.key == 0, isFirst: entry.key == 0),
-                    ))
-                .toList(),
-          );
-        },
-      );
-}
-
-class _HiddenTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Selector<AppsService, List<App>>(
-        selector: (_, appsService) => appsService.applications.where((app) => app.hidden).toList(),
+        selector: (_, appsService) => apps(appsService),
         builder: (context, applications, _) {
           if (applications.isEmpty) {
             return const _EmptyListPlaceholder("No applications found", autofocus: true);
@@ -380,7 +304,7 @@ class _EmptyListPlaceholderState extends State<_EmptyListPlaceholder> {
   Widget build(BuildContext context) {
     return Shortcuts(
       shortcuts: <LogicalKeySet, Intent>{
-        LogicalKeySet(LogicalKeyboardKey.arrowUp): const MoveFocusToTabIntent(),
+        LogicalKeySet(LogicalKeyboardKey.arrowUp): const _MoveFocusToTabIntent(),
       },
       child: Focus(
         focusNode: _focusNode,
@@ -454,7 +378,7 @@ class _AppListItemState extends State<_AppListItem> {
           focusNode: _focusNode,
           onKeyEvent: (node, event) {
             if (widget.isFirst && event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowUp) {
-              Actions.invoke(context, const MoveFocusToTabIntent());
+              Actions.invoke(context, const _MoveFocusToTabIntent());
               return KeyEventResult.handled;
             }
             return KeyEventResult.ignored;
