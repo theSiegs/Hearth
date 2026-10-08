@@ -68,13 +68,8 @@ class ProfilesSettingsPage extends StatelessWidget {
   }
 
   /// The signed-in Google TV profile's name, when Hearth knows it (and there is a ProfileService).
-  static String? activeProfileLabel(BuildContext context) {
-    try {
-      return context.select<ProfileService, String?>((p) => p.activeProfileName);
-    } on ProviderNotFoundException {
-      return null;
-    }
-  }
+  static String? activeProfileLabel(BuildContext context) =>
+      context.select<ProfileService?, String?>((p) => p?.activeProfileName);
 
   Future<void> _editParentPin(BuildContext context) async {
     final settings = context.read<SettingsService>();

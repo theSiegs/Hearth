@@ -126,7 +126,7 @@ void main() {
     expect(find.text("Section 9"), findsOneWidget);
   });
 
-  testWidgets("Continue watching section is displayed when SettingsService is provided", (tester) async {
+  testWidgets("Continue watching section is displayed", (tester) async {
     final appsService = MockAppsService();
     when(appsService.launcherSections).thenReturn([
       fakeCategory(name: "Favorites"),
@@ -188,12 +188,15 @@ Future<void> _pumpWidgetWithProviders(
   AppsService appsService, {
   SettingsService? settingsService,
 }) async {
+  if (settingsService == null) {
+    settingsService = MockSettingsService();
+    when(settingsService.continueWatchingOrder).thenReturn(0);
+  }
   await tester.pumpWidget(
     MultiProvider(
       providers: [
         ChangeNotifierProvider<AppsService>.value(value: appsService),
-        if (settingsService != null)
-          ChangeNotifierProvider<SettingsService>.value(value: settingsService),
+        ChangeNotifierProvider<SettingsService>.value(value: settingsService),
       ],
       builder: (_, __) => MaterialApp(
         localizationsDelegates: const [
