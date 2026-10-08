@@ -38,14 +38,14 @@ class CategoryRow extends StatelessWidget
   /// Size the row to its apps instead of the full width, so a short dock stays centred.
   final bool shrinkWrap;
 
-  CategoryRow({
-    Key? key,
+  const CategoryRow({
+    super.key,
     required this.category,
     required this.applications,
     this.isFirstSection = false,
     this.showTitle = true,
     this.shrinkWrap = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

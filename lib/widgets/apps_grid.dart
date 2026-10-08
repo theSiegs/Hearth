@@ -37,13 +37,13 @@ class AppsGrid extends StatelessWidget
   /// False when the section is the only one below the dock, where a heading adds nothing.
   final bool showTitle;
 
-  AppsGrid({
-    Key? key,
+  const AppsGrid({
+    super.key,
     required this.category,
     required this.applications,
     this.isFirstSection = false,
     this.showTitle = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

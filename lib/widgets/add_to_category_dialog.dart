@@ -10,7 +10,7 @@ import 'package:flauncher/widgets/side_panel_dialog.dart';
 class AddToCategoryDialog extends StatelessWidget {
   final App selectedApplication;
 
-  AddToCategoryDialog(this.selectedApplication);
+  const AddToCategoryDialog(this.selectedApplication, {super.key});
 
   @override
   Widget build(BuildContext context) => Selector<AppsService, List<Category>>(
@@ -22,7 +22,6 @@ class AddToCategoryDialog extends StatelessWidget {
 
           return SidePanelDialog(
             width: 300,
-            isRightSide: false,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,

@@ -55,8 +55,8 @@ void main() {
       const MaterialApp(
         home: Scaffold(
           body: SidePanelDialog(
-            child: testChild,
             isRightSide: true,
+            child: testChild,
           ),
         ),
       ),
@@ -93,8 +93,8 @@ void main() {
       const MaterialApp(
         home: Scaffold(
           body: SidePanelDialog(
-            child: testChild,
             width: 400.0,
+            child: testChild,
           ),
         ),
       ),
