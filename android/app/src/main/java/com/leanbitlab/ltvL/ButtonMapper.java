@@ -27,6 +27,9 @@ final class ButtonMapper {
     static final String PRESS_SHORT = "short";
     static final String PRESS_LONG = "long";
 
+    // Parsed once, not on every key event; setJson, the only writer, drops it. Guarded by ButtonMapper.class.
+    private static JSONObject sMappings;
+
     private ButtonMapper() {}
 
     /** False for keys whose remapping would leave the TV hard to navigate. */
@@ -51,21 +54,24 @@ final class ButtonMapper {
         }
     }
 
-    static JSONObject load(Context context) {
+    /** The stored mappings. Shared between callers, so only read it. */
+    private static synchronized JSONObject load(Context context) {
+        if (sMappings != null) return sMappings;
         String raw = context.getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, Context.MODE_PRIVATE)
                 .getString(MAPPINGS_KEY, "{}");
         try {
-            return new JSONObject(raw);
+            sMappings = new JSONObject(raw);
         } catch (JSONException e) {
-            return new JSONObject();
+            sMappings = new JSONObject();
         }
+        return sMappings;
     }
 
     static String getJson(Context context) {
         return load(context).toString();
     }
 
-    static void setJson(Context context, String json) throws JSONException {
+    static synchronized void setJson(Context context, String json) throws JSONException {
         // Validate, and drop any key that isn't allowed
         JSONObject parsed = new JSONObject(json);
         Iterator<String> keys = parsed.keys();
@@ -78,6 +84,7 @@ final class ButtonMapper {
         }
         context.getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, Context.MODE_PRIVATE)
                 .edit().putString(MAPPINGS_KEY, cleaned.toString()).apply();
+        sMappings = null;
     }
 
     /** The button is remapped only on Hearth's own screens; elsewhere (in an app) it does its normal job. */
