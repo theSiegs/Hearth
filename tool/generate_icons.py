@@ -166,7 +166,6 @@ def main():
     tv_banner = banner(640, 360)  # xhdpi, the density Android TV uses
     tv_banner.save(RES / "drawable-xhdpi" / "banner.png")
     banner(320, 180).save(RES / "drawable" / "banner.png")
-    tv_banner.save(ROOT / "assets" / "banner.png")
     legacy_icon(256).save(ROOT / "assets" / "icon.png")
     wordmark(168).save(ROOT / "assets" / "logo.png")  # shown 56 dp tall in Settings
 
