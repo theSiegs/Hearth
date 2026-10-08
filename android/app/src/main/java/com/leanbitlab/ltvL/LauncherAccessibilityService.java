@@ -779,6 +779,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 chosen = null;
             }
             mLastPick = chosen;
+            if (chosen != null) MainActivity.notifyProfileSwitching(chosen);
             mLastPickClicked = clicked;
             mLastPickAt = now;
             // The profile user may have switched already

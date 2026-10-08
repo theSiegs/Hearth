@@ -89,7 +89,18 @@ class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
     final profiles = context.watch<ProfileService?>();
     final watchNext = context.watch<WatchNextService?>();
     final transition = profiles?.transition;
-    if (profiles == null || transition == null || transition == _ended) return const SizedBox.shrink();
+    if (profiles == null) return const SizedBox.shrink();
+    if (transition == null || transition == _ended) {
+      // Picked in the chooser, not confirmed yet: the card shows already, its progress not started
+      final incoming = profiles.incomingName;
+      if (incoming == null) return const SizedBox.shrink();
+      if (!_focusNode.hasFocus) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && profiles.incomingName != null) _focusNode.requestFocus();
+        });
+      }
+      return _card(context, incoming, profiles.incomingAvatar, 0);
+    }
     if (transition != _current) _start(transition);
 
     final steps = <bool>[
@@ -101,8 +112,15 @@ class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
     final done = steps.where((s) => s).length;
     if (done == steps.length || _timedOut) _finish(profiles, transition);
 
-    final String? name = profiles.activeProfileName;
-    final Uint8List? photo = profiles.activeProfileAvatar;
+    return _card(
+      context,
+      profiles.activeProfileName ?? transition.pickedName,
+      profiles.activeProfileAvatar ?? transition.pickedAvatar,
+      done / steps.length,
+    );
+  }
+
+  Widget _card(BuildContext context, String? name, Uint8List? photo, double progress) {
     final theme = Theme.of(context);
     return Focus(
       focusNode: _focusNode,
@@ -134,7 +152,7 @@ class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(2),
                 child: LinearProgressIndicator(
-                  value: done / steps.length,
+                  value: progress,
                   minHeight: 4,
                   backgroundColor: Colors.white12,
                   color: theme.colorScheme.primary,
