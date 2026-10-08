@@ -120,25 +120,7 @@ class AppsService extends ChangeNotifier {
           await _database.persistApps([_buildAppCompanion(applicationInfo)]);
 
           App newApp = App.fromSystem(applicationInfo);
-          App? existingApp = _applications[newApp.packageName];
-
-          if (existingApp != null) {
-            newApp.hidden = existingApp.hidden;
-            newApp.categoryOrders = Map.from(existingApp.categoryOrders);
-            for (int categoryId in newApp.categoryOrders.keys) {
-              final category = _categoriesById[categoryId];
-              if (category != null) {
-                int index = category.applications.indexOf(existingApp);
-                if (index != -1) {
-                  category.applications[index] = newApp;
-                } else {
-                  category.applications.add(newApp);
-                }
-              }
-            }
-            _applications[newApp.packageName] = newApp;
-          } else {
-            _applications[newApp.packageName] = newApp;
+          if (!_replaceApp(newApp)) {
             final targetCategory =
                 _findTargetCategoryForNewApp(newApp.sideloaded);
             if (targetCategory != null) {
@@ -154,26 +136,7 @@ class AppsService extends ChangeNotifier {
 
           for (Map<dynamic, dynamic> applicationInfo in applicationsInfo) {
             App newApp = App.fromSystem(applicationInfo);
-            App? existingApp = _applications[newApp.packageName];
-
-            if (existingApp != null) {
-              newApp.hidden = existingApp.hidden;
-              newApp.categoryOrders = Map.from(existingApp.categoryOrders);
-              for (int categoryId in newApp.categoryOrders.keys) {
-                final category = _categoriesById[categoryId];
-                if (category != null) {
-                  int index = category.applications.indexOf(existingApp);
-                  if (index != -1) {
-                    category.applications[index] = newApp;
-                  } else {
-                    category.applications.add(newApp);
-                  }
-                }
-              }
-              _applications[newApp.packageName] = newApp;
-            } else {
-              _applications[newApp.packageName] = newApp;
-            }
+            _replaceApp(newApp);
             _iconCache.remove(newApp.packageName);
             _bannerCache.remove(newApp.packageName);
           }
@@ -211,6 +174,29 @@ class AppsService extends ChangeNotifier {
 
     // Pre-cache icons for visible apps
     _preCacheIcons();
+  }
+
+  /// Puts [newApp] where the installed app of the same package was, keeping its hidden flag and categories.
+  /// False when there was no such app.
+  bool _replaceApp(App newApp) {
+    final App? existingApp = _applications[newApp.packageName];
+    _applications[newApp.packageName] = newApp;
+    if (existingApp == null) return false;
+
+    newApp.hidden = existingApp.hidden;
+    newApp.categoryOrders = Map.from(existingApp.categoryOrders);
+    for (int categoryId in newApp.categoryOrders.keys) {
+      final category = _categoriesById[categoryId];
+      if (category != null) {
+        int index = category.applications.indexOf(existingApp);
+        if (index != -1) {
+          category.applications[index] = newApp;
+        } else {
+          category.applications.add(newApp);
+        }
+      }
+    }
+    return true;
   }
 
   Future<void> _preCacheIcons() async {
