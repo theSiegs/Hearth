@@ -177,19 +177,8 @@ public class MainActivity extends FlutterActivity {
                     // A search result: the app's own link for the title, opened in that app (Profile Pairing first).
                     String pkg = call.argument("packageName");
                     String link = call.argument("link");
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(link)).setPackage(pkg)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    Boolean inProfile = ProfileApps.open(this, intent);
-                    if (inProfile != null) {
-                        result.success(inProfile);
-                        return;
-                    }
-                    boolean ok = intent.resolveActivity(getPackageManager()) != null;
-                    if (ok) {
-                        ProfilePairingService.onAppLaunching(this, pkg);
-                        ok = tryStartActivity(intent);
-                    }
-                    result.success(ok);
+                    result.success(openInApp(new Intent(Intent.ACTION_VIEW, Uri.parse(link)).setPackage(pkg)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), pkg));
                 }
                 case "searchInApp" -> {
                     String pkg = call.argument("packageName");
@@ -1605,11 +1594,7 @@ public class MainActivity extends FlutterActivity {
             Intent intent = Intent.parseUri(intentUri, Intent.URI_INTENT_SCHEME);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             intent.setSelector(null);
-            // Another profile on: its copy of the app, in its user
-            Boolean inProfile = ProfileApps.open(this, intent);
-            if (inProfile != null) return inProfile;
-            ProfilePairingService.onAppLaunching(this, packageOf(intent));
-            return tryStartActivity(intent);
+            return openInApp(intent, packageOf(intent));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -1719,6 +1704,18 @@ public class MainActivity extends FlutterActivity {
         intent.removeExtra(EXTRA_OPEN_SEARCH);
         mPendingSearch = mode;
         if (mMethodChannel != null) mMethodChannel.invokeMethod("openSearch", mode);
+    }
+
+    /**
+     * Opens the intent in its app: with another profile on, in that profile's copy of the app, in its user;
+     * otherwise here, once something handles it, telling Profile Pairing first.
+     */
+    private boolean openInApp(Intent intent, String pkg) {
+        Boolean inProfile = ProfileApps.open(this, intent);
+        if (inProfile != null) return inProfile;
+        if (intent.resolveActivity(getPackageManager()) == null) return false;
+        ProfilePairingService.onAppLaunching(this, pkg);
+        return tryStartActivity(intent);
     }
 
     /** The app an intent opens, for Profile Pairing. */
