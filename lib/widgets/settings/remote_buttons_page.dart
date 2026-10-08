@@ -26,6 +26,10 @@ import '../../models/app.dart';
 import '../../providers/apps_service.dart';
 import '../../providers/tv_inputs_service.dart';
 import 'focusable_settings_tile.dart';
+import 'home_assistant_page.dart';
+import 'message_dialog.dart';
+import 'settings_page.dart';
+import 'setup_checklist_page.dart';
 
 /// Remap remote buttons: press a button to pick it, then choose what a press and a hold do.
 /// The accessibility service (Home Button Fix) does the remapping; mappings are device-wide.
@@ -104,13 +108,16 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
 
     final result = captured!;
     if (result.containsKey("error")) {
-      _showMessage("Turn on Home Button Fix first", "Remapping needs Home Button Fix (Settings > System > Setup & permissions).");
+      showMessageDialog(context,
+          title: "Turn on Home Button Fix first",
+          message: "Remapping needs Home Button Fix (${SetupChecklistPage.breadcrumb}).");
       return;
     }
     final String keyCode = "${result["keyCode"]}";
     if (result["name"] == "KEYCODE_BACK") return;
     if (result["remappable"] != true) {
-      _showMessage("Can't remap that button", "The arrows, OK, Back, Home and power keep their normal job.");
+      showMessageDialog(context,
+          title: "Can't remap that button", message: "The arrows, OK, Back, Home and power keep their normal job.");
       return;
     }
     _names[keyCode] = result["name"] as String;
@@ -169,7 +176,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
   }
 
   Future<Map<String, dynamic>?> _pickAction() async {
-    final inputs = context.read<TvInputsService?>()?.inputs ?? const [];
+    final inputs = context.read<TvInputsService>().inputs;
     final String? type = await showDialog<String>(
       context: context,
       builder: (context) => SimpleDialog(
@@ -239,8 +246,9 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
     } catch (_) {}
     if (!mounted) return null;
     if (entities.isEmpty) {
-      _showMessage("Connect Home Assistant first",
-          "Set up the Home Assistant panel (Settings > Home Assistant > Set up from your phone), then try again.");
+      showMessageDialog(context,
+          title: "Connect Home Assistant first",
+          message: "Set up the Home Assistant panel (${HaPanelPage.breadcrumb} > Set up from your phone), then try again.");
       return null;
     }
     const verbs = {"scene": "Scene", "script": "Run", "button": "Press", "input_button": "Press"};
@@ -260,59 +268,39 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
         onPressed: () => Navigator.of(context).pop(value),
       );
 
-  void _showMessage(String title, String message) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(), child: const Text("OK"))],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final keys = _mappings.keys.toList()..sort();
-    return Column(
+    return SettingsPage(
+      title: "Remote buttons",
       children: [
-        Text("Remote buttons", style: Theme.of(context).textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                FocusableSettingsTile(
-                  autofocus: true,
-                  leading: const Icon(Icons.add),
-                  title: Text("Remap a button", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: _addButton,
-                ),
-                for (final keyCode in keys)
-                  FocusableSettingsTile(
-                    leading: const Icon(Icons.settings_remote_outlined),
-                    title: Text(
-                      "${buttonName((_mappings[keyCode] as Map)["name"] as String?, keyCode)}\n"
-                      "Press: ${_actionLabel((_mappings[keyCode] as Map)[_press] as Map<String, dynamic>?)}  ·  "
-                      "Hold: ${_actionLabel((_mappings[keyCode] as Map)[_hold] as Map<String, dynamic>?)}"
-                      "${(_mappings[keyCode] as Map)["homeOnly"] == true ? "  ·  Home screen only" : ""}",
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    onPressed: () => _editButton(keyCode),
-                  ),
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Text(
-                    "Needs Home Button Fix (Settings > System > Setup & permissions). A button with only a Hold action does that "
-                    "action on a press too. Hearth search opens HearthTube's own search while HearthTube is in front. "
-                    "Remaps pause while a kids screen time screen is showing.",
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
+        FocusableSettingsTile(
+          autofocus: true,
+          leading: const Icon(Icons.add),
+          title: Text("Remap a button", style: Theme.of(context).textTheme.bodyMedium),
+          onPressed: _addButton,
+        ),
+        for (final keyCode in keys)
+          FocusableSettingsTile(
+            leading: const Icon(Icons.settings_remote_outlined),
+            title: Text(
+              "${buttonName((_mappings[keyCode] as Map)["name"] as String?, keyCode)}\n"
+              "Press: ${_actionLabel((_mappings[keyCode] as Map)[_press] as Map<String, dynamic>?)}  ·  "
+              "Hold: ${_actionLabel((_mappings[keyCode] as Map)[_hold] as Map<String, dynamic>?)}"
+              "${(_mappings[keyCode] as Map)["homeOnly"] == true ? "  ·  Home screen only" : ""}",
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
+            onPressed: () => _editButton(keyCode),
+          ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            "Needs Home Button Fix (${SetupChecklistPage.breadcrumb}). A button with only a Hold action does that "
+            "action on a press too. Hearth search opens HearthTube's own search while HearthTube is in front. "
+            "Remaps pause while a kids screen time screen is showing.",
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
+            textAlign: TextAlign.center,
           ),
         ),
       ],
