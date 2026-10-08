@@ -263,6 +263,11 @@ void main() async {
       final service = SettingsService(sp);
       expect(service.accentColor, const Color(0xFF7C4DFF));
     });
+
+    test("accentColorFromHex reads a preset and falls back on a malformed hex", () {
+      expect(accentColorFromHex(ACCENT_COLOR_TEAL), const Color(0xFF00BFA5));
+      expect(accentColorFromHex("12345G"), const Color(0xFF7C4DFF));
+    });
   });
 
   group("showCategoryAppCount", () {
