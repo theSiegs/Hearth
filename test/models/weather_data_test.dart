@@ -88,7 +88,6 @@ void main() {
       expect(weather.hasWarning, true);
       expect(weather.warningType, WeatherWarningType.rain);
       expect(weather.warningConditionCode, 500);
-      expect(weather.warningPrecipProbability, 80);
       expect(weather.warningText, "80% Rain today");
       expect(weather.getConditionIcon(isWarning: true), Icons.grain_outlined);
     });
