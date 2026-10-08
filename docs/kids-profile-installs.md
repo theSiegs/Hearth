@@ -135,12 +135,28 @@ agent only `if Hearth is installed there`. So the **first** Hearth copy in a bra
 placement (adb `install-existing`, or Play approval). After that one touch the profile self-sustains with no further
 adb. (This is where a one-command "adb once per new profile" helper fits.)
 
-Unknowns to de-risk on the TV before building:
-- Is an agent-initiated store-source install **silent to Family Link** (no per-install notification), unlike
-  `pm install-existing`? If yes, the per-start HearthTube reinstall is acceptable; if not, give HearthTube its own
-  no-policy admin receiver (fork change) and activate it once like Hearth, instead of reinstalling.
-- Is the `ACTION_ADD_DEVICE_ADMIN` consent screen reachable and does it stick in the PIN-gated kids UI? (Test on user
-  13, which has Hearth installed but is not yet an admin.)
+De-risk results (2026-10-08, on the TV):
+- **On-screen device-admin activation is impossible in a kids profile.** `ACTION_ADD_DEVICE_ADMIN` resolves to
+  `com.android.tv.settings/.deviceadmin.DeviceAdminAdd` only in user 0; in user 11 it returns "No activity found" even
+  though `com.android.tv.settings` is installed there — the activity is suppressed for the supervised user. So an
+  in-profile app has nothing to launch; device admin can only be set over adb (`dpm set-active-admin`). (`dpm
+  remove-active-admin` from shell also refuses a non-test admin, so Hearth's admin can't be cleared that way either.)
+- Therefore there is **no fully no-adb persistence** on Google TV kids profiles: device admin and block-uninstall both
+  need adb, the on-screen admin prompt doesn't exist in the kid user, and a per-start reinstall loop needs an
+  already-persisting in-profile Hearth (circular). The floor is **one privileged action per profile.**
+
+Making that floor painless (the recommendation):
+- **One command per new profile:** `pm install-existing --user N` + set block-uninstall (via tool/block_uninstall)
+  for both apps. Block-uninstall is lighter than device admin (no admin UI, nothing else to manage) and survives
+  reboots; screen time is handled in-app (Hearth's `screen_time_up`), which both apps already honor.
+- **Hands-off via Home Assistant:** the TV has no ADB integration in HA today (`androidtv` domain absent). Adding HA's
+  Android Debug Bridge integration (network adb to the TV) lets an automation run that one command on a trigger or
+  schedule, so new profiles self-heal with no computer. The block-uninstall step needs tool/block_uninstall's
+  `app_process` + dex present on the TV (persists in `/data/local/tmp`); alternatively use `dpm set-active-admin` (a
+  plain command, no dex) for Hearth and give HearthTube its own no-policy admin receiver.
+- The loopback/agent install (AgentHub + SessionInstaller) can still reduce steps — once Hearth is adb-protected, the
+  agent can install/maintain HearthTube over loopback — but it cannot remove the one adb action that first protects
+  Hearth.
 
 ## The agent's jobs without Hearth in the kid's profile
 
@@ -161,3 +177,8 @@ Still needs a one-time adb grant and can't cover everything, so it doesn't remov
   **package name**, not install source, so a self-sideloaded app is still uninstalled at the next profile start
   (proven: HearthTube with `installerPackageName=null` was removed from users 10/12). It only helps combined with the
   on-device device-admin route above.
+- "The APK is in user 0, so it's in every user": the APK is device-wide, so `install-existing`/`installExistingPackage`
+  are instant with no byte transfer (the loopback design needn't ship the APK). But the per-user `installed` bit is
+  **not** automatic and still needs a privileged flip — proof: HearthTube is `installed=false` in users 10/12 right
+  now while present in user 0. User 13 shows both apps only because it is a half-created profile with no profile owner
+  or restrictions yet, so no reconcile has run; a finalized supervised profile would strip them.
