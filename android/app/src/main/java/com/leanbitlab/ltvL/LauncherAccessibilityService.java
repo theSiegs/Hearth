@@ -24,10 +24,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
     // How long "use Google TV for now" holds off the automatic bounce-back (the parent returns sooner via Home).
     private static final long GOOGLE_TV_ALLOW_MS = 10 * 60 * 1000L;
 
-    private static LauncherAccessibilityService sInstance;
+    // Volatile: ProfileProvider's binder calls and AgentHub's socket threads read it too
+    private static volatile LauncherAccessibilityService sInstance;
 
-    // Set while Google TV shows a screen time screen: the launcher must never cover it.
-    private boolean mScreenTimeLock = false;
+    // Set while Google TV shows a screen time screen: the launcher must never cover it. Volatile, as sInstance.
+    private volatile boolean mScreenTimeLock = false;
     // Google TV's own screens (profile chooser, PIN, time up...) are in front: leave Home to Google TV.
     private boolean mGoogleTvScreenInFront = false;
     private long mPendingBounceAt = 0;
@@ -178,13 +179,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     public void onDestroy() {
         if (sInstance == this) sInstance = null;
         ProfileProvider.notifyChanged(this);  // service_running
-        mHandler.removeCallbacks(mPeriodicCheck);
-        mHandler.removeCallbacks(mKidsHomeTakeOver);
-        mHandler.removeCallbacks(mReadScreenTime);
-        mHandler.removeCallbacks(mProfileUserRecheck);
-        mHandler.removeCallbacks(mSettleCheck);
-        mHandler.removeCallbacks(mReadChooser);
-        mHandler.removeCallbacks(mReadyFallback);
+        mHandler.removeCallbacksAndMessages(null);
         if (mHaServer != null) mHaServer.stop();
         if (mHaStatus != null) mHaStatus.stop();
         try {
