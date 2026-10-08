@@ -305,7 +305,8 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Text(
                     "Needs Home Button Fix (Settings > System > Setup & permissions). A button with only a Hold action does that "
-                    "action on a press too. Remaps pause while a kids screen time screen is showing.",
+                    "action on a press too. Hearth search opens HearthTube's own search while HearthTube is in front. "
+                    "Remaps pause while a kids screen time screen is showing.",
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
                     textAlign: TextAlign.center,
                   ),

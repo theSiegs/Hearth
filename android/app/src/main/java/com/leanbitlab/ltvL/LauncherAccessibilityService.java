@@ -525,6 +525,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         String packageName = pkg.toString();
         String className = cls.toString();
         mLastWindowPackage = packageName;
+        // Not the keyboard, a system pop-up or the assistant's bar: those come up over the app that's still in use
+        if (packageName.equals(getPackageName()) || isLaunchableApp(packageName)) mLastAppPackage = packageName;
         mWellbeingInFront = GOOGLE_TV_PACKAGE.equals(packageName) && className.startsWith(GOOGLE_TV_WELLBEING_PREFIX);
         // The chooser stays "open" while Google TV lays its account check / PIN screens over it; it's over once
         // Google TV's home or any other app comes up.
@@ -641,6 +643,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     private static final long KIDS_HOME_GRACE_MS = 1_500;
     private String mLastWindowPackage;
+    private String mLastAppPackage;
+
+    /** The app last in front (Hearth included), ignoring windows that come up over it (keyboard, pop-ups). */
+    static String appInFront() {
+        LauncherAccessibilityService service = sInstance;
+        return service != null ? service.mLastAppPackage : null;
+    }
 
     /** The app whose window was last in front (null before the service has seen one). */
     static String foregroundPackage() {
