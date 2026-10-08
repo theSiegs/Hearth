@@ -27,15 +27,15 @@ class FocusKeyboardListener extends StatefulWidget {
   final KeyEventResult Function(LogicalKeyboardKey)? onPressed;
   final KeyEventResult Function(LogicalKeyboardKey)? onLongPress;
 
-  FocusKeyboardListener({
-    Key? key,
+  const FocusKeyboardListener({
+    super.key,
     required this.builder,
     this.onPressed,
     this.onLongPress,
-  }) : super(key: key);
+  });
 
   @override
-  _FocusKeyboardListenerState createState() => _FocusKeyboardListenerState();
+  State<FocusKeyboardListener> createState() => _FocusKeyboardListenerState();
 }
 
 class _FocusKeyboardListenerState extends State<FocusKeyboardListener> {
@@ -53,36 +53,24 @@ class _FocusKeyboardListenerState extends State<FocusKeyboardListener> {
   @override
   Widget build(BuildContext context) => Focus(
         canRequestFocus: false,
-        onKeyEvent: (_, keyEvent) => _handleKey(context, keyEvent),
+        onKeyEvent: (_, keyEvent) => _handleKey(keyEvent),
         child: Builder(builder: widget.builder),
       );
 
-  KeyEventResult _handleKey(BuildContext context, KeyEvent keyEvent) {
-    if (keyEvent is KeyRepeatEvent) {
-      final key = keyEvent.logicalKey;
-      if (key == LogicalKeyboardKey.arrowLeft ||
-          key == LogicalKeyboardKey.arrowRight ||
-          key == LogicalKeyboardKey.arrowUp ||
-          key == LogicalKeyboardKey.arrowDown) {
-        final result = widget.onPressed?.call(key) ?? KeyEventResult.ignored;
-        if (result == KeyEventResult.handled) {
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      }
+  KeyEventResult _handleKey(KeyEvent keyEvent) {
+    final key = keyEvent.logicalKey;
+    if (keyEvent is KeyRepeatEvent && AppCardKeys.isArrowKey(key)) {
+      return widget.onPressed?.call(key) ?? KeyEventResult.ignored;
     }
 
-    switch (keyEvent.runtimeType) {
-      case KeyDownEvent:
-      case KeyRepeatEvent:
-        return _keyDownEvent(context, keyEvent.logicalKey);
-      case KeyUpEvent:
-        return _keyUpEvent(context, keyEvent.logicalKey);
-    }
-    return KeyEventResult.handled;
+    return switch (keyEvent) {
+      KeyDownEvent() || KeyRepeatEvent() => _keyDownEvent(key),
+      KeyUpEvent() => _keyUpEvent(key),
+      _ => KeyEventResult.handled,
+    };
   }
 
-  KeyEventResult _keyDownEvent(BuildContext context, LogicalKeyboardKey key) {
+  KeyEventResult _keyDownEvent(LogicalKeyboardKey key) {
     // Menu or info key opens options immediately without waiting
     if (AppCardKeys.menuKeys.contains(key)) {
       _longPressTimer?.cancel();
@@ -121,7 +109,7 @@ class _FocusKeyboardListenerState extends State<FocusKeyboardListener> {
     return KeyEventResult.handled;
   }
 
-  KeyEventResult _keyUpEvent(BuildContext context, LogicalKeyboardKey key) {
+  KeyEventResult _keyUpEvent(LogicalKeyboardKey key) {
     _longPressTimer?.cancel();
     if (_handledKeys.remove(key)) {
       return KeyEventResult.handled;
