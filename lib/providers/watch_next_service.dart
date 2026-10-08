@@ -62,10 +62,13 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
     return shown;
   }
 
+  /// Engagement times below this are in seconds: as milliseconds it would be April 1970, as seconds it's 2286.
+  static const int _secondsCutoff = 10000000000;
+
   /// Engagement time in milliseconds (some apps write seconds); 0 when unknown.
   static int _engagementMillis(WatchNextProgram p) {
     final t = p.lastEngagementTime;
-    return t > 0 && t < 10000000000 ? t * 1000 : t;
+    return t > 0 && t < _secondsCutoff ? t * 1000 : t;
   }
 
   static bool _isOld(WatchNextProgram p, DateTime now) {
@@ -195,42 +198,26 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
     }
     _isFetching = true;
 
+    // Only one refresh runs at a time; the count stops an earlier refresh's poster loading.
     final int callSnapshot = ++_callCount;
     try {
-      final bool hasPermission = await checkPermission();
-      if (callSnapshot != _callCount) return;
-
-      _hasPermission = hasPermission;
-      if (!hasPermission) {
-        if (_programs.isNotEmpty) {
-          _programs = [];
-        }
-        if (callSnapshot == _callCount) notifyListeners();
+      _hasPermission = await checkPermission();
+      if (!_hasPermission) {
+        _programs = [];
+        notifyListeners();
         return;
       }
 
-      List<Map<dynamic, dynamic>> list;
-      try {
-        list = await _channel.getWatchNextPrograms();
-      } catch (e) {
-        log('Failed to fetch watch next programs', name: 'WatchNextService', error: e);
-        list = const [];
-      }
-      if (callSnapshot != _callCount) return;
-
       final List<WatchNextProgram> newPrograms = [];
-      for (final map in list) {
+      for (final map in await _channel.getWatchNextPrograms()) {
         final program = WatchNextProgram.fromMap(map);
         program.posterBytes = _posters[program.posterArtUri];
         newPrograms.add(program);
       }
 
-      // Explicitly sort programs so the most recently watched content is first
+      // Newest first
       newPrograms.sort((a, b) {
-        int timeA = a.lastEngagementTime;
-        int timeB = b.lastEngagementTime;
-        if (timeA > 0 && timeA < 10000000000) timeA *= 1000;
-        if (timeB > 0 && timeB < 10000000000) timeB *= 1000;
+        final timeA = _engagementMillis(a), timeB = _engagementMillis(b);
         if (timeA != timeB) {
           return timeB.compareTo(timeA);
         }
@@ -240,12 +227,13 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
       String? refreshedFor;
       try {
         refreshedFor = await _channel.getActiveProfileKey();
-      } catch (_) {}
+      } catch (e) {
+        log('Failed to read the active profile', name: 'WatchNextService', error: e);
+      }
       if (!_isTest) await _trackOwners(newPrograms);
-      if (callSnapshot != _callCount) return;
       _programs = newPrograms;
       _refreshedFor = refreshedFor;
-      if (callSnapshot == _callCount) notifyListeners();
+      notifyListeners();
       unawaited(_loadPosters(newPrograms, callSnapshot));
     } catch (e) {
       log('Failed to refresh watch next programs', name: 'WatchNextService', error: e);
@@ -303,11 +291,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
   Future<bool> launch(WatchNextProgram program) async {
     bool launched = false;
     if (program.intentUri.isNotEmpty) {
-      try {
-        launched = await _channel.launchWatchNextProgram(program.intentUri);
-      } catch (e) {
-        log('Failed to launch watch next program intent', name: 'WatchNextService', error: e);
-      }
+      launched = await _channel.launchWatchNextProgram(program.intentUri);
     }
     if (!launched && program.packageName.isNotEmpty) {
       try {
@@ -325,13 +309,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
     _programs = _programs.where((p) => p.id != program.id).toList();
     notifyListeners();
 
-    bool deleted = false;
-    try {
-      deleted = await _channel.deleteWatchNextProgram(program.id);
-    } catch (e) {
-      log('Failed to delete watch next program', name: 'WatchNextService', error: e);
-    }
-    return deleted;
+    return _channel.deleteWatchNextProgram(program.id);
   }
 
   @override
