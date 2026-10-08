@@ -42,10 +42,18 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 
-    <!-- Needed only for: Bing Photo of the Day wallpaper, built-in weather (Open-Meteo, only the
-         chosen place's coordinates), checking/installing LTvLauncher updates from GitHub Releases,
-         and, when turned on, receiving Home Assistant notifications on port 7676 from the local
-         network only. No ads/analytics/tracking use this. -->
+    <!-- What Hearth uses the network for:
+         - Bing's photo of the day as wallpaper, and the built-in weather (Open-Meteo's forecast and
+           place search; only the chosen place's coordinates are sent)
+         - search: Wikidata for titles, TMDB for posters and where a title streams
+         - Continue Watching posters, from the artwork host each Watch Next entry names
+         - Hearth's and HearthTube's updates, from their GitHub Releases
+         - Home Assistant, once set up: the status webhook, the REST API (remote buttons,
+           notification buttons, camera pictures) and the dashboard panel
+         - its own servers, answering the home network only: Home Assistant notifications on port
+           7676 and the phone setup page on ports 8765-8769
+         - Hearth's agents in the other profiles' users, over 127.0.0.1:47474
+         No ads, analytics or tracking. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Updates to apps Hearth installed (itself, HearthTube) without a confirmation screen -->
