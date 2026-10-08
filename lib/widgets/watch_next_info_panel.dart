@@ -18,7 +18,6 @@
 
 import 'dart:typed_data';
 
-import 'package:collection/collection.dart';
 import 'package:flauncher/models/watch_next_program.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
@@ -35,12 +34,12 @@ class WatchNextInfoPanel extends StatefulWidget {
   final Uint8List? appIconBytes;
 
   const WatchNextInfoPanel({
-    Key? key,
+    super.key,
     required this.program,
     required this.watchNextService,
     required this.appsService,
     this.appIconBytes,
-  }) : super(key: key);
+  });
 
   @override
   State<WatchNextInfoPanel> createState() => _WatchNextInfoPanelState();
@@ -65,12 +64,11 @@ class _WatchNextInfoPanelState extends State<WatchNextInfoPanel> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final app = widget.appsService.applications.firstWhereOrNull((a) => a.packageName == widget.program.packageName);
+    final app = widget.appsService.applications.where((a) => a.packageName == widget.program.packageName).firstOrNull;
     final appName = (app != null && app.name.isNotEmpty) ? app.name : widget.program.packageName;
 
     return SidePanelDialog(
       width: 300,
-      isRightSide: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

@@ -7,6 +7,7 @@ class SidePanelDialog extends StatelessWidget {
   final bool isRightSide;
 
   const SidePanelDialog({
+    super.key,
     required this.child,
     this.width = 250,
     this.isRightSide = false,

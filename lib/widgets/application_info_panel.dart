@@ -40,6 +40,7 @@ class ApplicationInfoPanel extends StatefulWidget
   final ImageProvider? image;
 
   const ApplicationInfoPanel({
+    super.key,
     required this.category,
     required this.application,
     this.image
@@ -66,7 +67,6 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
 
     return SidePanelDialog(
         width: 300,
-        isRightSide: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
