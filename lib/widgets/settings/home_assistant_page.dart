@@ -258,67 +258,58 @@ class _HaPanelPageState extends State<HaPanelPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return SettingsPage(
+      title: HaPanelPage.title,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(HaPanelPage.title, style: Theme.of(context).textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Selector<SettingsService, bool>(
-                  selector: (_, settings) => settings.haPanelEnabled,
-                  builder: (context, panelEnabled, _) => RoundedSwitchListTile(
-                    autofocus: true,
-                    value: panelEnabled,
-                    onChanged: (enabled) => context.read<SettingsService>().setHaPanelEnabled(enabled),
-                    title: const Text("Right at the right edge opens the panel"),
-                    secondary: const Icon(Icons.dashboard_outlined),
-                  ),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.qr_code_2),
-                  title: Text("Set up from your phone", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: _setUpFromPhone,
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: _panelToken,
-                        obscureText: true,
-                        textInputAction: TextInputAction.next,
-                        decoration: InputDecoration(
-                          labelText: "Long-lived access token",
-                          hintText: _panelHasToken ? "Saved (type a new one to replace it)" : null,
-                        ),
-                      ),
-                      TextField(
-                        controller: _panelDashboard,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (_) => _savePanel(),
-                        decoration: const InputDecoration(labelText: "Dashboard", hintText: "lovelace"),
-                      ),
-                    ],
-                  ),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.save_outlined),
-                  title: Text("Save", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: _savePanel,
-                ),
-                if (_panelSaved != null) _note(context, _panelSaved!),
-                _note(
-                  context,
-                  "On for this profile only. The panel shows a dashboard from the address under TV status, signed "
-                  "in with the token. Create the token in Home Assistant while logged in as a non-admin user made "
-                  "for this TV (profile page, Security tab).",
-                ),
-              ],
-            ),
+        Selector<SettingsService, bool>(
+          selector: (_, settings) => settings.haPanelEnabled,
+          builder: (context, panelEnabled, _) => RoundedSwitchListTile(
+            autofocus: true,
+            value: panelEnabled,
+            onChanged: (enabled) => context.read<SettingsService>().setHaPanelEnabled(enabled),
+            title: const Text("Right at the right edge opens the panel"),
+            secondary: const Icon(Icons.dashboard_outlined),
           ),
+        ),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.qr_code_2),
+          title: Text("Set up from your phone", style: Theme.of(context).textTheme.bodyMedium),
+          onPressed: _setUpFromPhone,
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: [
+              TextField(
+                controller: _panelToken,
+                obscureText: true,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: "Long-lived access token",
+                  hintText: _panelHasToken ? "Saved (type a new one to replace it)" : null,
+                ),
+              ),
+              TextField(
+                controller: _panelDashboard,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _savePanel(),
+                decoration: const InputDecoration(labelText: "Dashboard", hintText: "lovelace"),
+              ),
+            ],
+          ),
+        ),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.save_outlined),
+          title: Text("Save", style: Theme.of(context).textTheme.bodyMedium),
+          onPressed: _savePanel,
+        ),
+        if (_panelSaved != null) _note(context, _panelSaved!),
+        _note(
+          context,
+          "On for this profile only. The panel shows a dashboard from the address under TV status, signed "
+          "in with the token. Create the token in Home Assistant while logged in as a non-admin user made "
+          "for this TV (profile page, Security tab).",
         ),
       ],
     );
