@@ -31,7 +31,6 @@ class StreamingService {
 }
 
 const _netflix = StreamingService("Netflix", "com.netflix.ninja", ["P1874"], _netflixLink);
-const _disney = StreamingService("Disney+", "com.disney.disneyplus", ["P7595", "P7596"], _disneyLink);
 const _appleTv = StreamingService("Apple TV", "com.apple.atve.androidtv.appletv", ["P9586", "P9751"], _appleTvLink);
 const _max = StreamingService("HBO Max", "com.wbd.stream", ["P8298"], _maxLink);
 const _paramount = StreamingService("Paramount+", "com.cbs.ott", ["P13147"], _paramountLink);
@@ -42,8 +41,6 @@ const _paramount = StreamingService("Paramount+", "com.cbs.ott", ["P13147"], _pa
 const List<StreamingService> streamingServices = [_netflix, _appleTv, _max, _paramount];
 
 String _netflixLink(String property, String id) => "https://www.netflix.com/title/$id";
-String _disneyLink(String property, String id) =>
-    "https://www.disneyplus.com/${property == "P7595" ? "movies" : "series"}/x/$id";
 String _appleTvLink(String property, String id) => "https://tv.apple.com/${property == "P9586" ? "movie" : "show"}/$id";
 String _maxLink(String property, String id) => "https://play.max.com/$id";
 String _paramountLink(String property, String id) => "https://www.paramountplus.com/shows/$id/";
