@@ -344,7 +344,7 @@ class _FLauncherState extends State<FLauncher> {
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
       if (event is KeyDownEvent) {
-        _appBarKey.currentState?.focusSettings();
+        _appBarKey.currentState?.focusTopBar();
         setState(() => _showingRecents = false);
       }
       return KeyEventResult.handled;
@@ -355,9 +355,9 @@ class _FLauncherState extends State<FLauncher> {
   @override
   Widget build(BuildContext context) => Actions(
         actions: <Type, Action<Intent>>{
-          MoveFocusToSettingsIntent: CallbackAction<MoveFocusToSettingsIntent>(
+          MoveFocusToTopBarIntent: CallbackAction<MoveFocusToTopBarIntent>(
             onInvoke: (_) {
-              _appBarKey.currentState?.focusSettings();
+              _appBarKey.currentState?.focusTopBar();
               // Continue Watching only shows while it's being browsed; the dock comes back behind the top bar.
               if (_showingRecents) setState(() => _showingRecents = false);
               return null;

@@ -62,7 +62,7 @@ mixin LauncherCardBehavior<T extends StatefulWidget> on State<T>, TickerProvider
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowUp && upGoesToTopBar) {
-      Actions.invoke(context, const MoveFocusToSettingsIntent());
+      Actions.invoke(context, const MoveFocusToTopBarIntent());
       return KeyEventResult.handled;
     }
     return null;

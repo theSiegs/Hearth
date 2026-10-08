@@ -313,8 +313,8 @@ void main() {
     ]);
     await _pumpWidgetWith(tester, appsService);
 
-    final settingsNode = getSettingsFocusNode(tester);
-    settingsNode!.requestFocus();
+    final profileNode = getProfileFocusNode(tester);
+    profileNode!.requestFocus();
     await tester.pump();
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
@@ -740,7 +740,7 @@ void main() {
     expect(find.byType(SettingsPanelPage), findsOneWidget);
   });
 
-  testWidgets("Moving right or up can go the settings icon", (tester) async {
+  testWidgets("Up from the first section goes to the profile button", (tester) async {
     // given
     final appsService = mkAppService();
 
@@ -796,19 +796,19 @@ void main() {
     await tester.pump();
 
 
-    Element? settingsIcon = findSettingsIcon(tester);
-    expect(settingsIcon, isNotNull);
+    Element? profileButton = findProfileButton(tester);
+    expect(profileButton, isNotNull);
     expect(isAppCardFocused(tester, "me.efesser.tv1"), isFalse);
-    expect(isSettingsIconFocused(tester), isTrue);
+    expect(isProfileButtonFocused(tester), isTrue);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pump();
-    expect(isSettingsIconFocused(tester), isFalse);
+    expect(isProfileButtonFocused(tester), isFalse);
     expect(isAppCardFocused(tester, "me.efesser.tv1"), isTrue);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
     await tester.pump();
-    expect(isSettingsIconFocused(tester), isTrue);
+    expect(isProfileButtonFocused(tester), isTrue);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pump();
@@ -818,7 +818,7 @@ void main() {
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
     await tester.pump();
-    expect(isSettingsIconFocused(tester), isTrue);
+    expect(isProfileButtonFocused(tester), isTrue);
   });
 }
 
@@ -964,10 +964,10 @@ FocusNode? getFocusNodeForApp(WidgetTester tester, String packageName) {
   return inkWell.focusNode;
 }
 
-FocusNode? getSettingsFocusNode(WidgetTester tester) {
+FocusNode? getProfileFocusNode(WidgetTester tester) {
   try {
     final appBarState = tester.state<FocusAwareAppBarState>(find.byType(FocusAwareAppBar));
-    return appBarState.settingsFocusNode;
+    return appBarState.profileFocusNode;
   } catch (e) {
     return null;
   }
@@ -978,7 +978,7 @@ bool isAppCardFocused(WidgetTester tester, String packageName) {
   return focusNode?.hasFocus ?? false;
 }
 
-bool isSettingsIconFocused(WidgetTester tester) {
-  final focusNode = getSettingsFocusNode(tester);
+bool isProfileButtonFocused(WidgetTester tester) {
+  final focusNode = getProfileFocusNode(tester);
   return focusNode?.hasFocus ?? false;
 }
