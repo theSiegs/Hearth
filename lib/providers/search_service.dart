@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:collection/collection.dart';
+
 /// A streaming service a search result can open in.
 class StreamingService {
   final String name;
@@ -208,14 +210,111 @@ class SearchService {
   }
 }
 
-/// A title's poster and the services streaming it in the US, from The Movie Database (TMDB).
+/// A title's poster and where it can be watched in the US, from The Movie Database (TMDB; the data is JustWatch's).
 class TitleDetails {
   final String? posterUrl;
 
-  /// Subscription services streaming it in the US, as TMDB names them (data from JustWatch).
-  final List<String> streamingOn;
+  /// Services where it comes with the service: by subscription, free, or free with ads, as TMDB names them.
+  final List<String> included;
 
-  const TitleDetails({this.posterUrl, this.streamingOn = const []});
+  /// Stores where it can be rented or bought (and isn't also included there).
+  final List<String> rentOrBuy;
+
+  const TitleDetails({this.posterUrl, this.included = const [], this.rentOrBuy = const []});
+
+  /// Included services (the name older code used: "streaming on").
+  List<String> get streamingOn => included;
+}
+
+/// A TV app that TMDB lists titles for, by its TMDB provider names.
+class ProviderApp {
+  final String name;
+  final String packageName;
+
+  /// Lower-case TMDB provider names, or their beginnings ("netflix" covers "Netflix Standard with Ads").
+  final List<String> prefixes;
+
+  const ProviderApp(this.name, this.packageName, this.prefixes);
+
+  bool matches(String providerName) {
+    final p = providerName.toLowerCase();
+    return prefixes.any((prefix) => p == prefix || p.startsWith("$prefix "));
+  }
+}
+
+/// The apps Hearth can tell are on the TV, for TMDB's providers. Providers not here count as apps that aren't.
+const List<ProviderApp> providerApps = [
+  ProviderApp("Netflix", "com.netflix.ninja", ["netflix"]),
+  ProviderApp("Disney+", "com.disney.disneyplus", ["disney plus", "disney+"]),
+  ProviderApp("Apple TV", "com.apple.atve.androidtv.appletv", ["apple tv", "apple tv+", "apple tv plus"]),
+  ProviderApp("HBO Max", "com.wbd.stream", ["max", "hbo max"]),
+  ProviderApp("Paramount+", "com.cbs.ott", ["paramount plus", "paramount+"]),
+  ProviderApp("Hulu", "com.hulu.livingroomplus", ["hulu"]),
+  ProviderApp("Prime Video", "com.amazon.amazonvideo.livingroom", ["amazon prime video", "amazon video", "prime video"]),
+  ProviderApp("Peacock", "com.peacocktv.peacockandroid", ["peacock", "peacock premium", "peacock premium plus"]),
+  ProviderApp("Tubi", "com.tubitv", ["tubi tv", "tubi"]),
+  ProviderApp("Pluto TV", "tv.pluto.android", ["pluto tv"]),
+  ProviderApp("YouTube", "com.google.android.youtube.tv", ["youtube", "youtube premium"]),
+  ProviderApp("Google TV", "com.google.android.videos", ["google play movies", "google tv"]),
+];
+
+/// The app for a TMDB provider name, or null when Hearth doesn't know one.
+ProviderApp? providerApp(String providerName) => providerApps.firstWhereOrNull((app) => app.matches(providerName));
+
+/// How a title can be watched on this TV: what search shows up front (included with an installed app), and what it
+/// keeps quiet (rent or buy, or only on apps that aren't installed).
+class Availability {
+  /// Installed apps it comes with (subscription, free or with ads), best first.
+  final List<ProviderApp> included;
+
+  /// Installed stores that rent or sell it.
+  final List<ProviderApp> rentOrBuy;
+
+  /// Services it comes with that aren't on this TV, by name.
+  final List<String> elsewhere;
+
+  /// Whether TMDB knew where it's watchable at all.
+  final bool known;
+
+  const Availability({this.included = const [], this.rentOrBuy = const [], this.elsewhere = const [], this.known = false});
+
+  /// Up front in the results: it can be watched now at no extra cost.
+  bool get watchable => included.isNotEmpty;
+
+  /// Sorts out where [result] can be watched, with TMDB's [details] when there are any. Without them, the installed
+  /// apps Wikidata links the title to count as included (so search still works without a TMDB key).
+  static Availability of(SearchResult result, TitleDetails? details, bool Function(String packageName) installed) {
+    List<ProviderApp> installedApps(Iterable<String> names) {
+      final apps = <ProviderApp>[];
+      for (final name in names) {
+        final app = providerApp(name);
+        if (app != null && installed(app.packageName) && !apps.contains(app)) apps.add(app);
+      }
+      return apps;
+    }
+
+    if (details == null || (details.included.isEmpty && details.rentOrBuy.isEmpty)) {
+      final linked = <ProviderApp>[];
+      for (final offer in result.offers) {
+        final app = providerApps.firstWhereOrNull((a) => a.packageName == offer.service.packageName);
+        if (app != null && installed(app.packageName) && !linked.contains(app)) linked.add(app);
+      }
+      return Availability(included: linked);
+    }
+    final included = installedApps(details.included);
+    final elsewhere = <String>[];
+    for (final name in details.included) {
+      final app = providerApp(name);
+      final label = app?.name ?? name;
+      if ((app == null || !installed(app.packageName)) && !elsewhere.contains(label)) elsewhere.add(label);
+    }
+    return Availability(
+      included: included,
+      rentOrBuy: installedApps(details.rentOrBuy).where((app) => !included.contains(app)).toList(),
+      elsewhere: elsewhere,
+      known: true,
+    );
+  }
 }
 
 /// Looks titles up in TMDB by the id Wikidata gives. Needs an API key built in with
@@ -254,10 +353,17 @@ class TmdbClient {
 
   static TitleDetails parseDetails(Map json) {
     final poster = json["poster_path"];
-    final us = SearchService._at(json, ["watch/providers", "results", "US", "flatrate"]);
+    List<String> names(String kind) {
+      final list = SearchService._at(json, ["watch/providers", "results", "US", kind]);
+      return list is List ? list.map((p) => p is Map ? p["provider_name"] : null).whereType<String>().toList() : [];
+    }
+
+    final included = <String>{...names("flatrate"), ...names("free"), ...names("ads")}.toList();
+    final rentOrBuy = <String>{...names("rent"), ...names("buy")}.where((n) => !included.contains(n)).toList();
     return TitleDetails(
       posterUrl: poster is String ? "https://image.tmdb.org/t/p/w185$poster" : null,
-      streamingOn: us is List ? us.map((p) => p is Map ? p["provider_name"] : null).whereType<String>().toList() : [],
+      included: included,
+      rentOrBuy: rentOrBuy,
     );
   }
 }

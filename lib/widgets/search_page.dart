@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
+
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/search_service.dart';
@@ -60,6 +62,12 @@ class _SearchPageState extends State<SearchPage> {
   Timer? _debounce;
   String _query = "";
   List<SearchResult> _results = [];
+
+  /// TMDB's details for each result (null: none), fetched before results show so they can be grouped.
+  Map<SearchResult, TitleDetails?> _details = {};
+
+  /// The quiet group (rent or buy, other apps) is open.
+  bool _showMore = false;
   bool _loading = false;
   String? _error;
   int _generation = 0;
@@ -131,8 +139,14 @@ class _SearchPageState extends State<SearchPage> {
     try {
       final results = await _service.search(_query);
       if (!mounted || generation != _generation) return;
+      // Where each title is watchable decides where it shows, so the details come first (TMDB's answers are cached)
+      final tmdb = _tmdbFor(context);
+      final details = tmdb.enabled ? await Future.wait(results.map(tmdb.details)) : <TitleDetails?>[];
+      if (!mounted || generation != _generation) return;
       setState(() {
         _results = results;
+        _details = {for (final (i, r) in results.indexed) r: i < details.length ? details[i] : null};
+        _showMore = false;
         _loading = false;
       });
     } catch (_) {
@@ -152,6 +166,50 @@ class _SearchPageState extends State<SearchPage> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("That app couldn't open it.")));
     }
+  }
+
+  /// Titles included with an installed app first (at no extra cost); the rest (rent or buy, or only on apps that
+  /// aren't installed) behind one quiet line, closed until asked for.
+  List<Widget> _resultRows(bool Function(String packageName) installed) {
+    final watchable = <(SearchResult, Availability)>[];
+    final more = <(SearchResult, Availability)>[];
+    for (final result in _results) {
+      final availability = Availability.of(result, _details[result], installed);
+      (availability.watchable ? watchable : more).add((result, availability));
+    }
+    final textTheme = Theme.of(context).textTheme;
+    return [
+      for (final (index, (result, availability)) in watchable.indexed)
+        _ResultRow(
+            result: result,
+            details: _details[result],
+            availability: availability,
+            open: _open,
+            firstFocus: index == 0 ? _firstResult : null),
+      if (!_loading && _results.isNotEmpty && watchable.isEmpty)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 8, 4, 12),
+          child: Text("Nothing for \"$_query\" in your apps right now.", style: textTheme.bodyLarge),
+        ),
+      if (more.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: SearchChip(
+              focusNode: watchable.isEmpty ? _firstResult : null,
+              icon: _showMore ? Icons.expand_less : Icons.expand_more,
+              label: _showMore ? "Fewer" : "${more.length} more to rent, buy, or in other apps",
+              quiet: true,
+              onPressed: () => setState(() => _showMore = !_showMore),
+            ),
+          ),
+        ),
+      if (_showMore)
+        for (final (result, availability) in more)
+          _ResultRow(
+              result: result, details: _details[result], availability: availability, open: _open, quiet: true),
+    ];
   }
 
   @override
@@ -219,12 +277,7 @@ class _SearchPageState extends State<SearchPage> {
                       padding: const EdgeInsets.all(16),
                       child: Text("No films or shows found for \"$_query\".", style: textTheme.bodyLarge),
                     ),
-                  for (final (index, result) in _results.indexed)
-                    _ResultRow(
-                        result: result,
-                        installed: installed,
-                        open: _open,
-                        firstFocus: index == 0 ? _firstResult : null),
+                  ..._resultRows(installed),
                   if (_query.length >= 2) ...[
                     const Divider(height: 32),
                     Wrap(
@@ -275,88 +328,105 @@ TmdbClient _tmdbFor(BuildContext context) {
 
 class _ResultRow extends StatelessWidget {
   final SearchResult result;
-  final bool Function(String packageName) installed;
+  final TitleDetails? details;
+  final Availability availability;
   final Future<void> Function(Future<bool> Function() action) open;
   final FocusNode? firstFocus;
 
-  const _ResultRow({required this.result, required this.installed, required this.open, this.firstFocus});
+  /// In the "more" group: smaller and dimmer.
+  final bool quiet;
+
+  const _ResultRow(
+      {required this.result,
+      required this.details,
+      required this.availability,
+      required this.open,
+      this.firstFocus,
+      this.quiet = false});
+
+  /// Opens the title in [app]: its own page when Wikidata links one, else the app's search for the title, else
+  /// Google TV's page for it.
+  Future<bool> _openIn(FLauncherChannel channel, ProviderApp app) async {
+    final offer = result.offers.firstWhereOrNull((o) => o.service.packageName == app.packageName);
+    if (offer != null && await channel.openLinkInApp(app.packageName, offer.link)) return true;
+    if (await channel.searchInApp(app.packageName, result.title)) return true;
+    return _openGoogleTv(channel);
+  }
+
+  Future<bool> _openGoogleTv(FLauncherChannel channel) => result.googleTvLink != null
+      ? channel.openGoogleTv(link: result.googleTvLink)
+      : channel.openGoogleTv(query: result.title);
 
   @override
   Widget build(BuildContext context) {
     final channel = FLauncherChannel();
     final textTheme = Theme.of(context).textTheme;
-    final offers = result.offers.where((offer) => installed(offer.service.packageName)).toList();
-    return FutureBuilder<TitleDetails?>(
-      future: _tmdbFor(context).details(result),
-      builder: (context, snapshot) {
-        final details = snapshot.data;
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (_tmdbFor(context).enabled) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    width: 72,
-                    height: 108,
-                    color: Colors.white10,
-                    child: details?.posterUrl != null
-                        ? Image.network(details!.posterUrl!,
-                            fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink())
-                        : const Icon(Icons.movie_outlined, color: Colors.white24),
-                  ),
-                ),
-                const SizedBox(width: 16),
-              ],
-              Expanded(child: _details(context, textTheme, offers, channel, details)),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _details(BuildContext context, TextTheme textTheme, List<SearchOffer> allOffers, FLauncherChannel channel,
-      TitleDetails? details) {
-    // When TMDB says where it's streaming, skip apps that only have a catalog page for it (e.g. Apple TV for a
-    // Netflix show).
-    final offers = details == null || details.streamingOn.isEmpty
-        ? allOffers
-        : allOffers.where((offer) => details.streamingOn.any((name) => offer.service.matches(name))).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(result.year != null ? "${result.title} (${result.year})" : result.title, style: textTheme.titleLarge),
-        if (result.description != null)
-          Text(result.description!, style: textTheme.bodyMedium?.copyWith(color: Colors.white60)),
-        if (details != null && details.streamingOn.isNotEmpty)
-          Text("Streaming on ${details.streamingOn.take(4).join(", ")}",
-              style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 12,
-          runSpacing: 8,
-          children: [
-            for (final (index, offer) in offers.indexed)
-              SearchChip(
-                focusNode: index == 0 ? firstFocus : null,
-                icon: Icons.play_arrow_rounded,
-                label: offer.service.name,
-                onPressed: () => open(() => channel.openLinkInApp(offer.service.packageName, offer.link)),
+    // The quiet line: everything that isn't "watch it now"
+    final notes = [
+      if (availability.rentOrBuy.isNotEmpty) "Rent or buy on ${availability.rentOrBuy.map((a) => a.name).join(", ")}",
+      if (availability.elsewhere.isNotEmpty) "Also on ${availability.elsewhere.take(3).join(", ")} (not on this TV)",
+    ];
+    final buttons = quiet ? availability.rentOrBuy : availability.included;
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: quiet ? 6 : 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_tmdbFor(context).enabled) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: quiet ? 48 : 72,
+                height: quiet ? 72 : 108,
+                color: Colors.white10,
+                child: details?.posterUrl != null
+                    ? Opacity(
+                        opacity: quiet ? 0.6 : 1,
+                        child: Image.network(details!.posterUrl!,
+                            fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink()))
+                    : const Icon(Icons.movie_outlined, color: Colors.white24),
               ),
-            SearchChip(
-              focusNode: offers.isEmpty ? firstFocus : null,
-              icon: Icons.info_outline,
-              label: offers.isEmpty ? "Where to watch (Google TV)" : "More on Google TV",
-              onPressed: () => open(() => result.googleTvLink != null
-                  ? channel.openGoogleTv(link: result.googleTvLink)
-                  : channel.openGoogleTv(query: result.title)),
             ),
+            const SizedBox(width: 16),
           ],
-        ),
-      ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(result.year != null ? "${result.title} (${result.year})" : result.title,
+                    style: (quiet ? textTheme.titleMedium : textTheme.titleLarge)
+                        ?.copyWith(color: quiet ? Colors.white70 : null)),
+                if (result.description != null && !quiet)
+                  Text(result.description!, style: textTheme.bodyMedium?.copyWith(color: Colors.white60)),
+                if (notes.isNotEmpty)
+                  Text(notes.join(" \u00b7 "), style: textTheme.bodySmall?.copyWith(color: Colors.white38)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    for (final (index, app) in buttons.indexed)
+                      SearchChip(
+                        focusNode: index == 0 ? firstFocus : null,
+                        icon: quiet ? Icons.shopping_bag_outlined : Icons.play_arrow_rounded,
+                        label: quiet ? "Rent or buy on ${app.name}" : app.name,
+                        quiet: quiet,
+                        onPressed: () => open(() => _openIn(channel, app)),
+                      ),
+                    SearchChip(
+                      focusNode: buttons.isEmpty ? firstFocus : null,
+                      icon: Icons.info_outline,
+                      label: "More on Google TV",
+                      quiet: true,
+                      onPressed: () => open(() => _openGoogleTv(channel)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -368,7 +438,11 @@ class SearchChip extends StatefulWidget {
   final VoidCallback onPressed;
   final FocusNode? focusNode;
 
-  const SearchChip({super.key, required this.icon, required this.label, required this.onPressed, this.focusNode});
+  /// Secondary: smaller, no background and dimmer until it's focused.
+  final bool quiet;
+
+  const SearchChip(
+      {super.key, required this.icon, required this.label, required this.onPressed, this.focusNode, this.quiet = false});
 
   @override
   State<SearchChip> createState() => _SearchChipState();
@@ -395,17 +469,23 @@ class _SearchChipState extends State<SearchChip> {
         child: GestureDetector(
           onTap: widget.onPressed,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: widget.quiet
+                ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
+                : const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: _focused ? accent : Colors.white.withOpacity(0.10),
+              color: _focused ? accent : (widget.quiet ? Colors.transparent : Colors.white.withOpacity(0.10)),
               borderRadius: BorderRadius.circular(24),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(widget.icon, size: 20, color: Colors.white),
+                Icon(widget.icon,
+                    size: widget.quiet ? 16 : 20, color: _focused || !widget.quiet ? Colors.white : Colors.white54),
                 const SizedBox(width: 8),
-                Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 16)),
+                Text(widget.label,
+                    style: TextStyle(
+                        color: _focused || !widget.quiet ? Colors.white : Colors.white54,
+                        fontSize: widget.quiet ? 14 : 16)),
               ],
             ),
           ),
