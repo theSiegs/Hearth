@@ -19,6 +19,7 @@
 import 'package:flutter/material.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'focusable_settings_tile.dart';
+import 'settings_lock.dart';
 import 'launcher_sections_panel_page.dart';
 import 'continue_watching_settings_page.dart';
 import 'wallpaper_panel_page.dart';
@@ -46,7 +47,8 @@ class InterfaceSettingsPage extends StatelessWidget {
                   autofocus: true,
                   leading: const Icon(Icons.category),
                   title: Text(localizations.launcherSections, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(LauncherSectionsPanelPage.routeName),
+                  trailing: lockedTrailing(context, locked: settingsLocked(context)),
+                  onPressed: () => openLocked(context, LauncherSectionsPanelPage.routeName),
                 ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.play_circle_outline),

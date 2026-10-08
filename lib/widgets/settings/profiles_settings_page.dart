@@ -24,6 +24,7 @@ import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
 import 'profile_pairing_page.dart';
+import 'settings_lock.dart';
 
 /// Google TV profiles, Profile Pairing in the streaming apps, and the parent PIN.
 class ProfilesSettingsPage extends StatelessWidget {
@@ -35,6 +36,7 @@ class ProfilesSettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final hasPin = context.select<SettingsService, bool>((s) => s.hasParentPin);
+    final bool locked = settingsLocked(context);
     return Column(
       children: [
         Text("Profiles", style: textTheme.titleLarge),
@@ -55,13 +57,17 @@ class ProfilesSettingsPage extends StatelessWidget {
                 FocusableSettingsTile(
                   leading: const Icon(Icons.switch_account),
                   title: Text("Profile Pairing", style: textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(ProfilePairingPage.routeName),
+                  trailing: lockedTrailing(context, locked: locked),
+                  onPressed: () => openLocked(context, ProfilePairingPage.routeName),
                 ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.lock_outline),
                   title: Text("Parent PIN", style: textTheme.bodyMedium),
-                  trailing: Text(hasPin ? "On" : "Off", style: textTheme.bodySmall),
-                  onPressed: () => _editParentPin(context),
+                  trailing: lockedTrailing(context,
+                      locked: locked, trailing: Text(hasPin ? "On" : "Off", style: textTheme.bodySmall)),
+                  onPressed: () async {
+                    if (await unlockSettings(context) && context.mounted) await _editParentPin(context);
+                  },
                 ),
               ],
             ),

@@ -41,6 +41,7 @@ import 'package:flauncher/widgets/settings/general_settings_page.dart';
 import 'package:flauncher/widgets/settings/themes_page.dart';
 import 'package:flauncher/widgets/settings/appearance_panel_page.dart';
 import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
+import 'package:flauncher/widgets/settings/settings_lock.dart';
 import 'package:flauncher/widgets/settings/look_settings_page.dart';
 import 'package:flauncher/widgets/settings/remote_search_settings_page.dart';
 import 'package:flauncher/widgets/settings/backup_restore_page.dart';
@@ -67,6 +68,13 @@ class SettingsPanel extends StatefulWidget {
 
 class _SettingsPanelState extends State<SettingsPanel> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final ValueNotifier<bool> _unlocked = ValueNotifier(false);
+
+  @override
+  void dispose() {
+    _unlocked.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +97,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 canRequestFocus: false,
                 skipTraversal: true,
                 onKeyEvent: _closeOnRightAtEdge,
+                child: SettingsUnlock(
+                notifier: _unlocked,
                 child: Navigator(
                 key: _navigatorKey,
                 initialRoute: widget.initialRoute ?? SettingsPanelPage.routeName,
@@ -181,6 +191,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       throw ArgumentError.value(settings.name, "settings.name", "Route not supported.");
                   }
                 },
+              ),
               ),
             ),
             ),
