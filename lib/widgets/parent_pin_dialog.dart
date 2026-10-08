@@ -42,7 +42,7 @@ Future<bool> requireParent(BuildContext context) async {
       builder: (context) => AlertDialog(
         title: const Text("Ask a parent"),
         content: const Text(
-            "Launcher settings are locked in kids profiles. A parent can set a PIN in Settings → Parent PIN from their own profile."),
+            "Launcher settings are locked in kids profiles. A parent can set a PIN in Settings → Profiles → Parent PIN from their own profile."),
         actions: [TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(), child: const Text("OK"))],
       ),
     );
