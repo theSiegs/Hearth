@@ -32,9 +32,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     // > now while the parent chose to use Google TV for a while: the automatic bounce-back pauses until then.
     private static volatile long sAllowGoogleTvUntil = 0;
 
-    // Which profile is active comes from Google TV's profile users (ProfileUsers), keyed by serial; their names
-    // come from Google TV's chooser, which opens with the current profile focused and reports the picked tile in
-    // a click event. The chooser only names profiles: the profile users alone say which one is active.
+    // The active profile user's serial (ProfileUsers); names are learned from the chooser's current-account tile
+    // and picks.
     private long mActiveSerial = ProfileUsers.UNKNOWN;
     // The last profile switch seen in the profile users, and the last chooser pick: whichever comes second pairs
     // the new serial with the picked name.
@@ -455,7 +454,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private void nameSerial(long serial, String name, String how) {
         android.util.Log.i(PROFILE_TAG, "Serial " + serial + " is " + name + " (" + how + ")");
         ProfileUsers.setName(this, serial, name);
-        // Pairings saved under the name, before profiles had keys
+        // Migrate pairings saved under the profile's name to its key
         ProfilePairing.adoptNameChoices(this, ProfileUsers.key(serial), name);
         if (serial == mActiveSerial) {
             setActiveProfileName(name);
@@ -525,7 +524,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 || (!GOOGLE_TV_PACKAGE.equals(packageName) && !"com.android.systemui".equals(packageName)
                     && !"android".equals(packageName) && !packageName.equals(getPackageName()))) {
             // Not Hearth's own windows: Hearth reports window changes as it goes behind the chooser.
-            // (Coming back to Hearth without a pick is handled below: it cancels the pending pick.)
             mChooserOnScreen = false;
         }
         if (wasOnScreen != mChooserOnScreen) {
@@ -557,7 +555,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 // A new profile's home: the last one's screen time no longer applies (its own comes up next)
                 if (commitPendingProfile()) clearScreenTimeLock();
                 // Google TV only opens its home once a switch is done: take the new profile user now, before
-                // Hearth takes over, so Hearth never comes up showing the last profile (see readiness)
+                // Hearth takes over, so Hearth never comes up showing the last profile
                 if (mCandidateSerial != ProfileUsers.UNKNOWN) mCandidateAt -= OWNER_SETTLE_MS;
                 checkProfileUser("Google TV home");
                 updateScreenTimeLock("Google TV home");
@@ -596,7 +594,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             rememberAppUser(this, packageName);
         }
 
-        // The screen time lock only clears on a profile switch: failing safe beats covering a time up screen.
+        // Hearth or an app is in front: Google TV's own screens are gone.
         if (packageName.equals(getPackageName()) || isLaunchableApp(packageName)) {
             mGoogleTvScreenInFront = false;
         }
@@ -717,8 +715,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     /**
      * Screen time from the apps: in a kids profile Google TV blocks even the approved apps while time is up, and
-     * unblocks them when it isn't (bedtime over, bonus time), so the lock follows that, seen or not. When the apps
-     * can't tell, Google TV's own screens decide as before.
+     * unblocks them when it isn't (bedtime over, bonus time), so the lock follows that, seen or not. When they
+     * can't tell, Google TV's own screens decide.
      */
     private void updateScreenTimeLock(String why) {
         if (mActiveSerial == ProfileUsers.UNKNOWN || mCandidateSerial != ProfileUsers.UNKNOWN) return;
