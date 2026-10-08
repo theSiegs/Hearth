@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
+import 'family_apps_page.dart';
 import 'focusable_settings_tile.dart';
 
 /// One thing the TV owner turns on in Android's Settings for Hearth. Android doesn't let an app jump to (or
@@ -280,6 +281,12 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
                       ],
                       const Divider(),
                       _startOnBootTile(context),
+                      FocusableSettingsTile(
+                        leading: const Icon(Icons.people_alt_outlined),
+                        title: Text("Hearth on other profiles", style: textTheme.bodyMedium),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                        onPressed: () => Navigator.of(context).pushNamed(FamilyAppsPage.routeName),
+                      ),
                     ],
                   ),
                 ),

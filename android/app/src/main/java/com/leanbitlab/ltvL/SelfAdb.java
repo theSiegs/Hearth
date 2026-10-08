@@ -27,7 +27,7 @@ import dadb.Dadb;
  * wireless-debugging endpoint rather than cleartext 5555 if that is what survives a reboot (see
  * docs/kids-profile-installs.md). Kept isolated so finalizing it touches only this file.
  */
-public final class SelfAdb implements KidsAppAccess.ShellRunner, AutoCloseable {
+public final class SelfAdb implements ProfileAppAccess.ShellRunner, AutoCloseable {
 
     private static final String TAG = "HearthSelfAdb";
     private static final String HOST = "127.0.0.1";

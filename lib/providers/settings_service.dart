@@ -48,6 +48,7 @@ const String _accentColorKey = "accent_color";
 const String _screensaverClockStyleKey = "screensaver_clock_style";
 const String _timeBasedWallpaperEnabledKey = "time_based_wallpaper_enabled";
 const String _bingWallpaperEnabledKey = "bing_wallpaper_enabled";
+const String _pushToAdultProfilesKey = "push_to_adult_profiles";
 const String _matchSelectedAppBackgroundKey = "match_selected_app_background";
 const String _dockEnabledKey = "dock_enabled";
 const String _dockBlurEnabledKey = "dock_blur_enabled";
@@ -128,6 +129,7 @@ class SettingsService extends ChangeNotifier {
   late String _screensaverClockStyle;
   late bool _timeBasedWallpaperEnabled;
   late bool _bingWallpaperEnabled;
+  late bool _pushToAdultProfiles;
   late bool _showInputsWidgetInStatusBar;
   late bool _showContinueWatching;
   late String _continueWatchingCardSize;
@@ -194,6 +196,10 @@ class SettingsService extends ChangeNotifier {
   List<String> get hiddenWatchNextPackages => List.unmodifiable(_hiddenWatchNextPackages);
   bool get startOnBoot => _startOnBoot;
 
+  /// When on (the default), setting up Hearth on the kids' profiles also installs it on the TV's other adult
+  /// profiles, so another adult doesn't have to sideload it themselves. Adult profiles need no keep-installed flag.
+  bool get pushToAdultProfiles => _pushToAdultProfiles;
+
   /// A TMDB API key the user added for search posters (Settings → Search); empty when none. Not in backups.
   String get tmdbApiKey => _sharedPreferences.getString(_tmdbApiKeyKey) ?? "";
 
@@ -216,6 +222,12 @@ class SettingsService extends ChangeNotifier {
     } else {
       await _sharedPreferences.setString(_parentPinHashKey, _hashPin(pin));
     }
+    notifyListeners();
+  }
+
+  Future<void> setPushToAdultProfiles(bool value) async {
+    _pushToAdultProfiles = value;
+    await _sharedPreferences.setBool(_pushToAdultProfilesKey, value);
     notifyListeners();
   }
 
@@ -273,6 +285,7 @@ class SettingsService extends ChangeNotifier {
       _timeFormat = defaultTimeFormat;
     }
     _dataUsagePeriod = _sharedPreferences.getString(_dataUsagePeriodKey) ?? DATA_USAGE_DAILY;
+    _pushToAdultProfiles = _sharedPreferences.getBool(_pushToAdultProfilesKey) ?? true;
     _showDataWidgetInStatusBar = _sharedPreferences.getBool(_showDataWidgetInStatusBarKey) ?? false;
     _showNetworkIndicatorInStatusBar = _sharedPreferences.getBool(_showNetworkIndicatorInStatusBarKey) ?? true;
     _accentColorHex = _sharedPreferences.getString(_accentColorKey) ?? ACCENT_COLOR_PURPLE;

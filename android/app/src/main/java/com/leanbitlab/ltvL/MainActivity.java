@@ -171,13 +171,16 @@ public class MainActivity extends FlutterActivity {
                             this, LauncherAccessibilityService.getActiveProfileKey(this), kids);
                     result.success(kids);
                 }
-                // Parent-controlled "Add / Remove Hearth from kids' profiles" (Settings -> Setup & permissions) and a
-                // read-only state view. The work, and the one-time "Allow debugging?" consent, live in KidsAppAccess /
-                // SelfAdb. Off the main thread (adb I/O); the action is parent-confirmed because these fire only when
-                // the parent presses the row.
-                case "addHearthToKidsProfiles" -> sIoExecutor.execute(() -> runKidsProvision(true, result));
-                case "removeHearthFromKidsProfiles" -> sIoExecutor.execute(() -> runKidsProvision(false, result));
-                case "getKidsAppsState" -> sIoExecutor.execute(() -> runKidsAppsState(result));
+                // Parent-controlled "Add / Remove Hearth from other profiles" (a Settings action) and a read-only
+                // state view. The work, and the one-time "Allow debugging?" consent, live in ProfileAppAccess /
+                // SelfAdb. Off the main thread (adb I/O); parent-confirmed because these fire only from the Settings
+                // row. addHearthToProfiles' argument is whether to include the other adult profiles too.
+                case "addHearthToProfiles" -> {
+                    boolean includeAdults = Boolean.TRUE.equals(call.arguments());
+                    sIoExecutor.execute(() -> runAddToProfiles(includeAdults, result));
+                }
+                case "removeHearthFromProfiles" -> sIoExecutor.execute(() -> runRemoveFromProfiles(result));
+                case "getHearthProfilesState" -> sIoExecutor.execute(() -> runProfilesState(result));
                 case "voiceSearch" -> startVoiceSearch(result);
                 case "getAppLastProfiles" -> {
                     Map<String, Object> users = new HashMap<>(getSharedPreferences("ltv_app_last_profile", MODE_PRIVATE).getAll());
@@ -1341,29 +1344,50 @@ public class MainActivity extends FlutterActivity {
      * ({@link SelfAdb}). Reached only from the Settings rows, so {@code confirmedByParent} is true. Returns the log
      * of what was done; a first-run "Allow debugging?" that hasn't been approved surfaces as an error the UI explains.
      */
-    private void runKidsProvision(boolean add, io.flutter.plugin.common.MethodChannel.Result result) {
+    /**
+     * Parent-initiated add of Hearth's apps to the other profiles, over Hearth's loopback adb ({@link SelfAdb}):
+     * always the supervised kids (kept installed so the launcher can't strip them), and — when {@code includeAdults}
+     * — the other adult profiles too (plain install). Reached only from the Settings action, so parent-confirmed.
+     */
+    private void runAddToProfiles(boolean includeAdults, io.flutter.plugin.common.MethodChannel.Result result) {
         try (SelfAdb shell = SelfAdb.open(this)) {
-            java.util.List<Integer> kids = supervisedKidUserIds();
-            java.util.List<String> log = add
-                    ? KidsAppAccess.addToKidsProfiles(this, shell, kids, true)
-                    : KidsAppAccess.removeFromKidsProfiles(this, shell, kids, true);
+            java.util.List<String> log = new java.util.ArrayList<>(
+                    ProfileAppAccess.addToProfiles(this, shell, supervisedKidUserIds(), true, true));
+            if (includeAdults) {
+                log.addAll(ProfileAppAccess.addToProfiles(this, shell, adultProfileUserIds(), false, true));
+            }
             runOnUiThread(() -> result.success(log));
         } catch (Exception e) {
             runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
         }
     }
 
-    /** Read-only: which kids profiles currently have Hearth / HearthTube (and whether protected), for Settings. */
-    private void runKidsAppsState(io.flutter.plugin.common.MethodChannel.Result result) {
+    /** Parent-initiated removal from every other profile (kids and adults): the clean undo of add. */
+    private void runRemoveFromProfiles(io.flutter.plugin.common.MethodChannel.Result result) {
+        try (SelfAdb shell = SelfAdb.open(this)) {
+            java.util.List<Integer> all = new java.util.ArrayList<>(supervisedKidUserIds());
+            all.addAll(adultProfileUserIds());
+            java.util.List<String> log = ProfileAppAccess.removeFromProfiles(this, shell, all, true);
+            runOnUiThread(() -> result.success(log));
+        } catch (Exception e) {
+            runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
+        }
+    }
+
+    /** Read-only: Hearth/HearthTube state across the other profiles, each row tagged supervised (kid) or not. */
+    private void runProfilesState(io.flutter.plugin.common.MethodChannel.Result result) {
         try (SelfAdb shell = SelfAdb.open(this)) {
             java.util.List<Integer> kids = supervisedKidUserIds();
+            java.util.List<Integer> all = new java.util.ArrayList<>(kids);
+            all.addAll(adultProfileUserIds());
             java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
-            for (KidsAppAccess.AppStatus s : KidsAppAccess.state(this, shell, kids)) {
+            for (ProfileAppAccess.AppStatus s : ProfileAppAccess.state(this, shell, all)) {
                 java.util.Map<String, Object> row = new java.util.HashMap<>();
                 row.put("userId", s.userId);
                 row.put("packageName", s.packageName);
                 row.put("installed", s.installed);
                 row.put("protected", s.protectedFromRemoval);
+                row.put("supervised", kids.contains(s.userId));
                 rows.add(row);
             }
             runOnUiThread(() -> result.success(rows));
@@ -1372,12 +1396,23 @@ public class MainActivity extends FlutterActivity {
         }
     }
 
-    /**
-     * The SUPERVISED kid profiles' user ids — the only profiles the kids-app provisioning ever touches. Enumerates
-     * this user's profiles and keeps the ones Family Link supervises ({@link ProfileUsers#isSupervised}), so grown-up
-     * and half-provisioned profiles are never affected.
-     */
+    /** The SUPERVISED kid profiles' user ids — Family Link-supervised profiles of this user. */
     private java.util.List<Integer> supervisedKidUserIds() {
+        return profileUserIds(true);
+    }
+
+    /** The OTHER ADULT profiles' user ids — secondary profiles that are NOT supervised (grown-ups). */
+    private java.util.List<Integer> adultProfileUserIds() {
+        return profileUserIds(false);
+    }
+
+    /**
+     * This user's other profiles, filtered by supervision: {@code wantSupervised} true returns the Family Link kids,
+     * false the non-supervised adult profiles. The owner is always excluded.
+     * NOTE: the adult branch is unverified on a real 2-adult TV (no test device yet); confirm getUserProfiles()
+     * returns adult Google TV profiles there.
+     */
+    private java.util.List<Integer> profileUserIds(boolean wantSupervised) {
         java.util.List<Integer> ids = new java.util.ArrayList<>();
         android.os.UserManager um = (android.os.UserManager) getSystemService(android.content.Context.USER_SERVICE);
         if (um == null) return ids;
@@ -1385,7 +1420,8 @@ public class MainActivity extends FlutterActivity {
         for (android.os.UserHandle profile : um.getUserProfiles()) {
             if (profile.equals(me)) continue;
             long serial = um.getSerialNumberForUser(profile);
-            if (!Boolean.TRUE.equals(ProfileUsers.isSupervised(this, serial))) continue;
+            boolean supervised = Boolean.TRUE.equals(ProfileUsers.isSupervised(this, serial));
+            if (supervised != wantSupervised) continue;
             int userId = userIdOf(profile);
             if (userId >= 0) ids.add(userId);
         }
