@@ -364,7 +364,7 @@ class _ResultRow extends StatelessWidget {
     // The quiet line: everything that isn't "watch it now"
     final notes = [
       if (availability.rentOrBuy.isNotEmpty) "Rent or buy on ${availability.rentOrBuy.map((a) => a.name).join(", ")}",
-      if (availability.elsewhere.isNotEmpty) "Also on ${availability.elsewhere.take(3).join(", ")} (not on this TV)",
+      if (availability.elsewhere.isNotEmpty && !availability.watchable) "Also on ${availability.elsewhere.take(3).join(", ")} (not on this TV)",
     ];
     final buttons = quiet ? availability.rentOrBuy : availability.included;
     return Padding(
