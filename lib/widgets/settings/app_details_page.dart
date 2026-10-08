@@ -58,7 +58,7 @@ class AppDetailsPage extends StatelessWidget {
                 title: localizations.open,
                 onTap: () async {
                   await appsService.launchApp(application);
-                  Navigator.of(context).pop(); // Close settings after launch? Or stay? Dialog behavior was close.
+                  if (context.mounted) Navigator.of(context).pop();
                 },
               ),
               _buildListTile(
@@ -83,7 +83,7 @@ class AppDetailsPage extends StatelessWidget {
                 _buildListTile(
                   context,
                   icon: Icons.add_box_outlined,
-                  title: "Add to Category", // Need localization or string
+                  title: "Add to Category",
                   onTap: () => showDialog<Category>(
                     context: context,
                     builder: (_) => AddToCategoryDialog(application),
@@ -101,8 +101,8 @@ class AppDetailsPage extends StatelessWidget {
                 icon: Icons.delete_outlined,
                 title: localizations.uninstall,
                 onTap: () async {
-                    await appsService.uninstallApp(application);
-                    Navigator.of(context).pop();
+                  await appsService.uninstallApp(application);
+                  if (context.mounted) Navigator.of(context).pop();
                 },
               ),
             ],
@@ -119,8 +119,6 @@ class AppDetailsPage extends StatelessWidget {
       title: Text(title, style: Theme.of(context).textTheme.bodyMedium),
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      // Add hover/focus color if needed, but default ListTile focus usually works.
-      // We can enhance it later if the user requests specific aesthetics for these details too.
     );
   }
 }

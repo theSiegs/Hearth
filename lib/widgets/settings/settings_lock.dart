@@ -45,8 +45,9 @@ bool settingsLocked(BuildContext context) {
 Future<bool> unlockSettings(BuildContext context) async {
   final unlock = context.getInheritedWidgetOfExactType<SettingsUnlock>()?.notifier;
   if (unlock?.value == true) return true;
+  final kids = context.read<ProfileService?>()?.isKidsProfile ?? false;
   final ok = await requireParent(context);
-  if (ok && (context.read<ProfileService?>()?.isKidsProfile ?? false)) unlock?.value = true;
+  if (ok && kids) unlock?.value = true;
   return ok;
 }
 
