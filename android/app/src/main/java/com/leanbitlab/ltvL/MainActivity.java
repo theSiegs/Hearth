@@ -186,7 +186,7 @@ public class MainActivity extends FlutterActivity {
             case "openGoogleTvHome" -> result.success(openGoogleTvHome());
             case "voiceSearch" -> startVoiceSearch(result);
             case "getAppLastProfiles" -> {
-                Map<String, Object> users = new HashMap<>(getSharedPreferences("ltv_app_last_profile", MODE_PRIVATE).getAll());
+                Map<String, Object> users = new HashMap<>(LauncherAccessibilityService.getAppLastProfiles(this));
                 result.success(users);
             }
             case "takePendingSearch" -> {
@@ -891,10 +891,7 @@ public class MainActivity extends FlutterActivity {
     // Google TV's own profile switcher: switching here is what applies kids profile restrictions system-wide.
     // Not a public API, so fall back to the accounts settings page if Google TV changes it.
     private boolean openProfileChooser() {
-        Intent chooser = new Intent("com.google.android.gms.account.ProfilePickerDelegation")
-                .setClassName(LauncherAccessibilityService.GOOGLE_TV_PACKAGE,
-                        LauncherAccessibilityService.GOOGLE_TV_PACKAGE + ".profile.chooser.ProfileChooserActivity");
-        return startFirst(chooser, new Intent(Settings.ACTION_SYNC_SETTINGS));
+        return startFirst(LauncherAccessibilityService.profileChooserIntent(), new Intent(Settings.ACTION_SYNC_SETTINGS));
     }
 
     /**
