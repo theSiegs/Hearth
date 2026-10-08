@@ -14,12 +14,14 @@ void main() {
   // A day after the test programs' engagement times (Sep 2020), so none counts as old
   DateTime clock() => DateTime.fromMillisecondsSinceEpoch(1600000000000 + const Duration(days: 1).inMilliseconds);
   late MockFLauncherChannel mockChannel;
+  late SharedPreferences prefs;
   late StreamController<dynamic> watchNextStreamController;
   late WatchNextService watchNextService;
 
-  setUp(() {
+  setUp(() async {
     // Ownership tracking has started (no stored owners), and the active profile last used every test app
     SharedPreferences.setMockInitialValues({'watch_next_owners_v2': '{}'});
+    prefs = await SharedPreferences.getInstance();
     mockChannel = MockFLauncherChannel();
     watchNextStreamController = StreamController<dynamic>.broadcast();
     // Default stubs
@@ -48,7 +50,7 @@ void main() {
 
   group('WatchNextService Initialization', () {
     test('initializes with empty programs list', () async {
-      watchNextService = WatchNextService(mockChannel, clock: clock);
+      watchNextService = WatchNextService(mockChannel, prefs, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -58,7 +60,7 @@ void main() {
     });
 
     test('refreshes watch next programs when event stream emits change', () async {
-      watchNextService = WatchNextService(mockChannel, clock: clock);
+      watchNextService = WatchNextService(mockChannel, prefs, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -108,7 +110,7 @@ void main() {
 
       when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => fakePrograms);
 
-      watchNextService = WatchNextService(mockChannel, clock: clock);
+      watchNextService = WatchNextService(mockChannel, prefs, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -149,7 +151,7 @@ void main() {
 
       when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => fakePrograms);
 
-      watchNextService = WatchNextService(mockChannel, clock: clock);
+      watchNextService = WatchNextService(mockChannel, prefs, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -161,7 +163,7 @@ void main() {
     test('handles missing permission by setting hasPermission to false and clearing programs', () async {
       when(mockChannel.checkWatchNextPermission()).thenAnswer((_) async => false);
 
-      watchNextService = WatchNextService(mockChannel, clock: clock);
+      watchNextService = WatchNextService(mockChannel, prefs, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -175,7 +177,7 @@ void main() {
     test('handles channel getWatchNextPrograms error gracefully without throwing', () async {
       when(mockChannel.getWatchNextPrograms()).thenThrow(Exception('Channel failure'));
 
-      watchNextService = WatchNextService(mockChannel, clock: clock);
+      watchNextService = WatchNextService(mockChannel, prefs, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -188,7 +190,7 @@ void main() {
   group('WatchNextService Permissions', () {
     test('checkPermission queries channel directly', () async {
       when(mockChannel.checkWatchNextPermission()).thenAnswer((_) async => false);
-      watchNextService = WatchNextService(mockChannel, clock: clock);
+      watchNextService = WatchNextService(mockChannel, prefs, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -199,7 +201,7 @@ void main() {
 
     test('requestPermission requests channel permission and refreshes on grant', () async {
       when(mockChannel.requestWatchNextPermission()).thenAnswer((_) async => true);
-      watchNextService = WatchNextService(mockChannel, clock: clock);
+      watchNextService = WatchNextService(mockChannel, prefs, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -211,7 +213,7 @@ void main() {
 
     test('requestPermission returns false when denied', () async {
       when(mockChannel.requestWatchNextPermission()).thenAnswer((_) async => false);
-      watchNextService = WatchNextService(mockChannel, clock: clock);
+      watchNextService = WatchNextService(mockChannel, prefs, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -224,7 +226,7 @@ void main() {
 
   group('WatchNextService launch', () {
     test('launches program via channel intentUri', () async {
-      watchNextService = WatchNextService(mockChannel, clock: clock);
+      watchNextService = WatchNextService(mockChannel, prefs, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -251,7 +253,7 @@ void main() {
     });
 
     test('fallback launches app packageName when intentUri empty', () async {
-      watchNextService = WatchNextService(mockChannel, clock: clock);
+      watchNextService = WatchNextService(mockChannel, prefs, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -278,7 +280,7 @@ void main() {
     });
 
     test('fallback launches app packageName when intentUri returns false', () async {
-      watchNextService = WatchNextService(mockChannel, clock: clock);
+      watchNextService = WatchNextService(mockChannel, prefs, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -326,7 +328,7 @@ void main() {
       when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => fakePrograms);
       when(mockChannel.deleteWatchNextProgram(42)).thenAnswer((_) async => true);
 
-      watchNextService = WatchNextService(mockChannel, clock: clock);
+      watchNextService = WatchNextService(mockChannel, prefs, clock: clock);
       while (!watchNextService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -357,7 +359,7 @@ void main() {
         };
 
     Future<WatchNextService> ready() async {
-      final service = WatchNextService(mockChannel, clock: clock);
+      final service = WatchNextService(mockChannel, prefs, clock: clock);
       while (!service.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -411,7 +413,7 @@ void main() {
     List<String> titles(WatchNextService service) => service.programs.map((p) => p.title).toList();
 
     Future<WatchNextService> ready() async {
-      final service = WatchNextService(mockChannel, clock: clock);
+      final service = WatchNextService(mockChannel, prefs, clock: clock);
       while (!service.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -434,6 +436,7 @@ void main() {
 
     test('entries already there when tracking starts belong to no one until watched again', () async {
       SharedPreferences.setMockInitialValues({});
+      prefs = await SharedPreferences.getInstance();
       when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => [entry(1, 'com.netflix.mediaclient')]);
 
       final service = await ready();
@@ -457,8 +460,8 @@ void main() {
 
   group('WatchNextService hidden apps', () {
     test('setPackageHidden and unhideAll save the choice and re-read the list', () async {
-      final settings = SettingsService(await SharedPreferences.getInstance());
-      final service = WatchNextService(mockChannel, clock: clock);
+      final settings = SettingsService(prefs);
+      final service = WatchNextService(mockChannel, prefs, clock: clock);
       while (!service.initialized) {
         await Future.delayed(Duration.zero);
       }

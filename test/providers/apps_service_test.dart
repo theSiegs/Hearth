@@ -202,7 +202,7 @@ void main() {
       when(database.persistApps(any)).thenAnswer((_) => Future.value());
       when(database.deleteApps(any)).thenAnswer((_) => Future.value());
 
-      final appsService = AppsService(channel, database);
+      final appsService = AppsService(channel, database, await SharedPreferences.getInstance());
 
       // Wait for initialization
       while (!appsService.initialized) {
@@ -269,7 +269,7 @@ void main() {
       when(database.replaceAppsCategories(any))
           .thenAnswer((_) => Future.value());
 
-      final appsService = AppsService(channel, database);
+      final appsService = AppsService(channel, database, await SharedPreferences.getInstance());
 
       while (!appsService.initialized) {
         await Future.delayed(const Duration(milliseconds: 10));
@@ -433,7 +433,7 @@ void main() {
       when(database.insertAppsCategories(any))
           .thenAnswer((_) => Future.value());
 
-      final appsService = AppsService(channel, database);
+      final appsService = AppsService(channel, database, await SharedPreferences.getInstance());
 
       while (!appsService.initialized) {
         await Future.delayed(const Duration(milliseconds: 10));
@@ -508,7 +508,7 @@ void main() {
       when(database.persistApps(any)).thenAnswer((_) => Future.value());
       when(database.wasCreated).thenReturn(false);
 
-      final appsService = AppsService(channel, database);
+      final appsService = AppsService(channel, database, await SharedPreferences.getInstance());
 
       while (!appsService.initialized) {
         await Future.delayed(const Duration(milliseconds: 10));
@@ -584,7 +584,7 @@ void main() {
       when(database.insertAppsCategories(any))
           .thenAnswer((_) => Future.value());
 
-      final appsService = AppsService(channel, database);
+      final appsService = AppsService(channel, database, await SharedPreferences.getInstance());
       while (!appsService.initialized) {
         await Future.delayed(const Duration(milliseconds: 10));
       }
@@ -647,7 +647,7 @@ void main() {
       when(database.insertAppsCategories(any))
           .thenAnswer((_) => Future.value());
 
-      final appsService = AppsService(channel, database);
+      final appsService = AppsService(channel, database, await SharedPreferences.getInstance());
       while (!appsService.initialized) {
         await Future.delayed(const Duration(milliseconds: 10));
       }
@@ -709,7 +709,7 @@ void main() {
       when(database.insertAppsCategories(any))
           .thenAnswer((_) => Future.value());
 
-      final appsService = AppsService(channel, database);
+      final appsService = AppsService(channel, database, await SharedPreferences.getInstance());
       while (!appsService.initialized) {
         await Future.delayed(const Duration(milliseconds: 10));
       }
@@ -796,7 +796,7 @@ void main() {
           .thenAnswer((_) async {});
       when(database.wasCreated).thenReturn(false);
 
-      final appsService = AppsService(channel, database);
+      final appsService = AppsService(channel, database, await SharedPreferences.getInstance());
       while (!appsService.initialized) {
         await Future.delayed(const Duration(milliseconds: 10));
       }
@@ -832,7 +832,7 @@ void main() {
       when(database.transaction(any)).thenAnswer((invocation) => invocation.positionalArguments[0]());
       when(database.persistApps(any)).thenAnswer((_) async {});
       when(database.wasCreated).thenReturn(false);
-      final appsService = AppsService(channel, database);
+      final appsService = AppsService(channel, database, await SharedPreferences.getInstance());
       while (!appsService.initialized) {
         await Future.delayed(const Duration(milliseconds: 10));
       }
@@ -898,7 +898,7 @@ Future<AppsService> _buildInitialisedAppsService(
   when(database.transaction(any))
       .thenAnswer((realInvocation) => realInvocation.positionalArguments[0]());
   when(database.wasCreated).thenReturn(false);
-  final appsService = AppsService(channel, database);
+  final appsService = AppsService(channel, database, await SharedPreferences.getInstance());
 
   while (!appsService.initialized) {
     await Future.delayed(const Duration(milliseconds: 10));

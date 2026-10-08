@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flauncher/providers/notifications_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 import '../mocks.mocks.dart';
@@ -11,6 +12,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late MockFLauncherChannel mockChannel;
+  late SharedPreferences prefs;
   late NotificationsService notificationsService;
   late StreamController<List<Map<dynamic, dynamic>>> streamController;
 
@@ -18,8 +20,9 @@ void main() {
   Map<String, Object> clearable(String packageName, String key) =>
       {'key': key, 'packageName': packageName, 'title': 'Title $key', 'text': '', 'isClearable': true};
 
-  setUp(() {
+  setUp(() async {
     SharedPreferencesStorePlatform.instance = InMemorySharedPreferencesStore.empty();
+    prefs = await SharedPreferences.getInstance();
 
     mockChannel = MockFLauncherChannel();
     streamController = StreamController<List<Map<dynamic, dynamic>>>.broadcast();
@@ -49,7 +52,7 @@ void main() {
 
   group('Initialization', () {
     test('initializes with default state when permission denied', () async {
-      notificationsService = NotificationsService(mockChannel);
+      notificationsService = NotificationsService(mockChannel, prefs);
       
       while (!notificationsService.initialized) {
         await Future.delayed(Duration.zero);
@@ -72,7 +75,7 @@ void main() {
                 for (var i = 0; i < 5; i++) clearable('com.leanbitlab.ltvL', 'ltv_$i'),
               ]);
 
-      notificationsService = NotificationsService(mockChannel);
+      notificationsService = NotificationsService(mockChannel, prefs);
       
       while (!notificationsService.initialized) {
         await Future.delayed(Duration.zero);
@@ -90,7 +93,7 @@ void main() {
 
   group('Permission Changes', () {
     test('checkPermission updates state and notifies when changed', () async {
-      notificationsService = NotificationsService(mockChannel);
+      notificationsService = NotificationsService(mockChannel, prefs);
       while (!notificationsService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -112,7 +115,7 @@ void main() {
     });
 
     test('both checks at once, as on resume, pick up newly granted permissions', () async {
-      notificationsService = NotificationsService(mockChannel);
+      notificationsService = NotificationsService(mockChannel, prefs);
       while (!notificationsService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -138,7 +141,7 @@ void main() {
       when(mockChannel.checkNotificationListenerPermission())
           .thenAnswer((_) async => true);
       
-      notificationsService = NotificationsService(mockChannel);
+      notificationsService = NotificationsService(mockChannel, prefs);
       while (!notificationsService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -166,7 +169,7 @@ void main() {
                 clearable('com.android.settings', 'settings_0'),
               ]);
 
-      notificationsService = NotificationsService(mockChannel);
+      notificationsService = NotificationsService(mockChannel, prefs);
       while (!notificationsService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -188,7 +191,7 @@ void main() {
 
   group('Overlay Popup Settings', () {
     test('initializes with default overlay permission and toggle state', () async {
-      notificationsService = NotificationsService(mockChannel);
+      notificationsService = NotificationsService(mockChannel, prefs);
       while (!notificationsService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -197,7 +200,7 @@ void main() {
     });
 
     test('toggles system popup state and saves to preferences', () async {
-      notificationsService = NotificationsService(mockChannel);
+      notificationsService = NotificationsService(mockChannel, prefs);
       while (!notificationsService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -211,7 +214,7 @@ void main() {
     });
 
     test('requests overlay permission from channel', () async {
-      notificationsService = NotificationsService(mockChannel);
+      notificationsService = NotificationsService(mockChannel, prefs);
       while (!notificationsService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -232,7 +235,7 @@ void main() {
       when(mockChannel.dismissNotification(any))
           .thenAnswer((_) async => true);
 
-      notificationsService = NotificationsService(mockChannel);
+      notificationsService = NotificationsService(mockChannel, prefs);
       while (!notificationsService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -262,7 +265,7 @@ void main() {
       when(mockChannel.dismissAllNotifications())
           .thenAnswer((_) async => true);
 
-      notificationsService = NotificationsService(mockChannel);
+      notificationsService = NotificationsService(mockChannel, prefs);
       while (!notificationsService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -291,7 +294,7 @@ void main() {
                 {'packageName': 'com.google.android.youtube', 'key': 'yt_1', 'title': 'Video', 'isClearable': true},
               ]);
 
-      notificationsService = NotificationsService(mockChannel);
+      notificationsService = NotificationsService(mockChannel, prefs);
       while (!notificationsService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -320,7 +323,7 @@ void main() {
                 {'packageName': 'com.google.android.youtube', 'key': 'yt_1', 'title': 'Video', 'isClearable': true},
               ]);
 
-      notificationsService = NotificationsService(mockChannel);
+      notificationsService = NotificationsService(mockChannel, prefs);
       while (!notificationsService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -339,7 +342,7 @@ void main() {
                 {'packageName': 'com.netflix.ninja', 'key': 'net_1', 'title': 'Netflix', 'isClearable': true},
               ]);
 
-      notificationsService = NotificationsService(mockChannel);
+      notificationsService = NotificationsService(mockChannel, prefs);
       while (!notificationsService.initialized) {
         await Future.delayed(Duration.zero);
       }
@@ -372,7 +375,7 @@ void main() {
     Future<NotificationsService> ready() async {
       when(mockChannel.checkNotificationListenerPermission()).thenAnswer((_) async => true);
       when(mockChannel.dismissNotification(any)).thenAnswer((_) async => true);
-      final service = NotificationsService(mockChannel);
+      final service = NotificationsService(mockChannel, prefs);
       while (!service.initialized) {
         await Future.delayed(Duration.zero);
       }

@@ -2,6 +2,7 @@ import 'package:flauncher/models/category.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 import '../mock_channel.dart';
@@ -34,7 +35,7 @@ void main() {
       when(database.persistApps(any)).thenAnswer((_) => Future.value());
       when(database.deleteApps(any)).thenAnswer((_) => Future.value());
 
-      appsService = AppsService(channel, database);
+      appsService = AppsService(channel, database, await SharedPreferences.getInstance());
 
       // Wait for initialization
       while (!appsService.initialized) {
