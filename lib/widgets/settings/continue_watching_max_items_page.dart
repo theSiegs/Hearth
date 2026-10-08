@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/settings_service.dart';
+import 'settings_choice_tile.dart';
 
 class ContinueWatchingMaxItemsPage extends StatelessWidget {
   static const String routeName = "continue_watching_max_items_panel";
@@ -58,146 +59,22 @@ class ContinueWatchingMaxItemsPage extends StatelessWidget {
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
-                  children: maxItemsPresets.map((preset) {
-                    final count = preset.$1;
-                    final title = preset.$2;
-                    final subtitle = preset.$3;
-                    final isSelected = currentCount == count;
-
-                    return _MaxItemsRadioTile(
-                      title: title,
-                      subtitle: subtitle,
-                      value: count,
-                      groupValue: currentCount,
-                      isSelected: isSelected,
-                      autofocus: isSelected,
-                      onChanged: (value) {
-                        if (value != null) {
-                          settingsService.setContinueWatchingMaxItems(value);
-                        }
-                      },
-                    );
-                  }).toList(),
+                  children: [
+                    for (final (count, title, subtitle) in maxItemsPresets)
+                      SettingsChoiceTile<int>(
+                        title: title,
+                        subtitle: subtitle,
+                        value: count,
+                        groupValue: currentCount,
+                        onChanged: settingsService.setContinueWatchingMaxItems,
+                      ),
+                  ],
                 ),
               ),
             ),
           ],
         );
       },
-    );
-  }
-}
-
-class _MaxItemsRadioTile extends StatefulWidget {
-  final String title;
-  final String subtitle;
-  final int value;
-  final int groupValue;
-  final bool isSelected;
-  final ValueChanged<int?> onChanged;
-  final bool autofocus;
-
-  const _MaxItemsRadioTile({
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.groupValue,
-    required this.isSelected,
-    required this.onChanged,
-    this.autofocus = false,
-  });
-
-  @override
-  State<_MaxItemsRadioTile> createState() => _MaxItemsRadioTileState();
-}
-
-class _MaxItemsRadioTileState extends State<_MaxItemsRadioTile> {
-  bool _hasFocus = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
-
-    return RepaintBoundary(
-      child: Actions(
-        actions: <Type, Action<Intent>>{
-          ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
-            widget.onChanged(widget.value);
-            return null;
-          }),
-          ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) {
-            widget.onChanged(widget.value);
-            return null;
-          }),
-        },
-        child: Focus(
-          autofocus: widget.autofocus,
-          onFocusChange: (hasFocus) {
-            setState(() {
-              _hasFocus = hasFocus;
-            });
-            if (hasFocus) {
-              Scrollable.ensureVisible(
-                context,
-                alignment: 0.5,
-                duration: const Duration(milliseconds: 100),
-                curve: Curves.easeOut,
-              );
-            }
-          },
-          child: InkWell(
-            onTap: () {
-              widget.onChanged(widget.value);
-            },
-            focusColor: Colors.transparent,
-            hoverColor: Colors.transparent,
-            splashColor: Colors.transparent,
-            highlightColor: Colors.transparent,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: _hasFocus ? Colors.white.withOpacity(0.05) : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-                border: _hasFocus
-                    ? Border.all(color: primaryColor, width: 2)
-                    : Border.all(color: Colors.transparent, width: 2),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.title,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.normal,
-                                color: widget.isSelected ? Colors.white : Colors.white70,
-                                fontSize: 14,
-                              ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          widget.subtitle,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.white54,
-                                fontSize: 11,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (widget.isSelected)
-                    Icon(Icons.check_circle, color: primaryColor, size: 20)
-                  else
-                    const Icon(Icons.circle_outlined, color: Colors.white38, size: 20),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

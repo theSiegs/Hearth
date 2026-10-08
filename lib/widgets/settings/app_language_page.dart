@@ -18,7 +18,7 @@
 
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
-import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
+import 'package:flauncher/widgets/settings/settings_choice_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -37,24 +37,27 @@ class AppLanguagePage extends StatelessWidget {
             Text(localizations.appLanguage, style: Theme.of(context).textTheme.titleLarge),
             const Divider(),
             Expanded(
-              child: ListView(
-                children: [
-                  _radioTile(context, service, localizations.systemDefault, "", autofocus: true),
-                  _radioTile(context, service, localizations.english, "en"),
-                  _radioTile(context, service, localizations.spanish, "es"),
-                  _radioTile(context, service, localizations.french, "fr"),
-                  _radioTile(context, service, localizations.german, "de"),
-                  _radioTile(context, service, localizations.italian, "it"),
-                  _radioTile(context, service, localizations.portuguese, "pt"),
-                  _radioTile(context, service, localizations.russian, "ru"),
-                  _radioTile(context, service, localizations.ukrainian, "uk"),
-                  _radioTile(context, service, localizations.turkish, "tr"),
-                  _radioTile(context, service, localizations.arabic, "ar"),
-                  _radioTile(context, service, localizations.hindi, "hi"),
-                  _radioTile(context, service, localizations.chinese, "zh"),
-                  _radioTile(context, service, localizations.japanese, "ja"),
-                  _radioTile(context, service, localizations.korean, "ko"),
-                ],
+              // Built all at once, so the chosen language near the end can take focus.
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _choice(service, localizations.systemDefault, ""),
+                    _choice(service, localizations.english, "en"),
+                    _choice(service, localizations.spanish, "es"),
+                    _choice(service, localizations.french, "fr"),
+                    _choice(service, localizations.german, "de"),
+                    _choice(service, localizations.italian, "it"),
+                    _choice(service, localizations.portuguese, "pt"),
+                    _choice(service, localizations.russian, "ru"),
+                    _choice(service, localizations.ukrainian, "uk"),
+                    _choice(service, localizations.turkish, "tr"),
+                    _choice(service, localizations.arabic, "ar"),
+                    _choice(service, localizations.hindi, "hi"),
+                    _choice(service, localizations.chinese, "zh"),
+                    _choice(service, localizations.japanese, "ja"),
+                    _choice(service, localizations.korean, "ko"),
+                  ],
+                ),
               ),
             ),
           ],
@@ -63,16 +66,10 @@ class AppLanguagePage extends StatelessWidget {
     );
   }
 
-  Widget _radioTile(BuildContext context, SettingsService service, String label, String value, {bool autofocus = false}) {
-    final isSelected = service.appLanguage == value;
-    return FocusableSettingsTile(
-      autofocus: autofocus && isSelected,
-      leading: Icon(
-        isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-        color: isSelected ? Theme.of(context).colorScheme.secondary : Colors.grey,
-      ),
-      title: Text(label, style: Theme.of(context).textTheme.bodyMedium),
-      onPressed: () => service.setAppLanguage(value),
-    );
-  }
+  Widget _choice(SettingsService service, String label, String value) => SettingsChoiceTile<String>(
+        title: label,
+        value: value,
+        groupValue: service.appLanguage,
+        onChanged: service.setAppLanguage,
+      );
 }

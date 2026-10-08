@@ -1,7 +1,7 @@
 
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
-import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
+import 'package:flauncher/widgets/settings/settings_choice_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -22,9 +22,9 @@ class DataUsagePeriodPage extends StatelessWidget {
               Expanded(
                 child: ListView(
                   children: [
-                    _radioTile(context, service, 'Daily', DATA_USAGE_DAILY),
-                    _radioTile(context, service, 'Weekly', DATA_USAGE_WEEKLY),
-                    _radioTile(context, service, 'Monthly', DATA_USAGE_MONTHLY),
+                    _choice(service, 'Daily', DATA_USAGE_DAILY),
+                    _choice(service, 'Weekly', DATA_USAGE_WEEKLY),
+                    _choice(service, 'Monthly', DATA_USAGE_MONTHLY),
                   ],
                 ),
               ),
@@ -34,15 +34,10 @@ class DataUsagePeriodPage extends StatelessWidget {
     );
   }
 
-  Widget _radioTile(BuildContext context, SettingsService service, String label, String value) {
-    final isSelected = service.dataUsagePeriod == value;
-    return FocusableSettingsTile(
-      leading: Icon(
-        isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-        color: isSelected ? Theme.of(context).colorScheme.secondary : Colors.grey,
-      ),
-      title: Text(label, style: Theme.of(context).textTheme.bodyMedium),
-      onPressed: () => service.setDataUsagePeriod(value),
-    );
-  }
+  Widget _choice(SettingsService service, String label, String value) => SettingsChoiceTile<String>(
+        title: label,
+        value: value,
+        groupValue: service.dataUsagePeriod,
+        onChanged: service.setDataUsagePeriod,
+      );
 }
