@@ -20,37 +20,26 @@ import 'weather_status_bar_widget.dart';
 
 class FocusAwareAppBar extends StatefulWidget implements PreferredSizeWidget
 {
-  const FocusAwareAppBar({Key? key}) : super(key: key);
+  const FocusAwareAppBar({super.key});
 
   @override
-  State<StatefulWidget> createState() {
-    return FocusAwareAppBarState();
-  }
+  State<FocusAwareAppBar> createState() => FocusAwareAppBarState();
 
   @override
-  Size get preferredSize => Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
 
 class FocusAwareAppBarState extends State<FocusAwareAppBar>
 {
   bool _focused = false;
-  late FocusNode _profileFocusNode;
-  late FocusNode _inputsFocusNode;
-  late FocusNode _notificationsFocusNode;
-  late FocusNode _weatherFocusNode;
+  final FocusNode _profileFocusNode = FocusNode();
+  final FocusNode _inputsFocusNode = FocusNode();
+  final FocusNode _notificationsFocusNode = FocusNode();
+  final FocusNode _weatherFocusNode = FocusNode();
+  final FocusNode _searchFocusNode = FocusNode();
 
   @visibleForTesting
   FocusNode get profileFocusNode => _profileFocusNode;
-
-  @override
-  void initState() {
-    super.initState();
-    _profileFocusNode = FocusNode();
-    _inputsFocusNode = FocusNode();
-    _notificationsFocusNode = FocusNode();
-    _weatherFocusNode = FocusNode();
-    _searchFocusNode = FocusNode();
-  }
 
   @override
   void dispose() {
@@ -61,8 +50,6 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
     _searchFocusNode.dispose();
     super.dispose();
   }
-
-  late final FocusNode _searchFocusNode;
 
   /// Focuses the search button (or the current search's pill).
   void focusSearch() {
@@ -83,25 +70,21 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
   Widget build(BuildContext context) {
     return Selector<SettingsService, bool>(
       selector: (_, settings) => settings.autoHideAppBarEnabled,
-      builder: (context, autoHide, widget) {
+      builder: (context, autoHide, child) {
         if (autoHide) {
           return Focus(
             canRequestFocus: false,
+            onFocusChange: (hasFocus) => setState(() => _focused = hasFocus),
             child: AnimatedContainer(
               curve: Curves.decelerate,
-              duration: Duration(milliseconds: 150),
+              duration: const Duration(milliseconds: 150),
               height: _focused ? kToolbarHeight : 0,
-              child: widget!
+              child: child,
             ),
-            onFocusChange: (hasFocus) {
-              this.setState(() {
-                _focused = hasFocus;
-              });
-            }
           );
         }
 
-        return widget!;
+        return child!;
       },
       // Right past the last button opens the Home Assistant panel (when it's on), as it does from the dock.
       child: Focus(
@@ -130,8 +113,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
           elevation: 0,
           scrolledUnderElevation: 0,
           backgroundColor: Colors.transparent,
-          // Left side: profile, inputs, notifications. There's no Settings button:
-          // pressing Left at the left edge (here or on the home screen) opens Settings.
+          // Left side: profile, inputs, notifications, search, data usage. Left from the profile button opens Settings.
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -228,7 +210,6 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                       );
               }),
               const SizedBox(width: 16),
-              // Data usage widget
               Selector<SettingsService, bool>(
                 selector: (_, settings) => settings.showDataWidgetInStatusBar,
                 builder: (context, showData, _) => showData
@@ -286,7 +267,6 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                     dateFormat: service.dateFormat,
                     timeFormat: service.timeFormat),
                     builder: (context, dateTimeSettings, _) {
-                      // Define standard text style
                       const textStyle = TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w400,
@@ -313,18 +293,14 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Date
                             if (dateTimeSettings.showDateInStatusBar)
                               DateTimeWidget(
                                 dateTimeSettings.dateFormat,
                                 key: const Key("statusbar_date"),
                                 textStyle: textStyle,
                               ),
-                            
                             if (dateTimeSettings.showDateInStatusBar && dateTimeSettings.showTimeInStatusBar)
-                                const SizedBox(width: 12),
-
-                            // Clock
+                              const SizedBox(width: 12),
                             if (dateTimeSettings.showTimeInStatusBar)
                               DateTimeWidget(
                                 dateTimeSettings.timeFormat,
