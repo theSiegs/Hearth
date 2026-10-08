@@ -7,15 +7,11 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -50,7 +46,7 @@ final class HaSetupServer {
     /** Starts a fresh server (replacing any running one) and returns the link for the QR code, or null. */
     static synchronized String start(Context context) {
         stop();
-        String ip = localIpv4();
+        String ip = LocalNet.ipv4Address();
         if (ip == null) return null;
         HaSetupServer server = new HaSetupServer(context);
         for (int port : PORTS) {
@@ -170,20 +166,6 @@ final class HaSetupServer {
                 + "button{margin-top:20px;width:100%;padding:14px;font-size:16px;border:0;border-radius:8px;"
                 + "background:#ff7a1a;color:#111;font-weight:600}.help{color:#888;font-size:14px}.err{color:#ff8a80}"
                 + "</style></head><body><div class='c'><h2>" + escape(title) + "</h2>" + body + "</div></body></html>";
-    }
-
-    private static String localIpv4() {
-        try {
-            for (NetworkInterface nif : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-                if (!nif.isUp() || nif.isLoopback()) continue;
-                for (InetAddress address : Collections.list(nif.getInetAddresses())) {
-                    if (address instanceof Inet4Address && address.isSiteLocalAddress()) return address.getHostAddress();
-                }
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "Couldn't read the TV's network address", e);
-        }
-        return null;
     }
 
     private static String escape(String s) {

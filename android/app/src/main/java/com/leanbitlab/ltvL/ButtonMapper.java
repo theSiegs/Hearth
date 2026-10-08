@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.media.tv.TvContract;
 import android.net.Uri;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.KeyEvent;
 
 import org.json.JSONException;
@@ -23,6 +24,7 @@ import java.util.Map;
  * its entity ID) through the panel's token.
  */
 final class ButtonMapper {
+    private static final String TAG = "HearthButtons";
     private static final String MAPPINGS_KEY = "button_mappings";
     static final String PRESS_SHORT = "short";
     static final String PRESS_LONG = "long";
@@ -165,7 +167,8 @@ final class ButtonMapper {
                 HaApi.EXECUTOR.execute(() -> {
                     try {
                         HaApi.callService(service, parts[0], parts[1], new JSONObject().put("entity_id", target));
-                    } catch (JSONException ignored) {
+                    } catch (JSONException e) {
+                        Log.w(TAG, "Couldn't call Home Assistant for " + target, e);
                     }
                 });
                 return;
@@ -176,7 +179,8 @@ final class ButtonMapper {
         if (intent == null) return;
         try {
             service.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Log.w(TAG, "Couldn't start the mapped action " + type, e);
         }
     }
 
