@@ -136,6 +136,9 @@ class SetupChecklistPage extends StatefulWidget {
   static const String routeName = "setup_checklist";
   static const String title = "Setup & permissions";
 
+  /// Where this page is, for the hints on other pages that send people here.
+  static const String breadcrumb = "Settings > System > $title";
+
   const SetupChecklistPage({super.key});
 
   @override

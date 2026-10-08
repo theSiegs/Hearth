@@ -23,6 +23,7 @@ import '../../providers/settings_service.dart';
 import '../rounded_switch_list_tile.dart';
 import 'focusable_settings_tile.dart';
 import 'ha_phone_setup_dialog.dart';
+import 'setup_checklist_page.dart';
 
 /// Home Assistant: its pop-ups on the TV, its dashboard panel, and the TV's status reported to it. Each has a page
 /// of its own; this one shows whether each is on.
@@ -158,7 +159,7 @@ class _HaNotificationsPageState extends State<HaNotificationsPage> {
     final shown = await _channel.sendHaTestNotification();
     if (mounted) {
       setState(() => _testResult =
-          shown ? null : "Turn on Home Button Fix (Settings > System > Setup & permissions); it shows the pop-ups.");
+          shown ? null : "Turn on Home Button Fix (${SetupChecklistPage.breadcrumb}); it shows the pop-ups.");
     }
   }
 
@@ -193,7 +194,7 @@ class _HaNotificationsPageState extends State<HaNotificationsPage> {
                   "${_ip ?? "(this TV's IP address)"}. Then send notifications to it from automations, for "
                   "example for the doorbell or when the laundry is done.\n\n"
                   "Only devices on your home network can send them (port 7676). Pop-ups appear over any app "
-                  "and need Home Button Fix (Settings > System > Setup & permissions) to be on.",
+                  "and need Home Button Fix (${SetupChecklistPage.breadcrumb}) to be on.",
                 ),
               ],
             ),
