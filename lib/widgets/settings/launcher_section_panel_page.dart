@@ -25,6 +25,7 @@ import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 
 import '../../models/category.dart';
+import 'settings_page.dart';
 
 // Section name presets for TV remote-friendly selection
 // First 2 are special auto-populating categories
@@ -170,11 +171,10 @@ class LauncherSectionPanelPage extends StatelessWidget {
                 title = localizations.modifySection;
               }
 
-              return SingleChildScrollView(
+              return SettingsPage(
+                title: title,
                 padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  Text(title, style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
-                  Divider(),
+                children: [
                   if (creating) ...[
                     _listTile(
                       Text(localizations.type),
@@ -277,7 +277,7 @@ class LauncherSectionPanelPage extends StatelessWidget {
                           },
                           child: Text(localizations.delete),
                         ))
-                ]),
+                ],
               );
             }));
   }

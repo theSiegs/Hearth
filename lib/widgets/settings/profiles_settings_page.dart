@@ -25,6 +25,7 @@ import 'package:provider/provider.dart';
 import 'focusable_settings_tile.dart';
 import 'profile_pairing_page.dart';
 import 'settings_lock.dart';
+import 'settings_page.dart';
 
 /// Google TV profiles, Profile Pairing in the streaming apps, and the parent PIN.
 class ProfilesSettingsPage extends StatelessWidget {
@@ -37,38 +38,31 @@ class ProfilesSettingsPage extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final hasPin = context.select<SettingsService, bool>((s) => s.hasParentPin);
     final bool locked = settingsLocked(context);
-    return Column(
+    return SettingsPage(
+      title: "Profiles",
       children: [
-        Text("Profiles", style: textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                FocusableSettingsTile(
-                  autofocus: true,
-                  leading: const Icon(Icons.people_outline),
-                  title: Text("Switch profile", style: textTheme.bodyMedium),
-                  trailing: Text(activeProfileLabel(context) ?? "", style: textTheme.bodySmall),
-                  onPressed: () => FLauncherChannel().openProfileChooser(),
-                ),
-                // No PIN of its own: in a kids profile, Settings already took the parent PIN to get here, and
-                // grown-up profiles are only reached past Google TV's PIN.
-                if (!locked) FocusableSettingsTile(
-                  leading: const Icon(Icons.switch_account),
-                  title: Text("Profile Pairing", style: textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(ProfilePairingPage.routeName),
-                ),
-                if (!locked) FocusableSettingsTile(
-                  leading: const Icon(Icons.lock_outline),
-                  title: Text("Parent PIN", style: textTheme.bodyMedium),
-                  trailing: Text(hasPin ? "On" : "Off", style: textTheme.bodySmall),
-                  onPressed: () => _editParentPin(context),
-                ),
-              ],
-            ),
-          ),
+        FocusableSettingsTile(
+          autofocus: true,
+          leading: const Icon(Icons.people_outline),
+          title: Text("Switch profile", style: textTheme.bodyMedium),
+          trailing: Text(activeProfileLabel(context) ?? "", style: textTheme.bodySmall),
+          onPressed: () => FLauncherChannel().openProfileChooser(),
         ),
+        // No PIN of its own: in a kids profile, Settings already took the parent PIN to get here, and
+        // grown-up profiles are only reached past Google TV's PIN.
+        if (!locked)
+          FocusableSettingsTile(
+            leading: const Icon(Icons.switch_account),
+            title: Text("Profile Pairing", style: textTheme.bodyMedium),
+            onPressed: () => Navigator.of(context).pushNamed(ProfilePairingPage.routeName),
+          ),
+        if (!locked)
+          FocusableSettingsTile(
+            leading: const Icon(Icons.lock_outline),
+            title: Text("Parent PIN", style: textTheme.bodyMedium),
+            trailing: Text(hasPin ? "On" : "Off", style: textTheme.bodySmall),
+            onPressed: () => _editParentPin(context),
+          ),
       ],
     );
   }
@@ -96,7 +90,8 @@ class ProfilesSettingsPage extends StatelessWidget {
           title: const Text("Parent PIN"),
           actions: [
             TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text("Remove PIN")),
-            TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(false), child: const Text("Change PIN")),
+            TextButton(
+                autofocus: true, onPressed: () => Navigator.of(context).pop(false), child: const Text("Change PIN")),
           ],
         ),
       );

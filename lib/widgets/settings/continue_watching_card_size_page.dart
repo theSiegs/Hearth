@@ -21,6 +21,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/settings_service.dart';
 import 'settings_choice_tile.dart';
+import 'settings_page.dart';
 
 class ContinueWatchingCardSizePage extends StatelessWidget {
   static const String routeName = "continue_watching_card_size_panel";
@@ -51,36 +52,17 @@ class ContinueWatchingCardSizePage extends StatelessWidget {
         final int currentHeight = int.tryParse(currentSizeStr) ??
             (currentSizeStr == 'compact' ? 112 : (currentSizeStr == 'large' ? 157 : 135));
 
-        return Column(
+        return SettingsPage(
+          title: 'Card Size',
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-              child: Row(
-                children: [
-                  Text(
-                    'Card Size',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ],
+            for (final (height, title, subtitle) in cardSizePresets)
+              SettingsChoiceTile<int>(
+                title: title,
+                subtitle: subtitle,
+                value: height,
+                groupValue: currentHeight,
+                onChanged: (height) => settingsService.setContinueWatchingCardSize(height.toString()),
               ),
-            ),
-            const Divider(),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    for (final (height, title, subtitle) in cardSizePresets)
-                      SettingsChoiceTile<int>(
-                        title: title,
-                        subtitle: subtitle,
-                        value: height,
-                        groupValue: currentHeight,
-                        onChanged: (height) => settingsService.setContinueWatchingCardSize(height.toString()),
-                      ),
-                  ],
-                ),
-              ),
-            ),
           ],
         );
       },

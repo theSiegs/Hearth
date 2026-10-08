@@ -25,6 +25,7 @@ import 'package:flauncher/widgets/settings/app_icon.dart';
 import 'package:flauncher/widgets/settings/blocked_apps_section.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flauncher/widgets/settings/settings_page.dart';
 
 class BlockedNotificationsPage extends StatelessWidget {
   static const String routeName = "blocked_notifications_panel";
@@ -46,98 +47,83 @@ class BlockedNotificationsPage extends StatelessWidget {
         final knownBlockedPkg = blockedApps.map((a) => a.packageName).toSet();
         final unknownBlockedPkg = blockedPackages.where((p) => !knownBlockedPkg.contains(p)).toList();
 
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-              child: Row(
-                children: [
-                  Text(
-                    localizations.blockedNotificationApps,
-                    style: theme.textTheme.titleLarge,
-                  ),
-                ],
+        return SettingsPage.custom(
+          title: localizations.blockedNotificationApps,
+          body: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            children: [
+              BlockedAppsSection(
+                title: "${localizations.blockedNotificationApps} (${blockedPackages.length})",
+                apps: blockedApps,
+                missingPackages: unknownBlockedPkg,
+                blockedLabel: localizations.notificationsBlocked,
+                unblockLabel: localizations.unblockAppNotifications,
+                unblockAllLabel: localizations.unblockAll,
+                appIcon: Icons.android,
+                emptyIcon: Icons.notifications_active_outlined,
+                emptyTitle: localizations.noBlockedApps,
+                emptyMessage: localizations.noBlockedAppsDesc,
+                onUnblock: notificationsService.unblockPackage,
+                onUnblockAll: notificationsService.unblockAllPackages,
               ),
-            ),
-            const Divider(),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                children: [
-                  BlockedAppsSection(
-                    title: "${localizations.blockedNotificationApps} (${blockedPackages.length})",
-                    apps: blockedApps,
-                    missingPackages: unknownBlockedPkg,
-                    blockedLabel: localizations.notificationsBlocked,
-                    unblockLabel: localizations.unblockAppNotifications,
-                    unblockAllLabel: localizations.unblockAll,
-                    appIcon: Icons.android,
-                    emptyIcon: Icons.notifications_active_outlined,
-                    emptyTitle: localizations.noBlockedApps,
-                    emptyMessage: localizations.noBlockedAppsDesc,
-                    onUnblock: notificationsService.unblockPackage,
-                    onUnblockAll: notificationsService.unblockAllPackages,
-                  ),
 
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Divider(),
-                  ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Divider(),
+              ),
 
-                  // --- ALL APPLICATIONS ---
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          localizations.applications,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          localizations.noBlockedAppsDesc,
-                          style: theme.textTheme.bodySmall?.copyWith(color: Colors.white54),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ...allApps.map((app) {
-                    final isBlocked = blockedPackages.contains(app.packageName);
-
-                    return RoundedSwitchListTile(
-                      value: !isBlocked,
-                      onChanged: (allowed) {
-                        if (allowed) {
-                          notificationsService.unblockPackage(app.packageName);
-                        } else {
-                          notificationsService.blockPackage(app.packageName);
-                        }
-                      },
-                      title: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(app.name, style: theme.textTheme.bodyMedium),
-                          const SizedBox(height: 2),
-                          Text(
-                            isBlocked ? localizations.notificationsBlocked : localizations.notificationsAllowed,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: isBlocked ? Colors.redAccent : Colors.white54,
-                            ),
-                          ),
-                        ],
+              // --- ALL APPLICATIONS ---
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      localizations.applications,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.bold,
                       ),
-                      secondary: AppIcon(app.packageName, size: 32, borderRadius: 6),
-                    );
-                  }),
-                ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      localizations.noBlockedAppsDesc,
+                      style: theme.textTheme.bodySmall?.copyWith(color: Colors.white54),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              ...allApps.map((app) {
+                final isBlocked = blockedPackages.contains(app.packageName);
+
+                return RoundedSwitchListTile(
+                  value: !isBlocked,
+                  onChanged: (allowed) {
+                    if (allowed) {
+                      notificationsService.unblockPackage(app.packageName);
+                    } else {
+                      notificationsService.blockPackage(app.packageName);
+                    }
+                  },
+                  title: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(app.name, style: theme.textTheme.bodyMedium),
+                      const SizedBox(height: 2),
+                      Text(
+                        isBlocked ? localizations.notificationsBlocked : localizations.notificationsAllowed,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: isBlocked ? Colors.redAccent : Colors.white54,
+                        ),
+                      ),
+                    ],
+                  ),
+                  secondary: AppIcon(app.packageName, size: 32, borderRadius: 6),
+                );
+              }),
+            ],
+          ),
         );
       },
     );

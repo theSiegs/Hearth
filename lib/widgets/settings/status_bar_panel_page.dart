@@ -28,6 +28,7 @@ import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 
 import '../../providers/settings_service.dart';
+import 'package:flauncher/widgets/settings/settings_page.dart';
 
 class StatusBarPanelPage extends StatelessWidget {
   static const String routeName = "status_bar_panel";
@@ -37,91 +38,79 @@ class StatusBarPanelPage extends StatelessWidget {
     AppLocalizations localizations = AppLocalizations.of(context)!;
     SettingsService settingsService = Provider.of(context);
 
-    return Column(
-        children: [
-          Text(localizations.statusBar, style: Theme.of(context).textTheme.titleLarge),
-          Divider(),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                RoundedSwitchListTile(
-                  autofocus: true,
-                  value: settingsService.autoHideAppBarEnabled,
-                  onChanged: (value) => settingsService.setAutoHideAppBarEnabled(value),
-                  title: Text(localizations.autoHideAppBar, style: Theme.of(context).textTheme.bodyMedium),
-                  secondary: Icon(Icons.visibility_off_outlined),
-                ),
-                Divider(),
-                RoundedSwitchListTile(
-                  value: settingsService.showDateInStatusBar,
-                  onChanged: (value) => settingsService.setShowDateInStatusBar(value),
-                  title: Text(localizations.date),
-                  secondary: Icon(Icons.calendar_today_outlined)
-                ),
-                RoundedSwitchListTile(
-                  value: settingsService.showTimeInStatusBar,
-                  onChanged: (value) => settingsService.setShowTimeInStatusBar(value),
-                  title: Text(localizations.time),
-                  secondary: Icon(Icons.watch_later_outlined)
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.date_range),
-                  title: Text(localizations.dateAndTimeFormat, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(DateTimeFormatPage.routeName),
-                ),
-                RoundedSwitchListTile(
-                  value: settingsService.showDataWidgetInStatusBar,
-                  onChanged: (value) => settingsService.setShowDataWidgetInStatusBar(value),
-                  title: Text(localizations.dataUsage),
-                  secondary: Icon(Icons.data_usage)
-                ),
-                if (settingsService.showDataWidgetInStatusBar)
-                  FocusableSettingsTile(
-                    leading: const Icon(Icons.date_range_outlined),
-                    title: Text(localizations.dataUsagePeriod, style: Theme.of(context).textTheme.bodyMedium),
-                    onPressed: () => Navigator.of(context).pushNamed(DataUsagePeriodPage.routeName),
-                  ),
-                RoundedSwitchListTile(
-                  value: settingsService.showNetworkIndicatorInStatusBar,
-                  onChanged: (value) => settingsService.setShowNetworkIndicatorInStatusBar(value),
-                  title: Text(localizations.networkIndicator),
-                  secondary: Icon(Icons.signal_wifi_4_bar)
-                ),
-                RoundedSwitchListTile(
-                  value: settingsService.showInputsWidgetInStatusBar,
-                  onChanged: (value) => settingsService.setShowInputsWidgetInStatusBar(value),
-                  title: Text(localizations.inputs),
-                  secondary: Icon(Icons.tv_outlined),
-                ),
-                RoundedSwitchListTile(
-                  value: settingsService.showNotificationsWidgetInStatusBar,
-                  onChanged: (value) => settingsService.setShowNotificationsWidgetInStatusBar(value),
-                  title: Text(localizations.notificationBell),
-                  secondary: Icon(Icons.notifications_outlined),
-                ),
-                if (settingsService.showNotificationsWidgetInStatusBar)
-                  RoundedSwitchListTile(
-                    value: settingsService.autoHideNotificationsWidget,
-                    onChanged: (value) => settingsService.setAutoHideNotificationsWidget(value),
-                    title: Text(localizations.autoHideNotificationBell),
-                    secondary: Icon(Icons.notifications_paused_outlined),
-                  ),
-                Divider(),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.wb_sunny_outlined),
-                  title: Text(localizations.weather, style: Theme.of(context).textTheme.bodyMedium),
-                  trailing: Text(settingsService.showWeatherInStatusBar ? localizations.enabled : localizations.disabled,
-                      style: Theme.of(context).textTheme.bodySmall),
-                  onPressed: () => Navigator.of(context).pushNamed(WeatherSettingsPage.routeName),
-                ),
-              ],
-            ),
+    return SettingsPage(
+      title: localizations.statusBar,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      children: [
+        RoundedSwitchListTile(
+          autofocus: true,
+          value: settingsService.autoHideAppBarEnabled,
+          onChanged: (value) => settingsService.setAutoHideAppBarEnabled(value),
+          title: Text(localizations.autoHideAppBar, style: Theme.of(context).textTheme.bodyMedium),
+          secondary: Icon(Icons.visibility_off_outlined),
+        ),
+        Divider(),
+        RoundedSwitchListTile(
+            value: settingsService.showDateInStatusBar,
+            onChanged: (value) => settingsService.setShowDateInStatusBar(value),
+            title: Text(localizations.date),
+            secondary: Icon(Icons.calendar_today_outlined)),
+        RoundedSwitchListTile(
+            value: settingsService.showTimeInStatusBar,
+            onChanged: (value) => settingsService.setShowTimeInStatusBar(value),
+            title: Text(localizations.time),
+            secondary: Icon(Icons.watch_later_outlined)),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.date_range),
+          title: Text(localizations.dateAndTimeFormat, style: Theme.of(context).textTheme.bodyMedium),
+          onPressed: () => Navigator.of(context).pushNamed(DateTimeFormatPage.routeName),
+        ),
+        RoundedSwitchListTile(
+            value: settingsService.showDataWidgetInStatusBar,
+            onChanged: (value) => settingsService.setShowDataWidgetInStatusBar(value),
+            title: Text(localizations.dataUsage),
+            secondary: Icon(Icons.data_usage)),
+        if (settingsService.showDataWidgetInStatusBar)
+          FocusableSettingsTile(
+            leading: const Icon(Icons.date_range_outlined),
+            title: Text(localizations.dataUsagePeriod, style: Theme.of(context).textTheme.bodyMedium),
+            onPressed: () => Navigator.of(context).pushNamed(DataUsagePeriodPage.routeName),
           ),
-        ],
-      );
+        RoundedSwitchListTile(
+            value: settingsService.showNetworkIndicatorInStatusBar,
+            onChanged: (value) => settingsService.setShowNetworkIndicatorInStatusBar(value),
+            title: Text(localizations.networkIndicator),
+            secondary: Icon(Icons.signal_wifi_4_bar)),
+        RoundedSwitchListTile(
+          value: settingsService.showInputsWidgetInStatusBar,
+          onChanged: (value) => settingsService.setShowInputsWidgetInStatusBar(value),
+          title: Text(localizations.inputs),
+          secondary: Icon(Icons.tv_outlined),
+        ),
+        RoundedSwitchListTile(
+          value: settingsService.showNotificationsWidgetInStatusBar,
+          onChanged: (value) => settingsService.setShowNotificationsWidgetInStatusBar(value),
+          title: Text(localizations.notificationBell),
+          secondary: Icon(Icons.notifications_outlined),
+        ),
+        if (settingsService.showNotificationsWidgetInStatusBar)
+          RoundedSwitchListTile(
+            value: settingsService.autoHideNotificationsWidget,
+            onChanged: (value) => settingsService.setAutoHideNotificationsWidget(value),
+            title: Text(localizations.autoHideNotificationBell),
+            secondary: Icon(Icons.notifications_paused_outlined),
+          ),
+        Divider(),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.wb_sunny_outlined),
+          title: Text(localizations.weather, style: Theme.of(context).textTheme.bodyMedium),
+          trailing: Text(settingsService.showWeatherInStatusBar ? localizations.enabled : localizations.disabled,
+              style: Theme.of(context).textTheme.bodySmall),
+          onPressed: () => Navigator.of(context).pushNamed(WeatherSettingsPage.routeName),
+        ),
+      ],
+    );
   }
-
 }
 
 /// Weather in the status bar: on/off, warnings, unit and location.
@@ -135,70 +124,62 @@ class WeatherSettingsPage extends StatelessWidget {
     AppLocalizations localizations = AppLocalizations.of(context)!;
     SettingsService settingsService = Provider.of(context);
 
-    return Column(
+    return SettingsPage(
+      title: localizations.weather,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
-        Text(localizations.weather, style: Theme.of(context).textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              RoundedSwitchListTile(
-                autofocus: true,
-                value: settingsService.showWeatherInStatusBar,
-                onChanged: (value) => settingsService.setShowWeatherInStatusBar(value),
-                title: Text(localizations.weather),
-                secondary: Icon(Icons.wb_sunny_outlined),
-              ),
-              if (settingsService.showWeatherInStatusBar) ...[
-                RoundedSwitchListTile(
-                  value: settingsService.showWeatherWarnings,
-                  onChanged: (value) => settingsService.setShowWeatherWarnings(value),
-                  title: Text(localizations.showWeatherWarnings),
-                  secondary: Icon(Icons.thunderstorm_outlined),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.thermostat_outlined),
-                  title: Text(
-                    "${localizations.temperatureUnit}: ${settingsService.useFahrenheit ? localizations.fahrenheit : localizations.celsius}",
-                  ),
-                  onPressed: () {
-                    final next = settingsService.useFahrenheit
-                        ? TEMPERATURE_UNIT_CELSIUS
-                        : TEMPERATURE_UNIT_FAHRENHEIT;
-                    settingsService.setTemperatureUnit(next);
-                  },
-                ),
-                Consumer<WeatherService>(
-                  builder: (context, weatherService, _) {
-                    final place = weatherService.location;
-                    return Column(
-                      children: [
-                        FocusableSettingsTile(
-                          leading: const Icon(Icons.place_outlined),
-                          title: Text(place == null ? "Weather location: not set" : "Weather location: ${place.displayName}"),
-                          onPressed: () async {
-                            final picked = await showDialog<WeatherPlace>(
-                              context: context,
-                              builder: (_) => WeatherLocationDialog(weatherService: weatherService),
-                            );
-                            if (picked != null) await weatherService.setLocation(picked);
-                          },
-                        ),
-                        if (place != null && weatherService.builtInError)
-                          _weatherHint(context, "Couldn't load the weather. It will retry automatically."),
-                        if (place == null && !weatherService.hasWeather)
-                          _weatherHint(context,
-                              "Choose a weather location above (weather from Open-Meteo, free, no account). "
-                              "Without one, weather comes from the Breezy Weather app if it's installed with Gadgetbridge sharing on."),
-                      ],
-                    );
-                  },
-                ),
-              ],
-            ],
-          ),
+        RoundedSwitchListTile(
+          autofocus: true,
+          value: settingsService.showWeatherInStatusBar,
+          onChanged: (value) => settingsService.setShowWeatherInStatusBar(value),
+          title: Text(localizations.weather),
+          secondary: Icon(Icons.wb_sunny_outlined),
         ),
+        if (settingsService.showWeatherInStatusBar) ...[
+          RoundedSwitchListTile(
+            value: settingsService.showWeatherWarnings,
+            onChanged: (value) => settingsService.setShowWeatherWarnings(value),
+            title: Text(localizations.showWeatherWarnings),
+            secondary: Icon(Icons.thunderstorm_outlined),
+          ),
+          FocusableSettingsTile(
+            leading: const Icon(Icons.thermostat_outlined),
+            title: Text(
+              "${localizations.temperatureUnit}: ${settingsService.useFahrenheit ? localizations.fahrenheit : localizations.celsius}",
+            ),
+            onPressed: () {
+              final next = settingsService.useFahrenheit ? TEMPERATURE_UNIT_CELSIUS : TEMPERATURE_UNIT_FAHRENHEIT;
+              settingsService.setTemperatureUnit(next);
+            },
+          ),
+          Consumer<WeatherService>(
+            builder: (context, weatherService, _) {
+              final place = weatherService.location;
+              return Column(
+                children: [
+                  FocusableSettingsTile(
+                    leading: const Icon(Icons.place_outlined),
+                    title: Text(place == null ? "Weather location: not set" : "Weather location: ${place.displayName}"),
+                    onPressed: () async {
+                      final picked = await showDialog<WeatherPlace>(
+                        context: context,
+                        builder: (_) => WeatherLocationDialog(weatherService: weatherService),
+                      );
+                      if (picked != null) await weatherService.setLocation(picked);
+                    },
+                  ),
+                  if (place != null && weatherService.builtInError)
+                    _weatherHint(context, "Couldn't load the weather. It will retry automatically."),
+                  if (place == null && !weatherService.hasWeather)
+                    _weatherHint(
+                        context,
+                        "Choose a weather location above (weather from Open-Meteo, free, no account). "
+                        "Without one, weather comes from the Breezy Weather app if it's installed with Gadgetbridge sharing on."),
+                ],
+              );
+            },
+          ),
+        ],
       ],
     );
   }

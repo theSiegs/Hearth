@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'adb_command_dialog.dart';
 import 'family_apps_page.dart';
 import 'focusable_settings_tile.dart';
+import 'settings_page.dart';
 
 /// One thing the TV owner turns on in Android's Settings for Hearth. Android doesn't let an app jump to (or
 /// highlight) the exact switch on Google TV, so each step explains what to pick on the screen it opens.
@@ -120,7 +121,8 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
     SetupStep(
       title: "Hearth voice",
       why: "Lets Profile Pairing hear Netflix's profile screen. Other apps keep Google's voice.",
-      instructions: "On the next screen, under Preferred engine, choose \"Hearth voice\", then OK on the warning (Hearth only listens to the streaming apps). Press Back to return.",
+      instructions:
+          "On the next screen, under Preferred engine, choose \"Hearth voice\", then OK on the warning (Hearth only listens to the streaming apps). Press Back to return.",
       icon: Icons.record_voice_over,
       optional: true,
       done: pairing["voiceDefault"] == true,
@@ -238,54 +240,50 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
     final textTheme = Theme.of(context).textTheme;
     final steps = _steps;
     final required = steps?.where((s) => !s.optional).toList() ?? [];
-    return Column(
-      children: [
-        Text(SetupChecklistPage.title, style: textTheme.titleLarge),
-        if (steps != null)
-          Text(
-            "${required.where((s) => s.done).length} of ${required.length} done",
-            style: textTheme.bodySmall?.copyWith(color: Colors.white54),
-          ),
-        const Divider(),
-        Expanded(
-          child: steps == null
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      for (final (index, step) in steps.indexed) ...[
-                        if (step.optional && (index == 0 || !steps[index - 1].optional))
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text("Optional", style: textTheme.labelMedium?.copyWith(color: Colors.white54)),
-                            ),
-                          ),
-                        FocusableSettingsTile(
-                          autofocus: index == 0,
-                          leading: Icon(step.icon, color: step.done ? Colors.green : null),
-                          title: Text(step.title, style: textTheme.bodyMedium),
-                          trailing: Icon(
-                            step.done ? Icons.check_circle : Icons.chevron_right,
-                            color: step.done ? Colors.green : Colors.white54,
-                          ),
-                          onPressed: () => _showCard(step),
+    return SettingsPage.custom(
+      title: SetupChecklistPage.title,
+      subtitle: steps == null
+          ? null
+          : Text(
+              "${required.where((s) => s.done).length} of ${required.length} done",
+              style: textTheme.bodySmall?.copyWith(color: Colors.white54),
+            ),
+      body: steps == null
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Column(
+                children: [
+                  for (final (index, step) in steps.indexed) ...[
+                    if (step.optional && (index == 0 || !steps[index - 1].optional))
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text("Optional", style: textTheme.labelMedium?.copyWith(color: Colors.white54)),
                         ),
-                      ],
-                      const Divider(),
-                      _startOnBootTile(context),
-                      FocusableSettingsTile(
-                        leading: const Icon(Icons.people_alt_outlined),
-                        title: Text("Hearth on other profiles", style: textTheme.bodyMedium),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-                        onPressed: () => Navigator.of(context).pushNamed(FamilyAppsPage.routeName),
                       ),
-                    ],
+                    FocusableSettingsTile(
+                      autofocus: index == 0,
+                      leading: Icon(step.icon, color: step.done ? Colors.green : null),
+                      title: Text(step.title, style: textTheme.bodyMedium),
+                      trailing: Icon(
+                        step.done ? Icons.check_circle : Icons.chevron_right,
+                        color: step.done ? Colors.green : Colors.white54,
+                      ),
+                      onPressed: () => _showCard(step),
+                    ),
+                  ],
+                  const Divider(),
+                  _startOnBootTile(context),
+                  FocusableSettingsTile(
+                    leading: const Icon(Icons.people_alt_outlined),
+                    title: Text("Hearth on other profiles", style: textTheme.bodyMedium),
+                    trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                    onPressed: () => Navigator.of(context).pushNamed(FamilyAppsPage.routeName),
                   ),
-                ),
-        ),
-      ],
+                ],
+              ),
+            ),
     );
   }
 }

@@ -21,33 +21,31 @@ import 'package:flauncher/providers/wallpaper_service.dart';
 import 'package:flauncher/widgets/ensure_visible.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'settings_page.dart';
 
 class GradientPanelPage extends StatelessWidget {
   static const String routeName = "gradient_panel";
 
   @override
-  Widget build(BuildContext context) => Column(
-        children: [
-          Text("Gradient", style: Theme.of(context).textTheme.titleLarge),
-          const Divider(),
-          Expanded(
-            child: GridView.count(
-              crossAxisCount: 2,
-              childAspectRatio: 4 / 3,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              children: FLauncherGradients.all
-                  .map((gradient) => EnsureVisible(alignment: 0.5, child: _gradientCard(context, gradient)))
-                  .toList(),
-            ),
-          ),
-        ],
+  Widget build(BuildContext context) => SettingsPage.custom(
+        title: "Gradient",
+        body: GridView.count(
+          crossAxisCount: 2,
+          childAspectRatio: 4 / 3,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          children: FLauncherGradients.all
+              .map((gradient) => EnsureVisible(alignment: 0.5, child: _gradientCard(context, gradient)))
+              .toList(),
+        ),
       );
 
   Widget _gradientCard(BuildContext context, FLauncherGradient fLauncherGradient) => Actions(
         actions: <Type, Action<Intent>>{
-          ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => context.read<WallpaperService>().setGradient(fLauncherGradient)),
-          ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) => context.read<WallpaperService>().setGradient(fLauncherGradient)),
+          ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (_) => context.read<WallpaperService>().setGradient(fLauncherGradient)),
+          ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
+              onInvoke: (_) => context.read<WallpaperService>().setGradient(fLauncherGradient)),
         },
         child: Focus(
           key: Key("gradient-${fLauncherGradient.uuid}"),
@@ -85,6 +83,7 @@ class GradientPanelPage extends StatelessWidget {
       );
 
   ShapeBorder? _cardBorder(bool hasFocus) => hasFocus
-      ? RoundedRectangleBorder(side: const BorderSide(color: Colors.white, width: 2), borderRadius: BorderRadius.circular(12))
+      ? RoundedRectangleBorder(
+          side: const BorderSide(color: Colors.white, width: 2), borderRadius: BorderRadius.circular(12))
       : RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
 }

@@ -21,6 +21,7 @@ import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'settings_page.dart';
 
 /// Animations and the key click (under Look). The label and outline switches that used to be here are with the dock.
 class MiscPanelPage extends StatelessWidget {
@@ -34,35 +35,28 @@ class MiscPanelPage extends StatelessWidget {
     AppLocalizations localizations = AppLocalizations.of(context)!;
     SettingsService settingsService = Provider.of(context);
 
-    return Column(
+    return SettingsPage(
+      title: title,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
-        Text(title, style: Theme.of(context).textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              RoundedSwitchListTile(
-                autofocus: true,
-                value: settingsService.appHighlightAnimationEnabled,
-                onChanged: (value) => settingsService.setAppHighlightAnimationEnabled(value),
-                title: Text(localizations.appCardHighlightAnimation, style: Theme.of(context).textTheme.bodyMedium),
-                secondary: const Icon(Icons.filter_center_focus),
-              ),
-              RoundedSwitchListTile(
-                value: settingsService.appKeyClickEnabled,
-                onChanged: (value) => settingsService.setAppKeyClickEnabled(value),
-                title: Text(localizations.appKeyClick, style: Theme.of(context).textTheme.bodyMedium),
-                secondary: const Icon(Icons.notifications_active),
-              ),
-              RoundedSwitchListTile(
-                value: settingsService.appSelectorTransitionAnimationEnabled,
-                onChanged: (value) => settingsService.setAppSelectorTransitionAnimationEnabled(value),
-                title: Text(localizations.appSelectorTransitionAnimation, style: Theme.of(context).textTheme.bodyMedium),
-                secondary: const Icon(Icons.animation),
-              ),
-            ],
-          ),
+        RoundedSwitchListTile(
+          autofocus: true,
+          value: settingsService.appHighlightAnimationEnabled,
+          onChanged: (value) => settingsService.setAppHighlightAnimationEnabled(value),
+          title: Text(localizations.appCardHighlightAnimation, style: Theme.of(context).textTheme.bodyMedium),
+          secondary: const Icon(Icons.filter_center_focus),
+        ),
+        RoundedSwitchListTile(
+          value: settingsService.appKeyClickEnabled,
+          onChanged: (value) => settingsService.setAppKeyClickEnabled(value),
+          title: Text(localizations.appKeyClick, style: Theme.of(context).textTheme.bodyMedium),
+          secondary: const Icon(Icons.notifications_active),
+        ),
+        RoundedSwitchListTile(
+          value: settingsService.appSelectorTransitionAnimationEnabled,
+          onChanged: (value) => settingsService.setAppSelectorTransitionAnimationEnabled(value),
+          title: Text(localizations.appSelectorTransitionAnimation, style: Theme.of(context).textTheme.bodyMedium),
+          secondary: const Icon(Icons.animation),
         ),
       ],
     );

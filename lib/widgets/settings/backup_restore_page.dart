@@ -8,6 +8,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'message_dialog.dart';
+import 'package:flauncher/widgets/settings/settings_page.dart';
 
 class BackupRestorePage extends StatelessWidget {
   static const String routeName = "backup_restore_panel";
@@ -18,33 +19,24 @@ class BackupRestorePage extends StatelessWidget {
   Widget build(BuildContext context) {
     AppLocalizations localizations = AppLocalizations.of(context)!;
 
-    return Column(
+    return SettingsPage(
+      title: localizations.backupAndRestore,
       children: [
-        Text(localizations.backupAndRestore, style: Theme.of(context).textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                FocusableSettingsTile(
-                  autofocus: true,
-                  leading: const Icon(Icons.upload_file),
-                  title: Text(localizations.exportBackup, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => _export(context, localizations),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.download_done),
-                  title: Text(localizations.importBackup, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => _confirmImport(context, localizations),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.share),
-                  title: Text(localizations.shareBackup, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => _share(context),
-                ),
-              ],
-            ),
-          ),
+        FocusableSettingsTile(
+          autofocus: true,
+          leading: const Icon(Icons.upload_file),
+          title: Text(localizations.exportBackup, style: Theme.of(context).textTheme.bodyMedium),
+          onPressed: () => _export(context, localizations),
+        ),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.download_done),
+          title: Text(localizations.importBackup, style: Theme.of(context).textTheme.bodyMedium),
+          onPressed: () => _confirmImport(context, localizations),
+        ),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.share),
+          title: Text(localizations.shareBackup, style: Theme.of(context).textTheme.bodyMedium),
+          onPressed: () => _share(context),
         ),
       ],
     );
@@ -147,8 +139,8 @@ class BackupRestorePage extends StatelessWidget {
                           Text(
                             "${_formatDate(entry.lastModified)} (${_formatSize(entry.size)})",
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey,
-                            ),
+                                  color: Colors.grey,
+                                ),
                           ),
                         ],
                       ),
@@ -173,8 +165,7 @@ class BackupRestorePage extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmFileImport(
-      BuildContext context, AppLocalizations localizations, BackupFileEntry entry) async {
+  Future<void> _confirmFileImport(BuildContext context, AppLocalizations localizations, BackupFileEntry entry) async {
     final backupService = context.read<BackupService>();
     final settingsService = context.read<SettingsService>();
     final appsService = context.read<AppsService>();
@@ -197,7 +188,8 @@ class BackupRestorePage extends StatelessWidget {
                 settingsService.reload();
                 await appsService.refreshState();
                 if (context.mounted) {
-                  final ok = await showMessageDialog(context, title: "Import Success", message: localizations.importSuccess);
+                  final ok =
+                      await showMessageDialog(context, title: "Import Success", message: localizations.importSuccess);
                   if (ok && context.mounted) Navigator.of(context).pop();
                 }
               } catch (e) {

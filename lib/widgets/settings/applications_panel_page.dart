@@ -23,6 +23,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/widgets/settings/app_details_page.dart';
+import 'package:flauncher/widgets/settings/settings_page.dart';
 import 'package:flutter/services.dart';
 
 import '../../models/app.dart';
@@ -81,34 +82,35 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
       _title = _tabs[0].getTitle(localizations);
     }
 
-    return Column(
-      children: [
-        Text(_title, style: Theme.of(context).textTheme.titleLarge),
-        const Divider(),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: _tabs.map((tab) => _buildTabButton(tab.index, tab.icon, tab.getTitle(localizations))).toList(),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: Shortcuts(
-            shortcuts: <LogicalKeySet, Intent>{
-              LogicalKeySet(LogicalKeyboardKey.arrowLeft): const _ChangeTabIntent(-1),
-              LogicalKeySet(LogicalKeyboardKey.arrowRight): const _ChangeTabIntent(1),
-            },
-            child: Actions(
-              actions: <Type, Action<Intent>>{
-                _ChangeTabIntent: _ChangeTabAction(this),
-                _MoveFocusToTabIntent: _MoveFocusToTabAction(this),
-              },
-              child: _buildCurrentTab(),
+    return SettingsPage.custom(
+      title: _title,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: _tabs.map((tab) => _buildTabButton(tab.index, tab.icon, tab.getTitle(localizations))).toList(),
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Expanded(
+            child: Shortcuts(
+              shortcuts: <LogicalKeySet, Intent>{
+                LogicalKeySet(LogicalKeyboardKey.arrowLeft): const _ChangeTabIntent(-1),
+                LogicalKeySet(LogicalKeyboardKey.arrowRight): const _ChangeTabIntent(1),
+              },
+              child: Actions(
+                actions: <Type, Action<Intent>>{
+                  _ChangeTabIntent: _ChangeTabAction(this),
+                  _MoveFocusToTabIntent: _MoveFocusToTabAction(this),
+                },
+                child: _buildCurrentTab(),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -23,6 +23,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/notifications_service.dart';
 import 'adb_command_dialog.dart';
 import 'focusable_settings_tile.dart';
+import 'settings_page.dart';
 import 'blocked_notifications_page.dart';
 
 class NotificationsSettingsPage extends StatefulWidget {
@@ -67,93 +68,84 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> w
   Widget build(BuildContext context) {
     AppLocalizations localizations = AppLocalizations.of(context)!;
 
-    return Column(
-      children: [
-        Text(localizations.notifications, style: Theme.of(context).textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Consumer<NotificationsService>(
-              builder: (context, service, _) {
-                return Column(
-                  children: [
-                    FocusableSettingsTile(
-                      autofocus: true,
-                      leading: const Icon(Icons.notifications_active_outlined),
-                      title: Text(localizations.notificationAccess, style: Theme.of(context).textTheme.bodyMedium),
-                      trailing: Text(
-                        service.hasPermission ? localizations.granted : localizations.permissionRequired,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: service.hasPermission ? Colors.green : Colors.orange,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      onPressed: () async {
-                        await service.checkPermission();
-                        if (!service.hasPermission) {
-                          final success = await service.requestPermission();
-                          if (!success && context.mounted) {
-                            _showNotificationPermissionGuide(context);
-                          }
-                        }
-                      },
+    return Consumer<NotificationsService>(
+      builder: (context, service, _) {
+        return SettingsPage(
+          title: localizations.notifications,
+          children: [
+            FocusableSettingsTile(
+              autofocus: true,
+              leading: const Icon(Icons.notifications_active_outlined),
+              title: Text(localizations.notificationAccess, style: Theme.of(context).textTheme.bodyMedium),
+              trailing: Text(
+                service.hasPermission ? localizations.granted : localizations.permissionRequired,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: service.hasPermission ? Colors.green : Colors.orange,
+                      fontWeight: FontWeight.bold,
                     ),
-                    if (service.hasPermission) ...[
-                      FocusableSettingsTile(
-                        leading: const Icon(Icons.notifications_paused_outlined),
-                        title: Text(localizations.hidePersistentNotifications, style: Theme.of(context).textTheme.bodyMedium),
-                        trailing: Text(
-                          service.hidePersistentNotifications ? localizations.enabled : localizations.disabled,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: service.hidePersistentNotifications ? Colors.green : Colors.grey,
-                          ),
-                        ),
-                        onPressed: () => service.setHidePersistentNotifications(!service.hidePersistentNotifications),
-                      ),
-                      FocusableSettingsTile(
-                        leading: const Icon(Icons.block),
-                        title: Text(localizations.blockedNotificationApps, style: Theme.of(context).textTheme.bodyMedium),
-                        trailing: Text(
-                          service.blockedPackages.isEmpty ? '0' : '${service.blockedPackages.length}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: service.blockedPackages.isNotEmpty ? Colors.orange : Colors.grey,
-                          ),
-                        ),
-                        onPressed: () => Navigator.of(context).pushNamed(BlockedNotificationsPage.routeName),
-                      ),
-                      FocusableSettingsTile(
-                        leading: const Icon(Icons.picture_in_picture_alt_outlined),
-                        title: Text(localizations.systemWidePopupAlert, style: Theme.of(context).textTheme.bodyMedium),
-                        trailing: Text(
-                          !service.hasOverlayPermission
-                              ? localizations.overlayPermissionRequired
-                              : (service.systemPopupEnabled ? localizations.enabled : localizations.disabled),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: !service.hasOverlayPermission
-                                ? Colors.orange
-                                : (service.systemPopupEnabled ? Colors.green : Colors.grey),
-                          ),
-                        ),
-                        onPressed: () async {
-                          await service.checkOverlayPermission();
-                          if (!service.hasOverlayPermission) {
-                            final success = await service.requestOverlayPermission();
-                            if (!success && context.mounted) {
-                              _showOverlayPermissionGuide(context);
-                            }
-                          } else {
-                            await service.setSystemPopupEnabled(!service.systemPopupEnabled);
-                          }
-                        },
-                      ),
-                    ],
-                  ],
-                );
+              ),
+              onPressed: () async {
+                await service.checkPermission();
+                if (!service.hasPermission) {
+                  final success = await service.requestPermission();
+                  if (!success && context.mounted) {
+                    _showNotificationPermissionGuide(context);
+                  }
+                }
               },
             ),
-          ),
-        ),
-      ],
+            if (service.hasPermission) ...[
+              FocusableSettingsTile(
+                leading: const Icon(Icons.notifications_paused_outlined),
+                title: Text(localizations.hidePersistentNotifications, style: Theme.of(context).textTheme.bodyMedium),
+                trailing: Text(
+                  service.hidePersistentNotifications ? localizations.enabled : localizations.disabled,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: service.hidePersistentNotifications ? Colors.green : Colors.grey,
+                      ),
+                ),
+                onPressed: () => service.setHidePersistentNotifications(!service.hidePersistentNotifications),
+              ),
+              FocusableSettingsTile(
+                leading: const Icon(Icons.block),
+                title: Text(localizations.blockedNotificationApps, style: Theme.of(context).textTheme.bodyMedium),
+                trailing: Text(
+                  service.blockedPackages.isEmpty ? '0' : '${service.blockedPackages.length}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: service.blockedPackages.isNotEmpty ? Colors.orange : Colors.grey,
+                      ),
+                ),
+                onPressed: () => Navigator.of(context).pushNamed(BlockedNotificationsPage.routeName),
+              ),
+              FocusableSettingsTile(
+                leading: const Icon(Icons.picture_in_picture_alt_outlined),
+                title: Text(localizations.systemWidePopupAlert, style: Theme.of(context).textTheme.bodyMedium),
+                trailing: Text(
+                  !service.hasOverlayPermission
+                      ? localizations.overlayPermissionRequired
+                      : (service.systemPopupEnabled ? localizations.enabled : localizations.disabled),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: !service.hasOverlayPermission
+                            ? Colors.orange
+                            : (service.systemPopupEnabled ? Colors.green : Colors.grey),
+                      ),
+                ),
+                onPressed: () async {
+                  await service.checkOverlayPermission();
+                  if (!service.hasOverlayPermission) {
+                    final success = await service.requestOverlayPermission();
+                    if (!success && context.mounted) {
+                      _showOverlayPermissionGuide(context);
+                    }
+                  } else {
+                    await service.setSystemPopupEnabled(!service.systemPopupEnabled);
+                  }
+                },
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 
@@ -169,7 +161,8 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> w
           'Android TV does not provide a system settings screen for "Notification Access" (listening to notifications from other apps).\n\n'
           'Note: Enabling "Show notifications" in TV App Settings only controls outgoing notifications from this app, not Notification Access.\n\n'
           'To grant Notification Access, connect your TV via ADB and run:',
-      command: 'adb shell cmd notification allow_listener $packageName/$packageName.LauncherNotificationListenerService',
+      command:
+          'adb shell cmd notification allow_listener $packageName/$packageName.LauncherNotificationListenerService',
       actionLabel: 'Open App Info',
       onAction: () => context.read<NotificationsService>().openAppNotificationSettings(),
     );

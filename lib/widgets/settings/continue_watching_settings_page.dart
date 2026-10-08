@@ -29,6 +29,7 @@ import 'continue_watching_apps_page.dart';
 import 'continue_watching_card_size_page.dart';
 import 'continue_watching_max_items_page.dart';
 import 'focusable_settings_tile.dart';
+import 'settings_page.dart';
 
 class ContinueWatchingSettingsPage extends StatefulWidget {
   static const String routeName = "continue_watching_settings_panel";
@@ -90,168 +91,154 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
     final blockedCount = settingsService.hiddenWatchNextPackages.length;
     final hiddenProgramsCount = settingsService.hiddenWatchNextProgramIds.length;
 
-    return Column(
+    return SettingsPage(
+      title: localizations.continueWatching,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-          child: Row(
+        RoundedSwitchListTile(
+          autofocus: true,
+          value: settingsService.showContinueWatching,
+          onChanged: (value) async {
+            if (value) {
+              final hasPermission = await watchNextService.checkPermission();
+              if (!context.mounted) return;
+              if (!hasPermission) {
+                final granted = await watchNextService.requestPermission();
+                if (!context.mounted) return;
+                if (!granted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(localizations.permissionDeniedContinueWatching),
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                }
+              }
+            }
+            settingsService.setShowContinueWatching(value);
+          },
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(localizations.continueWatching, style: Theme.of(context).textTheme.titleLarge),
+              Text(localizations.showContinueWatchingOnHome, style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 2),
+              Text(
+                localizations.continueWatchingDescription,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
+              ),
             ],
           ),
+          secondary: const Icon(Icons.play_circle_outline),
         ),
-        const Divider(),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            children: [
-              RoundedSwitchListTile(
-                autofocus: true,
-                value: settingsService.showContinueWatching,
-                onChanged: (value) async {
-                  if (value) {
-                    final hasPermission = await watchNextService.checkPermission();
-                    if (!context.mounted) return;
-                    if (!hasPermission) {
-                      final granted = await watchNextService.requestPermission();
-                      if (!context.mounted) return;
-                      if (!granted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(localizations.permissionDeniedContinueWatching),
-                            duration: const Duration(seconds: 3),
-                          ),
-                        );
-                      }
-                    }
-                  }
-                  settingsService.setShowContinueWatching(value);
-                },
-                title: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(localizations.showContinueWatchingOnHome, style: Theme.of(context).textTheme.bodyMedium),
-                    const SizedBox(height: 2),
-                    Text(
-                      localizations.continueWatchingDescription,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
-                    ),
-                  ],
-                ),
-                secondary: const Icon(Icons.play_circle_outline),
-              ),
-              if (settingsService.showContinueWatching) ...[
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 4),
-                  child: Divider(),
-                ),
-                // Card Size
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.aspect_ratio_outlined),
-                  title: Text('Card Size', style: Theme.of(context).textTheme.bodyMedium),
-                  trailing: Text(
-                    sizeLabel,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
-                  ),
-                  onPressed: () => Navigator.of(context).pushNamed(ContinueWatchingCardSizePage.routeName),
-                ),
-                // Max items
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.format_list_numbered_outlined),
-                  title: Text('Maximum Items', style: Theme.of(context).textTheme.bodyMedium),
-                  trailing: Text(
-                    maxItemsLabel,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
-                  ),
-                  onPressed: () => Navigator.of(context).pushNamed(ContinueWatchingMaxItemsPage.routeName),
-                ),
-                // Show progress bar
-                RoundedSwitchListTile(
-                  value: settingsService.continueWatchingShowProgress,
-                  onChanged: (v) => settingsService.setContinueWatchingShowProgress(v),
-                  title: Text('Playback Progress Bar', style: Theme.of(context).textTheme.bodyMedium),
-                  secondary: const Icon(Icons.linear_scale_outlined),
-                ),
-                // Show percentage badge
-                RoundedSwitchListTile(
-                  value: settingsService.continueWatchingShowPercentage,
-                  onChanged: (v) => settingsService.setContinueWatchingShowPercentage(v),
-                  title: Text('Playback Percentage', style: Theme.of(context).textTheme.bodyMedium),
-                  secondary: const Icon(Icons.percent_outlined),
-                ),
-                // Show description
-                RoundedSwitchListTile(
-                  value: settingsService.continueWatchingShowDescription,
-                  onChanged: (v) => settingsService.setContinueWatchingShowDescription(v),
-                  title: Text('Episode & Video Details', style: Theme.of(context).textTheme.bodyMedium),
-                  secondary: const Icon(Icons.subtitles_outlined),
-                ),
-                // App Management (Apps & Blocked Content)
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.apps_outlined),
-                  title: Text('Apps with Continue Watching', style: Theme.of(context).textTheme.bodyMedium),
-                  trailing: Text(
-                    blockedCount > 0 ? '$blockedCount blocked' : 'Manage',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: blockedCount > 0 ? Colors.orange : Colors.grey,
-                        ),
-                  ),
-                  onPressed: () => Navigator.of(context).pushNamed(ContinueWatchingAppsPage.routeName),
-                ),
-                // Hidden individual programs
-                if (hiddenProgramsCount > 0)
-                  FocusableSettingsTile(
-                    leading: const Icon(Icons.restore, color: Colors.orangeAccent),
-                    title: Text(
-                      'Restore Hidden Programs',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.orangeAccent),
-                    ),
-                    trailing: Text(
-                      '$hiddenProgramsCount hidden',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orangeAccent),
-                    ),
-                    onPressed: () async {
-                      await settingsService.clearHiddenWatchNextPrograms();
-                      await watchNextService.refresh();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('All hidden programs restored')),
-                        );
-                      }
-                    },
-                  ),
-              ],
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 4),
-                child: Divider(),
-              ),
-              // Watch Next Permission
-              FocusableSettingsTile(
-                leading: const Icon(Icons.security),
-                title: Text(
-                  localizations.notificationAccess.replaceAll('Notification', 'Watch Next'),
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                trailing: Text(
-                  watchNextService.hasPermission ? localizations.granted : localizations.permissionRequired,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: watchNextService.hasPermission ? Colors.green : Colors.orange,
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                onPressed: () async {
-                  final has = await watchNextService.checkPermission();
-                  if (!has && context.mounted) {
-                    final granted = await watchNextService.requestPermission();
-                    if (!granted && context.mounted) {
-                      _showWatchNextPermissionGuide(context);
-                    }
-                  }
-                },
-              ),
-            ],
+        if (settingsService.showContinueWatching) ...[
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 4),
+            child: Divider(),
           ),
+          // Card Size
+          FocusableSettingsTile(
+            leading: const Icon(Icons.aspect_ratio_outlined),
+            title: Text('Card Size', style: Theme.of(context).textTheme.bodyMedium),
+            trailing: Text(
+              sizeLabel,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
+            ),
+            onPressed: () => Navigator.of(context).pushNamed(ContinueWatchingCardSizePage.routeName),
+          ),
+          // Max items
+          FocusableSettingsTile(
+            leading: const Icon(Icons.format_list_numbered_outlined),
+            title: Text('Maximum Items', style: Theme.of(context).textTheme.bodyMedium),
+            trailing: Text(
+              maxItemsLabel,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
+            ),
+            onPressed: () => Navigator.of(context).pushNamed(ContinueWatchingMaxItemsPage.routeName),
+          ),
+          // Show progress bar
+          RoundedSwitchListTile(
+            value: settingsService.continueWatchingShowProgress,
+            onChanged: (v) => settingsService.setContinueWatchingShowProgress(v),
+            title: Text('Playback Progress Bar', style: Theme.of(context).textTheme.bodyMedium),
+            secondary: const Icon(Icons.linear_scale_outlined),
+          ),
+          // Show percentage badge
+          RoundedSwitchListTile(
+            value: settingsService.continueWatchingShowPercentage,
+            onChanged: (v) => settingsService.setContinueWatchingShowPercentage(v),
+            title: Text('Playback Percentage', style: Theme.of(context).textTheme.bodyMedium),
+            secondary: const Icon(Icons.percent_outlined),
+          ),
+          // Show description
+          RoundedSwitchListTile(
+            value: settingsService.continueWatchingShowDescription,
+            onChanged: (v) => settingsService.setContinueWatchingShowDescription(v),
+            title: Text('Episode & Video Details', style: Theme.of(context).textTheme.bodyMedium),
+            secondary: const Icon(Icons.subtitles_outlined),
+          ),
+          // App Management (Apps & Blocked Content)
+          FocusableSettingsTile(
+            leading: const Icon(Icons.apps_outlined),
+            title: Text('Apps with Continue Watching', style: Theme.of(context).textTheme.bodyMedium),
+            trailing: Text(
+              blockedCount > 0 ? '$blockedCount blocked' : 'Manage',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: blockedCount > 0 ? Colors.orange : Colors.grey,
+                  ),
+            ),
+            onPressed: () => Navigator.of(context).pushNamed(ContinueWatchingAppsPage.routeName),
+          ),
+          // Hidden individual programs
+          if (hiddenProgramsCount > 0)
+            FocusableSettingsTile(
+              leading: const Icon(Icons.restore, color: Colors.orangeAccent),
+              title: Text(
+                'Restore Hidden Programs',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.orangeAccent),
+              ),
+              trailing: Text(
+                '$hiddenProgramsCount hidden',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orangeAccent),
+              ),
+              onPressed: () async {
+                await settingsService.clearHiddenWatchNextPrograms();
+                await watchNextService.refresh();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('All hidden programs restored')),
+                  );
+                }
+              },
+            ),
+        ],
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 4),
+          child: Divider(),
+        ),
+        // Watch Next Permission
+        FocusableSettingsTile(
+          leading: const Icon(Icons.security),
+          title: Text(
+            localizations.notificationAccess.replaceAll('Notification', 'Watch Next'),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          trailing: Text(
+            watchNextService.hasPermission ? localizations.granted : localizations.permissionRequired,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: watchNextService.hasPermission ? Colors.green : Colors.orange,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          onPressed: () async {
+            final has = await watchNextService.checkPermission();
+            if (!has && context.mounted) {
+              final granted = await watchNextService.requestPermission();
+              if (!granted && context.mounted) {
+                _showWatchNextPermissionGuide(context);
+              }
+            }
+          },
         ),
       ],
     );
