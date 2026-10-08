@@ -72,28 +72,36 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class MainActivity extends FlutterActivity {
+    /** Intent extra asking Hearth to open its search: "voice" to start listening right away. */
+    static final String EXTRA_OPEN_SEARCH = "hearth_open_search";
     private static final String TAG = "HearthMain";
+    private static final String METHOD_CHANNEL = "me.efesser.flauncher/method";
+    private static final String APPS_EVENT_CHANNEL = "me.efesser.flauncher/event_apps";
+    private static final String NETWORK_EVENT_CHANNEL = "me.efesser.flauncher/event_network";
+    private static final String NOTIFICATIONS_EVENT_CHANNEL = "me.efesser.flauncher/event_notifications";
+    private static final String WEATHER_EVENT_CHANNEL = "me.efesser.flauncher/event_weather";
+    private static final String WATCH_NEXT_EVENT_CHANNEL = "me.efesser.flauncher/event_watch_next";
+    private static final int VOICE_REQUEST = 4242;
+    private static final int WATCH_NEXT_PERMISSION_REQUEST = 1002;
     // Drawn app images are capped at this many pixels a side.
     private static final int MAX_ICON_PX = 512;
     private static final int[] DATA_USAGE_NETWORKS = {
             ConnectivityManager.TYPE_WIFI, ConnectivityManager.TYPE_MOBILE, ConnectivityManager.TYPE_ETHERNET};
-    private final String METHOD_CHANNEL = "me.efesser.flauncher/method";
-    private final String APPS_EVENT_CHANNEL = "me.efesser.flauncher/event_apps";
-    private final String NETWORK_EVENT_CHANNEL = "me.efesser.flauncher/event_network";
-    private final String NOTIFICATIONS_EVENT_CHANNEL = "me.efesser.flauncher/event_notifications";
-    private final String WEATHER_EVENT_CHANNEL = "me.efesser.flauncher/event_weather";
-    private final String WATCH_NEXT_EVENT_CHANNEL = "me.efesser.flauncher/event_watch_next";
-    private MethodChannel.Result pendingPermissionResult;
-    private MethodChannel mMethodChannel;
-    private MethodChannel.Result mPendingVoiceResult;
-    private static final int VOICE_REQUEST = 4242;
-    /** Intent extra asking Hearth to open its search: "voice" to start listening right away. */
-    static final String EXTRA_OPEN_SEARCH = "hearth_open_search";
     private static final ExecutorService sIoExecutor = Executors.newFixedThreadPool(4);
     // Builds one app list at a time, so overlapping requests are answered in the order they came.
     private static final ExecutorService sAppsLoader = Executors.newSingleThreadExecutor();
     // The app list's PackageManager lookups, in parallel. Separate from sAppsLoader, which waits on them.
     private static final ExecutorService sAppsExecutor = Executors.newFixedThreadPool(4);
+
+    private static java.lang.ref.WeakReference<MethodChannel> sMethodChannel;
+    /** Whether Hearth is the screen in front (between onResume and onPause). */
+    private static volatile boolean sInFront;
+
+    private MethodChannel mMethodChannel;
+    private MethodChannel.Result mPendingPermissionResult;
+    private MethodChannel.Result mPendingVoiceResult;
+    /** A search request from the remote ("voice" or "text") not yet picked up by Flutter. */
+    private String mPendingSearch;
 
     @Override
     public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
@@ -477,11 +485,11 @@ public class MainActivity extends FlutterActivity {
         if (checkWatchNextPermission()) {
             result.success(true);
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (pendingPermissionResult != null) {
+            if (mPendingPermissionResult != null) {
                 result.error("ALREADY_REQUESTING", "A permission request is already in progress", null);
             } else {
-                pendingPermissionResult = result;
-                requestPermissions(new String[]{"android.permission.READ_TV_LISTINGS"}, 1002);
+                mPendingPermissionResult = result;
+                requestPermissions(new String[]{"android.permission.READ_TV_LISTINGS"}, WATCH_NEXT_PERMISSION_REQUEST);
             }
         } else {
             result.success(true);
@@ -1396,8 +1404,6 @@ public class MainActivity extends FlutterActivity {
         return false;
     }
 
-    private static java.lang.ref.WeakReference<MethodChannel> sMethodChannel;
-
     /** Tells Flutter the active profile changed (it also re-reads it whenever Hearth comes back). */
     static void notifyProfileChanged() {
         MethodChannel channel = sMethodChannel != null ? sMethodChannel.get() : null;
@@ -1428,9 +1434,6 @@ public class MainActivity extends FlutterActivity {
         }
     }
 
-    /** Whether Hearth is the screen in front (between onResume and onPause). */
-    private static volatile boolean sInFront;
-
     static boolean isInFront() {
         return sInFront;
     }
@@ -1449,9 +1452,6 @@ public class MainActivity extends FlutterActivity {
         sInFront = false;
         super.onPause();
     }
-
-    /** A search request from the remote ("voice" or "text") not yet picked up by Flutter. */
-    private String mPendingSearch;
 
     /** Listens with the TV's speech recognizer (Google's on Google TV) and resolves with what was said, or null. */
     private void startVoiceSearch(MethodChannel.Result result) {
@@ -1628,11 +1628,11 @@ public class MainActivity extends FlutterActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 1002) {
-            if (pendingPermissionResult != null) {
+        if (requestCode == WATCH_NEXT_PERMISSION_REQUEST) {
+            if (mPendingPermissionResult != null) {
                 boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
-                pendingPermissionResult.success(granted);
-                pendingPermissionResult = null;
+                mPendingPermissionResult.success(granted);
+                mPendingPermissionResult = null;
             }
         }
     }
