@@ -67,9 +67,9 @@ class BackAction extends Action<BackIntent> {
   }
 }
 
-/// Moves focus up into the status bar (its leftmost button).
-class MoveFocusToSettingsIntent extends Intent {
-  const MoveFocusToSettingsIntent();
+/// Moves focus up into the top bar (its leftmost button).
+class MoveFocusToTopBarIntent extends Intent {
+  const MoveFocusToTopBarIntent();
 }
 
 /// Opens the Settings panel; sent by pressing Left at the left edge of the home screen.

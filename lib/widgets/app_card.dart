@@ -46,7 +46,7 @@ class AppCard extends StatefulWidget
   final void Function(AxisDirection) onMove;
   final VoidCallback onMoveEnd;
   final VoidCallback? onMoveCancel;
-  final bool handleUpNavigationToSettings;
+  final bool upGoesToTopBar;
   final bool isFirstInRow;
   final bool isLastInRow;
 
@@ -58,7 +58,7 @@ class AppCard extends StatefulWidget
     required this.onMove,
     required this.onMoveEnd,
     this.onMoveCancel,
-    this.handleUpNavigationToSettings = false,
+    this.upGoesToTopBar = false,
     this.isFirstInRow = false,
     this.isLastInRow = false,
   });
@@ -452,7 +452,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
           key,
           isFirstInRow: widget.isFirstInRow,
           isLastInRow: widget.isLastInRow,
-          upGoesToTopBar: widget.handleUpNavigationToSettings,
+          upGoesToTopBar: widget.upGoesToTopBar,
         ) ??
         KeyEventResult.ignored;
   }

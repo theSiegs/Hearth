@@ -206,7 +206,7 @@ class _ContinueWatchingRowState extends State<ContinueWatchingRow> {
                           program: program,
                           appsService: appsService,
                           watchNextService: watchNextService,
-                          handleUpNavigationToSettings: isFirstSection,
+                          upGoesToTopBar: isFirstSection,
                           isFirstInRow: index == 0,
                           isLastInRow: false,
                           autofocus: index == 0,
@@ -229,7 +229,7 @@ class WatchNextCard extends StatefulWidget {
   final WatchNextProgram program;
   final AppsService appsService;
   final WatchNextService watchNextService;
-  final bool handleUpNavigationToSettings;
+  final bool upGoesToTopBar;
   final bool isFirstInRow;
   final bool isLastInRow;
   final bool autofocus;
@@ -242,7 +242,7 @@ class WatchNextCard extends StatefulWidget {
     required this.program,
     required this.appsService,
     required this.watchNextService,
-    this.handleUpNavigationToSettings = true,
+    this.upGoesToTopBar = true,
     this.isFirstInRow = false,
     this.isLastInRow = false,
     this.autofocus = false,
@@ -590,8 +590,8 @@ class _WatchNextCardState extends State<WatchNextCard> with TickerProviderStateM
             _bumpController.forward(from: 0.0);
           }
           return KeyEventResult.handled;
-        } else if (key == LogicalKeyboardKey.arrowUp && widget.handleUpNavigationToSettings) {
-          Actions.invoke(context, const MoveFocusToSettingsIntent());
+        } else if (key == LogicalKeyboardKey.arrowUp && widget.upGoesToTopBar) {
+          Actions.invoke(context, const MoveFocusToTopBarIntent());
           return KeyEventResult.handled;
         } else if (AppCardKeys.validationKeys.contains(key)) {
           _onPressed();

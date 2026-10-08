@@ -32,21 +32,19 @@ class FocusAwareAppBar extends StatefulWidget implements PreferredSizeWidget
 
 class FocusAwareAppBarState extends State<FocusAwareAppBar>
 {
-  bool focused = false;
-  late FocusNode _settingsFocusNode;
+  bool _focused = false;
+  late FocusNode _profileFocusNode;
   late FocusNode _inputsFocusNode;
   late FocusNode _notificationsFocusNode;
   late FocusNode _weatherFocusNode;
 
-  FocusNode get settingsFocusNode => _settingsFocusNode;
-  FocusNode get inputsFocusNode => _inputsFocusNode;
-  FocusNode get notificationsFocusNode => _notificationsFocusNode;
-  FocusNode get weatherFocusNode => _weatherFocusNode;
+  @visibleForTesting
+  FocusNode get profileFocusNode => _profileFocusNode;
 
   @override
   void initState() {
     super.initState();
-    _settingsFocusNode = FocusNode();
+    _profileFocusNode = FocusNode();
     _inputsFocusNode = FocusNode();
     _notificationsFocusNode = FocusNode();
     _weatherFocusNode = FocusNode();
@@ -55,7 +53,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
 
   @override
   void dispose() {
-    _settingsFocusNode.dispose();
+    _profileFocusNode.dispose();
     _inputsFocusNode.dispose();
     _notificationsFocusNode.dispose();
     _weatherFocusNode.dispose();
@@ -70,9 +68,9 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
     _searchFocusNode.requestFocus();
   }
 
-  /// Focuses the status bar's leftmost button (the profile button; Settings itself opens with Left).
-  void focusSettings() {
-    _settingsFocusNode.requestFocus();
+  /// Focuses the top bar's leftmost button, the profile button.
+  void focusTopBar() {
+    _profileFocusNode.requestFocus();
   }
 
   /// Opens Settings. In kids profiles its risky parts ask for the parent PIN themselves (settings_lock.dart).
@@ -91,12 +89,12 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
             child: AnimatedContainer(
               curve: Curves.decelerate,
               duration: Duration(milliseconds: 150),
-              height: focused ? kToolbarHeight : 0,
+              height: _focused ? kToolbarHeight : 0,
               child: widget!
             ),
             onFocusChange: (hasFocus) {
               this.setState(() {
-                focused = hasFocus;
+                _focused = hasFocus;
               });
             }
           );
@@ -146,7 +144,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                   if (event is KeyDownEvent) openSettings();
                   return KeyEventResult.handled;
                 },
-                child: _ProfileButton(focusNode: _settingsFocusNode),
+                child: _ProfileButton(focusNode: _profileFocusNode),
               ),
               Selector<SettingsService, bool>(
                 selector: (_, settings) => settings.showInputsWidgetInStatusBar,

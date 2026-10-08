@@ -103,7 +103,7 @@ class _ContinueWatchingGridPageState extends State<ContinueWatchingGridPage> {
                         program: program,
                         appsService: appsService,
                         watchNextService: watchNextService,
-                        handleUpNavigationToSettings: false,
+                        upGoesToTopBar: false,
                         autofocus: i == 0,
                       ),
                   ],
