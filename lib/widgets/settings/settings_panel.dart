@@ -23,7 +23,7 @@ import 'package:flauncher/widgets/settings/search_settings_page.dart';
 import 'package:flauncher/widgets/settings/profile_pairing_page.dart';
 import 'package:flauncher/widgets/settings/home_assistant_page.dart';
 import 'package:flauncher/widgets/settings/remote_buttons_page.dart';
-import 'package:flauncher/widgets/side_panel_dialog.dart';
+import 'package:flauncher/widgets/settings/side_panel_overlay.dart';
 import 'package:flauncher/widgets/settings/applications_panel_page.dart';
 import 'package:flauncher/widgets/settings/launcher_sections_panel_page.dart';
 import 'package:flauncher/widgets/settings/gradient_panel_page.dart';
@@ -81,123 +81,109 @@ class _SettingsPanelState extends State<SettingsPanel> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async => !await _navigatorKey.currentState!.maybePop(),
-      child: Scaffold(
-        backgroundColor: Colors.black.withOpacity(0.70), // Dim the background
-        body: Stack(
-          children: [
-            // Tap outside to close
-            GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              child: Container(color: Colors.transparent),
+      child: SidePanelOverlay(
+        width: 350,
+        child: Focus(
+          canRequestFocus: false,
+          skipTraversal: true,
+          onKeyEvent: _closeOnRightAtEdge,
+          child: SettingsUnlock(
+            notifier: _unlocked,
+            child: Navigator(
+              key: _navigatorKey,
+              initialRoute: widget.initialRoute ?? SettingsPanelPage.routeName,
+              onGenerateRoute: (settings) {
+                switch (settings.name) {
+                  case SettingsPanelPage.routeName:
+                    return _FastPageRoute(builder: (_) => SettingsPanelPage());
+                  case GeneralSettingsPage.routeName:
+                    return _FastPageRoute(builder: (_) => GeneralSettingsPage());
+                  case InterfaceSettingsPage.routeName:
+                    return _FastPageRoute(builder: (_) => InterfaceSettingsPage());
+                  case WallpaperPanelPage.routeName:
+                    return _FastPageRoute(builder: (_) => WallpaperPanelPage());
+                  case StatusBarPanelPage.routeName:
+                    return _FastPageRoute(builder: (_) => StatusBarPanelPage());
+                  case GradientPanelPage.routeName:
+                    return _FastPageRoute(builder: (_) => GradientPanelPage());
+                  case ApplicationsPanelPage.routeName:
+                    return _FastPageRoute(builder: (_) => ApplicationsPanelPage());
+                  case LauncherSectionsPanelPage.routeName:
+                    return _FastPageRoute(builder: (_) => LauncherSectionsPanelPage());
+                  case LauncherSectionPanelPage.routeName:
+                    return _FastPageRoute(
+                        builder: (_) => LauncherSectionPanelPage(sectionIndex: settings.arguments as int?));
+                  case DataUsagePeriodPage.routeName:
+                    return _FastPageRoute(builder: (_) => DataUsagePeriodPage());
+                  case BackButtonActionPage.routeName:
+                    return _FastPageRoute(builder: (_) => BackButtonActionPage());
+                  case DateTimeFormatPage.routeName:
+                    return _FastPageRoute(builder: (_) => DateTimeFormatPage());
+                  case MiscPanelPage.routeName:
+                    return _FastPageRoute(builder: (_) => MiscPanelPage());
+                  case ThemesPage.routeName:
+                    return _FastPageRoute(builder: (_) => const ThemesPage());
+                  case AppearancePanelPage.routeName:
+                    return _FastPageRoute(builder: (_) => const AppearancePanelPage());
+                  case AccentColorPage.routeName:
+                    return _FastPageRoute(builder: (_) => AccentColorPage());
+                  case ProfilePairingPage.routeName:
+                    return _FastPageRoute(builder: (_) => const ProfilePairingPage());
+                  case ProfilePairingAppPage.routeName:
+                    return _FastPageRoute(
+                        builder: (_) => ProfilePairingAppPage(app: settings.arguments as Map<dynamic, dynamic>));
+                  case SearchSettingsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const SearchSettingsPage());
+                  case SetupChecklistPage.routeName:
+                    return _FastPageRoute(builder: (_) => const SetupChecklistPage());
+                  case FamilyAppsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const FamilyAppsPage());
+                  case CompanionAppsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const CompanionAppsPage());
+                  case HomeAssistantPage.routeName:
+                    return _FastPageRoute(builder: (_) => const HomeAssistantPage());
+                  case RemoteButtonsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const RemoteButtonsPage());
+                  case ProfilesSettingsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const ProfilesSettingsPage());
+                  case LookSettingsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const LookSettingsPage());
+                  case RemoteSearchSettingsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const RemoteSearchSettingsPage());
+                  case WeatherSettingsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const WeatherSettingsPage());
+                  case HaNotificationsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const HaNotificationsPage());
+                  case HaPanelPage.routeName:
+                    return _FastPageRoute(builder: (_) => const HaPanelPage());
+                  case HaStatusPage.routeName:
+                    return _FastPageRoute(builder: (_) => const HaStatusPage());
+                  case BackupRestorePage.routeName:
+                    return _FastPageRoute(builder: (_) => const BackupRestorePage());
+                  case AppLanguagePage.routeName:
+                    return _FastPageRoute(builder: (_) => const AppLanguagePage());
+                  case BlockedNotificationsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const BlockedNotificationsPage());
+                  case DisplaySettingsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const DisplaySettingsPage());
+                  case NotificationsSettingsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const NotificationsSettingsPage());
+                  case ContinueWatchingSettingsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const ContinueWatchingSettingsPage());
+                  case ContinueWatchingCardSizePage.routeName:
+                    return _FastPageRoute(builder: (_) => const ContinueWatchingCardSizePage());
+                  case ContinueWatchingMaxItemsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const ContinueWatchingMaxItemsPage());
+                  case ContinueWatchingAppsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const ContinueWatchingAppsPage());
+                  case AppDetailsPage.routeName:
+                    return _FastPageRoute(builder: (_) => AppDetailsPage(application: settings.arguments as App));
+                  default:
+                    throw ArgumentError.value(settings.name, "settings.name", "Route not supported.");
+                }
+              },
             ),
-            // The side panel
-            SidePanelDialog(
-              width: 350,
-              isRightSide: false,
-              child: Focus(
-                canRequestFocus: false,
-                skipTraversal: true,
-                onKeyEvent: _closeOnRightAtEdge,
-                child: SettingsUnlock(
-                  notifier: _unlocked,
-                  child: Navigator(
-                    key: _navigatorKey,
-                    initialRoute: widget.initialRoute ?? SettingsPanelPage.routeName,
-                    onGenerateRoute: (settings) {
-                      switch (settings.name) {
-                        case SettingsPanelPage.routeName:
-                          return _FastPageRoute(builder: (_) => SettingsPanelPage());
-                        case GeneralSettingsPage.routeName:
-                          return _FastPageRoute(builder: (_) => GeneralSettingsPage());
-                        case InterfaceSettingsPage.routeName:
-                          return _FastPageRoute(builder: (_) => InterfaceSettingsPage());
-                        case WallpaperPanelPage.routeName:
-                          return _FastPageRoute(builder: (_) => WallpaperPanelPage());
-                        case StatusBarPanelPage.routeName:
-                          return _FastPageRoute(builder: (_) => StatusBarPanelPage());
-                        case GradientPanelPage.routeName:
-                          return _FastPageRoute(builder: (_) => GradientPanelPage());
-                        case ApplicationsPanelPage.routeName:
-                          return _FastPageRoute(builder: (_) => ApplicationsPanelPage());
-                        case LauncherSectionsPanelPage.routeName:
-                          return _FastPageRoute(builder: (_) => LauncherSectionsPanelPage());
-                        case LauncherSectionPanelPage.routeName:
-                          return _FastPageRoute(
-                              builder: (_) => LauncherSectionPanelPage(sectionIndex: settings.arguments as int?));
-                        case DataUsagePeriodPage.routeName:
-                          return _FastPageRoute(builder: (_) => DataUsagePeriodPage());
-                        case BackButtonActionPage.routeName:
-                          return _FastPageRoute(builder: (_) => BackButtonActionPage());
-                        case DateTimeFormatPage.routeName:
-                          return _FastPageRoute(builder: (_) => DateTimeFormatPage());
-                        case MiscPanelPage.routeName:
-                          return _FastPageRoute(builder: (_) => MiscPanelPage());
-                        case ThemesPage.routeName:
-                          return _FastPageRoute(builder: (_) => const ThemesPage());
-                        case AppearancePanelPage.routeName:
-                          return _FastPageRoute(builder: (_) => const AppearancePanelPage());
-                        case AccentColorPage.routeName:
-                          return _FastPageRoute(builder: (_) => AccentColorPage());
-                        case ProfilePairingPage.routeName:
-                          return _FastPageRoute(builder: (_) => const ProfilePairingPage());
-                        case ProfilePairingAppPage.routeName:
-                          return _FastPageRoute(
-                              builder: (_) => ProfilePairingAppPage(app: settings.arguments as Map<dynamic, dynamic>));
-                        case SearchSettingsPage.routeName:
-                          return _FastPageRoute(builder: (_) => const SearchSettingsPage());
-                        case SetupChecklistPage.routeName:
-                          return _FastPageRoute(builder: (_) => const SetupChecklistPage());
-                        case FamilyAppsPage.routeName:
-                          return _FastPageRoute(builder: (_) => const FamilyAppsPage());
-                        case CompanionAppsPage.routeName:
-                          return _FastPageRoute(builder: (_) => const CompanionAppsPage());
-                        case HomeAssistantPage.routeName:
-                          return _FastPageRoute(builder: (_) => const HomeAssistantPage());
-                        case RemoteButtonsPage.routeName:
-                          return _FastPageRoute(builder: (_) => const RemoteButtonsPage());
-                        case ProfilesSettingsPage.routeName:
-                          return _FastPageRoute(builder: (_) => const ProfilesSettingsPage());
-                        case LookSettingsPage.routeName:
-                          return _FastPageRoute(builder: (_) => const LookSettingsPage());
-                        case RemoteSearchSettingsPage.routeName:
-                          return _FastPageRoute(builder: (_) => const RemoteSearchSettingsPage());
-                        case WeatherSettingsPage.routeName:
-                          return _FastPageRoute(builder: (_) => const WeatherSettingsPage());
-                        case HaNotificationsPage.routeName:
-                          return _FastPageRoute(builder: (_) => const HaNotificationsPage());
-                        case HaPanelPage.routeName:
-                          return _FastPageRoute(builder: (_) => const HaPanelPage());
-                        case HaStatusPage.routeName:
-                          return _FastPageRoute(builder: (_) => const HaStatusPage());
-                        case BackupRestorePage.routeName:
-                          return _FastPageRoute(builder: (_) => const BackupRestorePage());
-                        case AppLanguagePage.routeName:
-                          return _FastPageRoute(builder: (_) => const AppLanguagePage());
-                        case BlockedNotificationsPage.routeName:
-                          return _FastPageRoute(builder: (_) => const BlockedNotificationsPage());
-                        case DisplaySettingsPage.routeName:
-                          return _FastPageRoute(builder: (_) => const DisplaySettingsPage());
-                        case NotificationsSettingsPage.routeName:
-                          return _FastPageRoute(builder: (_) => const NotificationsSettingsPage());
-                        case ContinueWatchingSettingsPage.routeName:
-                          return _FastPageRoute(builder: (_) => const ContinueWatchingSettingsPage());
-                        case ContinueWatchingCardSizePage.routeName:
-                          return _FastPageRoute(builder: (_) => const ContinueWatchingCardSizePage());
-                        case ContinueWatchingMaxItemsPage.routeName:
-                          return _FastPageRoute(builder: (_) => const ContinueWatchingMaxItemsPage());
-                        case ContinueWatchingAppsPage.routeName:
-                          return _FastPageRoute(builder: (_) => const ContinueWatchingAppsPage());
-                        case AppDetailsPage.routeName:
-                          return _FastPageRoute(builder: (_) => AppDetailsPage(application: settings.arguments as App));
-                        default:
-                          throw ArgumentError.value(settings.name, "settings.name", "Route not supported.");
-                      }
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
