@@ -37,8 +37,10 @@ final class SessionInstaller {
             params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED);
         }
         params.setSize(apk.length());
+        int sessionId = -1;
+        boolean committed = false;
         try {
-            int sessionId = installer.createSession(params);
+            sessionId = installer.createSession(params);
             try (PackageInstaller.Session session = installer.openSession(sessionId)) {
                 try (InputStream in = new FileInputStream(apk);
                      OutputStream out = session.openWrite("base.apk", 0, apk.length())) {
@@ -52,11 +54,22 @@ final class SessionInstaller {
                 PendingIntent result = PendingIntent.getBroadcast(context, sessionId,
                         new Intent(context, ResultReceiver.class), flags);
                 session.commit(result.getIntentSender());
+                committed = true;
             }
             return true;
         } catch (Exception e) {
             Log.w(TAG, "Session install failed", e);
+            // A session left open keeps its partly written APK until Android cleans up days later
+            if (sessionId != -1 && !committed) abandon(installer, sessionId);
             return false;
+        }
+    }
+
+    private static void abandon(PackageInstaller installer, int sessionId) {
+        try {
+            installer.abandonSession(sessionId);
+        } catch (Exception e) {
+            Log.w(TAG, "Couldn't abandon install session " + sessionId, e);
         }
     }
 
@@ -72,8 +85,12 @@ final class SessionInstaller {
                 }
                 return;
             }
-            Log.w(TAG, "Install finished: status=" + status + " "
-                    + intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE));
+            String message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
+            if (status == PackageInstaller.STATUS_SUCCESS) {
+                Log.i(TAG, "Installed: " + message);
+            } else {
+                Log.w(TAG, "Install failed: status=" + status + " " + message);
+            }
         }
     }
 }
