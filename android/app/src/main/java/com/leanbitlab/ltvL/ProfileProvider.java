@@ -128,7 +128,7 @@ public class ProfileProvider extends ContentProvider {
 
     @Override
     public Bundle call(String method, String arg, Bundle extras) {
-        if (!HEARTHTUBE.equals(getCallingPackage()) || !isTrustedHearthTube(getContext(), HEARTHTUBE)) {
+        if (!HEARTHTUBE.equals(getCallingPackage()) || !isTrustedHearthTube(getContext())) {
             return null;
         }
 
@@ -141,24 +141,24 @@ public class ProfileProvider extends ContentProvider {
         return null;
     }
 
-    // SHA-256 of the certificates HearthTube may be signed with: Alex's debug key (HearthTube's releases) and his
-    // release key (Hearth's).
+    // SHA-256 of the certificates HearthTube may be signed with: the debug key HearthTube's releases are signed
+    // with, and Hearth's release key.
     private static final java.util.Set<String> TRUSTED_CERTS = new java.util.HashSet<>(java.util.Arrays.asList(
             "6748528ff4d17fd57c30b6c5d522c467920d9951ea5d208597f91b66df9a2bfe",
             "0438047b1a5eefe8693cad8f2b57189a418337bbcbd3c7dbdb79d20884beaf6e"));
 
-    /** The package is signed with one of Alex's keys, so another app can't pose as HearthTube to guess PINs. */
-    private static boolean isTrustedHearthTube(Context context, String packageName) {
+    /** HearthTube is signed with one of the trusted certificates, so another app can't pose as it to guess PINs. */
+    private static boolean isTrustedHearthTube(Context context) {
         try {
             android.content.pm.Signature[] signatures;
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                 android.content.pm.SigningInfo info = context.getPackageManager()
-                        .getPackageInfo(packageName, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES).signingInfo;
+                        .getPackageInfo(HEARTHTUBE, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES).signingInfo;
                 if (info == null || info.hasMultipleSigners()) return false;
                 signatures = info.getSigningCertificateHistory();
             } else {
                 signatures = context.getPackageManager()
-                        .getPackageInfo(packageName, android.content.pm.PackageManager.GET_SIGNATURES).signatures;
+                        .getPackageInfo(HEARTHTUBE, android.content.pm.PackageManager.GET_SIGNATURES).signatures;
             }
             if (signatures == null) return false;
             MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
