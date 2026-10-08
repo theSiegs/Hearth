@@ -26,30 +26,17 @@ public class WeatherReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (intent == null) return;
         String action = intent.getAction();
-        if (ACTION_GENERIC_WEATHER.equals(action)) {
-            String weatherJson = intent.getStringExtra("WeatherJson");
-            if (weatherJson != null && !weatherJson.isEmpty()) {
-                SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-                prefs.edit().putString(KEY_WEATHER_JSON, weatherJson).apply();
-                if (sListener != null) {
-                    sListener.onWeatherUpdated(weatherJson);
-                }
-            }
-        } else if (ACTION_BREEZY_UPDATE_NOTIFIER.equals(action) || ACTION_BREEZY_UPDATE_NOTIFIER_DEBUG.equals(action)) {
-            String weatherJson = intent.getStringExtra("WeatherJson");
-            if (weatherJson != null && !weatherJson.isEmpty()) {
-                SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-                prefs.edit().putString(KEY_WEATHER_JSON, weatherJson).apply();
-                if (sListener != null) {
-                    sListener.onWeatherUpdated(weatherJson);
-                }
-            } else {
-                SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-                String current = prefs.getString(KEY_WEATHER_JSON, null);
-                if (sListener != null && current != null) {
-                    sListener.onWeatherUpdated(current);
-                }
-            }
+        boolean breezy = ACTION_BREEZY_UPDATE_NOTIFIER.equals(action) || ACTION_BREEZY_UPDATE_NOTIFIER_DEBUG.equals(action);
+        if (!breezy && !ACTION_GENERIC_WEATHER.equals(action)) return;
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String weatherJson = intent.getStringExtra("WeatherJson");
+        if (weatherJson != null && !weatherJson.isEmpty()) {
+            prefs.edit().putString(KEY_WEATHER_JSON, weatherJson).apply();
+            if (sListener != null) sListener.onWeatherUpdated(weatherJson);
+        } else if (breezy) {
+            // Breezy's notifier can come without the data: pass on the last weather saved
+            String saved = prefs.getString(KEY_WEATHER_JSON, null);
+            if (sListener != null && saved != null) sListener.onWeatherUpdated(saved);
         }
     }
 }
