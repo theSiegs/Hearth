@@ -96,7 +96,8 @@ final class HaSetupServer {
                 socket.setSoTimeout(10_000);
                 handle(socket);
             } catch (SocketTimeoutException ignored) {
-            } catch (IOException e) {
+            } catch (IOException | RuntimeException e) {
+                // A malformed request from the network must not take the server (or Hearth) down
                 if (!server.isClosed()) Log.w(TAG, "Request failed", e);
             }
         }

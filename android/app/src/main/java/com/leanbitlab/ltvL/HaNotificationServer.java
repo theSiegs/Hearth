@@ -83,7 +83,8 @@ final class HaNotificationServer {
                 try (Socket socket = server.accept()) {
                     socket.setSoTimeout(10_000);
                     handle(socket);
-                } catch (IOException e) {
+                } catch (IOException | RuntimeException e) {
+                    // A malformed request from the network must not take the server (or Hearth) down
                     if (!server.isClosed()) Log.w(TAG, "Request failed", e);
                 }
             }
@@ -189,7 +190,7 @@ final class HaNotificationServer {
                     int nameAt = header.indexOf("name=\"");
                     if (nameAt >= 0) {
                         int end = header.indexOf('"', nameAt + 6);
-                        name = header.substring(nameAt + 6, end);
+                        if (end >= 0) name = header.substring(nameAt + 6, end);
                     }
                 }
             }
