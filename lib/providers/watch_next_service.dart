@@ -6,6 +6,7 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/watch_next_program.dart';
+import 'apps_service.dart';
 import 'settings_service.dart';
 
 class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
@@ -332,5 +333,22 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
     _watchNextSubscription?.cancel();
     _refreshTimer?.cancel();
     super.dispose();
+  }
+}
+
+extension VisibleWatchNext on WatchNextService {
+  /// The programs Continue Watching shows: not hidden in Settings, from an app that isn't hidden, and from an app
+  /// this profile can open (a kids profile blocks the rest). The home and the row both decide from this.
+  List<WatchNextProgram> visiblePrograms(SettingsService settings, AppsService apps) {
+    final hiddenIds = settings.hiddenWatchNextProgramIds;
+    final hiddenPackages = settings.hiddenWatchNextPackages;
+    return programs
+        .where((p) =>
+            !hiddenIds.contains(p.id.toString()) &&
+            !hiddenPackages.contains(p.packageName) &&
+            !apps.applications.any((app) => app.packageName == p.packageName && app.hidden) &&
+            (apps.applications.isEmpty ||
+                apps.applications.any((app) => app.packageName == p.packageName && !app.suspended)))
+        .toList();
   }
 }
