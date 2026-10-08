@@ -234,10 +234,14 @@ class ProviderApp {
   /// Lower-case TMDB provider names, or their beginnings ("netflix" covers "Netflix Standard with Ads").
   final List<String> prefixes;
 
-  const ProviderApp(this.name, this.packageName, this.prefixes);
+  /// Lower-case names that begin like this app's but are something else ("youtube tv" is the cable service).
+  final List<String> except;
+
+  const ProviderApp(this.name, this.packageName, this.prefixes, {this.except = const []});
 
   bool matches(String providerName) {
     final p = providerName.toLowerCase();
+    if (except.any((e) => p == e || p.startsWith("$e "))) return false;
     return prefixes.any((prefix) => p == prefix || p.startsWith("$prefix "));
   }
 }
@@ -254,12 +258,18 @@ const List<ProviderApp> providerApps = [
   ProviderApp("Peacock", "com.peacocktv.peacockandroid", ["peacock", "peacock premium", "peacock premium plus"]),
   ProviderApp("Tubi", "com.tubitv", ["tubi tv", "tubi"]),
   ProviderApp("Pluto TV", "tv.pluto.android", ["pluto tv"]),
-  ProviderApp("YouTube", "com.google.android.youtube.tv", ["youtube", "youtube premium"]),
+  ProviderApp("YouTube", "com.google.android.youtube.tv", ["youtube"], except: ["youtube tv"]),
   ProviderApp("Google TV", "com.google.android.videos", ["google play movies", "google tv"]),
 ];
 
+/// Add-on channels sold through another service ("HBO Max Amazon Channel" is bought in Prime Video, not the
+/// HBO Max app): their own subscription, so never the app they're named after.
+final RegExp _addOnChannel = RegExp(r" (amazon|apple tv|roku premium) channel$", caseSensitive: false);
+
 /// The app for a TMDB provider name, or null when Hearth doesn't know one.
-ProviderApp? providerApp(String providerName) => providerApps.firstWhereOrNull((app) => app.matches(providerName));
+ProviderApp? providerApp(String providerName) => _addOnChannel.hasMatch(providerName)
+    ? null
+    : providerApps.firstWhereOrNull((app) => app.matches(providerName));
 
 /// How a title can be watched on this TV: what search shows up front (included with an installed app), and what it
 /// keeps quiet (rent or buy, or only on apps that aren't installed).

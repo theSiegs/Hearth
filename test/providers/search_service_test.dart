@@ -133,6 +133,11 @@ void main() {
       expect(providerApp("Amazon Prime Video")?.name, "Prime Video");
       expect(providerApp("Google Play Movies")?.name, "Google TV");
       expect(providerApp("Crunchyroll"), isNull);
+      // Not the YouTube app, and not the HBO Max app
+      expect(providerApp("YouTube TV"), isNull);
+      expect(providerApp("YouTube Free")?.name, "YouTube");
+      expect(providerApp("HBO Max Amazon Channel"), isNull);
+      expect(providerApp("Apple TV Store")?.name, "Apple TV");
     });
 
     test("puts what an installed app includes first, and keeps the rest quiet", () {
