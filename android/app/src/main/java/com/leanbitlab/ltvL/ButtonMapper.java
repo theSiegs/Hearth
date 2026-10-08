@@ -113,9 +113,7 @@ final class ButtonMapper {
                 intent = new Intent(Intent.ACTION_VIEW, TvContract.buildChannelUriForPassthroughInput(target));
                 break;
             case "profiles":
-                intent = new Intent("com.google.android.gms.account.ProfilePickerDelegation")
-                        .setClassName(LauncherAccessibilityService.GOOGLE_TV_PACKAGE,
-                                LauncherAccessibilityService.GOOGLE_TV_PACKAGE + ".profile.chooser.ProfileChooserActivity");
+                intent = LauncherAccessibilityService.profileChooserIntent();
                 break;
             case "home":
                 intent = new Intent(service, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);

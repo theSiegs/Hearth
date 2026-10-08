@@ -65,7 +65,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             scheduleProfileUserRechecks();
         }
     };
-    private static final String GOOGLE_TV_CHOOSER_ACTIVITY = GOOGLE_TV_PACKAGE + ".profile.chooser.ProfileChooserActivity";
+    static final String GOOGLE_TV_CHOOSER_ACTIVITY = GOOGLE_TV_PACKAGE + ".profile.chooser.ProfileChooserActivity";
     private static final String PROFILE_PREFS = "ltv_active_profile";
     private static final String PROFILE_NAME_KEY = "name";
     private static final String PROFILE_KEY_KEY = "key";
@@ -85,6 +85,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
     /** How long after Google's last setup screen Hearth keeps out of the way (refreshed by each setup screen). */
     private static final long GOOGLE_SETUP_HOLD_MS = 2 * 60_000;
     private long mGoogleSetupUntil = 0;
+
+    /** Opens Google TV's own profile chooser. Not a public API, so starting it can fail. */
+    static Intent profileChooserIntent() {
+        return new Intent("com.google.android.gms.account.ProfilePickerDelegation")
+                .setClassName(GOOGLE_TV_PACKAGE, GOOGLE_TV_CHOOSER_ACTIVITY);
+    }
 
     /** Google TV's profile chooser, in either form (ProfileChooserActivity or ProfileChooserTransparentActivity). */
     private static boolean isChooser(String className) {
