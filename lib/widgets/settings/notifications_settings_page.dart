@@ -21,6 +21,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/notifications_service.dart';
+import 'adb_command_dialog.dart';
 import 'focusable_settings_tile.dart';
 import 'blocked_notifications_page.dart';
 
@@ -161,47 +162,16 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> w
     final packageName = packageInfo.packageName;
     if (!context.mounted) return;
 
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Notification Access (ADB Required)'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Android TV does not provide a system settings screen for "Notification Access" (listening to notifications from other apps).\n\n'
-              'Note: Enabling "Show notifications" in TV App Settings only controls outgoing notifications from this app, not Notification Access.\n\n'
-              'To grant Notification Access, connect your TV via ADB and run:',
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black26,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: SelectableText(
-                'adb shell cmd notification allow_listener $packageName/$packageName.LauncherNotificationListenerService',
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              context.read<NotificationsService>().openAppNotificationSettings();
-            },
-            child: const Text('Open App Info'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
+    showAdbCommandDialog(
+      context,
+      title: 'Notification Access (ADB Required)',
+      message:
+          'Android TV does not provide a system settings screen for "Notification Access" (listening to notifications from other apps).\n\n'
+          'Note: Enabling "Show notifications" in TV App Settings only controls outgoing notifications from this app, not Notification Access.\n\n'
+          'To grant Notification Access, connect your TV via ADB and run:',
+      command: 'adb shell cmd notification allow_listener $packageName/$packageName.LauncherNotificationListenerService',
+      actionLabel: 'Open App Info',
+      onAction: () => context.read<NotificationsService>().openAppNotificationSettings(),
     );
   }
 
@@ -210,39 +180,12 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> w
     final packageName = packageInfo.packageName;
     if (!context.mounted) return;
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Overlay Permission'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'On this device, the Overlay Permission settings screen could not be opened automatically.\n\n'
-              'To enable overlay popups, grant permission manually via ADB from a computer connected to the TV:',
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black26,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: SelectableText(
-                'adb shell appops set $packageName SYSTEM_ALERT_WINDOW allow',
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
+    showAdbCommandDialog(
+      context,
+      title: 'Overlay Permission',
+      message: 'On this device, the Overlay Permission settings screen could not be opened automatically.\n\n'
+          'To enable overlay popups, grant permission manually via ADB from a computer connected to the TV:',
+      command: 'adb shell appops set $packageName SYSTEM_ALERT_WINDOW allow',
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
+import 'adb_command_dialog.dart';
 import 'family_apps_page.dart';
 import 'focusable_settings_tile.dart';
 
@@ -210,21 +211,11 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
     );
     if (go != true) return;
     if (!await step.open() && step.adbFallback != null && mounted) {
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(step.title),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text("This TV wouldn't open that Settings screen. Run this once from a computer instead:"),
-              const SizedBox(height: 12),
-              SelectableText(step.adbFallback!, style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
-            ],
-          ),
-          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("OK"))],
-        ),
+      await showAdbCommandDialog(
+        context,
+        title: step.title,
+        message: "This TV wouldn't open that Settings screen. Run this once from a computer instead:",
+        command: step.adbFallback!,
       );
     }
   }
