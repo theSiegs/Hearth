@@ -17,7 +17,7 @@ Widget categoryContainerEmptyState(BuildContext context) {
       // Centred; this also keeps the first section's title clear of the app bar.
       alignment: 0.5,
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Align(
           alignment: Alignment.centerLeft,
           child: AspectRatio(
@@ -32,11 +32,11 @@ Widget categoryContainerEmptyState(BuildContext context) {
                   if (!allowed || !context.mounted) return;
                   showDialog(
                     context: context,
-                    builder: (_) => SettingsPanel(initialRoute: LauncherSectionsPanelPage.routeName),
+                    builder: (_) => const SettingsPanel(initialRoute: LauncherSectionsPanelPage.routeName),
                   );
                 },
                 child: Padding(
-                  padding: EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(8),
                   child: Center(
                     child: Text(
                       localizations.textEmptyCategory,

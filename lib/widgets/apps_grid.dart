@@ -57,7 +57,7 @@ class AppsGrid extends StatelessWidget
         primary: false,
         shrinkWrap: true,
         gridDelegate: _buildSliverGridDelegate(),
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         childrenDelegate: SliverChildBuilderDelegate(
           childCount: applications.length,
           findChildIndexCallback: _findChildIndex,
