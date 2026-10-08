@@ -195,7 +195,8 @@ class AppsService extends ChangeNotifier {
         int index = category.applications.indexOf(existingApp);
         if (index != -1) {
           category.applications[index] = newApp;
-        } else {
+        } else if (!newApp.hidden && !newApp.suspended) {
+          // Rows never show hidden or blocked apps (as in _refreshState)
           category.applications.add(newApp);
         }
       }

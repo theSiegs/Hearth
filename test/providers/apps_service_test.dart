@@ -771,10 +771,10 @@ void main() {
     late void Function(Map<String, dynamic>) onAppsChanged;
     final systemApp = {'packageName': 'app.tv', 'name': 'TV App', 'version': '1.0.0', 'sideloaded': false};
 
-    Future<AppsService> build() async {
+    Future<AppsService> build({bool hidden = false}) async {
       channel = MockFLauncherChannel();
       database = MockFLauncherDatabase();
-      final app = App(packageName: 'app.tv', name: 'TV App', version: '1.0.0', hidden: false);
+      final app = App(packageName: 'app.tv', name: 'TV App', version: '1.0.0', hidden: hidden);
       when(channel.getApplications()).thenAnswer((_) async => [systemApp]);
       when(channel.getApplicationIcon(any)).thenAnswer((_) async => Uint8List(0));
       when(channel.getApplicationBanner(any)).thenAnswer((_) async => Uint8List(0));
@@ -809,6 +809,18 @@ void main() {
       expect(after.version, '2.0.0');
       expect(after.categoryOrders, {1: 0});
       expect(appsService.getApp('app.tv'), same(after));
+    });
+
+    test("a hidden app stays out of its rows after an update", () async {
+      final appsService = await build(hidden: true);
+      expect(appsService.categories.single.applications, isEmpty);
+
+      onAppsChanged({'action': 'PACKAGE_CHANGED', 'activityInfo': {...systemApp, 'version': '2.0.0'}});
+      await pumpEventQueue();
+
+      expect(appsService.categories.single.applications, isEmpty);
+      expect(appsService.getApp('app.tv')!.version, '2.0.0');
+      expect(appsService.getApp('app.tv')!.hidden, isTrue);
     });
 
     test("apps coming back on external storage keep their place too", () async {
