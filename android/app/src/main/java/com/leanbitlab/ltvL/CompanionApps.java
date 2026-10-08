@@ -1,14 +1,15 @@
 package com.leanbitlab.ltvL;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 
 /** What Hearth knows about the companion apps it installs and updates (see companion_apps_page.dart). */
 final class CompanionApps {
     static final String HEARTHTUBE = "com.thesiegs.hearthtube";
-    /** Flutter's "companion_auto_update" (shared_preferences keeps Flutter keys with a "flutter." prefix). */
-    private static final String AUTO_UPDATE_KEY = "flutter.companion_auto_update";
+    /** Dart's "companion_auto_update" setting. */
+    private static final String AUTO_UPDATE_KEY = FlutterPrefs.key("companion_auto_update");
 
     private CompanionApps() {
     }
@@ -32,8 +33,7 @@ final class CompanionApps {
 
     /** Automatic companion updates are on (by default exactly when Hearth installed HearthTube). */
     static boolean autoUpdate(Context context) {
-        android.content.SharedPreferences prefs =
-                context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE);
+        SharedPreferences prefs = FlutterPrefs.get(context);
         return prefs.contains(AUTO_UPDATE_KEY) ? prefs.getBoolean(AUTO_UPDATE_KEY, false)
                 : installedByHearth(context, HEARTHTUBE);
     }
