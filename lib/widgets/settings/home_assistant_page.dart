@@ -312,7 +312,7 @@ class _HaPanelPageState extends State<HaPanelPage> {
                         controller: _panelDashboard,
                         textInputAction: TextInputAction.done,
                         onSubmitted: (_) => _savePanel(),
-                        decoration: const InputDecoration(labelText: "Dashboard", hintText: "hearth-tv/family_room"),
+                        decoration: const InputDecoration(labelText: "Dashboard", hintText: "lovelace"),
                       ),
                     ],
                   ),

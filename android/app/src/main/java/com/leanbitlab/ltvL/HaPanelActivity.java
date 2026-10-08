@@ -30,7 +30,7 @@ import org.json.JSONObject;
  */
 public class HaPanelActivity extends Activity {
     static final String DASHBOARD_KEY = "ha_panel_dashboard";
-    static final String DEFAULT_DASHBOARD = "hearth-tv/family_room";
+    static final String DEFAULT_DASHBOARD = "lovelace";
     private static final int PANEL_WIDTH_DP = 350;
     /** Long-lived tokens don't expire; tell the frontend so, so it never asks to refresh. */
     private static final long TOKEN_LIFETIME_SECONDS = 10L * 365 * 24 * 3600;
