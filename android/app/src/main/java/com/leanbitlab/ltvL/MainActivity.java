@@ -614,11 +614,7 @@ public class MainActivity extends FlutterActivity {
             category = Intent.CATEGORY_LEANBACK_LAUNCHER;
         }
 
-        // NOTE: Would be nice to query the applications that match *either* of the
-        // above categories
-        // but from the addCategory function documentation, it says that it will "use
-        // activities
-        // that provide *all* the requested categories"
+        // addCategory matches activities with all the given categories, so each category is queried on its own.
         Intent intent = new Intent(Intent.ACTION_MAIN)
                 .addCategory(category);
 
@@ -966,11 +962,6 @@ public class MainActivity extends FlutterActivity {
         return startFirst(chooser, new Intent(Settings.ACTION_SYNC_SETTINGS));
     }
 
-    /**
-     * Parent-initiated add/remove of Hearth's own apps in the kids profiles, over Hearth's loopback adb
-     * ({@link SelfAdb}). Reached only from the Settings rows, so {@code confirmedByParent} is true. Returns the log
-     * of what was done; a first-run "Allow debugging?" that hasn't been approved surfaces as an error the UI explains.
-     */
     /**
      * Parent-initiated add of Hearth's apps to the other profiles, over Hearth's loopback adb ({@link SelfAdb}):
      * always the supervised kids (kept installed so the launcher can't strip them), and — when {@code includeAdults}
@@ -1351,9 +1342,7 @@ public class MainActivity extends FlutterActivity {
         return true;
     }
 
-    /// Installs an APK previously downloaded by UpdateService through a store-style session (so the app isn't
-    /// left "restricted"), falling back to the system package installer via FileProvider so the installer
-    /// (a separate app) can read the file across the scoped-storage boundary.
+    /** Installs a downloaded APK: a store-style session first, else the system installer through FileProvider. */
     private boolean installApk(String path) {
         if (path == null) return false;
         try {
@@ -1569,11 +1558,8 @@ public class MainActivity extends FlutterActivity {
     }
 
     /**
-     * Android 13+ marks an app installed from a downloaded APK (as the in-app updater does) as restricted:
-     * its accessibility service can't be switched on, from the Settings screen or by `settings put`,
-     * until `adb shell appops set <package> ACCESS_RESTRICTED_SETTINGS allow`. Apps can't read that app op
-     * (it needs a system permission), so this only says whether the last install came from a file, which is
-     * when Android applies the restriction.
+     * Android 13+ blocks accessibility for apps installed from a file; apps can't read that app op, so this reports
+     * whether the install came from a file.
      */
     private boolean mayHaveRestrictedSettings() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false;
@@ -1598,8 +1584,6 @@ public class MainActivity extends FlutterActivity {
         }
         return true;
     }
-
-
 
     /** {versionName, versionCode} of an installed app, or null when it isn't installed. */
     @SuppressWarnings("deprecation")
