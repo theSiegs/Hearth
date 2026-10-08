@@ -45,7 +45,6 @@ const _dataUsagePeriodKey = "wifi_usage_period";
 const _showDataWidgetInStatusBarKey = "show_wifi_widget_in_status_bar";
 const String _showNetworkIndicatorInStatusBarKey = "show_network_indicator_in_status_bar";
 const String _accentColorKey = "accent_color";
-const String _screensaverClockStyleKey = "screensaver_clock_style";
 const String _timeBasedWallpaperEnabledKey = "time_based_wallpaper_enabled";
 const String _bingWallpaperEnabledKey = "bing_wallpaper_enabled";
 const String _pushToAdultProfilesKey = "push_to_adult_profiles";
@@ -126,7 +125,6 @@ class SettingsService extends ChangeNotifier {
   late bool _showDataWidgetInStatusBar;
   late bool _showNetworkIndicatorInStatusBar;
   late String _accentColorHex;
-  late String _screensaverClockStyle;
   late bool _timeBasedWallpaperEnabled;
   late bool _bingWallpaperEnabled;
   late bool _pushToAdultProfiles;
@@ -250,7 +248,6 @@ class SettingsService extends ChangeNotifier {
 
   String get accentColorHex => _accentColorHex;
 
-  String get screensaverClockStyle => _screensaverClockStyle;
 
   Color get accentColor {
     final hex = accentColorHex;
@@ -289,7 +286,6 @@ class SettingsService extends ChangeNotifier {
     _showDataWidgetInStatusBar = _sharedPreferences.getBool(_showDataWidgetInStatusBarKey) ?? false;
     _showNetworkIndicatorInStatusBar = _sharedPreferences.getBool(_showNetworkIndicatorInStatusBarKey) ?? true;
     _accentColorHex = _sharedPreferences.getString(_accentColorKey) ?? ACCENT_COLOR_PURPLE;
-    _screensaverClockStyle = _sharedPreferences.getString(_screensaverClockStyleKey) ?? "minimal";
     _timeBasedWallpaperEnabled = _sharedPreferences.getBool(_timeBasedWallpaperEnabledKey) ?? false;
     _bingWallpaperEnabled = _sharedPreferences.getBool(_bingWallpaperEnabledKey) ?? false;
     _showInputsWidgetInStatusBar = _sharedPreferences.getBool(_showInputsWidgetInStatusBarKey) ?? true;
@@ -333,7 +329,6 @@ class SettingsService extends ChangeNotifier {
       _showDataWidgetInStatusBarKey: _showDataWidgetInStatusBar,
       _showNetworkIndicatorInStatusBarKey: _showNetworkIndicatorInStatusBar,
       _accentColorKey: _accentColorHex,
-      _screensaverClockStyleKey: _screensaverClockStyle,
       _timeBasedWallpaperEnabledKey: _timeBasedWallpaperEnabled,
       _bingWallpaperEnabledKey: _bingWallpaperEnabled,
       _showInputsWidgetInStatusBarKey: _showInputsWidgetInStatusBar,
@@ -490,12 +485,6 @@ class SettingsService extends ChangeNotifier {
   Future<void> setAccentColor(String colorHex) async {
     await _sharedPreferences.setString(_accentColorKey, colorHex);
     _accentColorHex = colorHex;
-    notifyListeners();
-  }
-
-  Future<void> setScreensaverClockStyle(String style) async {
-    await _sharedPreferences.setString(_screensaverClockStyleKey, style);
-    _screensaverClockStyle = style;
     notifyListeners();
   }
 

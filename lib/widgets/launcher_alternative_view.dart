@@ -25,14 +25,14 @@ class AlternativeLauncherView extends StatelessWidget {
   const AlternativeLauncherView({super.key});
 
   @override
-  Widget build(BuildContext context) => Selector<SettingsService, (String, String, String)>(
-    selector: (_, service) => (service.timeFormat, service.dateFormat, service.screensaverClockStyle),
+  Widget build(BuildContext context) => Selector<SettingsService, (String, String)>(
+    selector: (_, service) => (service.timeFormat, service.dateFormat),
     builder: (context, formats, _) {
-      final (timeFormat, dateFormat, clockStyle) = formats;
+      final (timeFormat, dateFormat) = formats;
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildClock(context, timeFormat, clockStyle),
+          _buildClock(context, timeFormat),
           const SizedBox(height: 16),
           DateTimeWidget(dateFormat,
             textStyle: Theme.of(context).textTheme.headlineLarge!.copyWith(
@@ -46,55 +46,12 @@ class AlternativeLauncherView extends StatelessWidget {
     },
   );
 
-  Widget _buildClock(BuildContext context, String timeFormat, String style) {
-    final FontWeight fontWeight;
-    final double fontSize;
-    final double letterSpacing;
-    final String? fontFamily;
-
-    switch (style) {
-      case 'bold':
-        fontWeight = FontWeight.bold;
-        fontSize = 140;
-        letterSpacing = -2.0;
-        fontFamily = null;
-      case 'retro':
-        fontWeight = FontWeight.w400;
-        fontSize = 120;
-        letterSpacing = 4.0;
-        fontFamily = 'monospace';
-      case 'elegant':
-        fontWeight = FontWeight.w300;
-        fontSize = 120;
-        letterSpacing = 3.0;
-        fontFamily = 'serif';
-      case 'neon':
-        fontWeight = FontWeight.w100;
-        fontSize = 130;
-        letterSpacing = 4.0;
-        fontFamily = null;
-      case 'pixel':
-        fontWeight = FontWeight.w700;
-        fontSize = 110;
-        letterSpacing = 6.0;
-        fontFamily = 'monospace';
-      case 'digital':
-        fontWeight = FontWeight.w300;
-        fontSize = 120;
-        letterSpacing = 2.0;
-        fontFamily = 'monospace';
-      default: // minimal
-        fontWeight = FontWeight.w200;
-        fontSize = 120;
-        letterSpacing = 2.0;
-        fontFamily = null;
-    }
-
+  Widget _buildClock(BuildContext context, String timeFormat) {
+    const fontSize = 120.0;
     final mainStyle = Theme.of(context).textTheme.displayLarge!.copyWith(
       fontSize: fontSize,
-      fontWeight: fontWeight,
-      letterSpacing: letterSpacing,
-      fontFamily: fontFamily,
+      fontWeight: FontWeight.w200,
+      letterSpacing: 2.0,
       shadows: const [Shadow(color: Colors.black54, offset: Offset(2, 2), blurRadius: 16)],
     );
 

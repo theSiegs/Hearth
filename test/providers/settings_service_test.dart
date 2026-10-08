@@ -187,7 +187,6 @@ void main() async {
       await service1.setAutoHideAppBarEnabled(true);
       await service1.setThemes("legacy");
       await service1.setAppLanguage("fr");
-      await service1.setScreensaverClockStyle("analog");
       await service1.setShowContinueWatching(false);
       await service1.setShowCategoryAppCount(true);
 
@@ -196,7 +195,6 @@ void main() async {
       expect(exported["app_highlight_animation_enabled"], false);
       expect(exported["app_banner_shape"], "legacy");
       expect(exported["app_language"], "fr");
-      expect(exported["screensaver_clock_style"], "analog");
       expect(exported["show_continue_watching"], false);
       expect(exported["show_category_app_count"], true);
 
@@ -210,7 +208,6 @@ void main() async {
       expect(service2.autoHideAppBarEnabled, isTrue);
       expect(service2.themes, "legacy");
       expect(service2.appLanguage, "fr");
-      expect(service2.screensaverClockStyle, "analog");
       expect(service2.showContinueWatching, isFalse);
       expect(service2.showCategoryAppCount, isTrue);
     });
