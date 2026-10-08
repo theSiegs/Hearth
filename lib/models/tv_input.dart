@@ -6,6 +6,16 @@ enum TvInputType {
 }
 
 class TvInput {
+  // TvInputInfo.getType() values
+  static const int _typeTuner = 0;
+  static const int _typeOther = 1000;
+  static const int _typeComposite = 1001; // composite, S-Video, SCART and component run 1001-1004
+  static const int _typeComponent = 1004;
+  static const int _typeHdmi = 1007;
+
+  /// Counted as tuners too, though TvInputInfo defines no such types.
+  static const Set<int> _otherTunerTypes = {2, 3};
+
   final String id;
   final String label;
   final TvInputType type;
@@ -17,13 +27,13 @@ class TvInput {
   });
 
   factory TvInput.fromMap(Map<dynamic, dynamic> map) {
-    final int typeInt = map['type'] as int? ?? 1000;
+    final int typeInt = map['type'] as int? ?? _typeOther;
     TvInputType type;
-    if (typeInt == 1007) {
+    if (typeInt == _typeHdmi) {
       type = TvInputType.hdmi;
-    } else if (typeInt == 0 || typeInt == 2 || typeInt == 3) {
+    } else if (typeInt == _typeTuner || _otherTunerTypes.contains(typeInt)) {
       type = TvInputType.tuner;
-    } else if (typeInt >= 1001 && typeInt <= 1004) {
+    } else if (typeInt >= _typeComposite && typeInt <= _typeComponent) {
       type = TvInputType.av;
     } else {
       type = TvInputType.other;
