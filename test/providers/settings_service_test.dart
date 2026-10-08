@@ -175,8 +175,8 @@ void main() async {
     });
   });
 
-  group("exportSettingsMap and importSettingsMap", () {
-    test("exports complete settings map and restores across another instance", () async {
+  group("importSettingsMap", () {
+    test("restores settings saved from another instance", () async {
       final sp1 = await SharedPreferences.getInstance();
       await sp1.clear();
       final service1 = SettingsService(sp1);
@@ -190,15 +190,14 @@ void main() async {
       await service1.setShowContinueWatching(false);
       await service1.setShowCategoryAppCount(true);
 
-      final exported = service1.exportSettingsMap();
+      final exported = {
+        for (final key in service1.settingKeys)
+          if (sp1.get(key) != null) key: sp1.get(key),
+      };
       expect(exported["accent_color"], ACCENT_COLOR_TEAL);
-      expect(exported["app_highlight_animation_enabled"], false);
       expect(exported["app_banner_shape"], "legacy");
-      expect(exported["app_language"], "fr");
-      expect(exported["show_continue_watching"], false);
-      expect(exported["show_category_app_count"], true);
 
-      // Now create a target instance
+      await sp1.clear();
       final service2 = SettingsService(sp1);
       await service2.importSettingsMap(exported);
 

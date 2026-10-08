@@ -119,155 +119,64 @@ class SettingsService extends ChangeNotifier {
 
   /// Card sizes were saved by name before a height could be picked; these are the heights they drew.
   static const _legacyContinueWatchingCardHeights = {"compact": 112, "normal": 135, "large": 157};
+
+  /// Every setting this service stores. A backup or profile layout without one of them had it at its default.
+  static const Set<String> _settingKeys = {
+    _appHighlightAnimationEnabledKey,
+    _appKeyClickEnabledKey,
+    _autoHideAppBarKey,
+    _gradientUuidKey,
+    _backButtonActionKey,
+    _dateFormatKey,
+    _showCategoryTitlesKey,
+    _showCategoryAppCountKey,
+    _showAppNamesBelowIconsKey,
+    _themesKey,
+    _hideHighlightOutlineOnHomescreenKey,
+    _appSelectorTransitionAnimationEnabledKey,
+    _showDateInStatusBarKey,
+    _showTimeInStatusBarKey,
+    _timeFormatKey,
+    _dataUsagePeriodKey,
+    _showDataWidgetInStatusBarKey,
+    _showNetworkIndicatorInStatusBarKey,
+    _accentColorKey,
+    _timeBasedWallpaperEnabledKey,
+    _bingWallpaperEnabledKey,
+    _pushToAdultProfilesKey,
+    _matchSelectedAppBackgroundKey,
+    _dockEnabledKey,
+    _dockBlurEnabledKey,
+    _dockDarkBackgroundKey,
+    _dockShadowEnabledKey,
+    _blurWallpaperBelowDockKey,
+    _haPanelEnabledKey,
+    _showInputsWidgetInStatusBarKey,
+    _showContinueWatchingKey,
+    _continueWatchingCardSizeKey,
+    _continueWatchingMaxItemsKey,
+    _continueWatchingShowProgressKey,
+    _continueWatchingShowPercentageKey,
+    _continueWatchingShowDescriptionKey,
+    _continueWatchingOrderKey,
+    _hiddenWatchNextProgramIdsKey,
+    _hiddenWatchNextPackagesKey,
+    _startOnBootKey,
+    _showNotificationsWidgetInStatusBarKey,
+    _autoHideNotificationsWidgetKey,
+    _appLanguageKey,
+    _showWeatherInStatusBarKey,
+    _showWeatherWarningsKey,
+    _temperatureUnitKey,
+  };
+
   final SharedPreferences _sharedPreferences;
-
-  late bool _appHighlightAnimationEnabled;
-  late bool _appKeyClickEnabled;
-  late bool _autoHideAppBarEnabled;
-  late bool _showCategoryTitles;
-  late bool _showCategoryAppCount;
-  late bool _showAppNamesBelowIcons;
-  late String _themes;
-  late bool _hideHighlightOutlineOnHomescreen;
-  late bool _appSelectorTransitionAnimationEnabled;
-  late bool _showDateInStatusBar;
-  late bool _showTimeInStatusBar;
-  late String? _gradientUuid;
-  late String _backButtonAction;
-  late String _dateFormat;
-  late String _timeFormat;
-  late String _dataUsagePeriod;
-  late bool _showDataWidgetInStatusBar;
-  late bool _showNetworkIndicatorInStatusBar;
-  late String _accentColorHex;
-  late bool _timeBasedWallpaperEnabled;
-  late bool _bingWallpaperEnabled;
-  late bool _pushToAdultProfiles;
-  late bool _showInputsWidgetInStatusBar;
-  late bool _showContinueWatching;
-  late String _continueWatchingCardSize;
-  late int _continueWatchingCardHeight;
-  late int _continueWatchingMaxItems;
-  late bool _continueWatchingShowProgress;
-  late bool _continueWatchingShowPercentage;
-  late bool _continueWatchingShowDescription;
-  late int _continueWatchingOrder;
-  late List<String> _hiddenWatchNextProgramIds;
-  late List<String> _hiddenWatchNextPackages;
-  late bool _startOnBoot;
-  late bool _showNotificationsWidgetInStatusBar;
-  late bool _autoHideNotificationsWidget;
-  late String _appLanguage;
-  late bool _showWeatherInStatusBar;
-  late bool _showWeatherWarnings;
-  late String _temperatureUnit;
-
-  bool get appHighlightAnimationEnabled => _appHighlightAnimationEnabled;
-
-  bool get appKeyClickEnabled => _appKeyClickEnabled;
-
-  bool get autoHideAppBarEnabled => _autoHideAppBarEnabled;
-
-  bool get showCategoryTitles => _showCategoryTitles;
-
-  bool get showCategoryAppCount => _showCategoryAppCount;
-
-  bool get showAppNamesBelowIcons => _showAppNamesBelowIcons;
-
-  String get themes => _themes;
-
-  bool get hideHighlightOutlineOnHomescreen => _hideHighlightOutlineOnHomescreen;
-
-  bool get appSelectorTransitionAnimationEnabled => _appSelectorTransitionAnimationEnabled;
-
-  bool get showDateInStatusBar => _showDateInStatusBar;
-
-  bool get showTimeInStatusBar => _showTimeInStatusBar;
-
-  String? get gradientUuid => _gradientUuid;
-
-  String get backButtonAction => _backButtonAction;
-
-  String get dateFormat => _dateFormat;
-
-  String get timeFormat => _timeFormat;
-
-  String get dataUsagePeriod => _dataUsagePeriod;
-
-  bool get showDataWidgetInStatusBar => _showDataWidgetInStatusBar;
-
-  bool get showNetworkIndicatorInStatusBar => _showNetworkIndicatorInStatusBar;
-
-  bool get showInputsWidgetInStatusBar => _showInputsWidgetInStatusBar;
-  bool get showContinueWatching => _showContinueWatching;
-
-  /// The Continue Watching cards' height, in dp.
-  int get continueWatchingCardHeight => _continueWatchingCardHeight;
-  int get continueWatchingMaxItems => _continueWatchingMaxItems;
-  bool get continueWatchingShowProgress => _continueWatchingShowProgress;
-  bool get continueWatchingShowPercentage => _continueWatchingShowPercentage;
-  bool get continueWatchingShowDescription => _continueWatchingShowDescription;
-  int get continueWatchingOrder => _continueWatchingOrder;
-  List<String> get hiddenWatchNextProgramIds => List.unmodifiable(_hiddenWatchNextProgramIds);
-  List<String> get hiddenWatchNextPackages => List.unmodifiable(_hiddenWatchNextPackages);
-  bool get startOnBoot => _startOnBoot;
-
-  /// When on (the default), setting up Hearth on the kids' profiles also installs it on the TV's other adult
-  /// profiles, so another adult doesn't have to sideload it themselves. Adult profiles need no keep-installed flag.
-  bool get pushToAdultProfiles => _pushToAdultProfiles;
-
-
-  bool get hasParentPin => _sharedPreferences.getString(_parentPinHashKey) != null;
-
-  bool verifyParentPin(String pin) => _sharedPreferences.getString(_parentPinHashKey) == _hashPin(pin);
-
-  Future<void> setParentPin(String? pin) async {
-    if (pin == null) {
-      await _sharedPreferences.remove(_parentPinHashKey);
-    } else {
-      await _sharedPreferences.setString(_parentPinHashKey, _hashPin(pin));
-    }
-    notifyListeners();
-  }
-
-  Future<void> setPushToAdultProfiles(bool value) async {
-    _pushToAdultProfiles = value;
-    await _sharedPreferences.setBool(_pushToAdultProfilesKey, value);
-    notifyListeners();
-  }
-
-  static String _hashPin(String pin) => sha256.convert(utf8.encode("ltv-parent-pin:$pin")).toString();
-  bool get showNotificationsWidgetInStatusBar => _showNotificationsWidgetInStatusBar;
-  bool get autoHideNotificationsWidget => _autoHideNotificationsWidget;
-  bool get showWeatherInStatusBar => _showWeatherInStatusBar;
-  bool get showWeatherWarnings => _showWeatherWarnings;
-  String get temperatureUnit => _temperatureUnit;
-  bool get useFahrenheit => _temperatureUnit == TEMPERATURE_UNIT_FAHRENHEIT;
-
-  String get appLanguage => _appLanguage;
-
-  Locale? get appLocale {
-    if (_appLanguage.isEmpty) {
-      return null;
-    }
-    return Locale(_appLanguage);
-  }
-
-  String get accentColorHex => _accentColorHex;
-
-
-  Color get accentColor {
-    final hex = accentColorHex;
-    final int value = int.tryParse("0xFF$hex") ?? 0xFF7C4DFF;
-    return Color(value);
-  }
 
   SettingsService(this._sharedPreferences) {
     if (_sharedPreferences.containsKey(_retiredTmdbApiKeyKey)) {
       unawaited(_sharedPreferences.remove(_retiredTmdbApiKeyKey));
     }
     _clearOldDateTimeDefaults();
-    reload();
   }
 
   /// Once per TV: the old default date and time, restored from a layout or backup that saved them as if chosen,
@@ -290,97 +199,144 @@ class SettingsService extends ChangeNotifier {
     }
   }
 
-  /// The keys of the settings [exportSettingsMap] covers, whether set or not.
-  Set<String> get settingKeys => {...exportSettingsMap().keys, _gradientUuidKey};
+  /// The keys of the settings this service stores, whether set or not.
+  Set<String> get settingKeys => _settingKeys;
 
-  void reload() {
-    _appHighlightAnimationEnabled = _sharedPreferences.getBool(_appHighlightAnimationEnabledKey) ?? true;
-    _appKeyClickEnabled = _sharedPreferences.getBool(_appKeyClickEnabledKey) ?? true;
-    _autoHideAppBarEnabled = _sharedPreferences.getBool(_autoHideAppBarKey) ?? false;
-    _showCategoryTitles = _sharedPreferences.getBool(_showCategoryTitlesKey) ?? true;
-    _showCategoryAppCount = _sharedPreferences.getBool(_showCategoryAppCountKey) ?? false;
-    _showAppNamesBelowIcons = _sharedPreferences.getBool(_showAppNamesBelowIconsKey) ?? false;
-    _themes = _sharedPreferences.getString(_themesKey) ?? "modern";
-    _hideHighlightOutlineOnHomescreen = _sharedPreferences.getBool(_hideHighlightOutlineOnHomescreenKey) ?? false;
-    _appSelectorTransitionAnimationEnabled = _sharedPreferences.getBool(_appSelectorTransitionAnimationEnabledKey) ?? true;
-    _showDateInStatusBar = _sharedPreferences.getBool(_showDateInStatusBarKey) ?? true;
-    _showTimeInStatusBar = _sharedPreferences.getBool(_showTimeInStatusBarKey) ?? true;
-    _gradientUuid = _sharedPreferences.getString(_gradientUuidKey);
-    _backButtonAction = _sharedPreferences.getString(_backButtonActionKey) ?? backButtonActionNothing;
-    _dateFormat = _sharedPreferences.getString(_dateFormatKey) ?? defaultDateFormat;
-    _timeFormat = _sharedPreferences.getString(_timeFormatKey) ?? defaultTimeFormat;
-    _dataUsagePeriod = _sharedPreferences.getString(_dataUsagePeriodKey) ?? DATA_USAGE_DAILY;
-    _pushToAdultProfiles = _sharedPreferences.getBool(_pushToAdultProfilesKey) ?? true;
-    _showDataWidgetInStatusBar = _sharedPreferences.getBool(_showDataWidgetInStatusBarKey) ?? false;
-    _showNetworkIndicatorInStatusBar = _sharedPreferences.getBool(_showNetworkIndicatorInStatusBarKey) ?? true;
-    _accentColorHex = _sharedPreferences.getString(_accentColorKey) ?? ACCENT_COLOR_PURPLE;
-    _timeBasedWallpaperEnabled = _sharedPreferences.getBool(_timeBasedWallpaperEnabledKey) ?? false;
-    _bingWallpaperEnabled = _sharedPreferences.getBool(_bingWallpaperEnabledKey) ?? false;
-    _showInputsWidgetInStatusBar = _sharedPreferences.getBool(_showInputsWidgetInStatusBarKey) ?? true;
-    _showContinueWatching = _sharedPreferences.getBool(_showContinueWatchingKey) ?? false;
-    _continueWatchingCardSize = _sharedPreferences.getString(_continueWatchingCardSizeKey) ?? "normal";
-    _continueWatchingCardHeight = int.tryParse(_continueWatchingCardSize) ??
-        _legacyContinueWatchingCardHeights[_continueWatchingCardSize] ??
-        _defaultContinueWatchingCardHeight;
-    _continueWatchingMaxItems = _sharedPreferences.getInt(_continueWatchingMaxItemsKey) ?? 15;
-    _continueWatchingShowProgress = _sharedPreferences.getBool(_continueWatchingShowProgressKey) ?? true;
-    _continueWatchingShowPercentage = _sharedPreferences.getBool(_continueWatchingShowPercentageKey) ?? false;
-    _continueWatchingShowDescription = _sharedPreferences.getBool(_continueWatchingShowDescriptionKey) ?? true;
-    _continueWatchingOrder = _sharedPreferences.getInt(_continueWatchingOrderKey) ?? 0;
-    _hiddenWatchNextProgramIds = _sharedPreferences.getStringList(_hiddenWatchNextProgramIdsKey) ?? [];
-    _hiddenWatchNextPackages = _sharedPreferences.getStringList(_hiddenWatchNextPackagesKey) ?? [];
-    _startOnBoot = _sharedPreferences.getBool(_startOnBootKey) ?? false;
-    _showNotificationsWidgetInStatusBar = _sharedPreferences.getBool(_showNotificationsWidgetInStatusBarKey) ?? true;
-    _autoHideNotificationsWidget = _sharedPreferences.getBool(_autoHideNotificationsWidgetKey) ?? false;
-    _appLanguage = _sharedPreferences.getString(_appLanguageKey) ?? "";
-    _showWeatherInStatusBar = _sharedPreferences.getBool(_showWeatherInStatusBarKey) ?? false;
-    _showWeatherWarnings = _sharedPreferences.getBool(_showWeatherWarningsKey) ?? true;
-    _temperatureUnit = _sharedPreferences.getString(_temperatureUnitKey) ?? TEMPERATURE_UNIT_CELSIUS;
+  /// Tells listeners the stored settings changed underneath (after a restore).
+  void reload() => notifyListeners();
+
+  bool _bool(String key, bool fallback) => _sharedPreferences.getBool(key) ?? fallback;
+  int _int(String key, int fallback) => _sharedPreferences.getInt(key) ?? fallback;
+  String _string(String key, String fallback) => _sharedPreferences.getString(key) ?? fallback;
+  List<String> _list(String key) => List.unmodifiable(_sharedPreferences.getStringList(key) ?? const <String>[]);
+
+  Future<void> _setBool(String key, bool value) async {
+    await _sharedPreferences.setBool(key, value);
     notifyListeners();
   }
 
-  Map<String, dynamic> exportSettingsMap() {
-    return {
-      _appHighlightAnimationEnabledKey: _appHighlightAnimationEnabled,
-      _appKeyClickEnabledKey: _appKeyClickEnabled,
-      _autoHideAppBarKey: _autoHideAppBarEnabled,
-      _showCategoryTitlesKey: _showCategoryTitles,
-      _showCategoryAppCountKey: _showCategoryAppCount,
-      _showAppNamesBelowIconsKey: _showAppNamesBelowIcons,
-      _themesKey: _themes,
-      _hideHighlightOutlineOnHomescreenKey: _hideHighlightOutlineOnHomescreen,
-      _appSelectorTransitionAnimationEnabledKey: _appSelectorTransitionAnimationEnabled,
-      _showDateInStatusBarKey: _showDateInStatusBar,
-      _showTimeInStatusBarKey: _showTimeInStatusBar,
-      if (_gradientUuid != null) _gradientUuidKey: _gradientUuid,
-      _backButtonActionKey: _backButtonAction,
-      _dateFormatKey: _dateFormat,
-      _timeFormatKey: _timeFormat,
-      _dataUsagePeriodKey: _dataUsagePeriod,
-      _showDataWidgetInStatusBarKey: _showDataWidgetInStatusBar,
-      _showNetworkIndicatorInStatusBarKey: _showNetworkIndicatorInStatusBar,
-      _accentColorKey: _accentColorHex,
-      _timeBasedWallpaperEnabledKey: _timeBasedWallpaperEnabled,
-      _bingWallpaperEnabledKey: _bingWallpaperEnabled,
-      _showInputsWidgetInStatusBarKey: _showInputsWidgetInStatusBar,
-      _showContinueWatchingKey: _showContinueWatching,
-      _continueWatchingCardSizeKey: _continueWatchingCardSize,
-      _continueWatchingMaxItemsKey: _continueWatchingMaxItems,
-      _continueWatchingShowProgressKey: _continueWatchingShowProgress,
-      _continueWatchingShowPercentageKey: _continueWatchingShowPercentage,
-      _continueWatchingShowDescriptionKey: _continueWatchingShowDescription,
-      _continueWatchingOrderKey: _continueWatchingOrder,
-      _hiddenWatchNextProgramIdsKey: _hiddenWatchNextProgramIds,
-      _hiddenWatchNextPackagesKey: _hiddenWatchNextPackages,
-      _startOnBootKey: _startOnBoot,
-      _showNotificationsWidgetInStatusBarKey: _showNotificationsWidgetInStatusBar,
-      _autoHideNotificationsWidgetKey: _autoHideNotificationsWidget,
-      _appLanguageKey: _appLanguage,
-      _showWeatherInStatusBarKey: _showWeatherInStatusBar,
-      _showWeatherWarningsKey: _showWeatherWarnings,
-      _temperatureUnitKey: _temperatureUnit,
-    };
+  Future<void> _setInt(String key, int value) async {
+    await _sharedPreferences.setInt(key, value);
+    notifyListeners();
   }
+
+  Future<void> _setString(String key, String value) async {
+    await _sharedPreferences.setString(key, value);
+    notifyListeners();
+  }
+
+  /// An empty list is stored as no list: the default.
+  Future<void> _saveList(String key, List<String> list) async {
+    if (list.isEmpty) {
+      await _sharedPreferences.remove(key);
+    } else {
+      await _sharedPreferences.setStringList(key, list);
+    }
+    notifyListeners();
+  }
+
+  bool get appHighlightAnimationEnabled => _bool(_appHighlightAnimationEnabledKey, true);
+
+  bool get appKeyClickEnabled => _bool(_appKeyClickEnabledKey, true);
+
+  bool get autoHideAppBarEnabled => _bool(_autoHideAppBarKey, false);
+
+  bool get showCategoryTitles => _bool(_showCategoryTitlesKey, true);
+
+  bool get showCategoryAppCount => _bool(_showCategoryAppCountKey, false);
+
+  bool get showAppNamesBelowIcons => _bool(_showAppNamesBelowIconsKey, false);
+
+  String get themes => _string(_themesKey, "modern");
+
+  bool get hideHighlightOutlineOnHomescreen => _bool(_hideHighlightOutlineOnHomescreenKey, false);
+
+  bool get appSelectorTransitionAnimationEnabled => _bool(_appSelectorTransitionAnimationEnabledKey, true);
+
+  bool get showDateInStatusBar => _bool(_showDateInStatusBarKey, true);
+
+  bool get showTimeInStatusBar => _bool(_showTimeInStatusBarKey, true);
+
+  String? get gradientUuid => _sharedPreferences.getString(_gradientUuidKey);
+
+  String get backButtonAction => _string(_backButtonActionKey, backButtonActionNothing);
+
+  String get dateFormat => _string(_dateFormatKey, defaultDateFormat);
+
+  String get timeFormat => _string(_timeFormatKey, defaultTimeFormat);
+
+  String get dataUsagePeriod => _string(_dataUsagePeriodKey, DATA_USAGE_DAILY);
+
+  bool get showDataWidgetInStatusBar => _bool(_showDataWidgetInStatusBarKey, false);
+
+  bool get showNetworkIndicatorInStatusBar => _bool(_showNetworkIndicatorInStatusBarKey, true);
+
+  bool get showInputsWidgetInStatusBar => _bool(_showInputsWidgetInStatusBarKey, true);
+
+  bool get showContinueWatching => _bool(_showContinueWatchingKey, false);
+
+  /// The Continue Watching cards' height, in dp.
+  int get continueWatchingCardHeight {
+    final String size = _string(_continueWatchingCardSizeKey, "normal");
+    return int.tryParse(size) ?? _legacyContinueWatchingCardHeights[size] ?? _defaultContinueWatchingCardHeight;
+  }
+
+  int get continueWatchingMaxItems => _int(_continueWatchingMaxItemsKey, 15);
+
+  bool get continueWatchingShowProgress => _bool(_continueWatchingShowProgressKey, true);
+
+  bool get continueWatchingShowPercentage => _bool(_continueWatchingShowPercentageKey, false);
+
+  bool get continueWatchingShowDescription => _bool(_continueWatchingShowDescriptionKey, true);
+
+  int get continueWatchingOrder => _int(_continueWatchingOrderKey, 0);
+
+  List<String> get hiddenWatchNextProgramIds => _list(_hiddenWatchNextProgramIdsKey);
+
+  List<String> get hiddenWatchNextPackages => _list(_hiddenWatchNextPackagesKey);
+
+  bool get startOnBoot => _bool(_startOnBootKey, false);
+
+  /// When on (the default), setting up Hearth on the kids' profiles also installs it on the TV's other adult
+  /// profiles, so another adult doesn't have to sideload it themselves. Adult profiles need no keep-installed flag.
+  bool get pushToAdultProfiles => _bool(_pushToAdultProfilesKey, true);
+
+  Future<void> setPushToAdultProfiles(bool value) => _setBool(_pushToAdultProfilesKey, value);
+
+  bool get hasParentPin => _sharedPreferences.getString(_parentPinHashKey) != null;
+
+  bool verifyParentPin(String pin) => _sharedPreferences.getString(_parentPinHashKey) == _hashPin(pin);
+
+  Future<void> setParentPin(String? pin) async {
+    if (pin == null) {
+      await _sharedPreferences.remove(_parentPinHashKey);
+    } else {
+      await _sharedPreferences.setString(_parentPinHashKey, _hashPin(pin));
+    }
+    notifyListeners();
+  }
+
+  static String _hashPin(String pin) => sha256.convert(utf8.encode("ltv-parent-pin:$pin")).toString();
+
+  bool get showNotificationsWidgetInStatusBar => _bool(_showNotificationsWidgetInStatusBarKey, true);
+
+  bool get autoHideNotificationsWidget => _bool(_autoHideNotificationsWidgetKey, false);
+
+  bool get showWeatherInStatusBar => _bool(_showWeatherInStatusBarKey, false);
+
+  bool get showWeatherWarnings => _bool(_showWeatherWarningsKey, true);
+
+  String get temperatureUnit => _string(_temperatureUnitKey, TEMPERATURE_UNIT_CELSIUS);
+
+  bool get useFahrenheit => temperatureUnit == TEMPERATURE_UNIT_FAHRENHEIT;
+
+  String get appLanguage => _string(_appLanguageKey, "");
+
+  Locale? get appLocale => appLanguage.isEmpty ? null : Locale(appLanguage);
+
+  String get accentColorHex => _string(_accentColorKey, ACCENT_COLOR_PURPLE);
+
+  Color get accentColor => Color(int.tryParse("0xFF$accentColorHex") ?? 0xFF7C4DFF);
 
   Future<void> importSettingsMap(Map<String, dynamic> settingsMap) async {
     for (final entry in settingsMap.entries) {
@@ -402,312 +358,140 @@ class SettingsService extends ChangeNotifier {
     reload();
   }
 
-  Future<void> setAppLanguage(String value) async {
-    await _sharedPreferences.setString(_appLanguageKey, value);
-    _appLanguage = value;
-    notifyListeners();
-  }
+  Future<void> setAppLanguage(String value) => _setString(_appLanguageKey, value);
 
-  Future<void> setAppHighlightAnimationEnabled(bool value) async {
-    await _sharedPreferences.setBool(_appHighlightAnimationEnabledKey, value);
-    _appHighlightAnimationEnabled = value;
-    notifyListeners();
-  }
+  Future<void> setAppHighlightAnimationEnabled(bool value) => _setBool(_appHighlightAnimationEnabledKey, value);
 
-  Future<void> setAppKeyClickEnabled(bool value) async {
-    await _sharedPreferences.setBool(_appKeyClickEnabledKey, value);
-    _appKeyClickEnabled = value;
-    notifyListeners();
-  }
+  Future<void> setAppKeyClickEnabled(bool value) => _setBool(_appKeyClickEnabledKey, value);
 
-  Future<void> setAutoHideAppBarEnabled(bool value) async {
-    await _sharedPreferences.setBool(_autoHideAppBarKey, value);
-    _autoHideAppBarEnabled = value;
-    notifyListeners();
-  }
+  Future<void> setAutoHideAppBarEnabled(bool value) => _setBool(_autoHideAppBarKey, value);
 
-  Future<void> setGradientUuid(String value) async {
-    await _sharedPreferences.setString(_gradientUuidKey, value);
-    _gradientUuid = value;
-    notifyListeners();
-  }
+  Future<void> setGradientUuid(String value) => _setString(_gradientUuidKey, value);
 
-  Future<void> setBackButtonAction(String value) async {
-    await _sharedPreferences.setString(_backButtonActionKey, value);
-    _backButtonAction = value;
-    notifyListeners();
-  }
+  Future<void> setBackButtonAction(String value) => _setString(_backButtonActionKey, value);
 
   Future<void> setDateTimeFormat(String dateFormatString, String timeFormatString) async {
     await Future.wait([
       _sharedPreferences.setString(_dateFormatKey, dateFormatString),
       _sharedPreferences.setString(_timeFormatKey, timeFormatString)
     ]);
-    _dateFormat = dateFormatString;
-    _timeFormat = timeFormatString;
     notifyListeners();
   }
 
-  Future<void> setShowCategoryTitles(bool show) async {
-    await _sharedPreferences.setBool(_showCategoryTitlesKey, show);
-    _showCategoryTitles = show;
-    notifyListeners();
-  }
+  Future<void> setShowCategoryTitles(bool show) => _setBool(_showCategoryTitlesKey, show);
 
-  Future<void> setShowCategoryAppCount(bool show) async {
-    await _sharedPreferences.setBool(_showCategoryAppCountKey, show);
-    _showCategoryAppCount = show;
-    notifyListeners();
-  }
+  Future<void> setShowCategoryAppCount(bool show) => _setBool(_showCategoryAppCountKey, show);
 
-  Future<void> setShowAppNamesBelowIcons(bool show) async {
-    await _sharedPreferences.setBool(_showAppNamesBelowIconsKey, show);
-    _showAppNamesBelowIcons = show;
-    notifyListeners();
-  }
+  Future<void> setShowAppNamesBelowIcons(bool show) => _setBool(_showAppNamesBelowIconsKey, show);
 
-  Future<void> setThemes(String shape) async {
-    await _sharedPreferences.setString(_themesKey, shape);
-    _themes = shape;
-    notifyListeners();
-  }
+  Future<void> setThemes(String shape) => _setString(_themesKey, shape);
 
-  Future<void> setHideHighlightOutlineOnHomescreen(bool enabled) async {
-    await _sharedPreferences.setBool(_hideHighlightOutlineOnHomescreenKey, enabled);
-    _hideHighlightOutlineOnHomescreen = enabled;
-    notifyListeners();
-  }
+  Future<void> setHideHighlightOutlineOnHomescreen(bool enabled) =>
+      _setBool(_hideHighlightOutlineOnHomescreenKey, enabled);
 
-  Future<void> setAppSelectorTransitionAnimationEnabled(bool enabled) async {
-    await _sharedPreferences.setBool(_appSelectorTransitionAnimationEnabledKey, enabled);
-    _appSelectorTransitionAnimationEnabled = enabled;
-    notifyListeners();
-  }
+  Future<void> setAppSelectorTransitionAnimationEnabled(bool enabled) =>
+      _setBool(_appSelectorTransitionAnimationEnabledKey, enabled);
 
-  Future<void> setShowDateInStatusBar(bool show) async {
-    await _sharedPreferences.setBool(_showDateInStatusBarKey, show);
-    _showDateInStatusBar = show;
-    notifyListeners();
-  }
+  Future<void> setShowDateInStatusBar(bool show) => _setBool(_showDateInStatusBarKey, show);
 
-  Future<void> setShowTimeInStatusBar(bool show) async {
-    await _sharedPreferences.setBool(_showTimeInStatusBarKey, show);
-    _showTimeInStatusBar = show;
-    notifyListeners();
-  }
+  Future<void> setShowTimeInStatusBar(bool show) => _setBool(_showTimeInStatusBarKey, show);
 
-  Future<void> setDataUsagePeriod(String period) async {
-    await _sharedPreferences.setString(_dataUsagePeriodKey, period);
-    _dataUsagePeriod = period;
-    notifyListeners();
-  }
+  Future<void> setDataUsagePeriod(String period) => _setString(_dataUsagePeriodKey, period);
 
-  Future<void> setShowDataWidgetInStatusBar(bool show) async {
-    await _sharedPreferences.setBool(_showDataWidgetInStatusBarKey, show);
-    _showDataWidgetInStatusBar = show;
-    notifyListeners();
-  }
+  Future<void> setShowDataWidgetInStatusBar(bool show) => _setBool(_showDataWidgetInStatusBarKey, show);
 
-  Future<void> setShowNetworkIndicatorInStatusBar(bool show) async {
-    await _sharedPreferences.setBool(_showNetworkIndicatorInStatusBarKey, show);
-    _showNetworkIndicatorInStatusBar = show;
-    notifyListeners();
-  }
+  Future<void> setShowNetworkIndicatorInStatusBar(bool show) => _setBool(_showNetworkIndicatorInStatusBarKey, show);
 
-  Future<void> setAccentColor(String colorHex) async {
-    await _sharedPreferences.setString(_accentColorKey, colorHex);
-    _accentColorHex = colorHex;
-    notifyListeners();
-  }
+  Future<void> setAccentColor(String colorHex) => _setString(_accentColorKey, colorHex);
 
-  bool get timeBasedWallpaperEnabled => _timeBasedWallpaperEnabled;
+  bool get timeBasedWallpaperEnabled => _bool(_timeBasedWallpaperEnabledKey, false);
 
-  Future<void> setTimeBasedWallpaperEnabled(bool enabled) async {
-    await _sharedPreferences.setBool(_timeBasedWallpaperEnabledKey, enabled);
-    _timeBasedWallpaperEnabled = enabled;
-    notifyListeners();
-  }
+  Future<void> setTimeBasedWallpaperEnabled(bool enabled) => _setBool(_timeBasedWallpaperEnabledKey, enabled);
 
-  bool get bingWallpaperEnabled => _bingWallpaperEnabled;
+  bool get bingWallpaperEnabled => _bool(_bingWallpaperEnabledKey, false);
 
-  bool get matchSelectedAppBackground => _sharedPreferences.getBool(_matchSelectedAppBackgroundKey) ?? false;
+  Future<void> setBingWallpaperEnabled(bool enabled) => _setBool(_bingWallpaperEnabledKey, enabled);
 
-  Future<void> setMatchSelectedAppBackground(bool enabled) async {
-    await _sharedPreferences.setBool(_matchSelectedAppBackgroundKey, enabled);
-    notifyListeners();
-  }
+  bool get matchSelectedAppBackground => _bool(_matchSelectedAppBackgroundKey, false);
+
+  Future<void> setMatchSelectedAppBackground(bool enabled) => _setBool(_matchSelectedAppBackgroundKey, enabled);
 
   /// Favorites shown as a frosted dock at the bottom of the first screen, with
   /// Continue Watching above it and the other sections below.
-  bool get dockEnabled => _sharedPreferences.getBool(_dockEnabledKey) ?? true;
+  bool get dockEnabled => _bool(_dockEnabledKey, true);
 
-  Future<void> setDockEnabled(bool enabled) async {
-    await _sharedPreferences.setBool(_dockEnabledKey, enabled);
-    notifyListeners();
-  }
+  Future<void> setDockEnabled(bool enabled) => _setBool(_dockEnabledKey, enabled);
 
-  bool get dockBlurEnabled => _sharedPreferences.getBool(_dockBlurEnabledKey) ?? true;
+  bool get dockBlurEnabled => _bool(_dockBlurEnabledKey, true);
 
-  Future<void> setDockBlurEnabled(bool enabled) async {
-    await _sharedPreferences.setBool(_dockBlurEnabledKey, enabled);
-    notifyListeners();
-  }
+  Future<void> setDockBlurEnabled(bool enabled) => _setBool(_dockBlurEnabledKey, enabled);
 
-  bool get dockDarkBackground => _sharedPreferences.getBool(_dockDarkBackgroundKey) ?? false;
+  bool get dockDarkBackground => _bool(_dockDarkBackgroundKey, false);
 
-  Future<void> setDockDarkBackground(bool enabled) async {
-    await _sharedPreferences.setBool(_dockDarkBackgroundKey, enabled);
-    notifyListeners();
-  }
+  Future<void> setDockDarkBackground(bool enabled) => _setBool(_dockDarkBackgroundKey, enabled);
 
-  bool get dockShadowEnabled => _sharedPreferences.getBool(_dockShadowEnabledKey) ?? true;
+  bool get dockShadowEnabled => _bool(_dockShadowEnabledKey, true);
 
-  Future<void> setDockShadowEnabled(bool enabled) async {
-    await _sharedPreferences.setBool(_dockShadowEnabledKey, enabled);
-    notifyListeners();
-  }
+  Future<void> setDockShadowEnabled(bool enabled) => _setBool(_dockShadowEnabledKey, enabled);
 
   /// Blur the wallpaper while browsing the sections below the dock.
-  bool get blurWallpaperBelowDock => _sharedPreferences.getBool(_blurWallpaperBelowDockKey) ?? true;
+  bool get blurWallpaperBelowDock => _bool(_blurWallpaperBelowDockKey, true);
 
-  Future<void> setBlurWallpaperBelowDock(bool enabled) async {
-    await _sharedPreferences.setBool(_blurWallpaperBelowDockKey, enabled);
-    notifyListeners();
-  }
+  Future<void> setBlurWallpaperBelowDock(bool enabled) => _setBool(_blurWallpaperBelowDockKey, enabled);
 
   /// Right at the right edge of the home screen opens the Home Assistant panel. Per profile, off by default.
-  bool get haPanelEnabled => _sharedPreferences.getBool(_haPanelEnabledKey) ?? false;
+  bool get haPanelEnabled => _bool(_haPanelEnabledKey, false);
 
-  Future<void> setHaPanelEnabled(bool enabled) async {
-    await _sharedPreferences.setBool(_haPanelEnabledKey, enabled);
-    notifyListeners();
-  }
+  Future<void> setHaPanelEnabled(bool enabled) => _setBool(_haPanelEnabledKey, enabled);
 
-  Future<void> setBingWallpaperEnabled(bool enabled) async {
-    await _sharedPreferences.setBool(_bingWallpaperEnabledKey, enabled);
-    _bingWallpaperEnabled = enabled;
-    notifyListeners();
-  }
+  Future<void> setShowInputsWidgetInStatusBar(bool show) => _setBool(_showInputsWidgetInStatusBarKey, show);
 
-  Future<void> setShowInputsWidgetInStatusBar(bool show) async {
-    await _sharedPreferences.setBool(_showInputsWidgetInStatusBarKey, show);
-    _showInputsWidgetInStatusBar = show;
-    notifyListeners();
-  }
+  Future<void> setShowContinueWatching(bool show) => _setBool(_showContinueWatchingKey, show);
 
-  Future<void> setShowContinueWatching(bool show) async {
-    await _sharedPreferences.setBool(_showContinueWatchingKey, show);
-    _showContinueWatching = show;
-    notifyListeners();
-  }
+  Future<void> setContinueWatchingCardHeight(int height) =>
+      _setString(_continueWatchingCardSizeKey, height.toString());
 
-  Future<void> setContinueWatchingCardHeight(int height) async {
-    await _sharedPreferences.setString(_continueWatchingCardSizeKey, height.toString());
-    _continueWatchingCardSize = height.toString();
-    _continueWatchingCardHeight = height;
-    notifyListeners();
-  }
+  Future<void> setContinueWatchingMaxItems(int count) => _setInt(_continueWatchingMaxItemsKey, count);
 
-  Future<void> setContinueWatchingMaxItems(int count) async {
-    await _sharedPreferences.setInt(_continueWatchingMaxItemsKey, count);
-    _continueWatchingMaxItems = count;
-    notifyListeners();
-  }
+  Future<void> setContinueWatchingShowProgress(bool show) => _setBool(_continueWatchingShowProgressKey, show);
 
-  Future<void> setContinueWatchingShowProgress(bool show) async {
-    await _sharedPreferences.setBool(_continueWatchingShowProgressKey, show);
-    _continueWatchingShowProgress = show;
-    notifyListeners();
-  }
+  Future<void> setContinueWatchingShowPercentage(bool show) => _setBool(_continueWatchingShowPercentageKey, show);
 
-  Future<void> setContinueWatchingShowPercentage(bool show) async {
-    await _sharedPreferences.setBool(_continueWatchingShowPercentageKey, show);
-    _continueWatchingShowPercentage = show;
-    notifyListeners();
-  }
+  Future<void> setContinueWatchingShowDescription(bool show) => _setBool(_continueWatchingShowDescriptionKey, show);
 
-  Future<void> setContinueWatchingShowDescription(bool show) async {
-    await _sharedPreferences.setBool(_continueWatchingShowDescriptionKey, show);
-    _continueWatchingShowDescription = show;
-    notifyListeners();
-  }
-
-  Future<void> setContinueWatchingOrder(int order) async {
-    await _sharedPreferences.setInt(_continueWatchingOrderKey, order);
-    _continueWatchingOrder = order;
-    notifyListeners();
-  }
+  Future<void> setContinueWatchingOrder(int order) => _setInt(_continueWatchingOrderKey, order);
 
   Future<void> hideWatchNextProgram(int id) async {
-    final strId = id.toString();
-    if (!_hiddenWatchNextProgramIds.contains(strId)) {
-      _hiddenWatchNextProgramIds = List<String>.from(_hiddenWatchNextProgramIds)..add(strId);
-      await _sharedPreferences.setStringList(_hiddenWatchNextProgramIdsKey, _hiddenWatchNextProgramIds);
-      notifyListeners();
-    }
+    final ids = hiddenWatchNextProgramIds;
+    if (!ids.contains(id.toString())) await _saveList(_hiddenWatchNextProgramIdsKey, [...ids, id.toString()]);
   }
 
   Future<void> hideWatchNextPackage(String packageName) async {
-    if (!_hiddenWatchNextPackages.contains(packageName)) {
-      _hiddenWatchNextPackages = List<String>.from(_hiddenWatchNextPackages)..add(packageName);
-      await _sharedPreferences.setStringList(_hiddenWatchNextPackagesKey, _hiddenWatchNextPackages);
-      notifyListeners();
-    }
+    final packages = hiddenWatchNextPackages;
+    if (!packages.contains(packageName)) await _saveList(_hiddenWatchNextPackagesKey, [...packages, packageName]);
   }
 
   Future<void> unhideWatchNextPackage(String packageName) async {
-    if (_hiddenWatchNextPackages.contains(packageName)) {
-      _hiddenWatchNextPackages = List<String>.from(_hiddenWatchNextPackages)..remove(packageName);
-      await _sharedPreferences.setStringList(_hiddenWatchNextPackagesKey, _hiddenWatchNextPackages);
-      notifyListeners();
+    final packages = hiddenWatchNextPackages;
+    if (packages.contains(packageName)) {
+      await _saveList(_hiddenWatchNextPackagesKey, [...packages]..remove(packageName));
     }
   }
 
-  Future<void> unhideAllWatchNextPackages() async {
-    _hiddenWatchNextPackages = [];
-    await _sharedPreferences.remove(_hiddenWatchNextPackagesKey);
-    notifyListeners();
-  }
+  Future<void> unhideAllWatchNextPackages() => _saveList(_hiddenWatchNextPackagesKey, const []);
 
-  Future<void> clearHiddenWatchNextPrograms() async {
-    _hiddenWatchNextProgramIds = [];
-    await _sharedPreferences.remove(_hiddenWatchNextProgramIdsKey);
-    notifyListeners();
-  }
+  Future<void> clearHiddenWatchNextPrograms() => _saveList(_hiddenWatchNextProgramIdsKey, const []);
 
-  Future<void> setStartOnBoot(bool enabled) async {
-    await _sharedPreferences.setBool(_startOnBootKey, enabled);
-    _startOnBoot = enabled;
-    notifyListeners();
-  }
+  Future<void> setStartOnBoot(bool enabled) => _setBool(_startOnBootKey, enabled);
 
-  Future<void> setShowNotificationsWidgetInStatusBar(bool show) async {
-    await _sharedPreferences.setBool(_showNotificationsWidgetInStatusBarKey, show);
-    _showNotificationsWidgetInStatusBar = show;
-    notifyListeners();
-  }
+  Future<void> setShowNotificationsWidgetInStatusBar(bool show) =>
+      _setBool(_showNotificationsWidgetInStatusBarKey, show);
 
-  Future<void> setAutoHideNotificationsWidget(bool value) async {
-    await _sharedPreferences.setBool(_autoHideNotificationsWidgetKey, value);
-    _autoHideNotificationsWidget = value;
-    notifyListeners();
-  }
+  Future<void> setAutoHideNotificationsWidget(bool value) => _setBool(_autoHideNotificationsWidgetKey, value);
 
-  Future<void> setShowWeatherInStatusBar(bool show) async {
-    await _sharedPreferences.setBool(_showWeatherInStatusBarKey, show);
-    _showWeatherInStatusBar = show;
-    notifyListeners();
-  }
+  Future<void> setShowWeatherInStatusBar(bool show) => _setBool(_showWeatherInStatusBarKey, show);
 
-  Future<void> setShowWeatherWarnings(bool show) async {
-    await _sharedPreferences.setBool(_showWeatherWarningsKey, show);
-    _showWeatherWarnings = show;
-    notifyListeners();
-  }
+  Future<void> setShowWeatherWarnings(bool show) => _setBool(_showWeatherWarningsKey, show);
 
-  Future<void> setTemperatureUnit(String unit) async {
-    await _sharedPreferences.setString(_temperatureUnitKey, unit);
-    _temperatureUnit = unit;
-    notifyListeners();
-  }
+  Future<void> setTemperatureUnit(String unit) => _setString(_temperatureUnitKey, unit);
 }
