@@ -15,7 +15,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/cached_blur_backdrop.dart';
@@ -37,13 +36,11 @@ double dockRadiusForTheme(String theme) {
 /// Favorites shown as a frosted bar, adapted from arclauncher's dock.
 class HomeDock extends StatelessWidget {
   final Category category;
-  final List<App> applications;
   final bool isFirstSection;
 
   const HomeDock({
     super.key,
     required this.category,
-    required this.applications,
     this.isFirstSection = false,
   });
 
@@ -86,7 +83,6 @@ class HomeDock extends StatelessWidget {
             padding: const EdgeInsets.all(kDockInnerPadding - 8),
             child: CategoryRow(
               category: category,
-              applications: applications,
               isFirstSection: isFirstSection,
               showTitle: false,
               shrinkWrap: true,

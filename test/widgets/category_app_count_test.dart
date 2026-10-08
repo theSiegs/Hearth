@@ -55,10 +55,7 @@ void main() {
 
       await tester.pumpWidget(
         _buildTestWidget(
-          CategoryRow(
-            category: testCategory,
-            applications: const [],
-          ),
+          CategoryRow(category: testCategory),
           settingsService,
         ),
       );
@@ -74,10 +71,7 @@ void main() {
 
       await tester.pumpWidget(
         _buildTestWidget(
-          CategoryRow(
-            category: testCategory,
-            applications: const [],
-          ),
+          CategoryRow(category: testCategory),
           settingsService,
         ),
       );
@@ -107,10 +101,7 @@ void main() {
 
       await tester.pumpWidget(
         _buildTestWidget(
-          AppsGrid(
-            category: testCategory,
-            applications: const [],
-          ),
+          AppsGrid(category: testCategory),
           settingsService,
         ),
       );
@@ -126,10 +117,7 @@ void main() {
 
       await tester.pumpWidget(
         _buildTestWidget(
-          AppsGrid(
-            category: testCategory,
-            applications: const [],
-          ),
+          AppsGrid(category: testCategory),
           settingsService,
         ),
       );

@@ -28,7 +28,6 @@ import '../models/category.dart';
 class CategoryRow extends StatelessWidget
 {
   final Category category;
-  final List<App> applications;
 
   final bool isFirstSection;
 
@@ -41,7 +40,6 @@ class CategoryRow extends StatelessWidget
   const CategoryRow({
     super.key,
     required this.category,
-    required this.applications,
     this.isFirstSection = false,
     this.showTitle = true,
     this.shrinkWrap = false,
@@ -49,6 +47,7 @@ class CategoryRow extends StatelessWidget
 
   @override
   Widget build(BuildContext context) {
+    final applications = category.applications;
     Widget categoryContent;
     if (applications.isEmpty) {
       categoryContent = categoryContainerEmptyState(context);
@@ -99,19 +98,19 @@ class CategoryRow extends StatelessWidget
 
   int? _findChildIndex(Key key) {
     if (key is ValueKey<String>) {
-      final index = applications.indexWhere((app) => app.packageName == key.value);
+      final index = category.applications.indexWhere((app) => app.packageName == key.value);
       return index >= 0 ? index : null;
     }
     return null;
   }
 
   void _onMove(BuildContext context, AxisDirection direction, App movingApp) {
-    final index = applications.indexOf(movingApp);
+    final index = category.applications.indexOf(movingApp);
     if (index == -1) return;
 
     int newIndex = 0;
 
-    if (direction == AxisDirection.right && index < applications.length - 1) {
+    if (direction == AxisDirection.right && index < category.applications.length - 1) {
       newIndex = index + 1;
     } else if (direction == AxisDirection.left && index > 0) {
       newIndex = index - 1;
