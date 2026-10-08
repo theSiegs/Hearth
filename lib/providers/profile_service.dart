@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:typed_data';
 
@@ -48,6 +49,7 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     // A switch can land while Hearth is already in front
     FLauncherChannel.listenForProfileChanges(check);
+    FLauncherChannel.listenForProfileSwitching(switchingTo);
     check();
   }
 
@@ -90,6 +92,7 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _incomingExpiry?.cancel();
     super.dispose();
   }
 
@@ -153,6 +156,41 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
 
   ProfileTransition? _transition;
 
+  String? _incomingName;
+  Uint8List? _incomingAvatar;
+  Timer? _incomingExpiry;
+
+  /// A profile picked in Google TV's chooser that the switch hasn't confirmed yet: its welcome card shows meanwhile.
+  String? get incomingName => _incomingName;
+  Uint8List? get incomingAvatar => _incomingAvatar;
+
+  /// Google TV's chooser closed on [name]: show its welcome card now. The profile user takes a few seconds to
+  /// settle; the check that follows confirms the switch (and the card carries on) or clears it.
+  Future<void> switchingTo(String name) async {
+    if (name == _activeProfileName) return;
+    _incomingName = name;
+    _incomingAvatar = null;
+    _incomingExpiry?.cancel();
+    // A pick Google TV didn't act on (Back out of a PIN prompt): the card goes away on its own
+    _incomingExpiry = Timer(const Duration(seconds: 10), _clearIncoming);
+    notifyListeners();
+    try {
+      final avatar = await _channel.getProfileAvatar(name);
+      if (_incomingName == name && avatar.png != null) {
+        _incomingAvatar = avatar.png;
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  void _clearIncoming() {
+    _incomingExpiry?.cancel();
+    if (_incomingName == null) return;
+    _incomingName = null;
+    _incomingAvatar = null;
+    notifyListeners();
+  }
+
   /// A switch to another profile that Hearth's home is still catching up with (see ProfileTransitionOverlay).
   ProfileTransition? get transition => _transition;
 
@@ -177,9 +215,11 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
 
     // A switch from one known profile to another (not Hearth starting up): the welcome card covers the catch-up
     if (_activeProfileKey != null && key != null && key != _activeProfileKey) {
-      _transition = ProfileTransition(key, DateTime.now());
+      _transition = ProfileTransition(key, DateTime.now(), name ?? _incomingName, _incomingAvatar);
       _layoutReadyKey = null;
     }
+    // Confirmed (the transition carries on) or not happening: either way the early card's job is done
+    if (key != null && (key != _activeProfileKey || name == _incomingName)) _clearIncoming();
     bool changed = name != _activeProfileName || key != _activeProfileKey || kids != _isKidsProfile;
     _activeProfileName = name;
     _activeProfileKey = key;
@@ -223,5 +263,9 @@ class ProfileTransition {
   final String key;
   final DateTime startedAt;
 
-  ProfileTransition(this.key, this.startedAt);
+  /// The profile's name and photo as picked in the chooser, until Hearth has its own.
+  final String? pickedName;
+  final Uint8List? pickedAvatar;
+
+  ProfileTransition(this.key, this.startedAt, [this.pickedName, this.pickedAvatar]);
 }

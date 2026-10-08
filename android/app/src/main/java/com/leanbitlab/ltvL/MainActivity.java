@@ -1755,6 +1755,16 @@ public class MainActivity extends FlutterActivity {
         new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> channel.invokeMethod("profileChanged", null));
     }
 
+    /**
+     * Tells Flutter a switch to the named profile is under way (picked in Google TV's chooser): its welcome card
+     * shows now, seconds before the profile user settles and the switch is confirmed.
+     */
+    static void notifyProfileSwitching(String name) {
+        MethodChannel channel = sMethodChannel != null ? sMethodChannel.get() : null;
+        if (channel == null || name == null) return;
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> channel.invokeMethod("profileSwitching", name));
+    }
+
     @Override
     protected void onCreate(android.os.Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

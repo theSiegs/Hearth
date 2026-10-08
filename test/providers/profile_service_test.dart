@@ -110,6 +110,36 @@ void main() {
     expect(settings.bingWallpaperEnabled, isFalse);
   });
 
+  test("a pick in the chooser shows its card at once, and the confirmed switch takes it over", () async {
+    await prefs.setString(ProfileService.layoutOwnerKey, "user:0");
+    when(channel.getActiveProfileName()).thenAnswer((_) async => "Alex");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:0");
+    final service = build(_RecordingBackupService(database, prefs, {}));
+    await service.check();
+
+    await service.switchingTo("Riley");
+    expect(service.incomingName, "Riley");
+    expect(service.transition, isNull);
+
+    // The profile user settles; Hearth doesn't know her name in this user yet
+    when(channel.getActiveProfileName()).thenAnswer((_) async => null);
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:12");
+    await service.check();
+    expect(service.incomingName, isNull);
+    expect(service.transition?.key, "user:12");
+    expect(service.transition?.pickedName, "Riley");
+  });
+
+  test("picking the profile that's already on shows no card", () async {
+    when(channel.getActiveProfileName()).thenAnswer((_) async => "Alex");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:0");
+    final service = build(_RecordingBackupService(database, prefs, {}));
+    await service.check();
+
+    await service.switchingTo("Alex");
+    expect(service.incomingName, isNull);
+  });
+
   test("a profile not named yet still gets its own layout", () async {
     await prefs.setString(ProfileService.layoutOwnerKey, "user:0");
     when(channel.getActiveProfileName()).thenAnswer((_) async => null);
