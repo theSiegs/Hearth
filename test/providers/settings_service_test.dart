@@ -323,6 +323,7 @@ void main() async {
       final service = SettingsService(sp);
 
       expect(service.continueWatchingCardSize, "normal");
+      expect(service.continueWatchingCardHeight, 135);
       expect(service.continueWatchingMaxItems, 15);
       expect(service.continueWatchingShowProgress, isTrue);
       // The progress bar says it; the percentage badge is opt-in
@@ -331,7 +332,7 @@ void main() async {
       expect(service.hiddenWatchNextProgramIds, isEmpty);
       expect(service.hiddenWatchNextPackages, isEmpty);
 
-      await service.setContinueWatchingCardSize("compact");
+      await service.setContinueWatchingCardHeight(110);
       await service.setContinueWatchingMaxItems(20);
       await service.setContinueWatchingShowProgress(false);
       await service.setContinueWatchingShowPercentage(true);
@@ -339,7 +340,8 @@ void main() async {
       await service.hideWatchNextProgram(123);
       await service.hideWatchNextPackage("com.test.app");
 
-      expect(service.continueWatchingCardSize, "compact");
+      expect(service.continueWatchingCardSize, "110");
+      expect(service.continueWatchingCardHeight, 110);
       expect(service.continueWatchingMaxItems, 20);
       expect(service.continueWatchingShowProgress, isFalse);
       expect(service.continueWatchingShowPercentage, isTrue);
@@ -358,6 +360,15 @@ void main() async {
       await service.clearAllHiddenWatchNext();
       expect(service.hiddenWatchNextProgramIds, isEmpty);
       expect(service.hiddenWatchNextPackages, isEmpty);
+    });
+
+    test("card sizes saved by name keep the heights they drew; a picked height stays", () async {
+      final sp = await SharedPreferences.getInstance();
+      const heights = {"compact": 112, "normal": 135, "large": 157, "150": 150, "unknown": 135};
+      for (final MapEntry(key: saved, value: height) in heights.entries) {
+        await sp.setString("continue_watching_card_size", saved);
+        expect(SettingsService(sp).continueWatchingCardHeight, height, reason: saved);
+      }
     });
   });
 }

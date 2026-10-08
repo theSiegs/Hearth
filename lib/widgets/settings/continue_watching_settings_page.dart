@@ -66,24 +66,10 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
     final settingsService = context.watch<SettingsService>();
     final watchNextService = context.watch<WatchNextService>();
 
-    String sizeLabel;
-    final int? customHeight = int.tryParse(settingsService.continueWatchingCardSize);
-    if (customHeight != null) {
-      sizeLabel = '$customHeight dp';
-    } else {
-      switch (settingsService.continueWatchingCardSize) {
-        case 'compact':
-          sizeLabel = '112 dp (Compact)';
-          break;
-        case 'large':
-          sizeLabel = '157 dp (Large)';
-          break;
-        case 'normal':
-        default:
-          sizeLabel = '135 dp (Standard)';
-          break;
-      }
-    }
+    final cardHeight = settingsService.continueWatchingCardHeight;
+    // The heights of the sizes that had names before a height could be picked
+    final sizeName = const {112: 'Compact', 135: 'Standard', 157: 'Large'}[cardHeight];
+    final sizeLabel = sizeName == null ? '$cardHeight dp' : '$cardHeight dp ($sizeName)';
 
     final maxItems = settingsService.continueWatchingMaxItems;
     final maxItemsLabel = maxItems <= 0 ? 'Unlimited' : '$maxItems items';
