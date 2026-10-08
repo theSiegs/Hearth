@@ -49,7 +49,7 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
   Set<String> _hiddenPersistentKeys = {};
   bool _initialized = false;
   StreamSubscription? _subscription;
-  int _callCount = 0;
+  int _refreshCount = 0;
   SharedPreferences? _prefs;
 
   NotificationsService(this._channel) {
@@ -73,33 +73,20 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _init() async {
-    final localCallCount = ++_callCount;
     _prefs = await SharedPreferences.getInstance();
-    if (localCallCount != _callCount) return;
-
     _systemPopupEnabled = _prefs?.getBool('system_notifications_popup') ?? false;
     _hidePersistentNotifications = _prefs?.getBool('hide_persistent_notifications') ?? false;
     final blockedList = _prefs?.getStringList('blocked_notification_packages') ?? [];
     _blockedPackages = blockedList.toSet();
     _hiddenPersistentKeys = (_prefs?.getStringList(_hiddenPersistentKeysPref) ?? []).toSet();
 
-    final bool allowed = await _channel.checkNotificationListenerPermission();
-    if (localCallCount != _callCount) return;
-
-    _hasPermission = allowed;
-
-    final bool overlayAllowed = await _channel.checkOverlayPermission();
-    if (localCallCount != _callCount) return;
-
-    _hasOverlayPermission = overlayAllowed;
+    _hasPermission = await _channel.checkNotificationListenerPermission();
+    _hasOverlayPermission = await _channel.checkOverlayPermission();
 
     if (_hasPermission) {
-      final List<Map<dynamic, dynamic>> list = await _channel.getActiveNotifications();
-      if (localCallCount != _callCount) return;
+      _updateNotificationCounts(await _channel.getActiveNotifications());
 
-      _updateNotificationCounts(list);
-
-      _subscription = _channel.addNotificationsChangedListener((eventList) {
+      _subscription ??= _channel.addNotificationsChangedListener((eventList) {
         _updateNotificationCounts(eventList);
       });
     }
@@ -109,22 +96,12 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> checkPermission() async {
-    final localCallCount = ++_callCount;
     final bool allowed = await _channel.checkNotificationListenerPermission();
-    if (localCallCount != _callCount) return;
-
     final wasAllowed = _hasPermission;
     _hasPermission = allowed;
 
     if (allowed && (!wasAllowed || _subscription == null)) {
-      try {
-        final List<Map<dynamic, dynamic>> list = await _channel.getActiveNotifications();
-        if (localCallCount == _callCount) {
-          _updateNotificationCounts(list);
-        }
-      } catch (e) {
-        // ignore
-      }
+      _updateNotificationCounts(await _channel.getActiveNotifications());
       _subscription ??= _channel.addNotificationsChangedListener((eventList) {
         _updateNotificationCounts(eventList);
       });
@@ -136,9 +113,10 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> refreshNotifications() async {
     if (!_hasPermission) return;
 
-    final localCallCount = ++_callCount;
+    // Only the newest refresh applies, so an older list can't replace a newer one.
+    final refresh = ++_refreshCount;
     final List<Map<dynamic, dynamic>> list = await _channel.getActiveNotifications();
-    if (localCallCount != _callCount) return;
+    if (refresh != _refreshCount) return;
 
     _updateNotificationCounts(list);
   }
@@ -278,10 +256,7 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> checkOverlayPermission() async {
-    final localCallCount = ++_callCount;
     final bool allowed = await _channel.checkOverlayPermission();
-    if (localCallCount != _callCount) return;
-
     if (_hasOverlayPermission != allowed) {
       _hasOverlayPermission = allowed;
       notifyListeners();
