@@ -59,9 +59,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -232,7 +229,7 @@ public class MainActivity extends FlutterActivity {
                 result.success(null);
             }
             case "sendHaTestNotification" -> result.success(sendHaTestNotification());
-            case "getLocalIpAddress" -> result.success(getLocalIpAddress());
+            case "getLocalIpAddress" -> result.success(LocalNet.ipv4Address());
             case "getHaPanelConfig" -> result.success(getHaPanelConfig());
             case "setHaPanelConfig" -> {
                 HaPanelActivity.setConfig(this, call.argument("token"), call.argument("dashboard"));
@@ -421,8 +418,8 @@ public class MainActivity extends FlutterActivity {
     private Map<String, Object> getHaStatusConfig() {
         SharedPreferences prefs = getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, MODE_PRIVATE);
         Map<String, Object> config = new HashMap<>();
-        config.put("url", prefs.getString(HaStatusReporter.URL_KEY, null));
-        config.put("webhookId", prefs.getString(HaStatusReporter.WEBHOOK_KEY, null));
+        config.put("url", prefs.getString(HaConfig.URL_KEY, null));
+        config.put("webhookId", prefs.getString(HaConfig.WEBHOOK_KEY, null));
         return config;
     }
 
@@ -1032,22 +1029,6 @@ public class MainActivity extends FlutterActivity {
             if (name != null && !name.isEmpty()) names.put(userId, name);
         }
         return names;
-    }
-
-    /** The TV's LAN address, for the Home Assistant integration's host field. */
-    private String getLocalIpAddress() {
-        try {
-            for (NetworkInterface nif : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-                if (!nif.isUp() || nif.isLoopback()) continue;
-                for (InetAddress address : Collections.list(nif.getInetAddresses())) {
-                    if (address instanceof Inet4Address && address.isSiteLocalAddress()) {
-                        return address.getHostAddress();
-                    }
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        return null;
     }
 
     private boolean openWifiSettings() {

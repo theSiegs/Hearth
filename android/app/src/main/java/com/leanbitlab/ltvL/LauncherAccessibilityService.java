@@ -1018,8 +1018,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     /** Status reporting to a Home Assistant webhook; empty values turn it off. */
     static void setHaStatusConfig(Context context, String baseUrl, String webhookId) {
         context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).edit()
-                .putString(HaStatusReporter.URL_KEY, baseUrl)
-                .putString(HaStatusReporter.WEBHOOK_KEY, webhookId)
+                .putString(HaConfig.URL_KEY, baseUrl)
+                .putString(HaConfig.WEBHOOK_KEY, webhookId)
                 .apply();
         LauncherAccessibilityService service = sInstance;
         if (service != null && service.mHaStatus != null) service.mHaStatus.start();
