@@ -521,8 +521,9 @@ class AppsService extends ChangeNotifier {
       // File was deleted between check and read - clear stale reference
       final prefs = await _prefsAsync;
       await prefs.remove('custom_banner_$packageName');
-    } catch (_) {
-      // Ignore other errors reading custom banner
+    } catch (e) {
+      // The app's own banner is used instead
+      developer.log("Couldn't read the custom banner of $packageName", name: "AppsService", error: e);
     }
 
     final bytes = await _fLauncherChannel.getApplicationBanner(packageName);
@@ -545,8 +546,9 @@ class AppsService extends ChangeNotifier {
     if (customBannerPath != null) {
       try {
         await File(customBannerPath).delete();
-      } catch (_) {
-        // Ignore file deletion errors
+      } catch (e) {
+        // The banner setting is removed either way
+        developer.log("Couldn't delete the custom banner of $packageName", name: "AppsService", error: e);
       }
     }
     await prefs.remove('custom_banner_$packageName');

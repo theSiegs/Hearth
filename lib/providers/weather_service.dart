@@ -47,6 +47,7 @@ class WeatherService extends ChangeNotifier with WidgetsBindingObserver {
     try {
       return WeatherPlace.fromJson(jsonDecode(raw) as Map<String, dynamic>);
     } catch (_) {
+      // A saved place Hearth can't read counts as none (weather from Breezy, if installed)
       return null;
     }
   }
