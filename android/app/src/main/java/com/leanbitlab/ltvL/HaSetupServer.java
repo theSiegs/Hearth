@@ -4,7 +4,6 @@ import android.content.Context;
 import android.util.Base64;
 import android.util.Log;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -13,12 +12,9 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -111,43 +107,32 @@ final class HaSetupServer {
 
     private void handle(Socket socket) throws IOException {
         OutputStream out = socket.getOutputStream();
-        if (!HaNotificationServer.isLocal(socket.getInetAddress())) {
-            respond(out, 403, "Forbidden");
+        if (!LocalNet.isLocal(socket.getInetAddress())) {
+            MiniHttp.respond(out, 403, "Forbidden");
             return;
         }
         InputStream in = socket.getInputStream();
-        String requestLine = readLine(in);
-        if (requestLine == null) return;
-        Map<String, String> headers = new HashMap<>();
-        String line;
-        while ((line = readLine(in)) != null && !line.isEmpty()) {
-            int colon = line.indexOf(':');
-            if (colon > 0) headers.put(line.substring(0, colon).trim().toLowerCase(Locale.ROOT), line.substring(colon + 1).trim());
-        }
-        String[] parts = requestLine.split(" ");
-        if (parts.length < 2 || !("/" + mSecret).equals(parts[1].split("\\?")[0])) {
-            respond(out, 404, "Not found");
+        MiniHttp.Request request = MiniHttp.read(in);
+        if (request == null) return;
+        if (!("/" + mSecret).equals(request.path)) {
+            MiniHttp.respond(out, 404, "Not found");
             return;
         }
-        if (!"POST".equals(parts[0])) {
-            respondHtml(out, formPage(HaConfig.prefs(mContext).getString(HaConfig.URL_KEY, "")));
+        if (!"POST".equals(request.method)) {
+            MiniHttp.respondHtml(out, formPage(HaConfig.prefs(mContext).getString(HaConfig.URL_KEY, "")));
             return;
         }
 
-        int length = 0;
-        try {
-            length = Integer.parseInt(headers.getOrDefault("content-length", "0"));
-        } catch (NumberFormatException ignored) {
-        }
+        int length = request.contentLength();
         if (length <= 0 || length > MAX_BODY_BYTES) {
-            respond(out, 400, "Bad request");
+            MiniHttp.respond(out, 400, "Bad request");
             return;
         }
-        Map<String, String> fields = parseForm(new String(readExactly(in, length), StandardCharsets.UTF_8));
+        Map<String, String> fields = MiniHttp.parseForm(new String(MiniHttp.readBody(in, length), StandardCharsets.UTF_8));
         String url = HaConfig.normalizeUrl(fields.getOrDefault("url", ""));
         String token = fields.getOrDefault("token", "").replaceAll("\\s", "");
         if (token.isEmpty() || url == null) {
-            respondHtml(out, formPage(fields.getOrDefault("url", ""))
+            MiniHttp.respondHtml(out, formPage(fields.getOrDefault("url", ""))
                     .replace("<!--error-->", "<p class='err'>Enter the Home Assistant address and the token.</p>"));
             return;
         }
@@ -156,7 +141,7 @@ final class HaSetupServer {
         synchronized (HaSetupServer.class) {
             sLastReceived = true;
         }
-        respondHtml(out, page("Sent to the TV", "<p>Hearth has the address and token. You can close this page.</p>"));
+        MiniHttp.respondHtml(out, page("Sent to the TV", "<p>Hearth has the address and token. You can close this page.</p>"));
     }
 
     private static String formPage(String url) {
@@ -185,19 +170,6 @@ final class HaSetupServer {
                 + "</style></head><body><div class='c'><h2>" + escape(title) + "</h2>" + body + "</div></body></html>";
     }
 
-    private static Map<String, String> parseForm(String body) {
-        Map<String, String> fields = new HashMap<>();
-        for (String pair : body.split("&")) {
-            int eq = pair.indexOf('=');
-            if (eq <= 0) continue;
-            try {
-                fields.put(URLDecoder.decode(pair.substring(0, eq), "UTF-8"), URLDecoder.decode(pair.substring(eq + 1), "UTF-8"));
-            } catch (Exception ignored) {
-            }
-        }
-        return fields;
-    }
-
     private static String localIpv4() {
         try {
             for (NetworkInterface nif : Collections.list(NetworkInterface.getNetworkInterfaces())) {
@@ -213,44 +185,5 @@ final class HaSetupServer {
 
     private static String escape(String s) {
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("'", "&#39;").replace("\"", "&quot;");
-    }
-
-    private static void respondHtml(OutputStream out, String html) throws IOException {
-        byte[] body = html.getBytes(StandardCharsets.UTF_8);
-        out.write(("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nCache-Control: no-store\r\n"
-                + "Content-Length: " + body.length + "\r\nConnection: close\r\n\r\n").getBytes(StandardCharsets.ISO_8859_1));
-        out.write(body);
-        out.flush();
-    }
-
-    private static void respond(OutputStream out, int code, String text) throws IOException {
-        byte[] body = text.getBytes(StandardCharsets.UTF_8);
-        out.write(("HTTP/1.1 " + code + " " + text + "\r\nContent-Type: text/plain\r\nContent-Length: " + body.length
-                + "\r\nConnection: close\r\n\r\n").getBytes(StandardCharsets.ISO_8859_1));
-        out.write(body);
-        out.flush();
-    }
-
-    private static String readLine(InputStream in) throws IOException {
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        int b;
-        while ((b = in.read()) != -1) {
-            if (b == '\n') break;
-            if (b != '\r') buffer.write(b);
-            if (buffer.size() > 8192) return null;
-        }
-        if (b == -1 && buffer.size() == 0) return null;
-        return buffer.toString("UTF-8");
-    }
-
-    private static byte[] readExactly(InputStream in, int length) throws IOException {
-        byte[] data = new byte[length];
-        int read = 0;
-        while (read < length) {
-            int n = in.read(data, read, length - read);
-            if (n < 0) break;
-            read += n;
-        }
-        return data;
     }
 }

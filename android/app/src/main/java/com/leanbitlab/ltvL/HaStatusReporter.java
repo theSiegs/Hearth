@@ -303,9 +303,7 @@ final class HaStatusReporter {
         HttpURLConnection connection = null;
         try {
             URL target = new URL(url);
-            // Plain HTTP only inside the home network; anything on the internet must use HTTPS
-            if ("http".equalsIgnoreCase(target.getProtocol())
-                    && !HaNotificationServer.isLocal(java.net.InetAddress.getByName(target.getHost()))) {
+            if (!LocalNet.allows(target)) {
                 Log.w(TAG, "Refusing plain HTTP to a non-local address; use https");
                 return;
             }
