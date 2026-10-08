@@ -49,7 +49,34 @@ final class HaStatusReporter {
     private boolean mScreenTimeLock = false;
     private ScreenTimeScreen mScreenTime;
     private long mScreenTimeSeenAt;
+    /** The last body sent; used on the sender thread only. */
     private String mLastSent;
+
+    /** What the reporter knows, copied on the main thread so the status can be built on the sender thread. */
+    private static final class Snapshot {
+        final boolean screenOn;
+        final String foregroundPackage;
+        final boolean screenTimeLock;
+        final ScreenTimeScreen screenTime;
+        final long screenTimeSeenAt;
+        /** The media session shown as now playing: its app (null when there's none), state and metadata. */
+        final String mediaPackage;
+        final PlaybackState playback;
+        final MediaMetadata metadata;
+        final boolean nowPlayingAvailable;
+
+        Snapshot(HaStatusReporter reporter, MediaController playing) {
+            screenOn = reporter.mScreenOn;
+            foregroundPackage = reporter.mForegroundPackage;
+            screenTimeLock = reporter.mScreenTimeLock;
+            screenTime = reporter.mScreenTime;
+            screenTimeSeenAt = reporter.mScreenTimeSeenAt;
+            mediaPackage = playing != null ? playing.getPackageName() : null;
+            playback = playing != null ? playing.getPlaybackState() : null;
+            metadata = playing != null ? playing.getMetadata() : null;
+            nowPlayingAvailable = reporter.mSessionManager != null;
+        }
+    }
 
     private final MediaController.Callback mControllerCallback = new MediaController.Callback() {
         @Override
@@ -69,12 +96,11 @@ final class HaStatusReporter {
     };
 
     private final MediaSessionManager.OnActiveSessionsChangedListener mSessionsListener = this::setControllers;
-    private final Runnable mSend = this::send;
+    private final Runnable mSend = () -> send(false);
     private final Runnable mHeartbeat = new Runnable() {
         @Override
         public void run() {
-            mLastSent = null; // force
-            send();
+            send(true);
             mHandler.postDelayed(this, HEARTBEAT_MS);
         }
     };
@@ -182,44 +208,50 @@ final class HaStatusReporter {
         mHandler.postDelayed(mSend, DEBOUNCE_MS);
     }
 
-    private void send() {
+    /** Sends the status unless it's the same as the last one sent; a forced send goes out anyway. */
+    private void send(boolean force) {
         String url = webhookUrl(mContext);
         if (url == null) return;
-        String body;
-        try {
-            body = buildStatus().toString();
-        } catch (JSONException e) {
-            return;
-        }
-        if (body.equals(mLastSent)) return;
-        mLastSent = body;
-        mSender.execute(() -> post(url, body));
+        Snapshot snapshot = new Snapshot(this, primaryController());
+        // Labels, the profile and the allowed apps take PackageManager and UserManager calls: off the main thread
+        mSender.execute(() -> {
+            String body;
+            try {
+                body = buildStatus(snapshot).toString();
+            } catch (JSONException e) {
+                Log.w(TAG, "Couldn't build the status", e);
+                return;
+            }
+            if (!force && body.equals(mLastSent)) return;
+            mLastSent = body;
+            post(url, body);
+        });
     }
 
-    JSONObject buildStatus() throws JSONException {
+    private JSONObject buildStatus(Snapshot s) throws JSONException {
         JSONObject status = new JSONObject();
         PackageManager pm = mContext.getPackageManager();
-        status.put("screen", mScreenOn ? "on" : "off");
-        status.put("app_package", mForegroundPackage == null ? JSONObject.NULL : mForegroundPackage);
-        status.put("app", mForegroundPackage == null ? JSONObject.NULL : label(pm, mForegroundPackage));
+        status.put("screen", s.screenOn ? "on" : "off");
+        status.put("app_package", s.foregroundPackage == null ? JSONObject.NULL : s.foregroundPackage);
+        status.put("app", s.foregroundPackage == null ? JSONObject.NULL : label(pm, s.foregroundPackage));
         status.put("profile", nullable(LauncherAccessibilityService.getActiveProfileName(mContext)));
         boolean kids = ProfileUsers.isKids(mContext);
         status.put("kids_profile", kids);
-        status.put("screen_time_up", mScreenTimeLock);
+        status.put("screen_time_up", s.screenTimeLock);
         // Minutes are as Google TV stated them at screen_time_seen_at (epoch ms); Home Assistant can count down.
         // screen_time_text is Google TV's own wording, so what it says can be checked against the parsing.
-        status.put("screen_time_reason", mScreenTime == null ? JSONObject.NULL : mScreenTime.reason.id);
-        status.put("screen_time_minutes_left", mScreenTime == null || mScreenTime.minutesLeft == null
-                ? JSONObject.NULL : mScreenTime.minutesLeft);
-        status.put("screen_time_text", mScreenTime == null ? JSONObject.NULL : mScreenTime.text);
-        status.put("screen_time_seen_at", mScreenTime == null ? JSONObject.NULL : mScreenTimeSeenAt);
-        status.put("screen_time_unlocks_at", mScreenTime == null ? JSONObject.NULL : nullable(mScreenTime.unlocksAt));
+        ScreenTimeScreen screenTime = s.screenTime;
+        status.put("screen_time_reason", screenTime == null ? JSONObject.NULL : screenTime.reason.id);
+        status.put("screen_time_minutes_left", screenTime == null || screenTime.minutesLeft == null
+                ? JSONObject.NULL : screenTime.minutesLeft);
+        status.put("screen_time_text", screenTime == null ? JSONObject.NULL : screenTime.text);
+        status.put("screen_time_seen_at", screenTime == null ? JSONObject.NULL : s.screenTimeSeenAt);
+        status.put("screen_time_unlocks_at", screenTime == null ? JSONObject.NULL : nullable(screenTime.unlocksAt));
         status.put("allowed_apps", kids ? allowedApps(mContext, pm) : JSONObject.NULL);
 
-        MediaController playing = primaryController();
         String state = "idle";
-        if (playing != null && playing.getPlaybackState() != null) {
-            switch (playing.getPlaybackState().getState()) {
+        if (s.playback != null) {
+            switch (s.playback.getState()) {
                 case PlaybackState.STATE_PLAYING:
                 case PlaybackState.STATE_BUFFERING:
                     state = "playing";
@@ -231,17 +263,17 @@ final class HaStatusReporter {
                     state = "idle";
             }
         }
-        if (!mScreenOn) state = "off";
+        if (!s.screenOn) state = "off";
         status.put("state", state);
 
-        MediaMetadata metadata = playing != null ? playing.getMetadata() : null;
-        status.put("media_app", playing == null ? JSONObject.NULL : label(pm, playing.getPackageName()));
+        MediaMetadata metadata = s.metadata;
+        status.put("media_app", s.mediaPackage == null ? JSONObject.NULL : label(pm, s.mediaPackage));
         status.put("media_title", nullable(text(metadata, MediaMetadata.METADATA_KEY_TITLE, MediaMetadata.METADATA_KEY_DISPLAY_TITLE)));
         status.put("media_artist", nullable(text(metadata, MediaMetadata.METADATA_KEY_ARTIST, MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE)));
         status.put("media_album", nullable(text(metadata, MediaMetadata.METADATA_KEY_ALBUM)));
         status.put("media_duration_s", metadata == null ? JSONObject.NULL
                 : Math.max(0, metadata.getLong(MediaMetadata.METADATA_KEY_DURATION) / 1000));
-        status.put("now_playing_available", mSessionManager != null);
+        status.put("now_playing_available", s.nowPlayingAvailable);
         return status;
     }
 
@@ -320,12 +352,12 @@ final class HaStatusReporter {
             Log.d(TAG, "Status sent, Home Assistant answered " + code);
             if (code >= 300) {
                 Log.w(TAG, "Home Assistant webhook returned " + code);
-                mHandler.post(() -> mLastSent = null);
+                mLastSent = null;
             }
         } catch (Exception e) {
             Log.w(TAG, "Couldn't reach Home Assistant: " + e.getMessage());
             // Retry with the next change or heartbeat
-            mHandler.post(() -> mLastSent = null);
+            mLastSent = null;
         } finally {
             if (connection != null) connection.disconnect();
         }
