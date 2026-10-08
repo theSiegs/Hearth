@@ -139,7 +139,6 @@ class _WatchNextInfoPanelState extends State<WatchNextInfoPanel> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  // 1. Remove from Continue Watching
                   Consumer<SettingsService>(
                     builder: (context, settingsService, _) => PanelActionButton(
                       icon: Icons.visibility_off_outlined,
@@ -151,7 +150,6 @@ class _WatchNextInfoPanelState extends State<WatchNextInfoPanel> {
                       }),
                     ),
                   ),
-                  // 2. Hide all from this app
                   Consumer<SettingsService>(
                     builder: (context, settingsService, _) => PanelActionButton(
                       icon: Icons.block,
@@ -163,7 +161,6 @@ class _WatchNextInfoPanelState extends State<WatchNextInfoPanel> {
                       }),
                     ),
                   ),
-                  // 3. Play / Resume
                   PanelActionButton(
                     icon: Icons.play_arrow_rounded,
                     label: 'Play / Resume',
@@ -172,7 +169,6 @@ class _WatchNextInfoPanelState extends State<WatchNextInfoPanel> {
                       widget.watchNextService.launch(widget.program);
                     }),
                   ),
-                  // 4. Open App
                   PanelActionButton(
                     icon: Icons.open_in_new_rounded,
                     label: 'Open $appName',
@@ -185,7 +181,6 @@ class _WatchNextInfoPanelState extends State<WatchNextInfoPanel> {
                       }
                     }),
                   ),
-                  // 5. App Info
                   PanelActionButton(
                     icon: Icons.info_outline_rounded,
                     label: 'App Info',

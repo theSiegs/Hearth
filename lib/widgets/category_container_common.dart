@@ -14,12 +14,7 @@ Widget categoryContainerEmptyState(BuildContext context) {
   return SizedBox(
     height: 110,
     child: EnsureVisible(
-      // This specific alignment value is not only
-      // to center the focused card in the row while
-      // scrolling, but to prevent the topmost category
-      // title to be hidden by the content above it when
-      // scrolling from the app bar. How it relates to this,
-      // I don't know
+      // Centred; this also keeps the first section's title clear of the app bar.
       alignment: 0.5,
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 8),

@@ -107,7 +107,6 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
               child: SingleChildScrollView(
                 child: Column(
                  children: [
-                   // Add to Category button (First as requested)
                    PanelActionButton(
                      icon: Icons.add_box_outlined,
                      label: 'Add to Category',
@@ -119,7 +118,6 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                        );
                      },
                    ),
-                   // Reorder button (Second as requested)
                    if (widget.category?.sort == CategorySort.manual)
                      PanelActionButton(
                        icon: Icons.open_with,
@@ -134,7 +132,6 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                        if (context.mounted) Navigator.of(context).pop(ApplicationInfoPanelResult.none);
                      },
                    ),
-                   // Favorites toggle button
                    Builder(
                      builder: (context) {
                        final appsService = context.watch<AppsService>();
