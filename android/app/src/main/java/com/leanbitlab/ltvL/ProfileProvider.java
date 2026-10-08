@@ -25,24 +25,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Shares Hearth's state with HearthTube, so it can follow the profile and match Hearth's look.
- *
- * content://com.leanbitlab.ltvL.profile/active returns one row: the profile name (null when Hearth couldn't tell),
- * accent color ("7C4DFF"), time format ("h:mm a") and date format ("EEE, MMM d") as intl/ICU patterns (Hearth's
- * defaults when the user never changed them), app language ("" = the system's), whether a parent PIN is set,
- * the gradient's id and a stamp that changes when the wallpaper picture does (0 = no picture, use the gradient),
- * kids_profile (1 in a Google TV kids profile: one Family Link supervises, whatever apps a parent approved),
- * screen_time_up (1 while Google TV's bedtime / time's up lock is on: its screens, or the kid's approved apps blocked
- * in the kid's own profile user; cleared when they're unblocked or the profile changes; kept across Hearth restarts), service_running (1 while Hearth's accessibility service runs: without it Hearth sees no switches and no
- * screen time, so kids_profile / screen_time_up can't be trusted) and profile_id (the Google TV profile's lasting
- * key, "user:11", set before the name is known and unchanged by renames: what to save per-profile things under);
- * observers are notified when any of these change.
- * None of it is secret: it's all on screen in Hearth. The wallpaper picture itself is at .../wallpaper.
- *
- * One call, for HearthTube only (by package and signing certificate): "verify_parent_pin" checks a PIN without ever
- * handing out the PIN or its hash (5 wrong tries lock it for a minute).
- *
- * The full contract, column by column, is docs/provider-contract.md; contract_version says which one this is.
+ * Shares Hearth's state with HearthTube: one row at content://<pkg>.profile/active, the wallpaper at
+ * .../wallpaper, and a signature-checked "verify_parent_pin" call. The column-by-column contract is
+ * docs/provider-contract.md.
  */
 public class ProfileProvider extends ContentProvider {
     private static final String TAG = "HearthProvider";

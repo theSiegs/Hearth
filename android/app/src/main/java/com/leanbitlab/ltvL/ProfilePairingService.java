@@ -111,7 +111,6 @@ public class ProfilePairingService extends AccessibilityService {
         int probes;
         boolean appShown;
         String pickedName;
-        /** Where we believe focus is, for apps that don't report it (-1: unknown). */
         /** Apple TV: the tile its last accessibility-focus event named, or null while waiting for one. */
         String highlighted;
         boolean reachedEnd;
@@ -522,8 +521,7 @@ public class ProfilePairingService extends AccessibilityService {
             finish(NO_MATCH, "no profile matches " + s.hearthProfile + " in " + s.names.keySet());
             return;
         }
-        // Only positions heard this launch steer: Netflix's spoken "N of M" doesn't reliably match which way Up and
-        // Down move (tested October 2026, steering by the remembered order bounced between two profiles).
+        // Steer only by positions heard this launch: Netflix's spoken "N of M" doesn't reliably match Up/Down order.
         Integer targetIndex = target != null ? s.names.get(target) : null;
         if (targetIndex != null && index > 0) {
             s.direction = targetIndex > index ? 1 : -1;
@@ -693,8 +691,7 @@ public class ProfilePairingService extends AccessibilityService {
                 }
                 break;
             case ProfilePairing.PARAMOUNT:
-                // "com.cbs.ott:id/profile_avatar" with the name on it (2025), or a Compose "profile_avatar" tile
-                // with the name on a child (October 2026).
+                // The name is on the profile_avatar node itself (View layout) or on a child (Compose).
                 String id = node.getViewIdResourceName();
                 if (id != null && (id.equals("profile_avatar") || id.endsWith("/profile_avatar"))) {
                     String name = desc != null && desc.length() > 0 ? desc.toString().trim() : firstLabel(node, 0);

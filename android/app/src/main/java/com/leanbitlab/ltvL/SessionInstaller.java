@@ -14,12 +14,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
- * Installs an APK the way app stores do: through a PackageInstaller session marked as coming from a store.
- * Android 13+ treats an app installed from a downloaded file (an ACTION_VIEW install) as "restricted", and
- * Google TV has no on-screen way to lift that, so its accessibility services (Home Button Fix, Profile Pairing)
- * couldn't be turned on without adb. Store-source session installs aren't restricted. The user still
- * confirms a first install on screen; updates to apps Hearth installed (itself, HearthTube) go through without a
- * prompt where Android allows it (the app targets a recent SDK).
+ * Installs an APK through a PackageInstaller session marked store-sourced, so Android 13+ doesn't mark it
+ * "restricted" (which blocks Hearth's accessibility services). First installs still ask; updates to apps Hearth
+ * installed don't, where allowed.
  */
 final class SessionInstaller {
     private static final String TAG = "HearthInstaller";
