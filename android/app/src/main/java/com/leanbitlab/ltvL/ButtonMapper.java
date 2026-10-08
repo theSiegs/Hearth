@@ -16,7 +16,8 @@ import java.util.Map;
 
 /**
  * Remote button remapping, run from the accessibility service (the only place that sees remote keys
- * before apps and the system do). Stored as JSON: {"keyCode": {"short": action, "long": action}},
+ * before apps and the system do). Stored as JSON: {"keyCode": {"short": action, "long": action, "homeOnly": bool}},
+ * where "homeOnly" leaves the button alone (its normal job) unless Hearth is in front,
  * where an action is {"type": ..., "target": ..., "label": ...}. Type "ha" runs a Home Assistant entity (target is
  * its entity ID) through the panel's token.
  */
@@ -78,6 +79,12 @@ final class ButtonMapper {
                 .edit().putString(MAPPINGS_KEY, cleaned.toString()).apply();
     }
 
+    /** The button is remapped only on Hearth's own screens; elsewhere (in an app) it does its normal job. */
+    static boolean homeOnly(Context context, int keyCode) {
+        JSONObject entry = load(context).optJSONObject(String.valueOf(keyCode));
+        return entry != null && entry.optBoolean("homeOnly", false);
+    }
+
     /** {"short": action?, "long": action?} for this key, or null when it isn't remapped. */
     static Map<String, JSONObject> forKey(Context context, int keyCode) {
         JSONObject entry = load(context).optJSONObject(String.valueOf(keyCode));
@@ -123,6 +130,19 @@ final class ButtonMapper {
             case "sleep":
                 service.sleepNow();
                 return;
+            case "assistant": {
+                // Google's assistant (Gemini on Google TV): what the mic button does when Hearth doesn't take it
+                PackageManager pm = service.getPackageManager();
+                for (String assistAction : new String[]{Intent.ACTION_ASSIST, "android.intent.action.VOICE_ASSIST",
+                        Intent.ACTION_VOICE_COMMAND}) {
+                    Intent candidate = new Intent(assistAction);
+                    if (candidate.resolveActivity(pm) != null) {
+                        intent = candidate;
+                        break;
+                    }
+                }
+                break;
+            }
             case "ha": {
                 // A Home Assistant entity: toggled, or turned on for scenes and scripts
                 String haService = HaApi.serviceFor(target.contains(".") ? target.substring(0, target.indexOf('.')) : "");

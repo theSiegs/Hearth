@@ -126,6 +126,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
         children: [
           _option(context, "Press: ${_actionLabel(entry[_press] as Map<String, dynamic>?)}", _press),
           _option(context, "Hold: ${_actionLabel(entry[_hold] as Map<String, dynamic>?)}", _hold),
+          _option(context, "Only on Hearth's home screen: ${entry["homeOnly"] == true ? "On" : "Off"}", "homeOnly"),
           if (_mappings.containsKey(keyCode)) _option(context, "Restore normal button", "remove"),
         ],
       ),
@@ -134,6 +135,11 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
 
     if (choice == "remove") {
       _mappings.remove(keyCode);
+    } else if (choice == "homeOnly") {
+      // In apps the button keeps its normal job (the mic button opens Google's assistant there)
+      entry["homeOnly"] = entry["homeOnly"] != true;
+      entry["name"] = _names[keyCode] ?? entry["name"];
+      _mappings[keyCode] = entry;
     } else {
       final Map<String, dynamic>? action = await _pickAction();
       if (action == null) return;
@@ -157,6 +163,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
           _option(context, "Switch profile (Google TV)", "profiles"),
           _option(context, "Hearth search (voice)", "search_voice"),
           _option(context, "Hearth search (keyboard)", "search_text"),
+          _option(context, "Google Assistant (Gemini)", "assistant"),
           _option(context, "Hearth home", "home"),
           _option(context, "Sleep", "sleep"),
           _option(context, "Android settings", "settings"),
@@ -194,6 +201,8 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
         return {"type": "search", "target": "voice", "label": "Hearth search (voice)"};
       case "search_text":
         return {"type": "search", "target": "text", "label": "Hearth search (keyboard)"};
+      case "assistant":
+        return {"type": "assistant", "label": "Google Assistant (Gemini)"};
       case "home":
         return {"type": "home", "label": "Hearth home"};
       case "sleep":
@@ -267,7 +276,8 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
                     title: Text(
                       "${buttonName((_mappings[keyCode] as Map)["name"] as String?, keyCode)}\n"
                       "Press: ${_actionLabel((_mappings[keyCode] as Map)[_press] as Map<String, dynamic>?)}  ·  "
-                      "Hold: ${_actionLabel((_mappings[keyCode] as Map)[_hold] as Map<String, dynamic>?)}",
+                      "Hold: ${_actionLabel((_mappings[keyCode] as Map)[_hold] as Map<String, dynamic>?)}"
+                      "${(_mappings[keyCode] as Map)["homeOnly"] == true ? "  ·  Home screen only" : ""}",
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     onPressed: () => _editButton(keyCode),
