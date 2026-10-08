@@ -3,6 +3,7 @@ import 'package:flauncher/widgets/home_button_fix_check.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class _FakeChannel extends FLauncherChannel {
   Map<String, bool> status;
@@ -62,6 +63,13 @@ void main() {
   testWidgets('shows the adb command when Android restricts the app', (tester) async {
     await _pump(tester, _FakeChannel({'enabled': false, 'seenBefore': true, 'restricted': true}));
     expect(find.textContaining('ACCESS_RESTRICTED_SETTINGS allow'), findsOneWidget);
+  });
+
+  testWidgets("the adb command names the installed build's package", (tester) async {
+    PackageInfo.setMockInitialValues(
+        appName: 'Hearth', packageName: 'com.leanbitlab.ltvL.debug', version: '1', buildNumber: '1', buildSignature: '');
+    await _pump(tester, _FakeChannel({'enabled': false, 'seenBefore': true, 'restricted': true}));
+    expect(find.textContaining('appops set com.leanbitlab.ltvL.debug ACCESS_RESTRICTED_SETTINGS'), findsOneWidget);
   });
 
   testWidgets("Don't remind me forgets the service, and the warning shows once per run", (tester) async {
