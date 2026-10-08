@@ -19,14 +19,18 @@ import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flauncher/l10n/app_localizations.dart';
 
+/// The favorites dock and the home screen's labels and focus outline (under Look).
 class AppearancePanelPage extends StatelessWidget {
   static const String routeName = "appearance_panel";
+  static const String title = "Dock & labels";
 
   const AppearancePanelPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
     final settingsService = context.watch<SettingsService>();
     final bodyMedium = Theme.of(context).textTheme.bodyMedium;
     final small = Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white60);
@@ -34,7 +38,7 @@ class AppearancePanelPage extends StatelessWidget {
 
     return Column(
       children: [
-        Text("Appearance", style: Theme.of(context).textTheme.titleLarge),
+        Text(title, style: Theme.of(context).textTheme.titleLarge),
         const Divider(),
         Expanded(
           child: ListView(
@@ -81,6 +85,31 @@ class AppearancePanelPage extends StatelessWidget {
                   secondary: const Icon(Icons.lens_blur),
                 ),
               ],
+              const Divider(),
+              RoundedSwitchListTile(
+                value: settingsService.showCategoryTitles,
+                onChanged: (value) => settingsService.setShowCategoryTitles(value),
+                title: Text(localizations.showCategoryTitles, style: bodyMedium),
+                secondary: const Icon(Icons.abc),
+              ),
+              RoundedSwitchListTile(
+                value: settingsService.showCategoryAppCount,
+                onChanged: (value) => settingsService.setShowCategoryAppCount(value),
+                title: Text(localizations.showCategoryAppCount, style: bodyMedium),
+                secondary: const Icon(Icons.numbers),
+              ),
+              RoundedSwitchListTile(
+                value: settingsService.showAppNamesBelowIcons,
+                onChanged: (value) => settingsService.setShowAppNamesBelowIcons(value),
+                title: Text(localizations.showAppNamesBelowIcons, style: bodyMedium),
+                secondary: const Icon(Icons.subtitles),
+              ),
+              RoundedSwitchListTile(
+                value: settingsService.hideHighlightOutlineOnHomescreen,
+                onChanged: (value) => settingsService.setHideHighlightOutlineOnHomescreen(value),
+                title: Text(localizations.hideHighlightOutlineOnHomescreen, style: bodyMedium),
+                secondary: const Icon(Icons.border_clear),
+              ),
             ],
           ),
         ),

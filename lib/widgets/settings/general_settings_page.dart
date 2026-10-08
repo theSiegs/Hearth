@@ -19,9 +19,11 @@
 import 'package:flutter/material.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'focusable_settings_tile.dart';
-import 'date_time_format_page.dart';
-import 'back_button_action_page.dart';
-import 'data_usage_period_page.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'companion_apps_page.dart';
+import 'donate_dialog.dart';
+import 'flauncher_about_dialog.dart';
+import 'setup_checklist_page.dart';
 import 'backup_restore_page.dart';
 import 'app_language_page.dart';
 
@@ -49,24 +51,37 @@ class GeneralSettingsPage extends StatelessWidget {
                   onPressed: () => Navigator.of(context).pushNamed(AppLanguagePage.routeName),
                 ),
                 FocusableSettingsTile(
-                  leading: const Icon(Icons.date_range),
-                  title: Text(localizations.dateAndTimeFormat, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(DateTimeFormatPage.routeName),
+                  leading: const Icon(Icons.checklist),
+                  title: Text(SetupChecklistPage.title, style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => Navigator.of(context).pushNamed(SetupChecklistPage.routeName),
                 ),
                 FocusableSettingsTile(
-                  leading: const Icon(Icons.arrow_back),
-                  title: Text(localizations.backButtonAction, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(BackButtonActionPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.data_usage),
-                  title: Text(localizations.dataUsagePeriod, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(DataUsagePeriodPage.routeName),
+                  leading: const Icon(Icons.system_update_outlined),
+                  title: Text(CompanionAppsPage.title, style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => Navigator.of(context).pushNamed(CompanionAppsPage.routeName),
                 ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.settings_backup_restore),
                   title: Text(localizations.backupAndRestore, style: Theme.of(context).textTheme.bodyMedium),
                   onPressed: () => Navigator.of(context).pushNamed(BackupRestorePage.routeName),
+                ),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.favorite_rounded),
+                  title: Text("Support & Donate", style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => showDialog(context: context, builder: (_) => const DonateDialog()),
+                ),
+                FocusableSettingsTile(
+                  leading: const Icon(Icons.info_outline),
+                  title: Text(localizations.aboutFlauncher, style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => showDialog(
+                    context: context,
+                    builder: (_) => FutureBuilder<PackageInfo>(
+                      future: PackageInfo.fromPlatform(),
+                      builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && snapshot.hasData
+                          ? HearthAboutDialog(packageInfo: snapshot.data!)
+                          : Container(),
+                    ),
+                  ),
                 ),
               ],
             ),

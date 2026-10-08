@@ -1,6 +1,9 @@
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/providers/settings_service.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
 
@@ -14,7 +17,12 @@ class SetupStep {
   final bool optional;
   final bool done;
   final String? warning;
-  final Future<void> Function() open;
+
+  /// Opens the Settings screen for it; false when Android couldn't open it.
+  final Future<bool> Function() open;
+
+  /// What to run from a computer instead, when the screen won't open.
+  final String? adbFallback;
 
   const SetupStep({
     required this.title,
@@ -25,6 +33,7 @@ class SetupStep {
     required this.open,
     this.optional = false,
     this.warning,
+    this.adbFallback,
   });
 }
 
@@ -58,7 +67,10 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
       instructions: "On the next screen, choose Hearth.",
       icon: Icons.home_outlined,
       done: isDefault,
-      open: channel.openDefaultLauncherSettings,
+      open: () async {
+        await channel.openDefaultLauncherSettings();
+        return true;
+      },
     ),
     SetupStep(
       title: "Home Button Fix",
@@ -67,7 +79,9 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
       icon: Icons.settings_remote_outlined,
       done: homeFix["enabled"] == true,
       warning: restricted,
-      open: () async => await channel.requestAccessibilityPermission(),
+      open: channel.requestAccessibilityPermission,
+      adbFallback: "adb shell settings put secure enabled_accessibility_services "
+          "$packageName/$packageName.LauncherAccessibilityService",
     ),
     SetupStep(
       title: "Notification access",
@@ -75,7 +89,10 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
       instructions: "On the next screen, select \"Hearth Notification Service\" and allow it.",
       icon: Icons.notifications_active_outlined,
       done: notifications,
-      open: () async => await channel.requestNotificationListenerPermission(),
+      open: () async {
+        await channel.requestNotificationListenerPermission();
+        return true;
+      },
     ),
     SetupStep(
       title: "Installing updates",
@@ -83,7 +100,10 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
       instructions: "On the next screen, turn on Hearth.",
       icon: Icons.system_update_outlined,
       done: install,
-      open: () async => await channel.requestInstallPermission(),
+      open: () async {
+        await channel.requestInstallPermission();
+        return true;
+      },
     ),
     SetupStep(
       title: "Profile Pairing",
@@ -93,7 +113,7 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
       optional: true,
       done: pairing["enabled"] == true,
       warning: restricted,
-      open: () async => await channel.requestAccessibilityPermission(),
+      open: channel.requestAccessibilityPermission,
     ),
     SetupStep(
       title: "Hearth voice",
@@ -102,13 +122,18 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
       icon: Icons.record_voice_over,
       optional: true,
       done: pairing["voiceDefault"] == true,
-      open: () async => await channel.openTextToSpeechSettings(),
+      open: () async {
+        await channel.openTextToSpeechSettings();
+        return true;
+      },
     ),
   ];
 }
 
+/// Setup & permissions: what to turn on in Android's Settings for Hearth, each with its status, and Start on boot.
 class SetupChecklistPage extends StatefulWidget {
   static const String routeName = "setup_checklist";
+  static const String title = "Setup & permissions";
 
   const SetupChecklistPage({super.key});
 
@@ -179,7 +204,38 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
         ],
       ),
     );
-    if (go == true) await step.open();
+    if (go != true) return;
+    if (!await step.open() && step.adbFallback != null && mounted) {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(step.title),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("This TV wouldn't open that Settings screen. Run this once from a computer instead:"),
+              const SizedBox(height: 12),
+              SelectableText(step.adbFallback!, style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+            ],
+          ),
+          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("OK"))],
+        ),
+      );
+    }
+  }
+
+  Widget _startOnBootTile(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    final settings = context.watch<SettingsService>();
+    final on = settings.startOnBoot;
+    return FocusableSettingsTile(
+      leading: Icon(Icons.power_settings_new, color: on ? Colors.green : null),
+      title: Text(localizations.startOnBoot, style: Theme.of(context).textTheme.bodyMedium),
+      trailing: Text(on ? localizations.enabled : localizations.disabled,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: on ? Colors.green : Colors.white54)),
+      onPressed: () => settings.setStartOnBoot(!on),
+    );
   }
 
   @override
@@ -189,7 +245,7 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
     final required = steps?.where((s) => !s.optional).toList() ?? [];
     return Column(
       children: [
-        Text("Setup checklist", style: textTheme.titleLarge),
+        Text(SetupChecklistPage.title, style: textTheme.titleLarge),
         if (steps != null)
           Text(
             "${required.where((s) => s.done).length} of ${required.length} done",
@@ -222,6 +278,8 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
                           onPressed: () => _showCard(step),
                         ),
                       ],
+                      const Divider(),
+                      _startOnBootTile(context),
                     ],
                   ),
                 ),

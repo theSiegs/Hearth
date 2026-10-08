@@ -23,7 +23,10 @@ import 'package:flauncher/widgets/settings/interface_settings_page.dart';
 import 'package:flauncher/widgets/settings/general_settings_page.dart';
 import 'package:flauncher/widgets/settings/display_settings_page.dart';
 import 'package:flauncher/widgets/settings/notifications_settings_page.dart';
-import 'package:flauncher/widgets/settings/accessibility_page.dart';
+import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
+import 'package:flauncher/widgets/settings/home_assistant_page.dart';
+import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
+import 'package:flauncher/widgets/settings/remote_search_settings_page.dart';
 import 'package:flauncher/widgets/settings/donate_dialog.dart';
 import 'package:flauncher/widgets/settings/flauncher_about_dialog.dart';
 import 'package:flauncher/widgets/settings/settings_panel_page.dart';
@@ -39,6 +42,18 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:provider/provider.dart';
 
 import '../../mocks.mocks.dart';
+
+/// The top level's rows and the pages they open.
+const _rows = {
+  "Profiles": ProfilesSettingsPage.routeName,
+  "Applications": ApplicationsPanelPage.routeName,
+  "Home screen": InterfaceSettingsPage.routeName,
+  "Remote & search": RemoteSearchSettingsPage.routeName,
+  "Notifications": NotificationsSettingsPage.routeName,
+  "Home Assistant": HomeAssistantPage.routeName,
+  "TV & power": DisplaySettingsPage.routeName,
+  "System": GeneralSettingsPage.routeName,
+};
 
 void main() {
   setUpAll(() async {
@@ -62,145 +77,41 @@ void main() {
     expect(find.text("Settings"), findsNothing);
   });
 
-  testWidgets("'Applications' opens ApplicationsPanelPage", (tester) async {
-    final settingsService = MockSettingsService();
-    final appsService = MockAppsService();
-    when(appsService.launcherSections).thenReturn([]);
-    when(appsService.applications).thenReturn([]);
-    when(settingsService.appHighlightAnimationEnabled).thenReturn(true);
+  testWidgets("the top level is the eight groups, in order", (tester) async {
+    await _pumpWidgetWithProviders(tester, _settings(), _apps());
 
-    await _pumpWidgetWithProviders(tester, settingsService, appsService);
-
-    await tester.ensureVisible(find.text("Applications"));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text("Applications"));
-    await tester.pumpAndSettle();
-    expect(find.byKey(Key("ApplicationsPanelPage")), findsOneWidget);
+    final titles = tester
+        .widgetList<FocusableSettingsTile>(find.byType(FocusableSettingsTile))
+        .map((tile) => ((tile.title as Text).data))
+        .toList();
+    expect(titles, _rows.keys.toList());
   });
 
-  testWidgets("'Interface' opens InterfaceSettingsPage", (tester) async {
-    final settingsService = MockSettingsService();
-    final appsService = MockAppsService();
-    when(appsService.launcherSections).thenReturn([]);
-    when(appsService.applications).thenReturn([]);
-    when(settingsService.appHighlightAnimationEnabled).thenReturn(true);
+  for (final MapEntry(key: title, value: route) in _rows.entries) {
+    testWidgets("'$title' opens its page", (tester) async {
+      await _pumpWidgetWithProviders(tester, _settings(), _apps());
 
-    await _pumpWidgetWithProviders(tester, settingsService, appsService);
+      await tester.ensureVisible(find.text(title));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(title));
+      await tester.pumpAndSettle();
+      expect(find.byKey(Key(route)), findsOneWidget);
+    });
+  }
 
-    await tester.ensureVisible(find.text("Interface"));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text("Interface"));
-    await tester.pumpAndSettle();
-    expect(find.byKey(Key("InterfaceSettingsPage")), findsOneWidget);
-  });
-
-  testWidgets("'System' opens GeneralSettingsPage", (tester) async {
-    final settingsService = MockSettingsService();
-    final appsService = MockAppsService();
-    when(appsService.launcherSections).thenReturn([]);
-    when(appsService.applications).thenReturn([]);
-    when(settingsService.appHighlightAnimationEnabled).thenReturn(true);
-
-    await _pumpWidgetWithProviders(tester, settingsService, appsService);
-
-    await tester.ensureVisible(find.text("System"));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text("System"));
-    await tester.pumpAndSettle();
-    expect(find.byKey(Key("GeneralSettingsPage")), findsOneWidget);
-  });
-
-  testWidgets("'Display & screensaver' opens DisplaySettingsPage", (tester) async {
-    final settingsService = MockSettingsService();
-    final appsService = MockAppsService();
-    when(appsService.launcherSections).thenReturn([]);
-    when(appsService.applications).thenReturn([]);
-    when(settingsService.appHighlightAnimationEnabled).thenReturn(true);
-
-    await _pumpWidgetWithProviders(tester, settingsService, appsService);
-
-    await tester.ensureVisible(find.text("Display & Screensaver"));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text("Display & Screensaver"));
-    await tester.pumpAndSettle();
-    expect(find.byKey(Key("DisplaySettingsPage")), findsOneWidget);
-  });
-
-  testWidgets("'Notifications' opens NotificationsSettingsPage", (tester) async {
-    final settingsService = MockSettingsService();
-    final appsService = MockAppsService();
-    when(appsService.launcherSections).thenReturn([]);
-    when(appsService.applications).thenReturn([]);
-    when(settingsService.appHighlightAnimationEnabled).thenReturn(true);
-
-    await _pumpWidgetWithProviders(tester, settingsService, appsService);
-
-    await tester.ensureVisible(find.text("Notifications"));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text("Notifications"));
-    await tester.pumpAndSettle();
-    expect(find.byKey(Key("NotificationsSettingsPage")), findsOneWidget);
-  });
-
-  testWidgets("'Accessibility' opens AccessibilityPage", (tester) async {
-    final settingsService = MockSettingsService();
-    final appsService = MockAppsService();
-    when(appsService.launcherSections).thenReturn([]);
-    when(appsService.applications).thenReturn([]);
-    when(settingsService.appHighlightAnimationEnabled).thenReturn(true);
-
-    await _pumpWidgetWithProviders(tester, settingsService, appsService);
-
-    await tester.ensureVisible(find.text("Accessibility"));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text("Accessibility"));
-    await tester.pumpAndSettle();
-    expect(find.byKey(Key("AccessibilityPage")), findsOneWidget);
-  });
-
-  testWidgets("'Android settings' calls AppsService", (tester) async {
-    final settingsService = MockSettingsService();
-    final appsService = MockAppsService();
-    when(appsService.launcherSections).thenReturn([]);
-    when(appsService.applications).thenReturn([]);
-    when(settingsService.appHighlightAnimationEnabled).thenReturn(true);
-
-    await _pumpWidgetWithProviders(tester, settingsService, appsService);
-
-    await tester.ensureVisible(find.text("System settings"));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text("System settings"));
-    await tester.pumpAndSettle();
-    verify(appsService.openSettings());
-  });
-
-  testWidgets("'About Hearth' opens about dialog", (tester) async {
-    final settingsService = MockSettingsService();
-    final appsService = MockAppsService();
-    when(appsService.launcherSections).thenReturn([]);
-    when(appsService.applications).thenReturn([]);
-    when(settingsService.appHighlightAnimationEnabled).thenReturn(true);
+  testWidgets("System has About and Support & Donate", (tester) async {
+    final settingsService = _settings();
     when(settingsService.accentColorHex).thenReturn("7C4DFF");
     PackageInfoPlatform.instance = _MockPackageInfoPlatform();
-
-    await _pumpWidgetWithProviders(tester, settingsService, appsService);
+    await _pumpWidgetWithProviders(tester, settingsService, _apps(), home: const GeneralSettingsPage());
 
     await tester.ensureVisible(find.text("About Hearth"));
     await tester.pumpAndSettle();
     await tester.tap(find.text("About Hearth"));
     await tester.pumpAndSettle();
     expect(find.byType(HearthAboutDialog), findsOneWidget);
-  });
-
-  testWidgets("'Support & Donate' opens donate dialog", (tester) async {
-    final settingsService = MockSettingsService();
-    final appsService = MockAppsService();
-    when(appsService.launcherSections).thenReturn([]);
-    when(appsService.applications).thenReturn([]);
-    when(settingsService.appHighlightAnimationEnabled).thenReturn(true);
-    when(settingsService.accentColorHex).thenReturn("7C4DFF");
-
-    await _pumpWidgetWithProviders(tester, settingsService, appsService);
+    Navigator.of(tester.element(find.byType(HearthAboutDialog))).pop();
+    await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text("Support & Donate"));
     await tester.pumpAndSettle();
@@ -208,13 +119,38 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(DonateDialog), findsOneWidget);
   });
+
+  testWidgets("TV & power opens Android settings", (tester) async {
+    final appsService = _apps();
+    await _pumpWidgetWithProviders(tester, _settings(), appsService, home: const DisplaySettingsPage());
+
+    await tester.ensureVisible(find.text("System settings"));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text("System settings"));
+    await tester.pumpAndSettle();
+    verify(appsService.openSettings());
+  });
+}
+
+MockSettingsService _settings() {
+  final settingsService = MockSettingsService();
+  when(settingsService.appHighlightAnimationEnabled).thenReturn(true);
+  return settingsService;
+}
+
+MockAppsService _apps() {
+  final appsService = MockAppsService();
+  when(appsService.launcherSections).thenReturn([]);
+  when(appsService.applications).thenReturn([]);
+  return appsService;
 }
 
 Future<void> _pumpWidgetWithProviders(
   WidgetTester tester,
   SettingsService settingsService,
-  AppsService appsService,
-) async {
+  AppsService appsService, {
+  Widget? home,
+}) async {
   when(settingsService.hasParentPin).thenReturn(false);
   await tester.pumpWidget(
     MultiProvider(
@@ -230,14 +166,10 @@ Future<void> _pumpWidgetWithProviders(
         ],
         supportedLocales: AppLocalizations.supportedLocales,
         routes: {
-          InterfaceSettingsPage.routeName: (_) => Container(key: Key("InterfaceSettingsPage")),
-          DisplaySettingsPage.routeName: (_) => Container(key: Key("DisplaySettingsPage")),
-          NotificationsSettingsPage.routeName: (_) => Container(key: Key("NotificationsSettingsPage")),
-          GeneralSettingsPage.routeName: (_) => Container(key: Key("GeneralSettingsPage")),
-          AccessibilityPage.routeName: (_) => Container(key: Key("AccessibilityPage")),
-          ApplicationsPanelPage.routeName: (_) => Container(key: Key("ApplicationsPanelPage")),
+          for (final route in [..._rows.values])
+            route: (_) => Container(key: Key(route)),
         },
-        home: Material(child: SettingsPanelPage()),
+        home: Material(child: home ?? const SettingsPanelPage()),
       ),
     ),
   );

@@ -16,32 +16,20 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:flauncher/widgets/settings/home_assistant_page.dart';
-import 'package:flauncher/widgets/settings/remote_buttons_page.dart';
-import 'package:flauncher/providers/settings_service.dart';
-import 'package:flauncher/widgets/parent_pin_dialog.dart';
-import 'package:flauncher/providers/apps_service.dart';
-import 'package:flauncher/flauncher_channel.dart';
-import 'package:flauncher/widgets/settings/accessibility_page.dart';
 import 'package:flauncher/widgets/settings/applications_panel_page.dart';
-import 'package:flauncher/widgets/settings/donate_dialog.dart';
-import 'package:flauncher/widgets/settings/flauncher_about_dialog.dart';
-import 'package:flauncher/widgets/settings/interface_settings_page.dart';
 import 'package:flauncher/widgets/settings/display_settings_page.dart';
-import 'package:flauncher/widgets/settings/notifications_settings_page.dart';
 import 'package:flauncher/widgets/settings/general_settings_page.dart';
-import 'package:flauncher/widgets/settings/update_dialog.dart';
+import 'package:flauncher/widgets/settings/home_assistant_page.dart';
+import 'package:flauncher/widgets/settings/interface_settings_page.dart';
+import 'package:flauncher/widgets/settings/notifications_settings_page.dart';
+import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
+import 'package:flauncher/widgets/settings/remote_search_settings_page.dart';
 import 'package:flutter/material.dart';
-import 'package:package_info_plus/package_info_plus.dart';
-import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 
-import 'package:flauncher/widgets/settings/companion_apps_page.dart';
-import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
-import 'package:flauncher/widgets/settings/search_settings_page.dart';
-import 'package:flauncher/widgets/settings/profile_pairing_page.dart';
 import 'focusable_settings_tile.dart';
 
+/// The top of Settings: eight groups, each a page of its own.
 class SettingsPanelPage extends StatelessWidget {
   static const String routeName = "settings_panel";
 
@@ -72,16 +60,8 @@ class SettingsPanelPage extends StatelessWidget {
                   autofocus: true,
                   leading: const Icon(Icons.people_outline),
                   title: Text("Profiles", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => FLauncherChannel().openProfileChooser(),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.lock_outline),
-                  title: Text("Parent PIN", style: Theme.of(context).textTheme.bodyMedium),
-                  trailing: Text(
-                    context.select<SettingsService, bool>((s) => s.hasParentPin) ? "On" : "Off",
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  onPressed: () => _editParentPin(context),
+                  trailing: Text(ProfilesSettingsPage.activeProfileLabel(context) ?? "", style: Theme.of(context).textTheme.bodySmall),
+                  onPressed: () => Navigator.of(context).pushNamed(ProfilesSettingsPage.routeName),
                 ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.apps),
@@ -90,13 +70,13 @@ class SettingsPanelPage extends StatelessWidget {
                 ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.auto_awesome_mosaic_outlined),
-                  title: Text(localizations.interface, style: Theme.of(context).textTheme.bodyMedium),
+                  title: Text("Home screen", style: Theme.of(context).textTheme.bodyMedium),
                   onPressed: () => Navigator.of(context).pushNamed(InterfaceSettingsPage.routeName),
                 ),
                 FocusableSettingsTile(
-                  leading: const Icon(Icons.tv),
-                  title: Text(localizations.displayAndScreensaver, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(DisplaySettingsPage.routeName),
+                  leading: const Icon(Icons.settings_remote_outlined),
+                  title: Text("Remote & search", style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => Navigator.of(context).pushNamed(RemoteSearchSettingsPage.routeName),
                 ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.notifications_active_outlined),
@@ -104,79 +84,19 @@ class SettingsPanelPage extends StatelessWidget {
                   onPressed: () => Navigator.of(context).pushNamed(NotificationsSettingsPage.routeName),
                 ),
                 FocusableSettingsTile(
-                  leading: const Icon(Icons.settings_suggest_outlined),
-                  title: Text(localizations.system, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(GeneralSettingsPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.accessibility_new),
-                  title: Text(localizations.accessibility, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(AccessibilityPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.checklist),
-                  title: Text("Setup checklist", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(SetupChecklistPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.switch_account),
-                  title: Text("Profile Pairing", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => _openProfilePairing(context),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.search),
-                  title: Text("Search", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(SearchSettingsPage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.settings_remote_outlined),
-                  title: Text("Remote buttons", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(RemoteButtonsPage.routeName),
-                ),
-                FocusableSettingsTile(
                   leading: const Icon(Icons.home_outlined),
                   title: Text("Home Assistant", style: Theme.of(context).textTheme.bodyMedium),
                   onPressed: () => Navigator.of(context).pushNamed(HomeAssistantPage.routeName),
                 ),
                 FocusableSettingsTile(
-                  leading: const Icon(Icons.favorite_rounded),
-                  title: Text("Support & Donate", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => showDialog(
-                    context: context,
-                    builder: (_) => const DonateDialog(),
-                  ),
+                  leading: const Icon(Icons.tv),
+                  title: Text(DisplaySettingsPage.title, style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => Navigator.of(context).pushNamed(DisplaySettingsPage.routeName),
                 ),
                 FocusableSettingsTile(
-                  leading: const Icon(Icons.system_update_outlined),
-                  title: Text("Check for Updates", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => showDialog(
-                    context: context,
-                    builder: (_) => const UpdateDialog(),
-                  ),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.extension_outlined),
-                  title: Text("Companion apps", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(CompanionAppsPage.routeName),
-                ),
-                const Divider(),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.settings_outlined),
-                  title: Text(localizations.systemSettings, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => context.read<AppsService>().openSettings(),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.info_outline),
-                  title: Text(localizations.aboutFlauncher, style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => showDialog(
-                    context: context,
-                    builder: (_) => FutureBuilder<PackageInfo>(
-                      future: PackageInfo.fromPlatform(),
-                      builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && snapshot.hasData
-                          ? HearthAboutDialog(packageInfo: snapshot.data!)
-                          : Container(),
-                    ),
-                  ),
+                  leading: const Icon(Icons.settings_suggest_outlined),
+                  title: Text(localizations.system, style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => Navigator.of(context).pushNamed(GeneralSettingsPage.routeName),
                 ),
               ],
             ),
@@ -186,48 +106,4 @@ class SettingsPanelPage extends StatelessWidget {
     );
   }
 
-  /// No PIN of its own: in a kids profile, Settings already took the parent PIN to get here, and grown-up profiles
-  /// are only reached past Google TV's PIN.
-  Future<void> _openProfilePairing(BuildContext context) async {
-    Navigator.of(context).pushNamed(ProfilePairingPage.routeName);
-  }
-
-  Future<void> _editParentPin(BuildContext context) async {
-    final settings = context.read<SettingsService>();
-    if (settings.hasParentPin) {
-      final current = await showDialog<String>(
-        context: context,
-        builder: (_) => ParentPinDialog(title: "Current parent PIN", verify: settings.verifyParentPin),
-      );
-      if (current == null || !context.mounted) return;
-      final bool? remove = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text("Parent PIN"),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text("Remove PIN")),
-            TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(false), child: const Text("Change PIN")),
-          ],
-        ),
-      );
-      if (remove == null || !context.mounted) return;
-      if (remove) {
-        await settings.setParentPin(null);
-        return;
-      }
-    }
-    final first = await showDialog<String>(
-      context: context,
-      builder: (_) => const ParentPinDialog(
-          title: "New parent PIN", subtitle: "Needed to change the launcher in Google TV kids profiles"),
-    );
-    if (first == null || !context.mounted) return;
-    final second = await showDialog<String>(
-      context: context,
-      builder: (_) => ParentPinDialog(title: "Enter the PIN again", verify: (pin) => pin == first),
-    );
-    if (second != null) {
-      await settings.setParentPin(first);
-    }
-  }
 }

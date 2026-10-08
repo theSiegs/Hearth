@@ -5,6 +5,7 @@ import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flutter/material.dart';
 
 import 'focusable_settings_tile.dart';
+import 'update_dialog.dart';
 
 export 'package:flauncher/providers/companion_updater.dart' show CompanionApp, companionApps, newestInManifest;
 
@@ -12,6 +13,7 @@ enum _State { checking, notInstalled, upToDate, updateAvailable, downloading, in
 
 class CompanionAppsPage extends StatefulWidget {
   static const String routeName = "companion_apps";
+  static const String title = "Updates";
 
   const CompanionAppsPage({super.key});
 
@@ -172,13 +174,20 @@ class _CompanionAppsPageState extends State<CompanionAppsPage> with WidgetsBindi
     final textTheme = Theme.of(context).textTheme;
     return Column(
       children: [
-        Text("Companion apps", style: textTheme.titleLarge),
+        Text(CompanionAppsPage.title, style: textTheme.titleLarge),
         const Divider(),
         Expanded(
           child: SingleChildScrollView(
             child: Column(
               children: [
-                for (final (index, app) in companionApps.indexed) _tile(context, app, index == 0),
+                FocusableSettingsTile(
+                  autofocus: true,
+                  leading: const Icon(Icons.local_fire_department_outlined),
+                  title: Text("Hearth", style: textTheme.bodyMedium),
+                  trailing: Text("Check for updates", style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
+                  onPressed: () => showDialog(context: context, builder: (_) => const UpdateDialog()),
+                ),
+                for (final app in companionApps) _tile(context, app, false),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.system_update_outlined),
                   title: Column(
