@@ -121,6 +121,29 @@ void main() {
     expect((span.children![1] as TextSpan).text, '1.00 KB');
   });
 
+  testWidgets('asks again only when the period or the polled usage changes', (WidgetTester tester) async {
+    VoidCallback? notify;
+    when(mockNetworkService.addListener(any)).thenAnswer((i) => notify = i.positionalArguments[0] as VoidCallback);
+    when(mockNetworkService.hasUsageStatsPermission).thenReturn(true);
+    when(mockSettingsService.dataUsagePeriod).thenReturn('weekly');
+    when(mockNetworkService.getDataUsageForPeriod('weekly')).thenAnswer((_) async => 1024);
+
+    await tester.pumpWidget(createWidgetUnderTest());
+    await tester.pumpAndSettle();
+    verify(mockNetworkService.getDataUsageForPeriod('weekly')).called(1);
+
+    // A network change: same numbers, so no new platform call.
+    notify!();
+    await tester.pumpAndSettle();
+    verifyNever(mockNetworkService.getDataUsageForPeriod('weekly'));
+
+    // The service's poll found new usage.
+    when(mockNetworkService.dailyDataUsage).thenReturn(4096);
+    notify!();
+    await tester.pumpAndSettle();
+    verify(mockNetworkService.getDataUsageForPeriod('weekly')).called(1);
+  });
+
   testWidgets('formats 0 bytes correctly', (WidgetTester tester) async {
     when(mockNetworkService.hasUsageStatsPermission).thenReturn(true);
     when(mockSettingsService.dataUsagePeriod).thenReturn('daily');
