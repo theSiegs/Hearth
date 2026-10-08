@@ -165,6 +165,23 @@ class FLauncherChannel {
 
   Future<bool> isKidsProfile() async => await _methodChannel.invokeMethod<bool>("isKidsProfile") ?? false;
 
+  /// Parent-initiated: add Hearth and HearthTube to every kids profile and protect them from Google TV's
+  /// profile-start uninstall. Returns a short log of what was done. The first time, the TV shows a one-time
+  /// "Allow debugging?" prompt the parent approves; until then this throws a PlatformException (code "SELF_ADB").
+  /// Only ever touches Hearth's own two apps.
+  Future<List<String>> addHearthToKidsProfiles() async =>
+      await _methodChannel.invokeListMethod<String>("addHearthToKidsProfiles") ?? [];
+
+  /// Parent-initiated: release the protection and uninstall Hearth and HearthTube from every kids profile — the
+  /// clean undo of [addHearthToKidsProfiles], and what must run before Hearth itself is uninstalled.
+  Future<List<String>> removeHearthFromKidsProfiles() async =>
+      await _methodChannel.invokeListMethod<String>("removeHearthFromKidsProfiles") ?? [];
+
+  /// Read-only: for each kids profile, [{userId, packageName, installed, protected}] — so Settings can show exactly
+  /// where Hearth's apps are and nothing is hidden.
+  Future<List<Map<dynamic, dynamic>>> getKidsAppsState() async =>
+      await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getKidsAppsState") ?? [];
+
   /// Profile Pairing's state: {enabled, voiceDefault}.
   Future<Map<dynamic, dynamic>> getProfilePairingStatus() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getProfilePairingStatus") ?? {};

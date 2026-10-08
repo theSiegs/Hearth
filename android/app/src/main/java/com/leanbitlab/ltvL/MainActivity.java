@@ -171,6 +171,13 @@ public class MainActivity extends FlutterActivity {
                             this, LauncherAccessibilityService.getActiveProfileKey(this), kids);
                     result.success(kids);
                 }
+                // Parent-controlled "Add / Remove Hearth from kids' profiles" (Settings -> Setup & permissions) and a
+                // read-only state view. The work, and the one-time "Allow debugging?" consent, live in KidsAppAccess /
+                // SelfAdb. Off the main thread (adb I/O); the action is parent-confirmed because these fire only when
+                // the parent presses the row.
+                case "addHearthToKidsProfiles" -> sIoExecutor.execute(() -> runKidsProvision(true, result));
+                case "removeHearthFromKidsProfiles" -> sIoExecutor.execute(() -> runKidsProvision(false, result));
+                case "getKidsAppsState" -> sIoExecutor.execute(() -> runKidsAppsState(result));
                 case "voiceSearch" -> startVoiceSearch(result);
                 case "getAppLastProfiles" -> {
                     Map<String, Object> users = new HashMap<>(getSharedPreferences("ltv_app_last_profile", MODE_PRIVATE).getAll());
@@ -1327,6 +1334,40 @@ public class MainActivity extends FlutterActivity {
             return true;
         }
         return tryStartActivity(new Intent(Settings.ACTION_SYNC_SETTINGS));
+    }
+
+    /**
+     * Parent-initiated add/remove of Hearth's own apps in the kids profiles, over Hearth's loopback adb
+     * ({@link SelfAdb}). Reached only from the Settings rows, so {@code confirmedByParent} is true. Returns the log
+     * of what was done; a first-run "Allow debugging?" that hasn't been approved surfaces as an error the UI explains.
+     */
+    private void runKidsProvision(boolean add, io.flutter.plugin.common.MethodChannel.Result result) {
+        try (SelfAdb shell = SelfAdb.open(this)) {
+            java.util.List<String> log = add
+                    ? KidsAppAccess.addToKidsProfiles(this, shell, true)
+                    : KidsAppAccess.removeFromKidsProfiles(this, shell, true);
+            runOnUiThread(() -> result.success(log));
+        } catch (Exception e) {
+            runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
+        }
+    }
+
+    /** Read-only: which kids profiles currently have Hearth / HearthTube (and whether protected), for Settings. */
+    private void runKidsAppsState(io.flutter.plugin.common.MethodChannel.Result result) {
+        try (SelfAdb shell = SelfAdb.open(this)) {
+            java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
+            for (KidsAppAccess.AppStatus s : KidsAppAccess.state(this, shell)) {
+                java.util.Map<String, Object> row = new java.util.HashMap<>();
+                row.put("userId", s.userId);
+                row.put("packageName", s.packageName);
+                row.put("installed", s.installed);
+                row.put("protected", s.protectedFromRemoval);
+                rows.add(row);
+            }
+            runOnUiThread(() -> result.success(rows));
+        } catch (Exception e) {
+            runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
+        }
     }
 
     // Google TV kids profiles suspend every app a parent hasn't approved; once seen, a profile stays a kids one.
