@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 
 import 'daily_data_usage_widget.dart';
 import 'date_time_widget.dart';
+import 'focusable_tap.dart';
 import '../providers/home_search.dart';
 import 'weather_status_bar_widget.dart';
 
@@ -362,8 +363,10 @@ class _ProfileButton extends StatelessWidget {
       );
 }
 
-/// Reusable focusable icon button with consistent outline focus indicator
-class _FocusableIconButton extends StatefulWidget {
+/// A dark circle with a filled icon (accent when focused); the label, if any, sits beside it.
+class _FocusableIconButton extends StatelessWidget {
+  static const double _circleSize = 44;
+
   final IconData icon;
   final VoidCallback onPressed;
   final FocusNode? focusNode;
@@ -376,69 +379,46 @@ class _FocusableIconButton extends StatefulWidget {
       {super.key, required this.icon, required this.onPressed, this.focusNode, this.badgeCount = 0, this.label, this.image});
 
   @override
-  State<_FocusableIconButton> createState() => _FocusableIconButtonState();
-}
-
-class _FocusableIconButtonState extends State<_FocusableIconButton> {
-  static const double _circleSize = 44;
-  bool _focused = false;
-
-  @override
   Widget build(BuildContext context) {
-    return Actions(
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => widget.onPressed()),
-        ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) => widget.onPressed()),
-      },
-      child: Focus(
-        focusNode: widget.focusNode,
-        onFocusChange: (hasFocus) => setState(() => _focused = hasFocus),
-        child: InkWell(
-          onTap: widget.onPressed,
-          canRequestFocus: false,
-          focusColor: Colors.transparent,
-          hoverColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-          customBorder: const StadiumBorder(),
-          // HearthTube's style: a dark circle with a filled icon, the accent color when focused, and the label
-          // (the profile name) beside the circle.
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Badge(
-                isLabelVisible: widget.badgeCount > 0,
-                label: Text(widget.badgeCount.toString(), style: const TextStyle(color: Colors.white)),
-                backgroundColor: Colors.red,
-                offset: const Offset(-2, 2),
-                child: Container(
-                  width: _circleSize,
-                  height: _circleSize,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _focused ? Theme.of(context).colorScheme.primary : const Color(0xE6202024),
-                    boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 2))],
-                  ),
-                  // A photo sits inside the accent ring when focused
-                  padding: widget.image != null && _focused ? const EdgeInsets.all(3) : EdgeInsets.zero,
-                  child: widget.image != null
-                      ? ClipOval(child: Image.memory(widget.image!, fit: BoxFit.cover, gaplessPlayback: true))
-                      : Icon(widget.icon, size: 26, color: Colors.white),
-                ),
+    return FocusableTap(
+      focusNode: focusNode,
+      onPressed: onPressed,
+      splashShape: const StadiumBorder(),
+      builder: (context, focused) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Badge(
+            isLabelVisible: badgeCount > 0,
+            label: Text(badgeCount.toString(), style: const TextStyle(color: Colors.white)),
+            backgroundColor: Colors.red,
+            offset: const Offset(-2, 2),
+            child: Container(
+              width: _circleSize,
+              height: _circleSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: focused ? Theme.of(context).colorScheme.primary : const Color(0xE6202024),
+                boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 2))],
               ),
-              if (widget.label != null) ...[
-                const SizedBox(width: 12),
-                Text(
-                  widget.label!,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: _focused ? FontWeight.w600 : FontWeight.w400,
-                    shadows: const [Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 2))],
-                  ),
-                ),
-                const SizedBox(width: 4),
-              ],
-            ],
+              // A photo sits inside the accent ring when focused
+              padding: image != null && focused ? const EdgeInsets.all(3) : EdgeInsets.zero,
+              child: image != null
+                  ? ClipOval(child: Image.memory(image!, fit: BoxFit.cover, gaplessPlayback: true))
+                  : Icon(icon, size: 26, color: Colors.white),
+            ),
           ),
-        ),
+          if (label != null) ...[
+            const SizedBox(width: 12),
+            Text(
+              label!,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: focused ? FontWeight.w600 : FontWeight.w400,
+                shadows: const [Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 2))],
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
+        ],
       ),
     );
   }
@@ -446,7 +426,7 @@ class _FocusableIconButtonState extends State<_FocusableIconButton> {
 
 /// The current search in the top bar: a white pill with the query, as HearthTube shows its selected tab. Pressing
 /// it reopens the search box to change the search.
-class _SearchPill extends StatefulWidget {
+class _SearchPill extends StatelessWidget {
   final String query;
   final VoidCallback onPressed;
   final FocusNode? focusNode;
@@ -454,47 +434,31 @@ class _SearchPill extends StatefulWidget {
   const _SearchPill({required this.query, required this.onPressed, this.focusNode});
 
   @override
-  State<_SearchPill> createState() => _SearchPillState();
-}
-
-class _SearchPillState extends State<_SearchPill> {
-  bool _focused = false;
-
-  @override
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
-    return Actions(
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => widget.onPressed()),
-        ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) => widget.onPressed()),
-      },
-      child: Focus(
-        focusNode: widget.focusNode,
-        onFocusChange: (hasFocus) => setState(() => _focused = hasFocus),
-        child: GestureDetector(
-          onTap: widget.onPressed,
-          child: Container(
-            height: 44,
-            constraints: const BoxConstraints(maxWidth: 320),
-            padding: const EdgeInsets.only(left: 12, right: 18),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: _focused ? accent : Colors.white, width: 3),
-              boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 2))],
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.search, size: 22, color: Colors.black87),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(widget.query,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.black, fontSize: 17, fontWeight: FontWeight.w500)),
-              ),
-            ]),
-          ),
+    return FocusableTap(
+      focusNode: focusNode,
+      onPressed: onPressed,
+      builder: (context, focused) => Container(
+        height: 44,
+        constraints: const BoxConstraints(maxWidth: 320),
+        padding: const EdgeInsets.only(left: 12, right: 18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: focused ? accent : Colors.white, width: 3),
+          boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 2))],
         ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.search, size: 22, color: Colors.black87),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(query,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.black, fontSize: 17, fontWeight: FontWeight.w500)),
+          ),
+        ]),
       ),
     );
   }
