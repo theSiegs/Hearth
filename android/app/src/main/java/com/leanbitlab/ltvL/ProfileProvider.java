@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
+import android.util.Log;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -37,6 +38,7 @@ import java.util.Calendar;
  * The full contract, column by column, is docs/provider-contract.md; contract_version says which one this is.
  */
 public class ProfileProvider extends ContentProvider {
+    private static final String TAG = "HearthProvider";
     private static final String[] COLUMNS = {
             "name", "accent_color", "time_format", "app_language", "has_parent_pin", "gradient_uuid", "wallpaper_stamp",
             "date_format", "kids_profile", "screen_time_up", "service_running", "profile_id", "contract_version",
@@ -162,7 +164,8 @@ public class ProfileProvider extends ContentProvider {
             for (android.content.pm.Signature signature : signatures) {
                 if (TRUSTED_CERTS.contains(Hex.of(sha256.digest(signature.toByteArray())))) return true;
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Log.w(TAG, "Couldn't check HearthTube's signature", e);
         }
         return false;
     }

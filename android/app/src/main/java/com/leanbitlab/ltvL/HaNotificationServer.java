@@ -157,7 +157,8 @@ final class HaNotificationServer {
                         n.actions.add(action);
                     }
                 }
-            } catch (org.json.JSONException ignored) {
+            } catch (org.json.JSONException e) {
+                Log.w(TAG, "Ignoring the notification's actions: not a JSON list of buttons", e);
             }
         }
         return n;

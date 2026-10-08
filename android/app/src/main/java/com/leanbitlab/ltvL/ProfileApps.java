@@ -8,7 +8,9 @@ import android.content.pm.LauncherApps;
 import android.os.SystemClock;
 import android.os.UserHandle;
 import android.os.UserManager;
+import android.util.Log;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,6 +31,7 @@ final class ProfileApps {
     /** Not in the active profile's user (not approved for that kid). */
     static final int ABSENT = 3;
 
+    private static final String TAG = "HearthProfileApps";
     private static final long CACHE_MS = 2_000;
     private static UserHandle sCachedUser;
     private static Map<String, LauncherActivityInfo> sCachedApps;
@@ -60,6 +63,7 @@ final class ProfileApps {
             }
             return apps;
         } catch (RuntimeException e) {
+            Log.w(TAG, "Couldn't read the apps of " + user, e);
             return null;
         }
     }
@@ -69,7 +73,8 @@ final class ProfileApps {
         long now = SystemClock.elapsedRealtime();
         if (user.equals(sCachedUser) && sCachedApps != null && now - sCachedAt < CACHE_MS) return sCachedApps;
         Map<String, LauncherActivityInfo> apps = readApps(context, user);
-        if (apps == null) apps = new HashMap<>();
+        // Not cached: the next ask tries again
+        if (apps == null) return Collections.emptyMap();
         sCachedUser = user;
         sCachedApps = apps;
         sCachedAt = now;
