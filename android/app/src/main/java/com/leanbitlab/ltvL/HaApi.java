@@ -1,7 +1,6 @@
 package com.leanbitlab.ltvL;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -28,10 +27,6 @@ final class HaApi {
     static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
 
     private HaApi() {}
-
-    static boolean isConfigured(Context context) {
-        return baseUrl(context) != null && token(context) != null;
-    }
 
     /** Calls a service, e.g. ("light", "toggle", {"entity_id": "light.kitchen"}). True on success. */
     static boolean callService(Context context, String domain, String service, JSONObject data) {
@@ -92,8 +87,8 @@ final class HaApi {
     }
 
     private static byte[] request(Context context, String method, String path, byte[] body) {
-        String base = baseUrl(context);
-        String token = token(context);
+        String base = HaConfig.baseUrl(context);
+        String token = HaConfig.token(context);
         if (base == null || token == null) return null;
         HttpURLConnection connection = null;
         try {
@@ -132,19 +127,5 @@ final class HaApi {
         } finally {
             if (connection != null) connection.disconnect();
         }
-    }
-
-    private static String baseUrl(Context context) {
-        String base = prefs(context).getString(HaStatusReporter.URL_KEY, null);
-        return base == null || base.trim().isEmpty() ? null : HaSetupServer.normalizeUrl(base);
-    }
-
-    private static String token(Context context) {
-        String token = prefs(context).getString(HaPanelActivity.TOKEN_KEY, null);
-        return token == null || token.isEmpty() ? null : token;
-    }
-
-    private static SharedPreferences prefs(Context context) {
-        return context.getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, Context.MODE_PRIVATE);
     }
 }

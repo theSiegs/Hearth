@@ -29,7 +29,6 @@ import org.json.JSONObject;
  * (the same one the Home Assistant Companion app uses), so there is never a login screen.
  */
 public class HaPanelActivity extends Activity {
-    static final String TOKEN_KEY = "ha_panel_token";
     static final String DASHBOARD_KEY = "ha_panel_dashboard";
     static final String DEFAULT_DASHBOARD = "hearth-tv/family_room";
     private static final int PANEL_WIDTH_DP = 350;
@@ -59,20 +58,19 @@ public class HaPanelActivity extends Activity {
     private String mToken;
 
     static String getDashboard(Context context) {
-        String path = prefs(context).getString(DASHBOARD_KEY, null);
+        String path = HaConfig.prefs(context).getString(DASHBOARD_KEY, null);
         return path == null || path.isEmpty() ? DEFAULT_DASHBOARD : path;
     }
 
     static boolean hasToken(Context context) {
-        String token = prefs(context).getString(TOKEN_KEY, null);
-        return token != null && !token.isEmpty();
+        return HaConfig.token(context) != null;
     }
 
     static void setConfig(Context context, String token, String dashboard) {
-        SharedPreferences.Editor editor = prefs(context).edit();
+        SharedPreferences.Editor editor = HaConfig.prefs(context).edit();
         if (token != null) {
-            if (token.isEmpty()) editor.remove(TOKEN_KEY);
-            else editor.putString(TOKEN_KEY, token);
+            if (token.isEmpty()) editor.remove(HaConfig.TOKEN_KEY);
+            else editor.putString(HaConfig.TOKEN_KEY, token);
         }
         if (dashboard != null) {
             String path = dashboard.trim().replaceAll("^/+|/+$", "");
@@ -80,10 +78,6 @@ public class HaPanelActivity extends Activity {
             else editor.putString(DASHBOARD_KEY, path);
         }
         editor.apply();
-    }
-
-    private static SharedPreferences prefs(Context context) {
-        return context.getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, MODE_PRIVATE);
     }
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
@@ -106,8 +100,7 @@ public class HaPanelActivity extends Activity {
         root.setBackground(background);
         root.setClipToOutline(true);
 
-        mToken = prefs(this).getString(TOKEN_KEY, null);
-        String baseUrl = prefs(this).getString(HaStatusReporter.URL_KEY, null);
+        mToken = HaConfig.token(this);
 
         mWebView = new WebView(this);
         mWebView.setBackgroundColor(Color.TRANSPARENT);
@@ -134,11 +127,11 @@ public class HaPanelActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(root);
 
-        if (baseUrl == null || baseUrl.isEmpty() || mToken == null || mToken.isEmpty()) {
+        if (!HaConfig.isConfigured(this)) {
             showMessage("Home Assistant panel isn't set up",
                     "Add the Home Assistant address and an access token in Settings → Home Assistant.");
         } else {
-            mWebView.loadUrl(baseUrl.replaceAll("/+$", "") + "/" + getDashboard(this));
+            mWebView.loadUrl(HaConfig.baseUrl(this) + "/" + getDashboard(this));
         }
         mWebView.requestFocus(View.FOCUS_DOWN);
     }

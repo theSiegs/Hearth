@@ -1,7 +1,6 @@
 package com.leanbitlab.ltvL;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.util.Base64;
 import android.util.Log;
 
@@ -131,7 +130,7 @@ final class HaSetupServer {
             return;
         }
         if (!"POST".equals(parts[0])) {
-            respondHtml(out, formPage(prefs().getString(HaStatusReporter.URL_KEY, "")));
+            respondHtml(out, formPage(HaConfig.prefs(mContext).getString(HaConfig.URL_KEY, "")));
             return;
         }
 
@@ -145,31 +144,19 @@ final class HaSetupServer {
             return;
         }
         Map<String, String> fields = parseForm(new String(readExactly(in, length), StandardCharsets.UTF_8));
-        String url = normalizeUrl(fields.getOrDefault("url", ""));
+        String url = HaConfig.normalizeUrl(fields.getOrDefault("url", ""));
         String token = fields.getOrDefault("token", "").replaceAll("\\s", "");
         if (token.isEmpty() || url == null) {
             respondHtml(out, formPage(fields.getOrDefault("url", ""))
                     .replace("<!--error-->", "<p class='err'>Enter the Home Assistant address and the token.</p>"));
             return;
         }
-        prefs().edit().putString(HaStatusReporter.URL_KEY, url).putString(HaPanelActivity.TOKEN_KEY, token).apply();
+        HaConfig.prefs(mContext).edit().putString(HaConfig.URL_KEY, url).putString(HaConfig.TOKEN_KEY, token).apply();
         mReceived = true;
         synchronized (HaSetupServer.class) {
             sLastReceived = true;
         }
         respondHtml(out, page("Sent to the TV", "<p>Hearth has the address and token. You can close this page.</p>"));
-    }
-
-    /** Adds http:// when the scheme is missing and drops a trailing slash; null when there's nothing usable. */
-    static String normalizeUrl(String raw) {
-        String url = raw.trim().replaceAll("/+$", "");
-        if (url.isEmpty()) return null;
-        if (!url.matches("(?i)^https?://.*")) url = "http://" + url;
-        return url;
-    }
-
-    private SharedPreferences prefs() {
-        return mContext.getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, Context.MODE_PRIVATE);
     }
 
     private static String formPage(String url) {

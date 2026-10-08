@@ -33,8 +33,9 @@ import java.util.concurrent.Executors;
  * Sent on change (debounced) and as a heartbeat, so Home Assistant needs no credentials for the TV.
  */
 final class HaStatusReporter {
-    static final String URL_KEY = "ha_base_url";
-    static final String WEBHOOK_KEY = "ha_webhook_id";
+    // HaConfig's keys, under the names the activity and the accessibility service use
+    static final String URL_KEY = HaConfig.URL_KEY;
+    static final String WEBHOOK_KEY = HaConfig.WEBHOOK_KEY;
     private static final String TAG = "LTvHaStatus";
     private static final long DEBOUNCE_MS = 1_500;
     private static final long HEARTBEAT_MS = 10 * 60_000;
@@ -88,14 +89,9 @@ final class HaStatusReporter {
     }
 
     static String webhookUrl(Context context) {
-        android.content.SharedPreferences prefs =
-                context.getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, Context.MODE_PRIVATE);
-        String base = prefs.getString(URL_KEY, null);
-        String id = prefs.getString(WEBHOOK_KEY, null);
-        if (base == null || base.trim().isEmpty() || id == null || id.trim().isEmpty()) return null;
-        base = base.trim();
-        if (!base.startsWith("http://") && !base.startsWith("https://")) base = "http://" + base;
-        if (base.endsWith("/")) base = base.substring(0, base.length() - 1);
+        String base = HaConfig.baseUrl(context);
+        String id = HaConfig.prefs(context).getString(HaConfig.WEBHOOK_KEY, null);
+        if (base == null || id == null || id.trim().isEmpty()) return null;
         return base + "/api/webhook/" + id.trim();
     }
 
