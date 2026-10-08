@@ -550,7 +550,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 || type == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
             onUserInput();
         }
-        if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+        if (type != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             if (TextUtils.equals(GOOGLE_TV_PACKAGE, event.getPackageName())) {
                 onGoogleTvViewEvent(event);
             }
@@ -562,18 +562,21 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
         String packageName = pkg.toString();
         String className = cls.toString();
+        boolean isGoogleTv = GOOGLE_TV_PACKAGE.equals(packageName);
+        boolean isHearth = packageName.equals(getPackageName());
+        boolean isApp = !isHearth && isLaunchableApp(packageName);
         mLastWindowPackage = packageName;
         // Not the keyboard, a system pop-up or the assistant's bar: those come up over the app that's still in use
-        if (packageName.equals(getPackageName()) || isLaunchableApp(packageName)) mLastAppPackage = packageName;
-        mWellbeingInFront = GOOGLE_TV_PACKAGE.equals(packageName) && className.startsWith(GOOGLE_TV_WELLBEING_PREFIX);
+        if (isHearth || isApp) mLastAppPackage = packageName;
+        mWellbeingInFront = isGoogleTv && className.startsWith(GOOGLE_TV_WELLBEING_PREFIX);
         // The chooser stays "open" while Google TV lays its account check / PIN screens over it; it's over once
         // Google TV's home or any other app comes up.
         boolean wasOnScreen = mChooserOnScreen;
-        if (GOOGLE_TV_PACKAGE.equals(packageName) && isChooser(className)) {
+        if (isGoogleTv && isChooser(className)) {
             mChooserOnScreen = true;
         } else if (GOOGLE_TV_HOME_ACTIVITY.equals(className)
-                || (!GOOGLE_TV_PACKAGE.equals(packageName) && !"com.android.systemui".equals(packageName)
-                    && !"android".equals(packageName) && !packageName.equals(getPackageName()))) {
+                || (!isGoogleTv && !"com.android.systemui".equals(packageName)
+                    && !"android".equals(packageName) && !isHearth)) {
             // Not Hearth's own windows: Hearth reports window changes as it goes behind the chooser.
             mChooserOnScreen = false;
         }
@@ -583,70 +586,74 @@ public class LauncherAccessibilityService extends AccessibilityService {
             if (!mChooserOnScreen) checkProfileUser("chooser closed");
         }
 
-        if (GOOGLE_TV_PACKAGE.equals(packageName)) {
-            boolean wellbeing = className.startsWith(GOOGLE_TV_WELLBEING_PREFIX);
-            if (wellbeing) {
-                mWellbeingSeenAt = SystemClock.elapsedRealtime();
-                setScreenTimeLock();
-            }
-            reportScreenTimeText(className, event, wellbeing);
-            if (isChooser(className)) {
-                mHandler.removeCallbacks(mReadChooser);
-                mHandler.postDelayed(mReadChooser, CHOOSER_READ_DELAY_MS);
-                checkProfileUser("chooser opened");
-            }
+        if (isGoogleTv) {
+            onGoogleTvWindow(className, event);
+        } else {
+            onOtherWindow(packageName, isHearth, isApp);
+        }
+    }
 
-            // Google's own setup flows (a new kids profile's onboarding, sign-in, PIN creation) open Google TV's
-            // home behind themselves; Hearth stays out of the way until they're done.
-            if (isGoogleSetupScreen(className)) {
-                mGoogleSetupUntil = SystemClock.elapsedRealtime() + GOOGLE_SETUP_HOLD_MS;
-                Log.i(TAG, "Google TV setup in progress: " + className);
-            }
-            if (GOOGLE_TV_HOME_ACTIVITY.equals(className)) {
-                // A new profile's home: the last one's screen time no longer applies (its own comes up next)
-                if (commitPendingProfile()) clearScreenTimeLock();
-                // Google TV only opens its home once a switch is done: take the new profile user now, before
-                // Hearth takes over, so Hearth never comes up showing the last profile
-                checkProfileUser("Google TV home", true);
-                updateScreenTimeLock("Google TV home");
-                mGoogleTvScreenInFront = false;
-                // Google TV opens its own home by component after a profile switch, on Back from apps, etc.,
-                // ignoring the default home app. Bring the launcher back whenever that's allowed.
-                if (SystemClock.elapsedRealtime() < mGoogleSetupUntil) {
-                    Log.i(TAG, "Not taking over: Google TV setup in progress");
-                } else if (autoTakeOverAllowed() && ProfileUsers.isKids(this) && !mScreenTimeKnown) {
-                    // A kids profile whose screen time the apps can't tell: Google TV opens its time up / bedtime
-                    // screen from its home a moment after the home itself, and covering the home first would hide
-                    // it (Hearth, the home app, can't be suspended). Take over only if the home is still in front.
-                    mHandler.removeCallbacks(mKidsHomeTakeOver);
-                    mHandler.postDelayed(mKidsHomeTakeOver, KIDS_HOME_GRACE_MS);
-                } else if (autoTakeOverAllowed()) {
-                    openLauncher();
-                } else {
-                    mPendingBounceAt = SystemClock.elapsedRealtime();
-                }
-            } else if (className.startsWith(GOOGLE_TV_PACKAGE + ".") || className.startsWith("com.google.android.libraries.tv.")) {
-                // Its own screens (chooser, PIN, time up); plain view classes are overlays on its home.
-                mGoogleTvScreenInFront = true;
-            }
-            return;
+    /** One of Google TV's windows: its home, the chooser, a screen time screen, a setup flow, or another screen. */
+    private void onGoogleTvWindow(String className, AccessibilityEvent event) {
+        boolean wellbeing = className.startsWith(GOOGLE_TV_WELLBEING_PREFIX);
+        if (wellbeing) {
+            mWellbeingSeenAt = SystemClock.elapsedRealtime();
+            setScreenTimeLock();
+        }
+        reportScreenTimeText(className, event, wellbeing);
+        if (isChooser(className)) {
+            mHandler.removeCallbacks(mReadChooser);
+            mHandler.postDelayed(mReadChooser, CHOOSER_READ_DELAY_MS);
+            checkProfileUser("chooser opened");
         }
 
-        if (packageName.equals(getPackageName())) {
+        // Google's own setup flows (a new kids profile's onboarding, sign-in, PIN creation) open Google TV's
+        // home behind themselves; Hearth stays out of the way until they're done.
+        if (isGoogleSetupScreen(className)) {
+            mGoogleSetupUntil = SystemClock.elapsedRealtime() + GOOGLE_SETUP_HOLD_MS;
+            Log.i(TAG, "Google TV setup in progress: " + className);
+        }
+        if (GOOGLE_TV_HOME_ACTIVITY.equals(className)) {
+            // A new profile's home: the last one's screen time no longer applies (its own comes up next)
+            if (commitPendingProfile()) clearScreenTimeLock();
+            // Google TV only opens its home once a switch is done: take the new profile user now, before
+            // Hearth takes over, so Hearth never comes up showing the last profile
+            checkProfileUser("Google TV home", true);
+            updateScreenTimeLock("Google TV home");
+            mGoogleTvScreenInFront = false;
+            // Google TV opens its own home by component after a profile switch, on Back from apps, etc.,
+            // ignoring the default home app. Bring the launcher back whenever that's allowed.
+            if (SystemClock.elapsedRealtime() < mGoogleSetupUntil) {
+                Log.i(TAG, "Not taking over: Google TV setup in progress");
+            } else if (autoTakeOverAllowed() && ProfileUsers.isKids(this) && !mScreenTimeKnown) {
+                // A kids profile whose screen time the apps can't tell: Google TV opens its time up / bedtime
+                // screen from its home a moment after the home itself, and covering the home first would hide
+                // it (Hearth, the home app, can't be suspended). Take over only if the home is still in front.
+                mHandler.removeCallbacks(mKidsHomeTakeOver);
+                mHandler.postDelayed(mKidsHomeTakeOver, KIDS_HOME_GRACE_MS);
+            } else if (autoTakeOverAllowed()) {
+                openLauncher();
+            } else {
+                mPendingBounceAt = SystemClock.elapsedRealtime();
+            }
+        } else if (className.startsWith(GOOGLE_TV_PACKAGE + ".") || className.startsWith("com.google.android.libraries.tv.")) {
+            // Its own screens (chooser, PIN, time up); plain view classes are overlays on its home.
+            mGoogleTvScreenInFront = true;
+        }
+    }
+
+    /** Any other window: Hearth, an app, or something that comes up over one (the keyboard, a system pop-up). */
+    private void onOtherWindow(String packageName, boolean isHearth, boolean isApp) {
+        if (isHearth) {
             // Back in the launcher without Google TV's home in between: the switch was cancelled.
             mPendingProfile = null;
             mLastChooserFocus = null;
         }
-        if (mHaStatus != null && (packageName.equals(getPackageName()) || isLaunchableApp(packageName))) {
-            mHaStatus.setForegroundPackage(packageName);
-        }
-        if (!packageName.equals(getPackageName()) && isLaunchableApp(packageName)) {
-            rememberAppUser(this, packageName);
-        }
-
+        if (isApp) rememberAppUser(this, packageName);
         // Hearth or an app is in front: Google TV's own screens are gone.
-        if (packageName.equals(getPackageName()) || isLaunchableApp(packageName)) {
+        if (isHearth || isApp) {
             mGoogleTvScreenInFront = false;
+            if (mHaStatus != null) mHaStatus.setForegroundPackage(packageName);
         }
     }
 
