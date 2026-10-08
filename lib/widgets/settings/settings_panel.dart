@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:flauncher/widgets/settings/companion_apps_page.dart';
+import 'package:flauncher/widgets/settings/updates_page.dart';
 import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
 import 'package:flauncher/widgets/settings/family_apps_page.dart';
 import 'package:flauncher/widgets/settings/profile_pairing_page.dart';
@@ -140,8 +140,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     return _FastPageRoute(builder: (_) => const SetupChecklistPage());
                   case FamilyAppsPage.routeName:
                     return _FastPageRoute(builder: (_) => const FamilyAppsPage());
-                  case CompanionAppsPage.routeName:
-                    return _FastPageRoute(builder: (_) => const CompanionAppsPage());
+                  case UpdatesPage.routeName:
+                    return _FastPageRoute(builder: (_) => const UpdatesPage());
                   case HomeAssistantPage.routeName:
                     return _FastPageRoute(builder: (_) => const HomeAssistantPage());
                   case RemoteButtonsPage.routeName:

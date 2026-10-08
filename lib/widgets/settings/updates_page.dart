@@ -6,21 +6,23 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
+import 'settings_page.dart';
 import 'update_dialog.dart';
 
 enum _State { checking, notInstalled, upToDate, updateAvailable, downloading, installing, error }
 
-class CompanionAppsPage extends StatefulWidget {
+/// Updates: Hearth's own, and installing and updating the companion apps from their GitHub releases.
+class UpdatesPage extends StatefulWidget {
   static const String routeName = "companion_apps";
   static const String title = "Updates";
 
-  const CompanionAppsPage({super.key});
+  const UpdatesPage({super.key});
 
   @override
-  State<CompanionAppsPage> createState() => _CompanionAppsPageState();
+  State<UpdatesPage> createState() => _UpdatesPageState();
 }
 
-class _CompanionAppsPageState extends State<CompanionAppsPage> with WidgetsBindingObserver {
+class _UpdatesPageState extends State<UpdatesPage> with WidgetsBindingObserver {
   final FLauncherChannel _channel = FLauncherChannel();
   final Map<String, _State> _states = {};
   final Map<String, Map<dynamic, dynamic>?> _installed = {};
@@ -171,62 +173,53 @@ class _CompanionAppsPageState extends State<CompanionAppsPage> with WidgetsBindi
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Column(
+    return SettingsPage(
+      title: UpdatesPage.title,
       children: [
-        Text(CompanionAppsPage.title, style: textTheme.titleLarge),
-        const Divider(),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                FocusableSettingsTile(
-                  autofocus: true,
-                  leading: const Icon(Icons.local_fire_department_outlined),
-                  title: Text("Hearth", style: textTheme.bodyMedium),
-                  trailing: Text("Check for updates", style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
-                  onPressed: () => showDialog(context: context, builder: (_) => const UpdateDialog()),
-                ),
-                for (final app in companionApps) _tile(context, app, false),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.system_update_outlined),
-                  title: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Update automatically", style: textTheme.bodyMedium),
-                      Text(
-                        "Hearth checks daily and installs updates to apps it installed, when they're not in use",
-                        style: textTheme.bodySmall?.copyWith(color: Colors.white54),
-                      ),
-                    ],
-                  ),
-                  trailing: Switch(value: _autoUpdate ?? false, onChanged: null),
-                  onPressed: _autoUpdate == null
-                      ? null
-                      : () async {
-                          final on = !_autoUpdate!;
-                          setState(() => _autoUpdate = on);
-                          await _updater.setAutoUpdate(on);
-                        },
-                ),
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Text(
-                    "Installed from each app's GitHub releases. After Hearth installs or updates an app once, "
-                    "its updates install without asking, and the app leaves updating to Hearth.",
-                    style: textTheme.bodySmall?.copyWith(color: Colors.white54),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
-            ),
+        FocusableSettingsTile(
+          autofocus: true,
+          leading: const Icon(Icons.local_fire_department_outlined),
+          title: Text("Hearth", style: textTheme.bodyMedium),
+          trailing: Text("Check for updates", style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
+          onPressed: () => showDialog(context: context, builder: (_) => const UpdateDialog()),
+        ),
+        for (final app in companionApps) _tile(context, app),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.system_update_outlined),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Update automatically", style: textTheme.bodyMedium),
+              Text(
+                "Hearth checks daily and installs updates to apps it installed, when they're not in use",
+                style: textTheme.bodySmall?.copyWith(color: Colors.white54),
+              ),
+            ],
+          ),
+          trailing: Switch(value: _autoUpdate ?? false, onChanged: null),
+          onPressed: _autoUpdate == null
+              ? null
+              : () async {
+                  final on = !_autoUpdate!;
+                  setState(() => _autoUpdate = on);
+                  await _updater.setAutoUpdate(on);
+                },
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            "Installed from each app's GitHub releases. After Hearth installs or updates an app once, "
+            "its updates install without asking, and the app leaves updating to Hearth.",
+            style: textTheme.bodySmall?.copyWith(color: Colors.white54),
+            textAlign: TextAlign.center,
           ),
         ),
       ],
     );
   }
 
-  Widget _tile(BuildContext context, CompanionApp app, bool autofocus) {
+  Widget _tile(BuildContext context, CompanionApp app) {
     final textTheme = Theme.of(context).textTheme;
     final state = _states[app.packageName] ?? _State.checking;
     final installed = _installed[app.packageName];
@@ -241,7 +234,6 @@ class _CompanionAppsPageState extends State<CompanionAppsPage> with WidgetsBindi
       _State.error => (_errors[app.packageName] ?? "Error", Colors.redAccent, () => _check(app)),
     };
     return FocusableSettingsTile(
-      autofocus: autofocus,
       leading: const Icon(Icons.extension_outlined),
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
