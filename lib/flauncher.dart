@@ -148,12 +148,14 @@ class _FLauncherState extends State<FLauncher> {
       _lastDockFocus = FocusManager.instance.primaryFocus;
     }
     // With the top bar focused, the first screen is just the wallpaper: dock and Continue Watching slide away and
-    // come back when focus comes down again.
+    // come back when focus comes down again. Focus leaving the home screen (Settings, a dialog, the Home Assistant
+    // panel) leaves it as it was.
     final focusContext = FocusManager.instance.primaryFocus?.context;
-    final bool inTopBar = focusContext != null &&
+    final bool inHome = focusContext != null &&
         focusContext.mounted &&
-        focusContext.findAncestorWidgetOfExactType<FocusAwareAppBar>() != null;
-    if (inTopBar != _topBarFocused) {
+        focusContext.findAncestorStateOfType<_FLauncherState>() == this;
+    final bool inTopBar = inHome && focusContext.findAncestorWidgetOfExactType<FocusAwareAppBar>() != null;
+    if (inHome && inTopBar != _topBarFocused) {
       setState(() {
         _topBarFocused = inTopBar;
         if (inTopBar) _showingRecents = false;
@@ -186,18 +188,40 @@ class _FLauncherState extends State<FLauncher> {
       if (show) {
         target = _firstFocusable(_recentsFocusNode);
         if (target == null) {
-          // Nothing to show after all (e.g. every program is hidden): stay on the dock.
+          // Nothing to show after all (e.g. every program is hidden): the dock instead.
           setState(() => _showingRecents = false);
+          _focusDock();
           return;
         }
+        target.requestFocus();
       } else {
-        final last = _lastDockFocus;
-        target = last != null && last.context != null && _dockFocusNode.descendants.contains(last)
-            ? last
-            : _firstFocusable(_dockFocusNode);
+        _focusDock();
       }
-      target?.requestFocus();
     });
+  }
+
+  /// Continue Watching has something to show (set as the home builds).
+  bool _recentsAvailable = false;
+
+  /// Down from the top bar lands on Continue Watching when it has something, else on the dock where it was last.
+  /// The dock is slid away (not unfocusable) while the top bar has focus, so plain Down would pick whatever is
+  /// nearest on screen: the grid below, scrolling the page down. True when it handled the key.
+  bool _leaveTopBar() {
+    if (_firstFocusable(_dockFocusNode) == null) return false; // no dock: normal navigation
+    if (_recentsAvailable) {
+      _setShowingRecents(true);
+    } else {
+      _focusDock();
+    }
+    return true;
+  }
+
+  void _focusDock() {
+    final last = _lastDockFocus;
+    final target = last != null && last.context != null && _dockFocusNode.descendants.contains(last)
+        ? last
+        : _firstFocusable(_dockFocusNode);
+    target?.requestFocus();
   }
 
   static FocusNode? _firstFocusable(FocusNode parent) =>
@@ -242,6 +266,7 @@ class _FLauncherState extends State<FLauncher> {
           OpenSettingsIntent: CallbackAction<OpenSettingsIntent>(
             onInvoke: (_) => _appBarKey.currentState?.openSettings(),
           ),
+          LeaveTopBarIntent: CallbackAction<LeaveTopBarIntent>(onInvoke: (_) => _leaveTopBar()),
           OpenHaPanelIntent: CallbackAction<OpenHaPanelIntent>(
             onInvoke: (_) => FLauncherChannel().openHaPanel(),
           ),
@@ -357,6 +382,7 @@ class _FLauncherState extends State<FLauncher> {
     // With a single section left, its heading is dropped too. Everything below the dock wraps as a grid,
     // so a "row" section doesn't become one long sideways-scrolling strip.
     final bool showRecents = continueWatchingActive && _showingRecents;
+    _recentsAvailable = continueWatchingActive;
     final List<LauncherSection> belowDock =
         sections.where((s) => s != favorites && !(s is Category && s.applications.isEmpty)).toList();
 
