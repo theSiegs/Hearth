@@ -179,7 +179,7 @@ void main() {
       final candidates = searcher.findCandidates([nodeFrom, nodeAbove, nodeBelow], nodeFrom);
 
       expect(candidates.length, 1);
-      expect(candidates.first.node, nodeAbove);
+      expect(candidates.first, nodeAbove);
     });
 
     testWidgets('findCandidates down', (WidgetTester tester) async {
@@ -204,7 +204,7 @@ void main() {
       final candidates = searcher.findCandidates([nodeFrom, nodeAbove, nodeBelow], nodeFrom);
 
       expect(candidates.length, 1);
-      expect(candidates.first.node, nodeBelow);
+      expect(candidates.first, nodeBelow);
     });
 
     testWidgets('findCandidates left', (WidgetTester tester) async {
@@ -231,7 +231,7 @@ void main() {
       final candidates = searcher.findCandidates([nodeFrom, nodeLeft, nodeRight, nodeLeftDiffRow], nodeFrom);
 
       expect(candidates.length, 1);
-      expect(candidates.first.node, nodeLeft);
+      expect(candidates.first, nodeLeft);
     });
 
     testWidgets('findCandidates right', (WidgetTester tester) async {
@@ -258,7 +258,7 @@ void main() {
       final candidates = searcher.findCandidates([nodeFrom, nodeLeft, nodeRight, nodeRightDiffRow], nodeFrom);
 
       expect(candidates.length, 1);
-      expect(candidates.first.node, nodeRight);
+      expect(candidates.first, nodeRight);
     });
 
     testWidgets('findBestFocusNode down', (WidgetTester tester) async {
@@ -286,7 +286,7 @@ void main() {
       );
 
       final searcher = NodeSearcher(TraversalDirection.down);
-      final candidatesNodes = toCandidateNodes([nodeWayBelow, nodeBelowLeft, nodeBelowRight, nodeBelowCenter]);
+      final candidatesNodes = [nodeWayBelow, nodeBelowLeft, nodeBelowRight, nodeBelowCenter];
       final best = searcher.findBestFocusNode(candidatesNodes, nodeFrom);
 
       expect(best, nodeBelowCenter);
@@ -317,7 +317,7 @@ void main() {
       );
 
       final searcher = NodeSearcher(TraversalDirection.up);
-      final candidatesNodes = toCandidateNodes([nodeWayAbove, nodeAboveLeft, nodeAboveRight, nodeAboveCenter]);
+      final candidatesNodes = [nodeWayAbove, nodeAboveLeft, nodeAboveRight, nodeAboveCenter];
       final best = searcher.findBestFocusNode(candidatesNodes, nodeFrom);
 
       expect(best, nodeAboveCenter);
@@ -342,7 +342,7 @@ void main() {
       );
 
       final searcher = NodeSearcher(TraversalDirection.right);
-      final candidatesNodes = toCandidateNodes([nodeFarRight, nodeRight]);
+      final candidatesNodes = [nodeFarRight, nodeRight];
       final best = searcher.findBestFocusNode(candidatesNodes, nodeFrom);
 
       expect(best, nodeRight);
@@ -367,7 +367,7 @@ void main() {
       );
 
       final searcher = NodeSearcher(TraversalDirection.left);
-      final candidatesNodes = toCandidateNodes([nodeFarLeft, nodeLeft]);
+      final candidatesNodes = [nodeFarLeft, nodeLeft];
       final best = searcher.findBestFocusNode(candidatesNodes, nodeFrom);
 
       expect(best, nodeLeft);

@@ -21,13 +21,12 @@ class RowByRowTraversalPolicy extends FocusTraversalPolicy with DirectionalFocus
     }
 
     NodeSearcher searcher = NodeSearcher(direction);
-    List<CandidateNode> candidates = searcher.findCandidates(nodes, currentNode);
+    List<FocusNode> candidates = searcher.findCandidates(nodes, currentNode);
     if (candidates.isEmpty) {
       if (direction == TraversalDirection.left || direction == TraversalDirection.right) {
         return false;
       }
-      // WHY: Fallback for off-screen nodes. If geometric search fails (e.g., lower/higher row 
-      // is not yet laid out/rendered in viewport), fallback to widget order traversal to untrap focus.
+      // Rows not laid out yet have no geometry: fall back to widget order.
       return _fallbackPolicy.inDirection(currentNode, direction) || super.inDirection(currentNode, direction);
     }
     FocusNode nextNode = searcher.findBestFocusNode(candidates, currentNode);
@@ -42,7 +41,7 @@ class NodeSearcher {
   NodeSearcher(this.directionToSearch);
 
   /// should be called first
-  List<CandidateNode> findCandidates(List<FocusNode> nodes, FocusNode from) {
+  List<FocusNode> findCandidates(List<FocusNode> nodes, FocusNode from) {
     List<FocusNode> copy = List.from(nodes, growable: true);
 
     switch (directionToSearch) {
@@ -59,12 +58,10 @@ class NodeSearcher {
         copy.removeWhere((element) => element.isRightToOrEquals(from) || !element.isOnTheSameRow(from));
         break;
     }
-    return toCandidateNodes(copy);
+    return copy;
   }
 
-  FocusNode findBestFocusNode(List<CandidateNode> nodes, FocusNode from) {
-    List<FocusNode> candidates = toFocusNodes(nodes);
-
+  FocusNode findBestFocusNode(List<FocusNode> candidates, FocusNode from) {
     return candidates.reduce((bestNode, challenger) {
       if (directionToSearch == TraversalDirection.down && challenger.isAbove(bestNode)) {
         return challenger;
@@ -83,18 +80,6 @@ class NodeSearcher {
     });
   }
 }
-
-/// An internal object to use the [NodeSearcher] class as expected
-class CandidateNode {
-  final FocusNode node;
-
-  CandidateNode(this.node);
-}
-
-/// Some conversion utilities used internally
-List<CandidateNode> toCandidateNodes(List<FocusNode> nodes) => nodes.map((e) => CandidateNode(e)).toList();
-
-List<FocusNode> toFocusNodes(List<CandidateNode> nodes) => nodes.map((e) => e.node).toList();
 
 /// A few extension methods to the [FocusNode] to be able to compare their
 /// respective position easily.
