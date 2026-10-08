@@ -64,7 +64,7 @@ class WallpaperPanelPage extends StatelessWidget {
               autofocus: true,
               leading: const Icon(Icons.refresh),
               title: const Text("Refresh Now"),
-              onPressed: () => wallpaperService.refreshBingWallpaper(force: true),
+              onPressed: () => wallpaperService.refreshBingWallpaper(),
             ),
             if (wallpaperService.bingWallpaperError)
               const Padding(
