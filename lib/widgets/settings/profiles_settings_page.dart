@@ -54,20 +54,16 @@ class ProfilesSettingsPage extends StatelessWidget {
                 ),
                 // No PIN of its own: in a kids profile, Settings already took the parent PIN to get here, and
                 // grown-up profiles are only reached past Google TV's PIN.
-                FocusableSettingsTile(
+                if (!locked) FocusableSettingsTile(
                   leading: const Icon(Icons.switch_account),
                   title: Text("Profile Pairing", style: textTheme.bodyMedium),
-                  trailing: lockedTrailing(context, locked: locked),
-                  onPressed: () => openLocked(context, ProfilePairingPage.routeName),
+                  onPressed: () => Navigator.of(context).pushNamed(ProfilePairingPage.routeName),
                 ),
-                FocusableSettingsTile(
+                if (!locked) FocusableSettingsTile(
                   leading: const Icon(Icons.lock_outline),
                   title: Text("Parent PIN", style: textTheme.bodyMedium),
-                  trailing: lockedTrailing(context,
-                      locked: locked, trailing: Text(hasPin ? "On" : "Off", style: textTheme.bodySmall)),
-                  onPressed: () async {
-                    if (await unlockSettings(context) && context.mounted) await _editParentPin(context);
-                  },
+                  trailing: Text(hasPin ? "On" : "Off", style: textTheme.bodySmall),
+                  onPressed: () => _editParentPin(context),
                 ),
               ],
             ),
