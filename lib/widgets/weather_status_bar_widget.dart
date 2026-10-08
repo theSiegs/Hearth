@@ -59,6 +59,7 @@ class _WeatherStatusBarWidgetState extends State<WeatherStatusBarWidget> {
                 onFocusChange: (hasFocus) => setState(() => _focused = hasFocus),
                 child: InkWell(
                   onTap: () => weatherService.openBreezyWeather(),
+                  canRequestFocus: false,
                   borderRadius: BorderRadius.circular(14),
                   focusColor: Colors.transparent,
                   child: AnimatedContainer(
