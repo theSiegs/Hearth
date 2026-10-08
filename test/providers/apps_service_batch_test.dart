@@ -5,6 +5,7 @@ import 'package:mockito/mockito.dart';
 import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:drift/drift.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../mock_channel.dart';
 import '../mocks.mocks.dart';
@@ -15,13 +16,14 @@ void main() {
   late AppsService appsService;
 
   setUp(() async {
+    SharedPreferences.setMockInitialValues({});
     database = FLauncherDatabase.inMemory();
     mockChannel = mockChannelForAppsService();
 
     // Minimal mock for getApplications to avoid crash in _refreshState
     when(mockChannel.getApplications()).thenAnswer((_) async => []);
 
-    appsService = AppsService(mockChannel, database);
+    appsService = AppsService(mockChannel, database, await SharedPreferences.getInstance());
     // Wait for initialization
     while (!appsService.initialized) {
       await Future.delayed(Duration(milliseconds: 10));

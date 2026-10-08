@@ -76,9 +76,10 @@ class CompanionUpdater {
   static const String _userAgent = "Hearth-CompanionApps";
 
   final FLauncherChannel _channel;
+  final SharedPreferences _sharedPreferences;
   Timer? _timer;
 
-  CompanionUpdater(this._channel);
+  CompanionUpdater(this._channel, this._sharedPreferences);
 
   /// Starts the background checks (first a couple of minutes after Hearth starts, so it never slows the start).
   void start() {
@@ -93,24 +94,21 @@ class CompanionUpdater {
 
   /// Whether automatic updates are on: the saved choice, or by default whether Hearth installed HearthTube.
   Future<bool> autoUpdateEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getBool(autoUpdateKey);
+    final saved = _sharedPreferences.getBool(autoUpdateKey);
     return saved ?? await _channel.isInstalledByHearth(companionApps.first.packageName);
   }
 
   Future<void> setAutoUpdate(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(autoUpdateKey, enabled);
+    await _sharedPreferences.setBool(autoUpdateKey, enabled);
     await _channel.companionSettingsChanged();
   }
 
   Future<void> _maybeCheck() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final last = prefs.getInt(_lastCheckKey) ?? 0;
+      final last = _sharedPreferences.getInt(_lastCheckKey) ?? 0;
       if (DateTime.now().millisecondsSinceEpoch - last < _checkEvery.inMilliseconds) return;
       if (!await autoUpdateEnabled()) return;
-      await prefs.setInt(_lastCheckKey, DateTime.now().millisecondsSinceEpoch);
+      await _sharedPreferences.setInt(_lastCheckKey, DateTime.now().millisecondsSinceEpoch);
       for (final app in companionApps) {
         await _autoUpdate(app);
       }

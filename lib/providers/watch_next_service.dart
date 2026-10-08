@@ -24,7 +24,10 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
   /// The time "now" for hiding old entries (tests fix it).
   final DateTime Function() _clock;
 
-  WatchNextService(this._channel, {DateTime Function()? clock}) : _clock = clock ?? DateTime.now {
+  final SharedPreferences _sharedPreferences;
+
+  WatchNextService(this._channel, this._sharedPreferences, {DateTime Function()? clock})
+      : _clock = clock ?? DateTime.now {
     WidgetsBinding.instance.addObserver(this);
     _init();
   }
@@ -100,13 +103,12 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
   /// Records the active profile as the owner of entries that are new or were watched again since last time.
   Future<void> _trackOwners(List<WatchNextProgram> programs) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
       if (!_ownershipLoaded) {
-        final raw = prefs.getString(_ownershipKey);
+        final raw = _sharedPreferences.getString(_ownershipKey);
         _ownership = raw == null ? {} : (jsonDecode(raw) as Map).cast<String, dynamic>();
         _ownershipLoaded = true;
         if (raw == null) {
-          await prefs.remove("watch_next_owners"); // drop the v1 store
+          await _sharedPreferences.remove("watch_next_owners"); // drop the v1 store
           // First run: what's already there predates tracking, so it has no owner.
           for (final p in programs) {
             _ownership[_key(p)] = {"owner": null, "t": p.lastEngagementTime};
@@ -135,7 +137,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
       final before = _ownership.length;
       // Only the owner's own list says which of its entries are gone; another profile's (from its agent) doesn't
       if (!programs.any((p) => p.profileOwned)) _ownership.removeWhere((key, _) => !keys.contains(key));
-      if (changed || _ownership.length != before) await prefs.setString(_ownershipKey, jsonEncode(_ownership));
+      if (changed || _ownership.length != before) await _sharedPreferences.setString(_ownershipKey, jsonEncode(_ownership));
     } catch (e) {
       log('Failed to track Continue Watching owners', name: 'WatchNextService', error: e);
     }

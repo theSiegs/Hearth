@@ -41,6 +41,7 @@ class AppsService extends ChangeNotifier {
 
   final FLauncherChannel _fLauncherChannel;
   final FLauncherDatabase _database;
+  final SharedPreferences _prefs;
 
   bool _initialized = false;
   StreamSubscription? _appsChangedSubscription;
@@ -57,12 +58,6 @@ class AppsService extends ChangeNotifier {
   void _invalidateCategoryCache() {
     _categoriesByNameCache = null;
     _fallbackCategoryCache = null;
-  }
-
-  SharedPreferences? _prefs;
-  Future<SharedPreferences> get _prefsAsync async {
-    _prefs ??= await SharedPreferences.getInstance();
-    return _prefs!;
   }
 
   bool get initialized => _initialized;
@@ -90,7 +85,7 @@ class AppsService extends ChangeNotifier {
       .map((category) => category.unmodifiable())
       .toList(growable: false);
 
-  AppsService(this._fLauncherChannel, this._database) {
+  AppsService(this._fLauncherChannel, this._database, this._prefs) {
     _init();
   }
 
@@ -263,9 +258,8 @@ class AppsService extends ChangeNotifier {
 
   /// One-time migration: moves "TV Apps" above "Non-TV Apps".
   Future<void> _ensureTvAppsSectionOrder() async {
-    final prefs = await _prefsAsync;
     const migrationKey = "tv_apps_section_order_default_v1";
-    if (prefs.getBool(migrationKey) == true) {
+    if (_prefs.getBool(migrationKey) == true) {
       return;
     }
 
@@ -293,7 +287,7 @@ class AppsService extends ChangeNotifier {
       notifyListeners();
     }
 
-    await prefs.setBool(migrationKey, true);
+    await _prefs.setBool(migrationKey, true);
   }
 
   Future<void> refreshState() => _refreshState(shouldNotifyListeners: true);
@@ -513,8 +507,7 @@ class AppsService extends ChangeNotifier {
     }
 
     try {
-      final prefs = await _prefsAsync;
-      final customBannerPath = prefs.getString('custom_banner_$packageName');
+      final customBannerPath = _prefs.getString('custom_banner_$packageName');
       if (customBannerPath != null) {
         final file = File(customBannerPath);
         if (await file.exists()) {
@@ -525,8 +518,7 @@ class AppsService extends ChangeNotifier {
       }
     } on FileSystemException {
       // File was deleted between check and read - clear stale reference
-      final prefs = await _prefsAsync;
-      await prefs.remove('custom_banner_$packageName');
+      await _prefs.remove('custom_banner_$packageName');
     } catch (e) {
       // The app's own banner is used instead
       developer.log("Couldn't read the custom banner of $packageName", name: "AppsService", error: e);
@@ -540,8 +532,7 @@ class AppsService extends ChangeNotifier {
   }
 
   Future<void> setCustomAppBanner(String packageName, String imagePath) async {
-    final prefs = await _prefsAsync;
-    await prefs.setString('custom_banner_$packageName', imagePath);
+    await _prefs.setString('custom_banner_$packageName', imagePath);
     _bannerCache.remove(packageName);
     notifyListeners();
   }
@@ -559,8 +550,7 @@ class AppsService extends ChangeNotifier {
   }
 
   Future<void> removeCustomAppBanner(String packageName) async {
-    final prefs = await _prefsAsync;
-    final customBannerPath = prefs.getString('custom_banner_$packageName');
+    final customBannerPath = _prefs.getString('custom_banner_$packageName');
     if (customBannerPath != null) {
       try {
         await File(customBannerPath).delete();
@@ -569,14 +559,13 @@ class AppsService extends ChangeNotifier {
         developer.log("Couldn't delete the custom banner of $packageName", name: "AppsService", error: e);
       }
     }
-    await prefs.remove('custom_banner_$packageName');
+    await _prefs.remove('custom_banner_$packageName');
     _bannerCache.remove(packageName);
     notifyListeners();
   }
 
   Future<bool> hasCustomBanner(String packageName) async {
-    final prefs = await _prefsAsync;
-    return prefs.containsKey('custom_banner_$packageName');
+    return _prefs.containsKey('custom_banner_$packageName');
   }
 
   App? getApp(String packageName) => _applications[packageName];

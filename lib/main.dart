@@ -106,7 +106,7 @@ Future<void> main() async {
                 BackupService(fLauncherDatabase, sharedPreferences)..start(context.read<SettingsService>()),
             dispose: (_, backupService) => backupService.dispose(),
             lazy: false),
-        ChangeNotifierProvider(create: (_) => AppsService(fLauncherChannel, fLauncherDatabase)),
+        ChangeNotifierProvider(create: (_) => AppsService(fLauncherChannel, fLauncherDatabase, sharedPreferences)),
         ChangeNotifierProvider(create: (context) => LauncherState()..refresh(context.read<AppsService>())),
         ChangeNotifierProvider(create: (_) => NetworkService(fLauncherChannel)),
         ChangeNotifierProvider(
@@ -116,8 +116,8 @@ Future<void> main() async {
             }
         ),
         ChangeNotifierProvider(create: (_) => TvInputsService(fLauncherChannel)),
-        ChangeNotifierProvider(create: (_) => NotificationsService(fLauncherChannel)),
-        ChangeNotifierProvider(create: (_) => WatchNextService(fLauncherChannel)),
+        ChangeNotifierProvider(create: (_) => NotificationsService(fLauncherChannel, sharedPreferences)),
+        ChangeNotifierProvider(create: (_) => WatchNextService(fLauncherChannel, sharedPreferences)),
         ChangeNotifierProvider(create: (_) => WeatherService(fLauncherChannel, sharedPreferences: sharedPreferences)),
         ChangeNotifierProvider(create: (_) => UpdateService(fLauncherChannel)),
         // The home's search (top bar, results row, results grid)
@@ -129,7 +129,7 @@ Future<void> main() async {
         }),
         // Hearth is the TV's updater for its companion apps (checks in the background)
         Provider<CompanionUpdater>(
-            create: (_) => CompanionUpdater(fLauncherChannel)..start(),
+            create: (_) => CompanionUpdater(fLauncherChannel, sharedPreferences)..start(),
             dispose: (_, updater) => updater.dispose(),
             lazy: false),
         ChangeNotifierProvider(

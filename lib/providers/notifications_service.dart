@@ -50,9 +50,9 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
   bool _initialized = false;
   StreamSubscription? _subscription;
   int _refreshCount = 0;
-  SharedPreferences? _prefs;
+  final SharedPreferences _prefs;
 
-  NotificationsService(this._channel) {
+  NotificationsService(this._channel, this._prefs) {
     _init();
     WidgetsBinding.instance.addObserver(this);
   }
@@ -71,12 +71,11 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _init() async {
-    _prefs = await SharedPreferences.getInstance();
-    _systemPopupEnabled = _prefs?.getBool('system_notifications_popup') ?? false;
-    _hidePersistentNotifications = _prefs?.getBool('hide_persistent_notifications') ?? false;
-    final blockedList = _prefs?.getStringList('blocked_notification_packages') ?? [];
+    _systemPopupEnabled = _prefs.getBool('system_notifications_popup') ?? false;
+    _hidePersistentNotifications = _prefs.getBool('hide_persistent_notifications') ?? false;
+    final blockedList = _prefs.getStringList('blocked_notification_packages') ?? [];
     _blockedPackages = blockedList.toSet();
-    _hiddenPersistentKeys = (_prefs?.getStringList(_hiddenPersistentKeysPref) ?? []).toSet();
+    _hiddenPersistentKeys = (_prefs.getStringList(_hiddenPersistentKeysPref) ?? []).toSet();
 
     _hasPermission = await _channel.checkNotificationListenerPermission();
     _hasOverlayPermission = await _channel.checkOverlayPermission();
@@ -125,7 +124,7 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
     final activeKeys = list.map((item) => item['key']).whereType<String>().toSet();
     if (_hiddenPersistentKeys.any((key) => !activeKeys.contains(key))) {
       _hiddenPersistentKeys = _hiddenPersistentKeys.intersection(activeKeys);
-      _prefs?.setStringList(_hiddenPersistentKeysPref, _hiddenPersistentKeys.toList());
+      _prefs.setStringList(_hiddenPersistentKeysPref, _hiddenPersistentKeys.toList());
     }
     _processNotifications();
   }
@@ -193,14 +192,14 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> setHidePersistentNotifications(bool hide) async {
     _hidePersistentNotifications = hide;
-    await _prefs?.setBool('hide_persistent_notifications', hide);
+    await _prefs.setBool('hide_persistent_notifications', hide);
     _processNotifications();
   }
 
   Future<void> blockPackage(String packageName) async {
     if (!_blockedPackages.contains(packageName)) {
       _blockedPackages.add(packageName);
-      await _prefs?.setStringList('blocked_notification_packages', _blockedPackages.toList());
+      await _prefs.setStringList('blocked_notification_packages', _blockedPackages.toList());
       _processNotifications();
     }
   }
@@ -208,7 +207,7 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> unblockPackage(String packageName) async {
     if (_blockedPackages.contains(packageName)) {
       _blockedPackages.remove(packageName);
-      await _prefs?.setStringList('blocked_notification_packages', _blockedPackages.toList());
+      await _prefs.setStringList('blocked_notification_packages', _blockedPackages.toList());
       _processNotifications();
     }
   }
@@ -216,7 +215,7 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> unblockAllPackages() async {
     if (_blockedPackages.isNotEmpty) {
       _blockedPackages.clear();
-      await _prefs?.setStringList('blocked_notification_packages', []);
+      await _prefs.setStringList('blocked_notification_packages', []);
       _processNotifications();
     }
   }
@@ -243,7 +242,7 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> setSystemPopupEnabled(bool enabled) async {
     _systemPopupEnabled = enabled;
-    await _prefs?.setBool('system_notifications_popup', enabled);
+    await _prefs.setBool('system_notifications_popup', enabled);
     notifyListeners();
   }
 
@@ -273,7 +272,7 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _hidePersistent(List<String> keys) async {
     _hiddenPersistentKeys.addAll(keys);
-    await _prefs?.setStringList(_hiddenPersistentKeysPref, _hiddenPersistentKeys.toList());
+    await _prefs.setStringList(_hiddenPersistentKeysPref, _hiddenPersistentKeys.toList());
     _processNotifications();
   }
 
