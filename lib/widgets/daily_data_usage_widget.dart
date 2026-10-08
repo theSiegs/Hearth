@@ -3,8 +3,27 @@ import 'package:flauncher/providers/settings_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class DailyDataUsageWidget extends StatelessWidget {
+class DailyDataUsageWidget extends StatefulWidget {
   const DailyDataUsageWidget({super.key});
+
+  @override
+  State<DailyDataUsageWidget> createState() => _DailyDataUsageWidgetState();
+}
+
+class _DailyDataUsageWidgetState extends State<DailyDataUsageWidget> {
+  Future<int>? _usage;
+  (String, int)? _usageFor;
+
+  /// Asks the platform again only for a new period, or after the service's own poll found new numbers;
+  /// the service also notifies for every network change.
+  Future<int> _usageFuture(NetworkService networkService, String period) {
+    final usageFor = (period, networkService.dailyDataUsage);
+    if (_usage == null || usageFor != _usageFor) {
+      _usageFor = usageFor;
+      _usage = networkService.getDataUsageForPeriod(period);
+    }
+    return _usage!;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +53,7 @@ class DailyDataUsageWidget extends StatelessWidget {
         }
 
         return FutureBuilder<int>(
-          future: networkService.getDataUsageForPeriod(period),
+          future: _usageFuture(networkService, period),
           builder: (context, snapshot) {
             final usage = snapshot.data ?? networkService.dailyDataUsage;
             final usageString = _formatBytes(usage);
