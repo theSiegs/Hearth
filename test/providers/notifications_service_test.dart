@@ -14,6 +14,10 @@ void main() {
   late NotificationsService notificationsService;
   late StreamController<List<Map<dynamic, dynamic>>> streamController;
 
+  // What the notification listener sends for a notification the user can dismiss
+  Map<String, Object> clearable(String packageName, String key) =>
+      {'key': key, 'packageName': packageName, 'title': 'Title $key', 'text': '', 'isClearable': true};
+
   setUp(() {
     SharedPreferencesStorePlatform.instance = InMemorySharedPreferencesStore.empty();
 
@@ -53,7 +57,7 @@ void main() {
 
       expect(notificationsService.initialized, true);
       expect(notificationsService.hasPermission, false);
-      expect(notificationsService.notificationCounts, isEmpty);
+      expect(notificationsService.notifications, isEmpty);
       verify(mockChannel.checkNotificationListenerPermission()).called(1);
       verifyNever(mockChannel.getActiveNotifications());
       verifyNever(mockChannel.addNotificationsChangedListener(any));
@@ -64,8 +68,8 @@ void main() {
           .thenAnswer((_) async => true);
       when(mockChannel.getActiveNotifications())
           .thenAnswer((_) async => [
-                {'packageName': 'com.android.settings', 'count': 2},
-                {'packageName': 'com.leanbitlab.ltvL', 'count': 5},
+                for (var i = 0; i < 2; i++) clearable('com.android.settings', 'settings_$i'),
+                for (var i = 0; i < 5; i++) clearable('com.leanbitlab.ltvL', 'ltv_$i'),
               ]);
 
       notificationsService = NotificationsService(mockChannel);
@@ -146,7 +150,7 @@ void main() {
 
       // Push stream event
       streamController.add([
-        {'packageName': 'com.android.settings', 'count': 1},
+        clearable('com.android.settings', 'settings_0'),
       ]);
       await Future.delayed(Duration.zero);
 
@@ -159,7 +163,7 @@ void main() {
           .thenAnswer((_) async => true);
       when(mockChannel.getActiveNotifications())
           .thenAnswer((_) async => [
-                {'packageName': 'com.android.settings', 'count': 1},
+                clearable('com.android.settings', 'settings_0'),
               ]);
 
       notificationsService = NotificationsService(mockChannel);
@@ -174,7 +178,7 @@ void main() {
 
       // Push same stream event
       streamController.add([
-        {'packageName': 'com.android.settings', 'count': 1},
+        clearable('com.android.settings', 'settings_0'),
       ]);
       await Future.delayed(Duration.zero);
 
@@ -341,10 +345,10 @@ void main() {
       }
 
       expect(notificationsService.notifications.length, 3);
-      expect(notificationsService.isPackageBlocked('com.sony.dtv'), false);
+      expect(notificationsService.blockedPackages.contains('com.sony.dtv'), false);
 
       await notificationsService.blockPackage('com.sony.dtv');
-      expect(notificationsService.isPackageBlocked('com.sony.dtv'), true);
+      expect(notificationsService.blockedPackages.contains('com.sony.dtv'), true);
       expect(notificationsService.notifications.length, 2);
       expect(notificationsService.notifications.any((n) => n.packageName == 'com.sony.dtv'), false);
 
