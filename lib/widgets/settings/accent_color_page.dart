@@ -46,9 +46,8 @@ class AccentColorPage extends StatelessWidget {
 
   const AccentColorPage({super.key});
 
-  Color _hexToColor(String hex) {
-    return Color(int.parse('FF$hex', radix: 16));
-  }
+  /// The saved accent color comes from SettingsService.accentColor; this is only for the presets above.
+  static Color _presetColor(String hex) => Color(int.parse('FF$hex', radix: 16));
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +55,7 @@ class AccentColorPage extends StatelessWidget {
     return Consumer<SettingsService>(
       builder: (context, settingsService, _) {
         final currentColorHex = settingsService.accentColorHex;
-        final currentColor = _hexToColor(currentColorHex);
+        final currentColor = settingsService.accentColor;
 
         return Column(
           children: [
@@ -77,7 +76,7 @@ class AccentColorPage extends StatelessWidget {
                   final isSelected = currentColorHex == hex;
 
                   return _ColorTile(
-                    color: _hexToColor(hex),
+                    color: _presetColor(hex),
                     name: name,
                     isSelected: isSelected,
                     autofocus: index == 0,

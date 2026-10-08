@@ -129,7 +129,7 @@ void main() {
 
   testWidgets("System has About", (tester) async {
     final settingsService = _settings();
-    when(settingsService.accentColorHex).thenReturn("7C4DFF");
+    when(settingsService.accentColor).thenReturn(const Color(0xFF7C4DFF));
     PackageInfoPlatform.instance = _MockPackageInfoPlatform();
     await _pumpWidgetWithProviders(tester, settingsService, _apps(), home: const GeneralSettingsPage());
 
