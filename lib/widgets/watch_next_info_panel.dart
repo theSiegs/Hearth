@@ -23,6 +23,7 @@ import 'package:flauncher/models/watch_next_program.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
+import 'package:flauncher/widgets/panel_action_button.dart';
 import 'package:flauncher/widgets/side_panel_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -142,66 +143,41 @@ class _WatchNextInfoPanelState extends State<WatchNextInfoPanel> {
                 children: [
                   // 1. Remove from Continue Watching
                   Consumer<SettingsService>(
-                    builder: (context, settingsService, _) => TextButton(
+                    builder: (context, settingsService, _) => PanelActionButton(
+                      icon: Icons.visibility_off_outlined,
+                      label: 'Remove from Continue Watching',
                       onPressed: () => _safeAction(() async {
                         Navigator.of(context).pop();
                         await settingsService.hideWatchNextProgram(widget.program.id);
                         await widget.watchNextService.deleteProgram(widget.program);
                       }),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.visibility_off_outlined),
-                          Container(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Remove from Continue Watching',
-                              style: theme.textTheme.bodyMedium,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
                   // 2. Hide all from this app
                   Consumer<SettingsService>(
-                    builder: (context, settingsService, _) => TextButton(
+                    builder: (context, settingsService, _) => PanelActionButton(
+                      icon: Icons.block,
+                      label: 'Hide all from $appName',
                       onPressed: () => _safeAction(() async {
                         Navigator.of(context).pop();
                         await settingsService.hideWatchNextPackage(widget.program.packageName);
                         await widget.watchNextService.refresh();
                       }),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.block),
-                          Container(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Hide all from $appName',
-                              style: theme.textTheme.bodyMedium,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
                   // 3. Play / Resume
-                  TextButton(
+                  PanelActionButton(
+                    icon: Icons.play_arrow_rounded,
+                    label: 'Play / Resume',
                     onPressed: () => _safeAction(() {
                       Navigator.of(context).pop();
                       widget.watchNextService.launch(widget.program);
                     }),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.play_arrow_rounded),
-                        Container(width: 8),
-                        Text('Play / Resume', style: theme.textTheme.bodyMedium),
-                      ],
-                    ),
                   ),
                   // 4. Open App
-                  TextButton(
+                  PanelActionButton(
+                    icon: Icons.open_in_new_rounded,
+                    label: 'Open $appName',
                     onPressed: () => _safeAction(() async {
                       Navigator.of(context).pop();
                       if (app != null) {
@@ -210,35 +186,17 @@ class _WatchNextInfoPanelState extends State<WatchNextInfoPanel> {
                         await widget.watchNextService.launch(widget.program);
                       }
                     }),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.open_in_new_rounded),
-                        Container(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Open $appName',
-                            style: theme.textTheme.bodyMedium,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                   // 5. App Info
-                  TextButton(
+                  PanelActionButton(
+                    icon: Icons.info_outline_rounded,
+                    label: 'App Info',
                     onPressed: () => _safeAction(() async {
                       Navigator.of(context).pop();
                       if (app != null) {
                         await widget.appsService.openAppInfo(app);
                       }
                     }),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.info_outline_rounded),
-                        Container(width: 8),
-                        Text('App Info', style: theme.textTheme.bodyMedium),
-                      ],
-                    ),
                   ),
                 ],
               ),

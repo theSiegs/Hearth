@@ -22,6 +22,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/widgets/add_to_category_dialog.dart';
+import 'package:flauncher/widgets/panel_action_button.dart';
 import 'package:flauncher/widgets/side_panel_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
@@ -107,14 +108,9 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                 child: Column(
                  children: [
                    // Add to Category button (First as requested)
-                   TextButton(
-                     child: Row(
-                       children: [
-                         const Icon(Icons.add_box_outlined),
-                         Container(width: 8),
-                         Text('Add to Category', style: Theme.of(context).textTheme.bodyMedium),
-                       ],
-                     ),
+                   PanelActionButton(
+                     icon: Icons.add_box_outlined,
+                     label: 'Add to Category',
                      onPressed: () async {
                        Navigator.of(context).pop(ApplicationInfoPanelResult.none);
                        await showDialog(
@@ -125,24 +121,14 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                    ),
                    // Reorder button (Second as requested)
                    if (widget.category?.sort == CategorySort.manual)
-                     TextButton(
-                       child: Row(
-                         children: [
-                           const Icon(Icons.open_with),
-                           Container(width: 8),
-                           Text(localizations.reorder, style: Theme.of(context).textTheme.bodyMedium),
-                         ],
-                       ),
+                     PanelActionButton(
+                       icon: Icons.open_with,
+                       label: localizations.reorder,
                        onPressed: () => Navigator.of(context).pop(ApplicationInfoPanelResult.reorderApp),
                      ),
-                   TextButton(
-                     child: Row(
-                       children: [
-                         const Icon(Icons.open_in_new),
-                         Container(width: 8),
-                         Text(localizations.open, style: Theme.of(context).textTheme.bodyMedium),
-                       ],
-                     ),
+                   PanelActionButton(
+                     icon: Icons.open_in_new,
+                     label: localizations.open,
                      onPressed: () async {
                        await context.read<AppsService>().launchApp(widget.application);
                        Navigator.of(context).pop(ApplicationInfoPanelResult.none);
@@ -153,20 +139,9 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                      builder: (context) {
                        final appsService = context.watch<AppsService>();
                        final isInFavorites = appsService.isAppInFavorites(widget.application);
-                       return TextButton(
-                         child: Row(
-                           children: [
-                             Icon(isInFavorites ? Icons.star : Icons.star_border),
-                             Container(width: 8),
-                             Flexible(
-                               child: Text(
-                                 isInFavorites ? 'Remove from Fav' : 'Add to Fav',
-                                 style: Theme.of(context).textTheme.bodyMedium,
-                                 overflow: TextOverflow.ellipsis,
-                               ),
-                             ),
-                           ],
-                         ),
+                       return PanelActionButton(
+                         icon: isInFavorites ? Icons.star : Icons.star_border,
+                         label: isInFavorites ? 'Remove from Fav' : 'Add to Fav',
                          onPressed: () async {
                            await appsService.toggleFavorite(widget.application);
                            Navigator.of(context).pop(ApplicationInfoPanelResult.none);
@@ -174,14 +149,9 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                        );
                      },
                    ),
-                   TextButton(
-                     child: Row(
-                       children: [
-                         Icon(widget.application.hidden ? Icons.visibility : Icons.visibility_off_outlined),
-                         Container(width: 8),
-                         Text(widget.application.hidden ? localizations.show : localizations.hide, style: Theme.of(context).textTheme.bodyMedium),
-                       ],
-                     ),
+                   PanelActionButton(
+                     icon: widget.application.hidden ? Icons.visibility : Icons.visibility_off_outlined,
+                     label: widget.application.hidden ? localizations.show : localizations.hide,
                      onPressed: () async {
                        if (widget.application.hidden) {
                          await context.read<AppsService>().showApplication(widget.application);
@@ -192,21 +162,10 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                      },
                    ),
                    if (widget.category != null)
-                     TextButton(
-                       child: Row(
-                         children: [
-                           const Icon(Icons.delete_sweep_outlined),
-                           Container(width: 8),
-                           Flexible(
-                             child: Text(
-                               localizations.removeFrom(widget.category?.name ?? ''),
-                               style: Theme.of(context).textTheme.bodyMedium,
-                               maxLines: 2,
-                               overflow: TextOverflow.ellipsis,
-                             ),
-                           ),
-                         ],
-                       ),
+                     PanelActionButton(
+                       icon: Icons.delete_sweep_outlined,
+                       label: localizations.removeFrom(widget.category?.name ?? ''),
+                       maxLines: 2,
                        onPressed: () async {
                          final cat = widget.category;
                          if (cat != null) {
@@ -223,14 +182,9 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                        return Column(
                          crossAxisAlignment: CrossAxisAlignment.stretch,
                          children: [
-                           TextButton(
-                             child: Row(
-                               children: [
-                                 const Icon(Icons.image_search),
-                                 Container(width: 8),
-                                 Text('Set Custom Banner', style: Theme.of(context).textTheme.bodyMedium),
-                               ],
-                             ),
+                           PanelActionButton(
+                             icon: Icons.image_search,
+                             label: 'Set Custom Banner',
                              onPressed: () async {
                                try {
                                  final picker = ImagePicker();
@@ -262,14 +216,9 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                              },
                            ),
                            if (hasCustom)
-                             TextButton(
-                               child: Row(
-                                 children: [
-                                   const Icon(Icons.hide_image_outlined),
-                                   Container(width: 8),
-                                   Text('Clear Custom Banner', style: Theme.of(context).textTheme.bodyMedium),
-                                 ],
-                               ),
+                             PanelActionButton(
+                               icon: Icons.hide_image_outlined,
+                               label: 'Clear Custom Banner',
                                onPressed: () async {
                                  try {
                                    await context.read<AppsService>().removeCustomAppBanner(widget.application.packageName);
@@ -293,24 +242,14 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                      }
                    ),
                    const Divider(),
-                   TextButton(
-                     child: Row(
-                       children: [
-                         const Icon(Icons.info_outlined),
-                         Container(width: 8),
-                         Text(localizations.appInfo, style: Theme.of(context).textTheme.bodyMedium),
-                       ],
-                     ),
+                   PanelActionButton(
+                     icon: Icons.info_outlined,
+                     label: localizations.appInfo,
                      onPressed: () => context.read<AppsService>().openAppInfo(widget.application),
                    ),
-                   TextButton(
-                     child: Row(
-                       children: [
-                         const Icon(Icons.delete_outlined),
-                         Container(width: 8),
-                         Text(localizations.uninstall, style: Theme.of(context).textTheme.bodyMedium),
-                       ],
-                     ),
+                   PanelActionButton(
+                     icon: Icons.delete_outlined,
+                     label: localizations.uninstall,
                      onPressed: () async {
                        await context.read<AppsService>().uninstallApp(widget.application);
                        Navigator.of(context).pop(ApplicationInfoPanelResult.none);
