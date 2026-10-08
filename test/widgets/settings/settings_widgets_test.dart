@@ -16,6 +16,7 @@
  */
 
 import 'package:flauncher/providers/apps_service.dart';
+import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flauncher/widgets/settings/app_icon.dart';
 import 'package:flauncher/widgets/settings/blocked_apps_section.dart';
 import 'package:flauncher/widgets/settings/settings_choice_tile.dart';
@@ -58,6 +59,48 @@ void main() {
 
       await tester.tap(find.text("b"));
       expect(picked, "b");
+    });
+  });
+
+  group("RoundedSwitchListTile", () {
+    testWidgets("a press flips the value, and the subtitle sits under the title", (tester) async {
+      final changes = <bool>[];
+      await tester.pumpWidget(_wrap(
+        appsService,
+        RoundedSwitchListTile(
+          autofocus: true,
+          value: false,
+          onChanged: changes.add,
+          title: const Text("Update automatically"),
+          subtitle: const Text("Checks daily"),
+          secondary: const Icon(Icons.system_update_outlined),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(Focus.of(tester.element(find.text("Update automatically"))).hasFocus, isTrue);
+      expect(
+        tester.getTopLeft(find.text("Checks daily")).dy,
+        greaterThan(tester.getBottomLeft(find.text("Update automatically")).dy),
+      );
+      await tester.tap(find.text("Update automatically"));
+      expect(changes, [true]);
+    });
+
+    testWidgets("without onChanged a press does nothing and the switch is disabled", (tester) async {
+      await tester.pumpWidget(_wrap(
+        appsService,
+        const RoundedSwitchListTile(
+          value: true,
+          onChanged: null,
+          title: Text("Loading"),
+          secondary: Icon(Icons.hourglass_empty),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text("Loading"));
+      expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
     });
   });
 
