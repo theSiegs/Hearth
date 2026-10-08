@@ -43,7 +43,6 @@ import 'package:flauncher/widgets/continue_watching_row.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/profile_service.dart';
-import 'package:flauncher/l10n/app_localizations.dart';
 
 import 'models/category.dart';
 
@@ -414,9 +413,9 @@ class _FLauncherState extends State<FLauncher> {
               ),
               Consumer<LauncherState>(
                   builder: (_, state, child) => Visibility(
-                      child: child!,
+                      visible: state.launcherVisible,
                       replacement: const Center(child: AlternativeLauncherView()),
-                      visible: state.launcherVisible),
+                      child: child!),
                   child: Scaffold(
                       backgroundColor: Colors.transparent,
                       appBar: FocusAwareAppBar(key: _appBarKey),
@@ -569,9 +568,8 @@ class _FLauncherState extends State<FLauncher> {
                         : (continueWatchingActive ? _recentsUpFromDock : null),
                     child: _swapAnimation(
                       visible: !showRecents && !showSearch && !_topBarFocused,
-                      // Far enough to slide the dock off the bottom of the screen, so it needn't fade too.
-                      // (A fade would paint the dock once, off-screen, and its frosted backdrop would stay
-                      // sampled from there.)
+                      // Slide fully off-screen without fading: a fade would freeze the frosted backdrop's
+                      // off-screen sample.
                       hiddenOffset: const Offset(0, 1.6),
                       fade: false,
                       child: Padding(
@@ -667,7 +665,6 @@ class _FLauncherState extends State<FLauncher> {
       Category category = section as Category;
       Widget categoryWidget;
 
-      // Pass isFirstSection only to the first category found
       bool isFirstSection = !firstCategoryFound;
       if (isFirstSection) firstCategoryFound = true;
 
@@ -693,10 +690,7 @@ class _FLauncherState extends State<FLauncher> {
     }
 
     if (continueWatchingActive && !cwInserted) {
-      final bool isFirstSection = !firstCategoryFound;
-      children.add(ContinueWatchingRow(isFirstSection: isFirstSection));
-      cwInserted = true;
-      firstCategoryFound = true;
+      children.add(ContinueWatchingRow(isFirstSection: !firstCategoryFound));
     }
 
     return Column(children: children);
@@ -750,7 +744,7 @@ class _FLauncherState extends State<FLauncher> {
     );
   }
 
-  /// Starting up: the dock's shape with empty tiles, where the dock will be, instead of a spinner.
+  /// Starting up: empty dock-shaped tiles where the dock will appear.
   Widget _emptyState(BuildContext context) {
     return Align(
       alignment: Alignment.bottomCenter,
