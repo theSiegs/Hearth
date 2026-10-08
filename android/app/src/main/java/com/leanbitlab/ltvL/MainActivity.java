@@ -1074,7 +1074,7 @@ public class MainActivity extends FlutterActivity {
         try {
             // UserHandle.getIdentifier() is @hide, so reach it reflectively; fall back to parsing "UserHandle{N}".
             return (int) android.os.UserHandle.class.getMethod("getIdentifier").invoke(handle);
-        } catch (Throwable t) {
+        } catch (Exception e) {
             java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d+").matcher(String.valueOf(handle));
             return m.find() ? Integer.parseInt(m.group()) : -1;
         }
@@ -1250,7 +1250,7 @@ public class MainActivity extends FlutterActivity {
                 return true;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "Couldn't open the notification access settings", e);
         }
         return false;
     }
@@ -1285,7 +1285,7 @@ public class MainActivity extends FlutterActivity {
             service.cancelNotification(key);
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "Couldn't dismiss a notification", e);
             return false;
         }
     }
@@ -1299,7 +1299,7 @@ public class MainActivity extends FlutterActivity {
             service.cancelAllNotifications();
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "Couldn't dismiss the notifications", e);
             return false;
         }
     }
@@ -1355,7 +1355,7 @@ public class MainActivity extends FlutterActivity {
                     | Intent.FLAG_GRANT_READ_URI_PERMISSION);
             return tryStartActivity(intent);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "Couldn't install " + path, e);
             return false;
         }
     }
@@ -1384,7 +1384,7 @@ public class MainActivity extends FlutterActivity {
             int rowsDeleted = getContentResolver().delete(uri, null, null);
             return rowsDeleted > 0;
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "Couldn't delete Watch Next program " + id, e);
             return false;
         }
     }
@@ -1399,7 +1399,7 @@ public class MainActivity extends FlutterActivity {
             intent.setSelector(null);
             return openInApp(intent, packageOf(intent));
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "Couldn't open Watch Next program " + intentUri, e);
         }
         return false;
     }
@@ -1541,7 +1541,7 @@ public class MainActivity extends FlutterActivity {
                 Settings.Secure.ACCESSIBILITY_ENABLED
             );
         } catch (Settings.SettingNotFoundException e) {
-            e.printStackTrace();
+            Log.w(TAG, "No accessibility setting", e);
         }
 
         if (accessibilityEnabled == 1) {
@@ -1628,7 +1628,7 @@ public class MainActivity extends FlutterActivity {
                 return true;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "Couldn't open Breezy Weather", e);
         }
         return false;
     }
