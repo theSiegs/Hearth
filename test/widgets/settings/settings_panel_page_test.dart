@@ -20,15 +20,15 @@ import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/widgets/settings/applications_panel_page.dart';
-import 'package:flauncher/widgets/settings/interface_settings_page.dart';
-import 'package:flauncher/widgets/settings/general_settings_page.dart';
-import 'package:flauncher/widgets/settings/display_settings_page.dart';
+import 'package:flauncher/widgets/settings/home_screen_settings_page.dart';
+import 'package:flauncher/widgets/settings/system_settings_page.dart';
+import 'package:flauncher/widgets/settings/tv_power_settings_page.dart';
 import 'package:flauncher/widgets/settings/notifications_settings_page.dart';
 import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
 import 'package:flauncher/widgets/settings/home_assistant_page.dart';
 import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
 import 'package:flauncher/widgets/settings/remote_search_settings_page.dart';
-import 'package:flauncher/widgets/settings/flauncher_about_dialog.dart';
+import 'package:flauncher/widgets/settings/hearth_about_dialog.dart';
 import 'package:flauncher/widgets/settings/settings_panel_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -47,12 +47,12 @@ import '../../mocks.mocks.dart';
 const _rows = {
   "Profiles": ProfilesSettingsPage.routeName,
   "Applications": ApplicationsPanelPage.routeName,
-  "Home screen": InterfaceSettingsPage.routeName,
+  "Home screen": HomeScreenSettingsPage.routeName,
   "Remote & search": RemoteSearchSettingsPage.routeName,
   "Notifications": NotificationsSettingsPage.routeName,
   "Home Assistant": HomeAssistantPage.routeName,
-  "TV & power": DisplaySettingsPage.routeName,
-  "System": GeneralSettingsPage.routeName,
+  "TV & power": TvPowerSettingsPage.routeName,
+  "System": SystemSettingsPage.routeName,
 };
 
 void main() {
@@ -131,7 +131,7 @@ void main() {
     final settingsService = _settings();
     when(settingsService.accentColor).thenReturn(const Color(0xFF7C4DFF));
     PackageInfoPlatform.instance = _MockPackageInfoPlatform();
-    await _pumpWidgetWithProviders(tester, settingsService, _apps(), home: const GeneralSettingsPage());
+    await _pumpWidgetWithProviders(tester, settingsService, _apps(), home: const SystemSettingsPage());
 
     await tester.ensureVisible(find.text("About Hearth"));
     await tester.pumpAndSettle();
@@ -142,7 +142,7 @@ void main() {
 
   testWidgets("TV & power opens Android settings", (tester) async {
     final appsService = _apps();
-    await _pumpWidgetWithProviders(tester, _settings(), appsService, home: const DisplaySettingsPage());
+    await _pumpWidgetWithProviders(tester, _settings(), appsService, home: const TvPowerSettingsPage());
 
     await tester.ensureVisible(find.text("System settings"));
     await tester.pumpAndSettle();

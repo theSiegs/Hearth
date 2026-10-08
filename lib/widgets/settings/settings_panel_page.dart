@@ -17,10 +17,10 @@
  */
 
 import 'package:flauncher/widgets/settings/applications_panel_page.dart';
-import 'package:flauncher/widgets/settings/display_settings_page.dart';
-import 'package:flauncher/widgets/settings/general_settings_page.dart';
+import 'package:flauncher/widgets/settings/tv_power_settings_page.dart';
+import 'package:flauncher/widgets/settings/system_settings_page.dart';
 import 'package:flauncher/widgets/settings/home_assistant_page.dart';
-import 'package:flauncher/widgets/settings/interface_settings_page.dart';
+import 'package:flauncher/widgets/settings/home_screen_settings_page.dart';
 import 'package:flauncher/widgets/settings/notifications_settings_page.dart';
 import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
 import 'package:flauncher/widgets/settings/remote_search_settings_page.dart';
@@ -77,8 +77,8 @@ class SettingsPanelPage extends StatelessWidget {
                   ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.auto_awesome_mosaic_outlined),
-                  title: Text("Home screen", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => Navigator.of(context).pushNamed(InterfaceSettingsPage.routeName),
+                  title: Text(HomeScreenSettingsPage.title, style: Theme.of(context).textTheme.bodyMedium),
+                  onPressed: () => Navigator.of(context).pushNamed(HomeScreenSettingsPage.routeName),
                 ),
                 if (!locked) ...[
                   FocusableSettingsTile(
@@ -98,13 +98,13 @@ class SettingsPanelPage extends StatelessWidget {
                   ),
                   FocusableSettingsTile(
                     leading: const Icon(Icons.tv),
-                    title: Text(DisplaySettingsPage.title, style: Theme.of(context).textTheme.bodyMedium),
-                    onPressed: () => Navigator.of(context).pushNamed(DisplaySettingsPage.routeName),
+                    title: Text(TvPowerSettingsPage.title, style: Theme.of(context).textTheme.bodyMedium),
+                    onPressed: () => Navigator.of(context).pushNamed(TvPowerSettingsPage.routeName),
                   ),
                   FocusableSettingsTile(
                     leading: const Icon(Icons.settings_suggest_outlined),
                     title: Text(localizations.system, style: Theme.of(context).textTheme.bodyMedium),
-                    onPressed: () => Navigator.of(context).pushNamed(GeneralSettingsPage.routeName),
+                    onPressed: () => Navigator.of(context).pushNamed(SystemSettingsPage.routeName),
                   ),
                 ],
                 // A kids profile sees only its own things, and one way in for a parent

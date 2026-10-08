@@ -23,11 +23,11 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'settings_page.dart';
 
 /// The favorites dock and the home screen's labels and focus outline (under Look).
-class AppearancePanelPage extends StatelessWidget {
+class DockLabelsPage extends StatelessWidget {
   static const String routeName = "appearance_panel";
   static const String title = "Dock & labels";
 
-  const AppearancePanelPage({super.key});
+  const DockLabelsPage({super.key});
 
   @override
   Widget build(BuildContext context) {

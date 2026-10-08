@@ -27,11 +27,11 @@ import 'setup_checklist_page.dart';
 import 'settings_page.dart';
 
 /// TV & power: the screensaver, sleeping when idle, and Android's own settings.
-class DisplaySettingsPage extends StatelessWidget {
+class TvPowerSettingsPage extends StatelessWidget {
   static const String routeName = "display_settings_panel";
   static const String title = "TV & power";
 
-  const DisplaySettingsPage({super.key});
+  const TvPowerSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {

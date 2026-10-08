@@ -21,17 +21,17 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'focusable_settings_tile.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'companion_apps_page.dart';
-import 'flauncher_about_dialog.dart';
+import 'hearth_about_dialog.dart';
 import 'setup_checklist_page.dart';
 import 'backup_restore_page.dart';
 import 'app_language_page.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'settings_page.dart';
 
-class GeneralSettingsPage extends StatelessWidget {
+class SystemSettingsPage extends StatelessWidget {
   static const String routeName = "general_settings_panel";
 
-  const GeneralSettingsPage({super.key});
+  const SystemSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {

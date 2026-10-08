@@ -36,11 +36,11 @@ import 'package:flauncher/widgets/settings/back_button_action_page.dart';
 import 'package:flauncher/widgets/settings/date_time_format_page.dart';
 import 'package:flauncher/widgets/settings/app_details_page.dart';
 import 'package:flauncher/widgets/settings/accent_color_page.dart';
-import 'package:flauncher/widgets/settings/misc_panel_page.dart';
-import 'package:flauncher/widgets/settings/interface_settings_page.dart';
-import 'package:flauncher/widgets/settings/general_settings_page.dart';
-import 'package:flauncher/widgets/settings/themes_page.dart';
-import 'package:flauncher/widgets/settings/appearance_panel_page.dart';
+import 'package:flauncher/widgets/settings/animations_sound_page.dart';
+import 'package:flauncher/widgets/settings/home_screen_settings_page.dart';
+import 'package:flauncher/widgets/settings/system_settings_page.dart';
+import 'package:flauncher/widgets/settings/card_style_page.dart';
+import 'package:flauncher/widgets/settings/dock_labels_page.dart';
 import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
 import 'package:flauncher/widgets/settings/settings_lock.dart';
 import 'package:flauncher/widgets/settings/look_settings_page.dart';
@@ -48,7 +48,7 @@ import 'package:flauncher/widgets/settings/remote_search_settings_page.dart';
 import 'package:flauncher/widgets/settings/backup_restore_page.dart';
 import 'package:flauncher/widgets/settings/app_language_page.dart';
 import 'package:flauncher/widgets/settings/blocked_notifications_page.dart';
-import 'package:flauncher/widgets/settings/display_settings_page.dart';
+import 'package:flauncher/widgets/settings/tv_power_settings_page.dart';
 import 'package:flauncher/widgets/settings/notifications_settings_page.dart';
 import 'package:flauncher/widgets/settings/continue_watching_settings_page.dart';
 import 'package:flauncher/widgets/settings/continue_watching_card_size_page.dart';
@@ -96,10 +96,10 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 switch (settings.name) {
                   case SettingsPanelPage.routeName:
                     return _FastPageRoute(builder: (_) => SettingsPanelPage());
-                  case GeneralSettingsPage.routeName:
-                    return _FastPageRoute(builder: (_) => GeneralSettingsPage());
-                  case InterfaceSettingsPage.routeName:
-                    return _FastPageRoute(builder: (_) => InterfaceSettingsPage());
+                  case SystemSettingsPage.routeName:
+                    return _FastPageRoute(builder: (_) => SystemSettingsPage());
+                  case HomeScreenSettingsPage.routeName:
+                    return _FastPageRoute(builder: (_) => HomeScreenSettingsPage());
                   case WallpaperPanelPage.routeName:
                     return _FastPageRoute(builder: (_) => WallpaperPanelPage());
                   case StatusBarPanelPage.routeName:
@@ -119,12 +119,12 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     return _FastPageRoute(builder: (_) => BackButtonActionPage());
                   case DateTimeFormatPage.routeName:
                     return _FastPageRoute(builder: (_) => DateTimeFormatPage());
-                  case MiscPanelPage.routeName:
-                    return _FastPageRoute(builder: (_) => MiscPanelPage());
-                  case ThemesPage.routeName:
-                    return _FastPageRoute(builder: (_) => const ThemesPage());
-                  case AppearancePanelPage.routeName:
-                    return _FastPageRoute(builder: (_) => const AppearancePanelPage());
+                  case AnimationsSoundPage.routeName:
+                    return _FastPageRoute(builder: (_) => AnimationsSoundPage());
+                  case CardStylePage.routeName:
+                    return _FastPageRoute(builder: (_) => const CardStylePage());
+                  case DockLabelsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const DockLabelsPage());
                   case AccentColorPage.routeName:
                     return _FastPageRoute(builder: (_) => AccentColorPage());
                   case ProfilePairingPage.routeName:
@@ -164,8 +164,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     return _FastPageRoute(builder: (_) => const AppLanguagePage());
                   case BlockedNotificationsPage.routeName:
                     return _FastPageRoute(builder: (_) => const BlockedNotificationsPage());
-                  case DisplaySettingsPage.routeName:
-                    return _FastPageRoute(builder: (_) => const DisplaySettingsPage());
+                  case TvPowerSettingsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const TvPowerSettingsPage());
                   case NotificationsSettingsPage.routeName:
                     return _FastPageRoute(builder: (_) => const NotificationsSettingsPage());
                   case ContinueWatchingSettingsPage.routeName:
