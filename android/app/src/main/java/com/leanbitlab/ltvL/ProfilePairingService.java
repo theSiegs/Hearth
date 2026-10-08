@@ -871,6 +871,6 @@ public class ProfilePairingService extends AccessibilityService {
     }
 
     private int dp(int value) {
-        return Math.round(value * getResources().getDisplayMetrics().density);
+        return Dp.px(this, value);
     }
 }

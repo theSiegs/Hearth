@@ -314,6 +314,6 @@ final class HaNotificationOverlay {
     }
 
     private int dp(int value) {
-        return Math.round(value * mService.getResources().getDisplayMetrics().density);
+        return Dp.px(mService, value);
     }
 }
