@@ -20,7 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'focusable_settings_tile.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'companion_apps_page.dart';
+import 'updates_page.dart';
 import 'hearth_about_dialog.dart';
 import 'setup_checklist_page.dart';
 import 'backup_restore_page.dart';
@@ -53,8 +53,8 @@ class SystemSettingsPage extends StatelessWidget {
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.system_update_outlined),
-          title: Text(CompanionAppsPage.title, style: Theme.of(context).textTheme.bodyMedium),
-          onPressed: () => Navigator.of(context).pushNamed(CompanionAppsPage.routeName),
+          title: Text(UpdatesPage.title, style: Theme.of(context).textTheme.bodyMedium),
+          onPressed: () => Navigator.of(context).pushNamed(UpdatesPage.routeName),
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.tv_outlined),
