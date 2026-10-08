@@ -68,7 +68,6 @@ class AppsGrid extends StatelessWidget
 
             return AppCard(
               key: Key(applications[index].packageName),
-              index: index,
               category: category,
               application: applications[index],
               autofocus: index == 0,
