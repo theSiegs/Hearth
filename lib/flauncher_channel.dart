@@ -333,8 +333,6 @@ class FLauncherChannel {
   Future<List<String>> getSupportedAbis() async =>
       (await _methodChannel.invokeListMethod<String>("getSupportedAbis")) ?? const [];
 
-  Future<bool> isGoogleTv() async => await _methodChannel.invokeMethod("isGoogleTv") ?? false;
-
   Future<void> playClickSound() async {
     try {
       await _methodChannel.invokeMethod("playClickSound");
@@ -395,9 +393,6 @@ class FLauncherChannel {
     final bool? success = await _methodChannel.invokeMethod<bool>("requestOverlayPermission");
     return success ?? false;
   }
-
-  Future<bool> checkAccessibilityPermission() async =>
-      await _methodChannel.invokeMethod("checkAccessibilityPermission");
 
   /// {enabled, seenBefore, restricted}: whether Home Button Fix is on, whether it has ever been on here,
   /// and whether Android may block turning it on (last installed from an APK file, e.g. by the updater).
