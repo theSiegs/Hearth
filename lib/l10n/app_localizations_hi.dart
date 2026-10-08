@@ -10,9 +10,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get aboutFlauncher => 'Hearth के बारे में';
 
   @override
-  String get addCategory => 'श्रेणी जोड़ें';
-
-  @override
   String get addSection => 'अनुभाग जोड़ें';
 
   @override
@@ -40,9 +37,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get category => 'श्रेणी';
 
   @override
-  String get categories => 'श्रेणियाँ';
-
-  @override
   String get columnCount => 'कॉलम संख्या';
 
   @override
@@ -67,21 +61,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get dialogTextNoFileExplorer => 'कृपया चित्र चुनने के लिए फ़ाइल एक्सप्लोरर इंस्टॉल करें।';
 
   @override
-  String get dialogTitleBackButtonAction => 'बैक बटन एक्शन चुनें';
-
-  @override
   String disambiguateCategoryTitle(String title) {
     return '$title (श्रेणी)';
-  }
-
-  @override
-  String formattedDate(String dateString) {
-    return 'फ़ॉर्मेट किया गया दिनांक: $dateString';
-  }
-
-  @override
-  String formattedTime(String timeString) {
-    return 'फ़ॉर्मेट किया गया समय: $timeString';
   }
 
   @override
@@ -118,19 +99,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get modifySection => 'अनुभाग संशोधित करें';
 
   @override
-  String get mustNotBeEmpty => 'खाली नहीं होना चाहिए';
-
-  @override
   String get name => 'नाम';
 
   @override
   String get newSection => 'नया अनुभाग';
-
-  @override
-  String get noDateFormatSpecified => 'कोई दिनांक प्रारूप निर्दिष्ट नहीं';
-
-  @override
-  String get noTimeFormatSpecified => 'कोई समय प्रारूप निर्दिष्ट नहीं';
 
   @override
   String get nonTvApplications => 'गैर-टीवी ऐप्स';
@@ -139,18 +111,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get open => 'खोलें';
 
   @override
-  String get orSelectFormatSpecifiers => 'या प्रारूप निर्दिष्टकर्ता चुनें';
-
-  @override
   String get picture => 'चित्र';
 
   @override
   String removeFrom(String name) {
     return '$name से हटाएं';
   }
-
-  @override
-  String get renameCategory => 'श्रेणी का नाम बदलें';
 
   @override
   String get reorder => 'पुन: व्यवस्थित करें';
@@ -168,13 +134,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get spacer => 'स्पेसर';
 
   @override
-  String get spacerMaxHeightRequirement => '0 से अधिक और 500 से कम या बराबर होना चाहिए';
-
-  @override
   String get statusBar => 'स्टेटस बार';
-
-  @override
-  String get settings => 'सेटिंग्स';
 
   @override
   String get show => 'दिखाएं';
@@ -184,9 +144,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get showCategoryAppCount => 'श्रेणियों में ऐप की संख्या दिखाएं';
-
-  @override
-  String get themes => 'थीम';
 
   @override
   String get hideHighlightOutlineOnHomescreen => 'होम स्क्रीन पर हाइलाइट आउटलाइन छिपाएं';
@@ -201,30 +158,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get systemSettings => 'सिस्टम सेटिंग्स';
 
   @override
-  String textAboutDialog(String repoUrl) {
-    return 'Hearth (LTvLauncher) FLauncher पर आधारित Android TV के लिए एक अनुकूलित ओपन-सोर्स लॉन्चर है।\n\nLeanBitLab द्वारा विकसित।\nस्रोत कोड $repoUrl पर उपलब्ध है।';
-  }
-
-  @override
   String get textEmptyCategory => 'यह श्रेणी खाली है।';
 
   @override
   String get time => 'समय';
 
   @override
-  String get titleStatusBarSettingsPage => 'चुनें कि स्टेटस बार में क्या दिखाना है';
-
-  @override
   String get tvApplications => 'टीवी ऐप्स';
 
   @override
   String get type => 'प्रकार';
-
-  @override
-  String get typeInTheDateFormat => 'दिनांक प्रारूप टाइप करें';
-
-  @override
-  String get typeInTheHourFormat => 'समय प्रारूप टाइप करें';
 
   @override
   String get uninstall => 'अनइंस्टॉल करें';
@@ -243,21 +186,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get pickNightWallpaper => 'रात का वॉलपेपर चुनें';
-
-  @override
-  String get accessibility => 'पहुंच (एक्सेसिबिलिटी)';
-
-  @override
-  String get defaultLauncherIsDefault => 'Hearth डिफ़ॉल्ट लॉन्चर है';
-
-  @override
-  String get defaultLauncherNotDefault => 'Hearth डिफ़ॉल्ट लॉन्चर नहीं है';
-
-  @override
-  String get setAsDefaultLauncher => 'डिफ़ॉल्ट लॉन्चर के रूप में सेट करें';
-
-  @override
-  String get defaultLauncherDescription => 'डिफ़ॉल्ट लॉन्चर के रूप में सेट होने पर, होम बटन हमेशा Hearth पर वापस आएगा। टीवी भी सीधे Hearth में बूट होगा।';
 
   @override
   String get inputs => 'इनपुट';
@@ -299,26 +227,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get shareBackup => 'बैकअप साझा करें';
 
   @override
-  String get shareBackupDescription => 'स्थानीय नेटवर्क पर अन्य डिवाइसों के साथ बैकअप साझा करें';
-
-  @override
-  String get stopSharing => 'साझा करना बंद करें';
-
-  @override
-  String get localNetworkSharingActive => 'स्थानीय नेटवर्क साझाकरण सक्रिय है!';
-
-  @override
-  String get localNetworkSharingInstructions => 'किसी अन्य डिवाइस को उसी Wi-Fi नेटवर्क से कनेक्ट करें और वेब ब्राउज़र में निम्न URL खोलें:';
-
-  @override
-  String get localNetworkSharingDetails => 'यहां आप अपने टीवी की सेटिंग्स/लेआउट डाउनलोड कर सकते हैं या बैकअप फ़ाइल को इस टीवी पर वापस अपलोड कर सकते हैं।';
-
-  @override
-  String failedToStartServer(String error) {
-    return 'साझाकरण सर्वर प्रारंभ करने में विफल: $error';
-  }
-
-  @override
   String get notificationBell => 'सूचना घंटी';
 
   @override
@@ -334,25 +242,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get permissionDeniedContinueWatching => '\'देखना जारी रखें\' दिखाने के लिए अनुमति आवश्यक है';
 
   @override
-  String get interface => 'इंटरफ़ेस';
-
-  @override
   String get system => 'सिस्टम';
 
   @override
   String get accentColor => 'एक्सेंट रंग';
-
-  @override
-  String get miscellaneous => 'विविध';
-
-  @override
-  String get brightnessScheduler => 'चमक शेड्यूलर';
-
-  @override
-  String get screensaverSettings => 'स्क्रीनसेवर सेटिंग्स';
-
-  @override
-  String get screensaverClockStyle => 'स्क्रीनसेवर घड़ी शैली';
 
   @override
   String get dataUsagePeriod => 'डेटा उपयोग अवधि';
@@ -386,9 +279,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get networkIndicator => 'नेटवर्क संकेतक';
-
-  @override
-  String get homeButtonFix => 'होम बटन फिक्स (Google TV)';
 
   @override
   String get startOnBoot => 'बूट पर शुरू करें (Google TV / Fire TV)';
@@ -445,9 +335,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get hidePersistentNotifications => 'स्थायी सूचनाएं छिपाएं';
 
   @override
-  String get hidePersistentNotificationsDesc => 'पृष्ठभूमि सेवा और सिस्टम सूचनाएं छिपाएं';
-
-  @override
   String get blockedNotificationApps => 'अवरुद्ध ऐप्स';
 
   @override
@@ -481,31 +368,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get fahrenheit => 'फ़ारेनहाइट (°F)';
 
   @override
-  String get breezyWeatherSetupHint => 'मौसम और बारिश की चेतावनी देखने के लिए Breezy Weather इंस्टॉल करें और उसकी सेटिंग्स में \'स्थानीय डेटा साझाकरण\' सक्षम करें।';
-
-  @override
-  String get displayAndScreensaver => 'डिस्प्ले और स्क्रीनसेवर';
-
-  @override
   String get notifications => 'सूचनाएं';
 
   @override
   String get continueWatchingDescription => 'होम स्क्रीन पर हाल ही में देखी गई फिल्में और टीवी शो दिखाएं';
 
   @override
-  String get continueWatchingPermissionDesc => 'टीवी ऐप्स से देखने का इतिहास पढ़ने के लिए विशेष अनुमति की आवश्यकता है:';
-
-  @override
-  String get requestPermission => 'अनुमति का अनुरोध करें';
-
-  @override
   String get dismiss => 'हटाएं';
 
   @override
   String get openApp => 'खोलें';
-
-  @override
-  String get notificationOptions => 'सूचना विकल्प';
 
   @override
   String get noBlockedAppsDesc => 'सभी ऐप्स को वर्तमान में सूचनाएं दिखाने की अनुमति है';

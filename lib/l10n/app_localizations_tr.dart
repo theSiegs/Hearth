@@ -10,9 +10,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get aboutFlauncher => 'Hearth Hakkında';
 
   @override
-  String get addCategory => 'Kategori ekle';
-
-  @override
   String get addSection => 'Bölüm ekle';
 
   @override
@@ -40,9 +37,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get category => 'Kategori';
 
   @override
-  String get categories => 'Kategoriler';
-
-  @override
   String get columnCount => 'Sütun sayısı';
 
   @override
@@ -67,21 +61,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get dialogTextNoFileExplorer => 'Resim seçmek için lütfen bir dosya gezgini yükleyin.';
 
   @override
-  String get dialogTitleBackButtonAction => 'Geri düğmesi eylemini seçin';
-
-  @override
   String disambiguateCategoryTitle(String title) {
     return '$title (Kategori)';
-  }
-
-  @override
-  String formattedDate(String dateString) {
-    return 'Biçimlendirilmiş tarih: $dateString';
-  }
-
-  @override
-  String formattedTime(String timeString) {
-    return 'Biçimlendirilmiş saat: $timeString';
   }
 
   @override
@@ -118,19 +99,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get modifySection => 'Bölümü değiştir';
 
   @override
-  String get mustNotBeEmpty => 'Boş bırakılamaz';
-
-  @override
   String get name => 'Ad';
 
   @override
   String get newSection => 'Yeni bölüm';
-
-  @override
-  String get noDateFormatSpecified => 'Tarih biçimi belirtilmedi';
-
-  @override
-  String get noTimeFormatSpecified => 'Saat biçimi belirtilmedi';
 
   @override
   String get nonTvApplications => 'TV Dışı Uygulamalar';
@@ -139,18 +111,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get open => 'Aç';
 
   @override
-  String get orSelectFormatSpecifiers => 'Veya biçim belirteçlerini seçin';
-
-  @override
   String get picture => 'Resim';
 
   @override
   String removeFrom(String name) {
     return '$name öğesinden kaldır';
   }
-
-  @override
-  String get renameCategory => 'Kategoriyi yeniden adlandır';
 
   @override
   String get reorder => 'Yeniden sırala';
@@ -168,13 +134,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get spacer => 'Ayırıcı';
 
   @override
-  String get spacerMaxHeightRequirement => '0\'dan büyük ve 500\'den küçük veya eşit olmalıdır';
-
-  @override
   String get statusBar => 'Durum çubuğu';
-
-  @override
-  String get settings => 'Ayarlar';
 
   @override
   String get show => 'Göster';
@@ -184,9 +144,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get showCategoryAppCount => 'Kategorilerde uygulama sayısını göster';
-
-  @override
-  String get themes => 'Temalar';
 
   @override
   String get hideHighlightOutlineOnHomescreen => 'Ana ekranda vurgu anahattını gizle';
@@ -201,30 +158,16 @@ class AppLocalizationsTr extends AppLocalizations {
   String get systemSettings => 'Sistem ayarları';
 
   @override
-  String textAboutDialog(String repoUrl) {
-    return 'Hearth (LTvLauncher), FLauncher tabanlı, Android TV için özelleştirilmiş açık kaynaklı bir başlatıcıdır.\n\nLeanBitLab tarafından geliştirilmiştir.\nKaynak kodu $repoUrl adresinde mevcuttur.';
-  }
-
-  @override
   String get textEmptyCategory => 'Bu kategori boş.';
 
   @override
   String get time => 'Saat';
 
   @override
-  String get titleStatusBarSettingsPage => 'Durum çubuğunda neyin görüntüleneceğini seçin';
-
-  @override
   String get tvApplications => 'TV Uygulamaları';
 
   @override
   String get type => 'Tür';
-
-  @override
-  String get typeInTheDateFormat => 'Tarih biçimini yazın';
-
-  @override
-  String get typeInTheHourFormat => 'Saat biçimini yazın';
 
   @override
   String get uninstall => 'Kaldır';
@@ -243,21 +186,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get pickNightWallpaper => 'Gece duvar kağıdını seç';
-
-  @override
-  String get accessibility => 'Erişilebilirlik';
-
-  @override
-  String get defaultLauncherIsDefault => 'Hearth varsayılan başlatıcıdır';
-
-  @override
-  String get defaultLauncherNotDefault => 'Hearth varsayılan başlatıcı değildir';
-
-  @override
-  String get setAsDefaultLauncher => 'Varsayılan başlatıcı olarak ayarla';
-
-  @override
-  String get defaultLauncherDescription => 'Varsayılan başlatıcı olarak ayarlandığında, Ana Sayfa düğmesi her zaman Hearth\'a döner. TV de doğrudan Hearth\'da başlar.';
 
   @override
   String get inputs => 'Girişler';
@@ -299,26 +227,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get shareBackup => 'Yedeği Paylaş';
 
   @override
-  String get shareBackupDescription => 'Yedeği yerel ağdaki diğer cihazlarla paylaş';
-
-  @override
-  String get stopSharing => 'Paylaşımı Durdur';
-
-  @override
-  String get localNetworkSharingActive => 'Yerel ağ paylaşımı etkin!';
-
-  @override
-  String get localNetworkSharingInstructions => 'Başka bir cihazı aynı Wi-Fi ağına bağlayın ve bir web tarayıcısında aşağıdaki URL\'yi açın:';
-
-  @override
-  String get localNetworkSharingDetails => 'Buradan TV ayarlarınızı/düzeninizi indirebilir veya bir yedek dosyasını bu TV\'ye geri yükleyebilirsiniz.';
-
-  @override
-  String failedToStartServer(String error) {
-    return 'Paylaşım sunucusu başlatılamadı: $error';
-  }
-
-  @override
   String get notificationBell => 'Bildirim Zili';
 
   @override
@@ -334,25 +242,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get permissionDeniedContinueWatching => 'İzlemeye Devam Et\'i göstermek için izin gerekli';
 
   @override
-  String get interface => 'Arayüz';
-
-  @override
   String get system => 'Sistem';
 
   @override
   String get accentColor => 'Vurgu Rengi';
-
-  @override
-  String get miscellaneous => 'Çeşitli';
-
-  @override
-  String get brightnessScheduler => 'Parlaklık Zamanlayıcısı';
-
-  @override
-  String get screensaverSettings => 'Ekran Koruyucu Ayarları';
-
-  @override
-  String get screensaverClockStyle => 'Ekran Koruyucu Saat Stili';
 
   @override
   String get dataUsagePeriod => 'Veri Kullanım Dönemi';
@@ -386,9 +279,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get networkIndicator => 'Ağ Göstergesi';
-
-  @override
-  String get homeButtonFix => 'Ana Sayfa Düğmesi Düzeltmesi (Google TV)';
 
   @override
   String get startOnBoot => 'Açılışta başlat (Google TV / Fire TV)';
@@ -445,9 +335,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get hidePersistentNotifications => 'Kalıcı Bildirimleri Gizle';
 
   @override
-  String get hidePersistentNotificationsDesc => 'Arka plan servisi ve sistem bildirimlerini gizle';
-
-  @override
   String get blockedNotificationApps => 'Engellenen Uygulamalar';
 
   @override
@@ -481,31 +368,16 @@ class AppLocalizationsTr extends AppLocalizations {
   String get fahrenheit => 'Fahrenheit (°F)';
 
   @override
-  String get breezyWeatherSetupHint => 'Hava durumu ve yağmur uyarılarını görmek için Breezy Weather\'ı yükleyin ve ayarlarından \'Yerel veri paylaşımı\' / \'Gadgetbridge\' özelliğini etkinleştirin.';
-
-  @override
-  String get displayAndScreensaver => 'Ekran ve Ekran Koruyucu';
-
-  @override
   String get notifications => 'Bildirimler';
 
   @override
   String get continueWatchingDescription => 'Son izlenen filmleri ve dizileri ana ekranda göster';
 
   @override
-  String get continueWatchingPermissionDesc => 'TV uygulamalarından izleme geçmişini okumak için özel izin gereklidir:';
-
-  @override
-  String get requestPermission => 'İzin İste';
-
-  @override
   String get dismiss => 'Kapat';
 
   @override
   String get openApp => 'Aç';
-
-  @override
-  String get notificationOptions => 'Bildirim Seçenekleri';
 
   @override
   String get noBlockedAppsDesc => 'Şu anda tüm uygulamaların bildirim göstermesine izin veriliyor';
