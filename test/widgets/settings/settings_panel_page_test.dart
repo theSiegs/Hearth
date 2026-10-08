@@ -28,7 +28,6 @@ import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
 import 'package:flauncher/widgets/settings/home_assistant_page.dart';
 import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
 import 'package:flauncher/widgets/settings/remote_search_settings_page.dart';
-import 'package:flauncher/widgets/settings/donate_dialog.dart';
 import 'package:flauncher/widgets/settings/flauncher_about_dialog.dart';
 import 'package:flauncher/widgets/settings/settings_panel_page.dart';
 import 'package:flutter/material.dart';
@@ -128,7 +127,7 @@ void main() {
     expect(find.text("System"), findsOneWidget);
   });
 
-  testWidgets("System has About and Support & Donate", (tester) async {
+  testWidgets("System has About", (tester) async {
     final settingsService = _settings();
     when(settingsService.accentColorHex).thenReturn("7C4DFF");
     PackageInfoPlatform.instance = _MockPackageInfoPlatform();
@@ -139,14 +138,6 @@ void main() {
     await tester.tap(find.text("About Hearth"));
     await tester.pumpAndSettle();
     expect(find.byType(HearthAboutDialog), findsOneWidget);
-    Navigator.of(tester.element(find.byType(HearthAboutDialog))).pop();
-    await tester.pumpAndSettle();
-
-    await tester.ensureVisible(find.text("Support & Donate"));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text("Support & Donate"));
-    await tester.pumpAndSettle();
-    expect(find.byType(DonateDialog), findsOneWidget);
   });
 
   testWidgets("TV & power opens Android settings", (tester) async {

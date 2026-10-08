@@ -21,7 +21,6 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'focusable_settings_tile.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'companion_apps_page.dart';
-import 'donate_dialog.dart';
 import 'flauncher_about_dialog.dart';
 import 'setup_checklist_page.dart';
 import 'backup_restore_page.dart';
@@ -70,11 +69,6 @@ class GeneralSettingsPage extends StatelessWidget {
                   leading: const Icon(Icons.settings_backup_restore),
                   title: Text(localizations.backupAndRestore, style: Theme.of(context).textTheme.bodyMedium),
                   onPressed: () => Navigator.of(context).pushNamed(BackupRestorePage.routeName),
-                ),
-                FocusableSettingsTile(
-                  leading: const Icon(Icons.favorite_rounded),
-                  title: Text("Support & Donate", style: Theme.of(context).textTheme.bodyMedium),
-                  onPressed: () => showDialog(context: context, builder: (_) => const DonateDialog()),
                 ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.info_outline),
