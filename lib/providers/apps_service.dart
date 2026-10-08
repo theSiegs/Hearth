@@ -26,7 +26,6 @@ import 'package:drift/drift.dart';
 import 'package:flauncher/database.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flutter/foundation.dart' hide Category;
-import 'package:flutter/widgets.dart';
 import 'package:pool/pool.dart';
 
 import '../models/app.dart';
@@ -769,72 +768,6 @@ class AppsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> moveAppToAdjacentCategory(
-      App app, Category currentCategory, AxisDirection direction) async {
-    int currentSectionIndex = _launcherSections.indexOf(currentCategory);
-    if (currentSectionIndex == -1) {
-      return;
-    }
-
-    Category? targetCategory;
-
-    // Find next valid category (skip spacers)
-    if (direction == AxisDirection.down) {
-      for (int i = currentSectionIndex + 1; i < _launcherSections.length; i++) {
-        if (_launcherSections[i] is Category) {
-          targetCategory = _launcherSections[i] as Category;
-          break;
-        }
-      }
-    } else if (direction == AxisDirection.up) {
-      for (int i = currentSectionIndex - 1; i >= 0; i--) {
-        if (_launcherSections[i] is Category) {
-          targetCategory = _launcherSections[i] as Category;
-          break;
-        }
-      }
-    }
-
-    if (targetCategory == null) {
-      return;
-    }
-
-    // Remove from current
-    await removeFromCategory(app, currentCategory);
-
-    // Add to target
-    // DB Insert Logic
-    // 1. Get current items in target
-    List<App> targetApps = targetCategory.applications;
-
-    // 2. Adjust local list
-    if (direction == AxisDirection.down) {
-      targetApps.insert(0, app); // Insert at top
-    } else {
-      targetApps.add(app); // Insert at bottom
-    }
-
-    int newIndex = direction == AxisDirection.down ? 0 : targetApps.length - 1;
-    setPendingReorderFocus(app.packageName, targetCategory.id, newIndex);
-
-    // 3. Update orders for all items in target category
-    List<AppsCategoriesCompanion> orderedAppCategories = [];
-    for (int i = 0; i < targetApps.length; ++i) {
-      App a = targetApps[i];
-      a.categoryOrders[targetCategory.id] = i; // Update local map
-      orderedAppCategories.add(AppsCategoriesCompanion(
-        categoryId: Value(targetCategory.id),
-        appPackageName: Value(a.packageName),
-        order: Value(i),
-      ));
-    }
-
-    // 4. Batch DB update
-    await _database.replaceAppsCategories(orderedAppCategories);
-
-    notifyListeners();
-  }
-
   void reorderApplication(Category category, int oldIndex, int newIndex) {
     if (!_categoriesById.containsKey(category.id)) {
       return;
@@ -901,8 +834,7 @@ class AppsService extends ChangeNotifier {
   }
 
   Future<void> updateCategory(int categoryId, String name, CategorySort sort,
-      CategoryType type, int columnsCount, int rowHeight,
-      {bool shouldNotifyListeners = true}) async {
+      CategoryType type, int columnsCount, int rowHeight) async {
     Category? category = _categoriesById[categoryId];
     assert(category != null);
 
@@ -928,9 +860,7 @@ class AppsService extends ChangeNotifier {
       sortCategory(category);
     }
 
-    if (shouldNotifyListeners) {
-      notifyListeners();
-    }
+    notifyListeners();
   }
 
   Future<void> addSpacer(int height) async {
@@ -950,18 +880,6 @@ class AppsService extends ChangeNotifier {
 
     spacer.height = height;
     notifyListeners();
-  }
-
-  Future<void> renameCategory(Category category, String categoryName) async {
-    await _database.updateCategory(
-        category.id, CategoriesCompanion(name: Value(categoryName)));
-
-    final categoryFound = _categoriesById[category.id];
-    if (categoryFound != null) {
-      categoryFound.name = categoryName;
-      _invalidateCategoryCache();
-      notifyListeners();
-    }
   }
 
   Future<void> deleteSection(int index) async {
@@ -1040,11 +958,6 @@ class AppsService extends ChangeNotifier {
     ]);
   }
 
-  Future<void> moveSection(int oldIndex, int newIndex) async {
-    moveSectionInMemory(oldIndex, newIndex);
-    await persistSectionsOrder();
-  }
-
   Future<void> hideApplication(App application) async {
     await _database.updateApp(
         application.packageName, const AppsCompanion(hidden: Value(true)));
@@ -1081,57 +994,6 @@ class AppsService extends ChangeNotifier {
         }
       }
 
-      notifyListeners();
-    }
-  }
-
-  Future<void> setCategoryType(Category category, CategoryType type,
-      {bool shouldNotifyListeners = true}) async {
-    await _database.updateCategory(
-        category.id, CategoriesCompanion(type: Value(type)));
-
-    final categoryFound = _categoriesById[category.id];
-    if (categoryFound != null) {
-      categoryFound.type = type;
-
-      if (shouldNotifyListeners) {
-        notifyListeners();
-      }
-    }
-  }
-
-  Future<void> setCategorySort(Category category, CategorySort sort) async {
-    await _database.updateCategory(
-        category.id, CategoriesCompanion(sort: Value(sort)));
-    final categoryFound = _categoriesById[category.id];
-    if (categoryFound != null) {
-      categoryFound.sort = sort;
-      sortCategory(categoryFound);
-
-      notifyListeners();
-    }
-  }
-
-  Future<void> setCategoryColumnsCount(
-      Category category, int columnsCount) async {
-    await _database.updateCategory(
-        category.id, CategoriesCompanion(columnsCount: Value(columnsCount)));
-
-    final categoryFound = _categoriesById[category.id];
-    if (categoryFound != null) {
-      categoryFound.columnsCount = columnsCount;
-
-      notifyListeners();
-    }
-  }
-
-  Future<void> setCategoryRowHeight(Category category, int rowHeight) async {
-    await _database.updateCategory(
-        category.id, CategoriesCompanion(rowHeight: Value(rowHeight)));
-
-    final categoryFound = _categoriesById[category.id];
-    if (categoryFound != null) {
-      categoryFound.rowHeight = rowHeight;
       notifyListeners();
     }
   }
