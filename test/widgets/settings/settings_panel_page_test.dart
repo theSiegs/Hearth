@@ -31,6 +31,7 @@ import 'package:flauncher/widgets/settings/remote_search_settings_page.dart';
 import 'package:flauncher/widgets/settings/hearth_about_dialog.dart';
 import 'package:flauncher/widgets/settings/settings_panel_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -148,6 +149,21 @@ void main() {
     await tester.tap(find.text("System settings"));
     await tester.pumpAndSettle();
     verify(appsService.openSettings());
+  });
+
+  testWidgets("TV & power's screensaver row opens the screensaver settings", (tester) async {
+    const channel = MethodChannel('me.efesser.flauncher/method');
+    final calls = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call.method);
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null));
+    await _pumpWidgetWithProviders(tester, _settings(), _apps(), home: const TvPowerSettingsPage());
+
+    await tester.tap(find.text("Screensaver (Google Photos)"));
+    await tester.pumpAndSettle();
+    expect(calls, contains("openScreensaverSettings"));
   });
 }
 

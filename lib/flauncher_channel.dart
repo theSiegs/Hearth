@@ -279,6 +279,10 @@ class FLauncherChannel {
   Future<bool> openTextToSpeechSettings() async =>
       await _methodChannel.invokeMethod<bool>("openTextToSpeechSettings") ?? false;
 
+  /// Google TV's screensaver settings, or the nearest screen this TV has to them. False when none would open.
+  Future<bool> openScreensaverSettings() async =>
+      await _methodChannel.invokeMethod<bool>("openScreensaverSettings") ?? false;
+
   Future<int> getIdleStandbyMinutes() async => await _methodChannel.invokeMethod<int>("getIdleStandbyMinutes") ?? 0;
 
   Future<void> setIdleStandbyMinutes(int minutes) async =>

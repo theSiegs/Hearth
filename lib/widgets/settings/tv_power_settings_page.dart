@@ -18,7 +18,6 @@
 
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
@@ -44,7 +43,7 @@ class TvPowerSettingsPage extends StatelessWidget {
           autofocus: true,
           leading: const Icon(Icons.screenshot_monitor),
           title: Text("Screensaver (Google Photos)", style: Theme.of(context).textTheme.bodyMedium),
-          onPressed: () => _openScreensaverSettings(),
+          onPressed: () => FLauncherChannel().openScreensaverSettings(),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
@@ -63,11 +62,6 @@ class TvPowerSettingsPage extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  Future<void> _openScreensaverSettings() async {
-    const platform = MethodChannel('me.efesser.flauncher/method');
-    platform.invokeMethod('openScreensaverSettings');
   }
 }
 
