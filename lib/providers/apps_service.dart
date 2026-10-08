@@ -779,39 +779,31 @@ class AppsService extends ChangeNotifier {
       int rowHeight = Category.RowHeight,
       bool shouldNotifyListeners = true}) async {
     int order = _launcherSections.length;
-    int newCategoryId = -1;
+    // Persist every column so a restart doesn't fall back to the table defaults.
+    int newCategoryId = await _database.transaction(() => _database.insertCategory(CategoriesCompanion.insert(
+        name: categoryName,
+        order: order,
+        sort: Value(sort),
+        type: Value(type),
+        columnsCount: Value(columnsCount),
+        rowHeight: Value(rowHeight))));
 
-    try {
-      newCategoryId = await _database.transaction(() async {
-        // Persist every setting, not just the name: otherwise a restart reloads the column defaults
-        // (e.g. a "TV Apps" grid comes back as a row).
-        int newCategoryId = await _database.insertCategory(CategoriesCompanion.insert(
-            name: categoryName,
-            order: order,
-            sort: Value(sort),
-            type: Value(type),
-            columnsCount: Value(columnsCount),
-            rowHeight: Value(rowHeight)));
-        return newCategoryId;
-      });
+    Category newCategory = Category(
+        id: newCategoryId,
+        name: categoryName,
+        sort: sort,
+        type: type,
+        columnsCount: columnsCount,
+        rowHeight: rowHeight,
+        order: order);
 
-      Category newCategory = Category(
-          id: newCategoryId,
-          name: categoryName,
-          sort: sort,
-          type: type,
-          columnsCount: columnsCount,
-          rowHeight: rowHeight,
-          order: order);
+    _categoriesById[newCategoryId] = newCategory;
+    _invalidateCategoryCache();
+    _launcherSections.add(newCategory);
 
-      _categoriesById[newCategoryId] = newCategory;
-      _invalidateCategoryCache();
-      _launcherSections.add(newCategory);
-
-      if (shouldNotifyListeners) {
-        notifyListeners();
-      }
-    } catch (ex) {}
+    if (shouldNotifyListeners) {
+      notifyListeners();
+    }
 
     return newCategoryId;
   }
