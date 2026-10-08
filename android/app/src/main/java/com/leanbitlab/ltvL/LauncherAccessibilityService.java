@@ -13,6 +13,8 @@ import android.os.UserHandle;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
 
+import java.util.Map;
+
 public class LauncherAccessibilityService extends AccessibilityService {
     static final String GOOGLE_TV_PACKAGE = "com.google.android.apps.tv.launcherx";
     private static final String GOOGLE_TV_HOME_ACTIVITY = GOOGLE_TV_PACKAGE + ".home.HomeActivity";
@@ -797,9 +799,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (!profile.equals(prefs.getString(packageName, null))) prefs.edit().putString(packageName, profile).apply();
     }
 
-    /** The Google TV profile (key; a name for apps last used before keys) that last had this app in front, or null. */
-    static String getAppLastProfile(Context context, String packageName) {
-        return context.getSharedPreferences(APP_USERS_PREFS, MODE_PRIVATE).getString(packageName, null);
+    /**
+     * For each app, the Google TV profile (key; a name for apps last used before keys) that last had it in front.
+     * It comes from SharedPreferences.getAll, so callers copy it rather than change it.
+     */
+    static Map<String, ?> getAppLastProfiles(Context context) {
+        return context.getSharedPreferences(APP_USERS_PREFS, MODE_PRIVATE).getAll();
     }
 
     static String getActiveProfileName(Context context) {
