@@ -476,18 +476,7 @@ public class MainActivity extends FlutterActivity {
                     ProfileProvider.notifyChanged(this);  // updates_hearthtube
                     result.success(null);
                 }
-                case "getPackageVersion" -> {
-                    try {
-                        android.content.pm.PackageInfo info =
-                                getPackageManager().getPackageInfo((String) call.arguments(), 0);
-                        Map<String, Object> version = new HashMap<>();
-                        version.put("versionName", info.versionName);
-                        version.put("versionCode", info.getLongVersionCode());
-                        result.success(version);
-                    } catch (PackageManager.NameNotFoundException e) {
-                        result.success(null);
-                    }
-                }
+                case "getPackageVersion" -> result.success(getPackageVersion(call.arguments()));
                 case "playClickSound" -> {
                     getWindow().getDecorView().playSoundEffect(android.view.SoundEffectConstants.CLICK);
                     result.success(null);
@@ -2090,6 +2079,22 @@ public class MainActivity extends FlutterActivity {
     }
 
 
+
+    /** {versionName, versionCode} of an installed app, or null when it isn't installed. */
+    @SuppressWarnings("deprecation")
+    private Map<String, Object> getPackageVersion(String packageName) {
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo(packageName, 0);
+            Map<String, Object> version = new HashMap<>();
+            version.put("versionName", info.versionName);
+            // getLongVersionCode is API 28+; older releases only have the int.
+            version.put("versionCode", Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                    ? info.getLongVersionCode() : info.versionCode);
+            return version;
+        } catch (PackageManager.NameNotFoundException e) {
+            return null;
+        }
+    }
 
     private String getLatestWeatherData() {
         android.content.SharedPreferences prefs = getSharedPreferences(WeatherReceiver.PREFS_NAME, Context.MODE_PRIVATE);
