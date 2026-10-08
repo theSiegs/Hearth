@@ -46,13 +46,10 @@ class WeatherData {
   final int? todayMinTemp;
   final List<WeatherForecastItem> forecasts;
 
-  // Computed warning attributes
-  final bool hasWarning;
+  // The first rain, snow or storm in the coming week, if any
   final WeatherWarningType warningType;
   final String? warningText;
   final int? warningConditionCode;
-  final int? warningPrecipProbability;
-  final int? warningDayIndex; // 0 = today, 1 = tomorrow, 2+ = upcoming days
 
   const WeatherData({
     this.timestamp,
@@ -65,13 +62,12 @@ class WeatherData {
     this.todayMaxTemp,
     this.todayMinTemp,
     this.forecasts = const [],
-    this.hasWarning = false,
     this.warningType = WeatherWarningType.none,
     this.warningText,
     this.warningConditionCode,
-    this.warningPrecipProbability,
-    this.warningDayIndex,
   });
+
+  bool get hasWarning => warningType != WeatherWarningType.none;
 
   static const rainCodes = {500, 501, 502, 503, 504, 511, 520, 521, 522, 531};
   static const snowCodes = {600, 601, 602, 611, 612, 615, 616, 620, 621, 622};
@@ -108,12 +104,9 @@ class WeatherData {
             .toList()
         : [];
 
-    bool hasWarning = false;
     WeatherWarningType warningType = WeatherWarningType.none;
     String? warningText;
     int? warningConditionCode;
-    int? warningPrecipProbability;
-    int? warningDayIndex;
 
     const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final now = DateTime.now();
@@ -124,10 +117,7 @@ class WeatherData {
       if (code == null) continue;
 
       if (rainCodes.contains(code) || snowCodes.contains(code) || stormCodes.contains(code)) {
-        hasWarning = true;
         warningConditionCode = code;
-        warningPrecipProbability = f.precipProbability;
-        warningDayIndex = i;
 
         String dayText;
         if (i == 0) {
@@ -168,12 +158,9 @@ class WeatherData {
       todayMaxTemp: parseTemperature(json['todayMaxTemp']),
       todayMinTemp: parseTemperature(json['todayMinTemp']),
       forecasts: forecasts,
-      hasWarning: hasWarning,
       warningType: warningType,
       warningText: warningText,
       warningConditionCode: warningConditionCode,
-      warningPrecipProbability: warningPrecipProbability,
-      warningDayIndex: warningDayIndex,
     );
   }
 
