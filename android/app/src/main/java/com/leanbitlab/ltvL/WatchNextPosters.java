@@ -213,11 +213,7 @@ final class WatchNextPosters {
 
     private static String sha1(String s) {
         try {
-            StringBuilder sb = new StringBuilder();
-            for (byte b : MessageDigest.getInstance("SHA-1").digest(s.getBytes(StandardCharsets.UTF_8))) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
+            return Hex.of(MessageDigest.getInstance("SHA-1").digest(s.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {
             return Integer.toHexString(s.hashCode());
         }

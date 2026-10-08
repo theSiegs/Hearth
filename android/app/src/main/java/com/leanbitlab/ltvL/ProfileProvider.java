@@ -160,9 +160,7 @@ public class ProfileProvider extends ContentProvider {
             if (signatures == null) return false;
             MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
             for (android.content.pm.Signature signature : signatures) {
-                StringBuilder hex = new StringBuilder();
-                for (byte b : sha256.digest(signature.toByteArray())) hex.append(String.format("%02x", b));
-                if (TRUSTED_CERTS.contains(hex.toString())) return true;
+                if (TRUSTED_CERTS.contains(Hex.of(sha256.digest(signature.toByteArray())))) return true;
             }
         } catch (Exception ignored) {
         }
@@ -197,13 +195,8 @@ public class ProfileProvider extends ContentProvider {
     /** Same hash as SettingsService._hashPin in Dart. */
     private static String hashPin(String pin) {
         try {
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest(("ltv-parent-pin:" + pin).getBytes(StandardCharsets.UTF_8));
-            StringBuilder hex = new StringBuilder();
-            for (byte b : digest) {
-                hex.append(String.format("%02x", b));
-            }
-            return hex.toString();
+            return Hex.of(MessageDigest.getInstance("SHA-256")
+                    .digest(("ltv-parent-pin:" + pin).getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {
             return null;
         }

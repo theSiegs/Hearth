@@ -97,8 +97,8 @@ public class LauncherNotificationListenerService extends NotificationListenerSer
         return true;
     }
 
-    private int dpToPx(int dp) {
-        return (int) (dp * getResources().getDisplayMetrics().density);
+    private int dp(int value) {
+        return Dp.px(this, value);
     }
 
     /** Pops up a new notification for a few seconds in the top corner, when that's turned on. */
@@ -156,21 +156,21 @@ public class LauncherNotificationListenerService extends NotificationListenerSer
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.HORIZONTAL);
         container.setGravity(Gravity.CENTER_VERTICAL);
-        int pad = dpToPx(16);
+        int pad = dp(16);
         container.setPadding(pad, pad, pad, pad);
 
         GradientDrawable background = new GradientDrawable();
         background.setColor(Color.parseColor("#E01E1E1E"));
-        background.setCornerRadius(dpToPx(12));
-        background.setStroke(dpToPx(1), Color.parseColor("#44FFFFFF"));
+        background.setCornerRadius(dp(12));
+        background.setStroke(dp(1), Color.parseColor("#44FFFFFF"));
         container.setBackground(background);
 
         ImageView iconView = new ImageView(this);
         if (appIcon != null) {
             iconView.setImageDrawable(appIcon);
         }
-        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dpToPx(40), dpToPx(40));
-        iconParams.rightMargin = dpToPx(12);
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(40), dp(40));
+        iconParams.rightMargin = dp(12);
         iconView.setLayoutParams(iconParams);
         container.addView(iconView);
 
@@ -193,7 +193,7 @@ public class LauncherNotificationListenerService extends NotificationListenerSer
             bodyView.setTextSize(13);
             LinearLayout.LayoutParams bodyParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            bodyParams.topMargin = dpToPx(4);
+            bodyParams.topMargin = dp(4);
             bodyView.setLayoutParams(bodyParams);
             textContainer.addView(bodyView);
         }
@@ -213,8 +213,8 @@ public class LauncherNotificationListenerService extends NotificationListenerSer
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
                 PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.END;
-        params.x = dpToPx(24);
-        params.y = dpToPx(24);
+        params.x = dp(24);
+        params.y = dp(24);
 
         WindowManager windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         windowManager.addView(popup, params);

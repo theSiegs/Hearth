@@ -85,9 +85,7 @@ public class HaPanelActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Window window = getWindow();
-        int width = Math.round(TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP, PANEL_WIDTH_DP, getResources().getDisplayMetrics()));
-        window.setLayout(width, WindowManager.LayoutParams.MATCH_PARENT);
+        window.setLayout(Dp.px(this, PANEL_WIDTH_DP), WindowManager.LayoutParams.MATCH_PARENT);
         window.setGravity(Gravity.END);
         window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
         window.setDimAmount(0.7f);
