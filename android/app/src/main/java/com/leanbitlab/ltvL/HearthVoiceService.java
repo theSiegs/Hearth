@@ -1,5 +1,6 @@
 package com.leanbitlab.ltvL;
 
+import android.accessibilityservice.AccessibilityServiceInfo;
 import android.media.AudioFormat;
 import android.os.Bundle;
 import android.speech.tts.SynthesisCallback;
@@ -8,6 +9,7 @@ import android.speech.tts.TextToSpeech;
 import android.speech.tts.TextToSpeechService;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
+import android.view.accessibility.AccessibilityManager;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -115,14 +117,26 @@ public class HearthVoiceService extends TextToSpeechService {
             silence(callback);
             return;
         }
-        // In a kids profile, the picker apps stay in screen-reader mode after a pick: Android shares accessibility
-        // state with the profile but doesn't tell its apps when Hearth turns screen-reader mode off again. Nobody
-        // there uses a screen reader, so their speech goes nowhere rather than out loud.
-        if (AgentService.isAgent(this) && ProfilePairingService.needsScreenReaderMode(caller)) {
+        // The picker apps only talk because Hearth put them in screen-reader mode for a pick, and they don't always
+        // hear when it's off again (a first sign-in outlasting the pick, or a kids profile, whose apps Android never
+        // tells): unless someone uses a real screen reader, their speech goes nowhere rather than out loud.
+        if (ProfilePairingService.needsScreenReaderMode(caller) && !realScreenReaderOn()) {
             silence(callback);
             return;
         }
         if (text == null || !mForwardReady || !forward(text, request, callback)) silence(callback);
+    }
+
+    /** A screen reader other than Hearth's own Profile Pairing (TalkBack, say) gives spoken feedback. */
+    private boolean realScreenReaderOn() {
+        AccessibilityManager manager = (AccessibilityManager) getSystemService(ACCESSIBILITY_SERVICE);
+        if (manager == null) return false;
+        for (AccessibilityServiceInfo info
+                : manager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_SPOKEN)) {
+            if (info.getResolveInfo() == null || info.getResolveInfo().serviceInfo == null) continue;
+            if (!getPackageName().equals(info.getResolveInfo().serviceInfo.packageName)) return true;
+        }
+        return false;
     }
 
     private static void silence(SynthesisCallback callback) {
