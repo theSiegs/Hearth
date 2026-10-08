@@ -158,6 +158,33 @@ Making that floor painless (the recommendation):
   agent can install/maintain HearthTube over loopback — but it cannot remove the one adb action that first protects
   Hearth.
 
+### Best "no computer" path: Hearth as its own adb host (Shizuku-style self-adb)
+
+The one privileged action per profile needs the `shell` uid, but the adb *host* doesn't have to be a computer — it
+can be Hearth itself. Verified on the TV (2026-10-08): `adbd` listens on `*:5555`, an on-device process reaches
+`127.0.0.1:5555` (loopback probe connected, `rc=0`), `service.adb.tcp.port=5555`, and `adb_wifi_enabled=1`.
+
+Design:
+- Hearth (user 0) embeds an adb client (e.g. the `dadb` library) in its native layer and connects to
+  `127.0.0.1:5555`.
+- One-time: the first connection raises the system "authorize this debugging key?" prompt. The parent approves it
+  on screen — and unlike `DeviceAdminAdd`, this dialog does exist and work on Google TV (it is how a PC gets
+  authorized). Hearth's key is then trusted.
+- Thereafter Hearth runs, as `shell`, the same commands used here for each kid user: `pm install-existing --user N`
+  (both apps) + `dpm set-active-admin --user N com.leanbitlab.ltvL/.AgentAdminReceiver` (Hearth) and the
+  block-uninstall step for HearthTube (or give HearthTube its own no-policy admin receiver). `shell` holds
+  `INSTALL_PACKAGES`/`DELETE_PACKAGES`/`INTERACT_ACROSS_USERS_FULL`, so cross-user provisioning works.
+
+Result: Hearth self-provisions every kid profile, including new ones, with no computer and no Home Assistant — only
+the one on-screen key approval at setup.
+
+Open items:
+- Reboot persistence: `persist.adb.tcp.port` is empty, so cleartext 5555 may not return after a reboot on its own;
+  `adb_wifi_enabled=1` persists, so a robust build should speak the persistent wireless-debugging (TLS, Android 11+)
+  endpoint, paired once, rather than rely on 5555. Confirm what is reachable from on-device after a reboot.
+- This is a deliberate privileged-helper capability (owner-authorized adb key); scope it behind an explicit setup
+  step in Hearth.
+
 ## The agent's jobs without Hearth in the kid's profile
 
 Still needs a one-time adb grant and can't cover everything, so it doesn't remove the adb dependency:
