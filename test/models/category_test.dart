@@ -28,10 +28,10 @@ void main() {
       expect(category.id, 1);
       expect(category.order, 2);
       expect(category.name, 'Test Category');
-      expect(category.columnsCount, Category.ColumnsCount);
-      expect(category.rowHeight, Category.RowHeight);
-      expect(category.sort, Category.Sort);
-      expect(category.type, Category.Type);
+      expect(category.columnsCount, Category.defaultColumnsCount);
+      expect(category.rowHeight, Category.defaultRowHeight);
+      expect(category.sort, Category.defaultSort);
+      expect(category.type, Category.defaultType);
       expect(category.applications, isEmpty);
     });
 

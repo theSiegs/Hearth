@@ -174,9 +174,9 @@ void main() {
     test('handles CELLULAR_STATE_CHANGED with out-of-bounds index without throwing', () {
       expect(networkListener, isNotNull);
       expect(() => networkListener!({'name': 'CELLULAR_STATE_CHANGED', 'arguments': 999}), returnsNormally);
-      expect(networkService.cellularNetworkType, CellularNetworkType.Unknown);
+      expect(networkService.cellularNetworkType, CellularNetworkType.unknown);
       expect(() => networkListener!({'name': 'CELLULAR_STATE_CHANGED', 'arguments': -5}), returnsNormally);
-      expect(networkService.cellularNetworkType, CellularNetworkType.Unknown);
+      expect(networkService.cellularNetworkType, CellularNetworkType.unknown);
     });
   });
 }

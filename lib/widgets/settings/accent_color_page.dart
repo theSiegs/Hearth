@@ -28,21 +28,21 @@ class AccentColorPage extends StatelessWidget {
   static const String routeName = "accent_color_panel";
 
   static const List<(String hex, String name)> colorPresets = [
-    (ACCENT_COLOR_PURPLE, 'Purple'),
-    (ACCENT_COLOR_TEAL, 'Teal'),
-    (ACCENT_COLOR_BLUE, 'Blue'),
-    (ACCENT_COLOR_ORANGE, 'Orange'),
-    (ACCENT_COLOR_PINK, 'Pink'),
-    (ACCENT_COLOR_GREEN, 'Green'),
-    (ACCENT_COLOR_WHITE, 'White'),
-    (ACCENT_COLOR_YELLOW, 'Yellow'),
-    (ACCENT_COLOR_RED, 'Red'),
-    (ACCENT_COLOR_CYAN, 'Cyan'),
-    (ACCENT_COLOR_INDIGO, 'Indigo'),
-    (ACCENT_COLOR_LIME, 'Lime'),
-    (ACCENT_COLOR_AMBER, 'Amber'),
-    (ACCENT_COLOR_ROSE, 'Rose'),
-    (ACCENT_COLOR_ICE_BLUE, 'Ice Blue'),
+    (accentColorPurple, 'Purple'),
+    (accentColorTeal, 'Teal'),
+    (accentColorBlue, 'Blue'),
+    (accentColorOrange, 'Orange'),
+    (accentColorPink, 'Pink'),
+    (accentColorGreen, 'Green'),
+    (accentColorWhite, 'White'),
+    (accentColorYellow, 'Yellow'),
+    (accentColorRed, 'Red'),
+    (accentColorCyan, 'Cyan'),
+    (accentColorIndigo, 'Indigo'),
+    (accentColorLime, 'Lime'),
+    (accentColorAmber, 'Amber'),
+    (accentColorRose, 'Rose'),
+    (accentColorIceBlue, 'Ice Blue'),
   ];
 
   const AccentColorPage({super.key});

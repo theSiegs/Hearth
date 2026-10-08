@@ -82,30 +82,30 @@ const String backButtonActionNothing = "";
 const String backButtonActionClock = "CLOCK";
 const String backButtonActionScreensaver = "SCREENSAVER";
 
-const String TEMPERATURE_UNIT_CELSIUS = "celsius";
-const String TEMPERATURE_UNIT_FAHRENHEIT = "fahrenheit";
+const String temperatureUnitCelsius = "celsius";
+const String temperatureUnitFahrenheit = "fahrenheit";
 
 // WiFi usage period options
-const String DATA_USAGE_DAILY = "daily";
-const String DATA_USAGE_WEEKLY = "weekly";
-const String DATA_USAGE_MONTHLY = "monthly";
+const String dataUsageDaily = "daily";
+const String dataUsageWeekly = "weekly";
+const String dataUsageMonthly = "monthly";
 
 // Accent color presets (hex values)
-const String ACCENT_COLOR_PURPLE = "7C4DFF";
-const String ACCENT_COLOR_TEAL = "00BFA5";
-const String ACCENT_COLOR_BLUE = "2979FF";
-const String ACCENT_COLOR_ORANGE = "FF6D00";
-const String ACCENT_COLOR_PINK = "F50057";
-const String ACCENT_COLOR_GREEN = "00C853";
-const String ACCENT_COLOR_WHITE = "FFFFFF";
-const String ACCENT_COLOR_YELLOW = "FFD600";
-const String ACCENT_COLOR_RED = "D50000";
-const String ACCENT_COLOR_CYAN = "00E5FF";
-const String ACCENT_COLOR_INDIGO = "536DFE";
-const String ACCENT_COLOR_LIME = "AEEA00";
-const String ACCENT_COLOR_AMBER = "FFAB00";
-const String ACCENT_COLOR_ROSE = "FF4081";
-const String ACCENT_COLOR_ICE_BLUE = "80D8FF";
+const String accentColorPurple = "7C4DFF";
+const String accentColorTeal = "00BFA5";
+const String accentColorBlue = "2979FF";
+const String accentColorOrange = "FF6D00";
+const String accentColorPink = "F50057";
+const String accentColorGreen = "00C853";
+const String accentColorWhite = "FFFFFF";
+const String accentColorYellow = "FFD600";
+const String accentColorRed = "D50000";
+const String accentColorCyan = "00E5FF";
+const String accentColorIndigo = "536DFE";
+const String accentColorLime = "AEEA00";
+const String accentColorAmber = "FFAB00";
+const String accentColorRose = "FF4081";
+const String accentColorIceBlue = "80D8FF";
 
 /// An "RRGGBB" accent hex as an opaque color; one that doesn't parse is purple.
 Color accentColorFromHex(String hex) => Color(int.tryParse("0xFF$hex") ?? 0xFF7C4DFF);
@@ -268,7 +268,7 @@ class SettingsService extends ChangeNotifier {
 
   String get timeFormat => _string(_timeFormatKey, defaultTimeFormat);
 
-  String get dataUsagePeriod => _string(_dataUsagePeriodKey, DATA_USAGE_DAILY);
+  String get dataUsagePeriod => _string(_dataUsagePeriodKey, dataUsageDaily);
 
   bool get showDataWidgetInStatusBar => _bool(_showDataWidgetInStatusBarKey, false);
 
@@ -329,15 +329,15 @@ class SettingsService extends ChangeNotifier {
 
   bool get showWeatherWarnings => _bool(_showWeatherWarningsKey, true);
 
-  String get temperatureUnit => _string(_temperatureUnitKey, TEMPERATURE_UNIT_CELSIUS);
+  String get temperatureUnit => _string(_temperatureUnitKey, temperatureUnitCelsius);
 
-  bool get useFahrenheit => temperatureUnit == TEMPERATURE_UNIT_FAHRENHEIT;
+  bool get useFahrenheit => temperatureUnit == temperatureUnitFahrenheit;
 
   String get appLanguage => _string(_appLanguageKey, "");
 
   Locale? get appLocale => appLanguage.isEmpty ? null : Locale(appLanguage);
 
-  String get accentColorHex => _string(_accentColorKey, ACCENT_COLOR_PURPLE);
+  String get accentColorHex => _string(_accentColorKey, accentColorPurple);
 
   Color get accentColor => accentColorFromHex(accentColorHex);
 

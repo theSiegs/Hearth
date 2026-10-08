@@ -57,7 +57,7 @@ class Categories extends Table
 
   IntColumn get type => intEnum<CategoryType>().withDefault(const Constant(0))();
 
-  // Category.RowHeight and Category.ColumnsCount, written out: drift copies these defaults into generated schema
+  // Category.defaultRowHeight and Category.defaultColumnsCount, written out: drift copies these defaults into generated schema
   // code that can't import Category.
   IntColumn get rowHeight => integer().withDefault(const Constant(110))();
 

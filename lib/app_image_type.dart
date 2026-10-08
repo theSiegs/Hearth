@@ -17,6 +17,6 @@
  */
 
 enum AppImageType {
-  Banner,
-  Icon
+  banner,
+  icon
 }

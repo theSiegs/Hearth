@@ -66,7 +66,7 @@ class _SettingsState extends ChangeNotifier {
         _creating = false,
         _deleted = false,
         _valid = false,
-        _sectionType = LauncherSectionType.Category {
+        _sectionType = LauncherSectionType.category {
     LauncherSection? launcherSection;
     List<LauncherSection> sections = appsService.launcherSections;
     if (sectionIndex != null && sectionIndex < sections.length) {
@@ -95,12 +95,12 @@ class _SettingsState extends ChangeNotifier {
     _changed = false;
     _creating = false;
     _valid = false;
-    _sectionType = LauncherSectionType.Category;
+    _sectionType = LauncherSectionType.category;
 
     if (section == null) {
       _creating = true;
     } else if (section is LauncherSpacer) {
-      _sectionType = LauncherSectionType.Spacer;
+      _sectionType = LauncherSectionType.spacer;
     }
 
     _valid = false;
@@ -120,7 +120,7 @@ class _SettingsState extends ChangeNotifier {
     if (_sectionType != sectionType) {
       _sectionType = sectionType;
 
-      if (sectionType == LauncherSectionType.Spacer) {
+      if (sectionType == LauncherSectionType.spacer) {
         _changed = true;
         _valid = true;
       }
@@ -159,7 +159,7 @@ class LauncherSectionPanelPage extends StatelessWidget {
               bool creating = state.creating;
               Widget sectionSpecificSettings;
 
-              if (sectionType == LauncherSectionType.Category) {
+              if (sectionType == LauncherSectionType.category) {
                 sectionSpecificSettings = _CategorySettings(
                   category: launcherSection as Category?,
                 );
@@ -197,11 +197,11 @@ class LauncherSectionPanelPage extends StatelessWidget {
                           },
                           items: [
                             DropdownMenuItem(
-                              value: LauncherSectionType.Category,
+                              value: LauncherSectionType.category,
                               child: Text(localizations.category, style: Theme.of(context).textTheme.bodySmall),
                             ),
                             DropdownMenuItem(
-                              value: LauncherSectionType.Spacer,
+                              value: LauncherSectionType.spacer,
                               child: Text(localizations.spacer, style: Theme.of(context).textTheme.bodySmall),
                             ),
                           ],
@@ -311,10 +311,10 @@ class _CategorySettingsState extends State<_CategorySettings> {
 
   _CategorySettingsState()
       : _ignoreTextFieldKeyEvent = false,
-        _categorySort = Category.Sort,
-        _categoryType = Category.Type,
-        _columnsCount = Category.ColumnsCount,
-        _rowHeight = Category.RowHeight,
+        _categorySort = Category.defaultSort,
+        _categoryType = Category.defaultType,
+        _columnsCount = Category.defaultColumnsCount,
+        _rowHeight = Category.defaultRowHeight,
         _name = "",
         _textFieldFocusNode = FocusNode();
 
@@ -566,10 +566,10 @@ class _CategorySettingsState extends State<_CategorySettings> {
 
   void _notifyChange() {
     String initialName = "";
-    CategorySort initialSort = Category.Sort;
-    CategoryType initialType = Category.Type;
-    int initialColumnsCount = Category.ColumnsCount;
-    int initialRowHeight = Category.RowHeight;
+    CategorySort initialSort = Category.defaultSort;
+    CategoryType initialType = Category.defaultType;
+    int initialColumnsCount = Category.defaultColumnsCount;
+    int initialRowHeight = Category.defaultRowHeight;
     if (_category != null) {
       initialName = _category!.name;
       initialSort = _category!.sort;
