@@ -32,12 +32,7 @@ class SettingsUnlock extends InheritedNotifier<ValueNotifier<bool>> {
 
 /// This part of Settings is locked here: a kids profile, not unlocked with the parent PIN since the panel opened.
 bool settingsLocked(BuildContext context) {
-  final bool kids;
-  try {
-    kids = context.select<ProfileService, bool>((p) => p.isKidsProfile);
-  } on ProviderNotFoundException {
-    return false;
-  }
+  final kids = context.select<ProfileService?, bool>((p) => p?.isKidsProfile ?? false);
   return kids && SettingsUnlock._of(context)?.value != true;
 }
 

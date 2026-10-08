@@ -65,20 +65,18 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
     super.dispose();
   }
 
-  List<LauncherSection> _getDisplaySections(List<LauncherSection> appSections, SettingsService? settingsService) {
+  List<LauncherSection> _getDisplaySections(List<LauncherSection> appSections, SettingsService settingsService) {
     final list = List<LauncherSection>.from(appSections);
-    if (settingsService != null) {
-      final cwOrder = settingsService.continueWatchingOrder.clamp(0, list.length);
-      _continueWatchingSection.order = cwOrder;
-      list.insert(cwOrder, _continueWatchingSection);
-    }
+    final cwOrder = settingsService.continueWatchingOrder.clamp(0, list.length);
+    _continueWatchingSection.order = cwOrder;
+    list.insert(cwOrder, _continueWatchingSection);
     return list;
   }
 
   @override
   Widget build(BuildContext context) {
     AppLocalizations localizations = AppLocalizations.of(context)!;
-    final settingsService = Provider.of<SettingsService?>(context);
+    final settingsService = context.watch<SettingsService>();
 
     return SettingsPage.custom(
       title: localizations.launcherSections,
@@ -142,7 +140,7 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
     BuildContext context,
     LauncherSection section,
     List<LauncherSection> displaySections,
-    SettingsService? settingsService,
+    SettingsService settingsService,
   ) {
     AppLocalizations localizations = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
@@ -299,7 +297,7 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
     LauncherSection movingSection,
     int direction,
     List<LauncherSection> displaySections,
-    SettingsService? settingsService,
+    SettingsService settingsService,
   ) {
     final now = DateTime.now();
     if (_lastMoveTime != null && now.difference(_lastMoveTime!) < const Duration(milliseconds: 60)) {
@@ -314,9 +312,9 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
 
     final otherSection = displaySections[newIndex];
     if (movingSection is ContinueWatchingSection) {
-      settingsService?.setContinueWatchingOrder(newIndex);
+      settingsService.setContinueWatchingOrder(newIndex);
     } else if (otherSection is ContinueWatchingSection) {
-      settingsService?.setContinueWatchingOrder(currentIndex);
+      settingsService.setContinueWatchingOrder(currentIndex);
     } else {
       final appSections = _appsService.launcherSections;
       final oldAppIndex = appSections.indexOf(movingSection);
