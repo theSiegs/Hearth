@@ -2,14 +2,11 @@ package com.leanbitlab.ltvL;
 
 import android.util.Log;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Locale;
@@ -89,55 +86,34 @@ final class HaNotificationServer {
         }
     }
 
-    static boolean isLocal(InetAddress address) {
-        return address.isLoopbackAddress() || address.isSiteLocalAddress() || address.isLinkLocalAddress()
-                || isUniqueLocalIpv6(address);
-    }
-
-    private static boolean isUniqueLocalIpv6(InetAddress address) {
-        byte[] bytes = address.getAddress();
-        return bytes.length == 16 && (bytes[0] & 0xFE) == 0xFC;
-    }
-
     private void handle(Socket socket) throws IOException {
-        if (!isLocal(socket.getInetAddress())) {
-            respond(socket.getOutputStream(), 403, "Forbidden");
+        OutputStream out = socket.getOutputStream();
+        if (!LocalNet.isLocal(socket.getInetAddress())) {
+            MiniHttp.respond(out, 403, "Forbidden");
             return;
         }
         InputStream in = socket.getInputStream();
-        String requestLine = readLine(in);
-        if (requestLine == null) return;
-        Map<String, String> headers = new HashMap<>();
-        String line;
-        while ((line = readLine(in)) != null && !line.isEmpty()) {
-            int colon = line.indexOf(':');
-            if (colon > 0) headers.put(line.substring(0, colon).trim().toLowerCase(Locale.ROOT), line.substring(colon + 1).trim());
-        }
-
-        String method = requestLine.split(" ")[0];
-        if (!"POST".equals(method)) {
+        MiniHttp.Request request = MiniHttp.read(in);
+        if (request == null) return;
+        if (!"POST".equals(request.method)) {
             // Home Assistant's connection test
-            respond(socket.getOutputStream(), 200, "LTvLauncher");
+            MiniHttp.respond(out, 200, "LTvLauncher");
             return;
         }
 
-        int length = 0;
-        try {
-            length = Integer.parseInt(headers.getOrDefault("content-length", "0"));
-        } catch (NumberFormatException ignored) {
-        }
+        int length = request.contentLength();
         if (length <= 0 || length > MAX_BODY_BYTES) {
-            respond(socket.getOutputStream(), 400, "Bad Request");
+            MiniHttp.respond(out, 400, "Bad Request");
             return;
         }
-        byte[] body = readExactly(in, length);
-        Notification notification = parse(headers.getOrDefault("content-type", ""), body);
+        byte[] body = MiniHttp.readBody(in, length);
+        Notification notification = parse(request.headers.getOrDefault("content-type", ""), body);
         if (notification == null
                 || (isBlank(notification.message) && isBlank(notification.title) && isBlank(notification.camera))) {
-            respond(socket.getOutputStream(), 400, "Missing msg");
+            MiniHttp.respond(out, 400, "Missing msg");
             return;
         }
-        respond(socket.getOutputStream(), 200, "OK");
+        MiniHttp.respond(out, 200, "OK");
         mListener.onNotification(notification);
     }
 
@@ -156,14 +132,8 @@ final class HaNotificationServer {
             parseMultipart(body, boundary, fields);
         } else {
             // application/x-www-form-urlencoded, handy for curl tests
-            for (String pair : new String(body, StandardCharsets.UTF_8).split("&")) {
-                int eq = pair.indexOf('=');
-                if (eq <= 0) continue;
-                try {
-                    fields.put(URLDecoder.decode(pair.substring(0, eq), "UTF-8"),
-                            URLDecoder.decode(pair.substring(eq + 1), "UTF-8").getBytes(StandardCharsets.UTF_8));
-                } catch (Exception ignored) {
-                }
+            for (Map.Entry<String, String> field : MiniHttp.parseForm(new String(body, StandardCharsets.UTF_8)).entrySet()) {
+                fields.put(field.getKey(), field.getValue().getBytes(StandardCharsets.UTF_8));
             }
         }
 
@@ -256,37 +226,5 @@ final class HaNotificationServer {
 
     private static boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
-    }
-
-    private static String readLine(InputStream in) throws IOException {
-        ByteArrayOutputStream line = new ByteArrayOutputStream();
-        int b;
-        while ((b = in.read()) != -1) {
-            if (b == '\n') break;
-            if (b != '\r') line.write(b);
-            if (line.size() > 8192) throw new IOException("Header too long");
-        }
-        if (b == -1 && line.size() == 0) return null;
-        return line.toString("UTF-8");
-    }
-
-    private static byte[] readExactly(InputStream in, int length) throws IOException {
-        byte[] data = new byte[length];
-        int read = 0;
-        while (read < length) {
-            int n = in.read(data, read, length - read);
-            if (n < 0) throw new IOException("Body truncated");
-            read += n;
-        }
-        return data;
-    }
-
-    private static void respond(OutputStream out, int status, String text) throws IOException {
-        byte[] body = text.getBytes(StandardCharsets.UTF_8);
-        String reason = status == 200 ? "OK" : status == 403 ? "Forbidden" : "Bad Request";
-        out.write(("HTTP/1.1 " + status + " " + reason + "\r\nContent-Type: text/plain\r\nContent-Length: " + body.length
-                + "\r\nConnection: close\r\n\r\n").getBytes(StandardCharsets.UTF_8));
-        out.write(body);
-        out.flush();
     }
 }

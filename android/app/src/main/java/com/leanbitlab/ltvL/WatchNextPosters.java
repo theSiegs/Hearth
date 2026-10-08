@@ -14,7 +14,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.InetAddress;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -121,10 +120,8 @@ final class WatchNextPosters {
     }
 
     private static boolean allowed(URL url) {
-        if ("https".equalsIgnoreCase(url.getProtocol())) return true;
-        if (!"http".equalsIgnoreCase(url.getProtocol())) return false;
         try {
-            return HaNotificationServer.isLocal(InetAddress.getByName(url.getHost()));
+            return LocalNet.allows(url);
         } catch (IOException e) {
             return false;
         }

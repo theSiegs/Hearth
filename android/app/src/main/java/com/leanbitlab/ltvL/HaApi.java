@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.net.InetAddress;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
@@ -93,7 +92,7 @@ final class HaApi {
         HttpURLConnection connection = null;
         try {
             URL url = new URL(base + path);
-            if ("http".equals(url.getProtocol()) && !HaNotificationServer.isLocal(InetAddress.getByName(url.getHost()))) {
+            if (!LocalNet.allows(url)) {
                 Log.w(TAG, "Refusing plain HTTP to a non-local address; use https");
                 return null;
             }
