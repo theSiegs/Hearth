@@ -84,7 +84,7 @@ void main() {
     when(settingsService.showCategoryTitles).thenReturn(true);
     when(settingsService.showCategoryAppCount).thenReturn(false);
     when(settingsService.themes).thenReturn('modern');
-    when(settingsService.accentColorHex).thenReturn('00ff00');
+    when(settingsService.accentColor).thenReturn(const Color(0xFF00FF00));
     when(settingsService.appHighlightAnimationEnabled).thenReturn(true);
     when(settingsService.hideHighlightOutlineOnHomescreen).thenReturn(false);
     when(settingsService.appSelectorTransitionAnimationEnabled).thenReturn(true);
