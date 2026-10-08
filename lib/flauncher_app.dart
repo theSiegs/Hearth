@@ -28,6 +28,7 @@ import 'package:provider/provider.dart';
 
 import 'flauncher.dart';
 import 'widgets/home_button_fix_check.dart';
+import 'providers/home_search.dart';
 
 class FLauncherApp extends StatelessWidget
 {
@@ -148,6 +149,8 @@ class FLauncherApp extends StatelessWidget
           canPop: false,
           child: HomeButtonFixCheck(child: FLauncher()),
           onPopInvoked: (didPop) {
+            // A search closes first (the box, then the search itself)
+            if (context.read<HomeSearch?>()?.backHandler?.call() ?? false) return;
             LauncherState launcherState = context.read<LauncherState>();
             launcherState.handleBackNavigation(context);
           }
