@@ -16,9 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/widgets/add_to_category_dialog.dart';
@@ -189,15 +187,8 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                                  final picker = ImagePicker();
                                  final pickedFile = await picker.pickImage(source: ImageSource.gallery);
                                  if (pickedFile != null) {
-                                   final docDir = await getApplicationDocumentsDirectory();
-                                   // Sanitize package name for filename
-                                   final safePackageName = widget.application.packageName
-                                       .replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
-                                   final savedImage = File('${docDir.path}/custom_banner_$safePackageName.png');
-                                   await File(pickedFile.path).copy(savedImage.path);
-                                   // Clean up temp file from ImagePicker
-                                   await File(pickedFile.path).delete();
-                                   await appsService.setCustomAppBanner(widget.application.packageName, savedImage.path);
+                                   await appsService.setCustomAppBannerFromFile(
+                                       widget.application.packageName, pickedFile.path);
                                    if (!mounted) return;
                                    // Refresh the future to reflect the change
                                    setState(() {
