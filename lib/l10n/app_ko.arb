@@ -1,6 +1,5 @@
 {
     "aboutFlauncher": "Hearth 정보",
-    "addCategory": "카테고리 추가",
     "addSection": "섹션 추가",
     "alphabetical": "알파벳순",
     "appCardHighlightAnimation": "앱 카드 하이라이트 애니메이션",
@@ -10,7 +9,6 @@
     "autoHideAppBar": "상태 표시줄 자동 숨기기",
     "backButtonAction": "뒤로 버튼 동작",
     "category": "카테고리",
-    "categories": "카테고리",
     "columnCount": "열 수",
     "date": "날짜",
     "dateAndTimeFormat": "날짜 및 시간 형식",
@@ -19,27 +17,10 @@
     "dialogOptionBackButtonActionShowScreensaver": "화면 보호기 표시",
     "dialogOptionBackButtonActionShowClock": "시계 표시",
     "dialogTextNoFileExplorer": "사진을 선택하려면 파일 탐색기를 설치하세요.",
-    "dialogTitleBackButtonAction": "뒤로 버튼 동작 선택",
     "disambiguateCategoryTitle": "{title} (카테고리)",
     "@disambiguateCategoryTitle": {
         "placeholders": {
             "title": {
-                "type": "String"
-            }
-        }
-    },
-    "formattedDate": "포맷된 날짜: {dateString}",
-    "@formattedDate": {
-        "placeholders": {
-            "dateString": {
-                "type": "String"
-            }
-        }
-    },
-    "formattedTime": "포맷된 시간: {timeString}",
-    "@formattedTime": {
-        "placeholders": {
-            "timeString": {
                 "type": "String"
             }
         }
@@ -55,14 +36,10 @@
     "loading": "로딩 중",
     "manual": "수동",
     "modifySection": "섹션 수정",
-    "mustNotBeEmpty": "비워둘 수 없습니다",
     "name": "이름",
     "newSection": "새 섹션",
-    "noDateFormatSpecified": "날짜 형식이 지정되지 않음",
-    "noTimeFormatSpecified": "시간 형식이 지정되지 않음",
     "nonTvApplications": "비 TV 앱",
     "open": "열기",
-    "orSelectFormatSpecifiers": "또는 형식 지정자 선택",
     "picture": "사진",
     "removeFrom": "{name}에서 제거",
     "@removeFrom": {
@@ -72,49 +49,29 @@
             }
         }
     },
-    "renameCategory": "카테고리 이름 변경",
     "reorder": "재정렬",
     "row": "행",
     "rowHeight": "행 높이",
     "save": "저장",
     "spacer": "간격",
-    "spacerMaxHeightRequirement": "0보다 크고 500 이하여야 합니다",
     "statusBar": "상태 표시줄",
-    "settings": "설정",
     "show": "표시",
     "showCategoryTitles": "카테고리 제목 표시",
     "showCategoryAppCount": "카테고리의 앱 수 표시",
-    "themes": "테마",
     "hideHighlightOutlineOnHomescreen": "홈 화면에서 하이라이트 윤곽선 숨기기",
     "appSelectorTransitionAnimation": "앱 선택기 전환 애니메이션",
     "sort": "정렬",
     "systemSettings": "시스템 설정",
-    "textAboutDialog": "Hearth (LTvLauncher)는 FLauncher를 기반으로 한 Android TV용 맞춤형 오픈 소스 런처입니다.\n\nLeanBitLab에서 개발했습니다.\n소스 코드는 {repoUrl}에서 사용할 수 있습니다.",
-    "@textAboutDialog": {
-        "placeholders": {
-            "repoUrl": {
-                "type": "String"
-            }
-        }
-    },
     "textEmptyCategory": "이 카테고리는 비어 있습니다.",
     "time": "시간",
-    "titleStatusBarSettingsPage": "상태 표시줄에 표시할 내용 선택",
     "tvApplications": "TV 앱",
     "type": "유형",
-    "typeInTheDateFormat": "날짜 형식 입력",
-    "typeInTheHourFormat": "시간 형식 입력",
     "uninstall": "제거",
     "wallpaper": "배경화면",
     "withEllipsisAddTo": "추가...",
     "timeBasedWallpaper": "시간 기반 배경화면",
     "pickDayWallpaper": "주간 배경화면 선택",
     "pickNightWallpaper": "야간 배경화면 선택",
-    "accessibility": "접근성",
-    "defaultLauncherIsDefault": "Hearth가 기본 런처입니다",
-    "defaultLauncherNotDefault": "Hearth가 기본 런처가 아닙니다",
-    "setAsDefaultLauncher": "기본 런처로 설정",
-    "defaultLauncherDescription": "기본 런처로 설정하면 홈 버튼은 항상 Hearth로 돌아갑니다. TV도 직접 Hearth로 부팅됩니다.",
     "inputs": "입력",
     "inputSources": "입력 소스",
     "backupAndRestore": "백업 및 복원",
@@ -147,31 +104,13 @@
         }
     },
     "shareBackup": "백업 공유",
-    "shareBackupDescription": "로컬 네트워크의 다른 기기와 백업 공유",
-    "stopSharing": "공유 중지",
-    "localNetworkSharingActive": "로컬 네트워크 공유가 활성화되었습니다!",
-    "localNetworkSharingInstructions": "다른 기기를 동일한 Wi-Fi 네트워크에 연결하고 웹 브라우저에서 다음 URL을 엽니다.",
-    "localNetworkSharingDetails": "여기에서 TV 설정/레이아웃을 다운로드하거나 이 TV로 백업 파일을 업로드할 수 있습니다.",
-    "failedToStartServer": "공유 서버 시작 실패: {error}",
-    "@failedToStartServer": {
-        "placeholders": {
-            "error": {
-                "type": "String"
-            }
-        }
-    },
     "notificationBell": "알림 벨",
     "autoHideNotificationBell": "알림 벨 자동 숨기기",
     "continueWatching": "계속 시청",
     "showContinueWatchingOnHome": "홈에서 계속 시청 표시",
     "permissionDeniedContinueWatching": "계속 시청을 표시하려면 권한이 필요합니다",
-    "interface": "인터페이스",
     "system": "시스템",
     "accentColor": "강조 색상",
-    "miscellaneous": "기타",
-    "brightnessScheduler": "밝기 스케줄러",
-    "screensaverSettings": "화면 보호기 설정",
-    "screensaverClockStyle": "화면 보호기 시계 스타일",
     "dataUsagePeriod": "데이터 사용 기간",
     "notificationAccess": "알림 액세스",
     "granted": "부여됨",
@@ -183,7 +122,6 @@
     "showAppNamesBelowIcons": "아이콘 아래에 앱 이름 표시",
     "dataUsage": "데이터 사용량",
     "networkIndicator": "네트워크 표시기",
-    "homeButtonFix": "홈 버튼 수정 (Google TV)",
     "startOnBoot": "부팅 시 시작 (Google TV / Fire TV)",
     "appLanguage": "언어",
     "systemDefault": "시스템 기본값",
@@ -202,7 +140,6 @@
     "arabic": "아랍어",
     "turkish": "터키어",
     "hidePersistentNotifications": "고정 알림 숨기기",
-    "hidePersistentNotificationsDesc": "백그라운드 서비스 및 시스템 고정 알림 숨기기",
     "blockedNotificationApps": "차단된 앱",
     "blockAppNotifications": "알림 차단",
     "unblockAppNotifications": "알림 차단 해제",
@@ -214,15 +151,10 @@
     "temperatureUnit": "온도 단위",
     "celsius": "섭씨 (°C)",
     "fahrenheit": "화씨 (°F)",
-    "breezyWeatherSetupHint": "Breezy Weather를 설치하고 설정에서 '로컬 데이터 공유' / 'Gadgetbridge'를 활성화하면 날씨 및 강우 경보가 표시됩니다.",
-    "displayAndScreensaver": "디스플레이 및 화면 보호기",
     "notifications": "알림",
     "continueWatchingDescription": "홈 화면에 최근 시청한 영화 및 TV 프로그램 표시",
-    "continueWatchingPermissionDesc": "TV 앱의 시청 기록을 읽으려면 특별한 권한이 필요합니다:",
-    "requestPermission": "권한 요청",
     "dismiss": "닫기",
     "openApp": "열기",
-    "notificationOptions": "알림 옵션",
     "noBlockedAppsDesc": "현재 모든 애플리케이션의 알림 표시가 허용되어 있습니다",
     "notificationsAllowed": "알림 허용됨",
     "notificationsBlocked": "알림 차단됨",

@@ -10,9 +10,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get aboutFlauncher => 'Acerca de Hearth';
 
   @override
-  String get addCategory => 'Agregar categoría';
-
-  @override
   String get addSection => 'Agregar sección';
 
   @override
@@ -40,9 +37,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get category => 'Categoría';
 
   @override
-  String get categories => 'Categorías';
-
-  @override
   String get columnCount => 'Cantidad de columnas';
 
   @override
@@ -67,21 +61,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get dialogTextNoFileExplorer => 'Por favor, instale un gestor de archivos para seleccionar una imagen.';
 
   @override
-  String get dialogTitleBackButtonAction => 'Elegir la acción del botón \'Atrás\'';
-
-  @override
   String disambiguateCategoryTitle(String title) {
     return '$title (Categoría)';
-  }
-
-  @override
-  String formattedDate(String dateString) {
-    return 'Fecha con formato: $dateString';
-  }
-
-  @override
-  String formattedTime(String timeString) {
-    return 'Hora con formato: $timeString';
   }
 
   @override
@@ -118,19 +99,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get modifySection => 'Modificar sección';
 
   @override
-  String get mustNotBeEmpty => 'No debe estar vacío';
-
-  @override
   String get name => 'Nombre';
 
   @override
   String get newSection => 'Nueva sección';
-
-  @override
-  String get noDateFormatSpecified => 'Sin formato de fecha';
-
-  @override
-  String get noTimeFormatSpecified => 'Sin formato de hora';
 
   @override
   String get nonTvApplications => 'Otras aplicaciones';
@@ -139,18 +111,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get open => 'Abrir';
 
   @override
-  String get orSelectFormatSpecifiers => 'O seleccione especificadores de formato';
-
-  @override
   String get picture => 'Imagen';
 
   @override
   String removeFrom(String name) {
     return 'Eliminar de $name';
   }
-
-  @override
-  String get renameCategory => 'Renombrar categoría';
 
   @override
   String get reorder => 'Reordenar';
@@ -168,13 +134,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get spacer => 'Espaciador';
 
   @override
-  String get spacerMaxHeightRequirement => 'Debe ser mayor a cero y menor o igual a 500';
-
-  @override
   String get statusBar => 'Barra de estado';
-
-  @override
-  String get settings => 'Ajustes';
 
   @override
   String get show => 'Mostrar';
@@ -184,9 +144,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get showCategoryAppCount => 'Mostrar recuento de aplicaciones en categorías';
-
-  @override
-  String get themes => 'Temas';
 
   @override
   String get hideHighlightOutlineOnHomescreen => 'Ocultar el contorno de resaltado en la pantalla de inicio';
@@ -201,30 +158,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get systemSettings => 'Ajustes del sistema';
 
   @override
-  String textAboutDialog(String repoUrl) {
-    return 'Hearth (LTvLauncher) es un lanzador de código abierto personalizado para Android TV, basado en FLauncher.\n\nDesarrollado por LeanBitLab.\nCódigo fuente disponible en $repoUrl.';
-  }
-
-  @override
   String get textEmptyCategory => 'Esta categoría está vacía.';
 
   @override
   String get time => 'Hora';
 
   @override
-  String get titleStatusBarSettingsPage => 'Elija la información a mostrar en la barra de estado';
-
-  @override
   String get tvApplications => 'Aplicaciones del televisor';
 
   @override
   String get type => 'Tipo';
-
-  @override
-  String get typeInTheDateFormat => 'Escriba el formato de fecha';
-
-  @override
-  String get typeInTheHourFormat => 'Escriba el formato de hora';
 
   @override
   String get uninstall => 'Desinstalar';
@@ -243,21 +186,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get pickNightWallpaper => 'Elegir fondo de pantalla nocturno';
-
-  @override
-  String get accessibility => 'Accesibilidad';
-
-  @override
-  String get defaultLauncherIsDefault => 'Hearth es el lanzador predeterminado';
-
-  @override
-  String get defaultLauncherNotDefault => 'Hearth no es el lanzador predeterminado';
-
-  @override
-  String get setAsDefaultLauncher => 'Establecer como lanzador predeterminado';
-
-  @override
-  String get defaultLauncherDescription => 'Cuando se establece como lanzador predeterminado, el botón de inicio siempre regresará a Hearth. El TV también iniciará directamente en Hearth.';
 
   @override
   String get inputs => 'Entradas';
@@ -299,26 +227,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shareBackup => 'Compartir copia';
 
   @override
-  String get shareBackupDescription => 'Comparta la copia de seguridad con otros dispositivos en la red local';
-
-  @override
-  String get stopSharing => 'Detener uso compartido';
-
-  @override
-  String get localNetworkSharingActive => '¡El uso compartido en red local está activo!';
-
-  @override
-  String get localNetworkSharingInstructions => 'Conecte otro dispositivo a la misma red Wi-Fi y abra la siguiente URL en un navegador web:';
-
-  @override
-  String get localNetworkSharingDetails => 'Aquí puede descargar la configuración/diseño de su TV o subir un archivo de copia de seguridad a esta TV.';
-
-  @override
-  String failedToStartServer(String error) {
-    return 'Error al iniciar el servidor de uso compartido: $error';
-  }
-
-  @override
   String get notificationBell => 'Campana de notificaciones';
 
   @override
@@ -334,25 +242,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get permissionDeniedContinueWatching => 'Se requiere permiso para mostrar Continuar viendo';
 
   @override
-  String get interface => 'Interfaz';
-
-  @override
   String get system => 'Sistema';
 
   @override
   String get accentColor => 'Color de acento';
-
-  @override
-  String get miscellaneous => 'Miscelánea';
-
-  @override
-  String get brightnessScheduler => 'Programador de brillo';
-
-  @override
-  String get screensaverSettings => 'Ajustes del salvapantallas';
-
-  @override
-  String get screensaverClockStyle => 'Estilo de reloj del salvapantallas';
 
   @override
   String get dataUsagePeriod => 'Período de uso de datos';
@@ -386,9 +279,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get networkIndicator => 'Indicador de red';
-
-  @override
-  String get homeButtonFix => 'Corrección del botón Inicio (Google TV)';
 
   @override
   String get startOnBoot => 'Iniciar al encender (Google TV / Fire TV)';
@@ -445,9 +335,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get hidePersistentNotifications => 'Ocultar notificaciones persistentes';
 
   @override
-  String get hidePersistentNotificationsDesc => 'Ocultar notificaciones de servicios en segundo plano y del sistema';
-
-  @override
   String get blockedNotificationApps => 'Aplicaciones bloqueadas';
 
   @override
@@ -481,31 +368,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get fahrenheit => 'Fahrenheit (°F)';
 
   @override
-  String get breezyWeatherSetupHint => 'Instala Breezy Weather y activa \'Compartir datos locales\' / \'Gadgetbridge\' en sus ajustes para ver el clima y avisos de lluvia.';
-
-  @override
-  String get displayAndScreensaver => 'Pantalla y salvapantallas';
-
-  @override
   String get notifications => 'Notificaciones';
 
   @override
   String get continueWatchingDescription => 'Mostrar películas y series vistas recientemente en la pantalla de inicio';
 
   @override
-  String get continueWatchingPermissionDesc => 'Se requiere un permiso especial para leer el historial de reproducción de las aplicaciones de TV:';
-
-  @override
-  String get requestPermission => 'Solicitar permiso';
-
-  @override
   String get dismiss => 'Descartar';
 
   @override
   String get openApp => 'Abrir';
-
-  @override
-  String get notificationOptions => 'Opciones de notificación';
 
   @override
   String get noBlockedAppsDesc => 'Todas las aplicaciones tienen permitido mostrar notificaciones';

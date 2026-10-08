@@ -10,9 +10,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aboutFlauncher => 'О программе Hearth';
 
   @override
-  String get addCategory => 'Добавить категорию';
-
-  @override
   String get addSection => 'Добавить раздел';
 
   @override
@@ -40,9 +37,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get category => 'Категория';
 
   @override
-  String get categories => 'Категории';
-
-  @override
   String get columnCount => 'Количество столбцов';
 
   @override
@@ -67,21 +61,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get dialogTextNoFileExplorer => 'Пожалуйста, установите файловый менеджер, чтобы выбрать изображение.';
 
   @override
-  String get dialogTitleBackButtonAction => 'Выберите действие кнопки назад';
-
-  @override
   String disambiguateCategoryTitle(String title) {
     return '$title (Категория)';
-  }
-
-  @override
-  String formattedDate(String dateString) {
-    return 'Форматированная дата: $dateString';
-  }
-
-  @override
-  String formattedTime(String timeString) {
-    return 'Форматированное время: $timeString';
   }
 
   @override
@@ -118,19 +99,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get modifySection => 'Изменить раздел';
 
   @override
-  String get mustNotBeEmpty => 'Не должно быть пустым';
-
-  @override
   String get name => 'Имя';
 
   @override
   String get newSection => 'Новый раздел';
-
-  @override
-  String get noDateFormatSpecified => 'Формат даты не указан';
-
-  @override
-  String get noTimeFormatSpecified => 'Формат времени не указан';
 
   @override
   String get nonTvApplications => 'Приложения не для ТВ';
@@ -139,18 +111,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get open => 'Открыть';
 
   @override
-  String get orSelectFormatSpecifiers => 'Или выберите спецификаторы формата';
-
-  @override
   String get picture => 'Изображение';
 
   @override
   String removeFrom(String name) {
     return 'Удалить из $name';
   }
-
-  @override
-  String get renameCategory => 'Переименовать категорию';
 
   @override
   String get reorder => 'Изменить порядок';
@@ -168,13 +134,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get spacer => 'Разделитель';
 
   @override
-  String get spacerMaxHeightRequirement => 'Должно быть больше 0 и меньше или равно 500';
-
-  @override
   String get statusBar => 'Строка состояния';
-
-  @override
-  String get settings => 'Настройки';
 
   @override
   String get show => 'Показать';
@@ -184,9 +144,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get showCategoryAppCount => 'Показывать количество приложений в категориях';
-
-  @override
-  String get themes => 'Темы';
 
   @override
   String get hideHighlightOutlineOnHomescreen => 'Скрыть контур выделения на главном экране';
@@ -201,30 +158,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get systemSettings => 'Системные настройки';
 
   @override
-  String textAboutDialog(String repoUrl) {
-    return 'Hearth (LTvLauncher) — это настраиваемый лаунчер с открытым исходным кодом для Android TV, основанный на FLauncher.\n\nРазработан LeanBitLab.\nИсходный код доступен по адресу $repoUrl.';
-  }
-
-  @override
   String get textEmptyCategory => 'Эта категория пуста.';
 
   @override
   String get time => 'Время';
 
   @override
-  String get titleStatusBarSettingsPage => 'Выберите, что отображать в строке состояния';
-
-  @override
   String get tvApplications => 'ТВ-приложения';
 
   @override
   String get type => 'Тип';
-
-  @override
-  String get typeInTheDateFormat => 'Введите формат даты';
-
-  @override
-  String get typeInTheHourFormat => 'Введите формат времени';
 
   @override
   String get uninstall => 'Удалить';
@@ -243,21 +186,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get pickNightWallpaper => 'Выбрать ночные обои';
-
-  @override
-  String get accessibility => 'Специальные возможности';
-
-  @override
-  String get defaultLauncherIsDefault => 'Hearth является лаунчером по умолчанию';
-
-  @override
-  String get defaultLauncherNotDefault => 'Hearth не является лаунчером по умолчанию';
-
-  @override
-  String get setAsDefaultLauncher => 'Установить как лаунчер по умолчанию';
-
-  @override
-  String get defaultLauncherDescription => 'При установке в качестве лаунчера по умолчанию кнопка «Домой» всегда будет возвращать к Hearth. ТВ также будет загружаться напрямую в Hearth.';
 
   @override
   String get inputs => 'Входы';
@@ -299,26 +227,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get shareBackup => 'Поделиться резервной копией';
 
   @override
-  String get shareBackupDescription => 'Поделиться резервной копией с другими устройствами в локальной сети';
-
-  @override
-  String get stopSharing => 'Остановить доступ';
-
-  @override
-  String get localNetworkSharingActive => 'Доступ в локальной сети активен!';
-
-  @override
-  String get localNetworkSharingInstructions => 'Подключите другое устройство к той же сети Wi-Fi и откройте следующий URL-адрес в веб-браузере:';
-
-  @override
-  String get localNetworkSharingDetails => 'Здесь вы можете скачать настройки/макет вашего ТВ или загрузить файл резервной копии обратно на этот ТВ.';
-
-  @override
-  String failedToStartServer(String error) {
-    return 'Не удалось запустить сервер общего доступа: $error';
-  }
-
-  @override
   String get notificationBell => 'Колокольчик уведомлений';
 
   @override
@@ -334,25 +242,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get permissionDeniedContinueWatching => 'Требуется разрешение для показа «Продолжить просмотр»';
 
   @override
-  String get interface => 'Интерфейс';
-
-  @override
   String get system => 'Система';
 
   @override
   String get accentColor => 'Акцентный цвет';
-
-  @override
-  String get miscellaneous => 'Разное';
-
-  @override
-  String get brightnessScheduler => 'Планировщик яркости';
-
-  @override
-  String get screensaverSettings => 'Настройки заставки';
-
-  @override
-  String get screensaverClockStyle => 'Стиль часов заставки';
 
   @override
   String get dataUsagePeriod => 'Период использования данных';
@@ -386,9 +279,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get networkIndicator => 'Индикатор сети';
-
-  @override
-  String get homeButtonFix => 'Исправление кнопки «Домой» (Google TV)';
 
   @override
   String get startOnBoot => 'Запускать при включении (Google TV / Fire TV)';
@@ -445,9 +335,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get hidePersistentNotifications => 'Скрыть постоянные уведомления';
 
   @override
-  String get hidePersistentNotificationsDesc => 'Скрывать фоновые и системные уведомления';
-
-  @override
   String get blockedNotificationApps => 'Заблокированные приложения';
 
   @override
@@ -481,31 +368,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get fahrenheit => 'Фаренгейт (°F)';
 
   @override
-  String get breezyWeatherSetupHint => 'Установите Breezy Weather и включите \'Локальный обмен данными\' / \'Gadgetbridge\' в его настройках для отображения погоды и предупреждений.';
-
-  @override
-  String get displayAndScreensaver => 'Экран и заставка';
-
-  @override
   String get notifications => 'Уведомления';
 
   @override
   String get continueWatchingDescription => 'Показывать недавно просмотренные фильмы и передачи на главном экране';
 
   @override
-  String get continueWatchingPermissionDesc => 'Для чтения истории просмотров из ТВ-приложений требуется специальное разрешение:';
-
-  @override
-  String get requestPermission => 'Запросить разрешение';
-
-  @override
   String get dismiss => 'Закрыть';
 
   @override
   String get openApp => 'Открыть';
-
-  @override
-  String get notificationOptions => 'Параметры уведомления';
 
   @override
   String get noBlockedAppsDesc => 'Всем приложениям в данный момент разрешено показывать уведомления';

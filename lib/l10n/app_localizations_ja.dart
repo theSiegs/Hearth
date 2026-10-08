@@ -10,9 +10,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get aboutFlauncher => 'Hearthについて';
 
   @override
-  String get addCategory => 'カテゴリを追加';
-
-  @override
   String get addSection => 'セクションを追加';
 
   @override
@@ -40,9 +37,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get category => 'カテゴリ';
 
   @override
-  String get categories => 'カテゴリ';
-
-  @override
   String get columnCount => '列数';
 
   @override
@@ -67,21 +61,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get dialogTextNoFileExplorer => '画像を選択するにはファイルエクスプローラーをインストールしてください。';
 
   @override
-  String get dialogTitleBackButtonAction => '戻るボタンの動作を選択';
-
-  @override
   String disambiguateCategoryTitle(String title) {
     return '$title (カテゴリ)';
-  }
-
-  @override
-  String formattedDate(String dateString) {
-    return '書式化された日付: $dateString';
-  }
-
-  @override
-  String formattedTime(String timeString) {
-    return '書式化された時刻: $timeString';
   }
 
   @override
@@ -118,19 +99,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get modifySection => 'セクションを変更';
 
   @override
-  String get mustNotBeEmpty => '空にすることはできません';
-
-  @override
   String get name => '名前';
 
   @override
   String get newSection => '新しいセクション';
-
-  @override
-  String get noDateFormatSpecified => '日付形式が指定されていません';
-
-  @override
-  String get noTimeFormatSpecified => '時刻形式が指定されていません';
 
   @override
   String get nonTvApplications => '非TVアプリ';
@@ -139,18 +111,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get open => '開く';
 
   @override
-  String get orSelectFormatSpecifiers => 'または形式指定子を選択';
-
-  @override
   String get picture => '画像';
 
   @override
   String removeFrom(String name) {
     return '$nameから削除';
   }
-
-  @override
-  String get renameCategory => 'カテゴリ名を変更';
 
   @override
   String get reorder => '並べ替え';
@@ -168,13 +134,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get spacer => 'スペーサー';
 
   @override
-  String get spacerMaxHeightRequirement => '0より大きく500以下である必要があります';
-
-  @override
   String get statusBar => 'ステータスバー';
-
-  @override
-  String get settings => '設定';
 
   @override
   String get show => '表示';
@@ -184,9 +144,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get showCategoryAppCount => 'カテゴリ内のアプリ数を表示';
-
-  @override
-  String get themes => 'テーマ';
 
   @override
   String get hideHighlightOutlineOnHomescreen => 'ホーム画面でハイライトのアウトラインを非表示';
@@ -201,30 +158,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get systemSettings => 'システム設定';
 
   @override
-  String textAboutDialog(String repoUrl) {
-    return 'Hearth (LTvLauncher)はFLauncherをベースにしたAndroid TV用のカスタムオープンソースランチャーです。\n\nLeanBitLabによって開発されています。\nソースコードは$repoUrlで入手できます。';
-  }
-
-  @override
   String get textEmptyCategory => 'このカテゴリは空です。';
 
   @override
   String get time => '時刻';
 
   @override
-  String get titleStatusBarSettingsPage => 'ステータスバーに表示するものを選択';
-
-  @override
   String get tvApplications => 'TVアプリ';
 
   @override
   String get type => '種類';
-
-  @override
-  String get typeInTheDateFormat => '日付形式を入力';
-
-  @override
-  String get typeInTheHourFormat => '時刻形式を入力';
 
   @override
   String get uninstall => 'アンインストール';
@@ -243,21 +186,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get pickNightWallpaper => '夜の壁紙を選択';
-
-  @override
-  String get accessibility => 'アクセシビリティ';
-
-  @override
-  String get defaultLauncherIsDefault => 'Hearthはデフォルトのランチャーです';
-
-  @override
-  String get defaultLauncherNotDefault => 'Hearthはデフォルトのランチャーではありません';
-
-  @override
-  String get setAsDefaultLauncher => 'デフォルトのランチャーに設定';
-
-  @override
-  String get defaultLauncherDescription => 'デフォルトのランチャーに設定すると、ホームボタンは常にHearthに戻ります。TVの起動時も直接Hearthが起動します。';
 
   @override
   String get inputs => '入力';
@@ -299,26 +227,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get shareBackup => 'バックアップを共有';
 
   @override
-  String get shareBackupDescription => 'ローカルネットワーク上の他のデバイスとバックアップを共有';
-
-  @override
-  String get stopSharing => '共有を停止';
-
-  @override
-  String get localNetworkSharingActive => 'ローカルネットワーク共有が有効です！';
-
-  @override
-  String get localNetworkSharingInstructions => '他のデバイスを同じWi-Fiネットワークに接続し、Webブラウザで次のURLを開きます：';
-
-  @override
-  String get localNetworkSharingDetails => 'ここでTVの設定/レイアウトをダウンロードするか、バックアップファイルをこのTVにアップロードできます。';
-
-  @override
-  String failedToStartServer(String error) {
-    return '共有サーバーの起動に失敗しました: $error';
-  }
-
-  @override
   String get notificationBell => '通知ベル';
 
   @override
@@ -334,25 +242,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get permissionDeniedContinueWatching => '「続きを見る」を表示するには権限が必要です';
 
   @override
-  String get interface => 'インターフェース';
-
-  @override
   String get system => 'システム';
 
   @override
   String get accentColor => 'アクセントカラー';
-
-  @override
-  String get miscellaneous => 'その他';
-
-  @override
-  String get brightnessScheduler => '明るさスケジューラー';
-
-  @override
-  String get screensaverSettings => 'スクリーンセーバー設定';
-
-  @override
-  String get screensaverClockStyle => 'スクリーンセーバー時計スタイル';
 
   @override
   String get dataUsagePeriod => 'データ使用期間';
@@ -386,9 +279,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get networkIndicator => 'ネットワークインジケーター';
-
-  @override
-  String get homeButtonFix => 'ホームボタン修正 (Google TV)';
 
   @override
   String get startOnBoot => '起動時に開始 (Google TV / Fire TV)';
@@ -445,9 +335,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get hidePersistentNotifications => '常駐通知を非表示';
 
   @override
-  String get hidePersistentNotificationsDesc => 'バックグラウンドサービスやシステムの常駐通知を非表示';
-
-  @override
   String get blockedNotificationApps => 'ブロックされたアプリ';
 
   @override
@@ -481,31 +368,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get fahrenheit => '華氏 (°F)';
 
   @override
-  String get breezyWeatherSetupHint => 'Breezy Weather をインストールし、設定で「ローカルデータ共有」/「Gadgetbridge」を有効にすると、天気と雨の警告が表示されます。';
-
-  @override
-  String get displayAndScreensaver => 'ディスプレイとスクリーンセーバー';
-
-  @override
   String get notifications => '通知';
 
   @override
   String get continueWatchingDescription => 'ホーム画面に最近再生した映画や番組を表示します';
 
   @override
-  String get continueWatchingPermissionDesc => 'TVアプリの視聴履歴を読み取るには特別な権限が必要です:';
-
-  @override
-  String get requestPermission => '権限をリクエスト';
-
-  @override
   String get dismiss => '非表示';
 
   @override
   String get openApp => '開く';
-
-  @override
-  String get notificationOptions => '通知のオプション';
 
   @override
   String get noBlockedAppsDesc => '現在、すべてのアプリで通知の表示が許可されています';

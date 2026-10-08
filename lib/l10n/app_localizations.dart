@@ -125,12 +125,6 @@ abstract class AppLocalizations {
   /// **'About Hearth'**
   String get aboutFlauncher;
 
-  /// No description provided for @addCategory.
-  ///
-  /// In en, this message translates to:
-  /// **'Add category'**
-  String get addCategory;
-
   /// No description provided for @addSection.
   ///
   /// In en, this message translates to:
@@ -185,12 +179,6 @@ abstract class AppLocalizations {
   /// **'Category'**
   String get category;
 
-  /// No description provided for @categories.
-  ///
-  /// In en, this message translates to:
-  /// **'Categories'**
-  String get categories;
-
   /// No description provided for @columnCount.
   ///
   /// In en, this message translates to:
@@ -239,29 +227,11 @@ abstract class AppLocalizations {
   /// **'Please install a file explorer in order to pick a picture.'**
   String get dialogTextNoFileExplorer;
 
-  /// No description provided for @dialogTitleBackButtonAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose the back button action'**
-  String get dialogTitleBackButtonAction;
-
   /// No description provided for @disambiguateCategoryTitle.
   ///
   /// In en, this message translates to:
   /// **'{title} (Category)'**
   String disambiguateCategoryTitle(String title);
-
-  /// No description provided for @formattedDate.
-  ///
-  /// In en, this message translates to:
-  /// **'Formatted date: {dateString}'**
-  String formattedDate(String dateString);
-
-  /// No description provided for @formattedTime.
-  ///
-  /// In en, this message translates to:
-  /// **'Formatted time: {timeString}'**
-  String formattedTime(String timeString);
 
   /// No description provided for @gradient.
   ///
@@ -329,12 +299,6 @@ abstract class AppLocalizations {
   /// **'Modify section'**
   String get modifySection;
 
-  /// No description provided for @mustNotBeEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'Must not be empty'**
-  String get mustNotBeEmpty;
-
   /// No description provided for @name.
   ///
   /// In en, this message translates to:
@@ -346,18 +310,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New section'**
   String get newSection;
-
-  /// No description provided for @noDateFormatSpecified.
-  ///
-  /// In en, this message translates to:
-  /// **'No date format specified'**
-  String get noDateFormatSpecified;
-
-  /// No description provided for @noTimeFormatSpecified.
-  ///
-  /// In en, this message translates to:
-  /// **'No time format specified'**
-  String get noTimeFormatSpecified;
 
   /// No description provided for @nonTvApplications.
   ///
@@ -371,12 +323,6 @@ abstract class AppLocalizations {
   /// **'Open'**
   String get open;
 
-  /// No description provided for @orSelectFormatSpecifiers.
-  ///
-  /// In en, this message translates to:
-  /// **'Or select format specifiers'**
-  String get orSelectFormatSpecifiers;
-
   /// No description provided for @picture.
   ///
   /// In en, this message translates to:
@@ -388,12 +334,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove from {name}'**
   String removeFrom(String name);
-
-  /// No description provided for @renameCategory.
-  ///
-  /// In en, this message translates to:
-  /// **'Rename category'**
-  String get renameCategory;
 
   /// No description provided for @reorder.
   ///
@@ -425,23 +365,11 @@ abstract class AppLocalizations {
   /// **'Spacer'**
   String get spacer;
 
-  /// No description provided for @spacerMaxHeightRequirement.
-  ///
-  /// In en, this message translates to:
-  /// **'Must be greater than 0 and less than or equal to 500'**
-  String get spacerMaxHeightRequirement;
-
   /// No description provided for @statusBar.
   ///
   /// In en, this message translates to:
   /// **'Status bar'**
   String get statusBar;
-
-  /// No description provided for @settings.
-  ///
-  /// In en, this message translates to:
-  /// **'Settings'**
-  String get settings;
 
   /// No description provided for @show.
   ///
@@ -460,12 +388,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show app count in categories'**
   String get showCategoryAppCount;
-
-  /// No description provided for @themes.
-  ///
-  /// In en, this message translates to:
-  /// **'Themes'**
-  String get themes;
 
   /// No description provided for @hideHighlightOutlineOnHomescreen.
   ///
@@ -491,12 +413,6 @@ abstract class AppLocalizations {
   /// **'System settings'**
   String get systemSettings;
 
-  /// No description provided for @textAboutDialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Hearth is a private, family-friendly launcher for Google TV. It is a fork of LTvLauncher by LeanBitLab, which is based on FLauncher.\n\nSource code available at {repoUrl}.'**
-  String textAboutDialog(String repoUrl);
-
   /// No description provided for @textEmptyCategory.
   ///
   /// In en, this message translates to:
@@ -509,12 +425,6 @@ abstract class AppLocalizations {
   /// **'Time'**
   String get time;
 
-  /// No description provided for @titleStatusBarSettingsPage.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose what to display in the status bar'**
-  String get titleStatusBarSettingsPage;
-
   /// No description provided for @tvApplications.
   ///
   /// In en, this message translates to:
@@ -526,18 +436,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Type'**
   String get type;
-
-  /// No description provided for @typeInTheDateFormat.
-  ///
-  /// In en, this message translates to:
-  /// **'Type in the date format'**
-  String get typeInTheDateFormat;
-
-  /// No description provided for @typeInTheHourFormat.
-  ///
-  /// In en, this message translates to:
-  /// **'Type in the hour format'**
-  String get typeInTheHourFormat;
 
   /// No description provided for @uninstall.
   ///
@@ -574,36 +472,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pick night wallpaper'**
   String get pickNightWallpaper;
-
-  /// No description provided for @accessibility.
-  ///
-  /// In en, this message translates to:
-  /// **'Accessibility'**
-  String get accessibility;
-
-  /// No description provided for @defaultLauncherIsDefault.
-  ///
-  /// In en, this message translates to:
-  /// **'Hearth is the default launcher'**
-  String get defaultLauncherIsDefault;
-
-  /// No description provided for @defaultLauncherNotDefault.
-  ///
-  /// In en, this message translates to:
-  /// **'Hearth is not the default launcher'**
-  String get defaultLauncherNotDefault;
-
-  /// No description provided for @setAsDefaultLauncher.
-  ///
-  /// In en, this message translates to:
-  /// **'Set as default launcher'**
-  String get setAsDefaultLauncher;
-
-  /// No description provided for @defaultLauncherDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'When set as the default launcher, the Home button will always return to Hearth. The TV will also boot directly into Hearth.'**
-  String get defaultLauncherDescription;
 
   /// No description provided for @inputs.
   ///
@@ -671,42 +539,6 @@ abstract class AppLocalizations {
   /// **'Share Backup'**
   String get shareBackup;
 
-  /// No description provided for @shareBackupDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Share backup with other devices on local network'**
-  String get shareBackupDescription;
-
-  /// No description provided for @stopSharing.
-  ///
-  /// In en, this message translates to:
-  /// **'Stop Sharing'**
-  String get stopSharing;
-
-  /// No description provided for @localNetworkSharingActive.
-  ///
-  /// In en, this message translates to:
-  /// **'Local network sharing is active!'**
-  String get localNetworkSharingActive;
-
-  /// No description provided for @localNetworkSharingInstructions.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect another device to the same Wi-Fi network and open the following URL in a web browser:'**
-  String get localNetworkSharingInstructions;
-
-  /// No description provided for @localNetworkSharingDetails.
-  ///
-  /// In en, this message translates to:
-  /// **'Here you can download your TV settings/layout or upload a backup file back to this TV.'**
-  String get localNetworkSharingDetails;
-
-  /// No description provided for @failedToStartServer.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to start sharing server: {error}'**
-  String failedToStartServer(String error);
-
   /// No description provided for @notificationBell.
   ///
   /// In en, this message translates to:
@@ -737,12 +569,6 @@ abstract class AppLocalizations {
   /// **'Permission required to show Continue Watching'**
   String get permissionDeniedContinueWatching;
 
-  /// No description provided for @interface.
-  ///
-  /// In en, this message translates to:
-  /// **'Interface'**
-  String get interface;
-
   /// No description provided for @system.
   ///
   /// In en, this message translates to:
@@ -754,30 +580,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Accent Color'**
   String get accentColor;
-
-  /// No description provided for @miscellaneous.
-  ///
-  /// In en, this message translates to:
-  /// **'Miscellaneous'**
-  String get miscellaneous;
-
-  /// No description provided for @brightnessScheduler.
-  ///
-  /// In en, this message translates to:
-  /// **'Brightness Scheduler'**
-  String get brightnessScheduler;
-
-  /// No description provided for @screensaverSettings.
-  ///
-  /// In en, this message translates to:
-  /// **'Screensaver Settings'**
-  String get screensaverSettings;
-
-  /// No description provided for @screensaverClockStyle.
-  ///
-  /// In en, this message translates to:
-  /// **'Screensaver Clock Style'**
-  String get screensaverClockStyle;
 
   /// No description provided for @dataUsagePeriod.
   ///
@@ -844,12 +646,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Network Indicator'**
   String get networkIndicator;
-
-  /// No description provided for @homeButtonFix.
-  ///
-  /// In en, this message translates to:
-  /// **'Home Button Fix (Google TV)'**
-  String get homeButtonFix;
 
   /// No description provided for @startOnBoot.
   ///
@@ -959,12 +755,6 @@ abstract class AppLocalizations {
   /// **'Hide Persistent Notifications'**
   String get hidePersistentNotifications;
 
-  /// No description provided for @hidePersistentNotificationsDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Hide ongoing background service and system notifications'**
-  String get hidePersistentNotificationsDesc;
-
   /// No description provided for @blockedNotificationApps.
   ///
   /// In en, this message translates to:
@@ -1031,18 +821,6 @@ abstract class AppLocalizations {
   /// **'Fahrenheit (°F)'**
   String get fahrenheit;
 
-  /// No description provided for @breezyWeatherSetupHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Install Breezy Weather and enable \'Local data sharing\' / \'Gadgetbridge\' in its settings to see weather and rain warnings.'**
-  String get breezyWeatherSetupHint;
-
-  /// No description provided for @displayAndScreensaver.
-  ///
-  /// In en, this message translates to:
-  /// **'Display & Screensaver'**
-  String get displayAndScreensaver;
-
   /// No description provided for @notifications.
   ///
   /// In en, this message translates to:
@@ -1055,18 +833,6 @@ abstract class AppLocalizations {
   /// **'Show recently watched movies and TV shows from supported apps on your home screen'**
   String get continueWatchingDescription;
 
-  /// No description provided for @continueWatchingPermissionDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Special permission is required to read watch history from TV apps. You can grant it using the button below or via ADB:'**
-  String get continueWatchingPermissionDesc;
-
-  /// No description provided for @requestPermission.
-  ///
-  /// In en, this message translates to:
-  /// **'Request Permission'**
-  String get requestPermission;
-
   /// No description provided for @dismiss.
   ///
   /// In en, this message translates to:
@@ -1078,12 +844,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open'**
   String get openApp;
-
-  /// No description provided for @notificationOptions.
-  ///
-  /// In en, this message translates to:
-  /// **'Notification Options'**
-  String get notificationOptions;
 
   /// No description provided for @noBlockedAppsDesc.
   ///

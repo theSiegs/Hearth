@@ -10,9 +10,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aboutFlauncher => 'Hearth 정보';
 
   @override
-  String get addCategory => '카테고리 추가';
-
-  @override
   String get addSection => '섹션 추가';
 
   @override
@@ -40,9 +37,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get category => '카테고리';
 
   @override
-  String get categories => '카테고리';
-
-  @override
   String get columnCount => '열 수';
 
   @override
@@ -67,21 +61,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dialogTextNoFileExplorer => '사진을 선택하려면 파일 탐색기를 설치하세요.';
 
   @override
-  String get dialogTitleBackButtonAction => '뒤로 버튼 동작 선택';
-
-  @override
   String disambiguateCategoryTitle(String title) {
     return '$title (카테고리)';
-  }
-
-  @override
-  String formattedDate(String dateString) {
-    return '포맷된 날짜: $dateString';
-  }
-
-  @override
-  String formattedTime(String timeString) {
-    return '포맷된 시간: $timeString';
   }
 
   @override
@@ -118,19 +99,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get modifySection => '섹션 수정';
 
   @override
-  String get mustNotBeEmpty => '비워둘 수 없습니다';
-
-  @override
   String get name => '이름';
 
   @override
   String get newSection => '새 섹션';
-
-  @override
-  String get noDateFormatSpecified => '날짜 형식이 지정되지 않음';
-
-  @override
-  String get noTimeFormatSpecified => '시간 형식이 지정되지 않음';
 
   @override
   String get nonTvApplications => '비 TV 앱';
@@ -139,18 +111,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get open => '열기';
 
   @override
-  String get orSelectFormatSpecifiers => '또는 형식 지정자 선택';
-
-  @override
   String get picture => '사진';
 
   @override
   String removeFrom(String name) {
     return '$name에서 제거';
   }
-
-  @override
-  String get renameCategory => '카테고리 이름 변경';
 
   @override
   String get reorder => '재정렬';
@@ -168,13 +134,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get spacer => '간격';
 
   @override
-  String get spacerMaxHeightRequirement => '0보다 크고 500 이하여야 합니다';
-
-  @override
   String get statusBar => '상태 표시줄';
-
-  @override
-  String get settings => '설정';
 
   @override
   String get show => '표시';
@@ -184,9 +144,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get showCategoryAppCount => '카테고리의 앱 수 표시';
-
-  @override
-  String get themes => '테마';
 
   @override
   String get hideHighlightOutlineOnHomescreen => '홈 화면에서 하이라이트 윤곽선 숨기기';
@@ -201,30 +158,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get systemSettings => '시스템 설정';
 
   @override
-  String textAboutDialog(String repoUrl) {
-    return 'Hearth (LTvLauncher)는 FLauncher를 기반으로 한 Android TV용 맞춤형 오픈 소스 런처입니다.\n\nLeanBitLab에서 개발했습니다.\n소스 코드는 $repoUrl에서 사용할 수 있습니다.';
-  }
-
-  @override
   String get textEmptyCategory => '이 카테고리는 비어 있습니다.';
 
   @override
   String get time => '시간';
 
   @override
-  String get titleStatusBarSettingsPage => '상태 표시줄에 표시할 내용 선택';
-
-  @override
   String get tvApplications => 'TV 앱';
 
   @override
   String get type => '유형';
-
-  @override
-  String get typeInTheDateFormat => '날짜 형식 입력';
-
-  @override
-  String get typeInTheHourFormat => '시간 형식 입력';
 
   @override
   String get uninstall => '제거';
@@ -243,21 +186,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get pickNightWallpaper => '야간 배경화면 선택';
-
-  @override
-  String get accessibility => '접근성';
-
-  @override
-  String get defaultLauncherIsDefault => 'Hearth가 기본 런처입니다';
-
-  @override
-  String get defaultLauncherNotDefault => 'Hearth가 기본 런처가 아닙니다';
-
-  @override
-  String get setAsDefaultLauncher => '기본 런처로 설정';
-
-  @override
-  String get defaultLauncherDescription => '기본 런처로 설정하면 홈 버튼은 항상 Hearth로 돌아갑니다. TV도 직접 Hearth로 부팅됩니다.';
 
   @override
   String get inputs => '입력';
@@ -299,26 +227,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get shareBackup => '백업 공유';
 
   @override
-  String get shareBackupDescription => '로컬 네트워크의 다른 기기와 백업 공유';
-
-  @override
-  String get stopSharing => '공유 중지';
-
-  @override
-  String get localNetworkSharingActive => '로컬 네트워크 공유가 활성화되었습니다!';
-
-  @override
-  String get localNetworkSharingInstructions => '다른 기기를 동일한 Wi-Fi 네트워크에 연결하고 웹 브라우저에서 다음 URL을 엽니다.';
-
-  @override
-  String get localNetworkSharingDetails => '여기에서 TV 설정/레이아웃을 다운로드하거나 이 TV로 백업 파일을 업로드할 수 있습니다.';
-
-  @override
-  String failedToStartServer(String error) {
-    return '공유 서버 시작 실패: $error';
-  }
-
-  @override
   String get notificationBell => '알림 벨';
 
   @override
@@ -334,25 +242,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get permissionDeniedContinueWatching => '계속 시청을 표시하려면 권한이 필요합니다';
 
   @override
-  String get interface => '인터페이스';
-
-  @override
   String get system => '시스템';
 
   @override
   String get accentColor => '강조 색상';
-
-  @override
-  String get miscellaneous => '기타';
-
-  @override
-  String get brightnessScheduler => '밝기 스케줄러';
-
-  @override
-  String get screensaverSettings => '화면 보호기 설정';
-
-  @override
-  String get screensaverClockStyle => '화면 보호기 시계 스타일';
 
   @override
   String get dataUsagePeriod => '데이터 사용 기간';
@@ -386,9 +279,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get networkIndicator => '네트워크 표시기';
-
-  @override
-  String get homeButtonFix => '홈 버튼 수정 (Google TV)';
 
   @override
   String get startOnBoot => '부팅 시 시작 (Google TV / Fire TV)';
@@ -445,9 +335,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get hidePersistentNotifications => '고정 알림 숨기기';
 
   @override
-  String get hidePersistentNotificationsDesc => '백그라운드 서비스 및 시스템 고정 알림 숨기기';
-
-  @override
   String get blockedNotificationApps => '차단된 앱';
 
   @override
@@ -481,31 +368,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get fahrenheit => '화씨 (°F)';
 
   @override
-  String get breezyWeatherSetupHint => 'Breezy Weather를 설치하고 설정에서 \'로컬 데이터 공유\' / \'Gadgetbridge\'를 활성화하면 날씨 및 강우 경보가 표시됩니다.';
-
-  @override
-  String get displayAndScreensaver => '디스플레이 및 화면 보호기';
-
-  @override
   String get notifications => '알림';
 
   @override
   String get continueWatchingDescription => '홈 화면에 최근 시청한 영화 및 TV 프로그램 표시';
 
   @override
-  String get continueWatchingPermissionDesc => 'TV 앱의 시청 기록을 읽으려면 특별한 권한이 필요합니다:';
-
-  @override
-  String get requestPermission => '권한 요청';
-
-  @override
   String get dismiss => '닫기';
 
   @override
   String get openApp => '열기';
-
-  @override
-  String get notificationOptions => '알림 옵션';
 
   @override
   String get noBlockedAppsDesc => '현재 모든 애플리케이션의 알림 표시가 허용되어 있습니다';
