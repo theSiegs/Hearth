@@ -1,5 +1,6 @@
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 /// Warns when Home Button Fix (the accessibility service) has been on before but is off now, which is what an
 /// update does: Android switches the service off, and an APK installed by the in-app updater is also marked
@@ -22,12 +23,14 @@ class _HomeButtonFixCheckState extends State<HomeButtonFixCheck> with WidgetsBin
   late final FLauncherChannel _channel = widget.channel ?? FLauncherChannel();
   bool _shown = false;
   bool _checking = false;
-  final FocusNode _openButtonFocus = FocusNode();
+  // The debug build has its own package name. Read ahead so the dialog doesn't wait for it.
+  String _packageName = 'com.leanbitlab.ltvL';
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _readPackageName();
     // Let the home screen load and focus its first tile before the dialog takes focus.
     Future.delayed(widget.startDelay, _check);
   }
@@ -35,7 +38,6 @@ class _HomeButtonFixCheckState extends State<HomeButtonFixCheck> with WidgetsBin
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _openButtonFocus.dispose();
     super.dispose();
   }
 
@@ -60,9 +62,16 @@ class _HomeButtonFixCheckState extends State<HomeButtonFixCheck> with WidgetsBin
     }
   }
 
+  Future<void> _readPackageName() async {
+    try {
+      _packageName = (await PackageInfo.fromPlatform()).packageName;
+    } catch (e) {
+      debugPrint('Home Button Fix: no package info: $e');
+    }
+  }
+
   Future<void> _showDialog(bool restricted, {bool stuck = false}) async {
-    final String command = 'adb shell appops set com.leanbitlab.ltvL ACCESS_RESTRICTED_SETTINGS allow';
-    WidgetsBinding.instance.addPostFrameCallback((_) => _openButtonFocus.requestFocus());
+    final String command = 'adb shell appops set $_packageName ACCESS_RESTRICTED_SETTINGS allow';
     final String? choice = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -118,7 +127,6 @@ class _HomeButtonFixCheckState extends State<HomeButtonFixCheck> with WidgetsBin
           ),
           TextButton(
             autofocus: true,
-            focusNode: _openButtonFocus,
             onPressed: () => Navigator.of(dialogContext).pop('open'),
             child: const Text('Open Accessibility settings'),
           ),
@@ -131,7 +139,9 @@ class _HomeButtonFixCheckState extends State<HomeButtonFixCheck> with WidgetsBin
       } else if (choice == 'forget') {
         await _channel.forgetHomeButtonFix();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Home Button Fix: $e');
+    }
   }
 
   @override
