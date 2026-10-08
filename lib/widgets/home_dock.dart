@@ -19,6 +19,7 @@ import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/cached_blur_backdrop.dart';
+import 'package:flauncher/widgets/card_style.dart';
 import 'package:flauncher/widgets/category_row.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -29,15 +30,7 @@ const double kDockInnerPadding = 10;
 /// The dock's corner radius for a theme: the card radius plus the dock's padding,
 /// so the dock's corners run parallel to the cards' corners.
 double dockRadiusForTheme(String theme) {
-  final double cardRadius = switch (theme) {
-    'classic' => 0,
-    'minimal' => 4,
-    'glow' => 12,
-    'premium' => 16,
-    'squircle' => 24,
-    'capsule' => 100,
-    _ => 8,
-  };
+  final double cardRadius = CardStyle.of(theme).radius;
   return cardRadius == 0 ? 0 : cardRadius + kDockInnerPadding;
 }
 
