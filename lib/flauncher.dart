@@ -299,7 +299,7 @@ class _FLauncherState extends State<FLauncher> {
       if (show) {
         target = _firstFocusable(_recentsFocusNode);
         if (target == null) {
-          // Nothing to show after all (e.g. every program is hidden): the dock instead.
+          // The row emptied in the meantime: the dock instead.
           setState(() => _showingRecents = false);
           _focusDock();
           return;
@@ -450,9 +450,12 @@ class _FLauncherState extends State<FLauncher> {
     if (!appsService.initialized || !profileSettled) {
       return _emptyState(context);
     }
-    return Selector2<SettingsService, WatchNextService, ({bool continueWatching, int order, bool dock})>(
-      selector: (_, settings, watchNext) => (
-        continueWatching: settings.showContinueWatching && watchNext.programs.isNotEmpty,
+    return Selector3<SettingsService, WatchNextService, AppsService, ({bool continueWatching, int order, bool dock})>(
+      selector: (_, settings, watchNext, apps) => (
+        // The row's own list, so the home never keeps a spot (or Up) for a row with nothing in it
+        continueWatching: settings.showContinueWatching &&
+            watchNext.hasPermission &&
+            watchNext.visiblePrograms(settings, apps).isNotEmpty,
         order: settings.continueWatchingOrder,
         dock: settings.dockEnabled,
       ),

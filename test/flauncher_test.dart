@@ -320,6 +320,29 @@ void main() {
     expect(find.text("Nothing to watch right now"), findsOneWidget);
   });
 
+  testWidgets("With every Continue Watching program hidden, the home still says there's nothing to watch",
+      (tester) async {
+    final appsService = mkAppService();
+    when(appsService.launcherSections).thenReturn([fakeCategory(name: "Favorites", order: 0, type: CategoryType.row)]);
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+    when(settingsService.hiddenWatchNextProgramIds).thenReturn([]);
+    when(settingsService.hiddenWatchNextPackages).thenReturn(["com.example.video"]);
+    final watchNextService = mkWatchNextService();
+    when(watchNextService.hasPermission).thenReturn(true);
+    when(watchNextService.programs).thenReturn([
+      WatchNextProgram(
+        id: 1, packageName: "com.example.video", title: "Big Buck Bunny", description: "", watchNextType: 0,
+        lastEngagementTime: 0, playbackPosition: 50, duration: 100, intentUri: "intent://x", posterArtUri: "",
+      ),
+    ]);
+
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService,
+        watchNextService: watchNextService);
+
+    expect(find.text("Nothing to watch right now"), findsOneWidget);
+  });
+
   test("Dock corners follow the theme", () {
     expect(dockRadiusForTheme('classic'), 0);
     expect(dockRadiusForTheme('minimal'), 4 + kDockInnerPadding);

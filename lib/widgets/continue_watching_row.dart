@@ -68,18 +68,7 @@ class _ContinueWatchingRowState extends State<ContinueWatchingRow> {
           return const SizedBox.shrink();
         }
 
-        final hiddenProgramIds = settingsService.hiddenWatchNextProgramIds;
-        final hiddenPackages = settingsService.hiddenWatchNextPackages;
-
-        List<WatchNextProgram> programs = watchNextService.programs
-            .where((p) =>
-                !hiddenProgramIds.contains(p.id.toString()) &&
-                !hiddenPackages.contains(p.packageName) &&
-                !appsService.applications.any((app) => app.packageName == p.packageName && app.hidden) &&
-                // Apps this profile can't open (blocked in a kids profile) aren't in the list at all.
-                (appsService.applications.isEmpty ||
-                    appsService.applications.any((app) => app.packageName == p.packageName && !app.suspended)))
-            .toList();
+        List<WatchNextProgram> programs = watchNextService.visiblePrograms(settingsService, appsService);
 
         // "See all" shows every one, beyond the row's limit
         final allPrograms = programs;
