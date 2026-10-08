@@ -1,4 +1,4 @@
-import 'package:flauncher/widgets/settings/companion_apps_page.dart';
+import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

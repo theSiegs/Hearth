@@ -3,11 +3,10 @@ import 'dart:async';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
 import 'update_dialog.dart';
-
-export 'package:flauncher/providers/companion_updater.dart' show CompanionApp, companionApps, newestInManifest;
 
 enum _State { checking, notInstalled, upToDate, updateAvailable, downloading, installing, error }
 
@@ -26,7 +25,7 @@ class _CompanionAppsPageState extends State<CompanionAppsPage> with WidgetsBindi
   final Map<String, _State> _states = {};
   final Map<String, Map<dynamic, dynamic>?> _installed = {};
   final Map<String, CompanionRelease?> _releases = {};
-  late final CompanionUpdater _updater = CompanionUpdater(_channel);
+  late final CompanionUpdater _updater = context.read<CompanionUpdater>();
   bool? _autoUpdate;
   final Map<String, double> _progress = {};
   final Map<String, String> _errors = {};
