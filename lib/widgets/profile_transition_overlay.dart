@@ -42,6 +42,9 @@ class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
     super.dispose();
   }
 
+  /// No other page (search, settings) is open over the home: only then does the card take focus.
+  bool _homeOnTop() => ModalRoute.of(context)?.isCurrent ?? true;
+
   void _start(ProfileTransition transition) {
     _current = transition;
     _dataReady = false;
@@ -55,7 +58,7 @@ class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
     _poll = Timer.periodic(const Duration(milliseconds: 250), (_) => _checkData(transition));
     _checkData(transition);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _current == transition) _focusNode.requestFocus();
+      if (mounted && _current == transition && _homeOnTop()) _focusNode.requestFocus();
     });
   }
 
@@ -96,7 +99,7 @@ class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
       if (incoming == null) return const SizedBox.shrink();
       if (!_focusNode.hasFocus) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && profiles.incomingName != null) _focusNode.requestFocus();
+          if (mounted && profiles.incomingName != null && _homeOnTop()) _focusNode.requestFocus();
         });
       }
       return _card(context, incoming, profiles.incomingAvatar, 0);
