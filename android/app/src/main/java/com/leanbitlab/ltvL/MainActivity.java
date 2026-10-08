@@ -1380,6 +1380,7 @@ public class MainActivity extends FlutterActivity {
             java.util.List<Integer> kids = supervisedKidUserIds();
             java.util.List<Integer> all = new java.util.ArrayList<>(kids);
             all.addAll(adultProfileUserIds());
+            java.util.Map<Integer, String> names = profileDisplayNames();
             java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
             for (ProfileAppAccess.AppStatus s : ProfileAppAccess.state(this, shell, all)) {
                 java.util.Map<String, Object> row = new java.util.HashMap<>();
@@ -1388,6 +1389,7 @@ public class MainActivity extends FlutterActivity {
                 row.put("installed", s.installed);
                 row.put("protected", s.protectedFromRemoval);
                 row.put("supervised", kids.contains(s.userId));
+                row.put("name", names.get(s.userId));
                 rows.add(row);
             }
             runOnUiThread(() -> result.success(rows));
@@ -1437,6 +1439,22 @@ public class MainActivity extends FlutterActivity {
             java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d+").matcher(String.valueOf(handle));
             return m.find() ? Integer.parseInt(m.group()) : -1;
         }
+    }
+
+    /** Best display name per profile user id (the name Hearth learned from Google TV's chooser), for the list. */
+    private java.util.Map<Integer, String> profileDisplayNames() {
+        java.util.Map<Integer, String> names = new java.util.HashMap<>();
+        android.os.UserManager um = (android.os.UserManager) getSystemService(android.content.Context.USER_SERVICE);
+        if (um == null) return names;
+        android.os.UserHandle me = android.os.Process.myUserHandle();
+        for (android.os.UserHandle profile : um.getUserProfiles()) {
+            if (profile.equals(me)) continue;
+            int userId = userIdOf(profile);
+            if (userId < 0) continue;
+            String name = ProfileUsers.getName(this, um.getSerialNumberForUser(profile));
+            if (name != null && !name.isEmpty()) names.put(userId, name);
+        }
+        return names;
     }
 
     // Google TV kids profiles suspend every app a parent hasn't approved; once seen, a profile stays a kids one.

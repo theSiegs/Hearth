@@ -58,12 +58,12 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
     final go = await _confirm(
       title: "Add Hearth to other profiles",
       lines: [
-        "This puts Hearth and HearthTube on your kids' profiles and keeps them there — Google TV would otherwise remove them at each profile start.",
+        "This puts Hearth and HearthTube on your kids' profiles, so HearthTube works there and Hearth can pick the right profile in apps like Netflix and Disney+.",
         if (includeAdults)
-          "It also installs them on the TV's other adult profiles, so another adult doesn't have to sideload Hearth.",
-        "It only ever touches Hearth's own two apps, and you can undo it anytime with Remove below.",
+          "It also installs them on the TV's other adult profiles, so another adult doesn't have to set it up themselves.",
+        "It only adds Hearth's own two apps, and you can undo it anytime with Remove below.",
         "Each kid gets one Family Link \"app added\" notification.",
-        "The first time, the TV will ask \"Allow debugging?\" — choose Always allow.",
+        "The first time, the TV asks \"Allow debugging?\" — choose Always allow; that's what lets Hearth do the setup.",
       ],
       action: "Add",
     );
@@ -75,8 +75,8 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
     final go = await _confirm(
       title: "Remove Hearth from other profiles",
       lines: [
-        "This removes Hearth and HearthTube from your other profiles and lifts their keep-installed protection.",
-        "Run this before you ever uninstall Hearth itself — otherwise the kept copies can't be removed without a computer.",
+        "This removes Hearth and HearthTube from your other profiles.",
+        "If you plan to uninstall Hearth itself, run this first — otherwise its copies on the kids' profiles can be stranded and need a computer to clear.",
       ],
       action: "Remove",
     );
@@ -90,14 +90,16 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
       final log = await action();
       await _refresh();
       if (mounted) {
-        await _showLog("$label done", log.isEmpty ? ["Nothing to do — no other profiles found."] : log);
+        final done = label == "Add"
+            ? "Done. Hearth and HearthTube are now on your other profiles — see the list below."
+            : "Done. Hearth and HearthTube have been removed from your other profiles.";
+        await _showLog("$label done", [log.isEmpty ? "There are no other profiles to set up yet." : done]);
       }
-    } on PlatformException catch (e) {
+    } on PlatformException {
       if (mounted) {
-        await _showLog("Couldn't reach the TV", [
-          "Hearth needs its one-time on-screen approval before it can manage profiles.",
-          "On the TV, approve \"Allow debugging?\" (choose Always allow), then try again.",
-          if (e.message != null && e.message!.isNotEmpty) "Details: ${e.message}",
+        await _showLog("Couldn't set up the profiles", [
+          "Hearth needs a one-time approval on the TV before it can set up the other profiles.",
+          "On the TV, choose Always allow when it asks to \"Allow debugging?\", then try again.",
         ]);
       }
     } finally {
@@ -169,8 +171,9 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                   child: Text(
-                    "Put Hearth and HearthTube on your other Google TV profiles. Kids' profiles are kept installed; "
-                    "other adult profiles get a plain install. You stay in control — add or remove anytime.",
+                    "Put Hearth and HearthTube on your other Google TV profiles. On kids' profiles this is needed "
+                    "for HearthTube to work and for Hearth to pick the right profile in Netflix, Disney+ and other "
+                    "apps. On adult profiles it's just a convenience, so they don't have to install them by hand.",
                     style: textTheme.bodySmall?.copyWith(color: Colors.white70),
                   ),
                 ),
@@ -232,7 +235,7 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "${(entry.value.first["supervised"] as bool? ?? false) ? "Kid" : "Adult"} profile (user ${entry.key})",
+                  _profileLabel(entry.value.first),
                   style: textTheme.labelMedium?.copyWith(color: Colors.white70),
                 ),
                 for (final r in entry.value)
@@ -247,6 +250,14 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
           ),
       ],
     );
+  }
+
+  /// A friendly label for a profile row: its name if Hearth knows it, with whether it's a kids or adult profile.
+  String _profileLabel(Map<dynamic, dynamic> row) {
+    final supervised = (row["supervised"] as bool?) ?? false;
+    final name = row["name"] as String?;
+    if (name != null && name.isNotEmpty) return "$name (${supervised ? "kids" : "adult"})";
+    return supervised ? "A kids profile" : "An adult profile";
   }
 
   String _shortName(String? pkg) {
