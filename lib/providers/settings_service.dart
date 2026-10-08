@@ -648,15 +648,6 @@ class SettingsService extends ChangeNotifier {
     }
   }
 
-  Future<void> unhideWatchNextProgram(int id) async {
-    final strId = id.toString();
-    if (_hiddenWatchNextProgramIds.contains(strId)) {
-      _hiddenWatchNextProgramIds = List<String>.from(_hiddenWatchNextProgramIds)..remove(strId);
-      await _sharedPreferences.setStringList(_hiddenWatchNextProgramIdsKey, _hiddenWatchNextProgramIds);
-      notifyListeners();
-    }
-  }
-
   Future<void> hideWatchNextPackage(String packageName) async {
     if (!_hiddenWatchNextPackages.contains(packageName)) {
       _hiddenWatchNextPackages = List<String>.from(_hiddenWatchNextPackages)..add(packageName);
@@ -682,14 +673,6 @@ class SettingsService extends ChangeNotifier {
   Future<void> clearHiddenWatchNextPrograms() async {
     _hiddenWatchNextProgramIds = [];
     await _sharedPreferences.remove(_hiddenWatchNextProgramIdsKey);
-    notifyListeners();
-  }
-
-  Future<void> clearAllHiddenWatchNext() async {
-    _hiddenWatchNextProgramIds = [];
-    _hiddenWatchNextPackages = [];
-    await _sharedPreferences.remove(_hiddenWatchNextProgramIdsKey);
-    await _sharedPreferences.remove(_hiddenWatchNextPackagesKey);
     notifyListeners();
   }
 
