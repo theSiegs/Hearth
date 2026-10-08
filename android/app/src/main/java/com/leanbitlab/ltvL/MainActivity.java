@@ -73,6 +73,8 @@ import android.service.notification.StatusBarNotification;
 
 public class MainActivity extends FlutterActivity {
     private static final String TAG = "HearthMain";
+    // Drawn app images are capped at this many pixels a side.
+    private static final int MAX_ICON_PX = 512;
     private static final int[] DATA_USAGE_NETWORKS = {
             ConnectivityManager.TYPE_WIFI, ConnectivityManager.TYPE_MOBILE, ConnectivityManager.TYPE_ETHERNET};
     private final String METHOD_CHANNEL = "me.efesser.flauncher/method";
@@ -100,22 +102,19 @@ public class MainActivity extends FlutterActivity {
 
         BinaryMessenger messenger = flutterEngine.getDartExecutor().getBinaryMessenger();
 
+        // Opened by the remote's search button. Handled before the channel exists: Flutter isn't running yet, so it
+        // picks the search up with takePendingSearch rather than hearing openSearch.
+        handleSearchIntent(getIntent());
         mMethodChannel = new MethodChannel(messenger, METHOD_CHANNEL);
         sMethodChannel = new java.lang.ref.WeakReference<>(mMethodChannel);
-        // Opened by the remote's search button: Flutter picks this up with takePendingSearch once it's running.
-        String coldSearch = getIntent() != null ? getIntent().getStringExtra(EXTRA_OPEN_SEARCH) : null;
-        if (coldSearch != null) {
-            mPendingSearch = coldSearch;
-            getIntent().removeExtra(EXTRA_OPEN_SEARCH);
-        }
         mMethodChannel.setMethodCallHandler((call, result) -> {
             switch (call.method) {
                 case "getApplications" -> sAppsLoader.execute(() -> {
                     List<Map<String, Serializable>> applications = getApplications();
                     runOnUiThread(() -> result.success(applications));
                 });
-                case "getApplicationBanner" -> result.success(getApplicationBanner(call.arguments()));
-                case "getApplicationIcon" -> result.success(getApplicationIcon(call.arguments()));
+                case "getApplicationBanner" -> result.success(appImage(call.arguments(), true));
+                case "getApplicationIcon" -> result.success(appImage(call.arguments(), false));
                 case "launchActivityFromAction" -> result.success(launchActivityFromAction(call.arguments()));
                 case "launchApp" -> result.success(launchApp(call.arguments()));
                 case "openUrl" -> result.success(openUrl(call.arguments()));
@@ -673,38 +672,19 @@ public class MainActivity extends FlutterActivity {
         return map;
     }
 
-    private byte[] getApplicationBanner(String packageName) {
-        byte[] imageBytes = new byte[0];
-
+    /** The app's banner or icon as PNG bytes; empty when it has none or isn't installed. */
+    private byte[] appImage(String packageName, boolean banner) {
         PackageManager packageManager = getPackageManager();
         try {
             ApplicationInfo info = packageManager.getApplicationInfo(packageName, 0);
-            Drawable drawable = info.loadBanner(packageManager);
-
+            Drawable drawable = banner ? info.loadBanner(packageManager) : info.loadIcon(packageManager);
             if (drawable != null) {
-                imageBytes = drawableToByteArray(drawable);
+                return drawableToByteArray(drawable);
             }
         } catch (PackageManager.NameNotFoundException ignored) {
+            // Uninstalled since it was listed: no image.
         }
-
-        return imageBytes;
-    }
-
-    private byte[] getApplicationIcon(String packageName) {
-        byte[] imageBytes = new byte[0];
-
-        PackageManager packageManager = getPackageManager();
-        try {
-            ApplicationInfo info = packageManager.getApplicationInfo(packageName, 0);
-            Drawable drawable = info.loadIcon(packageManager);
-
-            if (drawable != null) {
-                imageBytes = drawableToByteArray(drawable);
-            }
-        } catch (PackageManager.NameNotFoundException ignored) {
-        }
-
-        return imageBytes;
+        return new byte[0];
     }
 
     private List<ResolveInfo> queryIntentActivities(boolean sideloaded) {
@@ -898,48 +878,34 @@ public class MainActivity extends FlutterActivity {
     }
 
     private byte[] drawableToByteArray(Drawable drawable) {
+        if (drawable.getIntrinsicWidth() <= 0 || drawable.getIntrinsicHeight() <= 0) {
+            return new byte[0];
+        }
         try {
-            if (drawable.getIntrinsicWidth() <= 0 || drawable.getIntrinsicHeight() <= 0) {
-                return new byte[0];
-            }
-
             Bitmap bitmap;
             if (drawable instanceof BitmapDrawable bitmapDrawable && bitmapDrawable.getBitmap() != null) {
                 bitmap = bitmapDrawable.getBitmap();
             } else {
                 bitmap = drawableToBitmap(drawable);
             }
-
-            if (bitmap == null) {
-                return new byte[0];
-            }
-
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
             return stream.toByteArray();
-        } catch (Throwable t) {
-            t.printStackTrace();
+        } catch (Exception e) {
+            Log.w(TAG, "Couldn't encode an app image", e);
             return new byte[0];
         }
     }
 
-    Bitmap drawableToBitmap(Drawable drawable) {
-        try {
-            int width = Math.min(Math.max(drawable.getIntrinsicWidth(), 1), 512);
-            int height = Math.min(Math.max(drawable.getIntrinsicHeight(), 1), 512);
-            Bitmap bitmap = Bitmap.createBitmap(
-                    width,
-                    height,
-                    Bitmap.Config.ARGB_8888);
-
-            Canvas canvas = new Canvas(bitmap);
-            drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
-            drawable.draw(canvas);
-            return bitmap;
-        } catch (Throwable t) {
-            t.printStackTrace();
-            return null;
-        }
+    /** Draws a drawable with a positive intrinsic size at that size, capped at MAX_ICON_PX a side. */
+    private static Bitmap drawableToBitmap(Drawable drawable) {
+        int width = Math.min(drawable.getIntrinsicWidth(), MAX_ICON_PX);
+        int height = Math.min(drawable.getIntrinsicHeight(), MAX_ICON_PX);
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        drawable.setBounds(0, 0, width, height);
+        drawable.draw(canvas);
+        return bitmap;
     }
 
     /** Midnight at the start of today, of this week (the locale's first day) or of this month. */
@@ -1673,7 +1639,10 @@ public class MainActivity extends FlutterActivity {
         handleSearchIntent(intent);
     }
 
-    /** The remote's search/mic button (mapped in Remote buttons) opens Hearth's search. */
+    /**
+     * The remote's search/mic button (mapped in Remote buttons) opens Hearth's search: Flutter hears openSearch, or
+     * picks it up with takePendingSearch when it starts.
+     */
     private void handleSearchIntent(Intent intent) {
         String mode = intent != null ? intent.getStringExtra(EXTRA_OPEN_SEARCH) : null;
         if (mode == null) return;
