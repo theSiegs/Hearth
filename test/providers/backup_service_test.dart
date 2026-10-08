@@ -86,7 +86,8 @@ void main() {
     ));
 
     // 2. Export Backup
-    final backupPath = await backupService.exportBackup();
+    final settingsService = SettingsService(sharedPreferences);
+    final backupPath = await backupService.exportBackup(settingsService);
     final backupFile = File(backupPath);
     expect(await backupFile.exists(), isTrue);
 
@@ -116,7 +117,7 @@ void main() {
     expect(await database.getCategories(), isEmpty);
 
     // 4. Import Backup
-    await backupService.importBackup();
+    await backupService.importBackup(backupFile, settingsService);
 
     // 5. Verify SharedPreferences and database restored
     expect(sharedPreferences.getBool("app_highlight_animation_enabled"), false);
@@ -167,7 +168,7 @@ void main() {
       "spacers": [],
     }));
 
-    await backupService.importBackup(file);
+    await backupService.importBackup(file, SettingsService(sharedPreferences));
     final categories = await database.getCategories();
     expect(categories.length, 1);
     expect(categories[0].sort, CategorySort.manual);
