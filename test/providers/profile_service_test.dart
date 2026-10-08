@@ -13,7 +13,7 @@ class _RecordingBackupService extends BackupService {
   final List<String> calls = [];
   final Set<String> savedProfiles;
 
-  _RecordingBackupService(FLauncherDatabase db, SharedPreferences prefs, this.savedProfiles) : super(db, prefs);
+  _RecordingBackupService(super.db, super.prefs, this.savedProfiles);
 
   @override
   Future<void> saveProfileLayout(String profileName, SettingsService settingsService) async {

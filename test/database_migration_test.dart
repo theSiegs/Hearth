@@ -16,7 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:drift/drift.dart';
 import 'package:drift_dev/api/migrations.dart';
 import 'package:flauncher/database.dart';
 import 'package:flauncher/models/category.dart';

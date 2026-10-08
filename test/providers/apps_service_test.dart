@@ -5,12 +5,10 @@ import 'package:flauncher/database.dart';
 import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:flauncher/providers/apps_service.dart';
-import 'package:flutter_test/flutter_test.dart' hide Category;
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
-import '../mocks.dart';
 import '../mocks.mocks.dart';
 
 void main() {
@@ -754,7 +752,7 @@ void main() {
       when(database.updateCategories(any)).thenAnswer((_) => Future.value());
       when(database.updateSpacers(any)).thenAnswer((_) => Future.value());
       when(database.updateCategory(any, any))
-          .thenAnswer((_) => Future.value(true));
+          .thenAnswer((_) async {});
       when(database.wasCreated).thenReturn(false);
 
       final appsService = AppsService(channel, database);

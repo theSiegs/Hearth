@@ -269,7 +269,7 @@ void main() {
         posterArtUri: '',
       );
 
-      when(mockChannel.launchApp(any)).thenAnswer((_) async => null);
+      when(mockChannel.launchApp(any)).thenAnswer((_) async {});
 
       final success = await watchNextService.launch(program);
 
@@ -297,7 +297,7 @@ void main() {
       );
 
       when(mockChannel.launchWatchNextProgram(any)).thenAnswer((_) async => false);
-      when(mockChannel.launchApp(any)).thenAnswer((_) async => null);
+      when(mockChannel.launchApp(any)).thenAnswer((_) async {});
 
       final success = await watchNextService.launch(program);
 
