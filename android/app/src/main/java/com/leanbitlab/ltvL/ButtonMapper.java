@@ -29,7 +29,7 @@ final class ButtonMapper {
 
     private ButtonMapper() {}
 
-    /** Keys that would leave the TV hard to navigate if remapped. */
+    /** False for keys whose remapping would leave the TV hard to navigate. */
     static boolean isRemappable(int keyCode) {
         switch (keyCode) {
             case KeyEvent.KEYCODE_DPAD_UP:
