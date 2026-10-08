@@ -82,7 +82,8 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
       _avatarName = name;
       _avatarModified = avatar.modified;
       return true;
-    } catch (_) {
+    } catch (e) {
+      developer.log("Couldn't read the photo of $name", name: "ProfileService", error: e);
       return false;
     }
   }
@@ -178,7 +179,10 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
         _incomingAvatar = avatar.png;
         notifyListeners();
       }
-    } catch (_) {}
+    } catch (e) {
+      // The card shows without a photo
+      developer.log("Couldn't read the photo of $name", name: "ProfileService", error: e);
+    }
   }
 
   void _clearIncoming() {
@@ -207,7 +211,9 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
       name = await _channel.getActiveProfileName();
       key = await _channel.getActiveProfileKey();
       kids = await _channel.isKidsProfile();
-    } catch (_) {
+    } catch (e) {
+      // Nothing to go on: the current profile and layout stay
+      developer.log("Couldn't read the active profile", name: "ProfileService", error: e);
       return;
     }
 
