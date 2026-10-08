@@ -16,7 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 import 'package:flauncher/providers/apps_service.dart';
 
 import 'package:flauncher/widgets/ensure_visible.dart';
@@ -49,7 +48,7 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
     _TabData(2, Icons.star, (l) => l.favoriteApps),
     _TabData(3, Icons.visibility_off_outlined, (l) => l.hiddenApplications),
   ];
-  
+
   late List<FocusNode> _tabFocusNodes;
 
   @override
@@ -105,7 +104,6 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
   }
 
   void _selectTab(int index, String title) {
-
     if (_selectedIndex != index) {
       if (mounted) {
         setState(() {
@@ -116,7 +114,6 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
     }
   }
 
-
   void changeTab(int direction) {
     // ... (existing code, ensure it matches previous edits)
 
@@ -124,23 +121,20 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
     if (newIndex != _selectedIndex) {
       final localizations = AppLocalizations.of(context)!;
 
-      
       _isSwitchingViaKeyboard = true;
       _selectTab(newIndex, _tabs[newIndex].getTitle(localizations));
-      
 
       _tabFocusNodes[newIndex].requestFocus();
-      
+
       Future.delayed(const Duration(milliseconds: 150), () {
         if (mounted) {
-           _isSwitchingViaKeyboard = false;
+          _isSwitchingViaKeyboard = false;
         }
       });
     }
   }
 
   void focusCurrentTab() {
-
     _tabFocusNodes[_selectedIndex].requestFocus();
   }
 
@@ -153,7 +147,6 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
           onFocusChange: (focused) {
             if (focused) {
               if (_isSwitchingViaKeyboard) {
-
                 return;
               }
 
@@ -200,13 +193,18 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
   }
 
   Widget _buildCurrentTab() {
-     // ... (same)
+    // ... (same)
     switch (_selectedIndex) {
-      case 0: return _TVTab();
-      case 1: return _SideloadedTab();
-      case 2: return _FavoritesTab();
-      case 3: return _HiddenTab();
-      default: return Container();
+      case 0:
+        return _TVTab();
+      case 1:
+        return _SideloadedTab();
+      case 2:
+        return _FavoritesTab();
+      case 3:
+        return _HiddenTab();
+      default:
+        return Container();
     }
   }
 }
@@ -218,7 +216,6 @@ class _TabData {
 
   _TabData(this.index, this.icon, this.getTitle);
 }
-
 
 class MoveFocusToTabIntent extends Intent {
   const MoveFocusToTabIntent();
@@ -250,7 +247,6 @@ class ChangeTabAction extends Action<ChangeTabIntent> {
     return null;
   }
 }
-
 
 class _TVTab extends StatelessWidget {
   @override
@@ -302,7 +298,7 @@ class _FavoritesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Selector<AppsService, List<App>>(
         selector: (_, appsService) {
-           final favorites = appsService.categories.firstWhere(
+          final favorites = appsService.categories.firstWhere(
             (category) => category.name == 'Favorites',
             orElse: () => Category(name: 'Favorites'),
           );
@@ -369,7 +365,6 @@ class _EmptyListPlaceholderState extends State<_EmptyListPlaceholder> {
     _focusNode = FocusNode();
     if (widget.autofocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-
         _focusNode.requestFocus();
       });
     }
@@ -400,8 +395,7 @@ class _EmptyListPlaceholderState extends State<_EmptyListPlaceholder> {
   }
 }
 
-class _AppListItem extends StatefulWidget
-{
+class _AppListItem extends StatefulWidget {
   final App application;
   final bool autofocus;
   final bool isFirst;
@@ -412,8 +406,7 @@ class _AppListItem extends StatefulWidget
   State<StatefulWidget> createState() => _AppListItemState();
 }
 
-class _AppListItemState extends State<_AppListItem>
-{
+class _AppListItemState extends State<_AppListItem> {
   late Future<ImageProvider> _iconLoadFuture;
   late FocusNode _focusNode;
 
@@ -425,7 +418,6 @@ class _AppListItemState extends State<_AppListItem>
 
     if (widget.autofocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-
         _focusNode.requestFocus();
       });
     }
@@ -462,15 +454,13 @@ class _AppListItemState extends State<_AppListItem>
           focusNode: _focusNode,
           onKeyEvent: (node, event) {
             if (widget.isFirst && event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowUp) {
-
               Actions.invoke(context, const MoveFocusToTabIntent());
               return KeyEventResult.handled;
             }
             return KeyEventResult.ignored;
           },
           onFocusChange: (hasFocus) {
-
-             setState(() {});
+            setState(() {});
           },
           child: Builder(
             builder: (context) {
@@ -524,9 +514,10 @@ class _AppListItemState extends State<_AppListItem>
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       title: Text(
         widget.application.name,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Colors.white,
-            fontWeight: focused ? FontWeight.bold : FontWeight.normal),
+        style: Theme.of(context)
+            .textTheme
+            .bodyMedium
+            ?.copyWith(color: Colors.white, fontWeight: focused ? FontWeight.bold : FontWeight.normal),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
