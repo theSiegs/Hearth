@@ -48,6 +48,8 @@ import java.util.regex.Pattern;
 public class ProfilePairingService extends AccessibilityService {
     static final String TAG = "HearthPairing";
     private static final long WAIT_FOR_PICKER_MS = 25_000;
+    /** The longest Hearth waits through a first sign-in for the picker. */
+    private static final long WAIT_THROUGH_SIGN_IN_MS = 5 * 60_000;
     private static final long PICK_TIMEOUT_MS = 15_000;
     private static final long STEP_TIMEOUT_MS = 2_500;
     private static final long SCAN_DELAY_MS = 300;
@@ -87,6 +89,8 @@ public class ProfilePairingService extends AccessibilityService {
         /** A kids profile: name matches must be close (see ProfilePairing.choose). */
         boolean kids;
         boolean pickerSeen;
+        boolean signingIn;
+        final long startedAt = android.os.SystemClock.elapsedRealtime();
         // Apps read through nodes
         boolean clickTried;
         boolean checkingClick;
@@ -362,6 +366,10 @@ public class ProfilePairingService extends AccessibilityService {
             pickerFound();
             return;
         }
+        if (!s.pickerSeen && looksLikeSignIn(lower)) {
+            stillSigningIn(s);
+            return;
+        }
         if (!s.pickerSeen || t.isEmpty()) return;
         // Hints and settings Netflix also reads out, not profile names.
         if (lower.startsWith("press ") || lower.startsWith("audio description")) return;
@@ -380,6 +388,27 @@ public class ProfilePairingService extends AccessibilityService {
         s.pendingName = t;
         mHandler.removeCallbacks(mDeliverPending);
         mHandler.postDelayed(mDeliverPending, NAME_WAIT_MS);
+    }
+
+    /** What Netflix reads out on its sign-in screens (choosing how, the code or QR page, email and password). */
+    private static boolean looksLikeSignIn(String lower) {
+        return lower.contains("sign in") || lower.contains("sign-in") || lower.contains("signin")
+                || lower.contains("email") || lower.contains("password") || lower.contains("code")
+                || lower.contains("use phone") || lower.contains("use remote") || lower.contains("qr")
+                || lower.contains("netflix.com/") || lower.contains("verif");
+    }
+
+    /**
+     * The app is on a sign-in screen: wait for its picker until WAIT_THROUGH_SIGN_IN_MS after the launch instead
+     * (a code entered on a phone can take minutes, with the app silent meanwhile).
+     */
+    private void stillSigningIn(Session s) {
+        long left = WAIT_THROUGH_SIGN_IN_MS - (android.os.SystemClock.elapsedRealtime() - s.startedAt);
+        if (left <= WAIT_FOR_PICKER_MS) return;
+        if (!s.signingIn) Log.i(TAG, "Signing in to " + s.pkg + ": waiting for its picker");
+        s.signingIn = true;
+        mHandler.removeCallbacks(mTimeout);
+        mHandler.postDelayed(mTimeout, left);
     }
 
     private final Runnable mDeliverPending = () -> {
