@@ -93,8 +93,10 @@ investigation), `tool/generate_icons.py` (app icon and TV banner).
 
 `.github/workflows/release.yml` builds and signs the APKs (`Hearth-universal`, `-arm64-v8a`, `-armeabi-v7a`) and
 publishes the GitHub release that the in-app updater reads. It needs the repository secrets `KEYSTORE_BASE64`,
-`KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` and `TMDB_API_KEY`. Tags with a `-` become pre-releases, which the
-updater skips. Every release must be signed with the same key, or installed copies can't update.
+`KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` and `TMDB_API_KEY`. For now every release is published as a
+pre-release, since Hearth is in early development; the in-app updater includes pre-releases by default (the
+**Include pre-releases** switch), for Hearth and HearthTube alike. Once Hearth leaves early development, the
+workflow can go back to making only tags with a `-` pre-releases. Every release must be signed with the same key, or installed copies can't update.
 
 `.github/workflows/ci.yml` analyzes, tests and builds a debug APK on every push.
 
