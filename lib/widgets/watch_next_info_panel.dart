@@ -143,6 +143,7 @@ class _WatchNextInfoPanelState extends State<WatchNextInfoPanel> {
                 children: [
                   Consumer<SettingsService>(
                     builder: (context, settingsService, _) => PanelActionButton(
+                      autofocus: true,
                       icon: Icons.visibility_off_outlined,
                       label: localizations.watchNextInfoRemove,
                       onPressed: () => _safeAction(() async {
