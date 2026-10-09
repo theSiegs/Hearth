@@ -19,6 +19,7 @@ Widget _buildTestWidget({
   required SettingsService settingsService,
   required WatchNextService watchNextService,
   required AppsService appsService,
+  Locale? locale,
 }) {
   return MultiProvider(
     providers: [
@@ -34,6 +35,7 @@ Widget _buildTestWidget({
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: Scaffold(
         body: Center(child: child),
       ),
@@ -157,6 +159,37 @@ void main() {
       expect(cards.any((c) => c.isLastInRow), isFalse);
       expect(find.text('See all'), findsOneWidget);
       expect(find.text('2 in progress'), findsOneWidget);
+    });
+
+    testWidgets('says how long is left, and the See all card, in the app\'s language', (tester) async {
+      final programs = [
+        _fakeProgram(
+            id: 1, packageName: 'app.one', title: 'Video 1', playbackPosition: 30 * 60000, duration: 120 * 60000),
+        _fakeProgram(id: 2, packageName: 'app.two', title: 'Video 2'),
+      ];
+      when(watchNextService.programs).thenReturn(programs);
+
+      Future<void> pumpIn(Locale locale) async {
+        await tester.pumpWidget(
+          _buildTestWidget(
+            child: const ContinueWatchingRow(),
+            settingsService: settingsService,
+            watchNextService: watchNextService,
+            appsService: appsService,
+            locale: locale,
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await pumpIn(const Locale('en'));
+      expect(find.text('Description for Video 1 \u00b7 1 h 30 min left'), findsOneWidget);
+
+      await pumpIn(const Locale('de'));
+      expect(find.text('WEITERSCHAUEN'), findsOneWidget);
+      expect(find.text('Description for Video 1 \u00b7 Noch 1 Std. 30 Min.'), findsOneWidget);
+      expect(find.text('Alle ansehen'), findsOneWidget);
+      expect(find.text('2 begonnen'), findsOneWidget);
     });
   });
 

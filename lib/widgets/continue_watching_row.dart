@@ -30,14 +30,16 @@ class ContinueWatchingRow extends StatefulWidget {
 }
 
 /// "S3 E12 · 14 min left · Disney+": what's shown under a program's name, above the row and in the grid.
-String watchNextDetail(WatchNextProgram program, AppsService appsService) {
+String watchNextDetail(AppLocalizations localizations, WatchNextProgram program, AppsService appsService) {
   final description = program.description.trim();
   final parts = <String>[
     if (description.isNotEmpty && description.toLowerCase() != program.title.trim().toLowerCase()) description,
   ];
   if (program.duration > 0 && program.playbackPosition > 0 && program.playbackPosition < program.duration) {
     final minutes = ((program.duration - program.playbackPosition) / 60000).ceil();
-    parts.add(minutes >= 60 ? "${minutes ~/ 60} h ${minutes % 60} min left" : "$minutes min left");
+    parts.add(minutes >= 60
+        ? localizations.cwRowHoursMinutesLeft(minutes ~/ 60, minutes % 60)
+        : localizations.cwRowMinutesLeft(minutes));
   }
   final app = appsService.applications.where((a) => a.packageName == program.packageName).firstOrNull;
   if (app != null) parts.add(app.name);
@@ -64,6 +66,8 @@ class _ContinueWatchingRowState extends State<ContinueWatchingRow> {
 
     return Consumer2<WatchNextService, AppsService>(
       builder: (context, watchNextService, appsService, _) {
+        // Looked up here, not in the list's item builder, so a change of language reaches the See all card
+        final localizations = AppLocalizations.of(context)!;
         if (!watchNextService.hasPermission) {
           return const SizedBox.shrink();
         }
@@ -97,7 +101,7 @@ class _ContinueWatchingRowState extends State<ContinueWatchingRow> {
                     valueListenable: _focused,
                     builder: (context, focused, _) {
                       final program = programs.contains(focused) ? focused! : programs.first;
-                      final detail = watchNextDetail(program, appsService);
+                      final detail = watchNextDetail(AppLocalizations.of(context)!, program, appsService);
                       return Padding(
                         padding: const EdgeInsets.only(left: 16, bottom: 4),
                         child: Column(
@@ -163,8 +167,8 @@ class _ContinueWatchingRowState extends State<ContinueWatchingRow> {
                               return KeyEventResult.ignored;
                             },
                             child: MoreCard(
-                              label: "See all",
-                              detail: "${allPrograms.length} in progress",
+                              label: localizations.cwRowSeeAll,
+                              detail: localizations.cwRowInProgress(allPrograms.length),
                               height: cardHeight,
                               onPressed: () => ContinueWatchingGridPage.open(context, allPrograms),
                             ),

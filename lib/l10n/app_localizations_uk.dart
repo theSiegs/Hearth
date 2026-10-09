@@ -474,4 +474,75 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get remove => 'Видалити';
+
+  @override
+  String get homeNothingToWatch => 'Зараз нічого дивитися';
+
+  @override
+  String get errorScreenTitle => 'Щось пішло не так';
+
+  @override
+  String get appInfoAddToCategory => 'Додати до категорії';
+
+  @override
+  String get appInfoAddToFavorites => 'До улюблених';
+
+  @override
+  String get appInfoRemoveFromFavorites => 'Прибрати з улюблених';
+
+  @override
+  String get appInfoSetCustomBanner => 'Встановити власний банер';
+
+  @override
+  String get appInfoClearCustomBanner => 'Прибрати власний банер';
+
+  @override
+  String appInfoSetBannerFailed(String error) {
+    return 'Не вдалося встановити банер: $error';
+  }
+
+  @override
+  String appInfoClearBannerFailed(String error) {
+    return 'Не вдалося прибрати банер: $error';
+  }
+
+  @override
+  String get cwGridAll => 'Усі';
+
+  @override
+  String get cwRowSeeAll => 'Показати всі';
+
+  @override
+  String cwRowInProgress(int count) {
+    return 'Розпочато: $count';
+  }
+
+  @override
+  String cwRowHoursMinutesLeft(int hours, int minutes) {
+    return 'Залишилося $hours год $minutes хв';
+  }
+
+  @override
+  String cwRowMinutesLeft(int minutes) {
+    return 'Залишилося $minutes хв';
+  }
+
+  @override
+  String get watchNextInfoRemove => 'Прибрати з «Продовжити перегляд»';
+
+  @override
+  String watchNextInfoHideAllFrom(String appName) {
+    return 'Приховати все з $appName';
+  }
+
+  @override
+  String get watchNextInfoPlayResume => 'Дивитися / Продовжити';
+
+  @override
+  String watchNextInfoOpenApp(String appName) {
+    return 'Відкрити $appName';
+  }
+
+  @override
+  String get watchNextInfoAppInfo => 'Інформація про застосунок';
 }

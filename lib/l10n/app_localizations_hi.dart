@@ -474,4 +474,75 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get remove => 'हटाएँ';
+
+  @override
+  String get homeNothingToWatch => 'अभी देखने के लिए कुछ नहीं है';
+
+  @override
+  String get errorScreenTitle => 'कुछ गलत हो गया';
+
+  @override
+  String get appInfoAddToCategory => 'श्रेणी में जोड़ें';
+
+  @override
+  String get appInfoAddToFavorites => 'पसंदीदा में जोड़ें';
+
+  @override
+  String get appInfoRemoveFromFavorites => 'पसंदीदा से हटाएं';
+
+  @override
+  String get appInfoSetCustomBanner => 'कस्टम बैनर सेट करें';
+
+  @override
+  String get appInfoClearCustomBanner => 'कस्टम बैनर हटाएं';
+
+  @override
+  String appInfoSetBannerFailed(String error) {
+    return 'बैनर सेट नहीं हो सका: $error';
+  }
+
+  @override
+  String appInfoClearBannerFailed(String error) {
+    return 'बैनर हटाया नहीं जा सका: $error';
+  }
+
+  @override
+  String get cwGridAll => 'सभी';
+
+  @override
+  String get cwRowSeeAll => 'सभी देखें';
+
+  @override
+  String cwRowInProgress(int count) {
+    return '$count जारी';
+  }
+
+  @override
+  String cwRowHoursMinutesLeft(int hours, int minutes) {
+    return '$hours घं $minutes मि बाकी';
+  }
+
+  @override
+  String cwRowMinutesLeft(int minutes) {
+    return '$minutes मि बाकी';
+  }
+
+  @override
+  String get watchNextInfoRemove => 'देखना जारी रखें से हटाएं';
+
+  @override
+  String watchNextInfoHideAllFrom(String appName) {
+    return '$appName से सभी छिपाएं';
+  }
+
+  @override
+  String get watchNextInfoPlayResume => 'चलाएं / फिर से शुरू करें';
+
+  @override
+  String watchNextInfoOpenApp(String appName) {
+    return '$appName खोलें';
+  }
+
+  @override
+  String get watchNextInfoAppInfo => 'ऐप जानकारी';
 }

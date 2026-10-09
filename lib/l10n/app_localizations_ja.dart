@@ -474,4 +474,75 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get remove => '削除';
+
+  @override
+  String get homeNothingToWatch => '今見られるものはありません';
+
+  @override
+  String get errorScreenTitle => '問題が発生しました';
+
+  @override
+  String get appInfoAddToCategory => 'カテゴリに追加';
+
+  @override
+  String get appInfoAddToFavorites => 'お気に入りに追加';
+
+  @override
+  String get appInfoRemoveFromFavorites => 'お気に入りから削除';
+
+  @override
+  String get appInfoSetCustomBanner => 'カスタムバナーを設定';
+
+  @override
+  String get appInfoClearCustomBanner => 'カスタムバナーを解除';
+
+  @override
+  String appInfoSetBannerFailed(String error) {
+    return 'バナーを設定できませんでした: $error';
+  }
+
+  @override
+  String appInfoClearBannerFailed(String error) {
+    return 'バナーを解除できませんでした: $error';
+  }
+
+  @override
+  String get cwGridAll => 'すべて';
+
+  @override
+  String get cwRowSeeAll => 'すべて表示';
+
+  @override
+  String cwRowInProgress(int count) {
+    return '視聴中 $count 件';
+  }
+
+  @override
+  String cwRowHoursMinutesLeft(int hours, int minutes) {
+    return '残り $hours 時間 $minutes 分';
+  }
+
+  @override
+  String cwRowMinutesLeft(int minutes) {
+    return '残り $minutes 分';
+  }
+
+  @override
+  String get watchNextInfoRemove => '「続きを見る」から削除';
+
+  @override
+  String watchNextInfoHideAllFrom(String appName) {
+    return '$appName のすべてを非表示';
+  }
+
+  @override
+  String get watchNextInfoPlayResume => '再生 / 再開';
+
+  @override
+  String watchNextInfoOpenApp(String appName) {
+    return '$appName を開く';
+  }
+
+  @override
+  String get watchNextInfoAppInfo => 'アプリ情報';
 }

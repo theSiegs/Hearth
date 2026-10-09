@@ -474,4 +474,75 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get remove => 'إزالة';
+
+  @override
+  String get homeNothingToWatch => 'لا يوجد ما يمكن مشاهدته الآن';
+
+  @override
+  String get errorScreenTitle => 'حدث خطأ ما';
+
+  @override
+  String get appInfoAddToCategory => 'إضافة إلى فئة';
+
+  @override
+  String get appInfoAddToFavorites => 'إضافة إلى المفضلة';
+
+  @override
+  String get appInfoRemoveFromFavorites => 'إزالة من المفضلة';
+
+  @override
+  String get appInfoSetCustomBanner => 'تعيين لافتة مخصصة';
+
+  @override
+  String get appInfoClearCustomBanner => 'إزالة اللافتة المخصصة';
+
+  @override
+  String appInfoSetBannerFailed(String error) {
+    return 'تعذّر تعيين اللافتة: $error';
+  }
+
+  @override
+  String appInfoClearBannerFailed(String error) {
+    return 'تعذّرت إزالة اللافتة: $error';
+  }
+
+  @override
+  String get cwGridAll => 'الكل';
+
+  @override
+  String get cwRowSeeAll => 'عرض الكل';
+
+  @override
+  String cwRowInProgress(int count) {
+    return '$count قيد المشاهدة';
+  }
+
+  @override
+  String cwRowHoursMinutesLeft(int hours, int minutes) {
+    return 'متبقٍ $hours س $minutes د';
+  }
+
+  @override
+  String cwRowMinutesLeft(int minutes) {
+    return 'متبقٍ $minutes د';
+  }
+
+  @override
+  String get watchNextInfoRemove => 'إزالة من متابعة المشاهدة';
+
+  @override
+  String watchNextInfoHideAllFrom(String appName) {
+    return 'إخفاء الكل من $appName';
+  }
+
+  @override
+  String get watchNextInfoPlayResume => 'تشغيل / استئناف';
+
+  @override
+  String watchNextInfoOpenApp(String appName) {
+    return 'فتح $appName';
+  }
+
+  @override
+  String get watchNextInfoAppInfo => 'معلومات التطبيق';
 }

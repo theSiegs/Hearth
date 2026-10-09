@@ -474,4 +474,75 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get remove => 'Quitar';
+
+  @override
+  String get homeNothingToWatch => 'No hay nada para ver ahora';
+
+  @override
+  String get errorScreenTitle => 'Algo salió mal';
+
+  @override
+  String get appInfoAddToCategory => 'Añadir a categoría';
+
+  @override
+  String get appInfoAddToFavorites => 'Añadir a favoritos';
+
+  @override
+  String get appInfoRemoveFromFavorites => 'Quitar de favoritos';
+
+  @override
+  String get appInfoSetCustomBanner => 'Establecer banner personalizado';
+
+  @override
+  String get appInfoClearCustomBanner => 'Quitar banner personalizado';
+
+  @override
+  String appInfoSetBannerFailed(String error) {
+    return 'No se pudo establecer el banner: $error';
+  }
+
+  @override
+  String appInfoClearBannerFailed(String error) {
+    return 'No se pudo quitar el banner: $error';
+  }
+
+  @override
+  String get cwGridAll => 'Todo';
+
+  @override
+  String get cwRowSeeAll => 'Ver todo';
+
+  @override
+  String cwRowInProgress(int count) {
+    return '$count en curso';
+  }
+
+  @override
+  String cwRowHoursMinutesLeft(int hours, int minutes) {
+    return 'Quedan $hours h $minutes min';
+  }
+
+  @override
+  String cwRowMinutesLeft(int minutes) {
+    return 'Quedan $minutes min';
+  }
+
+  @override
+  String get watchNextInfoRemove => 'Quitar de Continuar viendo';
+
+  @override
+  String watchNextInfoHideAllFrom(String appName) {
+    return 'Ocultar todo de $appName';
+  }
+
+  @override
+  String get watchNextInfoPlayResume => 'Reproducir / Reanudar';
+
+  @override
+  String watchNextInfoOpenApp(String appName) {
+    return 'Abrir $appName';
+  }
+
+  @override
+  String get watchNextInfoAppInfo => 'Datos de la aplicación';
 }
