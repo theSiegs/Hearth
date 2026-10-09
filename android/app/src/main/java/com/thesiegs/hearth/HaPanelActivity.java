@@ -89,8 +89,8 @@ public class HaPanelActivity extends Activity {
         Window window = getWindow();
         window.setLayout(Dp.px(this, PANEL_WIDTH_DP), WindowManager.LayoutParams.MATCH_PARENT);
         window.setGravity(Gravity.END);
-        window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-        window.setDimAmount(0.7f);
+        // The home stays as it is beside the panel: no dimming
+        window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
 
         float radius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 28, getResources().getDisplayMetrics());
         GradientDrawable background = new GradientDrawable();
