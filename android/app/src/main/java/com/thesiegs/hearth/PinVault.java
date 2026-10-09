@@ -43,11 +43,6 @@ final class PinVault {
     /** The app didn't take it last time; still tried once per launch until changed (see PinEntryMachine). */
     static final String STATUS_REJECTED = "rejected";
     /** Rejected often enough that another try could lock the profile: not tried until changed. */
-    /**
-     * Saved in the old Hearth (com.leanbitlab.ltvL), whose Keystore key can't move: the parent enters it again. Kept
-     * without the sealed PIN so Settings can say which ones (see LegacyMove). Never typed.
-     */
-    static final String STATUS_REENTER = "reenter";
 
     private PinVault() {
     }
@@ -147,42 +142,8 @@ final class PinVault {
         return out;
     }
 
-    /** A sealed PIN is saved (not one waiting to be entered again). */
     static boolean has(Context context, String pkg, String appProfile) {
-        JSONObject e = entry(context, pkg, appProfile);
-        return e != null && e.has("ct");
-    }
-
-    /**
-     * After the old Hearth's data moved in (LegacyMove): its PINs were sealed with a Keystore key that stayed behind,
-     * so each becomes a {@link #STATUS_REENTER} entry without the sealed PIN. Returns how many.
-     */
-    static int keepForReentry(Context context) {
-        SharedPreferences prefs = prefs(context);
-        SharedPreferences.Editor editor = prefs.edit();
-        int count = 0;
-        for (Map.Entry<String, ?> stored : prefs.getAll().entrySet()) {
-            if (!(stored.getValue() instanceof String) || stored.getKey().startsWith(PAUSED_PREFIX)
-                    || stored.getKey().startsWith(BREAKS_PREFIX)) {
-                continue;
-            }
-            try {
-                JSONObject e = new JSONObject((String) stored.getValue());
-                if (!e.has("ct") && STATUS_REENTER.equals(e.optString("status"))) {
-                    count++;
-                    continue;
-                }
-                e.remove("iv");
-                e.remove("ct");
-                e.put("status", STATUS_REENTER).put("rejections", 0);
-                editor.putString(stored.getKey(), e.toString());
-                count++;
-            } catch (Exception ignored) {
-                editor.remove(stored.getKey());
-            }
-        }
-        editor.commit();
-        return count;
+        return entry(context, pkg, appProfile) != null;
     }
 
     static String statusOf(Context context, String pkg, String appProfile) {

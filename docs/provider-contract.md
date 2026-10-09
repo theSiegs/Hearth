@@ -13,9 +13,8 @@ are never reused for a different meaning.
 ## Where
 
 - Authority: `com.thesiegs.hearth.profile` (debug builds: `com.thesiegs.hearth.debug.profile`). Hearth up to
-  2026.10.x, and the bridge build that moves a TV to the new app id, answer the same contract at
-  `com.leanbitlab.ltvL.profile` (debug: `com.leanbitlab.ltvL.debug.profile`). While TVs move, query the new authority
-  first and fall back to the old one (docs/design/app-id-change.md).
+  2026.10.x answered the same contract at `com.leanbitlab.ltvL.profile`; a client that still accepts it is harmless
+  (docs/design/app-id-change.md).
 - `content://com.thesiegs.hearth.profile/active`: one row, the columns below.
 - `content://com.thesiegs.hearth.profile/wallpaper`: Hearth's current wallpaper picture, read-only
   (`FileNotFoundException` when Hearth shows a gradient instead). Since version 5 only for `com.thesiegs.hearthtube`
@@ -38,8 +37,8 @@ null `wallpaper_brightness`, `wallpaper_title` and `wallpaper_credit`. `wallpape
 picture's file time, 0 for a gradient. `verify_parent_pin` is relayed to Hearth (the PIN never leaves it) and returns null when Hearth doesn't
 answer within a few seconds. Without an agent, a Hearth installed there answers with defaults only.
 
-**Checking it's really Hearth.** The provider belongs to `com.thesiegs.hearth` (or, until the TV has moved,
-`com.leanbitlab.ltvL`; either with `.debug` for debug builds) signed with one of:
+**Checking it's really Hearth.** The provider belongs to `com.thesiegs.hearth` (`.debug` for debug builds; up to
+2026.10.x `com.leanbitlab.ltvL`) signed with one of:
 - release: `0438047b1a5eefe8693cad8f2b57189a418337bbcbd3c7dbdb79d20884beaf6e`
 - debug: `6748528ff4d17fd57c30b6c5d522c467920d9951ea5d208597f91b66df9a2bfe`
 
@@ -84,7 +83,7 @@ a minute.
 ## History
 
 - **5, new app id** (2026-10): no column changes. Hearth's app id is `com.thesiegs.hearth`, so the authority is
-  `com.thesiegs.hearth.profile`; the old `com.leanbitlab.ltvL.profile` remains while TVs move.
+  `com.thesiegs.hearth.profile` (Hearth up to 2026.10.x: `com.leanbitlab.ltvL.profile`).
 - **5** (2026-10-09): added `wallpaper_kind`, `wallpaper_version`, `wallpaper_brightness`, `wallpaper_gradient`,
   `wallpaper_title`, `wallpaper_credit`; observers on `/active` are told when the wallpaper changes. `/wallpaper`
   only opens for HearthTube with a trusted signature. In a profile's agent, the wallpaper columns and `/wallpaper`

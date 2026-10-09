@@ -607,5 +607,6 @@
     "profileLockEveryTime": "Siempre",
     "profileLockAfterMinutes": "Tras {minutes} min suspendida",
     "profileLockNeedsGoogleLock": "Usa el bloqueo de perfil de Google TV: actívalo para tu cuenta en Ajustes de Google TV → Cuentas e inicio de sesión → tu cuenta → Bloqueo de perfil.",
-    "aboutWallpaperPhoto": "FOTO DE FONDO"
+    "aboutWallpaperPhoto": "FOTO DE FONDO",
+    "updateErrorWrongApp": "Esta descarga no es una actualización de este Hearth"
 }

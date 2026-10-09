@@ -115,8 +115,7 @@ class UpdateService extends ChangeNotifier {
         await _loadCurrentVersion();
       }
 
-      // Never a bridge APK (the old app id); the bridge build's own update is the new Hearth
-      final release = await _releases.latestWithApk(await _channel.getSupportedAbis(), accept: isHearthUpdateAsset);
+      final release = await _releases.latestWithApk(await _channel.getSupportedAbis());
       if (release == null) {
         _status = UpdateStatus.error;
         _error = UpdateError.noApkForDevice;

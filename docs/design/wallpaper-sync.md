@@ -8,8 +8,8 @@ Hearth's side is done (provider contract version 5, docs/provider-contract.md). 
 
 ## What Hearth offers
 
-Authority `com.thesiegs.hearth.profile` (debug Hearth: `com.thesiegs.hearth.debug.profile`); until a TV has moved to
-Hearth's new app id, `com.leanbitlab.ltvL.profile` (docs/design/app-id-change.md: try the new one first).
+Authority `com.thesiegs.hearth.profile` (debug Hearth: `com.thesiegs.hearth.debug.profile`). Hearth up to 2026.10.x
+answered at `com.leanbitlab.ltvL.profile` (docs/design/app-id-change.md).
 
 - `content://<authority>/active`: the one-row cursor HearthTube already reads. New wallpaper columns:
 
@@ -54,7 +54,7 @@ Drawing it on a `w` x `h` screen with `android.graphics` (colors via `Color.pars
 HearthTube follows Hearth's wallpaper when all of these hold:
 
 1. Hearth's provider answers: `query(/active)` returns a row with `contract_version >= 5`, and the provider's
-   package is `com.thesiegs.hearth` or `com.leanbitlab.ltvL` (or either `.debug`) signed with one of the certificates listed in
+   package is `com.thesiegs.hearth` (or `.debug`) signed with one of the certificates listed in
    docs/provider-contract.md (HearthTube already checks this).
 2. HearthTube was opened from Hearth, or Hearth is the TV's home:
    - `Activity.getLaunchedFromPackage()` (Android 14+) returns one of those Hearth packages. Hearth launches

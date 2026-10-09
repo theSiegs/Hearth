@@ -66,12 +66,6 @@
     <queries>
         <package android:name="org.breezyweather" />
         <package android:name="com.google.android.apps.tv.launcherx" />
-        <!-- Both sides of the move to Hearth's new app id (docs/design/app-id-change.md): the new Hearth finds the
-             old one's data, the bridge build finds the new Hearth it installed -->
-        <package android:name="com.leanbitlab.ltvL" />
-        <package android:name="com.leanbitlab.ltvL.debug" />
-        <package android:name="com.thesiegs.hearth" />
-        <package android:name="com.thesiegs.hearth.debug" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
         </intent>
@@ -85,7 +79,6 @@
     </queries>
 
     <application
-        android:name=".HearthApplication"
         android:allowBackup="false"
         android:networkSecurityConfig="@xml/network_security_config"
         android:banner="@drawable/banner"
@@ -114,15 +107,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!-- Restarts Hearth's main process (RestartActivity), e.g. to bring the old Hearth's data over -->
-        <activity
-            android:name=".RestartActivity"
-            android:process=":restart"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:noHistory="true"
-            android:theme="@android:style/Theme.NoDisplay" />
 
         <activity
             android:name=".HaPanelActivity"
@@ -271,14 +255,6 @@
         <provider
             android:name=".ProfileProvider"
             android:authorities="${applicationId}.profile"
-            android:exported="true" />
-
-        <!-- Bridge build only (the old app id): hands this Hearth's data to the new Hearth, signature-checked
-             (LegacyExportProvider) -->
-        <provider
-            android:name=".LegacyExportProvider"
-            android:authorities="${applicationId}.legacyexport"
-            android:enabled="${legacyExportEnabled}"
             android:exported="true" />
 
         <meta-data

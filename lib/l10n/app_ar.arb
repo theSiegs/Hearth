@@ -607,5 +607,6 @@
     "profileLockEveryTime": "في كل مرة",
     "profileLockAfterMinutes": "بعد {minutes} دقيقة من السكون",
     "profileLockNeedsGoogleLock": "يستخدم قفل الملف الشخصي في Google TV: فعّله لحسابك من إعدادات Google TV ← الحسابات وتسجيل الدخول ← حسابك ← قفل الملف الشخصي.",
-    "aboutWallpaperPhoto": "صورة الخلفية"
+    "aboutWallpaperPhoto": "صورة الخلفية",
+    "updateErrorWrongApp": "هذا التنزيل ليس تحديثًا لـ Hearth هذا"
 }
