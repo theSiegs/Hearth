@@ -77,12 +77,13 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
   ImageProvider? _image;
 
   late final AppsService _appsService;
+  late int _imageRevision;
 
   @override
   void initState() {
     super.initState();
     _appsService = context.read<AppsService>();
-    _appsService.addListener(_onAppsServiceChanged);
+    _imageRevision = _appsService.imageRevision(widget.application.packageName);
 
     FocusManager.instance.addHighlightModeListener(_focusHighlightModeChanged);
     _appImageLoadFuture = _loadAppBannerOrIcon(_appsService);
@@ -97,18 +98,9 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
 
   @override
   void dispose() {
-    _appsService.removeListener(_onAppsServiceChanged);
     FocusManager.instance.removeHighlightModeListener(_focusHighlightModeChanged);
     _focusNode.dispose();
     super.dispose();
-  }
-
-  void _onAppsServiceChanged() {
-    // Reload the app image when the AppsService notifies of changes
-    // (e.g., after setting a custom banner)
-    setState(() {
-      _appImageLoadFuture = _loadAppBannerOrIcon(_appsService);
-    });
   }
 
   // A move rebuilds the row; the moved card then takes focus back and stays in move mode.
@@ -132,6 +124,13 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
 
   @override
   Widget build(BuildContext context) {
+    // Only this app's banner or icon changing reloads the image (a custom banner, an app update)
+    final int imageRevision =
+        context.select<AppsService, int>((s) => s.imageRevision(widget.application.packageName));
+    if (imageRevision != _imageRevision) {
+      _imageRevision = imageRevision;
+      _appImageLoadFuture = _loadAppBannerOrIcon(_appsService);
+    }
     final bool showAppNames = context.select<SettingsService, bool>((s) => s.showAppNamesBelowIcons);
     final CardStyle style = CardStyle.of(context.select<SettingsService, String>((s) => s.themes));
     final Color accentColor = context.select<SettingsService, Color>((s) => s.accentColor);

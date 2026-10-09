@@ -50,6 +50,7 @@ class AppsService extends ChangeNotifier {
   Map<String, App> _applications = {};
   final Map<String, Uint8List> _iconCache = {};
   final Map<String, Uint8List> _bannerCache = {};
+  final Map<String, int> _imageRevisions = {};
 
   Map<int, Category> _categoriesById = {};
   Map<String, Category>? _categoriesByNameCache;
@@ -124,8 +125,7 @@ class AppsService extends ChangeNotifier {
     }
 
     if (changedPackageName != null) {
-      _iconCache.remove(changedPackageName);
-      _bannerCache.remove(changedPackageName);
+      _forgetImages(changedPackageName);
     }
 
     switch (event["action"]) {
@@ -152,8 +152,7 @@ class AppsService extends ChangeNotifier {
         for (Map<dynamic, dynamic> applicationInfo in applicationsInfo) {
           App newApp = App.fromSystem(applicationInfo);
           _replaceApp(newApp);
-          _iconCache.remove(newApp.packageName);
-          _bannerCache.remove(newApp.packageName);
+          _forgetImages(newApp.packageName);
         }
         break;
       case "PACKAGES_SUSPENSION_CHANGED":
@@ -164,9 +163,7 @@ class AppsService extends ChangeNotifier {
         String packageName = event['packageName'];
         await _database.deleteApps([packageName]);
 
-        // Clear icon cache for removed app
-        _iconCache.remove(packageName);
-        _bannerCache.remove(packageName);
+        _forgetImages(packageName);
 
         App? application = _applications.remove(packageName);
 
@@ -531,9 +528,18 @@ class AppsService extends ChangeNotifier {
     return bytes;
   }
 
+  /// Goes up each time an app's banner or icon may have changed, so its card reloads the image only then.
+  int imageRevision(String packageName) => _imageRevisions[packageName] ?? 0;
+
+  void _forgetImages(String packageName) {
+    _iconCache.remove(packageName);
+    _bannerCache.remove(packageName);
+    _imageRevisions[packageName] = imageRevision(packageName) + 1;
+  }
+
   Future<void> setCustomAppBanner(String packageName, String imagePath) async {
     await _prefs.setString('custom_banner_$packageName', imagePath);
-    _bannerCache.remove(packageName);
+    _forgetImages(packageName);
     notifyListeners();
   }
 
@@ -560,7 +566,7 @@ class AppsService extends ChangeNotifier {
       }
     }
     await _prefs.remove('custom_banner_$packageName');
-    _bannerCache.remove(packageName);
+    _forgetImages(packageName);
     notifyListeners();
   }
 

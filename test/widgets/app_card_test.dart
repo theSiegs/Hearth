@@ -27,6 +27,7 @@ void main() {
 
   setUp(() {
     mockAppsService = MockAppsService();
+    when(mockAppsService.imageRevision(any)).thenReturn(0);
     mockSettingsService = MockSettingsService();
 
     mockApp = fakeApp(packageName: "test.app.package", name: "Test App");
