@@ -16,10 +16,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:io';
+
 import 'package:flauncher/flauncher.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/gradients.dart';
 import 'package:flauncher/providers/apps_service.dart';
+import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:flauncher/models/watch_next_program.dart';
 import 'package:flauncher/providers/launcher_state.dart';
@@ -247,6 +250,208 @@ void main() {
     await tester.pumpAndSettle();
     expect(getFocusNodeForApp(tester, "me.efesser.flauncher.1")!.hasFocus, isTrue);
     expect(recentsOpacity(), 0);
+  });
+
+  testWidgets("The first app added to Favorites keeps the selection: it lands on that app in the new dock",
+      (tester) async {
+    final appsService = mkAppService(LiveAppsService()) as LiveAppsService;
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    final applicationsCategory = fakeCategory(name: "Applications", order: 1);
+    applicationsCategory.applications
+        .addAll(List.generate(20, (i) => fakeApp(packageName: "com.example.app$i", name: "App $i")));
+    when(appsService.launcherSections).thenReturn([favoritesCategory, applicationsCategory]);
+    when(appsService.toggleFavorite(any)).thenAnswer((invocation) async {
+      favoritesCategory.applications.add(invocation.positionalArguments[0] as App);
+      appsService.changed();
+    });
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+    expect(find.byType(HomeDock), findsNothing);
+
+    // An app on the grid's second row, after a visit to the top bar
+    getProfileFocusNode(tester)!.requestFocus();
+    await tester.pumpAndSettle();
+    getFocusNodeForApp(tester, "com.example.app7")!.requestFocus();
+    await tester.pumpAndSettle();
+    await tester.longPress(find.byKey(const Key("com.example.app7")));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text("Add to Favorites"));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HomeDock), findsOneWidget);
+    expect(isDockAppFocused(tester, "com.example.app7"), isTrue);
+    expect(isProfileButtonFocused(tester), isFalse);
+    expect(homeScrollOffset(tester), 0);
+  });
+
+  testWidgets("Moving an app inside the dock doesn't scroll the page", (tester) async {
+    final appsService = mkAppService(LiveAppsService()) as LiveAppsService;
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    favoritesCategory.applications
+        .addAll(List.generate(3, (i) => fakeApp(packageName: "com.example.dock$i", name: "Dock $i")));
+    final applicationsCategory = fakeCategory(name: "Applications", order: 1);
+    applicationsCategory.applications
+        .addAll(List.generate(30, (i) => fakeApp(packageName: "com.example.app$i", name: "App $i")));
+    when(appsService.launcherSections).thenReturn([favoritesCategory, applicationsCategory]);
+    when(appsService.reorderApplication(any, any, any)).thenAnswer((invocation) {
+      final apps = (invocation.positionalArguments[0] as Category).applications;
+      apps.insert(invocation.positionalArguments[2] as int, apps.removeAt(invocation.positionalArguments[1] as int));
+      appsService.changed();
+    });
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+    await tester.pumpAndSettle();
+    expect(isDockAppFocused(tester, "com.example.dock0"), isTrue);
+
+    await tester.longPress(find.byKey(const Key("com.example.dock0")));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text("Reorder"));
+    await tester.pumpAndSettle();
+    for (final key in [LogicalKeyboardKey.arrowRight, LogicalKeyboardKey.arrowRight, LogicalKeyboardKey.arrowLeft]) {
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+      expect(homeScrollOffset(tester), 0);
+    }
+    expect(favoritesCategory.applications[1].packageName, "com.example.dock0");
+    expect(isDockAppFocused(tester, "com.example.dock0"), isTrue);
+  });
+
+  group("Removing from Continue Watching", () {
+    WatchNextProgram program(int id, String packageName) => WatchNextProgram(
+          id: id, packageName: packageName, title: "Program $id", description: "", watchNextType: 0,
+          lastEngagementTime: 0, playbackPosition: 50, duration: 100, intentUri: "intent://$id", posterArtUri: "",
+        );
+
+    late LiveSettingsService settingsService;
+    late LiveWatchNextService watchNextService;
+    late List<WatchNextProgram> programs;
+    late List<String> hiddenPackages;
+
+    Future<void> pumpHome(WidgetTester tester, List<WatchNextProgram> initial) async {
+      final appsService = mkAppService();
+      when(appsService.applications).thenReturn([]);
+      final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+      favoritesCategory.applications.addAll([
+        fakeApp(packageName: "com.example.dock0", name: "Dock 0"),
+        fakeApp(packageName: "com.example.dock1", name: "Dock 1"),
+      ]);
+      final applicationsCategory = fakeCategory(name: "Applications", order: 1);
+      applicationsCategory.applications
+          .addAll(List.generate(30, (i) => fakeApp(packageName: "com.example.app$i", name: "App $i")));
+      when(appsService.launcherSections).thenReturn([favoritesCategory, applicationsCategory]);
+      settingsService = mkSettingsService(LiveSettingsService()) as LiveSettingsService;
+      when(settingsService.dockEnabled).thenReturn(true);
+      when(settingsService.showContinueWatching).thenReturn(true);
+      when(settingsService.hiddenWatchNextProgramIds).thenReturn([]);
+      hiddenPackages = [];
+      when(settingsService.hiddenWatchNextPackages).thenAnswer((_) => hiddenPackages);
+      when(settingsService.hideWatchNextPackage(any)).thenAnswer((invocation) async {
+        hiddenPackages = [...hiddenPackages, invocation.positionalArguments[0] as String];
+        settingsService.changed();
+      });
+      when(settingsService.hideWatchNextProgram(any)).thenAnswer((_) async {});
+      when(settingsService.continueWatchingMaxItems).thenReturn(10);
+      when(settingsService.continueWatchingCardHeight).thenReturn(135);
+      when(settingsService.continueWatchingShowProgress).thenReturn(true);
+      when(settingsService.continueWatchingShowPercentage).thenReturn(true);
+      when(settingsService.continueWatchingShowDescription).thenReturn(true);
+      watchNextService = mkWatchNextService(LiveWatchNextService()) as LiveWatchNextService;
+      when(watchNextService.hasPermission).thenReturn(true);
+      programs = initial;
+      when(watchNextService.programs).thenAnswer((_) => programs);
+      when(watchNextService.refresh()).thenAnswer((_) async {});
+      when(watchNextService.deleteProgram(any)).thenAnswer((invocation) async {
+        final removed = invocation.positionalArguments[0] as WatchNextProgram;
+        programs = programs.where((p) => p.id != removed.id).toList();
+        watchNextService.changed();
+        return true;
+      });
+      await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService,
+          watchNextService: watchNextService);
+      await tester.pumpAndSettle();
+    }
+
+    WatchNextProgram? focusedProgram() =>
+        FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<WatchNextCard>()?.program;
+
+    /// Up from the dock to Continue Watching, on up to the top bar and back down: the top bar is in the focus
+    /// history, as it is after a while on the TV.
+    Future<void> toRecentsByWayOfTopBar(WidgetTester tester) async {
+      for (final key in [LogicalKeyboardKey.arrowUp, LogicalKeyboardKey.arrowUp, LogicalKeyboardKey.arrowDown]) {
+        await tester.sendKeyEvent(key);
+        await tester.pumpAndSettle();
+      }
+      expect(focusedProgram()?.id, 1);
+    }
+
+    Future<void> openPanelAndPick(WidgetTester tester, String action) async {
+      await tester.sendKeyEvent(LogicalKeyboardKey.contextMenu);
+      await tester.pumpAndSettle();
+      // The panel ignores presses for its first moments (by the wall clock)
+      sleep(const Duration(milliseconds: 400));
+      await tester.tap(find.textContaining(action));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets("Remove keeps the selection in the row while it has programs", (tester) async {
+      await pumpHome(tester, [program(1, "com.example.video"), program(2, "com.example.video")]);
+      await toRecentsByWayOfTopBar(tester);
+
+      await openPanelAndPick(tester, "Remove from Continue Watching");
+
+      expect(focusedProgram()?.id, 2);
+      expect(homeScrollOffset(tester), 0);
+    });
+
+    testWidgets("Removing the last program lands on the dock, with the page at the top", (tester) async {
+      await pumpHome(tester, [program(1, "com.example.video")]);
+      await toRecentsByWayOfTopBar(tester);
+
+      await openPanelAndPick(tester, "Remove from Continue Watching");
+
+      expect(find.byType(WatchNextCard), findsNothing);
+      expect(isDockAppFocused(tester, "com.example.dock0"), isTrue);
+      expect(homeScrollOffset(tester), 0);
+    });
+
+    testWidgets("Hide all lands on the dock, with the page at the top", (tester) async {
+      await pumpHome(tester, [
+        program(1, "com.example.video"),
+        program(2, "com.example.video"),
+        program(3, "com.example.music"),
+        program(4, "com.example.music"),
+      ]);
+      await toRecentsByWayOfTopBar(tester);
+
+      await openPanelAndPick(tester, "Hide all from");
+
+      expect(hiddenPackages, ["com.example.video"]);
+      expect(isProfileButtonFocused(tester), isFalse);
+      expect(isDockAppFocused(tester, "com.example.dock0"), isTrue);
+      expect(homeScrollOffset(tester), 0);
+      // The other app's programs are still there, a press of Up away
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      expect(focusedProgram()?.id, 3);
+    });
+
+    testWidgets("The top bar takes the page back to the top, so the dock never slides away over the apps below",
+        (tester) async {
+      await pumpHome(tester, [program(1, "com.example.video")]);
+      tester
+          .widget<SingleChildScrollView>(
+              find.descendant(of: find.byType(FLauncher), matching: find.byType(SingleChildScrollView)).first)
+          .controller!
+          .jumpTo(200);
+      await tester.pump();
+
+      getProfileFocusNode(tester)!.requestFocus();
+      await tester.pumpAndSettle();
+
+      expect(homeScrollOffset(tester), 0);
+    });
   });
 
   testWidgets("After a profile switch, focus lands on the dock once the welcome card goes", (tester) async {
@@ -887,8 +1092,15 @@ void main() {
   });
 }
 
-SettingsService mkSettingsService() {
-  final settingsService = MockSettingsService();
+/// Mocks whose listeners hear [LiveListeners.changed], for tests where the home changes under the selection.
+class LiveAppsService extends MockAppsService with LiveListeners {}
+
+class LiveSettingsService extends MockSettingsService with LiveListeners {}
+
+class LiveWatchNextService extends MockWatchNextService with LiveListeners {}
+
+SettingsService mkSettingsService([MockSettingsService? mock]) {
+  final settingsService = mock ?? MockSettingsService();
   when(settingsService.dateFormat).thenReturn(SettingsService.defaultDateFormat);
   when(settingsService.timeFormat).thenReturn(SettingsService.defaultTimeFormat);
   when(settingsService.appHighlightAnimationEnabled).thenReturn(true);
@@ -946,8 +1158,8 @@ NotificationsService mkNotificationsService() {
   return notificationsService;
 }
 
-WatchNextService mkWatchNextService() {
-  final watchNextService = MockWatchNextService();
+WatchNextService mkWatchNextService([MockWatchNextService? mock]) {
+  final watchNextService = mock ?? MockWatchNextService();
   when(watchNextService.profileChanged(any)).thenReturn(null);
   when(watchNextService.programs).thenReturn([]);
   return watchNextService;
@@ -961,8 +1173,8 @@ WeatherService mkWeatherService() {
   return weatherService;
 }
 
-AppsService mkAppService() {
-  final appsService = MockAppsService();
+AppsService mkAppService([MockAppsService? mock]) {
+  final appsService = mock ?? MockAppsService();
   when(appsService.initialized).thenReturn(true);
   when(appsService.getAppBanner(any)).thenAnswer((_) async => kTransparentImage);
   when(appsService.getAppIcon(any)).thenAnswer((_) async => kTransparentImage);
@@ -1049,6 +1261,25 @@ bool isAppCardFocused(WidgetTester tester, String packageName) {
   final focusNode = getFocusNodeForApp(tester, packageName);
   return focusNode?.hasFocus ?? false;
 }
+
+/// The app's card in the dock (it can be in a grid below too) has focus.
+bool isDockAppFocused(WidgetTester tester, String packageName) {
+  final inkWell = find.descendant(
+    of: find.descendant(
+        of: find.byType(HomeDock),
+        matching: find.byWidgetPredicate((widget) => widget is AppCard && widget.application.packageName == packageName)),
+    matching: find.byType(InkWell),
+  );
+  if (inkWell.evaluate().isEmpty) return false;
+  return tester.widget<InkWell>(inkWell.first).focusNode?.hasFocus ?? false;
+}
+
+/// How far the home page is scrolled down.
+double homeScrollOffset(WidgetTester tester) => tester
+    .widget<SingleChildScrollView>(
+        find.descendant(of: find.byType(FLauncher), matching: find.byType(SingleChildScrollView)).first)
+    .controller!
+    .offset;
 
 bool isProfileButtonFocused(WidgetTester tester) {
   final focusNode = getProfileFocusNode(tester);

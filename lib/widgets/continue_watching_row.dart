@@ -150,6 +150,12 @@ class _ContinueWatchingRowState extends State<ContinueWatchingRow> {
               SizedBox(
                 height: rowHeight,
                 child: ListView.builder(
+                  // By key, so a card keeps its state (and the selection) when a program before it goes
+                  findChildIndexCallback: (key) {
+                    if (key == const ValueKey("see_all")) return programs.length;
+                    final int index = programs.indexWhere((p) => key == ValueKey(p.id));
+                    return index < 0 ? null : index;
+                  },
                   clipBehavior: Clip.none,
                   padding: const EdgeInsets.all(8),
                   physics: const ClampingScrollPhysics(),
@@ -318,9 +324,16 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
       ),
     );
     if (result == null || !mounted) return;
-    // The selection moves to the next card (or the one before) before this one goes, so it stays in the row
-    _focusNode.requestFocus();
-    if (!_focusNode.focusInDirection(TraversalDirection.right)) _focusNode.focusInDirection(TraversalDirection.left);
+    // Hide all, or the row's last program: the selection goes back to the dock (with a dock), as Down would.
+    // Otherwise it moves to the next card (or the one before) before this one goes, so it stays in the row.
+    final bool rowEmpties = widget.watchNextService.visiblePrograms(settings, widget.appsService).every((p) =>
+        result == WatchNextPanelResult.remove ? p.id == widget.program.id : p.packageName == widget.program.packageName);
+    final bool leftRow = (result == WatchNextPanelResult.hideApp || rowEmpties) &&
+        Actions.maybeInvoke(context, const LeaveContinueWatchingIntent()) == true;
+    if (!leftRow) {
+      _focusNode.requestFocus();
+      if (!_focusNode.focusInDirection(TraversalDirection.right)) _focusNode.focusInDirection(TraversalDirection.left);
+    }
     switch (result) {
       case WatchNextPanelResult.remove:
         await settings.hideWatchNextProgram(widget.program.id);

@@ -27,6 +27,7 @@ import 'package:flauncher/widgets/application_info_panel.dart';
 import 'package:flauncher/widgets/card_style.dart';
 import 'package:flauncher/widgets/focus_highlight.dart';
 import 'package:flauncher/widgets/focus_keyboard_listener.dart';
+import 'package:flauncher/widgets/home_dock.dart';
 import 'package:flauncher/widgets/app_card_keys.dart';
 import 'package:flauncher/widgets/launcher_card_behavior.dart';
 import 'package:flauncher/providers/launcher_state.dart';
@@ -465,8 +466,20 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
       _lastMoveTime = now;
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => Scrollable.ensureVisible(context,
-        alignment: 0.1, duration: const Duration(milliseconds: 100), curve: Curves.easeInOut));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      // In the dock only the dock's own row follows the card: the page stays put, with the first screen at the top
+      final ScrollableState? dockRow =
+          context.findAncestorWidgetOfExactType<HomeDock>() != null ? Scrollable.maybeOf(context) : null;
+      final RenderObject? card = context.findRenderObject();
+      if (dockRow != null && card != null) {
+        dockRow.position.ensureVisible(card,
+            alignment: 0.1, duration: const Duration(milliseconds: 100), curve: Curves.easeInOut);
+        return;
+      }
+      Scrollable.ensureVisible(context,
+          alignment: 0.1, duration: const Duration(milliseconds: 100), curve: Curves.easeInOut);
+    });
     if (key == LogicalKeyboardKey.arrowLeft) {
       widget.onMove(AxisDirection.left);
     } else if (key == LogicalKeyboardKey.arrowUp) {

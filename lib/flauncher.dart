@@ -100,6 +100,14 @@ class _FLauncherState extends State<FLauncher> {
   /// A profile just switched to, until the selection has landed on its home.
   String? _landingProfile;
 
+  /// The home's layout as last built: the dock, one grid without it, or the plain list of sections.
+  _HomeLayout? _layout;
+
+  /// The layout changed under the selection (the first app added to Favorites brings in the dock, the last one
+  /// removed takes it away): the card that had focus went with the old layout, so the selection lands on the home
+  /// again once nothing is open over it. Otherwise it would fall back to the top bar.
+  bool _relandOnHome = false;
+
   @override
   void initState() {
     super.initState();
@@ -172,6 +180,25 @@ class _FLauncherState extends State<FLauncher> {
     if (!mounted || _searchTyping || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
     (_firstFocusable(_dockFocusNode) ?? _firstFocusable(_appsGridFocusNode) ?? _firstFocusable(_belowDockFocusNode))
         ?.requestFocus();
+  }
+
+  /// Notes the layout the home is built with; see [_relandOnHome].
+  void _layoutBuilt(_HomeLayout layout) {
+    final previous = _layout;
+    _layout = layout;
+    if (previous == null || previous == layout) return;
+    // A profile switch lands on its own (_onProfileChanged), after its welcome card
+    if (_landingProfile != null || _profileService?.transition != null) return;
+    _relandOnHome = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _relandIfOnTop());
+  }
+
+  /// Lands on the home after a layout change, once the home is on top again (a panel over it has closed).
+  void _relandIfOnTop() {
+    if (!mounted || !_relandOnHome || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
+    _relandOnHome = false;
+    if (_showingRecents) setState(() => _showingRecents = false);
+    _landOnHome();
   }
 
   /// Opens the search box over the home: the keyboard, or listening right away for [mode] "voice" (the remote's
@@ -312,6 +339,11 @@ class _FLauncherState extends State<FLauncher> {
         _topBarFocused = inTopBar;
         if (inTopBar) _showingRecents = false;
       });
+      // The page goes back to the top with it: scrolled, the dock would slide away over the apps below the first
+      // screen instead of off the bottom
+      if (inTopBar && _firstScreenFocusNode.context != null && _scrollController.hasClients) {
+        _scrollController.animateTo(0, duration: const Duration(milliseconds: 150), curve: Curves.easeInOut);
+      }
     }
   }
 
@@ -375,6 +407,21 @@ class _FLauncherState extends State<FLauncher> {
     return true;
   }
 
+  /// Continue Watching's selected program is going with nothing to take its place (see LeaveContinueWatchingIntent):
+  /// the dock comes back and takes the selection, and the page goes back to the top with it. Without a dock the row is
+  /// one of the sections and the card keeps the selection in it (false).
+  bool _leaveRecents() {
+    if (_dockFocusNode.context == null) return false;
+    if (_showingRecents) {
+      _setShowingRecents(false);
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusDock();
+      });
+    }
+    return true;
+  }
+
   void _focusDock() {
     final last = _lastDockFocus;
     final target = last != null && last.context != null && _dockFocusNode.descendants.contains(last)
@@ -433,6 +480,8 @@ class _FLauncherState extends State<FLauncher> {
             onInvoke: (_) => _appBarKey.currentState?.openSettings(),
           ),
           LeaveTopBarIntent: CallbackAction<LeaveTopBarIntent>(onInvoke: (_) => _leaveTopBar()),
+          LeaveContinueWatchingIntent:
+              CallbackAction<LeaveContinueWatchingIntent>(onInvoke: (_) => _leaveRecents()),
           OpenHaPanelIntent: CallbackAction<OpenHaPanelIntent>(
             onInvoke: (_) => context.read<FLauncherChannel>().openHaPanel(),
           ),
@@ -488,6 +537,13 @@ class _FLauncherState extends State<FLauncher> {
                 ),
               // A profile switch: the welcome card until this profile's home is complete
               Positioned.fill(child: ProfileTransitionOverlay(channel: context.read<FLauncherChannel>())),
+              // Hears the home coming back on top (a panel over it closing), for _relandOnHome
+              Builder(builder: (context) {
+                if ((ModalRoute.isCurrentOf(context) ?? true) && _relandOnHome) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) => _relandIfOnTop());
+                }
+                return const SizedBox.shrink();
+              }),
             ])),
       );
 
@@ -537,6 +593,9 @@ class _FLauncherState extends State<FLauncher> {
             .whereType<Category>()
             .firstWhereOrNull((c) => c.name == AppsService.favoritesName && c.applications.isNotEmpty)
         : null;
+    _layoutBuilt(favorites != null
+        ? _HomeLayout.dock
+        : (dockEnabled ? _HomeLayout.grid : _HomeLayout.sections));
     if (favorites == null && !dockEnabled) {
       return _sections(sections,
           continueWatchingActive: continueWatchingActive, continueWatchingOrder: continueWatchingOrder);
@@ -832,6 +891,10 @@ class _FLauncherState extends State<FLauncher> {
     );
   }
 }
+
+/// How the home is laid out: Favorites as a dock over the other apps, one grid (dock on but nothing in Favorites),
+/// or the plain list of sections (dock off).
+enum _HomeLayout { dock, grid, sections }
 
 /// Draws a [Gradient] once into an image and shows that, instead of evaluating the gradient
 /// shader on every frame; on TV sticks a full-screen live gradient costs noticeably more.
