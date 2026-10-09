@@ -1745,4 +1745,70 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get cwWatchNextAdbMessage => 'Android TV 要求启动器拥有 READ_WRITE_WATCH_NEXT_PROGRAMS 权限，才能读取并显示已安装应用的「继续观看」行。\n\n要授予此权限，请通过 ADB 连接电视并运行：';
+
+  @override
+  String get appsNoApplicationsFound => '未找到应用';
+
+  @override
+  String get appDetailsAddToFavorites => '添加到收藏';
+
+  @override
+  String get appDetailsRemoveFromFavorites => '从收藏中移除';
+
+  @override
+  String get appDetailsAddToCategory => '添加到类别';
+
+  @override
+  String get sectionsCustomOption => '自定义...';
+
+  @override
+  String get sectionsSelectName => '选择名称';
+
+  @override
+  String get sectionsCustomName => '自定义名称';
+
+  @override
+  String get sectionsSortLastUsed => '最近使用';
+
+  @override
+  String get sectionsReorderHint => '用 ◄ / ► 选择，再用 ▲ / ▼ 调整顺序';
+
+  @override
+  String get inputsNoneDetected => '未检测到输入源';
+
+  @override
+  String get notifClearAll => '全部清除';
+
+  @override
+  String get notifAllCaughtUp => '全部看完了！';
+
+  @override
+  String notifBlockAppNotifications(String app) {
+    return '屏蔽通知（$app）';
+  }
+
+  @override
+  String notifOpenApp(String app) {
+    return '打开 $app';
+  }
+
+  @override
+  String get notifAccessAdbTitle => '通知访问权限（需要 ADB）';
+
+  @override
+  String get notifAccessAdbMessage => 'Android TV 没有提供「通知访问权限」（读取其他应用的通知）的系统设置页面。\n\n注意：在电视的应用设置中开启「显示通知」只控制本应用发出的通知，并不会授予通知访问权限。\n\n要授予通知访问权限，请通过 ADB 连接电视并运行：';
+
+  @override
+  String get notifOpenAppInfo => '打开应用信息';
+
+  @override
+  String get notifOverlayPermissionTitle => '悬浮窗权限';
+
+  @override
+  String get notifOverlayAdbMessage => '此设备无法自动打开悬浮窗权限设置页面。\n\n要启用悬浮弹窗，请在连接到电视的电脑上通过 ADB 手动授予权限：';
+
+  @override
+  String blockedNotificationsHeading(int count) {
+    return '已屏蔽的应用（$count）';
+  }
 }

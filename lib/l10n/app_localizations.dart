@@ -3106,6 +3106,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Android TV requires the READ_WRITE_WATCH_NEXT_PROGRAMS permission for launchers to read and display Continue Watching rows from installed apps.\n\nTo grant this permission, connect your TV via ADB and run:'**
   String get cwWatchNextAdbMessage;
+
+  /// Shown on a tab of the Applications page that has no apps
+  ///
+  /// In en, this message translates to:
+  /// **'No applications found'**
+  String get appsNoApplicationsFound;
+
+  /// Row on an app's details page in Settings that adds it to Favorites
+  ///
+  /// In en, this message translates to:
+  /// **'Add to Fav'**
+  String get appDetailsAddToFavorites;
+
+  /// Row on an app's details page in Settings that takes it out of Favorites
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from Fav'**
+  String get appDetailsRemoveFromFavorites;
+
+  /// Row on an app's details page in Settings that opens the category picker
+  ///
+  /// In en, this message translates to:
+  /// **'Add to Category'**
+  String get appDetailsAddToCategory;
+
+  /// Last choice in the section name list on the New section page; picking it lets you type a name
+  ///
+  /// In en, this message translates to:
+  /// **'Custom...'**
+  String get sectionsCustomOption;
+
+  /// Hint in the section name list on the New section page before a name is picked
+  ///
+  /// In en, this message translates to:
+  /// **'Select a name'**
+  String get sectionsSelectName;
+
+  /// Label of the text field for a typed section name on the section page
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Name'**
+  String get sectionsCustomName;
+
+  /// Sort choice on the section page: most recently opened apps first
+  ///
+  /// In en, this message translates to:
+  /// **'Last Used'**
+  String get sectionsSortLastUsed;
+
+  /// Hint at the bottom of the Sections page; the arrows are the remote's D-pad
+  ///
+  /// In en, this message translates to:
+  /// **'Select with ◄ / ► then use ▲ / ▼ to reorder'**
+  String get sectionsReorderHint;
+
+  /// Shown in the Input Sources panel when the TV reports no inputs
+  ///
+  /// In en, this message translates to:
+  /// **'No inputs detected'**
+  String get inputsNoneDetected;
+
+  /// Button at the top of the Notifications panel that dismisses every clearable notification
+  ///
+  /// In en, this message translates to:
+  /// **'Clear All'**
+  String get notifClearAll;
+
+  /// Shown in the Notifications panel when there are no notifications
+  ///
+  /// In en, this message translates to:
+  /// **'All caught up!'**
+  String get notifAllCaughtUp;
+
+  /// Tooltip of a notification's block button, and a row in its options dialog; {app} is the app's name
+  ///
+  /// In en, this message translates to:
+  /// **'Block Notifications ({app})'**
+  String notifBlockAppNotifications(String app);
+
+  /// Row in a notification's options dialog that opens the app it came from
+  ///
+  /// In en, this message translates to:
+  /// **'Open {app}'**
+  String notifOpenApp(String app);
+
+  /// Title of the dialog explaining how to grant notification access with ADB
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Access (ADB Required)'**
+  String get notifAccessAdbTitle;
+
+  /// Text of the notification access ADB dialog, shown above the command to run
+  ///
+  /// In en, this message translates to:
+  /// **'Android TV does not provide a system settings screen for \"Notification Access\" (listening to notifications from other apps).\n\nNote: Enabling \"Show notifications\" in TV App Settings only controls outgoing notifications from this app, not Notification Access.\n\nTo grant Notification Access, connect your TV via ADB and run:'**
+  String get notifAccessAdbMessage;
+
+  /// Button in the notification access ADB dialog that opens Hearth's app info screen
+  ///
+  /// In en, this message translates to:
+  /// **'Open App Info'**
+  String get notifOpenAppInfo;
+
+  /// Title of the dialog explaining how to allow popups over other apps with ADB
+  ///
+  /// In en, this message translates to:
+  /// **'Overlay Permission'**
+  String get notifOverlayPermissionTitle;
+
+  /// Text of the overlay permission ADB dialog, shown above the command to run
+  ///
+  /// In en, this message translates to:
+  /// **'On this device, the Overlay Permission settings screen could not be opened automatically.\n\nTo enable overlay popups, grant permission manually via ADB from a computer connected to the TV:'**
+  String get notifOverlayAdbMessage;
+
+  /// Heading on the Blocked Apps (notifications) page; {count} is how many apps are blocked
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked Apps ({count})'**
+  String blockedNotificationsHeading(int count);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

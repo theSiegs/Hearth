@@ -1755,4 +1755,70 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get cwWatchNextAdbMessage => 'O Android TV exige a permissão READ_WRITE_WATCH_NEXT_PROGRAMS para que launchers leiam e exibam as fileiras de Continuar assistindo dos apps instalados.\n\nPara conceder essa permissão, conecte sua TV via ADB e execute:';
+
+  @override
+  String get appsNoApplicationsFound => 'Nenhum app encontrado';
+
+  @override
+  String get appDetailsAddToFavorites => 'Adicionar aos favoritos';
+
+  @override
+  String get appDetailsRemoveFromFavorites => 'Remover dos favoritos';
+
+  @override
+  String get appDetailsAddToCategory => 'Adicionar à categoria';
+
+  @override
+  String get sectionsCustomOption => 'Personalizado...';
+
+  @override
+  String get sectionsSelectName => 'Escolha um nome';
+
+  @override
+  String get sectionsCustomName => 'Nome personalizado';
+
+  @override
+  String get sectionsSortLastUsed => 'Último uso';
+
+  @override
+  String get sectionsReorderHint => 'Selecione com ◄ / ► e use ▲ / ▼ para reordenar';
+
+  @override
+  String get inputsNoneDetected => 'Nenhuma entrada detectada';
+
+  @override
+  String get notifClearAll => 'Limpar tudo';
+
+  @override
+  String get notifAllCaughtUp => 'Tudo em dia!';
+
+  @override
+  String notifBlockAppNotifications(String app) {
+    return 'Bloquear notificações ($app)';
+  }
+
+  @override
+  String notifOpenApp(String app) {
+    return 'Abrir $app';
+  }
+
+  @override
+  String get notifAccessAdbTitle => 'Acesso a notificações (requer ADB)';
+
+  @override
+  String get notifAccessAdbMessage => 'O Android TV não oferece uma tela de configurações do sistema para \"Acesso a notificações\" (ler notificações de outros apps).\n\nObservação: ativar \"Mostrar notificações\" nas configurações de apps da TV controla apenas as notificações enviadas por este app, não o acesso a notificações.\n\nPara conceder o acesso a notificações, conecte sua TV via ADB e execute:';
+
+  @override
+  String get notifOpenAppInfo => 'Abrir informações do app';
+
+  @override
+  String get notifOverlayPermissionTitle => 'Permissão de sobreposição';
+
+  @override
+  String get notifOverlayAdbMessage => 'Neste dispositivo, não foi possível abrir automaticamente a tela de configurações da permissão de sobreposição.\n\nPara ativar os pop-ups sobrepostos, conceda a permissão manualmente via ADB de um computador conectado à TV:';
+
+  @override
+  String blockedNotificationsHeading(int count) {
+    return 'Aplicativos bloqueados ($count)';
+  }
 }

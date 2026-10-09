@@ -1753,4 +1753,70 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get cwWatchNextAdbMessage => 'लॉन्चर को इंस्टॉल किए गए ऐप्स की \'देखना जारी रखें\' पंक्तियां पढ़ने और दिखाने के लिए Android TV को READ_WRITE_WATCH_NEXT_PROGRAMS अनुमति चाहिए।\n\nयह अनुमति देने के लिए, अपने टीवी को ADB से कनेक्ट करें और चलाएं:';
+
+  @override
+  String get appsNoApplicationsFound => 'कोई ऐप नहीं मिला';
+
+  @override
+  String get appDetailsAddToFavorites => 'पसंदीदा में जोड़ें';
+
+  @override
+  String get appDetailsRemoveFromFavorites => 'पसंदीदा से हटाएं';
+
+  @override
+  String get appDetailsAddToCategory => 'श्रेणी में जोड़ें';
+
+  @override
+  String get sectionsCustomOption => 'कस्टम...';
+
+  @override
+  String get sectionsSelectName => 'एक नाम चुनें';
+
+  @override
+  String get sectionsCustomName => 'कस्टम नाम';
+
+  @override
+  String get sectionsSortLastUsed => 'अंतिम उपयोग';
+
+  @override
+  String get sectionsReorderHint => '◄ / ► से चुनें, फिर क्रम बदलने के लिए ▲ / ▼ का उपयोग करें';
+
+  @override
+  String get inputsNoneDetected => 'कोई इनपुट नहीं मिला';
+
+  @override
+  String get notifClearAll => 'सभी साफ़ करें';
+
+  @override
+  String get notifAllCaughtUp => 'सब देख लिया!';
+
+  @override
+  String notifBlockAppNotifications(String app) {
+    return 'सूचनाएं अवरुद्ध करें ($app)';
+  }
+
+  @override
+  String notifOpenApp(String app) {
+    return '$app खोलें';
+  }
+
+  @override
+  String get notifAccessAdbTitle => 'सूचना पहुंच (ADB आवश्यक)';
+
+  @override
+  String get notifAccessAdbMessage => 'Android TV में \"सूचना पहुंच\" (अन्य ऐप्स की सूचनाएं सुनना) के लिए कोई सिस्टम सेटिंग स्क्रीन नहीं है।\n\nध्यान दें: टीवी ऐप सेटिंग्स में \"सूचनाएं दिखाएं\" चालू करने से केवल इस ऐप से जाने वाली सूचनाएं नियंत्रित होती हैं, सूचना पहुंच नहीं।\n\nसूचना पहुंच देने के लिए, अपने टीवी को ADB से कनेक्ट करें और चलाएं:';
+
+  @override
+  String get notifOpenAppInfo => 'ऐप जानकारी खोलें';
+
+  @override
+  String get notifOverlayPermissionTitle => 'ओवरले अनुमति';
+
+  @override
+  String get notifOverlayAdbMessage => 'इस डिवाइस पर ओवरले अनुमति सेटिंग स्क्रीन अपने आप नहीं खुल सकी।\n\nओवरले पॉपअप चालू करने के लिए, टीवी से जुड़े कंप्यूटर से ADB के ज़रिए मैन्युअल रूप से अनुमति दें:';
+
+  @override
+  String blockedNotificationsHeading(int count) {
+    return 'अवरुद्ध ऐप्स ($count)';
+  }
 }

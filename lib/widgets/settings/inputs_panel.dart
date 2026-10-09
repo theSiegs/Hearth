@@ -35,7 +35,7 @@ class InputsPanel extends StatelessWidget {
                 child: inputs.isEmpty
                     ? Center(
                         child: Text(
-                          "No inputs detected",
+                          localizations.inputsNoneDetected,
                           style: theme.textTheme.bodyMedium,
                         ),
                       )

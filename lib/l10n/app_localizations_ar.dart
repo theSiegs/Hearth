@@ -1788,4 +1788,70 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get cwWatchNextAdbMessage => 'يتطلب Android TV إذن READ_WRITE_WATCH_NEXT_PROGRAMS لكي تقرأ المشغّلات صفوف متابعة المشاهدة من التطبيقات المثبتة وتعرضها.\n\nلمنح هذا الإذن، وصّل التلفزيون عبر ADB وشغّل:';
+
+  @override
+  String get appsNoApplicationsFound => 'لم يتم العثور على تطبيقات';
+
+  @override
+  String get appDetailsAddToFavorites => 'إضافة إلى المفضلة';
+
+  @override
+  String get appDetailsRemoveFromFavorites => 'إزالة من المفضلة';
+
+  @override
+  String get appDetailsAddToCategory => 'إضافة إلى فئة';
+
+  @override
+  String get sectionsCustomOption => 'مخصص...';
+
+  @override
+  String get sectionsSelectName => 'اختر اسمًا';
+
+  @override
+  String get sectionsCustomName => 'اسم مخصص';
+
+  @override
+  String get sectionsSortLastUsed => 'آخر استخدام';
+
+  @override
+  String get sectionsReorderHint => 'حدّد باستخدام ◄ / ► ثم استخدم ▲ / ▼ لإعادة الترتيب';
+
+  @override
+  String get inputsNoneDetected => 'لم يتم اكتشاف مصادر إدخال';
+
+  @override
+  String get notifClearAll => 'مسح الكل';
+
+  @override
+  String get notifAllCaughtUp => 'لا توجد إشعارات جديدة';
+
+  @override
+  String notifBlockAppNotifications(String app) {
+    return 'حظر الإشعارات ($app)';
+  }
+
+  @override
+  String notifOpenApp(String app) {
+    return 'فتح $app';
+  }
+
+  @override
+  String get notifAccessAdbTitle => 'الوصول إلى الإشعارات (يتطلب ADB)';
+
+  @override
+  String get notifAccessAdbMessage => 'لا يوفر Android TV شاشة إعدادات نظام لـ\"الوصول إلى الإشعارات\" (الاستماع إلى إشعارات التطبيقات الأخرى).\n\nملاحظة: تفعيل \"إظهار الإشعارات\" في إعدادات تطبيقات التلفزيون يتحكم فقط في الإشعارات الصادرة من هذا التطبيق، وليس في الوصول إلى الإشعارات.\n\nلمنح الوصول إلى الإشعارات، وصّل التلفزيون عبر ADB وشغّل:';
+
+  @override
+  String get notifOpenAppInfo => 'فتح معلومات التطبيق';
+
+  @override
+  String get notifOverlayPermissionTitle => 'إذن التراكب';
+
+  @override
+  String get notifOverlayAdbMessage => 'تعذّر فتح شاشة إعدادات إذن التراكب تلقائيًا على هذا الجهاز.\n\nلتفعيل النوافذ المنبثقة، امنح الإذن يدويًا عبر ADB من كمبيوتر متصل بالتلفزيون:';
+
+  @override
+  String blockedNotificationsHeading(int count) {
+    return 'التطبيقات المحظورة ($count)';
+  }
 }

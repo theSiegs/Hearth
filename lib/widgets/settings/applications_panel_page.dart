@@ -255,7 +255,7 @@ class _AppsTab extends StatelessWidget {
         selector: (_, appsService) => apps(appsService),
         builder: (context, applications, _) {
           if (applications.isEmpty) {
-            return const _EmptyListPlaceholder("No applications found", autofocus: true);
+            return _EmptyListPlaceholder(AppLocalizations.of(context)!.appsNoApplicationsFound, autofocus: true);
           }
           return ListView(
             children: applications

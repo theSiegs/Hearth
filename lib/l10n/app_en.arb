@@ -2113,5 +2113,100 @@
     "cwWatchNextAdbMessage": "Android TV requires the READ_WRITE_WATCH_NEXT_PROGRAMS permission for launchers to read and display Continue Watching rows from installed apps.\n\nTo grant this permission, connect your TV via ADB and run:",
     "@cwWatchNextAdbMessage": {
         "description": "Text of the Watch Next ADB dialog, shown above the command to run; keep READ_WRITE_WATCH_NEXT_PROGRAMS as is"
+    },
+    "appsNoApplicationsFound": "No applications found",
+    "@appsNoApplicationsFound": {
+        "description": "Shown on a tab of the Applications page that has no apps"
+    },
+    "appDetailsAddToFavorites": "Add to Fav",
+    "@appDetailsAddToFavorites": {
+        "description": "Row on an app's details page in Settings that adds it to Favorites"
+    },
+    "appDetailsRemoveFromFavorites": "Remove from Fav",
+    "@appDetailsRemoveFromFavorites": {
+        "description": "Row on an app's details page in Settings that takes it out of Favorites"
+    },
+    "appDetailsAddToCategory": "Add to Category",
+    "@appDetailsAddToCategory": {
+        "description": "Row on an app's details page in Settings that opens the category picker"
+    },
+    "sectionsCustomOption": "Custom...",
+    "@sectionsCustomOption": {
+        "description": "Last choice in the section name list on the New section page; picking it lets you type a name"
+    },
+    "sectionsSelectName": "Select a name",
+    "@sectionsSelectName": {
+        "description": "Hint in the section name list on the New section page before a name is picked"
+    },
+    "sectionsCustomName": "Custom Name",
+    "@sectionsCustomName": {
+        "description": "Label of the text field for a typed section name on the section page"
+    },
+    "sectionsSortLastUsed": "Last Used",
+    "@sectionsSortLastUsed": {
+        "description": "Sort choice on the section page: most recently opened apps first"
+    },
+    "sectionsReorderHint": "Select with ◄ / ► then use ▲ / ▼ to reorder",
+    "@sectionsReorderHint": {
+        "description": "Hint at the bottom of the Sections page; the arrows are the remote's D-pad"
+    },
+    "inputsNoneDetected": "No inputs detected",
+    "@inputsNoneDetected": {
+        "description": "Shown in the Input Sources panel when the TV reports no inputs"
+    },
+    "notifClearAll": "Clear All",
+    "@notifClearAll": {
+        "description": "Button at the top of the Notifications panel that dismisses every clearable notification"
+    },
+    "notifAllCaughtUp": "All caught up!",
+    "@notifAllCaughtUp": {
+        "description": "Shown in the Notifications panel when there are no notifications"
+    },
+    "notifBlockAppNotifications": "Block Notifications ({app})",
+    "@notifBlockAppNotifications": {
+        "description": "Tooltip of a notification's block button, and a row in its options dialog; {app} is the app's name",
+        "placeholders": {
+            "app": {
+                "type": "String"
+            }
+        }
+    },
+    "notifOpenApp": "Open {app}",
+    "@notifOpenApp": {
+        "description": "Row in a notification's options dialog that opens the app it came from",
+        "placeholders": {
+            "app": {
+                "type": "String"
+            }
+        }
+    },
+    "notifAccessAdbTitle": "Notification Access (ADB Required)",
+    "@notifAccessAdbTitle": {
+        "description": "Title of the dialog explaining how to grant notification access with ADB"
+    },
+    "notifAccessAdbMessage": "Android TV does not provide a system settings screen for \"Notification Access\" (listening to notifications from other apps).\n\nNote: Enabling \"Show notifications\" in TV App Settings only controls outgoing notifications from this app, not Notification Access.\n\nTo grant Notification Access, connect your TV via ADB and run:",
+    "@notifAccessAdbMessage": {
+        "description": "Text of the notification access ADB dialog, shown above the command to run"
+    },
+    "notifOpenAppInfo": "Open App Info",
+    "@notifOpenAppInfo": {
+        "description": "Button in the notification access ADB dialog that opens Hearth's app info screen"
+    },
+    "notifOverlayPermissionTitle": "Overlay Permission",
+    "@notifOverlayPermissionTitle": {
+        "description": "Title of the dialog explaining how to allow popups over other apps with ADB"
+    },
+    "notifOverlayAdbMessage": "On this device, the Overlay Permission settings screen could not be opened automatically.\n\nTo enable overlay popups, grant permission manually via ADB from a computer connected to the TV:",
+    "@notifOverlayAdbMessage": {
+        "description": "Text of the overlay permission ADB dialog, shown above the command to run"
+    },
+    "blockedNotificationsHeading": "Blocked Apps ({count})",
+    "@blockedNotificationsHeading": {
+        "description": "Heading on the Blocked Apps (notifications) page; {count} is how many apps are blocked",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
     }
 }

@@ -149,17 +149,15 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> w
     final packageInfo = await PackageInfo.fromPlatform();
     final packageName = packageInfo.packageName;
     if (!context.mounted) return;
+    final localizations = AppLocalizations.of(context)!;
 
     showAdbCommandDialog(
       context,
-      title: 'Notification Access (ADB Required)',
-      message:
-          'Android TV does not provide a system settings screen for "Notification Access" (listening to notifications from other apps).\n\n'
-          'Note: Enabling "Show notifications" in TV App Settings only controls outgoing notifications from this app, not Notification Access.\n\n'
-          'To grant Notification Access, connect your TV via ADB and run:',
+      title: localizations.notifAccessAdbTitle,
+      message: localizations.notifAccessAdbMessage,
       command:
           'adb shell cmd notification allow_listener $packageName/$packageName.LauncherNotificationListenerService',
-      actionLabel: 'Open App Info',
+      actionLabel: localizations.notifOpenAppInfo,
       onAction: () => context.read<NotificationsService>().openAppNotificationSettings(),
     );
   }
@@ -168,12 +166,12 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> w
     final packageInfo = await PackageInfo.fromPlatform();
     final packageName = packageInfo.packageName;
     if (!context.mounted) return;
+    final localizations = AppLocalizations.of(context)!;
 
     showAdbCommandDialog(
       context,
-      title: 'Overlay Permission',
-      message: 'On this device, the Overlay Permission settings screen could not be opened automatically.\n\n'
-          'To enable overlay popups, grant permission manually via ADB from a computer connected to the TV:',
+      title: localizations.notifOverlayPermissionTitle,
+      message: localizations.notifOverlayAdbMessage,
       command: 'adb shell appops set $packageName SYSTEM_ALERT_WINDOW allow',
     );
   }
