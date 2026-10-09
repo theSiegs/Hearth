@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Test-only: a profile owner that makes an emulator profile user look like a Family Link kids profile. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.hearthtest.supervisor"
+    android:versionCode="1"
+    android:versionName="1">
+    <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="34" />
+    <application android:label="Supervisor (test)" android:testOnly="true">
+        <receiver
+            android:name=".Admin"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data android:name="android.app.device_admin" android:resource="@xml/admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+        <receiver android:name=".Cmd" android:exported="true">
+            <intent-filter>
+                <action android:name="com.example.hearthtest.SUPERVISE" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
