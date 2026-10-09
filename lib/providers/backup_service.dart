@@ -114,6 +114,14 @@ class BackupService {
     return dirs;
   }
 
+  static Future<String> _realPath(File file) async {
+    try {
+      return await file.resolveSymbolicLinks();
+    } catch (_) {
+      return file.path;
+    }
+  }
+
   /// Gets the list of available backup files across all search locations.
   Future<List<BackupFileEntry>> getBackupFiles() async {
     final List<Directory> searchDirs = await getSearchDirectories();
@@ -124,7 +132,8 @@ class BackupService {
       if (!await dir.exists()) continue;
       try {
         await for (final entity in dir.list()) {
-          if (entity is File && seenPaths.add(entity.path)) {
+          // One file is reachable through several paths (/sdcard, /storage/emulated/0, /storage/self/primary)
+          if (entity is File && seenPaths.add(await _realPath(entity))) {
             final name = path.basename(entity.path);
             if ((name.startsWith('ltv_backup') || name.startsWith('flauncher_backup')) && name.endsWith('.json')) {
               try {

@@ -280,13 +280,13 @@
     "@appInfoAddToCategory": {
         "description": "App options panel (long press on an app): opens the list of sections to add the app to"
     },
-    "appInfoAddToFavorites": "Add to Fav",
+    "appInfoAddToFavorites": "Add to Favorites",
     "@appInfoAddToFavorites": {
-        "description": "App options panel: adds the app to Favorites (the dock); Fav is short for Favorites"
+        "description": "App options panel: adds the app to Favorites (the dock)"
     },
-    "appInfoRemoveFromFavorites": "Remove from Fav",
+    "appInfoRemoveFromFavorites": "Remove from Favorites",
     "@appInfoRemoveFromFavorites": {
-        "description": "App options panel: takes the app out of Favorites (the dock); Fav is short for Favorites"
+        "description": "App options panel: takes the app out of Favorites (the dock)"
     },
     "appInfoSetCustomBanner": "Set Custom Banner",
     "@appInfoSetCustomBanner": {
@@ -2071,11 +2071,11 @@
     "@appsNoApplicationsFound": {
         "description": "Shown on a tab of the Applications page that has no apps"
     },
-    "appDetailsAddToFavorites": "Add to Fav",
+    "appDetailsAddToFavorites": "Add to Favorites",
     "@appDetailsAddToFavorites": {
         "description": "Row on an app's details page in Settings that adds it to Favorites"
     },
-    "appDetailsRemoveFromFavorites": "Remove from Fav",
+    "appDetailsRemoveFromFavorites": "Remove from Favorites",
     "@appDetailsRemoveFromFavorites": {
         "description": "Row on an app's details page in Settings that takes it out of Favorites"
     },

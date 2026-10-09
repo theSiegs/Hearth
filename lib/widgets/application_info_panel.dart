@@ -160,7 +160,8 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                        if (context.mounted) Navigator.of(context).pop(ApplicationInfoPanelResult.none);
                      },
                    ),
-                   if (widget.category != null)
+                   // Not for the dock: "Remove from Favorites" above already does it
+                   if (widget.category != null && widget.category!.name != AppsService.favoritesName)
                      PanelActionButton(
                        icon: Icons.delete_sweep_outlined,
                        label: localizations.removeFrom(widget.category?.name ?? ''),
