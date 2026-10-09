@@ -248,6 +248,8 @@ final class HaStatusReporter {
         status.put("app_package", s.foregroundPackage == null ? JSONObject.NULL : s.foregroundPackage);
         status.put("app", s.foregroundPackage == null ? JSONObject.NULL : label(pm, s.foregroundPackage));
         status.put("profile", nullable(LauncherAccessibilityService.getActiveProfileName(mContext)));
+        // The stable key of the Google TV profile ("user:<serial>"): survives renames, maps a kid to their TV profile
+        status.put("profile_id", nullable(LauncherAccessibilityService.getActiveProfileKey(mContext)));
         boolean kids = ProfileUsers.isKids(mContext);
         status.put("kids_profile", kids);
         status.put("screen_time_up", s.screenTimeLock);

@@ -59,4 +59,17 @@ public class ScreenTimeStateTest {
         assertNull(screen.minutesLeft);
         assertFalse(screen.isScreenTimeText());
     }
+
+    @Test
+    public void bedtimeKeepsTheLockWhenTheOwnerIsReported() {
+        // Google TV's own screen set it: the kid's user stopped and the owner's is reported, still locked
+        assertFalse(LauncherAccessibilityService.mayLiftLock(true, false, true, false));
+        assertFalse(LauncherAccessibilityService.mayLiftLock(true, false, false, false));
+        // A pick in the chooser always lifts it
+        assertTrue(LauncherAccessibilityService.mayLiftLock(true, true, false, false));
+        // Set from the apps alone (no screen seen): a grown-up profile or a flip lifts it, as before
+        assertTrue(LauncherAccessibilityService.mayLiftLock(false, false, true, true));
+        assertTrue(LauncherAccessibilityService.mayLiftLock(false, false, false, false));
+        assertFalse(LauncherAccessibilityService.mayLiftLock(false, false, false, true));
+    }
 }
