@@ -205,5 +205,14 @@
     "watchNextInfoHideAllFrom": "{appName} से सभी छिपाएं",
     "watchNextInfoPlayResume": "चलाएं / फिर से शुरू करें",
     "watchNextInfoOpenApp": "{appName} खोलें",
-    "watchNextInfoAppInfo": "ऐप जानकारी"
+    "watchNextInfoAppInfo": "ऐप जानकारी",
+    "dataWidgetGrantPermission": "उपयोग अनुमति दें",
+    "dataWidgetDaily": "दैनिक: {usage}",
+    "dataWidgetWeekly": "साप्ताहिक: {usage}",
+    "dataWidgetMonthly": "मासिक: {usage}",
+    "weatherWidgetTemperatureWithWarning": "{temperature} • {warning}",
+    "weatherTextRain": "{when, select, today{आज बारिश} tomorrow{कल बारिश} other{{day} को बारिश}}",
+    "weatherTextSnow": "{when, select, today{आज बर्फ़बारी} tomorrow{कल बर्फ़बारी} other{{day} को बर्फ़बारी}}",
+    "weatherTextStorm": "{when, select, today{आज तूफ़ान} tomorrow{कल तूफ़ान} other{{day} को तूफ़ान}}",
+    "weatherTextChance": "{percent}% {forecast}"
 }

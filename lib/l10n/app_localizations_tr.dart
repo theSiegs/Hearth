@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -545,4 +547,71 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get watchNextInfoAppInfo => 'Uygulama bilgisi';
+
+  @override
+  String get dataWidgetGrantPermission => 'Kullanım izni ver';
+
+  @override
+  String dataWidgetDaily(String usage) {
+    return 'Günlük: $usage';
+  }
+
+  @override
+  String dataWidgetWeekly(String usage) {
+    return 'Haftalık: $usage';
+  }
+
+  @override
+  String dataWidgetMonthly(String usage) {
+    return 'Aylık: $usage';
+  }
+
+  @override
+  String weatherWidgetTemperatureWithWarning(String temperature, String warning) {
+    return '$temperature • $warning';
+  }
+
+  @override
+  String weatherTextRain(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': 'Bugün yağmur',
+        'tomorrow': 'Yarın yağmur',
+        'other': '$day yağmur',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextSnow(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': 'Bugün kar',
+        'tomorrow': 'Yarın kar',
+        'other': '$day kar',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextStorm(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': 'Bugün fırtına',
+        'tomorrow': 'Yarın fırtına',
+        'other': '$day fırtına',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextChance(int percent, String forecast) {
+    return '$forecast (%$percent)';
+  }
 }

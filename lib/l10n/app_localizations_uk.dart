@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -545,4 +547,71 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get watchNextInfoAppInfo => 'Інформація про застосунок';
+
+  @override
+  String get dataWidgetGrantPermission => 'Надати доступ до статистики';
+
+  @override
+  String dataWidgetDaily(String usage) {
+    return 'За день: $usage';
+  }
+
+  @override
+  String dataWidgetWeekly(String usage) {
+    return 'За тиждень: $usage';
+  }
+
+  @override
+  String dataWidgetMonthly(String usage) {
+    return 'За місяць: $usage';
+  }
+
+  @override
+  String weatherWidgetTemperatureWithWarning(String temperature, String warning) {
+    return '$temperature • $warning';
+  }
+
+  @override
+  String weatherTextRain(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': 'Дощ сьогодні',
+        'tomorrow': 'Дощ завтра',
+        'other': 'Дощ, $day',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextSnow(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': 'Сніг сьогодні',
+        'tomorrow': 'Сніг завтра',
+        'other': 'Сніг, $day',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextStorm(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': 'Гроза сьогодні',
+        'tomorrow': 'Гроза завтра',
+        'other': 'Гроза, $day',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextChance(int percent, String forecast) {
+    return '$forecast ($percent%)';
+  }
 }

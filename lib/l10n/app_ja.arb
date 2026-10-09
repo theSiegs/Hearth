@@ -205,5 +205,14 @@
     "watchNextInfoHideAllFrom": "{appName} のすべてを非表示",
     "watchNextInfoPlayResume": "再生 / 再開",
     "watchNextInfoOpenApp": "{appName} を開く",
-    "watchNextInfoAppInfo": "アプリ情報"
+    "watchNextInfoAppInfo": "アプリ情報",
+    "dataWidgetGrantPermission": "使用状況へのアクセスを許可",
+    "dataWidgetDaily": "1日: {usage}",
+    "dataWidgetWeekly": "1週間: {usage}",
+    "dataWidgetMonthly": "1か月: {usage}",
+    "weatherWidgetTemperatureWithWarning": "{temperature} • {warning}",
+    "weatherTextRain": "{when, select, today{今日は雨} tomorrow{明日は雨} other{{day}曜日は雨}}",
+    "weatherTextSnow": "{when, select, today{今日は雪} tomorrow{明日は雪} other{{day}曜日は雪}}",
+    "weatherTextStorm": "{when, select, today{今日は雷雨} tomorrow{明日は雷雨} other{{day}曜日は雷雨}}",
+    "weatherTextChance": "{forecast}（{percent}%）"
 }

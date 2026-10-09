@@ -48,8 +48,20 @@ class WeatherData {
 
   // The first rain, snow or storm in the coming week, if any
   final WeatherWarningType warningType;
+
+  /// The warning in English ("70% Rain today"). The status bar shows its own, in the app's language, from
+  /// [warningType], [warningDayIndex], [warningDate] and [warningPrecipProbability].
   final String? warningText;
   final int? warningConditionCode;
+
+  /// The forecast day the warning is for: 0 today, 1 tomorrow, and so on.
+  final int? warningDayIndex;
+
+  /// That day's date, for its weekday's name.
+  final DateTime? warningDate;
+
+  /// The chance of it in percent, when the forecast gives one above 0.
+  final int? warningPrecipProbability;
 
   const WeatherData({
     this.timestamp,
@@ -65,6 +77,9 @@ class WeatherData {
     this.warningType = WeatherWarningType.none,
     this.warningText,
     this.warningConditionCode,
+    this.warningDayIndex,
+    this.warningDate,
+    this.warningPrecipProbability,
   });
 
   bool get hasWarning => warningType != WeatherWarningType.none;
@@ -107,6 +122,9 @@ class WeatherData {
     WeatherWarningType warningType = WeatherWarningType.none;
     String? warningText;
     int? warningConditionCode;
+    int? warningDayIndex;
+    DateTime? warningDate;
+    int? warningPrecipProbability;
 
     const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final now = DateTime.now();
@@ -118,6 +136,9 @@ class WeatherData {
 
       if (rainCodes.contains(code) || snowCodes.contains(code) || stormCodes.contains(code)) {
         warningConditionCode = code;
+        warningDayIndex = i;
+        final targetDate = now.add(Duration(days: i));
+        warningDate = targetDate;
 
         String dayText;
         if (i == 0) {
@@ -125,13 +146,13 @@ class WeatherData {
         } else if (i == 1) {
           dayText = "tomorrow";
         } else {
-          final targetDate = now.add(Duration(days: i));
           dayText = "on ${dayNames[targetDate.weekday - 1]}";
         }
 
-        final precipString = (f.precipProbability != null && f.precipProbability! > 0)
-            ? "${f.precipProbability}% "
-            : "";
+        if (f.precipProbability != null && f.precipProbability! > 0) {
+          warningPrecipProbability = f.precipProbability;
+        }
+        final precipString = warningPrecipProbability != null ? "$warningPrecipProbability% " : "";
 
         if (rainCodes.contains(code)) {
           warningType = WeatherWarningType.rain;
@@ -161,6 +182,9 @@ class WeatherData {
       warningType: warningType,
       warningText: warningText,
       warningConditionCode: warningConditionCode,
+      warningDayIndex: warningDayIndex,
+      warningDate: warningDate,
+      warningPrecipProbability: warningPrecipProbability,
     );
   }
 

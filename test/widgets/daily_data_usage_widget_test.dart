@@ -1,3 +1,4 @@
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/network_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/daily_data_usage_widget.dart';
@@ -19,14 +20,17 @@ void main() {
     when(mockNetworkService.dailyDataUsage).thenReturn(0);
   });
 
-  Widget createWidgetUnderTest() {
+  Widget createWidgetUnderTest({Locale? locale}) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<NetworkService>.value(value: mockNetworkService),
         ChangeNotifierProvider<SettingsService>.value(value: mockSettingsService),
       ],
-      child: const MaterialApp(
-        home: Directionality(
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
+        home: const Directionality(
           textDirection: TextDirection.ltr,
           child: Scaffold(
             body: DailyDataUsageWidget(),
@@ -156,5 +160,29 @@ void main() {
     final richText = tester.widget<RichText>(find.byType(RichText));
     final span = richText.text as TextSpan;
     expect((span.children![1] as TextSpan).text, '0 B');
+  });
+
+  testWidgets('keeps the amount bold wherever the language puts it', (WidgetTester tester) async {
+    when(mockNetworkService.hasUsageStatsPermission).thenReturn(true);
+    when(mockSettingsService.dataUsagePeriod).thenReturn('daily');
+    when(mockNetworkService.getDataUsageForPeriod('daily')).thenAnswer((_) async => 1024 * 1024 * 5);
+
+    await tester.pumpWidget(createWidgetUnderTest(locale: const Locale('de')));
+    await tester.pumpAndSettle();
+
+    final span = tester.widget<RichText>(find.byType(RichText)).text as TextSpan;
+    expect(span.children!.length, 2);
+    expect((span.children![0] as TextSpan).text, 'Täglich: ');
+    expect((span.children![1] as TextSpan).text, '5.00 MB');
+    expect((span.children![1] as TextSpan).style?.fontWeight, FontWeight.bold);
+  });
+
+  testWidgets('asks for the permission in the app\'s language', (WidgetTester tester) async {
+    when(mockNetworkService.hasUsageStatsPermission).thenReturn(false);
+
+    await tester.pumpWidget(createWidgetUnderTest(locale: const Locale('fr')));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Autoriser l'accès à l'utilisation"), findsOneWidget);
   });
 }

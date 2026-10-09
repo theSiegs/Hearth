@@ -205,5 +205,14 @@
     "watchNextInfoHideAllFrom": "إخفاء الكل من {appName}",
     "watchNextInfoPlayResume": "تشغيل / استئناف",
     "watchNextInfoOpenApp": "فتح {appName}",
-    "watchNextInfoAppInfo": "معلومات التطبيق"
+    "watchNextInfoAppInfo": "معلومات التطبيق",
+    "dataWidgetGrantPermission": "منح إذن الاستخدام",
+    "dataWidgetDaily": "يوميًا: {usage}",
+    "dataWidgetWeekly": "أسبوعيًا: {usage}",
+    "dataWidgetMonthly": "شهريًا: {usage}",
+    "weatherWidgetTemperatureWithWarning": "{temperature} • {warning}",
+    "weatherTextRain": "{when, select, today{أمطار اليوم} tomorrow{أمطار غدًا} other{أمطار يوم {day}}}",
+    "weatherTextSnow": "{when, select, today{ثلوج اليوم} tomorrow{ثلوج غدًا} other{ثلوج يوم {day}}}",
+    "weatherTextStorm": "{when, select, today{عاصفة رعدية اليوم} tomorrow{عاصفة رعدية غدًا} other{عاصفة رعدية يوم {day}}}",
+    "weatherTextChance": "{forecast} بنسبة {percent}%"
 }

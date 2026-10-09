@@ -1150,6 +1150,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'App Info'**
   String get watchNextInfoAppInfo;
+
+  /// Top bar's data usage button when Hearth may not read usage stats yet
+  ///
+  /// In en, this message translates to:
+  /// **'Grant Usage Permission'**
+  String get dataWidgetGrantPermission;
+
+  /// Top bar: data used today; usage is an amount like 5.00 MB, shown in bold
+  ///
+  /// In en, this message translates to:
+  /// **'Daily: {usage}'**
+  String dataWidgetDaily(String usage);
+
+  /// Top bar: data used this week; usage is an amount like 5.00 MB, shown in bold
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly: {usage}'**
+  String dataWidgetWeekly(String usage);
+
+  /// Top bar: data used this month; usage is an amount like 5.00 MB, shown in bold
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly: {usage}'**
+  String dataWidgetMonthly(String usage);
+
+  /// Top bar weather: the temperature (like 27°C) and the coming rain, snow or storm (like 80% Rain today)
+  ///
+  /// In en, this message translates to:
+  /// **'{temperature} • {warning}'**
+  String weatherWidgetTemperatureWithWarning(String temperature, String warning);
+
+  /// Top bar weather warning: rain expected. when is today, tomorrow or other; for other, day is the weekday's short name (Mon, Tue...)
+  ///
+  /// In en, this message translates to:
+  /// **'{when, select, today{Rain today} tomorrow{Rain tomorrow} other{Rain on {day}}}'**
+  String weatherTextRain(String when, String day);
+
+  /// Top bar weather warning: snow expected. when is today, tomorrow or other; for other, day is the weekday's short name (Mon, Tue...)
+  ///
+  /// In en, this message translates to:
+  /// **'{when, select, today{Snow today} tomorrow{Snow tomorrow} other{Snow on {day}}}'**
+  String weatherTextSnow(String when, String day);
+
+  /// Top bar weather warning: a thunderstorm expected. when is today, tomorrow or other; for other, day is the weekday's short name (Mon, Tue...)
+  ///
+  /// In en, this message translates to:
+  /// **'{when, select, today{Storm today} tomorrow{Storm tomorrow} other{Storm on {day}}}'**
+  String weatherTextStorm(String when, String day);
+
+  /// Top bar weather warning with its chance: percent is a number, forecast is one of the weatherText warnings
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% {forecast}'**
+  String weatherTextChance(int percent, String forecast);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

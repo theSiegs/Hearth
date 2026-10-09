@@ -384,5 +384,96 @@
     "watchNextInfoAppInfo": "App Info",
     "@watchNextInfoAppInfo": {
         "description": "Options panel of a Continue Watching program: opens Android's info page for the app it's from"
+    },
+    "dataWidgetGrantPermission": "Grant Usage Permission",
+    "@dataWidgetGrantPermission": {
+        "description": "Top bar's data usage button when Hearth may not read usage stats yet"
+    },
+    "dataWidgetDaily": "Daily: {usage}",
+    "@dataWidgetDaily": {
+        "description": "Top bar: data used today; usage is an amount like 5.00 MB, shown in bold",
+        "placeholders": {
+            "usage": {
+                "type": "String"
+            }
+        }
+    },
+    "dataWidgetWeekly": "Weekly: {usage}",
+    "@dataWidgetWeekly": {
+        "description": "Top bar: data used this week; usage is an amount like 5.00 MB, shown in bold",
+        "placeholders": {
+            "usage": {
+                "type": "String"
+            }
+        }
+    },
+    "dataWidgetMonthly": "Monthly: {usage}",
+    "@dataWidgetMonthly": {
+        "description": "Top bar: data used this month; usage is an amount like 5.00 MB, shown in bold",
+        "placeholders": {
+            "usage": {
+                "type": "String"
+            }
+        }
+    },
+    "weatherWidgetTemperatureWithWarning": "{temperature} • {warning}",
+    "@weatherWidgetTemperatureWithWarning": {
+        "description": "Top bar weather: the temperature (like 27°C) and the coming rain, snow or storm (like 80% Rain today)",
+        "placeholders": {
+            "temperature": {
+                "type": "String"
+            },
+            "warning": {
+                "type": "String"
+            }
+        }
+    },
+    "weatherTextRain": "{when, select, today{Rain today} tomorrow{Rain tomorrow} other{Rain on {day}}}",
+    "@weatherTextRain": {
+        "description": "Top bar weather warning: rain expected. when is today, tomorrow or other; for other, day is the weekday's short name (Mon, Tue...)",
+        "placeholders": {
+            "when": {
+                "type": "String"
+            },
+            "day": {
+                "type": "String"
+            }
+        }
+    },
+    "weatherTextSnow": "{when, select, today{Snow today} tomorrow{Snow tomorrow} other{Snow on {day}}}",
+    "@weatherTextSnow": {
+        "description": "Top bar weather warning: snow expected. when is today, tomorrow or other; for other, day is the weekday's short name (Mon, Tue...)",
+        "placeholders": {
+            "when": {
+                "type": "String"
+            },
+            "day": {
+                "type": "String"
+            }
+        }
+    },
+    "weatherTextStorm": "{when, select, today{Storm today} tomorrow{Storm tomorrow} other{Storm on {day}}}",
+    "@weatherTextStorm": {
+        "description": "Top bar weather warning: a thunderstorm expected. when is today, tomorrow or other; for other, day is the weekday's short name (Mon, Tue...)",
+        "placeholders": {
+            "when": {
+                "type": "String"
+            },
+            "day": {
+                "type": "String"
+            }
+        }
+    },
+    "weatherTextChance": "{percent}% {forecast}",
+    "@weatherTextChance": {
+        "description": "Top bar weather warning with its chance: percent is a number, forecast is one of the weatherText warnings",
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            },
+            "forecast": {
+                "type": "String"
+            }
+        }
     }
 }

@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -545,4 +547,71 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get watchNextInfoAppInfo => '앱 정보';
+
+  @override
+  String get dataWidgetGrantPermission => '사용 권한 허용';
+
+  @override
+  String dataWidgetDaily(String usage) {
+    return '일간: $usage';
+  }
+
+  @override
+  String dataWidgetWeekly(String usage) {
+    return '주간: $usage';
+  }
+
+  @override
+  String dataWidgetMonthly(String usage) {
+    return '월간: $usage';
+  }
+
+  @override
+  String weatherWidgetTemperatureWithWarning(String temperature, String warning) {
+    return '$temperature • $warning';
+  }
+
+  @override
+  String weatherTextRain(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': '오늘 비',
+        'tomorrow': '내일 비',
+        'other': '$day요일 비',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextSnow(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': '오늘 눈',
+        'tomorrow': '내일 눈',
+        'other': '$day요일 눈',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextStorm(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': '오늘 뇌우',
+        'tomorrow': '내일 뇌우',
+        'other': '$day요일 뇌우',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextChance(int percent, String forecast) {
+    return '$forecast ($percent%)';
+  }
 }

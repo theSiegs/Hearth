@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -545,4 +547,71 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get watchNextInfoAppInfo => 'アプリ情報';
+
+  @override
+  String get dataWidgetGrantPermission => '使用状況へのアクセスを許可';
+
+  @override
+  String dataWidgetDaily(String usage) {
+    return '1日: $usage';
+  }
+
+  @override
+  String dataWidgetWeekly(String usage) {
+    return '1週間: $usage';
+  }
+
+  @override
+  String dataWidgetMonthly(String usage) {
+    return '1か月: $usage';
+  }
+
+  @override
+  String weatherWidgetTemperatureWithWarning(String temperature, String warning) {
+    return '$temperature • $warning';
+  }
+
+  @override
+  String weatherTextRain(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': '今日は雨',
+        'tomorrow': '明日は雨',
+        'other': '$day曜日は雨',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextSnow(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': '今日は雪',
+        'tomorrow': '明日は雪',
+        'other': '$day曜日は雪',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextStorm(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': '今日は雷雨',
+        'tomorrow': '明日は雷雨',
+        'other': '$day曜日は雷雨',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextChance(int percent, String forecast) {
+    return '$forecast（$percent%）';
+  }
 }

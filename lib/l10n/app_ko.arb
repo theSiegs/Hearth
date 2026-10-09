@@ -205,5 +205,14 @@
     "watchNextInfoHideAllFrom": "{appName}의 항목 모두 숨기기",
     "watchNextInfoPlayResume": "재생 / 이어보기",
     "watchNextInfoOpenApp": "{appName} 열기",
-    "watchNextInfoAppInfo": "앱 정보"
+    "watchNextInfoAppInfo": "앱 정보",
+    "dataWidgetGrantPermission": "사용 권한 허용",
+    "dataWidgetDaily": "일간: {usage}",
+    "dataWidgetWeekly": "주간: {usage}",
+    "dataWidgetMonthly": "월간: {usage}",
+    "weatherWidgetTemperatureWithWarning": "{temperature} • {warning}",
+    "weatherTextRain": "{when, select, today{오늘 비} tomorrow{내일 비} other{{day}요일 비}}",
+    "weatherTextSnow": "{when, select, today{오늘 눈} tomorrow{내일 눈} other{{day}요일 눈}}",
+    "weatherTextStorm": "{when, select, today{오늘 뇌우} tomorrow{내일 뇌우} other{{day}요일 뇌우}}",
+    "weatherTextChance": "{forecast} ({percent}%)"
 }

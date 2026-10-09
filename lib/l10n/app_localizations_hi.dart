@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -545,4 +547,71 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get watchNextInfoAppInfo => 'ऐप जानकारी';
+
+  @override
+  String get dataWidgetGrantPermission => 'उपयोग अनुमति दें';
+
+  @override
+  String dataWidgetDaily(String usage) {
+    return 'दैनिक: $usage';
+  }
+
+  @override
+  String dataWidgetWeekly(String usage) {
+    return 'साप्ताहिक: $usage';
+  }
+
+  @override
+  String dataWidgetMonthly(String usage) {
+    return 'मासिक: $usage';
+  }
+
+  @override
+  String weatherWidgetTemperatureWithWarning(String temperature, String warning) {
+    return '$temperature • $warning';
+  }
+
+  @override
+  String weatherTextRain(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': 'आज बारिश',
+        'tomorrow': 'कल बारिश',
+        'other': '$day को बारिश',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextSnow(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': 'आज बर्फ़बारी',
+        'tomorrow': 'कल बर्फ़बारी',
+        'other': '$day को बर्फ़बारी',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextStorm(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': 'आज तूफ़ान',
+        'tomorrow': 'कल तूफ़ान',
+        'other': '$day को तूफ़ान',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextChance(int percent, String forecast) {
+    return '$percent% $forecast';
+  }
 }

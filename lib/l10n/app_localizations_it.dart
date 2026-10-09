@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -545,4 +547,71 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get watchNextInfoAppInfo => 'Info app';
+
+  @override
+  String get dataWidgetGrantPermission => 'Concedi autorizzazione di utilizzo';
+
+  @override
+  String dataWidgetDaily(String usage) {
+    return 'Giornaliero: $usage';
+  }
+
+  @override
+  String dataWidgetWeekly(String usage) {
+    return 'Settimanale: $usage';
+  }
+
+  @override
+  String dataWidgetMonthly(String usage) {
+    return 'Mensile: $usage';
+  }
+
+  @override
+  String weatherWidgetTemperatureWithWarning(String temperature, String warning) {
+    return '$temperature • $warning';
+  }
+
+  @override
+  String weatherTextRain(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': 'Pioggia oggi',
+        'tomorrow': 'Pioggia domani',
+        'other': 'Pioggia $day',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextSnow(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': 'Neve oggi',
+        'tomorrow': 'Neve domani',
+        'other': 'Neve $day',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextStorm(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': 'Temporale oggi',
+        'tomorrow': 'Temporale domani',
+        'other': 'Temporale $day',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextChance(int percent, String forecast) {
+    return '$percent% $forecast';
+  }
 }

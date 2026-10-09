@@ -147,5 +147,35 @@ void main() {
       expect(weather.warningText, "90% Storm today");
       expect(weather.getConditionIcon(isWarning: true), Icons.flash_on_outlined);
     });
+
+    test('keeps the warning\'s day and chance, for the status bar to put into words', () {
+      const jsonStr = '''
+      {
+        "currentTemp": 12,
+        "forecasts": [
+          {"conditionCode": 800, "precipProbability": 0},
+          {"conditionCode": 801, "precipProbability": 10},
+          {"conditionCode": 804, "precipProbability": 20},
+          {"conditionCode": 211, "precipProbability": 0}
+        ]
+      }
+      ''';
+      final before = DateTime.now();
+      final weather = WeatherData.fromJsonString(jsonStr);
+
+      expect(weather.warningType, WeatherWarningType.storm);
+      expect(weather.warningDayIndex, 3);
+      expect(weather.warningPrecipProbability, isNull);
+      expect(weather.warningDate!.difference(before).inDays, 3);
+
+      final rainToday = WeatherData.fromJsonString(
+          '{"forecasts": [{"conditionCode": 500, "precipProbability": 80}]}');
+      expect(rainToday.warningDayIndex, 0);
+      expect(rainToday.warningPrecipProbability, 80);
+
+      final none = WeatherData.fromJsonString('{"forecasts": [{"conditionCode": 800}]}');
+      expect(none.warningDayIndex, isNull);
+      expect(none.warningDate, isNull);
+    });
   });
 }
