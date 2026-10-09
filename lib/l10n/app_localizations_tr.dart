@@ -393,4 +393,64 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get dpadDismissHint => 'Sol: Kapat • Tamam: Seçenekler';
+
+  @override
+  String get settingsTitle => 'Ayarlar';
+
+  @override
+  String get profilesTitle => 'Profiller';
+
+  @override
+  String get homeScreenTitle => 'Ana ekran';
+
+  @override
+  String get remoteAndSearchTitle => 'Kumanda ve arama';
+
+  @override
+  String get parentSettingsTitle => 'Ebeveyn ayarları';
+
+  @override
+  String get tvPowerTitle => 'TV ve güç';
+
+  @override
+  String get setupPermissionsTitle => 'Kurulum ve izinler';
+
+  @override
+  String get updatesTitle => 'Güncellemeler';
+
+  @override
+  String get familyAppsTitle => 'Diğer profillerde Hearth';
+
+  @override
+  String get cardStyleTitle => 'Kart stili';
+
+  @override
+  String get dockLabelsTitle => 'Dock ve etiketler';
+
+  @override
+  String get animationsSoundTitle => 'Animasyonlar ve ses';
+
+  @override
+  String get haPanelTitle => 'Pano paneli';
+
+  @override
+  String get lookTitle => 'Görünüm';
+
+  @override
+  String get remoteButtonsTitle => 'Kumanda tuşları';
+
+  @override
+  String get profilePairingTitle => 'Profil eşleştirme';
+
+  @override
+  String get haTvStatusTitle => 'TV durumu';
+
+  @override
+  String get continueWatchingAppsTitle => 'İzlemeye Devam Et uygulamaları';
+
+  @override
+  String get cardSizeTitle => 'Kart boyutu';
+
+  @override
+  String get maxItemsTitle => 'En fazla öğe';
 }

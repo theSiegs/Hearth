@@ -874,6 +874,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Left: Dismiss • OK: Options'**
   String get dpadDismissHint;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Profiles'**
+  String get profilesTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Home screen'**
+  String get homeScreenTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Remote & search'**
+  String get remoteAndSearchTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Parent settings'**
+  String get parentSettingsTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'TV & power'**
+  String get tvPowerTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Setup & permissions'**
+  String get setupPermissionsTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Updates'**
+  String get updatesTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth on other profiles'**
+  String get familyAppsTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Card style'**
+  String get cardStyleTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Dock & labels'**
+  String get dockLabelsTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Animations & sound'**
+  String get animationsSoundTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Dashboard panel'**
+  String get haPanelTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Look'**
+  String get lookTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Remote buttons'**
+  String get remoteButtonsTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Pairing'**
+  String get profilePairingTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'TV status'**
+  String get haTvStatusTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Watching Apps'**
+  String get continueWatchingAppsTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Card Size'**
+  String get cardSizeTitle;
+
+  /// Settings page title, also its row in the page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum Items'**
+  String get maxItemsTitle;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

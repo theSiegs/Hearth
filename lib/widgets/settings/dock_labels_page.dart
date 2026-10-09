@@ -25,7 +25,6 @@ import 'settings_page.dart';
 /// The favorites dock and the home screen's labels and focus outline (under Look).
 class DockLabelsPage extends StatelessWidget {
   static const String routeName = "appearance_panel";
-  static const String title = "Dock & labels";
 
   const DockLabelsPage({super.key});
 
@@ -38,7 +37,7 @@ class DockLabelsPage extends StatelessWidget {
     final dockEnabled = settingsService.dockEnabled;
 
     return SettingsPage(
-      title: title,
+      title: localizations.dockLabelsTitle,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
         RoundedSwitchListTile(

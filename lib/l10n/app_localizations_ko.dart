@@ -393,4 +393,64 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dpadDismissHint => '왼쪽: 닫기 • 확인: 옵션';
+
+  @override
+  String get settingsTitle => '설정';
+
+  @override
+  String get profilesTitle => '프로필';
+
+  @override
+  String get homeScreenTitle => '홈 화면';
+
+  @override
+  String get remoteAndSearchTitle => '리모컨 및 검색';
+
+  @override
+  String get parentSettingsTitle => '보호자 설정';
+
+  @override
+  String get tvPowerTitle => 'TV 및 전원';
+
+  @override
+  String get setupPermissionsTitle => '설정 및 권한';
+
+  @override
+  String get updatesTitle => '업데이트';
+
+  @override
+  String get familyAppsTitle => '다른 프로필의 Hearth';
+
+  @override
+  String get cardStyleTitle => '카드 스타일';
+
+  @override
+  String get dockLabelsTitle => '독 및 레이블';
+
+  @override
+  String get animationsSoundTitle => '애니메이션 및 소리';
+
+  @override
+  String get haPanelTitle => '대시보드 패널';
+
+  @override
+  String get lookTitle => '모양';
+
+  @override
+  String get remoteButtonsTitle => '리모컨 버튼';
+
+  @override
+  String get profilePairingTitle => '프로필 연결';
+
+  @override
+  String get haTvStatusTitle => 'TV 상태';
+
+  @override
+  String get continueWatchingAppsTitle => '계속 시청 앱';
+
+  @override
+  String get cardSizeTitle => '카드 크기';
+
+  @override
+  String get maxItemsTitle => '최대 항목 수';
 }

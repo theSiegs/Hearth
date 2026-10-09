@@ -26,7 +26,6 @@ import 'settings_page.dart';
 /// Animations and the key click (under Look).
 class AnimationsSoundPage extends StatelessWidget {
   static const String routeName = "misc_panel";
-  static const String title = "Animations & sound";
 
   const AnimationsSoundPage({super.key});
 
@@ -36,7 +35,7 @@ class AnimationsSoundPage extends StatelessWidget {
     SettingsService settingsService = Provider.of(context);
 
     return SettingsPage(
-      title: title,
+      title: localizations.animationsSoundTitle,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
         RoundedSwitchListTile(

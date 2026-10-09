@@ -393,4 +393,64 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get dpadDismissHint => 'Вліво: Закрити • OK: Параметри';
+
+  @override
+  String get settingsTitle => 'Налаштування';
+
+  @override
+  String get profilesTitle => 'Профілі';
+
+  @override
+  String get homeScreenTitle => 'Головний екран';
+
+  @override
+  String get remoteAndSearchTitle => 'Пульт і пошук';
+
+  @override
+  String get parentSettingsTitle => 'Налаштування для батьків';
+
+  @override
+  String get tvPowerTitle => 'Телевізор і живлення';
+
+  @override
+  String get setupPermissionsTitle => 'Налаштування та дозволи';
+
+  @override
+  String get updatesTitle => 'Оновлення';
+
+  @override
+  String get familyAppsTitle => 'Hearth в інших профілях';
+
+  @override
+  String get cardStyleTitle => 'Стиль карток';
+
+  @override
+  String get dockLabelsTitle => 'Док і підписи';
+
+  @override
+  String get animationsSoundTitle => 'Анімація і звук';
+
+  @override
+  String get haPanelTitle => 'Панель дашборда';
+
+  @override
+  String get lookTitle => 'Вигляд';
+
+  @override
+  String get remoteButtonsTitle => 'Кнопки пульта';
+
+  @override
+  String get profilePairingTitle => 'Зв\'язування профілів';
+
+  @override
+  String get haTvStatusTitle => 'Стан телевізора';
+
+  @override
+  String get continueWatchingAppsTitle => 'Застосунки «Продовжити перегляд»';
+
+  @override
+  String get cardSizeTitle => 'Розмір карток';
+
+  @override
+  String get maxItemsTitle => 'Максимум елементів';
 }

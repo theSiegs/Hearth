@@ -29,7 +29,6 @@ import 'status_bar_panel_page.dart';
 
 class HomeScreenSettingsPage extends StatelessWidget {
   static const String routeName = "interface_settings_panel";
-  static const String title = "Home screen";
 
   const HomeScreenSettingsPage({super.key});
 
@@ -39,7 +38,7 @@ class HomeScreenSettingsPage extends StatelessWidget {
     final bool locked = settingsLocked(context);
 
     return SettingsPage(
-      title: title,
+      title: localizations.homeScreenTitle,
       children: [
         // Sections are a parent's to change (as on the home screen itself): hidden in a locked kids profile
         if (!locked)
@@ -57,7 +56,7 @@ class HomeScreenSettingsPage extends StatelessWidget {
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.style_outlined),
-          title: Text("Look", style: Theme.of(context).textTheme.bodyMedium),
+          title: Text(AppLocalizations.of(context)!.lookTitle, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: () => Navigator.of(context).pushNamed(LookSettingsPage.routeName),
         ),
         FocusableSettingsTile(

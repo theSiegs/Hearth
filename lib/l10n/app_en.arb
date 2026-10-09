@@ -162,5 +162,85 @@
     "noBlockedAppsDesc": "All applications are currently allowed to show notifications",
     "notificationsAllowed": "Notifications Allowed",
     "notificationsBlocked": "Notifications Blocked",
-    "dpadDismissHint": "Left: Dismiss • OK: Options"
+    "dpadDismissHint": "Left: Dismiss • OK: Options",
+    "settingsTitle": "Settings",
+    "@settingsTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "profilesTitle": "Profiles",
+    "@profilesTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "homeScreenTitle": "Home screen",
+    "@homeScreenTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "remoteAndSearchTitle": "Remote & search",
+    "@remoteAndSearchTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "parentSettingsTitle": "Parent settings",
+    "@parentSettingsTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "tvPowerTitle": "TV & power",
+    "@tvPowerTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "setupPermissionsTitle": "Setup & permissions",
+    "@setupPermissionsTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "updatesTitle": "Updates",
+    "@updatesTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "familyAppsTitle": "Hearth on other profiles",
+    "@familyAppsTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "cardStyleTitle": "Card style",
+    "@cardStyleTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "dockLabelsTitle": "Dock & labels",
+    "@dockLabelsTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "animationsSoundTitle": "Animations & sound",
+    "@animationsSoundTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "haPanelTitle": "Dashboard panel",
+    "@haPanelTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "lookTitle": "Look",
+    "@lookTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "remoteButtonsTitle": "Remote buttons",
+    "@remoteButtonsTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "profilePairingTitle": "Profile Pairing",
+    "@profilePairingTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "haTvStatusTitle": "TV status",
+    "@haTvStatusTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "continueWatchingAppsTitle": "Continue Watching Apps",
+    "@continueWatchingAppsTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "cardSizeTitle": "Card Size",
+    "@cardSizeTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    },
+    "maxItemsTitle": "Maximum Items",
+    "@maxItemsTitle": {
+        "description": "Settings page title, also its row in the page that opens it"
+    }
 }

@@ -1,3 +1,4 @@
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/tv_inputs_service.dart';
@@ -38,7 +39,10 @@ void main() {
         ChangeNotifierProvider<AppsService>.value(value: MockAppsService()),
         ChangeNotifierProvider<TvInputsService>.value(value: tvInputsService),
       ],
-      child: const MaterialApp(home: Scaffold(body: RemoteButtonsPage())),
+      child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: RemoteButtonsPage())),
     ));
     await tester.pumpAndSettle();
   }

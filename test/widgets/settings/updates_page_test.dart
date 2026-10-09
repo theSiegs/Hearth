@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'dart:async';
 
 import 'package:flauncher/flauncher_channel.dart';
@@ -53,11 +54,14 @@ void main() {
         Provider<FLauncherChannel>.value(value: FLauncherChannel()),
         Provider<CompanionUpdater>.value(value: updater),
       ],
-      child: const MaterialApp(home: Scaffold(body: UpdatesPage())),
+      child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: UpdatesPage())),
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text(UpdatesPage.title), findsOneWidget);
+    expect(find.text("Updates"), findsOneWidget);
     expect(Focus.of(tester.element(find.text("Hearth"))).hasFocus, isTrue);
     expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
     await tester.tap(find.text("Update automatically"));

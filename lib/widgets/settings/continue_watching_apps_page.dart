@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -53,7 +54,7 @@ class ContinueWatchingAppsPage extends StatelessWidget {
     final unknownBlockedPkg = blockedPackages.where((p) => !knownBlockedPkg.contains(p)).toList();
 
     return SettingsPage.custom(
-      title: 'Continue Watching Apps',
+      title: AppLocalizations.of(context)!.continueWatchingAppsTitle,
       // A long list: rows are built as they scroll into view
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 8),

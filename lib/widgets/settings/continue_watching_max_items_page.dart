@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -44,7 +45,7 @@ class ContinueWatchingMaxItemsPage extends StatelessWidget {
         final settingsService = context.read<SettingsService>();
 
         return SettingsPage(
-          title: 'Maximum Items',
+          title: AppLocalizations.of(context)!.maxItemsTitle,
           children: [
             for (final (count, title, subtitle) in maxItemsPresets)
               SettingsChoiceTile<int>(

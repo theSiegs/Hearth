@@ -34,12 +34,12 @@ class RemoteSearchSettingsPage extends StatelessWidget {
     final localizations = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     return SettingsPage(
-      title: "Remote & search",
+      title: AppLocalizations.of(context)!.remoteAndSearchTitle,
       children: [
         FocusableSettingsTile(
           autofocus: true,
           leading: const Icon(Icons.settings_remote_outlined),
-          title: Text("Remote buttons", style: textTheme.bodyMedium),
+          title: Text(AppLocalizations.of(context)!.remoteButtonsTitle, style: textTheme.bodyMedium),
           onPressed: () => Navigator.of(context).pushNamed(RemoteButtonsPage.routeName),
         ),
         FocusableSettingsTile(

@@ -28,7 +28,6 @@ import 'settings_page.dart';
 /// TV & power: the screensaver, sleeping when idle, and Android's own settings.
 class TvPowerSettingsPage extends StatelessWidget {
   static const String routeName = "display_settings_panel";
-  static const String title = "TV & power";
 
   const TvPowerSettingsPage({super.key});
 
@@ -37,7 +36,7 @@ class TvPowerSettingsPage extends StatelessWidget {
     AppLocalizations localizations = AppLocalizations.of(context)!;
 
     return SettingsPage(
-      title: title,
+      title: localizations.tvPowerTitle,
       children: [
         FocusableSettingsTile(
           autofocus: true,
@@ -107,7 +106,7 @@ class _IdleStandbyTileState extends State<_IdleStandbyTile> {
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
             child: Text(
-                "Playing video or music counts as activity. Needs Home Button Fix (${SetupChecklistPage.breadcrumb}).",
+                "Playing video or music counts as activity. Needs Home Button Fix (${SetupChecklistPage.breadcrumb(AppLocalizations.of(context)!)}).",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54)),
           ),
         ],

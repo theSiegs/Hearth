@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -110,7 +111,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
     if (result.containsKey("error")) {
       showMessageDialog(context,
           title: "Turn on Home Button Fix first",
-          message: "Remapping needs Home Button Fix (${SetupChecklistPage.breadcrumb}).");
+          message: "Remapping needs Home Button Fix (${SetupChecklistPage.breadcrumb(AppLocalizations.of(context)!)}).");
       return;
     }
     final String keyCode = "${result["keyCode"]}";
@@ -248,7 +249,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
     if (entities.isEmpty) {
       showMessageDialog(context,
           title: "Connect Home Assistant first",
-          message: "Set up the Home Assistant panel (${HaPanelPage.breadcrumb} > Set up from your phone), then try again.");
+          message: "Set up the Home Assistant panel (${HaPanelPage.breadcrumb(AppLocalizations.of(context)!)} > Set up from your phone), then try again.");
       return null;
     }
     const verbs = {"scene": "Scene", "script": "Run", "button": "Press", "input_button": "Press"};
@@ -272,7 +273,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
   Widget build(BuildContext context) {
     final keys = _mappings.keys.toList()..sort();
     return SettingsPage(
-      title: "Remote buttons",
+      title: AppLocalizations.of(context)!.remoteButtonsTitle,
       children: [
         FocusableSettingsTile(
           autofocus: true,
@@ -296,7 +297,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
-            "Needs Home Button Fix (${SetupChecklistPage.breadcrumb}). A button with only a Hold action does that "
+            "Needs Home Button Fix (${SetupChecklistPage.breadcrumb(AppLocalizations.of(context)!)}). A button with only a Hold action does that "
             "action on a press too. Hearth search opens HearthTube's own search while HearthTube is in front. "
             "Remaps pause while a kids screen time screen is showing.",
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),

@@ -393,4 +393,64 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get dpadDismissHint => 'बायां: हटाएं • ठीक है: विकल्प';
+
+  @override
+  String get settingsTitle => 'सेटिंग्स';
+
+  @override
+  String get profilesTitle => 'प्रोफ़ाइल';
+
+  @override
+  String get homeScreenTitle => 'होम स्क्रीन';
+
+  @override
+  String get remoteAndSearchTitle => 'रिमोट और खोज';
+
+  @override
+  String get parentSettingsTitle => 'अभिभावक सेटिंग्स';
+
+  @override
+  String get tvPowerTitle => 'टीवी और पावर';
+
+  @override
+  String get setupPermissionsTitle => 'सेटअप और अनुमतियाँ';
+
+  @override
+  String get updatesTitle => 'अपडेट';
+
+  @override
+  String get familyAppsTitle => 'अन्य प्रोफ़ाइल पर Hearth';
+
+  @override
+  String get cardStyleTitle => 'कार्ड शैली';
+
+  @override
+  String get dockLabelsTitle => 'डॉक और लेबल';
+
+  @override
+  String get animationsSoundTitle => 'एनिमेशन और ध्वनि';
+
+  @override
+  String get haPanelTitle => 'डैशबोर्ड पैनल';
+
+  @override
+  String get lookTitle => 'रूप';
+
+  @override
+  String get remoteButtonsTitle => 'रिमोट बटन';
+
+  @override
+  String get profilePairingTitle => 'प्रोफ़ाइल पेयरिंग';
+
+  @override
+  String get haTvStatusTitle => 'टीवी की स्थिति';
+
+  @override
+  String get continueWatchingAppsTitle => 'देखना जारी रखें ऐप्स';
+
+  @override
+  String get cardSizeTitle => 'कार्ड का आकार';
+
+  @override
+  String get maxItemsTitle => 'अधिकतम आइटम';
 }

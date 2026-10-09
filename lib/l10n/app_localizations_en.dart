@@ -393,4 +393,64 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dpadDismissHint => 'Left: Dismiss • OK: Options';
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get profilesTitle => 'Profiles';
+
+  @override
+  String get homeScreenTitle => 'Home screen';
+
+  @override
+  String get remoteAndSearchTitle => 'Remote & search';
+
+  @override
+  String get parentSettingsTitle => 'Parent settings';
+
+  @override
+  String get tvPowerTitle => 'TV & power';
+
+  @override
+  String get setupPermissionsTitle => 'Setup & permissions';
+
+  @override
+  String get updatesTitle => 'Updates';
+
+  @override
+  String get familyAppsTitle => 'Hearth on other profiles';
+
+  @override
+  String get cardStyleTitle => 'Card style';
+
+  @override
+  String get dockLabelsTitle => 'Dock & labels';
+
+  @override
+  String get animationsSoundTitle => 'Animations & sound';
+
+  @override
+  String get haPanelTitle => 'Dashboard panel';
+
+  @override
+  String get lookTitle => 'Look';
+
+  @override
+  String get remoteButtonsTitle => 'Remote buttons';
+
+  @override
+  String get profilePairingTitle => 'Profile Pairing';
+
+  @override
+  String get haTvStatusTitle => 'TV status';
+
+  @override
+  String get continueWatchingAppsTitle => 'Continue Watching Apps';
+
+  @override
+  String get cardSizeTitle => 'Card Size';
+
+  @override
+  String get maxItemsTitle => 'Maximum Items';
 }
