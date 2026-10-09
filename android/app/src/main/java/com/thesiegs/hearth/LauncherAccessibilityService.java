@@ -110,6 +110,18 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private long mWellbeingSeenAt = 0;
     /** Google TV's time up / bedtime screen is the window in front: never lift the lock under it. */
     private boolean mWellbeingInFront = false;
+    /**
+     * Google TV put up a kids screen time / bedtime screen: whatever Android says is running, this is a locked kids
+     * profile. At bedtime Google TV stops the kid's profile user and shows its screen from the owner's, so the
+     * running user alone reads as the owner. Held until a profile is picked in the chooser, or the kid's own user is
+     * running again with its apps unblocked (time's back).
+     */
+    private boolean mKidsLockHold = false;
+    /** Hearth handing the screen back to Google TV while the lock is set: when, and how often lately. */
+    private long mStepBackWindowStart = 0;
+    private int mStepBacks = 0;
+    private static final long STEP_BACK_WINDOW_MS = 60_000;
+    private static final int STEP_BACKS_PER_WINDOW = 3;
     /** The apps' state settled screen time the last time it was checked (see ProfileUsers.isScreenTimeUp). */
     private boolean mScreenTimeKnown = false;
     private String mScreenTimeClass;
@@ -338,7 +350,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN) {
             ProfilePairing.rememberHearthProfile(this, ProfileUsers.key(mActiveSerial), kids);
         }
-        if (picked || flipped || !kids) {
+        if (mayLiftLock(mKidsLockHold, picked, flipped, kids)) {
             clearScreenTimeLock();
         } else if (mHaStatus != null) {
             mHaStatus.onAppsChanged();
@@ -740,6 +752,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         boolean wellbeing = className.startsWith(GOOGLE_TV_WELLBEING_PREFIX);
         if (wellbeing) {
             mWellbeingSeenAt = SystemClock.elapsedRealtime();
+            // A kids profile's screen, whatever user Android reports (see mKidsLockHold)
+            mKidsLockHold = true;
             setScreenTimeLock();
         }
         reportScreenTimeText(className, event, wellbeing);
@@ -802,6 +816,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
             mLastChooserFocus = null;
         }
         if (isApp) rememberAppUser(this, packageName);
+        // Hearth landed on top of Google TV's screen time screen: give the screen back
+        if (isHearth) stepBackIfLocked();
         // Hearth or an app is in front: Google TV's own screens are gone.
         if (isHearth || isApp) {
             mGoogleTvScreenInFront = false;
@@ -911,15 +927,53 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (up) {
             Log.i(TAG, "Screen time is up: the approved apps are blocked (" + why + ")");
             setScreenTimeLock();
-        } else if (!mWellbeingInFront && SystemClock.elapsedRealtime() - mWellbeingSeenAt > WELLBEING_TRUST_MS) {
+        } else if (!mWellbeingInFront && SystemClock.elapsedRealtime() - mWellbeingSeenAt > WELLBEING_TRUST_MS
+                && (!mKidsLockHold || ProfileUsers.isKids(this))) {
             Log.i(TAG, "Screen time is over: the approved apps are unblocked (" + why + ")");
             clearScreenTimeLock();
+        }
+    }
+
+    /**
+     * Whether a profile change may lift the screen time lock: a pick in the chooser always does; a flip between a
+     * kids profile and a grown-up one, or a grown-up profile reported, only when it wasn't Google TV's own screen
+     * that set it (at bedtime the kid's user stops and the owner's is reported, but it's still the kid's bedtime).
+     */
+    static boolean mayLiftLock(boolean kidsLockHold, boolean picked, boolean flipped, boolean kids) {
+        if (picked) return true;
+        return !kidsLockHold && (flipped || !kids);
+    }
+
+    /**
+     * Hearth came to the front while a kids screen time lock is set: it raced Google TV's screen (Google TV opens it
+     * from its home a moment after the home, and Hearth may land on top of it). Hand the screen back to Google TV's
+     * home, which shows its screen again. A few times a minute at most, so it can't loop; Google TV's chooser
+     * always works to switch profiles (which lifts the lock).
+     */
+    private void stepBackIfLocked() {
+        if (!mScreenTimeLock || !(mKidsLockHold || ProfileUsers.isKids(this))) return;
+        long now = SystemClock.elapsedRealtime();
+        if (now - mStepBackWindowStart > STEP_BACK_WINDOW_MS) {
+            mStepBackWindowStart = now;
+            mStepBacks = 0;
+        }
+        if (++mStepBacks > STEP_BACKS_PER_WINDOW) return;
+        Log.i(TAG, "Hearth is in front during screen time: back to Google TV");
+        Intent home = new Intent(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_HOME)
+                .setClassName(GOOGLE_TV_PACKAGE, GOOGLE_TV_HOME_ACTIVITY)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(home);
+        } catch (Exception e) {
+            Log.w(TAG, "Couldn't hand the screen back to Google TV", e);
         }
     }
 
     private void clearScreenTimeLock() {
         boolean changed = mScreenTimeLock;
         mScreenTimeLock = false;
+        mKidsLockHold = false;
         if (changed) ProfileUsers.setScreenTimeUpSerial(this, ProfileUsers.UNKNOWN);
         if (changed) ProfileProvider.notifyChanged(this);
         if (mHaStatus != null) {
