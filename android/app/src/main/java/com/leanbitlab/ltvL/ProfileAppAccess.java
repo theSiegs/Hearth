@@ -158,6 +158,16 @@ public final class ProfileAppAccess {
         return out;
     }
 
+    /**
+     * Sets the keep-installed flag on one of Hearth's apps in one profile and reports whether it holds. Used by a
+     * profile's agent to replace the old device-admin protection with the flag (AgentService.retireOldAdmin).
+     */
+    static boolean keepInstalled(Context context, ShellRunner shell, String pkg, int userId) throws Exception {
+        String apk = context.getPackageCodePath();
+        setProtected(shell, apk, pkg, userId, true);
+        return isProtected(shell, apk, pkg, userId);
+    }
+
     // --- internals ---
 
     private static void requireParent(boolean confirmedByParent, String action) {

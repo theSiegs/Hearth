@@ -90,7 +90,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
         child: Focus(
           canRequestFocus: false,
           skipTraversal: true,
-          onKeyEvent: _closeOnRightAtEdge,
+          onKeyEvent: _onArrowAtEdge,
           child: SettingsUnlock(
             notifier: _unlocked,
             child: Navigator(
@@ -191,14 +191,21 @@ class _SettingsPanelState extends State<SettingsPanel> {
     );
   }
 
-  /// Right closes the panel unless focus can move right inside it.
-  KeyEventResult _closeOnRightAtEdge(FocusNode node, KeyEvent event) {
-    if (event.logicalKey != LogicalKeyboardKey.arrowRight || event is KeyUpEvent) {
-      return KeyEventResult.ignored;
-    }
+  /// Right closes the panel, and Left goes back to the page before (on a sub page), unless focus can move that way
+  /// inside the page.
+  KeyEventResult _onArrowAtEdge(FocusNode node, KeyEvent event) {
+    final bool right = event.logicalKey == LogicalKeyboardKey.arrowRight;
+    final bool left = event.logicalKey == LogicalKeyboardKey.arrowLeft;
+    if (!(right || left) || event is KeyUpEvent) return KeyEventResult.ignored;
+    if (left && !_navigatorKey.currentState!.canPop()) return KeyEventResult.ignored;
     final focused = FocusManager.instance.primaryFocus;
-    if (event is KeyDownEvent && (focused == null || !focused.focusInDirection(TraversalDirection.right))) {
-      Navigator.of(context).pop();
+    if (event is KeyDownEvent &&
+        (focused == null || !focused.focusInDirection(right ? TraversalDirection.right : TraversalDirection.left))) {
+      if (right) {
+        Navigator.of(context).pop();
+      } else {
+        _navigatorKey.currentState!.maybePop();
+      }
     }
     return KeyEventResult.handled;
   }

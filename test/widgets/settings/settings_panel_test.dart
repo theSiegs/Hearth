@@ -22,13 +22,61 @@ import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
 import 'package:flauncher/widgets/settings/settings_panel_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:provider/provider.dart';
 
 import '../../mocks.mocks.dart';
 
+Future<void> _openPanel(WidgetTester tester) async {
+  tester.view.physicalSize = const Size(1280, 720);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
+  final settingsService = MockSettingsService();
+  when(settingsService.hasParentPin).thenReturn(false);
+  final appsService = MockAppsService();
+
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<SettingsService>.value(value: settingsService),
+        ChangeNotifierProvider<AppsService>.value(value: appsService),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showDialog(context: context, builder: (_) => const SettingsPanel()),
+            child: const Text("Open"),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text("Open"));
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  testWidgets("Left on a sub page goes back to the page before; on the first page it stays", (tester) async {
+    await _openPanel(tester);
+    await tester.tap(find.text("Profiles"));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfilesSettingsPage), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfilesSettingsPage), findsNothing);
+    expect(find.byType(SettingsPanelPage), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsPanelPage), findsOneWidget);
+  });
+
   testWidgets("Back leaves a Settings page first, then closes the panel", (tester) async {
     tester.view.physicalSize = const Size(1280, 720);
     tester.view.devicePixelRatio = 1.0;
