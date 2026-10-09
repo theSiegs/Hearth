@@ -157,7 +157,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sort => 'Trier';
 
   @override
-  String get systemSettings => 'Paramètres système';
+  String get systemSettings => 'Paramètres Google TV';
 
   @override
   String get textEmptyCategory => 'Cette catégorie est vide.';
@@ -397,7 +397,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get homeScreenTitle => 'Écran d\'accueil';
 
   @override
-  String get remoteAndSearchTitle => 'Télécommande et recherche';
+  String get remoteAndSearchTitle => 'Télécommande';
 
   @override
   String get parentSettingsTitle => 'Paramètres parentaux';

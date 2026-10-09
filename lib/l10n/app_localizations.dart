@@ -410,7 +410,7 @@ abstract class AppLocalizations {
   /// No description provided for @systemSettings.
   ///
   /// In en, this message translates to:
-  /// **'System settings'**
+  /// **'Google TV settings'**
   String get systemSettings;
 
   /// No description provided for @textEmptyCategory.
@@ -878,7 +878,7 @@ abstract class AppLocalizations {
   /// Settings page title, also its row in the page that opens it
   ///
   /// In en, this message translates to:
-  /// **'Remote & search'**
+  /// **'Remote'**
   String get remoteAndSearchTitle;
 
   /// Settings page title, also its row in the page that opens it

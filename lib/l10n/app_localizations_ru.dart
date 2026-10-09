@@ -157,7 +157,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sort => 'Сортировать';
 
   @override
-  String get systemSettings => 'Системные настройки';
+  String get systemSettings => 'Настройки Google TV';
 
   @override
   String get textEmptyCategory => 'Эта категория пуста.';
@@ -397,7 +397,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get homeScreenTitle => 'Главный экран';
 
   @override
-  String get remoteAndSearchTitle => 'Пульт и поиск';
+  String get remoteAndSearchTitle => 'Пульт';
 
   @override
   String get parentSettingsTitle => 'Настройки для родителей';

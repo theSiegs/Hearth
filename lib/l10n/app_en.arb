@@ -61,7 +61,7 @@
     "hideHighlightOutlineOnHomescreen": "Hide highlight outline on homescreen",
     "appSelectorTransitionAnimation": "App selector transition animation",
     "sort": "Sort",
-    "systemSettings": "System settings",
+    "systemSettings": "Google TV settings",
     "textEmptyCategory": "This category is empty.",
     "time": "Time",
     "tvApplications": "TV Apps",
@@ -172,7 +172,7 @@
     "@homeScreenTitle": {
         "description": "Settings page title, also its row in the page that opens it"
     },
-    "remoteAndSearchTitle": "Remote & search",
+    "remoteAndSearchTitle": "Remote",
     "@remoteAndSearchTitle": {
         "description": "Settings page title, also its row in the page that opens it"
     },

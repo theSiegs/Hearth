@@ -23,7 +23,6 @@ import 'package:flauncher/widgets/settings/home_assistant_page.dart';
 import 'package:flauncher/widgets/settings/home_screen_settings_page.dart';
 import 'package:flauncher/widgets/settings/notifications_settings_page.dart';
 import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
-import 'package:flauncher/widgets/settings/remote_search_settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 
@@ -81,11 +80,6 @@ class SettingsPanelPage extends StatelessWidget {
                   onPressed: () => Navigator.of(context).pushNamed(HomeScreenSettingsPage.routeName),
                 ),
                 if (!locked) ...[
-                  FocusableSettingsTile(
-                    leading: const Icon(Icons.settings_remote_outlined),
-                    title: Text(localizations.remoteAndSearchTitle, style: Theme.of(context).textTheme.bodyMedium),
-                    onPressed: () => Navigator.of(context).pushNamed(RemoteSearchSettingsPage.routeName),
-                  ),
                   FocusableSettingsTile(
                     leading: const Icon(Icons.notifications_active_outlined),
                     title: Text(localizations.notifications, style: Theme.of(context).textTheme.bodyMedium),

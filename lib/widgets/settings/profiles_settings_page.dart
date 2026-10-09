@@ -23,6 +23,7 @@ import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'family_apps_page.dart';
 import 'focusable_settings_tile.dart';
 import 'profile_pairing_page.dart';
 import 'settings_lock.dart';
@@ -57,6 +58,13 @@ class ProfilesSettingsPage extends StatelessWidget {
             leading: const Icon(Icons.switch_account),
             title: Text(l.profilePairingTitle, style: textTheme.bodyMedium),
             onPressed: () => Navigator.of(context).pushNamed(ProfilePairingPage.routeName),
+          ),
+        if (!locked)
+          FocusableSettingsTile(
+            leading: const Icon(Icons.people_alt_outlined),
+            title: Text(l.familyAppsTitle, style: textTheme.bodyMedium),
+            trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+            onPressed: () => Navigator.of(context).pushNamed(FamilyAppsPage.routeName),
           ),
         if (!locked)
           FocusableSettingsTile(

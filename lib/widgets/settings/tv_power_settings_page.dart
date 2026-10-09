@@ -22,6 +22,7 @@ import 'package:provider/provider.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'focusable_settings_tile.dart';
+import 'remote_search_settings_page.dart';
 import 'setup_checklist_page.dart';
 import 'settings_page.dart';
 
@@ -53,6 +54,13 @@ class TvPowerSettingsPage extends StatelessWidget {
           ),
         ),
         const _IdleStandbyTile(),
+        // The remote: its buttons and what Back does on the home
+        FocusableSettingsTile(
+          leading: const Icon(Icons.settings_remote_outlined),
+          title: Text(localizations.remoteAndSearchTitle, style: Theme.of(context).textTheme.bodyMedium),
+          trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+          onPressed: () => Navigator.of(context).pushNamed(RemoteSearchSettingsPage.routeName),
+        ),
         FocusableSettingsTile(
           leading: const Icon(Icons.settings_outlined),
           title: Text(localizations.systemSettings, style: Theme.of(context).textTheme.bodyMedium),
