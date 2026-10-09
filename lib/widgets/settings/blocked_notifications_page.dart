@@ -53,7 +53,7 @@ class BlockedNotificationsPage extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             children: [
               BlockedAppsSection(
-                title: "${localizations.blockedNotificationApps} (${blockedPackages.length})",
+                title: localizations.blockedNotificationsHeading(blockedPackages.length),
                 apps: blockedApps,
                 missingPackages: unknownBlockedPkg,
                 blockedLabel: localizations.notificationsBlocked,

@@ -1755,4 +1755,70 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cwWatchNextAdbMessage => 'Android TV requires the READ_WRITE_WATCH_NEXT_PROGRAMS permission for launchers to read and display Continue Watching rows from installed apps.\n\nTo grant this permission, connect your TV via ADB and run:';
+
+  @override
+  String get appsNoApplicationsFound => 'No applications found';
+
+  @override
+  String get appDetailsAddToFavorites => 'Add to Fav';
+
+  @override
+  String get appDetailsRemoveFromFavorites => 'Remove from Fav';
+
+  @override
+  String get appDetailsAddToCategory => 'Add to Category';
+
+  @override
+  String get sectionsCustomOption => 'Custom...';
+
+  @override
+  String get sectionsSelectName => 'Select a name';
+
+  @override
+  String get sectionsCustomName => 'Custom Name';
+
+  @override
+  String get sectionsSortLastUsed => 'Last Used';
+
+  @override
+  String get sectionsReorderHint => 'Select with ◄ / ► then use ▲ / ▼ to reorder';
+
+  @override
+  String get inputsNoneDetected => 'No inputs detected';
+
+  @override
+  String get notifClearAll => 'Clear All';
+
+  @override
+  String get notifAllCaughtUp => 'All caught up!';
+
+  @override
+  String notifBlockAppNotifications(String app) {
+    return 'Block Notifications ($app)';
+  }
+
+  @override
+  String notifOpenApp(String app) {
+    return 'Open $app';
+  }
+
+  @override
+  String get notifAccessAdbTitle => 'Notification Access (ADB Required)';
+
+  @override
+  String get notifAccessAdbMessage => 'Android TV does not provide a system settings screen for \"Notification Access\" (listening to notifications from other apps).\n\nNote: Enabling \"Show notifications\" in TV App Settings only controls outgoing notifications from this app, not Notification Access.\n\nTo grant Notification Access, connect your TV via ADB and run:';
+
+  @override
+  String get notifOpenAppInfo => 'Open App Info';
+
+  @override
+  String get notifOverlayPermissionTitle => 'Overlay Permission';
+
+  @override
+  String get notifOverlayAdbMessage => 'On this device, the Overlay Permission settings screen could not be opened automatically.\n\nTo enable overlay popups, grant permission manually via ADB from a computer connected to the TV:';
+
+  @override
+  String blockedNotificationsHeading(int count) {
+    return 'Blocked Apps ($count)';
+  }
 }

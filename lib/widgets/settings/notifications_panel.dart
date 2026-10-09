@@ -34,7 +34,7 @@ class NotificationsPanel extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Notifications",
+                      localizations.notifications,
                       style: theme.textTheme.titleLarge,
                     ),
                     Row(
@@ -63,7 +63,7 @@ class NotificationsPanel extends StatelessWidget {
                               await notificationsService.dismissAll();
                             },
                             icon: const Icon(Icons.clear_all, size: 18),
-                            label: const Text("Clear All"),
+                            label: Text(localizations.notifClearAll),
                             style: ButtonStyle(
                               foregroundColor: WidgetStateProperty.resolveWith(
                                 (states) =>
@@ -104,7 +104,7 @@ class NotificationsPanel extends StatelessWidget {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              "All caught up!",
+                              localizations.notifAllCaughtUp,
                               style: theme.textTheme.bodyLarge?.copyWith(
                                 color: theme.hintColor,
                               ),
@@ -225,7 +225,7 @@ class NotificationsPanel extends StatelessWidget {
                                         ),
                                       IconButton(
                                         icon: const Icon(Icons.block, size: 18),
-                                        tooltip: "${localizations.blockAppNotifications} ($appName)",
+                                        tooltip: localizations.notifBlockAppNotifications(appName),
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                                         onPressed: () => notificationsService.blockPackage(notification.packageName),
@@ -292,7 +292,7 @@ class NotificationsPanel extends StatelessWidget {
               FocusableSettingsTile(
                 autofocus: true,
                 leading: const Icon(Icons.launch, color: Colors.blueAccent),
-                title: Text("${localizations.openApp} $appName"),
+                title: Text(localizations.notifOpenApp(appName)),
                 onPressed: () {
                   Navigator.of(dialogCtx).pop();
                   Navigator.of(context).pop();
@@ -312,7 +312,7 @@ class NotificationsPanel extends StatelessWidget {
             FocusableSettingsTile(
               leading: const Icon(Icons.block, color: Colors.redAccent),
               title: Text(
-                "${localizations.blockAppNotifications} ($appName)",
+                localizations.notifBlockAppNotifications(appName),
                 style: const TextStyle(color: Colors.redAccent),
               ),
               onPressed: () {

@@ -1745,4 +1745,70 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get cwWatchNextAdbMessage => '런처가 설치된 앱의 계속 시청 행을 읽고 표시하려면 Android TV에서 READ_WRITE_WATCH_NEXT_PROGRAMS 권한이 필요합니다.\n\n이 권한을 부여하려면 ADB로 TV에 연결하고 다음을 실행하세요:';
+
+  @override
+  String get appsNoApplicationsFound => '앱을 찾을 수 없습니다';
+
+  @override
+  String get appDetailsAddToFavorites => '즐겨찾기에 추가';
+
+  @override
+  String get appDetailsRemoveFromFavorites => '즐겨찾기에서 삭제';
+
+  @override
+  String get appDetailsAddToCategory => '카테고리에 추가';
+
+  @override
+  String get sectionsCustomOption => '사용자 지정...';
+
+  @override
+  String get sectionsSelectName => '이름 선택';
+
+  @override
+  String get sectionsCustomName => '사용자 지정 이름';
+
+  @override
+  String get sectionsSortLastUsed => '최근 사용';
+
+  @override
+  String get sectionsReorderHint => '◄ / ►로 선택한 다음 ▲ / ▼로 순서 변경';
+
+  @override
+  String get inputsNoneDetected => '감지된 입력이 없습니다';
+
+  @override
+  String get notifClearAll => '모두 지우기';
+
+  @override
+  String get notifAllCaughtUp => '모두 확인했습니다!';
+
+  @override
+  String notifBlockAppNotifications(String app) {
+    return '알림 차단($app)';
+  }
+
+  @override
+  String notifOpenApp(String app) {
+    return '$app 열기';
+  }
+
+  @override
+  String get notifAccessAdbTitle => '알림 액세스(ADB 필요)';
+
+  @override
+  String get notifAccessAdbMessage => 'Android TV에는 \'알림 액세스\'(다른 앱의 알림 수신)를 위한 시스템 설정 화면이 없습니다.\n\n참고: TV 앱 설정에서 \'알림 표시\'를 켜면 이 앱이 보내는 알림만 제어되며 알림 액세스는 허용되지 않습니다.\n\n알림 액세스를 허용하려면 ADB로 TV에 연결하고 다음을 실행하세요:';
+
+  @override
+  String get notifOpenAppInfo => '앱 정보 열기';
+
+  @override
+  String get notifOverlayPermissionTitle => '오버레이 권한';
+
+  @override
+  String get notifOverlayAdbMessage => '이 기기에서는 오버레이 권한 설정 화면을 자동으로 열 수 없습니다.\n\n오버레이 팝업을 사용하려면 TV에 연결된 컴퓨터에서 ADB로 직접 권한을 부여하세요:';
+
+  @override
+  String blockedNotificationsHeading(int count) {
+    return '차단된 앱($count)';
+  }
 }

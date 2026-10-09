@@ -1745,4 +1745,70 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get cwWatchNextAdbMessage => 'ランチャーがインストール済みアプリの「続きを見る」の行を読み取って表示するには、Android TV で READ_WRITE_WATCH_NEXT_PROGRAMS 権限が必要です。\n\nこの権限を付与するには、ADB でテレビに接続して次を実行します:';
+
+  @override
+  String get appsNoApplicationsFound => 'アプリが見つかりません';
+
+  @override
+  String get appDetailsAddToFavorites => 'お気に入りに追加';
+
+  @override
+  String get appDetailsRemoveFromFavorites => 'お気に入りから削除';
+
+  @override
+  String get appDetailsAddToCategory => 'カテゴリに追加';
+
+  @override
+  String get sectionsCustomOption => 'カスタム...';
+
+  @override
+  String get sectionsSelectName => '名前を選択';
+
+  @override
+  String get sectionsCustomName => 'カスタム名';
+
+  @override
+  String get sectionsSortLastUsed => '最近使用した順';
+
+  @override
+  String get sectionsReorderHint => '◄ / ► で選択し、▲ / ▼ で並べ替え';
+
+  @override
+  String get inputsNoneDetected => '入力が見つかりません';
+
+  @override
+  String get notifClearAll => 'すべて消去';
+
+  @override
+  String get notifAllCaughtUp => 'すべて確認済みです';
+
+  @override
+  String notifBlockAppNotifications(String app) {
+    return '通知をブロック（$app）';
+  }
+
+  @override
+  String notifOpenApp(String app) {
+    return '$app を開く';
+  }
+
+  @override
+  String get notifAccessAdbTitle => '通知アクセス（ADB が必要）';
+
+  @override
+  String get notifAccessAdbMessage => 'Android TV には「通知へのアクセス」（ほかのアプリの通知の受信）のシステム設定画面がありません。\n\n注: テレビのアプリ設定で「通知を表示」をオンにしても、このアプリが送る通知を制御するだけで、通知へのアクセスは許可されません。\n\n通知へのアクセスを許可するには、ADB でテレビに接続して次を実行します:';
+
+  @override
+  String get notifOpenAppInfo => 'アプリ情報を開く';
+
+  @override
+  String get notifOverlayPermissionTitle => 'オーバーレイ権限';
+
+  @override
+  String get notifOverlayAdbMessage => 'このデバイスでは、オーバーレイ権限の設定画面を自動で開けませんでした。\n\nオーバーレイのポップアップを有効にするには、テレビに接続したパソコンから ADB で手動で権限を付与してください:';
+
+  @override
+  String blockedNotificationsHeading(int count) {
+    return 'ブロックされたアプリ（$count）';
+  }
 }

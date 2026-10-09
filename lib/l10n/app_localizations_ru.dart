@@ -1769,4 +1769,70 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get cwWatchNextAdbMessage => 'Android TV требует разрешение READ_WRITE_WATCH_NEXT_PROGRAMS, чтобы лаунчеры могли читать и показывать ряды «Продолжить просмотр» из установленных приложений.\n\nЧтобы выдать его, подключитесь к телевизору через ADB и выполните:';
+
+  @override
+  String get appsNoApplicationsFound => 'Приложения не найдены';
+
+  @override
+  String get appDetailsAddToFavorites => 'В избранное';
+
+  @override
+  String get appDetailsRemoveFromFavorites => 'Убрать из избранного';
+
+  @override
+  String get appDetailsAddToCategory => 'Добавить в категорию';
+
+  @override
+  String get sectionsCustomOption => 'Свой...';
+
+  @override
+  String get sectionsSelectName => 'Выберите название';
+
+  @override
+  String get sectionsCustomName => 'Своё название';
+
+  @override
+  String get sectionsSortLastUsed => 'По последнему использованию';
+
+  @override
+  String get sectionsReorderHint => 'Выберите с помощью ◄ / ►, затем перемещайте ▲ / ▼';
+
+  @override
+  String get inputsNoneDetected => 'Входы не обнаружены';
+
+  @override
+  String get notifClearAll => 'Очистить все';
+
+  @override
+  String get notifAllCaughtUp => 'Новых уведомлений нет';
+
+  @override
+  String notifBlockAppNotifications(String app) {
+    return 'Блокировать уведомления ($app)';
+  }
+
+  @override
+  String notifOpenApp(String app) {
+    return 'Открыть $app';
+  }
+
+  @override
+  String get notifAccessAdbTitle => 'Доступ к уведомлениям (нужен ADB)';
+
+  @override
+  String get notifAccessAdbMessage => 'В Android TV нет экрана системных настроек для «Доступа к уведомлениям» (чтения уведомлений других приложений).\n\nПримечание: параметр «Показывать уведомления» в настройках приложений телевизора управляет только уведомлениями этого приложения, а не доступом к уведомлениям.\n\nЧтобы выдать доступ к уведомлениям, подключитесь к телевизору через ADB и выполните:';
+
+  @override
+  String get notifOpenAppInfo => 'Открыть сведения о приложении';
+
+  @override
+  String get notifOverlayPermissionTitle => 'Разрешение на наложение';
+
+  @override
+  String get notifOverlayAdbMessage => 'На этом устройстве не удалось автоматически открыть экран настроек разрешения на наложение.\n\nЧтобы включить всплывающие окна поверх других, выдайте разрешение вручную через ADB с компьютера, подключённого к телевизору:';
+
+  @override
+  String blockedNotificationsHeading(int count) {
+    return 'Заблокированные приложения ($count)';
+  }
 }

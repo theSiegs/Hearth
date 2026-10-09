@@ -121,7 +121,7 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Select with ◄ / ► then use ▲ / ▼ to reorder',
+                      localizations.sectionsReorderHint,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.white70,
                           ),

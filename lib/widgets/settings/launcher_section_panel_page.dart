@@ -28,7 +28,8 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import '../../models/category.dart';
 import 'settings_page.dart';
 
-/// Name choices for a new section; the first two fill themselves (see _save).
+/// Name choices for a new section; the first two fill themselves (see _save). They're saved as the section's name,
+/// so they stay in English; the last one, [_customPreset], is shown in the current language.
 const List<String> sectionNamePresets = [
   'TV Apps', // Auto: non-sideloaded apps
   'Non-TV Apps', // Auto: sideloaded apps
@@ -41,8 +42,11 @@ const List<String> sectionNamePresets = [
   'News',
   'Tools',
   'Favorites',
-  'Custom...',
+  _customPreset,
 ];
+
+/// The name choice that lets you type a name instead.
+const String _customPreset = 'Custom...';
 
 class _SettingsState extends ChangeNotifier {
   bool _changed;
@@ -404,11 +408,12 @@ class _CategorySettingsState extends State<_CategorySettings> {
                     autofocus: _creating,
                     isDense: true,
                     isExpanded: true,
-                    value: sectionNamePresets.contains(_name) ? _name : 'Custom...',
-                    hint: Text(_name.isEmpty ? 'Select a name' : _name, style: Theme.of(context).textTheme.bodySmall),
+                    value: sectionNamePresets.contains(_name) ? _name : _customPreset,
+                    hint: Text(_name.isEmpty ? localizations.sectionsSelectName : _name,
+                        style: Theme.of(context).textTheme.bodySmall),
                     onChanged: (value) {
                       setState(() {
-                        if (value == 'Custom...') {
+                        if (value == _customPreset) {
                           _name = '';
                           _nameController.text = '';
                         } else if (value != null) {
@@ -421,13 +426,14 @@ class _CategorySettingsState extends State<_CategorySettings> {
                     items: sectionNamePresets
                         .map((name) => DropdownMenuItem(
                               value: name,
-                              child: Text(name, style: Theme.of(context).textTheme.bodySmall),
+                              child: Text(name == _customPreset ? localizations.sectionsCustomOption : name,
+                                  style: Theme.of(context).textTheme.bodySmall),
                             ))
                         .toList(),
                   ))),
           if (!sectionNamePresets.contains(_name) || _name.isEmpty)
             _listTile(
-                Text('Custom Name'),
+                Text(localizations.sectionsCustomName),
                 Padding(
                     padding: EdgeInsets.only(top: 4),
                     child: TextFormField(
@@ -473,7 +479,7 @@ class _CategorySettingsState extends State<_CategorySettings> {
                         ),
                         DropdownMenuItem(
                           value: CategorySort.lastUsed,
-                          child: Text('Last Used', style: Theme.of(context).textTheme.bodySmall),
+                          child: Text(localizations.sectionsSortLastUsed, style: Theme.of(context).textTheme.bodySmall),
                         )
                       ]))),
           _listTile(

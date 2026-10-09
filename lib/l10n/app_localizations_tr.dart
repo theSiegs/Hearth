@@ -1745,4 +1745,70 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get cwWatchNextAdbMessage => 'Android TV, başlatıcıların yüklü uygulamalardaki İzlemeye Devam Et satırlarını okuyup göstermesi için READ_WRITE_WATCH_NEXT_PROGRAMS iznini gerektirir.\n\nBu izni vermek için TV\'nize ADB ile bağlanın ve şunu çalıştırın:';
+
+  @override
+  String get appsNoApplicationsFound => 'Uygulama bulunamadı';
+
+  @override
+  String get appDetailsAddToFavorites => 'Favorilere ekle';
+
+  @override
+  String get appDetailsRemoveFromFavorites => 'Favorilerden kaldır';
+
+  @override
+  String get appDetailsAddToCategory => 'Kategoriye ekle';
+
+  @override
+  String get sectionsCustomOption => 'Özel...';
+
+  @override
+  String get sectionsSelectName => 'Bir ad seçin';
+
+  @override
+  String get sectionsCustomName => 'Özel ad';
+
+  @override
+  String get sectionsSortLastUsed => 'Son kullanılan';
+
+  @override
+  String get sectionsReorderHint => '◄ / ► ile seçin, ardından sıralamak için ▲ / ▼ kullanın';
+
+  @override
+  String get inputsNoneDetected => 'Giriş algılanmadı';
+
+  @override
+  String get notifClearAll => 'Tümünü temizle';
+
+  @override
+  String get notifAllCaughtUp => 'Hepsini gördünüz!';
+
+  @override
+  String notifBlockAppNotifications(String app) {
+    return 'Bildirimleri Engelle ($app)';
+  }
+
+  @override
+  String notifOpenApp(String app) {
+    return '$app uygulamasını aç';
+  }
+
+  @override
+  String get notifAccessAdbTitle => 'Bildirim Erişimi (ADB gerekli)';
+
+  @override
+  String get notifAccessAdbMessage => 'Android TV, \"Bildirim Erişimi\" (diğer uygulamaların bildirimlerini dinleme) için bir sistem ayarları ekranı sunmaz.\n\nNot: TV Uygulama Ayarları\'nda \"Bildirimleri göster\"i açmak yalnızca bu uygulamanın gönderdiği bildirimleri kontrol eder, Bildirim Erişimi\'ni değil.\n\nBildirim Erişimi vermek için TV\'nize ADB ile bağlanın ve şunu çalıştırın:';
+
+  @override
+  String get notifOpenAppInfo => 'Uygulama bilgisini aç';
+
+  @override
+  String get notifOverlayPermissionTitle => 'Kaplama İzni';
+
+  @override
+  String get notifOverlayAdbMessage => 'Bu cihazda Kaplama İzni ayarları ekranı otomatik olarak açılamadı.\n\nKaplama açılır pencerelerini etkinleştirmek için TV\'ye bağlı bir bilgisayardan ADB ile izni elle verin:';
+
+  @override
+  String blockedNotificationsHeading(int count) {
+    return 'Engellenen Uygulamalar ($count)';
+  }
 }
