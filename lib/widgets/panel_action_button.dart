@@ -27,17 +27,22 @@ class PanelActionButton extends StatelessWidget {
   /// Lines the label may wrap to; no limit by default.
   final int? maxLines;
 
+  /// Takes focus when the panel opens (its first action), so OK works without an arrow press first.
+  final bool autofocus;
+
   const PanelActionButton({
     super.key,
     required this.icon,
     required this.label,
     required this.onPressed,
     this.maxLines,
+    this.autofocus = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return TextButton(
+      autofocus: autofocus,
       onPressed: onPressed,
       child: Row(
         children: [

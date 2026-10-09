@@ -106,6 +106,7 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                 child: Column(
                  children: [
                    PanelActionButton(
+                     autofocus: true,
                      icon: Icons.add_box_outlined,
                      label: localizations.appInfoAddToCategory,
                      onPressed: () async {
