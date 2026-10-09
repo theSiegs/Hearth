@@ -1,5 +1,7 @@
-import 'package:flutter/painting.dart';
+import 'dart:io';
 import 'dart:typed_data';
+
+import 'package:flutter/painting.dart';
 /*
  * FLauncher
  * Copyright (C) 2021  Étienne Fesser
@@ -33,17 +35,19 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late final _MockPathProviderPlatform pathProviderPlatform;
+  late final Directory documents;
   setUpAll(() {
+    documents = Directory.systemTemp.createTempSync("hearth_wallpaper_test");
     pathProviderPlatform = _MockPathProviderPlatform();
-    when(pathProviderPlatform.getApplicationDocumentsPath()).thenAnswer((_) => Future.value("."));
+    when(pathProviderPlatform.getApplicationDocumentsPath()).thenAnswer((_) => Future.value(documents.path));
     PathProviderPlatform.instance = pathProviderPlatform;
   });
+  tearDownAll(() => documents.deleteSync(recursive: true));
 
   group("pickWallpaper", () {
     test("picks image", () async {
-      TestWidgetsFlutterBinding.ensureInitialized();
       final pickedFile = _MockXFile();
-      when(pickedFile.readAsBytes()).thenAnswer((_) => Future.value(Uint8List.fromList([0x01])));
+      when(pickedFile.openRead()).thenAnswer((_) => Stream.value(Uint8List.fromList([0x01])));
       final imagePicker = _MockImagePicker();
       final fLauncherChannel = MockFLauncherChannel();
       final settingsService = MockSettingsService();
@@ -51,16 +55,15 @@ void main() {
       when(settingsService.bingWallpaperEnabled).thenReturn(false);
       when(imagePicker.pickImage(source: ImageSource.gallery)).thenAnswer((_) => Future.value(pickedFile));
       when(fLauncherChannel.checkForGetContentAvailability()).thenAnswer((_) => Future.value(true));
-      final wallpaperService = WallpaperService(fLauncherChannel, settingsService);
+      final wallpaperService = WallpaperService(fLauncherChannel, settingsService, imagePicker: imagePicker);
       await untilCalled(pathProviderPlatform.getApplicationDocumentsPath());
 
       await wallpaperService.pickWallpaper();
 
-      //verify(imagePicker.pickImage(source: ImageSource.gallery));
-      // MissingPluginException(No implementation found for method pickImage on channel plugins.flutter.io/image_picker)
-      //
-      expect(wallpaperService.wallpaper.hashCode, 1);
-    }, skip: true);
+      verify(imagePicker.pickImage(source: ImageSource.gallery));
+      expect(File("${documents.path}/wallpaper").readAsBytesSync(), [0x01]);
+      expect(wallpaperService.wallpaper, isA<FileImage>());
+    });
 
     test("throws error when no file explorer installed", () async {
       final fLauncherChannel = MockFLauncherChannel();
@@ -184,8 +187,8 @@ class _MockImagePicker extends Mock implements ImagePicker {
 // ignore: must_be_immutable
 class _MockXFile extends Mock implements XFile {
   @override
-  Future<Uint8List> readAsBytes() => super
-      .noSuchMethod(Invocation.method(#readAsBytes, []), returnValue: Future<Uint8List>.value(Uint8List.fromList([])));
+  Stream<Uint8List> openRead([int? start, int? end]) =>
+      super.noSuchMethod(Invocation.method(#openRead, [start, end]), returnValue: const Stream<Uint8List>.empty());
 }
 
 class _MockPathProviderPlatform extends Mock with MockPlatformInterfaceMixin implements PathProviderPlatform {
