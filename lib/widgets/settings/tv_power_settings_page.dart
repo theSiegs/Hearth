@@ -106,10 +106,20 @@ class _IdleStandbyTileState extends State<_IdleStandbyTile> {
       builder: (context) => SimpleDialog(
         title: Text(l.tvPowerSleepWhenIdle),
         children: [
+          // The current value is marked and selected as the dialog opens
           for (final option in _options)
             SimpleDialogOption(
-              onPressed: () => Navigator.of(context).pop(option),
-              child: Text(_label(l, option), style: Theme.of(context).textTheme.bodyMedium),
+              child: TextButton(
+                autofocus: option == _minutes,
+                onPressed: () => Navigator.of(context).pop(option),
+                child: Row(
+                  children: [
+                    Icon(option == _minutes ? Icons.radio_button_checked : Icons.radio_button_unchecked, size: 20),
+                    const SizedBox(width: 12),
+                    Flexible(child: Text(_label(l, option), style: Theme.of(context).textTheme.bodyMedium)),
+                  ],
+                ),
+              ),
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),

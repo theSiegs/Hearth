@@ -102,6 +102,7 @@ class _ProfilePairingPageState extends State<ProfilePairingPage> {
                 children: [
                   if (!_serviceOn)
                     FocusableSettingsTile(
+                      autofocus: true,
                       leading: const Icon(Icons.warning_amber_rounded, color: Colors.orange),
                       title: Text(l.pairingOffSetUp, style: textTheme.bodyMedium),
                       onPressed: () async {
