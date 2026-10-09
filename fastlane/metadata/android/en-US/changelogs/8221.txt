@@ -1,0 +1,2 @@
+- Early development pre-release.
+- New signing key: builds up to 2026.10.09 can't update to this one. Uninstall the old Hearth first.
