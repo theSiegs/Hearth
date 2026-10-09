@@ -38,7 +38,6 @@
     <string name="pin_unlocking">Ввод PIN-кода профиля…</string>
     <string name="pin_rejected_title">%1$s не принял сохранённый PIN-код для «%2$s»</string>
     <string name="pin_rejected_body">«Изменить PIN» откроет настройки Hearth, «Закрыть» — введите код сами.</string>
-    <string name="pin_stopped_body">Hearth не будет пробовать этот код, пока его не изменят, чтобы профиль не заблокировался. «Изменить PIN» — обновить, «Закрыть» — ввести самому.</string>
     <string name="pin_locked_title">%1$s заблокировал «%2$s»</string>
     <string name="pin_locked_body">Слишком много неверных кодов. Разблокируйте профиль в приложении, затем обновите код в настройках Hearth.</string>
     <string name="pin_screen_changed">Экран PIN-кода в %1$s изменился, поэтому Hearth не ввёл код. Введите его сами.</string>

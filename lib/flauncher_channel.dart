@@ -223,7 +223,7 @@ class FLauncherChannel {
   Future<bool> profilePinEntrySupported(String packageName) async =>
       await _methodChannel.invokeMethod<bool>("profilePinEntrySupported", packageName) ?? false;
 
-  /// A saved streaming-app profile PIN's state, never the PIN: {status ("none", "saved", "rejected", "stopped"),
+  /// A saved streaming-app profile PIN's state, never the PIN: {status ("none", "saved", "rejected"),
   /// length, savedAt, rejections, paused}.
   Future<Map<dynamic, dynamic>> getProfilePinStatus(String packageName, String appProfile) async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>(

@@ -15,9 +15,6 @@ interface PinRecipe {
     /** The app the recipe is for. */
     String packageName();
 
-    /** Wrong PINs the app allows before it locks the profile; 0 when unknown (Hearth then stops after three). */
-    int lockoutAfter();
-
     /** The PIN's length in this app. */
     int pinLength();
 

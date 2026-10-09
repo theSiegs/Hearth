@@ -1978,9 +1978,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get profilePinRejected => 'सहेजा गया — पिछली बार स्वीकार नहीं हुआ';
 
   @override
-  String get profilePinStopped => 'सहेजा गया — बदले जाने तक नहीं आज़माया जाएगा';
-
-  @override
   String get profilePinPaused => 'सहेजा गया — रुका हुआ (ऐप बदल गया)';
 
   @override

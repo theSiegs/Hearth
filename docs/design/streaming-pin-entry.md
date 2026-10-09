@@ -130,10 +130,10 @@ recognition step on the open PIN screen and reports "recognised" or what differs
 
   The next launch tries the saved PIN once again, and shows the same pop-up if it fails again, until the PIN is
   changed (then the mark clears) or removed.
-  - **Lockout guard:** each failed launch adds a wrong attempt in the app, and some apps lock a profile after a few.
-    Hearth counts consecutive rejections per app profile; if the app's PIN screen shows a lockout or "too many
-    attempts" message (part of each recipe), or the count reaches the app's known limit minus one, Hearth stops trying
-    that PIN until it's updated and the pop-up says so ("…not tried again until you update it").
+  - **No give-up state** (decided): a rejected PIN keeps being tried once per launch. The parent typing the right PIN
+    by hand after Close resets the app's own count of wrong attempts, so one wrong try per launch doesn't build up
+    to a lockout. If the app does show a lockout or "too many attempts" message (part of each recipe), Hearth says
+    so and leaves the screen alone.
 - **Broken** (anything unexpected, timeout, left the app): stop before any unverified OK, drop the cover, say "Hearth
   couldn't enter the PIN this time; please enter it." Three breaks in a row for an app → *paused* until a successful
   *Try it now*.
@@ -156,5 +156,5 @@ recognition step on the open PIN screen and reports "recognised" or what differs
 - PINs entered only in Hearth's Settings (no "capture" from the app) — proposed.
 - Typed only in grown-up Google TV profiles, never in a kids profile — proposed.
 - One attempt per launch; on a rejection a pop-up offers **Change PIN** (Settings) or **Close** (the app's own PIN
-  entry, by hand) — decided; tried again on every launch until changed, with the lockout guard above.
+  entry, by hand) — decided; tried again on every launch until changed or removed, with no give-up state.
 - Which apps first: Netflix (most profiles locked?), then Disney+, Max, Paramount+, Apple TV.

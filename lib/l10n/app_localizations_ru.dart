@@ -1994,9 +1994,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get profilePinRejected => 'Сохранён — в прошлый раз не принят';
 
   @override
-  String get profilePinStopped => 'Сохранён — не пробуется, пока не изменят';
-
-  @override
   String get profilePinPaused => 'Сохранён — приостановлен (приложение изменилось)';
 
   @override

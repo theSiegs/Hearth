@@ -3485,12 +3485,6 @@ abstract class AppLocalizations {
   /// **'Saved — not accepted last time'**
   String get profilePinRejected;
 
-  /// Status: Hearth stopped trying the saved PIN so the profile doesn't get locked
-  ///
-  /// In en, this message translates to:
-  /// **'Saved — not tried until it’s changed'**
-  String get profilePinStopped;
-
   /// Profile Pairing: streaming app profile PIN
   ///
   /// In en, this message translates to:

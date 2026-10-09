@@ -595,7 +595,6 @@
     "profilePinNone": "无",
     "profilePinSaved": "已保存",
     "profilePinRejected": "已保存 — 上次未被接受",
-    "profilePinStopped": "已保存 — 更改前不再尝试",
     "profilePinPaused": "已保存 — 已暂停（应用已变化）",
     "profilePinUnsupported": "Hearth 暂时还无法在 {app} 中输入 PIN",
     "profilePinEnterTitle": "{profile} 在 {app} 中的 PIN",

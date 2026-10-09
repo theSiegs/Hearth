@@ -595,7 +595,6 @@
     "profilePinNone": "कोई नहीं",
     "profilePinSaved": "सहेजा गया",
     "profilePinRejected": "सहेजा गया — पिछली बार स्वीकार नहीं हुआ",
-    "profilePinStopped": "सहेजा गया — बदले जाने तक नहीं आज़माया जाएगा",
     "profilePinPaused": "सहेजा गया — रुका हुआ (ऐप बदल गया)",
     "profilePinUnsupported": "Hearth अभी {app} में PIN टाइप नहीं कर सकता",
     "profilePinEnterTitle": "{app} में {profile} का PIN",

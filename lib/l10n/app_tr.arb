@@ -595,7 +595,6 @@
     "profilePinNone": "Yok",
     "profilePinSaved": "Kayıtlı",
     "profilePinRejected": "Kayıtlı — son seferde kabul edilmedi",
-    "profilePinStopped": "Kayıtlı — değiştirilene kadar denenmez",
     "profilePinPaused": "Kayıtlı — duraklatıldı (uygulama değişti)",
     "profilePinUnsupported": "Hearth henüz {app} içinde PIN yazamıyor",
     "profilePinEnterTitle": "{profile} için {app} PIN’i",

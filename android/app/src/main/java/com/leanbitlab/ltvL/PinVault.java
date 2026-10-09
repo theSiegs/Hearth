@@ -43,7 +43,6 @@ final class PinVault {
     /** The app didn't take it last time; still tried once per launch until changed (see PinEntryMachine). */
     static final String STATUS_REJECTED = "rejected";
     /** Rejected often enough that another try could lock the profile: not tried until changed. */
-    static final String STATUS_STOPPED = "stopped";
 
     private PinVault() {
     }
@@ -193,9 +192,9 @@ final class PinVault {
         update(context, pkg, appProfile, STATUS_SAVED, 0);
     }
 
-    /** One more rejection; {@code stop}: no more tries until it's changed (the app's lockout is near). */
-    static void markRejected(Context context, String pkg, String appProfile, boolean stop) {
-        update(context, pkg, appProfile, stop ? STATUS_STOPPED : STATUS_REJECTED,
+    /** One more rejection: still tried on the next launch, and Settings says it wasn't accepted. */
+    static void markRejected(Context context, String pkg, String appProfile) {
+        update(context, pkg, appProfile, STATUS_REJECTED,
                 rejections(context, pkg, appProfile) + 1);
     }
 

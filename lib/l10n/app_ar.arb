@@ -595,7 +595,6 @@
     "profilePinNone": "لا يوجد",
     "profilePinSaved": "محفوظ",
     "profilePinRejected": "محفوظ — لم يُقبل في المرة الأخيرة",
-    "profilePinStopped": "محفوظ — لن يُجرَّب حتى يتغيّر",
     "profilePinPaused": "محفوظ — متوقف مؤقتًا (تغيّر التطبيق)",
     "profilePinUnsupported": "لا يستطيع Hearth بعد كتابة رموز PIN في {app}",
     "profilePinEnterTitle": "رمز PIN لـ {profile} في {app}",

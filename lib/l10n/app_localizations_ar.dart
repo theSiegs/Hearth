@@ -2013,9 +2013,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profilePinRejected => 'محفوظ — لم يُقبل في المرة الأخيرة';
 
   @override
-  String get profilePinStopped => 'محفوظ — لن يُجرَّب حتى يتغيّر';
-
-  @override
   String get profilePinPaused => 'محفوظ — متوقف مؤقتًا (تغيّر التطبيق)';
 
   @override

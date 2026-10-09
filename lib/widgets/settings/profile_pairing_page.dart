@@ -221,7 +221,6 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
     String text = switch (status) {
       "none" => l.profilePinNone,
       "rejected" => l.profilePinRejected,
-      "stopped" => l.profilePinStopped,
       _ => l.profilePinSaved,
     };
     if (status != "none" && pin["paused"] == true) text = l.profilePinPaused;

@@ -1970,9 +1970,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get profilePinRejected => 'Kayıtlı — son seferde kabul edilmedi';
 
   @override
-  String get profilePinStopped => 'Kayıtlı — değiştirilene kadar denenmez';
-
-  @override
   String get profilePinPaused => 'Kayıtlı — duraklatıldı (uygulama değişti)';
 
   @override

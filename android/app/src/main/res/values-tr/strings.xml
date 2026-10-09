@@ -38,7 +38,6 @@
     <string name="pin_unlocking">Profil PIN’i giriliyor…</string>
     <string name="pin_rejected_title">%1$s, “%2$s” için kayıtlı PIN’i kabul etmedi</string>
     <string name="pin_rejected_body">PIN’i Değiştir ile Hearth Ayarlarında güncelleyin ya da Kapat ile kendiniz yazın.</string>
-    <string name="pin_stopped_body">Profil kilitlenmesin diye Hearth bu PIN’i değiştirilene kadar tekrar denemeyecek. Güncellemek için PIN’i Değiştir, kendiniz yazmak için Kapat.</string>
     <string name="pin_locked_title">%1$s, “%2$s” profilini kilitledi</string>
     <string name="pin_locked_body">Çok fazla yanlış PIN. Profilin kilidini uygulamada açın, sonra PIN’i Hearth Ayarlarında güncelleyin.</string>
     <string name="pin_screen_changed">%1$s PIN ekranı değişti, bu yüzden Hearth PIN’i yazmadı. Lütfen kendiniz yazın.</string>

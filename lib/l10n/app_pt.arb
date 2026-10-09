@@ -595,7 +595,6 @@
     "profilePinNone": "Nenhum",
     "profilePinSaved": "Salvo",
     "profilePinRejected": "Salvo — não aceito da última vez",
-    "profilePinStopped": "Salvo — não tentado até ser alterado",
     "profilePinPaused": "Salvo — pausado (o app mudou)",
     "profilePinUnsupported": "O Hearth ainda não digita PINs no {app}",
     "profilePinEnterTitle": "PIN de {profile} no {app}",
