@@ -3,6 +3,11 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.10 (pre-release)
+
+**New signing key** (CN=Hearth). Builds up to 2026.10.09 were signed with the key inherited from the
+project Hearth started from, so they can't update to this one: uninstall the old Hearth first.
+
 ## 2026.10.09 (pre-release)
 
 **New app id.** Hearth is now `com.thesiegs.hearth` (it was `com.leanbitlab.ltvL`, inherited from LTvLauncher).
