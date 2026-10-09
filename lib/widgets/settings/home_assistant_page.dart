@@ -23,6 +23,7 @@ import '../../flauncher_channel.dart';
 import '../../providers/settings_service.dart';
 import '../rounded_switch_list_tile.dart';
 import 'focusable_settings_tile.dart';
+import 'remote_text_field.dart';
 import 'ha_phone_setup_dialog.dart';
 import 'settings_page.dart';
 import 'setup_checklist_page.dart';
@@ -278,7 +279,7 @@ class _HaPanelPageState extends State<HaPanelPage> {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
-              TextField(
+              RemoteTextField(
                 controller: _panelToken,
                 obscureText: true,
                 textInputAction: TextInputAction.next,
@@ -287,7 +288,7 @@ class _HaPanelPageState extends State<HaPanelPage> {
                   hintText: _panelHasToken ? l.haPanelTokenSavedHint : null,
                 ),
               ),
-              TextField(
+              RemoteTextField(
                 controller: _panelDashboard,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _savePanel(),
@@ -385,13 +386,13 @@ class _HaStatusPageState extends State<HaStatusPage> with WidgetsBindingObserver
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
-              TextField(
+              RemoteTextField(
                 controller: _url,
                 keyboardType: TextInputType.url,
                 textInputAction: TextInputAction.next,
                 decoration: InputDecoration(labelText: l.haStatusAddressLabel, hintText: "http://192.168.1.10:8123"),
               ),
-              TextField(
+              RemoteTextField(
                 controller: _webhook,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _saveStatus(),
