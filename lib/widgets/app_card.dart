@@ -17,7 +17,6 @@
  */
 
 import 'package:flauncher/providers/wallpaper_service.dart';
-import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'dart:async';
 
 import 'package:flauncher/app_image_type.dart';
@@ -497,9 +496,9 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
     return KeyEventResult.ignored;
   }
 
+  /// The app's menu. Opens in kids profiles too: arranging their own home is theirs, and the actions a parent
+  /// controls ask for the parent PIN themselves (see ApplicationInfoPanel).
   Future<void> _showPanel(BuildContext context) async {
-    final bool allowed = await requireParent(context);
-    if (!allowed || !context.mounted) return;
     final result = await showDialog<ApplicationInfoPanelResult>(
       context: context,
       builder: (context) => ApplicationInfoPanel(
