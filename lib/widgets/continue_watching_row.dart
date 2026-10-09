@@ -100,7 +100,10 @@ class _ContinueWatchingRowState extends State<ContinueWatchingRow> {
                   return ValueListenableBuilder<WatchNextProgram?>(
                     valueListenable: _focused,
                     builder: (context, focused, _) {
-                      final program = programs.contains(focused) ? focused! : programs.first;
+                      // By id: each refresh builds new program objects
+                      final program = programs.firstWhere(
+                          (p) => focused != null && p.id == focused.id && p.packageName == focused.packageName,
+                          orElse: () => programs.first);
                       final detail = watchNextDetail(AppLocalizations.of(context)!, program, appsService);
                       return Padding(
                         padding: const EdgeInsets.only(left: 16, bottom: 4),
@@ -298,7 +301,8 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
   Future<void> _showPanel() async {
     final bool allowed = await requireParent(context);
     if (!allowed || !mounted) return;
-    showDialog(
+    final settings = context.read<SettingsService>();
+    final result = await showDialog<WatchNextPanelResult>(
       context: context,
       builder: (context) => WatchNextInfoPanel(
         program: widget.program,
@@ -307,6 +311,18 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
         appIconBytes: _appIconBytes,
       ),
     );
+    if (result == null || !mounted) return;
+    // The selection moves to the next card (or the one before) before this one goes, so it stays in the row
+    _focusNode.requestFocus();
+    if (!_focusNode.focusInDirection(TraversalDirection.right)) _focusNode.focusInDirection(TraversalDirection.left);
+    switch (result) {
+      case WatchNextPanelResult.remove:
+        await settings.hideWatchNextProgram(widget.program.id);
+        await widget.watchNextService.deleteProgram(widget.program);
+      case WatchNextPanelResult.hideApp:
+        await settings.hideWatchNextPackage(widget.program.packageName);
+        await widget.watchNextService.refresh();
+    }
   }
 
   KeyEventResult _onPressed(LogicalKeyboardKey key) {

@@ -28,6 +28,10 @@ import 'package:flauncher/widgets/side_panel_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+/// What the program's panel asks the card to do once it has closed: the card moves the selection off itself first,
+/// so it doesn't fall to the top bar when the program disappears.
+enum WatchNextPanelResult { remove, hideApp }
+
 class WatchNextInfoPanel extends StatefulWidget {
   final WatchNextProgram program;
   final WatchNextService watchNextService;
@@ -146,22 +150,14 @@ class _WatchNextInfoPanelState extends State<WatchNextInfoPanel> {
                       autofocus: true,
                       icon: Icons.visibility_off_outlined,
                       label: localizations.watchNextInfoRemove,
-                      onPressed: () => _safeAction(() async {
-                        Navigator.of(context).pop();
-                        await settingsService.hideWatchNextProgram(widget.program.id);
-                        await widget.watchNextService.deleteProgram(widget.program);
-                      }),
+                      onPressed: () => _safeAction(() => Navigator.of(context).pop(WatchNextPanelResult.remove)),
                     ),
                   ),
                   Consumer<SettingsService>(
                     builder: (context, settingsService, _) => PanelActionButton(
                       icon: Icons.block,
                       label: localizations.watchNextInfoHideAllFrom(appName),
-                      onPressed: () => _safeAction(() async {
-                        Navigator.of(context).pop();
-                        await settingsService.hideWatchNextPackage(widget.program.packageName);
-                        await widget.watchNextService.refresh();
-                      }),
+                      onPressed: () => _safeAction(() => Navigator.of(context).pop(WatchNextPanelResult.hideApp)),
                     ),
                   ),
                   PanelActionButton(
