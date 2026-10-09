@@ -1,6 +1,7 @@
 # Design: entering streaming-app profile PINs for the parent
 
-Status: proposal, not built. Builds on Profile Pairing (`ProfilePairingService`), which already opens a streaming app
+Status: built. Netflix, Disney+, Apple TV and HBO Max have PIN recipes, none of them tried on a TV yet; Hulu's PIN
+screen hasn't been recorded, and Paramount+ is not supported. Builds on Profile Pairing (`ProfilePairingService`), which already opens a streaming app
 behind its "Opening Netflix as Alex…" cover card and picks the paired profile on the app's "Who's watching?" screen.
 
 ## Goal
