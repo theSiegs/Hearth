@@ -82,6 +82,26 @@ void main() {
     verify(appsService.refreshState()).called(1);
   });
 
+  test("the wallpaper's pictures follow the profile whose settings are in place", () async {
+    await prefs.setString(ProfileService.layoutOwnerKey, "user:0");
+    when(channel.getActiveProfileName()).thenAnswer((_) async => "Riley");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:10");
+    final wallpaper = MockWallpaperService();
+    when(wallpaper.setProfile(any)).thenAnswer((_) async {});
+    final backup = _RecordingBackupService(database, prefs, {"user:10"});
+    final service =
+        ProfileService(channel, prefs, backup, SettingsService(prefs), appsService, wallpaperService: wallpaper);
+
+    await service.check();
+    verify(wallpaper.setProfile("user:10")).called(1);
+
+    // Back to the owner, whose layout was saved on the way out
+    when(channel.getActiveProfileName()).thenAnswer((_) async => "Alex");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:0");
+    await service.check();
+    verify(wallpaper.setProfile("user:0")).called(1);
+  });
+
   test("a kids profile starts with Bing's photo once, then keeps its own choice", () async {
     await prefs.setString(ProfileService.layoutOwnerKey, "user:0");
     when(channel.getActiveProfileName()).thenAnswer((_) async => "Jordan");
