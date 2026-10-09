@@ -1928,7 +1928,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get updatesOpenSettings => 'Abrir ajustes';
 
   @override
-  String get updatesCheckFailed => 'No se pudieron buscar actualizaciones';
+  String get updatesCheckFailed => 'No se pudo comprobar';
 
   @override
   String get updatesInstallerNotStarted => 'El instalador no se inició';

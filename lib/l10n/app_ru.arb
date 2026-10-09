@@ -581,7 +581,7 @@
     "updatesInstallPermissionTitle": "Разрешите Hearth устанавливать приложения",
     "updatesInstallPermissionMessage": "На следующем экране найдите Hearth, включите его и нажмите «Назад». Установка продолжится, когда вы вернётесь сюда.",
     "updatesOpenSettings": "Открыть настройки",
-    "updatesCheckFailed": "Не удалось проверить обновления",
+    "updatesCheckFailed": "Ошибка проверки",
     "updatesInstallerNotStarted": "Установщик не запустился",
     "updatesCheckForUpdates": "Проверить обновления",
     "updatesAutoUpdate": "Обновлять автоматически",

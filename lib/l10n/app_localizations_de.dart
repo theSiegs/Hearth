@@ -1926,10 +1926,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get updatesOpenSettings => 'Einstellungen öffnen';
 
   @override
-  String get updatesCheckFailed => 'Suche nach Updates fehlgeschlagen';
+  String get updatesCheckFailed => 'Update-Prüfung fehlgeschlagen';
 
   @override
-  String get updatesInstallerNotStarted => 'Das Installationsprogramm wurde nicht gestartet';
+  String get updatesInstallerNotStarted => 'Installer startete nicht';
 
   @override
   String get updatesCheckForUpdates => 'Nach Updates suchen';

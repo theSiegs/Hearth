@@ -33,9 +33,13 @@ class NotificationsPanel extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      localizations.notifications,
-                      style: theme.textTheme.titleLarge,
+                    // A long title in some languages leaves room for the buttons
+                    Flexible(
+                      child: Text(
+                        localizations.notifications,
+                        style: theme.textTheme.titleLarge,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     Row(
                       mainAxisSize: MainAxisSize.min,

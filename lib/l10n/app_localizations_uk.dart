@@ -1942,7 +1942,7 @@ class AppLocalizationsUk extends AppLocalizations {
   String get updatesOpenSettings => 'Відкрити налаштування';
 
   @override
-  String get updatesCheckFailed => 'Не вдалося перевірити оновлення';
+  String get updatesCheckFailed => 'Помилка перевірки';
 
   @override
   String get updatesInstallerNotStarted => 'Інсталятор не запустився';
