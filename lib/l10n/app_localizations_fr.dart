@@ -1117,4 +1117,95 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get familyAppsUnnamedAdult => 'Un profil adulte';
+
+  @override
+  String setupAccessibilityInstructions(String service) {
+    return 'Sur l\'écran suivant, faites défiler jusqu\'à Services, sélectionnez \"$service\", puis activez Activer et confirmez. Appuyez sur Retour jusqu\'à revenir à l\'accueil.';
+  }
+
+  @override
+  String setupRestrictedWarning(String command) {
+    return 'Si Android indique que le paramètre est restreint, exécutez ceci une fois depuis un ordinateur :\n$command';
+  }
+
+  @override
+  String get setupDefaultLauncherTitle => 'Hearth comme application d\'accueil';
+
+  @override
+  String get setupDefaultLauncherWhy => 'Empêche les profils enfants de bloquer Hearth.';
+
+  @override
+  String get setupDefaultLauncherInstructions => 'Sur l\'écran suivant, choisissez Hearth.';
+
+  @override
+  String get setupHomeFixTitle => 'Correctif du bouton Accueil';
+
+  @override
+  String get setupHomeFixWhy => 'Le bouton Accueil ouvre Hearth au lieu de Google TV.';
+
+  @override
+  String get setupNotificationsTitle => 'Accès aux notifications';
+
+  @override
+  String get setupNotificationsWhy => 'Affiche les notifications et ce qui est en lecture.';
+
+  @override
+  String setupNotificationsInstructions(String service) {
+    return 'Sur l\'écran suivant, sélectionnez \"$service\" et autorisez-le.';
+  }
+
+  @override
+  String get setupInstallTitle => 'Installation des mises à jour';
+
+  @override
+  String get setupInstallWhy => 'Permet à Hearth de se mettre à jour et d\'installer ses applications compagnons.';
+
+  @override
+  String get setupInstallInstructions => 'Sur l\'écran suivant, activez Hearth.';
+
+  @override
+  String get setupPairingWhy => 'Choisit votre profil dans Netflix, Disney+, Apple TV, HBO Max et Paramount+.';
+
+  @override
+  String get setupVoiceTitle => 'Voix Hearth';
+
+  @override
+  String get setupVoiceWhy => 'Permet à l\'association des profils d\'entendre l\'écran des profils de Netflix. Les autres applications gardent la voix de Google.';
+
+  @override
+  String setupVoiceInstructions(String engine) {
+    return 'Sur l\'écran suivant, sous Moteur préféré, choisissez \"$engine\", puis OK sur l\'avertissement (Hearth n\'écoute que les applications de streaming). Appuyez sur Retour pour revenir.';
+  }
+
+  @override
+  String get setupOpenSettings => 'Ouvrir les paramètres';
+
+  @override
+  String get setupAdbFallback => 'Cette TV n\'a pas ouvert cet écran de paramètres. Exécutez plutôt ceci une fois depuis un ordinateur :';
+
+  @override
+  String setupProgress(int done, int total) {
+    return '$done sur $total terminés';
+  }
+
+  @override
+  String get setupOptional => 'Facultatif';
+
+  @override
+  String get homeButtonFixOffTitle => 'Le Correctif du bouton Accueil est désactivé';
+
+  @override
+  String get homeButtonFixOffBody => 'Le service d\'accessibilité de Hearth s\'est arrêté, généralement après une mise à jour. Tant qu\'il n\'est pas réactivé, le bouton Accueil peut ouvrir Google TV au lieu de Hearth, et les changements de profil ne sont pas suivis.';
+
+  @override
+  String get homeButtonFixStuck => 'Android l\'indique toujours comme activé, mais il ne tourne pas. Désactivez puis réactivez Hearth dans les paramètres d\'accessibilité pour le redémarrer.';
+
+  @override
+  String get homeButtonFixRestricted => 'Si l\'interrupteur de Hearth y est grisé, Android le bloque car cette mise à jour a été installée depuis un téléchargement. Exécutez ceci depuis un ordinateur connecté à la TV, puis activez Hearth :';
+
+  @override
+  String get homeButtonFixDontRemind => 'Ne plus me le rappeler';
+
+  @override
+  String get homeButtonFixOpenSettings => 'Ouvrir les paramètres d\'accessibilité';
 }

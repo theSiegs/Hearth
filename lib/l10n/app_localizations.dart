@@ -2050,6 +2050,168 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'An adult profile'**
   String get familyAppsUnnamedAdult;
+
+  /// Setup & permissions step: how to turn on an accessibility service in Android's settings; {service} is the service's name as Android shows it (in English)
+  ///
+  /// In en, this message translates to:
+  /// **'On the next screen, scroll down to Services, select \"{service}\", then turn on Enable and confirm. Press Back until you\'re home again.'**
+  String setupAccessibilityInstructions(String service);
+
+  /// Setup & permissions step: warning under an accessibility step; {command} is an adb command
+  ///
+  /// In en, this message translates to:
+  /// **'If Android says the setting is restricted, run this once from a computer:\n{command}'**
+  String setupRestrictedWarning(String command);
+
+  /// Setup & permissions step title: make Hearth the default launcher
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth as the home app'**
+  String get setupDefaultLauncherTitle;
+
+  /// Setup & permissions step: why it matters
+  ///
+  /// In en, this message translates to:
+  /// **'Keeps kids profiles from blocking Hearth.'**
+  String get setupDefaultLauncherWhy;
+
+  /// Setup & permissions step: what to do in Android's settings
+  ///
+  /// In en, this message translates to:
+  /// **'On the next screen, choose Hearth.'**
+  String get setupDefaultLauncherInstructions;
+
+  /// Setup & permissions step title: Hearth's accessibility service that makes Home open Hearth
+  ///
+  /// In en, this message translates to:
+  /// **'Home Button Fix'**
+  String get setupHomeFixTitle;
+
+  /// Setup & permissions step: why it matters
+  ///
+  /// In en, this message translates to:
+  /// **'The Home button opens Hearth instead of Google TV.'**
+  String get setupHomeFixWhy;
+
+  /// Setup & permissions step title
+  ///
+  /// In en, this message translates to:
+  /// **'Notification access'**
+  String get setupNotificationsTitle;
+
+  /// Setup & permissions step: why it matters
+  ///
+  /// In en, this message translates to:
+  /// **'Shows notifications and what\'s playing.'**
+  String get setupNotificationsWhy;
+
+  /// Setup & permissions step: what to do; {service} is the service's name as Android shows it (in English)
+  ///
+  /// In en, this message translates to:
+  /// **'On the next screen, select \"{service}\" and allow it.'**
+  String setupNotificationsInstructions(String service);
+
+  /// Setup & permissions step title: permission to install apps
+  ///
+  /// In en, this message translates to:
+  /// **'Installing updates'**
+  String get setupInstallTitle;
+
+  /// Setup & permissions step: why it matters
+  ///
+  /// In en, this message translates to:
+  /// **'Lets Hearth update itself and install companion apps.'**
+  String get setupInstallWhy;
+
+  /// Setup & permissions step: what to do in Android's settings
+  ///
+  /// In en, this message translates to:
+  /// **'On the next screen, turn on Hearth.'**
+  String get setupInstallInstructions;
+
+  /// Setup & permissions step: why Profile Pairing matters
+  ///
+  /// In en, this message translates to:
+  /// **'Picks your profile in Netflix, Disney+, Apple TV, HBO Max and Paramount+.'**
+  String get setupPairingWhy;
+
+  /// Setup & permissions step title: Hearth's text-to-speech engine
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth voice'**
+  String get setupVoiceTitle;
+
+  /// Setup & permissions step: why Hearth voice matters
+  ///
+  /// In en, this message translates to:
+  /// **'Lets Profile Pairing hear Netflix\'s profile screen. Other apps keep Google\'s voice.'**
+  String get setupVoiceWhy;
+
+  /// Setup & permissions step: what to do in Android's text-to-speech settings; {engine} is the engine's name as Android shows it (in English)
+  ///
+  /// In en, this message translates to:
+  /// **'On the next screen, under Preferred engine, choose \"{engine}\", then OK on the warning (Hearth only listens to the streaming apps). Press Back to return.'**
+  String setupVoiceInstructions(String engine);
+
+  /// Setup & permissions step dialog: button that opens Android's settings screen
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get setupOpenSettings;
+
+  /// Dialog when Android couldn't open a settings screen; an adb command follows
+  ///
+  /// In en, this message translates to:
+  /// **'This TV wouldn\'t open that Settings screen. Run this once from a computer instead:'**
+  String get setupAdbFallback;
+
+  /// Setup & permissions page: under the title, how many required steps are done
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {total} done'**
+  String setupProgress(int done, int total);
+
+  /// Setup & permissions page: heading above the optional steps
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get setupOptional;
+
+  /// Warning dialog title when Hearth's accessibility service has stopped
+  ///
+  /// In en, this message translates to:
+  /// **'Home Button Fix is off'**
+  String get homeButtonFixOffTitle;
+
+  /// Home Button Fix is off dialog: first paragraph
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth\'s accessibility service has stopped, usually after an update. Until it is back on, the Home button may open Google TV instead of Hearth, and profile switches aren\'t followed.'**
+  String get homeButtonFixOffBody;
+
+  /// Home Button Fix is off dialog: when Android shows the service as on but it isn't running
+  ///
+  /// In en, this message translates to:
+  /// **'Android still lists it as on, but it isn\'t running. Turn Hearth off and on again in Accessibility settings to restart it.'**
+  String get homeButtonFixStuck;
+
+  /// Home Button Fix is off dialog: when Android restricts the setting; an adb command follows
+  ///
+  /// In en, this message translates to:
+  /// **'If Hearth\'s switch there is greyed out, Android is blocking it because this update was installed from a download. Run this from a computer connected to the TV, then turn Hearth on:'**
+  String get homeButtonFixRestricted;
+
+  /// Home Button Fix is off dialog: button that stops the warning
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t remind me'**
+  String get homeButtonFixDontRemind;
+
+  /// Home Button Fix is off dialog: button that opens Android's accessibility settings
+  ///
+  /// In en, this message translates to:
+  /// **'Open Accessibility settings'**
+  String get homeButtonFixOpenSettings;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

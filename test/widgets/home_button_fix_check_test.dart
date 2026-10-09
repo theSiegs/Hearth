@@ -1,4 +1,5 @@
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/widgets/home_button_fix_check.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -27,6 +28,8 @@ class _FakeChannel extends FLauncherChannel {
 
 Future<void> _pump(WidgetTester tester, _FakeChannel channel) async {
   await tester.pumpWidget(MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: HomeButtonFixCheck(channel: channel, startDelay: Duration.zero, child: const Text('home')),
   ));
   await tester.pumpAndSettle();

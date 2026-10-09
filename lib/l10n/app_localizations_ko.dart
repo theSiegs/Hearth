@@ -1114,4 +1114,95 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get familyAppsUnnamedAdult => '성인 프로필';
+
+  @override
+  String setupAccessibilityInstructions(String service) {
+    return '다음 화면에서 \'서비스\'까지 스크롤하여 \'$service\'을(를) 선택한 다음 \'사용\'을 켜고 확인하세요. 홈으로 돌아갈 때까지 뒤로를 누르세요.';
+  }
+
+  @override
+  String setupRestrictedWarning(String command) {
+    return 'Android에서 설정이 제한되었다고 표시되면 컴퓨터에서 다음을 한 번 실행하세요.\n$command';
+  }
+
+  @override
+  String get setupDefaultLauncherTitle => 'Hearth를 홈 앱으로';
+
+  @override
+  String get setupDefaultLauncherWhy => '어린이 프로필에서 Hearth가 차단되지 않게 합니다.';
+
+  @override
+  String get setupDefaultLauncherInstructions => '다음 화면에서 Hearth를 선택하세요.';
+
+  @override
+  String get setupHomeFixTitle => '홈 버튼 수정';
+
+  @override
+  String get setupHomeFixWhy => '홈 버튼을 누르면 Google TV 대신 Hearth가 열립니다.';
+
+  @override
+  String get setupNotificationsTitle => '알림 액세스';
+
+  @override
+  String get setupNotificationsWhy => '알림과 재생 중인 항목을 표시합니다.';
+
+  @override
+  String setupNotificationsInstructions(String service) {
+    return '다음 화면에서 \'$service\'을(를) 선택하고 허용하세요.';
+  }
+
+  @override
+  String get setupInstallTitle => '업데이트 설치';
+
+  @override
+  String get setupInstallWhy => 'Hearth가 스스로 업데이트하고 함께 쓰는 앱을 설치할 수 있게 합니다.';
+
+  @override
+  String get setupInstallInstructions => '다음 화면에서 Hearth를 켜세요.';
+
+  @override
+  String get setupPairingWhy => 'Netflix, Disney+, Apple TV, HBO Max, Paramount+에서 내 프로필을 선택합니다.';
+
+  @override
+  String get setupVoiceTitle => 'Hearth 음성';
+
+  @override
+  String get setupVoiceWhy => '프로필 연결이 Netflix의 프로필 화면을 들을 수 있게 합니다. 다른 앱은 Google 음성을 그대로 사용합니다.';
+
+  @override
+  String setupVoiceInstructions(String engine) {
+    return '다음 화면의 \'기본 엔진\'에서 \'$engine\'을(를) 선택하고 경고에서 확인을 누르세요(Hearth는 스트리밍 앱만 듣습니다). 뒤로를 눌러 돌아오세요.';
+  }
+
+  @override
+  String get setupOpenSettings => '설정 열기';
+
+  @override
+  String get setupAdbFallback => '이 TV에서 해당 설정 화면을 열 수 없습니다. 대신 컴퓨터에서 다음을 한 번 실행하세요.';
+
+  @override
+  String setupProgress(int done, int total) {
+    return '$total개 중 $done개 완료';
+  }
+
+  @override
+  String get setupOptional => '선택 사항';
+
+  @override
+  String get homeButtonFixOffTitle => '홈 버튼 수정이 꺼져 있습니다';
+
+  @override
+  String get homeButtonFixOffBody => 'Hearth의 접근성 서비스가 중지되었습니다. 보통 업데이트 후에 발생합니다. 다시 켜기 전까지는 홈 버튼이 Hearth 대신 Google TV를 열 수 있고 프로필 전환도 따라가지 않습니다.';
+
+  @override
+  String get homeButtonFixStuck => 'Android에는 아직 켜짐으로 표시되지만 실행 중이 아닙니다. 접근성 설정에서 Hearth를 껐다가 다시 켜서 다시 시작하세요.';
+
+  @override
+  String get homeButtonFixRestricted => 'Hearth의 스위치가 회색으로 표시되면, 이 업데이트가 다운로드로 설치되어 Android가 차단하고 있는 것입니다. TV에 연결된 컴퓨터에서 다음을 실행한 다음 Hearth를 켜세요.';
+
+  @override
+  String get homeButtonFixDontRemind => '다시 알리지 않기';
+
+  @override
+  String get homeButtonFixOpenSettings => '접근성 설정 열기';
 }

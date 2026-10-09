@@ -1123,4 +1123,95 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get familyAppsUnnamedAdult => 'Взрослый профиль';
+
+  @override
+  String setupAccessibilityInstructions(String service) {
+    return 'На следующем экране прокрутите вниз до раздела «Службы», выберите \"$service\", затем включите «Включить» и подтвердите. Нажимайте «Назад», пока не вернётесь на главный экран.';
+  }
+
+  @override
+  String setupRestrictedWarning(String command) {
+    return 'Если Android сообщает, что настройка ограничена, выполните это один раз с компьютера:\n$command';
+  }
+
+  @override
+  String get setupDefaultLauncherTitle => 'Hearth как главный экран';
+
+  @override
+  String get setupDefaultLauncherWhy => 'Не даёт детским профилям блокировать Hearth.';
+
+  @override
+  String get setupDefaultLauncherInstructions => 'На следующем экране выберите Hearth.';
+
+  @override
+  String get setupHomeFixTitle => 'Исправление кнопки Домой';
+
+  @override
+  String get setupHomeFixWhy => 'Кнопка «Домой» открывает Hearth вместо Google TV.';
+
+  @override
+  String get setupNotificationsTitle => 'Доступ к уведомлениям';
+
+  @override
+  String get setupNotificationsWhy => 'Показывает уведомления и то, что сейчас играет.';
+
+  @override
+  String setupNotificationsInstructions(String service) {
+    return 'На следующем экране выберите \"$service\" и разрешите доступ.';
+  }
+
+  @override
+  String get setupInstallTitle => 'Установка обновлений';
+
+  @override
+  String get setupInstallWhy => 'Позволяет Hearth обновляться и устанавливать сопутствующие приложения.';
+
+  @override
+  String get setupInstallInstructions => 'На следующем экране включите Hearth.';
+
+  @override
+  String get setupPairingWhy => 'Выбирает ваш профиль в Netflix, Disney+, Apple TV, HBO Max и Paramount+.';
+
+  @override
+  String get setupVoiceTitle => 'Голос Hearth';
+
+  @override
+  String get setupVoiceWhy => 'Позволяет связыванию профилей «слышать» экран профилей Netflix. Остальные приложения сохраняют голос Google.';
+
+  @override
+  String setupVoiceInstructions(String engine) {
+    return 'На следующем экране в разделе «Предпочитаемый синтезатор» выберите \"$engine\", затем нажмите «ОК» в предупреждении (Hearth слушает только стриминговые приложения). Нажмите «Назад», чтобы вернуться.';
+  }
+
+  @override
+  String get setupOpenSettings => 'Открыть настройки';
+
+  @override
+  String get setupAdbFallback => 'Телевизор не открыл этот экран настроек. Вместо этого выполните один раз с компьютера:';
+
+  @override
+  String setupProgress(int done, int total) {
+    return 'Выполнено: $done из $total';
+  }
+
+  @override
+  String get setupOptional => 'Необязательно';
+
+  @override
+  String get homeButtonFixOffTitle => '«Исправление кнопки Домой» выключено';
+
+  @override
+  String get homeButtonFixOffBody => 'Служба специальных возможностей Hearth остановилась — обычно это происходит после обновления. Пока она снова не включена, кнопка «Домой» может открывать Google TV вместо Hearth, а смена профиля не отслеживается.';
+
+  @override
+  String get homeButtonFixStuck => 'Android всё ещё показывает её как включённую, но она не работает. Выключите и снова включите Hearth в настройках специальных возможностей, чтобы перезапустить её.';
+
+  @override
+  String get homeButtonFixRestricted => 'Если переключатель Hearth там неактивен (серый), Android блокирует его, потому что это обновление установлено из загруженного файла. Выполните это на компьютере, подключённом к телевизору, а затем включите Hearth:';
+
+  @override
+  String get homeButtonFixDontRemind => 'Не напоминать';
+
+  @override
+  String get homeButtonFixOpenSettings => 'Открыть специальные возможности';
 }

@@ -1128,4 +1128,95 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get familyAppsUnnamedAdult => 'ملف شخصي لبالغ';
+
+  @override
+  String setupAccessibilityInstructions(String service) {
+    return 'في الشاشة التالية، مرّر لأسفل إلى \"الخدمات\"، واختر \"$service\"، ثم فعّل \"تفعيل\" وأكّد. اضغط \"رجوع\" حتى تعود إلى الشاشة الرئيسية.';
+  }
+
+  @override
+  String setupRestrictedWarning(String command) {
+    return 'إذا قال Android إن الإعداد مقيّد، فشغّل هذا مرة واحدة من كمبيوتر:\n$command';
+  }
+
+  @override
+  String get setupDefaultLauncherTitle => 'Hearth كتطبيق رئيسي';
+
+  @override
+  String get setupDefaultLauncherWhy => 'يمنع ملفات الأطفال الشخصية من حظر Hearth.';
+
+  @override
+  String get setupDefaultLauncherInstructions => 'في الشاشة التالية، اختر Hearth.';
+
+  @override
+  String get setupHomeFixTitle => 'إصلاح زر الرئيسية';
+
+  @override
+  String get setupHomeFixWhy => 'يفتح زر الرئيسية Hearth بدلًا من Google TV.';
+
+  @override
+  String get setupNotificationsTitle => 'الوصول إلى الإشعارات';
+
+  @override
+  String get setupNotificationsWhy => 'يعرض الإشعارات وما يُشغَّل الآن.';
+
+  @override
+  String setupNotificationsInstructions(String service) {
+    return 'في الشاشة التالية، اختر \"$service\" واسمح به.';
+  }
+
+  @override
+  String get setupInstallTitle => 'تثبيت التحديثات';
+
+  @override
+  String get setupInstallWhy => 'يتيح لـ Hearth تحديث نفسه وتثبيت التطبيقات المرافقة.';
+
+  @override
+  String get setupInstallInstructions => 'في الشاشة التالية، فعّل Hearth.';
+
+  @override
+  String get setupPairingWhy => 'يختار ملفك الشخصي في Netflix وDisney+ وApple TV وHBO Max وParamount+.';
+
+  @override
+  String get setupVoiceTitle => 'صوت Hearth';
+
+  @override
+  String get setupVoiceWhy => 'يتيح لربط الملفات الشخصية سماع شاشة الملفات الشخصية في Netflix. تحتفظ التطبيقات الأخرى بصوت Google.';
+
+  @override
+  String setupVoiceInstructions(String engine) {
+    return 'في الشاشة التالية، ضمن \"المحرك المفضل\"، اختر \"$engine\"، ثم \"حسنًا\" في التحذير (لا يستمع Hearth إلا إلى تطبيقات البث). اضغط \"رجوع\" للعودة.';
+  }
+
+  @override
+  String get setupOpenSettings => 'فتح الإعدادات';
+
+  @override
+  String get setupAdbFallback => 'لم يفتح هذا التلفزيون شاشة الإعدادات تلك. شغّل هذا مرة واحدة من كمبيوتر بدلًا من ذلك:';
+
+  @override
+  String setupProgress(int done, int total) {
+    return 'تم $done من $total';
+  }
+
+  @override
+  String get setupOptional => 'اختياري';
+
+  @override
+  String get homeButtonFixOffTitle => 'إصلاح زر الرئيسية متوقف';
+
+  @override
+  String get homeButtonFixOffBody => 'توقفت خدمة إمكانية الوصول في Hearth، عادةً بعد تحديث. وإلى أن تعود للعمل، قد يفتح زر الرئيسية Google TV بدلًا من Hearth، ولن يتابع Hearth تبديل الملفات الشخصية.';
+
+  @override
+  String get homeButtonFixStuck => 'لا يزال Android يعرضها على أنها مفعّلة، لكنها لا تعمل. أوقف Hearth ثم شغّله مرة أخرى في إعدادات إمكانية الوصول لإعادة تشغيلها.';
+
+  @override
+  String get homeButtonFixRestricted => 'إذا كان مفتاح Hearth هناك باهتًا، فإن Android يحظره لأن هذا التحديث ثُبّت من ملف تم تنزيله. شغّل هذا من كمبيوتر متصل بالتلفزيون، ثم فعّل Hearth:';
+
+  @override
+  String get homeButtonFixDontRemind => 'لا تذكّرني';
+
+  @override
+  String get homeButtonFixOpenSettings => 'فتح إعدادات إمكانية الوصول';
 }

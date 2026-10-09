@@ -41,8 +41,9 @@ class SetupStep {
   });
 }
 
-/// Builds the checklist from the TV's current state.
-Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageName) async {
+/// Builds the checklist from the TV's current state, worded in [l]'s language. The services' names stay as Android
+/// shows them (they come from Hearth's manifest).
+Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageName, AppLocalizations l) async {
   Future<T> safe<T>(Future<T> Function() read, T fallback) async {
     try {
       return await read();
@@ -57,18 +58,15 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
   final install = await safe(channel.checkInstallPermission, false);
   final pairing = await safe(channel.getProfilePairingStatus, <dynamic, dynamic>{});
 
-  const accessibilitySteps = "scroll down to Services, select \"%s\", then turn on Enable and confirm. "
-      "Press Back until you're home again.";
   final restricted = homeFix["restricted"] == true
-      ? "If Android says the setting is restricted, run this once from a computer:\n"
-          "adb shell appops set $packageName ACCESS_RESTRICTED_SETTINGS allow"
+      ? l.setupRestrictedWarning("adb shell appops set $packageName ACCESS_RESTRICTED_SETTINGS allow")
       : null;
 
   return [
     SetupStep(
-      title: "Hearth as the home app",
-      why: "Keeps kids profiles from blocking Hearth.",
-      instructions: "On the next screen, choose Hearth.",
+      title: l.setupDefaultLauncherTitle,
+      why: l.setupDefaultLauncherWhy,
+      instructions: l.setupDefaultLauncherInstructions,
       icon: Icons.home_outlined,
       done: isDefault,
       open: () async {
@@ -77,9 +75,9 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
       },
     ),
     SetupStep(
-      title: "Home Button Fix",
-      why: "The Home button opens Hearth instead of Google TV.",
-      instructions: "On the next screen, ${accessibilitySteps.replaceFirst("%s", "Hearth Home Button Fix")}",
+      title: l.setupHomeFixTitle,
+      why: l.setupHomeFixWhy,
+      instructions: l.setupAccessibilityInstructions("Hearth Home Button Fix"),
       icon: Icons.settings_remote_outlined,
       done: homeFix["enabled"] == true,
       warning: restricted,
@@ -88,9 +86,9 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
           "$packageName/$packageName.LauncherAccessibilityService",
     ),
     SetupStep(
-      title: "Notification access",
-      why: "Shows notifications and what's playing.",
-      instructions: "On the next screen, select \"Hearth Notification Service\" and allow it.",
+      title: l.setupNotificationsTitle,
+      why: l.setupNotificationsWhy,
+      instructions: l.setupNotificationsInstructions("Hearth Notification Service"),
       icon: Icons.notifications_active_outlined,
       done: notifications,
       open: () async {
@@ -99,9 +97,9 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
       },
     ),
     SetupStep(
-      title: "Installing updates",
-      why: "Lets Hearth update itself and install companion apps.",
-      instructions: "On the next screen, turn on Hearth.",
+      title: l.setupInstallTitle,
+      why: l.setupInstallWhy,
+      instructions: l.setupInstallInstructions,
       icon: Icons.system_update_outlined,
       done: install,
       open: () async {
@@ -110,9 +108,9 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
       },
     ),
     SetupStep(
-      title: "Profile Pairing",
-      why: "Picks your profile in Netflix, Disney+, Apple TV, HBO Max and Paramount+.",
-      instructions: "On the next screen, ${accessibilitySteps.replaceFirst("%s", "Hearth Profile Pairing")}",
+      title: l.profilePairingTitle,
+      why: l.setupPairingWhy,
+      instructions: l.setupAccessibilityInstructions("Hearth Profile Pairing"),
       icon: Icons.switch_account,
       optional: true,
       done: pairing["enabled"] == true,
@@ -120,10 +118,9 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
       open: channel.requestAccessibilityPermission,
     ),
     SetupStep(
-      title: "Hearth voice",
-      why: "Lets Profile Pairing hear Netflix's profile screen. Other apps keep Google's voice.",
-      instructions:
-          "On the next screen, under Preferred engine, choose \"Hearth voice\", then OK on the warning (Hearth only listens to the streaming apps). Press Back to return.",
+      title: l.setupVoiceTitle,
+      why: l.setupVoiceWhy,
+      instructions: l.setupVoiceInstructions("Hearth voice"),
       icon: Icons.record_voice_over,
       optional: true,
       done: pairing["voiceDefault"] == true,
@@ -175,11 +172,13 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
     try {
       packageName = (await PackageInfo.fromPlatform()).packageName;
     } catch (_) {}
-    final steps = await loadSetupSteps(_channel, packageName);
+    if (!mounted) return;
+    final steps = await loadSetupSteps(_channel, packageName, AppLocalizations.of(context)!);
     if (mounted) setState(() => _steps = steps);
   }
 
   Future<void> _showCard(SetupStep step) async {
+    final l = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final go = await showDialog<bool>(
       context: context,
@@ -202,11 +201,11 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text("Not now")),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(l.notNow)),
           TextButton(
             autofocus: true,
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text("Open Settings"),
+            child: Text(l.setupOpenSettings),
           ),
         ],
       ),
@@ -216,7 +215,7 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
       await showAdbCommandDialog(
         context,
         title: step.title,
-        message: "This TV wouldn't open that Settings screen. Run this once from a computer instead:",
+        message: l.setupAdbFallback,
         command: step.adbFallback!,
       );
     }
@@ -236,15 +235,16 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final steps = _steps;
     final required = steps?.where((s) => !s.optional).toList() ?? [];
     return SettingsPage.custom(
-      title: AppLocalizations.of(context)!.setupPermissionsTitle,
+      title: l.setupPermissionsTitle,
       subtitle: steps == null
           ? null
           : Text(
-              "${required.where((s) => s.done).length} of ${required.length} done",
+              l.setupProgress(required.where((s) => s.done).length, required.length),
               style: textTheme.bodySmall?.copyWith(color: Colors.white54),
             ),
       body: steps == null
@@ -258,7 +258,7 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
                         padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
                         child: Align(
                           alignment: Alignment.centerLeft,
-                          child: Text("Optional", style: textTheme.labelMedium?.copyWith(color: Colors.white54)),
+                          child: Text(l.setupOptional, style: textTheme.labelMedium?.copyWith(color: Colors.white54)),
                         ),
                       ),
                     FocusableSettingsTile(
@@ -276,7 +276,7 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
                   _startOnBootTile(context),
                   FocusableSettingsTile(
                     leading: const Icon(Icons.people_alt_outlined),
-                    title: Text(AppLocalizations.of(context)!.familyAppsTitle, style: textTheme.bodyMedium),
+                    title: Text(l.familyAppsTitle, style: textTheme.bodyMedium),
                     trailing: const Icon(Icons.chevron_right, color: Colors.white54),
                     onPressed: () => Navigator.of(context).pushNamed(FamilyAppsPage.routeName),
                   ),

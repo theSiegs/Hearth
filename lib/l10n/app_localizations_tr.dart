@@ -1114,4 +1114,95 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get familyAppsUnnamedAdult => 'Bir yetişkin profili';
+
+  @override
+  String setupAccessibilityInstructions(String service) {
+    return 'Sonraki ekranda Hizmetler\'e kaydırın, \"$service\" öğesini seçin, ardından Etkinleştir\'i açıp onaylayın. Ana ekrana dönene kadar Geri\'ye basın.';
+  }
+
+  @override
+  String setupRestrictedWarning(String command) {
+    return 'Android ayarın kısıtlandığını söylerse bunu bir bilgisayardan bir kez çalıştırın:\n$command';
+  }
+
+  @override
+  String get setupDefaultLauncherTitle => 'Ana ekran uygulaması olarak Hearth';
+
+  @override
+  String get setupDefaultLauncherWhy => 'Çocuk profillerinin Hearth\'ü engellemesini önler.';
+
+  @override
+  String get setupDefaultLauncherInstructions => 'Sonraki ekranda Hearth\'ü seçin.';
+
+  @override
+  String get setupHomeFixTitle => 'Ana Ekran Tuşu Düzeltmesi';
+
+  @override
+  String get setupHomeFixWhy => 'Ana ekran tuşu Google TV yerine Hearth\'ü açar.';
+
+  @override
+  String get setupNotificationsTitle => 'Bildirim erişimi';
+
+  @override
+  String get setupNotificationsWhy => 'Bildirimleri ve oynatılan içeriği gösterir.';
+
+  @override
+  String setupNotificationsInstructions(String service) {
+    return 'Sonraki ekranda \"$service\" öğesini seçip izin verin.';
+  }
+
+  @override
+  String get setupInstallTitle => 'Güncellemeleri yükleme';
+
+  @override
+  String get setupInstallWhy => 'Hearth\'ün kendini güncellemesine ve yardımcı uygulamaları yüklemesine izin verir.';
+
+  @override
+  String get setupInstallInstructions => 'Sonraki ekranda Hearth\'ü açın.';
+
+  @override
+  String get setupPairingWhy => 'Netflix, Disney+, Apple TV, HBO Max ve Paramount+\'ta profilinizi seçer.';
+
+  @override
+  String get setupVoiceTitle => 'Hearth sesi';
+
+  @override
+  String get setupVoiceWhy => 'Profil eşleştirmenin Netflix\'in profil ekranını duymasını sağlar. Diğer uygulamalar Google\'ın sesini kullanmaya devam eder.';
+
+  @override
+  String setupVoiceInstructions(String engine) {
+    return 'Sonraki ekranda Tercih edilen motor altında \"$engine\" seçin, ardından uyarıda Tamam\'a basın (Hearth yalnızca yayın uygulamalarını dinler). Dönmek için Geri\'ye basın.';
+  }
+
+  @override
+  String get setupOpenSettings => 'Ayarları aç';
+
+  @override
+  String get setupAdbFallback => 'Bu TV o ayar ekranını açmadı. Bunun yerine bunu bir bilgisayardan bir kez çalıştırın:';
+
+  @override
+  String setupProgress(int done, int total) {
+    return '$total adımdan $done tamamlandı';
+  }
+
+  @override
+  String get setupOptional => 'İsteğe bağlı';
+
+  @override
+  String get homeButtonFixOffTitle => 'Ana Ekran Tuşu Düzeltmesi kapalı';
+
+  @override
+  String get homeButtonFixOffBody => 'Hearth\'ün erişilebilirlik hizmeti durdu; bu genellikle bir güncellemeden sonra olur. Yeniden açılana kadar ana ekran tuşu Hearth yerine Google TV\'yi açabilir ve profil değişiklikleri izlenmez.';
+
+  @override
+  String get homeButtonFixStuck => 'Android onu hâlâ açık gösteriyor ama çalışmıyor. Yeniden başlatmak için Erişilebilirlik ayarlarında Hearth\'ü kapatıp yeniden açın.';
+
+  @override
+  String get homeButtonFixRestricted => 'Oradaki Hearth anahtarı griyse, bu güncelleme bir indirmeden yüklendiği için Android onu engelliyor. TV\'ye bağlı bir bilgisayardan bunu çalıştırın, ardından Hearth\'ü açın:';
+
+  @override
+  String get homeButtonFixDontRemind => 'Bana hatırlatma';
+
+  @override
+  String get homeButtonFixOpenSettings => 'Erişilebilirlik ayarlarını aç';
 }

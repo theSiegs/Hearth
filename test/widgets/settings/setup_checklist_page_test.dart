@@ -1,3 +1,4 @@
+import 'package:flauncher/l10n/app_localizations_en.dart';
 import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
@@ -6,6 +7,7 @@ import '../../mocks.mocks.dart';
 
 void main() {
   late MockFLauncherChannel channel;
+  final l = AppLocalizationsEn();
 
   setUp(() {
     channel = MockFLauncherChannel();
@@ -17,7 +19,7 @@ void main() {
   });
 
   test("reports each step from the TV's state", () async {
-    final steps = await loadSetupSteps(channel, "com.example.hearth");
+    final steps = await loadSetupSteps(channel, "com.example.hearth", l);
     final done = {for (final step in steps) step.title: step.done};
     expect(done, {
       "Hearth as the home app": true,
@@ -31,7 +33,7 @@ void main() {
   });
 
   test("accessibility steps name the exact service and the adb fix when restricted", () async {
-    final steps = await loadSetupSteps(channel, "com.example.hearth");
+    final steps = await loadSetupSteps(channel, "com.example.hearth", l);
     final homeFix = steps.singleWhere((s) => s.title == "Home Button Fix");
     expect(homeFix.instructions, contains('"Hearth Home Button Fix"'));
     expect(homeFix.warning, contains("adb shell appops set com.example.hearth ACCESS_RESTRICTED_SETTINGS allow"));
@@ -39,7 +41,7 @@ void main() {
 
   test("a failing check counts as not done instead of breaking the list", () async {
     when(channel.checkInstallPermission()).thenThrow(Exception("no channel"));
-    final steps = await loadSetupSteps(channel, "com.example.hearth");
+    final steps = await loadSetupSteps(channel, "com.example.hearth", l);
     expect(steps.singleWhere((s) => s.title == "Installing updates").done, isFalse);
   });
 }
