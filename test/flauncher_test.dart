@@ -965,6 +965,7 @@ AppsService mkAppService() {
   when(appsService.initialized).thenReturn(true);
   when(appsService.getAppBanner(any)).thenAnswer((_) async => kTransparentImage);
   when(appsService.getAppIcon(any)).thenAnswer((_) async => kTransparentImage);
+  when(appsService.imageRevision(any)).thenReturn(0);
   when(appsService.pendingReorderFocusPackage).thenReturn(null);
   when(appsService.hasCustomBanner(any)).thenAnswer((_) async => false);
   when(appsService.isAppInFavorites(any)).thenReturn(false);

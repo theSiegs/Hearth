@@ -110,6 +110,7 @@ void main() {
         notified = true;
       });
 
+      final revision = appsService.imageRevision('com.example/tv app');
       await appsService.setCustomAppBannerFromFile('com.example/tv app', picked.path);
 
       final saved = File('${documents.path}/custom_banner_com.example_tv_app.png');
@@ -119,6 +120,9 @@ void main() {
       expect(prefs.getString('custom_banner_com.example/tv app'), saved.path);
       expect(await appsService.hasCustomBanner('com.example/tv app'), isTrue);
       expect(notified, isTrue);
+      // Only this app's card reloads its image
+      expect(appsService.imageRevision('com.example/tv app'), revision + 1);
+      expect(appsService.imageRevision('other.app'), 0);
     });
   });
 
