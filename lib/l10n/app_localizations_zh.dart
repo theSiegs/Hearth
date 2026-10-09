@@ -2002,10 +2002,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profilePinSaveFailed => '无法保存 PIN。';
 
   @override
-  String get profileLockNow => '锁定我的个人资料';
-
-  @override
-  String get profileLockNowSubtitle => '要回来，Google TV 会要求输入个人资料 PIN。按住个人资料按钮也可以。';
+  String get profileLockNow => '锁定个人资料';
 
   @override
   String get profileLockOnSleep => '电视休眠时锁定';

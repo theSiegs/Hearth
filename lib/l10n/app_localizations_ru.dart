@@ -2026,10 +2026,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get profilePinSaveFailed => 'Не удалось сохранить PIN-код.';
 
   @override
-  String get profileLockNow => 'Заблокировать мой профиль';
-
-  @override
-  String get profileLockNowSubtitle => 'Чтобы вернуться, Google TV попросит PIN-код профиля. Удержание кнопки профиля делает то же самое.';
+  String get profileLockNow => 'Заблокировать профиль';
 
   @override
   String get profileLockOnSleep => 'Блокировать, когда телевизор засыпает';

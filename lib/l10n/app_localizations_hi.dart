@@ -2010,10 +2010,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get profilePinSaveFailed => 'PIN सहेजा नहीं जा सका।';
 
   @override
-  String get profileLockNow => 'मेरी प्रोफ़ाइल लॉक करें';
-
-  @override
-  String get profileLockNowSubtitle => 'वापस आने के लिए Google TV आपकी प्रोफ़ाइल का PIN माँगता है। प्रोफ़ाइल बटन दबाए रखने से भी यही होता है।';
+  String get profileLockNow => 'प्रोफ़ाइल लॉक करें';
 
   @override
   String get profileLockOnSleep => 'टीवी के स्लीप होने पर लॉक करें';

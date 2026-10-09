@@ -2002,10 +2002,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get profilePinSaveFailed => 'PIN kaydedilemedi.';
 
   @override
-  String get profileLockNow => 'Profilimi kilitle';
-
-  @override
-  String get profileLockNowSubtitle => 'Geri dönmek için Google TV profil PIN\'inizi sorar. Profil düğmesini basılı tutmak da aynısını yapar.';
+  String get profileLockNow => 'Profili kilitle';
 
   @override
   String get profileLockOnSleep => 'TV uykuya geçtiğinde kilitle';

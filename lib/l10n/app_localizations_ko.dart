@@ -2002,10 +2002,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get profilePinSaveFailed => 'PIN을 저장하지 못했습니다.';
 
   @override
-  String get profileLockNow => '내 프로필 잠그기';
-
-  @override
-  String get profileLockNowSubtitle => '돌아오려면 Google TV가 프로필 PIN을 묻습니다. 프로필 버튼을 길게 눌러도 됩니다.';
+  String get profileLockNow => '프로필 잠금';
 
   @override
   String get profileLockOnSleep => 'TV가 절전 모드가 되면 잠그기';

@@ -3536,14 +3536,8 @@ abstract class AppLocalizations {
   /// Settings > Profiles: locking a grown-up profile with Google TV's profile lock
   ///
   /// In en, this message translates to:
-  /// **'Lock my profile'**
+  /// **'Lock Profile'**
   String get profileLockNow;
-
-  /// Settings > Profiles: locking a grown-up profile with Google TV's profile lock
-  ///
-  /// In en, this message translates to:
-  /// **'Google TV asks for your profile PIN to come back. Holding the profile button does it too.'**
-  String get profileLockNowSubtitle;
 
   /// Settings > Profiles: locking a grown-up profile with Google TV's profile lock
   ///

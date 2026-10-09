@@ -2012,10 +2012,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get profilePinSaveFailed => 'No se pudo guardar el PIN.';
 
   @override
-  String get profileLockNow => 'Bloquear mi perfil';
-
-  @override
-  String get profileLockNowSubtitle => 'Google TV pide el PIN de tu perfil para volver. Mantener pulsado el botón de perfil también lo hace.';
+  String get profileLockNow => 'Bloquear perfil';
 
   @override
   String get profileLockOnSleep => 'Bloquear cuando la TV se suspende';

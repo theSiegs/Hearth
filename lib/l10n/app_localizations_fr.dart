@@ -2012,10 +2012,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profilePinSaveFailed => 'Impossible d’enregistrer le code.';
 
   @override
-  String get profileLockNow => 'Verrouiller mon profil';
-
-  @override
-  String get profileLockNowSubtitle => 'Google TV demande le code de votre profil pour y revenir. Maintenir le bouton de profil fait de même.';
+  String get profileLockNow => 'Verrouiller le profil';
 
   @override
   String get profileLockOnSleep => 'Verrouiller quand le téléviseur se met en veille';
