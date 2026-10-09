@@ -179,5 +179,12 @@
     "haTvStatusTitle": "テレビの状態",
     "continueWatchingAppsTitle": "「続きを見る」のアプリ",
     "cardSizeTitle": "カードのサイズ",
-    "maxItemsTitle": "最大アイテム数"
+    "maxItemsTitle": "最大アイテム数",
+    "ok": "OK",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "tryAgain": "再試行",
+    "notNow": "後で",
+    "done": "完了",
+    "remove": "削除"
 }

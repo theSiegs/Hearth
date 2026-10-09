@@ -453,4 +453,25 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get maxItemsTitle => 'Nombre maximal d\'éléments';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get cancel => 'Annuler';
+
+  @override
+  String get close => 'Fermer';
+
+  @override
+  String get tryAgain => 'Réessayer';
+
+  @override
+  String get notNow => 'Pas maintenant';
+
+  @override
+  String get done => 'Terminé';
+
+  @override
+  String get remove => 'Retirer';
 }

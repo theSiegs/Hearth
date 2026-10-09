@@ -453,4 +453,25 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get maxItemsTitle => 'Maximale Anzahl';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get cancel => 'Abbrechen';
+
+  @override
+  String get close => 'Schließen';
+
+  @override
+  String get tryAgain => 'Erneut versuchen';
+
+  @override
+  String get notNow => 'Nicht jetzt';
+
+  @override
+  String get done => 'Fertig';
+
+  @override
+  String get remove => 'Entfernen';
 }

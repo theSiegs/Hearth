@@ -453,4 +453,25 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get maxItemsTitle => 'Numero massimo di elementi';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get cancel => 'Annulla';
+
+  @override
+  String get close => 'Chiudi';
+
+  @override
+  String get tryAgain => 'Riprova';
+
+  @override
+  String get notNow => 'Non ora';
+
+  @override
+  String get done => 'Fatto';
+
+  @override
+  String get remove => 'Rimuovi';
 }

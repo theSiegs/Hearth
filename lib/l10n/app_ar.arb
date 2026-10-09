@@ -179,5 +179,12 @@
     "haTvStatusTitle": "حالة التلفزيون",
     "continueWatchingAppsTitle": "تطبيقات متابعة المشاهدة",
     "cardSizeTitle": "حجم البطاقة",
-    "maxItemsTitle": "الحد الأقصى للعناصر"
+    "maxItemsTitle": "الحد الأقصى للعناصر",
+    "ok": "حسنًا",
+    "cancel": "إلغاء",
+    "close": "إغلاق",
+    "tryAgain": "حاول مرة أخرى",
+    "notNow": "ليس الآن",
+    "done": "تم",
+    "remove": "إزالة"
 }

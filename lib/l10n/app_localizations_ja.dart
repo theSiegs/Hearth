@@ -453,4 +453,25 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get maxItemsTitle => '最大アイテム数';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get cancel => 'キャンセル';
+
+  @override
+  String get close => '閉じる';
+
+  @override
+  String get tryAgain => '再試行';
+
+  @override
+  String get notNow => '後で';
+
+  @override
+  String get done => '完了';
+
+  @override
+  String get remove => '削除';
 }

@@ -453,4 +453,25 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get maxItemsTitle => 'الحد الأقصى للعناصر';
+
+  @override
+  String get ok => 'حسنًا';
+
+  @override
+  String get cancel => 'إلغاء';
+
+  @override
+  String get close => 'إغلاق';
+
+  @override
+  String get tryAgain => 'حاول مرة أخرى';
+
+  @override
+  String get notNow => 'ليس الآن';
+
+  @override
+  String get done => 'تم';
+
+  @override
+  String get remove => 'إزالة';
 }

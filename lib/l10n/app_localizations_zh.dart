@@ -453,4 +453,25 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get maxItemsTitle => '最多项目数';
+
+  @override
+  String get ok => '确定';
+
+  @override
+  String get cancel => '取消';
+
+  @override
+  String get close => '关闭';
+
+  @override
+  String get tryAgain => '重试';
+
+  @override
+  String get notNow => '以后再说';
+
+  @override
+  String get done => '完成';
+
+  @override
+  String get remove => '移除';
 }

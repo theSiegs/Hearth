@@ -179,5 +179,12 @@
     "haTvStatusTitle": "电视状态",
     "continueWatchingAppsTitle": "继续观看应用",
     "cardSizeTitle": "卡片大小",
-    "maxItemsTitle": "最多项目数"
+    "maxItemsTitle": "最多项目数",
+    "ok": "确定",
+    "cancel": "取消",
+    "close": "关闭",
+    "tryAgain": "重试",
+    "notNow": "以后再说",
+    "done": "完成",
+    "remove": "移除"
 }

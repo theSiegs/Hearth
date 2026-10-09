@@ -453,4 +453,25 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get maxItemsTitle => 'En fazla öğe';
+
+  @override
+  String get ok => 'Tamam';
+
+  @override
+  String get cancel => 'İptal';
+
+  @override
+  String get close => 'Kapat';
+
+  @override
+  String get tryAgain => 'Tekrar dene';
+
+  @override
+  String get notNow => 'Şimdi değil';
+
+  @override
+  String get done => 'Bitti';
+
+  @override
+  String get remove => 'Kaldır';
 }
