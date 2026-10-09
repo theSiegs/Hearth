@@ -606,5 +606,6 @@
     "profileLockOnSleep": "TV가 절전 모드가 되면 잠그기",
     "profileLockEveryTime": "매번",
     "profileLockAfterMinutes": "{minutes}분 절전 후",
-    "profileLockNeedsGoogleLock": "Google TV 자체의 프로필 잠금을 사용합니다. Google TV 설정 → 계정 및 로그인 → 내 계정 → 프로필 잠금에서 켜세요."
+    "profileLockNeedsGoogleLock": "Google TV 자체의 프로필 잠금을 사용합니다. Google TV 설정 → 계정 및 로그인 → 내 계정 → 프로필 잠금에서 켜세요.",
+    "aboutWallpaperPhoto": "배경화면 사진"
 }

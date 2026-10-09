@@ -606,5 +606,6 @@
     "profileLockOnSleep": "Блокувати, коли телевізор засинає",
     "profileLockEveryTime": "Щоразу",
     "profileLockAfterMinutes": "Через {minutes} хв сну",
-    "profileLockNeedsGoogleLock": "Використовує блокування профілю Google TV: увімкніть його для свого облікового запису в Налаштуваннях Google TV → Облікові записи та вхід → ваш обліковий запис → Блокування профілю."
+    "profileLockNeedsGoogleLock": "Використовує блокування профілю Google TV: увімкніть його для свого облікового запису в Налаштуваннях Google TV → Облікові записи та вхід → ваш обліковий запис → Блокування профілю.",
+    "aboutWallpaperPhoto": "ФОТО НА ТЛІ"
 }

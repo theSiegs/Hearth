@@ -2024,4 +2024,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get profileLockNeedsGoogleLock => 'Usa o bloqueio de perfil do próprio Google TV: ative-o para sua conta em Configurações do Google TV → Contas e login → sua conta → Bloqueio de perfil.';
+
+  @override
+  String get aboutWallpaperPhoto => 'FOTO DO PLANO DE FUNDO';
 }

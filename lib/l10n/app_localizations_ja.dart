@@ -2014,4 +2014,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get profileLockNeedsGoogleLock => 'Google TV自体のプロフィールロックを使います。Google TVの設定 → アカウントとログイン → ご自分のアカウント → プロフィールロック でオンにしてください。';
+
+  @override
+  String get aboutWallpaperPhoto => '壁紙の写真';
 }

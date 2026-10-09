@@ -606,5 +606,6 @@
     "profileLockOnSleep": "Blocca quando la TV va in standby",
     "profileLockEveryTime": "Ogni volta",
     "profileLockAfterMinutes": "Dopo {minutes} min di standby",
-    "profileLockNeedsGoogleLock": "Usa il blocco del profilo di Google TV: attivalo per il tuo account in Impostazioni di Google TV → Account e accesso → il tuo account → Blocco profilo."
+    "profileLockNeedsGoogleLock": "Usa il blocco del profilo di Google TV: attivalo per il tuo account in Impostazioni di Google TV → Account e accesso → il tuo account → Blocco profilo.",
+    "aboutWallpaperPhoto": "FOTO DI SFONDO"
 }

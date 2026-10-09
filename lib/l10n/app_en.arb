@@ -2553,5 +2553,9 @@
     "profileLockNeedsGoogleLock": "Uses Google TV's own profile lock: turn it on for your account in Google TV Settings → Accounts & Sign In → your account → Profile lock.",
     "@profileLockNeedsGoogleLock": {
         "description": "Settings > Profiles: locking a grown-up profile with Google TV's profile lock"
+    },
+    "aboutWallpaperPhoto": "WALLPAPER PHOTO",
+    "@aboutWallpaperPhoto": {
+        "description": "About: heading over the Bing photo of the day's title and credit (shown only while it is the wallpaper)"
     }
 }

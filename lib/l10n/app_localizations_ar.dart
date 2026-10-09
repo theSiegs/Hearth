@@ -2057,4 +2057,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get profileLockNeedsGoogleLock => 'يستخدم قفل الملف الشخصي في Google TV: فعّله لحسابك من إعدادات Google TV ← الحسابات وتسجيل الدخول ← حسابك ← قفل الملف الشخصي.';
+
+  @override
+  String get aboutWallpaperPhoto => 'صورة الخلفية';
 }

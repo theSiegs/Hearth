@@ -2014,4 +2014,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get profileLockNeedsGoogleLock => 'Google TV\'nin kendi profil kilidini kullanır: Google TV Ayarları → Hesaplar ve Oturum Açma → hesabınız → Profil kilidi\'nden hesabınız için açın.';
+
+  @override
+  String get aboutWallpaperPhoto => 'DUVAR KAĞIDI FOTOĞRAFI';
 }

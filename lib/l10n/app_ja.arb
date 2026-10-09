@@ -606,5 +606,6 @@
     "profileLockOnSleep": "テレビがスリープしたらロック",
     "profileLockEveryTime": "毎回",
     "profileLockAfterMinutes": "{minutes}分以上スリープした後",
-    "profileLockNeedsGoogleLock": "Google TV自体のプロフィールロックを使います。Google TVの設定 → アカウントとログイン → ご自分のアカウント → プロフィールロック でオンにしてください。"
+    "profileLockNeedsGoogleLock": "Google TV自体のプロフィールロックを使います。Google TVの設定 → アカウントとログイン → ご自分のアカウント → プロフィールロック でオンにしてください。",
+    "aboutWallpaperPhoto": "壁紙の写真"
 }
