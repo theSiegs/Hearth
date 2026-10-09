@@ -343,9 +343,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get blockedNotificationApps => 'Applications bloquées';
 
   @override
-  String get blockAppNotifications => 'Bloquer les notifications';
-
-  @override
   String get unblockAppNotifications => 'Débloquer les notifications';
 
   @override
@@ -364,9 +361,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get showWeatherWarnings => 'Afficher les alertes météo et pluie';
 
   @override
-  String get temperatureUnit => 'Unité de température';
-
-  @override
   String get celsius => 'Celsius (°C)';
 
   @override
@@ -380,9 +374,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get dismiss => 'Ignorer';
-
-  @override
-  String get openApp => 'Ouvrir';
 
   @override
   String get noBlockedAppsDesc => 'Toutes les applications sont actuellement autorisées à afficher des notifications';
@@ -1471,39 +1462,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get wallpaperBingError => 'Impossible de joindre Bing. Vérifiez votre connexion réseau.';
 
   @override
-  String get gradientPitchBlack => 'Noir absolu';
-
-  @override
-  String get gradientGreatWhale => 'Grande baleine';
-
-  @override
-  String get gradientViciousStance => 'Posture féroce';
-
-  @override
-  String get gradientTeenNotebook => 'Cahier d\'ado';
-
-  @override
-  String get gradientOldHat => 'Vieux chapeau';
-
-  @override
-  String get gradientBurningSpring => 'Printemps brûlant';
-
-  @override
-  String get gradientDesertHump => 'Dune du désert';
-
-  @override
-  String get gradientFarawayRiver => 'Rivière lointaine';
-
-  @override
-  String get gradientSaintPetersburg => 'Saint-Pétersbourg';
-
-  @override
-  String get gradientAfricanField => 'Champ africain';
-
-  @override
-  String get gradientGrassShampoo => 'Shampooing d\'herbe';
-
-  @override
   String statusBarTemperatureUnitValue(String unit) {
     return 'Unité de température : $unit';
   }
@@ -1969,9 +1927,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get updatesError => 'Erreur';
-
-  @override
-  String get updatesHearthTubeDescription => 'YouTube pour Hearth ; suit votre profil Hearth';
 
   @override
   String updatesDescriptionWithVersion(String description, String version) {

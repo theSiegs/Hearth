@@ -239,7 +239,7 @@ class _UpdatesPageState extends State<UpdatesPage> with WidgetsBindingObserver {
       _State.installing => (localizations.updatesInstalling, Colors.white54, null),
       _State.error => (_errors[app.packageName] ?? localizations.updatesError, Colors.redAccent, () => _check(app)),
     };
-    final description = _description(localizations, app);
+    final description = app.localizedDescription(localizations);
     return FocusableSettingsTile(
       leading: const Icon(Icons.extension_outlined),
       title: Column(
@@ -258,10 +258,4 @@ class _UpdatesPageState extends State<UpdatesPage> with WidgetsBindingObserver {
       onPressed: action,
     );
   }
-
-  /// A companion app's description in the current language, by its package; one without a translation keeps its own.
-  String _description(AppLocalizations localizations, CompanionApp app) => switch (app.packageName) {
-        "com.thesiegs.hearthtube" => localizations.updatesHearthTubeDescription,
-        _ => app.description,
-      };
 }

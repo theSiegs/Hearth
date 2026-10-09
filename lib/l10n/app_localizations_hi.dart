@@ -343,9 +343,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get blockedNotificationApps => 'अवरुद्ध ऐप्स';
 
   @override
-  String get blockAppNotifications => 'सूचनाएं अवरुद्ध करें';
-
-  @override
   String get unblockAppNotifications => 'सूचनाएं अनब्लॉक करें';
 
   @override
@@ -364,9 +361,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get showWeatherWarnings => 'मौसम और बारिश की चेतावनी दिखाएं';
 
   @override
-  String get temperatureUnit => 'तापमान इकाई';
-
-  @override
   String get celsius => 'सेल्सियस (°C)';
 
   @override
@@ -380,9 +374,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get dismiss => 'हटाएं';
-
-  @override
-  String get openApp => 'खोलें';
 
   @override
   String get noBlockedAppsDesc => 'सभी ऐप्स को वर्तमान में सूचनाएं दिखाने की अनुमति है';
@@ -1471,39 +1462,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get wallpaperBingError => 'Bing तक नहीं पहुंच सके। अपना नेटवर्क कनेक्शन जांचें।';
 
   @override
-  String get gradientPitchBlack => 'गहरा काला';
-
-  @override
-  String get gradientGreatWhale => 'विशाल व्हेल';
-
-  @override
-  String get gradientViciousStance => 'उग्र मुद्रा';
-
-  @override
-  String get gradientTeenNotebook => 'किशोर नोटबुक';
-
-  @override
-  String get gradientOldHat => 'पुरानी टोपी';
-
-  @override
-  String get gradientBurningSpring => 'जलता बसंत';
-
-  @override
-  String get gradientDesertHump => 'रेगिस्तानी टीला';
-
-  @override
-  String get gradientFarawayRiver => 'दूर की नदी';
-
-  @override
-  String get gradientSaintPetersburg => 'सेंट पीटर्सबर्ग';
-
-  @override
-  String get gradientAfricanField => 'अफ़्रीकी मैदान';
-
-  @override
-  String get gradientGrassShampoo => 'घास शैम्पू';
-
-  @override
   String statusBarTemperatureUnitValue(String unit) {
     return 'तापमान इकाई: $unit';
   }
@@ -1967,9 +1925,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get updatesError => 'त्रुटि';
-
-  @override
-  String get updatesHearthTubeDescription => 'Hearth के लिए YouTube; आपकी Hearth प्रोफ़ाइल के साथ चलता है';
 
   @override
   String updatesDescriptionWithVersion(String description, String version) {

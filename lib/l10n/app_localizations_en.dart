@@ -343,9 +343,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get blockedNotificationApps => 'Blocked Apps';
 
   @override
-  String get blockAppNotifications => 'Block Notifications';
-
-  @override
   String get unblockAppNotifications => 'Unblock Notifications';
 
   @override
@@ -364,9 +361,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get showWeatherWarnings => 'Show Weather & Rain Warnings';
 
   @override
-  String get temperatureUnit => 'Temperature Unit';
-
-  @override
   String get celsius => 'Celsius (°C)';
 
   @override
@@ -380,9 +374,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dismiss => 'Dismiss';
-
-  @override
-  String get openApp => 'Open';
 
   @override
   String get noBlockedAppsDesc => 'All applications are currently allowed to show notifications';
@@ -1471,39 +1462,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wallpaperBingError => 'Couldn\'t reach Bing. Check your network connection.';
 
   @override
-  String get gradientPitchBlack => 'Pitch Black';
-
-  @override
-  String get gradientGreatWhale => 'Great Whale';
-
-  @override
-  String get gradientViciousStance => 'Vicious Stance';
-
-  @override
-  String get gradientTeenNotebook => 'Teen Notebook';
-
-  @override
-  String get gradientOldHat => 'Old Hat';
-
-  @override
-  String get gradientBurningSpring => 'Burning Spring';
-
-  @override
-  String get gradientDesertHump => 'Desert Hump';
-
-  @override
-  String get gradientFarawayRiver => 'Faraway River';
-
-  @override
-  String get gradientSaintPetersburg => 'Saint Petersburg';
-
-  @override
-  String get gradientAfricanField => 'African Field';
-
-  @override
-  String get gradientGrassShampoo => 'Grass Shampoo';
-
-  @override
   String statusBarTemperatureUnitValue(String unit) {
     return 'Temperature Unit: $unit';
   }
@@ -1969,9 +1927,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updatesError => 'Error';
-
-  @override
-  String get updatesHearthTubeDescription => 'YouTube for Hearth; follows your Hearth profile';
 
   @override
   String updatesDescriptionWithVersion(String description, String version) {

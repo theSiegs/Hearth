@@ -343,9 +343,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get blockedNotificationApps => '차단된 앱';
 
   @override
-  String get blockAppNotifications => '알림 차단';
-
-  @override
   String get unblockAppNotifications => '알림 차단 해제';
 
   @override
@@ -364,9 +361,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get showWeatherWarnings => '날씨 및 강우 경보 표시';
 
   @override
-  String get temperatureUnit => '온도 단위';
-
-  @override
   String get celsius => '섭씨 (°C)';
 
   @override
@@ -380,9 +374,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dismiss => '닫기';
-
-  @override
-  String get openApp => '열기';
 
   @override
   String get noBlockedAppsDesc => '현재 모든 애플리케이션의 알림 표시가 허용되어 있습니다';
@@ -1467,39 +1458,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get wallpaperBingError => 'Bing에 연결할 수 없습니다. 네트워크 연결을 확인하세요.';
 
   @override
-  String get gradientPitchBlack => '칠흑';
-
-  @override
-  String get gradientGreatWhale => '그레이트 웨일';
-
-  @override
-  String get gradientViciousStance => '비셔스 스탠스';
-
-  @override
-  String get gradientTeenNotebook => '틴 노트북';
-
-  @override
-  String get gradientOldHat => '올드 햇';
-
-  @override
-  String get gradientBurningSpring => '버닝 스프링';
-
-  @override
-  String get gradientDesertHump => '데저트 험프';
-
-  @override
-  String get gradientFarawayRiver => '머나먼 강';
-
-  @override
-  String get gradientSaintPetersburg => '상트페테르부르크';
-
-  @override
-  String get gradientAfricanField => '아프리카 들판';
-
-  @override
-  String get gradientGrassShampoo => '그래스 샴푸';
-
-  @override
   String statusBarTemperatureUnitValue(String unit) {
     return '온도 단위: $unit';
   }
@@ -1959,9 +1917,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get updatesError => '오류';
-
-  @override
-  String get updatesHearthTubeDescription => 'Hearth용 YouTube, Hearth 프로필을 따라갑니다';
 
   @override
   String updatesDescriptionWithVersion(String description, String version) {

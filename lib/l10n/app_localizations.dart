@@ -767,12 +767,6 @@ abstract class AppLocalizations {
   /// **'Blocked Apps'**
   String get blockedNotificationApps;
 
-  /// No description provided for @blockAppNotifications.
-  ///
-  /// In en, this message translates to:
-  /// **'Block Notifications'**
-  String get blockAppNotifications;
-
   /// No description provided for @unblockAppNotifications.
   ///
   /// In en, this message translates to:
@@ -809,12 +803,6 @@ abstract class AppLocalizations {
   /// **'Show Weather & Rain Warnings'**
   String get showWeatherWarnings;
 
-  /// No description provided for @temperatureUnit.
-  ///
-  /// In en, this message translates to:
-  /// **'Temperature Unit'**
-  String get temperatureUnit;
-
   /// No description provided for @celsius.
   ///
   /// In en, this message translates to:
@@ -844,12 +832,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dismiss'**
   String get dismiss;
-
-  /// No description provided for @openApp.
-  ///
-  /// In en, this message translates to:
-  /// **'Open'**
-  String get openApp;
 
   /// No description provided for @noBlockedAppsDesc.
   ///
@@ -2663,72 +2645,6 @@ abstract class AppLocalizations {
   /// **'Couldn\'t reach Bing. Check your network connection.'**
   String get wallpaperBingError;
 
-  /// Name of a wallpaper gradient on the Gradient page
-  ///
-  /// In en, this message translates to:
-  /// **'Pitch Black'**
-  String get gradientPitchBlack;
-
-  /// Name of a wallpaper gradient on the Gradient page
-  ///
-  /// In en, this message translates to:
-  /// **'Great Whale'**
-  String get gradientGreatWhale;
-
-  /// Name of a wallpaper gradient on the Gradient page
-  ///
-  /// In en, this message translates to:
-  /// **'Vicious Stance'**
-  String get gradientViciousStance;
-
-  /// Name of a wallpaper gradient on the Gradient page
-  ///
-  /// In en, this message translates to:
-  /// **'Teen Notebook'**
-  String get gradientTeenNotebook;
-
-  /// Name of a wallpaper gradient on the Gradient page
-  ///
-  /// In en, this message translates to:
-  /// **'Old Hat'**
-  String get gradientOldHat;
-
-  /// Name of a wallpaper gradient on the Gradient page
-  ///
-  /// In en, this message translates to:
-  /// **'Burning Spring'**
-  String get gradientBurningSpring;
-
-  /// Name of a wallpaper gradient on the Gradient page
-  ///
-  /// In en, this message translates to:
-  /// **'Desert Hump'**
-  String get gradientDesertHump;
-
-  /// Name of a wallpaper gradient on the Gradient page
-  ///
-  /// In en, this message translates to:
-  /// **'Faraway River'**
-  String get gradientFarawayRiver;
-
-  /// Name of a wallpaper gradient on the Gradient page (named after the city)
-  ///
-  /// In en, this message translates to:
-  /// **'Saint Petersburg'**
-  String get gradientSaintPetersburg;
-
-  /// Name of a wallpaper gradient on the Gradient page
-  ///
-  /// In en, this message translates to:
-  /// **'African Field'**
-  String get gradientAfricanField;
-
-  /// Name of a wallpaper gradient on the Gradient page
-  ///
-  /// In en, this message translates to:
-  /// **'Grass Shampoo'**
-  String get gradientGrassShampoo;
-
   /// Row on the Weather settings page; pressing it switches the unit. {unit} is Celsius (°C) or Fahrenheit (°F)
   ///
   /// In en, this message translates to:
@@ -3478,12 +3394,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Error'**
   String get updatesError;
-
-  /// Line under HearthTube on the Updates page
-  ///
-  /// In en, this message translates to:
-  /// **'YouTube for Hearth; follows your Hearth profile'**
-  String get updatesHearthTubeDescription;
 
   /// Line under a companion app on the Updates page when it's installed: its description and installed version
   ///

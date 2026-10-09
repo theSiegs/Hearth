@@ -343,9 +343,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get blockedNotificationApps => 'App bloccate';
 
   @override
-  String get blockAppNotifications => 'Blocca notifiche';
-
-  @override
   String get unblockAppNotifications => 'Sblocca notifiche';
 
   @override
@@ -364,9 +361,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get showWeatherWarnings => 'Mostra avvisi meteo e pioggia';
 
   @override
-  String get temperatureUnit => 'Unità di temperatura';
-
-  @override
   String get celsius => 'Celsius (°C)';
 
   @override
@@ -380,9 +374,6 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get dismiss => 'Ignora';
-
-  @override
-  String get openApp => 'Apri';
 
   @override
   String get noBlockedAppsDesc => 'Tutte le applicazioni possono attualmente mostrare notifiche';
@@ -1471,39 +1462,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get wallpaperBingError => 'Impossibile raggiungere Bing. Controlla la connessione di rete.';
 
   @override
-  String get gradientPitchBlack => 'Nero pece';
-
-  @override
-  String get gradientGreatWhale => 'Grande balena';
-
-  @override
-  String get gradientViciousStance => 'Posa feroce';
-
-  @override
-  String get gradientTeenNotebook => 'Quaderno adolescente';
-
-  @override
-  String get gradientOldHat => 'Vecchio cappello';
-
-  @override
-  String get gradientBurningSpring => 'Primavera ardente';
-
-  @override
-  String get gradientDesertHump => 'Duna del deserto';
-
-  @override
-  String get gradientFarawayRiver => 'Fiume lontano';
-
-  @override
-  String get gradientSaintPetersburg => 'San Pietroburgo';
-
-  @override
-  String get gradientAfricanField => 'Campo africano';
-
-  @override
-  String get gradientGrassShampoo => 'Shampoo d\'erba';
-
-  @override
   String statusBarTemperatureUnitValue(String unit) {
     return 'Unità di temperatura: $unit';
   }
@@ -1969,9 +1927,6 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get updatesError => 'Errore';
-
-  @override
-  String get updatesHearthTubeDescription => 'YouTube per Hearth; segue il tuo profilo Hearth';
 
   @override
   String updatesDescriptionWithVersion(String description, String version) {
