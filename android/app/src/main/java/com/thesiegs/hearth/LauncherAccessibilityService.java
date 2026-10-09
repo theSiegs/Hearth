@@ -98,6 +98,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private boolean mGoogleTvScreenInFront = false;
     private long mPendingBounceAt = 0;
     private long mGoogleSetupUntil = 0;
+    /** The setup hold is for a just-added profile: it ends as soon as that profile's user starts. */
+    private boolean mNewProfileHold = false;
     /**
      * When Google TV's profile lock (its PIN screen for the current profile) last came up. Cancelling it opens Google
      * TV's home and, a moment later, its profile chooser over it: Hearth taking over in between would land back in
@@ -407,6 +409,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mCandidateSerial = ProfileUsers.UNKNOWN;
         long previous = mActiveSerial;
         mActiveSerial = serial;
+        if (mNewProfileHold && previous != ProfileUsers.UNKNOWN) {
+            // The just-added profile is running: Hearth takes over its home again (unless a setup screen is up)
+            mNewProfileHold = false;
+            mGoogleSetupUntil = 0;
+            mHandler.removeCallbacks(mKidsHomeTakeOver);
+            mHandler.postDelayed(mKidsHomeTakeOver, KIDS_HOME_GRACE_MS);
+        }
         // A new profile (or Hearth starting): not ready until Flutter says its home is complete
         String key = ProfileUsers.key(serial);
         SharedPreferences prefs = getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE);
@@ -772,7 +781,16 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         if (GOOGLE_TV_HOME_ACTIVITY.equals(className)) {
             // A new profile's home: the last one's screen time no longer applies (its own comes up next)
-            if (commitPendingProfile()) clearScreenTimeLock();
+            if (commitPendingProfile()) {
+                clearScreenTimeLock();
+                // A profile no profile user has run as yet (just added): Google TV sets it up from its own home in
+                // this user before it starts the new one, and gives up if Hearth covers that home
+                if (mLastPick != null && ProfileUsers.serialOf(this, mLastPick) == ProfileUsers.UNKNOWN) {
+                    mGoogleSetupUntil = SystemClock.elapsedRealtime() + GOOGLE_SETUP_HOLD_MS;
+                    mNewProfileHold = true;
+                    Log.i(TAG, "New profile " + mLastPick + ": Google TV sets it up before Hearth takes over");
+                }
+            }
             // Google TV only opens its home once a switch is done: take the new profile user now, before
             // Hearth takes over, so Hearth never comes up showing the last profile
             checkProfileUser("Google TV home", true);
