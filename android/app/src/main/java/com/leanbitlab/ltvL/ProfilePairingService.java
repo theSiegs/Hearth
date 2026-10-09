@@ -203,11 +203,73 @@ public class ProfilePairingService extends AccessibilityService {
         super.onServiceConnected();
         sInstance = this;
         setMode(false, false);
+        getContentResolver().registerContentObserver(Settings.Global.getUriFor(RESEARCH_SETTING), false,
+                mResearchObserver);
+        applyResearch();
+    }
+
+    // ---- Research mode, for writing PIN recipes (adb only) ----
+    // `adb shell settings put global hearth_pin_research <package>` makes the service listen to that app, in
+    // screen-reader mode where the app needs it, and log what it announces and focuses (tag HearthResearch), so a
+    // person driving the remote by adb can see where the focus is. `settings delete global hearth_pin_research` ends
+    // it. Off unless set; it logs keypad labels, so it's for test profiles and throwaway PINs only.
+    private static final String RESEARCH_SETTING = "hearth_pin_research";
+    private static final String RESEARCH_TAG = "HearthResearch";
+    private String mResearch;
+    private final android.database.ContentObserver mResearchObserver =
+            new android.database.ContentObserver(new Handler(Looper.getMainLooper())) {
+                @Override
+                public void onChange(boolean selfChange) {
+                    applyResearch();
+                }
+            };
+
+    private void applyResearch() {
+        String pkg = Settings.Global.getString(getContentResolver(), RESEARCH_SETTING);
+        if (pkg != null && pkg.isEmpty()) pkg = null;
+        mResearch = pkg;
+        Log.i(RESEARCH_TAG, pkg == null ? "off" : "listening to " + pkg);
+        if (pkg != null) {
+            // Screen-reader mode for every app here: several (Netflix, Hulu) describe their screens only then
+            setMode(true, true);
+            setListeningTo(pkg);
+        } else {
+            mHandler.post(mGoIdle);
+        }
+    }
+
+    /**
+     * Keypad keys and typed digits never reach the log, even in research mode: a person may type a real PIN while it
+     * runs. Every digit, figure or English word, becomes "#" (so "Enter a 4 digit code" reads "Enter a # digit
+     * code"; the shape stays).
+     */
+    private static String redactDigits(String text) {
+        if (text == null) return null;
+        return text.replaceAll("[0-9\u0660-\u0669\u06F0-\u06F9\u0966-\u096F\uFF10-\uFF19]", "#")
+                .replaceAll("(?i)\\b(zero|one|two|three|four|five|six|seven|eight|nine)\\b", "#");
+    }
+
+    private void logResearch(AccessibilityEvent event) {
+        StringBuilder line = new StringBuilder(AccessibilityEvent.eventTypeToString(event.getEventType()));
+        line.append(" class=").append(event.getClassName());
+        if (!event.getText().isEmpty()) line.append(" text=").append(redactDigits(event.getText().toString()));
+        if (event.getContentDescription() != null) {
+            line.append(" desc=").append(redactDigits(event.getContentDescription().toString()));
+        }
+        AccessibilityNodeInfo source = event.getSource();
+        if (source != null) {
+            line.append(" src[id=").append(source.getViewIdResourceName())
+                    .append(" text=").append(redactDigits(String.valueOf(source.getText())))
+                    .append(" desc=").append(redactDigits(String.valueOf(source.getContentDescription())))
+                    .append(" focused=").append(source.isFocused()).append(']');
+        }
+        Log.i(RESEARCH_TAG, line.toString());
     }
 
     @Override
     public void onDestroy() {
         if (sInstance == this) sInstance = null;
+        getContentResolver().unregisterContentObserver(mResearchObserver);
         setListeningTo(null);
         mHandler.removeCallbacksAndMessages(null);
         hideCover();
@@ -247,7 +309,7 @@ public class ProfilePairingService extends AccessibilityService {
     }
 
     private final Runnable mGoIdle = () -> {
-        if (mSession != null || mPin != null) return;
+        if (mSession != null || mPin != null || mResearch != null) return;
         setMode(false, false);
         // The app stops speaking once screen-reader mode is off; until then Hearth voice keeps it quiet.
         setListeningTo(null);
@@ -314,6 +376,9 @@ public class ProfilePairingService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
+        if (mResearch != null && mResearch.contentEquals(event.getPackageName() != null ? event.getPackageName() : "")) {
+            logResearch(event);
+        }
         if (mPin != null) onPinEvent(event);
         Session s = mSession;
         if (s == null) return;
@@ -373,6 +438,7 @@ public class ProfilePairingService extends AccessibilityService {
     // ---- Netflix: hears the picker through Hearth's voice ----
 
     private void handleSpeech(String callerPackage, String text) {
+        if (mResearch != null && mResearch.equals(callerPackage)) Log.i(RESEARCH_TAG, "speech: " + redactDigits(text));
         Session s = mSession;
         if (s == null || !ProfilePairing.NETFLIX.equals(s.pkg) || !s.pkg.equals(callerPackage)) return;
         String t = text.trim();
