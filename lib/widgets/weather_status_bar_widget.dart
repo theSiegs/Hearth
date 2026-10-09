@@ -1,8 +1,38 @@
+import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/models/weather_data.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/widgets/focusable_tap.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
+/// The coming rain, snow or storm in the app's language ("80% Rain today"), or null when there's none.
+String? weatherWarningText(AppLocalizations localizations, WeatherData weather) {
+  final dayIndex = weather.warningDayIndex;
+  final date = weather.warningDate;
+  if (dayIndex == null || date == null) return weather.warningText;
+  final when = switch (dayIndex) { 0 => "today", 1 => "tomorrow", _ => "other" };
+  final day = when == "other" ? _weekday(localizations.localeName, date) : "";
+  final forecast = switch (weather.warningType) {
+    WeatherWarningType.rain => localizations.weatherTextRain(when, day),
+    WeatherWarningType.snow => localizations.weatherTextSnow(when, day),
+    WeatherWarningType.storm => localizations.weatherTextStorm(when, day),
+    WeatherWarningType.none => null,
+  };
+  if (forecast == null) return null;
+  final chance = weather.warningPrecipProbability;
+  return chance == null ? forecast : localizations.weatherTextChance(chance, forecast);
+}
+
+/// The weekday's short name ("Mon"), in English when the language's dates aren't loaded.
+String _weekday(String locale, DateTime date) {
+  try {
+    return DateFormat.E(locale).format(date);
+  } catch (_) {
+    return DateFormat.E("en_US").format(date);
+  }
+}
 
 class WeatherStatusBarWidget extends StatelessWidget {
   final FocusNode? focusNode;
@@ -29,13 +59,12 @@ class WeatherStatusBarWidget extends StatelessWidget {
             final bool isWarning = showWarnings && weather.hasWarning;
             final icon = weather.getConditionIcon();
             final tempText = weather.formatTemperature(useFahrenheit: useFahrenheit);
+            final localizations = AppLocalizations.of(context)!;
+            final warning = isWarning ? weatherWarningText(localizations, weather) : null;
 
-            String displayText;
-            if (isWarning && weather.warningText != null) {
-              displayText = "$tempText • ${weather.warningText}";
-            } else {
-              displayText = tempText;
-            }
+            final String displayText = warning != null
+                ? localizations.weatherWidgetTemperatureWithWarning(tempText, warning)
+                : tempText;
 
             final theme = Theme.of(context);
 

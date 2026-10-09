@@ -205,5 +205,14 @@
     "watchNextInfoHideAllFrom": "{appName} içeriklerinin tümünü gizle",
     "watchNextInfoPlayResume": "Oynat / Devam et",
     "watchNextInfoOpenApp": "{appName} uygulamasını aç",
-    "watchNextInfoAppInfo": "Uygulama bilgisi"
+    "watchNextInfoAppInfo": "Uygulama bilgisi",
+    "dataWidgetGrantPermission": "Kullanım izni ver",
+    "dataWidgetDaily": "Günlük: {usage}",
+    "dataWidgetWeekly": "Haftalık: {usage}",
+    "dataWidgetMonthly": "Aylık: {usage}",
+    "weatherWidgetTemperatureWithWarning": "{temperature} • {warning}",
+    "weatherTextRain": "{when, select, today{Bugün yağmur} tomorrow{Yarın yağmur} other{{day} yağmur}}",
+    "weatherTextSnow": "{when, select, today{Bugün kar} tomorrow{Yarın kar} other{{day} kar}}",
+    "weatherTextStorm": "{when, select, today{Bugün fırtına} tomorrow{Yarın fırtına} other{{day} fırtına}}",
+    "weatherTextChance": "{forecast} (%{percent})"
 }

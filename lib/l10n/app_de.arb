@@ -205,5 +205,14 @@
     "watchNextInfoHideAllFrom": "Alle von {appName} ausblenden",
     "watchNextInfoPlayResume": "Abspielen / Fortsetzen",
     "watchNextInfoOpenApp": "{appName} öffnen",
-    "watchNextInfoAppInfo": "App-Info"
+    "watchNextInfoAppInfo": "App-Info",
+    "dataWidgetGrantPermission": "Nutzungszugriff erlauben",
+    "dataWidgetDaily": "Täglich: {usage}",
+    "dataWidgetWeekly": "Wöchentlich: {usage}",
+    "dataWidgetMonthly": "Monatlich: {usage}",
+    "weatherWidgetTemperatureWithWarning": "{temperature} • {warning}",
+    "weatherTextRain": "{when, select, today{Regen heute} tomorrow{Regen morgen} other{Regen am {day}}}",
+    "weatherTextSnow": "{when, select, today{Schnee heute} tomorrow{Schnee morgen} other{Schnee am {day}}}",
+    "weatherTextStorm": "{when, select, today{Gewitter heute} tomorrow{Gewitter morgen} other{Gewitter am {day}}}",
+    "weatherTextChance": "{percent} % {forecast}"
 }

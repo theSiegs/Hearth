@@ -1,9 +1,11 @@
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/models/weather_data.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/widgets/weather_status_bar_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:mockito/mockito.dart';
 import 'package:provider/provider.dart';
 
@@ -39,8 +41,11 @@ void main() {
     when(mockWeatherService.weatherData).thenReturn(testWeatherWithWarning);
   });
 
-  Widget createWidgetUnderTest() {
+  Widget createWidgetUnderTest({Locale? locale}) {
     return MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: Scaffold(
         body: MultiProvider(
           providers: [
@@ -98,5 +103,36 @@ void main() {
     final border = boxDecoration.border as Border;
     expect(border.top.color, Colors.white.withOpacity(0.12));
     expect(border.top.width, 1.0);
+  });
+
+  testWidgets('says the warning in the app\'s language', (tester) async {
+    when(mockSettingsService.showWeatherWarnings).thenReturn(true);
+
+    await tester.pumpWidget(createWidgetUnderTest(locale: const Locale('de')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('27°C • 80 % Regen heute'), findsOneWidget);
+  });
+
+  testWidgets('names the weekday of a warning later in the week', (tester) async {
+    when(mockSettingsService.showWeatherWarnings).thenReturn(true);
+    when(mockWeatherService.weatherData).thenReturn(WeatherData(
+      currentTemp: 27,
+      currentConditionCode: 800,
+      warningType: WeatherWarningType.storm,
+      warningText: "Storm on Thu",
+      warningConditionCode: 211,
+      warningDayIndex: 3,
+      warningDate: DateTime(2026, 10, 8), // a Thursday
+    ));
+
+    await tester.pumpWidget(createWidgetUnderTest());
+    await tester.pumpAndSettle();
+    expect(find.text('27°C • Storm on Thu'), findsOneWidget);
+
+    await tester.pumpWidget(createWidgetUnderTest(locale: const Locale('de')));
+    await tester.pumpAndSettle();
+    // The weekday's short name as the language's date data has it ("Do" or "Do.")
+    expect(find.text('27°C • Gewitter am ${DateFormat.E('de').format(DateTime(2026, 10, 8))}'), findsOneWidget);
   });
 }

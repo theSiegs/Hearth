@@ -1,3 +1,4 @@
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/network_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flutter/material.dart';
@@ -25,32 +26,32 @@ class _DailyDataUsageWidgetState extends State<DailyDataUsageWidget> {
     return _usage!;
   }
 
+  /// Marks where the amount goes in the translated label, so the amount alone can be bold.
+  static const String _usageMarker = "\u0000";
+
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
     return Consumer2<NetworkService, SettingsService>(
       builder: (context, networkService, settingsService, _) {
         if (!networkService.hasUsageStatsPermission) {
           return TextButton.icon(
              icon: const Icon(Icons.data_usage, size: 20),
-             label: const Text("Grant Usage Permission"),
+             label: Text(localizations.dataWidgetGrantPermission),
              onPressed: () => networkService.requestPermission(),
           );
         }
 
         final period = settingsService.dataUsagePeriod;
-        String label;
-        switch (period) {
-          case 'weekly':
-            label = 'Weekly: ';
-            break;
-          case 'monthly':
-            label = 'Monthly: ';
-            break;
-          case 'daily':
-          default:
-            label = 'Daily: ';
-            break;
-        }
+        final String Function(String usage) label = switch (period) {
+          'weekly' => localizations.dataWidgetWeekly,
+          'monthly' => localizations.dataWidgetMonthly,
+          _ => localizations.dataWidgetDaily,
+        };
+        // The text around the amount, wherever the language puts it ("Daily: " before it in English)
+        final labelParts = label(_usageMarker).split(_usageMarker);
+        final before = labelParts.first;
+        final after = labelParts.skip(1).join();
 
         return FutureBuilder<int>(
           future: _usageFuture(networkService, period),
@@ -69,11 +70,12 @@ class _DailyDataUsageWidgetState extends State<DailyDataUsageWidget> {
                   ],
                 ),
                 children: [
-                  TextSpan(text: label),
+                  if (before.isNotEmpty) TextSpan(text: before),
                   TextSpan(
                     text: usageString,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
+                  if (after.isNotEmpty) TextSpan(text: after),
                 ],
               ),
             );

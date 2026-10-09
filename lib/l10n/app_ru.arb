@@ -205,5 +205,14 @@
     "watchNextInfoHideAllFrom": "Скрыть всё из {appName}",
     "watchNextInfoPlayResume": "Смотреть / Продолжить",
     "watchNextInfoOpenApp": "Открыть {appName}",
-    "watchNextInfoAppInfo": "Информация о приложении"
+    "watchNextInfoAppInfo": "Информация о приложении",
+    "dataWidgetGrantPermission": "Разрешить доступ к статистике",
+    "dataWidgetDaily": "За день: {usage}",
+    "dataWidgetWeekly": "За неделю: {usage}",
+    "dataWidgetMonthly": "За месяц: {usage}",
+    "weatherWidgetTemperatureWithWarning": "{temperature} • {warning}",
+    "weatherTextRain": "{when, select, today{Дождь сегодня} tomorrow{Дождь завтра} other{Дождь, {day}}}",
+    "weatherTextSnow": "{when, select, today{Снег сегодня} tomorrow{Снег завтра} other{Снег, {day}}}",
+    "weatherTextStorm": "{when, select, today{Гроза сегодня} tomorrow{Гроза завтра} other{Гроза, {day}}}",
+    "weatherTextChance": "{forecast} ({percent}%)"
 }

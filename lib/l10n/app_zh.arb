@@ -205,5 +205,14 @@
     "watchNextInfoHideAllFrom": "隐藏来自 {appName} 的全部内容",
     "watchNextInfoPlayResume": "播放 / 继续",
     "watchNextInfoOpenApp": "打开 {appName}",
-    "watchNextInfoAppInfo": "应用信息"
+    "watchNextInfoAppInfo": "应用信息",
+    "dataWidgetGrantPermission": "授予使用情况权限",
+    "dataWidgetDaily": "每日：{usage}",
+    "dataWidgetWeekly": "每周：{usage}",
+    "dataWidgetMonthly": "每月：{usage}",
+    "weatherWidgetTemperatureWithWarning": "{temperature} • {warning}",
+    "weatherTextRain": "{when, select, today{今天有雨} tomorrow{明天有雨} other{{day}有雨}}",
+    "weatherTextSnow": "{when, select, today{今天有雪} tomorrow{明天有雪} other{{day}有雪}}",
+    "weatherTextStorm": "{when, select, today{今天有雷暴} tomorrow{明天有雷暴} other{{day}有雷暴}}",
+    "weatherTextChance": "{forecast}（{percent}%）"
 }

@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -545,4 +547,71 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get watchNextInfoAppInfo => 'App Info';
+
+  @override
+  String get dataWidgetGrantPermission => 'Grant Usage Permission';
+
+  @override
+  String dataWidgetDaily(String usage) {
+    return 'Daily: $usage';
+  }
+
+  @override
+  String dataWidgetWeekly(String usage) {
+    return 'Weekly: $usage';
+  }
+
+  @override
+  String dataWidgetMonthly(String usage) {
+    return 'Monthly: $usage';
+  }
+
+  @override
+  String weatherWidgetTemperatureWithWarning(String temperature, String warning) {
+    return '$temperature • $warning';
+  }
+
+  @override
+  String weatherTextRain(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': 'Rain today',
+        'tomorrow': 'Rain tomorrow',
+        'other': 'Rain on $day',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextSnow(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': 'Snow today',
+        'tomorrow': 'Snow tomorrow',
+        'other': 'Snow on $day',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextStorm(String when, String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      when,
+      {
+        'today': 'Storm today',
+        'tomorrow': 'Storm tomorrow',
+        'other': 'Storm on $day',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weatherTextChance(int percent, String forecast) {
+    return '$percent% $forecast';
+  }
 }
