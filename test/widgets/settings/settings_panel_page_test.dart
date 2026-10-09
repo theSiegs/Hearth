@@ -103,6 +103,7 @@ void main() {
   testWidgets("in a kids profile, Settings shows the kid's own groups and Parent settings", (tester) async {
     final profiles = MockProfileService();
     when(profiles.isKidsProfile).thenReturn(true);
+    when(profiles.activeProfileKey).thenReturn("user:10");
     when(profiles.activeProfileName).thenReturn("Sam");
     await _pumpWidgetWithProviders(tester, _settings(), _apps(), profiles: profiles);
 
@@ -121,6 +122,7 @@ void main() {
   testWidgets("in a grown-up profile nothing is locked", (tester) async {
     final profiles = MockProfileService();
     when(profiles.isKidsProfile).thenReturn(false);
+    when(profiles.activeProfileKey).thenReturn("user:0");
     when(profiles.activeProfileName).thenReturn("Alex");
     await _pumpWidgetWithProviders(tester, _settings(), _apps(), profiles: profiles);
 

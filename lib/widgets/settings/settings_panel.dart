@@ -54,7 +54,9 @@ import 'package:flauncher/widgets/settings/continue_watching_card_size_page.dart
 import 'package:flauncher/widgets/settings/continue_watching_max_items_page.dart';
 import 'package:flauncher/widgets/settings/continue_watching_apps_page.dart';
 import 'package:flauncher/models/app.dart';
+import 'package:flauncher/providers/profile_service.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 
 class SettingsPanel extends StatefulWidget {
@@ -69,9 +71,35 @@ class SettingsPanel extends StatefulWidget {
 class _SettingsPanelState extends State<SettingsPanel> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final ValueNotifier<bool> _unlocked = ValueNotifier(false);
+  ProfileService? _profiles;
+  String? _profileKey;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final profiles = context.read<ProfileService?>();
+    if (profiles != _profiles) {
+      _profiles?.removeListener(_onProfileChanged);
+      _profiles = profiles;
+      _profileKey = profiles?.activeProfileKey;
+      profiles?.addListener(_onProfileChanged);
+    }
+  }
+
+  /// A parent's unlock is for the profile it was given in: another profile (Profiles > Switch profile, with the
+  /// panel still open) starts locked again, back on the first page.
+  void _onProfileChanged() {
+    final key = _profiles?.activeProfileKey;
+    if (key == null || key == _profileKey) return;
+    _profileKey = key;
+    if (!_unlocked.value) return;
+    _unlocked.value = false;
+    _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+  }
 
   @override
   void dispose() {
+    _profiles?.removeListener(_onProfileChanged);
     _unlocked.dispose();
     super.dispose();
   }

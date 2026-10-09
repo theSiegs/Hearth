@@ -308,7 +308,6 @@ void main() {
       expect(_settingsRows(tester), ["Profiles", "Home screen", "Parent settings"]);
       await hearth.stop(tester);
     },
-        skip: true, // Fails today: SettingsUnlock outlives a profile switch (seen on the emulator too; see the QA report)
     );
   });
 }

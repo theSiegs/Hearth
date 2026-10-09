@@ -28,23 +28,36 @@ class SettingsUnlock extends InheritedNotifier<ValueNotifier<bool>> {
 
   static ValueNotifier<bool>? _of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<SettingsUnlock>()?.notifier;
+
+  /// The profile a parent unlocked Settings in: the unlock holds only while that profile is the active one, so it
+  /// never carries over a switch to another kids profile with the panel still open.
+  static final Expando<String> _unlockedFor = Expando<String>();
+
+  static bool _holds(ValueNotifier<bool>? unlock, String? activeKey) =>
+      unlock?.value == true && _unlockedFor[unlock!] == activeKey;
 }
 
 /// This part of Settings is locked here: a kids profile, not unlocked with the parent PIN since the panel opened.
 bool settingsLocked(BuildContext context) {
   final kids = context.select<ProfileService?, bool>((p) => p?.isKidsProfile ?? false);
-  return kids && SettingsUnlock._of(context)?.value != true;
+  final key = context.select<ProfileService?, String?>((p) => p?.activeProfileKey);
+  return kids && !SettingsUnlock._holds(SettingsUnlock._of(context), key);
 }
 
 /// Asks for the parent PIN where Settings is locked; true when the locked part may open.
 Future<bool> unlockSettings(BuildContext context) async {
   final unlock = context.getInheritedWidgetOfExactType<SettingsUnlock>()?.notifier;
-  if (unlock?.value == true) return true;
-  final kids = context.read<ProfileService?>()?.isKidsProfile ?? false;
+  final profiles = context.read<ProfileService?>();
+  if (SettingsUnlock._holds(unlock, profiles?.activeProfileKey)) return true;
+  final kids = profiles?.isKidsProfile ?? false;
   final ok = await requireParent(context);
-  if (ok && kids) unlock?.value = true;
+  if (ok && kids && unlock != null) {
+    SettingsUnlock._unlockedFor[unlock] = profiles?.activeProfileKey;
+    unlock.value = true;
+  }
   return ok;
 }
 
 /// A parent unlocked Settings in this kids profile since the panel opened (the newly shown rows take focus).
-bool settingsUnlocked(BuildContext context) => SettingsUnlock._of(context)?.value == true;
+bool settingsUnlocked(BuildContext context) => SettingsUnlock._holds(
+    SettingsUnlock._of(context), context.select<ProfileService?, String?>((p) => p?.activeProfileKey));
