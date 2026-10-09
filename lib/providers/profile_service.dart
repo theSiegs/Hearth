@@ -229,7 +229,12 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
     _activeProfileKey = key;
     _isKidsProfile = kids;
     changed = await _loadAvatar(name) || changed;
-    if (changed) notifyListeners();
+    if (changed) {
+      // In the TV's log (tag flutter): which profile Hearth shows, and whether it has that profile's photo
+      debugPrint("HearthProfileUi: key=$key kids=$kids name=${name == null ? "unknown" : "known"} "
+          "photo=${_avatar == null ? "none" : "yes (saved ${DateTime.fromMillisecondsSinceEpoch(_avatarModified)})"}");
+      notifyListeners();
+    }
 
     // Unknown profile (Hearth can't tell yet): leave the layout alone rather than guess.
     if (key == null) return;
