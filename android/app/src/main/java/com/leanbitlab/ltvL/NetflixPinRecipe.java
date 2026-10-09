@@ -80,7 +80,7 @@ final class NetflixPinRecipe extends NavigatedKeypadRecipe {
     @Override
     protected void awaitPress(Consumer<Boolean> confirmed) {
         // Netflix says nothing per digit: the count is checked by its "Entered 4 of 4 digits" and its answer
-        mHandler.postDelayed(() -> confirmed.accept(true), PRESS_SETTLE_MS);
+        handler().postDelayed(() -> confirmed.accept(true), PRESS_SETTLE_MS);
     }
 
     @Override

@@ -20,7 +20,15 @@ abstract class NavigatedKeypadRecipe implements PinRecipe {
     private static final long POLL_MS = 50;
     private static final int MAX_MOVES = 10;
 
-    protected final Handler mHandler = new Handler(Looper.getMainLooper());
+    static final int UP = 0, DOWN = 1, LEFT = 2, RIGHT = 3;
+
+    private Handler mHandlerInstance;
+
+    /** The main thread's handler (made on first use, so the parsing and moves can be tested off the TV). */
+    protected final Handler handler() {
+        if (mHandlerInstance == null) mHandlerInstance = new Handler(Looper.getMainLooper());
+        return mHandlerInstance;
+    }
 
     /** The focused key's label ("0"-"9", or something else for another key) and when it was heard. */
     private String mFocused;
@@ -74,18 +82,11 @@ abstract class NavigatedKeypadRecipe implements PinRecipe {
             confirmed.accept(false);
             return;
         }
-        int[] from = position(focused.charAt(0));
-        int[] to = position(digit);
-        int action;
-        boolean lastRow = to[0] > from[0] && to[0] == lastRow();
-        // Into the last row (0's row, with gaps or wide keys beside it): line up the column first, then down
-        if ((lastRow || from[0] == to[0]) && from[1] != to[1]) {
-            action = to[1] > from[1]
-                    ? AccessibilityService.GLOBAL_ACTION_DPAD_RIGHT : AccessibilityService.GLOBAL_ACTION_DPAD_LEFT;
-        } else {
-            action = to[0] > from[0]
-                    ? AccessibilityService.GLOBAL_ACTION_DPAD_DOWN : AccessibilityService.GLOBAL_ACTION_DPAD_UP;
-        }
+        int move = nextMove(position(focused.charAt(0)), position(digit), lastRow());
+        int action = move == UP ? AccessibilityService.GLOBAL_ACTION_DPAD_UP
+                : move == DOWN ? AccessibilityService.GLOBAL_ACTION_DPAD_DOWN
+                : move == LEFT ? AccessibilityService.GLOBAL_ACTION_DPAD_LEFT
+                : AccessibilityService.GLOBAL_ACTION_DPAD_RIGHT;
         long movedAt = SystemClock.elapsedRealtime();
         mFocused = null;
         service.performGlobalAction(action);
@@ -97,11 +98,21 @@ abstract class NavigatedKeypadRecipe implements PinRecipe {
                 } else if (SystemClock.elapsedRealtime() - movedAt >= MOVE_WAIT_MS) {
                     confirmed.accept(false);
                 } else {
-                    mHandler.postDelayed(this, POLL_MS);
+                    handler().postDelayed(this, POLL_MS);
                 }
             }
         };
-        mHandler.postDelayed(wait, POLL_MS);
+        handler().postDelayed(wait, POLL_MS);
+    }
+
+    /**
+     * One move from the key at {@code from} toward {@code to} ({row, column}; never equal): rows first, except into
+     * the last row (0's row, with gaps or wide keys beside it), where the column is lined up first.
+     */
+    static int nextMove(int[] from, int[] to, int lastRow) {
+        boolean intoLastRow = to[0] > from[0] && to[0] == lastRow;
+        if ((intoLastRow || from[0] == to[0]) && from[1] != to[1]) return to[1] > from[1] ? RIGHT : LEFT;
+        return to[0] > from[0] ? DOWN : UP;
     }
 
     /** The keypad's last row, where 0 is. */
