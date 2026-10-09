@@ -208,6 +208,13 @@ class SettingsService extends ChangeNotifier {
   /// Tells listeners the stored settings changed underneath (after a restore).
   void reload() => notifyListeners();
 
+  /// SharedPreferences key: the profile (its key, "user:11") whose layout and settings are the ones stored now.
+  /// ProfileService keeps it; HearthWallpaper.java reads it too.
+  static const String layoutOwnerKey = "device_layout_owner";
+
+  /// The profile whose settings these are (null before Hearth has seen one).
+  String? get layoutOwner => _sharedPreferences.getString(layoutOwnerKey);
+
   bool _bool(String key, bool fallback) => _sharedPreferences.getBool(key) ?? fallback;
   int _int(String key, int fallback) => _sharedPreferences.getInt(key) ?? fallback;
   String _string(String key, String fallback) => _sharedPreferences.getString(key) ?? fallback;

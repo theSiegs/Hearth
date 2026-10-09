@@ -27,23 +27,28 @@ import '../models/app.dart';
 import 'apps_service.dart';
 import 'backup_service.dart';
 import 'settings_service.dart';
+import 'wallpaper_service.dart';
 
 /// Follows the active Google TV profile (as seen by the accessibility service) and gives each profile its own
 /// home layout: on a switch, the outgoing profile's layout is saved and the incoming one's restored.
 class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
-  static const String layoutOwnerKey = "device_layout_owner";
+  static const String layoutOwnerKey = SettingsService.layoutOwnerKey;
 
   final FLauncherChannel _channel;
   final SharedPreferences _sharedPreferences;
   final BackupService _backupService;
   final SettingsService _settingsService;
   final AppsService _appsService;
+  // Each profile has its own wallpaper pictures: told whose settings are in place after a switch
+  final WallpaperService? _wallpaperService;
 
   String? _activeProfileName;
   bool _isKidsProfile = false;
   Future<void>? _checking;
 
-  ProfileService(this._channel, this._sharedPreferences, this._backupService, this._settingsService, this._appsService) {
+  ProfileService(this._channel, this._sharedPreferences, this._backupService, this._settingsService, this._appsService,
+      {WallpaperService? wallpaperService})
+      : _wallpaperService = wallpaperService {
     WidgetsBinding.instance.addObserver(this);
     // A switch can land while Hearth is already in front
     FLauncherChannel.listenForProfileChanges(check);
@@ -248,6 +253,7 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
     final String? owner = _sharedPreferences.getString(layoutOwnerKey);
     if (owner == key || (owner != null && owner == name)) {
       if (owner != key) await _sharedPreferences.setString(layoutOwnerKey, key);
+      await _wallpaperService?.setProfile(key);
       await _appsService.hideDefaultHiddenApps(key);
       await _fillEmptyDock();
       await _giveKidsTheirFirstLook(key);
@@ -269,6 +275,7 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
         await _appsService.resetToDefaultLayout();
       }
       await _sharedPreferences.setString(layoutOwnerKey, key);
+      await _wallpaperService?.setProfile(key);
       await _appsService.hideDefaultHiddenApps(key);
       await _fillEmptyDock();
       await _giveKidsTheirFirstLook(key);

@@ -69,8 +69,42 @@ HearthTube follows Hearth's wallpaper when all of these hold:
    Decide once per `onStart` (or per new intent) and keep the answer while the activity lives.
 
 In a Google TV profile other than the owner's, HearthTube reaches Hearth through Hearth's agent there: the same
-columns, but `wallpaper_kind` is always "gradient" (no picture crosses users) and `wallpaper_brightness` is null:
-use `wallpaper_gradient` and its `brightness`.
+columns and `/wallpaper`, answering with that profile's own wallpaper (below). Nothing changes for HearthTube.
+
+## Each profile's own wallpaper
+
+Every Google TV profile, kids' and grown-ups', has its own look in Hearth, and HearthTube in that profile shows it.
+
+- Hearth's settings (gradient, Bing on or off, day/night pictures on or off) are saved and restored per profile
+  (ProfileService, BackupService profile layouts). The pictures a profile picks are its own too: they live in
+  `app_flutter/wallpapers/<profile key>/` (`wallpaper`, `wallpaper_day`, `wallpaper_night`; the key "user:11" as
+  `user_11`). The folder used is the one of `device_layout_owner`, the profile whose settings are in place, so the
+  pictures always match the settings (WallpaperService.setProfile after each switch; HearthWallpaper.java reads the
+  same key). Bing's photo of the day is the same for everyone and stays in `app_flutter/wallpaper_bing`.
+- Pictures from before this (in `app_flutter/` itself) become the TV owner's (`user:0`) the first time Hearth starts
+  with it. A new profile starts with no picture (its gradient), a kids profile with Bing's photo.
+- Backups and exports hold settings and layouts, not pictures, as before.
+
+### Getting it to the profile's user
+
+HearthTube in a profile runs in that profile's Android user and reads the provider of Hearth's agent there, which
+can't read Hearth's files in the owner's user. So Hearth sends it over the agent channel (AgentHub, one JSON line;
+AgentWallpaper.java):
+
+- `{"type":"wallpaper","profile":"user:11","kind","version","brightness","gradient","title","credit","image"}`:
+  the v5 wallpaper columns as Hearth's provider has them, and for "picture" and "bing" the picture as a base64 JPEG,
+  center-cropped and scaled down to at most 1920x1080 (what the screen shows; never enlarged; EXIF rotation applied),
+  at most 3 MB (quality 85, then 70; bigger and it isn't sent).
+- Only to the agent of the profile whose wallpaper it is: Hearth sends it only when `device_layout_owner` is that
+  agent's profile key, and the agent drops a message for another profile. No profile's picture reaches another
+  profile's user. (The agents of profiles that aren't active aren't running anyway: Google TV stops their users.)
+- When: when the agent connects (its user starts on a switch to the profile) and whenever Hearth's provider row
+  changes (Flutter publishes a new wallpaper state on a pick, a gradient, Bing on or off or a new photo, the
+  day/night swap, and the switch itself, since the state carries the profile). Repeats are skipped; the picture goes
+  only when the agent doesn't have that `wallpaper_version` (the agent says which it has in its hello).
+- The agent keeps the picture in its files dir (`hearth_wallpaper.jpg`, written whole then renamed) and the columns
+  in its preferences, notifies `/active`, and serves them with the same `wallpaper_version`. It reports "gradient"
+  while it lacks the current version's picture, and deletes the picture when the profile goes to a gradient.
 
 ## What HearthTube does in Hearth
 

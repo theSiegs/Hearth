@@ -124,7 +124,14 @@ public class ProfileProvider extends ContentProvider {
             throw new FileNotFoundException("Not for " + getCallingPackage());
         }
 
-        File wallpaper = AgentService.isAgent(getContext()) ? null : HearthWallpaper.current(getContext()).file;
+        // An agent serves its own profile's picture, as Hearth sent it (AgentWallpaper)
+        File wallpaper;
+        if (AgentService.isAgent(getContext())) {
+            AgentWallpaper.Kept kept = AgentWallpaper.kept(getContext());
+            wallpaper = kept != null ? kept.picture : null;
+        } else {
+            wallpaper = HearthWallpaper.current(getContext()).file;
+        }
 
         if (wallpaper == null) {
             throw new FileNotFoundException("No wallpaper picture");
