@@ -108,6 +108,43 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
   ImageProvider?  get wallpaper     => _wallpaper;
   int             get version       => _version;
 
+  /// How light the picture behind the home is, 0 (black) to 1 (white): the wallpaper's average, or the gradient's.
+  /// Row titles sit on a darker pill the lighter it is.
+  double get brightness => _wallpaper != null ? (_wallpaperBrightness ?? 0.5) : gradientBrightness(gradient.gradient);
+  double? _wallpaperBrightness;
+
+  static double gradientBrightness(Gradient gradient) {
+    final colors = gradient.colors;
+    if (colors.isEmpty) return 0;
+    return colors.map((c) => c.computeLuminance()).reduce((a, b) => a + b) / colors.length;
+  }
+
+  /// The average luminance of an image file, from a copy a few dozen pixels wide.
+  static Future<double?> imageBrightness(File file) async {
+    try {
+      final codec = await ui.instantiateImageCodec(await file.readAsBytes(), targetWidth: 32);
+      final frame = await codec.getNextFrame();
+      final data = await frame.image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      frame.image.dispose();
+      if (data == null) return null;
+      return averageLuminance(data.buffer.asUint8List());
+    } catch (e) {
+      developer.log("Couldn't measure the wallpaper", name: "WallpaperService", error: e);
+      return null;
+    }
+  }
+
+  /// Mean relative luminance (0-1) of RGBA pixels.
+  static double averageLuminance(Uint8List rgba) {
+    double sum = 0;
+    int count = 0;
+    for (int i = 0; i + 3 < rgba.length; i += 4) {
+      sum += 0.2126 * rgba[i] + 0.7152 * rgba[i + 1] + 0.0722 * rgba[i + 2];
+      count++;
+    }
+    return count == 0 ? 0 : sum / count / 255;
+  }
+
   FLauncherGradient get gradient => FLauncherGradients.all.firstWhere(
         (gradient) => gradient.uuid == _settingsService.gradientUuid,
         orElse: () => FLauncherGradients.pitchBlack,
@@ -124,8 +161,15 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
 
   bool _lastTimeBasedEnabled = false;
   bool _lastBingEnabled = false;
+  String? _lastGradientUuid;
 
   void _onSettingsChanged() {
+    // A new gradient changes [brightness] when there's no wallpaper picture
+    final gradientUuid = _settingsService.gradientUuid;
+    if (gradientUuid != _lastGradientUuid) {
+      _lastGradientUuid = gradientUuid;
+      if (_wallpaper == null) notifyListeners();
+    }
     final timeBasedEnabled = _settingsService.timeBasedWallpaperEnabled;
     final bingEnabled = _settingsService.bingWallpaperEnabled;
     final timeBasedChanged = timeBasedEnabled != _lastTimeBasedEnabled;
@@ -222,28 +266,34 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
     final bingEnabled = _settingsService.bingWallpaperEnabled;
     final timeBasedEnabled = _settingsService.timeBasedWallpaperEnabled;
 
-    ImageProvider? newWallpaper;
+    File? file;
 
     if (bingEnabled && await _wallpaperBingFile.exists()) {
-      newWallpaper = FileImage(_wallpaperBingFile);
+      file = _wallpaperBingFile;
     } else if (timeBasedEnabled) {
       if (isDay && await _wallpaperDayFile.exists()) {
-        newWallpaper = FileImage(_wallpaperDayFile);
+        file = _wallpaperDayFile;
       } else if (!isDay && await _wallpaperNightFile.exists()) {
-        newWallpaper = FileImage(_wallpaperNightFile);
+        file = _wallpaperNightFile;
       } else if (await _wallpaperFile.exists()) {
-        newWallpaper = FileImage(_wallpaperFile); // Fallback
+        file = _wallpaperFile; // Fallback
       }
     } else {
       if (await _wallpaperFile.exists()) {
-        newWallpaper = FileImage(_wallpaperFile);
+        file = _wallpaperFile;
       }
     }
+    final ImageProvider? newWallpaper = file != null ? FileImage(file) : null;
 
     if (callId == _updateWallpaperCallCount) {
       if (_wallpaper != newWallpaper || force) {
         _wallpaper = newWallpaper;
         notifyListeners();
+        final brightness = file != null ? await imageBrightness(file) : null;
+        if (callId == _updateWallpaperCallCount && brightness != _wallpaperBrightness) {
+          _wallpaperBrightness = brightness;
+          notifyListeners();
+        }
       }
     }
   }

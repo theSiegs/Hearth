@@ -17,6 +17,7 @@ import 'date_time_widget.dart';
 import 'focusable_tap.dart';
 import '../providers/home_search.dart';
 import 'weather_status_bar_widget.dart';
+import 'package:flauncher/widgets/title_pill.dart';
 
 class FocusAwareAppBar extends StatefulWidget implements PreferredSizeWidget
 {
@@ -216,7 +217,8 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                   ? Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.3),
+                        // Darker on a light wallpaper, like the row titles' pills
+                        color: Colors.black.withOpacity(TitlePill.opacityOf(context)),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: Colors.white.withOpacity(0.12),
@@ -283,7 +285,8 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.3),
+                          // Darker on a light wallpaper, like the row titles' pills
+                          color: Colors.black.withOpacity(TitlePill.opacityOf(context)),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                             color: Colors.white.withOpacity(0.12),
@@ -384,15 +387,17 @@ class _FocusableIconButton extends StatelessWidget {
             ),
           ),
           if (label != null) ...[
-            const SizedBox(width: 12),
-            Text(
-              label!,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: focused ? FontWeight.w600 : FontWeight.w400,
-                shadows: const [Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 2))],
+            const SizedBox(width: 8),
+            // On a pill like the row titles, so the name reads on a light wallpaper
+            TitlePill(
+              child: Text(
+                label!,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: focused ? FontWeight.w600 : FontWeight.w400,
+                  shadows: TitlePill.textShadow,
+                ),
               ),
             ),
-            const SizedBox(width: 4),
           ],
         ],
       ),

@@ -7,6 +7,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'ensure_visible.dart';
+import 'title_pill.dart';
 
 Widget categoryContainerEmptyState(BuildContext context) {
   AppLocalizations localizations = AppLocalizations.of(context)!;
@@ -72,20 +73,22 @@ class CategoryHeader extends StatelessWidget {
 
     final textTheme = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.only(left: 16, bottom: 8),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: textTheme.titleLarge!.copyWith(
-              shadows: const [Shadow(color: Colors.black54, offset: Offset(1, 1), blurRadius: 8)],
-            ),
+      padding: const EdgeInsets.only(left: 8, bottom: 8),
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: TitlePill(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(title, style: textTheme.titleLarge!.copyWith(shadows: TitlePill.textShadow)),
+              if (showCount) ...[
+                const SizedBox(width: 8),
+                Text('•  $count',
+                    style: textTheme.bodyMedium!.copyWith(color: Colors.white70, shadows: TitlePill.textShadow)),
+              ],
+            ],
           ),
-          if (showCount) ...[
-            const SizedBox(width: 8),
-            Text('•  $count', style: textTheme.bodyMedium!.copyWith(color: Colors.white54)),
-          ],
-        ],
+        ),
       ),
     );
   }
