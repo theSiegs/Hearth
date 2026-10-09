@@ -84,13 +84,23 @@ void main() {
     final settingsService = MockSettingsService();
       when(settingsService.timeBasedWallpaperEnabled).thenReturn(false);
       when(settingsService.bingWallpaperEnabled).thenReturn(false);
+      when(settingsService.gradientUuid).thenReturn(null);
     final wallpaperService = WallpaperService(fLauncherChannel, settingsService);
 
     await untilCalled(pathProviderPlatform.getApplicationDocumentsPath());
+    // Let the first look at the wallpaper (reading the file to measure it) finish: Windows can't delete an open file
+    await Future.delayed(const Duration(milliseconds: 200));
     await wallpaperService.setGradient(FLauncherGradients.greatWhale);
 
     verify(settingsService.setGradientUuid(FLauncherGradients.greatWhale.uuid));
     expect(wallpaperService.wallpaper, null);
+  });
+
+  test("brightness follows the gradient, and a picture's average", () {
+    expect(WallpaperService.gradientBrightness(FLauncherGradients.pitchBlack.gradient), lessThan(0.05));
+    expect(WallpaperService.gradientBrightness(FLauncherGradients.greatWhale.gradient), greaterThan(0.25));
+    // Two pixels: white and black
+    expect(WallpaperService.averageLuminance(Uint8List.fromList([255, 255, 255, 255, 0, 0, 0, 255])), closeTo(0.5, 0.01));
   });
 
   group("getGradient", () {

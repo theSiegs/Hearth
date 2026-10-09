@@ -16,6 +16,7 @@ import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/widgets/continue_watching_grid_page.dart';
 import 'package:flauncher/widgets/search/title_card.dart';
+import 'package:flauncher/widgets/title_pill.dart';
 
 class ContinueWatchingRow extends StatefulWidget {
   final bool isFirstSection;
@@ -111,10 +112,15 @@ class _ContinueWatchingRowState extends State<ContinueWatchingRow> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (showCategoryTitles)
-                              Text(
-                                AppLocalizations.of(context)!.continueWatching.toUpperCase(),
-                                style: Theme.of(context).textTheme.labelLarge!.copyWith(
-                                    color: Colors.white70, letterSpacing: 1.0, shadows: shadow),
+                              Padding(
+                                padding: const EdgeInsetsDirectional.only(start: 0, bottom: 4),
+                                child: TitlePill(
+                                  child: Text(
+                                    AppLocalizations.of(context)!.continueWatching.toUpperCase(),
+                                    style: Theme.of(context).textTheme.labelLarge!.copyWith(
+                                        color: Colors.white, letterSpacing: 1.0, shadows: TitlePill.textShadow),
+                                  ),
+                                ),
                               ),
                             Text(
                               program.title.trim(),
