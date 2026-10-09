@@ -33,6 +33,7 @@ import 'package:path_provider/path_provider.dart';
 class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
   final FLauncherChannel _fLauncherChannel;
   final SettingsService _settingsService;
+  final ImagePicker _imagePicker;
 
   // "Match selected app": background tinted from the focused app's banner
   final Map<String, Color?> _appColorCache = {};
@@ -112,7 +113,8 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
         orElse: () => FLauncherGradients.pitchBlack,
       );
 
-  WallpaperService(this._fLauncherChannel, this._settingsService) :
+  WallpaperService(this._fLauncherChannel, this._settingsService, {ImagePicker? imagePicker}) :
+    _imagePicker = imagePicker ?? ImagePicker(),
     _wallpaper = null
   {
     _settingsService.addListener(_onSettingsChanged);
@@ -328,8 +330,7 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
       throw NoFileExplorerException();
     }
 
-    final imagePicker = ImagePicker();
-    final pickedFile = await imagePicker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await _imagePicker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       // Use stream for memory efficiency
       final readStream = pickedFile.openRead();
@@ -350,7 +351,8 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     await _settingsService.setGradientUuid(fLauncherGradient.uuid);
-    notifyListeners();
+    // A picture picked before is gone: show what's left (the gradient, or a day/night or Bing picture)
+    await _updateWallpaper(force: true);
   }
 }
 
