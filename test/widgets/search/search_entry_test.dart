@@ -1,4 +1,5 @@
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/widgets/search/search_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,7 +21,11 @@ void main() {
     final submitted = <String>[];
     await tester.pumpWidget(Provider<FLauncherChannel>.value(
       value: FLauncherChannel(),
-      child: MaterialApp(home: Scaffold(body: SearchEntry(onSubmit: submitted.add, onCancel: () {}))),
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(body: SearchEntry(onSubmit: submitted.add, onCancel: () {})),
+      ),
     ));
     await tester.pump();
 

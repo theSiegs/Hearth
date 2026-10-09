@@ -614,4 +614,130 @@ class AppLocalizationsTr extends AppLocalizations {
   String weatherTextChance(int percent, String forecast) {
     return '$forecast (%$percent)';
   }
+
+  @override
+  String searchWatchOn(String apps) {
+    return '$apps üzerinde izle';
+  }
+
+  @override
+  String searchRentOrBuyOn(String app) {
+    return '$app üzerinde kirala veya satın al';
+  }
+
+  @override
+  String get searchMoreWaysToWatch => 'Diğer izleme yolları (Google TV)';
+
+  @override
+  String get searchListening => 'Dinleniyor…';
+
+  @override
+  String get searchHint => 'Film ve dizi ara';
+
+  @override
+  String get searchEntryHelp => 'Yazın, mikrofonu kullanın veya Google TV uygulamasıyla telefonunuzdan yazın.';
+
+  @override
+  String get searchTabWatchNow => 'Şimdi izle';
+
+  @override
+  String get searchTabRentOrBuy => 'Kirala veya satın al';
+
+  @override
+  String get searchTabOtherApps => 'Diğer uygulamalar';
+
+  @override
+  String searchGridRentOrBuyApps(String apps) {
+    return 'Kirala veya satın al · $apps';
+  }
+
+  @override
+  String get searchGridWhereToWatchGoogleTv => 'Nerede izlenir: Google TV';
+
+  @override
+  String searchGridElsewhere(String services) {
+    return '$services üzerinde (bu TV\'de yok)';
+  }
+
+  @override
+  String searchGridResults(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sonuç',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String searchGridNothingHere(String query) {
+    return 'Burada “$query” için bir şey yok.';
+  }
+
+  @override
+  String get searchGridTmdbNotice => 'İzleme bilgileri TMDB\'den (JustWatch aracılığıyla). Bu ürün TMDB API\'sini kullanır ancak TMDB tarafından onaylanmamış veya sertifikalandırılmamıştır.';
+
+  @override
+  String searchAppsOr(String apps, String last) {
+    return '$apps veya $last';
+  }
+
+  @override
+  String get searchListSeparator => ', ';
+
+  @override
+  String searchAskGoogleQuery(String query) {
+    return 'Google\'a sor: “$query”';
+  }
+
+  @override
+  String get searchAskGoogleDetail => 'Sorular, hava durumu ve dizi olmayan her şey için';
+
+  @override
+  String searchSearchingFor(String query) {
+    return '“$query” aranıyor…';
+  }
+
+  @override
+  String get searchFailed => 'Şu anda arama yapılamıyor. İnternet bağlantısını kontrol edin.';
+
+  @override
+  String searchNothingFound(String query) {
+    return '“$query” için sonuç bulunamadı';
+  }
+
+  @override
+  String searchNothingInYourApps(String query) {
+    return 'Şu anda uygulamalarınızda “$query” için bir şey yok';
+  }
+
+  @override
+  String get searchSeeMoreResults => 'Başka nerede bulunduğunu Daha fazla sonuç bölümünde görün.';
+
+  @override
+  String get searchMoreResults => 'Daha fazla sonuç';
+
+  @override
+  String searchTitles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count içerik',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get searchAskGoogle => 'Google\'a sor';
+
+  @override
+  String searchQuoted(String query) {
+    return '“$query”';
+  }
+
+  @override
+  String get searchKindFilm => 'Film';
+
+  @override
+  String get searchKindSeries => 'Dizi';
 }

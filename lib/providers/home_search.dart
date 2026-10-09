@@ -42,14 +42,16 @@ class HomeSearch extends ChangeNotifier {
   String _query = "";
   List<TitleMatch> _matches = const [];
   bool _loading = false;
-  String? _error;
+  bool _failed = false;
   int _generation = 0;
 
   /// What was searched ("" when there's no search).
   String get query => _query;
   bool get active => _query.isNotEmpty;
   bool get loading => _loading;
-  String? get error => _error;
+
+  /// The last search couldn't be done (no connection, or Wikidata didn't answer).
+  bool get failed => _failed;
 
   /// Every title found, in search order.
   List<TitleMatch> get matches => _matches;
@@ -72,7 +74,7 @@ class HomeSearch extends ChangeNotifier {
     final generation = ++_generation;
     _query = query;
     _matches = const [];
-    _error = null;
+    _failed = false;
     _loading = query.length >= 2;
     notifyListeners();
     if (!_loading) return;
@@ -90,7 +92,7 @@ class HomeSearch extends ChangeNotifier {
       ];
     } catch (_) {
       if (generation != _generation) return;
-      _error = "Couldn't search right now. Check the internet connection.";
+      _failed = true;
     }
     _loading = false;
     notifyListeners();
@@ -102,7 +104,7 @@ class HomeSearch extends ChangeNotifier {
     _query = "";
     _matches = const [];
     _loading = false;
-    _error = null;
+    _failed = false;
     notifyListeners();
   }
 }

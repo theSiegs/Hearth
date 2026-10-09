@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../flauncher_channel.dart';
+import '../../l10n/app_localizations.dart';
 import '../../providers/home_search.dart';
 import '../../providers/search_service.dart';
 import 'open_title.dart';
@@ -46,10 +47,10 @@ class _SearchResultsRowState extends State<SearchResultsRow> {
   TitleMatch? _focused;
   bool _askFocused = false;
 
-  String _watchOn(TitleMatch m) {
+  String _watchOn(AppLocalizations localizations, TitleMatch m) {
     final names = appsFor(m).map((a) => a.name).toList();
     if (names.isEmpty) return "";
-    return "Watch on ${names.length == 1 ? names.first : "${names.sublist(0, names.length - 1).join(", ")} or ${names.last}"}";
+    return localizations.searchWatchOn(orList(localizations, names));
   }
 
   Future<void> _open(TitleMatch match) async {
@@ -69,31 +70,34 @@ class _SearchResultsRowState extends State<SearchResultsRow> {
   Widget build(BuildContext context) {
     final search = context.watch<HomeSearch>();
     final textTheme = Theme.of(context).textTheme;
+    final localizations = AppLocalizations.of(context)!;
     final shadow = [const Shadow(color: Colors.black54, offset: Offset(1, 1), blurRadius: 8)];
     final row = search.watchNow.take(SearchResultsRow.rowLimit).toList();
     final focused = row.contains(_focused) ? _focused : (row.isNotEmpty ? row.first : null);
 
     final String heading;
     final String detail;
-    final bool nothingFound = !search.loading && (search.error != null || search.matches.isEmpty);
+    final bool nothingFound = !search.loading && (search.failed || search.matches.isEmpty);
     if (_askFocused && !search.loading) {
-      heading = "Ask Google “${search.query}”";
-      detail = "For questions, the weather and anything else that isn't a show";
+      heading = localizations.searchAskGoogleQuery(search.query);
+      detail = localizations.searchAskGoogleDetail;
     } else if (search.loading) {
-      heading = "Searching for “${search.query}”…";
+      heading = localizations.searchSearchingFor(search.query);
       detail = "";
-    } else if (search.error != null) {
-      heading = search.error!;
+    } else if (search.failed) {
+      heading = localizations.searchFailed;
       detail = "";
     } else if (focused != null) {
       heading = focused.result.title;
-      detail = [focused.meta, _watchOn(focused)].where((s) => s.isNotEmpty).join(" · ");
+      detail = [titleMeta(localizations, focused), _watchOn(localizations, focused)]
+          .where((s) => s.isNotEmpty)
+          .join(" · ");
     } else if (search.matches.isEmpty) {
-      heading = "Nothing found for “${search.query}”";
+      heading = localizations.searchNothingFound(search.query);
       detail = "";
     } else {
-      heading = "Nothing for “${search.query}” in your apps right now";
-      detail = "See where else it's available in More results.";
+      heading = localizations.searchNothingInYourApps(search.query);
+      detail = localizations.searchSeeMoreResults;
     }
 
     return Focus(
@@ -146,7 +150,7 @@ class _SearchResultsRowState extends State<SearchResultsRow> {
                           child: TitleCard(
                             autofocus: i == 0,
                             title: match.result.title,
-                            detail: match.meta,
+                            detail: titleMeta(localizations, match),
                             imageUrl: match.imageUrl,
                             packageName: appsFor(match).firstOrNull?.packageName,
                             onFocusChange: (on) {
@@ -165,8 +169,8 @@ class _SearchResultsRowState extends State<SearchResultsRow> {
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: MoreCard(
                             autofocus: row.isEmpty && !nothingFound,
-                            label: "More results",
-                            detail: "${search.matches.length} titles",
+                            label: localizations.searchMoreResults,
+                            detail: localizations.searchTitles(search.matches.length),
                             onPressed: _openGrid,
                             onFocusChange: (on) {
                               if (on) setState(() => _askFocused = false);
@@ -179,8 +183,8 @@ class _SearchResultsRowState extends State<SearchResultsRow> {
                           autofocus: nothingFound,
                           width: 240,
                           icon: Icons.keyboard_voice_outlined,
-                          label: "Ask Google",
-                          detail: "“${search.query}”",
+                          label: localizations.searchAskGoogle,
+                          detail: localizations.searchQuoted(search.query),
                           onPressed: () => _askGoogle(search.query),
                           onFocusChange: (on) => setState(() => _askFocused = on),
                         ),

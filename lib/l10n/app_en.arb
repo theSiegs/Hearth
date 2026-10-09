@@ -475,5 +475,193 @@
                 "type": "String"
             }
         }
+    },
+    "searchWatchOn": "Watch on {apps}",
+    "@searchWatchOn": {
+        "description": "Search: button in the choice of apps for a title, and the detail line under the focused result; apps is one app name, or several joined by searchAppsOr",
+        "placeholders": {
+            "apps": {
+                "type": "String"
+            }
+        }
+    },
+    "searchRentOrBuyOn": "Rent or buy on {app}",
+    "@searchRentOrBuyOn": {
+        "description": "Search: button in the choice of stores for a title that can only be rented or bought",
+        "placeholders": {
+            "app": {
+                "type": "String"
+            }
+        }
+    },
+    "searchMoreWaysToWatch": "More ways to watch (Google TV)",
+    "@searchMoreWaysToWatch": {
+        "description": "Search: last button in the choice of apps for a title; opens the title's Google TV page"
+    },
+    "searchListening": "Listening…",
+    "@searchListening": {
+        "description": "Search box hint while the microphone is listening"
+    },
+    "searchHint": "Search films and shows",
+    "@searchHint": {
+        "description": "Search box hint"
+    },
+    "searchEntryHelp": "Type, use the mic, or type on your phone with the Google TV app.",
+    "@searchEntryHelp": {
+        "description": "Search: help line under the search box"
+    },
+    "searchTabWatchNow": "Watch now",
+    "@searchTabWatchNow": {
+        "description": "Search results page: pill for titles included in an app on this TV"
+    },
+    "searchTabRentOrBuy": "Rent or buy",
+    "@searchTabRentOrBuy": {
+        "description": "Search results page: pill for titles that can be rented or bought in a store on this TV"
+    },
+    "searchTabOtherApps": "Other apps",
+    "@searchTabOtherApps": {
+        "description": "Search results page: pill for titles only on apps that aren't on this TV"
+    },
+    "searchGridRentOrBuyApps": "Rent or buy · {apps}",
+    "@searchGridRentOrBuyApps": {
+        "description": "Search results page, Rent or buy pill: a card's detail line; apps is a list of store names",
+        "placeholders": {
+            "apps": {
+                "type": "String"
+            }
+        }
+    },
+    "searchGridWhereToWatchGoogleTv": "Where to watch: Google TV",
+    "@searchGridWhereToWatchGoogleTv": {
+        "description": "Search results page, Other apps pill: a card's detail line when no service is known"
+    },
+    "searchGridElsewhere": "On {services} (not on this TV)",
+    "@searchGridElsewhere": {
+        "description": "Search results page, Other apps pill: a card's detail line; services is one or two streaming service names",
+        "placeholders": {
+            "services": {
+                "type": "String"
+            }
+        }
+    },
+    "searchGridResults": "{count, plural, =1{1 result} other{{count} results}}",
+    "@searchGridResults": {
+        "description": "Search results page: how many titles were found, beside the search",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "searchGridNothingHere": "Nothing here for “{query}”.",
+    "@searchGridNothingHere": {
+        "description": "Search results page: the selected pill has no titles; query is what was searched",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "searchGridTmdbNotice": "Where to watch from TMDB (via JustWatch). This product uses the TMDB API but is not endorsed or certified by TMDB.",
+    "@searchGridTmdbNotice": {
+        "description": "Search results page: attribution at the bottom, which TMDB's terms ask for"
+    },
+    "searchAppsOr": "{apps} or {last}",
+    "@searchAppsOr": {
+        "description": "Search: the last of several app names; apps is the others, joined by searchListSeparator (A, B or C)",
+        "placeholders": {
+            "apps": {
+                "type": "String"
+            },
+            "last": {
+                "type": "String"
+            }
+        }
+    },
+    "searchListSeparator": ", ",
+    "@searchListSeparator": {
+        "description": "Search: what goes between names in a list of apps or services (Netflix, Disney+)"
+    },
+    "searchAskGoogleQuery": "Ask Google “{query}”",
+    "@searchAskGoogleQuery": {
+        "description": "Search results row, heading while Ask Google is focused; query is what was searched",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "searchAskGoogleDetail": "For questions, the weather and anything else that isn't a show",
+    "@searchAskGoogleDetail": {
+        "description": "Search results row, under the heading while Ask Google is focused"
+    },
+    "searchSearchingFor": "Searching for “{query}”…",
+    "@searchSearchingFor": {
+        "description": "Search results row heading while the search runs; query is what was searched",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "searchFailed": "Couldn't search right now. Check the internet connection.",
+    "@searchFailed": {
+        "description": "Search results row heading when the search couldn't be done"
+    },
+    "searchNothingFound": "Nothing found for “{query}”",
+    "@searchNothingFound": {
+        "description": "Search results row heading when the search found no titles; query is what was searched",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "searchNothingInYourApps": "Nothing for “{query}” in your apps right now",
+    "@searchNothingInYourApps": {
+        "description": "Search results row heading when titles were found but none is watchable in this TV's apps",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "searchSeeMoreResults": "See where else it's available in More results.",
+    "@searchSeeMoreResults": {
+        "description": "Search results row, under searchNothingInYourApps; More results is the searchMoreResults card"
+    },
+    "searchMoreResults": "More results",
+    "@searchMoreResults": {
+        "description": "Search results row: card that opens every result in a grid"
+    },
+    "searchTitles": "{count, plural, =1{1 title} other{{count} titles}}",
+    "@searchTitles": {
+        "description": "Search results row, under More results: how many titles were found",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "searchAskGoogle": "Ask Google",
+    "@searchAskGoogle": {
+        "description": "Search results row: last card, which hands the same words to Google TV's own search"
+    },
+    "searchQuoted": "“{query}”",
+    "@searchQuoted": {
+        "description": "Search results row, under Ask Google: what was searched, in the language's quotation marks",
+        "placeholders": {
+            "query": {
+                "type": "String"
+            }
+        }
+    },
+    "searchKindFilm": "Film",
+    "@searchKindFilm": {
+        "description": "Search: kind of title on a result card, after its year (2014 · Film)"
+    },
+    "searchKindSeries": "Series",
+    "@searchKindSeries": {
+        "description": "Search: kind of title on a result card, after its year (2022 · Series)"
     }
 }
