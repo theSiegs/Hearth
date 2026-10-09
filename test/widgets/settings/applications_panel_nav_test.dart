@@ -18,6 +18,7 @@ void main() {
   });
 
   testWidgets("Left/Right arrow keys switch categories in ApplicationsPanelPage", (tester) async {
+    int leftsReachingPage = 0;
     final appsService = MockAppsService();
     // Setup some fake apps to populate tabs
     when(appsService.applications).thenReturn([
@@ -35,7 +36,16 @@ void main() {
         builder: (_, __) => MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const Scaffold(body: ApplicationsPanelPage()),
+          // Stands in for the Settings panel, whose Left goes back to the page before
+          home: Focus(
+            canRequestFocus: false,
+            skipTraversal: true,
+            onKeyEvent: (_, event) {
+              if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowLeft) leftsReachingPage++;
+              return KeyEventResult.ignored;
+            },
+            child: const Scaffold(body: ApplicationsPanelPage()),
+          ),
           onGenerateRoute: (settings) => MaterialPageRoute(builder: (_) => Container()),
         ),
       ),
@@ -71,5 +81,6 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
     expect(find.text("TV Apps"), findsOneWidget, reason: "Should stay on TV Apps when pressing Left on first tab");
+    expect(leftsReachingPage, 1, reason: "Left on the first tab goes on to the page, to go back");
   });
 }
