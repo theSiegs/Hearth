@@ -65,7 +65,12 @@ class _FocusableSettingsTileState extends State<FocusableSettingsTile> {
                   Expanded(child: widget.title),
                   if (widget.trailing != null) ...[
                     const SizedBox(width: 16),
-                    widget.trailing!,
+                    // A long status ("Overlay Permission Required", or longer in German) wraps here instead of
+                    // squeezing the title into a column of single letters
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 120),
+                      child: DefaultTextStyle.merge(textAlign: TextAlign.end, child: widget.trailing!),
+                    ),
                   ],
                 ],
               ),
