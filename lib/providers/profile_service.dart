@@ -248,6 +248,7 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
     final String? owner = _sharedPreferences.getString(layoutOwnerKey);
     if (owner == key || (owner != null && owner == name)) {
       if (owner != key) await _sharedPreferences.setString(layoutOwnerKey, key);
+      await _appsService.hideDefaultHiddenApps(key);
       await _fillEmptyDock();
       await _giveKidsTheirFirstLook(key);
       return;
@@ -268,6 +269,7 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
         await _appsService.resetToDefaultLayout();
       }
       await _sharedPreferences.setString(layoutOwnerKey, key);
+      await _appsService.hideDefaultHiddenApps(key);
       await _fillEmptyDock();
       await _giveKidsTheirFirstLook(key);
     } catch (e, stack) {
