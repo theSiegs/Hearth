@@ -8,7 +8,8 @@ Hearth's side is done (provider contract version 5, docs/provider-contract.md). 
 
 ## What Hearth offers
 
-Authority `com.leanbitlab.ltvL.profile` (debug Hearth: `com.leanbitlab.ltvL.debug.profile`).
+Authority `com.thesiegs.hearth.profile` (debug Hearth: `com.thesiegs.hearth.debug.profile`); until a TV has moved to
+Hearth's new app id, `com.leanbitlab.ltvL.profile` (docs/design/app-id-change.md: try the new one first).
 
 - `content://<authority>/active`: the one-row cursor HearthTube already reads. New wallpaper columns:
 
@@ -53,10 +54,10 @@ Drawing it on a `w` x `h` screen with `android.graphics` (colors via `Color.pars
 HearthTube follows Hearth's wallpaper when all of these hold:
 
 1. Hearth's provider answers: `query(/active)` returns a row with `contract_version >= 5`, and the provider's
-   package is `com.leanbitlab.ltvL` (or `.debug`) signed with one of the certificates listed in
+   package is `com.thesiegs.hearth` or `com.leanbitlab.ltvL` (or either `.debug`) signed with one of the certificates listed in
    docs/provider-contract.md (HearthTube already checks this).
 2. HearthTube was opened from Hearth, or Hearth is the TV's home:
-   - `Activity.getLaunchedFromPackage()` (Android 14+) returns `com.leanbitlab.ltvL` (or `.debug`). Hearth launches
+   - `Activity.getLaunchedFromPackage()` (Android 14+) returns one of those Hearth packages. Hearth launches
      apps with share-identity `ActivityOptions`, so this works for anything opened from Hearth's home, search or
      Continue Watching. It's null when opened some other way, and before Android 14.
    - Otherwise: `PackageManager.resolveActivity(new Intent(ACTION_MAIN).addCategory(CATEGORY_HOME),

@@ -44,14 +44,14 @@ Both are set over adb and then persist across reboots (no adb at each boot), but
 again — that per-profile adb is exactly the dependency we want to remove.
 
 ### Device admin (live now for Hearth)
-Hearth holds a no-policy device-admin receiver (`com.leanbitlab.ltvL/.AgentAdminReceiver`) in users 10/11/12
+Hearth holds a no-policy device-admin receiver (`com.thesiegs.hearth/.AgentAdminReceiver`) in users 10/11/12
 (alongside the GMS profile owner, `com.google.android.gms/.kids.account.receiver.ProfileOwnerReceiver`). An active
 admin can't be uninstalled or suspended:
 - `DeletePackageHelper` → `DELETE_FAILED_DEVICE_POLICY_MANAGER`; seen live: `PackageManager: Not removing package
-  com.leanbitlab.ltvL: has active device admin`.
+  com.thesiegs.hearth: has active device admin`.
 - `SuspendPackageHelper.canSuspendPackageForUser` → "has an active device admin".
 
-Set with `dpm set-active-admin --user N com.leanbitlab.ltvL/.AgentAdminReceiver`. Downsides: adb per profile; and
+Set with `dpm set-active-admin --user N com.thesiegs.hearth/.AgentAdminReceiver`. Downsides: adb per profile; and
 because an active admin can't be suspended, Google TV's bedtime suspend can't touch it (Hearth handles bedtime itself
 via its own `screen_time_up`).
 
@@ -175,7 +175,7 @@ Design:
   on screen — and unlike `DeviceAdminAdd`, this dialog does exist and work on Google TV (it is how a PC gets
   authorized). Hearth's key is then trusted.
 - Thereafter Hearth runs, as `shell`, the same commands used here for each kid user: `pm install-existing --user N`
-  (both apps) + `dpm set-active-admin --user N com.leanbitlab.ltvL/.AgentAdminReceiver` (Hearth) and the
+  (both apps) + `dpm set-active-admin --user N com.thesiegs.hearth/.AgentAdminReceiver` (Hearth) and the
   block-uninstall step for HearthTube (or give HearthTube its own no-policy admin receiver). `shell` holds
   `INSTALL_PACKAGES`/`DELETE_PACKAGES`/`INTERACT_ACROSS_USERS_FULL`, so cross-user provisioning works.
 
@@ -206,7 +206,7 @@ TV-verified (it is chooser/supervision-driven and does not fire from a headless 
 
 Still needs a one-time adb grant and can't cover everything, so it doesn't remove the adb dependency:
 - Continue Watching: `INTERACT_ACROSS_USERS` is `signature|privileged|development|role` on Android 14, so
-  `pm grant com.leanbitlab.ltvL android.permission.INTERACT_ACROSS_USERS` (adb, once) lets the owner-user Hearth read
+  `pm grant com.thesiegs.hearth android.permission.INTERACT_ACROSS_USERS` (adb, once) lets the owner-user Hearth read
   `content://N@android.media.tv/watch_next_program`. Untested; the kid user must be running.
 - Deep links into the kid user likely need `INTERACT_ACROSS_USERS_FULL` (adb can't grant).
 - Netflix pairing's text-to-speech relay must run in the kid user, so it can't move out.

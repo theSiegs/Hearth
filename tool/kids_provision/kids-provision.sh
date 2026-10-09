@@ -41,7 +41,7 @@
 set -u
 
 # --- Hearth's own packages: the ONLY packages this script ever touches. ---
-HEARTH=com.leanbitlab.ltvL
+HEARTH=com.thesiegs.hearth
 HEARTHTUBE=com.thesiegs.hearthtube
 PKGS="$HEARTH $HEARTHTUBE"
 
