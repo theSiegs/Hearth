@@ -36,16 +36,17 @@ class ProfilesSettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final hasPin = context.select<SettingsService, bool>((s) => s.hasParentPin);
     final bool locked = settingsLocked(context);
     return SettingsPage(
-      title: AppLocalizations.of(context)!.profilesTitle,
+      title: l.profilesTitle,
       children: [
         FocusableSettingsTile(
           autofocus: true,
           leading: const Icon(Icons.people_outline),
-          title: Text("Switch profile", style: textTheme.bodyMedium),
+          title: Text(l.profilesSwitchProfile, style: textTheme.bodyMedium),
           trailing: Text(activeProfileLabel(context) ?? "", style: textTheme.bodySmall),
           onPressed: () => context.read<FLauncherChannel>().openProfileChooser(),
         ),
@@ -54,14 +55,14 @@ class ProfilesSettingsPage extends StatelessWidget {
         if (!locked)
           FocusableSettingsTile(
             leading: const Icon(Icons.switch_account),
-            title: Text(AppLocalizations.of(context)!.profilePairingTitle, style: textTheme.bodyMedium),
+            title: Text(l.profilePairingTitle, style: textTheme.bodyMedium),
             onPressed: () => Navigator.of(context).pushNamed(ProfilePairingPage.routeName),
           ),
         if (!locked)
           FocusableSettingsTile(
             leading: const Icon(Icons.lock_outline),
-            title: Text("Parent PIN", style: textTheme.bodyMedium),
-            trailing: Text(hasPin ? "On" : "Off", style: textTheme.bodySmall),
+            title: Text(l.parentPinTitle, style: textTheme.bodyMedium),
+            trailing: Text(hasPin ? l.parentPinOn : l.parentPinOff, style: textTheme.bodySmall),
             onPressed: () => _editParentPin(context),
           ),
       ],
@@ -73,21 +74,22 @@ class ProfilesSettingsPage extends StatelessWidget {
       context.select<ProfileService?, String?>((p) => p?.activeProfileName);
 
   Future<void> _editParentPin(BuildContext context) async {
+    final l = AppLocalizations.of(context)!;
     final settings = context.read<SettingsService>();
     if (settings.hasParentPin) {
       final current = await showDialog<String>(
         context: context,
-        builder: (_) => ParentPinDialog(title: "Current parent PIN", verify: settings.verifyParentPin),
+        builder: (_) => ParentPinDialog(title: l.parentPinCurrent, verify: settings.verifyParentPin),
       );
       if (current == null || !context.mounted) return;
       final bool? remove = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text("Parent PIN"),
+          title: Text(l.parentPinTitle),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text("Remove PIN")),
+            TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l.parentPinRemove)),
             TextButton(
-                autofocus: true, onPressed: () => Navigator.of(context).pop(false), child: const Text("Change PIN")),
+                autofocus: true, onPressed: () => Navigator.of(context).pop(false), child: Text(l.parentPinChange)),
           ],
         ),
       );
@@ -99,13 +101,12 @@ class ProfilesSettingsPage extends StatelessWidget {
     }
     final first = await showDialog<String>(
       context: context,
-      builder: (_) => const ParentPinDialog(
-          title: "New parent PIN", subtitle: "Needed to change the launcher in Google TV kids profiles"),
+      builder: (_) => ParentPinDialog(title: l.parentPinNew, subtitle: l.parentPinNewSubtitle),
     );
     if (first == null || !context.mounted) return;
     final second = await showDialog<String>(
       context: context,
-      builder: (_) => ParentPinDialog(title: "Enter the PIN again", verify: (pin) => pin == first),
+      builder: (_) => ParentPinDialog(title: l.parentPinConfirm, verify: (pin) => pin == first),
     );
     if (second != null) {
       await settings.setParentPin(first);

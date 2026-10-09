@@ -875,4 +875,252 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get haPhoneSetupScan => 'Відскануйте телефоном у тій самій мережі Wi-Fi, вставте адресу Home Assistant і токен доступу та натисніть Send. Сторінка працює, лише поки це вікно відкрите.';
+
+  @override
+  String get profilesSwitchProfile => 'Змінити профіль';
+
+  @override
+  String get parentPinTitle => 'Батьківський PIN-код';
+
+  @override
+  String get parentPinOn => 'Увімк.';
+
+  @override
+  String get parentPinOff => 'Вимк.';
+
+  @override
+  String get parentPinCurrent => 'Поточний батьківський PIN-код';
+
+  @override
+  String get parentPinRemove => 'Видалити PIN-код';
+
+  @override
+  String get parentPinChange => 'Змінити PIN-код';
+
+  @override
+  String get parentPinNew => 'Новий батьківський PIN-код';
+
+  @override
+  String get parentPinNewSubtitle => 'Потрібен, щоб змінювати лаунчер у дитячих профілях Google TV';
+
+  @override
+  String get parentPinConfirm => 'Введіть PIN-код ще раз';
+
+  @override
+  String get parentPinAskTitle => 'Попроси батьків';
+
+  @override
+  String parentPinAskBody(String settings, String profiles, String parentPin) {
+    return 'У дитячих профілях налаштування лаунчера заблоковано. Батьки можуть задати PIN-код у своєму профілі: $settings → $profiles → $parentPin.';
+  }
+
+  @override
+  String get parentPinKidsSubtitle => 'Дитячий профіль: введіть батьківський PIN-код, щоб змінити лаунчер';
+
+  @override
+  String get parentPinWrong => 'НЕПРАВИЛЬНИЙ PIN-КОД';
+
+  @override
+  String get parentPinEnter => 'ВВЕДІТЬ PIN-КОД';
+
+  @override
+  String profileSwitchGreeting(String name) {
+    return 'Привіт, $name';
+  }
+
+  @override
+  String get profileSwitchSettingUp => 'Налаштовуємо цей профіль…';
+
+  @override
+  String profilesKidsName(String name) {
+    return '$name (дитячий)';
+  }
+
+  @override
+  String profilesAdultName(String name) {
+    return '$name (дорослий)';
+  }
+
+  @override
+  String get pairingShowPicker => 'Показати вибір профілю';
+
+  @override
+  String get pairingAlwaysShowPicker => 'Завжди показувати вибір профілю';
+
+  @override
+  String pairingMatchedByName(String profile) {
+    return '$profile (збіг за іменем)';
+  }
+
+  @override
+  String get pairingNoMatchYet => 'Збігів поки немає: показується вибір профілю';
+
+  @override
+  String get pairingOffSetUp => 'Зв\'язування профілів вимкнено. Налаштувати';
+
+  @override
+  String pairingFooter(String shortName, String fullName) {
+    return 'Коли Hearth відкриває один із цих застосунків, він вибирає профіль застосунку, пов\'язаний із профілем Google TV. Hearth сам зіставляє імена (\"$shortName\" відповідає \"$fullName\"); будь-який зв\'язок можна змінити тут. Якщо збігу немає, показується вибір профілю самого застосунку.';
+  }
+
+  @override
+  String get pairingAppNotInstalled => 'Не встановлено';
+
+  @override
+  String get pairingAppOff => 'Вимк.: показується вибір профілю застосунку';
+
+  @override
+  String get pairingAppNotSeen => 'Відкрийте його один раз із Hearth, щоб Hearth дізнався його профілі';
+
+  @override
+  String pairingAppProfilesFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Знайдено $count профілю',
+      many: 'Знайдено $count профілів',
+      few: 'Знайдено $count профілі',
+      one: 'Знайдено $count профіль',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pairingMatchByName(String profile) {
+    return 'За іменем ($profile)';
+  }
+
+  @override
+  String get pairingMatchByNameNone => 'За іменем (збігів поки немає)';
+
+  @override
+  String pairingProfileInApp(String profile, String app) {
+    return '$profile у $app';
+  }
+
+  @override
+  String pairingPairIn(String app) {
+    return 'Зв\'язувати профілі в $app';
+  }
+
+  @override
+  String get pairingAppNotSeenFooter => 'Hearth ще не бачив профілів цього застосунку. Відкрийте його один раз із Hearth і поверніться.';
+
+  @override
+  String pairingAppProfilesFooter(String profiles) {
+    return 'Профілі в цьому застосунку: $profiles. Профілі Google TV з\'являться тут, коли Hearth їх побачить.';
+  }
+
+  @override
+  String get familyAppsIntro => 'Установіть Hearth і HearthTube в інші профілі Google TV. У дитячих профілях це потрібно, щоб працював HearthTube і щоб Hearth вибирав правильний профіль у Netflix, Disney+ та інших застосунках. У дорослих профілях це просто зручність: не доведеться встановлювати їх вручну.';
+
+  @override
+  String get familyAppsAddTitle => 'Додати Hearth в інші профілі';
+
+  @override
+  String get familyAppsAddKids => 'Hearth і HearthTube буде встановлено в профілі ваших дітей: там запрацює HearthTube, а Hearth зможе вибирати правильний профіль у таких застосунках, як Netflix і Disney+.';
+
+  @override
+  String get familyAppsAddAdults => 'Їх також буде встановлено в інші дорослі профілі телевізора, щоб іншим дорослим не довелося налаштовувати все самим.';
+
+  @override
+  String get familyAppsAddOnlyOwnApps => 'Додаються лише два застосунки Hearth, і це можна будь-коли скасувати кнопкою «Видалити» нижче.';
+
+  @override
+  String get familyAppsAddFamilyLink => 'Кожна дитина отримає одне сповіщення Family Link «Застосунок додано».';
+
+  @override
+  String get familyAppsAddApproval => 'Першого разу телевізор запитає «Дозволити налагодження?» — виберіть «Завжди дозволяти»: так Hearth зможе виконати налаштування.';
+
+  @override
+  String get familyAppsAdd => 'Додати';
+
+  @override
+  String get familyAppsRemoveTitle => 'Видалити Hearth з інших профілів';
+
+  @override
+  String get familyAppsRemoveBody => 'Hearth і HearthTube буде видалено з інших профілів.';
+
+  @override
+  String get familyAppsRemoveFirst => 'Якщо ви збираєтеся видалити сам Hearth, спершу виконайте це — інакше його копії в дитячих профілях можуть залишитися, і видалити їх можна буде лише з комп\'ютера.';
+
+  @override
+  String get familyAppsUninstallTitle => 'Видалити Hearth';
+
+  @override
+  String get familyAppsUninstallBody => 'Спершу Hearth і HearthTube буде видалено з інших профілів, а потім Hearth буде видалено з цього.';
+
+  @override
+  String get familyAppsUninstallWhyHere => 'Видалення тут, а не в налаштуваннях Android, гарантує, що в дитячих профілях нічого не залишиться.';
+
+  @override
+  String get familyAppsApprovalFirstTitle => 'Спершу надайте одноразовий дозвіл';
+
+  @override
+  String get familyAppsApprovalFirstBody => 'Hearth поки не зміг очистити інші профілі: потрібно один раз підтвердити на телевізорі запит «Дозволити налагодження?».';
+
+  @override
+  String get familyAppsApprovalFirstRetry => 'Підтвердьте його й знову спробуйте видалити, щоб у дитячих профілях нічого не залишилося.';
+
+  @override
+  String get familyAppsAddDone => 'Додавання завершено';
+
+  @override
+  String get familyAppsRemoveDone => 'Видалення завершено';
+
+  @override
+  String get familyAppsAdded => 'Готово. Hearth і HearthTube тепер є в інших профілях — дивіться список нижче.';
+
+  @override
+  String get familyAppsRemoved => 'Готово. Hearth і HearthTube видалено з інших профілів.';
+
+  @override
+  String get familyAppsNothingToSetUp => 'Інших профілів для налаштування поки немає.';
+
+  @override
+  String get familyAppsFailedTitle => 'Не вдалося налаштувати профілі';
+
+  @override
+  String get familyAppsFailedBody => 'Щоб налаштувати інші профілі, Hearth потрібно один раз отримати дозвіл на телевізорі.';
+
+  @override
+  String get familyAppsFailedRetry => 'Коли телевізор запитає «Дозволити налагодження?», виберіть «Завжди дозволяти» й спробуйте ще раз.';
+
+  @override
+  String get familyAppsAlsoAdults => 'Також налаштувати інші дорослі профілі';
+
+  @override
+  String get familyAppsOn => 'Увімк.';
+
+  @override
+  String get familyAppsOff => 'Вимк.';
+
+  @override
+  String get familyAppsNoneYet => 'Інші профілі поки не налаштовано.';
+
+  @override
+  String familyAppsAppInstalled(String app) {
+    return '$app: встановлено';
+  }
+
+  @override
+  String familyAppsAppInstalledKept(String app) {
+    return '$app: встановлено, захищено';
+  }
+
+  @override
+  String familyAppsAppNotInstalled(String app) {
+    return '$app: не встановлено';
+  }
+
+  @override
+  String familyAppsAppNotInstalledKept(String app) {
+    return '$app: не встановлено, захищено';
+  }
+
+  @override
+  String get familyAppsUnnamedKids => 'Дитячий профіль';
+
+  @override
+  String get familyAppsUnnamedAdult => 'Дорослий профіль';
 }

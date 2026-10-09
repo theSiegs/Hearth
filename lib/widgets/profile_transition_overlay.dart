@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../flauncher_channel.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/profile_service.dart';
 import '../providers/watch_next_service.dart';
 
@@ -181,6 +182,7 @@ class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
   }
 
   Widget _card(BuildContext context, String? name, Uint8List? photo, double progress) {
+    final l = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return Focus(
       focusNode: _focusNode,
@@ -203,7 +205,7 @@ class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
             ),
             const SizedBox(height: 28),
             Text(
-              name != null ? "Hi, $name" : "Setting up this profile…",
+              name != null ? l.profileSwitchGreeting(name) : l.profileSwitchSettingUp,
               style: theme.textTheme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 24),

@@ -871,4 +871,250 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get haPhoneSetupScan => 'Scansiona con un telefono sulla stessa rete Wi-Fi, incolla l\'indirizzo di Home Assistant e il token di accesso e tocca Send. La pagina funziona solo finché questa finestra è aperta.';
+
+  @override
+  String get profilesSwitchProfile => 'Cambia profilo';
+
+  @override
+  String get parentPinTitle => 'PIN genitori';
+
+  @override
+  String get parentPinOn => 'Attivo';
+
+  @override
+  String get parentPinOff => 'Disattivo';
+
+  @override
+  String get parentPinCurrent => 'PIN genitori attuale';
+
+  @override
+  String get parentPinRemove => 'Rimuovi PIN';
+
+  @override
+  String get parentPinChange => 'Cambia PIN';
+
+  @override
+  String get parentPinNew => 'Nuovo PIN genitori';
+
+  @override
+  String get parentPinNewSubtitle => 'Serve per modificare il launcher nei profili bambini di Google TV';
+
+  @override
+  String get parentPinConfirm => 'Inserisci di nuovo il PIN';
+
+  @override
+  String get parentPinAskTitle => 'Chiedi a un genitore';
+
+  @override
+  String parentPinAskBody(String settings, String profiles, String parentPin) {
+    return 'Le impostazioni del launcher sono bloccate nei profili bambini. Un genitore può impostare un PIN in $settings → $profiles → $parentPin dal proprio profilo.';
+  }
+
+  @override
+  String get parentPinKidsSubtitle => 'Profilo bambini: inserisci il PIN genitori per modificare il launcher';
+
+  @override
+  String get parentPinWrong => 'PIN ERRATO';
+
+  @override
+  String get parentPinEnter => 'INSERISCI IL PIN';
+
+  @override
+  String profileSwitchGreeting(String name) {
+    return 'Ciao, $name';
+  }
+
+  @override
+  String get profileSwitchSettingUp => 'Configurazione del profilo…';
+
+  @override
+  String profilesKidsName(String name) {
+    return '$name (bambini)';
+  }
+
+  @override
+  String profilesAdultName(String name) {
+    return '$name (adulti)';
+  }
+
+  @override
+  String get pairingShowPicker => 'Mostra la scelta profilo';
+
+  @override
+  String get pairingAlwaysShowPicker => 'Mostra sempre la scelta profilo';
+
+  @override
+  String pairingMatchedByName(String profile) {
+    return '$profile (abbinato per nome)';
+  }
+
+  @override
+  String get pairingNoMatchYet => 'Nessun abbinamento: compare la scelta profilo';
+
+  @override
+  String get pairingOffSetUp => 'L\'abbinamento profili è disattivato. Configuralo';
+
+  @override
+  String pairingFooter(String shortName, String fullName) {
+    return 'Quando Hearth apre una di queste app, sceglie il profilo dell\'app abbinato al profilo Google TV. Hearth abbina i nomi da solo (\"$shortName\" va con \"$fullName\"); puoi cambiare qualsiasi abbinamento qui. Senza abbinamento, compare la scelta profilo dell\'app.';
+  }
+
+  @override
+  String get pairingAppNotInstalled => 'Non installata';
+
+  @override
+  String get pairingAppOff => 'Disattivo: compare la scelta profilo dell\'app';
+
+  @override
+  String get pairingAppNotSeen => 'Aprila una volta da Hearth così Hearth ne impara i profili';
+
+  @override
+  String pairingAppProfilesFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count profili trovati',
+      one: '1 profilo trovato',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pairingMatchByName(String profile) {
+    return 'Abbina per nome ($profile)';
+  }
+
+  @override
+  String get pairingMatchByNameNone => 'Abbina per nome (nessun abbinamento)';
+
+  @override
+  String pairingProfileInApp(String profile, String app) {
+    return '$profile in $app';
+  }
+
+  @override
+  String pairingPairIn(String app) {
+    return 'Abbina i profili in $app';
+  }
+
+  @override
+  String get pairingAppNotSeenFooter => 'Hearth non ha ancora visto i profili di questa app. Aprila una volta da Hearth, poi torna qui.';
+
+  @override
+  String pairingAppProfilesFooter(String profiles) {
+    return 'Profili in questa app: $profiles. I profili Google TV compaiono qui quando Hearth li ha visti.';
+  }
+
+  @override
+  String get familyAppsIntro => 'Porta Hearth e HearthTube sugli altri profili Google TV. Sui profili bambini serve perché HearthTube funzioni e perché Hearth scelga il profilo giusto in Netflix, Disney+ e altre app. Sui profili adulti è solo una comodità, così non vanno installate a mano.';
+
+  @override
+  String get familyAppsAddTitle => 'Aggiungi Hearth agli altri profili';
+
+  @override
+  String get familyAppsAddKids => 'Così Hearth e HearthTube vanno sui profili dei tuoi figli: HearthTube funziona lì e Hearth può scegliere il profilo giusto in app come Netflix e Disney+.';
+
+  @override
+  String get familyAppsAddAdults => 'Le installa anche sugli altri profili adulti della TV, così un altro adulto non deve configurarle da solo.';
+
+  @override
+  String get familyAppsAddOnlyOwnApps => 'Aggiunge solo le due app di Hearth e puoi annullare in qualsiasi momento con Rimuovi qui sotto.';
+
+  @override
+  String get familyAppsAddFamilyLink => 'Ogni bambino riceve una notifica di Family Link \"app aggiunta\".';
+
+  @override
+  String get familyAppsAddApproval => 'La prima volta la TV chiede \"Consentire il debug?\": scegli Consenti sempre; è ciò che permette a Hearth di fare la configurazione.';
+
+  @override
+  String get familyAppsAdd => 'Aggiungi';
+
+  @override
+  String get familyAppsRemoveTitle => 'Rimuovi Hearth dagli altri profili';
+
+  @override
+  String get familyAppsRemoveBody => 'Rimuove Hearth e HearthTube dagli altri profili.';
+
+  @override
+  String get familyAppsRemoveFirst => 'Se vuoi disinstallare Hearth, fai prima questo: altrimenti le sue copie sui profili bambini possono restare bloccate e servirà un computer per rimuoverle.';
+
+  @override
+  String get familyAppsUninstallTitle => 'Disinstalla Hearth';
+
+  @override
+  String get familyAppsUninstallBody => 'Prima rimuove Hearth e HearthTube dagli altri profili, poi disinstalla Hearth da questo.';
+
+  @override
+  String get familyAppsUninstallWhyHere => 'Disinstallare da qui, invece che dalle impostazioni di Android, garantisce che non resti nulla sui profili bambini.';
+
+  @override
+  String get familyAppsApprovalFirstTitle => 'Prima completa l\'approvazione una tantum';
+
+  @override
+  String get familyAppsApprovalFirstBody => 'Hearth non è ancora riuscito a ripulire gli altri profili: serve l\'approvazione una tantum \"Consentire il debug?\" sulla TV.';
+
+  @override
+  String get familyAppsApprovalFirstRetry => 'Approvala, poi riprova Disinstalla, così sui profili bambini non resta nulla.';
+
+  @override
+  String get familyAppsAddDone => 'Aggiunta completata';
+
+  @override
+  String get familyAppsRemoveDone => 'Rimozione completata';
+
+  @override
+  String get familyAppsAdded => 'Fatto. Hearth e HearthTube ora sono sugli altri profili: guarda l\'elenco qui sotto.';
+
+  @override
+  String get familyAppsRemoved => 'Fatto. Hearth e HearthTube sono stati rimossi dagli altri profili.';
+
+  @override
+  String get familyAppsNothingToSetUp => 'Non ci sono ancora altri profili da configurare.';
+
+  @override
+  String get familyAppsFailedTitle => 'Impossibile configurare i profili';
+
+  @override
+  String get familyAppsFailedBody => 'Hearth ha bisogno di un\'approvazione una tantum sulla TV prima di poter configurare gli altri profili.';
+
+  @override
+  String get familyAppsFailedRetry => 'Sulla TV scegli Consenti sempre quando chiede \"Consentire il debug?\", poi riprova.';
+
+  @override
+  String get familyAppsAlsoAdults => 'Configura anche gli altri profili adulti';
+
+  @override
+  String get familyAppsOn => 'Attivo';
+
+  @override
+  String get familyAppsOff => 'Disattivo';
+
+  @override
+  String get familyAppsNoneYet => 'Nessun altro profilo ancora configurato.';
+
+  @override
+  String familyAppsAppInstalled(String app) {
+    return '$app: installata';
+  }
+
+  @override
+  String familyAppsAppInstalledKept(String app) {
+    return '$app: installata, protetta';
+  }
+
+  @override
+  String familyAppsAppNotInstalled(String app) {
+    return '$app: non installata';
+  }
+
+  @override
+  String familyAppsAppNotInstalledKept(String app) {
+    return '$app: non installata, protetta';
+  }
+
+  @override
+  String get familyAppsUnnamedKids => 'Un profilo bambini';
+
+  @override
+  String get familyAppsUnnamedAdult => 'Un profilo adulti';
 }

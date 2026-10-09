@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -37,19 +38,19 @@ Future<bool> requireParent(BuildContext context) async {
   if (!kids) return true;
 
   final settings = context.read<SettingsService>();
+  final l = AppLocalizations.of(context)!;
   if (!settings.hasParentPin) {
     await showMessageDialog(context,
-        title: "Ask a parent",
-        message: "Launcher settings are locked in kids profiles. A parent can set a PIN in Settings → Profiles → "
-            "Parent PIN from their own profile.");
+        title: l.parentPinAskTitle,
+        message: l.parentPinAskBody(l.settingsTitle, l.profilesTitle, l.parentPinTitle));
     return false;
   }
 
   final String? pin = await showDialog<String>(
     context: context,
     builder: (_) => ParentPinDialog(
-      title: "Parent PIN",
-      subtitle: "Kids profile: enter the parent PIN to change the launcher",
+      title: l.parentPinTitle,
+      subtitle: l.parentPinKidsSubtitle,
       verify: settings.verifyParentPin,
     ),
   );
@@ -113,6 +114,7 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Dialog.fullscreen(
       backgroundColor: _background,
       child: Focus(
@@ -137,7 +139,7 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(_error ? "WRONG PIN" : "ENTER PIN",
+                  Text(_error ? l.parentPinWrong : l.parentPinEnter,
                       style: TextStyle(
                           color: _error ? const Color(0xFFF2B8B5) : _textDim, fontSize: 12, letterSpacing: 2)),
                   const SizedBox(height: 16),

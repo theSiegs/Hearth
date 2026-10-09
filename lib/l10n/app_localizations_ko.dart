@@ -869,4 +869,249 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get haPhoneSetupScan => '같은 Wi-Fi에 연결된 휴대전화로 스캔하고 Home Assistant 주소와 액세스 토큰을 붙여넣은 다음 Send를 탭하세요. 이 창이 열려 있는 동안에만 페이지가 작동합니다.';
+
+  @override
+  String get profilesSwitchProfile => '프로필 전환';
+
+  @override
+  String get parentPinTitle => '보호자 PIN';
+
+  @override
+  String get parentPinOn => '켜짐';
+
+  @override
+  String get parentPinOff => '꺼짐';
+
+  @override
+  String get parentPinCurrent => '현재 보호자 PIN';
+
+  @override
+  String get parentPinRemove => 'PIN 삭제';
+
+  @override
+  String get parentPinChange => 'PIN 변경';
+
+  @override
+  String get parentPinNew => '새 보호자 PIN';
+
+  @override
+  String get parentPinNewSubtitle => 'Google TV 어린이 프로필에서 런처를 변경하려면 필요합니다';
+
+  @override
+  String get parentPinConfirm => 'PIN을 다시 입력하세요';
+
+  @override
+  String get parentPinAskTitle => '보호자에게 물어보세요';
+
+  @override
+  String parentPinAskBody(String settings, String profiles, String parentPin) {
+    return '어린이 프로필에서는 런처 설정이 잠겨 있습니다. 보호자가 자신의 프로필에서 $settings → $profiles → $parentPin에서 PIN을 설정할 수 있습니다.';
+  }
+
+  @override
+  String get parentPinKidsSubtitle => '어린이 프로필: 런처를 변경하려면 보호자 PIN을 입력하세요';
+
+  @override
+  String get parentPinWrong => 'PIN이 틀렸습니다';
+
+  @override
+  String get parentPinEnter => 'PIN 입력';
+
+  @override
+  String profileSwitchGreeting(String name) {
+    return '$name님, 안녕하세요';
+  }
+
+  @override
+  String get profileSwitchSettingUp => '이 프로필을 설정하는 중…';
+
+  @override
+  String profilesKidsName(String name) {
+    return '$name(어린이)';
+  }
+
+  @override
+  String profilesAdultName(String name) {
+    return '$name(성인)';
+  }
+
+  @override
+  String get pairingShowPicker => '선택 화면 표시';
+
+  @override
+  String get pairingAlwaysShowPicker => '항상 선택 화면 표시';
+
+  @override
+  String pairingMatchedByName(String profile) {
+    return '$profile(이름으로 일치)';
+  }
+
+  @override
+  String get pairingNoMatchYet => '아직 일치 항목 없음: 선택 화면 표시';
+
+  @override
+  String get pairingOffSetUp => '프로필 연결이 꺼져 있습니다. 설정하기';
+
+  @override
+  String pairingFooter(String shortName, String fullName) {
+    return 'Hearth가 이 앱 중 하나를 열면 Google TV 프로필과 연결된 앱 프로필을 선택합니다. Hearth가 이름을 알아서 맞추며(\"$shortName\"은 \"$fullName\"과 연결), 여기에서 연결을 바꿀 수 있습니다. 일치하는 항목이 없으면 앱의 자체 선택 화면이 표시됩니다.';
+  }
+
+  @override
+  String get pairingAppNotInstalled => '설치되지 않음';
+
+  @override
+  String get pairingAppOff => '꺼짐: 앱의 자체 선택 화면 표시';
+
+  @override
+  String get pairingAppNotSeen => 'Hearth에서 한 번 열면 Hearth가 프로필을 알 수 있습니다';
+
+  @override
+  String pairingAppProfilesFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '프로필 $count개 찾음',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pairingMatchByName(String profile) {
+    return '이름으로 맞추기($profile)';
+  }
+
+  @override
+  String get pairingMatchByNameNone => '이름으로 맞추기(아직 일치 항목 없음)';
+
+  @override
+  String pairingProfileInApp(String profile, String app) {
+    return '$app의 $profile';
+  }
+
+  @override
+  String pairingPairIn(String app) {
+    return '$app에서 프로필 연결';
+  }
+
+  @override
+  String get pairingAppNotSeenFooter => 'Hearth가 아직 이 앱의 프로필을 확인하지 못했습니다. Hearth에서 한 번 연 다음 돌아오세요.';
+
+  @override
+  String pairingAppProfilesFooter(String profiles) {
+    return '이 앱의 프로필: $profiles. Google TV 프로필은 Hearth가 확인하면 여기에 표시됩니다.';
+  }
+
+  @override
+  String get familyAppsIntro => 'Hearth와 HearthTube를 다른 Google TV 프로필에도 설치합니다. 어린이 프로필에서는 HearthTube가 작동하고 Hearth가 Netflix, Disney+ 등의 앱에서 올바른 프로필을 고르려면 필요합니다. 성인 프로필에서는 직접 설치하지 않아도 되도록 하는 편의 기능입니다.';
+
+  @override
+  String get familyAppsAddTitle => '다른 프로필에 Hearth 추가';
+
+  @override
+  String get familyAppsAddKids => '자녀 프로필에 Hearth와 HearthTube를 설치합니다. 그러면 그곳에서 HearthTube가 작동하고 Hearth가 Netflix, Disney+ 같은 앱에서 올바른 프로필을 고를 수 있습니다.';
+
+  @override
+  String get familyAppsAddAdults => 'TV의 다른 성인 프로필에도 설치하므로 다른 성인이 직접 설정할 필요가 없습니다.';
+
+  @override
+  String get familyAppsAddOnlyOwnApps => 'Hearth의 앱 2개만 추가되며, 아래의 제거로 언제든지 되돌릴 수 있습니다.';
+
+  @override
+  String get familyAppsAddFamilyLink => '자녀마다 Family Link의 \'앱 추가됨\' 알림이 한 번 표시됩니다.';
+
+  @override
+  String get familyAppsAddApproval => '처음에는 TV에 \'디버깅을 허용하시겠습니까?\'가 표시됩니다. \'항상 허용\'을 선택하세요. 그래야 Hearth가 설정할 수 있습니다.';
+
+  @override
+  String get familyAppsAdd => '추가';
+
+  @override
+  String get familyAppsRemoveTitle => '다른 프로필에서 Hearth 제거';
+
+  @override
+  String get familyAppsRemoveBody => '다른 프로필에서 Hearth와 HearthTube를 제거합니다.';
+
+  @override
+  String get familyAppsRemoveFirst => 'Hearth 자체를 제거하려면 먼저 이것을 실행하세요. 그렇지 않으면 어린이 프로필의 사본이 남아 컴퓨터로 지워야 할 수 있습니다.';
+
+  @override
+  String get familyAppsUninstallTitle => 'Hearth 제거';
+
+  @override
+  String get familyAppsUninstallBody => '먼저 다른 프로필에서 Hearth와 HearthTube를 제거한 다음 이 프로필에서 Hearth를 제거합니다.';
+
+  @override
+  String get familyAppsUninstallWhyHere => 'Android 설정이 아니라 여기에서 제거해야 어린이 프로필에 아무것도 남지 않습니다.';
+
+  @override
+  String get familyAppsApprovalFirstTitle => '먼저 1회 승인을 완료하세요';
+
+  @override
+  String get familyAppsApprovalFirstBody => 'Hearth가 아직 다른 프로필을 정리하지 못했습니다. TV에서 \'디버깅을 허용하시겠습니까?\'를 한 번 승인해야 합니다.';
+
+  @override
+  String get familyAppsApprovalFirstRetry => '승인한 다음 다시 제거를 시도하세요. 그래야 어린이 프로필에 아무것도 남지 않습니다.';
+
+  @override
+  String get familyAppsAddDone => '추가 완료';
+
+  @override
+  String get familyAppsRemoveDone => '제거 완료';
+
+  @override
+  String get familyAppsAdded => '완료되었습니다. 이제 다른 프로필에 Hearth와 HearthTube가 있습니다. 아래 목록을 확인하세요.';
+
+  @override
+  String get familyAppsRemoved => '완료되었습니다. 다른 프로필에서 Hearth와 HearthTube를 제거했습니다.';
+
+  @override
+  String get familyAppsNothingToSetUp => '아직 설정할 다른 프로필이 없습니다.';
+
+  @override
+  String get familyAppsFailedTitle => '프로필을 설정할 수 없습니다';
+
+  @override
+  String get familyAppsFailedBody => '다른 프로필을 설정하려면 TV에서 한 번 승인해야 합니다.';
+
+  @override
+  String get familyAppsFailedRetry => 'TV에 \'디버깅을 허용하시겠습니까?\'가 표시되면 \'항상 허용\'을 선택한 다음 다시 시도하세요.';
+
+  @override
+  String get familyAppsAlsoAdults => '다른 성인 프로필도 설정';
+
+  @override
+  String get familyAppsOn => '켜짐';
+
+  @override
+  String get familyAppsOff => '꺼짐';
+
+  @override
+  String get familyAppsNoneYet => '아직 설정된 다른 프로필이 없습니다.';
+
+  @override
+  String familyAppsAppInstalled(String app) {
+    return '$app: 설치됨';
+  }
+
+  @override
+  String familyAppsAppInstalledKept(String app) {
+    return '$app: 설치됨, 유지됨';
+  }
+
+  @override
+  String familyAppsAppNotInstalled(String app) {
+    return '$app: 설치되지 않음';
+  }
+
+  @override
+  String familyAppsAppNotInstalledKept(String app) {
+    return '$app: 설치되지 않음, 유지됨';
+  }
+
+  @override
+  String get familyAppsUnnamedKids => '어린이 프로필';
+
+  @override
+  String get familyAppsUnnamedAdult => '성인 프로필';
 }
