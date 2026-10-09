@@ -1964,4 +1964,45 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'इस प्रोफ़ाइल के अगली बार शुरू होने पर Google TV यहाँ के असुरक्षित ऐप्स हटा देगा। उन्हें सुरक्षित करने के लिए फिर से जोड़ें का उपयोग करें।';
+
+  @override
+  String get profilePinRow => 'प्रोफ़ाइल PIN';
+
+  @override
+  String get profilePinNone => 'कोई नहीं';
+
+  @override
+  String get profilePinSaved => 'सहेजा गया';
+
+  @override
+  String get profilePinRejected => 'सहेजा गया — पिछली बार स्वीकार नहीं हुआ';
+
+  @override
+  String get profilePinStopped => 'सहेजा गया — बदले जाने तक नहीं आज़माया जाएगा';
+
+  @override
+  String get profilePinPaused => 'सहेजा गया — रुका हुआ (ऐप बदल गया)';
+
+  @override
+  String profilePinUnsupported(String app) {
+    return 'Hearth अभी $app में PIN टाइप नहीं कर सकता';
+  }
+
+  @override
+  String profilePinEnterTitle(String profile, String app) {
+    return '$app में $profile का PIN';
+  }
+
+  @override
+  String profilePinEnterSubtitle(String app) {
+    return 'जब $app पूछता है, Hearth इसे “इस रूप में लॉग इन” कार्ड के पीछे टाइप करता है। यह इस टीवी पर एन्क्रिप्ट होकर रहता है और कभी दिखाया नहीं जाता।';
+  }
+
+  @override
+  String profilePinNeedsParentPin(String settings, String profiles, String parentPin) {
+    return 'पहले पैरेंट PIN सेट करें ($settings → $profiles → $parentPin): प्रोफ़ाइल का PIN सहेजने के लिए यह ज़रूरी है।';
+  }
+
+  @override
+  String get profilePinSaveFailed => 'PIN सहेजा नहीं जा सका।';
 }

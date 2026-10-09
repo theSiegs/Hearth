@@ -37,6 +37,7 @@ import 'package:flauncher/providers/home_search.dart';
 import 'package:flauncher/widgets/search/search_entry.dart';
 import 'package:flauncher/widgets/search/search_grid_page.dart';
 import 'package:flauncher/widgets/search/search_results_row.dart';
+import 'package:flauncher/widgets/settings/settings_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -105,11 +106,17 @@ class _FLauncherState extends State<FLauncher> {
     FocusManager.instance.addListener(_onFocusMoved);
     // The remote's mapped search button: open search, by voice or keyboard.
     FLauncherChannel.listenForSearch(_openSearch);
+    // Profile Pairing's "Change PIN": Settings on that app's profile PINs.
+    FLauncherChannel.listenForProfilePins(_openProfilePins);
     final channel = context.read<FLauncherChannel>();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         final pending = await channel.takePendingSearch();
         if (pending != null) _openSearch(pending);
+      } catch (_) {}
+      try {
+        final pins = await channel.takePendingProfilePins();
+        if (pins != null) _openProfilePins(pins);
       } catch (_) {}
     });
     _homeSearch = context.read<HomeSearch?>();
@@ -169,6 +176,13 @@ class _FLauncherState extends State<FLauncher> {
 
   /// Opens the search box over the home: the keyboard, or listening right away for [mode] "voice" (the remote's
   /// voice search). It starts from the current search, to edit it.
+  void _openProfilePins(String packageName) {
+    if (!mounted) return;
+    // Whatever was open (Settings included) closes first, so the panel opens on the app's page
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    showDialog(context: context, builder: (_) => SettingsPanel(openProfilePinsFor: packageName));
+  }
+
   void _openSearch(String mode) {
     if (!mounted) return;
     setState(() {

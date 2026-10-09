@@ -35,4 +35,15 @@
     <string name="agent_channel_name">Hearth لهذا الملف الشخصي</string>
     <string name="agent_notification_text">يُبقي الشاشة الرئيسية في Hearth متوافقة مع هذا الملف الشخصي</string>
     <string name="search_voice_prompt">ابحث عن الأفلام والمسلسلات</string>
+    <string name="pin_unlocking">جارٍ إدخال رمز PIN للملف الشخصي…</string>
+    <string name="pin_rejected_title">لم يقبل %1$s رمز PIN المحفوظ لـ “%2$s”</string>
+    <string name="pin_rejected_body">اختر تغيير PIN لتحديثه في إعدادات Hearth، أو إغلاق لكتابته بنفسك.</string>
+    <string name="pin_stopped_body">لن يجرّب Hearth هذا الرمز مجددًا حتى يتم تغييره، حتى لا يُقفل الملف الشخصي. اختر تغيير PIN لتحديثه، أو إغلاق لكتابته بنفسك.</string>
+    <string name="pin_locked_title">قفل %1$s الملف “%2$s”</string>
+    <string name="pin_locked_body">رموز خاطئة كثيرة. افتح قفل الملف الشخصي في التطبيق، ثم حدّث الرمز في إعدادات Hearth.</string>
+    <string name="pin_screen_changed">تغيّرت شاشة رمز PIN في %1$s، لذا لم يكتب Hearth الرمز. يُرجى كتابته بنفسك.</string>
+    <string name="pin_broken_digits">توقف Hearth بعد %1$d أرقام. يُرجى مسحها وكتابة الرمز بنفسك.</string>
+    <string name="pin_broken">تعذّر على Hearth إدخال الرمز. يُرجى كتابته بنفسك.</string>
+    <string name="pin_change">تغيير PIN</string>
+    <string name="pin_close">إغلاق</string>
 </resources>

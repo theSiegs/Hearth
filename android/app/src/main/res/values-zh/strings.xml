@@ -35,4 +35,15 @@
     <string name="agent_channel_name">此个人资料的 Hearth</string>
     <string name="agent_notification_text">让 Hearth 主屏幕与此个人资料保持同步</string>
     <string name="search_voice_prompt">搜索电影和节目</string>
+    <string name="pin_unlocking">正在输入个人资料 PIN…</string>
+    <string name="pin_rejected_title">%1$s 未接受“%2$s”的已保存 PIN</string>
+    <string name="pin_rejected_body">选择“更改 PIN”在 Hearth 设置中更新，或选择“关闭”自行输入。</string>
+    <string name="pin_stopped_body">为避免个人资料被锁定，Hearth 在 PIN 更改前不会再尝试。选择“更改 PIN”更新，或“关闭”自行输入。</string>
+    <string name="pin_locked_title">%1$s 已锁定“%2$s”</string>
+    <string name="pin_locked_body">错误的 PIN 次数过多。请在应用中解锁个人资料，然后在 Hearth 设置中更新 PIN。</string>
+    <string name="pin_screen_changed">%1$s 的 PIN 界面已变化，因此 Hearth 未输入 PIN。请自行输入。</string>
+    <string name="pin_broken_digits">Hearth 输入 %1$d 位后停止。请清除后自行输入 PIN。</string>
+    <string name="pin_broken">Hearth 无法输入 PIN。请自行输入。</string>
+    <string name="pin_change">更改 PIN</string>
+    <string name="pin_close">关闭</string>
 </resources>

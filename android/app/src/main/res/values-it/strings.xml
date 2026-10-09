@@ -35,4 +35,15 @@
     <string name="agent_channel_name">Hearth per questo profilo</string>
     <string name="agent_notification_text">Mantiene la schermata Home di Hearth allineata a questo profilo</string>
     <string name="search_voice_prompt">Cerca film e serie</string>
+    <string name="pin_unlocking">Inserimento del PIN del profilo…</string>
+    <string name="pin_rejected_title">%1$s non ha accettato il PIN salvato per “%2$s”</string>
+    <string name="pin_rejected_body">Cambia PIN per aggiornarlo nelle Impostazioni di Hearth, o Chiudi per digitarlo tu.</string>
+    <string name="pin_stopped_body">Hearth non riproverà questo PIN finché non viene cambiato, così il profilo non si blocca. Cambia PIN per aggiornarlo, o Chiudi per digitarlo tu.</string>
+    <string name="pin_locked_title">%1$s ha bloccato “%2$s”</string>
+    <string name="pin_locked_body">Troppi PIN errati. Sblocca il profilo nell’app, poi aggiorna il PIN nelle Impostazioni di Hearth.</string>
+    <string name="pin_screen_changed">La schermata PIN di %1$s è cambiata, quindi Hearth non ha digitato il PIN. Digitalo tu.</string>
+    <string name="pin_broken_digits">Hearth si è fermato dopo %1$d cifre. Cancellale e digita il PIN tu.</string>
+    <string name="pin_broken">Hearth non è riuscito a inserire il PIN. Digitalo tu.</string>
+    <string name="pin_change">Cambia PIN</string>
+    <string name="pin_close">Chiudi</string>
 </resources>

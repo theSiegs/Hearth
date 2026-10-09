@@ -590,5 +590,16 @@
     "familyAppsStatusPartial": "一部のみ",
     "familyAppsStatusNotInstalled": "未インストール",
     "familyAppsStatusAtRisk": "削除の恐れ",
-    "familyAppsAtRiskDetail": "このプロフィールを次に開いたとき、保護されていないアプリは Google TV に削除されます。もう一度「追加」を使って保護してください。"
+    "familyAppsAtRiskDetail": "このプロフィールを次に開いたとき、保護されていないアプリは Google TV に削除されます。もう一度「追加」を使って保護してください。",
+    "profilePinRow": "プロフィールのPIN",
+    "profilePinNone": "なし",
+    "profilePinSaved": "保存済み",
+    "profilePinRejected": "保存済み — 前回受け付けられませんでした",
+    "profilePinStopped": "保存済み — 変更されるまで試しません",
+    "profilePinPaused": "保存済み — 一時停止中（アプリが変わりました）",
+    "profilePinUnsupported": "Hearthはまだ{app}でPINを入力できません",
+    "profilePinEnterTitle": "{app}での{profile}のPIN",
+    "profilePinEnterSubtitle": "{app}が求めると、Hearthが「ログイン中」カードの裏で入力します。このテレビに暗号化して保存され、表示されることはありません。",
+    "profilePinNeedsParentPin": "先に保護者のPINを設定してください（{settings} → {profiles} → {parentPin}）。プロフィールのPINを保存するのに必要です。",
+    "profilePinSaveFailed": "PINを保存できませんでした。"
 }

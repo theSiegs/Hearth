@@ -1966,4 +1966,45 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'Google TV supprimera ici les applis non protégées au prochain démarrage de ce profil. Utilisez à nouveau Ajouter pour les protéger.';
+
+  @override
+  String get profilePinRow => 'Code PIN du profil';
+
+  @override
+  String get profilePinNone => 'Aucun';
+
+  @override
+  String get profilePinSaved => 'Enregistré';
+
+  @override
+  String get profilePinRejected => 'Enregistré – refusé la dernière fois';
+
+  @override
+  String get profilePinStopped => 'Enregistré – plus essayé avant modification';
+
+  @override
+  String get profilePinPaused => 'Enregistré – en pause (l’app a changé)';
+
+  @override
+  String profilePinUnsupported(String app) {
+    return 'Hearth ne sait pas encore saisir les codes dans $app';
+  }
+
+  @override
+  String profilePinEnterTitle(String profile, String app) {
+    return 'Code PIN de $profile dans $app';
+  }
+
+  @override
+  String profilePinEnterSubtitle(String app) {
+    return 'Hearth le saisit derrière la carte « Connexion en tant que » quand $app le demande. Il reste chiffré sur ce téléviseur et n’est jamais affiché.';
+  }
+
+  @override
+  String profilePinNeedsParentPin(String settings, String profiles, String parentPin) {
+    return 'Définissez d’abord un code parental ($settings → $profiles → $parentPin) : il est nécessaire pour enregistrer le code d’un profil.';
+  }
+
+  @override
+  String get profilePinSaveFailed => 'Impossible d’enregistrer le code.';
 }

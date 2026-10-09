@@ -590,5 +590,16 @@
     "familyAppsStatusPartial": "일부",
     "familyAppsStatusNotInstalled": "설치되지 않음",
     "familyAppsStatusAtRisk": "위험",
-    "familyAppsAtRiskDetail": "이 프로필이 다음에 시작될 때 Google TV가 보호되지 않은 앱을 삭제합니다. 다시 추가를 사용해 보호하세요."
+    "familyAppsAtRiskDetail": "이 프로필이 다음에 시작될 때 Google TV가 보호되지 않은 앱을 삭제합니다. 다시 추가를 사용해 보호하세요.",
+    "profilePinRow": "프로필 PIN",
+    "profilePinNone": "없음",
+    "profilePinSaved": "저장됨",
+    "profilePinRejected": "저장됨 — 지난번에 받아들여지지 않음",
+    "profilePinStopped": "저장됨 — 변경될 때까지 시도 안 함",
+    "profilePinPaused": "저장됨 — 일시 중지됨(앱이 바뀜)",
+    "profilePinUnsupported": "Hearth는 아직 {app}에서 PIN을 입력할 수 없습니다",
+    "profilePinEnterTitle": "{app}의 {profile} PIN",
+    "profilePinEnterSubtitle": "{app}이(가) 요청하면 Hearth가 ‘로그인 중’ 카드 뒤에서 입력합니다. 이 TV에 암호화되어 저장되며 표시되지 않습니다.",
+    "profilePinNeedsParentPin": "먼저 보호자 PIN을 설정하세요({settings} → {profiles} → {parentPin}). 프로필 PIN을 저장하려면 필요합니다.",
+    "profilePinSaveFailed": "PIN을 저장하지 못했습니다."
 }

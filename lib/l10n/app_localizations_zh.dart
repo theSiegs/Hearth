@@ -1956,4 +1956,45 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => '此个人资料下次启动时，Google TV 会移除这里未受保护的应用。请再次使用“添加”来保护它们。';
+
+  @override
+  String get profilePinRow => '个人资料 PIN';
+
+  @override
+  String get profilePinNone => '无';
+
+  @override
+  String get profilePinSaved => '已保存';
+
+  @override
+  String get profilePinRejected => '已保存 — 上次未被接受';
+
+  @override
+  String get profilePinStopped => '已保存 — 更改前不再尝试';
+
+  @override
+  String get profilePinPaused => '已保存 — 已暂停（应用已变化）';
+
+  @override
+  String profilePinUnsupported(String app) {
+    return 'Hearth 暂时还无法在 $app 中输入 PIN';
+  }
+
+  @override
+  String profilePinEnterTitle(String profile, String app) {
+    return '$profile 在 $app 中的 PIN';
+  }
+
+  @override
+  String profilePinEnterSubtitle(String app) {
+    return '当 $app 要求时，Hearth 会在“正在登录”卡片后面输入。它加密保存在这台电视上，从不显示。';
+  }
+
+  @override
+  String profilePinNeedsParentPin(String settings, String profiles, String parentPin) {
+    return '请先设置家长 PIN（$settings → $profiles → $parentPin）：保存个人资料 PIN 需要它。';
+  }
+
+  @override
+  String get profilePinSaveFailed => '无法保存 PIN。';
 }

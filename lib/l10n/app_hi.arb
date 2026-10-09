@@ -590,5 +590,16 @@
     "familyAppsStatusPartial": "आंशिक",
     "familyAppsStatusNotInstalled": "इंस्टॉल नहीं है",
     "familyAppsStatusAtRisk": "जोखिम में",
-    "familyAppsAtRiskDetail": "इस प्रोफ़ाइल के अगली बार शुरू होने पर Google TV यहाँ के असुरक्षित ऐप्स हटा देगा। उन्हें सुरक्षित करने के लिए फिर से जोड़ें का उपयोग करें।"
+    "familyAppsAtRiskDetail": "इस प्रोफ़ाइल के अगली बार शुरू होने पर Google TV यहाँ के असुरक्षित ऐप्स हटा देगा। उन्हें सुरक्षित करने के लिए फिर से जोड़ें का उपयोग करें।",
+    "profilePinRow": "प्रोफ़ाइल PIN",
+    "profilePinNone": "कोई नहीं",
+    "profilePinSaved": "सहेजा गया",
+    "profilePinRejected": "सहेजा गया — पिछली बार स्वीकार नहीं हुआ",
+    "profilePinStopped": "सहेजा गया — बदले जाने तक नहीं आज़माया जाएगा",
+    "profilePinPaused": "सहेजा गया — रुका हुआ (ऐप बदल गया)",
+    "profilePinUnsupported": "Hearth अभी {app} में PIN टाइप नहीं कर सकता",
+    "profilePinEnterTitle": "{app} में {profile} का PIN",
+    "profilePinEnterSubtitle": "जब {app} पूछता है, Hearth इसे “इस रूप में लॉग इन” कार्ड के पीछे टाइप करता है। यह इस टीवी पर एन्क्रिप्ट होकर रहता है और कभी दिखाया नहीं जाता।",
+    "profilePinNeedsParentPin": "पहले पैरेंट PIN सेट करें ({settings} → {profiles} → {parentPin}): प्रोफ़ाइल का PIN सहेजने के लिए यह ज़रूरी है।",
+    "profilePinSaveFailed": "PIN सहेजा नहीं जा सका।"
 }

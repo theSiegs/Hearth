@@ -1966,4 +1966,45 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'Google TV rimuoverà da qui le app non protette al prossimo avvio di questo profilo. Usa di nuovo Aggiungi per proteggerle.';
+
+  @override
+  String get profilePinRow => 'PIN del profilo';
+
+  @override
+  String get profilePinNone => 'Nessuno';
+
+  @override
+  String get profilePinSaved => 'Salvato';
+
+  @override
+  String get profilePinRejected => 'Salvato – non accettato l’ultima volta';
+
+  @override
+  String get profilePinStopped => 'Salvato – non riprovato finché non cambia';
+
+  @override
+  String get profilePinPaused => 'Salvato – in pausa (l’app è cambiata)';
+
+  @override
+  String profilePinUnsupported(String app) {
+    return 'Hearth non sa ancora digitare i PIN in $app';
+  }
+
+  @override
+  String profilePinEnterTitle(String profile, String app) {
+    return 'PIN di $profile in $app';
+  }
+
+  @override
+  String profilePinEnterSubtitle(String app) {
+    return 'Hearth lo digita dietro la scheda “Accesso come” quando $app lo chiede. Resta cifrato su questa TV e non viene mai mostrato.';
+  }
+
+  @override
+  String profilePinNeedsParentPin(String settings, String profiles, String parentPin) {
+    return 'Imposta prima un PIN genitore ($settings → $profiles → $parentPin): serve per salvare il PIN di un profilo.';
+  }
+
+  @override
+  String get profilePinSaveFailed => 'Impossibile salvare il PIN.';
 }

@@ -1966,4 +1966,45 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'Google TV quitará de aquí las apps sin proteger la próxima vez que se inicie este perfil. Use Añadir de nuevo para protegerlas.';
+
+  @override
+  String get profilePinRow => 'PIN del perfil';
+
+  @override
+  String get profilePinNone => 'Ninguno';
+
+  @override
+  String get profilePinSaved => 'Guardado';
+
+  @override
+  String get profilePinRejected => 'Guardado: no se aceptó la última vez';
+
+  @override
+  String get profilePinStopped => 'Guardado: no se prueba hasta que lo cambies';
+
+  @override
+  String get profilePinPaused => 'Guardado: en pausa (la app cambió)';
+
+  @override
+  String profilePinUnsupported(String app) {
+    return 'Hearth aún no puede escribir PIN en $app';
+  }
+
+  @override
+  String profilePinEnterTitle(String profile, String app) {
+    return 'PIN de $profile en $app';
+  }
+
+  @override
+  String profilePinEnterSubtitle(String app) {
+    return 'Hearth lo escribe detrás de la tarjeta «Iniciando sesión como» cuando $app lo pide. Se queda cifrado en esta TV y nunca se muestra.';
+  }
+
+  @override
+  String profilePinNeedsParentPin(String settings, String profiles, String parentPin) {
+    return 'Primero configura un PIN parental ($settings → $profiles → $parentPin): hace falta para guardar el PIN de un perfil.';
+  }
+
+  @override
+  String get profilePinSaveFailed => 'No se pudo guardar el PIN.';
 }

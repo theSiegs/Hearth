@@ -590,5 +590,16 @@
     "familyAppsStatusPartial": "Partiel",
     "familyAppsStatusNotInstalled": "Non installé",
     "familyAppsStatusAtRisk": "À risque",
-    "familyAppsAtRiskDetail": "Google TV supprimera ici les applis non protégées au prochain démarrage de ce profil. Utilisez à nouveau Ajouter pour les protéger."
+    "familyAppsAtRiskDetail": "Google TV supprimera ici les applis non protégées au prochain démarrage de ce profil. Utilisez à nouveau Ajouter pour les protéger.",
+    "profilePinRow": "Code PIN du profil",
+    "profilePinNone": "Aucun",
+    "profilePinSaved": "Enregistré",
+    "profilePinRejected": "Enregistré – refusé la dernière fois",
+    "profilePinStopped": "Enregistré – plus essayé avant modification",
+    "profilePinPaused": "Enregistré – en pause (l’app a changé)",
+    "profilePinUnsupported": "Hearth ne sait pas encore saisir les codes dans {app}",
+    "profilePinEnterTitle": "Code PIN de {profile} dans {app}",
+    "profilePinEnterSubtitle": "Hearth le saisit derrière la carte « Connexion en tant que » quand {app} le demande. Il reste chiffré sur ce téléviseur et n’est jamais affiché.",
+    "profilePinNeedsParentPin": "Définissez d’abord un code parental ({settings} → {profiles} → {parentPin}) : il est nécessaire pour enregistrer le code d’un profil.",
+    "profilePinSaveFailed": "Impossible d’enregistrer le code."
 }

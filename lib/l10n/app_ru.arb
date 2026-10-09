@@ -590,5 +590,16 @@
     "familyAppsStatusPartial": "Частично",
     "familyAppsStatusNotInstalled": "Не установлено",
     "familyAppsStatusAtRisk": "Под угрозой",
-    "familyAppsAtRiskDetail": "Google TV удалит незащищённые приложения в этом профиле при его следующем запуске. Нажмите «Добавить» ещё раз, чтобы защитить их."
+    "familyAppsAtRiskDetail": "Google TV удалит незащищённые приложения в этом профиле при его следующем запуске. Нажмите «Добавить» ещё раз, чтобы защитить их.",
+    "profilePinRow": "PIN-код профиля",
+    "profilePinNone": "Нет",
+    "profilePinSaved": "Сохранён",
+    "profilePinRejected": "Сохранён — в прошлый раз не принят",
+    "profilePinStopped": "Сохранён — не пробуется, пока не изменят",
+    "profilePinPaused": "Сохранён — приостановлен (приложение изменилось)",
+    "profilePinUnsupported": "Hearth пока не умеет вводить PIN-коды в {app}",
+    "profilePinEnterTitle": "PIN-код {profile} в {app}",
+    "profilePinEnterSubtitle": "Hearth вводит его за карточкой «Вход как», когда {app} просит. Код хранится на этом телевизоре в зашифрованном виде и никогда не показывается.",
+    "profilePinNeedsParentPin": "Сначала задайте родительский PIN-код ({settings} → {profiles} → {parentPin}): он нужен, чтобы сохранить PIN-код профиля.",
+    "profilePinSaveFailed": "Не удалось сохранить PIN-код."
 }

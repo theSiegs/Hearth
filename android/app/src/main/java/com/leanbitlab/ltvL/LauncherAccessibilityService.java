@@ -1155,6 +1155,17 @@ public class LauncherAccessibilityService extends AccessibilityService {
     @Override
     protected boolean onKeyEvent(KeyEvent event) {
         onUserInput();
+        // Hearth is typing a saved profile PIN behind the cover: keys would land on the app's keypad. Back and Home
+        // stop it (Home still goes on to do its usual job), everything else waits.
+        if (ProfilePairingService.isEnteringPin()) {
+            int code = event.getKeyCode();
+            if (code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_HOME) {
+                if (event.getAction() == KeyEvent.ACTION_DOWN) ProfilePairingService.cancelPinEntry();
+                if (code == KeyEvent.KEYCODE_BACK) return true;
+            } else {
+                return true;
+            }
+        }
         if (handleRemap(event)) return true;
         // Google TV can open its screens (a kids profile's PIN screen, the chooser) behind Hearth; with Hearth in
         // front none of them is showing, so Home stays with Hearth instead of waking them.

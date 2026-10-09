@@ -207,6 +207,41 @@ class FLauncherChannel {
   /// A search the remote asked for before Flutter was listening: "voice", "text" or null.
   Future<String?> takePendingSearch() async => await _methodChannel.invokeMethod<String>("takePendingSearch");
 
+  /// The app whose profile PINs Profile Pairing's "Change PIN" asked for before Flutter was listening, or null.
+  Future<String?> takePendingProfilePins() async =>
+      await _methodChannel.invokeMethod<String>("takePendingProfilePins");
+
+  /// Calls [onOpen] with the app's package when Profile Pairing's "Change PIN" asks for its PINs in Settings.
+  static void listenForProfilePins(void Function(String packageName) onOpen) {
+    _onOpenProfilePins = onOpen;
+    _listen();
+  }
+
+  static void Function(String packageName)? _onOpenProfilePins;
+
+  /// Whether Hearth can type profile PINs in the app yet (it has a recipe for the app's PIN screen).
+  Future<bool> profilePinEntrySupported(String packageName) async =>
+      await _methodChannel.invokeMethod<bool>("profilePinEntrySupported", packageName) ?? false;
+
+  /// A saved streaming-app profile PIN's state, never the PIN: {status ("none", "saved", "rejected", "stopped"),
+  /// length, savedAt, rejections, paused}.
+  Future<Map<dynamic, dynamic>> getProfilePinStatus(String packageName, String appProfile) async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>(
+          "getProfilePinStatus", {"packageName": packageName, "appProfile": appProfile}) ??
+      {};
+
+  /// Hands the PIN to the Android side, which encrypts it at once (Keystore); false when it couldn't be saved.
+  Future<bool> saveProfilePin(String packageName, String appProfile, String pin) async =>
+      await _methodChannel.invokeMethod<bool>(
+          "saveProfilePin", {"packageName": packageName, "appProfile": appProfile, "pin": pin}) ??
+      false;
+
+  Future<void> removeProfilePin(String packageName, String appProfile) async =>
+      await _methodChannel.invokeMethod("removeProfilePin", {"packageName": packageName, "appProfile": appProfile});
+
+  /// Every saved profile PIN (when the parent PIN that guards them is removed).
+  Future<void> removeAllProfilePins() async => await _methodChannel.invokeMethod("removeAllProfilePins");
+
   /// Calls [onOpenSearch] ("voice" or "text") when the remote's mapped search button is pressed.
   static void listenForSearch(void Function(String mode) onOpenSearch) {
     _onOpenSearch = onOpenSearch;
@@ -244,6 +279,7 @@ class FLauncherChannel {
       if (call.method == "profileChanged") _onProfileChanged?.call();
       if (call.method == "profileSwitching") _onProfileSwitching?.call(call.arguments as String);
       if (call.method == "profileSwitchCancelled") _onProfileSwitchCancelled?.call();
+      if (call.method == "openProfilePins") _onOpenProfilePins?.call(call.arguments as String);
       return null;
     });
   }

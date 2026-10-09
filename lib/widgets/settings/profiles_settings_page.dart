@@ -104,6 +104,8 @@ class ProfilesSettingsPage extends StatelessWidget {
       if (remove == null || !context.mounted) return;
       if (remove) {
         await settings.setParentPin(null);
+        // The streaming apps' profile PINs were saved under the parent PIN: they go with it
+        if (context.mounted) await context.read<FLauncherChannel>().removeAllProfilePins();
         return;
       }
     }

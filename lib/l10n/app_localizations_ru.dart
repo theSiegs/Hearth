@@ -1980,4 +1980,45 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'Google TV удалит незащищённые приложения в этом профиле при его следующем запуске. Нажмите «Добавить» ещё раз, чтобы защитить их.';
+
+  @override
+  String get profilePinRow => 'PIN-код профиля';
+
+  @override
+  String get profilePinNone => 'Нет';
+
+  @override
+  String get profilePinSaved => 'Сохранён';
+
+  @override
+  String get profilePinRejected => 'Сохранён — в прошлый раз не принят';
+
+  @override
+  String get profilePinStopped => 'Сохранён — не пробуется, пока не изменят';
+
+  @override
+  String get profilePinPaused => 'Сохранён — приостановлен (приложение изменилось)';
+
+  @override
+  String profilePinUnsupported(String app) {
+    return 'Hearth пока не умеет вводить PIN-коды в $app';
+  }
+
+  @override
+  String profilePinEnterTitle(String profile, String app) {
+    return 'PIN-код $profile в $app';
+  }
+
+  @override
+  String profilePinEnterSubtitle(String app) {
+    return 'Hearth вводит его за карточкой «Вход как», когда $app просит. Код хранится на этом телевизоре в зашифрованном виде и никогда не показывается.';
+  }
+
+  @override
+  String profilePinNeedsParentPin(String settings, String profiles, String parentPin) {
+    return 'Сначала задайте родительский PIN-код ($settings → $profiles → $parentPin): он нужен, чтобы сохранить PIN-код профиля.';
+  }
+
+  @override
+  String get profilePinSaveFailed => 'Не удалось сохранить PIN-код.';
 }

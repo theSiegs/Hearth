@@ -87,6 +87,8 @@ import io.flutter.plugin.common.MethodChannel;
 public class MainActivity extends FlutterActivity {
     /** Intent extra asking Hearth to open its search: "voice" to start listening right away. */
     static final String EXTRA_OPEN_SEARCH = "hearth_open_search";
+    /** Opens Settings on an app's profile PINs (the "Change PIN" button when a saved PIN wasn't taken). */
+    static final String EXTRA_OPEN_PROFILE_PINS = "hearth_open_profile_pins";
     private static final String TAG = "HearthMain";
     private static final String METHOD_CHANNEL = "me.efesser.flauncher/method";
     private static final String APPS_EVENT_CHANNEL = "me.efesser.flauncher/event_apps";
@@ -115,6 +117,7 @@ public class MainActivity extends FlutterActivity {
     private MethodChannel.Result mPendingVoiceResult;
     /** A search request from the remote ("voice" or "text") not yet picked up by Flutter. */
     private String mPendingSearch;
+    private String mPendingProfilePins;
 
     @Override
     public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
@@ -126,6 +129,7 @@ public class MainActivity extends FlutterActivity {
         // Opened by the remote's search button. Handled before the channel exists: Flutter isn't running yet, so it
         // picks the search up with takePendingSearch rather than hearing openSearch.
         handleSearchIntent(getIntent());
+        handleProfilePinsIntent(getIntent());
         mMethodChannel = new MethodChannel(messenger, METHOD_CHANNEL);
         sMethodChannel = new WeakReference<>(mMethodChannel);
         mMethodChannel.setMethodCallHandler(this::onMethodCall);
@@ -185,6 +189,35 @@ public class MainActivity extends FlutterActivity {
             case "getAppLastProfiles" -> {
                 Map<String, Object> users = new HashMap<>(LauncherAccessibilityService.getAppLastProfiles(this));
                 result.success(users);
+            }
+            case "takePendingProfilePins" -> {
+                String pending = mPendingProfilePins;
+                mPendingProfilePins = null;
+                result.success(pending);
+            }
+            case "profilePinEntrySupported" -> result.success(PinRecipes.supports(call.arguments()));
+            case "getProfilePinStatus" -> result.success(
+                    PinVault.status(this, call.argument("packageName"), call.argument("appProfile")));
+            case "saveProfilePin" -> {
+                String pkg = call.argument("packageName");
+                String pin = call.argument("pin");
+                char[] digits = pin != null ? pin.toCharArray() : new char[0];
+                boolean saved = digits.length > 0 && PinVault.save(this, pkg, call.argument("appProfile"), digits);
+                java.util.Arrays.fill(digits, ' ');
+                if (saved) {
+                    // A new PIN gets a fresh start: entry resumes if it was paused for the app
+                    PinVault.setPaused(this, pkg, false);
+                    PinVault.resetBreaks(this, pkg);
+                }
+                result.success(saved);
+            }
+            case "removeAllProfilePins" -> {
+                PinVault.removeAll(this);
+                result.success(null);
+            }
+            case "removeProfilePin" -> {
+                PinVault.remove(this, call.argument("packageName"), call.argument("appProfile"));
+                result.success(null);
             }
             case "takePendingSearch" -> {
                 String pending = mPendingSearch;
@@ -1418,6 +1451,16 @@ public class MainActivity extends FlutterActivity {
     protected void onNewIntent(@NonNull Intent intent) {
         super.onNewIntent(intent);
         handleSearchIntent(intent);
+        handleProfilePinsIntent(intent);
+    }
+
+    /** Profile Pairing's "Change PIN": Flutter opens Settings on the app's page (now, or with takePendingProfilePins). */
+    private void handleProfilePinsIntent(Intent intent) {
+        String pkg = intent != null ? intent.getStringExtra(EXTRA_OPEN_PROFILE_PINS) : null;
+        if (pkg == null) return;
+        intent.removeExtra(EXTRA_OPEN_PROFILE_PINS);
+        mPendingProfilePins = pkg;
+        if (mMethodChannel != null) mMethodChannel.invokeMethod("openProfilePins", pkg);
     }
 
     /**

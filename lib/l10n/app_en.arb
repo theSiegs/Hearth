@@ -2455,5 +2455,78 @@
     "familyAppsAtRiskDetail": "Google TV will remove the unprotected apps here the next time this profile starts. Use Add again to protect them.",
     "@familyAppsAtRiskDetail": {
         "description": "Hearth on other profiles: shown under an At risk profile while it's selected"
+    },
+    "profilePinRow": "Profile PIN",
+    "@profilePinRow": {
+        "description": "Profile Pairing: the row for a streaming app profile's saved PIN"
+    },
+    "profilePinNone": "None",
+    "@profilePinNone": {
+        "description": "Profile Pairing: streaming app profile PIN"
+    },
+    "profilePinSaved": "Saved",
+    "@profilePinSaved": {
+        "description": "Profile Pairing: streaming app profile PIN"
+    },
+    "profilePinRejected": "Saved — not accepted last time",
+    "@profilePinRejected": {
+        "description": "Profile Pairing: streaming app profile PIN"
+    },
+    "profilePinStopped": "Saved — not tried until it’s changed",
+    "@profilePinStopped": {
+        "description": "Status: Hearth stopped trying the saved PIN so the profile doesn't get locked"
+    },
+    "profilePinPaused": "Saved — paused (the app changed)",
+    "@profilePinPaused": {
+        "description": "Profile Pairing: streaming app profile PIN"
+    },
+    "profilePinUnsupported": "Hearth can’t type PINs in {app} yet",
+    "@profilePinUnsupported": {
+        "description": "Profile Pairing: streaming app profile PIN",
+        "placeholders": {
+            "app": {
+                "type": "String"
+            }
+        }
+    },
+    "profilePinEnterTitle": "{profile}’s PIN in {app}",
+    "@profilePinEnterTitle": {
+        "description": "Title of the pad for a streaming app profile's PIN",
+        "placeholders": {
+            "profile": {
+                "type": "String"
+            },
+            "app": {
+                "type": "String"
+            }
+        }
+    },
+    "profilePinEnterSubtitle": "Hearth types it behind the “logging in as” card when {app} asks. It stays on this TV, encrypted, and is never shown.",
+    "@profilePinEnterSubtitle": {
+        "description": "Profile Pairing: streaming app profile PIN",
+        "placeholders": {
+            "app": {
+                "type": "String"
+            }
+        }
+    },
+    "profilePinNeedsParentPin": "Set a parent PIN first ({settings} → {profiles} → {parentPin}): saving a profile’s PIN needs it.",
+    "@profilePinNeedsParentPin": {
+        "description": "Profile Pairing: streaming app profile PIN",
+        "placeholders": {
+            "settings": {
+                "type": "String"
+            },
+            "profiles": {
+                "type": "String"
+            },
+            "parentPin": {
+                "type": "String"
+            }
+        }
+    },
+    "profilePinSaveFailed": "Couldn’t save the PIN.",
+    "@profilePinSaveFailed": {
+        "description": "Profile Pairing: streaming app profile PIN"
     }
 }

@@ -3460,6 +3460,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Google TV will remove the unprotected apps here the next time this profile starts. Use Add again to protect them.'**
   String get familyAppsAtRiskDetail;
+
+  /// Profile Pairing: the row for a streaming app profile's saved PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Profile PIN'**
+  String get profilePinRow;
+
+  /// Profile Pairing: streaming app profile PIN
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get profilePinNone;
+
+  /// Profile Pairing: streaming app profile PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get profilePinSaved;
+
+  /// Profile Pairing: streaming app profile PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Saved — not accepted last time'**
+  String get profilePinRejected;
+
+  /// Status: Hearth stopped trying the saved PIN so the profile doesn't get locked
+  ///
+  /// In en, this message translates to:
+  /// **'Saved — not tried until it’s changed'**
+  String get profilePinStopped;
+
+  /// Profile Pairing: streaming app profile PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Saved — paused (the app changed)'**
+  String get profilePinPaused;
+
+  /// Profile Pairing: streaming app profile PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth can’t type PINs in {app} yet'**
+  String profilePinUnsupported(String app);
+
+  /// Title of the pad for a streaming app profile's PIN
+  ///
+  /// In en, this message translates to:
+  /// **'{profile}’s PIN in {app}'**
+  String profilePinEnterTitle(String profile, String app);
+
+  /// Profile Pairing: streaming app profile PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth types it behind the “logging in as” card when {app} asks. It stays on this TV, encrypted, and is never shown.'**
+  String profilePinEnterSubtitle(String app);
+
+  /// Profile Pairing: streaming app profile PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Set a parent PIN first ({settings} → {profiles} → {parentPin}): saving a profile’s PIN needs it.'**
+  String profilePinNeedsParentPin(String settings, String profiles, String parentPin);
+
+  /// Profile Pairing: streaming app profile PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t save the PIN.'**
+  String get profilePinSaveFailed;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

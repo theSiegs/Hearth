@@ -590,5 +590,16 @@
     "familyAppsStatusPartial": "جزئي",
     "familyAppsStatusNotInstalled": "غير مثبّت",
     "familyAppsStatusAtRisk": "معرّض للخطر",
-    "familyAppsAtRiskDetail": "سيزيل Google TV التطبيقات غير المحمية هنا عند بدء هذا الملف الشخصي في المرة القادمة. استخدم \"إضافة\" مرة أخرى لحمايتها."
+    "familyAppsAtRiskDetail": "سيزيل Google TV التطبيقات غير المحمية هنا عند بدء هذا الملف الشخصي في المرة القادمة. استخدم \"إضافة\" مرة أخرى لحمايتها.",
+    "profilePinRow": "رمز PIN للملف الشخصي",
+    "profilePinNone": "لا يوجد",
+    "profilePinSaved": "محفوظ",
+    "profilePinRejected": "محفوظ — لم يُقبل في المرة الأخيرة",
+    "profilePinStopped": "محفوظ — لن يُجرَّب حتى يتغيّر",
+    "profilePinPaused": "محفوظ — متوقف مؤقتًا (تغيّر التطبيق)",
+    "profilePinUnsupported": "لا يستطيع Hearth بعد كتابة رموز PIN في {app}",
+    "profilePinEnterTitle": "رمز PIN لـ {profile} في {app}",
+    "profilePinEnterSubtitle": "يكتبه Hearth خلف بطاقة \"تسجيل الدخول باسم\" عندما يطلبه {app}. يبقى مشفّرًا على هذا التلفزيون ولا يُعرض أبدًا.",
+    "profilePinNeedsParentPin": "عيّن أولًا رمز PIN للوالدين ({settings} ← {profiles} ← {parentPin}): هو مطلوب لحفظ رمز ملف شخصي.",
+    "profilePinSaveFailed": "تعذّر حفظ الرمز."
 }

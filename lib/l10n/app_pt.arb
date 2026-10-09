@@ -590,5 +590,16 @@
     "familyAppsStatusPartial": "Parcial",
     "familyAppsStatusNotInstalled": "Não instalado",
     "familyAppsStatusAtRisk": "Em risco",
-    "familyAppsAtRiskDetail": "O Google TV vai remover daqui os apps sem proteção na próxima vez que este perfil for iniciado. Use Adicionar de novo para protegê-los."
+    "familyAppsAtRiskDetail": "O Google TV vai remover daqui os apps sem proteção na próxima vez que este perfil for iniciado. Use Adicionar de novo para protegê-los.",
+    "profilePinRow": "PIN do perfil",
+    "profilePinNone": "Nenhum",
+    "profilePinSaved": "Salvo",
+    "profilePinRejected": "Salvo — não aceito da última vez",
+    "profilePinStopped": "Salvo — não tentado até ser alterado",
+    "profilePinPaused": "Salvo — pausado (o app mudou)",
+    "profilePinUnsupported": "O Hearth ainda não digita PINs no {app}",
+    "profilePinEnterTitle": "PIN de {profile} no {app}",
+    "profilePinEnterSubtitle": "O Hearth o digita atrás do cartão “Entrando como” quando o {app} pede. Fica criptografado nesta TV e nunca é mostrado.",
+    "profilePinNeedsParentPin": "Defina antes um PIN dos pais ({settings} → {profiles} → {parentPin}): ele é necessário para salvar o PIN de um perfil.",
+    "profilePinSaveFailed": "Não foi possível salvar o PIN."
 }

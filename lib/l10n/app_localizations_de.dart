@@ -1964,4 +1964,45 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'Google TV entfernt die ungeschützten Apps hier beim nächsten Start dieses Profils. Mit „Hinzufügen“ werden sie wieder geschützt.';
+
+  @override
+  String get profilePinRow => 'Profil-PIN';
+
+  @override
+  String get profilePinNone => 'Keine';
+
+  @override
+  String get profilePinSaved => 'Gespeichert';
+
+  @override
+  String get profilePinRejected => 'Gespeichert – zuletzt nicht akzeptiert';
+
+  @override
+  String get profilePinStopped => 'Gespeichert – erst nach Änderung wieder versucht';
+
+  @override
+  String get profilePinPaused => 'Gespeichert – pausiert (App hat sich geändert)';
+
+  @override
+  String profilePinUnsupported(String app) {
+    return 'Hearth kann in $app noch keine PINs eingeben';
+  }
+
+  @override
+  String profilePinEnterTitle(String profile, String app) {
+    return 'PIN von $profile in $app';
+  }
+
+  @override
+  String profilePinEnterSubtitle(String app) {
+    return 'Hearth gibt sie hinter der Karte „Anmelden als“ ein, wenn $app danach fragt. Sie bleibt verschlüsselt auf diesem Fernseher und wird nie angezeigt.';
+  }
+
+  @override
+  String profilePinNeedsParentPin(String settings, String profiles, String parentPin) {
+    return 'Lege zuerst eine Eltern-PIN fest ($settings → $profiles → $parentPin): Sie wird zum Speichern einer Profil-PIN benötigt.';
+  }
+
+  @override
+  String get profilePinSaveFailed => 'Die PIN konnte nicht gespeichert werden.';
 }

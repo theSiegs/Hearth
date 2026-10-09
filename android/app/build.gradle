@@ -151,4 +151,6 @@ dependencies {
     // kids-profile install/uninstall as the shell user over 127.0.0.1:5555, after the parent's one-time on-screen
     // "Allow debugging?" approval. Pin/confirm the latest version when first building.
     implementation "dev.mobile:dadb:1.2.10"
+    // Plain-Java unit tests (src/test): the PIN entry state machine
+    testImplementation "junit:junit:4.13.2"
 }
