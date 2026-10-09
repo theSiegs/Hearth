@@ -1384,4 +1384,188 @@ class AppLocalizationsAr extends AppLocalizations {
   String tvPowerSleepNote(String path) {
     return 'يُحتسب تشغيل الفيديو أو الموسيقى نشاطًا. يتطلب إصلاح زر الرئيسية ($path).';
   }
+
+  @override
+  String get accentPurple => 'أرجواني';
+
+  @override
+  String get accentTeal => 'أزرق مخضر';
+
+  @override
+  String get accentBlue => 'أزرق';
+
+  @override
+  String get accentOrange => 'برتقالي';
+
+  @override
+  String get accentPink => 'وردي';
+
+  @override
+  String get accentGreen => 'أخضر';
+
+  @override
+  String get accentWhite => 'أبيض';
+
+  @override
+  String get accentYellow => 'أصفر';
+
+  @override
+  String get accentRed => 'أحمر';
+
+  @override
+  String get accentCyan => 'سماوي';
+
+  @override
+  String get accentIndigo => 'نيلي';
+
+  @override
+  String get accentLime => 'ليموني';
+
+  @override
+  String get accentAmber => 'كهرماني';
+
+  @override
+  String get accentRose => 'وردي فاتح';
+
+  @override
+  String get accentIceBlue => 'أزرق جليدي';
+
+  @override
+  String get accentSelected => 'اللون المميز المحدد';
+
+  @override
+  String get cardStyleDefault => 'افتراضي';
+
+  @override
+  String get cardStylePremium => 'مميز';
+
+  @override
+  String get cardStyleGlow => 'توهج';
+
+  @override
+  String get cardStyleSquircle => 'مربع منحني';
+
+  @override
+  String get cardStyleClassic => 'كلاسيكي';
+
+  @override
+  String get cardStyleMinimal => 'بسيط';
+
+  @override
+  String get cardStyleCapsule => 'كبسولة';
+
+  @override
+  String get dockFavoritesDock => 'شريط المفضلة';
+
+  @override
+  String get dockFavoritesDockDescription => 'يعرض المفضلة كشريط أسفل الشاشة الرئيسية، مع متابعة المشاهدة فوقه وأقسامك الأخرى أسفله. تتبع زواياه نمط البطاقات.';
+
+  @override
+  String get dockFrosted => 'شريط بتأثير زجاجي';
+
+  @override
+  String get dockDark => 'شريط داكن';
+
+  @override
+  String get dockShadow => 'ظل الشريط';
+
+  @override
+  String get dockBlurWallpaperBelow => 'تمويه الخلفية أسفل الشريط';
+
+  @override
+  String get wallpaperMatchSelectedApp => 'مطابقة التطبيق المحدد';
+
+  @override
+  String get wallpaperBingPhotoOfTheDay => 'صورة اليوم من Bing';
+
+  @override
+  String get wallpaperRefreshNow => 'تحديث الآن';
+
+  @override
+  String get wallpaperBingError => 'تعذّر الوصول إلى Bing. تحقق من اتصال الشبكة.';
+
+  @override
+  String get gradientPitchBlack => 'أسود حالك';
+
+  @override
+  String get gradientGreatWhale => 'الحوت العظيم';
+
+  @override
+  String get gradientViciousStance => 'وقفة شرسة';
+
+  @override
+  String get gradientTeenNotebook => 'دفتر المراهق';
+
+  @override
+  String get gradientOldHat => 'قبعة قديمة';
+
+  @override
+  String get gradientBurningSpring => 'ربيع مشتعل';
+
+  @override
+  String get gradientDesertHump => 'كثيب الصحراء';
+
+  @override
+  String get gradientFarawayRiver => 'نهر بعيد';
+
+  @override
+  String get gradientSaintPetersburg => 'سانت بطرسبرغ';
+
+  @override
+  String get gradientAfricanField => 'حقل أفريقي';
+
+  @override
+  String get gradientGrassShampoo => 'شامبو العشب';
+
+  @override
+  String statusBarTemperatureUnitValue(String unit) {
+    return 'وحدة درجة الحرارة: $unit';
+  }
+
+  @override
+  String get weatherLocationNotSet => 'موقع الطقس: غير محدد';
+
+  @override
+  String weatherLocationValue(String place) {
+    return 'موقع الطقس: $place';
+  }
+
+  @override
+  String get statusBarWeatherLoadFailed => 'تعذّر تحميل الطقس. ستتم إعادة المحاولة تلقائيًا.';
+
+  @override
+  String get statusBarWeatherSourceHint => 'اختر موقعًا للطقس أعلاه (الطقس من Open-Meteo، مجاني وبدون حساب). بدونه، يأتي الطقس من تطبيق Breezy Weather إذا كان مثبتًا مع تفعيل المشاركة عبر Gadgetbridge.';
+
+  @override
+  String get weatherLocationTitle => 'موقع الطقس';
+
+  @override
+  String get weatherLocationHint => 'مدينة أو بلدة';
+
+  @override
+  String get weatherLocationNoResults => 'لم يتم العثور على أماكن';
+
+  @override
+  String get weatherLocationSearchError => 'تعذّر الوصول إلى خدمة الطقس. تحقق من اتصال الشبكة.';
+
+  @override
+  String get weatherLocationPrivacyNote => 'الطقس من Open-Meteo.com: مجاني وبدون حساب. تُرسل إحداثيات المكان المختار فقط.';
+
+  @override
+  String get weatherLocationSearch => 'بحث';
+
+  @override
+  String get dateTimeInvalidFormat => 'تنسيق غير صالح';
+
+  @override
+  String get dateTimeSelectFormats => 'اختر التنسيقات أدناه';
+
+  @override
+  String get dataUsageDaily => 'يومي';
+
+  @override
+  String get dataUsageWeekly => 'أسبوعي';
+
+  @override
+  String get dataUsageMonthly => 'شهري';
 }

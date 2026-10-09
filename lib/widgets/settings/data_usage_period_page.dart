@@ -17,9 +17,9 @@ class DataUsagePeriodPage extends StatelessWidget {
       return SettingsPage(
         title: localizations.dataUsagePeriod,
         children: [
-          _choice(service, 'Daily', dataUsageDaily),
-          _choice(service, 'Weekly', dataUsageWeekly),
-          _choice(service, 'Monthly', dataUsageMonthly),
+          _choice(service, localizations.dataUsageDaily, dataUsageDaily),
+          _choice(service, localizations.dataUsageWeekly, dataUsageWeekly),
+          _choice(service, localizations.dataUsageMonthly, dataUsageMonthly),
         ],
       );
     });

@@ -44,40 +44,36 @@ class DockLabelsPage extends StatelessWidget {
           autofocus: true,
           value: dockEnabled,
           onChanged: settingsService.setDockEnabled,
-          title: Text("Favorites dock", style: bodyMedium),
+          title: Text(localizations.dockFavoritesDock, style: bodyMedium),
           secondary: const Icon(Icons.call_to_action_outlined),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: Text(
-            "Shows Favorites as a bar along the bottom of the home screen, with Continue Watching above it "
-            "and your other sections below. Its corners follow the theme.",
-            style: small,
-          ),
+          child: Text(localizations.dockFavoritesDockDescription, style: small),
         ),
         if (dockEnabled) ...[
           RoundedSwitchListTile(
             value: settingsService.dockBlurEnabled,
             onChanged: settingsService.setDockBlurEnabled,
-            title: Text("Frosted dock", style: bodyMedium),
+            title: Text(localizations.dockFrosted, style: bodyMedium),
             secondary: const Icon(Icons.blur_on),
           ),
           RoundedSwitchListTile(
             value: settingsService.dockDarkBackground,
             onChanged: settingsService.setDockDarkBackground,
-            title: Text("Dark dock", style: bodyMedium),
+            title: Text(localizations.dockDark, style: bodyMedium),
             secondary: const Icon(Icons.dark_mode_outlined),
           ),
           RoundedSwitchListTile(
             value: settingsService.dockShadowEnabled,
             onChanged: settingsService.setDockShadowEnabled,
-            title: Text("Dock shadow", style: bodyMedium),
+            title: Text(localizations.dockShadow, style: bodyMedium),
             secondary: const Icon(Icons.layers_outlined),
           ),
           RoundedSwitchListTile(
             value: settingsService.blurWallpaperBelowDock,
             onChanged: settingsService.setBlurWallpaperBelowDock,
-            title: Text("Blur wallpaper below the dock", style: bodyMedium),
+            title: Text(localizations.dockBlurWallpaperBelow, style: bodyMedium),
             secondary: const Icon(Icons.lens_blur),
           ),
         ],

@@ -31,16 +31,16 @@ import 'settings_page.dart';
 class LookSettingsPage extends StatelessWidget {
   static const String routeName = "look_settings";
 
-  /// CardStylePage's choices, by their saved value.
-  static const Map<String, String> cardStyles = {
-    "modern": "Default",
-    "premium": "Premium",
-    "glow": "Glow",
-    "squircle": "Squircle",
-    "classic": "Classic",
-    "minimal": "Minimal",
-    "capsule": "Capsule",
-  };
+  /// CardStylePage's choices, by their saved value, with their names in the current language.
+  static Map<String, String> cardStyles(AppLocalizations localizations) => {
+        "modern": localizations.cardStyleDefault,
+        "premium": localizations.cardStylePremium,
+        "glow": localizations.cardStyleGlow,
+        "squircle": localizations.cardStyleSquircle,
+        "classic": localizations.cardStyleClassic,
+        "minimal": localizations.cardStyleMinimal,
+        "capsule": localizations.cardStyleCapsule,
+      };
 
   const LookSettingsPage({super.key});
 
@@ -56,7 +56,7 @@ class LookSettingsPage extends StatelessWidget {
           autofocus: true,
           leading: const Icon(Icons.crop_square),
           title: Text(AppLocalizations.of(context)!.cardStyleTitle, style: textTheme.bodyMedium),
-          trailing: Text(cardStyles[cardStyle] ?? "", style: textTheme.bodySmall),
+          trailing: Text(cardStyles(localizations)[cardStyle] ?? "", style: textTheme.bodySmall),
           onPressed: () => Navigator.of(context).pushNamed(CardStylePage.routeName),
         ),
         FocusableSettingsTile(

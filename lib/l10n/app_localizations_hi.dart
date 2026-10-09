@@ -1370,4 +1370,188 @@ class AppLocalizationsHi extends AppLocalizations {
   String tvPowerSleepNote(String path) {
     return 'वीडियो या संगीत चलाना गतिविधि माना जाता है। होम बटन फ़िक्स ज़रूरी है ($path)।';
   }
+
+  @override
+  String get accentPurple => 'बैंगनी';
+
+  @override
+  String get accentTeal => 'हरा-नीला';
+
+  @override
+  String get accentBlue => 'नीला';
+
+  @override
+  String get accentOrange => 'नारंगी';
+
+  @override
+  String get accentPink => 'गुलाबी';
+
+  @override
+  String get accentGreen => 'हरा';
+
+  @override
+  String get accentWhite => 'सफ़ेद';
+
+  @override
+  String get accentYellow => 'पीला';
+
+  @override
+  String get accentRed => 'लाल';
+
+  @override
+  String get accentCyan => 'सियान';
+
+  @override
+  String get accentIndigo => 'इंडिगो';
+
+  @override
+  String get accentLime => 'लाइम';
+
+  @override
+  String get accentAmber => 'एम्बर';
+
+  @override
+  String get accentRose => 'हल्का गुलाबी';
+
+  @override
+  String get accentIceBlue => 'बर्फ़ीला नीला';
+
+  @override
+  String get accentSelected => 'चुना गया एक्सेंट रंग';
+
+  @override
+  String get cardStyleDefault => 'डिफ़ॉल्ट';
+
+  @override
+  String get cardStylePremium => 'प्रीमियम';
+
+  @override
+  String get cardStyleGlow => 'ग्लो';
+
+  @override
+  String get cardStyleSquircle => 'स्क्विर्कल';
+
+  @override
+  String get cardStyleClassic => 'क्लासिक';
+
+  @override
+  String get cardStyleMinimal => 'मिनिमल';
+
+  @override
+  String get cardStyleCapsule => 'कैप्सूल';
+
+  @override
+  String get dockFavoritesDock => 'पसंदीदा डॉक';
+
+  @override
+  String get dockFavoritesDockDescription => 'पसंदीदा को होम स्क्रीन के नीचे एक बार के रूप में दिखाता है, ऊपर \'देखना जारी रखें\' और नीचे आपके अन्य अनुभाग। इसके कोने कार्ड शैली के अनुसार होते हैं।';
+
+  @override
+  String get dockFrosted => 'फ्रॉस्टेड डॉक';
+
+  @override
+  String get dockDark => 'गहरा डॉक';
+
+  @override
+  String get dockShadow => 'डॉक की छाया';
+
+  @override
+  String get dockBlurWallpaperBelow => 'डॉक के नीचे वॉलपेपर धुंधला करें';
+
+  @override
+  String get wallpaperMatchSelectedApp => 'चुने गए ऐप से मिलाएं';
+
+  @override
+  String get wallpaperBingPhotoOfTheDay => 'Bing दिन की फ़ोटो';
+
+  @override
+  String get wallpaperRefreshNow => 'अभी रीफ़्रेश करें';
+
+  @override
+  String get wallpaperBingError => 'Bing तक नहीं पहुंच सके। अपना नेटवर्क कनेक्शन जांचें।';
+
+  @override
+  String get gradientPitchBlack => 'गहरा काला';
+
+  @override
+  String get gradientGreatWhale => 'विशाल व्हेल';
+
+  @override
+  String get gradientViciousStance => 'उग्र मुद्रा';
+
+  @override
+  String get gradientTeenNotebook => 'किशोर नोटबुक';
+
+  @override
+  String get gradientOldHat => 'पुरानी टोपी';
+
+  @override
+  String get gradientBurningSpring => 'जलता बसंत';
+
+  @override
+  String get gradientDesertHump => 'रेगिस्तानी टीला';
+
+  @override
+  String get gradientFarawayRiver => 'दूर की नदी';
+
+  @override
+  String get gradientSaintPetersburg => 'सेंट पीटर्सबर्ग';
+
+  @override
+  String get gradientAfricanField => 'अफ़्रीकी मैदान';
+
+  @override
+  String get gradientGrassShampoo => 'घास शैम्पू';
+
+  @override
+  String statusBarTemperatureUnitValue(String unit) {
+    return 'तापमान इकाई: $unit';
+  }
+
+  @override
+  String get weatherLocationNotSet => 'मौसम का स्थान: सेट नहीं है';
+
+  @override
+  String weatherLocationValue(String place) {
+    return 'मौसम का स्थान: $place';
+  }
+
+  @override
+  String get statusBarWeatherLoadFailed => 'मौसम लोड नहीं हो सका। यह अपने आप फिर से कोशिश करेगा।';
+
+  @override
+  String get statusBarWeatherSourceHint => 'ऊपर मौसम का स्थान चुनें (मौसम Open-Meteo से, मुफ़्त, बिना खाते के)। इसके बिना, मौसम Breezy Weather ऐप से आता है, यदि वह Gadgetbridge शेयरिंग चालू करके इंस्टॉल है।';
+
+  @override
+  String get weatherLocationTitle => 'मौसम का स्थान';
+
+  @override
+  String get weatherLocationHint => 'शहर या कस्बा';
+
+  @override
+  String get weatherLocationNoResults => 'कोई स्थान नहीं मिला';
+
+  @override
+  String get weatherLocationSearchError => 'मौसम सेवा तक नहीं पहुंच सके। नेटवर्क कनेक्शन जांचें।';
+
+  @override
+  String get weatherLocationPrivacyNote => 'मौसम Open-Meteo.com से: मुफ़्त, बिना खाते के। केवल चुने गए स्थान के निर्देशांक भेजे जाते हैं।';
+
+  @override
+  String get weatherLocationSearch => 'खोजें';
+
+  @override
+  String get dateTimeInvalidFormat => 'अमान्य फ़ॉर्मैट';
+
+  @override
+  String get dateTimeSelectFormats => 'नीचे फ़ॉर्मैट चुनें';
+
+  @override
+  String get dataUsageDaily => 'दैनिक';
+
+  @override
+  String get dataUsageWeekly => 'साप्ताहिक';
+
+  @override
+  String get dataUsageMonthly => 'मासिक';
 }

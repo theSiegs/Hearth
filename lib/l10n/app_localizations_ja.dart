@@ -1366,4 +1366,188 @@ class AppLocalizationsJa extends AppLocalizations {
   String tvPowerSleepNote(String path) {
     return '動画や音楽の再生も操作とみなされます。ホームボタン修正が必要です（$path）。';
   }
+
+  @override
+  String get accentPurple => 'パープル';
+
+  @override
+  String get accentTeal => 'ティール';
+
+  @override
+  String get accentBlue => 'ブルー';
+
+  @override
+  String get accentOrange => 'オレンジ';
+
+  @override
+  String get accentPink => 'ピンク';
+
+  @override
+  String get accentGreen => 'グリーン';
+
+  @override
+  String get accentWhite => 'ホワイト';
+
+  @override
+  String get accentYellow => 'イエロー';
+
+  @override
+  String get accentRed => 'レッド';
+
+  @override
+  String get accentCyan => 'シアン';
+
+  @override
+  String get accentIndigo => 'インディゴ';
+
+  @override
+  String get accentLime => 'ライム';
+
+  @override
+  String get accentAmber => 'アンバー';
+
+  @override
+  String get accentRose => 'ローズ';
+
+  @override
+  String get accentIceBlue => 'アイスブルー';
+
+  @override
+  String get accentSelected => '選択中のアクセント';
+
+  @override
+  String get cardStyleDefault => 'デフォルト';
+
+  @override
+  String get cardStylePremium => 'プレミアム';
+
+  @override
+  String get cardStyleGlow => 'グロー';
+
+  @override
+  String get cardStyleSquircle => 'スクワークル';
+
+  @override
+  String get cardStyleClassic => 'クラシック';
+
+  @override
+  String get cardStyleMinimal => 'ミニマル';
+
+  @override
+  String get cardStyleCapsule => 'カプセル';
+
+  @override
+  String get dockFavoritesDock => 'お気に入りドック';
+
+  @override
+  String get dockFavoritesDockDescription => 'お気に入りをホーム画面下部のバーとして表示し、その上に「続きを見る」、下にほかのセクションを並べます。角の形はカードのスタイルに合わせます。';
+
+  @override
+  String get dockFrosted => 'すりガラスのドック';
+
+  @override
+  String get dockDark => 'ダークドック';
+
+  @override
+  String get dockShadow => 'ドックの影';
+
+  @override
+  String get dockBlurWallpaperBelow => 'ドックの下の壁紙をぼかす';
+
+  @override
+  String get wallpaperMatchSelectedApp => '選択中のアプリに合わせる';
+
+  @override
+  String get wallpaperBingPhotoOfTheDay => 'Bing の今日の写真';
+
+  @override
+  String get wallpaperRefreshNow => '今すぐ更新';
+
+  @override
+  String get wallpaperBingError => 'Bing に接続できませんでした。ネットワーク接続を確認してください。';
+
+  @override
+  String get gradientPitchBlack => '漆黒';
+
+  @override
+  String get gradientGreatWhale => 'グレートホエール';
+
+  @override
+  String get gradientViciousStance => 'ヴィシャススタンス';
+
+  @override
+  String get gradientTeenNotebook => 'ティーンノートブック';
+
+  @override
+  String get gradientOldHat => 'オールドハット';
+
+  @override
+  String get gradientBurningSpring => 'バーニングスプリング';
+
+  @override
+  String get gradientDesertHump => 'デザートハンプ';
+
+  @override
+  String get gradientFarawayRiver => 'ファラウェイリバー';
+
+  @override
+  String get gradientSaintPetersburg => 'サンクトペテルブルク';
+
+  @override
+  String get gradientAfricanField => 'アフリカンフィールド';
+
+  @override
+  String get gradientGrassShampoo => 'グラスシャンプー';
+
+  @override
+  String statusBarTemperatureUnitValue(String unit) {
+    return '温度単位: $unit';
+  }
+
+  @override
+  String get weatherLocationNotSet => '天気の地域: 未設定';
+
+  @override
+  String weatherLocationValue(String place) {
+    return '天気の地域: $place';
+  }
+
+  @override
+  String get statusBarWeatherLoadFailed => '天気を読み込めませんでした。自動的に再試行します。';
+
+  @override
+  String get statusBarWeatherSourceHint => '上で天気の地域を選んでください（天気は Open-Meteo から、無料・アカウント不要）。選ばない場合は、Gadgetbridge 共有をオンにした Breezy Weather アプリがインストールされていれば、そこから天気を取得します。';
+
+  @override
+  String get weatherLocationTitle => '天気の地域';
+
+  @override
+  String get weatherLocationHint => '市区町村';
+
+  @override
+  String get weatherLocationNoResults => '場所が見つかりません';
+
+  @override
+  String get weatherLocationSearchError => '天気サービスに接続できませんでした。ネットワーク接続を確認してください。';
+
+  @override
+  String get weatherLocationPrivacyNote => '天気は Open-Meteo.com 提供（無料・アカウント不要）。送信されるのは選んだ場所の座標だけです。';
+
+  @override
+  String get weatherLocationSearch => '検索';
+
+  @override
+  String get dateTimeInvalidFormat => '無効な形式';
+
+  @override
+  String get dateTimeSelectFormats => '下で形式を選んでください';
+
+  @override
+  String get dataUsageDaily => '1日';
+
+  @override
+  String get dataUsageWeekly => '1週間';
+
+  @override
+  String get dataUsageMonthly => '1か月';
 }

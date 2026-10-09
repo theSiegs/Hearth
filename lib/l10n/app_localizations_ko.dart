@@ -1366,4 +1366,188 @@ class AppLocalizationsKo extends AppLocalizations {
   String tvPowerSleepNote(String path) {
     return '동영상이나 음악 재생도 사용 중으로 간주됩니다. 홈 버튼 수정이 필요합니다($path).';
   }
+
+  @override
+  String get accentPurple => '보라';
+
+  @override
+  String get accentTeal => '청록';
+
+  @override
+  String get accentBlue => '파랑';
+
+  @override
+  String get accentOrange => '주황';
+
+  @override
+  String get accentPink => '분홍';
+
+  @override
+  String get accentGreen => '초록';
+
+  @override
+  String get accentWhite => '흰색';
+
+  @override
+  String get accentYellow => '노랑';
+
+  @override
+  String get accentRed => '빨강';
+
+  @override
+  String get accentCyan => '시안';
+
+  @override
+  String get accentIndigo => '남색';
+
+  @override
+  String get accentLime => '라임';
+
+  @override
+  String get accentAmber => '호박색';
+
+  @override
+  String get accentRose => '로즈';
+
+  @override
+  String get accentIceBlue => '아이스 블루';
+
+  @override
+  String get accentSelected => '선택한 강조 색상';
+
+  @override
+  String get cardStyleDefault => '기본';
+
+  @override
+  String get cardStylePremium => '프리미엄';
+
+  @override
+  String get cardStyleGlow => '글로우';
+
+  @override
+  String get cardStyleSquircle => '스퀴클';
+
+  @override
+  String get cardStyleClassic => '클래식';
+
+  @override
+  String get cardStyleMinimal => '미니멀';
+
+  @override
+  String get cardStyleCapsule => '캡슐';
+
+  @override
+  String get dockFavoritesDock => '즐겨찾기 독';
+
+  @override
+  String get dockFavoritesDockDescription => '즐겨찾기를 홈 화면 하단의 바로 표시하고, 위에는 계속 시청, 아래에는 다른 섹션을 둡니다. 모서리는 카드 스타일을 따릅니다.';
+
+  @override
+  String get dockFrosted => '반투명 독';
+
+  @override
+  String get dockDark => '어두운 독';
+
+  @override
+  String get dockShadow => '독 그림자';
+
+  @override
+  String get dockBlurWallpaperBelow => '독 아래 배경화면 흐리게';
+
+  @override
+  String get wallpaperMatchSelectedApp => '선택한 앱에 맞추기';
+
+  @override
+  String get wallpaperBingPhotoOfTheDay => 'Bing 오늘의 사진';
+
+  @override
+  String get wallpaperRefreshNow => '지금 새로고침';
+
+  @override
+  String get wallpaperBingError => 'Bing에 연결할 수 없습니다. 네트워크 연결을 확인하세요.';
+
+  @override
+  String get gradientPitchBlack => '칠흑';
+
+  @override
+  String get gradientGreatWhale => '그레이트 웨일';
+
+  @override
+  String get gradientViciousStance => '비셔스 스탠스';
+
+  @override
+  String get gradientTeenNotebook => '틴 노트북';
+
+  @override
+  String get gradientOldHat => '올드 햇';
+
+  @override
+  String get gradientBurningSpring => '버닝 스프링';
+
+  @override
+  String get gradientDesertHump => '데저트 험프';
+
+  @override
+  String get gradientFarawayRiver => '머나먼 강';
+
+  @override
+  String get gradientSaintPetersburg => '상트페테르부르크';
+
+  @override
+  String get gradientAfricanField => '아프리카 들판';
+
+  @override
+  String get gradientGrassShampoo => '그래스 샴푸';
+
+  @override
+  String statusBarTemperatureUnitValue(String unit) {
+    return '온도 단위: $unit';
+  }
+
+  @override
+  String get weatherLocationNotSet => '날씨 위치: 설정 안 됨';
+
+  @override
+  String weatherLocationValue(String place) {
+    return '날씨 위치: $place';
+  }
+
+  @override
+  String get statusBarWeatherLoadFailed => '날씨를 불러오지 못했습니다. 자동으로 다시 시도합니다.';
+
+  @override
+  String get statusBarWeatherSourceHint => '위에서 날씨 위치를 선택하세요(날씨는 Open-Meteo 제공, 무료, 계정 불필요). 선택하지 않으면 Gadgetbridge 공유가 켜진 Breezy Weather 앱이 설치된 경우 해당 앱에서 날씨를 가져옵니다.';
+
+  @override
+  String get weatherLocationTitle => '날씨 위치';
+
+  @override
+  String get weatherLocationHint => '도시 또는 마을';
+
+  @override
+  String get weatherLocationNoResults => '장소를 찾을 수 없습니다';
+
+  @override
+  String get weatherLocationSearchError => '날씨 서비스에 연결할 수 없습니다. 네트워크 연결을 확인하세요.';
+
+  @override
+  String get weatherLocationPrivacyNote => '날씨 제공: Open-Meteo.com(무료, 계정 불필요). 선택한 장소의 좌표만 전송됩니다.';
+
+  @override
+  String get weatherLocationSearch => '검색';
+
+  @override
+  String get dateTimeInvalidFormat => '잘못된 형식';
+
+  @override
+  String get dateTimeSelectFormats => '아래에서 형식을 선택하세요';
+
+  @override
+  String get dataUsageDaily => '일간';
+
+  @override
+  String get dataUsageWeekly => '주간';
+
+  @override
+  String get dataUsageMonthly => '월간';
 }

@@ -146,9 +146,8 @@ class WeatherSettingsPage extends StatelessWidget {
           ),
           FocusableSettingsTile(
             leading: const Icon(Icons.thermostat_outlined),
-            title: Text(
-              "${localizations.temperatureUnit}: ${settingsService.useFahrenheit ? localizations.fahrenheit : localizations.celsius}",
-            ),
+            title: Text(localizations.statusBarTemperatureUnitValue(
+                settingsService.useFahrenheit ? localizations.fahrenheit : localizations.celsius)),
             onPressed: () {
               final next = settingsService.useFahrenheit ? temperatureUnitCelsius : temperatureUnitFahrenheit;
               settingsService.setTemperatureUnit(next);
@@ -161,7 +160,9 @@ class WeatherSettingsPage extends StatelessWidget {
                 children: [
                   FocusableSettingsTile(
                     leading: const Icon(Icons.place_outlined),
-                    title: Text(place == null ? "Weather location: not set" : "Weather location: ${place.displayName}"),
+                    title: Text(place == null
+                        ? localizations.weatherLocationNotSet
+                        : localizations.weatherLocationValue(place.displayName)),
                     onPressed: () async {
                       final picked = await showDialog<WeatherPlace>(
                         context: context,
@@ -171,12 +172,9 @@ class WeatherSettingsPage extends StatelessWidget {
                     },
                   ),
                   if (place != null && weatherService.builtInError)
-                    _weatherHint(context, "Couldn't load the weather. It will retry automatically."),
+                    _weatherHint(context, localizations.statusBarWeatherLoadFailed),
                   if (place == null && !weatherService.hasWeather)
-                    _weatherHint(
-                        context,
-                        "Choose a weather location above (weather from Open-Meteo, free, no account). "
-                        "Without one, weather comes from the Breezy Weather app if it's installed with Gadgetbridge sharing on."),
+                    _weatherHint(context, localizations.statusBarWeatherSourceHint),
                 ],
               );
             },

@@ -1366,4 +1366,188 @@ class AppLocalizationsTr extends AppLocalizations {
   String tvPowerSleepNote(String path) {
     return 'Video veya müzik oynatmak etkinlik sayılır. Ana Ekran Tuşu Düzeltmesi gerekir ($path).';
   }
+
+  @override
+  String get accentPurple => 'Mor';
+
+  @override
+  String get accentTeal => 'Petrol mavisi';
+
+  @override
+  String get accentBlue => 'Mavi';
+
+  @override
+  String get accentOrange => 'Turuncu';
+
+  @override
+  String get accentPink => 'Pembe';
+
+  @override
+  String get accentGreen => 'Yeşil';
+
+  @override
+  String get accentWhite => 'Beyaz';
+
+  @override
+  String get accentYellow => 'Sarı';
+
+  @override
+  String get accentRed => 'Kırmızı';
+
+  @override
+  String get accentCyan => 'Camgöbeği';
+
+  @override
+  String get accentIndigo => 'Çivit mavisi';
+
+  @override
+  String get accentLime => 'Limon yeşili';
+
+  @override
+  String get accentAmber => 'Kehribar';
+
+  @override
+  String get accentRose => 'Gül pembesi';
+
+  @override
+  String get accentIceBlue => 'Buz mavisi';
+
+  @override
+  String get accentSelected => 'Seçili vurgu rengi';
+
+  @override
+  String get cardStyleDefault => 'Varsayılan';
+
+  @override
+  String get cardStylePremium => 'Premium';
+
+  @override
+  String get cardStyleGlow => 'Parıltı';
+
+  @override
+  String get cardStyleSquircle => 'Squircle';
+
+  @override
+  String get cardStyleClassic => 'Klasik';
+
+  @override
+  String get cardStyleMinimal => 'Minimal';
+
+  @override
+  String get cardStyleCapsule => 'Kapsül';
+
+  @override
+  String get dockFavoritesDock => 'Favoriler dock\'u';
+
+  @override
+  String get dockFavoritesDockDescription => 'Favorileri ana ekranın altında bir çubuk olarak gösterir; üstünde İzlemeye Devam Et, altında diğer bölümleriniz yer alır. Köşeleri kart stiline uyar.';
+
+  @override
+  String get dockFrosted => 'Buzlu dock';
+
+  @override
+  String get dockDark => 'Koyu dock';
+
+  @override
+  String get dockShadow => 'Dock gölgesi';
+
+  @override
+  String get dockBlurWallpaperBelow => 'Dock\'un altındaki duvar kağıdını bulanıklaştır';
+
+  @override
+  String get wallpaperMatchSelectedApp => 'Seçili uygulamaya uydur';
+
+  @override
+  String get wallpaperBingPhotoOfTheDay => 'Bing Günün Fotoğrafı';
+
+  @override
+  String get wallpaperRefreshNow => 'Şimdi yenile';
+
+  @override
+  String get wallpaperBingError => 'Bing\'e ulaşılamadı. Ağ bağlantınızı kontrol edin.';
+
+  @override
+  String get gradientPitchBlack => 'Zifiri Siyah';
+
+  @override
+  String get gradientGreatWhale => 'Büyük Balina';
+
+  @override
+  String get gradientViciousStance => 'Vahşi Duruş';
+
+  @override
+  String get gradientTeenNotebook => 'Genç Defteri';
+
+  @override
+  String get gradientOldHat => 'Eski Şapka';
+
+  @override
+  String get gradientBurningSpring => 'Yanan Bahar';
+
+  @override
+  String get gradientDesertHump => 'Çöl Tümseği';
+
+  @override
+  String get gradientFarawayRiver => 'Uzak Nehir';
+
+  @override
+  String get gradientSaintPetersburg => 'Saint Petersburg';
+
+  @override
+  String get gradientAfricanField => 'Afrika Tarlası';
+
+  @override
+  String get gradientGrassShampoo => 'Çim Şampuanı';
+
+  @override
+  String statusBarTemperatureUnitValue(String unit) {
+    return 'Sıcaklık Birimi: $unit';
+  }
+
+  @override
+  String get weatherLocationNotSet => 'Hava durumu konumu: ayarlanmadı';
+
+  @override
+  String weatherLocationValue(String place) {
+    return 'Hava durumu konumu: $place';
+  }
+
+  @override
+  String get statusBarWeatherLoadFailed => 'Hava durumu yüklenemedi. Otomatik olarak yeniden denenecek.';
+
+  @override
+  String get statusBarWeatherSourceHint => 'Yukarıdan bir hava durumu konumu seçin (hava durumu Open-Meteo\'dan, ücretsiz, hesap gerekmez). Seçilmezse hava durumu, Gadgetbridge paylaşımı açık olarak yüklüyse Breezy Weather uygulamasından gelir.';
+
+  @override
+  String get weatherLocationTitle => 'Hava durumu konumu';
+
+  @override
+  String get weatherLocationHint => 'Şehir veya kasaba';
+
+  @override
+  String get weatherLocationNoResults => 'Yer bulunamadı';
+
+  @override
+  String get weatherLocationSearchError => 'Hava durumu hizmetine ulaşılamadı. Ağ bağlantısını kontrol edin.';
+
+  @override
+  String get weatherLocationPrivacyNote => 'Hava durumu Open-Meteo.com\'dan: ücretsiz, hesap gerekmez. Yalnızca seçilen yerin koordinatları gönderilir.';
+
+  @override
+  String get weatherLocationSearch => 'Ara';
+
+  @override
+  String get dateTimeInvalidFormat => 'Geçersiz biçim';
+
+  @override
+  String get dateTimeSelectFormats => 'Aşağıdan biçimleri seçin';
+
+  @override
+  String get dataUsageDaily => 'Günlük';
+
+  @override
+  String get dataUsageWeekly => 'Haftalık';
+
+  @override
+  String get dataUsageMonthly => 'Aylık';
 }

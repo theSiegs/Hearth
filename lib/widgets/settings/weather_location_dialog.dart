@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -67,7 +68,7 @@ class _WeatherLocationDialogState extends State<WeatherLocationDialog> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = "Couldn't reach the weather service. Check the network connection.";
+        _error = AppLocalizations.of(context)!.weatherLocationSearchError;
         _searching = false;
       });
     }
@@ -75,9 +76,10 @@ class _WeatherLocationDialogState extends State<WeatherLocationDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
     final results = _results;
     return AlertDialog(
-      title: const Text("Weather location"),
+      title: Text(localizations.weatherLocationTitle),
       content: SizedBox(
         width: 420,
         child: Column(
@@ -90,12 +92,13 @@ class _WeatherLocationDialogState extends State<WeatherLocationDialog> {
               autofocus: true,
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => _search(),
-              decoration: const InputDecoration(hintText: "City or town", prefixIcon: Icon(Icons.search)),
+              decoration: InputDecoration(
+                  hintText: localizations.weatherLocationHint, prefixIcon: const Icon(Icons.search)),
             ),
             const SizedBox(height: 8),
             if (_searching) const LinearProgressIndicator(),
             if (_error != null) Text(_error!, style: const TextStyle(color: Colors.redAccent)),
-            if (results != null && results.isEmpty && !_searching) const Text("No places found"),
+            if (results != null && results.isEmpty && !_searching) Text(localizations.weatherLocationNoResults),
             if (results != null && results.isNotEmpty)
               Flexible(
                 child: ListView(
@@ -114,15 +117,15 @@ class _WeatherLocationDialogState extends State<WeatherLocationDialog> {
               ),
             const SizedBox(height: 8),
             Text(
-              "Weather by Open-Meteo.com: free, no account. Only the chosen place's coordinates are sent.",
+              localizations.weatherLocationPrivacyNote,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
             ),
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: _search, child: const Text("Search")),
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("Cancel")),
+        TextButton(onPressed: _search, child: Text(localizations.weatherLocationSearch)),
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(localizations.cancel)),
       ],
     );
   }
