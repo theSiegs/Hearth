@@ -1968,4 +1968,19 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get aboutLicense => 'Свободное ПО под лицензией GNU GPL v3, как и проекты, на которых оно основано.';
+
+  @override
+  String get familyAppsStatusInstalled => 'Установлено';
+
+  @override
+  String get familyAppsStatusPartial => 'Частично';
+
+  @override
+  String get familyAppsStatusNotInstalled => 'Не установлено';
+
+  @override
+  String get familyAppsStatusAtRisk => 'Под угрозой';
+
+  @override
+  String get familyAppsAtRiskDetail => 'Google TV удалит незащищённые приложения в этом профиле при его следующем запуске. Нажмите «Добавить» ещё раз, чтобы защитить их.';
 }

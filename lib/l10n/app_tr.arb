@@ -586,5 +586,10 @@
     "aboutHearthOnGitHub": "GitHub'da Hearth",
     "aboutCredits": "Katkıda bulunanlar",
     "aboutFlauncherForkCredit": "FLauncher çatalı · {author}",
-    "aboutLicense": "Temel aldığı projeler gibi GNU GPL v3 kapsamında özgür yazılımdır."
+    "aboutLicense": "Temel aldığı projeler gibi GNU GPL v3 kapsamında özgür yazılımdır.",
+    "familyAppsStatusInstalled": "Yüklü",
+    "familyAppsStatusPartial": "Kısmi",
+    "familyAppsStatusNotInstalled": "Yüklü değil",
+    "familyAppsStatusAtRisk": "Risk altında",
+    "familyAppsAtRiskDetail": "Google TV, bu profil bir sonraki açılışında buradaki korumasız uygulamaları kaldıracak. Korumak için Ekle'yi yeniden kullanın."
 }

@@ -1987,4 +1987,19 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get aboutLicense => 'برنامج حر بموجب رخصة GNU GPL v3، مثل المشاريع التي يعتمد عليها.';
+
+  @override
+  String get familyAppsStatusInstalled => 'مثبّت';
+
+  @override
+  String get familyAppsStatusPartial => 'جزئي';
+
+  @override
+  String get familyAppsStatusNotInstalled => 'غير مثبّت';
+
+  @override
+  String get familyAppsStatusAtRisk => 'معرّض للخطر';
+
+  @override
+  String get familyAppsAtRiskDetail => 'سيزيل Google TV التطبيقات غير المحمية هنا عند بدء هذا الملف الشخصي في المرة القادمة. استخدم \"إضافة\" مرة أخرى لحمايتها.';
 }

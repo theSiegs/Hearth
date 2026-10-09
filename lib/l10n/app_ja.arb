@@ -586,5 +586,10 @@
     "aboutHearthOnGitHub": "GitHub の Hearth",
     "aboutCredits": "クレジット",
     "aboutFlauncherForkCredit": "FLauncher のフォーク · {author}",
-    "aboutLicense": "元になったプロジェクトと同じく、GNU GPL v3 のフリーソフトウェアです。"
+    "aboutLicense": "元になったプロジェクトと同じく、GNU GPL v3 のフリーソフトウェアです。",
+    "familyAppsStatusInstalled": "インストール済み",
+    "familyAppsStatusPartial": "一部のみ",
+    "familyAppsStatusNotInstalled": "未インストール",
+    "familyAppsStatusAtRisk": "削除の恐れ",
+    "familyAppsAtRiskDetail": "このプロフィールを次に開いたとき、保護されていないアプリは Google TV に削除されます。もう一度「追加」を使って保護してください。"
 }

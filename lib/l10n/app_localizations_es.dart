@@ -1954,4 +1954,19 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get aboutLicense => 'Software libre bajo la GNU GPL v3, como los proyectos en los que se basa.';
+
+  @override
+  String get familyAppsStatusInstalled => 'Instalado';
+
+  @override
+  String get familyAppsStatusPartial => 'Parcial';
+
+  @override
+  String get familyAppsStatusNotInstalled => 'No instalado';
+
+  @override
+  String get familyAppsStatusAtRisk => 'En riesgo';
+
+  @override
+  String get familyAppsAtRiskDetail => 'Google TV quitará de aquí las apps sin proteger la próxima vez que se inicie este perfil. Use Añadir de nuevo para protegerlas.';
 }

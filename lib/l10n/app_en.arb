@@ -1175,7 +1175,7 @@
             }
         }
     },
-    "familyAppsAppInstalledKept": "{app}: installed, kept",
+    "familyAppsAppInstalledKept": "{app}: installed, protected",
     "@familyAppsAppInstalledKept": {
         "description": "Hearth on other profiles page: list line; kept means Hearth keeps it installed in a kids profile",
         "placeholders": {
@@ -1193,7 +1193,7 @@
             }
         }
     },
-    "familyAppsAppNotInstalledKept": "{app}: not installed, kept",
+    "familyAppsAppNotInstalledKept": "{app}: not installed, protected",
     "@familyAppsAppNotInstalledKept": {
         "description": "Hearth on other profiles page: list line; kept means Hearth keeps it installed in a kids profile",
         "placeholders": {
@@ -2439,5 +2439,25 @@
     "aboutLicense": "Free software under the GNU GPL v3, like the projects it builds on.",
     "@aboutLicense": {
         "description": "Small print at the bottom of the About dialog"
+    },
+    "familyAppsStatusInstalled": "Installed",
+    "@familyAppsStatusInstalled": {
+        "description": "Hearth on other profiles: a profile's status, in green; Hearth and HearthTube are both there (and protected in a kids profile)"
+    },
+    "familyAppsStatusPartial": "Partial",
+    "@familyAppsStatusPartial": {
+        "description": "Hearth on other profiles: a profile's status, in yellow; only some of Hearth's apps are there"
+    },
+    "familyAppsStatusNotInstalled": "Not installed",
+    "@familyAppsStatusNotInstalled": {
+        "description": "Hearth on other profiles: a profile's status; neither of Hearth's apps is there"
+    },
+    "familyAppsStatusAtRisk": "At risk",
+    "@familyAppsStatusAtRisk": {
+        "description": "Hearth on other profiles: a profile's status, in red; a kids profile has an app Google TV will remove at its next start"
+    },
+    "familyAppsAtRiskDetail": "Google TV will remove the unprotected apps here the next time this profile starts. Use Add again to protect them.",
+    "@familyAppsAtRiskDetail": {
+        "description": "Hearth on other profiles: shown under an At risk profile while it's selected"
     }
 }

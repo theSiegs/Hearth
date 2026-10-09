@@ -1944,4 +1944,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aboutLicense => '与其所基于的项目一样，是遵循 GNU GPL v3 的自由软件。';
+
+  @override
+  String get familyAppsStatusInstalled => '已安装';
+
+  @override
+  String get familyAppsStatusPartial => '部分安装';
+
+  @override
+  String get familyAppsStatusNotInstalled => '未安装';
+
+  @override
+  String get familyAppsStatusAtRisk => '有风险';
+
+  @override
+  String get familyAppsAtRiskDetail => '此个人资料下次启动时，Google TV 会移除这里未受保护的应用。请再次使用“添加”来保护它们。';
 }
