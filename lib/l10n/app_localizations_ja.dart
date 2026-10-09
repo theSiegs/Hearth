@@ -343,9 +343,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get blockedNotificationApps => 'ブロックされたアプリ';
 
   @override
-  String get blockAppNotifications => '通知をブロック';
-
-  @override
   String get unblockAppNotifications => '通知のブロックを解除';
 
   @override
@@ -364,9 +361,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get showWeatherWarnings => '天気と雨の警告を表示';
 
   @override
-  String get temperatureUnit => '温度単位';
-
-  @override
   String get celsius => '摂氏 (°C)';
 
   @override
@@ -380,9 +374,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get dismiss => '非表示';
-
-  @override
-  String get openApp => '開く';
 
   @override
   String get noBlockedAppsDesc => '現在、すべてのアプリで通知の表示が許可されています';
@@ -1467,39 +1458,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get wallpaperBingError => 'Bing に接続できませんでした。ネットワーク接続を確認してください。';
 
   @override
-  String get gradientPitchBlack => '漆黒';
-
-  @override
-  String get gradientGreatWhale => 'グレートホエール';
-
-  @override
-  String get gradientViciousStance => 'ヴィシャススタンス';
-
-  @override
-  String get gradientTeenNotebook => 'ティーンノートブック';
-
-  @override
-  String get gradientOldHat => 'オールドハット';
-
-  @override
-  String get gradientBurningSpring => 'バーニングスプリング';
-
-  @override
-  String get gradientDesertHump => 'デザートハンプ';
-
-  @override
-  String get gradientFarawayRiver => 'ファラウェイリバー';
-
-  @override
-  String get gradientSaintPetersburg => 'サンクトペテルブルク';
-
-  @override
-  String get gradientAfricanField => 'アフリカンフィールド';
-
-  @override
-  String get gradientGrassShampoo => 'グラスシャンプー';
-
-  @override
   String statusBarTemperatureUnitValue(String unit) {
     return '温度単位: $unit';
   }
@@ -1959,9 +1917,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get updatesError => 'エラー';
-
-  @override
-  String get updatesHearthTubeDescription => 'Hearth 用の YouTube。Hearth のプロフィールに連動します';
 
   @override
   String updatesDescriptionWithVersion(String description, String version) {

@@ -343,9 +343,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get blockedNotificationApps => 'Engellenen Uygulamalar';
 
   @override
-  String get blockAppNotifications => 'Bildirimleri Engelle';
-
-  @override
   String get unblockAppNotifications => 'Bildirim Engelini Kaldır';
 
   @override
@@ -364,9 +361,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get showWeatherWarnings => 'Hava Durumu ve Yağmur Uyarılarını Göster';
 
   @override
-  String get temperatureUnit => 'Sıcaklık Birimi';
-
-  @override
   String get celsius => 'Celsius (°C)';
 
   @override
@@ -380,9 +374,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get dismiss => 'Kapat';
-
-  @override
-  String get openApp => 'Aç';
 
   @override
   String get noBlockedAppsDesc => 'Şu anda tüm uygulamaların bildirim göstermesine izin veriliyor';
@@ -1467,39 +1458,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get wallpaperBingError => 'Bing\'e ulaşılamadı. Ağ bağlantınızı kontrol edin.';
 
   @override
-  String get gradientPitchBlack => 'Zifiri Siyah';
-
-  @override
-  String get gradientGreatWhale => 'Büyük Balina';
-
-  @override
-  String get gradientViciousStance => 'Vahşi Duruş';
-
-  @override
-  String get gradientTeenNotebook => 'Genç Defteri';
-
-  @override
-  String get gradientOldHat => 'Eski Şapka';
-
-  @override
-  String get gradientBurningSpring => 'Yanan Bahar';
-
-  @override
-  String get gradientDesertHump => 'Çöl Tümseği';
-
-  @override
-  String get gradientFarawayRiver => 'Uzak Nehir';
-
-  @override
-  String get gradientSaintPetersburg => 'Saint Petersburg';
-
-  @override
-  String get gradientAfricanField => 'Afrika Tarlası';
-
-  @override
-  String get gradientGrassShampoo => 'Çim Şampuanı';
-
-  @override
   String statusBarTemperatureUnitValue(String unit) {
     return 'Sıcaklık Birimi: $unit';
   }
@@ -1959,9 +1917,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get updatesError => 'Hata';
-
-  @override
-  String get updatesHearthTubeDescription => 'Hearth için YouTube; Hearth profilinizi izler';
 
   @override
   String updatesDescriptionWithVersion(String description, String version) {

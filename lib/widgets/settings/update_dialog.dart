@@ -165,7 +165,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
           children: [
             const Icon(Icons.error_outline, color: Colors.redAccent, size: 32),
             const SizedBox(height: 8),
-            Text(service.errorMessage ?? localizations.updateSomethingWentWrong,
+            Text(service.error?.message(localizations) ?? service.errorMessage ?? localizations.updateSomethingWentWrong,
                 textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, fontSize: 12)),
           ],
         );

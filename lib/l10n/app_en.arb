@@ -145,20 +145,17 @@
     "turkish": "Turkish",
     "hidePersistentNotifications": "Hide Persistent Notifications",
     "blockedNotificationApps": "Blocked Apps",
-    "blockAppNotifications": "Block Notifications",
     "unblockAppNotifications": "Unblock Notifications",
     "noBlockedApps": "No blocked apps",
     "persistentNotification": "Persistent",
     "unblockAll": "Unblock All",
     "weather": "Weather",
     "showWeatherWarnings": "Show Weather & Rain Warnings",
-    "temperatureUnit": "Temperature Unit",
     "celsius": "Celsius (°C)",
     "fahrenheit": "Fahrenheit (°F)",
     "notifications": "Notifications",
     "continueWatchingDescription": "Show recently watched movies and TV shows from supported apps on your home screen",
     "dismiss": "Dismiss",
-    "openApp": "Open",
     "noBlockedAppsDesc": "All applications are currently allowed to show notifications",
     "notificationsAllowed": "Notifications Allowed",
     "notificationsBlocked": "Notifications Blocked",
@@ -1739,50 +1736,6 @@
     "@wallpaperBingError": {
         "description": "Error under Refresh Now on the Wallpaper page"
     },
-    "gradientPitchBlack": "Pitch Black",
-    "@gradientPitchBlack": {
-        "description": "Name of a wallpaper gradient on the Gradient page"
-    },
-    "gradientGreatWhale": "Great Whale",
-    "@gradientGreatWhale": {
-        "description": "Name of a wallpaper gradient on the Gradient page"
-    },
-    "gradientViciousStance": "Vicious Stance",
-    "@gradientViciousStance": {
-        "description": "Name of a wallpaper gradient on the Gradient page"
-    },
-    "gradientTeenNotebook": "Teen Notebook",
-    "@gradientTeenNotebook": {
-        "description": "Name of a wallpaper gradient on the Gradient page"
-    },
-    "gradientOldHat": "Old Hat",
-    "@gradientOldHat": {
-        "description": "Name of a wallpaper gradient on the Gradient page"
-    },
-    "gradientBurningSpring": "Burning Spring",
-    "@gradientBurningSpring": {
-        "description": "Name of a wallpaper gradient on the Gradient page"
-    },
-    "gradientDesertHump": "Desert Hump",
-    "@gradientDesertHump": {
-        "description": "Name of a wallpaper gradient on the Gradient page"
-    },
-    "gradientFarawayRiver": "Faraway River",
-    "@gradientFarawayRiver": {
-        "description": "Name of a wallpaper gradient on the Gradient page"
-    },
-    "gradientSaintPetersburg": "Saint Petersburg",
-    "@gradientSaintPetersburg": {
-        "description": "Name of a wallpaper gradient on the Gradient page (named after the city)"
-    },
-    "gradientAfricanField": "African Field",
-    "@gradientAfricanField": {
-        "description": "Name of a wallpaper gradient on the Gradient page"
-    },
-    "gradientGrassShampoo": "Grass Shampoo",
-    "@gradientGrassShampoo": {
-        "description": "Name of a wallpaper gradient on the Gradient page"
-    },
     "statusBarTemperatureUnitValue": "Temperature Unit: {unit}",
     "@statusBarTemperatureUnitValue": {
         "description": "Row on the Weather settings page; pressing it switches the unit. {unit} is Celsius (°C) or Fahrenheit (°F)",
@@ -2434,10 +2387,6 @@
     "updatesError": "Error",
     "@updatesError": {
         "description": "Next to a companion app on the Updates page when something failed without a message"
-    },
-    "updatesHearthTubeDescription": "YouTube for Hearth; follows your Hearth profile",
-    "@updatesHearthTubeDescription": {
-        "description": "Line under HearthTube on the Updates page"
     },
     "updatesDescriptionWithVersion": "{description} · {version}",
     "@updatesDescriptionWithVersion": {

@@ -343,9 +343,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get blockedNotificationApps => '已屏蔽的应用';
 
   @override
-  String get blockAppNotifications => '屏蔽通知';
-
-  @override
   String get unblockAppNotifications => '取消屏蔽通知';
 
   @override
@@ -364,9 +361,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get showWeatherWarnings => '显示降雨及天气预警';
 
   @override
-  String get temperatureUnit => '温度单位';
-
-  @override
   String get celsius => '摄氏度 (°C)';
 
   @override
@@ -380,9 +374,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dismiss => '关闭';
-
-  @override
-  String get openApp => '打开';
 
   @override
   String get noBlockedAppsDesc => '当前所有应用均允许显示通知';
@@ -1467,39 +1458,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get wallpaperBingError => '无法连接 Bing。请检查网络连接。';
 
   @override
-  String get gradientPitchBlack => '漆黑';
-
-  @override
-  String get gradientGreatWhale => '巨鲸';
-
-  @override
-  String get gradientViciousStance => '凶猛姿态';
-
-  @override
-  String get gradientTeenNotebook => '少年笔记本';
-
-  @override
-  String get gradientOldHat => '旧帽子';
-
-  @override
-  String get gradientBurningSpring => '燃烧的春天';
-
-  @override
-  String get gradientDesertHump => '沙漠驼峰';
-
-  @override
-  String get gradientFarawayRiver => '遥远的河流';
-
-  @override
-  String get gradientSaintPetersburg => '圣彼得堡';
-
-  @override
-  String get gradientAfricanField => '非洲原野';
-
-  @override
-  String get gradientGrassShampoo => '青草洗发水';
-
-  @override
   String statusBarTemperatureUnitValue(String unit) {
     return '温度单位：$unit';
   }
@@ -1959,9 +1917,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get updatesError => '错误';
-
-  @override
-  String get updatesHearthTubeDescription => '适用于 Hearth 的 YouTube；跟随你的 Hearth 个人资料';
 
   @override
   String updatesDescriptionWithVersion(String description, String version) {

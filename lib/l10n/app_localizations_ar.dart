@@ -343,9 +343,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get blockedNotificationApps => 'التطبيقات المحظورة';
 
   @override
-  String get blockAppNotifications => 'حظر الإشعارات';
-
-  @override
   String get unblockAppNotifications => 'إلغاء حظر الإشعارات';
 
   @override
@@ -364,9 +361,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get showWeatherWarnings => 'إظهار تحذيرات الطقس والأمطار';
 
   @override
-  String get temperatureUnit => 'وحدة درجة الحرارة';
-
-  @override
   String get celsius => 'مئوية (°C)';
 
   @override
@@ -380,9 +374,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get dismiss => 'تجاهل';
-
-  @override
-  String get openApp => 'فتح';
 
   @override
   String get noBlockedAppsDesc => 'يُسمح لجميع التطبيقات حاليًا بإظهار الإشعارات';
@@ -1485,39 +1476,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get wallpaperBingError => 'تعذّر الوصول إلى Bing. تحقق من اتصال الشبكة.';
 
   @override
-  String get gradientPitchBlack => 'أسود حالك';
-
-  @override
-  String get gradientGreatWhale => 'الحوت العظيم';
-
-  @override
-  String get gradientViciousStance => 'وقفة شرسة';
-
-  @override
-  String get gradientTeenNotebook => 'دفتر المراهق';
-
-  @override
-  String get gradientOldHat => 'قبعة قديمة';
-
-  @override
-  String get gradientBurningSpring => 'ربيع مشتعل';
-
-  @override
-  String get gradientDesertHump => 'كثيب الصحراء';
-
-  @override
-  String get gradientFarawayRiver => 'نهر بعيد';
-
-  @override
-  String get gradientSaintPetersburg => 'سانت بطرسبرغ';
-
-  @override
-  String get gradientAfricanField => 'حقل أفريقي';
-
-  @override
-  String get gradientGrassShampoo => 'شامبو العشب';
-
-  @override
   String statusBarTemperatureUnitValue(String unit) {
     return 'وحدة درجة الحرارة: $unit';
   }
@@ -2002,9 +1960,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get updatesError => 'خطأ';
-
-  @override
-  String get updatesHearthTubeDescription => 'YouTube لـ Hearth؛ يتبع ملفك الشخصي في Hearth';
 
   @override
   String updatesDescriptionWithVersion(String description, String version) {
