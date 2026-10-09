@@ -189,7 +189,8 @@ class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
       // The home underneath is still the last profile's: nothing moves until it's this one's
       onKeyEvent: (_, __) => KeyEventResult.handled,
       child: Container(
-        color: const Color(0xF2101114),
+        // Solid: the home rearranges itself behind the card (the profile's layout, its apps) and mustn't show through
+        color: const Color(0xFF101114),
         alignment: Alignment.center,
         child: Column(
           mainAxisSize: MainAxisSize.min,
