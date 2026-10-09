@@ -615,4 +615,13 @@ class FLauncherChannel {
   /// {versionName, versionCode} of an installed app, or null when it isn't installed.
   Future<Map<dynamic, dynamic>?> getPackageVersion(String packageName) async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getPackageVersion", packageName);
+
+  /// Hands Hearth's current wallpaper (WallpaperService.providerState) to the provider HearthTube reads.
+  Future<void> setWallpaperState(Map<String, Object?> state) async {
+    try {
+      await _methodChannel.invokeMethod("setWallpaperState", state);
+    } catch (_) {
+      // No Android side (tests): nobody to tell
+    }
+  }
 }
