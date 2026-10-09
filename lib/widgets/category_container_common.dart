@@ -33,6 +33,7 @@ Widget categoryContainerEmptyState(BuildContext context) {
                   if (!allowed || !context.mounted) return;
                   showDialog(
                     context: context,
+                    barrierColor: Colors.transparent,
                     builder: (_) => const SettingsPanel(initialRoute: LauncherSectionsPanelPage.routeName),
                   );
                 },

@@ -208,7 +208,7 @@ class _FLauncherState extends State<FLauncher> {
     if (!mounted) return;
     // Whatever was open (Settings included) closes first, so the panel opens on the app's page
     Navigator.of(context).popUntil((route) => route.isFirst);
-    showDialog(context: context, builder: (_) => SettingsPanel(openProfilePinsFor: packageName));
+    showDialog(context: context, barrierColor: Colors.transparent, builder: (_) => SettingsPanel(openProfilePinsFor: packageName));
   }
 
   void _openSearch(String mode) {

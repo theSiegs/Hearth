@@ -18,7 +18,7 @@
 import 'package:flauncher/widgets/side_panel_dialog.dart';
 import 'package:flutter/material.dart';
 
-/// A panel along the left edge over the dimmed home screen, as Settings, Inputs and Notifications open. A tap outside
+/// A panel along the left edge over the home screen, which stays as it is, as Settings, Inputs and Notifications open. A tap outside
 /// the panel closes it.
 class SidePanelOverlay extends StatelessWidget {
   final double width;
@@ -28,7 +28,7 @@ class SidePanelOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: Colors.black.withOpacity(0.70),
+        backgroundColor: Colors.transparent,
         body: Stack(
           children: [
             GestureDetector(

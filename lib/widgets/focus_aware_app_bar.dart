@@ -66,7 +66,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
 
   /// Opens Settings. In kids profiles its risky parts ask for the parent PIN themselves (settings_lock.dart).
   Future<void> openSettings() async {
-    showDialog(context: context, builder: (_) => const SettingsPanel());
+    showDialog(context: context, barrierColor: Colors.transparent, builder: (_) => const SettingsPanel());
   }
 
   @override
@@ -147,6 +147,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                                 focusNode: _inputsFocusNode,
                                 onPressed: () => showDialog(
                                   context: context,
+                                  barrierColor: Colors.transparent,
                                   builder: (_) => const InputsPanel(),
                                 ),
                               ),
@@ -183,6 +184,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                                   badgeCount: count,
                                   onPressed: () => showDialog(
                                     context: context,
+                                    barrierColor: Colors.transparent,
                                     builder: (_) => const NotificationsPanel(),
                                   ),
                                 ),
