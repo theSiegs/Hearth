@@ -2212,6 +2212,258 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open Accessibility settings'**
   String get homeButtonFixOpenSettings;
+
+  /// Remote buttons page: row that starts remapping a button
+  ///
+  /// In en, this message translates to:
+  /// **'Remap a button'**
+  String get remoteButtonsRemapButton;
+
+  /// Remote buttons page: name of a button Android gives no name; {keyCode} is its key code
+  ///
+  /// In en, this message translates to:
+  /// **'Button {keyCode}'**
+  String remoteButtonsButtonNumber(String keyCode);
+
+  /// Remote buttons page: a press or hold that keeps the button's normal job
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get remoteButtonsNormal;
+
+  /// Remote buttons page: dialog title while waiting for a button press
+  ///
+  /// In en, this message translates to:
+  /// **'Press a remote button'**
+  String get remoteButtonsCaptureTitle;
+
+  /// Remote buttons page: dialog text while waiting for a button press
+  ///
+  /// In en, this message translates to:
+  /// **'Press the button you want to remap. Press Back to cancel.'**
+  String get remoteButtonsCaptureBody;
+
+  /// Remote buttons page: dialog title when remapping can't start
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on Home Button Fix first'**
+  String get remoteButtonsNeedsFixTitle;
+
+  /// Remote buttons page: dialog text; {path} is where Setup & permissions is
+  ///
+  /// In en, this message translates to:
+  /// **'Remapping needs Home Button Fix ({path}).'**
+  String remoteButtonsNeedsFixBody(String path);
+
+  /// Remote buttons page: dialog title for a button that can't be remapped
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t remap that button'**
+  String get remoteButtonsCantRemapTitle;
+
+  /// Remote buttons page: dialog text for a button that can't be remapped
+  ///
+  /// In en, this message translates to:
+  /// **'The arrows, OK, Back, Home and power keep their normal job.'**
+  String get remoteButtonsCantRemapBody;
+
+  /// Remote buttons page: option for what a short press does; {action} is the current action
+  ///
+  /// In en, this message translates to:
+  /// **'Press: {action}'**
+  String remoteButtonsPressOption(String action);
+
+  /// Remote buttons page: option for what holding the button does; {action} is the current action
+  ///
+  /// In en, this message translates to:
+  /// **'Hold: {action}'**
+  String remoteButtonsHoldOption(String action);
+
+  /// Remote buttons page: option that sets press to Hearth search and hold to Google's assistant
+  ///
+  /// In en, this message translates to:
+  /// **'Tap for Hearth search, hold for Google'**
+  String get remoteButtonsSearchPreset;
+
+  /// Remote buttons page: option; the remap works only on Hearth's home screen
+  ///
+  /// In en, this message translates to:
+  /// **'Only on Hearth\'s home screen: On'**
+  String get remoteButtonsHomeOnlyOn;
+
+  /// Remote buttons page: option; the remap works everywhere
+  ///
+  /// In en, this message translates to:
+  /// **'Only on Hearth\'s home screen: Off'**
+  String get remoteButtonsHomeOnlyOff;
+
+  /// Remote buttons page: option that removes a button's remap
+  ///
+  /// In en, this message translates to:
+  /// **'Restore normal button'**
+  String get remoteButtonsRestore;
+
+  /// Remote buttons page: title of the dialog that picks what a press or hold does
+  ///
+  /// In en, this message translates to:
+  /// **'Action'**
+  String get remoteButtonsActionTitle;
+
+  /// Remote buttons page: action option
+  ///
+  /// In en, this message translates to:
+  /// **'Open an app…'**
+  String get remoteButtonsActionApp;
+
+  /// Remote buttons page: action option
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to a TV input…'**
+  String get remoteButtonsActionInput;
+
+  /// Remote buttons page: action option
+  ///
+  /// In en, this message translates to:
+  /// **'Switch profile (Google TV)'**
+  String get remoteButtonsActionSwitchProfile;
+
+  /// Remote buttons page: action option and its label
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth search (voice)'**
+  String get remoteButtonsActionSearchVoice;
+
+  /// Remote buttons page: action option and its label
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth search (keyboard)'**
+  String get remoteButtonsActionSearchKeyboard;
+
+  /// Remote buttons page: action option and its label; goes to Hearth's home screen
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth home'**
+  String get remoteButtonsActionHome;
+
+  /// Remote buttons page: action option and its label; puts the TV to sleep
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep'**
+  String get remoteButtonsActionSleep;
+
+  /// Remote buttons page: action option and its label; opens Android's settings
+  ///
+  /// In en, this message translates to:
+  /// **'Android settings'**
+  String get remoteButtonsActionAndroidSettings;
+
+  /// Remote buttons page: title of the app list dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Open an app'**
+  String get remoteButtonsPickAppTitle;
+
+  /// Remote buttons page: title of the TV input list dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to a TV input'**
+  String get remoteButtonsPickInputTitle;
+
+  /// Remote buttons page: dialog title when Home Assistant isn't set up
+  ///
+  /// In en, this message translates to:
+  /// **'Connect Home Assistant first'**
+  String get remoteButtonsHaConnectTitle;
+
+  /// Remote buttons page: dialog text; {panel} is where the Dashboard panel page is, {row} its Set up from your phone row
+  ///
+  /// In en, this message translates to:
+  /// **'Set up the Home Assistant panel ({panel} > {row}), then try again.'**
+  String remoteButtonsHaConnectBody(String panel, String row);
+
+  /// Remote buttons page: a Home Assistant scene to turn on; {name} is its name
+  ///
+  /// In en, this message translates to:
+  /// **'Scene: {name}'**
+  String remoteButtonsHaScene(String name);
+
+  /// Remote buttons page: a Home Assistant script to run; {name} is its name
+  ///
+  /// In en, this message translates to:
+  /// **'Run: {name}'**
+  String remoteButtonsHaRun(String name);
+
+  /// Remote buttons page: a Home Assistant button entity to press; {name} is its name
+  ///
+  /// In en, this message translates to:
+  /// **'Press: {name}'**
+  String remoteButtonsHaPress(String name);
+
+  /// Remote buttons page: a Home Assistant light, switch or the like to toggle; {name} is its name
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle: {name}'**
+  String remoteButtonsHaToggle(String name);
+
+  /// Remote buttons page: a remapped button's row; {button} is its name, {press} and {hold} what a press and a hold do
+  ///
+  /// In en, this message translates to:
+  /// **'{button}\nPress: {press}  ·  Hold: {hold}'**
+  String remoteButtonsRowSummary(String button, String press, String hold);
+
+  /// Remote buttons page: a remapped button's row when it only works on Hearth's home screen
+  ///
+  /// In en, this message translates to:
+  /// **'{button}\nPress: {press}  ·  Hold: {hold}  ·  Home screen only'**
+  String remoteButtonsRowSummaryHomeOnly(String button, String press, String hold);
+
+  /// Remote buttons page: note at the bottom; {path} is where Setup & permissions is
+  ///
+  /// In en, this message translates to:
+  /// **'Needs Home Button Fix ({path}). A button with only a Hold action does that action on a press too. Hearth search opens HearthTube\'s own search while HearthTube is in front. Remaps pause while a kids screen time screen is showing.'**
+  String remoteButtonsFooter(String path);
+
+  /// TV & power page: row that opens Google TV's screensaver settings
+  ///
+  /// In en, this message translates to:
+  /// **'Screensaver (Google Photos)'**
+  String get tvPowerScreensaver;
+
+  /// TV & power page: note under the screensaver row
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth uses Google TV\'s screensaver. Choose Google Photos (and which albums) or another source there.'**
+  String get tvPowerScreensaverNote;
+
+  /// TV & power page: row, and the title of its dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep when idle'**
+  String get tvPowerSleepWhenIdle;
+
+  /// TV & power page: Sleep when idle is off
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get tvPowerSleepOff;
+
+  /// TV & power page: Sleep when idle option in minutes
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String tvPowerMinutes(int minutes);
+
+  /// TV & power page: Sleep when idle option in hours
+  ///
+  /// In en, this message translates to:
+  /// **'{hours, plural, =1{1 hour} other{{hours} hours}}'**
+  String tvPowerHours(int hours);
+
+  /// Sleep when idle dialog: note; {path} is where Setup & permissions is
+  ///
+  /// In en, this message translates to:
+  /// **'Playing video or music counts as activity. Needs Home Button Fix ({path}).'**
+  String tvPowerSleepNote(String path);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -41,14 +41,13 @@ class TvPowerSettingsPage extends StatelessWidget {
         FocusableSettingsTile(
           autofocus: true,
           leading: const Icon(Icons.screenshot_monitor),
-          title: Text("Screensaver (Google Photos)", style: Theme.of(context).textTheme.bodyMedium),
+          title: Text(localizations.tvPowerScreensaver, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: () => context.read<FLauncherChannel>().openScreensaverSettings(),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
           child: Text(
-            "Hearth uses Google TV's screensaver. Choose Google Photos (and which albums) or another source "
-            "there.",
+            localizations.tvPowerScreensaverNote,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
             textAlign: TextAlign.center,
           ),
@@ -86,27 +85,27 @@ class _IdleStandbyTileState extends State<_IdleStandbyTile> {
     }).catchError((_) {});
   }
 
-  static String _label(int minutes) {
-    if (minutes == 0) return "Off";
-    if (minutes < 60) return "$minutes min";
-    return minutes == 60 ? "1 hour" : "${minutes ~/ 60} hours";
+  static String _label(AppLocalizations l, int minutes) {
+    if (minutes == 0) return l.tvPowerSleepOff;
+    if (minutes < 60) return l.tvPowerMinutes(minutes);
+    return l.tvPowerHours(minutes ~/ 60);
   }
 
   Future<void> _choose() async {
+    final l = AppLocalizations.of(context)!;
     final int? picked = await showDialog<int>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text("Sleep when idle"),
+        title: Text(l.tvPowerSleepWhenIdle),
         children: [
           for (final option in _options)
             SimpleDialogOption(
               onPressed: () => Navigator.of(context).pop(option),
-              child: Text(_label(option), style: Theme.of(context).textTheme.bodyMedium),
+              child: Text(_label(l, option), style: Theme.of(context).textTheme.bodyMedium),
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-            child: Text(
-                "Playing video or music counts as activity. Needs Home Button Fix (${SetupChecklistPage.breadcrumb(AppLocalizations.of(context)!)}).",
+            child: Text(l.tvPowerSleepNote(SetupChecklistPage.breadcrumb(l)),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54)),
           ),
         ],
@@ -118,10 +117,13 @@ class _IdleStandbyTileState extends State<_IdleStandbyTile> {
   }
 
   @override
-  Widget build(BuildContext context) => FocusableSettingsTile(
-        leading: const Icon(Icons.bedtime_outlined),
-        title: Text("Sleep when idle", style: Theme.of(context).textTheme.bodyMedium),
-        trailing: Text(_label(_minutes), style: Theme.of(context).textTheme.bodySmall),
-        onPressed: _choose,
-      );
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    return FocusableSettingsTile(
+      leading: const Icon(Icons.bedtime_outlined),
+      title: Text(l.tvPowerSleepWhenIdle, style: Theme.of(context).textTheme.bodyMedium),
+      trailing: Text(_label(l, _minutes), style: Theme.of(context).textTheme.bodySmall),
+      onPressed: _choose,
+    );
+  }
 }

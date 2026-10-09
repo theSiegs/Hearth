@@ -1208,4 +1208,166 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get homeButtonFixOpenSettings => 'Abrir configurações de acessibilidade';
+
+  @override
+  String get remoteButtonsRemapButton => 'Remapear um botão';
+
+  @override
+  String remoteButtonsButtonNumber(String keyCode) {
+    return 'Botão $keyCode';
+  }
+
+  @override
+  String get remoteButtonsNormal => 'Normal';
+
+  @override
+  String get remoteButtonsCaptureTitle => 'Pressione um botão do controle';
+
+  @override
+  String get remoteButtonsCaptureBody => 'Pressione o botão que quer remapear. Pressione Voltar para cancelar.';
+
+  @override
+  String get remoteButtonsNeedsFixTitle => 'Primeiro ative a Correção do botão Início';
+
+  @override
+  String remoteButtonsNeedsFixBody(String path) {
+    return 'Para remapear é preciso a Correção do botão Início ($path).';
+  }
+
+  @override
+  String get remoteButtonsCantRemapTitle => 'Não é possível remapear esse botão';
+
+  @override
+  String get remoteButtonsCantRemapBody => 'As setas, OK, Voltar, Início e o botão liga/desliga mantêm a função normal.';
+
+  @override
+  String remoteButtonsPressOption(String action) {
+    return 'Toque: $action';
+  }
+
+  @override
+  String remoteButtonsHoldOption(String action) {
+    return 'Segurar: $action';
+  }
+
+  @override
+  String get remoteButtonsSearchPreset => 'Toque para a busca do Hearth, segure para o Google';
+
+  @override
+  String get remoteButtonsHomeOnlyOn => 'Só na tela inicial do Hearth: Ativado';
+
+  @override
+  String get remoteButtonsHomeOnlyOff => 'Só na tela inicial do Hearth: Desativado';
+
+  @override
+  String get remoteButtonsRestore => 'Restaurar o botão normal';
+
+  @override
+  String get remoteButtonsActionTitle => 'Ação';
+
+  @override
+  String get remoteButtonsActionApp => 'Abrir um aplicativo…';
+
+  @override
+  String get remoteButtonsActionInput => 'Mudar para uma entrada da TV…';
+
+  @override
+  String get remoteButtonsActionSwitchProfile => 'Trocar de perfil (Google TV)';
+
+  @override
+  String get remoteButtonsActionSearchVoice => 'Busca do Hearth (voz)';
+
+  @override
+  String get remoteButtonsActionSearchKeyboard => 'Busca do Hearth (teclado)';
+
+  @override
+  String get remoteButtonsActionHome => 'Início do Hearth';
+
+  @override
+  String get remoteButtonsActionSleep => 'Suspender';
+
+  @override
+  String get remoteButtonsActionAndroidSettings => 'Configurações do Android';
+
+  @override
+  String get remoteButtonsPickAppTitle => 'Abrir um aplicativo';
+
+  @override
+  String get remoteButtonsPickInputTitle => 'Mudar para uma entrada da TV';
+
+  @override
+  String get remoteButtonsHaConnectTitle => 'Primeiro conecte o Home Assistant';
+
+  @override
+  String remoteButtonsHaConnectBody(String panel, String row) {
+    return 'Configure o painel do Home Assistant ($panel > $row) e tente de novo.';
+  }
+
+  @override
+  String remoteButtonsHaScene(String name) {
+    return 'Cena: $name';
+  }
+
+  @override
+  String remoteButtonsHaRun(String name) {
+    return 'Executar: $name';
+  }
+
+  @override
+  String remoteButtonsHaPress(String name) {
+    return 'Pressionar: $name';
+  }
+
+  @override
+  String remoteButtonsHaToggle(String name) {
+    return 'Alternar: $name';
+  }
+
+  @override
+  String remoteButtonsRowSummary(String button, String press, String hold) {
+    return '$button\nToque: $press  ·  Segurar: $hold';
+  }
+
+  @override
+  String remoteButtonsRowSummaryHomeOnly(String button, String press, String hold) {
+    return '$button\nToque: $press  ·  Segurar: $hold  ·  Só na tela inicial';
+  }
+
+  @override
+  String remoteButtonsFooter(String path) {
+    return 'Precisa da Correção do botão Início ($path). Um botão que só tem ação ao segurar também a executa com um toque. A busca do Hearth abre a busca do próprio HearthTube enquanto o HearthTube está na frente. Os remapeamentos pausam enquanto uma tela de tempo de tela infantil estiver aparecendo.';
+  }
+
+  @override
+  String get tvPowerScreensaver => 'Protetor de tela (Google Photos)';
+
+  @override
+  String get tvPowerScreensaverNote => 'O Hearth usa o protetor de tela do Google TV. Escolha lá o Google Photos (e quais álbuns) ou outra fonte.';
+
+  @override
+  String get tvPowerSleepWhenIdle => 'Suspender quando inativo';
+
+  @override
+  String get tvPowerSleepOff => 'Desativado';
+
+  @override
+  String tvPowerMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String tvPowerHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours horas',
+      one: '1 hora',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tvPowerSleepNote(String path) {
+    return 'Reproduzir vídeo ou música conta como atividade. Precisa da Correção do botão Início ($path).';
+  }
 }

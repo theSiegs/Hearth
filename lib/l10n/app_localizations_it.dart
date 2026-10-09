@@ -1208,4 +1208,166 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get homeButtonFixOpenSettings => 'Apri impostazioni di accessibilità';
+
+  @override
+  String get remoteButtonsRemapButton => 'Riassegna un tasto';
+
+  @override
+  String remoteButtonsButtonNumber(String keyCode) {
+    return 'Tasto $keyCode';
+  }
+
+  @override
+  String get remoteButtonsNormal => 'Normale';
+
+  @override
+  String get remoteButtonsCaptureTitle => 'Premi un tasto del telecomando';
+
+  @override
+  String get remoteButtonsCaptureBody => 'Premi il tasto da riassegnare. Premi Indietro per annullare.';
+
+  @override
+  String get remoteButtonsNeedsFixTitle => 'Prima attiva la Correzione tasto Home';
+
+  @override
+  String remoteButtonsNeedsFixBody(String path) {
+    return 'Per riassegnare serve la Correzione tasto Home ($path).';
+  }
+
+  @override
+  String get remoteButtonsCantRemapTitle => 'Impossibile riassegnare questo tasto';
+
+  @override
+  String get remoteButtonsCantRemapBody => 'Frecce, OK, Indietro, Home e accensione mantengono la loro funzione normale.';
+
+  @override
+  String remoteButtonsPressOption(String action) {
+    return 'Pressione: $action';
+  }
+
+  @override
+  String remoteButtonsHoldOption(String action) {
+    return 'Pressione lunga: $action';
+  }
+
+  @override
+  String get remoteButtonsSearchPreset => 'Premi per la ricerca di Hearth, tieni premuto per Google';
+
+  @override
+  String get remoteButtonsHomeOnlyOn => 'Solo nella schermata iniziale di Hearth: Attivo';
+
+  @override
+  String get remoteButtonsHomeOnlyOff => 'Solo nella schermata iniziale di Hearth: Disattivo';
+
+  @override
+  String get remoteButtonsRestore => 'Ripristina il tasto normale';
+
+  @override
+  String get remoteButtonsActionTitle => 'Azione';
+
+  @override
+  String get remoteButtonsActionApp => 'Apri un\'app…';
+
+  @override
+  String get remoteButtonsActionInput => 'Passa a un ingresso TV…';
+
+  @override
+  String get remoteButtonsActionSwitchProfile => 'Cambia profilo (Google TV)';
+
+  @override
+  String get remoteButtonsActionSearchVoice => 'Ricerca di Hearth (voce)';
+
+  @override
+  String get remoteButtonsActionSearchKeyboard => 'Ricerca di Hearth (tastiera)';
+
+  @override
+  String get remoteButtonsActionHome => 'Home di Hearth';
+
+  @override
+  String get remoteButtonsActionSleep => 'Sospensione';
+
+  @override
+  String get remoteButtonsActionAndroidSettings => 'Impostazioni Android';
+
+  @override
+  String get remoteButtonsPickAppTitle => 'Apri un\'app';
+
+  @override
+  String get remoteButtonsPickInputTitle => 'Passa a un ingresso TV';
+
+  @override
+  String get remoteButtonsHaConnectTitle => 'Prima collega Home Assistant';
+
+  @override
+  String remoteButtonsHaConnectBody(String panel, String row) {
+    return 'Configura il pannello di Home Assistant ($panel > $row), poi riprova.';
+  }
+
+  @override
+  String remoteButtonsHaScene(String name) {
+    return 'Scena: $name';
+  }
+
+  @override
+  String remoteButtonsHaRun(String name) {
+    return 'Esegui: $name';
+  }
+
+  @override
+  String remoteButtonsHaPress(String name) {
+    return 'Premi: $name';
+  }
+
+  @override
+  String remoteButtonsHaToggle(String name) {
+    return 'Attiva/disattiva: $name';
+  }
+
+  @override
+  String remoteButtonsRowSummary(String button, String press, String hold) {
+    return '$button\nPressione: $press  ·  Pressione lunga: $hold';
+  }
+
+  @override
+  String remoteButtonsRowSummaryHomeOnly(String button, String press, String hold) {
+    return '$button\nPressione: $press  ·  Pressione lunga: $hold  ·  Solo schermata iniziale';
+  }
+
+  @override
+  String remoteButtonsFooter(String path) {
+    return 'Richiede la Correzione tasto Home ($path). Un tasto con solo un\'azione a pressione lunga la esegue anche con una pressione normale. La ricerca di Hearth apre la ricerca di HearthTube quando HearthTube è in primo piano. Le riassegnazioni si fermano mentre è visibile una schermata del tempo di utilizzo dei bambini.';
+  }
+
+  @override
+  String get tvPowerScreensaver => 'Salvaschermo (Google Photos)';
+
+  @override
+  String get tvPowerScreensaverNote => 'Hearth usa il salvaschermo di Google TV. Lì scegli Google Photos (e quali album) o un\'altra fonte.';
+
+  @override
+  String get tvPowerSleepWhenIdle => 'Sospendi se inattivo';
+
+  @override
+  String get tvPowerSleepOff => 'Disattivo';
+
+  @override
+  String tvPowerMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String tvPowerHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours ore',
+      one: '1 ora',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tvPowerSleepNote(String path) {
+    return 'La riproduzione di video o musica conta come attività. Richiede la Correzione tasto Home ($path).';
+  }
 }

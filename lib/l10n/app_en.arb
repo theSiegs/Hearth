@@ -1348,5 +1348,263 @@
     "homeButtonFixOpenSettings": "Open Accessibility settings",
     "@homeButtonFixOpenSettings": {
         "description": "Home Button Fix is off dialog: button that opens Android's accessibility settings"
+    },
+    "remoteButtonsRemapButton": "Remap a button",
+    "@remoteButtonsRemapButton": {
+        "description": "Remote buttons page: row that starts remapping a button"
+    },
+    "remoteButtonsButtonNumber": "Button {keyCode}",
+    "@remoteButtonsButtonNumber": {
+        "description": "Remote buttons page: name of a button Android gives no name; {keyCode} is its key code",
+        "placeholders": {
+            "keyCode": {
+                "type": "String"
+            }
+        }
+    },
+    "remoteButtonsNormal": "Normal",
+    "@remoteButtonsNormal": {
+        "description": "Remote buttons page: a press or hold that keeps the button's normal job"
+    },
+    "remoteButtonsCaptureTitle": "Press a remote button",
+    "@remoteButtonsCaptureTitle": {
+        "description": "Remote buttons page: dialog title while waiting for a button press"
+    },
+    "remoteButtonsCaptureBody": "Press the button you want to remap. Press Back to cancel.",
+    "@remoteButtonsCaptureBody": {
+        "description": "Remote buttons page: dialog text while waiting for a button press"
+    },
+    "remoteButtonsNeedsFixTitle": "Turn on Home Button Fix first",
+    "@remoteButtonsNeedsFixTitle": {
+        "description": "Remote buttons page: dialog title when remapping can't start"
+    },
+    "remoteButtonsNeedsFixBody": "Remapping needs Home Button Fix ({path}).",
+    "@remoteButtonsNeedsFixBody": {
+        "description": "Remote buttons page: dialog text; {path} is where Setup & permissions is",
+        "placeholders": {
+            "path": {
+                "type": "String"
+            }
+        }
+    },
+    "remoteButtonsCantRemapTitle": "Can't remap that button",
+    "@remoteButtonsCantRemapTitle": {
+        "description": "Remote buttons page: dialog title for a button that can't be remapped"
+    },
+    "remoteButtonsCantRemapBody": "The arrows, OK, Back, Home and power keep their normal job.",
+    "@remoteButtonsCantRemapBody": {
+        "description": "Remote buttons page: dialog text for a button that can't be remapped"
+    },
+    "remoteButtonsPressOption": "Press: {action}",
+    "@remoteButtonsPressOption": {
+        "description": "Remote buttons page: option for what a short press does; {action} is the current action",
+        "placeholders": {
+            "action": {
+                "type": "String"
+            }
+        }
+    },
+    "remoteButtonsHoldOption": "Hold: {action}",
+    "@remoteButtonsHoldOption": {
+        "description": "Remote buttons page: option for what holding the button does; {action} is the current action",
+        "placeholders": {
+            "action": {
+                "type": "String"
+            }
+        }
+    },
+    "remoteButtonsSearchPreset": "Tap for Hearth search, hold for Google",
+    "@remoteButtonsSearchPreset": {
+        "description": "Remote buttons page: option that sets press to Hearth search and hold to Google's assistant"
+    },
+    "remoteButtonsHomeOnlyOn": "Only on Hearth's home screen: On",
+    "@remoteButtonsHomeOnlyOn": {
+        "description": "Remote buttons page: option; the remap works only on Hearth's home screen"
+    },
+    "remoteButtonsHomeOnlyOff": "Only on Hearth's home screen: Off",
+    "@remoteButtonsHomeOnlyOff": {
+        "description": "Remote buttons page: option; the remap works everywhere"
+    },
+    "remoteButtonsRestore": "Restore normal button",
+    "@remoteButtonsRestore": {
+        "description": "Remote buttons page: option that removes a button's remap"
+    },
+    "remoteButtonsActionTitle": "Action",
+    "@remoteButtonsActionTitle": {
+        "description": "Remote buttons page: title of the dialog that picks what a press or hold does"
+    },
+    "remoteButtonsActionApp": "Open an app…",
+    "@remoteButtonsActionApp": {
+        "description": "Remote buttons page: action option"
+    },
+    "remoteButtonsActionInput": "Switch to a TV input…",
+    "@remoteButtonsActionInput": {
+        "description": "Remote buttons page: action option"
+    },
+    "remoteButtonsActionSwitchProfile": "Switch profile (Google TV)",
+    "@remoteButtonsActionSwitchProfile": {
+        "description": "Remote buttons page: action option"
+    },
+    "remoteButtonsActionSearchVoice": "Hearth search (voice)",
+    "@remoteButtonsActionSearchVoice": {
+        "description": "Remote buttons page: action option and its label"
+    },
+    "remoteButtonsActionSearchKeyboard": "Hearth search (keyboard)",
+    "@remoteButtonsActionSearchKeyboard": {
+        "description": "Remote buttons page: action option and its label"
+    },
+    "remoteButtonsActionHome": "Hearth home",
+    "@remoteButtonsActionHome": {
+        "description": "Remote buttons page: action option and its label; goes to Hearth's home screen"
+    },
+    "remoteButtonsActionSleep": "Sleep",
+    "@remoteButtonsActionSleep": {
+        "description": "Remote buttons page: action option and its label; puts the TV to sleep"
+    },
+    "remoteButtonsActionAndroidSettings": "Android settings",
+    "@remoteButtonsActionAndroidSettings": {
+        "description": "Remote buttons page: action option and its label; opens Android's settings"
+    },
+    "remoteButtonsPickAppTitle": "Open an app",
+    "@remoteButtonsPickAppTitle": {
+        "description": "Remote buttons page: title of the app list dialog"
+    },
+    "remoteButtonsPickInputTitle": "Switch to a TV input",
+    "@remoteButtonsPickInputTitle": {
+        "description": "Remote buttons page: title of the TV input list dialog"
+    },
+    "remoteButtonsHaConnectTitle": "Connect Home Assistant first",
+    "@remoteButtonsHaConnectTitle": {
+        "description": "Remote buttons page: dialog title when Home Assistant isn't set up"
+    },
+    "remoteButtonsHaConnectBody": "Set up the Home Assistant panel ({panel} > {row}), then try again.",
+    "@remoteButtonsHaConnectBody": {
+        "description": "Remote buttons page: dialog text; {panel} is where the Dashboard panel page is, {row} its Set up from your phone row",
+        "placeholders": {
+            "panel": {
+                "type": "String"
+            },
+            "row": {
+                "type": "String"
+            }
+        }
+    },
+    "remoteButtonsHaScene": "Scene: {name}",
+    "@remoteButtonsHaScene": {
+        "description": "Remote buttons page: a Home Assistant scene to turn on; {name} is its name",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "remoteButtonsHaRun": "Run: {name}",
+    "@remoteButtonsHaRun": {
+        "description": "Remote buttons page: a Home Assistant script to run; {name} is its name",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "remoteButtonsHaPress": "Press: {name}",
+    "@remoteButtonsHaPress": {
+        "description": "Remote buttons page: a Home Assistant button entity to press; {name} is its name",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "remoteButtonsHaToggle": "Toggle: {name}",
+    "@remoteButtonsHaToggle": {
+        "description": "Remote buttons page: a Home Assistant light, switch or the like to toggle; {name} is its name",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "remoteButtonsRowSummary": "{button}\nPress: {press}  ·  Hold: {hold}",
+    "@remoteButtonsRowSummary": {
+        "description": "Remote buttons page: a remapped button's row; {button} is its name, {press} and {hold} what a press and a hold do",
+        "placeholders": {
+            "button": {
+                "type": "String"
+            },
+            "press": {
+                "type": "String"
+            },
+            "hold": {
+                "type": "String"
+            }
+        }
+    },
+    "remoteButtonsRowSummaryHomeOnly": "{button}\nPress: {press}  ·  Hold: {hold}  ·  Home screen only",
+    "@remoteButtonsRowSummaryHomeOnly": {
+        "description": "Remote buttons page: a remapped button's row when it only works on Hearth's home screen",
+        "placeholders": {
+            "button": {
+                "type": "String"
+            },
+            "press": {
+                "type": "String"
+            },
+            "hold": {
+                "type": "String"
+            }
+        }
+    },
+    "remoteButtonsFooter": "Needs Home Button Fix ({path}). A button with only a Hold action does that action on a press too. Hearth search opens HearthTube's own search while HearthTube is in front. Remaps pause while a kids screen time screen is showing.",
+    "@remoteButtonsFooter": {
+        "description": "Remote buttons page: note at the bottom; {path} is where Setup & permissions is",
+        "placeholders": {
+            "path": {
+                "type": "String"
+            }
+        }
+    },
+    "tvPowerScreensaver": "Screensaver (Google Photos)",
+    "@tvPowerScreensaver": {
+        "description": "TV & power page: row that opens Google TV's screensaver settings"
+    },
+    "tvPowerScreensaverNote": "Hearth uses Google TV's screensaver. Choose Google Photos (and which albums) or another source there.",
+    "@tvPowerScreensaverNote": {
+        "description": "TV & power page: note under the screensaver row"
+    },
+    "tvPowerSleepWhenIdle": "Sleep when idle",
+    "@tvPowerSleepWhenIdle": {
+        "description": "TV & power page: row, and the title of its dialog"
+    },
+    "tvPowerSleepOff": "Off",
+    "@tvPowerSleepOff": {
+        "description": "TV & power page: Sleep when idle is off"
+    },
+    "tvPowerMinutes": "{minutes} min",
+    "@tvPowerMinutes": {
+        "description": "TV & power page: Sleep when idle option in minutes",
+        "placeholders": {
+            "minutes": {
+                "type": "int"
+            }
+        }
+    },
+    "tvPowerHours": "{hours, plural, =1{1 hour} other{{hours} hours}}",
+    "@tvPowerHours": {
+        "description": "TV & power page: Sleep when idle option in hours",
+        "placeholders": {
+            "hours": {
+                "type": "int"
+            }
+        }
+    },
+    "tvPowerSleepNote": "Playing video or music counts as activity. Needs Home Button Fix ({path}).",
+    "@tvPowerSleepNote": {
+        "description": "Sleep when idle dialog: note; {path} is where Setup & permissions is",
+        "placeholders": {
+            "path": {
+                "type": "String"
+            }
+        }
     }
 }
