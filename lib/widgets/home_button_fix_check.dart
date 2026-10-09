@@ -51,7 +51,8 @@ class _HomeButtonFixCheckState extends State<HomeButtonFixCheck> with WidgetsBin
   }
 
   Future<void> _check() async {
-    if (_shown || _checking) return;
+    // The bridge build (old app id) is on its way out: "Hearth is moving" says what to do instead
+    if (_shown || _checking || isBridgePackage(_packageName)) return;
     _checking = true;
     try {
       final status = await _channel.getHomeButtonFixStatus();
