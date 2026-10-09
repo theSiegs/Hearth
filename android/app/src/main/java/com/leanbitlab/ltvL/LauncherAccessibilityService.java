@@ -26,6 +26,7 @@ import android.os.UserHandle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Display;
+import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -1157,7 +1158,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         onUserInput();
         // Hearth is typing a saved profile PIN behind the cover: keys would land on the app's keypad. Back and Home
         // stop it (Home still goes on to do its usual job), everything else waits.
-        if (ProfilePairingService.isEnteringPin()) {
+        // Keys Hearth injects itself (Profile Pairing moving a keypad's focus) come from no real device and pass.
+        if (ProfilePairingService.isEnteringPin() && event.getDeviceId() != KeyCharacterMap.VIRTUAL_KEYBOARD) {
             int code = event.getKeyCode();
             if (code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_HOME) {
                 if (event.getAction() == KeyEvent.ACTION_DOWN) ProfilePairingService.cancelPinEntry();
