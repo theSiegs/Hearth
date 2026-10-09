@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Continue Watching shows "See all" only once it has three programs.
