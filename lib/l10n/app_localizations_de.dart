@@ -1929,8 +1929,8 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String aboutForkOf(String launcher, String author, String parts) {
-    return 'Ein Fork von $launcher von $author, mit Teilen von $parts';
+  String aboutBuiltOn(String launcher, String author, String original, String parts) {
+    return 'Basiert auf $launcher von $author und $original, mit Teilen von $parts';
   }
 
   @override

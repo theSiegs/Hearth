@@ -580,7 +580,7 @@
     "updatesInstalling": "Встановлення…",
     "updatesError": "Помилка",
     "updatesDescriptionWithVersion": "{description} · {version}",
-    "aboutForkOf": "Форк {launcher} від {author} із частинами {parts}",
+    "aboutBuiltOn": "Створено на основі {launcher} від {author} та {original}, із частинами {parts}",
     "aboutDescription": "Приватний сімейний лаунчер для Google TV із вбудованими профілями Google TV і Home Assistant. Без реклами й трекерів.",
     "aboutHearthOnGitHub": "Hearth на GitHub",
     "aboutCredits": "Подяки",

@@ -580,7 +580,7 @@
     "updatesInstalling": "설치 중…",
     "updatesError": "오류",
     "updatesDescriptionWithVersion": "{description} · {version}",
-    "aboutForkOf": "{author}의 {launcher}를 포크했으며, {parts}의 일부를 포함합니다",
+    "aboutBuiltOn": "{author}의 {launcher} 및 {original} 기반이며, {parts}의 일부를 포함합니다",
     "aboutDescription": "Google TV용 비공개 가족 친화형 런처로, Google TV 프로필과 Home Assistant가 내장되어 있습니다. 광고 및 추적기가 없습니다.",
     "aboutHearthOnGitHub": "GitHub의 Hearth",
     "aboutCredits": "크레딧",

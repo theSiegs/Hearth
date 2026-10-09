@@ -580,7 +580,7 @@
     "updatesInstalling": "جارٍ التثبيت…",
     "updatesError": "خطأ",
     "updatesDescriptionWithVersion": "{description} · {version}",
-    "aboutForkOf": "نسخة متفرعة من {launcher} من {author}، مع أجزاء من {parts}",
+    "aboutBuiltOn": "مبني على {launcher} من {author} و{original}، مع أجزاء من {parts}",
     "aboutDescription": "مشغّل خاص ومناسب للعائلة لـ Google TV، مع ملفات Google TV الشخصية وHome Assistant مدمجة. بلا إعلانات وبلا تتبع.",
     "aboutHearthOnGitHub": "Hearth على GitHub",
     "aboutCredits": "شكر وتقدير",

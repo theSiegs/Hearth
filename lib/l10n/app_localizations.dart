@@ -3395,11 +3395,11 @@ abstract class AppLocalizations {
   /// **'{description} · {version}'**
   String updatesDescriptionWithVersion(String description, String version);
 
-  /// Line under the version in the About dialog; the placeholders are project and author names
+  /// Line under the version in the About dialog: the projects Hearth is built on. The placeholders are project and author names (launcher: the project Hearth started from, author: its author, original: the launcher that one came from, parts: a project Hearth took parts from)
   ///
   /// In en, this message translates to:
-  /// **'A fork of {launcher} by {author}, with parts of {parts}'**
-  String aboutForkOf(String launcher, String author, String parts);
+  /// **'Built on {launcher} by {author} and {original}, with parts of {parts}'**
+  String aboutBuiltOn(String launcher, String author, String original, String parts);
 
   /// Description card in the About dialog
   ///

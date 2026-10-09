@@ -1964,8 +1964,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String aboutForkOf(String launcher, String author, String parts) {
-    return 'نسخة متفرعة من $launcher من $author، مع أجزاء من $parts';
+  String aboutBuiltOn(String launcher, String author, String original, String parts) {
+    return 'مبني على $launcher من $author و$original، مع أجزاء من $parts';
   }
 
   @override

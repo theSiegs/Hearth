@@ -1921,8 +1921,8 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String aboutForkOf(String launcher, String author, String parts) {
-    return '$author tarafından geliştirilen $launcher uygulamasının bir çatalı, $parts parçalarıyla';
+  String aboutBuiltOn(String launcher, String author, String original, String parts) {
+    return '$author tarafından geliştirilen $launcher ve $original temel alınarak, $parts parçalarıyla';
   }
 
   @override

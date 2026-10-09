@@ -1921,8 +1921,8 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String aboutForkOf(String launcher, String author, String parts) {
-    return '$author의 $launcher를 포크했으며, $parts의 일부를 포함합니다';
+  String aboutBuiltOn(String launcher, String author, String original, String parts) {
+    return '$author의 $launcher 및 $original 기반이며, $parts의 일부를 포함합니다';
   }
 
   @override

@@ -580,7 +580,7 @@
     "updatesInstalling": "Yükleniyor…",
     "updatesError": "Hata",
     "updatesDescriptionWithVersion": "{description} · {version}",
-    "aboutForkOf": "{author} tarafından geliştirilen {launcher} uygulamasının bir çatalı, {parts} parçalarıyla",
+    "aboutBuiltOn": "{author} tarafından geliştirilen {launcher} ve {original} temel alınarak, {parts} parçalarıyla",
     "aboutDescription": "Google TV için gizliliğe önem veren, aile dostu bir başlatıcı; Google TV profilleri ve Home Assistant yerleşik. Reklamsız ve izleyicisiz.",
     "aboutHearthOnGitHub": "GitHub'da Hearth",
     "aboutCredits": "Katkıda bulunanlar",

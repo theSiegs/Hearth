@@ -580,7 +580,7 @@
     "updatesInstalling": "Installation…",
     "updatesError": "Erreur",
     "updatesDescriptionWithVersion": "{description} · {version}",
-    "aboutForkOf": "Un fork de {launcher} par {author}, avec des éléments de {parts}",
+    "aboutBuiltOn": "Basé sur {launcher} par {author} et {original}, avec des éléments de {parts}",
     "aboutDescription": "Un lanceur privé et familial pour Google TV, avec les profils Google TV et Home Assistant intégrés. Sans publicité ni traceurs.",
     "aboutHearthOnGitHub": "Hearth sur GitHub",
     "aboutCredits": "Crédits",
