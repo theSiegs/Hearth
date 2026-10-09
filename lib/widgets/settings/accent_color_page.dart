@@ -27,29 +27,31 @@ import 'settings_page.dart';
 class AccentColorPage extends StatelessWidget {
   static const String routeName = "accent_color_panel";
 
-  static const List<(String hex, String name)> colorPresets = [
-    (accentColorPurple, 'Purple'),
-    (accentColorTeal, 'Teal'),
-    (accentColorBlue, 'Blue'),
-    (accentColorOrange, 'Orange'),
-    (accentColorPink, 'Pink'),
-    (accentColorGreen, 'Green'),
-    (accentColorWhite, 'White'),
-    (accentColorYellow, 'Yellow'),
-    (accentColorRed, 'Red'),
-    (accentColorCyan, 'Cyan'),
-    (accentColorIndigo, 'Indigo'),
-    (accentColorLime, 'Lime'),
-    (accentColorAmber, 'Amber'),
-    (accentColorRose, 'Rose'),
-    (accentColorIceBlue, 'Ice Blue'),
-  ];
+  /// The swatches, by their saved hex value, with their names in the current language.
+  static List<(String hex, String name)> colorPresets(AppLocalizations localizations) => [
+        (accentColorPurple, localizations.accentPurple),
+        (accentColorTeal, localizations.accentTeal),
+        (accentColorBlue, localizations.accentBlue),
+        (accentColorOrange, localizations.accentOrange),
+        (accentColorPink, localizations.accentPink),
+        (accentColorGreen, localizations.accentGreen),
+        (accentColorWhite, localizations.accentWhite),
+        (accentColorYellow, localizations.accentYellow),
+        (accentColorRed, localizations.accentRed),
+        (accentColorCyan, localizations.accentCyan),
+        (accentColorIndigo, localizations.accentIndigo),
+        (accentColorLime, localizations.accentLime),
+        (accentColorAmber, localizations.accentAmber),
+        (accentColorRose, localizations.accentRose),
+        (accentColorIceBlue, localizations.accentIceBlue),
+      ];
 
   const AccentColorPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     AppLocalizations localizations = AppLocalizations.of(context)!;
+    final presets = colorPresets(localizations);
     return Consumer<SettingsService>(
       builder: (context, settingsService, _) {
         final currentColorHex = settingsService.accentColorHex;
@@ -68,9 +70,9 @@ class AccentColorPage extends StatelessWidget {
                     mainAxisSpacing: 12,
                     childAspectRatio: 1.3,
                   ),
-                  itemCount: colorPresets.length,
+                  itemCount: presets.length,
                   itemBuilder: (context, index) {
-                    final (hex, name) = colorPresets[index];
+                    final (hex, name) = presets[index];
                     final isSelected = currentColorHex == hex;
 
                     return _ColorTile(
@@ -107,9 +109,9 @@ class AccentColorPage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
-                        'Selected Accent',
-                        style: TextStyle(
+                      Text(
+                        localizations.accentSelected,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 13,
                           fontWeight: FontWeight.w500,

@@ -1370,4 +1370,188 @@ class AppLocalizationsPt extends AppLocalizations {
   String tvPowerSleepNote(String path) {
     return 'Reproduzir vídeo ou música conta como atividade. Precisa da Correção do botão Início ($path).';
   }
+
+  @override
+  String get accentPurple => 'Roxo';
+
+  @override
+  String get accentTeal => 'Verde-azulado';
+
+  @override
+  String get accentBlue => 'Azul';
+
+  @override
+  String get accentOrange => 'Laranja';
+
+  @override
+  String get accentPink => 'Rosa';
+
+  @override
+  String get accentGreen => 'Verde';
+
+  @override
+  String get accentWhite => 'Branco';
+
+  @override
+  String get accentYellow => 'Amarelo';
+
+  @override
+  String get accentRed => 'Vermelho';
+
+  @override
+  String get accentCyan => 'Ciano';
+
+  @override
+  String get accentIndigo => 'Índigo';
+
+  @override
+  String get accentLime => 'Lima';
+
+  @override
+  String get accentAmber => 'Âmbar';
+
+  @override
+  String get accentRose => 'Rosa-claro';
+
+  @override
+  String get accentIceBlue => 'Azul-gelo';
+
+  @override
+  String get accentSelected => 'Cor de destaque escolhida';
+
+  @override
+  String get cardStyleDefault => 'Padrão';
+
+  @override
+  String get cardStylePremium => 'Premium';
+
+  @override
+  String get cardStyleGlow => 'Brilho';
+
+  @override
+  String get cardStyleSquircle => 'Squircle';
+
+  @override
+  String get cardStyleClassic => 'Clássico';
+
+  @override
+  String get cardStyleMinimal => 'Minimalista';
+
+  @override
+  String get cardStyleCapsule => 'Cápsula';
+
+  @override
+  String get dockFavoritesDock => 'Dock de favoritos';
+
+  @override
+  String get dockFavoritesDockDescription => 'Mostra os Favoritos como uma barra na parte inferior da tela inicial, com Continuar assistindo acima e suas outras seções abaixo. Os cantos seguem o estilo dos cartões.';
+
+  @override
+  String get dockFrosted => 'Dock fosco';
+
+  @override
+  String get dockDark => 'Dock escuro';
+
+  @override
+  String get dockShadow => 'Sombra do dock';
+
+  @override
+  String get dockBlurWallpaperBelow => 'Desfocar o papel de parede sob o dock';
+
+  @override
+  String get wallpaperMatchSelectedApp => 'Combinar com o app selecionado';
+
+  @override
+  String get wallpaperBingPhotoOfTheDay => 'Foto do dia do Bing';
+
+  @override
+  String get wallpaperRefreshNow => 'Atualizar agora';
+
+  @override
+  String get wallpaperBingError => 'Não foi possível acessar o Bing. Verifique sua conexão de rede.';
+
+  @override
+  String get gradientPitchBlack => 'Preto absoluto';
+
+  @override
+  String get gradientGreatWhale => 'Grande baleia';
+
+  @override
+  String get gradientViciousStance => 'Postura feroz';
+
+  @override
+  String get gradientTeenNotebook => 'Caderno adolescente';
+
+  @override
+  String get gradientOldHat => 'Chapéu velho';
+
+  @override
+  String get gradientBurningSpring => 'Primavera ardente';
+
+  @override
+  String get gradientDesertHump => 'Duna do deserto';
+
+  @override
+  String get gradientFarawayRiver => 'Rio distante';
+
+  @override
+  String get gradientSaintPetersburg => 'São Petersburgo';
+
+  @override
+  String get gradientAfricanField => 'Campo africano';
+
+  @override
+  String get gradientGrassShampoo => 'Xampu de grama';
+
+  @override
+  String statusBarTemperatureUnitValue(String unit) {
+    return 'Unidade de temperatura: $unit';
+  }
+
+  @override
+  String get weatherLocationNotSet => 'Local do clima: não definido';
+
+  @override
+  String weatherLocationValue(String place) {
+    return 'Local do clima: $place';
+  }
+
+  @override
+  String get statusBarWeatherLoadFailed => 'Não foi possível carregar o clima. Uma nova tentativa será feita automaticamente.';
+
+  @override
+  String get statusBarWeatherSourceHint => 'Escolha um local do clima acima (clima do Open-Meteo, grátis, sem conta). Sem um local, o clima vem do app Breezy Weather, se estiver instalado com o compartilhamento do Gadgetbridge ativado.';
+
+  @override
+  String get weatherLocationTitle => 'Local do clima';
+
+  @override
+  String get weatherLocationHint => 'Cidade';
+
+  @override
+  String get weatherLocationNoResults => 'Nenhum local encontrado';
+
+  @override
+  String get weatherLocationSearchError => 'Não foi possível acessar o serviço de clima. Verifique a conexão de rede.';
+
+  @override
+  String get weatherLocationPrivacyNote => 'Clima por Open-Meteo.com: grátis, sem conta. Somente as coordenadas do local escolhido são enviadas.';
+
+  @override
+  String get weatherLocationSearch => 'Pesquisar';
+
+  @override
+  String get dateTimeInvalidFormat => 'Formato inválido';
+
+  @override
+  String get dateTimeSelectFormats => 'Escolha os formatos abaixo';
+
+  @override
+  String get dataUsageDaily => 'Diário';
+
+  @override
+  String get dataUsageWeekly => 'Semanal';
+
+  @override
+  String get dataUsageMonthly => 'Mensal';
 }

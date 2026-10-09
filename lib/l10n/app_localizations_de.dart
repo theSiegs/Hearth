@@ -1370,4 +1370,188 @@ class AppLocalizationsDe extends AppLocalizations {
   String tvPowerSleepNote(String path) {
     return 'Video- oder Musikwiedergabe zählt als Aktivität. Benötigt die Home-Tasten-Korrektur ($path).';
   }
+
+  @override
+  String get accentPurple => 'Lila';
+
+  @override
+  String get accentTeal => 'Petrol';
+
+  @override
+  String get accentBlue => 'Blau';
+
+  @override
+  String get accentOrange => 'Orange';
+
+  @override
+  String get accentPink => 'Pink';
+
+  @override
+  String get accentGreen => 'Grün';
+
+  @override
+  String get accentWhite => 'Weiß';
+
+  @override
+  String get accentYellow => 'Gelb';
+
+  @override
+  String get accentRed => 'Rot';
+
+  @override
+  String get accentCyan => 'Cyan';
+
+  @override
+  String get accentIndigo => 'Indigo';
+
+  @override
+  String get accentLime => 'Limette';
+
+  @override
+  String get accentAmber => 'Bernstein';
+
+  @override
+  String get accentRose => 'Rosé';
+
+  @override
+  String get accentIceBlue => 'Eisblau';
+
+  @override
+  String get accentSelected => 'Gewählte Akzentfarbe';
+
+  @override
+  String get cardStyleDefault => 'Standard';
+
+  @override
+  String get cardStylePremium => 'Premium';
+
+  @override
+  String get cardStyleGlow => 'Leuchten';
+
+  @override
+  String get cardStyleSquircle => 'Squircle';
+
+  @override
+  String get cardStyleClassic => 'Klassisch';
+
+  @override
+  String get cardStyleMinimal => 'Minimal';
+
+  @override
+  String get cardStyleCapsule => 'Kapsel';
+
+  @override
+  String get dockFavoritesDock => 'Favoriten-Dock';
+
+  @override
+  String get dockFavoritesDockDescription => 'Zeigt Favoriten als Leiste am unteren Rand des Startbildschirms, darüber Weiterschauen und darunter deine anderen Abschnitte. Die Ecken folgen dem Kartenstil.';
+
+  @override
+  String get dockFrosted => 'Mattglas-Dock';
+
+  @override
+  String get dockDark => 'Dunkles Dock';
+
+  @override
+  String get dockShadow => 'Dock-Schatten';
+
+  @override
+  String get dockBlurWallpaperBelow => 'Hintergrundbild unter dem Dock weichzeichnen';
+
+  @override
+  String get wallpaperMatchSelectedApp => 'An ausgewählte App anpassen';
+
+  @override
+  String get wallpaperBingPhotoOfTheDay => 'Bing-Bild des Tages';
+
+  @override
+  String get wallpaperRefreshNow => 'Jetzt aktualisieren';
+
+  @override
+  String get wallpaperBingError => 'Bing ist nicht erreichbar. Prüfe deine Netzwerkverbindung.';
+
+  @override
+  String get gradientPitchBlack => 'Pechschwarz';
+
+  @override
+  String get gradientGreatWhale => 'Großer Wal';
+
+  @override
+  String get gradientViciousStance => 'Wilde Haltung';
+
+  @override
+  String get gradientTeenNotebook => 'Teenie-Notizbuch';
+
+  @override
+  String get gradientOldHat => 'Alter Hut';
+
+  @override
+  String get gradientBurningSpring => 'Brennender Frühling';
+
+  @override
+  String get gradientDesertHump => 'Wüstendüne';
+
+  @override
+  String get gradientFarawayRiver => 'Ferner Fluss';
+
+  @override
+  String get gradientSaintPetersburg => 'Sankt Petersburg';
+
+  @override
+  String get gradientAfricanField => 'Afrikanisches Feld';
+
+  @override
+  String get gradientGrassShampoo => 'Gras-Shampoo';
+
+  @override
+  String statusBarTemperatureUnitValue(String unit) {
+    return 'Temperatureinheit: $unit';
+  }
+
+  @override
+  String get weatherLocationNotSet => 'Wetterort: nicht festgelegt';
+
+  @override
+  String weatherLocationValue(String place) {
+    return 'Wetterort: $place';
+  }
+
+  @override
+  String get statusBarWeatherLoadFailed => 'Das Wetter konnte nicht geladen werden. Es wird automatisch erneut versucht.';
+
+  @override
+  String get statusBarWeatherSourceHint => 'Wähle oben einen Wetterort (Wetter von Open-Meteo, kostenlos, ohne Konto). Ohne Ort kommt das Wetter aus der App Breezy Weather, sofern sie installiert und die Gadgetbridge-Freigabe aktiviert ist.';
+
+  @override
+  String get weatherLocationTitle => 'Wetterort';
+
+  @override
+  String get weatherLocationHint => 'Stadt oder Ort';
+
+  @override
+  String get weatherLocationNoResults => 'Keine Orte gefunden';
+
+  @override
+  String get weatherLocationSearchError => 'Der Wetterdienst ist nicht erreichbar. Prüfe die Netzwerkverbindung.';
+
+  @override
+  String get weatherLocationPrivacyNote => 'Wetter von Open-Meteo.com: kostenlos, ohne Konto. Nur die Koordinaten des gewählten Orts werden gesendet.';
+
+  @override
+  String get weatherLocationSearch => 'Suchen';
+
+  @override
+  String get dateTimeInvalidFormat => 'Ungültiges Format';
+
+  @override
+  String get dateTimeSelectFormats => 'Wähle unten die Formate';
+
+  @override
+  String get dataUsageDaily => 'Täglich';
+
+  @override
+  String get dataUsageWeekly => 'Wöchentlich';
+
+  @override
+  String get dataUsageMonthly => 'Monatlich';
 }

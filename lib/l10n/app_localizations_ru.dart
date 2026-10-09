@@ -1378,4 +1378,188 @@ class AppLocalizationsRu extends AppLocalizations {
   String tvPowerSleepNote(String path) {
     return 'Воспроизведение видео или музыки считается активностью. Требуется «Исправление кнопки Домой» ($path).';
   }
+
+  @override
+  String get accentPurple => 'Фиолетовый';
+
+  @override
+  String get accentTeal => 'Бирюзовый';
+
+  @override
+  String get accentBlue => 'Синий';
+
+  @override
+  String get accentOrange => 'Оранжевый';
+
+  @override
+  String get accentPink => 'Розовый';
+
+  @override
+  String get accentGreen => 'Зелёный';
+
+  @override
+  String get accentWhite => 'Белый';
+
+  @override
+  String get accentYellow => 'Жёлтый';
+
+  @override
+  String get accentRed => 'Красный';
+
+  @override
+  String get accentCyan => 'Голубой';
+
+  @override
+  String get accentIndigo => 'Индиго';
+
+  @override
+  String get accentLime => 'Лаймовый';
+
+  @override
+  String get accentAmber => 'Янтарный';
+
+  @override
+  String get accentRose => 'Светло-розовый';
+
+  @override
+  String get accentIceBlue => 'Ледяной голубой';
+
+  @override
+  String get accentSelected => 'Выбранный акцентный цвет';
+
+  @override
+  String get cardStyleDefault => 'По умолчанию';
+
+  @override
+  String get cardStylePremium => 'Премиум';
+
+  @override
+  String get cardStyleGlow => 'Свечение';
+
+  @override
+  String get cardStyleSquircle => 'Сквиркл';
+
+  @override
+  String get cardStyleClassic => 'Классический';
+
+  @override
+  String get cardStyleMinimal => 'Минимальный';
+
+  @override
+  String get cardStyleCapsule => 'Капсула';
+
+  @override
+  String get dockFavoritesDock => 'Док избранного';
+
+  @override
+  String get dockFavoritesDockDescription => 'Показывает избранное панелью внизу главного экрана: над ней «Продолжить просмотр», под ней остальные разделы. Углы следуют стилю карточек.';
+
+  @override
+  String get dockFrosted => 'Матовый док';
+
+  @override
+  String get dockDark => 'Тёмный док';
+
+  @override
+  String get dockShadow => 'Тень дока';
+
+  @override
+  String get dockBlurWallpaperBelow => 'Размывать обои под доком';
+
+  @override
+  String get wallpaperMatchSelectedApp => 'Подстраивать под выбранное приложение';
+
+  @override
+  String get wallpaperBingPhotoOfTheDay => 'Фото дня Bing';
+
+  @override
+  String get wallpaperRefreshNow => 'Обновить сейчас';
+
+  @override
+  String get wallpaperBingError => 'Не удалось подключиться к Bing. Проверьте подключение к сети.';
+
+  @override
+  String get gradientPitchBlack => 'Чёрная смоль';
+
+  @override
+  String get gradientGreatWhale => 'Большой кит';
+
+  @override
+  String get gradientViciousStance => 'Грозная стойка';
+
+  @override
+  String get gradientTeenNotebook => 'Подростковый блокнот';
+
+  @override
+  String get gradientOldHat => 'Старая шляпа';
+
+  @override
+  String get gradientBurningSpring => 'Пылающая весна';
+
+  @override
+  String get gradientDesertHump => 'Пустынный бархан';
+
+  @override
+  String get gradientFarawayRiver => 'Далёкая река';
+
+  @override
+  String get gradientSaintPetersburg => 'Санкт-Петербург';
+
+  @override
+  String get gradientAfricanField => 'Африканское поле';
+
+  @override
+  String get gradientGrassShampoo => 'Травяной шампунь';
+
+  @override
+  String statusBarTemperatureUnitValue(String unit) {
+    return 'Единица температуры: $unit';
+  }
+
+  @override
+  String get weatherLocationNotSet => 'Место для погоды: не задано';
+
+  @override
+  String weatherLocationValue(String place) {
+    return 'Место для погоды: $place';
+  }
+
+  @override
+  String get statusBarWeatherLoadFailed => 'Не удалось загрузить погоду. Повторная попытка будет выполнена автоматически.';
+
+  @override
+  String get statusBarWeatherSourceHint => 'Выберите место для погоды выше (погода от Open-Meteo, бесплатно, без аккаунта). Без него погода берётся из приложения Breezy Weather, если оно установлено и в нём включён обмен через Gadgetbridge.';
+
+  @override
+  String get weatherLocationTitle => 'Место для погоды';
+
+  @override
+  String get weatherLocationHint => 'Город или посёлок';
+
+  @override
+  String get weatherLocationNoResults => 'Места не найдены';
+
+  @override
+  String get weatherLocationSearchError => 'Не удалось подключиться к сервису погоды. Проверьте подключение к сети.';
+
+  @override
+  String get weatherLocationPrivacyNote => 'Погода от Open-Meteo.com: бесплатно, без аккаунта. Отправляются только координаты выбранного места.';
+
+  @override
+  String get weatherLocationSearch => 'Найти';
+
+  @override
+  String get dateTimeInvalidFormat => 'Неверный формат';
+
+  @override
+  String get dateTimeSelectFormats => 'Выберите форматы ниже';
+
+  @override
+  String get dataUsageDaily => 'За день';
+
+  @override
+  String get dataUsageWeekly => 'За неделю';
+
+  @override
+  String get dataUsageMonthly => 'За месяц';
 }

@@ -1606,5 +1606,255 @@
                 "type": "String"
             }
         }
+    },
+    "accentPurple": "Purple",
+    "@accentPurple": {
+        "description": "Accent colour swatch name on the Accent Color page"
+    },
+    "accentTeal": "Teal",
+    "@accentTeal": {
+        "description": "Accent colour swatch name on the Accent Color page"
+    },
+    "accentBlue": "Blue",
+    "@accentBlue": {
+        "description": "Accent colour swatch name on the Accent Color page"
+    },
+    "accentOrange": "Orange",
+    "@accentOrange": {
+        "description": "Accent colour swatch name on the Accent Color page"
+    },
+    "accentPink": "Pink",
+    "@accentPink": {
+        "description": "Accent colour swatch name on the Accent Color page (a deep pink)"
+    },
+    "accentGreen": "Green",
+    "@accentGreen": {
+        "description": "Accent colour swatch name on the Accent Color page"
+    },
+    "accentWhite": "White",
+    "@accentWhite": {
+        "description": "Accent colour swatch name on the Accent Color page"
+    },
+    "accentYellow": "Yellow",
+    "@accentYellow": {
+        "description": "Accent colour swatch name on the Accent Color page"
+    },
+    "accentRed": "Red",
+    "@accentRed": {
+        "description": "Accent colour swatch name on the Accent Color page"
+    },
+    "accentCyan": "Cyan",
+    "@accentCyan": {
+        "description": "Accent colour swatch name on the Accent Color page"
+    },
+    "accentIndigo": "Indigo",
+    "@accentIndigo": {
+        "description": "Accent colour swatch name on the Accent Color page"
+    },
+    "accentLime": "Lime",
+    "@accentLime": {
+        "description": "Accent colour swatch name on the Accent Color page"
+    },
+    "accentAmber": "Amber",
+    "@accentAmber": {
+        "description": "Accent colour swatch name on the Accent Color page"
+    },
+    "accentRose": "Rose",
+    "@accentRose": {
+        "description": "Accent colour swatch name on the Accent Color page (a lighter pink than Pink)"
+    },
+    "accentIceBlue": "Ice Blue",
+    "@accentIceBlue": {
+        "description": "Accent colour swatch name on the Accent Color page"
+    },
+    "accentSelected": "Selected Accent",
+    "@accentSelected": {
+        "description": "Label next to the current colour's dot at the bottom of the Accent Color page"
+    },
+    "cardStyleDefault": "Default",
+    "@cardStyleDefault": {
+        "description": "Card style choice on the Card style page, also shown next to Card style under Look"
+    },
+    "cardStylePremium": "Premium",
+    "@cardStylePremium": {
+        "description": "Card style choice on the Card style page, also shown next to Card style under Look"
+    },
+    "cardStyleGlow": "Glow",
+    "@cardStyleGlow": {
+        "description": "Card style choice on the Card style page, also shown next to Card style under Look"
+    },
+    "cardStyleSquircle": "Squircle",
+    "@cardStyleSquircle": {
+        "description": "Card style choice on the Card style page (a rounded square shape), also shown next to Card style under Look"
+    },
+    "cardStyleClassic": "Classic",
+    "@cardStyleClassic": {
+        "description": "Card style choice on the Card style page, also shown next to Card style under Look"
+    },
+    "cardStyleMinimal": "Minimal",
+    "@cardStyleMinimal": {
+        "description": "Card style choice on the Card style page, also shown next to Card style under Look"
+    },
+    "cardStyleCapsule": "Capsule",
+    "@cardStyleCapsule": {
+        "description": "Card style choice on the Card style page, also shown next to Card style under Look"
+    },
+    "dockFavoritesDock": "Favorites dock",
+    "@dockFavoritesDock": {
+        "description": "Switch on the Dock & labels page"
+    },
+    "dockFavoritesDockDescription": "Shows Favorites as a bar along the bottom of the home screen, with Continue Watching above it and your other sections below. Its corners follow the theme.",
+    "@dockFavoritesDockDescription": {
+        "description": "Explanation under the Favorites dock switch on the Dock & labels page; \"the theme\" is the card style"
+    },
+    "dockFrosted": "Frosted dock",
+    "@dockFrosted": {
+        "description": "Switch on the Dock & labels page: a blurred, see-through dock"
+    },
+    "dockDark": "Dark dock",
+    "@dockDark": {
+        "description": "Switch on the Dock & labels page"
+    },
+    "dockShadow": "Dock shadow",
+    "@dockShadow": {
+        "description": "Switch on the Dock & labels page"
+    },
+    "dockBlurWallpaperBelow": "Blur wallpaper below the dock",
+    "@dockBlurWallpaperBelow": {
+        "description": "Switch on the Dock & labels page"
+    },
+    "wallpaperMatchSelectedApp": "Match selected app",
+    "@wallpaperMatchSelectedApp": {
+        "description": "Switch on the Wallpaper page: the background follows the focused app"
+    },
+    "wallpaperBingPhotoOfTheDay": "Bing Photo of the Day",
+    "@wallpaperBingPhotoOfTheDay": {
+        "description": "Switch on the Wallpaper page"
+    },
+    "wallpaperRefreshNow": "Refresh Now",
+    "@wallpaperRefreshNow": {
+        "description": "Row on the Wallpaper page that fetches today's Bing photo again"
+    },
+    "wallpaperBingError": "Couldn't reach Bing. Check your network connection.",
+    "@wallpaperBingError": {
+        "description": "Error under Refresh Now on the Wallpaper page"
+    },
+    "gradientPitchBlack": "Pitch Black",
+    "@gradientPitchBlack": {
+        "description": "Name of a wallpaper gradient on the Gradient page"
+    },
+    "gradientGreatWhale": "Great Whale",
+    "@gradientGreatWhale": {
+        "description": "Name of a wallpaper gradient on the Gradient page"
+    },
+    "gradientViciousStance": "Vicious Stance",
+    "@gradientViciousStance": {
+        "description": "Name of a wallpaper gradient on the Gradient page"
+    },
+    "gradientTeenNotebook": "Teen Notebook",
+    "@gradientTeenNotebook": {
+        "description": "Name of a wallpaper gradient on the Gradient page"
+    },
+    "gradientOldHat": "Old Hat",
+    "@gradientOldHat": {
+        "description": "Name of a wallpaper gradient on the Gradient page"
+    },
+    "gradientBurningSpring": "Burning Spring",
+    "@gradientBurningSpring": {
+        "description": "Name of a wallpaper gradient on the Gradient page"
+    },
+    "gradientDesertHump": "Desert Hump",
+    "@gradientDesertHump": {
+        "description": "Name of a wallpaper gradient on the Gradient page"
+    },
+    "gradientFarawayRiver": "Faraway River",
+    "@gradientFarawayRiver": {
+        "description": "Name of a wallpaper gradient on the Gradient page"
+    },
+    "gradientSaintPetersburg": "Saint Petersburg",
+    "@gradientSaintPetersburg": {
+        "description": "Name of a wallpaper gradient on the Gradient page (named after the city)"
+    },
+    "gradientAfricanField": "African Field",
+    "@gradientAfricanField": {
+        "description": "Name of a wallpaper gradient on the Gradient page"
+    },
+    "gradientGrassShampoo": "Grass Shampoo",
+    "@gradientGrassShampoo": {
+        "description": "Name of a wallpaper gradient on the Gradient page"
+    },
+    "statusBarTemperatureUnitValue": "Temperature Unit: {unit}",
+    "@statusBarTemperatureUnitValue": {
+        "description": "Row on the Weather settings page; pressing it switches the unit. {unit} is Celsius (°C) or Fahrenheit (°F)",
+        "placeholders": {
+            "unit": {
+                "type": "String"
+            }
+        }
+    },
+    "weatherLocationNotSet": "Weather location: not set",
+    "@weatherLocationNotSet": {
+        "description": "Row on the Weather settings page that opens the location search, when no place is chosen"
+    },
+    "weatherLocationValue": "Weather location: {place}",
+    "@weatherLocationValue": {
+        "description": "Row on the Weather settings page that opens the location search; {place} is the chosen city",
+        "placeholders": {
+            "place": {
+                "type": "String"
+            }
+        }
+    },
+    "statusBarWeatherLoadFailed": "Couldn't load the weather. It will retry automatically.",
+    "@statusBarWeatherLoadFailed": {
+        "description": "Hint on the Weather settings page when the built-in weather fails to load"
+    },
+    "statusBarWeatherSourceHint": "Choose a weather location above (weather from Open-Meteo, free, no account). Without one, weather comes from the Breezy Weather app if it's installed with Gadgetbridge sharing on.",
+    "@statusBarWeatherSourceHint": {
+        "description": "Hint on the Weather settings page when no location is set and no weather is available. Open-Meteo, Breezy Weather and Gadgetbridge are names"
+    },
+    "weatherLocationTitle": "Weather location",
+    "@weatherLocationTitle": {
+        "description": "Title of the dialog that searches for the weather's place"
+    },
+    "weatherLocationHint": "City or town",
+    "@weatherLocationHint": {
+        "description": "Hint in the search field of the Weather location dialog"
+    },
+    "weatherLocationNoResults": "No places found",
+    "@weatherLocationNoResults": {
+        "description": "Shown in the Weather location dialog when a search finds nothing"
+    },
+    "weatherLocationSearchError": "Couldn't reach the weather service. Check the network connection.",
+    "@weatherLocationSearchError": {
+        "description": "Error in the Weather location dialog when the search fails"
+    },
+    "weatherLocationPrivacyNote": "Weather by Open-Meteo.com: free, no account. Only the chosen place's coordinates are sent.",
+    "@weatherLocationPrivacyNote": {
+        "description": "Note at the bottom of the Weather location dialog; Open-Meteo.com is a name"
+    },
+    "weatherLocationSearch": "Search",
+    "@weatherLocationSearch": {
+        "description": "Button in the Weather location dialog that runs the search"
+    },
+    "dateTimeInvalidFormat": "Invalid format",
+    "@dateTimeInvalidFormat": {
+        "description": "Preview at the top of the Date and time format page when the saved pattern can't be used"
+    },
+    "dateTimeSelectFormats": "Select formats below",
+    "@dateTimeSelectFormats": {
+        "description": "Preview at the top of the Date and time format page when no format is chosen"
+    },
+    "dataUsageDaily": "Daily",
+    "@dataUsageDaily": {
+        "description": "Choice on the Data Usage Period page: the status bar shows today's data usage"
+    },
+    "dataUsageWeekly": "Weekly",
+    "@dataUsageWeekly": {
+        "description": "Choice on the Data Usage Period page"
+    },
+    "dataUsageMonthly": "Monthly",
+    "@dataUsageMonthly": {
+        "description": "Choice on the Data Usage Period page"
     }
 }

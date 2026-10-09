@@ -121,7 +121,7 @@ class DateTimeFormatPage extends StatelessWidget {
         preview += DateFormat(timeFormat, Platform.localeName).format(now);
       }
     } catch (e) {
-      preview = 'Invalid format';
+      preview = AppLocalizations.of(context)!.dateTimeInvalidFormat;
     }
 
     return Container(
@@ -131,7 +131,7 @@ class DateTimeFormatPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        preview.isEmpty ? 'Select formats below' : preview,
+        preview.isEmpty ? AppLocalizations.of(context)!.dateTimeSelectFormats : preview,
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),

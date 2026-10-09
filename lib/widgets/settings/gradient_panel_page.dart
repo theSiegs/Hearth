@@ -76,7 +76,8 @@ class GradientPanelPage extends StatelessWidget {
                           color: Focus.of(context).hasFocus ? Colors.white : null,
                         ),
                     duration: const Duration(milliseconds: 50),
-                    child: Text(fLauncherGradient.name, overflow: TextOverflow.ellipsis),
+                    child: Text(_name(AppLocalizations.of(context)!, fLauncherGradient),
+                        overflow: TextOverflow.ellipsis),
                   ),
                 ),
               ],
@@ -84,6 +85,22 @@ class GradientPanelPage extends StatelessWidget {
           ),
         ),
       );
+
+  /// A gradient's name in the current language; one without a translation keeps its own name.
+  String _name(AppLocalizations localizations, FLauncherGradient gradient) => switch (gradient) {
+        FLauncherGradients.pitchBlack => localizations.gradientPitchBlack,
+        FLauncherGradients.greatWhale => localizations.gradientGreatWhale,
+        FLauncherGradients.viciousStance => localizations.gradientViciousStance,
+        FLauncherGradients.teenNotebook => localizations.gradientTeenNotebook,
+        FLauncherGradients.oldHat => localizations.gradientOldHat,
+        FLauncherGradients.burningSprings => localizations.gradientBurningSpring,
+        FLauncherGradients.desertHump => localizations.gradientDesertHump,
+        FLauncherGradients.farawayRiver => localizations.gradientFarawayRiver,
+        FLauncherGradients.saintPetersburg => localizations.gradientSaintPetersburg,
+        FLauncherGradients.africanField => localizations.gradientAfricanField,
+        FLauncherGradients.grassShampoo => localizations.gradientGrassShampoo,
+        _ => gradient.name,
+      };
 
   ShapeBorder? _cardBorder(bool hasFocus) => hasFocus
       ? RoundedRectangleBorder(

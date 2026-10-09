@@ -41,13 +41,13 @@ class WallpaperPanelPage extends StatelessWidget {
         title: localizations.wallpaper,
         children: [
           RoundedSwitchListTile(
-            title: const Text("Match selected app"),
+            title: Text(localizations.wallpaperMatchSelectedApp),
             secondary: const Icon(Icons.palette_outlined),
             value: settings.matchSelectedAppBackground,
             onChanged: (value) => settings.setMatchSelectedAppBackground(value),
           ),
           RoundedSwitchListTile(
-            title: const Text("Bing Photo of the Day"),
+            title: Text(localizations.wallpaperBingPhotoOfTheDay),
             secondary: const Icon(Icons.photo_library_outlined),
             value: settings.bingWallpaperEnabled,
             onChanged: (value) => settings.setBingWallpaperEnabled(value),
@@ -63,16 +63,16 @@ class WallpaperPanelPage extends StatelessWidget {
             FocusableSettingsTile(
               autofocus: true,
               leading: const Icon(Icons.refresh),
-              title: const Text("Refresh Now"),
+              title: Text(localizations.wallpaperRefreshNow),
               onPressed: () => wallpaperService.refreshBingWallpaper(),
             ),
             if (wallpaperService.bingWallpaperError)
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Text(
-                  "Couldn't reach Bing. Check your network connection.",
+                  localizations.wallpaperBingError,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.redAccent, fontSize: 12),
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 12),
                 ),
               ),
           ] else if (settings.timeBasedWallpaperEnabled) ...[

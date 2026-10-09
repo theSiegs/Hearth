@@ -1366,4 +1366,188 @@ class AppLocalizationsZh extends AppLocalizations {
   String tvPowerSleepNote(String path) {
     return '播放视频或音乐也算作活动。需要主页按钮修复（$path）。';
   }
+
+  @override
+  String get accentPurple => '紫色';
+
+  @override
+  String get accentTeal => '青绿色';
+
+  @override
+  String get accentBlue => '蓝色';
+
+  @override
+  String get accentOrange => '橙色';
+
+  @override
+  String get accentPink => '粉色';
+
+  @override
+  String get accentGreen => '绿色';
+
+  @override
+  String get accentWhite => '白色';
+
+  @override
+  String get accentYellow => '黄色';
+
+  @override
+  String get accentRed => '红色';
+
+  @override
+  String get accentCyan => '青色';
+
+  @override
+  String get accentIndigo => '靛蓝';
+
+  @override
+  String get accentLime => '青柠色';
+
+  @override
+  String get accentAmber => '琥珀色';
+
+  @override
+  String get accentRose => '玫瑰色';
+
+  @override
+  String get accentIceBlue => '冰蓝色';
+
+  @override
+  String get accentSelected => '当前强调色';
+
+  @override
+  String get cardStyleDefault => '默认';
+
+  @override
+  String get cardStylePremium => '高级';
+
+  @override
+  String get cardStyleGlow => '发光';
+
+  @override
+  String get cardStyleSquircle => '超椭圆';
+
+  @override
+  String get cardStyleClassic => '经典';
+
+  @override
+  String get cardStyleMinimal => '极简';
+
+  @override
+  String get cardStyleCapsule => '胶囊';
+
+  @override
+  String get dockFavoritesDock => '收藏程序坞';
+
+  @override
+  String get dockFavoritesDockDescription => '将收藏以横栏形式显示在主屏幕底部，上方为「继续观看」，下方为其他分区。圆角随卡片样式变化。';
+
+  @override
+  String get dockFrosted => '磨砂程序坞';
+
+  @override
+  String get dockDark => '深色程序坞';
+
+  @override
+  String get dockShadow => '程序坞阴影';
+
+  @override
+  String get dockBlurWallpaperBelow => '模糊程序坞下方的壁纸';
+
+  @override
+  String get wallpaperMatchSelectedApp => '匹配所选应用';
+
+  @override
+  String get wallpaperBingPhotoOfTheDay => 'Bing 每日图片';
+
+  @override
+  String get wallpaperRefreshNow => '立即刷新';
+
+  @override
+  String get wallpaperBingError => '无法连接 Bing。请检查网络连接。';
+
+  @override
+  String get gradientPitchBlack => '漆黑';
+
+  @override
+  String get gradientGreatWhale => '巨鲸';
+
+  @override
+  String get gradientViciousStance => '凶猛姿态';
+
+  @override
+  String get gradientTeenNotebook => '少年笔记本';
+
+  @override
+  String get gradientOldHat => '旧帽子';
+
+  @override
+  String get gradientBurningSpring => '燃烧的春天';
+
+  @override
+  String get gradientDesertHump => '沙漠驼峰';
+
+  @override
+  String get gradientFarawayRiver => '遥远的河流';
+
+  @override
+  String get gradientSaintPetersburg => '圣彼得堡';
+
+  @override
+  String get gradientAfricanField => '非洲原野';
+
+  @override
+  String get gradientGrassShampoo => '青草洗发水';
+
+  @override
+  String statusBarTemperatureUnitValue(String unit) {
+    return '温度单位：$unit';
+  }
+
+  @override
+  String get weatherLocationNotSet => '天气位置：未设置';
+
+  @override
+  String weatherLocationValue(String place) {
+    return '天气位置：$place';
+  }
+
+  @override
+  String get statusBarWeatherLoadFailed => '无法加载天气，将自动重试。';
+
+  @override
+  String get statusBarWeatherSourceHint => '请在上方选择天气位置（天气来自 Open-Meteo，免费，无需账号）。如未选择，且已安装 Breezy Weather 应用并开启 Gadgetbridge 共享，则从该应用获取天气。';
+
+  @override
+  String get weatherLocationTitle => '天气位置';
+
+  @override
+  String get weatherLocationHint => '城市或城镇';
+
+  @override
+  String get weatherLocationNoResults => '未找到地点';
+
+  @override
+  String get weatherLocationSearchError => '无法连接天气服务。请检查网络连接。';
+
+  @override
+  String get weatherLocationPrivacyNote => '天气由 Open-Meteo.com 提供：免费，无需账号。仅发送所选地点的坐标。';
+
+  @override
+  String get weatherLocationSearch => '搜索';
+
+  @override
+  String get dateTimeInvalidFormat => '格式无效';
+
+  @override
+  String get dateTimeSelectFormats => '请在下方选择格式';
+
+  @override
+  String get dataUsageDaily => '每日';
+
+  @override
+  String get dataUsageWeekly => '每周';
+
+  @override
+  String get dataUsageMonthly => '每月';
 }

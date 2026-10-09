@@ -2464,6 +2464,366 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Playing video or music counts as activity. Needs Home Button Fix ({path}).'**
   String tvPowerSleepNote(String path);
+
+  /// Accent colour swatch name on the Accent Color page
+  ///
+  /// In en, this message translates to:
+  /// **'Purple'**
+  String get accentPurple;
+
+  /// Accent colour swatch name on the Accent Color page
+  ///
+  /// In en, this message translates to:
+  /// **'Teal'**
+  String get accentTeal;
+
+  /// Accent colour swatch name on the Accent Color page
+  ///
+  /// In en, this message translates to:
+  /// **'Blue'**
+  String get accentBlue;
+
+  /// Accent colour swatch name on the Accent Color page
+  ///
+  /// In en, this message translates to:
+  /// **'Orange'**
+  String get accentOrange;
+
+  /// Accent colour swatch name on the Accent Color page (a deep pink)
+  ///
+  /// In en, this message translates to:
+  /// **'Pink'**
+  String get accentPink;
+
+  /// Accent colour swatch name on the Accent Color page
+  ///
+  /// In en, this message translates to:
+  /// **'Green'**
+  String get accentGreen;
+
+  /// Accent colour swatch name on the Accent Color page
+  ///
+  /// In en, this message translates to:
+  /// **'White'**
+  String get accentWhite;
+
+  /// Accent colour swatch name on the Accent Color page
+  ///
+  /// In en, this message translates to:
+  /// **'Yellow'**
+  String get accentYellow;
+
+  /// Accent colour swatch name on the Accent Color page
+  ///
+  /// In en, this message translates to:
+  /// **'Red'**
+  String get accentRed;
+
+  /// Accent colour swatch name on the Accent Color page
+  ///
+  /// In en, this message translates to:
+  /// **'Cyan'**
+  String get accentCyan;
+
+  /// Accent colour swatch name on the Accent Color page
+  ///
+  /// In en, this message translates to:
+  /// **'Indigo'**
+  String get accentIndigo;
+
+  /// Accent colour swatch name on the Accent Color page
+  ///
+  /// In en, this message translates to:
+  /// **'Lime'**
+  String get accentLime;
+
+  /// Accent colour swatch name on the Accent Color page
+  ///
+  /// In en, this message translates to:
+  /// **'Amber'**
+  String get accentAmber;
+
+  /// Accent colour swatch name on the Accent Color page (a lighter pink than Pink)
+  ///
+  /// In en, this message translates to:
+  /// **'Rose'**
+  String get accentRose;
+
+  /// Accent colour swatch name on the Accent Color page
+  ///
+  /// In en, this message translates to:
+  /// **'Ice Blue'**
+  String get accentIceBlue;
+
+  /// Label next to the current colour's dot at the bottom of the Accent Color page
+  ///
+  /// In en, this message translates to:
+  /// **'Selected Accent'**
+  String get accentSelected;
+
+  /// Card style choice on the Card style page, also shown next to Card style under Look
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get cardStyleDefault;
+
+  /// Card style choice on the Card style page, also shown next to Card style under Look
+  ///
+  /// In en, this message translates to:
+  /// **'Premium'**
+  String get cardStylePremium;
+
+  /// Card style choice on the Card style page, also shown next to Card style under Look
+  ///
+  /// In en, this message translates to:
+  /// **'Glow'**
+  String get cardStyleGlow;
+
+  /// Card style choice on the Card style page (a rounded square shape), also shown next to Card style under Look
+  ///
+  /// In en, this message translates to:
+  /// **'Squircle'**
+  String get cardStyleSquircle;
+
+  /// Card style choice on the Card style page, also shown next to Card style under Look
+  ///
+  /// In en, this message translates to:
+  /// **'Classic'**
+  String get cardStyleClassic;
+
+  /// Card style choice on the Card style page, also shown next to Card style under Look
+  ///
+  /// In en, this message translates to:
+  /// **'Minimal'**
+  String get cardStyleMinimal;
+
+  /// Card style choice on the Card style page, also shown next to Card style under Look
+  ///
+  /// In en, this message translates to:
+  /// **'Capsule'**
+  String get cardStyleCapsule;
+
+  /// Switch on the Dock & labels page
+  ///
+  /// In en, this message translates to:
+  /// **'Favorites dock'**
+  String get dockFavoritesDock;
+
+  /// Explanation under the Favorites dock switch on the Dock & labels page; "the theme" is the card style
+  ///
+  /// In en, this message translates to:
+  /// **'Shows Favorites as a bar along the bottom of the home screen, with Continue Watching above it and your other sections below. Its corners follow the theme.'**
+  String get dockFavoritesDockDescription;
+
+  /// Switch on the Dock & labels page: a blurred, see-through dock
+  ///
+  /// In en, this message translates to:
+  /// **'Frosted dock'**
+  String get dockFrosted;
+
+  /// Switch on the Dock & labels page
+  ///
+  /// In en, this message translates to:
+  /// **'Dark dock'**
+  String get dockDark;
+
+  /// Switch on the Dock & labels page
+  ///
+  /// In en, this message translates to:
+  /// **'Dock shadow'**
+  String get dockShadow;
+
+  /// Switch on the Dock & labels page
+  ///
+  /// In en, this message translates to:
+  /// **'Blur wallpaper below the dock'**
+  String get dockBlurWallpaperBelow;
+
+  /// Switch on the Wallpaper page: the background follows the focused app
+  ///
+  /// In en, this message translates to:
+  /// **'Match selected app'**
+  String get wallpaperMatchSelectedApp;
+
+  /// Switch on the Wallpaper page
+  ///
+  /// In en, this message translates to:
+  /// **'Bing Photo of the Day'**
+  String get wallpaperBingPhotoOfTheDay;
+
+  /// Row on the Wallpaper page that fetches today's Bing photo again
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh Now'**
+  String get wallpaperRefreshNow;
+
+  /// Error under Refresh Now on the Wallpaper page
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach Bing. Check your network connection.'**
+  String get wallpaperBingError;
+
+  /// Name of a wallpaper gradient on the Gradient page
+  ///
+  /// In en, this message translates to:
+  /// **'Pitch Black'**
+  String get gradientPitchBlack;
+
+  /// Name of a wallpaper gradient on the Gradient page
+  ///
+  /// In en, this message translates to:
+  /// **'Great Whale'**
+  String get gradientGreatWhale;
+
+  /// Name of a wallpaper gradient on the Gradient page
+  ///
+  /// In en, this message translates to:
+  /// **'Vicious Stance'**
+  String get gradientViciousStance;
+
+  /// Name of a wallpaper gradient on the Gradient page
+  ///
+  /// In en, this message translates to:
+  /// **'Teen Notebook'**
+  String get gradientTeenNotebook;
+
+  /// Name of a wallpaper gradient on the Gradient page
+  ///
+  /// In en, this message translates to:
+  /// **'Old Hat'**
+  String get gradientOldHat;
+
+  /// Name of a wallpaper gradient on the Gradient page
+  ///
+  /// In en, this message translates to:
+  /// **'Burning Spring'**
+  String get gradientBurningSpring;
+
+  /// Name of a wallpaper gradient on the Gradient page
+  ///
+  /// In en, this message translates to:
+  /// **'Desert Hump'**
+  String get gradientDesertHump;
+
+  /// Name of a wallpaper gradient on the Gradient page
+  ///
+  /// In en, this message translates to:
+  /// **'Faraway River'**
+  String get gradientFarawayRiver;
+
+  /// Name of a wallpaper gradient on the Gradient page (named after the city)
+  ///
+  /// In en, this message translates to:
+  /// **'Saint Petersburg'**
+  String get gradientSaintPetersburg;
+
+  /// Name of a wallpaper gradient on the Gradient page
+  ///
+  /// In en, this message translates to:
+  /// **'African Field'**
+  String get gradientAfricanField;
+
+  /// Name of a wallpaper gradient on the Gradient page
+  ///
+  /// In en, this message translates to:
+  /// **'Grass Shampoo'**
+  String get gradientGrassShampoo;
+
+  /// Row on the Weather settings page; pressing it switches the unit. {unit} is Celsius (°C) or Fahrenheit (°F)
+  ///
+  /// In en, this message translates to:
+  /// **'Temperature Unit: {unit}'**
+  String statusBarTemperatureUnitValue(String unit);
+
+  /// Row on the Weather settings page that opens the location search, when no place is chosen
+  ///
+  /// In en, this message translates to:
+  /// **'Weather location: not set'**
+  String get weatherLocationNotSet;
+
+  /// Row on the Weather settings page that opens the location search; {place} is the chosen city
+  ///
+  /// In en, this message translates to:
+  /// **'Weather location: {place}'**
+  String weatherLocationValue(String place);
+
+  /// Hint on the Weather settings page when the built-in weather fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the weather. It will retry automatically.'**
+  String get statusBarWeatherLoadFailed;
+
+  /// Hint on the Weather settings page when no location is set and no weather is available. Open-Meteo, Breezy Weather and Gadgetbridge are names
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a weather location above (weather from Open-Meteo, free, no account). Without one, weather comes from the Breezy Weather app if it\'s installed with Gadgetbridge sharing on.'**
+  String get statusBarWeatherSourceHint;
+
+  /// Title of the dialog that searches for the weather's place
+  ///
+  /// In en, this message translates to:
+  /// **'Weather location'**
+  String get weatherLocationTitle;
+
+  /// Hint in the search field of the Weather location dialog
+  ///
+  /// In en, this message translates to:
+  /// **'City or town'**
+  String get weatherLocationHint;
+
+  /// Shown in the Weather location dialog when a search finds nothing
+  ///
+  /// In en, this message translates to:
+  /// **'No places found'**
+  String get weatherLocationNoResults;
+
+  /// Error in the Weather location dialog when the search fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the weather service. Check the network connection.'**
+  String get weatherLocationSearchError;
+
+  /// Note at the bottom of the Weather location dialog; Open-Meteo.com is a name
+  ///
+  /// In en, this message translates to:
+  /// **'Weather by Open-Meteo.com: free, no account. Only the chosen place\'s coordinates are sent.'**
+  String get weatherLocationPrivacyNote;
+
+  /// Button in the Weather location dialog that runs the search
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get weatherLocationSearch;
+
+  /// Preview at the top of the Date and time format page when the saved pattern can't be used
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid format'**
+  String get dateTimeInvalidFormat;
+
+  /// Preview at the top of the Date and time format page when no format is chosen
+  ///
+  /// In en, this message translates to:
+  /// **'Select formats below'**
+  String get dateTimeSelectFormats;
+
+  /// Choice on the Data Usage Period page: the status bar shows today's data usage
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get dataUsageDaily;
+
+  /// Choice on the Data Usage Period page
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get dataUsageWeekly;
+
+  /// Choice on the Data Usage Period page
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get dataUsageMonthly;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

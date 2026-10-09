@@ -32,12 +32,13 @@ class CardStylePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
     final current = context.select<SettingsService, String>((s) => s.themes);
 
     return SettingsPage(
-      title: AppLocalizations.of(context)!.cardStyleTitle,
+      title: localizations.cardStyleTitle,
       children: [
-        for (final MapEntry(key: value, value: label) in LookSettingsPage.cardStyles.entries)
+        for (final MapEntry(key: value, value: label) in LookSettingsPage.cardStyles(localizations).entries)
           SettingsChoiceTile<String>(
             title: label,
             value: value,
