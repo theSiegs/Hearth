@@ -1994,4 +1994,24 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get profilePinSaveFailed => 'PINを保存できませんでした。';
+
+  @override
+  String get profileLockNow => 'プロフィールをロック';
+
+  @override
+  String get profileLockNowSubtitle => '戻るにはGoogle TVがプロフィールのPINを求めます。プロフィールボタンの長押しでも同じです。';
+
+  @override
+  String get profileLockOnSleep => 'テレビがスリープしたらロック';
+
+  @override
+  String get profileLockEveryTime => '毎回';
+
+  @override
+  String profileLockAfterMinutes(int minutes) {
+    return '$minutes分以上スリープした後';
+  }
+
+  @override
+  String get profileLockNeedsGoogleLock => 'Google TV自体のプロフィールロックを使います。Google TVの設定 → アカウントとログイン → ご自分のアカウント → プロフィールロック でオンにしてください。';
 }

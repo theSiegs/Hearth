@@ -600,5 +600,11 @@
     "profilePinEnterTitle": "{profile} için {app} PIN’i",
     "profilePinEnterSubtitle": "{app} sorduğunda Hearth onu “Giriş yapılıyor” kartının arkasında yazar. Bu TV’de şifreli kalır ve asla gösterilmez.",
     "profilePinNeedsParentPin": "Önce bir ebeveyn PIN’i belirleyin ({settings} → {profiles} → {parentPin}): profil PIN’i kaydetmek için gerekir.",
-    "profilePinSaveFailed": "PIN kaydedilemedi."
+    "profilePinSaveFailed": "PIN kaydedilemedi.",
+    "profileLockNow": "Profilimi kilitle",
+    "profileLockNowSubtitle": "Geri dönmek için Google TV profil PIN'inizi sorar. Profil düğmesini basılı tutmak da aynısını yapar.",
+    "profileLockOnSleep": "TV uykuya geçtiğinde kilitle",
+    "profileLockEveryTime": "Her seferinde",
+    "profileLockAfterMinutes": "{minutes} dk uykudan sonra",
+    "profileLockNeedsGoogleLock": "Google TV'nin kendi profil kilidini kullanır: Google TV Ayarları → Hesaplar ve Oturum Açma → hesabınız → Profil kilidi'nden hesabınız için açın."
 }

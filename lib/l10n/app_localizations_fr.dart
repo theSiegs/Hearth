@@ -2004,4 +2004,24 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profilePinSaveFailed => 'Impossible d’enregistrer le code.';
+
+  @override
+  String get profileLockNow => 'Verrouiller mon profil';
+
+  @override
+  String get profileLockNowSubtitle => 'Google TV demande le code de votre profil pour y revenir. Maintenir le bouton de profil fait de même.';
+
+  @override
+  String get profileLockOnSleep => 'Verrouiller quand le téléviseur se met en veille';
+
+  @override
+  String get profileLockEveryTime => 'À chaque fois';
+
+  @override
+  String profileLockAfterMinutes(int minutes) {
+    return 'Après $minutes min de veille';
+  }
+
+  @override
+  String get profileLockNeedsGoogleLock => 'Utilise le verrouillage de profil de Google TV : activez-le pour votre compte dans Paramètres de Google TV → Comptes et connexion → votre compte → Verrouillage du profil.';
 }

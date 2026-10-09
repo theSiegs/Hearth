@@ -239,6 +239,16 @@ class FLauncherChannel {
   Future<void> removeProfilePin(String packageName, String appProfile) async =>
       await _methodChannel.invokeMethod("removeProfilePin", {"packageName": packageName, "appProfile": appProfile});
 
+  /// Locks the current grown-up profile with Google TV's own profile lock (its PIN screen). False in a kids profile
+  /// or when it couldn't be opened.
+  Future<bool> lockProfile() async => await _methodChannel.invokeMethod<bool>("lockProfile") ?? false;
+
+  /// "Lock when the TV sleeps": minutes the TV must sleep before it locks on waking (0 for any sleep), or -1 for off.
+  Future<int> getLockOnSleepMinutes() async => await _methodChannel.invokeMethod<int>("getLockOnSleepMinutes") ?? -1;
+
+  Future<void> setLockOnSleepMinutes(int minutes) async =>
+      await _methodChannel.invokeMethod("setLockOnSleepMinutes", minutes);
+
   /// Every saved profile PIN (when the parent PIN that guards them is removed).
   Future<void> removeAllProfilePins() async => await _methodChannel.invokeMethod("removeAllProfilePins");
 

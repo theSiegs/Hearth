@@ -146,6 +146,9 @@ final class ButtonMapper {
             case "sleep":
                 service.sleepNow();
                 return;
+            case "lock":
+                ProfileLock.lockNow(service);
+                return;
             case "assistant": {
                 // Google's assistant (Gemini on Google TV): what the mic button does when Hearth doesn't take it
                 PackageManager pm = service.getPackageManager();

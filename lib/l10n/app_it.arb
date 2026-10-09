@@ -600,5 +600,11 @@
     "profilePinEnterTitle": "PIN di {profile} in {app}",
     "profilePinEnterSubtitle": "Hearth lo digita dietro la scheda “Accesso come” quando {app} lo chiede. Resta cifrato su questa TV e non viene mai mostrato.",
     "profilePinNeedsParentPin": "Imposta prima un PIN genitore ({settings} → {profiles} → {parentPin}): serve per salvare il PIN di un profilo.",
-    "profilePinSaveFailed": "Impossibile salvare il PIN."
+    "profilePinSaveFailed": "Impossibile salvare il PIN.",
+    "profileLockNow": "Blocca il mio profilo",
+    "profileLockNowSubtitle": "Google TV chiede il PIN del profilo per tornarci. Anche tenere premuto il pulsante del profilo lo fa.",
+    "profileLockOnSleep": "Blocca quando la TV va in standby",
+    "profileLockEveryTime": "Ogni volta",
+    "profileLockAfterMinutes": "Dopo {minutes} min di standby",
+    "profileLockNeedsGoogleLock": "Usa il blocco del profilo di Google TV: attivalo per il tuo account in Impostazioni di Google TV → Account e accesso → il tuo account → Blocco profilo."
 }

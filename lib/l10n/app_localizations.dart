@@ -3520,6 +3520,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn’t save the PIN.'**
   String get profilePinSaveFailed;
+
+  /// Settings > Profiles: locking a grown-up profile with Google TV's profile lock
+  ///
+  /// In en, this message translates to:
+  /// **'Lock my profile'**
+  String get profileLockNow;
+
+  /// Settings > Profiles: locking a grown-up profile with Google TV's profile lock
+  ///
+  /// In en, this message translates to:
+  /// **'Google TV asks for your profile PIN to come back. Holding the profile button does it too.'**
+  String get profileLockNowSubtitle;
+
+  /// Settings > Profiles: locking a grown-up profile with Google TV's profile lock
+  ///
+  /// In en, this message translates to:
+  /// **'Lock when the TV sleeps'**
+  String get profileLockOnSleep;
+
+  /// Settings > Profiles: locking a grown-up profile with Google TV's profile lock
+  ///
+  /// In en, this message translates to:
+  /// **'Every time'**
+  String get profileLockEveryTime;
+
+  /// Settings > Profiles: locking a grown-up profile with Google TV's profile lock
+  ///
+  /// In en, this message translates to:
+  /// **'After {minutes} min asleep'**
+  String profileLockAfterMinutes(int minutes);
+
+  /// Settings > Profiles: locking a grown-up profile with Google TV's profile lock
+  ///
+  /// In en, this message translates to:
+  /// **'Uses Google TV\'s own profile lock: turn it on for your account in Google TV Settings → Accounts & Sign In → your account → Profile lock.'**
+  String get profileLockNeedsGoogleLock;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

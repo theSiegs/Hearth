@@ -51,6 +51,21 @@ class ProfilesSettingsPage extends StatelessWidget {
           trailing: Text(activeProfileLabel(context) ?? "", style: textTheme.bodySmall),
           onPressed: () => context.read<FLauncherChannel>().openProfileChooser(),
         ),
+        // Grown-up profiles: Google TV's own profile lock, now or whenever the TV wakes from a sleep
+        if (!(context.select<ProfileService?, bool>((p) => p?.isKidsProfile ?? false))) ...[
+          FocusableSettingsTile(
+            leading: const Icon(Icons.lock_person_outlined),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l.profileLockNow, style: textTheme.bodyMedium),
+                Text(l.profileLockNowSubtitle, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
+              ],
+            ),
+            onPressed: () => context.read<FLauncherChannel?>()?.lockProfile(),
+          ),
+          const _LockOnSleepTile(),
+        ],
         // No PIN of its own: in a kids profile, Settings already took the parent PIN to get here, and
         // grown-up profiles are only reached past Google TV's PIN.
         if (!locked)
@@ -121,5 +136,79 @@ class ProfilesSettingsPage extends StatelessWidget {
     if (second != null) {
       await settings.setParentPin(first);
     }
+  }
+}
+
+/// "Lock when the TV sleeps": Google TV's profile lock comes up as the TV wakes after sleeping at least this long.
+class _LockOnSleepTile extends StatefulWidget {
+  const _LockOnSleepTile();
+
+  @override
+  State<_LockOnSleepTile> createState() => _LockOnSleepTileState();
+}
+
+class _LockOnSleepTileState extends State<_LockOnSleepTile> {
+  /// -1 off, 0 every time, else minutes asleep.
+  static const List<int> _options = [-1, 0, 5, 15, 30, 60];
+  late final FLauncherChannel? _channel = context.read<FLauncherChannel?>();
+  int _minutes = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    _channel?.getLockOnSleepMinutes().then((m) {
+      if (mounted) setState(() => _minutes = m);
+    }).catchError((_) {});
+  }
+
+  static String _label(AppLocalizations l, int minutes) => switch (minutes) {
+        -1 => l.parentPinOff,
+        0 => l.profileLockEveryTime,
+        _ => l.profileLockAfterMinutes(minutes),
+      };
+
+  Future<void> _choose() async {
+    final l = AppLocalizations.of(context)!;
+    final int? picked = await showDialog<int>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(l.profileLockOnSleep),
+        children: [
+          for (final option in _options)
+            SimpleDialogOption(
+              child: TextButton(
+                autofocus: option == _minutes,
+                onPressed: () => Navigator.of(context).pop(option),
+                child: Row(
+                  children: [
+                    Icon(option == _minutes ? Icons.radio_button_checked : Icons.radio_button_unchecked, size: 20),
+                    const SizedBox(width: 12),
+                    Flexible(child: Text(_label(l, option), style: Theme.of(context).textTheme.bodyMedium)),
+                  ],
+                ),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+            child: Text(l.profileLockNeedsGoogleLock,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54)),
+          ),
+        ],
+      ),
+    );
+    if (picked == null) return;
+    await _channel?.setLockOnSleepMinutes(picked);
+    if (mounted) setState(() => _minutes = picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    return FocusableSettingsTile(
+      leading: const Icon(Icons.bedtime_outlined),
+      title: Text(l.profileLockOnSleep, style: Theme.of(context).textTheme.bodyMedium),
+      trailing: Text(_label(l, _minutes), style: Theme.of(context).textTheme.bodySmall),
+      onPressed: _choose,
+    );
   }
 }

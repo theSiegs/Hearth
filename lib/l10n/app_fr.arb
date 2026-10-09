@@ -600,5 +600,11 @@
     "profilePinEnterTitle": "Code PIN de {profile} dans {app}",
     "profilePinEnterSubtitle": "Hearth le saisit derrière la carte « Connexion en tant que » quand {app} le demande. Il reste chiffré sur ce téléviseur et n’est jamais affiché.",
     "profilePinNeedsParentPin": "Définissez d’abord un code parental ({settings} → {profiles} → {parentPin}) : il est nécessaire pour enregistrer le code d’un profil.",
-    "profilePinSaveFailed": "Impossible d’enregistrer le code."
+    "profilePinSaveFailed": "Impossible d’enregistrer le code.",
+    "profileLockNow": "Verrouiller mon profil",
+    "profileLockNowSubtitle": "Google TV demande le code de votre profil pour y revenir. Maintenir le bouton de profil fait de même.",
+    "profileLockOnSleep": "Verrouiller quand le téléviseur se met en veille",
+    "profileLockEveryTime": "À chaque fois",
+    "profileLockAfterMinutes": "Après {minutes} min de veille",
+    "profileLockNeedsGoogleLock": "Utilise le verrouillage de profil de Google TV : activez-le pour votre compte dans Paramètres de Google TV → Comptes et connexion → votre compte → Verrouillage du profil."
 }

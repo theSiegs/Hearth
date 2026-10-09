@@ -197,7 +197,14 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private final BroadcastReceiver mScreenReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (mHaStatus != null) mHaStatus.setScreenOn(Intent.ACTION_SCREEN_ON.equals(intent.getAction()));
+            boolean on = Intent.ACTION_SCREEN_ON.equals(intent.getAction());
+            if (mHaStatus != null) mHaStatus.setScreenOn(on);
+            // "Lock when the TV sleeps": Google TV's profile lock on waking after long enough asleep
+            if (on) {
+                ProfileLock.onScreenOn(context);
+            } else {
+                ProfileLock.onScreenOff();
+            }
         }
     };
     private final LauncherApps.Callback mSuspensionCallback = new LauncherApps.Callback() {

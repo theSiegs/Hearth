@@ -215,6 +215,13 @@ public class MainActivity extends FlutterActivity {
                 PinVault.removeAll(this);
                 result.success(null);
             }
+            case "lockProfile" -> result.success(ProfileLock.lockNow(this));
+            case "getLockOnSleepMinutes" -> result.success(ProfileLock.lockOnSleepMinutes(this));
+            case "setLockOnSleepMinutes" -> {
+                Integer minutes = call.arguments();
+                ProfileLock.setLockOnSleepMinutes(this, minutes != null ? minutes : ProfileLock.OFF);
+                result.success(null);
+            }
             case "removeProfilePin" -> {
                 PinVault.remove(this, call.argument("packageName"), call.argument("appProfile"));
                 result.success(null);

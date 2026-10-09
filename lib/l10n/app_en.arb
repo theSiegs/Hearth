@@ -2524,5 +2524,34 @@
     "profilePinSaveFailed": "Couldn’t save the PIN.",
     "@profilePinSaveFailed": {
         "description": "Profile Pairing: streaming app profile PIN"
+    },
+    "profileLockNow": "Lock my profile",
+    "@profileLockNow": {
+        "description": "Settings > Profiles: locking a grown-up profile with Google TV's profile lock"
+    },
+    "profileLockNowSubtitle": "Google TV asks for your profile PIN to come back. Holding the profile button does it too.",
+    "@profileLockNowSubtitle": {
+        "description": "Settings > Profiles: locking a grown-up profile with Google TV's profile lock"
+    },
+    "profileLockOnSleep": "Lock when the TV sleeps",
+    "@profileLockOnSleep": {
+        "description": "Settings > Profiles: locking a grown-up profile with Google TV's profile lock"
+    },
+    "profileLockEveryTime": "Every time",
+    "@profileLockEveryTime": {
+        "description": "Settings > Profiles: locking a grown-up profile with Google TV's profile lock"
+    },
+    "profileLockAfterMinutes": "After {minutes} min asleep",
+    "@profileLockAfterMinutes": {
+        "description": "Settings > Profiles: locking a grown-up profile with Google TV's profile lock",
+        "placeholders": {
+            "minutes": {
+                "type": "int"
+            }
+        }
+    },
+    "profileLockNeedsGoogleLock": "Uses Google TV's own profile lock: turn it on for your account in Google TV Settings → Accounts & Sign In → your account → Profile lock.",
+    "@profileLockNeedsGoogleLock": {
+        "description": "Settings > Profiles: locking a grown-up profile with Google TV's profile lock"
     }
 }
