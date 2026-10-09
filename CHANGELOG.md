@@ -35,6 +35,8 @@ restore, and uninstall the old one. See [docs/design/app-id-change.md](docs/desi
 - Remote buttons: press and hold actions, Home Assistant scenes and scripts, "Ask Google", lock my profile; remaps
   can apply only on Hearth's home screen.
 - Hearth keeps HearthTube up to date.
+- Include pre-releases (Settings → System → Updates, on by default): Hearth and HearthTube updates include early
+  test builds. Every release is a pre-release while Hearth is in early development.
 - Settings regrouped into eight sections.
 
 **Home Assistant**
