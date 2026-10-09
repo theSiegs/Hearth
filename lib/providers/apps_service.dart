@@ -249,8 +249,55 @@ class AppsService extends ChangeNotifier {
             shouldNotifyListeners: false);
       }
 
-      await addCategory(favoritesName, shouldNotifyListeners: false);
+      final favoritesId = await addCategory(favoritesName, shouldNotifyListeners: false);
+      // The dock starts with a few apps, not empty: the streaming apps this TV has, else its first TV apps
+      final starters = defaultDockApps(_applications.values);
+      if (starters.isNotEmpty) {
+        await addAllToCategory(starters, _categoriesById[favoritesId]!, shouldNotifyListeners: false);
+      }
     });
+  }
+
+  /// Apps a new dock starts with, in this order when installed (at most [defaultDockSize]).
+  static const List<String> defaultDockPackages = [
+    "com.thesiegs.hearthtube",
+    "com.netflix.ninja",
+    "com.google.android.youtube.tv",
+    "com.disney.disneyplus",
+    "com.wbd.stream",
+    "com.amazon.amazonvideo.livingroom",
+    "com.apple.atve.androidtv.appletv",
+    "com.hulu.livingroomplus",
+    "com.cbs.ott",
+    "com.peacocktv.peacockandroid",
+  ];
+  static const int defaultDockSize = 5;
+
+  /// The known streaming apps that are installed, in [defaultDockPackages] order; when fewer than two, topped up with
+  /// other TV apps (not sideloaded, not the Play Store).
+  static List<App> defaultDockApps(Iterable<App> apps) {
+    final byPackage = {for (final a in apps) a.packageName: a};
+    final picked = [for (final p in defaultDockPackages) if (byPackage[p] != null) byPackage[p]!].take(defaultDockSize).toList();
+    if (picked.length < 2) {
+      picked.addAll(apps
+          .where((a) => !a.sideloaded && !picked.contains(a) && a.packageName != "com.android.vending")
+          .take(defaultDockSize - picked.length));
+    }
+    return picked;
+  }
+
+  /// The sections a fresh install starts with (TV Apps, Non-TV Apps, an empty Favorites), every app shown again:
+  /// a profile Hearth sees for the first time starts here rather than from the last profile's layout.
+  Future<void> resetToDefaultLayout() async {
+    await _database.transaction(() async {
+      await _database.customStatement('DELETE FROM apps_categories;');
+      await _database.customStatement('DELETE FROM launcher_spacers;');
+      await _database.customStatement('DELETE FROM categories;');
+      await _database.customStatement('UPDATE apps SET hidden = 0;');
+    });
+    await _refreshState(shouldNotifyListeners: false);
+    await _initDefaultCategories();
+    await _refreshState();
   }
 
   /// One-time migration: moves "TV Apps" above "Non-TV Apps".

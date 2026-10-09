@@ -391,6 +391,14 @@ class BackupService {
     await file.writeAsString(jsonEncode(await buildBackupData(settingsService, true)));
   }
 
+  /// A profile's settings back to their defaults (device-level settings, like the TV's own, stay).
+  Future<void> resetProfileSettings(SettingsService settingsService) async {
+    for (final key in settingsService.settingKeys) {
+      if (!isDeviceLevelKey(key)) await _sharedPreferences.remove(key);
+    }
+    settingsService.reload();
+  }
+
   /// Returns false when this profile has no saved layout yet.
   Future<bool> loadProfileLayout(String profileName, SettingsService settingsService) async {
     final File file = await _profileLayoutFile(profileName);
