@@ -1205,4 +1205,165 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get homeButtonFixOpenSettings => '접근성 설정 열기';
+
+  @override
+  String get remoteButtonsRemapButton => '버튼 다시 지정';
+
+  @override
+  String remoteButtonsButtonNumber(String keyCode) {
+    return '버튼 $keyCode';
+  }
+
+  @override
+  String get remoteButtonsNormal => '기본';
+
+  @override
+  String get remoteButtonsCaptureTitle => '리모컨 버튼을 누르세요';
+
+  @override
+  String get remoteButtonsCaptureBody => '다시 지정할 버튼을 누르세요. 취소하려면 뒤로를 누르세요.';
+
+  @override
+  String get remoteButtonsNeedsFixTitle => '먼저 홈 버튼 수정을 켜세요';
+
+  @override
+  String remoteButtonsNeedsFixBody(String path) {
+    return '버튼을 다시 지정하려면 홈 버튼 수정이 필요합니다($path).';
+  }
+
+  @override
+  String get remoteButtonsCantRemapTitle => '이 버튼은 다시 지정할 수 없습니다';
+
+  @override
+  String get remoteButtonsCantRemapBody => '방향키, 확인, 뒤로, 홈, 전원 버튼은 원래 기능을 유지합니다.';
+
+  @override
+  String remoteButtonsPressOption(String action) {
+    return '누르기: $action';
+  }
+
+  @override
+  String remoteButtonsHoldOption(String action) {
+    return '길게 누르기: $action';
+  }
+
+  @override
+  String get remoteButtonsSearchPreset => '누르면 Hearth 검색, 길게 누르면 Google';
+
+  @override
+  String get remoteButtonsHomeOnlyOn => 'Hearth 홈 화면에서만: 켜짐';
+
+  @override
+  String get remoteButtonsHomeOnlyOff => 'Hearth 홈 화면에서만: 꺼짐';
+
+  @override
+  String get remoteButtonsRestore => '기본 버튼으로 복원';
+
+  @override
+  String get remoteButtonsActionTitle => '동작';
+
+  @override
+  String get remoteButtonsActionApp => '앱 열기…';
+
+  @override
+  String get remoteButtonsActionInput => 'TV 입력으로 전환…';
+
+  @override
+  String get remoteButtonsActionSwitchProfile => '프로필 전환(Google TV)';
+
+  @override
+  String get remoteButtonsActionSearchVoice => 'Hearth 검색(음성)';
+
+  @override
+  String get remoteButtonsActionSearchKeyboard => 'Hearth 검색(키보드)';
+
+  @override
+  String get remoteButtonsActionHome => 'Hearth 홈';
+
+  @override
+  String get remoteButtonsActionSleep => '절전';
+
+  @override
+  String get remoteButtonsActionAndroidSettings => 'Android 설정';
+
+  @override
+  String get remoteButtonsPickAppTitle => '앱 열기';
+
+  @override
+  String get remoteButtonsPickInputTitle => 'TV 입력으로 전환';
+
+  @override
+  String get remoteButtonsHaConnectTitle => '먼저 Home Assistant를 연결하세요';
+
+  @override
+  String remoteButtonsHaConnectBody(String panel, String row) {
+    return 'Home Assistant 패널을 설정한 다음($panel > $row) 다시 시도하세요.';
+  }
+
+  @override
+  String remoteButtonsHaScene(String name) {
+    return '장면: $name';
+  }
+
+  @override
+  String remoteButtonsHaRun(String name) {
+    return '실행: $name';
+  }
+
+  @override
+  String remoteButtonsHaPress(String name) {
+    return '누르기: $name';
+  }
+
+  @override
+  String remoteButtonsHaToggle(String name) {
+    return '전환: $name';
+  }
+
+  @override
+  String remoteButtonsRowSummary(String button, String press, String hold) {
+    return '$button\n누르기: $press  ·  길게 누르기: $hold';
+  }
+
+  @override
+  String remoteButtonsRowSummaryHomeOnly(String button, String press, String hold) {
+    return '$button\n누르기: $press  ·  길게 누르기: $hold  ·  홈 화면에서만';
+  }
+
+  @override
+  String remoteButtonsFooter(String path) {
+    return '홈 버튼 수정이 필요합니다($path). 길게 누르기 동작만 있는 버튼은 그냥 눌러도 그 동작을 합니다. HearthTube가 앞에 있을 때 Hearth 검색은 HearthTube 자체 검색을 엽니다. 어린이 스크린 타임 화면이 표시되는 동안에는 다시 지정한 버튼이 일시 중지됩니다.';
+  }
+
+  @override
+  String get tvPowerScreensaver => '화면 보호기(Google Photos)';
+
+  @override
+  String get tvPowerScreensaverNote => 'Hearth는 Google TV의 화면 보호기를 사용합니다. 그곳에서 Google Photos(와 앨범) 또는 다른 소스를 선택하세요.';
+
+  @override
+  String get tvPowerSleepWhenIdle => '사용하지 않을 때 절전';
+
+  @override
+  String get tvPowerSleepOff => '꺼짐';
+
+  @override
+  String tvPowerMinutes(int minutes) {
+    return '$minutes분';
+  }
+
+  @override
+  String tvPowerHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours시간',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tvPowerSleepNote(String path) {
+    return '동영상이나 음악 재생도 사용 중으로 간주됩니다. 홈 버튼 수정이 필요합니다($path).';
+  }
 }

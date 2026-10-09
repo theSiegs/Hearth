@@ -1208,4 +1208,166 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get homeButtonFixOpenSettings => 'सुलभता सेटिंग्स खोलें';
+
+  @override
+  String get remoteButtonsRemapButton => 'बटन रीमैप करें';
+
+  @override
+  String remoteButtonsButtonNumber(String keyCode) {
+    return 'बटन $keyCode';
+  }
+
+  @override
+  String get remoteButtonsNormal => 'सामान्य';
+
+  @override
+  String get remoteButtonsCaptureTitle => 'रिमोट का कोई बटन दबाएं';
+
+  @override
+  String get remoteButtonsCaptureBody => 'जिस बटन को रीमैप करना है, उसे दबाएं। रद्द करने के लिए \"वापस\" दबाएं।';
+
+  @override
+  String get remoteButtonsNeedsFixTitle => 'पहले होम बटन फ़िक्स चालू करें';
+
+  @override
+  String remoteButtonsNeedsFixBody(String path) {
+    return 'रीमैप करने के लिए होम बटन फ़िक्स ज़रूरी है ($path)।';
+  }
+
+  @override
+  String get remoteButtonsCantRemapTitle => 'यह बटन रीमैप नहीं हो सकता';
+
+  @override
+  String get remoteButtonsCantRemapBody => 'तीर, OK, वापस, होम और पावर बटन अपना सामान्य काम करते रहते हैं।';
+
+  @override
+  String remoteButtonsPressOption(String action) {
+    return 'दबाएं: $action';
+  }
+
+  @override
+  String remoteButtonsHoldOption(String action) {
+    return 'दबाए रखें: $action';
+  }
+
+  @override
+  String get remoteButtonsSearchPreset => 'Hearth खोज के लिए दबाएं, Google के लिए दबाए रखें';
+
+  @override
+  String get remoteButtonsHomeOnlyOn => 'केवल Hearth की होम स्क्रीन पर: चालू';
+
+  @override
+  String get remoteButtonsHomeOnlyOff => 'केवल Hearth की होम स्क्रीन पर: बंद';
+
+  @override
+  String get remoteButtonsRestore => 'सामान्य बटन बहाल करें';
+
+  @override
+  String get remoteButtonsActionTitle => 'कार्रवाई';
+
+  @override
+  String get remoteButtonsActionApp => 'कोई ऐप खोलें…';
+
+  @override
+  String get remoteButtonsActionInput => 'किसी टीवी इनपुट पर जाएं…';
+
+  @override
+  String get remoteButtonsActionSwitchProfile => 'प्रोफ़ाइल बदलें (Google TV)';
+
+  @override
+  String get remoteButtonsActionSearchVoice => 'Hearth खोज (आवाज़)';
+
+  @override
+  String get remoteButtonsActionSearchKeyboard => 'Hearth खोज (कीबोर्ड)';
+
+  @override
+  String get remoteButtonsActionHome => 'Hearth होम';
+
+  @override
+  String get remoteButtonsActionSleep => 'स्लीप';
+
+  @override
+  String get remoteButtonsActionAndroidSettings => 'Android सेटिंग्स';
+
+  @override
+  String get remoteButtonsPickAppTitle => 'कोई ऐप खोलें';
+
+  @override
+  String get remoteButtonsPickInputTitle => 'किसी टीवी इनपुट पर जाएं';
+
+  @override
+  String get remoteButtonsHaConnectTitle => 'पहले Home Assistant कनेक्ट करें';
+
+  @override
+  String remoteButtonsHaConnectBody(String panel, String row) {
+    return 'Home Assistant पैनल सेट अप करें ($panel > $row), फिर दोबारा कोशिश करें।';
+  }
+
+  @override
+  String remoteButtonsHaScene(String name) {
+    return 'सीन: $name';
+  }
+
+  @override
+  String remoteButtonsHaRun(String name) {
+    return 'चलाएं: $name';
+  }
+
+  @override
+  String remoteButtonsHaPress(String name) {
+    return 'दबाएं: $name';
+  }
+
+  @override
+  String remoteButtonsHaToggle(String name) {
+    return 'टॉगल: $name';
+  }
+
+  @override
+  String remoteButtonsRowSummary(String button, String press, String hold) {
+    return '$button\nदबाएं: $press  ·  दबाए रखें: $hold';
+  }
+
+  @override
+  String remoteButtonsRowSummaryHomeOnly(String button, String press, String hold) {
+    return '$button\nदबाएं: $press  ·  दबाए रखें: $hold  ·  केवल होम स्क्रीन';
+  }
+
+  @override
+  String remoteButtonsFooter(String path) {
+    return 'होम बटन फ़िक्स ज़रूरी है ($path)। जिस बटन पर सिर्फ़ \"दबाए रखें\" की कार्रवाई है, वह सामान्य दबाने पर भी वही करता है। HearthTube सामने होने पर Hearth खोज, HearthTube की अपनी खोज खोलती है। बच्चों की स्क्रीन टाइम स्क्रीन दिखने के दौरान रीमैप रुके रहते हैं।';
+  }
+
+  @override
+  String get tvPowerScreensaver => 'स्क्रीनसेवर (Google Photos)';
+
+  @override
+  String get tvPowerScreensaverNote => 'Hearth, Google TV का स्क्रीनसेवर इस्तेमाल करता है। वहां Google Photos (और कौन-से एल्बम) या कोई दूसरा स्रोत चुनें।';
+
+  @override
+  String get tvPowerSleepWhenIdle => 'निष्क्रिय होने पर स्लीप';
+
+  @override
+  String get tvPowerSleepOff => 'बंद';
+
+  @override
+  String tvPowerMinutes(int minutes) {
+    return '$minutes मिनट';
+  }
+
+  @override
+  String tvPowerHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours घंटे',
+      one: '1 घंटा',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tvPowerSleepNote(String path) {
+    return 'वीडियो या संगीत चलाना गतिविधि माना जाता है। होम बटन फ़िक्स ज़रूरी है ($path)।';
+  }
 }

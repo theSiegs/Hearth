@@ -1205,4 +1205,165 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get homeButtonFixOpenSettings => 'ユーザー補助の設定を開く';
+
+  @override
+  String get remoteButtonsRemapButton => 'ボタンの割り当てを変更';
+
+  @override
+  String remoteButtonsButtonNumber(String keyCode) {
+    return 'ボタン $keyCode';
+  }
+
+  @override
+  String get remoteButtonsNormal => '通常';
+
+  @override
+  String get remoteButtonsCaptureTitle => 'リモコンのボタンを押してください';
+
+  @override
+  String get remoteButtonsCaptureBody => '割り当てを変更するボタンを押してください。キャンセルするには「戻る」を押します。';
+
+  @override
+  String get remoteButtonsNeedsFixTitle => '先にホームボタン修正をオンにしてください';
+
+  @override
+  String remoteButtonsNeedsFixBody(String path) {
+    return '割り当ての変更にはホームボタン修正が必要です（$path）。';
+  }
+
+  @override
+  String get remoteButtonsCantRemapTitle => 'このボタンは割り当てを変更できません';
+
+  @override
+  String get remoteButtonsCantRemapBody => '方向キー、決定、戻る、ホーム、電源は通常の動作のままです。';
+
+  @override
+  String remoteButtonsPressOption(String action) {
+    return '押す：$action';
+  }
+
+  @override
+  String remoteButtonsHoldOption(String action) {
+    return '長押し：$action';
+  }
+
+  @override
+  String get remoteButtonsSearchPreset => '押すと Hearth 検索、長押しで Google';
+
+  @override
+  String get remoteButtonsHomeOnlyOn => 'Hearth のホーム画面でのみ：オン';
+
+  @override
+  String get remoteButtonsHomeOnlyOff => 'Hearth のホーム画面でのみ：オフ';
+
+  @override
+  String get remoteButtonsRestore => '通常のボタンに戻す';
+
+  @override
+  String get remoteButtonsActionTitle => '動作';
+
+  @override
+  String get remoteButtonsActionApp => 'アプリを開く…';
+
+  @override
+  String get remoteButtonsActionInput => 'テレビの入力を切り替え…';
+
+  @override
+  String get remoteButtonsActionSwitchProfile => 'プロフィールを切り替え（Google TV）';
+
+  @override
+  String get remoteButtonsActionSearchVoice => 'Hearth 検索（音声）';
+
+  @override
+  String get remoteButtonsActionSearchKeyboard => 'Hearth 検索（キーボード）';
+
+  @override
+  String get remoteButtonsActionHome => 'Hearth のホーム';
+
+  @override
+  String get remoteButtonsActionSleep => 'スリープ';
+
+  @override
+  String get remoteButtonsActionAndroidSettings => 'Android の設定';
+
+  @override
+  String get remoteButtonsPickAppTitle => 'アプリを開く';
+
+  @override
+  String get remoteButtonsPickInputTitle => 'テレビの入力を切り替え';
+
+  @override
+  String get remoteButtonsHaConnectTitle => '先に Home Assistant に接続してください';
+
+  @override
+  String remoteButtonsHaConnectBody(String panel, String row) {
+    return 'Home Assistant のパネルを設定してから（$panel > $row）、もう一度お試しください。';
+  }
+
+  @override
+  String remoteButtonsHaScene(String name) {
+    return 'シーン：$name';
+  }
+
+  @override
+  String remoteButtonsHaRun(String name) {
+    return '実行：$name';
+  }
+
+  @override
+  String remoteButtonsHaPress(String name) {
+    return '押す：$name';
+  }
+
+  @override
+  String remoteButtonsHaToggle(String name) {
+    return '切り替え：$name';
+  }
+
+  @override
+  String remoteButtonsRowSummary(String button, String press, String hold) {
+    return '$button\n押す：$press  ·  長押し：$hold';
+  }
+
+  @override
+  String remoteButtonsRowSummaryHomeOnly(String button, String press, String hold) {
+    return '$button\n押す：$press  ·  長押し：$hold  ·  ホーム画面のみ';
+  }
+
+  @override
+  String remoteButtonsFooter(String path) {
+    return 'ホームボタン修正が必要です（$path）。長押しの動作だけを設定したボタンは、普通に押したときもその動作をします。HearthTube の表示中は、Hearth 検索で HearthTube 自体の検索が開きます。子どものスクリーンタイムの画面が表示されている間は、割り当ての変更は一時停止します。';
+  }
+
+  @override
+  String get tvPowerScreensaver => 'スクリーンセーバー（Google Photos）';
+
+  @override
+  String get tvPowerScreensaverNote => 'Hearth は Google TV のスクリーンセーバーを使います。そこで Google Photos（とアルバム）や他のソースを選んでください。';
+
+  @override
+  String get tvPowerSleepWhenIdle => '操作がないときにスリープ';
+
+  @override
+  String get tvPowerSleepOff => 'オフ';
+
+  @override
+  String tvPowerMinutes(int minutes) {
+    return '$minutes 分';
+  }
+
+  @override
+  String tvPowerHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours 時間',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tvPowerSleepNote(String path) {
+    return '動画や音楽の再生も操作とみなされます。ホームボタン修正が必要です（$path）。';
+  }
 }

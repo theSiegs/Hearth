@@ -1214,4 +1214,168 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get homeButtonFixOpenSettings => 'Открыть специальные возможности';
+
+  @override
+  String get remoteButtonsRemapButton => 'Переназначить кнопку';
+
+  @override
+  String remoteButtonsButtonNumber(String keyCode) {
+    return 'Кнопка $keyCode';
+  }
+
+  @override
+  String get remoteButtonsNormal => 'Как обычно';
+
+  @override
+  String get remoteButtonsCaptureTitle => 'Нажмите кнопку на пульте';
+
+  @override
+  String get remoteButtonsCaptureBody => 'Нажмите кнопку, которую хотите переназначить. Для отмены нажмите «Назад».';
+
+  @override
+  String get remoteButtonsNeedsFixTitle => 'Сначала включите «Исправление кнопки Домой»';
+
+  @override
+  String remoteButtonsNeedsFixBody(String path) {
+    return 'Для переназначения нужно «Исправление кнопки Домой» ($path).';
+  }
+
+  @override
+  String get remoteButtonsCantRemapTitle => 'Эту кнопку нельзя переназначить';
+
+  @override
+  String get remoteButtonsCantRemapBody => 'Стрелки, OK, «Назад», «Домой» и кнопка питания работают как обычно.';
+
+  @override
+  String remoteButtonsPressOption(String action) {
+    return 'Нажатие: $action';
+  }
+
+  @override
+  String remoteButtonsHoldOption(String action) {
+    return 'Удержание: $action';
+  }
+
+  @override
+  String get remoteButtonsSearchPreset => 'Нажатие — поиск Hearth, удержание — Google';
+
+  @override
+  String get remoteButtonsHomeOnlyOn => 'Только на главном экране Hearth: вкл.';
+
+  @override
+  String get remoteButtonsHomeOnlyOff => 'Только на главном экране Hearth: выкл.';
+
+  @override
+  String get remoteButtonsRestore => 'Вернуть обычную кнопку';
+
+  @override
+  String get remoteButtonsActionTitle => 'Действие';
+
+  @override
+  String get remoteButtonsActionApp => 'Открыть приложение…';
+
+  @override
+  String get remoteButtonsActionInput => 'Переключить вход телевизора…';
+
+  @override
+  String get remoteButtonsActionSwitchProfile => 'Сменить профиль (Google TV)';
+
+  @override
+  String get remoteButtonsActionSearchVoice => 'Поиск Hearth (голос)';
+
+  @override
+  String get remoteButtonsActionSearchKeyboard => 'Поиск Hearth (клавиатура)';
+
+  @override
+  String get remoteButtonsActionHome => 'Главный экран Hearth';
+
+  @override
+  String get remoteButtonsActionSleep => 'Спящий режим';
+
+  @override
+  String get remoteButtonsActionAndroidSettings => 'Настройки Android';
+
+  @override
+  String get remoteButtonsPickAppTitle => 'Открыть приложение';
+
+  @override
+  String get remoteButtonsPickInputTitle => 'Переключить вход телевизора';
+
+  @override
+  String get remoteButtonsHaConnectTitle => 'Сначала подключите Home Assistant';
+
+  @override
+  String remoteButtonsHaConnectBody(String panel, String row) {
+    return 'Настройте панель Home Assistant ($panel > $row) и попробуйте ещё раз.';
+  }
+
+  @override
+  String remoteButtonsHaScene(String name) {
+    return 'Сцена: $name';
+  }
+
+  @override
+  String remoteButtonsHaRun(String name) {
+    return 'Запуск: $name';
+  }
+
+  @override
+  String remoteButtonsHaPress(String name) {
+    return 'Нажать: $name';
+  }
+
+  @override
+  String remoteButtonsHaToggle(String name) {
+    return 'Переключить: $name';
+  }
+
+  @override
+  String remoteButtonsRowSummary(String button, String press, String hold) {
+    return '$button\nНажатие: $press  ·  Удержание: $hold';
+  }
+
+  @override
+  String remoteButtonsRowSummaryHomeOnly(String button, String press, String hold) {
+    return '$button\nНажатие: $press  ·  Удержание: $hold  ·  Только на главном экране';
+  }
+
+  @override
+  String remoteButtonsFooter(String path) {
+    return 'Требуется «Исправление кнопки Домой» ($path). Кнопка, у которой задано только действие при удержании, выполняет его и при обычном нажатии. Пока HearthTube на экране, поиск Hearth открывает собственный поиск HearthTube. Переназначения приостанавливаются, пока показан экран экранного времени для детей.';
+  }
+
+  @override
+  String get tvPowerScreensaver => 'Заставка (Google Photos)';
+
+  @override
+  String get tvPowerScreensaverNote => 'Hearth использует заставку Google TV. Выберите там Google Photos (и нужные альбомы) или другой источник.';
+
+  @override
+  String get tvPowerSleepWhenIdle => 'Спящий режим при бездействии';
+
+  @override
+  String get tvPowerSleepOff => 'Выкл.';
+
+  @override
+  String tvPowerMinutes(int minutes) {
+    return '$minutes мин';
+  }
+
+  @override
+  String tvPowerHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours часа',
+      many: '$hours часов',
+      few: '$hours часа',
+      one: '$hours час',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tvPowerSleepNote(String path) {
+    return 'Воспроизведение видео или музыки считается активностью. Требуется «Исправление кнопки Домой» ($path).';
+  }
 }

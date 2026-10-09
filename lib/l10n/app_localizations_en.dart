@@ -1208,4 +1208,166 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeButtonFixOpenSettings => 'Open Accessibility settings';
+
+  @override
+  String get remoteButtonsRemapButton => 'Remap a button';
+
+  @override
+  String remoteButtonsButtonNumber(String keyCode) {
+    return 'Button $keyCode';
+  }
+
+  @override
+  String get remoteButtonsNormal => 'Normal';
+
+  @override
+  String get remoteButtonsCaptureTitle => 'Press a remote button';
+
+  @override
+  String get remoteButtonsCaptureBody => 'Press the button you want to remap. Press Back to cancel.';
+
+  @override
+  String get remoteButtonsNeedsFixTitle => 'Turn on Home Button Fix first';
+
+  @override
+  String remoteButtonsNeedsFixBody(String path) {
+    return 'Remapping needs Home Button Fix ($path).';
+  }
+
+  @override
+  String get remoteButtonsCantRemapTitle => 'Can\'t remap that button';
+
+  @override
+  String get remoteButtonsCantRemapBody => 'The arrows, OK, Back, Home and power keep their normal job.';
+
+  @override
+  String remoteButtonsPressOption(String action) {
+    return 'Press: $action';
+  }
+
+  @override
+  String remoteButtonsHoldOption(String action) {
+    return 'Hold: $action';
+  }
+
+  @override
+  String get remoteButtonsSearchPreset => 'Tap for Hearth search, hold for Google';
+
+  @override
+  String get remoteButtonsHomeOnlyOn => 'Only on Hearth\'s home screen: On';
+
+  @override
+  String get remoteButtonsHomeOnlyOff => 'Only on Hearth\'s home screen: Off';
+
+  @override
+  String get remoteButtonsRestore => 'Restore normal button';
+
+  @override
+  String get remoteButtonsActionTitle => 'Action';
+
+  @override
+  String get remoteButtonsActionApp => 'Open an app…';
+
+  @override
+  String get remoteButtonsActionInput => 'Switch to a TV input…';
+
+  @override
+  String get remoteButtonsActionSwitchProfile => 'Switch profile (Google TV)';
+
+  @override
+  String get remoteButtonsActionSearchVoice => 'Hearth search (voice)';
+
+  @override
+  String get remoteButtonsActionSearchKeyboard => 'Hearth search (keyboard)';
+
+  @override
+  String get remoteButtonsActionHome => 'Hearth home';
+
+  @override
+  String get remoteButtonsActionSleep => 'Sleep';
+
+  @override
+  String get remoteButtonsActionAndroidSettings => 'Android settings';
+
+  @override
+  String get remoteButtonsPickAppTitle => 'Open an app';
+
+  @override
+  String get remoteButtonsPickInputTitle => 'Switch to a TV input';
+
+  @override
+  String get remoteButtonsHaConnectTitle => 'Connect Home Assistant first';
+
+  @override
+  String remoteButtonsHaConnectBody(String panel, String row) {
+    return 'Set up the Home Assistant panel ($panel > $row), then try again.';
+  }
+
+  @override
+  String remoteButtonsHaScene(String name) {
+    return 'Scene: $name';
+  }
+
+  @override
+  String remoteButtonsHaRun(String name) {
+    return 'Run: $name';
+  }
+
+  @override
+  String remoteButtonsHaPress(String name) {
+    return 'Press: $name';
+  }
+
+  @override
+  String remoteButtonsHaToggle(String name) {
+    return 'Toggle: $name';
+  }
+
+  @override
+  String remoteButtonsRowSummary(String button, String press, String hold) {
+    return '$button\nPress: $press  ·  Hold: $hold';
+  }
+
+  @override
+  String remoteButtonsRowSummaryHomeOnly(String button, String press, String hold) {
+    return '$button\nPress: $press  ·  Hold: $hold  ·  Home screen only';
+  }
+
+  @override
+  String remoteButtonsFooter(String path) {
+    return 'Needs Home Button Fix ($path). A button with only a Hold action does that action on a press too. Hearth search opens HearthTube\'s own search while HearthTube is in front. Remaps pause while a kids screen time screen is showing.';
+  }
+
+  @override
+  String get tvPowerScreensaver => 'Screensaver (Google Photos)';
+
+  @override
+  String get tvPowerScreensaverNote => 'Hearth uses Google TV\'s screensaver. Choose Google Photos (and which albums) or another source there.';
+
+  @override
+  String get tvPowerSleepWhenIdle => 'Sleep when idle';
+
+  @override
+  String get tvPowerSleepOff => 'Off';
+
+  @override
+  String tvPowerMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String tvPowerHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours hours',
+      one: '1 hour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tvPowerSleepNote(String path) {
+    return 'Playing video or music counts as activity. Needs Home Button Fix ($path).';
+  }
 }

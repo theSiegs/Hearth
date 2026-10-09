@@ -1205,4 +1205,165 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get homeButtonFixOpenSettings => 'Erişilebilirlik ayarlarını aç';
+
+  @override
+  String get remoteButtonsRemapButton => 'Bir tuşu yeniden ata';
+
+  @override
+  String remoteButtonsButtonNumber(String keyCode) {
+    return 'Tuş $keyCode';
+  }
+
+  @override
+  String get remoteButtonsNormal => 'Normal';
+
+  @override
+  String get remoteButtonsCaptureTitle => 'Kumandada bir tuşa basın';
+
+  @override
+  String get remoteButtonsCaptureBody => 'Yeniden atamak istediğiniz tuşa basın. İptal etmek için Geri\'ye basın.';
+
+  @override
+  String get remoteButtonsNeedsFixTitle => 'Önce Ana Ekran Tuşu Düzeltmesi\'ni açın';
+
+  @override
+  String remoteButtonsNeedsFixBody(String path) {
+    return 'Yeniden atama için Ana Ekran Tuşu Düzeltmesi gerekir ($path).';
+  }
+
+  @override
+  String get remoteButtonsCantRemapTitle => 'Bu tuş yeniden atanamaz';
+
+  @override
+  String get remoteButtonsCantRemapBody => 'Yön tuşları, Tamam, Geri, Ana ekran ve güç tuşu normal işlevlerini korur.';
+
+  @override
+  String remoteButtonsPressOption(String action) {
+    return 'Basma: $action';
+  }
+
+  @override
+  String remoteButtonsHoldOption(String action) {
+    return 'Basılı tutma: $action';
+  }
+
+  @override
+  String get remoteButtonsSearchPreset => 'Hearth araması için bas, Google için basılı tut';
+
+  @override
+  String get remoteButtonsHomeOnlyOn => 'Yalnızca Hearth ana ekranında: Açık';
+
+  @override
+  String get remoteButtonsHomeOnlyOff => 'Yalnızca Hearth ana ekranında: Kapalı';
+
+  @override
+  String get remoteButtonsRestore => 'Normal tuşu geri yükle';
+
+  @override
+  String get remoteButtonsActionTitle => 'Eylem';
+
+  @override
+  String get remoteButtonsActionApp => 'Bir uygulama aç…';
+
+  @override
+  String get remoteButtonsActionInput => 'Bir TV girişine geç…';
+
+  @override
+  String get remoteButtonsActionSwitchProfile => 'Profil değiştir (Google TV)';
+
+  @override
+  String get remoteButtonsActionSearchVoice => 'Hearth araması (ses)';
+
+  @override
+  String get remoteButtonsActionSearchKeyboard => 'Hearth araması (klavye)';
+
+  @override
+  String get remoteButtonsActionHome => 'Hearth ana ekranı';
+
+  @override
+  String get remoteButtonsActionSleep => 'Uyku';
+
+  @override
+  String get remoteButtonsActionAndroidSettings => 'Android ayarları';
+
+  @override
+  String get remoteButtonsPickAppTitle => 'Bir uygulama aç';
+
+  @override
+  String get remoteButtonsPickInputTitle => 'Bir TV girişine geç';
+
+  @override
+  String get remoteButtonsHaConnectTitle => 'Önce Home Assistant\'ı bağlayın';
+
+  @override
+  String remoteButtonsHaConnectBody(String panel, String row) {
+    return 'Home Assistant panelini kurun ($panel > $row), sonra yeniden deneyin.';
+  }
+
+  @override
+  String remoteButtonsHaScene(String name) {
+    return 'Sahne: $name';
+  }
+
+  @override
+  String remoteButtonsHaRun(String name) {
+    return 'Çalıştır: $name';
+  }
+
+  @override
+  String remoteButtonsHaPress(String name) {
+    return 'Bas: $name';
+  }
+
+  @override
+  String remoteButtonsHaToggle(String name) {
+    return 'Aç/Kapat: $name';
+  }
+
+  @override
+  String remoteButtonsRowSummary(String button, String press, String hold) {
+    return '$button\nBasma: $press  ·  Basılı tutma: $hold';
+  }
+
+  @override
+  String remoteButtonsRowSummaryHomeOnly(String button, String press, String hold) {
+    return '$button\nBasma: $press  ·  Basılı tutma: $hold  ·  Yalnızca ana ekran';
+  }
+
+  @override
+  String remoteButtonsFooter(String path) {
+    return 'Ana Ekran Tuşu Düzeltmesi gerekir ($path). Yalnızca basılı tutma eylemi olan bir tuş, normal basışta da o eylemi yapar. HearthTube öndeyken Hearth araması HearthTube\'un kendi aramasını açar. Çocuk ekran süresi ekranı gösterilirken yeniden atamalar duraklar.';
+  }
+
+  @override
+  String get tvPowerScreensaver => 'Ekran koruyucu (Google Photos)';
+
+  @override
+  String get tvPowerScreensaverNote => 'Hearth, Google TV\'nin ekran koruyucusunu kullanır. Orada Google Photos\'u (ve hangi albümleri) ya da başka bir kaynağı seçin.';
+
+  @override
+  String get tvPowerSleepWhenIdle => 'Boşta kalınca uyku';
+
+  @override
+  String get tvPowerSleepOff => 'Kapalı';
+
+  @override
+  String tvPowerMinutes(int minutes) {
+    return '$minutes dk';
+  }
+
+  @override
+  String tvPowerHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours saat',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tvPowerSleepNote(String path) {
+    return 'Video veya müzik oynatmak etkinlik sayılır. Ana Ekran Tuşu Düzeltmesi gerekir ($path).';
+  }
 }

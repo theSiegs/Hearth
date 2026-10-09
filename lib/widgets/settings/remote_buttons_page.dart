@@ -46,6 +46,8 @@ class RemoteButtonsPage extends StatefulWidget {
 class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
   static const _press = "short";
   static const _hold = "long";
+  // The labels saved with Hearth's own actions are a fallback: the page names those actions from their type, in the
+  // current language (see _actionLabel).
   static const Map<String, dynamic> _searchVoice = {"type": "search", "target": "voice", "label": "Hearth search (voice)"};
   static const Map<String, dynamic> _assistant = {"type": "assistant", "label": "Google Assistant (Gemini)"};
 
@@ -71,13 +73,26 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
     if (mounted) setState(() {});
   }
 
-  static String buttonName(String? raw, String keyCode) {
-    if (raw == null || raw.isEmpty) return "Button $keyCode";
+  static String buttonName(String? raw, String keyCode, AppLocalizations l) {
+    if (raw == null || raw.isEmpty) return l.remoteButtonsButtonNumber(keyCode);
     final words = raw.replaceFirst("KEYCODE_", "").replaceFirst("PROG_", "").replaceFirst("MEDIA_", "").split("_");
     return words.map((w) => w.isEmpty ? w : w[0] + w.substring(1).toLowerCase()).join(" ");
   }
 
-  String _actionLabel(Map<String, dynamic>? action) => action == null ? "Normal" : (action["label"] as String? ?? "?");
+  /// What a press or a hold does, in words. Hearth's own actions are named in the current language; an app, a TV
+  /// input, a Home Assistant entity or the assistant shows the label saved with it.
+  String _actionLabel(AppLocalizations l, Map<String, dynamic>? action) {
+    if (action == null) return l.remoteButtonsNormal;
+    return switch (action["type"]) {
+      "profiles" => l.profilesSwitchProfile,
+      "search" when action["target"] == "voice" => l.remoteButtonsActionSearchVoice,
+      "search" when action["target"] == "text" => l.remoteButtonsActionSearchKeyboard,
+      "home" => l.remoteButtonsActionHome,
+      "sleep" => l.remoteButtonsActionSleep,
+      "settings" => l.remoteButtonsActionAndroidSettings,
+      _ => action["label"] as String? ?? "?",
+    };
+  }
 
   Future<void> _addButton() async {
     Map<dynamic, dynamic>? captured;
@@ -94,9 +109,9 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        title: Text("Press a remote button"),
-        content: Text("Press the button you want to remap. Press Back to cancel."),
+      builder: (context) => AlertDialog(
+        title: Text(AppLocalizations.of(context)!.remoteButtonsCaptureTitle),
+        content: Text(AppLocalizations.of(context)!.remoteButtonsCaptureBody),
       ),
     );
     if (captured == null) {
@@ -107,18 +122,17 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
     await capture;
     if (!mounted) return;
 
+    final l = AppLocalizations.of(context)!;
     final result = captured!;
     if (result.containsKey("error")) {
       showMessageDialog(context,
-          title: "Turn on Home Button Fix first",
-          message: "Remapping needs Home Button Fix (${SetupChecklistPage.breadcrumb(AppLocalizations.of(context)!)}).");
+          title: l.remoteButtonsNeedsFixTitle, message: l.remoteButtonsNeedsFixBody(SetupChecklistPage.breadcrumb(l)));
       return;
     }
     final String keyCode = "${result["keyCode"]}";
     if (result["name"] == "KEYCODE_BACK") return;
     if (result["remappable"] != true) {
-      showMessageDialog(context,
-          title: "Can't remap that button", message: "The arrows, OK, Back, Home and power keep their normal job.");
+      showMessageDialog(context, title: l.remoteButtonsCantRemapTitle, message: l.remoteButtonsCantRemapBody);
       return;
     }
     _names[keyCode] = result["name"] as String;
@@ -126,19 +140,21 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
   }
 
   Future<void> _editButton(String keyCode) async {
+    final l = AppLocalizations.of(context)!;
     final Map<String, dynamic> entry = Map<String, dynamic>.from(_mappings[keyCode] as Map? ?? {});
-    final String name = buttonName(_names[keyCode] ?? entry["name"] as String?, keyCode);
+    final String name = buttonName(_names[keyCode] ?? entry["name"] as String?, keyCode, l);
 
     final String? choice = await showDialog<String>(
       context: context,
       builder: (context) => SimpleDialog(
         title: Text(name),
         children: [
-          _option(context, "Press: ${_actionLabel(entry[_press] as Map<String, dynamic>?)}", _press),
-          _option(context, "Hold: ${_actionLabel(entry[_hold] as Map<String, dynamic>?)}", _hold),
-          _option(context, "Tap for Hearth search, hold for Google", "searchPreset"),
-          _option(context, "Only on Hearth's home screen: ${entry["homeOnly"] == true ? "On" : "Off"}", "homeOnly"),
-          if (_mappings.containsKey(keyCode)) _option(context, "Restore normal button", "remove"),
+          _option(context, l.remoteButtonsPressOption(_actionLabel(l, entry[_press] as Map<String, dynamic>?)), _press),
+          _option(context, l.remoteButtonsHoldOption(_actionLabel(l, entry[_hold] as Map<String, dynamic>?)), _hold),
+          _option(context, l.remoteButtonsSearchPreset, "searchPreset"),
+          _option(context, entry["homeOnly"] == true ? l.remoteButtonsHomeOnlyOn : l.remoteButtonsHomeOnlyOff,
+              "homeOnly"),
+          if (_mappings.containsKey(keyCode)) _option(context, l.remoteButtonsRestore, "remove"),
         ],
       ),
     );
@@ -177,22 +193,23 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
   }
 
   Future<Map<String, dynamic>?> _pickAction() async {
+    final l = AppLocalizations.of(context)!;
     final inputs = context.read<TvInputsService>().inputs;
     final String? type = await showDialog<String>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text("Action"),
+        title: Text(l.remoteButtonsActionTitle),
         children: [
-          _option(context, "Open an app…", "app"),
-          if (inputs.isNotEmpty) _option(context, "Switch to a TV input…", "input"),
+          _option(context, l.remoteButtonsActionApp, "app"),
+          if (inputs.isNotEmpty) _option(context, l.remoteButtonsActionInput, "input"),
           _option(context, "Home Assistant…", "ha"),
-          _option(context, "Switch profile (Google TV)", "profiles"),
-          _option(context, "Hearth search (voice)", "search_voice"),
-          _option(context, "Hearth search (keyboard)", "search_text"),
+          _option(context, l.remoteButtonsActionSwitchProfile, "profiles"),
+          _option(context, l.remoteButtonsActionSearchVoice, "search_voice"),
+          _option(context, l.remoteButtonsActionSearchKeyboard, "search_text"),
           _option(context, "Google Assistant (Gemini)", "assistant"),
-          _option(context, "Hearth home", "home"),
-          _option(context, "Sleep", "sleep"),
-          _option(context, "Android settings", "settings"),
+          _option(context, l.remoteButtonsActionHome, "home"),
+          _option(context, l.remoteButtonsActionSleep, "sleep"),
+          _option(context, l.remoteButtonsActionAndroidSettings, "settings"),
         ],
       ),
     );
@@ -205,7 +222,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
         final App? app = await showDialog<App>(
           context: context,
           builder: (context) => SimpleDialog(
-            title: const Text("Open an app"),
+            title: Text(l.remoteButtonsPickAppTitle),
             children: [for (final app in apps) _option(context, app.name, app)],
           ),
         );
@@ -214,7 +231,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
         final input = await showDialog(
           context: context,
           builder: (context) => SimpleDialog(
-            title: const Text("Switch to a TV input"),
+            title: Text(l.remoteButtonsPickInputTitle),
             children: [for (final input in inputs) _option(context, input.label, input)],
           ),
         );
@@ -246,14 +263,23 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
       entities = json.decode(await _channel.getHaEntities()) as List<dynamic>;
     } catch (_) {}
     if (!mounted) return null;
+    final l = AppLocalizations.of(context)!;
     if (entities.isEmpty) {
       showMessageDialog(context,
-          title: "Connect Home Assistant first",
-          message: "Set up the Home Assistant panel (${HaPanelPage.breadcrumb(AppLocalizations.of(context)!)} > Set up from your phone), then try again.");
+          title: l.remoteButtonsHaConnectTitle,
+          message: l.remoteButtonsHaConnectBody(HaPanelPage.breadcrumb(l), l.haSetUpFromPhone));
       return null;
     }
-    const verbs = {"scene": "Scene", "script": "Run", "button": "Press", "input_button": "Press"};
-    String describe(Map e) => "${verbs[e["domain"]] ?? "Toggle"}: ${e["name"]}";
+    // Saved as the action's label, so it stays in the language it was picked in.
+    String describe(Map e) {
+      final name = "${e["name"]}";
+      return switch (e["domain"]) {
+        "scene" => l.remoteButtonsHaScene(name),
+        "script" => l.remoteButtonsHaRun(name),
+        "button" || "input_button" => l.remoteButtonsHaPress(name),
+        _ => l.remoteButtonsHaToggle(name),
+      };
+    }
     final Map? picked = await showDialog<Map>(
       context: context,
       builder: (context) => SimpleDialog(
@@ -269,37 +295,41 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
         onPressed: () => Navigator.of(context).pop(value),
       );
 
+  /// A remapped button's row: its name, then what a press and a hold do (and whether only on the home screen).
+  String _rowSummary(AppLocalizations l, String keyCode) {
+    final entry = _mappings[keyCode] as Map;
+    final button = buttonName(entry["name"] as String?, keyCode, l);
+    final press = _actionLabel(l, entry[_press] as Map<String, dynamic>?);
+    final hold = _actionLabel(l, entry[_hold] as Map<String, dynamic>?);
+    return entry["homeOnly"] == true
+        ? l.remoteButtonsRowSummaryHomeOnly(button, press, hold)
+        : l.remoteButtonsRowSummary(button, press, hold);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final keys = _mappings.keys.toList()..sort();
     return SettingsPage(
-      title: AppLocalizations.of(context)!.remoteButtonsTitle,
+      title: l.remoteButtonsTitle,
       children: [
         FocusableSettingsTile(
           autofocus: true,
           leading: const Icon(Icons.add),
-          title: Text("Remap a button", style: Theme.of(context).textTheme.bodyMedium),
+          title: Text(l.remoteButtonsRemapButton, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: _addButton,
         ),
         for (final keyCode in keys)
           FocusableSettingsTile(
             leading: const Icon(Icons.settings_remote_outlined),
-            title: Text(
-              "${buttonName((_mappings[keyCode] as Map)["name"] as String?, keyCode)}\n"
-              "Press: ${_actionLabel((_mappings[keyCode] as Map)[_press] as Map<String, dynamic>?)}  ·  "
-              "Hold: ${_actionLabel((_mappings[keyCode] as Map)[_hold] as Map<String, dynamic>?)}"
-              "${(_mappings[keyCode] as Map)["homeOnly"] == true ? "  ·  Home screen only" : ""}",
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            title: Text(_rowSummary(l, keyCode), style: Theme.of(context).textTheme.bodyMedium),
             onPressed: () => _editButton(keyCode),
           ),
         const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
-            "Needs Home Button Fix (${SetupChecklistPage.breadcrumb(AppLocalizations.of(context)!)}). A button with only a Hold action does that "
-            "action on a press too. Hearth search opens HearthTube's own search while HearthTube is in front. "
-            "Remaps pause while a kids screen time screen is showing.",
+            l.remoteButtonsFooter(SetupChecklistPage.breadcrumb(l)),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
             textAlign: TextAlign.center,
           ),

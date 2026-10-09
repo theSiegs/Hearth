@@ -1219,4 +1219,169 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get homeButtonFixOpenSettings => 'فتح إعدادات إمكانية الوصول';
+
+  @override
+  String get remoteButtonsRemapButton => 'إعادة تعيين زر';
+
+  @override
+  String remoteButtonsButtonNumber(String keyCode) {
+    return 'الزر $keyCode';
+  }
+
+  @override
+  String get remoteButtonsNormal => 'عادي';
+
+  @override
+  String get remoteButtonsCaptureTitle => 'اضغط زرًا في جهاز التحكم';
+
+  @override
+  String get remoteButtonsCaptureBody => 'اضغط الزر الذي تريد إعادة تعيينه. اضغط \"رجوع\" للإلغاء.';
+
+  @override
+  String get remoteButtonsNeedsFixTitle => 'فعّل إصلاح زر الرئيسية أولًا';
+
+  @override
+  String remoteButtonsNeedsFixBody(String path) {
+    return 'تتطلب إعادة التعيين إصلاح زر الرئيسية ($path).';
+  }
+
+  @override
+  String get remoteButtonsCantRemapTitle => 'لا يمكن إعادة تعيين هذا الزر';
+
+  @override
+  String get remoteButtonsCantRemapBody => 'تحتفظ الأسهم و\"حسنًا\" و\"رجوع\" و\"الرئيسية\" وزر التشغيل بوظائفها المعتادة.';
+
+  @override
+  String remoteButtonsPressOption(String action) {
+    return 'ضغط: $action';
+  }
+
+  @override
+  String remoteButtonsHoldOption(String action) {
+    return 'ضغط مطوّل: $action';
+  }
+
+  @override
+  String get remoteButtonsSearchPreset => 'ضغطة لبحث Hearth، وضغط مطوّل لـ Google';
+
+  @override
+  String get remoteButtonsHomeOnlyOn => 'على شاشة Hearth الرئيسية فقط: مفعّل';
+
+  @override
+  String get remoteButtonsHomeOnlyOff => 'على شاشة Hearth الرئيسية فقط: متوقف';
+
+  @override
+  String get remoteButtonsRestore => 'استعادة الزر العادي';
+
+  @override
+  String get remoteButtonsActionTitle => 'الإجراء';
+
+  @override
+  String get remoteButtonsActionApp => 'فتح تطبيق…';
+
+  @override
+  String get remoteButtonsActionInput => 'التبديل إلى مدخل تلفزيون…';
+
+  @override
+  String get remoteButtonsActionSwitchProfile => 'تبديل الملف الشخصي (Google TV)';
+
+  @override
+  String get remoteButtonsActionSearchVoice => 'بحث Hearth (صوتي)';
+
+  @override
+  String get remoteButtonsActionSearchKeyboard => 'بحث Hearth (لوحة المفاتيح)';
+
+  @override
+  String get remoteButtonsActionHome => 'شاشة Hearth الرئيسية';
+
+  @override
+  String get remoteButtonsActionSleep => 'سكون';
+
+  @override
+  String get remoteButtonsActionAndroidSettings => 'إعدادات Android';
+
+  @override
+  String get remoteButtonsPickAppTitle => 'فتح تطبيق';
+
+  @override
+  String get remoteButtonsPickInputTitle => 'التبديل إلى مدخل تلفزيون';
+
+  @override
+  String get remoteButtonsHaConnectTitle => 'اربط Home Assistant أولًا';
+
+  @override
+  String remoteButtonsHaConnectBody(String panel, String row) {
+    return 'اضبط لوحة Home Assistant ($panel > $row)، ثم حاول مرة أخرى.';
+  }
+
+  @override
+  String remoteButtonsHaScene(String name) {
+    return 'مشهد: $name';
+  }
+
+  @override
+  String remoteButtonsHaRun(String name) {
+    return 'تشغيل: $name';
+  }
+
+  @override
+  String remoteButtonsHaPress(String name) {
+    return 'ضغط: $name';
+  }
+
+  @override
+  String remoteButtonsHaToggle(String name) {
+    return 'تبديل: $name';
+  }
+
+  @override
+  String remoteButtonsRowSummary(String button, String press, String hold) {
+    return '$button\nضغط: $press  ·  ضغط مطوّل: $hold';
+  }
+
+  @override
+  String remoteButtonsRowSummaryHomeOnly(String button, String press, String hold) {
+    return '$button\nضغط: $press  ·  ضغط مطوّل: $hold  ·  الشاشة الرئيسية فقط';
+  }
+
+  @override
+  String remoteButtonsFooter(String path) {
+    return 'يتطلب إصلاح زر الرئيسية ($path). الزر الذي له إجراء ضغط مطوّل فقط ينفّذ هذا الإجراء عند الضغط العادي أيضًا. يفتح بحث Hearth بحث HearthTube نفسه عندما يكون HearthTube في المقدمة. تتوقف إعادة التعيين مؤقتًا أثناء ظهور شاشة وقت الشاشة للأطفال.';
+  }
+
+  @override
+  String get tvPowerScreensaver => 'شاشة التوقف (Google Photos)';
+
+  @override
+  String get tvPowerScreensaverNote => 'يستخدم Hearth شاشة توقف Google TV. اختر هناك Google Photos (والألبومات التي تريدها) أو مصدرًا آخر.';
+
+  @override
+  String get tvPowerSleepWhenIdle => 'السكون عند عدم النشاط';
+
+  @override
+  String get tvPowerSleepOff => 'متوقف';
+
+  @override
+  String tvPowerMinutes(int minutes) {
+    return '$minutes دقيقة';
+  }
+
+  @override
+  String tvPowerHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours ساعة',
+      many: '$hours ساعة',
+      few: '$hours ساعات',
+      two: 'ساعتان',
+      one: 'ساعة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tvPowerSleepNote(String path) {
+    return 'يُحتسب تشغيل الفيديو أو الموسيقى نشاطًا. يتطلب إصلاح زر الرئيسية ($path).';
+  }
 }

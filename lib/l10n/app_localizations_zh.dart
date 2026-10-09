@@ -1205,4 +1205,165 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeButtonFixOpenSettings => '打开无障碍设置';
+
+  @override
+  String get remoteButtonsRemapButton => '重新映射按钮';
+
+  @override
+  String remoteButtonsButtonNumber(String keyCode) {
+    return '按钮 $keyCode';
+  }
+
+  @override
+  String get remoteButtonsNormal => '默认';
+
+  @override
+  String get remoteButtonsCaptureTitle => '请按遥控器上的按钮';
+
+  @override
+  String get remoteButtonsCaptureBody => '按下要重新映射的按钮。按返回键取消。';
+
+  @override
+  String get remoteButtonsNeedsFixTitle => '请先打开主页按钮修复';
+
+  @override
+  String remoteButtonsNeedsFixBody(String path) {
+    return '重新映射需要主页按钮修复（$path）。';
+  }
+
+  @override
+  String get remoteButtonsCantRemapTitle => '无法重新映射该按钮';
+
+  @override
+  String get remoteButtonsCantRemapBody => '方向键、确定、返回、主页和电源键保持原有功能。';
+
+  @override
+  String remoteButtonsPressOption(String action) {
+    return '按下：$action';
+  }
+
+  @override
+  String remoteButtonsHoldOption(String action) {
+    return '长按：$action';
+  }
+
+  @override
+  String get remoteButtonsSearchPreset => '按下使用 Hearth 搜索，长按使用 Google';
+
+  @override
+  String get remoteButtonsHomeOnlyOn => '仅在 Hearth 主屏幕：开';
+
+  @override
+  String get remoteButtonsHomeOnlyOff => '仅在 Hearth 主屏幕：关';
+
+  @override
+  String get remoteButtonsRestore => '恢复按钮原有功能';
+
+  @override
+  String get remoteButtonsActionTitle => '操作';
+
+  @override
+  String get remoteButtonsActionApp => '打开应用…';
+
+  @override
+  String get remoteButtonsActionInput => '切换到电视输入源…';
+
+  @override
+  String get remoteButtonsActionSwitchProfile => '切换个人资料（Google TV）';
+
+  @override
+  String get remoteButtonsActionSearchVoice => 'Hearth 搜索（语音）';
+
+  @override
+  String get remoteButtonsActionSearchKeyboard => 'Hearth 搜索（键盘）';
+
+  @override
+  String get remoteButtonsActionHome => 'Hearth 主屏幕';
+
+  @override
+  String get remoteButtonsActionSleep => '休眠';
+
+  @override
+  String get remoteButtonsActionAndroidSettings => 'Android 设置';
+
+  @override
+  String get remoteButtonsPickAppTitle => '打开应用';
+
+  @override
+  String get remoteButtonsPickInputTitle => '切换到电视输入源';
+
+  @override
+  String get remoteButtonsHaConnectTitle => '请先连接 Home Assistant';
+
+  @override
+  String remoteButtonsHaConnectBody(String panel, String row) {
+    return '请先设置 Home Assistant 面板（$panel > $row），然后重试。';
+  }
+
+  @override
+  String remoteButtonsHaScene(String name) {
+    return '场景：$name';
+  }
+
+  @override
+  String remoteButtonsHaRun(String name) {
+    return '运行：$name';
+  }
+
+  @override
+  String remoteButtonsHaPress(String name) {
+    return '按下：$name';
+  }
+
+  @override
+  String remoteButtonsHaToggle(String name) {
+    return '切换：$name';
+  }
+
+  @override
+  String remoteButtonsRowSummary(String button, String press, String hold) {
+    return '$button\n按下：$press  ·  长按：$hold';
+  }
+
+  @override
+  String remoteButtonsRowSummaryHomeOnly(String button, String press, String hold) {
+    return '$button\n按下：$press  ·  长按：$hold  ·  仅主屏幕';
+  }
+
+  @override
+  String remoteButtonsFooter(String path) {
+    return '需要主页按钮修复（$path）。只设置了长按操作的按钮，按下时也会执行该操作。HearthTube 在前台时，Hearth 搜索会打开 HearthTube 自己的搜索。显示儿童屏幕使用时间界面时，重新映射会暂停。';
+  }
+
+  @override
+  String get tvPowerScreensaver => '屏幕保护程序（Google Photos）';
+
+  @override
+  String get tvPowerScreensaverNote => 'Hearth 使用 Google TV 的屏幕保护程序。请在那里选择 Google Photos（以及哪些相册）或其他来源。';
+
+  @override
+  String get tvPowerSleepWhenIdle => '闲置时休眠';
+
+  @override
+  String get tvPowerSleepOff => '关';
+
+  @override
+  String tvPowerMinutes(int minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String tvPowerHours(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours 小时',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tvPowerSleepNote(String path) {
+    return '播放视频或音乐也算作活动。需要主页按钮修复（$path）。';
+  }
 }
