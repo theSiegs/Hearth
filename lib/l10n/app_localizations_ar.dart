@@ -879,4 +879,253 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get haPhoneSetupScan => 'امسح الرمز بهاتف متصل بشبكة Wi-Fi نفسها، والصق عنوان Home Assistant ورمز الوصول، ثم اضغط Send. تعمل الصفحة فقط ما دامت هذه النافذة مفتوحة.';
+
+  @override
+  String get profilesSwitchProfile => 'تبديل الملف الشخصي';
+
+  @override
+  String get parentPinTitle => 'رمز PIN للوالدين';
+
+  @override
+  String get parentPinOn => 'مفعّل';
+
+  @override
+  String get parentPinOff => 'متوقف';
+
+  @override
+  String get parentPinCurrent => 'رمز PIN الحالي للوالدين';
+
+  @override
+  String get parentPinRemove => 'إزالة رمز PIN';
+
+  @override
+  String get parentPinChange => 'تغيير رمز PIN';
+
+  @override
+  String get parentPinNew => 'رمز PIN جديد للوالدين';
+
+  @override
+  String get parentPinNewSubtitle => 'مطلوب لتغيير المشغّل في الملفات الشخصية للأطفال على Google TV';
+
+  @override
+  String get parentPinConfirm => 'أدخل رمز PIN مرة أخرى';
+
+  @override
+  String get parentPinAskTitle => 'اطلب من أحد الوالدين';
+
+  @override
+  String parentPinAskBody(String settings, String profiles, String parentPin) {
+    return 'إعدادات المشغّل مقفلة في الملفات الشخصية للأطفال. يمكن لأحد الوالدين تعيين رمز PIN من $settings ← $profiles ← $parentPin من ملفه الشخصي.';
+  }
+
+  @override
+  String get parentPinKidsSubtitle => 'ملف شخصي للأطفال: أدخل رمز PIN للوالدين لتغيير المشغّل';
+
+  @override
+  String get parentPinWrong => 'رمز PIN خاطئ';
+
+  @override
+  String get parentPinEnter => 'أدخل رمز PIN';
+
+  @override
+  String profileSwitchGreeting(String name) {
+    return 'مرحبًا، $name';
+  }
+
+  @override
+  String get profileSwitchSettingUp => 'جارٍ إعداد هذا الملف الشخصي…';
+
+  @override
+  String profilesKidsName(String name) {
+    return '$name (أطفال)';
+  }
+
+  @override
+  String profilesAdultName(String name) {
+    return '$name (بالغ)';
+  }
+
+  @override
+  String get pairingShowPicker => 'عرض أداة الاختيار';
+
+  @override
+  String get pairingAlwaysShowPicker => 'عرض أداة الاختيار دائمًا';
+
+  @override
+  String pairingMatchedByName(String profile) {
+    return '$profile (مطابقة بالاسم)';
+  }
+
+  @override
+  String get pairingNoMatchYet => 'لا توجد مطابقة بعد: تظهر أداة الاختيار';
+
+  @override
+  String get pairingOffSetUp => 'ربط الملفات الشخصية متوقف. اضبطه الآن';
+
+  @override
+  String pairingFooter(String shortName, String fullName) {
+    return 'عندما يفتح Hearth أحد هذه التطبيقات، يختار ملف التطبيق الشخصي المرتبط بملف Google TV الشخصي. يطابق Hearth الأسماء تلقائيًا (\"$shortName\" يتوافق مع \"$fullName\")؛ ويمكنك تغيير أي ربط هنا. إذا لم توجد مطابقة، تظهر أداة الاختيار الخاصة بالتطبيق.';
+  }
+
+  @override
+  String get pairingAppNotInstalled => 'غير مثبّت';
+
+  @override
+  String get pairingAppOff => 'متوقف: تظهر أداة الاختيار الخاصة بالتطبيق';
+
+  @override
+  String get pairingAppNotSeen => 'افتحه مرة واحدة من Hearth حتى يتعرّف Hearth على ملفاته الشخصية';
+
+  @override
+  String pairingAppProfilesFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تم العثور على $count ملف شخصي',
+      many: 'تم العثور على $count ملفًا شخصيًا',
+      few: 'تم العثور على $count ملفات شخصية',
+      two: 'تم العثور على ملفين شخصيين',
+      one: 'تم العثور على ملف شخصي واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pairingMatchByName(String profile) {
+    return 'المطابقة بالاسم ($profile)';
+  }
+
+  @override
+  String get pairingMatchByNameNone => 'المطابقة بالاسم (لا توجد مطابقة بعد)';
+
+  @override
+  String pairingProfileInApp(String profile, String app) {
+    return '$profile في $app';
+  }
+
+  @override
+  String pairingPairIn(String app) {
+    return 'ربط الملفات الشخصية في $app';
+  }
+
+  @override
+  String get pairingAppNotSeenFooter => 'لم يتعرّف Hearth على الملفات الشخصية لهذا التطبيق بعد. افتحه مرة واحدة من Hearth، ثم عُد إلى هنا.';
+
+  @override
+  String pairingAppProfilesFooter(String profiles) {
+    return 'الملفات الشخصية في هذا التطبيق: $profiles. تظهر ملفات Google TV الشخصية هنا بعد أن يتعرّف عليها Hearth.';
+  }
+
+  @override
+  String get familyAppsIntro => 'ثبّت Hearth وHearthTube على ملفات Google TV الشخصية الأخرى. على ملفات الأطفال، هذا ضروري ليعمل HearthTube وليختار Hearth الملف الشخصي الصحيح في Netflix وDisney+ وتطبيقات أخرى. أما على ملفات البالغين فهو للراحة فقط، كي لا يضطروا إلى تثبيتهما يدويًا.';
+
+  @override
+  String get familyAppsAddTitle => 'إضافة Hearth إلى الملفات الشخصية الأخرى';
+
+  @override
+  String get familyAppsAddKids => 'يثبّت هذا Hearth وHearthTube على ملفات أطفالك الشخصية، ليعمل HearthTube هناك ويتمكن Hearth من اختيار الملف الشخصي الصحيح في تطبيقات مثل Netflix وDisney+.';
+
+  @override
+  String get familyAppsAddAdults => 'ويثبّتهما أيضًا على ملفات البالغين الأخرى على التلفزيون، كي لا يضطر أي بالغ آخر إلى إعداده بنفسه.';
+
+  @override
+  String get familyAppsAddOnlyOwnApps => 'يضيف فقط تطبيقَي Hearth، ويمكنك التراجع عن ذلك في أي وقت عبر \"إزالة\" أدناه.';
+
+  @override
+  String get familyAppsAddFamilyLink => 'سيتلقى كل طفل إشعارًا واحدًا من Family Link بأنه \"تمت إضافة تطبيق\".';
+
+  @override
+  String get familyAppsAddApproval => 'في المرة الأولى، يسأل التلفزيون \"هل تريد السماح بتصحيح الأخطاء؟\" — اختر \"السماح دائمًا\"؛ فهذا ما يتيح لـ Hearth إجراء الإعداد.';
+
+  @override
+  String get familyAppsAdd => 'إضافة';
+
+  @override
+  String get familyAppsRemoveTitle => 'إزالة Hearth من الملفات الشخصية الأخرى';
+
+  @override
+  String get familyAppsRemoveBody => 'يزيل هذا Hearth وHearthTube من ملفاتك الشخصية الأخرى.';
+
+  @override
+  String get familyAppsRemoveFirst => 'إذا كنت تنوي إلغاء تثبيت Hearth نفسه، فنفّذ هذا أولًا — وإلا فقد تبقى نسخه على ملفات الأطفال عالقة وتحتاج إلى كمبيوتر لإزالتها.';
+
+  @override
+  String get familyAppsUninstallTitle => 'إلغاء تثبيت Hearth';
+
+  @override
+  String get familyAppsUninstallBody => 'يزيل هذا أولًا Hearth وHearthTube من ملفاتك الشخصية الأخرى، ثم يلغي تثبيت Hearth من هذا الملف.';
+
+  @override
+  String get familyAppsUninstallWhyHere => 'إلغاء التثبيت من هنا — بدلًا من إعدادات Android — يضمن عدم بقاء أي شيء على ملفات الأطفال.';
+
+  @override
+  String get familyAppsApprovalFirstTitle => 'أكمل الموافقة لمرة واحدة أولًا';
+
+  @override
+  String get familyAppsApprovalFirstBody => 'تعذّر على Hearth تنظيف الملفات الشخصية الأخرى بعد — فهو يحتاج إلى الموافقة لمرة واحدة على \"هل تريد السماح بتصحيح الأخطاء؟\" على التلفزيون.';
+
+  @override
+  String get familyAppsApprovalFirstRetry => 'وافق عليها، ثم جرّب إلغاء التثبيت مرة أخرى، حتى لا يبقى شيء على ملفات الأطفال.';
+
+  @override
+  String get familyAppsAddDone => 'اكتملت الإضافة';
+
+  @override
+  String get familyAppsRemoveDone => 'اكتملت الإزالة';
+
+  @override
+  String get familyAppsAdded => 'تم. أصبح Hearth وHearthTube الآن على ملفاتك الشخصية الأخرى — راجع القائمة أدناه.';
+
+  @override
+  String get familyAppsRemoved => 'تم. أُزيل Hearth وHearthTube من ملفاتك الشخصية الأخرى.';
+
+  @override
+  String get familyAppsNothingToSetUp => 'لا توجد ملفات شخصية أخرى لإعدادها بعد.';
+
+  @override
+  String get familyAppsFailedTitle => 'تعذّر إعداد الملفات الشخصية';
+
+  @override
+  String get familyAppsFailedBody => 'يحتاج Hearth إلى موافقة لمرة واحدة على التلفزيون قبل أن يتمكن من إعداد الملفات الشخصية الأخرى.';
+
+  @override
+  String get familyAppsFailedRetry => 'على التلفزيون، اختر \"السماح دائمًا\" عندما يسأل \"هل تريد السماح بتصحيح الأخطاء؟\"، ثم حاول مرة أخرى.';
+
+  @override
+  String get familyAppsAlsoAdults => 'إعداد ملفات البالغين الأخرى أيضًا';
+
+  @override
+  String get familyAppsOn => 'مفعّل';
+
+  @override
+  String get familyAppsOff => 'متوقف';
+
+  @override
+  String get familyAppsNoneYet => 'لم يتم إعداد ملفات شخصية أخرى بعد.';
+
+  @override
+  String familyAppsAppInstalled(String app) {
+    return '$app: مثبّت';
+  }
+
+  @override
+  String familyAppsAppInstalledKept(String app) {
+    return '$app: مثبّت، محمي';
+  }
+
+  @override
+  String familyAppsAppNotInstalled(String app) {
+    return '$app: غير مثبّت';
+  }
+
+  @override
+  String familyAppsAppNotInstalledKept(String app) {
+    return '$app: غير مثبّت، محمي';
+  }
+
+  @override
+  String get familyAppsUnnamedKids => 'ملف شخصي للأطفال';
+
+  @override
+  String get familyAppsUnnamedAdult => 'ملف شخصي لبالغ';
 }

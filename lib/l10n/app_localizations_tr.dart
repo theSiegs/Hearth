@@ -869,4 +869,249 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get haPhoneSetupScan => 'Aynı Wi-Fi ağındaki bir telefonla tarayın, Home Assistant adresini ve erişim belirtecini yapıştırıp Send\'e dokunun. Sayfa yalnızca bu pencere açıkken çalışır.';
+
+  @override
+  String get profilesSwitchProfile => 'Profil değiştir';
+
+  @override
+  String get parentPinTitle => 'Ebeveyn PIN\'i';
+
+  @override
+  String get parentPinOn => 'Açık';
+
+  @override
+  String get parentPinOff => 'Kapalı';
+
+  @override
+  String get parentPinCurrent => 'Mevcut ebeveyn PIN\'i';
+
+  @override
+  String get parentPinRemove => 'PIN\'i kaldır';
+
+  @override
+  String get parentPinChange => 'PIN\'i değiştir';
+
+  @override
+  String get parentPinNew => 'Yeni ebeveyn PIN\'i';
+
+  @override
+  String get parentPinNewSubtitle => 'Google TV çocuk profillerinde başlatıcıyı değiştirmek için gerekir';
+
+  @override
+  String get parentPinConfirm => 'PIN\'i yeniden girin';
+
+  @override
+  String get parentPinAskTitle => 'Bir ebeveyne sor';
+
+  @override
+  String parentPinAskBody(String settings, String profiles, String parentPin) {
+    return 'Çocuk profillerinde başlatıcı ayarları kilitlidir. Bir ebeveyn kendi profilinden $settings → $profiles → $parentPin bölümünde PIN belirleyebilir.';
+  }
+
+  @override
+  String get parentPinKidsSubtitle => 'Çocuk profili: başlatıcıyı değiştirmek için ebeveyn PIN\'ini girin';
+
+  @override
+  String get parentPinWrong => 'YANLIŞ PIN';
+
+  @override
+  String get parentPinEnter => 'PIN GİRİN';
+
+  @override
+  String profileSwitchGreeting(String name) {
+    return 'Merhaba $name';
+  }
+
+  @override
+  String get profileSwitchSettingUp => 'Bu profil hazırlanıyor…';
+
+  @override
+  String profilesKidsName(String name) {
+    return '$name (çocuk)';
+  }
+
+  @override
+  String profilesAdultName(String name) {
+    return '$name (yetişkin)';
+  }
+
+  @override
+  String get pairingShowPicker => 'Seçiciyi göster';
+
+  @override
+  String get pairingAlwaysShowPicker => 'Seçiciyi her zaman göster';
+
+  @override
+  String pairingMatchedByName(String profile) {
+    return '$profile (adla eşleşti)';
+  }
+
+  @override
+  String get pairingNoMatchYet => 'Henüz eşleşme yok: seçici gösterilir';
+
+  @override
+  String get pairingOffSetUp => 'Profil eşleştirme kapalı. Kurun';
+
+  @override
+  String pairingFooter(String shortName, String fullName) {
+    return 'Hearth bu uygulamalardan birini açtığında Google TV profiliyle eşleştirilmiş uygulama profilini seçer. Hearth adları kendisi eşleştirir (\"$shortName\", \"$fullName\" ile eşleşir); herhangi bir eşleştirmeyi buradan değiştirebilirsiniz. Eşleşme yoksa uygulamanın kendi seçicisi gösterilir.';
+  }
+
+  @override
+  String get pairingAppNotInstalled => 'Yüklü değil';
+
+  @override
+  String get pairingAppOff => 'Kapalı: uygulamanın kendi seçicisi gösterilir';
+
+  @override
+  String get pairingAppNotSeen => 'Hearth\'ün profilleri öğrenmesi için bir kez Hearth\'ten açın';
+
+  @override
+  String pairingAppProfilesFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count profil bulundu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pairingMatchByName(String profile) {
+    return 'Adla eşleştir ($profile)';
+  }
+
+  @override
+  String get pairingMatchByNameNone => 'Adla eşleştir (henüz eşleşme yok)';
+
+  @override
+  String pairingProfileInApp(String profile, String app) {
+    return '$app içinde $profile';
+  }
+
+  @override
+  String pairingPairIn(String app) {
+    return '$app içinde profilleri eşleştir';
+  }
+
+  @override
+  String get pairingAppNotSeenFooter => 'Hearth bu uygulamanın profillerini henüz görmedi. Bir kez Hearth\'ten açın, sonra geri gelin.';
+
+  @override
+  String pairingAppProfilesFooter(String profiles) {
+    return 'Bu uygulamadaki profiller: $profiles. Google TV profilleri, Hearth onları gördüğünde burada görünür.';
+  }
+
+  @override
+  String get familyAppsIntro => 'Hearth ve HearthTube\'u diğer Google TV profillerinize de yükleyin. Çocuk profillerinde bu, HearthTube\'un çalışması ve Hearth\'ün Netflix, Disney+ ve diğer uygulamalarda doğru profili seçmesi için gereklidir. Yetişkin profillerinde ise yalnızca kolaylık sağlar; elle yüklemek gerekmez.';
+
+  @override
+  String get familyAppsAddTitle => 'Hearth\'ü diğer profillere ekle';
+
+  @override
+  String get familyAppsAddKids => 'Bu, Hearth ve HearthTube\'u çocuklarınızın profillerine yükler; böylece HearthTube orada çalışır ve Hearth, Netflix ve Disney+ gibi uygulamalarda doğru profili seçebilir.';
+
+  @override
+  String get familyAppsAddAdults => 'Ayrıca bunları TV\'deki diğer yetişkin profillerine de yükler; böylece başka bir yetişkinin kendisi kurması gerekmez.';
+
+  @override
+  String get familyAppsAddOnlyOwnApps => 'Yalnızca Hearth\'ün kendi iki uygulamasını ekler; aşağıdaki Kaldır ile istediğiniz zaman geri alabilirsiniz.';
+
+  @override
+  String get familyAppsAddFamilyLink => 'Her çocuk bir Family Link \"uygulama eklendi\" bildirimi alır.';
+
+  @override
+  String get familyAppsAddApproval => 'İlk seferde TV \"Hata ayıklamaya izin verilsin mi?\" diye sorar; Her zaman izin ver\'i seçin. Hearth\'ün kurulumu yapmasını sağlayan budur.';
+
+  @override
+  String get familyAppsAdd => 'Ekle';
+
+  @override
+  String get familyAppsRemoveTitle => 'Hearth\'ü diğer profillerden kaldır';
+
+  @override
+  String get familyAppsRemoveBody => 'Bu, Hearth ve HearthTube\'u diğer profillerinizden kaldırır.';
+
+  @override
+  String get familyAppsRemoveFirst => 'Hearth\'ün kendisini kaldırmayı planlıyorsanız önce bunu çalıştırın; aksi halde çocuk profillerindeki kopyaları ortada kalabilir ve temizlemek için bilgisayar gerekebilir.';
+
+  @override
+  String get familyAppsUninstallTitle => 'Hearth\'ü kaldır';
+
+  @override
+  String get familyAppsUninstallBody => 'Bu önce Hearth ve HearthTube\'u diğer profillerinizden kaldırır, ardından Hearth\'ü bu profilden kaldırır.';
+
+  @override
+  String get familyAppsUninstallWhyHere => 'Android ayarları yerine buradan kaldırmak, çocuk profillerinde hiçbir şey kalmamasını sağlar.';
+
+  @override
+  String get familyAppsApprovalFirstTitle => 'Önce tek seferlik onayı tamamlayın';
+
+  @override
+  String get familyAppsApprovalFirstBody => 'Hearth diğer profilleri henüz temizleyemedi; TV\'de tek seferlik \"Hata ayıklamaya izin verilsin mi?\" onayı gerekiyor.';
+
+  @override
+  String get familyAppsApprovalFirstRetry => 'Onaylayın, ardından çocuk profillerinde hiçbir şey kalmaması için Kaldır\'ı yeniden deneyin.';
+
+  @override
+  String get familyAppsAddDone => 'Ekleme tamamlandı';
+
+  @override
+  String get familyAppsRemoveDone => 'Kaldırma tamamlandı';
+
+  @override
+  String get familyAppsAdded => 'Tamam. Hearth ve HearthTube artık diğer profillerinizde; aşağıdaki listeye bakın.';
+
+  @override
+  String get familyAppsRemoved => 'Tamam. Hearth ve HearthTube diğer profillerinizden kaldırıldı.';
+
+  @override
+  String get familyAppsNothingToSetUp => 'Henüz kurulacak başka profil yok.';
+
+  @override
+  String get familyAppsFailedTitle => 'Profiller kurulamadı';
+
+  @override
+  String get familyAppsFailedBody => 'Hearth\'ün diğer profilleri kurabilmesi için TV\'de tek seferlik bir onay gerekir.';
+
+  @override
+  String get familyAppsFailedRetry => 'TV \"Hata ayıklamaya izin verilsin mi?\" diye sorduğunda Her zaman izin ver\'i seçin, sonra yeniden deneyin.';
+
+  @override
+  String get familyAppsAlsoAdults => 'Diğer yetişkin profillerini de kur';
+
+  @override
+  String get familyAppsOn => 'Açık';
+
+  @override
+  String get familyAppsOff => 'Kapalı';
+
+  @override
+  String get familyAppsNoneYet => 'Henüz başka profil kurulmadı.';
+
+  @override
+  String familyAppsAppInstalled(String app) {
+    return '$app: yüklü';
+  }
+
+  @override
+  String familyAppsAppInstalledKept(String app) {
+    return '$app: yüklü, korunuyor';
+  }
+
+  @override
+  String familyAppsAppNotInstalled(String app) {
+    return '$app: yüklü değil';
+  }
+
+  @override
+  String familyAppsAppNotInstalledKept(String app) {
+    return '$app: yüklü değil, korunuyor';
+  }
+
+  @override
+  String get familyAppsUnnamedKids => 'Bir çocuk profili';
+
+  @override
+  String get familyAppsUnnamedAdult => 'Bir yetişkin profili';
 }

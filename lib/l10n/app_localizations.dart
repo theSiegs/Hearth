@@ -1630,6 +1630,426 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Scan with a phone on the same Wi-Fi, paste the Home Assistant address and access token, and tap Send. The page only works while this is open.'**
   String get haPhoneSetupScan;
+
+  /// Profiles page: row that opens Google TV's profile chooser; also a remote button action
+  ///
+  /// In en, this message translates to:
+  /// **'Switch profile'**
+  String get profilesSwitchProfile;
+
+  /// Profiles page row, and the title of the parent PIN screens and of the remove/change dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Parent PIN'**
+  String get parentPinTitle;
+
+  /// Profiles page: shown next to Parent PIN when a PIN is set
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get parentPinOn;
+
+  /// Profiles page: shown next to Parent PIN when no PIN is set
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get parentPinOff;
+
+  /// PIN screen title: asks for the PIN before changing or removing it
+  ///
+  /// In en, this message translates to:
+  /// **'Current parent PIN'**
+  String get parentPinCurrent;
+
+  /// Parent PIN dialog: button
+  ///
+  /// In en, this message translates to:
+  /// **'Remove PIN'**
+  String get parentPinRemove;
+
+  /// Parent PIN dialog: button
+  ///
+  /// In en, this message translates to:
+  /// **'Change PIN'**
+  String get parentPinChange;
+
+  /// PIN screen title: choosing a new parent PIN
+  ///
+  /// In en, this message translates to:
+  /// **'New parent PIN'**
+  String get parentPinNew;
+
+  /// PIN screen: under New parent PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Needed to change the launcher in Google TV kids profiles'**
+  String get parentPinNewSubtitle;
+
+  /// PIN screen title: confirming the new parent PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the PIN again'**
+  String get parentPinConfirm;
+
+  /// Dialog title in a kids profile when no parent PIN is set
+  ///
+  /// In en, this message translates to:
+  /// **'Ask a parent'**
+  String get parentPinAskTitle;
+
+  /// Ask a parent dialog: {settings}, {profiles} and {parentPin} are the Settings, Profiles and Parent PIN titles
+  ///
+  /// In en, this message translates to:
+  /// **'Launcher settings are locked in kids profiles. A parent can set a PIN in {settings} → {profiles} → {parentPin} from their own profile.'**
+  String parentPinAskBody(String settings, String profiles, String parentPin);
+
+  /// PIN screen in a kids profile: under Parent PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Kids profile: enter the parent PIN to change the launcher'**
+  String get parentPinKidsSubtitle;
+
+  /// PIN screen: small capitals above the digits after a wrong PIN
+  ///
+  /// In en, this message translates to:
+  /// **'WRONG PIN'**
+  String get parentPinWrong;
+
+  /// PIN screen: small capitals above the digits
+  ///
+  /// In en, this message translates to:
+  /// **'ENTER PIN'**
+  String get parentPinEnter;
+
+  /// Profile switch card: greets the profile Hearth is switching to
+  ///
+  /// In en, this message translates to:
+  /// **'Hi, {name}'**
+  String profileSwitchGreeting(String name);
+
+  /// Profile switch card: before Hearth knows the profile's name
+  ///
+  /// In en, this message translates to:
+  /// **'Setting up this profile…'**
+  String get profileSwitchSettingUp;
+
+  /// A Google TV profile's name, marked as a kids profile (Profile Pairing and Hearth on other profiles)
+  ///
+  /// In en, this message translates to:
+  /// **'{name} (kids)'**
+  String profilesKidsName(String name);
+
+  /// Hearth on other profiles: a Google TV profile's name, marked as an adult profile
+  ///
+  /// In en, this message translates to:
+  /// **'{name} (adult)'**
+  String profilesAdultName(String name);
+
+  /// Profile Pairing: summary when the chosen app profile is unknown; the app's own profile picker shows
+  ///
+  /// In en, this message translates to:
+  /// **'Show the picker'**
+  String get pairingShowPicker;
+
+  /// Profile Pairing: option and summary; the app always asks who's watching
+  ///
+  /// In en, this message translates to:
+  /// **'Always show the picker'**
+  String get pairingAlwaysShowPicker;
+
+  /// Profile Pairing: summary; {profile} is the app profile Hearth matched by name
+  ///
+  /// In en, this message translates to:
+  /// **'{profile} (matched by name)'**
+  String pairingMatchedByName(String profile);
+
+  /// Profile Pairing: summary when no app profile matches by name
+  ///
+  /// In en, this message translates to:
+  /// **'No match yet: shows the picker'**
+  String get pairingNoMatchYet;
+
+  /// Profile Pairing page: warning row that opens Setup & permissions
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Pairing is off. Set it up'**
+  String get pairingOffSetUp;
+
+  /// Profile Pairing page: note at the bottom; {shortName} and {fullName} are example names
+  ///
+  /// In en, this message translates to:
+  /// **'When Hearth opens one of these apps, it picks the app profile paired with the Google TV profile. Hearth matches names by itself (\"{shortName}\" goes with \"{fullName}\"); change any pairing here. Without a match, the app\'s own picker shows.'**
+  String pairingFooter(String shortName, String fullName);
+
+  /// Profile Pairing page: under an app that isn't installed
+  ///
+  /// In en, this message translates to:
+  /// **'Not installed'**
+  String get pairingAppNotInstalled;
+
+  /// Profile Pairing page: under an app with pairing turned off
+  ///
+  /// In en, this message translates to:
+  /// **'Off: the app\'s own picker shows'**
+  String get pairingAppOff;
+
+  /// Profile Pairing page: under an app whose profiles Hearth hasn't seen
+  ///
+  /// In en, this message translates to:
+  /// **'Open it once from Hearth so Hearth can learn its profiles'**
+  String get pairingAppNotSeen;
+
+  /// Profile Pairing page: under an app, how many of its profiles Hearth has seen
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 profile found} other{{count} profiles found}}'**
+  String pairingAppProfilesFound(int count);
+
+  /// Profile Pairing app page: option; {profile} is the app profile that matches
+  ///
+  /// In en, this message translates to:
+  /// **'Match by name ({profile})'**
+  String pairingMatchByName(String profile);
+
+  /// Profile Pairing app page: option when no app profile matches yet
+  ///
+  /// In en, this message translates to:
+  /// **'Match by name (no match yet)'**
+  String get pairingMatchByNameNone;
+
+  /// Profile Pairing app page: dialog title; {profile} is a Google TV profile, {app} a streaming app
+  ///
+  /// In en, this message translates to:
+  /// **'{profile} in {app}'**
+  String pairingProfileInApp(String profile, String app);
+
+  /// Profile Pairing app page: switch; {app} is the streaming app
+  ///
+  /// In en, this message translates to:
+  /// **'Pair profiles in {app}'**
+  String pairingPairIn(String app);
+
+  /// Profile Pairing app page: note when Hearth hasn't seen the app's profiles
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth hasn\'t seen this app\'s profiles yet. Open it once from Hearth, then come back.'**
+  String get pairingAppNotSeenFooter;
+
+  /// Profile Pairing app page: note; {profiles} lists the app's profile names
+  ///
+  /// In en, this message translates to:
+  /// **'Profiles in this app: {profiles}. Google TV profiles appear here once Hearth has seen them.'**
+  String pairingAppProfilesFooter(String profiles);
+
+  /// Hearth on other profiles page: text at the top
+  ///
+  /// In en, this message translates to:
+  /// **'Put Hearth and HearthTube on your other Google TV profiles. On kids\' profiles this is needed for HearthTube to work and for Hearth to pick the right profile in Netflix, Disney+ and other apps. On adult profiles it\'s just a convenience, so they don\'t have to install them by hand.'**
+  String get familyAppsIntro;
+
+  /// Hearth on other profiles page: row, and the title of its confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Add Hearth to other profiles'**
+  String get familyAppsAddTitle;
+
+  /// Add Hearth to other profiles dialog: first paragraph
+  ///
+  /// In en, this message translates to:
+  /// **'This puts Hearth and HearthTube on your kids\' profiles, so HearthTube works there and Hearth can pick the right profile in apps like Netflix and Disney+.'**
+  String get familyAppsAddKids;
+
+  /// Add Hearth to other profiles dialog: paragraph shown when adult profiles are included
+  ///
+  /// In en, this message translates to:
+  /// **'It also installs them on the TV\'s other adult profiles, so another adult doesn\'t have to set it up themselves.'**
+  String get familyAppsAddAdults;
+
+  /// Add Hearth to other profiles dialog: paragraph
+  ///
+  /// In en, this message translates to:
+  /// **'It only adds Hearth\'s own two apps, and you can undo it anytime with Remove below.'**
+  String get familyAppsAddOnlyOwnApps;
+
+  /// Add Hearth to other profiles dialog: paragraph about the Family Link notification
+  ///
+  /// In en, this message translates to:
+  /// **'Each kid gets one Family Link \"app added\" notification.'**
+  String get familyAppsAddFamilyLink;
+
+  /// Add Hearth to other profiles dialog: paragraph; quotes Android's debugging prompt and its Always allow button
+  ///
+  /// In en, this message translates to:
+  /// **'The first time, the TV asks \"Allow debugging?\" — choose Always allow; that\'s what lets Hearth do the setup.'**
+  String get familyAppsAddApproval;
+
+  /// Add Hearth to other profiles dialog: the button that goes ahead
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get familyAppsAdd;
+
+  /// Hearth on other profiles page: row, and the title of its confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Hearth from other profiles'**
+  String get familyAppsRemoveTitle;
+
+  /// Remove Hearth from other profiles dialog: first paragraph
+  ///
+  /// In en, this message translates to:
+  /// **'This removes Hearth and HearthTube from your other profiles.'**
+  String get familyAppsRemoveBody;
+
+  /// Remove Hearth from other profiles dialog: second paragraph
+  ///
+  /// In en, this message translates to:
+  /// **'If you plan to uninstall Hearth itself, run this first — otherwise its copies on the kids\' profiles can be stranded and need a computer to clear.'**
+  String get familyAppsRemoveFirst;
+
+  /// Hearth on other profiles page: row, and the title of its confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Uninstall Hearth'**
+  String get familyAppsUninstallTitle;
+
+  /// Uninstall Hearth dialog: first paragraph
+  ///
+  /// In en, this message translates to:
+  /// **'This first removes Hearth and HearthTube from your other profiles, then uninstalls Hearth from this one.'**
+  String get familyAppsUninstallBody;
+
+  /// Uninstall Hearth dialog: second paragraph
+  ///
+  /// In en, this message translates to:
+  /// **'Uninstalling here — rather than from Android\'s settings — makes sure nothing is left behind on the kids\' profiles.'**
+  String get familyAppsUninstallWhyHere;
+
+  /// Dialog title when Uninstall Hearth can't clean up the other profiles yet
+  ///
+  /// In en, this message translates to:
+  /// **'Finish the one-time approval first'**
+  String get familyAppsApprovalFirstTitle;
+
+  /// Finish the one-time approval first dialog: first paragraph; quotes Android's debugging prompt
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth couldn\'t clean up the other profiles yet — it needs the one-time \"Allow debugging?\" approval on the TV.'**
+  String get familyAppsApprovalFirstBody;
+
+  /// Finish the one-time approval first dialog: second paragraph
+  ///
+  /// In en, this message translates to:
+  /// **'Approve it, then try Uninstall again, so nothing is left on the kids\' profiles.'**
+  String get familyAppsApprovalFirstRetry;
+
+  /// Dialog title after Add Hearth to other profiles finished
+  ///
+  /// In en, this message translates to:
+  /// **'Add done'**
+  String get familyAppsAddDone;
+
+  /// Dialog title after Remove Hearth from other profiles finished
+  ///
+  /// In en, this message translates to:
+  /// **'Remove done'**
+  String get familyAppsRemoveDone;
+
+  /// Add done dialog: message
+  ///
+  /// In en, this message translates to:
+  /// **'Done. Hearth and HearthTube are now on your other profiles — see the list below.'**
+  String get familyAppsAdded;
+
+  /// Remove done dialog: message
+  ///
+  /// In en, this message translates to:
+  /// **'Done. Hearth and HearthTube have been removed from your other profiles.'**
+  String get familyAppsRemoved;
+
+  /// Add done / Remove done dialog: when the TV has no other profiles
+  ///
+  /// In en, this message translates to:
+  /// **'There are no other profiles to set up yet.'**
+  String get familyAppsNothingToSetUp;
+
+  /// Dialog title when adding or removing failed for lack of approval
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t set up the profiles'**
+  String get familyAppsFailedTitle;
+
+  /// Couldn't set up the profiles dialog: first paragraph
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth needs a one-time approval on the TV before it can set up the other profiles.'**
+  String get familyAppsFailedBody;
+
+  /// Couldn't set up the profiles dialog: second paragraph; quotes Android's debugging prompt and its Always allow button
+  ///
+  /// In en, this message translates to:
+  /// **'On the TV, choose Always allow when it asks to \"Allow debugging?\", then try again.'**
+  String get familyAppsFailedRetry;
+
+  /// Hearth on other profiles page: on/off row
+  ///
+  /// In en, this message translates to:
+  /// **'Also set up other adult profiles'**
+  String get familyAppsAlsoAdults;
+
+  /// Hearth on other profiles page: shown next to Also set up other adult profiles when on
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get familyAppsOn;
+
+  /// Hearth on other profiles page: shown next to Also set up other adult profiles when off
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get familyAppsOff;
+
+  /// Hearth on other profiles page: the list when it's empty
+  ///
+  /// In en, this message translates to:
+  /// **'No other profiles set up yet.'**
+  String get familyAppsNoneYet;
+
+  /// Hearth on other profiles page: list line; {app} is Hearth or HearthTube
+  ///
+  /// In en, this message translates to:
+  /// **'{app}: installed'**
+  String familyAppsAppInstalled(String app);
+
+  /// Hearth on other profiles page: list line; kept means Hearth keeps it installed in a kids profile
+  ///
+  /// In en, this message translates to:
+  /// **'{app}: installed, kept'**
+  String familyAppsAppInstalledKept(String app);
+
+  /// Hearth on other profiles page: list line; {app} is Hearth or HearthTube
+  ///
+  /// In en, this message translates to:
+  /// **'{app}: not installed'**
+  String familyAppsAppNotInstalled(String app);
+
+  /// Hearth on other profiles page: list line; kept means Hearth keeps it installed in a kids profile
+  ///
+  /// In en, this message translates to:
+  /// **'{app}: not installed, kept'**
+  String familyAppsAppNotInstalledKept(String app);
+
+  /// Hearth on other profiles page: heading for a kids profile whose name Hearth doesn't know
+  ///
+  /// In en, this message translates to:
+  /// **'A kids profile'**
+  String get familyAppsUnnamedKids;
+
+  /// Hearth on other profiles page: heading for an adult profile whose name Hearth doesn't know
+  ///
+  /// In en, this message translates to:
+  /// **'An adult profile'**
+  String get familyAppsUnnamedAdult;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

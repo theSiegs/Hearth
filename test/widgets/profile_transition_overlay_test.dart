@@ -1,3 +1,4 @@
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/widgets/profile_transition_overlay.dart';
 import 'package:flutter/material.dart';
@@ -21,7 +22,11 @@ void main() {
   Future<void> pumpOverlay(WidgetTester tester) => tester.pumpWidget(
         ChangeNotifierProvider<ProfileService>.value(
           value: profiles,
-          child: MaterialApp(home: Scaffold(body: ProfileTransitionOverlay(channel: channel))),
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: ProfileTransitionOverlay(channel: channel)),
+          ),
         ),
       );
 

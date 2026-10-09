@@ -31,10 +31,10 @@ class PairingChoice {
         autoMatch = map["autoMatch"] as String?;
 
   /// What Hearth will do, in words: "Alex Morgan (matched by name)", "Show the picker", ...
-  String get summary => switch (mode) {
-        "profile" => chosenProfile ?? "Show the picker",
-        "picker" => "Always show the picker",
-        _ => autoMatch != null ? "$autoMatch (matched by name)" : "No match yet: shows the picker",
+  String summary(AppLocalizations l) => switch (mode) {
+        "profile" => chosenProfile ?? l.pairingShowPicker,
+        "picker" => l.pairingAlwaysShowPicker,
+        _ => autoMatch != null ? l.pairingMatchedByName(autoMatch!) : l.pairingNoMatchYet,
       };
 }
 
@@ -73,10 +73,11 @@ class _ProfilePairingPageState extends State<ProfilePairingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final apps = _apps;
     return SettingsPage.custom(
-      title: AppLocalizations.of(context)!.profilePairingTitle,
+      title: l.profilePairingTitle,
       body: apps == null
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -85,7 +86,7 @@ class _ProfilePairingPageState extends State<ProfilePairingPage> {
                   if (!_serviceOn)
                     FocusableSettingsTile(
                       leading: const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-                      title: Text("Profile Pairing is off. Set it up", style: textTheme.bodyMedium),
+                      title: Text(l.pairingOffSetUp, style: textTheme.bodyMedium),
                       onPressed: () async {
                         await Navigator.of(context).pushNamed(SetupChecklistPage.routeName);
                         _load();
@@ -99,7 +100,7 @@ class _ProfilePairingPageState extends State<ProfilePairingPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(app["label"] as String, style: textTheme.bodyMedium),
-                          Text(_appStatus(app), style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
+                          Text(_appStatus(l, app), style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
                         ],
                       ),
                       trailing: app["installed"] == true ? const Icon(Icons.chevron_right) : null,
@@ -114,9 +115,7 @@ class _ProfilePairingPageState extends State<ProfilePairingPage> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Text(
-                      "When Hearth opens one of these apps, it picks the app profile paired with the Google TV "
-                      "profile. Hearth matches names by itself (\"Alex\" goes with \"Alex Morgan\"); "
-                      "change any pairing here. Without a match, the app's own picker shows.",
+                      l.pairingFooter("Alex", "Alex Morgan"),
                       style: textTheme.bodySmall?.copyWith(color: Colors.white54),
                       textAlign: TextAlign.center,
                     ),
@@ -127,12 +126,12 @@ class _ProfilePairingPageState extends State<ProfilePairingPage> {
     );
   }
 
-  String _appStatus(Map<dynamic, dynamic> app) {
-    if (app["installed"] != true) return "Not installed";
-    if (app["enabled"] == false) return "Off: the app's own picker shows";
+  String _appStatus(AppLocalizations l, Map<dynamic, dynamic> app) {
+    if (app["installed"] != true) return l.pairingAppNotInstalled;
+    if (app["enabled"] == false) return l.pairingAppOff;
     final seen = (app["seenProfiles"] as List?)?.length ?? 0;
-    if (seen == 0) return "Open it once from Hearth so Hearth can learn its profiles";
-    return "$seen profile${seen == 1 ? '' : 's'} found";
+    if (seen == 0) return l.pairingAppNotSeen;
+    return l.pairingAppProfilesFound(seen);
   }
 }
 
@@ -174,12 +173,13 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
   }
 
   Future<void> _change(PairingChoice choice) async {
+    final l = AppLocalizations.of(context)!;
     final label = widget.app["label"] as String;
     // Each option: (mode, app profile, text).
     final options = <(String, String?, String)>[
-      ("auto", null, choice.autoMatch != null ? "Match by name (${choice.autoMatch})" : "Match by name (no match yet)"),
+      ("auto", null, choice.autoMatch != null ? l.pairingMatchByName(choice.autoMatch!) : l.pairingMatchByNameNone),
       for (final profile in _seenProfiles) ("profile", profile, profile),
-      ("picker", null, "Always show the picker"),
+      ("picker", null, l.pairingAlwaysShowPicker),
     ];
     bool isCurrent((String, String?, String) option) =>
         option.$1 == choice.mode && (option.$1 != "profile" || option.$2 == choice.chosenProfile);
@@ -187,7 +187,7 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
     final picked = await showDialog<(String, String?, String)>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: Text("${choice.displayName} in $label"),
+        title: Text(l.pairingProfileInApp(choice.displayName, label)),
         children: [
           for (final option in options)
             SimpleDialogOption(
@@ -213,6 +213,7 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final choices = _choices;
     return SettingsPage.custom(
@@ -226,7 +227,7 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
                     autofocus: true,
                     value: _enabled,
                     onChanged: _setEnabled,
-                    title: Text("Pair profiles in ${widget.app["label"]}", style: textTheme.bodyMedium),
+                    title: Text(l.pairingPairIn(widget.app["label"] as String), style: textTheme.bodyMedium),
                     secondary: Icon(Icons.switch_account, color: _enabled ? Colors.green : Colors.white54),
                   ),
                   if (_enabled) const Divider(),
@@ -237,8 +238,9 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
                         title: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(choice.displayName + (choice.kids ? " (kids)" : ""), style: textTheme.bodyMedium),
-                            Text(choice.summary, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
+                            Text(choice.kids ? l.profilesKidsName(choice.displayName) : choice.displayName,
+                                style: textTheme.bodyMedium),
+                            Text(choice.summary(l), style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
                           ],
                         ),
                         trailing: const Icon(Icons.chevron_right),
@@ -249,9 +251,8 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Text(
                       _seenProfiles.isEmpty
-                          ? "Hearth hasn't seen this app's profiles yet. Open it once from Hearth, then come back."
-                          : "Profiles in this app: ${_seenProfiles.join(", ")}. Google TV profiles appear here "
-                              "once Hearth has seen them.",
+                          ? l.pairingAppNotSeenFooter
+                          : l.pairingAppProfilesFooter(_seenProfiles.join(", ")),
                       style: textTheme.bodySmall?.copyWith(color: Colors.white54),
                       textAlign: TextAlign.center,
                     ),

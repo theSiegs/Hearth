@@ -869,4 +869,249 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get haPhoneSetupScan => '用连接同一 Wi-Fi 的手机扫描，粘贴 Home Assistant 地址和访问令牌，然后点按 Send。此窗口打开时页面才可用。';
+
+  @override
+  String get profilesSwitchProfile => '切换个人资料';
+
+  @override
+  String get parentPinTitle => '家长 PIN 码';
+
+  @override
+  String get parentPinOn => '开';
+
+  @override
+  String get parentPinOff => '关';
+
+  @override
+  String get parentPinCurrent => '当前家长 PIN 码';
+
+  @override
+  String get parentPinRemove => '移除 PIN 码';
+
+  @override
+  String get parentPinChange => '更改 PIN 码';
+
+  @override
+  String get parentPinNew => '新家长 PIN 码';
+
+  @override
+  String get parentPinNewSubtitle => '在 Google TV 儿童个人资料中更改启动器时需要';
+
+  @override
+  String get parentPinConfirm => '再次输入 PIN 码';
+
+  @override
+  String get parentPinAskTitle => '请家长帮忙';
+
+  @override
+  String parentPinAskBody(String settings, String profiles, String parentPin) {
+    return '儿童个人资料中的启动器设置已锁定。家长可以在自己的个人资料中前往 $settings → $profiles → $parentPin 设置 PIN 码。';
+  }
+
+  @override
+  String get parentPinKidsSubtitle => '儿童个人资料：输入家长 PIN 码以更改启动器';
+
+  @override
+  String get parentPinWrong => 'PIN 码错误';
+
+  @override
+  String get parentPinEnter => '输入 PIN 码';
+
+  @override
+  String profileSwitchGreeting(String name) {
+    return '你好，$name';
+  }
+
+  @override
+  String get profileSwitchSettingUp => '正在设置此个人资料…';
+
+  @override
+  String profilesKidsName(String name) {
+    return '$name（儿童）';
+  }
+
+  @override
+  String profilesAdultName(String name) {
+    return '$name（成人）';
+  }
+
+  @override
+  String get pairingShowPicker => '显示选择界面';
+
+  @override
+  String get pairingAlwaysShowPicker => '始终显示选择界面';
+
+  @override
+  String pairingMatchedByName(String profile) {
+    return '$profile（按名称匹配）';
+  }
+
+  @override
+  String get pairingNoMatchYet => '暂无匹配：显示选择界面';
+
+  @override
+  String get pairingOffSetUp => '个人资料配对已关闭。去设置';
+
+  @override
+  String pairingFooter(String shortName, String fullName) {
+    return 'Hearth 打开其中某个应用时，会选择与 Google TV 个人资料配对的应用个人资料。Hearth 会自动匹配名称（“$shortName”对应“$fullName”）；可在此更改任何配对。没有匹配时，会显示应用自己的选择界面。';
+  }
+
+  @override
+  String get pairingAppNotInstalled => '未安装';
+
+  @override
+  String get pairingAppOff => '关：显示应用自己的选择界面';
+
+  @override
+  String get pairingAppNotSeen => '从 Hearth 打开一次，让 Hearth 了解它的个人资料';
+
+  @override
+  String pairingAppProfilesFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '找到 $count 个个人资料',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pairingMatchByName(String profile) {
+    return '按名称匹配（$profile）';
+  }
+
+  @override
+  String get pairingMatchByNameNone => '按名称匹配（暂无匹配）';
+
+  @override
+  String pairingProfileInApp(String profile, String app) {
+    return '$app 中的 $profile';
+  }
+
+  @override
+  String pairingPairIn(String app) {
+    return '在 $app 中配对个人资料';
+  }
+
+  @override
+  String get pairingAppNotSeenFooter => 'Hearth 还没有看到此应用的个人资料。请从 Hearth 打开一次，然后再回来。';
+
+  @override
+  String pairingAppProfilesFooter(String profiles) {
+    return '此应用中的个人资料：$profiles。Hearth 看到 Google TV 个人资料后，它们会显示在这里。';
+  }
+
+  @override
+  String get familyAppsIntro => '将 Hearth 和 HearthTube 安装到其他 Google TV 个人资料中。在儿童个人资料中，这是 HearthTube 正常工作以及 Hearth 在 Netflix、Disney+ 等应用中选对个人资料所必需的。在成人个人资料中只是为了方便，免得手动安装。';
+
+  @override
+  String get familyAppsAddTitle => '将 Hearth 添加到其他个人资料';
+
+  @override
+  String get familyAppsAddKids => '这会把 Hearth 和 HearthTube 安装到孩子的个人资料中，让 HearthTube 在那里可用，并让 Hearth 能在 Netflix 和 Disney+ 等应用中选对个人资料。';
+
+  @override
+  String get familyAppsAddAdults => '它还会安装到电视上的其他成人个人资料中，其他成人无需自己设置。';
+
+  @override
+  String get familyAppsAddOnlyOwnApps => '只会添加 Hearth 自己的两个应用，你可以随时用下方的“移除”撤销。';
+
+  @override
+  String get familyAppsAddFamilyLink => '每个孩子会收到一条 Family Link“已添加应用”通知。';
+
+  @override
+  String get familyAppsAddApproval => '第一次时，电视会询问“允许调试吗？”——请选择“始终允许”，这样 Hearth 才能完成设置。';
+
+  @override
+  String get familyAppsAdd => '添加';
+
+  @override
+  String get familyAppsRemoveTitle => '从其他个人资料中移除 Hearth';
+
+  @override
+  String get familyAppsRemoveBody => '这会从其他个人资料中移除 Hearth 和 HearthTube。';
+
+  @override
+  String get familyAppsRemoveFirst => '如果你打算卸载 Hearth 本身，请先执行此操作，否则它在儿童个人资料中的副本可能会残留，需要用电脑才能清除。';
+
+  @override
+  String get familyAppsUninstallTitle => '卸载 Hearth';
+
+  @override
+  String get familyAppsUninstallBody => '这会先从其他个人资料中移除 Hearth 和 HearthTube，然后从当前个人资料中卸载 Hearth。';
+
+  @override
+  String get familyAppsUninstallWhyHere => '在这里卸载（而不是在 Android 设置中卸载）可以确保儿童个人资料中不留下任何东西。';
+
+  @override
+  String get familyAppsApprovalFirstTitle => '请先完成一次性授权';
+
+  @override
+  String get familyAppsApprovalFirstBody => 'Hearth 还无法清理其他个人资料——需要先在电视上对“允许调试吗？”授权一次。';
+
+  @override
+  String get familyAppsApprovalFirstRetry => '授权后再试一次卸载，这样儿童个人资料中就不会有残留。';
+
+  @override
+  String get familyAppsAddDone => '添加完成';
+
+  @override
+  String get familyAppsRemoveDone => '移除完成';
+
+  @override
+  String get familyAppsAdded => '完成。Hearth 和 HearthTube 现已安装到其他个人资料中，请查看下方列表。';
+
+  @override
+  String get familyAppsRemoved => '完成。已从其他个人资料中移除 Hearth 和 HearthTube。';
+
+  @override
+  String get familyAppsNothingToSetUp => '目前还没有其他需要设置的个人资料。';
+
+  @override
+  String get familyAppsFailedTitle => '无法设置个人资料';
+
+  @override
+  String get familyAppsFailedBody => 'Hearth 需要先在电视上获得一次性授权，才能设置其他个人资料。';
+
+  @override
+  String get familyAppsFailedRetry => '当电视询问“允许调试吗？”时，请选择“始终允许”，然后重试。';
+
+  @override
+  String get familyAppsAlsoAdults => '同时设置其他成人个人资料';
+
+  @override
+  String get familyAppsOn => '开';
+
+  @override
+  String get familyAppsOff => '关';
+
+  @override
+  String get familyAppsNoneYet => '尚未设置其他个人资料。';
+
+  @override
+  String familyAppsAppInstalled(String app) {
+    return '$app：已安装';
+  }
+
+  @override
+  String familyAppsAppInstalledKept(String app) {
+    return '$app：已安装，已保留';
+  }
+
+  @override
+  String familyAppsAppNotInstalled(String app) {
+    return '$app：未安装';
+  }
+
+  @override
+  String familyAppsAppNotInstalledKept(String app) {
+    return '$app：未安装，已保留';
+  }
+
+  @override
+  String get familyAppsUnnamedKids => '一个儿童个人资料';
+
+  @override
+  String get familyAppsUnnamedAdult => '一个成人个人资料';
 }

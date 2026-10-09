@@ -1,7 +1,10 @@
+import 'package:flauncher/l10n/app_localizations_en.dart';
 import 'package:flauncher/widgets/settings/profile_pairing_page.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  final l = AppLocalizationsEn();
+
   PairingChoice choice(String mode, {String? chosen, String? auto}) => PairingChoice.fromMap({
         "hearthProfile": "Alex",
         "kids": false,
@@ -11,10 +14,10 @@ void main() {
       });
 
   test("summaries say what Hearth will pick", () {
-    expect(choice("auto", auto: "Alex Morgan").summary, "Alex Morgan (matched by name)");
-    expect(choice("auto").summary, "No match yet: shows the picker");
-    expect(choice("profile", chosen: "Grown Ups").summary, "Grown Ups");
-    expect(choice("picker").summary, "Always show the picker");
+    expect(choice("auto", auto: "Alex Morgan").summary(l), "Alex Morgan (matched by name)");
+    expect(choice("auto").summary(l), "No match yet: shows the picker");
+    expect(choice("profile", chosen: "Grown Ups").summary(l), "Grown Ups");
+    expect(choice("picker").summary(l), "Always show the picker");
   });
 
   test("a missing mode means match by name", () {

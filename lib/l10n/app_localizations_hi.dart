@@ -871,4 +871,250 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get haPhoneSetupScan => 'उसी Wi-Fi पर किसी फ़ोन से स्कैन करें, Home Assistant का पता और एक्सेस टोकन पेस्ट करें, और Send पर टैप करें। यह पेज तभी काम करता है जब तक यह खुला है।';
+
+  @override
+  String get profilesSwitchProfile => 'प्रोफ़ाइल बदलें';
+
+  @override
+  String get parentPinTitle => 'अभिभावक PIN';
+
+  @override
+  String get parentPinOn => 'चालू';
+
+  @override
+  String get parentPinOff => 'बंद';
+
+  @override
+  String get parentPinCurrent => 'वर्तमान अभिभावक PIN';
+
+  @override
+  String get parentPinRemove => 'PIN हटाएँ';
+
+  @override
+  String get parentPinChange => 'PIN बदलें';
+
+  @override
+  String get parentPinNew => 'नया अभिभावक PIN';
+
+  @override
+  String get parentPinNewSubtitle => 'Google TV की बच्चों की प्रोफ़ाइल में लॉन्चर बदलने के लिए ज़रूरी';
+
+  @override
+  String get parentPinConfirm => 'PIN फिर से दर्ज करें';
+
+  @override
+  String get parentPinAskTitle => 'माता-पिता से पूछें';
+
+  @override
+  String parentPinAskBody(String settings, String profiles, String parentPin) {
+    return 'बच्चों की प्रोफ़ाइल में लॉन्चर सेटिंग्स लॉक रहती हैं। माता-पिता अपनी प्रोफ़ाइल से $settings → $profiles → $parentPin में PIN सेट कर सकते हैं।';
+  }
+
+  @override
+  String get parentPinKidsSubtitle => 'बच्चों की प्रोफ़ाइल: लॉन्चर बदलने के लिए अभिभावक PIN दर्ज करें';
+
+  @override
+  String get parentPinWrong => 'गलत PIN';
+
+  @override
+  String get parentPinEnter => 'PIN दर्ज करें';
+
+  @override
+  String profileSwitchGreeting(String name) {
+    return 'नमस्ते, $name';
+  }
+
+  @override
+  String get profileSwitchSettingUp => 'यह प्रोफ़ाइल सेट हो रही है…';
+
+  @override
+  String profilesKidsName(String name) {
+    return '$name (बच्चे)';
+  }
+
+  @override
+  String profilesAdultName(String name) {
+    return '$name (वयस्क)';
+  }
+
+  @override
+  String get pairingShowPicker => 'चुनने की स्क्रीन दिखाएं';
+
+  @override
+  String get pairingAlwaysShowPicker => 'हमेशा चुनने की स्क्रीन दिखाएं';
+
+  @override
+  String pairingMatchedByName(String profile) {
+    return '$profile (नाम से मिलान)';
+  }
+
+  @override
+  String get pairingNoMatchYet => 'अभी कोई मिलान नहीं: चुनने की स्क्रीन दिखती है';
+
+  @override
+  String get pairingOffSetUp => 'प्रोफ़ाइल पेयरिंग बंद है। इसे सेट अप करें';
+
+  @override
+  String pairingFooter(String shortName, String fullName) {
+    return 'जब Hearth इनमें से कोई ऐप खोलता है, तो वह Google TV प्रोफ़ाइल से जुड़ी ऐप प्रोफ़ाइल चुनता है। Hearth नामों का मिलान खुद करता है (\"$shortName\" का मेल \"$fullName\" से); कोई भी पेयरिंग यहां बदलें। मिलान न होने पर ऐप की अपनी चुनने की स्क्रीन दिखती है।';
+  }
+
+  @override
+  String get pairingAppNotInstalled => 'इंस्टॉल नहीं है';
+
+  @override
+  String get pairingAppOff => 'बंद: ऐप की अपनी चुनने की स्क्रीन दिखती है';
+
+  @override
+  String get pairingAppNotSeen => 'इसे एक बार Hearth से खोलें ताकि Hearth इसकी प्रोफ़ाइल जान सके';
+
+  @override
+  String pairingAppProfilesFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count प्रोफ़ाइल मिलीं',
+      one: '1 प्रोफ़ाइल मिली',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pairingMatchByName(String profile) {
+    return 'नाम से मिलान ($profile)';
+  }
+
+  @override
+  String get pairingMatchByNameNone => 'नाम से मिलान (अभी कोई मिलान नहीं)';
+
+  @override
+  String pairingProfileInApp(String profile, String app) {
+    return '$app में $profile';
+  }
+
+  @override
+  String pairingPairIn(String app) {
+    return '$app में प्रोफ़ाइल पेयर करें';
+  }
+
+  @override
+  String get pairingAppNotSeenFooter => 'Hearth ने अभी इस ऐप की प्रोफ़ाइल नहीं देखी हैं। इसे एक बार Hearth से खोलें, फिर वापस आएं।';
+
+  @override
+  String pairingAppProfilesFooter(String profiles) {
+    return 'इस ऐप की प्रोफ़ाइल: $profiles। Google TV प्रोफ़ाइल यहां तब दिखती हैं जब Hearth उन्हें देख लेता है।';
+  }
+
+  @override
+  String get familyAppsIntro => 'Hearth और HearthTube को अपनी अन्य Google TV प्रोफ़ाइल पर डालें। बच्चों की प्रोफ़ाइल पर यह HearthTube के काम करने और Netflix, Disney+ व अन्य ऐप्स में Hearth के सही प्रोफ़ाइल चुनने के लिए ज़रूरी है। वयस्क प्रोफ़ाइल पर यह बस सुविधा है, ताकि उन्हें हाथ से इंस्टॉल न करना पड़े।';
+
+  @override
+  String get familyAppsAddTitle => 'अन्य प्रोफ़ाइल में Hearth जोड़ें';
+
+  @override
+  String get familyAppsAddKids => 'इससे Hearth और HearthTube आपके बच्चों की प्रोफ़ाइल पर आ जाते हैं, ताकि वहां HearthTube काम करे और Hearth, Netflix व Disney+ जैसे ऐप्स में सही प्रोफ़ाइल चुन सके।';
+
+  @override
+  String get familyAppsAddAdults => 'यह इन्हें टीवी की अन्य वयस्क प्रोफ़ाइल पर भी इंस्टॉल करता है, ताकि किसी दूसरे वयस्क को खुद सेट अप न करना पड़े।';
+
+  @override
+  String get familyAppsAddOnlyOwnApps => 'यह केवल Hearth के अपने दो ऐप जोड़ता है, और आप नीचे दिए \"हटाएँ\" से इसे कभी भी पलट सकते हैं।';
+
+  @override
+  String get familyAppsAddFamilyLink => 'हर बच्चे को Family Link की एक \"ऐप जोड़ा गया\" सूचना मिलती है।';
+
+  @override
+  String get familyAppsAddApproval => 'पहली बार टीवी पूछता है \"डीबगिंग की अनुमति दें?\" — \"हमेशा अनुमति दें\" चुनें; इसी से Hearth सेटअप कर पाता है।';
+
+  @override
+  String get familyAppsAdd => 'जोड़ें';
+
+  @override
+  String get familyAppsRemoveTitle => 'अन्य प्रोफ़ाइल से Hearth हटाएँ';
+
+  @override
+  String get familyAppsRemoveBody => 'इससे Hearth और HearthTube आपकी अन्य प्रोफ़ाइल से हट जाते हैं।';
+
+  @override
+  String get familyAppsRemoveFirst => 'अगर आप Hearth को ही अनइंस्टॉल करना चाहते हैं, तो पहले यह चलाएं — वरना बच्चों की प्रोफ़ाइल पर इसकी कॉपियां अटकी रह सकती हैं और उन्हें हटाने के लिए कंप्यूटर चाहिए होगा।';
+
+  @override
+  String get familyAppsUninstallTitle => 'Hearth अनइंस्टॉल करें';
+
+  @override
+  String get familyAppsUninstallBody => 'यह पहले Hearth और HearthTube को आपकी अन्य प्रोफ़ाइल से हटाता है, फिर इस प्रोफ़ाइल से Hearth अनइंस्टॉल करता है।';
+
+  @override
+  String get familyAppsUninstallWhyHere => 'Android की सेटिंग्स के बजाय यहां से अनइंस्टॉल करने पर बच्चों की प्रोफ़ाइल पर कुछ भी नहीं छूटता।';
+
+  @override
+  String get familyAppsApprovalFirstTitle => 'पहले एक बार की अनुमति पूरी करें';
+
+  @override
+  String get familyAppsApprovalFirstBody => 'Hearth अभी अन्य प्रोफ़ाइल साफ़ नहीं कर सका — इसके लिए टीवी पर एक बार \"डीबगिंग की अनुमति दें?\" की मंज़ूरी चाहिए।';
+
+  @override
+  String get familyAppsApprovalFirstRetry => 'इसे मंज़ूर करें, फिर दोबारा अनइंस्टॉल करें, ताकि बच्चों की प्रोफ़ाइल पर कुछ न बचे।';
+
+  @override
+  String get familyAppsAddDone => 'जोड़ना पूरा हुआ';
+
+  @override
+  String get familyAppsRemoveDone => 'हटाना पूरा हुआ';
+
+  @override
+  String get familyAppsAdded => 'हो गया। Hearth और HearthTube अब आपकी अन्य प्रोफ़ाइल पर हैं — नीचे दी गई सूची देखें।';
+
+  @override
+  String get familyAppsRemoved => 'हो गया। Hearth और HearthTube आपकी अन्य प्रोफ़ाइल से हटा दिए गए हैं।';
+
+  @override
+  String get familyAppsNothingToSetUp => 'अभी सेट अप करने के लिए कोई अन्य प्रोफ़ाइल नहीं है।';
+
+  @override
+  String get familyAppsFailedTitle => 'प्रोफ़ाइल सेट अप नहीं हो सकीं';
+
+  @override
+  String get familyAppsFailedBody => 'अन्य प्रोफ़ाइल सेट अप करने से पहले Hearth को टीवी पर एक बार की अनुमति चाहिए।';
+
+  @override
+  String get familyAppsFailedRetry => 'टीवी जब \"डीबगिंग की अनुमति दें?\" पूछे, तो \"हमेशा अनुमति दें\" चुनें, फिर दोबारा कोशिश करें।';
+
+  @override
+  String get familyAppsAlsoAdults => 'अन्य वयस्क प्रोफ़ाइल भी सेट अप करें';
+
+  @override
+  String get familyAppsOn => 'चालू';
+
+  @override
+  String get familyAppsOff => 'बंद';
+
+  @override
+  String get familyAppsNoneYet => 'अभी कोई अन्य प्रोफ़ाइल सेट अप नहीं है।';
+
+  @override
+  String familyAppsAppInstalled(String app) {
+    return '$app: इंस्टॉल है';
+  }
+
+  @override
+  String familyAppsAppInstalledKept(String app) {
+    return '$app: इंस्टॉल है, सुरक्षित';
+  }
+
+  @override
+  String familyAppsAppNotInstalled(String app) {
+    return '$app: इंस्टॉल नहीं है';
+  }
+
+  @override
+  String familyAppsAppNotInstalledKept(String app) {
+    return '$app: इंस्टॉल नहीं है, सुरक्षित';
+  }
+
+  @override
+  String get familyAppsUnnamedKids => 'बच्चों की एक प्रोफ़ाइल';
+
+  @override
+  String get familyAppsUnnamedAdult => 'एक वयस्क प्रोफ़ाइल';
 }

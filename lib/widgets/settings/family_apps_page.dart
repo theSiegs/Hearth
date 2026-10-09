@@ -55,47 +55,43 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
   }
 
   Future<void> _add() async {
+    final l = AppLocalizations.of(context)!;
     final includeAdults = context.read<SettingsService>().pushToAdultProfiles;
     final go = await _confirm(
-      title: "Add Hearth to other profiles",
+      title: l.familyAppsAddTitle,
       lines: [
-        "This puts Hearth and HearthTube on your kids' profiles, so HearthTube works there and Hearth can pick the right profile in apps like Netflix and Disney+.",
-        if (includeAdults)
-          "It also installs them on the TV's other adult profiles, so another adult doesn't have to set it up themselves.",
-        "It only adds Hearth's own two apps, and you can undo it anytime with Remove below.",
-        "Each kid gets one Family Link \"app added\" notification.",
-        "The first time, the TV asks \"Allow debugging?\" — choose Always allow; that's what lets Hearth do the setup.",
+        l.familyAppsAddKids,
+        if (includeAdults) l.familyAppsAddAdults,
+        l.familyAppsAddOnlyOwnApps,
+        l.familyAppsAddFamilyLink,
+        l.familyAppsAddApproval,
       ],
-      action: "Add",
+      action: l.familyAppsAdd,
     );
     if (go != true) return;
-    await _run(() => _channel.addHearthToProfiles(includeAdults: includeAdults), "Add");
+    await _run(() => _channel.addHearthToProfiles(includeAdults: includeAdults), adding: true);
   }
 
   Future<void> _remove() async {
+    final l = AppLocalizations.of(context)!;
     final go = await _confirm(
-      title: "Remove Hearth from other profiles",
-      lines: [
-        "This removes Hearth and HearthTube from your other profiles.",
-        "If you plan to uninstall Hearth itself, run this first — otherwise its copies on the kids' profiles can be stranded and need a computer to clear.",
-      ],
-      action: "Remove",
+      title: l.familyAppsRemoveTitle,
+      lines: [l.familyAppsRemoveBody, l.familyAppsRemoveFirst],
+      action: l.remove,
     );
     if (go != true) return;
-    await _run(() => _channel.removeHearthFromProfiles(), "Remove");
+    await _run(() => _channel.removeHearthFromProfiles(), adding: false);
   }
 
   /// Uninstall Hearth the safe way: clean up the other profiles first (so nothing is left behind), then open
   /// Android's uninstall screen for Hearth itself. If the cleanup can't run yet, stop and ask for the approval
   /// rather than uninstall into a half-cleaned state.
   Future<void> _uninstallHearth() async {
+    final l = AppLocalizations.of(context)!;
     final go = await _confirm(
-      title: "Uninstall Hearth",
-      lines: [
-        "This first removes Hearth and HearthTube from your other profiles, then uninstalls Hearth from this one.",
-        "Uninstalling here — rather than from Android's settings — makes sure nothing is left behind on the kids' profiles.",
-      ],
-      action: "Uninstall",
+      title: l.familyAppsUninstallTitle,
+      lines: [l.familyAppsUninstallBody, l.familyAppsUninstallWhyHere],
+      action: l.uninstall,
     );
     if (go != true) return;
     setState(() => _busy = true);
@@ -104,10 +100,7 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
     } on PlatformException {
       if (mounted) {
         setState(() => _busy = false);
-        await _showLog("Finish the one-time approval first", [
-          "Hearth couldn't clean up the other profiles yet — it needs the one-time \"Allow debugging?\" approval on the TV.",
-          "Approve it, then try Uninstall again, so nothing is left on the kids' profiles.",
-        ]);
+        await _showLog(l.familyAppsApprovalFirstTitle, [l.familyAppsApprovalFirstBody, l.familyAppsApprovalFirstRetry]);
       }
       return;
     }
@@ -115,23 +108,20 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
     await _channel.uninstallHearth();
   }
 
-  Future<void> _run(Future<List<String>> Function() action, String label) async {
+  Future<void> _run(Future<List<String>> Function() action, {required bool adding}) async {
+    final l = AppLocalizations.of(context)!;
     setState(() => _busy = true);
     try {
       final log = await action();
       await _refresh();
       if (mounted) {
-        final done = label == "Add"
-            ? "Done. Hearth and HearthTube are now on your other profiles — see the list below."
-            : "Done. Hearth and HearthTube have been removed from your other profiles.";
-        await _showLog("$label done", [log.isEmpty ? "There are no other profiles to set up yet." : done]);
+        final done = adding ? l.familyAppsAdded : l.familyAppsRemoved;
+        await _showLog(adding ? l.familyAppsAddDone : l.familyAppsRemoveDone,
+            [log.isEmpty ? l.familyAppsNothingToSetUp : done]);
       }
     } on PlatformException {
       if (mounted) {
-        await _showLog("Couldn't set up the profiles", [
-          "Hearth needs a one-time approval on the TV before it can set up the other profiles.",
-          "On the TV, choose Always allow when it asks to \"Allow debugging?\", then try again.",
-        ]);
+        await _showLog(l.familyAppsFailedTitle, [l.familyAppsFailedBody, l.familyAppsFailedRetry]);
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -158,7 +148,8 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text("Not now")),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(false), child: Text(AppLocalizations.of(context)!.notNow)),
           TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(true), child: Text(action)),
         ],
       ),
@@ -181,33 +172,37 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
             ),
           ),
         ),
-        actions: [TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(), child: const Text("OK"))],
+        actions: [
+          TextButton(
+              autofocus: true,
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(AppLocalizations.of(context)!.ok)),
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final settings = context.watch<SettingsService>();
     final adultsOn = settings.pushToAdultProfiles;
     return SettingsPage(
-      title: AppLocalizations.of(context)!.familyAppsTitle,
+      title: l.familyAppsTitle,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           child: Text(
-            "Put Hearth and HearthTube on your other Google TV profiles. On kids' profiles this is needed "
-            "for HearthTube to work and for Hearth to pick the right profile in Netflix, Disney+ and other "
-            "apps. On adult profiles it's just a convenience, so they don't have to install them by hand.",
+            l.familyAppsIntro,
             style: textTheme.bodySmall?.copyWith(color: Colors.white70),
           ),
         ),
         FocusableSettingsTile(
           autofocus: true,
           leading: const Icon(Icons.group_add_outlined),
-          title: Text("Add Hearth to other profiles", style: textTheme.bodyMedium),
+          title: Text(l.familyAppsAddTitle, style: textTheme.bodyMedium),
           trailing: _busy
               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.chevron_right, color: Colors.white54),
@@ -215,20 +210,20 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.group_remove_outlined),
-          title: Text("Remove Hearth from other profiles", style: textTheme.bodyMedium),
+          title: Text(l.familyAppsRemoveTitle, style: textTheme.bodyMedium),
           trailing: const Icon(Icons.chevron_right, color: Colors.white54),
           onPressed: _busy ? null : () => _remove(),
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.delete_outline),
-          title: Text("Uninstall Hearth", style: textTheme.bodyMedium),
+          title: Text(l.familyAppsUninstallTitle, style: textTheme.bodyMedium),
           trailing: const Icon(Icons.chevron_right, color: Colors.white54),
           onPressed: _busy ? null : () => _uninstallHearth(),
         ),
         FocusableSettingsTile(
           leading: Icon(Icons.person_outline, color: adultsOn ? Colors.green : null),
-          title: Text("Also set up other adult profiles", style: textTheme.bodyMedium),
-          trailing: Text(adultsOn ? "On" : "Off",
+          title: Text(l.familyAppsAlsoAdults, style: textTheme.bodyMedium),
+          trailing: Text(adultsOn ? l.familyAppsOn : l.familyAppsOff,
               style: textTheme.bodySmall?.copyWith(color: adultsOn ? Colors.green : Colors.white54)),
           onPressed: () => settings.setPushToAdultProfiles(!adultsOn),
         ),
@@ -239,6 +234,7 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
   }
 
   Widget _stateSection(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final rows = _state;
     if (rows == null) {
@@ -247,7 +243,7 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
     if (rows.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        child: Text("No other profiles set up yet.", style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
+        child: Text(l.familyAppsNoneYet, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
       );
     }
     final byUser = <int, List<Map<dynamic, dynamic>>>{};
@@ -264,15 +260,13 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _profileLabel(entry.value.first),
+                  _profileLabel(l, entry.value.first),
                   style: textTheme.labelMedium?.copyWith(color: Colors.white70),
                 ),
                 for (final r in entry.value)
-                  Text(
-                    "  ${_shortName(r["packageName"] as String?)}: "
-                    "${(r["installed"] as bool? ?? false) ? "installed" : "not installed"}"
-                    "${(r["protected"] as bool? ?? false) ? ", kept" : ""}",
-                    style: textTheme.bodySmall?.copyWith(color: Colors.white54),
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(start: 8),
+                    child: Text(_appLine(l, r), style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
                   ),
               ],
             ),
@@ -282,11 +276,24 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
   }
 
   /// A friendly label for a profile row: its name if Hearth knows it, with whether it's a kids or adult profile.
-  String _profileLabel(Map<dynamic, dynamic> row) {
+  String _profileLabel(AppLocalizations l, Map<dynamic, dynamic> row) {
     final supervised = (row["supervised"] as bool?) ?? false;
     final name = row["name"] as String?;
-    if (name != null && name.isNotEmpty) return "$name (${supervised ? "kids" : "adult"})";
-    return supervised ? "A kids profile" : "An adult profile";
+    if (name != null && name.isNotEmpty) return supervised ? l.profilesKidsName(name) : l.profilesAdultName(name);
+    return supervised ? l.familyAppsUnnamedKids : l.familyAppsUnnamedAdult;
+  }
+
+  /// One of Hearth's apps on a profile: whether it's installed there, and whether Hearth keeps it installed.
+  String _appLine(AppLocalizations l, Map<dynamic, dynamic> row) {
+    final app = _shortName(row["packageName"] as String?);
+    final installed = (row["installed"] as bool?) ?? false;
+    final kept = (row["protected"] as bool?) ?? false;
+    return switch ((installed, kept)) {
+      (true, true) => l.familyAppsAppInstalledKept(app),
+      (true, false) => l.familyAppsAppInstalled(app),
+      (false, true) => l.familyAppsAppNotInstalledKept(app),
+      (false, false) => l.familyAppsAppNotInstalled(app),
+    };
   }
 
   String _shortName(String? pkg) {
