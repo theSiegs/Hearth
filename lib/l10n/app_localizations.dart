@@ -3226,6 +3226,306 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Blocked Apps ({count})'**
   String blockedNotificationsHeading(int count);
+
+  /// Row on the System page that opens the Google TV home screen instead of Hearth
+  ///
+  /// In en, this message translates to:
+  /// **'Use Google TV for now'**
+  String get systemPageUseGoogleTv;
+
+  /// Text sent along with the backup file when it's shared from the Backup & Restore page
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth Backup'**
+  String get backupShareText;
+
+  /// Title of the message when sharing a backup fails
+  ///
+  /// In en, this message translates to:
+  /// **'Share Failed'**
+  String get backupShareFailedTitle;
+
+  /// Message when sharing a backup fails; {error} is the reason
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to share backup: {error}'**
+  String backupShareFailed(String error);
+
+  /// Title of the message after a backup is exported
+  ///
+  /// In en, this message translates to:
+  /// **'Export Success'**
+  String get backupExportSuccessTitle;
+
+  /// Title of the message when exporting a backup fails
+  ///
+  /// In en, this message translates to:
+  /// **'Export Failed'**
+  String get backupExportFailedTitle;
+
+  /// Title of the message after a backup is imported
+  ///
+  /// In en, this message translates to:
+  /// **'Import Success'**
+  String get backupImportSuccessTitle;
+
+  /// Title of the message when importing a backup fails
+  ///
+  /// In en, this message translates to:
+  /// **'Import Failed'**
+  String get backupImportFailedTitle;
+
+  /// Button that confirms importing the chosen backup
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get backupImport;
+
+  /// Shown in the Import Backup dialog when the list of backups can't be read; {error} is the reason
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading backups: {error}'**
+  String backupLoadError(String error);
+
+  /// Shown in the Import Backup dialog when there are no backups
+  ///
+  /// In en, this message translates to:
+  /// **'No backup files found.'**
+  String get backupNoFiles;
+
+  /// Line under a backup's file name in the Import Backup dialog: when it was saved and its size
+  ///
+  /// In en, this message translates to:
+  /// **'{date} ({size})'**
+  String backupFileDetails(String date, String size);
+
+  /// A backup file's size in bytes, in the Import Backup dialog
+  ///
+  /// In en, this message translates to:
+  /// **'{size} B'**
+  String backupSizeBytes(String size);
+
+  /// A backup file's size in kilobytes, in the Import Backup dialog
+  ///
+  /// In en, this message translates to:
+  /// **'{size} KB'**
+  String backupSizeKilobytes(String size);
+
+  /// A backup file's size in megabytes, in the Import Backup dialog
+  ///
+  /// In en, this message translates to:
+  /// **'{size} MB'**
+  String backupSizeMegabytes(String size);
+
+  /// Title of Hearth's update dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Check for Updates'**
+  String get updateCheckForUpdatesTitle;
+
+  /// Under the title of the update dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Current version: {version}'**
+  String updateCurrentVersion(String version);
+
+  /// Shown in the update dialog while it checks
+  ///
+  /// In en, this message translates to:
+  /// **'Checking GitHub for a new release…'**
+  String get updateChecking;
+
+  /// Shown in the update dialog when there's nothing newer
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re on the latest version.'**
+  String get updateUpToDate;
+
+  /// Shown in the update dialog when a newer release exists; {version} is its tag
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} is available'**
+  String updateVersionAvailable(String version);
+
+  /// Under the progress bar in the update dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading… {percent}%'**
+  String updateDownloading(String percent);
+
+  /// Shown in the update dialog after the download; "Install unknown apps" is the Android setting's name
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded. If the installer didn\'t open, your device may need\n\"Install unknown apps\" permission granted for Hearth.'**
+  String get updateDownloadedHint;
+
+  /// Shown in the update dialog when an error has no message of its own
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get updateSomethingWentWrong;
+
+  /// Button in the update dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Download & Install'**
+  String get updateDownloadAndInstall;
+
+  /// Button in the update dialog after the download, to open the installer again
+  ///
+  /// In en, this message translates to:
+  /// **'Retry Install'**
+  String get updateRetryInstall;
+
+  /// Button in the update dialog after a check
+  ///
+  /// In en, this message translates to:
+  /// **'Check Again'**
+  String get updateCheckAgain;
+
+  /// Title of the dialog on the Updates page before opening the "Install unknown apps" setting
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Hearth to install apps'**
+  String get updatesInstallPermissionTitle;
+
+  /// Text of the dialog on the Updates page before opening the "Install unknown apps" setting
+  ///
+  /// In en, this message translates to:
+  /// **'On the next screen, find Hearth and turn it on, then press Back. The install continues when you\'re back here.'**
+  String get updatesInstallPermissionMessage;
+
+  /// Button in the install permission dialog on the Updates page
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get updatesOpenSettings;
+
+  /// Next to a companion app on the Updates page when checking for its updates fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check for updates'**
+  String get updatesCheckFailed;
+
+  /// Next to a companion app on the Updates page when Android's installer doesn't open
+  ///
+  /// In en, this message translates to:
+  /// **'The installer didn\'t start'**
+  String get updatesInstallerNotStarted;
+
+  /// Next to Hearth on the Updates page; pressing the row opens the update dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Check for updates'**
+  String get updatesCheckForUpdates;
+
+  /// Switch on the Updates page
+  ///
+  /// In en, this message translates to:
+  /// **'Update automatically'**
+  String get updatesAutoUpdate;
+
+  /// Line under the Update automatically switch on the Updates page
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth checks daily and installs updates to apps it installed, when they\'re not in use'**
+  String get updatesAutoUpdateDescription;
+
+  /// Note at the bottom of the Updates page
+  ///
+  /// In en, this message translates to:
+  /// **'Installed from each app\'s GitHub releases. After Hearth installs or updates an app once, its updates install without asking, and the app leaves updating to Hearth.'**
+  String get updatesFooter;
+
+  /// Next to a companion app on the Updates page while it checks
+  ///
+  /// In en, this message translates to:
+  /// **'Checking…'**
+  String get updatesChecking;
+
+  /// Next to a companion app on the Updates page that isn't installed; pressing the row installs it
+  ///
+  /// In en, this message translates to:
+  /// **'Install'**
+  String get updatesInstall;
+
+  /// Next to a companion app on the Updates page when a newer version exists
+  ///
+  /// In en, this message translates to:
+  /// **'Update to {version}'**
+  String updatesUpdateTo(String version);
+
+  /// Next to a companion app on the Updates page when it has the latest version
+  ///
+  /// In en, this message translates to:
+  /// **'Up to date'**
+  String get updatesUpToDate;
+
+  /// Next to a companion app on the Updates page while its update downloads
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading {percent}%'**
+  String updatesDownloadingPercent(int percent);
+
+  /// Next to a companion app on the Updates page while it installs
+  ///
+  /// In en, this message translates to:
+  /// **'Installing…'**
+  String get updatesInstalling;
+
+  /// Next to a companion app on the Updates page when something failed without a message
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get updatesError;
+
+  /// Line under HearthTube on the Updates page
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube for Hearth; follows your Hearth profile'**
+  String get updatesHearthTubeDescription;
+
+  /// Line under a companion app on the Updates page when it's installed: its description and installed version
+  ///
+  /// In en, this message translates to:
+  /// **'{description} · {version}'**
+  String updatesDescriptionWithVersion(String description, String version);
+
+  /// Line under the version in the About dialog; the placeholders are project and author names
+  ///
+  /// In en, this message translates to:
+  /// **'A fork of {launcher} by {author}, with parts of {parts}'**
+  String aboutForkOf(String launcher, String author, String parts);
+
+  /// Description card in the About dialog
+  ///
+  /// In en, this message translates to:
+  /// **'A private, family-friendly launcher for Google TV, with Google TV profiles and Home Assistant built in. Ad-free and tracker-free.'**
+  String get aboutDescription;
+
+  /// Button in the About dialog that opens Hearth's GitHub page
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth on GitHub'**
+  String get aboutHearthOnGitHub;
+
+  /// Heading above the projects Hearth builds on, in the About dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Credits'**
+  String get aboutCredits;
+
+  /// Credit button in the About dialog for a fork of FLauncher; {author} is its author's handle
+  ///
+  /// In en, this message translates to:
+  /// **'FLauncher fork · {author}'**
+  String aboutFlauncherForkCredit(String author);
+
+  /// Small print at the bottom of the About dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Free software under the GNU GPL v3, like the projects it builds on.'**
+  String get aboutLicense;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

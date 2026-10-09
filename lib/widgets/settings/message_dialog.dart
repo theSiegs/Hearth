@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// A title, a message and OK. True when it was closed with OK rather than Back.
@@ -30,7 +31,7 @@ Future<bool> showMessageDialog(BuildContext context, {required String title, req
         TextButton(
           autofocus: true,
           onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: const Text("OK"),
+          child: Text(AppLocalizations.of(dialogContext)!.ok),
         ),
       ],
     ),

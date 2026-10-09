@@ -1819,4 +1819,182 @@ class AppLocalizationsDe extends AppLocalizations {
   String blockedNotificationsHeading(int count) {
     return 'Blockierte Apps ($count)';
   }
+
+  @override
+  String get systemPageUseGoogleTv => 'Vorerst Google TV verwenden';
+
+  @override
+  String get backupShareText => 'Hearth-Sicherung';
+
+  @override
+  String get backupShareFailedTitle => 'Teilen fehlgeschlagen';
+
+  @override
+  String backupShareFailed(String error) {
+    return 'Teilen der Sicherung fehlgeschlagen: $error';
+  }
+
+  @override
+  String get backupExportSuccessTitle => 'Export erfolgreich';
+
+  @override
+  String get backupExportFailedTitle => 'Export fehlgeschlagen';
+
+  @override
+  String get backupImportSuccessTitle => 'Import erfolgreich';
+
+  @override
+  String get backupImportFailedTitle => 'Import fehlgeschlagen';
+
+  @override
+  String get backupImport => 'Importieren';
+
+  @override
+  String backupLoadError(String error) {
+    return 'Fehler beim Laden der Sicherungen: $error';
+  }
+
+  @override
+  String get backupNoFiles => 'Keine Sicherungsdateien gefunden.';
+
+  @override
+  String backupFileDetails(String date, String size) {
+    return '$date ($size)';
+  }
+
+  @override
+  String backupSizeBytes(String size) {
+    return '$size B';
+  }
+
+  @override
+  String backupSizeKilobytes(String size) {
+    return '$size KB';
+  }
+
+  @override
+  String backupSizeMegabytes(String size) {
+    return '$size MB';
+  }
+
+  @override
+  String get updateCheckForUpdatesTitle => 'Nach Updates suchen';
+
+  @override
+  String updateCurrentVersion(String version) {
+    return 'Aktuelle Version: $version';
+  }
+
+  @override
+  String get updateChecking => 'Suche auf GitHub nach einer neuen Version…';
+
+  @override
+  String get updateUpToDate => 'Du hast die neueste Version.';
+
+  @override
+  String updateVersionAvailable(String version) {
+    return 'Version $version ist verfügbar';
+  }
+
+  @override
+  String updateDownloading(String percent) {
+    return 'Wird heruntergeladen… $percent %';
+  }
+
+  @override
+  String get updateDownloadedHint => 'Heruntergeladen. Falls sich das Installationsprogramm nicht geöffnet hat, braucht Hearth\nauf deinem Gerät eventuell die Berechtigung „Unbekannte Apps installieren“.';
+
+  @override
+  String get updateSomethingWentWrong => 'Etwas ist schiefgelaufen';
+
+  @override
+  String get updateDownloadAndInstall => 'Herunterladen & installieren';
+
+  @override
+  String get updateRetryInstall => 'Installation wiederholen';
+
+  @override
+  String get updateCheckAgain => 'Erneut prüfen';
+
+  @override
+  String get updatesInstallPermissionTitle => 'Hearth erlauben, Apps zu installieren';
+
+  @override
+  String get updatesInstallPermissionMessage => 'Suche auf dem nächsten Bildschirm Hearth, schalte es ein und drücke dann Zurück. Die Installation geht weiter, sobald du wieder hier bist.';
+
+  @override
+  String get updatesOpenSettings => 'Einstellungen öffnen';
+
+  @override
+  String get updatesCheckFailed => 'Suche nach Updates fehlgeschlagen';
+
+  @override
+  String get updatesInstallerNotStarted => 'Das Installationsprogramm wurde nicht gestartet';
+
+  @override
+  String get updatesCheckForUpdates => 'Nach Updates suchen';
+
+  @override
+  String get updatesAutoUpdate => 'Automatisch aktualisieren';
+
+  @override
+  String get updatesAutoUpdateDescription => 'Hearth sucht täglich und installiert Updates für die von ihm installierten Apps, wenn sie nicht verwendet werden';
+
+  @override
+  String get updatesFooter => 'Installiert aus den GitHub-Releases der jeweiligen App. Nachdem Hearth eine App einmal installiert oder aktualisiert hat, werden ihre Updates ohne Rückfrage installiert und die App überlässt das Aktualisieren Hearth.';
+
+  @override
+  String get updatesChecking => 'Wird geprüft…';
+
+  @override
+  String get updatesInstall => 'Installieren';
+
+  @override
+  String updatesUpdateTo(String version) {
+    return 'Auf $version aktualisieren';
+  }
+
+  @override
+  String get updatesUpToDate => 'Aktuell';
+
+  @override
+  String updatesDownloadingPercent(int percent) {
+    return 'Wird heruntergeladen: $percent %';
+  }
+
+  @override
+  String get updatesInstalling => 'Wird installiert…';
+
+  @override
+  String get updatesError => 'Fehler';
+
+  @override
+  String get updatesHearthTubeDescription => 'YouTube für Hearth; folgt deinem Hearth-Profil';
+
+  @override
+  String updatesDescriptionWithVersion(String description, String version) {
+    return '$description · $version';
+  }
+
+  @override
+  String aboutForkOf(String launcher, String author, String parts) {
+    return 'Ein Fork von $launcher von $author, mit Teilen von $parts';
+  }
+
+  @override
+  String get aboutDescription => 'Ein privater, familienfreundlicher Launcher für Google TV, mit integrierten Google-TV-Profilen und Home Assistant. Ohne Werbung und ohne Tracker.';
+
+  @override
+  String get aboutHearthOnGitHub => 'Hearth auf GitHub';
+
+  @override
+  String get aboutCredits => 'Danksagungen';
+
+  @override
+  String aboutFlauncherForkCredit(String author) {
+    return 'FLauncher-Fork · $author';
+  }
+
+  @override
+  String get aboutLicense => 'Freie Software unter der GNU GPL v3, wie die Projekte, auf denen sie aufbaut.';
 }

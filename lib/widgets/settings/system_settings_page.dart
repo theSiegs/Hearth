@@ -59,7 +59,7 @@ class SystemSettingsPage extends StatelessWidget {
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.tv_outlined),
-          title: Text("Use Google TV for now", style: Theme.of(context).textTheme.bodyMedium),
+          title: Text(localizations.systemPageUseGoogleTv, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: () => context.read<FLauncherChannel>().openGoogleTvHome(),
         ),
         FocusableSettingsTile(

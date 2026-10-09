@@ -1835,4 +1835,182 @@ class AppLocalizationsUk extends AppLocalizations {
   String blockedNotificationsHeading(int count) {
     return 'Заблоковані додатки ($count)';
   }
+
+  @override
+  String get systemPageUseGoogleTv => 'Поки що використовувати Google TV';
+
+  @override
+  String get backupShareText => 'Резервна копія Hearth';
+
+  @override
+  String get backupShareFailedTitle => 'Не вдалося поділитися';
+
+  @override
+  String backupShareFailed(String error) {
+    return 'Не вдалося поділитися резервною копією: $error';
+  }
+
+  @override
+  String get backupExportSuccessTitle => 'Експорт виконано';
+
+  @override
+  String get backupExportFailedTitle => 'Помилка експорту';
+
+  @override
+  String get backupImportSuccessTitle => 'Імпорт виконано';
+
+  @override
+  String get backupImportFailedTitle => 'Помилка імпорту';
+
+  @override
+  String get backupImport => 'Імпортувати';
+
+  @override
+  String backupLoadError(String error) {
+    return 'Помилка завантаження резервних копій: $error';
+  }
+
+  @override
+  String get backupNoFiles => 'Файлів резервних копій не знайдено.';
+
+  @override
+  String backupFileDetails(String date, String size) {
+    return '$date ($size)';
+  }
+
+  @override
+  String backupSizeBytes(String size) {
+    return '$size Б';
+  }
+
+  @override
+  String backupSizeKilobytes(String size) {
+    return '$size КБ';
+  }
+
+  @override
+  String backupSizeMegabytes(String size) {
+    return '$size МБ';
+  }
+
+  @override
+  String get updateCheckForUpdatesTitle => 'Перевірка оновлень';
+
+  @override
+  String updateCurrentVersion(String version) {
+    return 'Поточна версія: $version';
+  }
+
+  @override
+  String get updateChecking => 'Пошук нової версії на GitHub…';
+
+  @override
+  String get updateUpToDate => 'У вас остання версія.';
+
+  @override
+  String updateVersionAvailable(String version) {
+    return 'Доступна версія $version';
+  }
+
+  @override
+  String updateDownloading(String percent) {
+    return 'Завантаження… $percent%';
+  }
+
+  @override
+  String get updateDownloadedHint => 'Завантажено. Якщо інсталятор не відкрився, можливо, на пристрої потрібно\nдозволити Hearth «Встановлення невідомих застосунків».';
+
+  @override
+  String get updateSomethingWentWrong => 'Щось пішло не так';
+
+  @override
+  String get updateDownloadAndInstall => 'Завантажити й установити';
+
+  @override
+  String get updateRetryInstall => 'Повторити встановлення';
+
+  @override
+  String get updateCheckAgain => 'Перевірити знову';
+
+  @override
+  String get updatesInstallPermissionTitle => 'Дозвольте Hearth встановлювати застосунки';
+
+  @override
+  String get updatesInstallPermissionMessage => 'На наступному екрані знайдіть Hearth, увімкніть його й натисніть «Назад». Встановлення продовжиться, коли ви повернетеся сюди.';
+
+  @override
+  String get updatesOpenSettings => 'Відкрити налаштування';
+
+  @override
+  String get updatesCheckFailed => 'Не вдалося перевірити оновлення';
+
+  @override
+  String get updatesInstallerNotStarted => 'Інсталятор не запустився';
+
+  @override
+  String get updatesCheckForUpdates => 'Перевірити оновлення';
+
+  @override
+  String get updatesAutoUpdate => 'Оновлювати автоматично';
+
+  @override
+  String get updatesAutoUpdateDescription => 'Hearth щодня перевіряє й установлює оновлення застосунків, які він установив, коли вони не використовуються';
+
+  @override
+  String get updatesFooter => 'Встановлюються з релізів кожного застосунку на GitHub. Після того як Hearth один раз установить або оновить застосунок, його оновлення ставляться без запитань, а сам застосунок довіряє оновлення Hearth.';
+
+  @override
+  String get updatesChecking => 'Перевірка…';
+
+  @override
+  String get updatesInstall => 'Установити';
+
+  @override
+  String updatesUpdateTo(String version) {
+    return 'Оновити до $version';
+  }
+
+  @override
+  String get updatesUpToDate => 'Остання версія';
+
+  @override
+  String updatesDownloadingPercent(int percent) {
+    return 'Завантаження $percent%';
+  }
+
+  @override
+  String get updatesInstalling => 'Встановлення…';
+
+  @override
+  String get updatesError => 'Помилка';
+
+  @override
+  String get updatesHearthTubeDescription => 'YouTube для Hearth; відповідає вашому профілю Hearth';
+
+  @override
+  String updatesDescriptionWithVersion(String description, String version) {
+    return '$description · $version';
+  }
+
+  @override
+  String aboutForkOf(String launcher, String author, String parts) {
+    return 'Форк $launcher від $author із частинами $parts';
+  }
+
+  @override
+  String get aboutDescription => 'Приватний сімейний лаунчер для Google TV із вбудованими профілями Google TV і Home Assistant. Без реклами й трекерів.';
+
+  @override
+  String get aboutHearthOnGitHub => 'Hearth на GitHub';
+
+  @override
+  String get aboutCredits => 'Подяки';
+
+  @override
+  String aboutFlauncherForkCredit(String author) {
+    return 'Форк FLauncher · $author';
+  }
+
+  @override
+  String get aboutLicense => 'Вільне ПЗ за ліцензією GNU GPL v3, як і проєкти, на яких воно базується.';
 }
