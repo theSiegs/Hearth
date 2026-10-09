@@ -3,6 +3,11 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.13 (pre-release)
+
+- A newly added Google TV profile can be switched to: Hearth waits while Google TV sets it up.
+- The fade behind Continue Watching and search reaches both edges of the screen.
+
 ## 2026.10.12 (pre-release)
 
 - Continue Watching shows "See all" only once it has three programs.
