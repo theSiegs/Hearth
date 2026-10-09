@@ -20,6 +20,7 @@ import 'package:flauncher/flauncher.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/gradients.dart';
 import 'package:flauncher/providers/apps_service.dart';
+import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:flauncher/models/watch_next_program.dart';
 import 'package:flauncher/providers/launcher_state.dart';
@@ -247,6 +248,39 @@ void main() {
     await tester.pumpAndSettle();
     expect(getFocusNodeForApp(tester, "me.efesser.flauncher.1")!.hasFocus, isTrue);
     expect(recentsOpacity(), 0);
+  });
+
+  testWidgets("The first app added to Favorites keeps the selection: it lands on that app in the new dock",
+      (tester) async {
+    final appsService = mkAppService(LiveAppsService()) as LiveAppsService;
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    final applicationsCategory = fakeCategory(name: "Applications", order: 1);
+    applicationsCategory.applications
+        .addAll(List.generate(20, (i) => fakeApp(packageName: "com.example.app$i", name: "App $i")));
+    when(appsService.launcherSections).thenReturn([favoritesCategory, applicationsCategory]);
+    when(appsService.toggleFavorite(any)).thenAnswer((invocation) async {
+      favoritesCategory.applications.add(invocation.positionalArguments[0] as App);
+      appsService.changed();
+    });
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+    expect(find.byType(HomeDock), findsNothing);
+
+    // An app on the grid's second row, after a visit to the top bar
+    getProfileFocusNode(tester)!.requestFocus();
+    await tester.pumpAndSettle();
+    getFocusNodeForApp(tester, "com.example.app7")!.requestFocus();
+    await tester.pumpAndSettle();
+    await tester.longPress(find.byKey(const Key("com.example.app7")));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text("Add to Favorites"));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HomeDock), findsOneWidget);
+    expect(isDockAppFocused(tester, "com.example.app7"), isTrue);
+    expect(isProfileButtonFocused(tester), isFalse);
+    expect(homeScrollOffset(tester), 0);
   });
 
   testWidgets("After a profile switch, focus lands on the dock once the welcome card goes", (tester) async {
@@ -887,8 +921,15 @@ void main() {
   });
 }
 
-SettingsService mkSettingsService() {
-  final settingsService = MockSettingsService();
+/// Mocks whose listeners hear [LiveListeners.changed], for tests where the home changes under the selection.
+class LiveAppsService extends MockAppsService with LiveListeners {}
+
+class LiveSettingsService extends MockSettingsService with LiveListeners {}
+
+class LiveWatchNextService extends MockWatchNextService with LiveListeners {}
+
+SettingsService mkSettingsService([MockSettingsService? mock]) {
+  final settingsService = mock ?? MockSettingsService();
   when(settingsService.dateFormat).thenReturn(SettingsService.defaultDateFormat);
   when(settingsService.timeFormat).thenReturn(SettingsService.defaultTimeFormat);
   when(settingsService.appHighlightAnimationEnabled).thenReturn(true);
@@ -946,8 +987,8 @@ NotificationsService mkNotificationsService() {
   return notificationsService;
 }
 
-WatchNextService mkWatchNextService() {
-  final watchNextService = MockWatchNextService();
+WatchNextService mkWatchNextService([MockWatchNextService? mock]) {
+  final watchNextService = mock ?? MockWatchNextService();
   when(watchNextService.profileChanged(any)).thenReturn(null);
   when(watchNextService.programs).thenReturn([]);
   return watchNextService;
@@ -961,8 +1002,8 @@ WeatherService mkWeatherService() {
   return weatherService;
 }
 
-AppsService mkAppService() {
-  final appsService = MockAppsService();
+AppsService mkAppService([MockAppsService? mock]) {
+  final appsService = mock ?? MockAppsService();
   when(appsService.initialized).thenReturn(true);
   when(appsService.getAppBanner(any)).thenAnswer((_) async => kTransparentImage);
   when(appsService.getAppIcon(any)).thenAnswer((_) async => kTransparentImage);
@@ -1049,6 +1090,25 @@ bool isAppCardFocused(WidgetTester tester, String packageName) {
   final focusNode = getFocusNodeForApp(tester, packageName);
   return focusNode?.hasFocus ?? false;
 }
+
+/// The app's card in the dock (it can be in a grid below too) has focus.
+bool isDockAppFocused(WidgetTester tester, String packageName) {
+  final inkWell = find.descendant(
+    of: find.descendant(
+        of: find.byType(HomeDock),
+        matching: find.byWidgetPredicate((widget) => widget is AppCard && widget.application.packageName == packageName)),
+    matching: find.byType(InkWell),
+  );
+  if (inkWell.evaluate().isEmpty) return false;
+  return tester.widget<InkWell>(inkWell).focusNode?.hasFocus ?? false;
+}
+
+/// How far the home page is scrolled down.
+double homeScrollOffset(WidgetTester tester) => tester
+    .widget<SingleChildScrollView>(
+        find.descendant(of: find.byType(FLauncher), matching: find.byType(SingleChildScrollView)).first)
+    .controller!
+    .offset;
 
 bool isProfileButtonFocused(WidgetTester tester) {
   final focusNode = getProfileFocusNode(tester);
