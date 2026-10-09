@@ -468,8 +468,19 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 && !current.equals(ProfileUsers.getName(this, mActiveSerial))) {
             nameSerial(mActiveSerial, current, "chooser's current account");
         }
-        // Only the current account's tile: it's the highlighted one, without the lock Google TV puts on other
-        // PIN-protected profiles' tiles (or their dimming), so each profile's photo is taken while it's on
+        // Only the current account's tile, and only while it's the selected one: Google TV draws its PIN lock (and
+        // dimming) on a PIN-protected profile's tile whenever another tile has focus, the current one included
+        if (current != null && !current.equals(focusedTileName(root))) {
+            Log.i(TAG, "Chooser shows " + names + "; photo waits until the current account's tile is selected");
+            return;
+        }
+        // Nor mid-switch: picking a PIN-protected profile from another one shows its tile locked until the switch
+        // is done, so only a profile that's already running (settled, no switch under way) is photographed
+        boolean settled = mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN;
+        if (current != null && (!settled || !current.equals(ProfileUsers.getName(this, mActiveSerial)))) {
+            Log.i(TAG, "Chooser shows " + names + "; photo waits until " + current + " is the running profile");
+            return;
+        }
         Map<String, Rect> due = new LinkedHashMap<>();
         for (int i = 0; i < names.size(); i++) {
             if (names.get(i).equals(current) && ProfileAvatars.isDue(this, names.get(i))) {
@@ -486,6 +497,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
             @Override
             public void onSuccess(ScreenshotResult result) {
                 final HardwareBuffer buffer = result.getHardwareBuffer();
+                // Focus can move while the screenshot is taken: then the tile may already show the lock
+                AccessibilityNodeInfo now = getRootInActiveWindow();
+                if (now == null || !TextUtils.equals(current, focusedTileName(now))) {
+                    buffer.close();
+                    Log.i(TAG, "Photo dropped: the selection moved off the current account's tile");
+                    return;
+                }
                 // Cropping and saving off the main thread; the full screenshot is never kept.
                 new Thread(() -> {
                     Bitmap hardware = Bitmap.wrapHardwareBuffer(buffer, result.getColorSpace());
@@ -514,6 +532,19 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 Log.i(TAG, "Profile photo screenshot failed: " + errorCode);
             }
         });
+    }
+
+    /** The name on the chooser tile that has focus (null if none): the selected tile. */
+    private static String focusedTileName(AccessibilityNodeInfo node) {
+        AccessibilityNodeInfo focused = node.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+        if (focused == null) return null;
+        for (int i = 0; i < focused.getChildCount(); i++) {
+            AccessibilityNodeInfo child = focused.getChild(i);
+            if (child != null && TextUtils.equals(TEXT_VIEW, child.getClassName()) && child.getText() != null) {
+                return child.getText().toString().trim();
+            }
+        }
+        return null;
     }
 
     /** The first ImageView in a node's subtree. */

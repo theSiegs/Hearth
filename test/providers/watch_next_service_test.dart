@@ -19,8 +19,7 @@ void main() {
   late WatchNextService watchNextService;
 
   setUp(() async {
-    // Ownership tracking has started (no stored owners), and the active profile last used every test app
-    SharedPreferences.setMockInitialValues({'watch_next_owners_v2': '{}'});
+    SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
     mockChannel = MockFLauncherChannel();
     watchNextStreamController = StreamController<dynamic>.broadcast();
@@ -420,38 +419,30 @@ void main() {
       return service;
     }
 
-    test('each profile sees the entries from apps it last used here', () async {
+    test("the owner's own list shows to the owner, whichever profile last used its apps", () async {
       when(mockChannel.getWatchNextPrograms())
           .thenAnswer((_) async => [entry(1, 'com.netflix.mediaclient'), entry(2, 'com.disney.disneyplus')]);
       when(mockChannel.getAppLastProfiles())
-          .thenAnswer((_) async => {'com.netflix.mediaclient': 'user:0', 'com.disney.disneyplus': 'user:10'});
+          .thenAnswer((_) async => {'com.netflix.mediaclient': 'user:10', 'com.disney.disneyplus': 'user:11'});
 
+      final service = await ready();
+      expect(titles(service), unorderedEquals(['Show 1', 'Show 2']));
+    });
+
+    test("the owner's list never shows while another profile is on", () async {
+      when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => [entry(1, 'com.netflix.mediaclient')]);
       final service = await ready();
       expect(titles(service), ['Show 1']);
 
       when(mockChannel.getActiveProfileKey()).thenAnswer((_) async => 'user:10');
       await service.refresh();
-      expect(titles(service), ['Show 2']);
-    });
-
-    test('entries already there when tracking starts belong to no one until watched again', () async {
-      SharedPreferences.setMockInitialValues({});
-      prefs = await SharedPreferences.getInstance();
-      when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => [entry(1, 'com.netflix.mediaclient')]);
-
-      final service = await ready();
       expect(service.programs, isEmpty);
-
-      when(mockChannel.getWatchNextPrograms())
-          .thenAnswer((_) async => [entry(1, 'com.netflix.mediaclient', time: 1600000060000)]);
-      await service.refresh();
-      expect(titles(service), ['Show 1']);
     });
 
     test("an entry from the active profile's own agent is always shown", () async {
+      when(mockChannel.getActiveProfileKey()).thenAnswer((_) async => 'user:10');
       when(mockChannel.getWatchNextPrograms())
           .thenAnswer((_) async => [entry(1, 'com.disney.disneyplus')..['profileOwned'] = true]);
-      when(mockChannel.getAppLastProfiles()).thenAnswer((_) async => {'com.disney.disneyplus': 'user:10'});
 
       final service = await ready();
       expect(titles(service), ['Show 1']);

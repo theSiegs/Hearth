@@ -3,7 +3,6 @@ import 'dart:developer';
 import 'dart:typed_data';
 import 'package:flutter/widgets.dart';
 import 'package:flauncher/flauncher_channel.dart';
-import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/watch_next_program.dart';
 import 'apps_service.dart';
@@ -29,10 +28,14 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
   WatchNextService(this._channel, this._sharedPreferences, {DateTime Function()? clock})
       : _clock = clock ?? DateTime.now {
     WidgetsBinding.instance.addObserver(this);
+    // Who-watched-what records from before Hearth read each profile's own list; nothing reads them any more
+    for (final key in const ["watch_next_owners_v2", "watch_next_owners"]) {
+      if (_sharedPreferences.containsKey(key)) unawaited(_sharedPreferences.remove(key));
+    }
     _init();
   }
 
-  /// What Continue Watching shows: the programs the active Google TV profile watched (see [_ownership]), without
+  /// What Continue Watching shows: the active Google TV profile's own programs (see [_visibleToActiveProfile]), without
   /// old or finished ones, and no more than [maxPerApp] from one app (see [selectForRow]).
   List<WatchNextProgram> get programs => List.unmodifiable(selectForRow(_programs.where(_visibleToActiveProfile), _clock()));
 
@@ -82,65 +85,26 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
   static bool _isFinished(WatchNextProgram p) =>
       p.watchNextType == 0 && p.duration > 0 && p.playbackPosition >= p.duration * finishedFraction;
 
-  // All Google TV profiles share one Watch Next list. An entry belongs to the profile that last used its app here;
-  // entries with no known owner are hidden.
-  static const _ownershipKey = "watch_next_owners_v2";
-  Map<String, dynamic> _ownership = {};
-  bool _ownershipLoaded = false;
-  // The active profile's key; owners are saved by key.
+  // Each Google TV profile is its own Android user with its own Watch Next list: Hearth reads the owner's (user 0)
+  // itself, and another profile's comes from that profile's agent (marked profileOwned). So an entry from Hearth's
+  // own list belongs to the owner's profile, and never shows while another profile is on (Hearth falls back to its
+  // own list when that profile has no agent).
+  static const String _ownerProfile = "user:0";
+  // The active profile's key, read with each refresh; null while Hearth can't tell.
   String? _activeProfile;
 
-  static String _key(WatchNextProgram p) => "${p.packageName}|${p.id}";
+  bool _visibleToActiveProfile(WatchNextProgram p) =>
+      p.profileOwned || _activeProfile == null || _activeProfile == _ownerProfile;
 
-  bool _visibleToActiveProfile(WatchNextProgram p) {
-    if (p.profileOwned) return true;
-    final owner = (_ownership[_key(p)] as Map?)?["owner"] as String?;
-    if (!_ownershipLoaded) return true;
-    if (owner == null || _activeProfile == null) return false;
-    return owner == _activeProfile;
-  }
-
-  /// Records the active profile as the owner of entries that are new or were watched again since last time.
-  Future<void> _trackOwners(List<WatchNextProgram> programs) async {
-    try {
-      if (!_ownershipLoaded) {
-        final raw = _sharedPreferences.getString(_ownershipKey);
-        _ownership = raw == null ? {} : (jsonDecode(raw) as Map).cast<String, dynamic>();
-        _ownershipLoaded = true;
-        if (raw == null) {
-          await _sharedPreferences.remove("watch_next_owners"); // drop the v1 store
-          // First run: what's already there predates tracking, so it has no owner.
-          for (final p in programs) {
-            _ownership[_key(p)] = {"owner": null, "t": p.lastEngagementTime};
-          }
-        }
-      }
-      _activeProfile = await _channel.getActiveProfileKey();
-      final appUsers = await _channel.getAppLastProfiles();
-      bool changed = false;
-      final keys = <String>{};
-      for (final p in programs) {
-        if (p.profileOwned) continue;
-        final key = _key(p);
-        keys.add(key);
-        final entry = _ownership[key] as Map?;
-        if (entry == null || entry["t"] != p.lastEngagementTime) {
-          // Only a profile key ("user:11") makes an owner
-          final appUser = appUsers[p.packageName] as String?;
-          _ownership[key] = {
-            "owner": appUser != null && appUser.startsWith("user:") ? appUser : entry?["owner"],
-            "t": p.lastEngagementTime,
-          };
-          changed = true;
-        }
-      }
-      final before = _ownership.length;
-      // Only the owner's own list says which of its entries are gone; another profile's (from its agent) doesn't
-      if (!programs.any((p) => p.profileOwned)) _ownership.removeWhere((key, _) => !keys.contains(key));
-      if (changed || _ownership.length != before) await _sharedPreferences.setString(_ownershipKey, jsonEncode(_ownership));
-    } catch (e) {
-      log('Failed to track Continue Watching owners', name: 'WatchNextService', error: e);
-    }
+  /// One line in the TV's log per refresh (tag flutter, "HearthWatchNext"): how many entries there are, how many
+  /// Continue Watching shows, and why the rest are hidden. Counts and package names only, no titles.
+  void _logWhatShows() {
+    final visible = _programs.where(_visibleToActiveProfile).toList();
+    final shown = selectForRow(visible, _clock());
+    final apps = {for (final p in _programs) p.packageName}.join(",");
+    debugPrint("HearthWatchNext: ${_programs.length} entries, ${shown.length} shown for $_activeProfile; hidden: "
+        "otherProfile=${_programs.length - visible.length} oldFinishedOrPerApp=${visible.length - shown.length}; "
+        "apps=$apps");
   }
 
   @visibleForTesting
@@ -231,9 +195,10 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
       } catch (e) {
         log('Failed to read the active profile', name: 'WatchNextService', error: e);
       }
-      await _trackOwners(newPrograms);
+      _activeProfile = refreshedFor;
       _programs = newPrograms;
       _refreshedFor = refreshedFor;
+      _logWhatShows();
       notifyListeners();
       unawaited(_loadPosters(newPrograms, callSnapshot));
     } catch (e) {

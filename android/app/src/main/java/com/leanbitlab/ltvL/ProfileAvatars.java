@@ -43,14 +43,20 @@ final class ProfileAvatars {
         } catch (UnsupportedEncodingException e) {
             safe = Integer.toHexString(name.hashCode());
         }
-        return new File(new File(context.getFilesDir(), "profile_avatars_v2"), safe + ".png");
+        return new File(new File(context.getFilesDir(), "profile_avatars_v3"), safe + ".png");
     }
 
-    /** Pre-v2 photos could include Google TV's PIN lock badge. Runs once per process. */
+    /**
+     * Earlier photos could include Google TV's PIN lock badge (v1: any tile; v2: the current account's tile while
+     * another tile was selected). Runs once per process.
+     */
     private static synchronized void dropLegacyPhotos(Context context) {
         if (sLegacyDropped) return;
         sLegacyDropped = true;
-        File old = new File(context.getFilesDir(), "profile_avatars");
+        for (String dir : new String[]{"profile_avatars", "profile_avatars_v2"}) dropDir(new File(context.getFilesDir(), dir));
+    }
+
+    private static void dropDir(File old) {
         if (!old.isDirectory()) return;
         File[] files = old.listFiles();
         if (files != null) {
