@@ -3,7 +3,7 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
-## Unreleased
+## 2026.10.09 (pre-release)
 
 **New app id.** Hearth is now `com.thesiegs.hearth` (it was `com.leanbitlab.ltvL`, inherited from LTvLauncher).
 It installs as a new app: back up with the old Hearth (Settings → System → Backup & Restore), install this one,
