@@ -27,6 +27,7 @@ dependencies:
   pool: ^1.5.2
   share_plus: ^10.0.0
   qr_flutter: ^4.1.0
+  flutter_svg: ^2.1.0
 
 dev_dependencies:
   flutter_test:
@@ -51,3 +52,5 @@ flutter:
   assets:
     - assets/icon.png
     - assets/logo.png
+    # TMDB's approved logo (themoviedb.org/about/logos-attribution), shown in About as its terms require
+    - assets/tmdb_logo.svg

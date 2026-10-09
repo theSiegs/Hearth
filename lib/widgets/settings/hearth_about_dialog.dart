@@ -17,6 +17,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
@@ -28,6 +29,10 @@ import 'hearth_dialog.dart';
 
 class HearthAboutDialog extends StatelessWidget {
   final PackageInfo packageInfo;
+
+  /// The notice TMDB's API terms require (section 3), word for word.
+  static const String tmdbNotice =
+      "This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.";
 
   const HearthAboutDialog({super.key, required this.packageInfo});
 
@@ -139,6 +144,21 @@ class HearthAboutDialog extends StatelessWidget {
             icon: Icons.history,
             label: localizations.aboutFlauncherForkCredit("osrosal"),
             onPressed: () => context.read<FLauncherChannel>().openUrl("https://github.com/osrosal/flauncher"),
+          ),
+          // TMDB's terms: its logo (less prominent than Hearth's) and this notice, word for word. It's a legal notice,
+          // so it stays in English in every language.
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              SvgPicture.asset("assets/tmdb_logo.svg", height: 12, semanticsLabel: "TMDB"),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  tmdbNotice,
+                  style: const TextStyle(color: Colors.white54, fontSize: 10, height: 1.3),
+                ),
+              ),
+            ],
           ),
           // Bing's photo of the day: its title and credit live here, not on the home screen
           if (bing != null) ...[
