@@ -15,4 +15,17 @@ void main() {
     expect((box.decoration as BoxDecoration).color!.opacity, closeTo(TitlePill.opacityFor(0.5), 0.01));
     expect(find.text("Favorites"), findsOneWidget);
   });
+
+  test("the details scrim is lighter on dark wallpapers, HearthTube's strength on light ones", () {
+    expect(DetailsScrim.bottomOpacityFor(0.1), closeTo(0.5, 0.001));
+    expect(DetailsScrim.bottomOpacityFor(0.43), closeTo(0.684, 0.001));
+    expect(DetailsScrim.bottomOpacityFor(0.95), closeTo(0.9, 0.001));
+  });
+
+  testWidgets("the details scrim shows only while its row does", (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: DetailsScrim(visible: false)));
+    expect(tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity)).opacity, 0);
+    await tester.pumpWidget(const MaterialApp(home: DetailsScrim(visible: true)));
+    expect(tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity)).opacity, 1);
+  });
 }
