@@ -86,6 +86,12 @@ class LeaveTopBarIntent extends Intent {
   const LeaveTopBarIntent();
 }
 
+/// Continue Watching's selected program is going with nothing to take its place (Hide all, or the row's last
+/// program): back to the dock, as Down would. The action returns true when it handled it (only with a dock).
+class LeaveContinueWatchingIntent extends Intent {
+  const LeaveContinueWatchingIntent();
+}
+
 /// Opens the Home Assistant panel; sent by pressing Right at the right edge of the home screen when the panel is on.
 class OpenHaPanelIntent extends Intent {
   const OpenHaPanelIntent();

@@ -339,6 +339,11 @@ class _FLauncherState extends State<FLauncher> {
         _topBarFocused = inTopBar;
         if (inTopBar) _showingRecents = false;
       });
+      // The page goes back to the top with it: scrolled, the dock would slide away over the apps below the first
+      // screen instead of off the bottom
+      if (inTopBar && _firstScreenFocusNode.context != null && _scrollController.hasClients) {
+        _scrollController.animateTo(0, duration: const Duration(milliseconds: 150), curve: Curves.easeInOut);
+      }
     }
   }
 
@@ -402,6 +407,21 @@ class _FLauncherState extends State<FLauncher> {
     return true;
   }
 
+  /// Continue Watching's selected program is going with nothing to take its place (see LeaveContinueWatchingIntent):
+  /// the dock comes back and takes the selection, and the page goes back to the top with it. Without a dock the row is
+  /// one of the sections and the card keeps the selection in it (false).
+  bool _leaveRecents() {
+    if (_dockFocusNode.context == null) return false;
+    if (_showingRecents) {
+      _setShowingRecents(false);
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusDock();
+      });
+    }
+    return true;
+  }
+
   void _focusDock() {
     final last = _lastDockFocus;
     final target = last != null && last.context != null && _dockFocusNode.descendants.contains(last)
@@ -460,6 +480,8 @@ class _FLauncherState extends State<FLauncher> {
             onInvoke: (_) => _appBarKey.currentState?.openSettings(),
           ),
           LeaveTopBarIntent: CallbackAction<LeaveTopBarIntent>(onInvoke: (_) => _leaveTopBar()),
+          LeaveContinueWatchingIntent:
+              CallbackAction<LeaveContinueWatchingIntent>(onInvoke: (_) => _leaveRecents()),
           OpenHaPanelIntent: CallbackAction<OpenHaPanelIntent>(
             onInvoke: (_) => context.read<FLauncherChannel>().openHaPanel(),
           ),
