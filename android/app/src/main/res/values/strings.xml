@@ -1,6 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Text the Java side shows or says, translated in values-xx/strings.xml. Proper nouns (Hearth, Home Assistant, Google TV...) stay untranslated. -->
 <resources>
+    <!-- Home Assistant notifications over whatever is playing (HaNotificationOverlay) -->
+    <string name="ha_notification_close">Close</string>
+    <string name="ha_notification_test_message">Test notification from Hearth</string>
+
+    <!-- The Home Assistant dashboard panel (HaPanelActivity) -->
+    <string name="ha_panel_unreachable">Can\'t reach Home Assistant</string>
+    <string name="ha_panel_not_set_up">Home Assistant panel isn\'t set up</string>
+    <string name="ha_panel_not_set_up_detail">Add the Home Assistant address and an access token in Settings → Home Assistant.</string>
+
+    <!-- The phone page that sends the Home Assistant address and token to the TV (HaSetupServer) -->
+    <string name="ha_setup_title">Connect Hearth to Home Assistant</string>
+    <string name="ha_setup_address_label">Home Assistant address</string>
+    <string name="ha_setup_token_label">Long-lived access token</string>
+    <string name="ha_setup_token_hint">Paste the token here</string>
+    <string name="ha_setup_send">Send to TV</string>
+    <string name="ha_setup_help">Create the token in Home Assistant while signed in as the user for this TV: profile, Security tab, Long-lived access tokens. It goes straight to the TV over your home network.</string>
+    <string name="ha_setup_missing">Enter the Home Assistant address and the token.</string>
+    <string name="ha_setup_sent_title">Sent to the TV</string>
+    <string name="ha_setup_sent_detail">Hearth has the address and token. You can close this page.</string>
+
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">Opening %1$s as %2$s…</string>
     <string name="profile_pairing_no_match">No matching profile for %1$s. Choose one on the next screen.</string>

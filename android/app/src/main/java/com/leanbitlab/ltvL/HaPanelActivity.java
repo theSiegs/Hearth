@@ -119,7 +119,7 @@ public class HaPanelActivity extends Activity {
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
-                    showMessage("Can't reach Home Assistant", String.valueOf(error.getDescription()));
+                    showMessage(getString(R.string.ha_panel_unreachable), String.valueOf(error.getDescription()));
                 }
             }
         });
@@ -128,8 +128,7 @@ public class HaPanelActivity extends Activity {
         setContentView(root);
 
         if (!HaConfig.isConfigured(this)) {
-            showMessage("Home Assistant panel isn't set up",
-                    "Add the Home Assistant address and an access token in Settings → Home Assistant.");
+            showMessage(getString(R.string.ha_panel_not_set_up), getString(R.string.ha_panel_not_set_up_detail));
         } else {
             mWebView.loadUrl(HaConfig.baseUrl(this) + "/" + getDashboard(this));
         }
