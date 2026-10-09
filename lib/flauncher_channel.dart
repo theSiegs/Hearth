@@ -225,10 +225,13 @@ class FLauncherChannel {
 
   /// [onSwitching] hears of a switch to the named profile as soon as it's picked in Google TV's chooser, before
   /// it's confirmed.
-  static void listenForProfileSwitching(void Function(String name) onSwitching) {
+  static void listenForProfileSwitching(void Function(String name) onSwitching, {void Function()? onCancelled}) {
     _onProfileSwitching = onSwitching;
+    _onProfileSwitchCancelled = onCancelled;
     _listen();
   }
+
+  static void Function()? _onProfileSwitchCancelled;
 
   static bool _listening = false;
 
@@ -240,6 +243,7 @@ class FLauncherChannel {
       if (call.method == "openSearch") _onOpenSearch?.call(call.arguments as String? ?? "text");
       if (call.method == "profileChanged") _onProfileChanged?.call();
       if (call.method == "profileSwitching") _onProfileSwitching?.call(call.arguments as String);
+      if (call.method == "profileSwitchCancelled") _onProfileSwitchCancelled?.call();
       return null;
     });
   }

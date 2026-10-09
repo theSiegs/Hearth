@@ -1338,6 +1338,13 @@ public class MainActivity extends FlutterActivity {
         new Handler(Looper.getMainLooper()).post(() -> channel.invokeMethod("profileSwitching", name));
     }
 
+    /** Tells Flutter the profile picked in Google TV's chooser isn't coming (Back out of a PIN prompt, say). */
+    static void notifyProfileSwitchCancelled() {
+        MethodChannel channel = sMethodChannel != null ? sMethodChannel.get() : null;
+        if (channel == null) return;
+        new Handler(Looper.getMainLooper()).post(() -> channel.invokeMethod("profileSwitchCancelled", null));
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

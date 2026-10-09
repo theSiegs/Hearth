@@ -192,7 +192,8 @@ void main() {
       await hearth.stop(tester);
     });
 
-    testWidgets("a pick Google TV never acts on (Back out of its PIN prompt) clears itself", (tester) async {
+    testWidgets("a pick Google TV never acts on (Back out of its PIN prompt) clears as soon as it's cancelled",
+        (tester) async {
       final native = FakeNativeProfiles.install(tester, key: "user:0", name: "Sam");
       final hearth = await _Hearth.start();
       await tester.pumpWidget(hearth.wrap(_homeWithCard()));
@@ -202,11 +203,28 @@ void main() {
       await tester.pump();
       expect(find.text("Hi, Alex"), findsOneWidget);
 
-      await tester.pump(const Duration(seconds: 10));
+      await native.cancelPick();
       await tester.pump();
 
       expect(find.text("Hi, Alex"), findsNothing);
       expect(native.readyKeys, isEmpty);
+      await hearth.stop(tester);
+    });
+
+    testWidgets("a slow switch keeps the pick's card up (the old home stays covered); 30 s is the fallback",
+        (tester) async {
+      final native = FakeNativeProfiles.install(tester, key: "user:0", name: "Sam");
+      final hearth = await _Hearth.start();
+      await tester.pumpWidget(hearth.wrap(_homeWithCard()));
+      await tester.pump();
+
+      await native.pick("Alex");
+      await tester.pump(const Duration(seconds: 20));
+      expect(find.text("Hi, Alex"), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 11));
+      await tester.pump();
+      expect(find.text("Hi, Alex"), findsNothing);
       await hearth.stop(tester);
     });
 

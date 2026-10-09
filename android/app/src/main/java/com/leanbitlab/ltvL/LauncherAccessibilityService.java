@@ -493,6 +493,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 || power == null || !power.isInteractive()) {
             return;
         }
+        // A moment more first: on a slow TV the chooser draws Google's placeholder initial before the real photo
+        mHandler.postDelayed(() -> {
+        if (!mChooserOnScreen) return;
         takeScreenshot(Display.DEFAULT_DISPLAY, getMainExecutor(), new TakeScreenshotCallback() {
             @Override
             public void onSuccess(ScreenshotResult result) {
@@ -532,7 +535,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 Log.i(TAG, "Profile photo screenshot failed: " + errorCode);
             }
         });
+        }, PHOTO_DELAY_MS);
     }
+
+    private static final long PHOTO_DELAY_MS = 2_000;
 
     /** The name on the chooser tile that has focus (null if none): the selected tile. */
     private static String focusedTileName(AccessibilityNodeInfo node) {
@@ -744,7 +750,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
     /** Any other window: Hearth, an app, or something that comes up over one (the keyboard, a system pop-up). */
     private void onOtherWindow(String packageName, boolean isHearth, boolean isApp) {
         if (isHearth) {
-            // Back in the launcher without Google TV's home in between: the switch was cancelled.
+            // Back in the launcher without Google TV's home in between: the switch was cancelled (its early
+            // welcome card goes now, not after its time limit)
+            if (mPendingProfile != null) MainActivity.notifyProfileSwitchCancelled();
             mPendingProfile = null;
             mLastChooserFocus = null;
         }
