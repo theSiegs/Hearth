@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Home Assistant notifications over whatever is playing (HaNotificationOverlay) -->
+    <string name="ha_notification_close">Закрыть</string>
+    <string name="ha_notification_test_message">Тестовое уведомление от Hearth</string>
+
+    <!-- The Home Assistant dashboard panel (HaPanelActivity) -->
+    <string name="ha_panel_unreachable">Не удаётся подключиться к Home Assistant</string>
+    <string name="ha_panel_not_set_up">Панель Home Assistant не настроена</string>
+    <string name="ha_panel_not_set_up_detail">Добавьте адрес Home Assistant и токен доступа в разделе Настройки → Home Assistant.</string>
+
+    <!-- The phone page that sends the Home Assistant address and token to the TV (HaSetupServer) -->
+    <string name="ha_setup_title">Подключение Hearth к Home Assistant</string>
+    <string name="ha_setup_address_label">Адрес Home Assistant</string>
+    <string name="ha_setup_token_label">Долгосрочный токен доступа</string>
+    <string name="ha_setup_token_hint">Вставьте токен сюда</string>
+    <string name="ha_setup_send">Отправить на телевизор</string>
+    <string name="ha_setup_help">Создайте токен в Home Assistant, войдя под пользователем для этого телевизора: профиль, вкладка «Безопасность», «Долгосрочные токены доступа». Токен передаётся прямо на телевизор по вашей домашней сети.</string>
+    <string name="ha_setup_missing">Введите адрес Home Assistant и токен.</string>
+    <string name="ha_setup_sent_title">Отправлено на телевизор</string>
+    <string name="ha_setup_sent_detail">Hearth получил адрес и токен. Эту страницу можно закрыть.</string>
+
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">Открываем %1$s как %2$s…</string>
     <string name="profile_pairing_no_match">Нет подходящего профиля для %1$s. Выберите профиль на следующем экране.</string>

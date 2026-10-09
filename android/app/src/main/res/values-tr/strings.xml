@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Home Assistant notifications over whatever is playing (HaNotificationOverlay) -->
+    <string name="ha_notification_close">Kapat</string>
+    <string name="ha_notification_test_message">Hearth\'tan test bildirimi</string>
+
+    <!-- The Home Assistant dashboard panel (HaPanelActivity) -->
+    <string name="ha_panel_unreachable">Home Assistant\'a ulaşılamıyor</string>
+    <string name="ha_panel_not_set_up">Home Assistant paneli kurulmadı</string>
+    <string name="ha_panel_not_set_up_detail">Ayarlar → Home Assistant bölümünden Home Assistant adresini ve bir erişim jetonunu ekleyin.</string>
+
+    <!-- The phone page that sends the Home Assistant address and token to the TV (HaSetupServer) -->
+    <string name="ha_setup_title">Hearth\'ı Home Assistant\'a bağlayın</string>
+    <string name="ha_setup_address_label">Home Assistant adresi</string>
+    <string name="ha_setup_token_label">Uzun ömürlü erişim jetonu</string>
+    <string name="ha_setup_token_hint">Jetonu buraya yapıştırın</string>
+    <string name="ha_setup_send">TV\'ye gönder</string>
+    <string name="ha_setup_help">Bu TV\'nin kullanıcısıyla oturum açmışken jetonu Home Assistant\'ta oluşturun: profil, Güvenlik sekmesi, Uzun ömürlü erişim jetonları. Jeton, ev ağınız üzerinden doğrudan TV\'ye gider.</string>
+    <string name="ha_setup_missing">Home Assistant adresini ve jetonu girin.</string>
+    <string name="ha_setup_sent_title">TV\'ye gönderildi</string>
+    <string name="ha_setup_sent_detail">Hearth adresi ve jetonu aldı. Bu sayfayı kapatabilirsiniz.</string>
+
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">%2$s profiliyle açılıyor: %1$s…</string>
     <string name="profile_pairing_no_match">%1$s için eşleşen profil yok. Sonraki ekranda bir profil seçin.</string>

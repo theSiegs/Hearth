@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Home Assistant notifications over whatever is playing (HaNotificationOverlay) -->
+    <string name="ha_notification_close">إغلاق</string>
+    <string name="ha_notification_test_message">إشعار تجريبي من Hearth</string>
+
+    <!-- The Home Assistant dashboard panel (HaPanelActivity) -->
+    <string name="ha_panel_unreachable">تعذّر الوصول إلى Home Assistant</string>
+    <string name="ha_panel_not_set_up">لم يتم إعداد لوحة Home Assistant</string>
+    <string name="ha_panel_not_set_up_detail">أضِف عنوان Home Assistant ورمز وصول في الإعدادات ← Home Assistant.</string>
+
+    <!-- The phone page that sends the Home Assistant address and token to the TV (HaSetupServer) -->
+    <string name="ha_setup_title">ربط Hearth بـ Home Assistant</string>
+    <string name="ha_setup_address_label">عنوان Home Assistant</string>
+    <string name="ha_setup_token_label">رمز وصول طويل الأمد</string>
+    <string name="ha_setup_token_hint">الصق الرمز هنا</string>
+    <string name="ha_setup_send">إرسال إلى التلفزيون</string>
+    <string name="ha_setup_help">أنشئ الرمز في Home Assistant وأنت مسجّل الدخول بحساب المستخدم الخاص بهذا التلفزيون: الملف الشخصي، علامة التبويب «الأمان»، «رموز الوصول طويلة الأمد». يصل الرمز إلى التلفزيون مباشرةً عبر شبكتك المنزلية.</string>
+    <string name="ha_setup_missing">أدخل عنوان Home Assistant والرمز.</string>
+    <string name="ha_setup_sent_title">تم الإرسال إلى التلفزيون</string>
+    <string name="ha_setup_sent_detail">حصل Hearth على العنوان والرمز. يمكنك إغلاق هذه الصفحة.</string>
+
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">جارٍ فتح %1$s باسم %2$s…</string>
     <string name="profile_pairing_no_match">لا يوجد ملف شخصي مطابق لـ %1$s. اختر ملفًا في الشاشة التالية.</string>

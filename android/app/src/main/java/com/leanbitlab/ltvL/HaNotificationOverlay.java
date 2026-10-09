@@ -253,7 +253,7 @@ final class HaNotificationOverlay {
                 next();
             });
         }
-        View close = addButton(buttons, "Close", accent, this::next);
+        View close = addButton(buttons, mService.getString(R.string.ha_notification_close), accent, this::next);
         close.post(close::requestFocus);
         return buttons;
     }

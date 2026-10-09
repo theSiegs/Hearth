@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Home Assistant notifications over whatever is playing (HaNotificationOverlay) -->
+    <string name="ha_notification_close">닫기</string>
+    <string name="ha_notification_test_message">Hearth 테스트 알림</string>
+
+    <!-- The Home Assistant dashboard panel (HaPanelActivity) -->
+    <string name="ha_panel_unreachable">Home Assistant에 연결할 수 없음</string>
+    <string name="ha_panel_not_set_up">Home Assistant 패널이 설정되지 않음</string>
+    <string name="ha_panel_not_set_up_detail">설정 → Home Assistant에서 Home Assistant 주소와 액세스 토큰을 추가하세요.</string>
+
+    <!-- The phone page that sends the Home Assistant address and token to the TV (HaSetupServer) -->
+    <string name="ha_setup_title">Hearth를 Home Assistant에 연결</string>
+    <string name="ha_setup_address_label">Home Assistant 주소</string>
+    <string name="ha_setup_token_label">장기 액세스 토큰</string>
+    <string name="ha_setup_token_hint">여기에 토큰 붙여넣기</string>
+    <string name="ha_setup_send">TV로 보내기</string>
+    <string name="ha_setup_help">이 TV용 사용자로 로그인한 상태에서 Home Assistant에서 토큰을 만드세요: 프로필, 보안 탭, 장기 액세스 토큰. 토큰은 홈 네트워크를 통해 TV로 바로 전송됩니다.</string>
+    <string name="ha_setup_missing">Home Assistant 주소와 토큰을 입력하세요.</string>
+    <string name="ha_setup_sent_title">TV로 전송됨</string>
+    <string name="ha_setup_sent_detail">Hearth가 주소와 토큰을 받았습니다. 이 페이지를 닫아도 됩니다.</string>
+
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">%2$s(으)로 %1$s 여는 중…</string>
     <string name="profile_pairing_no_match">%1$s와(과) 일치하는 프로필이 없습니다. 다음 화면에서 선택하세요.</string>

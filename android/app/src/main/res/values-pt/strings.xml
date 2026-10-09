@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Home Assistant notifications over whatever is playing (HaNotificationOverlay) -->
+    <string name="ha_notification_close">Fechar</string>
+    <string name="ha_notification_test_message">Notificação de teste do Hearth</string>
+
+    <!-- The Home Assistant dashboard panel (HaPanelActivity) -->
+    <string name="ha_panel_unreachable">Não foi possível acessar o Home Assistant</string>
+    <string name="ha_panel_not_set_up">O painel do Home Assistant não está configurado</string>
+    <string name="ha_panel_not_set_up_detail">Adicione o endereço do Home Assistant e um token de acesso em Configurações → Home Assistant.</string>
+
+    <!-- The phone page that sends the Home Assistant address and token to the TV (HaSetupServer) -->
+    <string name="ha_setup_title">Conectar o Hearth ao Home Assistant</string>
+    <string name="ha_setup_address_label">Endereço do Home Assistant</string>
+    <string name="ha_setup_token_label">Token de acesso de longa duração</string>
+    <string name="ha_setup_token_hint">Cole o token aqui</string>
+    <string name="ha_setup_send">Enviar para a TV</string>
+    <string name="ha_setup_help">Crie o token no Home Assistant conectado como o usuário desta TV: perfil, aba Segurança, Tokens de acesso de longa duração. Ele vai direto para a TV pela sua rede doméstica.</string>
+    <string name="ha_setup_missing">Digite o endereço do Home Assistant e o token.</string>
+    <string name="ha_setup_sent_title">Enviado para a TV</string>
+    <string name="ha_setup_sent_detail">O Hearth recebeu o endereço e o token. Você já pode fechar esta página.</string>
+
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">Abrindo %1$s como %2$s…</string>
     <string name="profile_pairing_no_match">Nenhum perfil corresponde a %1$s. Escolha um na próxima tela.</string>

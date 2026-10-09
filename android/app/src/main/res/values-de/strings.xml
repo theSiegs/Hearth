@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Home Assistant notifications over whatever is playing (HaNotificationOverlay) -->
+    <string name="ha_notification_close">Schließen</string>
+    <string name="ha_notification_test_message">Testbenachrichtigung von Hearth</string>
+
+    <!-- The Home Assistant dashboard panel (HaPanelActivity) -->
+    <string name="ha_panel_unreachable">Home Assistant ist nicht erreichbar</string>
+    <string name="ha_panel_not_set_up">Home Assistant-Bereich ist nicht eingerichtet</string>
+    <string name="ha_panel_not_set_up_detail">Fügen Sie die Home Assistant-Adresse und ein Zugriffstoken unter Einstellungen → Home Assistant hinzu.</string>
+
+    <!-- The phone page that sends the Home Assistant address and token to the TV (HaSetupServer) -->
+    <string name="ha_setup_title">Hearth mit Home Assistant verbinden</string>
+    <string name="ha_setup_address_label">Home Assistant-Adresse</string>
+    <string name="ha_setup_token_label">Langlebiges Zugriffstoken</string>
+    <string name="ha_setup_token_hint">Token hier einfügen</string>
+    <string name="ha_setup_send">An den Fernseher senden</string>
+    <string name="ha_setup_help">Erstellen Sie das Token in Home Assistant, während Sie als Benutzer für diesen Fernseher angemeldet sind: Profil, Tab „Sicherheit“, „Langlebige Zugriffstokens“. Es geht über Ihr Heimnetz direkt an den Fernseher.</string>
+    <string name="ha_setup_missing">Geben Sie die Home Assistant-Adresse und das Token ein.</string>
+    <string name="ha_setup_sent_title">An den Fernseher gesendet</string>
+    <string name="ha_setup_sent_detail">Hearth hat die Adresse und das Token erhalten. Sie können diese Seite schließen.</string>
+
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">Hearth öffnet %1$s als %2$s…</string>
     <string name="profile_pairing_no_match">Kein passendes Profil für %1$s. Wählen Sie auf dem nächsten Bildschirm eines aus.</string>

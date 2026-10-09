@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Home Assistant notifications over whatever is playing (HaNotificationOverlay) -->
+    <string name="ha_notification_close">Fermer</string>
+    <string name="ha_notification_test_message">Notification de test de Hearth</string>
+
+    <!-- The Home Assistant dashboard panel (HaPanelActivity) -->
+    <string name="ha_panel_unreachable">Impossible de joindre Home Assistant</string>
+    <string name="ha_panel_not_set_up">Le panneau Home Assistant n\'est pas configuré</string>
+    <string name="ha_panel_not_set_up_detail">Ajoutez l\'adresse de Home Assistant et un jeton d\'accès dans Paramètres → Home Assistant.</string>
+
+    <!-- The phone page that sends the Home Assistant address and token to the TV (HaSetupServer) -->
+    <string name="ha_setup_title">Connecter Hearth à Home Assistant</string>
+    <string name="ha_setup_address_label">Adresse de Home Assistant</string>
+    <string name="ha_setup_token_label">Jeton d\'accès longue durée</string>
+    <string name="ha_setup_token_hint">Collez le jeton ici</string>
+    <string name="ha_setup_send">Envoyer à la TV</string>
+    <string name="ha_setup_help">Créez le jeton dans Home Assistant en étant connecté avec l\'utilisateur de cette TV : profil, onglet Sécurité, Jetons d\'accès longue durée. Il est envoyé directement à la TV via votre réseau domestique.</string>
+    <string name="ha_setup_missing">Saisissez l\'adresse de Home Assistant et le jeton.</string>
+    <string name="ha_setup_sent_title">Envoyé à la TV</string>
+    <string name="ha_setup_sent_detail">Hearth a reçu l\'adresse et le jeton. Vous pouvez fermer cette page.</string>
+
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">Ouverture de %1$s en tant que %2$s…</string>
     <string name="profile_pairing_no_match">Aucun profil correspondant pour %1$s. Choisissez-en un sur l\'écran suivant.</string>

@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Home Assistant notifications over whatever is playing (HaNotificationOverlay) -->
+    <string name="ha_notification_close">Chiudi</string>
+    <string name="ha_notification_test_message">Notifica di prova da Hearth</string>
+
+    <!-- The Home Assistant dashboard panel (HaPanelActivity) -->
+    <string name="ha_panel_unreachable">Impossibile raggiungere Home Assistant</string>
+    <string name="ha_panel_not_set_up">Il pannello di Home Assistant non è configurato</string>
+    <string name="ha_panel_not_set_up_detail">Aggiungi l\'indirizzo di Home Assistant e un token di accesso in Impostazioni → Home Assistant.</string>
+
+    <!-- The phone page that sends the Home Assistant address and token to the TV (HaSetupServer) -->
+    <string name="ha_setup_title">Collega Hearth a Home Assistant</string>
+    <string name="ha_setup_address_label">Indirizzo di Home Assistant</string>
+    <string name="ha_setup_token_label">Token di accesso di lunga durata</string>
+    <string name="ha_setup_token_hint">Incolla qui il token</string>
+    <string name="ha_setup_send">Invia alla TV</string>
+    <string name="ha_setup_help">Crea il token in Home Assistant dopo aver effettuato l\'accesso con l\'utente di questa TV: profilo, scheda Sicurezza, Token di accesso di lunga durata. Arriva direttamente alla TV attraverso la tua rete di casa.</string>
+    <string name="ha_setup_missing">Inserisci l\'indirizzo di Home Assistant e il token.</string>
+    <string name="ha_setup_sent_title">Inviato alla TV</string>
+    <string name="ha_setup_sent_detail">Hearth ha ricevuto l\'indirizzo e il token. Puoi chiudere questa pagina.</string>
+
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">Apro %1$s come %2$s…</string>
     <string name="profile_pairing_no_match">Nessun profilo corrispondente per %1$s. Scegline uno nella schermata successiva.</string>

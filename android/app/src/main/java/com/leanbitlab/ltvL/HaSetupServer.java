@@ -131,7 +131,7 @@ final class HaSetupServer {
         String token = fields.getOrDefault("token", "").replaceAll("\\s", "");
         if (token.isEmpty() || url == null) {
             MiniHttp.respondHtml(out, formPage(fields.getOrDefault("url", ""))
-                    .replace("<!--error-->", "<p class='err'>Enter the Home Assistant address and the token.</p>"));
+                    .replace("<!--error-->", "<p class='err'>" + text(R.string.ha_setup_missing) + "</p>"));
             return;
         }
         HaConfig.prefs(mContext).edit().putString(HaConfig.URL_KEY, url).putString(HaConfig.TOKEN_KEY, token).apply();
@@ -139,20 +139,25 @@ final class HaSetupServer {
         synchronized (HaSetupServer.class) {
             sLastReceived = true;
         }
-        MiniHttp.respondHtml(out, page("Sent to the TV", "<p>Hearth has the address and token. You can close this page.</p>"));
+        MiniHttp.respondHtml(out, page(mContext.getString(R.string.ha_setup_sent_title),
+                "<p>" + text(R.string.ha_setup_sent_detail) + "</p>"));
     }
 
-    private static String formPage(String url) {
-        return page("Connect Hearth to Home Assistant",
+    private String formPage(String url) {
+        return page(mContext.getString(R.string.ha_setup_title),
                 "<!--error--><form method='POST'>"
-                        + "<label for='url'>Home Assistant address</label>"
+                        + "<label for='url'>" + text(R.string.ha_setup_address_label) + "</label>"
                         + "<input id='url' name='url' type='url' value='" + escape(url) + "' placeholder='http://192.168.1.10:8123'>"
-                        + "<label for='token'>Long-lived access token</label>"
-                        + "<textarea id='token' name='token' rows='5' placeholder='Paste the token here' autofocus></textarea>"
-                        + "<button type='submit'>Send to TV</button></form>"
-                        + "<p class='help'>Create the token in Home Assistant while signed in as the user for this TV: "
-                        + "profile, Security tab, Long-lived access tokens. It goes straight to the TV over your home "
-                        + "network.</p>");
+                        + "<label for='token'>" + text(R.string.ha_setup_token_label) + "</label>"
+                        + "<textarea id='token' name='token' rows='5' placeholder='" + text(R.string.ha_setup_token_hint)
+                        + "' autofocus></textarea>"
+                        + "<button type='submit'>" + text(R.string.ha_setup_send) + "</button></form>"
+                        + "<p class='help'>" + text(R.string.ha_setup_help) + "</p>");
+    }
+
+    /** A string resource, escaped for the page's HTML. */
+    private String text(int id) {
+        return escape(mContext.getString(id));
     }
 
     private static String page(String title, String body) {

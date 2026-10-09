@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Home Assistant notifications over whatever is playing (HaNotificationOverlay) -->
+    <string name="ha_notification_close">बंद करें</string>
+    <string name="ha_notification_test_message">Hearth की ओर से टेस्ट सूचना</string>
+
+    <!-- The Home Assistant dashboard panel (HaPanelActivity) -->
+    <string name="ha_panel_unreachable">Home Assistant से कनेक्ट नहीं हो पा रहा</string>
+    <string name="ha_panel_not_set_up">Home Assistant पैनल सेट अप नहीं है</string>
+    <string name="ha_panel_not_set_up_detail">सेटिंग्स → Home Assistant में Home Assistant का पता और एक्सेस टोकन जोड़ें।</string>
+
+    <!-- The phone page that sends the Home Assistant address and token to the TV (HaSetupServer) -->
+    <string name="ha_setup_title">Hearth को Home Assistant से कनेक्ट करें</string>
+    <string name="ha_setup_address_label">Home Assistant का पता</string>
+    <string name="ha_setup_token_label">लंबे समय तक चलने वाला एक्सेस टोकन</string>
+    <string name="ha_setup_token_hint">टोकन यहाँ पेस्ट करें</string>
+    <string name="ha_setup_send">टीवी पर भेजें</string>
+    <string name="ha_setup_help">इस टीवी के यूज़र के रूप में साइन इन रहते हुए Home Assistant में टोकन बनाएँ: प्रोफ़ाइल, सुरक्षा टैब, लंबे समय तक चलने वाले एक्सेस टोकन। यह आपके होम नेटवर्क से सीधे टीवी पर जाता है।</string>
+    <string name="ha_setup_missing">Home Assistant का पता और टोकन दर्ज करें।</string>
+    <string name="ha_setup_sent_title">टीवी पर भेज दिया गया</string>
+    <string name="ha_setup_sent_detail">Hearth को पता और टोकन मिल गया है। आप यह पेज बंद कर सकते हैं।</string>
+
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">%1$s को %2$s के रूप में खोला जा रहा है…</string>
     <string name="profile_pairing_no_match">%1$s से मेल खाती कोई प्रोफ़ाइल नहीं मिली। अगली स्क्रीन पर एक चुनें।</string>

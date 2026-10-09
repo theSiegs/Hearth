@@ -404,7 +404,7 @@ public class MainActivity extends FlutterActivity {
     private boolean sendHaTestNotification() {
         HaNotificationServer.Notification test = new HaNotificationServer.Notification();
         test.title = "Home Assistant";
-        test.message = "Test notification from Hearth";
+        test.message = getString(R.string.ha_notification_test_message);
         return LauncherAccessibilityService.showHaNotification(test);
     }
 
