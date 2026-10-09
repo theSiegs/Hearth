@@ -4,7 +4,7 @@ Hearth shares its state with other apps (today: HearthTube) through one content 
 contract: what each column means, when it changes, and what callers may rely on. The provider's `contract_version`
 column says which version of this page it implements.
 
-**Current version: 4** (Hearth 2026.10, `ProfileProvider.CONTRACT_VERSION`).
+**Current version: 5** (Hearth 2026.10, `ProfileProvider.CONTRACT_VERSION`).
 
 Change rules: adding, removing or changing the meaning of a column or call bumps the version and gets a line in
 the history below. A reader that sees a newer version than it knows keeps using the columns it understands; columns
@@ -15,14 +15,17 @@ are never reused for a different meaning.
 - Authority: `com.leanbitlab.ltvL.profile` (debug builds: `com.leanbitlab.ltvL.debug.profile`).
 - `content://com.leanbitlab.ltvL.profile/active`: one row, the columns below.
 - `content://com.leanbitlab.ltvL.profile/wallpaper`: Hearth's current wallpaper picture, read-only
-  (`FileNotFoundException` when Hearth shows a gradient instead).
+  (`FileNotFoundException` when Hearth shows a gradient instead). Since version 5 only for `com.thesiegs.hearthtube`
+  signed with one of the certificates below (a picked wallpaper may be a family photo); anyone else gets
+  `FileNotFoundException`. How HearthTube shows Hearth's wallpaper: docs/design/wallpaper-sync.md.
 - Observers registered on `/active` are notified whenever a column changes.
 
 **In the owner's user, and in profiles through Hearth's agent.** Android refuses provider access across users,
 so an app running in a Google TV profile user (a kid's own copy of an app) can't reach Hearth, which runs in the
 owner's user (0). Where a parent has approved Hearth for that profile, Hearth runs there as the profile's agent and
 its provider answers with Hearth's own row as Hearth last sent it, except: `service_running` is 1 only while the
-agent is connected to Hearth, `wallpaper_stamp` is always 0 (no picture there: use the gradient) and `/wallpaper`
+agent is connected to Hearth, `wallpaper_stamp` is always 0 and `wallpaper_kind` always "gradient" (no picture there: use
+`wallpaper_gradient`), `wallpaper_brightness`, `wallpaper_title` and `wallpaper_credit` are null, and `/wallpaper`
 has no file. `verify_parent_pin` is relayed to Hearth (the PIN never leaves it) and returns null when Hearth doesn't
 answer within a few seconds. Without an agent, a Hearth installed there answers with defaults only.
 
@@ -51,7 +54,13 @@ answer within a few seconds. Without an agent, a Hearth installed there answers 
 | `profile_ready` | 0/1 | 1 once Hearth's home is complete for the active profile after a switch or start: its layout restored, its Continue Watching read, and (for a profile other than the owner's) its Hearth agent heard from, or 4 seconds passed. Back to 0 at the next switch. Act on profile-specific state when this turns 1, not on the first change of `profile_id`. |
 | `switch_generation` | integer | Goes up by one at every profile switch (and when Hearth starts). Tells a new visit to a profile from the same one. |
 | `updates_hearthtube` | 0/1 | 1 while Hearth keeps HearthTube up to date: automatic companion updates are on (Settings → Companion apps; on by default when Hearth installed HearthTube) and Hearth is HearthTube's installer of record, so Android lets it update without asking. HearthTube's own updater steps aside meanwhile. Changes when the setting does or HearthTube is installed or updated. |
-| `contract_version` | integer | This page's version (4). Missing on Hearth builds from before version 2. |
+| `wallpaper_kind` | text | What Hearth's home shows behind everything: "picture" (a picked picture, the day or night one resolved for the time now), "bing" (Bing's photo of the day) or "gradient". For "picture" and "bing", `/wallpaper` opens that file. |
+| `wallpaper_version` | integer | Changes whenever what `wallpaper_kind` names does: another picture, the same one replaced (a new pick, a new day's Bing photo), day turning to night, another gradient while one shows. Positive. Re-open `/wallpaper` (or redraw the gradient) when it changes. |
+| `wallpaper_brightness` | real or null | How light the wallpaper is, 0 (black) to 1 (white): the picture's average luminance as Hearth measured it, or the gradient's. Null until Hearth has measured what's shown now (for a moment after a change, or after day turns to night while Hearth wasn't running). Hearth darkens its row titles' pills the lighter it is. |
+| `wallpaper_gradient` | text (JSON) or null | Hearth's gradient: shown when `wallpaper_kind` is "gradient", and what Hearth falls back to otherwise. `{"type": "linear" or "radial", "colors": ["#AARRGGBB", ...], "stops": [0..1, ...] or null (evenly spaced), "rotation": radians clockwise about the screen's center, "brightness": 0..1}`, plus for linear `"begin"` and `"end"` and for radial `"center"` as `{"x", "y"}` alignments (-1..1 across the screen, x right, y down) and `"radius"` (a fraction of the screen's shorter side). Null before Hearth has described the chosen gradient (a moment after a change, or a Hearth not opened since it was updated). |
+| `wallpaper_title` | text or null | When `wallpaper_kind` is "bing": the photo's title as Bing gives it ("A quiet lake"). Otherwise null; also null for a photo fetched before Hearth kept titles. |
+| `wallpaper_credit` | text or null | When `wallpaper_kind` is "bing": Bing's caption and credit for the photo ("A quiet lake at dawn (© Photographer/Agency)"), to show where the photo is credited. Otherwise null. |
+| `contract_version` | integer | This page's version (5). Missing on Hearth builds from before version 2. |
 
 None of these are secret: everything is on screen in Hearth.
 
@@ -64,6 +73,9 @@ a minute.
 
 ## History
 
+- **5** (2026-10-09): added `wallpaper_kind`, `wallpaper_version`, `wallpaper_brightness`, `wallpaper_gradient`,
+  `wallpaper_title`, `wallpaper_credit`; observers on `/active` are told when the wallpaper changes. `/wallpaper`
+  only opens for HearthTube with a trusted signature.
 - **4** (2026-10-07): added `updates_hearthtube`. `profile_ready` also turns 1 at most 4 s after a change with
   Hearth off screen.
 - **3** (2026-10-07): added `profile_ready` and `switch_generation`.
