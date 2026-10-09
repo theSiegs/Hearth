@@ -89,8 +89,12 @@ public class ProfilePairingService extends AccessibilityService {
     private PinRun mPin;
     private View mPinPopup;
     private static final long PIN_SCREEN_WAIT_MS = 6_000;
-    private static final long PIN_STEP_MS = 2_500;
-    private static final long PIN_OVERALL_MS = 15_000;
+    /** Long enough for a keypad driven one D-pad move at a time (Netflix, HBO Max). */
+    private static final long PIN_OVERALL_MS = 40_000;
+    private static final long PIN_OUTCOME_POLL_MS = 400;
+    /** What the launched app said lately (speech and announcements), replayed to a PIN recipe as it starts. */
+    private static final long RECENT_SPEECH_MS = 15_000;
+    private final java.util.ArrayDeque<Object[]> mRecentSpeech = new java.util.ArrayDeque<>();
     private static final long PIN_MESSAGE_MS = 3_500;
     private static final int PIN_BREAKS_BEFORE_PAUSE = 3;
 
@@ -328,6 +332,7 @@ public class ProfilePairingService extends AccessibilityService {
         mHandler.removeCallbacks(mGoIdle);
         hideCover();
         mSession = new Session(pkg, key, hearthProfile);
+        mRecentSpeech.clear();
         mSession.kids = ProfileUsers.isKids(this);
         setListeningTo(pkg);
         setMode(true, needsScreenReaderMode(pkg));
@@ -376,6 +381,10 @@ public class ProfilePairingService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
+        if (event.getEventType() == AccessibilityEvent.TYPE_ANNOUNCEMENT && event.getPackageName() != null
+                && !event.getText().isEmpty()) {
+            heard(event.getPackageName().toString(), android.text.TextUtils.join(" ", event.getText()));
+        }
         if (mResearch != null && mResearch.contentEquals(event.getPackageName() != null ? event.getPackageName() : "")) {
             logResearch(event);
         }
@@ -439,6 +448,7 @@ public class ProfilePairingService extends AccessibilityService {
 
     private void handleSpeech(String callerPackage, String text) {
         if (mResearch != null && mResearch.equals(callerPackage)) Log.i(RESEARCH_TAG, "speech: " + redactDigits(text));
+        heard(callerPackage, text);
         Session s = mSession;
         if (s == null || !ProfilePairing.NETFLIX.equals(s.pkg) || !s.pkg.equals(callerPackage)) return;
         String t = text.trim();
@@ -851,6 +861,35 @@ public class ProfilePairingService extends AccessibilityService {
      * this is a grown-up Google TV profile paired with that app profile by an explicit choice, and a PIN is saved for
      * it that Hearth may still try. False when not (the cover goes as usual).
      */
+    /**
+     * The launched app said something (speech through Hearth voice, or an announcement): kept a short while for a PIN
+     * recipe that starts after it (the PIN screen often speaks before the cover's pick is done), and handed to a
+     * running one. Never logged.
+     */
+    private void heard(String pkg, String text) {
+        if (pkg == null || text == null || !pkg.equals(sListeningTo)) return;
+        long now = SystemClock.elapsedRealtime();
+        mRecentSpeech.addLast(new Object[] {now, pkg, text});
+        while (mRecentSpeech.size() > 60 || (!mRecentSpeech.isEmpty()
+                && now - (long) mRecentSpeech.peekFirst()[0] > RECENT_SPEECH_MS)) {
+            mRecentSpeech.pollFirst();
+        }
+        PinRun run = mPin;
+        if (run != null && run.session.pkg.equals(pkg)) {
+            run.recipe.onSpeech(text);
+            checkPinScreen();
+        }
+    }
+
+    private final Runnable mPinOutcomePoll = new Runnable() {
+        @Override
+        public void run() {
+            if (mPin == null || !mPin.outcomeDue) return;
+            checkPinScreen();
+            if (mPin != null) mHandler.postDelayed(this, PIN_OUTCOME_POLL_MS);
+        }
+    };
+
     private boolean startPinEntry(Session s) {
         String appProfile = s.pickedName;
         PinRecipe recipe = PinRecipes.forPackage(s.pkg);
@@ -865,6 +904,10 @@ public class ProfilePairingService extends AccessibilityService {
             return false;
         }
         mPin = new PinRun(s, appProfile, recipe, pin);
+        long now = SystemClock.elapsedRealtime();
+        for (Object[] said : mRecentSpeech) {
+            if (s.pkg.equals(said[1]) && now - (long) said[0] <= RECENT_SPEECH_MS) recipe.onSpeech((String) said[2]);
+        }
         if (mCoverTitle != null) mCoverTitle.setText(getString(R.string.pin_unlocking));
         mHandler.postDelayed(mPinNoScreen, PIN_SCREEN_WAIT_MS);
         mHandler.postDelayed(mPinBroken, PIN_OVERALL_MS);
@@ -892,10 +935,9 @@ public class ProfilePairingService extends AccessibilityService {
             }
             return;
         }
-        if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
-                || type == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
-            checkPinScreen();
-        }
+        // Announcements reach the recipe through heard()
+        run.recipe.onEvent(event);
+        if (type != AccessibilityEvent.TYPE_ANNOUNCEMENT) checkPinScreen();
     }
 
     /** What the recipe makes of the app's window now: the PIN screen to type on, or the app's answer. */
@@ -947,13 +989,14 @@ public class ProfilePairingService extends AccessibilityService {
                 return;
             }
             mHandler.removeCallbacks(stepTimeout);
-            mHandler.postDelayed(stepTimeout, PIN_STEP_MS);
+            mHandler.postDelayed(stepTimeout, recipe.stepTimeoutMs());
             recipe.type(ProfilePairingService.this, root, pin[index], ok -> {
                 mHandler.removeCallbacks(stepTimeout);
                 if (mPin != this) return;
                 if (ok && index == pin.length - 1) {
                     outcomeDue = true;
-                    mHandler.postDelayed(stepTimeout, PIN_STEP_MS);
+                    mHandler.postDelayed(stepTimeout, recipe.outcomeTimeoutMs());
+                    mHandler.postDelayed(mPinOutcomePoll, PIN_OUTCOME_POLL_MS);
                 }
                 machine.onDigit(ok);
                 if (outcomeDue) checkPinScreen();
@@ -973,6 +1016,8 @@ public class ProfilePairingService extends AccessibilityService {
         java.util.Arrays.fill(run.pin, '\0');
         mHandler.removeCallbacks(mPinNoScreen);
         mHandler.removeCallbacks(mPinBroken);
+        mHandler.removeCallbacks(mPinOutcomePoll);
+        mRecentSpeech.clear();
         String pkg = run.session.pkg;
         String app = appLabel(pkg);
         Log.i(TAG, "PIN entry in " + pkg + ": " + result);
