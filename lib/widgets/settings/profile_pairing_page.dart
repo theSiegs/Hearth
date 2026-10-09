@@ -222,10 +222,9 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
     String text = switch (status) {
       "none" => l.profilePinNone,
       "rejected" => l.profilePinRejected,
-      "reenter" => l.profilePinReenter,
       _ => l.profilePinSaved,
     };
-    if (status != "none" && status != "reenter" && pin["paused"] == true) text = l.profilePinPaused;
+    if (status != "none" && pin["paused"] == true) text = l.profilePinPaused;
     if (!_pinsSupported) text = "$text · ${l.profilePinUnsupported(widget.app["label"] as String)}";
     return text;
   }
@@ -235,8 +234,7 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
     final l = AppLocalizations.of(context)!;
     if (!await requireParentPin(context)) return;
     if (!mounted) return;
-    // A PIN to enter again (Hearth moved) goes straight to the pad
-    final saved = !const {"none", "reenter"}.contains(_pins[appProfile]?["status"] as String? ?? "none");
+    final saved = (_pins[appProfile]?["status"] as String? ?? "none") != "none";
     if (saved) {
       final remove = await showDialog<bool>(
         context: context,
