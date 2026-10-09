@@ -2024,4 +2024,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileLockNeedsGoogleLock => 'Uses Google TV\'s own profile lock: turn it on for your account in Google TV Settings → Accounts & Sign In → your account → Profile lock.';
+
+  @override
+  String get aboutWallpaperPhoto => 'WALLPAPER PHOTO';
 }

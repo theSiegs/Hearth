@@ -2014,4 +2014,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profileLockNeedsGoogleLock => '使用 Google TV 自带的个人资料锁：在 Google TV 设置 → 账号与登录 → 你的账号 → 个人资料锁 中为你的账号开启。';
+
+  @override
+  String get aboutWallpaperPhoto => '壁纸照片';
 }

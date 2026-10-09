@@ -606,5 +606,6 @@
     "profileLockOnSleep": "टीवी के स्लीप होने पर लॉक करें",
     "profileLockEveryTime": "हर बार",
     "profileLockAfterMinutes": "{minutes} मिनट स्लीप के बाद",
-    "profileLockNeedsGoogleLock": "Google TV का अपना प्रोफ़ाइल लॉक इस्तेमाल करता है: Google TV सेटिंग → खाते और साइन इन → आपका खाता → प्रोफ़ाइल लॉक में इसे अपने खाते के लिए चालू करें।"
+    "profileLockNeedsGoogleLock": "Google TV का अपना प्रोफ़ाइल लॉक इस्तेमाल करता है: Google TV सेटिंग → खाते और साइन इन → आपका खाता → प्रोफ़ाइल लॉक में इसे अपने खाते के लिए चालू करें।",
+    "aboutWallpaperPhoto": "वॉलपेपर फ़ोटो"
 }

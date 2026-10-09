@@ -2014,4 +2014,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get profileLockNeedsGoogleLock => 'Google TV 자체의 프로필 잠금을 사용합니다. Google TV 설정 → 계정 및 로그인 → 내 계정 → 프로필 잠금에서 켜세요.';
+
+  @override
+  String get aboutWallpaperPhoto => '배경화면 사진';
 }

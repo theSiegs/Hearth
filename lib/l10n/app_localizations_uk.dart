@@ -2038,4 +2038,7 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get profileLockNeedsGoogleLock => 'Використовує блокування профілю Google TV: увімкніть його для свого облікового запису в Налаштуваннях Google TV → Облікові записи та вхід → ваш обліковий запис → Блокування профілю.';
+
+  @override
+  String get aboutWallpaperPhoto => 'ФОТО НА ТЛІ';
 }

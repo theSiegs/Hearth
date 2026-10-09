@@ -3556,6 +3556,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Uses Google TV\'s own profile lock: turn it on for your account in Google TV Settings → Accounts & Sign In → your account → Profile lock.'**
   String get profileLockNeedsGoogleLock;
+
+  /// About: heading over the Bing photo of the day's title and credit (shown only while it is the wallpaper)
+  ///
+  /// In en, this message translates to:
+  /// **'WALLPAPER PHOTO'**
+  String get aboutWallpaperPhoto;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

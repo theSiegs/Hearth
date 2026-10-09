@@ -606,5 +606,6 @@
     "profileLockOnSleep": "Sperren, wenn der Fernseher schläft",
     "profileLockEveryTime": "Jedes Mal",
     "profileLockAfterMinutes": "Nach {minutes} Min. Ruhezustand",
-    "profileLockNeedsGoogleLock": "Nutzt die Profilsperre von Google TV: Schalte sie für dein Konto ein unter Google TV-Einstellungen → Konten und Anmeldung → dein Konto → Profilsperre."
+    "profileLockNeedsGoogleLock": "Nutzt die Profilsperre von Google TV: Schalte sie für dein Konto ein unter Google TV-Einstellungen → Konten und Anmeldung → dein Konto → Profilsperre.",
+    "aboutWallpaperPhoto": "HINTERGRUNDFOTO"
 }

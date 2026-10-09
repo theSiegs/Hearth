@@ -2022,4 +2022,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get profileLockNeedsGoogleLock => 'Nutzt die Profilsperre von Google TV: Schalte sie für dein Konto ein unter Google TV-Einstellungen → Konten und Anmeldung → dein Konto → Profilsperre.';
+
+  @override
+  String get aboutWallpaperPhoto => 'HINTERGRUNDFOTO';
 }

@@ -20,6 +20,8 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/providers/wallpaper_service.dart';
 import 'package:provider/provider.dart';
 
 import 'hearth_dialog.dart';
@@ -32,6 +34,7 @@ class HearthAboutDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
+    final bing = _bingPhoto(context);
     return HearthDialogFrame(
       width: 380,
       padding: const EdgeInsets.all(20),
@@ -137,6 +140,30 @@ class HearthAboutDialog extends StatelessWidget {
             label: localizations.aboutFlauncherForkCredit("osrosal"),
             onPressed: () => context.read<FLauncherChannel>().openUrl("https://github.com/osrosal/flauncher"),
           ),
+          // Bing's photo of the day: its title and credit live here, not on the home screen
+          if (bing != null) ...[
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                localizations.aboutWallpaperPhoto,
+                style: const TextStyle(
+                  color: Colors.white54,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                [bing.title, bing.credit].whereType<String>().join("\n"),
+                style: const TextStyle(color: Colors.white70, fontSize: 11, height: 1.4),
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           Text(
             localizations.aboutLicense,
@@ -154,5 +181,17 @@ class HearthAboutDialog extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// The Bing photo of the day's title and credit while it's the wallpaper; null otherwise (or nothing known).
+  static ({String? title, String? credit})? _bingPhoto(BuildContext context) {
+    try {
+      final wallpaper = context.read<WallpaperService>();
+      if (!context.read<SettingsService>().bingWallpaperEnabled || wallpaper.wallpaper == null) return null;
+      if (wallpaper.bingTitle == null && wallpaper.bingCredit == null) return null;
+      return (title: wallpaper.bingTitle, credit: wallpaper.bingCredit);
+    } catch (_) {
+      return null;
+    }
   }
 }

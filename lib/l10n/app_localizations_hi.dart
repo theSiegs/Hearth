@@ -2022,4 +2022,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get profileLockNeedsGoogleLock => 'Google TV का अपना प्रोफ़ाइल लॉक इस्तेमाल करता है: Google TV सेटिंग → खाते और साइन इन → आपका खाता → प्रोफ़ाइल लॉक में इसे अपने खाते के लिए चालू करें।';
+
+  @override
+  String get aboutWallpaperPhoto => 'वॉलपेपर फ़ोटो';
 }
