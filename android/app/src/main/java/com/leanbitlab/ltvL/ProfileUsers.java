@@ -146,8 +146,20 @@ final class ProfileUsers {
             checked++;
             if ((app.getValue().getApplicationInfo().flags & ApplicationInfo.FLAG_SUSPENDED) != 0) blocked++;
         }
-        // All of them: right after a switch some can still carry the last profile's state
-        return checked == 0 ? null : blocked == checked;
+        return screenTimeFromBlocked(checked, blocked);
+    }
+
+    /**
+     * Screen time from how many of a kids profile's approved apps Google TV blocks. All of them: up. None: not up.
+     * Some: can't tell (null), never "not up": right after a switch some apps can still carry the last profile's
+     * state, and an app a parent always allows (or blocks on its own) stays as it is whatever the screen time, so
+     * a mixed state says nothing. "Not up" lifts the screen time lock, so only an app list Google TV clearly isn't
+     * blocking may say it.
+     */
+    static Boolean screenTimeFromBlocked(int checked, int blocked) {
+        if (checked <= 0) return null;
+        if (blocked >= checked) return true;
+        return blocked == 0 ? Boolean.FALSE : null;
     }
 
     /** The settled active serial (as Hearth's service last saw it), else a fresh read. */
