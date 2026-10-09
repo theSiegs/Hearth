@@ -1376,7 +1376,7 @@ public class MainActivity extends FlutterActivity {
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
                 .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                         RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
-                .putExtra(RecognizerIntent.EXTRA_PROMPT, "Search films and shows")
+                .putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.search_voice_prompt))
                 .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
         try {
             mPendingVoiceResult = result;

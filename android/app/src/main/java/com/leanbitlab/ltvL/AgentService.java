@@ -239,14 +239,14 @@ public class AgentService extends Service {
         Notification.Builder builder;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             notifications.createNotificationChannel(
-                    new NotificationChannel(CHANNEL, "Hearth for this profile", NotificationManager.IMPORTANCE_MIN));
+                    new NotificationChannel(CHANNEL, getString(R.string.agent_channel_name), NotificationManager.IMPORTANCE_MIN));
             builder = new Notification.Builder(this, CHANNEL);
         } else {
             builder = new Notification.Builder(this);
         }
         Notification notification = builder.setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("Hearth")
-                .setContentText("Keeps Hearth's home in step with this profile")
+                .setContentText(getString(R.string.agent_notification_text))
                 .build();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);

@@ -28,4 +28,11 @@
 
     <!-- A Google TV profile before Hearth has learned its name (ProfileUsers) -->
     <string name="profile_unnamed">Profilo %1$d</string>
+
+    <!-- System text: the notification popup, idle standby, the agent's notification, voice search -->
+    <string name="popup_app_and_title">%1$s • %2$s</string>
+    <string name="idle_sleep_warning">Nessuna attività: la TV andrà in standby tra 1 minuto. Premi un tasto qualsiasi per tenerla accesa.</string>
+    <string name="agent_channel_name">Hearth per questo profilo</string>
+    <string name="agent_notification_text">Mantiene la schermata Home di Hearth allineata a questo profilo</string>
+    <string name="search_voice_prompt">Cerca film e serie</string>
 </resources>

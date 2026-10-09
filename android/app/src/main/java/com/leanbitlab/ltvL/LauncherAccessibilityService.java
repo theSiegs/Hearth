@@ -983,8 +983,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             sleepNow();
         } else if (!mIdleWarned && idleFor >= limit - IDLE_WARNING_MS) {
             mIdleWarned = true;
-            Toast.makeText(this, "No activity: going to sleep in 1 minute. Press any button to stay on.",
-                    Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.idle_sleep_warning, Toast.LENGTH_LONG).show();
         }
     }
 

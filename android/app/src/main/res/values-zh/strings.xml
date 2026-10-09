@@ -28,4 +28,11 @@
 
     <!-- A Google TV profile before Hearth has learned its name (ProfileUsers) -->
     <string name="profile_unnamed">个人资料 %1$d</string>
+
+    <!-- System text: the notification popup, idle standby, the agent's notification, voice search -->
+    <string name="popup_app_and_title">%1$s • %2$s</string>
+    <string name="idle_sleep_warning">无操作：电视将在 1 分钟后进入休眠。按任意按钮可保持开启。</string>
+    <string name="agent_channel_name">此个人资料的 Hearth</string>
+    <string name="agent_notification_text">让 Hearth 主屏幕与此个人资料保持同步</string>
+    <string name="search_voice_prompt">搜索电影和节目</string>
 </resources>

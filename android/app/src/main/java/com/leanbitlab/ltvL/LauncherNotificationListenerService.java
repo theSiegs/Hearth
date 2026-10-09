@@ -180,7 +180,7 @@ public class LauncherNotificationListenerService extends NotificationListenerSer
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         TextView titleView = new TextView(this);
-        titleView.setText(title.isEmpty() ? appLabel : appLabel + " • " + title);
+        titleView.setText(title.isEmpty() ? appLabel : getString(R.string.popup_app_and_title, appLabel, title));
         titleView.setTextColor(Color.WHITE);
         titleView.setTextSize(14);
         titleView.setTypeface(Typeface.DEFAULT_BOLD);
