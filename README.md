@@ -27,7 +27,14 @@ Google TV's own home screen is mostly ads and "for you" rows. Hearth replaces it
 only what you put there, and keeps working with the parts of Google TV that families rely on: profiles, kids
 profiles, Family Link screen time, and the Google Assistant.
 
-<!-- Screenshots: to be retaken from Hearth (the images in docs/images are from the upstream project). -->
+<p align="center">
+  <img src="docs/images/home.png" width="49%" alt="Hearth's home screen: a gradient wallpaper with the Favorites dock along the bottom">
+  <img src="docs/images/settings.png" width="49%" alt="Hearth's Settings panel, opened from the left edge of the home screen">
+</p>
+<p align="center">
+  <img src="docs/images/updates.png" width="49%" alt="Settings, System, Updates: Hearth, HearthTube and the Include pre-releases switch">
+  <img src="docs/images/about.png" width="49%" alt="About Hearth, with the credits for the projects it is built on">
+</p>
 
 ## Features
 
