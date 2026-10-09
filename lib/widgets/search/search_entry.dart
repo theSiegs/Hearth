@@ -21,7 +21,6 @@ import 'package:provider/provider.dart';
 
 import '../../flauncher_channel.dart';
 import '../../l10n/app_localizations.dart';
-import '../focusable_tap.dart';
 
 /// Where a search is typed or spoken, over the home: Google's own on-screen keyboard (also what a phone's Google
 /// TV app or a paired keyboard types into) and the mic for Google's speech recognizer. Submitting hands the text
@@ -116,9 +115,8 @@ class _SearchEntryState extends State<SearchEntry> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // No mic button of its own: the keyboard has one, and the remote's voice search starts listening
               Row(children: [
-                _MicButton(listening: _listening, onPressed: _listen),
-                const SizedBox(width: 14),
                 Expanded(
                   child: Material(
                     color: Colors.transparent,
@@ -158,31 +156,6 @@ class _SearchEntryState extends State<SearchEntry> {
         ),
       ),
     ),
-    );
-  }
-}
-
-class _MicButton extends StatelessWidget {
-  final bool listening;
-  final VoidCallback onPressed;
-
-  const _MicButton({required this.listening, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
-    return FocusableTap(
-      onPressed: onPressed,
-      builder: (context, focused) => Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: listening ? accent : (focused ? accent.withOpacity(0.6) : const Color(0xEE1E2026)),
-          border: Border.all(color: focused ? accent : Colors.transparent, width: 2),
-        ),
-        child: Icon(listening ? Icons.mic : Icons.mic_none, color: Colors.white, size: 28),
-      ),
     );
   }
 }

@@ -12,8 +12,7 @@ void main() {
   tearDown(() => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(channel, null));
 
-  testWidgets("the mic rings in the accent when focused, and select listens", (tester) async {
-    final calls = <String>[];
+  Future<List<String>> pump(WidgetTester tester, List<String> calls, {required bool voice}) async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
       calls.add(call.method);
       return call.method == "voiceSearch" ? "dune" : null;
@@ -24,31 +23,26 @@ void main() {
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(body: SearchEntry(onSubmit: submitted.add, onCancel: () {})),
+        home: Scaffold(body: SearchEntry(onSubmit: submitted.add, onCancel: () {}, voice: voice)),
       ),
     ));
     await tester.pump();
-
-    final mic = find.byIcon(Icons.mic_none);
-    final micFocus = Focus.of(tester.element(mic));
-    Color ring() => ((tester.widget<Container>(find.ancestor(of: mic, matching: find.byType(Container)).first).decoration
-                as BoxDecoration)
-            .border as Border)
-        .top
-        .color;
-    final accent = Theme.of(tester.element(mic)).colorScheme.primary;
-
-    // The box has focus to start with, not the mic
-    expect(micFocus.hasFocus, isFalse);
-    expect(ring(), Colors.transparent);
-
-    micFocus.requestFocus();
     await tester.pump();
-    expect(ring(), accent);
+    return submitted;
+  }
 
-    await tester.sendKeyEvent(LogicalKeyboardKey.select);
-    await tester.pump();
-    expect(calls, ["voiceSearch"]);
+  testWidgets("the remote's voice search listens right away and searches what was said", (tester) async {
+    final calls = <String>[];
+    final submitted = await pump(tester, calls, voice: true);
+    expect(calls, contains("voiceSearch"));
     expect(submitted, ["dune"]);
+  });
+
+  testWidgets("the box has no mic button of its own (the keyboard has one)", (tester) async {
+    final calls = <String>[];
+    await pump(tester, calls, voice: false);
+    expect(find.byIcon(Icons.mic_none), findsNothing);
+    expect(find.byIcon(Icons.mic), findsNothing);
+    expect(calls, isNot(contains("voiceSearch")));
   });
 }
