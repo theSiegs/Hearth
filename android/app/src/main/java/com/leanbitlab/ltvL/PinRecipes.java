@@ -10,8 +10,9 @@ import java.util.function.Supplier;
  *
  * Each recipe comes from research on the app's real PIN screen (a wrong and then the right PIN typed by a parent with
  * research mode on, digits masked): how the screen is recognised, how the keypad is typed and confirmed, what a wrong
- * PIN and success look like. Not here: Paramount+ (keeps the profile without a PIN at launch), Hulu (shows nothing to
- * accessibility unless TalkBack itself is on).
+ * PIN and success look like. Not here: Paramount+ (keeps the profile without a PIN at launch) and Hulu, which draws
+ * its own screen and only speaks it, through the TTS engine it can see: Google's, never Hearth voice (it declares
+ * no queries for TTS engines), and it turns its speech off when it thinks TalkBack is on. See the design doc, §9.
  */
 final class PinRecipes {
     private static final Map<String, Supplier<PinRecipe>> RECIPES = new HashMap<>();
