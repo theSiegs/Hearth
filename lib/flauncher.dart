@@ -47,6 +47,7 @@ import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/profile_service.dart';
 
 import 'models/category.dart';
+import 'package:flauncher/widgets/title_pill.dart';
 
 class FLauncher extends StatefulWidget {
   const FLauncher({super.key});
@@ -632,8 +633,13 @@ class _FLauncherState extends State<FLauncher> {
       children: [
         Container(
           constraints: BoxConstraints(minHeight: viewportHeight),
-          alignment: Alignment.bottomCenter,
-          child: Focus(
+          width: double.infinity,
+          child: Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              // Behind Continue Watching's or the search's title and details, fading in with them
+              Positioned.fill(child: DetailsScrim(visible: showRecents || showSearch)),
+              Focus(
             focusNode: _firstScreenFocusNode,
             child: Stack(
               alignment: Alignment.bottomCenter,
@@ -700,6 +706,8 @@ class _FLauncherState extends State<FLauncher> {
                 ),
               ],
             ),
+          ),
+            ],
           ),
         ),
         Focus(

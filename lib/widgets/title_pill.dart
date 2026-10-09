@@ -36,3 +36,41 @@ class TitlePill extends StatelessWidget {
     );
   }
 }
+
+/// A dark fade rising from the bottom of the screen behind Continue Watching's and search's title and details (as
+/// HearthTube's details scrim), so they read on any wallpaper. Like [TitlePill] it follows the wallpaper: lighter on
+/// a dark picture, up to HearthTube's strength on a light one.
+class DetailsScrim extends StatelessWidget {
+  final bool visible;
+
+  const DetailsScrim({super.key, required this.visible});
+
+  /// The fade's black opacity at the bottom edge for a background [brightness] (0-1): 0.5 up to a dark 0.2, 0.9 from
+  /// a light 0.7.
+  static double bottomOpacityFor(double brightness) => 0.5 + 0.4 * ((brightness - 0.2) / 0.5).clamp(0.0, 1.0);
+
+  @override
+  Widget build(BuildContext context) {
+    double brightness = 0.5;
+    try {
+      brightness = context.select<WallpaperService?, double>((w) => w?.brightness ?? 0.5);
+    } catch (_) {}
+    final double a = bottomOpacityFor(brightness);
+    return IgnorePointer(
+      child: AnimatedOpacity(
+        opacity: visible ? 1 : 0,
+        duration: const Duration(milliseconds: 250),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: [Colors.black.withOpacity(a), Colors.black.withOpacity(a * 0.78), Colors.transparent],
+              stops: const [0, 0.38, 0.62],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
