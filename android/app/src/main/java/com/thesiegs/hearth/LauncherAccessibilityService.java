@@ -506,10 +506,19 @@ public class LauncherAccessibilityService extends AccessibilityService {
         List<String> names = new ArrayList<>();
         List<Rect> photos = new ArrayList<>();
         String current = collectChooserTiles(root, names, photos, 0);
-        // The current account's tile names the running profile user, unless a switch is still settling
+        // The current account's tile names the running profile user, unless a switch is still settling. A name
+        // already learned is replaced only when the chooser no longer lists it (the profile was renamed): Google TV
+        // can mark a profile current that never started (a new one whose switch didn't finish), and that mustn't
+        // rename the profile that's actually running.
+        String known = mActiveSerial == ProfileUsers.UNKNOWN ? null : ProfileUsers.getName(this, mActiveSerial);
         if (current != null && mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN
-                && !current.equals(ProfileUsers.getName(this, mActiveSerial))) {
-            nameSerial(mActiveSerial, current, "chooser's current account");
+                && !current.equals(known)) {
+            if (known == null || !names.contains(known)) {
+                nameSerial(mActiveSerial, current, "chooser's current account");
+            } else {
+                Log.i(TAG, "Chooser marks " + current + " current, but serial " + mActiveSerial + " (" + known
+                        + ") is running: not renaming");
+            }
         }
         // Only the current account's tile, and only while it's the selected one: Google TV draws its PIN lock (and
         // dimming) on a PIN-protected profile's tile whenever another tile has focus, the current one included
