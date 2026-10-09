@@ -165,6 +165,8 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Focus(
         focusNode: focusNode,
+        // The page opens with the first section selected
+        autofocus: identical(displaySections.first, section),
         onFocusChange: (focused) {
           if (focused && focusNode.context != null) {
             Scrollable.ensureVisible(

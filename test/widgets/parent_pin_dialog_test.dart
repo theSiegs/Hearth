@@ -86,6 +86,25 @@ void main() {
     expect(allowed, isTrue);
   });
 
+  testWidgets("the remote's number keys type the PIN too", (tester) async {
+    when(profile.isKidsProfile).thenReturn(true);
+    when(settings.hasParentPin).thenReturn(true);
+    when(settings.verifyParentPin(any)).thenAnswer((i) => i.positionalArguments[0] == "2468");
+    await pump(tester);
+
+    for (final key in [
+      LogicalKeyboardKey.digit2,
+      LogicalKeyboardKey.digit4,
+      LogicalKeyboardKey.digit6,
+      LogicalKeyboardKey.digit8,
+    ]) {
+      await tester.sendKeyEvent(key);
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+    expect(allowed, isTrue);
+  });
+
   testWidgets("the row pad: Up/Down pick a row, Left/OK/Right its first/middle/last digit, ⌫ under the rows",
       (tester) async {
     // The same seed shuffles the same way here as in the dialog

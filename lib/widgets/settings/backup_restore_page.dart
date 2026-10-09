@@ -116,6 +116,7 @@ class BackupRestorePage extends StatelessWidget {
                         child: Text(localizations.backupNoFiles),
                       ),
                       TextButton(
+                        autofocus: true,
                         onPressed: () => Navigator.of(dialogContext).pop(),
                         child: Text(localizations.ok),
                       ),
@@ -129,6 +130,8 @@ class BackupRestorePage extends StatelessWidget {
                   itemBuilder: (itemContext, index) {
                     final entry = entries[index];
                     return FocusableSettingsTile(
+                      // The newest backup is selected as the list loads
+                      autofocus: index == 0,
                       leading: const Icon(Icons.settings_backup_restore),
                       title: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,7 +184,9 @@ class BackupRestorePage extends StatelessWidget {
         title: Text(localizations.importBackup),
         content: Text(localizations.importConfirm),
         actions: [
+          // Cancel first: importing replaces the current settings
           TextButton(
+            autofocus: true,
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: Text(localizations.cancel),
           ),
