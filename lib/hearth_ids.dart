@@ -34,6 +34,15 @@ String withoutDebugSuffix(String packageName) =>
 /// This is the bridge build: the old app id, which moves the TV to the new one.
 bool isBridgePackage(String packageName) => withoutDebugSuffix(packageName) == kLegacyHearthAppId;
 
+/// The app a Hearth update must install: Hearth itself, except in the bridge build, whose "update" is the new
+/// Hearth. Release APKs only (a debug build updates to the release app, as before).
+String expectedUpdatePackage(String ownPackage) =>
+    isBridgePackage(ownPackage) ? kHearthAppId : withoutDebugSuffix(ownPackage);
+
+/// A release asset that is Hearth under its current id: the bridge build's APKs ("Hearth-bridge-…") are never an
+/// update, for the new Hearth or for the bridge itself.
+bool isHearthUpdateAsset(String name) => !name.toLowerCase().contains("bridge");
+
 /// Hearth under either id, release or debug.
 bool isHearthPackage(String? packageName) {
   if (packageName == null) return false;
