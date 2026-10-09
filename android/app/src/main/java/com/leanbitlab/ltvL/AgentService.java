@@ -78,6 +78,7 @@ public class AgentService extends Service {
     private volatile boolean mSelfCleaned = false;
     private volatile PrintWriter mOut;
     private volatile Socket mSocket;
+    private volatile long mSerial = ProfileUsers.UNKNOWN;
     private ContentObserver mWatchNextObserver;
 
     /** Whether Hearth is running in a profile user other than the owner's (the system user), as an agent. */
@@ -124,7 +125,8 @@ public class AgentService extends Service {
     /**
      * Hearth's provider row as Hearth last sent it, in ProfileProvider's column order, for the provider here (a kid's
      * HearthTube in this user can't reach Hearth's). service_running says whether this agent is connected to
-     * Hearth now; there's no wallpaper picture here (wallpaper_stamp 0, wallpaper_kind "gradient": Hearth's gradient).
+     * Hearth now. The wallpaper columns are this profile's own wallpaper as Hearth last sent it (AgentWallpaper);
+     * before Hearth has, there's no picture here (wallpaper_stamp 0, wallpaper_kind "gradient": Hearth's gradient).
      * Defaults before the first.
      */
     static Object[] mirroredRow(Context context) {
@@ -136,6 +138,7 @@ public class AgentService extends Service {
             if (saved != null) row = new JSONObject(saved);
         } catch (Exception ignored) {
         }
+        AgentWallpaper.Kept wallpaper = AgentWallpaper.kept(context);
         for (int i = 0; i < columns.length; i++) {
             Object value = row != null && !row.isNull(columns[i]) ? row.opt(columns[i]) : null;
             switch (columns[i]) {
@@ -143,16 +146,26 @@ public class AgentService extends Service {
                     value = sConnected && row != null ? 1 : 0;
                     break;
                 case "wallpaper_stamp":
-                    value = 0;
+                    value = wallpaper != null && wallpaper.picture != null ? wallpaper.picture.lastModified() : 0;
                     break;
                 case "wallpaper_kind":
-                    // No picture here: Hearth's gradient stands in (wallpaper_gradient, with its own brightness)
-                    value = HearthWallpaper.KIND_GRADIENT;
+                    // Without this profile's own yet: Hearth's gradient stands in (wallpaper_gradient, its brightness)
+                    value = wallpaper != null ? wallpaper.kind : HearthWallpaper.KIND_GRADIENT;
+                    break;
+                case "wallpaper_version":
+                    if (wallpaper != null) value = wallpaper.version;
+                    break;
+                case "wallpaper_gradient":
+                    if (wallpaper != null && wallpaper.gradient != null) value = wallpaper.gradient;
                     break;
                 case "wallpaper_brightness":
+                    value = wallpaper != null ? wallpaper.brightness : null;
+                    break;
                 case "wallpaper_title":
+                    value = wallpaper != null ? wallpaper.title : null;
+                    break;
                 case "wallpaper_credit":
-                    value = null;
+                    value = wallpaper != null ? wallpaper.credit : null;
                     break;
                 case "contract_version":
                     value = ProfileProvider.CONTRACT_VERSION;
@@ -301,13 +314,15 @@ public class AgentService extends Service {
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
             out.println(new JSONObject().put("type", "hello").put("serial", serial).put("key", key)
-                    .put("voiceDefault", ProfilePairingService.isVoiceDefault(this)));
+                    .put("voiceDefault", ProfilePairingService.isVoiceDefault(this))
+                    .put("wallpaperVersion", AgentWallpaper.versionHere(this)));
             JSONObject reply = new JSONObject(in.readLine());
             if (!"welcome".equals(reply.optString("type"))) {
                 Log.i(TAG, "Hearth refused this agent's key");
                 return false;
             }
             Log.i(TAG, "Connected to Hearth as serial " + serial);
+            mSerial = serial;
             mOut = out;
             connected = true;
             onConnectionChanged(true);
@@ -348,6 +363,12 @@ public class AgentService extends Service {
                 }
                 break;
             }
+            case "wallpaper":
+                // This profile's own wallpaper (AgentWallpaper): HearthTube here shows it
+                if (AgentWallpaper.store(this, message, ProfileUsers.key(mSerial))) {
+                    getContentResolver().notifyChange(ProfileProvider.activeUri(this), null);
+                }
+                break;
             case "pinResult": {
                 BlockingQueue<JSONObject> reply = sPinReplies.get(message.optLong("id"));
                 if (reply != null) reply.offer(message);

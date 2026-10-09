@@ -24,9 +24,15 @@ are never reused for a different meaning.
 so an app running in a Google TV profile user (a kid's own copy of an app) can't reach Hearth, which runs in the
 owner's user (0). Where a parent has approved Hearth for that profile, Hearth runs there as the profile's agent and
 its provider answers with Hearth's own row as Hearth last sent it, except: `service_running` is 1 only while the
-agent is connected to Hearth, `wallpaper_stamp` is always 0 and `wallpaper_kind` always "gradient" (no picture there: use
-`wallpaper_gradient`), `wallpaper_brightness`, `wallpaper_title` and `wallpaper_credit` are null, and `/wallpaper`
-has no file. `verify_parent_pin` is relayed to Hearth (the PIN never leaves it) and returns null when Hearth doesn't
+agent is connected to Hearth, and the `wallpaper_*` columns and `/wallpaper` are that profile's own wallpaper, the
+one Hearth shows for it (its picture, Bing's photo or its gradient), with the same meanings and the same
+`wallpaper_version` as in the owner's user. Hearth sends each profile's agent only that profile's wallpaper, a
+picture as a JPEG of at most 1920x1080 (center-cropped like the screen shows it), and only while that profile's
+settings are the ones in place; `/active` observers there are notified when it arrives. Until the agent has a
+picture's current version (just after a switch, or a picture too big to send) it reports `wallpaper_kind`
+"gradient" with that profile's `wallpaper_gradient`, and before Hearth has sent it anything, Hearth's gradient with
+null `wallpaper_brightness`, `wallpaper_title` and `wallpaper_credit`. `wallpaper_stamp` there is the cached
+picture's file time, 0 for a gradient. `verify_parent_pin` is relayed to Hearth (the PIN never leaves it) and returns null when Hearth doesn't
 answer within a few seconds. Without an agent, a Hearth installed there answers with defaults only.
 
 **Checking it's really Hearth.** The provider belongs to `com.leanbitlab.ltvL` signed with one of:
@@ -75,7 +81,8 @@ a minute.
 
 - **5** (2026-10-09): added `wallpaper_kind`, `wallpaper_version`, `wallpaper_brightness`, `wallpaper_gradient`,
   `wallpaper_title`, `wallpaper_credit`; observers on `/active` are told when the wallpaper changes. `/wallpaper`
-  only opens for HearthTube with a trusted signature.
+  only opens for HearthTube with a trusted signature. In a profile's agent, the wallpaper columns and `/wallpaper`
+  are that profile's own wallpaper (same columns and meanings, so no new version for it).
 - **4** (2026-10-07): added `updates_hearthtube`. `profile_ready` also turns 1 at most 4 s after a change with
   Hearth off screen.
 - **3** (2026-10-07): added `profile_ready` and `switch_generation`.

@@ -89,6 +89,8 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
     return hsl.withLightness(hsl.lightness.clamp(0.12, 0.26)).withSaturation(hsl.saturation.clamp(0.0, 0.65)).toColor();
   }
 
+  // Pictures a profile picked are its own (in [profileFolder]); Bing's photo of the day is everyone's
+  late Directory _documents;
   late File _wallpaperFile;
   late File _wallpaperDayFile;
   late File _wallpaperNightFile;
@@ -217,11 +219,61 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
     super.dispose();
   }
 
+  /// The TV owner's profile key: where pictures picked before they were per profile go, and whose pictures show
+  /// before Hearth has seen any profile (HearthWallpaper.java does the same).
+  static const String ownerProfileKey = "user:0";
+
+  /// The documents subfolder holding a profile's own pictures (wallpaper, wallpaper_day, wallpaper_night).
+  @visibleForTesting
+  static String profileFolder(String profileKey) =>
+      "wallpapers/${profileKey.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_')}";
+
+  static const List<String> _pictureNames = ["wallpaper", "wallpaper_day", "wallpaper_night"];
+
+  String _profileKey = ownerProfileKey;
+  final Completer<void> _ready = Completer<void>();
+
+  /// The profile whose pictures show (the one whose settings are in place).
+  String get profileKey => _profileKey;
+
+  void _usePictures(String profileKey) {
+    _profileKey = profileKey;
+    final folder = "${_documents.path}/${profileFolder(profileKey)}";
+    _wallpaperFile = File("$folder/wallpaper");
+    _wallpaperDayFile = File("$folder/wallpaper_day");
+    _wallpaperNightFile = File("$folder/wallpaper_night");
+  }
+
+  /// Another profile's settings are in place (ProfileService, after a switch): its own pictures show.
+  Future<void> setProfile(String profileKey) async {
+    await _ready.future;
+    if (profileKey == _profileKey) return;
+    _usePictures(profileKey);
+    _version++;
+    await _updateWallpaper(force: true);
+  }
+
+  /// Pictures picked before each profile had its own were everyone's: they become the TV owner's.
+  Future<void> _movePicturesToOwner() async {
+    for (final name in _pictureNames) {
+      final old = File("${_documents.path}/$name");
+      try {
+        if (!await old.exists()) continue;
+        final target = File("${_documents.path}/${profileFolder(ownerProfileKey)}/$name");
+        if (await target.exists()) continue;
+        await target.parent.create(recursive: true);
+        await old.rename(target.path);
+      } catch (e) {
+        developer.log("Couldn't move the wallpaper $name", name: "WallpaperService", error: e);
+      }
+    }
+  }
+
   Future<void> _init() async {
     final directory = await getApplicationDocumentsDirectory();
-    _wallpaperFile = File("${directory.path}/wallpaper");
-    _wallpaperDayFile = File("${directory.path}/wallpaper_day");
-    _wallpaperNightFile = File("${directory.path}/wallpaper_night");
+    _documents = directory;
+    await _movePicturesToOwner();
+    _usePictures(_settingsService.layoutOwner ?? ownerProfileKey);
     _wallpaperBingFile = File("${directory.path}/wallpaper_bing");
     _wallpaperBingDateFile = File("${directory.path}/wallpaper_bing_date");
     _wallpaperBingInfoFile = File("${directory.path}/wallpaper_bing_info");
@@ -230,6 +282,7 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
     _lastTimeBasedEnabled = _settingsService.timeBasedWallpaperEnabled;
     _lastBingEnabled = _settingsService.bingWallpaperEnabled;
     _initialized = true;
+    _ready.complete();
     await _updateWallpaper();
     _updateTimerState();
 
@@ -321,7 +374,10 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
     final gradient = this.gradient.gradient;
     final gradientBrightness = WallpaperService.gradientBrightness(gradient);
     return {
-      "file": _shownFile?.uri.pathSegments.last,
+      // Relative to the documents folder: "wallpaper_bing", or "wallpapers/user_11/wallpaper_day"
+      "file": _shownFile == null ? null : _relativePath(_shownFile!),
+      // Each profile's state is its own, even when two show the same gradient
+      "profile": _profileKey,
       "brightness": _shownFile != null ? _wallpaperBrightness : null,
       "gradient_uuid": _settingsService.gradientUuid,
       "gradient": jsonEncode(describeGradient(gradient, gradientBrightness)),
@@ -331,6 +387,11 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
       // A new picture in the same file (a new pick, a new day's Bing photo) is news too
       "picked": _version,
     };
+  }
+
+  String _relativePath(File file) {
+    final prefix = "${_documents.path}/";
+    return file.path.startsWith(prefix) ? file.path.substring(prefix.length) : file.uri.pathSegments.last;
   }
 
   /// Tells the provider when [providerState] changed, which tells HearthTube.
@@ -459,14 +520,17 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> pickWallpaper() async {
+    await _ready.future;
     await _pickAndSave(_wallpaperFile);
   }
 
   Future<void> pickWallpaperDay() async {
+    await _ready.future;
     await _pickAndSave(_wallpaperDayFile);
   }
 
   Future<void> pickWallpaperNight() async {
+    await _ready.future;
     await _pickAndSave(_wallpaperNightFile);
   }
 
@@ -477,6 +541,7 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
 
     final pickedFile = await _imagePicker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
+      await targetFile.parent.create(recursive: true);
       // Use stream for memory efficiency
       final readStream = pickedFile.openRead();
       final writeStream = targetFile.openWrite();
@@ -491,6 +556,7 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> setGradient(FLauncherGradient fLauncherGradient) async {
+    await _ready.future;
     if (await _wallpaperFile.exists()) {
       await _wallpaperFile.delete();
     }

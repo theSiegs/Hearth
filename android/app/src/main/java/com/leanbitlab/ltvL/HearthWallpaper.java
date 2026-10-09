@@ -20,10 +20,19 @@ final class HearthWallpaper {
     static final String KIND_BING = "bing";
     static final String KIND_GRADIENT = "gradient";
 
+    /** Bing's photo of the day: everyone's, in the documents folder itself. */
     static final String BING = "wallpaper_bing";
+    // A profile's own pictures, in its profileFolder
     private static final String PLAIN = "wallpaper";
     private static final String DAY = "wallpaper_day";
     private static final String NIGHT = "wallpaper_night";
+    /**
+     * The TV owner's profile key (WallpaperService.ownerProfileKey): whose pictures show before Hearth has seen a
+     * profile.
+     */
+    static final String OWNER_PROFILE = "user:0";
+    /** SettingsService.layoutOwnerKey: the profile whose settings (and so whose pictures) are in place. */
+    private static final String LAYOUT_OWNER = "device_layout_owner";
 
     private static final String PREFS = "hearth_wallpaper";
     private static final String FILE = "file";
@@ -38,6 +47,8 @@ final class HearthWallpaper {
 
     /** What the provider shows of the wallpaper, in one read. */
     static final class State {
+        /** The profile this is the wallpaper of (its key, "user:11"). */
+        final String profile;
         final File file;
         final String kind;
         final long version;
@@ -46,7 +57,9 @@ final class HearthWallpaper {
         final String title;
         final String credit;
 
-        State(File file, String kind, long version, Double brightness, String gradient, String title, String credit) {
+        State(String profile, File file, String kind, long version, Double brightness, String gradient, String title,
+                String credit) {
+            this.profile = profile;
             this.file = file;
             this.kind = kind;
             this.version = version;
@@ -85,9 +98,12 @@ final class HearthWallpaper {
     static State current(Context context) {
         // path_provider's getApplicationDocumentsDirectory()
         File dir = new File(context.getApplicationInfo().dataDir, "app_flutter");
+        String profile = FlutterPrefs.getString(context, LAYOUT_OWNER, null);
+        if (profile == null) profile = OWNER_PROFILE;
         String name = pick(FlutterPrefs.getBoolean(context, "bing_wallpaper_enabled", false),
                 FlutterPrefs.getBoolean(context, "time_based_wallpaper_enabled", false),
-                Calendar.getInstance().get(Calendar.HOUR_OF_DAY), n -> new File(dir, n).exists());
+                Calendar.getInstance().get(Calendar.HOUR_OF_DAY), profileFolder(profile),
+                n -> new File(dir, n).exists());
         File file = name != null ? new File(dir, name) : null;
         String kind = kindOf(name);
         String gradientUuid = FlutterPrefs.getString(context, "gradient_uuid", null);
@@ -100,7 +116,7 @@ final class HearthWallpaper {
                 sameGradient ? number(sent.getString(GRADIENT_BRIGHTNESS, null)) : null);
         boolean bing = KIND_BING.equals(kind);
 
-        return new State(file, kind,
+        return new State(profile, file, kind,
                 version(kind, name, file != null ? file.lastModified() : 0, file != null ? file.length() : 0,
                         gradientUuid),
                 brightness, gradient,
@@ -109,16 +125,24 @@ final class HearthWallpaper {
     }
 
     /**
-     * The picture file shown, as WallpaperService._updateWallpaper picks it: Bing's when that's on, the day or night
-     * one (06:00 to 18:00 is day) when those are on, falling back to the plain one; null for the gradient.
+     * The picture file shown (relative to the documents folder), as WallpaperService._updateWallpaper picks it:
+     * Bing's when that's on, the profile's day or night one (06:00 to 18:00 is day) when those are on, falling back
+     * to its plain one; null for the gradient.
      */
-    static String pick(boolean bingEnabled, boolean timeBasedEnabled, int hour, Predicate<String> exists) {
+    static String pick(boolean bingEnabled, boolean timeBasedEnabled, int hour, String folder,
+            Predicate<String> exists) {
         if (bingEnabled && exists.test(BING)) return BING;
         if (timeBasedEnabled) {
-            String timed = hour >= 6 && hour < 18 ? DAY : NIGHT;
+            String timed = folder + "/" + (hour >= 6 && hour < 18 ? DAY : NIGHT);
             if (exists.test(timed)) return timed;
         }
-        return exists.test(PLAIN) ? PLAIN : null;
+        String plain = folder + "/" + PLAIN;
+        return exists.test(plain) ? plain : null;
+    }
+
+    /** The documents subfolder with a profile's own pictures, as WallpaperService.profileFolder names it. */
+    static String profileFolder(String profileKey) {
+        return "wallpapers/" + profileKey.replaceAll("[^A-Za-z0-9_-]", "_");
     }
 
     static String kindOf(String fileName) {

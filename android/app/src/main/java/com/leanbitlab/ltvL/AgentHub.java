@@ -40,11 +40,13 @@ import java.util.concurrent.Executors;
  * object per line. Each profile's agent proves itself with a key Hearth hands it when it starts it (in the launch's
  * source bounds, the only thing a launch into another user carries), so another app on the TV can't pose as one.
  *
- * Agent to Hearth: {"type":"hello","serial":n,"key":"…","voiceDefault":bool}, {"type":"watchNext","rows":[…]},
+ * Agent to Hearth: {"type":"hello","serial":n,"key":"…","voiceDefault":bool,"wallpaperVersion":n},
+ * {"type":"watchNext","rows":[…]},
  * {"type":"ping"}, {"type":"opened","ok":bool}, {"type":"speech","package":"…","text":"…"} (what an app said through
  * Hearth's voice there, for Profile Pairing). Hearth to agent: {"type":"welcome"}, {"type":"open","intent":"intent:…"},
  * {"type":"listen","package":"…" or null} (the app Profile Pairing is handling, whose speech to relay),
- * {"type":"hearth","row":{column: value}} (Hearth's provider row, mirrored by the agent's provider there) and
+ * {"type":"hearth","row":{column: value}} (Hearth's provider row, mirrored by the agent's provider there),
+ * {"type":"wallpaper",…} (that profile's own wallpaper, picture included, only to its own agent: AgentWallpaper) and
  * {"type":"pinResult","id":n,"ok":bool,"wait":s} answering an agent's {"type":"verifyPin","id":n,"pin":"…"}.
  */
 final class AgentHub {
@@ -68,10 +70,40 @@ final class AgentHub {
         final Socket socket;
         final PrintWriter out;
 
-        Connection(long serial, Socket socket, PrintWriter out) {
+        // Only touched on SENDER: the picture version the agent has, and the last wallpaper message sent (no image)
+        private long wallpaperVersionThere;
+        private String lastWallpaper;
+
+        Connection(long serial, Socket socket, PrintWriter out, long wallpaperVersionThere) {
             this.serial = serial;
             this.socket = socket;
             this.out = out;
+            this.wallpaperVersionThere = wallpaperVersionThere;
+        }
+
+        /**
+         * Sends the agent its profile's wallpaper (AgentWallpaper), when that's the one in place and it changed since
+         * the last time; the picture only when the agent doesn't have it yet.
+         */
+        void sendWallpaper(Context context) {
+            SENDER.execute(() -> {
+                try {
+                    JSONObject message = AgentWallpaper.message(context, serial, wallpaperVersionThere);
+                    if (message == null) return;
+                    Object image = message.remove("image");
+                    String withoutImage = message.toString();
+                    if (image == null && withoutImage.equals(lastWallpaper)) return;
+                    if (image != null) message.put("image", image);
+                    out.println(message.toString());
+                    lastWallpaper = withoutImage;
+                    // Sent, or tried and too big: either way not again for this version
+                    if (!HearthWallpaper.KIND_GRADIENT.equals(message.optString("kind"))) {
+                        wallpaperVersionThere = message.optLong("version");
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Couldn't send the wallpaper to the agent for serial " + serial + ": " + e);
+                }
+            });
         }
 
         /**
@@ -128,13 +160,14 @@ final class AgentHub {
                 socket.close();
                 return;
             }
-            connection = new Connection(serial, socket, out);
+            connection = new Connection(serial, socket, out, hello.optLong("wallpaperVersion"));
             Connection old = sConnections.put(serial, connection);
             if (old != null) closeQuietly(old.socket);
             sVoiceDefault.put(serial, hello.optBoolean("voiceDefault"));
             connection.send(json("type", "welcome"));
             connection.send(listenMessage(sListening));
             connection.send(hearthState(sContext));
+            connection.sendWallpaper(sContext);
             // Share owner-Hearth's already-authorized adb key over this loopback channel, so if Hearth is ever
             // uninstalled from the owner the agent can still clean up its own profile (see AgentService). Local only.
             String[] adbKey = SelfAdb.keyMaterial(sContext);
@@ -225,7 +258,11 @@ final class AgentHub {
         if (sConnections.isEmpty()) return;
         try {
             JSONObject state = hearthState(context);
-            for (Connection connection : sConnections.values()) connection.send(state);
+            for (Connection connection : sConnections.values()) {
+                connection.send(state);
+                // Its own wallpaper too, to the agent whose profile it is (the others get none)
+                connection.sendWallpaper(context.getApplicationContext());
+            }
         } catch (Exception e) {
             Log.w(TAG, "Couldn't send Hearth's state to the agents: " + e);
         }
