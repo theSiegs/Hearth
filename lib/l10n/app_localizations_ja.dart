@@ -1072,7 +1072,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get familyAppsFailedTitle => 'プロフィールを設定できませんでした';
 
   @override
-  String get familyAppsFailedBody => '他のプロフィールを設定するには、テレビで 1 回だけ許可する必要があります。';
+  String get familyAppsFailedBody => '他のプロフィールを設定するには、テレビで Hearth を 1 回だけ許可する必要があります。';
 
   @override
   String get familyAppsFailedRetry => 'テレビに「デバッグを許可しますか？」と表示されたら「常に許可」を選んで、もう一度お試しください。';
