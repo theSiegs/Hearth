@@ -88,7 +88,7 @@ class HomeSearch extends ChangeNotifier {
       if (generation != _generation) return;
       _matches = [
         for (final (i, result) in results.indexed)
-          TitleMatch(result, details[i], Availability.of(result, details[i], _installed)),
+          if (details[i]?.adult != true) TitleMatch(result, details[i], Availability.of(result, details[i], _installed)),
       ];
     } catch (_) {
       if (generation != _generation) return;

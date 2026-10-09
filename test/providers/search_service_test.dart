@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 Map _id(String value) => {"mainsnak": {"datavalue": {"value": value}}};
 Map _time(String value) => {"mainsnak": {"datavalue": {"value": {"time": value}}}};
+Map _item(String id) => {"mainsnak": {"datavalue": {"value": {"id": id}}}};
 
 void main() {
   final hits = [
@@ -34,6 +35,26 @@ void main() {
   test("keeps films and shows, drops everything else", () {
     final results = SearchService.parseResults(hits, entities);
     expect(results.map((r) => r.wikidataId), ["Q19798734", "Q39071378"]);
+  });
+
+  test("never keeps an adult title (Wikidata's genre or class pornographic film)", () {
+    final adultHits = [
+      {"id": "Q1", "label": "A Parody"},
+      {"id": "Q2", "label": "Another"},
+      {"id": "Q3", "label": "A Comedy"},
+    ];
+    final adultEntities = {
+      "Q1": {"labels": {"en": {"value": "A Parody"}}, "claims": {"P4947": [_id("1")], "P136": [_item("Q185529")]}},
+      "Q2": {"labels": {"en": {"value": "Another"}}, "claims": {"P4947": [_id("2")], "P31": [_item("Q185529")]}},
+      "Q3": {"labels": {"en": {"value": "A Comedy"}}, "claims": {"P4947": [_id("3")], "P136": [_item("Q157443")]}},
+    };
+    expect(SearchService.parseResults(adultHits, adultEntities).map((r) => r.wikidataId), ["Q3"]);
+  });
+
+  test("reads TMDB's adult mark", () {
+    expect(TmdbClient.parseDetails({"adult": true}).adult, isTrue);
+    expect(TmdbClient.parseDetails({"adult": false}).adult, isFalse);
+    expect(TmdbClient.parseDetails({}).adult, isFalse);
   });
 
   test("builds each app's link and the year", () {
