@@ -62,6 +62,9 @@ HearthTube follows Hearth's wallpaper when all of these hold:
    - Otherwise: `PackageManager.resolveActivity(new Intent(ACTION_MAIN).addCategory(CATEGORY_HOME),
      MATCH_DEFAULT_ONLY)` resolves to Hearth. That covers HearthTube opened by voice, a cast or a deep link on a TV
      whose home is Hearth.
+   - Or `/active` reports `service_running = 1`. On Google TV the home stays Google TV's own launcher and Hearth
+     takes the Home button over through its accessibility service (Home Button Fix), so the check above finds
+     Google TV there; a running service means Hearth is the home the family sees. (Found testing on a TV.)
 
    Decide once per `onStart` (or per new intent) and keep the answer while the activity lives.
 
