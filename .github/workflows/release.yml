@@ -10,6 +10,11 @@ on:
         description: 'Tag name for the release (e.g. v1.0.0)'
         required: true
         default: 'v-dev'
+      bridge:
+        description: 'Bridge build: the old app id com.leanbitlab.ltvL, which moves a TV to the new Hearth (docs/design/app-id-change.md). Assets are named Hearth-bridge-*.'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: write
@@ -64,6 +69,8 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           # Optional: posters and "streaming on" in search (TMDB). Without it, search has no posters.
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          # The bridge build (android/app/build.gradle): the old app id
+          HEARTH_BRIDGE: ${{ github.event.inputs.bridge == 'true' && 'true' || 'false' }}
         run: |
           # Build universal APK first
           flutter build apk --release --target-platform=android-arm,android-arm64 --dart-define=TMDB_API_KEY="$TMDB_API_KEY"
@@ -75,6 +82,12 @@ jobs:
           mv build/app/outputs/flutter-apk/app-release.apk.temp build/app/outputs/flutter-apk/Hearth-universal-release.apk
           mv build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk build/app/outputs/flutter-apk/Hearth-armeabi-v7a-release.apk
           mv build/app/outputs/flutter-apk/app-arm64-v8a-release.apk build/app/outputs/flutter-apk/Hearth-arm64-v8a-release.apk
+          # A bridge build's assets say so: Hearth's updater never offers them (isHearthUpdateAsset)
+          if [ "$HEARTH_BRIDGE" = "true" ]; then
+            for abi in universal armeabi-v7a arm64-v8a; do
+              mv "build/app/outputs/flutter-apk/Hearth-$abi-release.apk" "build/app/outputs/flutter-apk/Hearth-bridge-$abi-release.apk"
+            done
+          fi
 
       - name: Generate Release Notes
         env:
@@ -87,9 +100,7 @@ jobs:
           tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
           body_path: release_notes.md
           files: |
-            build/app/outputs/flutter-apk/Hearth-universal-release.apk
-            build/app/outputs/flutter-apk/Hearth-armeabi-v7a-release.apk
-            build/app/outputs/flutter-apk/Hearth-arm64-v8a-release.apk
+            build/app/outputs/flutter-apk/Hearth-*.apk
           draft: false
           prerelease: ${{ contains(github.event.inputs.tag_name || github.ref_name, '-') }}
         env:
