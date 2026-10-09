@@ -81,6 +81,7 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
     if (_title.isEmpty) {
       _title = _tabs[0].getTitle(localizations);
     }
+    final bool rtl = Directionality.of(context) == TextDirection.rtl;
 
     return SettingsPage.custom(
       title: _title,
@@ -96,9 +97,10 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
           const SizedBox(height: 8),
           Expanded(
             child: Shortcuts(
+              // The tab row is mirrored in a right-to-left language, and so are Left and Right
               shortcuts: <LogicalKeySet, Intent>{
-                LogicalKeySet(LogicalKeyboardKey.arrowLeft): const _ChangeTabIntent(-1),
-                LogicalKeySet(LogicalKeyboardKey.arrowRight): const _ChangeTabIntent(1),
+                LogicalKeySet(LogicalKeyboardKey.arrowLeft): _ChangeTabIntent(rtl ? 1 : -1),
+                LogicalKeySet(LogicalKeyboardKey.arrowRight): _ChangeTabIntent(rtl ? -1 : 1),
               },
               child: Actions(
                 actions: <Type, Action<Intent>>{
@@ -141,6 +143,13 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
         }
       });
     }
+  }
+
+  /// Whether there's a tab that way; when not (Left on the first tab), the key goes on to the page, whose Left goes
+  /// back to the page before.
+  bool canChangeTab(int direction) {
+    final newIndex = _selectedIndex + direction;
+    return newIndex >= 0 && newIndex < _tabs.length;
   }
 
   void focusCurrentTab() {
@@ -236,6 +245,9 @@ class _ChangeTabAction extends Action<_ChangeTabIntent> {
   final _ApplicationsPanelPageState state;
 
   _ChangeTabAction(this.state);
+
+  @override
+  bool isEnabled(_ChangeTabIntent intent) => state.canChangeTab(intent.direction);
 
   @override
   Object? invoke(_ChangeTabIntent intent) {
