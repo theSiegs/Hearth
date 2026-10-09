@@ -1,0 +1,6 @@
+- Early development pre-release. New app id com.thesiegs.hearth: it installs as a new app; back up the old Hearth first and restore.
+- Follows Google TV profiles: each has its own layout, wallpaper and Continue Watching; Profile Pairing picks your profile in streaming apps and can type its PIN.
+- Lock my profile with Google TV's own lock; kids profiles keep Hearth and respect bedtime and screen time screens.
+- Search on the home; row titles that stay readable on any wallpaper; per-profile wallpaper pictures.
+- Settings > System > Updates: "Include pre-releases" (on by default) for Hearth and HearthTube.
+- Translated into 13 languages besides English.
