@@ -3341,6 +3341,18 @@ abstract class AppLocalizations {
   /// **'Hearth checks daily and installs updates to apps it installed, when they\'re not in use'**
   String get updatesAutoUpdateDescription;
 
+  /// Switch on the Updates page: Hearth's and HearthTube's updates also offer pre-release (early test) builds
+  ///
+  /// In en, this message translates to:
+  /// **'Include pre-releases'**
+  String get updatesIncludePrereleases;
+
+  /// Line under the Include pre-releases switch on the Updates page
+  ///
+  /// In en, this message translates to:
+  /// **'Early test builds of Hearth and HearthTube. They may be unfinished.'**
+  String get updatesIncludePrereleasesDescription;
+
   /// Note at the bottom of the Updates page
   ///
   /// In en, this message translates to:

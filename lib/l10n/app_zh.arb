@@ -571,6 +571,8 @@
     "updatesCheckForUpdates": "检查更新",
     "updatesAutoUpdate": "自动更新",
     "updatesAutoUpdateDescription": "Hearth 每天检查，并在其安装的应用未使用时安装更新",
+    "updatesIncludePrereleases": "包括预发布版本",
+    "updatesIncludePrereleasesDescription": "Hearth 和 HearthTube 的早期测试版本，可能尚未完成。",
     "updatesFooter": "从各应用的 GitHub 发布版本安装。Hearth 安装或更新某个应用一次后，其更新会直接安装，无需询问，应用也会将更新交给 Hearth。",
     "updatesChecking": "正在检查…",
     "updatesInstall": "安装",

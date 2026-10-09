@@ -1888,6 +1888,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get updatesAutoUpdateDescription => 'Hearth가 매일 확인하고, 직접 설치한 앱이 사용 중이 아닐 때 업데이트를 설치합니다';
 
   @override
+  String get updatesIncludePrereleases => '사전 출시 버전 포함';
+
+  @override
+  String get updatesIncludePrereleasesDescription => 'Hearth 및 HearthTube의 초기 테스트 빌드입니다. 완성되지 않았을 수 있습니다.';
+
+  @override
   String get updatesFooter => '각 앱의 GitHub 릴리스에서 설치합니다. Hearth가 앱을 한 번 설치하거나 업데이트하면 이후 업데이트는 묻지 않고 설치되며, 앱은 업데이트를 Hearth에 맡깁니다.';
 
   @override

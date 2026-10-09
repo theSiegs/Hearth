@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/companion_updater.dart';
+import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -189,6 +190,20 @@ class _UpdatesPageState extends State<UpdatesPage> with WidgetsBindingObserver {
           trailing:
               Text(localizations.updatesCheckForUpdates, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
           onPressed: () => showDialog(context: context, builder: (_) => const UpdateDialog()),
+        ),
+        // Hearth's and the companion apps' updates. Each check reads it (Hearth's dialog checks every time it
+        // opens); the companions are checked again now. Turning it off never offers an older version.
+        RoundedSwitchListTile(
+          value: context.select<SettingsService, bool>((s) => s.updatesIncludePrereleases),
+          onChanged: (on) async {
+            await context.read<SettingsService>().setUpdatesIncludePrereleases(on);
+            for (final app in companionApps) {
+              _check(app);
+            }
+          },
+          title: Text(localizations.updatesIncludePrereleases, style: textTheme.bodyMedium),
+          subtitle: Text(localizations.updatesIncludePrereleasesDescription),
+          secondary: const Icon(Icons.science_outlined),
         ),
         for (final app in companionApps) _tile(context, app),
         RoundedSwitchListTile(

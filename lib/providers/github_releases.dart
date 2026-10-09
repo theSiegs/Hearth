@@ -105,10 +105,13 @@ class GitHubReleases {
   /// The newest release among the last [perPage] that isn't a draft or pre-release and has an APK for [abis].
   /// The full list, not /latest, so a newer release without an APK for this device doesn't hide an older one.
   /// With [accept], only APKs whose file name it accepts count (see [pickApkAsset]).
-  Future<GitHubRelease?> latestWithApk(List<String> abis, {int perPage = 20, bool Function(String name)? accept}) async {
+  /// With [includePrereleases], pre-releases count too; drafts never do.
+  Future<GitHubRelease?> latestWithApk(List<String> abis,
+      {int perPage = 20, bool Function(String name)? accept, bool includePrereleases = false}) async {
     final releases = await getJson(_api.resolve("/repos/$repo/releases?per_page=$perPage")) as List<dynamic>;
     for (final release in releases.whereType<Map<String, dynamic>>()) {
-      if (release['draft'] == true || release['prerelease'] == true) continue;
+      if (release['draft'] == true) continue;
+      if (release['prerelease'] == true && !includePrereleases) continue;
       final apk = pickApkAsset((release['assets'] as List<dynamic>?) ?? [], abis, accept: accept);
       if (apk != null) return GitHubRelease(release, apk);
     }

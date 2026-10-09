@@ -1,7 +1,37 @@
 import 'package:flauncher/l10n/app_localizations_de.dart';
 import 'package:flauncher/l10n/app_localizations_en.dart';
 import 'package:flauncher/providers/companion_updater.dart';
+import 'package:flauncher/providers/github_releases.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../mocks.mocks.dart';
+
+/// HearthTube's releases as GitHub lists them: its one release is a pre-release on the tag "latest".
+class _FakeHearthTubeReleases extends GitHubReleases {
+  _FakeHearthTubeReleases() : super("theSiegs/HearthTube", userAgent: "Hearth-Test");
+
+  @override
+  Future<dynamic> getJson(Uri uri) async {
+    if (uri.path.endsWith("hearthtube.json")) {
+      return {
+        "32.63": {"versionCode": 3263}
+      };
+    }
+    return [
+      {
+        "tag_name": "latest",
+        "name": "HearthTube 32.63",
+        "prerelease": true,
+        "assets": [
+          {"name": "HearthTube_arm64-v8a.apk", "browser_download_url": "https://example/ht.apk", "size": 1},
+          {"name": "hearthtube.json", "browser_download_url": "https://example/hearthtube.json", "size": 1},
+        ],
+      },
+    ];
+  }
+}
 
 void main() {
   group("newestInManifest", () {
@@ -31,5 +61,32 @@ void main() {
     final hearthTube = companionApps.singleWhere((app) => app.packageName == "com.thesiegs.hearthtube");
     expect(hearthTube.localizedDescription(AppLocalizationsEn()), hearthTube.description);
     expect(hearthTube.localizedDescription(AppLocalizationsDe()), "YouTube für Hearth; folgt Ihrem Hearth-Profil");
+  });
+
+  group("latestRelease follows Include pre-releases", () {
+    late MockFLauncherChannel channel;
+    late SharedPreferences sharedPreferences;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      sharedPreferences = await SharedPreferences.getInstance();
+      channel = MockFLauncherChannel();
+      when(channel.getSupportedAbis()).thenAnswer((_) async => ["arm64-v8a"]);
+    });
+
+    CompanionUpdater updater(bool includePrereleases) => CompanionUpdater(channel, sharedPreferences,
+        includePrereleases: () => includePrereleases, releasesFor: (_) => _FakeHearthTubeReleases());
+
+    test("offers HearthTube's pre-release when the switch is on", () async {
+      final release = await updater(true).latestRelease(companionApps.first);
+
+      expect(release!.versionName, "32.63");
+      expect(release.versionCode, 3263);
+      expect(release.isNewerThan({"versionName": "32.50", "versionCode": 3250}), isTrue);
+    });
+
+    test("offers nothing from a pre-release when the switch is off", () async {
+      expect(await updater(false).latestRelease(companionApps.first), isNull);
+    });
   });
 }

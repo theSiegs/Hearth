@@ -571,6 +571,8 @@
     "updatesCheckForUpdates": "Проверить обновления",
     "updatesAutoUpdate": "Обновлять автоматически",
     "updatesAutoUpdateDescription": "Hearth ежедневно проверяет обновления и устанавливает их для установленных им приложений, когда они не используются",
+    "updatesIncludePrereleases": "Включать предварительные версии",
+    "updatesIncludePrereleasesDescription": "Ранние тестовые сборки Hearth и HearthTube. Они могут быть недоработаны.",
     "updatesFooter": "Устанавливаются из релизов каждого приложения на GitHub. После того как Hearth один раз установит или обновит приложение, его обновления ставятся без вопросов, а само приложение доверяет обновление Hearth.",
     "updatesChecking": "Проверка…",
     "updatesInstall": "Установить",

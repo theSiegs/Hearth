@@ -571,6 +571,8 @@
     "updatesCheckForUpdates": "Güncellemeleri denetle",
     "updatesAutoUpdate": "Otomatik güncelle",
     "updatesAutoUpdateDescription": "Hearth her gün denetler ve yüklediği uygulamaların güncellemelerini, kullanılmadıkları sırada yükler",
+    "updatesIncludePrereleases": "Ön sürümleri dahil et",
+    "updatesIncludePrereleasesDescription": "Hearth ve HearthTube'un erken test sürümleri. Tamamlanmamış olabilirler.",
     "updatesFooter": "Her uygulamanın GitHub sürümlerinden yüklenir. Hearth bir uygulamayı bir kez yükledikten veya güncelledikten sonra güncellemeleri sormadan yüklenir ve uygulama güncellemeyi Hearth'e bırakır.",
     "updatesChecking": "Denetleniyor…",
     "updatesInstall": "Yükle",

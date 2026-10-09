@@ -1888,6 +1888,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get updatesAutoUpdateDescription => 'Hearth her gün denetler ve yüklediği uygulamaların güncellemelerini, kullanılmadıkları sırada yükler';
 
   @override
+  String get updatesIncludePrereleases => 'Ön sürümleri dahil et';
+
+  @override
+  String get updatesIncludePrereleasesDescription => 'Hearth ve HearthTube\'un erken test sürümleri. Tamamlanmamış olabilirler.';
+
+  @override
   String get updatesFooter => 'Her uygulamanın GitHub sürümlerinden yüklenir. Hearth bir uygulamayı bir kez yükledikten veya güncelledikten sonra güncellemeleri sormadan yüklenir ve uygulama güncellemeyi Hearth\'e bırakır.';
 
   @override

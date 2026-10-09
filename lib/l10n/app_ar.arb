@@ -571,6 +571,8 @@
     "updatesCheckForUpdates": "التحقق من التحديثات",
     "updatesAutoUpdate": "التحديث تلقائيًا",
     "updatesAutoUpdateDescription": "يتحقق Hearth يوميًا ويثبّت تحديثات التطبيقات التي ثبّتها، عندما لا تكون قيد الاستخدام",
+    "updatesIncludePrereleases": "تضمين الإصدارات التجريبية",
+    "updatesIncludePrereleasesDescription": "إصدارات اختبار مبكرة من Hearth وHearthTube. قد تكون غير مكتملة.",
     "updatesFooter": "تُثبَّت من إصدارات GitHub لكل تطبيق. بعد أن يثبّت Hearth تطبيقًا أو يحدّثه مرة واحدة، تُثبَّت تحديثاته دون سؤال، ويترك التطبيق التحديث لـ Hearth.",
     "updatesChecking": "جارٍ التحقق…",
     "updatesInstall": "تثبيت",

@@ -18,6 +18,7 @@
 
 //import 'dart:html';
 
+import 'package:flauncher/providers/backup_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -144,6 +145,27 @@ void main() async {
       });
       await settingsService.setShowInputsWidgetInStatusBar(false);
       expect(notified, isTrue);
+    });
+  });
+
+  group("updatesIncludePrereleases", () {
+    test("is on by default, since every Hearth release is a pre-release for now", () async {
+      final settingsService = SettingsService(await SharedPreferences.getInstance());
+      expect(settingsService.updatesIncludePrereleases, isTrue);
+    });
+
+    test("sets the value for the whole TV, not a profile's layout", () async {
+      final settingsService = SettingsService(await SharedPreferences.getInstance());
+      var notified = false;
+      settingsService.addListener(() => notified = true);
+
+      await settingsService.setUpdatesIncludePrereleases(false);
+
+      expect(settingsService.updatesIncludePrereleases, isFalse);
+      expect(notified, isTrue);
+      final key = sharedPreferences.getKeys().singleWhere((k) => k.contains("prerelease"));
+      expect(BackupService.isDeviceLevelKey(key), isTrue);
+      expect(settingsService.settingKeys, isNot(contains(key)));
     });
   });
 

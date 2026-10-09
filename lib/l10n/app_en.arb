@@ -2342,6 +2342,14 @@
     "@updatesAutoUpdateDescription": {
         "description": "Line under the Update automatically switch on the Updates page"
     },
+    "updatesIncludePrereleases": "Include pre-releases",
+    "@updatesIncludePrereleases": {
+        "description": "Switch on the Updates page: Hearth's and HearthTube's updates also offer pre-release (early test) builds"
+    },
+    "updatesIncludePrereleasesDescription": "Early test builds of Hearth and HearthTube. They may be unfinished.",
+    "@updatesIncludePrereleasesDescription": {
+        "description": "Line under the Include pre-releases switch on the Updates page"
+    },
     "updatesFooter": "Installed from each app's GitHub releases. After Hearth installs or updates an app once, its updates install without asking, and the app leaves updating to Hearth.",
     "@updatesFooter": {
         "description": "Note at the bottom of the Updates page"

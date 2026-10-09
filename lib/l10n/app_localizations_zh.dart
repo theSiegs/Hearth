@@ -1888,6 +1888,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get updatesAutoUpdateDescription => 'Hearth 每天检查，并在其安装的应用未使用时安装更新';
 
   @override
+  String get updatesIncludePrereleases => '包括预发布版本';
+
+  @override
+  String get updatesIncludePrereleasesDescription => 'Hearth 和 HearthTube 的早期测试版本，可能尚未完成。';
+
+  @override
   String get updatesFooter => '从各应用的 GitHub 发布版本安装。Hearth 安装或更新某个应用一次后，其更新会直接安装，无需询问，应用也会将更新交给 Hearth。';
 
   @override

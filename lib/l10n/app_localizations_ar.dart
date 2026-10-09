@@ -1931,6 +1931,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get updatesAutoUpdateDescription => 'يتحقق Hearth يوميًا ويثبّت تحديثات التطبيقات التي ثبّتها، عندما لا تكون قيد الاستخدام';
 
   @override
+  String get updatesIncludePrereleases => 'تضمين الإصدارات التجريبية';
+
+  @override
+  String get updatesIncludePrereleasesDescription => 'إصدارات اختبار مبكرة من Hearth وHearthTube. قد تكون غير مكتملة.';
+
+  @override
   String get updatesFooter => 'تُثبَّت من إصدارات GitHub لكل تطبيق. بعد أن يثبّت Hearth تطبيقًا أو يحدّثه مرة واحدة، تُثبَّت تحديثاته دون سؤال، ويترك التطبيق التحديث لـ Hearth.';
 
   @override
