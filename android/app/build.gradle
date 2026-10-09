@@ -60,6 +60,10 @@ def keystoreFilePath = System.getenv("KEYSTORE_FILE") ?: localProperties['storeF
 def hasKeystore = keystoreFilePath != null && file(keystoreFilePath).exists()
 
 android {
+    // JVM unit tests (PIN entry logic) touch Android classes only in passing; stubs return defaults there
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
     dependenciesInfo {
         // Disables dependency metadata when building APKs (for IzzyOnDroid/F-Droid)
         includeInApk = false

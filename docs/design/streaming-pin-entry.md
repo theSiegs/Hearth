@@ -158,3 +158,21 @@ recognition step on the open PIN screen and reports "recognised" or what differs
 - One attempt per launch; on a rejection a pop-up offers **Change PIN** (Settings) or **Close** (the app's own PIN
   entry, by hand) — decided; tried again on every launch until changed or removed, with no give-up state.
 - Which apps first: Netflix (most profiles locked?), then Disney+, Max, Paramount+, Apple TV.
+
+## 9. What each app's PIN screen does (researched 2026-10-09)
+
+Recorded with research mode (`adb shell settings put global hearth_pin_research <package>`; Profile Pairing logs
+what the app shows and says under the tag HearthResearch, every digit masked as "#") while a parent typed a wrong
+PIN and then the right one. Recipes: `DisneyPinRecipe`, `AppleTvPinRecipe`, `NetflixPinRecipe`, `MaxPinRecipe`.
+
+| App | PIN screen as Hearth sees it | Typing | Each digit confirmed by | Wrong PIN | Right PIN |
+|---|---|---|---|---|---|
+| Disney+ | Native views: `enterPinRootView`, keypad `pinCodeKeyboard` (1-9, 0 below), field `pinCodeEditText` | Click the digit's key node | The field's character count (never read beyond its length) | `pinCodeErrorTextView` "Incorrect PIN. Please try again.", field clears | PIN screen gone (home) |
+| Apple TV | One row of key nodes described "1".."9", "0", "Delete" (+ "Use Password Instead"); focus reported as accessibility focus | D-pad along the row, OK on the digit | Announcement "N of 4 values entered" | No message; the PIN screen stays and the count restarts | "Loading", then home |
+| Netflix | No nodes; speech only, in screen-reader mode: "On the PIN entry screen." ... "This is a keyboard with 4 rows and 3 columns. The last row contains 0 and Delete keys." then the focused key | D-pad in the 3x3 grid, 0 bottom left; OK on the spoken digit | Nothing per digit; "Entered 4 of 4 digits." after the last | "Whoops, wrong PIN. Please try again." | "On the browse screen..." |
+| HBO Max | No nodes; announcements: "Enter Your Profile PIN, ..., Numeric Keyboard, 1, Button, Actions are on the far right" | D-pad in the 3x3 grid, 0 alone mid bottom row, actions to the right; OK on the announced digit | An echo of the digit | "That PIN doesn't look right." | "H B O Max Home, ..." |
+| Paramount+ | Opens the last profile without a PIN; a PIN only guards leaving it | Not needed | | | |
+| Hulu | Nothing at all (no nodes, announcements or speech, even in screen-reader mode) | Not supported | | | |
+
+All four ask after the 4th digit by themselves. English-only phrases: in another language nothing matches, no PIN is
+typed and the parent enters it. Lockout messages weren't seen (no lockout was triggered); "too many" is treated as one.

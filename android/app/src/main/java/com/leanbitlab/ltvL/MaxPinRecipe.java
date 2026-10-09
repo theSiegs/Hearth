@@ -85,11 +85,11 @@ final class MaxPinRecipe extends NavigatedKeypadRecipe {
                 } else if (SystemClock.elapsedRealtime() - since >= PRESS_WAIT_MS) {
                     confirmed.accept(false);
                 } else {
-                    mHandler.postDelayed(this, 50);
+                    handler().postDelayed(this, 50);
                 }
             }
         };
-        mHandler.postDelayed(check, 50);
+        handler().postDelayed(check, 50);
     }
 
     @Override

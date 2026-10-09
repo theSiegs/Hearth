@@ -38,7 +38,7 @@ final class AppleTvPinRecipe extends NavigatedKeypadRecipe {
     }
 
     /** "…, Keyboard, 1" or "1": the label after the last comma. */
-    private static String label(CharSequence description) {
+    static String label(CharSequence description) {
         if (description == null) return null;
         String d = description.toString();
         int comma = d.lastIndexOf(',');
@@ -114,11 +114,11 @@ final class AppleTvPinRecipe extends NavigatedKeypadRecipe {
                 } else if (SystemClock.elapsedRealtime() - since >= PRESS_WAIT_MS) {
                     confirmed.accept(false);
                 } else {
-                    mHandler.postDelayed(this, 50);
+                    handler().postDelayed(this, 50);
                 }
             }
         };
-        mHandler.postDelayed(check, 50);
+        handler().postDelayed(check, 50);
     }
 
     @Override
