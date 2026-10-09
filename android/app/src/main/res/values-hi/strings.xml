@@ -38,7 +38,6 @@
     <string name="pin_unlocking">प्रोफ़ाइल PIN डाला जा रहा है…</string>
     <string name="pin_rejected_title">%1$s ने “%2$s” का सहेजा गया PIN स्वीकार नहीं किया</string>
     <string name="pin_rejected_body">Hearth की सेटिंग में अपडेट करने के लिए PIN बदलें चुनें, या ख़ुद टाइप करने के लिए बंद करें।</string>
-    <string name="pin_stopped_body">प्रोफ़ाइल लॉक न हो, इसलिए Hearth यह PIN बदले जाने तक दोबारा नहीं आज़माएगा। अपडेट करने के लिए PIN बदलें, या ख़ुद टाइप करने के लिए बंद करें।</string>
     <string name="pin_locked_title">%1$s ने “%2$s” लॉक कर दिया</string>
     <string name="pin_locked_body">बहुत सारे ग़लत PIN। ऐप में प्रोफ़ाइल अनलॉक करें, फिर Hearth की सेटिंग में PIN अपडेट करें।</string>
     <string name="pin_screen_changed">%1$s की PIN स्क्रीन बदल गई, इसलिए Hearth ने PIN टाइप नहीं किया। कृपया ख़ुद टाइप करें।</string>

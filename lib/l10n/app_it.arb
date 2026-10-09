@@ -595,7 +595,6 @@
     "profilePinNone": "Nessuno",
     "profilePinSaved": "Salvato",
     "profilePinRejected": "Salvato – non accettato l’ultima volta",
-    "profilePinStopped": "Salvato – non riprovato finché non cambia",
     "profilePinPaused": "Salvato – in pausa (l’app è cambiata)",
     "profilePinUnsupported": "Hearth non sa ancora digitare i PIN in {app}",
     "profilePinEnterTitle": "PIN di {profile} in {app}",

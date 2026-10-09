@@ -1980,9 +1980,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profilePinRejected => 'Enregistré – refusé la dernière fois';
 
   @override
-  String get profilePinStopped => 'Enregistré – plus essayé avant modification';
-
-  @override
   String get profilePinPaused => 'Enregistré – en pause (l’app a changé)';
 
   @override

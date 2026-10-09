@@ -1980,9 +1980,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get profilePinRejected => 'Salvato – non accettato l’ultima volta';
 
   @override
-  String get profilePinStopped => 'Salvato – non riprovato finché non cambia';
-
-  @override
   String get profilePinPaused => 'Salvato – in pausa (l’app è cambiata)';
 
   @override

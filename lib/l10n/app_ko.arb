@@ -595,7 +595,6 @@
     "profilePinNone": "없음",
     "profilePinSaved": "저장됨",
     "profilePinRejected": "저장됨 — 지난번에 받아들여지지 않음",
-    "profilePinStopped": "저장됨 — 변경될 때까지 시도 안 함",
     "profilePinPaused": "저장됨 — 일시 중지됨(앱이 바뀜)",
     "profilePinUnsupported": "Hearth는 아직 {app}에서 PIN을 입력할 수 없습니다",
     "profilePinEnterTitle": "{app}의 {profile} PIN",

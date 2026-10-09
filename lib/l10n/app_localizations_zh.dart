@@ -1970,9 +1970,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profilePinRejected => '已保存 — 上次未被接受';
 
   @override
-  String get profilePinStopped => '已保存 — 更改前不再尝试';
-
-  @override
   String get profilePinPaused => '已保存 — 已暂停（应用已变化）';
 
   @override

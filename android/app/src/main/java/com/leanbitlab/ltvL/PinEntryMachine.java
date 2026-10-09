@@ -6,7 +6,7 @@ package com.leanbitlab.ltvL;
  * tested without a TV; the {@link Driver} does the typing and shows the outcome.
  *
  * The rules it keeps: never type on a PIN screen that doesn't match the recipe; confirm every digit before the next;
- * one attempt per launch, never retried within it; stop trying a rejected PIN before it could lock the profile.
+ * one attempt per launch, never retried within it (a rejected PIN is tried again on the next launch).
  */
 final class PinEntryMachine {
 
@@ -30,10 +30,6 @@ final class PinEntryMachine {
         ACCEPTED,
         /** Not accepted; tried again (once) on the next launch. */
         REJECTED,
-        /** Not accepted, and another try could lock the profile: not tried again until the PIN is changed. */
-        REJECTED_STOPPED,
-        /** A rejected PIN close to the app's limit: not typed this time. */
-        NOT_TRIED,
         /** The PIN screen isn't the one the recipe knows: nothing typed, entry paused for the app. */
         SCREEN_CHANGED,
         LOCKED_OUT,
@@ -55,30 +51,16 @@ final class PinEntryMachine {
 
     private final Driver driver;
     private final int length;
-    private final int rejectionsSoFar;
-    /** Wrong PINs the app allows before locking the profile; 0 when unknown. */
-    private final int lockoutAfter;
     private State state = State.WAITING_FOR_SCREEN;
     private int typed;
 
-    PinEntryMachine(Driver driver, int length, int rejectionsSoFar, int lockoutAfter) {
+    PinEntryMachine(Driver driver, int length) {
         this.driver = driver;
         this.length = length;
-        this.rejectionsSoFar = rejectionsSoFar;
-        this.lockoutAfter = lockoutAfter;
     }
 
     boolean isDone() {
         return state == State.DONE;
-    }
-
-    /**
-     * Whether one more wrong PIN would reach the app's limit: the attempt that would lock it is never made, and a
-     * rejection that leaves only one more stops further tries. With no known limit, after three rejections in a row.
-     */
-    private boolean atLimit(int rejections) {
-        int limit = lockoutAfter > 0 ? lockoutAfter : 4;
-        return rejections >= limit - 1;
     }
 
     /** The PIN screen came up (or the recipe saw something else on it). */
@@ -92,10 +74,6 @@ final class PinEntryMachine {
                 finish(Result.LOCKED_OUT);
                 return;
             case MATCH:
-                if (atLimit(rejectionsSoFar)) {
-                    finish(Result.NOT_TRIED);
-                    return;
-                }
                 state = State.TYPING;
                 driver.typeDigit(0);
         }
@@ -131,7 +109,7 @@ final class PinEntryMachine {
                 finish(Result.LOCKED_OUT);
                 return;
             case REJECTED:
-                finish(atLimit(rejectionsSoFar + 1) ? Result.REJECTED_STOPPED : Result.REJECTED);
+                finish(Result.REJECTED);
         }
     }
 

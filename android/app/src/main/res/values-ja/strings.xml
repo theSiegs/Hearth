@@ -38,7 +38,6 @@
     <string name="pin_unlocking">プロフィールのPINを入力しています…</string>
     <string name="pin_rejected_title">%1$sは「%2$s」の保存済みPINを受け付けませんでした</string>
     <string name="pin_rejected_body">「PINを変更」でHearthの設定を開くか、「閉じる」で自分で入力してください。</string>
-    <string name="pin_stopped_body">プロフィールがロックされないよう、変更されるまでHearthはこのPINを再試行しません。「PINを変更」で更新、「閉じる」で自分で入力。</string>
     <string name="pin_locked_title">%1$sが「%2$s」をロックしました</string>
     <string name="pin_locked_body">間違ったPINが多すぎます。アプリでプロフィールのロックを解除してから、Hearthの設定でPINを更新してください。</string>
     <string name="pin_screen_changed">%1$sのPIN画面が変わったため、HearthはPINを入力しませんでした。自分で入力してください。</string>

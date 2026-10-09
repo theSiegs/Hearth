@@ -866,8 +866,7 @@ public class ProfilePairingService extends AccessibilityService {
             this.appProfile = appProfile;
             this.recipe = recipe;
             this.pin = pin;
-            this.machine = new PinEntryMachine(this, pin.length,
-                    PinVault.rejections(ProfilePairingService.this, session.pkg, appProfile), recipe.lockoutAfter());
+            this.machine = new PinEntryMachine(this, pin.length);
         }
 
         private void machineBroken() {
@@ -918,21 +917,12 @@ public class ProfilePairingService extends AccessibilityService {
                 hideCover();
                 break;
             case REJECTED:
-                PinVault.markRejected(this, pkg, run.appProfile, false);
+                PinVault.markRejected(this, pkg, run.appProfile);
                 showPinPopup(getString(R.string.pin_rejected_title, app, run.appProfile),
                         getString(R.string.pin_rejected_body), pkg);
                 break;
-            case REJECTED_STOPPED:
-                PinVault.markRejected(this, pkg, run.appProfile, true);
-                showPinPopup(getString(R.string.pin_rejected_title, app, run.appProfile),
-                        getString(R.string.pin_stopped_body), pkg);
-                break;
-            case NOT_TRIED:
-                showPinPopup(getString(R.string.pin_rejected_title, app, run.appProfile),
-                        getString(R.string.pin_stopped_body), pkg);
-                break;
             case LOCKED_OUT:
-                PinVault.markRejected(this, pkg, run.appProfile, true);
+                PinVault.markRejected(this, pkg, run.appProfile);
                 showPinPopup(getString(R.string.pin_locked_title, app, run.appProfile),
                         getString(R.string.pin_locked_body), pkg);
                 break;

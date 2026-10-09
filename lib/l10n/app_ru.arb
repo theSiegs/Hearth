@@ -595,7 +595,6 @@
     "profilePinNone": "Нет",
     "profilePinSaved": "Сохранён",
     "profilePinRejected": "Сохранён — в прошлый раз не принят",
-    "profilePinStopped": "Сохранён — не пробуется, пока не изменят",
     "profilePinPaused": "Сохранён — приостановлен (приложение изменилось)",
     "profilePinUnsupported": "Hearth пока не умеет вводить PIN-коды в {app}",
     "profilePinEnterTitle": "PIN-код {profile} в {app}",

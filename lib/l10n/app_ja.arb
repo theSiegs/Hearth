@@ -595,7 +595,6 @@
     "profilePinNone": "なし",
     "profilePinSaved": "保存済み",
     "profilePinRejected": "保存済み — 前回受け付けられませんでした",
-    "profilePinStopped": "保存済み — 変更されるまで試しません",
     "profilePinPaused": "保存済み — 一時停止中（アプリが変わりました）",
     "profilePinUnsupported": "Hearthはまだ{app}でPINを入力できません",
     "profilePinEnterTitle": "{app}での{profile}のPIN",

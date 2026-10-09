@@ -38,7 +38,6 @@
     <string name="pin_unlocking">Inserindo o PIN do perfil…</string>
     <string name="pin_rejected_title">%1$s não aceitou o PIN salvo de “%2$s”</string>
     <string name="pin_rejected_body">Alterar PIN para atualizá-lo nas Configurações do Hearth, ou Fechar para digitá-lo você mesmo.</string>
-    <string name="pin_stopped_body">O Hearth não tentará este PIN de novo até que seja alterado, para o perfil não ser bloqueado. Alterar PIN para atualizá-lo, ou Fechar para digitá-lo.</string>
     <string name="pin_locked_title">%1$s bloqueou “%2$s”</string>
     <string name="pin_locked_body">PINs incorretos demais. Desbloqueie o perfil no app e atualize o PIN nas Configurações do Hearth.</string>
     <string name="pin_screen_changed">A tela de PIN do %1$s mudou, então o Hearth não digitou o PIN. Digite-o você mesmo.</string>

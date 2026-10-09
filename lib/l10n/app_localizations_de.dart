@@ -1978,9 +1978,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get profilePinRejected => 'Gespeichert – zuletzt nicht akzeptiert';
 
   @override
-  String get profilePinStopped => 'Gespeichert – erst nach Änderung wieder versucht';
-
-  @override
   String get profilePinPaused => 'Gespeichert – pausiert (App hat sich geändert)';
 
   @override

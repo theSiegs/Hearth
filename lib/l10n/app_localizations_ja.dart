@@ -1970,9 +1970,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profilePinRejected => '保存済み — 前回受け付けられませんでした';
 
   @override
-  String get profilePinStopped => '保存済み — 変更されるまで試しません';
-
-  @override
   String get profilePinPaused => '保存済み — 一時停止中（アプリが変わりました）';
 
   @override

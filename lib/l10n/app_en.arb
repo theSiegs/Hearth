@@ -2472,10 +2472,6 @@
     "@profilePinRejected": {
         "description": "Profile Pairing: streaming app profile PIN"
     },
-    "profilePinStopped": "Saved — not tried until it’s changed",
-    "@profilePinStopped": {
-        "description": "Status: Hearth stopped trying the saved PIN so the profile doesn't get locked"
-    },
     "profilePinPaused": "Saved — paused (the app changed)",
     "@profilePinPaused": {
         "description": "Profile Pairing: streaming app profile PIN"

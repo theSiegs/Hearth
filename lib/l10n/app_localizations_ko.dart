@@ -1970,9 +1970,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get profilePinRejected => '저장됨 — 지난번에 받아들여지지 않음';
 
   @override
-  String get profilePinStopped => '저장됨 — 변경될 때까지 시도 안 함';
-
-  @override
   String get profilePinPaused => '저장됨 — 일시 중지됨(앱이 바뀜)';
 
   @override
