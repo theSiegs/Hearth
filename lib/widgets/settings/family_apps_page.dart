@@ -136,15 +136,18 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
         title: Text(title),
         content: SizedBox(
           width: 460,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final line in lines) ...[
-                Text(line, style: textTheme.bodyMedium),
-                const SizedBox(height: 10),
+          // Longer languages can run past the screen's height
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final line in lines) ...[
+                  Text(line, style: textTheme.bodyMedium),
+                  const SizedBox(height: 10),
+                ],
               ],
-            ],
+            ),
           ),
         ),
         actions: [
