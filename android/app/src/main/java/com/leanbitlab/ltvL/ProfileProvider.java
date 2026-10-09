@@ -20,7 +20,6 @@ import java.io.FileNotFoundException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -34,9 +33,10 @@ public class ProfileProvider extends ContentProvider {
     private static final String[] COLUMNS = {
             "name", "accent_color", "time_format", "app_language", "has_parent_pin", "gradient_uuid", "wallpaper_stamp",
             "date_format", "kids_profile", "screen_time_up", "service_running", "profile_id", "contract_version",
-            "profile_ready", "switch_generation", "updates_hearthtube"};
+            "profile_ready", "switch_generation", "updates_hearthtube", "wallpaper_kind", "wallpaper_version",
+            "wallpaper_brightness", "wallpaper_gradient", "wallpaper_title", "wallpaper_credit"};
     /** docs/provider-contract.md: bumped when a column's meaning changes or one is added or removed. */
-    static final int CONTRACT_VERSION = 4;
+    static final int CONTRACT_VERSION = 5;
     // SettingsService.defaultTimeFormat / defaultDateFormat
     private static final String DEFAULT_TIME_FORMAT = "h:mm a";
     private static final String DEFAULT_DATE_FORMAT = "EEE, MMM d";
@@ -82,7 +82,7 @@ public class ProfileProvider extends ContentProvider {
 
     /** The /active row's values, in {@link #COLUMNS} order (as Hearth itself, in the owner's user). */
     static Object[] row(Context context) {
-        File wallpaper = currentWallpaper(context);
+        HearthWallpaper.State wallpaper = HearthWallpaper.current(context);
         String[] formats = dateTimeFormats(context);
         return new Object[]{
                 LauncherAccessibilityService.getActiveProfileName(context),
@@ -91,7 +91,7 @@ public class ProfileProvider extends ContentProvider {
                 FlutterPrefs.getString(context, "app_language", ""),
                 FlutterPrefs.getString(context, "device_parent_pin_hash", null) != null ? 1 : 0,
                 FlutterPrefs.getString(context, "gradient_uuid", null),
-                wallpaper != null ? wallpaper.lastModified() : 0,
+                wallpaper.file != null ? wallpaper.file.lastModified() : 0,
                 formats[0],
                 ProfileUsers.isKids(context) ? 1 : 0,
                 LauncherAccessibilityService.isScreenTimeUp() ? 1 : 0,
@@ -100,7 +100,13 @@ public class ProfileProvider extends ContentProvider {
                 CONTRACT_VERSION,
                 LauncherAccessibilityService.isProfileReady(context) ? 1 : 0,
                 LauncherAccessibilityService.getProfileGeneration(context),
-                CompanionApps.updatesHearthTube(context) ? 1 : 0};
+                CompanionApps.updatesHearthTube(context) ? 1 : 0,
+                wallpaper.kind,
+                wallpaper.version,
+                wallpaper.brightness,
+                wallpaper.gradient,
+                wallpaper.title,
+                wallpaper.credit};
     }
 
     static String[] columns() {
@@ -113,7 +119,12 @@ public class ProfileProvider extends ContentProvider {
             throw new FileNotFoundException(uri.toString());
         }
 
-        File wallpaper = currentWallpaper(getContext());
+        // The picture may be a family photo: only HearthTube gets it
+        if (!CompanionApps.HEARTHTUBE.equals(getCallingPackage()) || !isTrustedHearthTube(getContext())) {
+            throw new FileNotFoundException("Not for " + getCallingPackage());
+        }
+
+        File wallpaper = AgentService.isAgent(getContext()) ? null : HearthWallpaper.current(getContext()).file;
 
         if (wallpaper == null) {
             throw new FileNotFoundException("No wallpaper picture");
@@ -194,28 +205,6 @@ public class ProfileProvider extends ContentProvider {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    /** The picture Hearth shows right now, picked like WallpaperService._updateWallpaper. Null = the gradient. */
-    private static File currentWallpaper(Context context) {
-        // path_provider's getApplicationDocumentsDirectory()
-        File dir = new File(context.getApplicationInfo().dataDir, "app_flutter");
-        File bing = new File(dir, "wallpaper_bing");
-        File plain = new File(dir, "wallpaper");
-
-        if (FlutterPrefs.getBoolean(context, "bing_wallpaper_enabled", false) && bing.exists()) {
-            return bing;
-        }
-
-        if (FlutterPrefs.getBoolean(context, "time_based_wallpaper_enabled", false)) {
-            int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
-            File timed = new File(dir, hour >= 6 && hour < 18 ? "wallpaper_day" : "wallpaper_night");
-            if (timed.exists()) {
-                return timed;
-            }
-        }
-
-        return plain.exists() ? plain : null;
     }
 
     /** {date, time} formats. */

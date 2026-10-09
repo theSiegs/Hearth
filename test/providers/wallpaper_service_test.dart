@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -53,6 +54,7 @@ void main() {
       final settingsService = MockSettingsService();
       when(settingsService.timeBasedWallpaperEnabled).thenReturn(false);
       when(settingsService.bingWallpaperEnabled).thenReturn(false);
+      when(settingsService.gradientUuid).thenReturn(null);
       when(imagePicker.pickImage(source: ImageSource.gallery)).thenAnswer((_) => Future.value(pickedFile));
       when(fLauncherChannel.checkForGetContentAvailability()).thenAnswer((_) => Future.value(true));
       final wallpaperService = WallpaperService(fLauncherChannel, settingsService, imagePicker: imagePicker);
@@ -63,6 +65,10 @@ void main() {
       verify(imagePicker.pickImage(source: ImageSource.gallery));
       expect(File("${documents.path}/wallpaper").readAsBytesSync(), [0x01]);
       expect(wallpaperService.wallpaper, isA<FileImage>());
+      // HearthTube hears of the new picture through Hearth's provider
+      final sent = verify(fLauncherChannel.setWallpaperState(captureAny)).captured.last as Map<String, Object?>;
+      expect(sent["file"], "wallpaper");
+      expect(sent["bing_credit"], isNull);
     });
 
     test("throws error when no file explorer installed", () async {
@@ -71,6 +77,7 @@ void main() {
       final settingsService = MockSettingsService();
       when(settingsService.timeBasedWallpaperEnabled).thenReturn(false);
       when(settingsService.bingWallpaperEnabled).thenReturn(false);
+      when(settingsService.gradientUuid).thenReturn(null);
       final wallpaperService = WallpaperService(fLauncherChannel, settingsService);
       await untilCalled(pathProviderPlatform.getApplicationDocumentsPath());
 
@@ -94,6 +101,45 @@ void main() {
 
     verify(settingsService.setGradientUuid(FLauncherGradients.greatWhale.uuid));
     expect(wallpaperService.wallpaper, null);
+    final sent = verify(fLauncherChannel.setWallpaperState(captureAny)).captured.last as Map<String, Object?>;
+    expect(sent["file"], isNull);
+    expect(sent["gradient"], isA<String>());
+  });
+
+  group("what HearthTube gets", () {
+    test("a linear gradient: colors, begin and end, rotation, brightness", () {
+      final described = WallpaperService.describeGradient(FLauncherGradients.greatWhale.gradient, 0.4);
+      expect(described["type"], "linear");
+      expect(described["colors"], ["#FF6991C7", "#FFA3BDED"]);
+      expect(described["stops"], isNull);
+      expect(described["begin"], {"x": -1.0, "y": 0.0});
+      expect(described["end"], {"x": 1.0, "y": 0.0});
+      expect(described["rotation"], 5.6);
+      expect(described["brightness"], 0.4);
+      // It goes over the provider as JSON
+      expect(() => jsonEncode(described), returnsNormally);
+    });
+
+    test("stops, and a radial gradient", () {
+      expect(WallpaperService.describeGradient(FLauncherGradients.grassShampoo.gradient, 0)["stops"], [0, 0.47, 1]);
+      final radial = WallpaperService.describeGradient(FLauncherGradients.oldHat.gradient, 0.8);
+      expect(radial["type"], "radial");
+      expect(radial["center"], {"x": 0.0, "y": 0.0});
+      expect(radial["radius"], 0.5);
+      expect(radial["rotation"], 0.0);
+    });
+
+    test("the Bing photo's title and credit", () {
+      final info = WallpaperService.bingInfo({
+        "title": "A quiet lake",
+        "copyright": "A quiet lake at dawn (© Example Photographer/Example Agency)",
+      });
+      expect(info.title, "A quiet lake");
+      expect(info.credit, "A quiet lake at dawn (© Example Photographer/Example Agency)");
+      final none = WallpaperService.bingInfo({"title": " ", "copyright": null});
+      expect(none.title, isNull);
+      expect(none.credit, isNull);
+    });
   });
 
   test("brightness follows the gradient, and a picture's average", () {

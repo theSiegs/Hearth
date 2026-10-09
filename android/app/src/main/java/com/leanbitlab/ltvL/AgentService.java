@@ -124,7 +124,8 @@ public class AgentService extends Service {
     /**
      * Hearth's provider row as Hearth last sent it, in ProfileProvider's column order, for the provider here (a kid's
      * HearthTube in this user can't reach Hearth's). service_running says whether this agent is connected to
-     * Hearth now; there's no wallpaper picture here (wallpaper_stamp 0: the gradient). Defaults before the first.
+     * Hearth now; there's no wallpaper picture here (wallpaper_stamp 0, wallpaper_kind "gradient": Hearth's gradient).
+     * Defaults before the first.
      */
     static Object[] mirroredRow(Context context) {
         String[] columns = ProfileProvider.columns();
@@ -143,6 +144,15 @@ public class AgentService extends Service {
                     break;
                 case "wallpaper_stamp":
                     value = 0;
+                    break;
+                case "wallpaper_kind":
+                    // No picture here: Hearth's gradient stands in (wallpaper_gradient, with its own brightness)
+                    value = HearthWallpaper.KIND_GRADIENT;
+                    break;
+                case "wallpaper_brightness":
+                case "wallpaper_title":
+                case "wallpaper_credit":
+                    value = null;
                     break;
                 case "contract_version":
                     value = ProfileProvider.CONTRACT_VERSION;
