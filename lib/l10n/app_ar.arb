@@ -318,9 +318,9 @@
     "pairingPairIn": "ربط الملفات الشخصية في {app}",
     "pairingAppNotSeenFooter": "لم يتعرّف Hearth على الملفات الشخصية لهذا التطبيق بعد. افتحه مرة واحدة من Hearth، ثم عُد إلى هنا.",
     "pairingAppProfilesFooter": "الملفات الشخصية في هذا التطبيق: {profiles}. تظهر ملفات Google TV الشخصية هنا بعد أن يتعرّف عليها Hearth.",
-    "familyAppsIntro": "ثبّت Hearth وHearthTube على ملفات Google TV الشخصية الأخرى. على ملفات الأطفال، هذا ضروري ليعمل HearthTube وليختار Hearth الملف الشخصي الصحيح في Netflix وDisney+ وتطبيقات أخرى. أما على ملفات البالغين فهو للراحة فقط، كي لا يضطروا إلى تثبيتهما يدويًا.",
+    "familyAppsIntro": "ثبّت Hearth وHearthTube على ملفات Google TV الشخصية الأخرى. على ملفات الأطفال، هذا ضروري ليعمل HearthTube وليختار Hearth الملف الشخصي الصحيح في خدمات البث. أما على ملفات البالغين فهو للراحة فقط، كي لا يضطروا إلى تثبيتهما يدويًا.",
     "familyAppsAddTitle": "إضافة Hearth إلى الملفات الشخصية الأخرى",
-    "familyAppsAddKids": "يثبّت هذا Hearth وHearthTube على ملفات أطفالك الشخصية، ليعمل HearthTube هناك ويتمكن Hearth من اختيار الملف الشخصي الصحيح في تطبيقات مثل Netflix وDisney+.",
+    "familyAppsAddKids": "يثبّت هذا Hearth وHearthTube على ملفات أطفالك الشخصية، ليعمل HearthTube هناك ويتمكن Hearth من اختيار الملف الشخصي الصحيح في خدمات البث.",
     "familyAppsAddAdults": "ويثبّتهما أيضًا على ملفات البالغين الأخرى على التلفزيون، كي لا يضطر أي بالغ آخر إلى إعداده بنفسه.",
     "familyAppsAddOnlyOwnApps": "يضيف فقط تطبيقَي Hearth، ويمكنك التراجع عن ذلك في أي وقت عبر \"إزالة\" أدناه.",
     "familyAppsAddFamilyLink": "سيتلقى كل طفل إشعارًا واحدًا من Family Link بأنه \"تمت إضافة تطبيق\".",
@@ -591,5 +591,6 @@
     "familyAppsStatusPartial": "جزئي",
     "familyAppsStatusNotInstalled": "غير مثبّت",
     "familyAppsStatusAtRisk": "معرّض للخطر",
-    "familyAppsAtRiskDetail": "سيزيل Google TV التطبيقات غير المحمية هنا عند بدء هذا الملف الشخصي في المرة القادمة. استخدم \"إضافة\" مرة أخرى لحمايتها."
+    "familyAppsAtRiskDetail": "سيزيل Google TV التطبيقات غير المحمية هنا عند بدء هذا الملف الشخصي في المرة القادمة. استخدم \"إضافة\" مرة أخرى لحمايتها.",
+    "familyAppsAbout": "ما هذا؟"
 }

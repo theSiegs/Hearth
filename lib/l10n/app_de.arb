@@ -318,9 +318,9 @@
     "pairingPairIn": "Profile in {app} koppeln",
     "pairingAppNotSeenFooter": "Hearth kennt die Profile dieser App noch nicht. Einmal aus Hearth öffnen und dann zurückkommen.",
     "pairingAppProfilesFooter": "Profile in dieser App: {profiles}. Google TV-Profile erscheinen hier, sobald Hearth sie gesehen hat.",
-    "familyAppsIntro": "Bringen Sie Hearth und HearthTube auf Ihre anderen Google TV-Profile. In Kinderprofilen ist das nötig, damit HearthTube funktioniert und Hearth in Netflix, Disney+ und anderen Apps das richtige Profil wählt. In Erwachsenenprofilen ist es nur eine Erleichterung, damit niemand sie von Hand installieren muss.",
+    "familyAppsIntro": "Bringen Sie Hearth und HearthTube auf Ihre anderen Google TV-Profile. In Kinderprofilen ist das nötig, damit HearthTube funktioniert und Hearth in Streamingdiensten das richtige Profil wählt. In Erwachsenenprofilen ist es nur eine Erleichterung, damit niemand sie von Hand installieren muss.",
     "familyAppsAddTitle": "Hearth zu anderen Profilen hinzufügen",
-    "familyAppsAddKids": "Damit kommen Hearth und HearthTube auf die Profile Ihrer Kinder, sodass HearthTube dort funktioniert und Hearth in Apps wie Netflix und Disney+ das richtige Profil wählen kann.",
+    "familyAppsAddKids": "Damit kommen Hearth und HearthTube auf die Profile Ihrer Kinder, sodass HearthTube dort funktioniert und Hearth in Streamingdiensten das richtige Profil wählen kann.",
     "familyAppsAddAdults": "Außerdem werden sie auf den anderen Erwachsenenprofilen des Fernsehers installiert, damit andere Erwachsene nichts selbst einrichten müssen.",
     "familyAppsAddOnlyOwnApps": "Es werden nur die zwei eigenen Apps von Hearth hinzugefügt, und Sie können das jederzeit unten mit Entfernen rückgängig machen.",
     "familyAppsAddFamilyLink": "Jedes Kind erhält eine Family Link-Benachrichtigung „App hinzugefügt“.",
@@ -591,5 +591,6 @@
     "familyAppsStatusPartial": "Teilweise",
     "familyAppsStatusNotInstalled": "Nicht installiert",
     "familyAppsStatusAtRisk": "Gefährdet",
-    "familyAppsAtRiskDetail": "Google TV entfernt die ungeschützten Apps hier beim nächsten Start dieses Profils. Mit „Hinzufügen“ werden sie wieder geschützt."
+    "familyAppsAtRiskDetail": "Google TV entfernt die ungeschützten Apps hier beim nächsten Start dieses Profils. Mit „Hinzufügen“ werden sie wieder geschützt.",
+    "familyAppsAbout": "Was ist das?"
 }

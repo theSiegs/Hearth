@@ -318,9 +318,9 @@
     "pairingPairIn": "Vincular perfiles en {app}",
     "pairingAppNotSeenFooter": "Hearth aún no ha visto los perfiles de esta aplicación. Ábrala una vez desde Hearth y vuelva.",
     "pairingAppProfilesFooter": "Perfiles de esta aplicación: {profiles}. Los perfiles de Google TV aparecen aquí cuando Hearth los ha visto.",
-    "familyAppsIntro": "Ponga Hearth y HearthTube en sus otros perfiles de Google TV. En los perfiles infantiles es necesario para que HearthTube funcione y para que Hearth elija el perfil correcto en Netflix, Disney+ y otras aplicaciones. En los perfiles de adultos es solo una comodidad, para no tener que instalarlas a mano.",
+    "familyAppsIntro": "Ponga Hearth y HearthTube en sus otros perfiles de Google TV. En los perfiles infantiles es necesario para que HearthTube funcione y para que Hearth elija el perfil correcto en los servicios de streaming. En los perfiles de adultos es solo una comodidad, para no tener que instalarlas a mano.",
     "familyAppsAddTitle": "Añadir Hearth a otros perfiles",
-    "familyAppsAddKids": "Esto pone Hearth y HearthTube en los perfiles de sus hijos, para que HearthTube funcione allí y Hearth pueda elegir el perfil correcto en aplicaciones como Netflix y Disney+.",
+    "familyAppsAddKids": "Esto pone Hearth y HearthTube en los perfiles de sus hijos, para que HearthTube funcione allí y Hearth pueda elegir el perfil correcto en los servicios de streaming.",
     "familyAppsAddAdults": "También las instala en los demás perfiles de adultos de la TV, para que otro adulto no tenga que configurarlo por su cuenta.",
     "familyAppsAddOnlyOwnApps": "Solo añade las dos aplicaciones de Hearth, y puede deshacerlo en cualquier momento con Quitar, más abajo.",
     "familyAppsAddFamilyLink": "Cada niño recibe una notificación de Family Link de \"aplicación añadida\".",
@@ -591,5 +591,6 @@
     "familyAppsStatusPartial": "Parcial",
     "familyAppsStatusNotInstalled": "No instalado",
     "familyAppsStatusAtRisk": "En riesgo",
-    "familyAppsAtRiskDetail": "Google TV quitará de aquí las apps sin proteger la próxima vez que se inicie este perfil. Use Añadir de nuevo para protegerlas."
+    "familyAppsAtRiskDetail": "Google TV quitará de aquí las apps sin proteger la próxima vez que se inicie este perfil. Use Añadir de nuevo para protegerlas.",
+    "familyAppsAbout": "¿Qué es esto?"
 }

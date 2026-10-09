@@ -1003,13 +1003,13 @@ class AppLocalizationsUk extends AppLocalizations {
   }
 
   @override
-  String get familyAppsIntro => 'Установіть Hearth і HearthTube в інші профілі Google TV. У дитячих профілях це потрібно, щоб працював HearthTube і щоб Hearth вибирав правильний профіль у Netflix, Disney+ та інших застосунках. У дорослих профілях це просто зручність: не доведеться встановлювати їх вручну.';
+  String get familyAppsIntro => 'Установіть Hearth і HearthTube в інші профілі Google TV. У дитячих профілях це потрібно, щоб працював HearthTube і щоб Hearth вибирав потрібний профіль у стрімінгових сервісах. У профілях дорослих це лише зручність: не доведеться встановлювати їх вручну.';
 
   @override
   String get familyAppsAddTitle => 'Додати Hearth в інші профілі';
 
   @override
-  String get familyAppsAddKids => 'Hearth і HearthTube буде встановлено в профілі ваших дітей: там запрацює HearthTube, а Hearth зможе вибирати правильний профіль у таких застосунках, як Netflix і Disney+.';
+  String get familyAppsAddKids => 'Hearth і HearthTube буде встановлено в профілі ваших дітей: там працюватиме HearthTube, а Hearth зможе вибирати потрібний профіль у стрімінгових сервісах.';
 
   @override
   String get familyAppsAddAdults => 'Їх також буде встановлено в інші дорослі профілі телевізора, щоб іншим дорослим не довелося налаштовувати все самим.';
@@ -1983,4 +1983,7 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'Google TV видалить незахищені застосунки в цьому профілі під час його наступного запуску. Скористайтеся «Додати» ще раз, щоб захистити їх.';
+
+  @override
+  String get familyAppsAbout => 'Що це?';
 }

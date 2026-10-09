@@ -318,9 +318,9 @@
     "pairingPairIn": "{app} içinde profilleri eşleştir",
     "pairingAppNotSeenFooter": "Hearth bu uygulamanın profillerini henüz görmedi. Bir kez Hearth'ten açın, sonra geri gelin.",
     "pairingAppProfilesFooter": "Bu uygulamadaki profiller: {profiles}. Google TV profilleri, Hearth onları gördüğünde burada görünür.",
-    "familyAppsIntro": "Hearth ve HearthTube'u diğer Google TV profillerinize de yükleyin. Çocuk profillerinde bu, HearthTube'un çalışması ve Hearth'ün Netflix, Disney+ ve diğer uygulamalarda doğru profili seçmesi için gereklidir. Yetişkin profillerinde ise yalnızca kolaylık sağlar; elle yüklemek gerekmez.",
+    "familyAppsIntro": "Hearth ve HearthTube'u diğer Google TV profillerinize ekleyin. Çocuk profillerinde bu, HearthTube'un çalışması ve Hearth'ün yayın hizmetlerinde doğru profili seçmesi için gereklidir. Yetişkin profillerinde ise yalnızca kolaylık sağlar; elle yüklemeleri gerekmez.",
     "familyAppsAddTitle": "Hearth'ü diğer profillere ekle",
-    "familyAppsAddKids": "Bu, Hearth ve HearthTube'u çocuklarınızın profillerine yükler; böylece HearthTube orada çalışır ve Hearth, Netflix ve Disney+ gibi uygulamalarda doğru profili seçebilir.",
+    "familyAppsAddKids": "Bu, Hearth ve HearthTube'u çocuklarınızın profillerine ekler; böylece HearthTube orada çalışır ve Hearth yayın hizmetlerinde doğru profili seçebilir.",
     "familyAppsAddAdults": "Ayrıca bunları TV'deki diğer yetişkin profillerine de yükler; böylece başka bir yetişkinin kendisi kurması gerekmez.",
     "familyAppsAddOnlyOwnApps": "Yalnızca Hearth'ün kendi iki uygulamasını ekler; aşağıdaki Kaldır ile istediğiniz zaman geri alabilirsiniz.",
     "familyAppsAddFamilyLink": "Her çocuk bir Family Link \"uygulama eklendi\" bildirimi alır.",
@@ -591,5 +591,6 @@
     "familyAppsStatusPartial": "Kısmi",
     "familyAppsStatusNotInstalled": "Yüklü değil",
     "familyAppsStatusAtRisk": "Risk altında",
-    "familyAppsAtRiskDetail": "Google TV, bu profil bir sonraki açılışında buradaki korumasız uygulamaları kaldıracak. Korumak için Ekle'yi yeniden kullanın."
+    "familyAppsAtRiskDetail": "Google TV, bu profil bir sonraki açılışında buradaki korumasız uygulamaları kaldıracak. Korumak için Ekle'yi yeniden kullanın.",
+    "familyAppsAbout": "Bu nedir?"
 }

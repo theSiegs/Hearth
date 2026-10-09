@@ -1008,13 +1008,13 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get familyAppsIntro => 'ثبّت Hearth وHearthTube على ملفات Google TV الشخصية الأخرى. على ملفات الأطفال، هذا ضروري ليعمل HearthTube وليختار Hearth الملف الشخصي الصحيح في Netflix وDisney+ وتطبيقات أخرى. أما على ملفات البالغين فهو للراحة فقط، كي لا يضطروا إلى تثبيتهما يدويًا.';
+  String get familyAppsIntro => 'ثبّت Hearth وHearthTube على ملفات Google TV الشخصية الأخرى. على ملفات الأطفال، هذا ضروري ليعمل HearthTube وليختار Hearth الملف الشخصي الصحيح في خدمات البث. أما على ملفات البالغين فهو للراحة فقط، كي لا يضطروا إلى تثبيتهما يدويًا.';
 
   @override
   String get familyAppsAddTitle => 'إضافة Hearth إلى الملفات الشخصية الأخرى';
 
   @override
-  String get familyAppsAddKids => 'يثبّت هذا Hearth وHearthTube على ملفات أطفالك الشخصية، ليعمل HearthTube هناك ويتمكن Hearth من اختيار الملف الشخصي الصحيح في تطبيقات مثل Netflix وDisney+.';
+  String get familyAppsAddKids => 'يثبّت هذا Hearth وHearthTube على ملفات أطفالك الشخصية، ليعمل HearthTube هناك ويتمكن Hearth من اختيار الملف الشخصي الصحيح في خدمات البث.';
 
   @override
   String get familyAppsAddAdults => 'ويثبّتهما أيضًا على ملفات البالغين الأخرى على التلفزيون، كي لا يضطر أي بالغ آخر إلى إعداده بنفسه.';
@@ -2002,4 +2002,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'سيزيل Google TV التطبيقات غير المحمية هنا عند بدء هذا الملف الشخصي في المرة القادمة. استخدم \"إضافة\" مرة أخرى لحمايتها.';
+
+  @override
+  String get familyAppsAbout => 'ما هذا؟';
 }

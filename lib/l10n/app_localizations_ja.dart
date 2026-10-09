@@ -994,13 +994,13 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get familyAppsIntro => 'Hearth と HearthTube を Google TV の他のプロフィールにも入れます。キッズプロフィールでは、HearthTube を使うためと、Netflix や Disney+ などのアプリで Hearth が正しいプロフィールを選ぶために必要です。大人のプロフィールでは、手動でインストールする手間を省くためのものです。';
+  String get familyAppsIntro => 'Hearth と HearthTube を他の Google TV プロフィールにも入れます。お子様のプロフィールでは、HearthTube が動作し、Hearth がストリーミング サービスで正しいプロフィールを選ぶために必要です。大人のプロフィールでは、手動でインストールする手間を省くためのものです。';
 
   @override
   String get familyAppsAddTitle => '他のプロフィールに Hearth を追加';
 
   @override
-  String get familyAppsAddKids => 'お子さんのプロフィールに Hearth と HearthTube を入れます。これで HearthTube が使えるようになり、Netflix や Disney+ などのアプリで Hearth が正しいプロフィールを選べます。';
+  String get familyAppsAddKids => 'Hearth と HearthTube をお子様のプロフィールに入れます。これで HearthTube がそこで動作し、Hearth がストリーミング サービスで正しいプロフィールを選べるようになります。';
 
   @override
   String get familyAppsAddAdults => 'テレビの他の大人のプロフィールにもインストールするので、他の大人が自分で設定する必要はありません。';
@@ -1959,4 +1959,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'このプロフィールを次に開いたとき、保護されていないアプリは Google TV に削除されます。もう一度「追加」を使って保護してください。';
+
+  @override
+  String get familyAppsAbout => 'これは何？';
 }
