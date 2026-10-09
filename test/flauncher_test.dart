@@ -283,6 +283,39 @@ void main() {
     expect(homeScrollOffset(tester), 0);
   });
 
+  testWidgets("Moving an app inside the dock doesn't scroll the page", (tester) async {
+    final appsService = mkAppService(LiveAppsService()) as LiveAppsService;
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    favoritesCategory.applications
+        .addAll(List.generate(3, (i) => fakeApp(packageName: "com.example.dock$i", name: "Dock $i")));
+    final applicationsCategory = fakeCategory(name: "Applications", order: 1);
+    applicationsCategory.applications
+        .addAll(List.generate(30, (i) => fakeApp(packageName: "com.example.app$i", name: "App $i")));
+    when(appsService.launcherSections).thenReturn([favoritesCategory, applicationsCategory]);
+    when(appsService.reorderApplication(any, any, any)).thenAnswer((invocation) {
+      final apps = (invocation.positionalArguments[0] as Category).applications;
+      apps.insert(invocation.positionalArguments[2] as int, apps.removeAt(invocation.positionalArguments[1] as int));
+      appsService.changed();
+    });
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+    await tester.pumpAndSettle();
+    expect(isDockAppFocused(tester, "com.example.dock0"), isTrue);
+
+    await tester.longPress(find.byKey(const Key("com.example.dock0")));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text("Reorder"));
+    await tester.pumpAndSettle();
+    for (final key in [LogicalKeyboardKey.arrowRight, LogicalKeyboardKey.arrowRight, LogicalKeyboardKey.arrowLeft]) {
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+      expect(homeScrollOffset(tester), 0);
+    }
+    expect(favoritesCategory.applications[1].packageName, "com.example.dock0");
+    expect(isDockAppFocused(tester, "com.example.dock0"), isTrue);
+  });
+
   testWidgets("After a profile switch, focus lands on the dock once the welcome card goes", (tester) async {
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
         const MethodChannel('me.efesser.flauncher/method'), (call) async {
@@ -1100,7 +1133,7 @@ bool isDockAppFocused(WidgetTester tester, String packageName) {
     matching: find.byType(InkWell),
   );
   if (inkWell.evaluate().isEmpty) return false;
-  return tester.widget<InkWell>(inkWell).focusNode?.hasFocus ?? false;
+  return tester.widget<InkWell>(inkWell.first).focusNode?.hasFocus ?? false;
 }
 
 /// How far the home page is scrolled down.
