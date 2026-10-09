@@ -13,10 +13,12 @@ class SidePanelDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const borderRadius = BorderRadius.horizontal(right: Radius.circular(24));
+    // On the start side: the left, or the right in a right-to-left language
+    final borderRadius =
+        const BorderRadiusDirectional.horizontal(end: Radius.circular(24)).resolve(Directionality.of(context));
 
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: AlignmentDirectional.centerStart,
       child: Material(
         color: const Color(0xFF0F0F0F),
         elevation: 24,

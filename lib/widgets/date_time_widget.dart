@@ -20,7 +20,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' show DateFormat;
 
 import 'animated_character.dart';
 
@@ -50,17 +50,29 @@ class _DateTimeWidgetState extends State<DateTimeWidget> with WidgetsBindingObse
   String _formattedText = '';
   Timer? _timer;
 
+  /// Hearth's language (its own App language setting, else the TV's), for day and month names.
+  String? _locale;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initDateFormatAndRefresh();
     _startTimer();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final locale = Localizations.maybeLocaleOf(context)?.toString() ?? Platform.localeName;
+    if (locale != _locale) {
+      _locale = locale;
+      _initDateFormatAndRefresh();
+    }
   }
 
   void _initDateFormatAndRefresh() {
     try {
-      _dateFormat = DateFormat(widget._dateTimeFormatString, Platform.localeName);
+      _dateFormat = DateFormat(widget._dateTimeFormatString, _locale ?? Platform.localeName);
     } catch (_) {
       try {
         _dateFormat = DateFormat(widget._dateTimeFormatString);
@@ -113,7 +125,9 @@ class _DateTimeWidgetState extends State<DateTimeWidget> with WidgetsBindingObse
 
   @override
   Widget build(BuildContext context) {
-    if (widget.animate) {
+    // Animated one character at a time only left to right: in a right-to-left language the characters would be
+    // laid out back to front, and Arabic letters must join
+    if (widget.animate && Directionality.of(context) == TextDirection.ltr) {
       return AnimatedTimeDisplay(
         displayText: _formattedText,
         textStyle: widget.textStyle,
