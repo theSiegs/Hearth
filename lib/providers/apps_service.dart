@@ -103,6 +103,7 @@ class AppsService extends ChangeNotifier {
     } else {
       await _ensureTvAppsSectionOrder();
     }
+    await hideDefaultHiddenApps("device");
 
     _appsChangedSubscription = _fLauncherChannel
         .addAppsChangedListener((event) => _onAppsChanged(event).catchError((Object e, StackTrace stack) {
@@ -297,7 +298,27 @@ class AppsService extends ChangeNotifier {
     });
     await _refreshState(shouldNotifyListeners: false);
     await _initDefaultCategories();
+    for (final pkg in hiddenByDefault) {
+      final app = _applications[pkg];
+      if (app != null) await hideApplication(app);
+    }
     await _refreshState();
+  }
+
+  /// Apps that start hidden: Google TV's own Settings app (Hearth's Settings opens it when wanted, and a kid
+  /// shouldn't find it on the home). Shown again from the app's options like any hidden app.
+  static const Set<String> hiddenByDefault = {"com.android.tv.settings"};
+
+  /// Hides [hiddenByDefault] once per [scope] ("device" on this TV, or a profile key for its layout), so a parent who
+  /// shows one again keeps it shown.
+  Future<void> hideDefaultHiddenApps(String scope) async {
+    final flag = "hidden_by_default_v1_$scope";
+    if (_prefs.getBool(flag) == true) return;
+    for (final pkg in hiddenByDefault) {
+      final app = _applications[pkg];
+      if (app != null && !app.hidden) await hideApplication(app);
+    }
+    await _prefs.setBool(flag, true);
   }
 
   /// One-time migration: moves "TV Apps" above "Non-TV Apps".
