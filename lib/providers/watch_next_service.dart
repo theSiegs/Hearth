@@ -93,6 +93,15 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
   // The active profile's key, read with each refresh; null while Hearth can't tell.
   String? _activeProfile;
 
+  /// The active profile changed: the owner's entries stop showing at once if it's another profile (its own list
+  /// comes from its agent, if it has one), and the list is read again for it.
+  void profileChanged(String? key) {
+    if (key == _activeProfile) return;
+    _activeProfile = key;
+    notifyListeners();
+    refresh();
+  }
+
   bool _visibleToActiveProfile(WatchNextProgram p) =>
       p.profileOwned || _activeProfile == null || _activeProfile == _ownerProfile;
 
