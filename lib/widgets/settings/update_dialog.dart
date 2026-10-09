@@ -18,6 +18,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/update_service.dart';
 
@@ -39,6 +40,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
     final accentColor = context.select((SettingsService s) => s.accentColor);
     final updateService = context.watch<UpdateService>();
 
@@ -51,51 +53,55 @@ class _UpdateDialogState extends State<UpdateDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.system_update_outlined, color: Colors.white, size: 24),
-              SizedBox(width: 8),
-              Text(
-                "Check for Updates",
-                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              const Icon(Icons.system_update_outlined, color: Colors.white, size: 24),
+              const SizedBox(width: 8),
+              // A long title in another language wraps instead of overflowing
+              Flexible(
+                child: Text(
+                  localizations.updateCheckForUpdatesTitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
-            "Current version: ${updateService.currentVersion}",
+            localizations.updateCurrentVersion(updateService.currentVersion),
             style: const TextStyle(color: Colors.white54, fontSize: 12),
           ),
           const SizedBox(height: 16),
-          _buildBody(context, updateService, accentColor),
+          _buildBody(localizations, updateService, accentColor),
           const SizedBox(height: 16),
-          _buildActions(context, updateService),
+          _buildActions(context, localizations, updateService),
         ],
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, UpdateService service, Color accentColor) {
+  Widget _buildBody(AppLocalizations localizations, UpdateService service, Color accentColor) {
     switch (service.status) {
       case UpdateStatus.idle:
       case UpdateStatus.checking:
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16),
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
           child: Column(
             children: [
-              SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 3)),
-              SizedBox(height: 12),
-              Text("Checking GitHub for a new release…", style: TextStyle(color: Colors.white70, fontSize: 13)),
+              const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 3)),
+              const SizedBox(height: 12),
+              Text(localizations.updateChecking, style: const TextStyle(color: Colors.white70, fontSize: 13)),
             ],
           ),
         );
       case UpdateStatus.upToDate:
-        return const Column(
+        return Column(
           children: [
-            Icon(Icons.check_circle_outline, color: Colors.greenAccent, size: 32),
-            SizedBox(height: 8),
-            Text("You're on the latest version.", style: TextStyle(color: Colors.white70, fontSize: 13)),
+            const Icon(Icons.check_circle_outline, color: Colors.greenAccent, size: 32),
+            const SizedBox(height: 8),
+            Text(localizations.updateUpToDate, style: const TextStyle(color: Colors.white70, fontSize: 13)),
           ],
         );
       case UpdateStatus.available:
@@ -107,8 +113,10 @@ class _UpdateDialogState extends State<UpdateDialog> {
               children: [
                 const Icon(Icons.new_releases_outlined, color: Colors.amberAccent, size: 20),
                 const SizedBox(width: 8),
-                Text("Version ${info.tagName} is available",
-                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                Flexible(
+                  child: Text(localizations.updateVersionAvailable(info.tagName),
+                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                ),
               ],
             ),
             if (info.changelog.trim().isNotEmpty) ...[
@@ -136,20 +144,19 @@ class _UpdateDialogState extends State<UpdateDialog> {
               backgroundColor: Colors.white.withOpacity(0.1),
             ),
             const SizedBox(height: 8),
-            Text("Downloading… ${(service.downloadProgress * 100).toStringAsFixed(0)}%",
+            Text(localizations.updateDownloading((service.downloadProgress * 100).toStringAsFixed(0)),
                 style: const TextStyle(color: Colors.white70, fontSize: 12)),
           ],
         );
       case UpdateStatus.readyToInstall:
-        return const Column(
+        return Column(
           children: [
-            Icon(Icons.download_done_outlined, color: Colors.greenAccent, size: 32),
-            SizedBox(height: 8),
+            const Icon(Icons.download_done_outlined, color: Colors.greenAccent, size: 32),
+            const SizedBox(height: 8),
             Text(
-              "Downloaded. If the installer didn't open, your device may need\n"
-              "\"Install unknown apps\" permission granted for Hearth.",
+              localizations.updateDownloadedHint,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70, fontSize: 12),
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
             ),
           ],
         );
@@ -158,21 +165,21 @@ class _UpdateDialogState extends State<UpdateDialog> {
           children: [
             const Icon(Icons.error_outline, color: Colors.redAccent, size: 32),
             const SizedBox(height: 8),
-            Text(service.errorMessage ?? "Something went wrong",
+            Text(service.errorMessage ?? localizations.updateSomethingWentWrong,
                 textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, fontSize: 12)),
           ],
         );
     }
   }
 
-  Widget _buildActions(BuildContext context, UpdateService service) {
+  Widget _buildActions(BuildContext context, AppLocalizations localizations, UpdateService service) {
     final actions = <Widget>[];
 
     switch (service.status) {
       case UpdateStatus.available:
         actions.add(FocusableDialogButton(
           icon: Icons.download,
-          label: "Download & Install",
+          label: localizations.updateDownloadAndInstall,
           compact: true,
           autofocus: true,
           onPressed: () => service.downloadAndInstall(),
@@ -181,7 +188,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
       case UpdateStatus.readyToInstall:
         actions.add(FocusableDialogButton(
           icon: Icons.refresh,
-          label: "Retry Install",
+          label: localizations.updateRetryInstall,
           compact: true,
           autofocus: true,
           onPressed: () => service.retryInstall(),
@@ -191,7 +198,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
       case UpdateStatus.upToDate:
         actions.add(FocusableDialogButton(
           icon: Icons.refresh,
-          label: "Check Again",
+          label: localizations.updateCheckAgain,
           compact: true,
           autofocus: true,
           onPressed: () => service.checkForUpdate(),
@@ -203,7 +210,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
 
     actions.add(FocusableDialogButton(
       icon: Icons.close,
-      label: "Close",
+      label: localizations.close,
       compact: true,
       autofocus: actions.isEmpty,
       onPressed: () => Navigator.of(context).pop(),

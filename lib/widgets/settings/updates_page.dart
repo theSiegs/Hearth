@@ -75,21 +75,21 @@ class _UpdatesPageState extends State<UpdatesPage> with WidgetsBindingObserver {
 
   /// Explains the "Install unknown apps" screen before opening it; true when the user goes ahead.
   Future<bool> _askForInstallPermission() async {
+    final localizations = AppLocalizations.of(context)!;
     final go = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Allow Hearth to install apps"),
-        content: const SizedBox(
+        title: Text(localizations.updatesInstallPermissionTitle),
+        content: SizedBox(
           width: 420,
-          child: Text("On the next screen, find Hearth and turn it on, then press Back. "
-              "The install continues when you're back here."),
+          child: Text(localizations.updatesInstallPermissionMessage),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text("Not now")),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(localizations.notNow)),
           TextButton(
             autofocus: true,
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text("Open Settings"),
+            child: Text(localizations.updatesOpenSettings),
           ),
         ],
       ),
@@ -112,7 +112,8 @@ class _UpdatesPageState extends State<UpdatesPage> with WidgetsBindingObserver {
       _releases[app.packageName] = await _updater.latestRelease(app);
       _settle(app);
     } catch (e) {
-      _set(app, _State.error, error: "Couldn't check for updates");
+      if (!mounted) return;
+      _set(app, _State.error, error: AppLocalizations.of(context)!.updatesCheckFailed);
     }
   }
 
@@ -154,7 +155,10 @@ class _UpdatesPageState extends State<UpdatesPage> with WidgetsBindingObserver {
       });
 
       _set(app, _State.installing);
-      if (!await _channel.installApk(apk.path)) throw Exception("The installer didn't start");
+      if (!await _channel.installApk(apk.path)) {
+        if (!mounted) return;
+        throw Exception(AppLocalizations.of(context)!.updatesInstallerNotStarted);
+      }
       // Updates may install without a prompt, so nothing brings Hearth back to the front: watch for the new version.
       _installWatch?.cancel();
       var ticks = 0;
@@ -173,15 +177,17 @@ class _UpdatesPageState extends State<UpdatesPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     return SettingsPage(
-      title: AppLocalizations.of(context)!.updatesTitle,
+      title: localizations.updatesTitle,
       children: [
         FocusableSettingsTile(
           autofocus: true,
           leading: const Icon(Icons.local_fire_department_outlined),
           title: Text("Hearth", style: textTheme.bodyMedium),
-          trailing: Text("Check for updates", style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
+          trailing:
+              Text(localizations.updatesCheckForUpdates, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
           onPressed: () => showDialog(context: context, builder: (_) => const UpdateDialog()),
         ),
         for (final app in companionApps) _tile(context, app),
@@ -193,16 +199,15 @@ class _UpdatesPageState extends State<UpdatesPage> with WidgetsBindingObserver {
                   setState(() => _autoUpdate = on);
                   await _updater.setAutoUpdate(on);
                 },
-          title: Text("Update automatically", style: textTheme.bodyMedium),
-          subtitle: const Text("Hearth checks daily and installs updates to apps it installed, when they're not in use"),
+          title: Text(localizations.updatesAutoUpdate, style: textTheme.bodyMedium),
+          subtitle: Text(localizations.updatesAutoUpdateDescription),
           secondary: const Icon(Icons.system_update_outlined),
         ),
         const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
-            "Installed from each app's GitHub releases. After Hearth installs or updates an app once, "
-            "its updates install without asking, and the app leaves updating to Hearth.",
+            localizations.updatesFooter,
             style: textTheme.bodySmall?.copyWith(color: Colors.white54),
             textAlign: TextAlign.center,
           ),
@@ -212,19 +217,29 @@ class _UpdatesPageState extends State<UpdatesPage> with WidgetsBindingObserver {
   }
 
   Widget _tile(BuildContext context, CompanionApp app) {
+    final localizations = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final state = _states[app.packageName] ?? _State.checking;
     final installed = _installed[app.packageName];
     final release = _releases[app.packageName];
     final (String status, Color color, VoidCallback? action) = switch (state) {
-      _State.checking => ("Checking…", Colors.white54, null),
-      _State.notInstalled => ("Install", Colors.orange, () => _install(app)),
-      _State.updateAvailable => ("Update to ${release?.versionName ?? ''}", Colors.orange, () => _install(app)),
-      _State.upToDate => ("Up to date", Colors.green, () => _check(app)),
-      _State.downloading => ("Downloading ${((_progress[app.packageName] ?? 0) * 100).round()}%", Colors.white54, null),
-      _State.installing => ("Installing…", Colors.white54, null),
-      _State.error => (_errors[app.packageName] ?? "Error", Colors.redAccent, () => _check(app)),
+      _State.checking => (localizations.updatesChecking, Colors.white54, null),
+      _State.notInstalled => (localizations.updatesInstall, Colors.orange, () => _install(app)),
+      _State.updateAvailable => (
+          localizations.updatesUpdateTo(release?.versionName ?? ''),
+          Colors.orange,
+          () => _install(app)
+        ),
+      _State.upToDate => (localizations.updatesUpToDate, Colors.green, () => _check(app)),
+      _State.downloading => (
+          localizations.updatesDownloadingPercent(((_progress[app.packageName] ?? 0) * 100).round()),
+          Colors.white54,
+          null
+        ),
+      _State.installing => (localizations.updatesInstalling, Colors.white54, null),
+      _State.error => (_errors[app.packageName] ?? localizations.updatesError, Colors.redAccent, () => _check(app)),
     };
+    final description = _description(localizations, app);
     return FocusableSettingsTile(
       leading: const Icon(Icons.extension_outlined),
       title: Column(
@@ -232,7 +247,9 @@ class _UpdatesPageState extends State<UpdatesPage> with WidgetsBindingObserver {
         children: [
           Text(app.name, style: textTheme.bodyMedium),
           Text(
-            installed != null ? "${app.description} · ${installed['versionName']}" : app.description,
+            installed != null
+                ? localizations.updatesDescriptionWithVersion(description, '${installed['versionName']}')
+                : description,
             style: textTheme.bodySmall?.copyWith(color: Colors.white54),
           ),
         ],
@@ -241,4 +258,10 @@ class _UpdatesPageState extends State<UpdatesPage> with WidgetsBindingObserver {
       onPressed: action,
     );
   }
+
+  /// A companion app's description in the current language, by its package; one without a translation keeps its own.
+  String _description(AppLocalizations localizations, CompanionApp app) => switch (app.packageName) {
+        "com.thesiegs.hearthtube" => localizations.updatesHearthTubeDescription,
+        _ => app.description,
+      };
 }

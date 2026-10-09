@@ -1811,4 +1811,182 @@ class AppLocalizationsKo extends AppLocalizations {
   String blockedNotificationsHeading(int count) {
     return '차단된 앱($count)';
   }
+
+  @override
+  String get systemPageUseGoogleTv => '지금은 Google TV 사용';
+
+  @override
+  String get backupShareText => 'Hearth 백업';
+
+  @override
+  String get backupShareFailedTitle => '공유 실패';
+
+  @override
+  String backupShareFailed(String error) {
+    return '백업 공유 실패: $error';
+  }
+
+  @override
+  String get backupExportSuccessTitle => '내보내기 성공';
+
+  @override
+  String get backupExportFailedTitle => '내보내기 실패';
+
+  @override
+  String get backupImportSuccessTitle => '가져오기 성공';
+
+  @override
+  String get backupImportFailedTitle => '가져오기 실패';
+
+  @override
+  String get backupImport => '가져오기';
+
+  @override
+  String backupLoadError(String error) {
+    return '백업을 불러오는 중 오류: $error';
+  }
+
+  @override
+  String get backupNoFiles => '백업 파일을 찾을 수 없습니다.';
+
+  @override
+  String backupFileDetails(String date, String size) {
+    return '$date($size)';
+  }
+
+  @override
+  String backupSizeBytes(String size) {
+    return '$size B';
+  }
+
+  @override
+  String backupSizeKilobytes(String size) {
+    return '$size KB';
+  }
+
+  @override
+  String backupSizeMegabytes(String size) {
+    return '$size MB';
+  }
+
+  @override
+  String get updateCheckForUpdatesTitle => '업데이트 확인';
+
+  @override
+  String updateCurrentVersion(String version) {
+    return '현재 버전: $version';
+  }
+
+  @override
+  String get updateChecking => 'GitHub에서 새 릴리스를 확인하는 중…';
+
+  @override
+  String get updateUpToDate => '최신 버전을 사용 중입니다.';
+
+  @override
+  String updateVersionAvailable(String version) {
+    return '버전 $version을(를) 사용할 수 있습니다';
+  }
+
+  @override
+  String updateDownloading(String percent) {
+    return '다운로드 중… $percent%';
+  }
+
+  @override
+  String get updateDownloadedHint => '다운로드했습니다. 설치 프로그램이 열리지 않으면 기기에서 Hearth에\n\'알 수 없는 앱 설치\' 권한을 허용해야 할 수 있습니다.';
+
+  @override
+  String get updateSomethingWentWrong => '문제가 발생했습니다';
+
+  @override
+  String get updateDownloadAndInstall => '다운로드 및 설치';
+
+  @override
+  String get updateRetryInstall => '설치 다시 시도';
+
+  @override
+  String get updateCheckAgain => '다시 확인';
+
+  @override
+  String get updatesInstallPermissionTitle => 'Hearth가 앱을 설치하도록 허용';
+
+  @override
+  String get updatesInstallPermissionMessage => '다음 화면에서 Hearth를 찾아 켠 다음 뒤로를 누르세요. 여기로 돌아오면 설치가 계속됩니다.';
+
+  @override
+  String get updatesOpenSettings => '설정 열기';
+
+  @override
+  String get updatesCheckFailed => '업데이트를 확인할 수 없습니다';
+
+  @override
+  String get updatesInstallerNotStarted => '설치 프로그램이 시작되지 않았습니다';
+
+  @override
+  String get updatesCheckForUpdates => '업데이트 확인';
+
+  @override
+  String get updatesAutoUpdate => '자동으로 업데이트';
+
+  @override
+  String get updatesAutoUpdateDescription => 'Hearth가 매일 확인하고, 직접 설치한 앱이 사용 중이 아닐 때 업데이트를 설치합니다';
+
+  @override
+  String get updatesFooter => '각 앱의 GitHub 릴리스에서 설치합니다. Hearth가 앱을 한 번 설치하거나 업데이트하면 이후 업데이트는 묻지 않고 설치되며, 앱은 업데이트를 Hearth에 맡깁니다.';
+
+  @override
+  String get updatesChecking => '확인 중…';
+
+  @override
+  String get updatesInstall => '설치';
+
+  @override
+  String updatesUpdateTo(String version) {
+    return '$version(으)로 업데이트';
+  }
+
+  @override
+  String get updatesUpToDate => '최신 상태';
+
+  @override
+  String updatesDownloadingPercent(int percent) {
+    return '다운로드 중 $percent%';
+  }
+
+  @override
+  String get updatesInstalling => '설치 중…';
+
+  @override
+  String get updatesError => '오류';
+
+  @override
+  String get updatesHearthTubeDescription => 'Hearth용 YouTube, Hearth 프로필을 따라갑니다';
+
+  @override
+  String updatesDescriptionWithVersion(String description, String version) {
+    return '$description · $version';
+  }
+
+  @override
+  String aboutForkOf(String launcher, String author, String parts) {
+    return '$author의 $launcher를 포크했으며, $parts의 일부를 포함합니다';
+  }
+
+  @override
+  String get aboutDescription => 'Google TV용 비공개 가족 친화형 런처로, Google TV 프로필과 Home Assistant가 내장되어 있습니다. 광고 및 추적기가 없습니다.';
+
+  @override
+  String get aboutHearthOnGitHub => 'GitHub의 Hearth';
+
+  @override
+  String get aboutCredits => '크레딧';
+
+  @override
+  String aboutFlauncherForkCredit(String author) {
+    return 'FLauncher 포크 · $author';
+  }
+
+  @override
+  String get aboutLicense => '기반이 된 프로젝트와 마찬가지로 GNU GPL v3에 따른 자유 소프트웨어입니다.';
 }

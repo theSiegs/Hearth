@@ -2208,5 +2208,287 @@
                 "type": "int"
             }
         }
+    },
+    "systemPageUseGoogleTv": "Use Google TV for now",
+    "@systemPageUseGoogleTv": {
+        "description": "Row on the System page that opens the Google TV home screen instead of Hearth"
+    },
+    "backupShareText": "Hearth Backup",
+    "@backupShareText": {
+        "description": "Text sent along with the backup file when it's shared from the Backup & Restore page"
+    },
+    "backupShareFailedTitle": "Share Failed",
+    "@backupShareFailedTitle": {
+        "description": "Title of the message when sharing a backup fails"
+    },
+    "backupShareFailed": "Failed to share backup: {error}",
+    "@backupShareFailed": {
+        "description": "Message when sharing a backup fails; {error} is the reason",
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "backupExportSuccessTitle": "Export Success",
+    "@backupExportSuccessTitle": {
+        "description": "Title of the message after a backup is exported"
+    },
+    "backupExportFailedTitle": "Export Failed",
+    "@backupExportFailedTitle": {
+        "description": "Title of the message when exporting a backup fails"
+    },
+    "backupImportSuccessTitle": "Import Success",
+    "@backupImportSuccessTitle": {
+        "description": "Title of the message after a backup is imported"
+    },
+    "backupImportFailedTitle": "Import Failed",
+    "@backupImportFailedTitle": {
+        "description": "Title of the message when importing a backup fails"
+    },
+    "backupImport": "Import",
+    "@backupImport": {
+        "description": "Button that confirms importing the chosen backup"
+    },
+    "backupLoadError": "Error loading backups: {error}",
+    "@backupLoadError": {
+        "description": "Shown in the Import Backup dialog when the list of backups can't be read; {error} is the reason",
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "backupNoFiles": "No backup files found.",
+    "@backupNoFiles": {
+        "description": "Shown in the Import Backup dialog when there are no backups"
+    },
+    "backupFileDetails": "{date} ({size})",
+    "@backupFileDetails": {
+        "description": "Line under a backup's file name in the Import Backup dialog: when it was saved and its size",
+        "placeholders": {
+            "date": {
+                "type": "String"
+            },
+            "size": {
+                "type": "String"
+            }
+        }
+    },
+    "backupSizeBytes": "{size} B",
+    "@backupSizeBytes": {
+        "description": "A backup file's size in bytes, in the Import Backup dialog",
+        "placeholders": {
+            "size": {
+                "type": "String"
+            }
+        }
+    },
+    "backupSizeKilobytes": "{size} KB",
+    "@backupSizeKilobytes": {
+        "description": "A backup file's size in kilobytes, in the Import Backup dialog",
+        "placeholders": {
+            "size": {
+                "type": "String"
+            }
+        }
+    },
+    "backupSizeMegabytes": "{size} MB",
+    "@backupSizeMegabytes": {
+        "description": "A backup file's size in megabytes, in the Import Backup dialog",
+        "placeholders": {
+            "size": {
+                "type": "String"
+            }
+        }
+    },
+    "updateCheckForUpdatesTitle": "Check for Updates",
+    "@updateCheckForUpdatesTitle": {
+        "description": "Title of Hearth's update dialog"
+    },
+    "updateCurrentVersion": "Current version: {version}",
+    "@updateCurrentVersion": {
+        "description": "Under the title of the update dialog",
+        "placeholders": {
+            "version": {
+                "type": "String"
+            }
+        }
+    },
+    "updateChecking": "Checking GitHub for a new release…",
+    "@updateChecking": {
+        "description": "Shown in the update dialog while it checks"
+    },
+    "updateUpToDate": "You're on the latest version.",
+    "@updateUpToDate": {
+        "description": "Shown in the update dialog when there's nothing newer"
+    },
+    "updateVersionAvailable": "Version {version} is available",
+    "@updateVersionAvailable": {
+        "description": "Shown in the update dialog when a newer release exists; {version} is its tag",
+        "placeholders": {
+            "version": {
+                "type": "String"
+            }
+        }
+    },
+    "updateDownloading": "Downloading… {percent}%",
+    "@updateDownloading": {
+        "description": "Under the progress bar in the update dialog",
+        "placeholders": {
+            "percent": {
+                "type": "String"
+            }
+        }
+    },
+    "updateDownloadedHint": "Downloaded. If the installer didn't open, your device may need\n\"Install unknown apps\" permission granted for Hearth.",
+    "@updateDownloadedHint": {
+        "description": "Shown in the update dialog after the download; \"Install unknown apps\" is the Android setting's name"
+    },
+    "updateSomethingWentWrong": "Something went wrong",
+    "@updateSomethingWentWrong": {
+        "description": "Shown in the update dialog when an error has no message of its own"
+    },
+    "updateDownloadAndInstall": "Download & Install",
+    "@updateDownloadAndInstall": {
+        "description": "Button in the update dialog"
+    },
+    "updateRetryInstall": "Retry Install",
+    "@updateRetryInstall": {
+        "description": "Button in the update dialog after the download, to open the installer again"
+    },
+    "updateCheckAgain": "Check Again",
+    "@updateCheckAgain": {
+        "description": "Button in the update dialog after a check"
+    },
+    "updatesInstallPermissionTitle": "Allow Hearth to install apps",
+    "@updatesInstallPermissionTitle": {
+        "description": "Title of the dialog on the Updates page before opening the \"Install unknown apps\" setting"
+    },
+    "updatesInstallPermissionMessage": "On the next screen, find Hearth and turn it on, then press Back. The install continues when you're back here.",
+    "@updatesInstallPermissionMessage": {
+        "description": "Text of the dialog on the Updates page before opening the \"Install unknown apps\" setting"
+    },
+    "updatesOpenSettings": "Open Settings",
+    "@updatesOpenSettings": {
+        "description": "Button in the install permission dialog on the Updates page"
+    },
+    "updatesCheckFailed": "Couldn't check for updates",
+    "@updatesCheckFailed": {
+        "description": "Next to a companion app on the Updates page when checking for its updates fails"
+    },
+    "updatesInstallerNotStarted": "The installer didn't start",
+    "@updatesInstallerNotStarted": {
+        "description": "Next to a companion app on the Updates page when Android's installer doesn't open"
+    },
+    "updatesCheckForUpdates": "Check for updates",
+    "@updatesCheckForUpdates": {
+        "description": "Next to Hearth on the Updates page; pressing the row opens the update dialog"
+    },
+    "updatesAutoUpdate": "Update automatically",
+    "@updatesAutoUpdate": {
+        "description": "Switch on the Updates page"
+    },
+    "updatesAutoUpdateDescription": "Hearth checks daily and installs updates to apps it installed, when they're not in use",
+    "@updatesAutoUpdateDescription": {
+        "description": "Line under the Update automatically switch on the Updates page"
+    },
+    "updatesFooter": "Installed from each app's GitHub releases. After Hearth installs or updates an app once, its updates install without asking, and the app leaves updating to Hearth.",
+    "@updatesFooter": {
+        "description": "Note at the bottom of the Updates page"
+    },
+    "updatesChecking": "Checking…",
+    "@updatesChecking": {
+        "description": "Next to a companion app on the Updates page while it checks"
+    },
+    "updatesInstall": "Install",
+    "@updatesInstall": {
+        "description": "Next to a companion app on the Updates page that isn't installed; pressing the row installs it"
+    },
+    "updatesUpdateTo": "Update to {version}",
+    "@updatesUpdateTo": {
+        "description": "Next to a companion app on the Updates page when a newer version exists",
+        "placeholders": {
+            "version": {
+                "type": "String"
+            }
+        }
+    },
+    "updatesUpToDate": "Up to date",
+    "@updatesUpToDate": {
+        "description": "Next to a companion app on the Updates page when it has the latest version"
+    },
+    "updatesDownloadingPercent": "Downloading {percent}%",
+    "@updatesDownloadingPercent": {
+        "description": "Next to a companion app on the Updates page while its update downloads",
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
+    "updatesInstalling": "Installing…",
+    "@updatesInstalling": {
+        "description": "Next to a companion app on the Updates page while it installs"
+    },
+    "updatesError": "Error",
+    "@updatesError": {
+        "description": "Next to a companion app on the Updates page when something failed without a message"
+    },
+    "updatesHearthTubeDescription": "YouTube for Hearth; follows your Hearth profile",
+    "@updatesHearthTubeDescription": {
+        "description": "Line under HearthTube on the Updates page"
+    },
+    "updatesDescriptionWithVersion": "{description} · {version}",
+    "@updatesDescriptionWithVersion": {
+        "description": "Line under a companion app on the Updates page when it's installed: its description and installed version",
+        "placeholders": {
+            "description": {
+                "type": "String"
+            },
+            "version": {
+                "type": "String"
+            }
+        }
+    },
+    "aboutForkOf": "A fork of {launcher} by {author}, with parts of {parts}",
+    "@aboutForkOf": {
+        "description": "Line under the version in the About dialog; the placeholders are project and author names",
+        "placeholders": {
+            "launcher": {
+                "type": "String"
+            },
+            "author": {
+                "type": "String"
+            },
+            "parts": {
+                "type": "String"
+            }
+        }
+    },
+    "aboutDescription": "A private, family-friendly launcher for Google TV, with Google TV profiles and Home Assistant built in. Ad-free and tracker-free.",
+    "@aboutDescription": {
+        "description": "Description card in the About dialog"
+    },
+    "aboutHearthOnGitHub": "Hearth on GitHub",
+    "@aboutHearthOnGitHub": {
+        "description": "Button in the About dialog that opens Hearth's GitHub page"
+    },
+    "aboutCredits": "Credits",
+    "@aboutCredits": {
+        "description": "Heading above the projects Hearth builds on, in the About dialog"
+    },
+    "aboutFlauncherForkCredit": "FLauncher fork · {author}",
+    "@aboutFlauncherForkCredit": {
+        "description": "Credit button in the About dialog for a fork of FLauncher; {author} is its author's handle",
+        "placeholders": {
+            "author": {
+                "type": "String"
+            }
+        }
+    },
+    "aboutLicense": "Free software under the GNU GPL v3, like the projects it builds on.",
+    "@aboutLicense": {
+        "description": "Small print at the bottom of the About dialog"
     }
 }

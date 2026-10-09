@@ -1811,4 +1811,182 @@ class AppLocalizationsTr extends AppLocalizations {
   String blockedNotificationsHeading(int count) {
     return 'Engellenen Uygulamalar ($count)';
   }
+
+  @override
+  String get systemPageUseGoogleTv => 'Şimdilik Google TV\'yi kullan';
+
+  @override
+  String get backupShareText => 'Hearth Yedeği';
+
+  @override
+  String get backupShareFailedTitle => 'Paylaşılamadı';
+
+  @override
+  String backupShareFailed(String error) {
+    return 'Yedek paylaşılamadı: $error';
+  }
+
+  @override
+  String get backupExportSuccessTitle => 'Dışa aktarma başarılı';
+
+  @override
+  String get backupExportFailedTitle => 'Dışa aktarma başarısız';
+
+  @override
+  String get backupImportSuccessTitle => 'İçe aktarma başarılı';
+
+  @override
+  String get backupImportFailedTitle => 'İçe aktarma başarısız';
+
+  @override
+  String get backupImport => 'İçe aktar';
+
+  @override
+  String backupLoadError(String error) {
+    return 'Yedekler yüklenirken hata: $error';
+  }
+
+  @override
+  String get backupNoFiles => 'Yedek dosyası bulunamadı.';
+
+  @override
+  String backupFileDetails(String date, String size) {
+    return '$date ($size)';
+  }
+
+  @override
+  String backupSizeBytes(String size) {
+    return '$size B';
+  }
+
+  @override
+  String backupSizeKilobytes(String size) {
+    return '$size KB';
+  }
+
+  @override
+  String backupSizeMegabytes(String size) {
+    return '$size MB';
+  }
+
+  @override
+  String get updateCheckForUpdatesTitle => 'Güncellemeleri denetle';
+
+  @override
+  String updateCurrentVersion(String version) {
+    return 'Geçerli sürüm: $version';
+  }
+
+  @override
+  String get updateChecking => 'GitHub\'da yeni sürüm aranıyor…';
+
+  @override
+  String get updateUpToDate => 'En son sürümü kullanıyorsunuz.';
+
+  @override
+  String updateVersionAvailable(String version) {
+    return '$version sürümü kullanılabilir';
+  }
+
+  @override
+  String updateDownloading(String percent) {
+    return 'İndiriliyor… %$percent';
+  }
+
+  @override
+  String get updateDownloadedHint => 'İndirildi. Yükleyici açılmadıysa cihazınızda Hearth\'e\n\"Bilinmeyen uygulamaları yükle\" izni vermeniz gerekebilir.';
+
+  @override
+  String get updateSomethingWentWrong => 'Bir şeyler ters gitti';
+
+  @override
+  String get updateDownloadAndInstall => 'İndir ve yükle';
+
+  @override
+  String get updateRetryInstall => 'Yüklemeyi yeniden dene';
+
+  @override
+  String get updateCheckAgain => 'Yeniden denetle';
+
+  @override
+  String get updatesInstallPermissionTitle => 'Hearth\'ün uygulama yüklemesine izin verin';
+
+  @override
+  String get updatesInstallPermissionMessage => 'Sonraki ekranda Hearth\'ü bulup açın, ardından Geri\'ye basın. Buraya döndüğünüzde yükleme devam eder.';
+
+  @override
+  String get updatesOpenSettings => 'Ayarları aç';
+
+  @override
+  String get updatesCheckFailed => 'Güncellemeler denetlenemedi';
+
+  @override
+  String get updatesInstallerNotStarted => 'Yükleyici başlamadı';
+
+  @override
+  String get updatesCheckForUpdates => 'Güncellemeleri denetle';
+
+  @override
+  String get updatesAutoUpdate => 'Otomatik güncelle';
+
+  @override
+  String get updatesAutoUpdateDescription => 'Hearth her gün denetler ve yüklediği uygulamaların güncellemelerini, kullanılmadıkları sırada yükler';
+
+  @override
+  String get updatesFooter => 'Her uygulamanın GitHub sürümlerinden yüklenir. Hearth bir uygulamayı bir kez yükledikten veya güncelledikten sonra güncellemeleri sormadan yüklenir ve uygulama güncellemeyi Hearth\'e bırakır.';
+
+  @override
+  String get updatesChecking => 'Denetleniyor…';
+
+  @override
+  String get updatesInstall => 'Yükle';
+
+  @override
+  String updatesUpdateTo(String version) {
+    return '$version sürümüne güncelle';
+  }
+
+  @override
+  String get updatesUpToDate => 'Güncel';
+
+  @override
+  String updatesDownloadingPercent(int percent) {
+    return 'İndiriliyor %$percent';
+  }
+
+  @override
+  String get updatesInstalling => 'Yükleniyor…';
+
+  @override
+  String get updatesError => 'Hata';
+
+  @override
+  String get updatesHearthTubeDescription => 'Hearth için YouTube; Hearth profilinizi izler';
+
+  @override
+  String updatesDescriptionWithVersion(String description, String version) {
+    return '$description · $version';
+  }
+
+  @override
+  String aboutForkOf(String launcher, String author, String parts) {
+    return '$author tarafından geliştirilen $launcher uygulamasının bir çatalı, $parts parçalarıyla';
+  }
+
+  @override
+  String get aboutDescription => 'Google TV için gizliliğe önem veren, aile dostu bir başlatıcı; Google TV profilleri ve Home Assistant yerleşik. Reklamsız ve izleyicisiz.';
+
+  @override
+  String get aboutHearthOnGitHub => 'GitHub\'da Hearth';
+
+  @override
+  String get aboutCredits => 'Katkıda bulunanlar';
+
+  @override
+  String aboutFlauncherForkCredit(String author) {
+    return 'FLauncher çatalı · $author';
+  }
+
+  @override
+  String get aboutLicense => 'Temel aldığı projeler gibi GNU GPL v3 kapsamında özgür yazılımdır.';
 }

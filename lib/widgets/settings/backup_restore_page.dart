@@ -36,20 +36,21 @@ class BackupRestorePage extends StatelessWidget {
         FocusableSettingsTile(
           leading: const Icon(Icons.share),
           title: Text(localizations.shareBackup, style: Theme.of(context).textTheme.bodyMedium),
-          onPressed: () => _share(context),
+          onPressed: () => _share(context, localizations),
         ),
       ],
     );
   }
 
-  Future<void> _share(BuildContext context) async {
+  Future<void> _share(BuildContext context, AppLocalizations localizations) async {
     try {
       final settingsService = context.read<SettingsService>();
       final pathStr = await context.read<BackupService>().exportBackup(settingsService);
-      await Share.shareXFiles([XFile(pathStr)], text: 'Hearth Backup');
+      await Share.shareXFiles([XFile(pathStr)], text: localizations.backupShareText);
     } catch (e) {
       if (context.mounted) {
-        showMessageDialog(context, title: "Share Failed", message: "Failed to share backup: $e");
+        showMessageDialog(context,
+            title: localizations.backupShareFailedTitle, message: localizations.backupShareFailed(e.toString()));
       }
     }
   }
@@ -59,19 +60,21 @@ class BackupRestorePage extends StatelessWidget {
       final settingsService = context.read<SettingsService>();
       final path = await context.read<BackupService>().exportBackup(settingsService);
       if (context.mounted) {
-        showMessageDialog(context, title: "Export Success", message: localizations.exportSuccess(path));
+        showMessageDialog(context,
+            title: localizations.backupExportSuccessTitle, message: localizations.exportSuccess(path));
       }
     } catch (e) {
       if (context.mounted) {
-        showMessageDialog(context, title: "Export Failed", message: localizations.exportError(e.toString()));
+        showMessageDialog(context,
+            title: localizations.backupExportFailedTitle, message: localizations.exportError(e.toString()));
       }
     }
   }
 
-  String _formatSize(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  String _formatSize(AppLocalizations localizations, int bytes) {
+    if (bytes < 1024) return localizations.backupSizeBytes('$bytes');
+    if (bytes < 1024 * 1024) return localizations.backupSizeKilobytes((bytes / 1024).toStringAsFixed(1));
+    return localizations.backupSizeMegabytes((bytes / (1024 * 1024)).toStringAsFixed(1));
   }
 
   String _formatDate(DateTime dateTime) {
@@ -99,7 +102,7 @@ class BackupRestorePage extends StatelessWidget {
                 }
                 if (snapshot.hasError) {
                   return Text(
-                    "Error loading backups: ${snapshot.error}",
+                    localizations.backupLoadError('${snapshot.error}'),
                     style: const TextStyle(color: Colors.red),
                   );
                 }
@@ -108,13 +111,13 @@ class BackupRestorePage extends StatelessWidget {
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24.0),
-                        child: Text("No backup files found."),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24.0),
+                        child: Text(localizations.backupNoFiles),
                       ),
                       TextButton(
                         onPressed: () => Navigator.of(dialogContext).pop(),
-                        child: const Text("OK"),
+                        child: Text(localizations.ok),
                       ),
                     ],
                   );
@@ -137,7 +140,8 @@ class BackupRestorePage extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            "${_formatDate(entry.lastModified)} (${_formatSize(entry.size)})",
+                            localizations.backupFileDetails(
+                                _formatDate(entry.lastModified), _formatSize(localizations, entry.size)),
                             style: Theme.of(itemContext).textTheme.bodySmall?.copyWith(
                                   color: Colors.grey,
                                 ),
@@ -158,7 +162,7 @@ class BackupRestorePage extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text("Cancel"),
+              child: Text(localizations.cancel),
             ),
           ],
         );
@@ -179,7 +183,7 @@ class BackupRestorePage extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text("Cancel"),
+            child: Text(localizations.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -189,17 +193,18 @@ class BackupRestorePage extends StatelessWidget {
                 settingsService.reload();
                 await appsService.refreshState();
                 if (context.mounted) {
-                  final ok =
-                      await showMessageDialog(context, title: "Import Success", message: localizations.importSuccess);
+                  final ok = await showMessageDialog(context,
+                      title: localizations.backupImportSuccessTitle, message: localizations.importSuccess);
                   if (ok && context.mounted) Navigator.of(context).pop();
                 }
               } catch (e) {
                 if (context.mounted) {
-                  showMessageDialog(context, title: "Import Failed", message: localizations.importError(e.toString()));
+                  showMessageDialog(context,
+                      title: localizations.backupImportFailedTitle, message: localizations.importError(e.toString()));
                 }
               }
             },
-            child: const Text("Import"),
+            child: Text(localizations.backupImport),
           ),
         ],
       ),

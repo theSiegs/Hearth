@@ -1819,4 +1819,182 @@ class AppLocalizationsHi extends AppLocalizations {
   String blockedNotificationsHeading(int count) {
     return 'अवरुद्ध ऐप्स ($count)';
   }
+
+  @override
+  String get systemPageUseGoogleTv => 'अभी के लिए Google TV इस्तेमाल करें';
+
+  @override
+  String get backupShareText => 'Hearth बैकअप';
+
+  @override
+  String get backupShareFailedTitle => 'साझा करना विफल';
+
+  @override
+  String backupShareFailed(String error) {
+    return 'बैकअप साझा करने में विफल: $error';
+  }
+
+  @override
+  String get backupExportSuccessTitle => 'निर्यात सफल';
+
+  @override
+  String get backupExportFailedTitle => 'निर्यात विफल';
+
+  @override
+  String get backupImportSuccessTitle => 'आयात सफल';
+
+  @override
+  String get backupImportFailedTitle => 'आयात विफल';
+
+  @override
+  String get backupImport => 'आयात करें';
+
+  @override
+  String backupLoadError(String error) {
+    return 'बैकअप लोड करने में त्रुटि: $error';
+  }
+
+  @override
+  String get backupNoFiles => 'कोई बैकअप फ़ाइल नहीं मिली।';
+
+  @override
+  String backupFileDetails(String date, String size) {
+    return '$date ($size)';
+  }
+
+  @override
+  String backupSizeBytes(String size) {
+    return '$size B';
+  }
+
+  @override
+  String backupSizeKilobytes(String size) {
+    return '$size KB';
+  }
+
+  @override
+  String backupSizeMegabytes(String size) {
+    return '$size MB';
+  }
+
+  @override
+  String get updateCheckForUpdatesTitle => 'अपडेट की जांच करें';
+
+  @override
+  String updateCurrentVersion(String version) {
+    return 'वर्तमान संस्करण: $version';
+  }
+
+  @override
+  String get updateChecking => 'GitHub पर नई रिलीज़ खोजी जा रही है…';
+
+  @override
+  String get updateUpToDate => 'आपके पास नवीनतम संस्करण है।';
+
+  @override
+  String updateVersionAvailable(String version) {
+    return 'संस्करण $version उपलब्ध है';
+  }
+
+  @override
+  String updateDownloading(String percent) {
+    return 'डाउनलोड हो रहा है… $percent%';
+  }
+
+  @override
+  String get updateDownloadedHint => 'डाउनलोड हो गया। अगर इंस्टॉलर नहीं खुला, तो आपके डिवाइस पर Hearth को\n\"अज्ञात ऐप्स इंस्टॉल करें\" अनुमति देनी पड़ सकती है।';
+
+  @override
+  String get updateSomethingWentWrong => 'कुछ गलत हो गया';
+
+  @override
+  String get updateDownloadAndInstall => 'डाउनलोड और इंस्टॉल करें';
+
+  @override
+  String get updateRetryInstall => 'फिर से इंस्टॉल करें';
+
+  @override
+  String get updateCheckAgain => 'फिर से जांचें';
+
+  @override
+  String get updatesInstallPermissionTitle => 'Hearth को ऐप्स इंस्टॉल करने दें';
+
+  @override
+  String get updatesInstallPermissionMessage => 'अगली स्क्रीन पर Hearth ढूंढें और उसे चालू करें, फिर वापस दबाएं। यहां लौटने पर इंस्टॉल जारी रहेगा।';
+
+  @override
+  String get updatesOpenSettings => 'सेटिंग्स खोलें';
+
+  @override
+  String get updatesCheckFailed => 'अपडेट की जांच नहीं हो सकी';
+
+  @override
+  String get updatesInstallerNotStarted => 'इंस्टॉलर शुरू नहीं हुआ';
+
+  @override
+  String get updatesCheckForUpdates => 'अपडेट की जांच करें';
+
+  @override
+  String get updatesAutoUpdate => 'अपने आप अपडेट करें';
+
+  @override
+  String get updatesAutoUpdateDescription => 'Hearth रोज़ जांच करता है और अपने इंस्टॉल किए ऐप्स के अपडेट तब इंस्टॉल करता है जब वे इस्तेमाल में न हों';
+
+  @override
+  String get updatesFooter => 'हर ऐप की GitHub रिलीज़ से इंस्टॉल। Hearth के किसी ऐप को एक बार इंस्टॉल या अपडेट करने के बाद, उसके अपडेट बिना पूछे इंस्टॉल होते हैं, और ऐप अपडेट करना Hearth पर छोड़ देता है।';
+
+  @override
+  String get updatesChecking => 'जांच हो रही है…';
+
+  @override
+  String get updatesInstall => 'इंस्टॉल करें';
+
+  @override
+  String updatesUpdateTo(String version) {
+    return '$version पर अपडेट करें';
+  }
+
+  @override
+  String get updatesUpToDate => 'अप टू डेट';
+
+  @override
+  String updatesDownloadingPercent(int percent) {
+    return 'डाउनलोड हो रहा है $percent%';
+  }
+
+  @override
+  String get updatesInstalling => 'इंस्टॉल हो रहा है…';
+
+  @override
+  String get updatesError => 'त्रुटि';
+
+  @override
+  String get updatesHearthTubeDescription => 'Hearth के लिए YouTube; आपकी Hearth प्रोफ़ाइल के साथ चलता है';
+
+  @override
+  String updatesDescriptionWithVersion(String description, String version) {
+    return '$description · $version';
+  }
+
+  @override
+  String aboutForkOf(String launcher, String author, String parts) {
+    return '$author के $launcher का फ़ोर्क, $parts के कुछ हिस्सों के साथ';
+  }
+
+  @override
+  String get aboutDescription => 'Google TV के लिए एक निजी, परिवार के अनुकूल लॉन्चर, जिसमें Google TV प्रोफ़ाइल और Home Assistant शामिल हैं। विज्ञापन-मुक्त और ट्रैकर-मुक्त।';
+
+  @override
+  String get aboutHearthOnGitHub => 'GitHub पर Hearth';
+
+  @override
+  String get aboutCredits => 'श्रेय';
+
+  @override
+  String aboutFlauncherForkCredit(String author) {
+    return 'FLauncher फ़ोर्क · $author';
+  }
+
+  @override
+  String get aboutLicense => 'GNU GPL v3 के तहत मुक्त सॉफ़्टवेयर, उन प्रोजेक्ट्स की तरह जिन पर यह बना है।';
 }

@@ -1811,4 +1811,182 @@ class AppLocalizationsZh extends AppLocalizations {
   String blockedNotificationsHeading(int count) {
     return '已屏蔽的应用（$count）';
   }
+
+  @override
+  String get systemPageUseGoogleTv => '暂时使用 Google TV';
+
+  @override
+  String get backupShareText => 'Hearth 备份';
+
+  @override
+  String get backupShareFailedTitle => '共享失败';
+
+  @override
+  String backupShareFailed(String error) {
+    return '共享备份失败：$error';
+  }
+
+  @override
+  String get backupExportSuccessTitle => '导出成功';
+
+  @override
+  String get backupExportFailedTitle => '导出失败';
+
+  @override
+  String get backupImportSuccessTitle => '导入成功';
+
+  @override
+  String get backupImportFailedTitle => '导入失败';
+
+  @override
+  String get backupImport => '导入';
+
+  @override
+  String backupLoadError(String error) {
+    return '加载备份出错：$error';
+  }
+
+  @override
+  String get backupNoFiles => '未找到备份文件。';
+
+  @override
+  String backupFileDetails(String date, String size) {
+    return '$date（$size）';
+  }
+
+  @override
+  String backupSizeBytes(String size) {
+    return '$size B';
+  }
+
+  @override
+  String backupSizeKilobytes(String size) {
+    return '$size KB';
+  }
+
+  @override
+  String backupSizeMegabytes(String size) {
+    return '$size MB';
+  }
+
+  @override
+  String get updateCheckForUpdatesTitle => '检查更新';
+
+  @override
+  String updateCurrentVersion(String version) {
+    return '当前版本：$version';
+  }
+
+  @override
+  String get updateChecking => '正在 GitHub 上检查新版本…';
+
+  @override
+  String get updateUpToDate => '已是最新版本。';
+
+  @override
+  String updateVersionAvailable(String version) {
+    return '有新版本 $version 可用';
+  }
+
+  @override
+  String updateDownloading(String percent) {
+    return '正在下载… $percent%';
+  }
+
+  @override
+  String get updateDownloadedHint => '已下载。如果安装程序没有打开，可能需要在设备上\n为 Hearth 授予「安装未知应用」权限。';
+
+  @override
+  String get updateSomethingWentWrong => '出了点问题';
+
+  @override
+  String get updateDownloadAndInstall => '下载并安装';
+
+  @override
+  String get updateRetryInstall => '重试安装';
+
+  @override
+  String get updateCheckAgain => '再次检查';
+
+  @override
+  String get updatesInstallPermissionTitle => '允许 Hearth 安装应用';
+
+  @override
+  String get updatesInstallPermissionMessage => '在下一个页面中找到 Hearth 并开启，然后按返回键。回到这里后安装会继续。';
+
+  @override
+  String get updatesOpenSettings => '打开设置';
+
+  @override
+  String get updatesCheckFailed => '无法检查更新';
+
+  @override
+  String get updatesInstallerNotStarted => '安装程序未启动';
+
+  @override
+  String get updatesCheckForUpdates => '检查更新';
+
+  @override
+  String get updatesAutoUpdate => '自动更新';
+
+  @override
+  String get updatesAutoUpdateDescription => 'Hearth 每天检查，并在其安装的应用未使用时安装更新';
+
+  @override
+  String get updatesFooter => '从各应用的 GitHub 发布版本安装。Hearth 安装或更新某个应用一次后，其更新会直接安装，无需询问，应用也会将更新交给 Hearth。';
+
+  @override
+  String get updatesChecking => '正在检查…';
+
+  @override
+  String get updatesInstall => '安装';
+
+  @override
+  String updatesUpdateTo(String version) {
+    return '更新到 $version';
+  }
+
+  @override
+  String get updatesUpToDate => '已是最新';
+
+  @override
+  String updatesDownloadingPercent(int percent) {
+    return '正在下载 $percent%';
+  }
+
+  @override
+  String get updatesInstalling => '正在安装…';
+
+  @override
+  String get updatesError => '错误';
+
+  @override
+  String get updatesHearthTubeDescription => '适用于 Hearth 的 YouTube；跟随你的 Hearth 个人资料';
+
+  @override
+  String updatesDescriptionWithVersion(String description, String version) {
+    return '$description · $version';
+  }
+
+  @override
+  String aboutForkOf(String launcher, String author, String parts) {
+    return '$author 的 $launcher 的分支，包含 $parts 的部分代码';
+  }
+
+  @override
+  String get aboutDescription => '一款注重隐私、适合家庭的 Google TV 启动器，内置 Google TV 个人资料和 Home Assistant。无广告、无跟踪器。';
+
+  @override
+  String get aboutHearthOnGitHub => 'GitHub 上的 Hearth';
+
+  @override
+  String get aboutCredits => '致谢';
+
+  @override
+  String aboutFlauncherForkCredit(String author) {
+    return 'FLauncher 分支 · $author';
+  }
+
+  @override
+  String get aboutLicense => '与其所基于的项目一样，是遵循 GNU GPL v3 的自由软件。';
 }

@@ -19,6 +19,7 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'hearth_dialog.dart';
@@ -30,6 +31,7 @@ class HearthAboutDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
     return HearthDialogFrame(
       width: 380,
       padding: const EdgeInsets.all(20),
@@ -63,10 +65,10 @@ class HearthAboutDialog extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            "A fork of LTvLauncher by LeanBitLab, with parts of Arc Launcher",
+          Text(
+            localizations.aboutForkOf("LTvLauncher", "LeanBitLab", "Arc Launcher"),
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white70,
               fontSize: 13,
               fontWeight: FontWeight.w500,
@@ -79,10 +81,10 @@ class HearthAboutDialog extends StatelessWidget {
               color: Colors.white.withOpacity(0.04),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text(
-              "A private, family-friendly launcher for Google TV, with Google TV profiles and Home Assistant built in. Ad-free and tracker-free.",
+            child: Text(
+              localizations.aboutDescription,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white70,
                 fontSize: 11,
                 height: 1.4,
@@ -92,18 +94,18 @@ class HearthAboutDialog extends StatelessWidget {
           const SizedBox(height: 14),
           FocusableDialogButton(
             icon: Icons.code,
-            label: "Hearth on GitHub",
+            label: localizations.aboutHearthOnGitHub,
             autofocus: true,
             onPressed: () => context.read<FLauncherChannel>().openUrl("https://github.com/theSiegs/Hearth"),
           ),
           const SizedBox(height: 14),
 
           // Hearth stands on these projects (all GPL-3.0).
-          const Align(
+          Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              "Credits",
-              style: TextStyle(
+              localizations.aboutCredits,
+              style: const TextStyle(
                 color: Colors.white54,
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -132,21 +134,21 @@ class HearthAboutDialog extends StatelessWidget {
           const SizedBox(height: 6),
           FocusableDialogButton(
             icon: Icons.history,
-            label: "FLauncher fork · osrosal",
+            label: localizations.aboutFlauncherForkCredit("osrosal"),
             onPressed: () => context.read<FLauncherChannel>().openUrl("https://github.com/osrosal/flauncher"),
           ),
           const SizedBox(height: 10),
-          const Text(
-            "Free software under the GNU GPL v3, like the projects it builds on.",
+          Text(
+            localizations.aboutLicense,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white38, fontSize: 10),
+            style: const TextStyle(color: Colors.white38, fontSize: 10),
           ),
           const SizedBox(height: 6),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              "Close",
-              style: TextStyle(color: Colors.white54, fontSize: 13),
+            child: Text(
+              localizations.close,
+              style: const TextStyle(color: Colors.white54, fontSize: 13),
             ),
           ),
         ],

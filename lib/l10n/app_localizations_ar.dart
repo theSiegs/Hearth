@@ -1854,4 +1854,182 @@ class AppLocalizationsAr extends AppLocalizations {
   String blockedNotificationsHeading(int count) {
     return 'التطبيقات المحظورة ($count)';
   }
+
+  @override
+  String get systemPageUseGoogleTv => 'استخدام Google TV مؤقتًا';
+
+  @override
+  String get backupShareText => 'نسخة Hearth الاحتياطية';
+
+  @override
+  String get backupShareFailedTitle => 'فشلت المشاركة';
+
+  @override
+  String backupShareFailed(String error) {
+    return 'فشلت مشاركة النسخ الاحتياطي: $error';
+  }
+
+  @override
+  String get backupExportSuccessTitle => 'نجح التصدير';
+
+  @override
+  String get backupExportFailedTitle => 'فشل التصدير';
+
+  @override
+  String get backupImportSuccessTitle => 'نجح الاستيراد';
+
+  @override
+  String get backupImportFailedTitle => 'فشل الاستيراد';
+
+  @override
+  String get backupImport => 'استيراد';
+
+  @override
+  String backupLoadError(String error) {
+    return 'خطأ في تحميل النسخ الاحتياطية: $error';
+  }
+
+  @override
+  String get backupNoFiles => 'لم يتم العثور على ملفات نسخ احتياطي.';
+
+  @override
+  String backupFileDetails(String date, String size) {
+    return '$date ($size)';
+  }
+
+  @override
+  String backupSizeBytes(String size) {
+    return '$size بايت';
+  }
+
+  @override
+  String backupSizeKilobytes(String size) {
+    return '$size كيلوبايت';
+  }
+
+  @override
+  String backupSizeMegabytes(String size) {
+    return '$size ميغابايت';
+  }
+
+  @override
+  String get updateCheckForUpdatesTitle => 'التحقق من التحديثات';
+
+  @override
+  String updateCurrentVersion(String version) {
+    return 'الإصدار الحالي: $version';
+  }
+
+  @override
+  String get updateChecking => 'جارٍ البحث عن إصدار جديد على GitHub…';
+
+  @override
+  String get updateUpToDate => 'أنت تستخدم أحدث إصدار.';
+
+  @override
+  String updateVersionAvailable(String version) {
+    return 'الإصدار $version متاح';
+  }
+
+  @override
+  String updateDownloading(String percent) {
+    return 'جارٍ التنزيل… $percent%';
+  }
+
+  @override
+  String get updateDownloadedHint => 'تم التنزيل. إذا لم يُفتح المثبّت، فقد يحتاج جهازك إلى\nمنح Hearth إذن \"تثبيت التطبيقات غير المعروفة\".';
+
+  @override
+  String get updateSomethingWentWrong => 'حدث خطأ ما';
+
+  @override
+  String get updateDownloadAndInstall => 'تنزيل وتثبيت';
+
+  @override
+  String get updateRetryInstall => 'إعادة محاولة التثبيت';
+
+  @override
+  String get updateCheckAgain => 'التحقق مجددًا';
+
+  @override
+  String get updatesInstallPermissionTitle => 'السماح لـ Hearth بتثبيت التطبيقات';
+
+  @override
+  String get updatesInstallPermissionMessage => 'في الشاشة التالية، ابحث عن Hearth وفعّله، ثم اضغط رجوع. سيستمر التثبيت عند عودتك إلى هنا.';
+
+  @override
+  String get updatesOpenSettings => 'فتح الإعدادات';
+
+  @override
+  String get updatesCheckFailed => 'تعذّر التحقق من التحديثات';
+
+  @override
+  String get updatesInstallerNotStarted => 'لم يبدأ المثبّت';
+
+  @override
+  String get updatesCheckForUpdates => 'التحقق من التحديثات';
+
+  @override
+  String get updatesAutoUpdate => 'التحديث تلقائيًا';
+
+  @override
+  String get updatesAutoUpdateDescription => 'يتحقق Hearth يوميًا ويثبّت تحديثات التطبيقات التي ثبّتها، عندما لا تكون قيد الاستخدام';
+
+  @override
+  String get updatesFooter => 'تُثبَّت من إصدارات GitHub لكل تطبيق. بعد أن يثبّت Hearth تطبيقًا أو يحدّثه مرة واحدة، تُثبَّت تحديثاته دون سؤال، ويترك التطبيق التحديث لـ Hearth.';
+
+  @override
+  String get updatesChecking => 'جارٍ التحقق…';
+
+  @override
+  String get updatesInstall => 'تثبيت';
+
+  @override
+  String updatesUpdateTo(String version) {
+    return 'التحديث إلى $version';
+  }
+
+  @override
+  String get updatesUpToDate => 'محدّث';
+
+  @override
+  String updatesDownloadingPercent(int percent) {
+    return 'جارٍ التنزيل $percent%';
+  }
+
+  @override
+  String get updatesInstalling => 'جارٍ التثبيت…';
+
+  @override
+  String get updatesError => 'خطأ';
+
+  @override
+  String get updatesHearthTubeDescription => 'YouTube لـ Hearth؛ يتبع ملفك الشخصي في Hearth';
+
+  @override
+  String updatesDescriptionWithVersion(String description, String version) {
+    return '$description · $version';
+  }
+
+  @override
+  String aboutForkOf(String launcher, String author, String parts) {
+    return 'نسخة متفرعة من $launcher من $author، مع أجزاء من $parts';
+  }
+
+  @override
+  String get aboutDescription => 'مشغّل خاص ومناسب للعائلة لـ Google TV، مع ملفات Google TV الشخصية وHome Assistant مدمجة. بلا إعلانات وبلا تتبع.';
+
+  @override
+  String get aboutHearthOnGitHub => 'Hearth على GitHub';
+
+  @override
+  String get aboutCredits => 'شكر وتقدير';
+
+  @override
+  String aboutFlauncherForkCredit(String author) {
+    return 'نسخة متفرعة من FLauncher · $author';
+  }
+
+  @override
+  String get aboutLicense => 'برنامج حر بموجب رخصة GNU GPL v3، مثل المشاريع التي يعتمد عليها.';
 }
