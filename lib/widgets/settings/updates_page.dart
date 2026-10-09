@@ -1,3 +1,4 @@
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'dart:async';
 
 import 'package:flauncher/flauncher_channel.dart';
@@ -15,7 +16,6 @@ enum _State { checking, notInstalled, upToDate, updateAvailable, downloading, in
 /// Updates: Hearth's own, and installing and updating the companion apps from their GitHub releases.
 class UpdatesPage extends StatefulWidget {
   static const String routeName = "companion_apps";
-  static const String title = "Updates";
 
   const UpdatesPage({super.key});
 
@@ -175,7 +175,7 @@ class _UpdatesPageState extends State<UpdatesPage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return SettingsPage(
-      title: UpdatesPage.title,
+      title: AppLocalizations.of(context)!.updatesTitle,
       children: [
         FocusableSettingsTile(
           autofocus: true,

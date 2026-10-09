@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -50,7 +51,7 @@ class ContinueWatchingCardSizePage extends StatelessWidget {
       builder: (context, currentHeight, _) {
         final settingsService = context.read<SettingsService>();
         return SettingsPage(
-          title: 'Card Size',
+          title: AppLocalizations.of(context)!.cardSizeTitle,
           children: [
             for (final (height, title, subtitle) in cardSizePresets)
               SettingsChoiceTile<int>(

@@ -138,10 +138,8 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
 /// Setup & permissions: what to turn on in Android's Settings for Hearth, each with its status, and Start on boot.
 class SetupChecklistPage extends StatefulWidget {
   static const String routeName = "setup_checklist";
-  static const String title = "Setup & permissions";
-
   /// Where this page is, for the hints on other pages that send people here.
-  static const String breadcrumb = "Settings > System > $title";
+  static String breadcrumb(AppLocalizations l) => "${l.settingsTitle} > ${l.system} > ${l.setupPermissionsTitle}";
 
   const SetupChecklistPage({super.key});
 
@@ -242,7 +240,7 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
     final steps = _steps;
     final required = steps?.where((s) => !s.optional).toList() ?? [];
     return SettingsPage.custom(
-      title: SetupChecklistPage.title,
+      title: AppLocalizations.of(context)!.setupPermissionsTitle,
       subtitle: steps == null
           ? null
           : Text(
@@ -278,7 +276,7 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
                   _startOnBootTile(context),
                   FocusableSettingsTile(
                     leading: const Icon(Icons.people_alt_outlined),
-                    title: Text("Hearth on other profiles", style: textTheme.bodyMedium),
+                    title: Text(AppLocalizations.of(context)!.familyAppsTitle, style: textTheme.bodyMedium),
                     trailing: const Icon(Icons.chevron_right, color: Colors.white54),
                     onPressed: () => Navigator.of(context).pushNamed(FamilyAppsPage.routeName),
                   ),

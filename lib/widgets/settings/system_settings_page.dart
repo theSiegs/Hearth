@@ -49,12 +49,12 @@ class SystemSettingsPage extends StatelessWidget {
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.checklist),
-          title: Text(SetupChecklistPage.title, style: Theme.of(context).textTheme.bodyMedium),
+          title: Text(AppLocalizations.of(context)!.setupPermissionsTitle, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: () => Navigator.of(context).pushNamed(SetupChecklistPage.routeName),
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.system_update_outlined),
-          title: Text(UpdatesPage.title, style: Theme.of(context).textTheme.bodyMedium),
+          title: Text(AppLocalizations.of(context)!.updatesTitle, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: () => Navigator.of(context).pushNamed(UpdatesPage.routeName),
         ),
         FocusableSettingsTile(

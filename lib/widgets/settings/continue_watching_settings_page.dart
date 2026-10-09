@@ -114,7 +114,7 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
           ),
           FocusableSettingsTile(
             leading: const Icon(Icons.aspect_ratio_outlined),
-            title: Text('Card Size', style: Theme.of(context).textTheme.bodyMedium),
+            title: Text(AppLocalizations.of(context)!.cardSizeTitle, style: Theme.of(context).textTheme.bodyMedium),
             trailing: Text(
               sizeLabel,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
@@ -123,7 +123,7 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
           ),
           FocusableSettingsTile(
             leading: const Icon(Icons.format_list_numbered_outlined),
-            title: Text('Maximum Items', style: Theme.of(context).textTheme.bodyMedium),
+            title: Text(AppLocalizations.of(context)!.maxItemsTitle, style: Theme.of(context).textTheme.bodyMedium),
             trailing: Text(
               maxItemsLabel,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),

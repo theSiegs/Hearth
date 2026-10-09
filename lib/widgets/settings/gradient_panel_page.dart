@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/gradients.dart';
 import 'package:flauncher/providers/wallpaper_service.dart';
 import 'package:flauncher/widgets/ensure_visible.dart';
@@ -30,7 +31,7 @@ class GradientPanelPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SettingsPage.custom(
-        title: "Gradient",
+        title: AppLocalizations.of(context)!.gradient,
         body: GridView.count(
           crossAxisCount: 2,
           childAspectRatio: 4 / 3,

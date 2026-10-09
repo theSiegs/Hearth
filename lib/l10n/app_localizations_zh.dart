@@ -393,4 +393,64 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dpadDismissHint => '左键: 关闭 • 确定: 选项';
+
+  @override
+  String get settingsTitle => '设置';
+
+  @override
+  String get profilesTitle => '个人资料';
+
+  @override
+  String get homeScreenTitle => '主屏幕';
+
+  @override
+  String get remoteAndSearchTitle => '遥控器和搜索';
+
+  @override
+  String get parentSettingsTitle => '家长设置';
+
+  @override
+  String get tvPowerTitle => '电视和电源';
+
+  @override
+  String get setupPermissionsTitle => '设置和权限';
+
+  @override
+  String get updatesTitle => '更新';
+
+  @override
+  String get familyAppsTitle => '其他个人资料中的 Hearth';
+
+  @override
+  String get cardStyleTitle => '卡片样式';
+
+  @override
+  String get dockLabelsTitle => '程序坞和标签';
+
+  @override
+  String get animationsSoundTitle => '动画和声音';
+
+  @override
+  String get haPanelTitle => '仪表板面板';
+
+  @override
+  String get lookTitle => '外观';
+
+  @override
+  String get remoteButtonsTitle => '遥控器按钮';
+
+  @override
+  String get profilePairingTitle => '个人资料配对';
+
+  @override
+  String get haTvStatusTitle => '电视状态';
+
+  @override
+  String get continueWatchingAppsTitle => '继续观看应用';
+
+  @override
+  String get cardSizeTitle => '卡片大小';
+
+  @override
+  String get maxItemsTitle => '最多项目数';
 }

@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/settings/continue_watching_card_size_page.dart';
 import 'package:flutter/material.dart';
@@ -32,7 +33,10 @@ void main() {
 
     await tester.pumpWidget(ChangeNotifierProvider<SettingsService>.value(
       value: settingsService,
-      child: const MaterialApp(home: Scaffold(body: ContinueWatchingCardSizePage())),
+      child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: ContinueWatchingCardSizePage())),
     ));
     await tester.pumpAndSettle();
 

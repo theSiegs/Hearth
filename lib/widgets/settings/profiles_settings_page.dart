@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
@@ -39,7 +40,7 @@ class ProfilesSettingsPage extends StatelessWidget {
     final hasPin = context.select<SettingsService, bool>((s) => s.hasParentPin);
     final bool locked = settingsLocked(context);
     return SettingsPage(
-      title: "Profiles",
+      title: AppLocalizations.of(context)!.profilesTitle,
       children: [
         FocusableSettingsTile(
           autofocus: true,
@@ -53,7 +54,7 @@ class ProfilesSettingsPage extends StatelessWidget {
         if (!locked)
           FocusableSettingsTile(
             leading: const Icon(Icons.switch_account),
-            title: Text("Profile Pairing", style: textTheme.bodyMedium),
+            title: Text(AppLocalizations.of(context)!.profilePairingTitle, style: textTheme.bodyMedium),
             onPressed: () => Navigator.of(context).pushNamed(ProfilePairingPage.routeName),
           ),
         if (!locked)

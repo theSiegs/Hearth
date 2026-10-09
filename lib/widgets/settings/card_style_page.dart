@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -26,7 +27,6 @@ import 'settings_page.dart';
 
 class CardStylePage extends StatelessWidget {
   static const String routeName = "themes_panel";
-  static const String title = "Card style";
 
   const CardStylePage({super.key});
 
@@ -35,7 +35,7 @@ class CardStylePage extends StatelessWidget {
     final current = context.select<SettingsService, String>((s) => s.themes);
 
     return SettingsPage(
-      title: title,
+      title: AppLocalizations.of(context)!.cardStyleTitle,
       children: [
         for (final MapEntry(key: value, value: label) in LookSettingsPage.cardStyles.entries)
           SettingsChoiceTile<String>(

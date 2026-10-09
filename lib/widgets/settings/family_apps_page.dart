@@ -1,3 +1,4 @@
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +14,6 @@ import 'settings_page.dart';
 /// at each profile start); other adult profiles get a plain install, as a convenience, when the toggle is on.
 class FamilyAppsPage extends StatefulWidget {
   static const String routeName = "family_apps";
-  static const String title = "Hearth on other profiles";
 
   const FamilyAppsPage({super.key});
 
@@ -192,7 +192,7 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
     final settings = context.watch<SettingsService>();
     final adultsOn = settings.pushToAdultProfiles;
     return SettingsPage(
-      title: FamilyAppsPage.title,
+      title: AppLocalizations.of(context)!.familyAppsTitle,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Padding(

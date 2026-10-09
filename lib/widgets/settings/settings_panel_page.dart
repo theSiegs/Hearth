@@ -64,7 +64,7 @@ class SettingsPanelPage extends StatelessWidget {
                 FocusableSettingsTile(
                   autofocus: !justUnlocked,
                   leading: const Icon(Icons.people_outline),
-                  title: Text("Profiles", style: Theme.of(context).textTheme.bodyMedium),
+                  title: Text(localizations.profilesTitle, style: Theme.of(context).textTheme.bodyMedium),
                   trailing: Text(ProfilesSettingsPage.activeProfileLabel(context) ?? "", style: Theme.of(context).textTheme.bodySmall),
                   onPressed: () => Navigator.of(context).pushNamed(ProfilesSettingsPage.routeName),
                 ),
@@ -77,13 +77,13 @@ class SettingsPanelPage extends StatelessWidget {
                   ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.auto_awesome_mosaic_outlined),
-                  title: Text(HomeScreenSettingsPage.title, style: Theme.of(context).textTheme.bodyMedium),
+                  title: Text(localizations.homeScreenTitle, style: Theme.of(context).textTheme.bodyMedium),
                   onPressed: () => Navigator.of(context).pushNamed(HomeScreenSettingsPage.routeName),
                 ),
                 if (!locked) ...[
                   FocusableSettingsTile(
                     leading: const Icon(Icons.settings_remote_outlined),
-                    title: Text("Remote & search", style: Theme.of(context).textTheme.bodyMedium),
+                    title: Text(localizations.remoteAndSearchTitle, style: Theme.of(context).textTheme.bodyMedium),
                     onPressed: () => Navigator.of(context).pushNamed(RemoteSearchSettingsPage.routeName),
                   ),
                   FocusableSettingsTile(
@@ -98,7 +98,7 @@ class SettingsPanelPage extends StatelessWidget {
                   ),
                   FocusableSettingsTile(
                     leading: const Icon(Icons.tv),
-                    title: Text(TvPowerSettingsPage.title, style: Theme.of(context).textTheme.bodyMedium),
+                    title: Text(localizations.tvPowerTitle, style: Theme.of(context).textTheme.bodyMedium),
                     onPressed: () => Navigator.of(context).pushNamed(TvPowerSettingsPage.routeName),
                   ),
                   FocusableSettingsTile(
@@ -111,7 +111,7 @@ class SettingsPanelPage extends StatelessWidget {
                 if (locked)
                   FocusableSettingsTile(
                     leading: const Icon(Icons.lock_outline),
-                    title: Text("Parent settings", style: Theme.of(context).textTheme.bodyMedium),
+                    title: Text(localizations.parentSettingsTitle, style: Theme.of(context).textTheme.bodyMedium),
                     onPressed: () => unlockSettings(context),
                   ),
               ],

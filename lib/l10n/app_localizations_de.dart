@@ -393,4 +393,64 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get dpadDismissHint => 'Links: Verwerfen • OK: Optionen';
+
+  @override
+  String get settingsTitle => 'Einstellungen';
+
+  @override
+  String get profilesTitle => 'Profile';
+
+  @override
+  String get homeScreenTitle => 'Startbildschirm';
+
+  @override
+  String get remoteAndSearchTitle => 'Fernbedienung & Suche';
+
+  @override
+  String get parentSettingsTitle => 'Eltern-Einstellungen';
+
+  @override
+  String get tvPowerTitle => 'TV & Energie';
+
+  @override
+  String get setupPermissionsTitle => 'Einrichtung & Berechtigungen';
+
+  @override
+  String get updatesTitle => 'Updates';
+
+  @override
+  String get familyAppsTitle => 'Hearth auf anderen Profilen';
+
+  @override
+  String get cardStyleTitle => 'Kartenstil';
+
+  @override
+  String get dockLabelsTitle => 'Dock & Beschriftungen';
+
+  @override
+  String get animationsSoundTitle => 'Animationen & Ton';
+
+  @override
+  String get haPanelTitle => 'Dashboard-Bereich';
+
+  @override
+  String get lookTitle => 'Aussehen';
+
+  @override
+  String get remoteButtonsTitle => 'Fernbedienungstasten';
+
+  @override
+  String get profilePairingTitle => 'Profilkopplung';
+
+  @override
+  String get haTvStatusTitle => 'TV-Status';
+
+  @override
+  String get continueWatchingAppsTitle => 'Weiterschauen-Apps';
+
+  @override
+  String get cardSizeTitle => 'Kartengröße';
+
+  @override
+  String get maxItemsTitle => 'Maximale Anzahl';
 }

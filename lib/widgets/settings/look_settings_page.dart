@@ -50,12 +50,12 @@ class LookSettingsPage extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final cardStyle = context.select<SettingsService, String>((s) => s.themes);
     return SettingsPage(
-      title: "Look",
+      title: AppLocalizations.of(context)!.lookTitle,
       children: [
         FocusableSettingsTile(
           autofocus: true,
           leading: const Icon(Icons.crop_square),
-          title: Text(CardStylePage.title, style: textTheme.bodyMedium),
+          title: Text(AppLocalizations.of(context)!.cardStyleTitle, style: textTheme.bodyMedium),
           trailing: Text(cardStyles[cardStyle] ?? "", style: textTheme.bodySmall),
           onPressed: () => Navigator.of(context).pushNamed(CardStylePage.routeName),
         ),
@@ -66,12 +66,12 @@ class LookSettingsPage extends StatelessWidget {
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.call_to_action_outlined),
-          title: Text(DockLabelsPage.title, style: textTheme.bodyMedium),
+          title: Text(AppLocalizations.of(context)!.dockLabelsTitle, style: textTheme.bodyMedium),
           onPressed: () => Navigator.of(context).pushNamed(DockLabelsPage.routeName),
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.animation),
-          title: Text(AnimationsSoundPage.title, style: textTheme.bodyMedium),
+          title: Text(AppLocalizations.of(context)!.animationsSoundTitle, style: textTheme.bodyMedium),
           onPressed: () => Navigator.of(context).pushNamed(AnimationsSoundPage.routeName),
         ),
       ],

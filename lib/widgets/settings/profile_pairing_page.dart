@@ -1,3 +1,4 @@
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
@@ -75,7 +76,7 @@ class _ProfilePairingPageState extends State<ProfilePairingPage> {
     final textTheme = Theme.of(context).textTheme;
     final apps = _apps;
     return SettingsPage.custom(
-      title: "Profile Pairing",
+      title: AppLocalizations.of(context)!.profilePairingTitle,
       body: apps == null
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(

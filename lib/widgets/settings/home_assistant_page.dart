@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -78,19 +79,19 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
         FocusableSettingsTile(
           autofocus: true,
           leading: const Icon(Icons.notifications_active_outlined),
-          title: Text("Notifications", style: textTheme.bodyMedium),
+          title: Text(AppLocalizations.of(context)!.notifications, style: textTheme.bodyMedium),
           trailing: Text(_onOff(_notifications), style: textTheme.bodySmall),
           onPressed: () => _open(HaNotificationsPage.routeName),
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.dashboard_outlined),
-          title: Text(HaPanelPage.title, style: textTheme.bodyMedium),
+          title: Text(AppLocalizations.of(context)!.haPanelTitle, style: textTheme.bodyMedium),
           trailing: Text(_onOff(panel), style: textTheme.bodySmall),
           onPressed: () => _open(HaPanelPage.routeName),
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.sensors_outlined),
-          title: Text("TV status", style: textTheme.bodyMedium),
+          title: Text(AppLocalizations.of(context)!.haTvStatusTitle, style: textTheme.bodyMedium),
           trailing: Text(_reporting == null ? "" : (_reporting! ? "Reporting" : "Off"), style: textTheme.bodySmall),
           onPressed: () => _open(HaStatusPage.routeName),
         ),
@@ -151,14 +152,14 @@ class _HaNotificationsPageState extends State<HaNotificationsPage> {
     final shown = await _channel.sendHaTestNotification();
     if (mounted) {
       setState(() => _testResult =
-          shown ? null : "Turn on Home Button Fix (${SetupChecklistPage.breadcrumb}); it shows the pop-ups.");
+          shown ? null : "Turn on Home Button Fix (${SetupChecklistPage.breadcrumb(AppLocalizations.of(context)!)}); it shows the pop-ups.");
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return SettingsPage(
-      title: "Notifications",
+      title: AppLocalizations.of(context)!.notifications,
       children: [
         RoundedSwitchListTile(
           autofocus: true,
@@ -180,7 +181,7 @@ class _HaNotificationsPageState extends State<HaNotificationsPage> {
           "${_ip ?? "(this TV's IP address)"}. Then send notifications to it from automations, for "
           "example for the doorbell or when the laundry is done.\n\n"
           "Only devices on your home network can send them (port 7676). Pop-ups appear over any app "
-          "and need Home Button Fix (${SetupChecklistPage.breadcrumb}) to be on.",
+          "and need Home Button Fix (${SetupChecklistPage.breadcrumb(AppLocalizations.of(context)!)}) to be on.",
         ),
       ],
     );
@@ -190,10 +191,8 @@ class _HaNotificationsPageState extends State<HaNotificationsPage> {
 /// A Home Assistant dashboard that slides in from the right edge, signed in with a long-lived token.
 class HaPanelPage extends StatefulWidget {
   static const String routeName = "home_assistant_panel";
-  static const String title = "Dashboard panel";
-
   /// Where this page is, for the hints on other pages that send people here.
-  static const String breadcrumb = "Settings > Home Assistant > $title";
+  static String breadcrumb(AppLocalizations l) => "${l.settingsTitle} > Home Assistant > ${l.haPanelTitle}";
 
   const HaPanelPage({super.key});
 
@@ -259,7 +258,7 @@ class _HaPanelPageState extends State<HaPanelPage> {
   @override
   Widget build(BuildContext context) {
     return SettingsPage(
-      title: HaPanelPage.title,
+      title: AppLocalizations.of(context)!.haPanelTitle,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Selector<SettingsService, bool>(
@@ -385,7 +384,7 @@ class _HaStatusPageState extends State<HaStatusPage> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     return SettingsPage(
-      title: "TV status",
+      title: AppLocalizations.of(context)!.haTvStatusTitle,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),

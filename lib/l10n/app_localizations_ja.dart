@@ -393,4 +393,64 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get dpadDismissHint => '左: 非表示 • OK: オプション';
+
+  @override
+  String get settingsTitle => '設定';
+
+  @override
+  String get profilesTitle => 'プロフィール';
+
+  @override
+  String get homeScreenTitle => 'ホーム画面';
+
+  @override
+  String get remoteAndSearchTitle => 'リモコンと検索';
+
+  @override
+  String get parentSettingsTitle => '保護者の設定';
+
+  @override
+  String get tvPowerTitle => 'テレビと電源';
+
+  @override
+  String get setupPermissionsTitle => 'セットアップと権限';
+
+  @override
+  String get updatesTitle => 'アップデート';
+
+  @override
+  String get familyAppsTitle => '他のプロフィールの Hearth';
+
+  @override
+  String get cardStyleTitle => 'カードのスタイル';
+
+  @override
+  String get dockLabelsTitle => 'ドックとラベル';
+
+  @override
+  String get animationsSoundTitle => 'アニメーションとサウンド';
+
+  @override
+  String get haPanelTitle => 'ダッシュボードパネル';
+
+  @override
+  String get lookTitle => '外観';
+
+  @override
+  String get remoteButtonsTitle => 'リモコンのボタン';
+
+  @override
+  String get profilePairingTitle => 'プロフィールの連携';
+
+  @override
+  String get haTvStatusTitle => 'テレビの状態';
+
+  @override
+  String get continueWatchingAppsTitle => '「続きを見る」のアプリ';
+
+  @override
+  String get cardSizeTitle => 'カードのサイズ';
+
+  @override
+  String get maxItemsTitle => '最大アイテム数';
 }

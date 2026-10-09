@@ -393,4 +393,64 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get dpadDismissHint => 'يسار: تجاهل • موافق: خيارات';
+
+  @override
+  String get settingsTitle => 'الإعدادات';
+
+  @override
+  String get profilesTitle => 'الملفات الشخصية';
+
+  @override
+  String get homeScreenTitle => 'الشاشة الرئيسية';
+
+  @override
+  String get remoteAndSearchTitle => 'جهاز التحكم والبحث';
+
+  @override
+  String get parentSettingsTitle => 'إعدادات الوالدين';
+
+  @override
+  String get tvPowerTitle => 'التلفزيون والطاقة';
+
+  @override
+  String get setupPermissionsTitle => 'الإعداد والأذونات';
+
+  @override
+  String get updatesTitle => 'التحديثات';
+
+  @override
+  String get familyAppsTitle => 'Hearth على الملفات الشخصية الأخرى';
+
+  @override
+  String get cardStyleTitle => 'نمط البطاقات';
+
+  @override
+  String get dockLabelsTitle => 'الشريط والتسميات';
+
+  @override
+  String get animationsSoundTitle => 'الحركات والصوت';
+
+  @override
+  String get haPanelTitle => 'لوحة المعلومات الجانبية';
+
+  @override
+  String get lookTitle => 'المظهر';
+
+  @override
+  String get remoteButtonsTitle => 'أزرار جهاز التحكم';
+
+  @override
+  String get profilePairingTitle => 'ربط الملفات الشخصية';
+
+  @override
+  String get haTvStatusTitle => 'حالة التلفزيون';
+
+  @override
+  String get continueWatchingAppsTitle => 'تطبيقات متابعة المشاهدة';
+
+  @override
+  String get cardSizeTitle => 'حجم البطاقة';
+
+  @override
+  String get maxItemsTitle => 'الحد الأقصى للعناصر';
 }
