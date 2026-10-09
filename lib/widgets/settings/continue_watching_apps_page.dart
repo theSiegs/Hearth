@@ -37,6 +37,7 @@ class ContinueWatchingAppsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final settingsService = context.watch<SettingsService>();
     final watchNextService = context.watch<WatchNextService>();
@@ -54,22 +55,22 @@ class ContinueWatchingAppsPage extends StatelessWidget {
     final unknownBlockedPkg = blockedPackages.where((p) => !knownBlockedPkg.contains(p)).toList();
 
     return SettingsPage.custom(
-      title: AppLocalizations.of(context)!.continueWatchingAppsTitle,
+      title: localizations.continueWatchingAppsTitle,
       // A long list: rows are built as they scroll into view
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 8),
         children: [
           BlockedAppsSection(
-            title: 'Blocked from Continue Watching (${blockedPackages.length})',
+            title: localizations.cwAppsBlockedHeading(blockedPackages.length),
             apps: knownBlockedApps,
             missingPackages: unknownBlockedPkg,
-            blockedLabel: 'Blocked from Continue Watching',
-            unblockLabel: 'Unblock',
-            unblockAllLabel: 'Unblock All Apps',
+            blockedLabel: localizations.cwAppsBlockedFromContinueWatching,
+            unblockLabel: localizations.cwAppsUnblock,
+            unblockAllLabel: localizations.cwAppsUnblockAllApps,
             appIcon: Icons.tv,
             emptyIcon: Icons.check_circle_outline,
-            emptyTitle: 'No Blocked Apps',
-            emptyMessage: 'All supported apps can show items in Continue Watching.',
+            emptyTitle: localizations.cwAppsNoBlockedApps,
+            emptyMessage: localizations.cwAppsNoBlockedAppsMessage,
             onUnblock: (pkg) => watchNextService.setPackageHidden(settingsService, pkg, false),
             onUnblockAll: () => watchNextService.unhideAll(settingsService),
           ),
@@ -86,16 +87,16 @@ class ContinueWatchingAppsPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Apps with Continue Watching',
+                  localizations.cwAppsWithContinueWatching,
                   style: theme.textTheme.titleSmall?.copyWith(
                     color: theme.colorScheme.primary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  'Apps currently providing Watch Next items on your home screen',
-                  style: TextStyle(color: Colors.white54, fontSize: 11),
+                Text(
+                  localizations.cwAppsWithContinueWatchingHint,
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
               ],
             ),
@@ -117,7 +118,7 @@ class ContinueWatchingAppsPage extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'No apps are currently providing Continue Watching items.\nWhen supported apps (such as SmartTube or streaming services) add items, they will appear here.',
+                        localizations.cwAppsNoActiveApps,
                         style: theme.textTheme.bodySmall?.copyWith(color: Colors.white60, height: 1.3),
                       ),
                     ),
@@ -143,8 +144,8 @@ class ContinueWatchingAppsPage extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       isBlocked
-                          ? 'Blocked from Continue Watching'
-                          : '$count active item(s)',
+                          ? localizations.cwAppsBlockedFromContinueWatching
+                          : localizations.cwAppsActiveItems(count),
                       style: TextStyle(
                         fontSize: 11,
                         color: isBlocked ? Colors.redAccent : Colors.white54,
@@ -168,16 +169,16 @@ class ContinueWatchingAppsPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'All Installed Apps',
+                  localizations.cwAppsAllInstalledApps,
                   style: theme.textTheme.titleSmall?.copyWith(
                     color: theme.colorScheme.primary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  'Toggle off to block any app from adding items to Continue Watching',
-                  style: TextStyle(color: Colors.white54, fontSize: 11),
+                Text(
+                  localizations.cwAppsAllInstalledAppsHint,
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
               ],
             ),
@@ -196,7 +197,7 @@ class ContinueWatchingAppsPage extends StatelessWidget {
                   Text(app.name, style: theme.textTheme.bodyMedium),
                   const SizedBox(height: 2),
                   Text(
-                    isBlocked ? 'Blocked' : 'Allowed',
+                    isBlocked ? localizations.cwAppsBlocked : localizations.cwAppsAllowed,
                     style: TextStyle(
                       fontSize: 11,
                       color: isBlocked ? Colors.redAccent : Colors.white54,

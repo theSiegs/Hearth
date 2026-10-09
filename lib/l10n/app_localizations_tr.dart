@@ -1550,4 +1550,199 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get dataUsageMonthly => 'Aylık';
+
+  @override
+  String cwAppsBlockedHeading(int count) {
+    return 'İzlemeye Devam Et\'ten engellenenler ($count)';
+  }
+
+  @override
+  String get cwAppsBlockedFromContinueWatching => 'İzlemeye Devam Et\'ten engellendi';
+
+  @override
+  String get cwAppsUnblock => 'Engeli kaldır';
+
+  @override
+  String get cwAppsUnblockAllApps => 'Tüm uygulamaların engelini kaldır';
+
+  @override
+  String get cwAppsNoBlockedApps => 'Engellenen uygulama yok';
+
+  @override
+  String get cwAppsNoBlockedAppsMessage => 'Desteklenen tüm uygulamalar İzlemeye Devam Et\'te öğe gösterebilir.';
+
+  @override
+  String get cwAppsWithContinueWatching => 'İzlemeye Devam Et içeren uygulamalar';
+
+  @override
+  String get cwAppsWithContinueWatchingHint => 'Şu anda ana ekranınıza Watch Next öğeleri sağlayan uygulamalar';
+
+  @override
+  String get cwAppsNoActiveApps => 'Şu anda hiçbir uygulama İzlemeye Devam Et öğesi sağlamıyor.\nDesteklenen uygulamalar (SmartTube veya yayın hizmetleri gibi) öğe eklediğinde burada görünür.';
+
+  @override
+  String cwAppsActiveItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count etkin öğe',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwAppsAllInstalledApps => 'Tüm yüklü uygulamalar';
+
+  @override
+  String get cwAppsAllInstalledAppsHint => 'Bir uygulamanın İzlemeye Devam Et\'e öğe eklemesini engellemek için kapatın';
+
+  @override
+  String get cwAppsBlocked => 'Engellendi';
+
+  @override
+  String get cwAppsAllowed => 'İzin verildi';
+
+  @override
+  String cwCardSizeOption(int height, String size) {
+    return '$height dp • $size';
+  }
+
+  @override
+  String cwCardSizeDimensions(int width, int height) {
+    return '$width × $height dp';
+  }
+
+  @override
+  String cwCardSizeDp(int height) {
+    return '$height dp';
+  }
+
+  @override
+  String cwCardSizeDpNamed(int height, String size) {
+    return '$height dp ($size)';
+  }
+
+  @override
+  String get cwCardSizeExtraSmall => 'Ekstra küçük';
+
+  @override
+  String get cwCardSizeVerySmall => 'Çok küçük';
+
+  @override
+  String get cwCardSizeSmall => 'Küçük';
+
+  @override
+  String get cwCardSizeCompact => 'Kompakt';
+
+  @override
+  String get cwCardSizeMediumSmall => 'Orta küçük';
+
+  @override
+  String get cwCardSizeMedium => 'Orta';
+
+  @override
+  String get cwCardSizeStandardDefault => 'Standart (varsayılan)';
+
+  @override
+  String get cwCardSizeStandard => 'Standart';
+
+  @override
+  String get cwCardSizeMediumLarge => 'Orta büyük';
+
+  @override
+  String get cwCardSizeLarge => 'Büyük';
+
+  @override
+  String get cwCardSizeVeryLarge => 'Çok büyük';
+
+  @override
+  String get cwCardSizeExtraLarge => 'Ekstra büyük';
+
+  @override
+  String get cwCardSizeHuge => 'Dev';
+
+  @override
+  String cwMaxItemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count öğe',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cwMaxItemsUpTo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'En fazla $count son öğeyi göster',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cwMaxItemsDefaultNote(String description) {
+    return '$description • Varsayılan';
+  }
+
+  @override
+  String get cwUnlimited => 'Sınırsız';
+
+  @override
+  String get cwMaxItemsAll => 'Tüm mevcut öğeleri göster';
+
+  @override
+  String cwMaxItemsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count öğe',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwPlaybackProgressBar => 'Oynatma ilerleme çubuğu';
+
+  @override
+  String get cwPlaybackPercentage => 'Oynatma yüzdesi';
+
+  @override
+  String get cwEpisodeDetails => 'Bölüm ve video ayrıntıları';
+
+  @override
+  String cwBlockedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count engellendi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwManage => 'Yönet';
+
+  @override
+  String get cwRestoreHiddenPrograms => 'Gizli programları geri yükle';
+
+  @override
+  String cwHiddenCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count gizli',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwHiddenProgramsRestored => 'Tüm gizli programlar geri yüklendi';
+
+  @override
+  String get cwWatchNextAdbTitle => 'Watch Next Erişimi (ADB gerekli)';
+
+  @override
+  String get cwWatchNextAdbMessage => 'Android TV, başlatıcıların yüklü uygulamalardaki İzlemeye Devam Et satırlarını okuyup göstermesi için READ_WRITE_WATCH_NEXT_PROGRAMS iznini gerektirir.\n\nBu izni vermek için TV\'nize ADB ile bağlanın ve şunu çalıştırın:';
 }

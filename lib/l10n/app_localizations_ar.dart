@@ -1568,4 +1568,224 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get dataUsageMonthly => 'شهري';
+
+  @override
+  String cwAppsBlockedHeading(int count) {
+    return 'محظورة من متابعة المشاهدة ($count)';
+  }
+
+  @override
+  String get cwAppsBlockedFromContinueWatching => 'محظور من متابعة المشاهدة';
+
+  @override
+  String get cwAppsUnblock => 'إلغاء الحظر';
+
+  @override
+  String get cwAppsUnblockAllApps => 'إلغاء حظر كل التطبيقات';
+
+  @override
+  String get cwAppsNoBlockedApps => 'لا توجد تطبيقات محظورة';
+
+  @override
+  String get cwAppsNoBlockedAppsMessage => 'يمكن لكل التطبيقات المدعومة عرض عناصر في متابعة المشاهدة.';
+
+  @override
+  String get cwAppsWithContinueWatching => 'التطبيقات التي تدعم متابعة المشاهدة';
+
+  @override
+  String get cwAppsWithContinueWatchingHint => 'التطبيقات التي توفر حاليًا عناصر Watch Next على شاشتك الرئيسية';
+
+  @override
+  String get cwAppsNoActiveApps => 'لا توجد تطبيقات توفر حاليًا عناصر متابعة المشاهدة.\nعندما تضيف التطبيقات المدعومة (مثل SmartTube أو خدمات البث) عناصر، ستظهر هنا.';
+
+  @override
+  String cwAppsActiveItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count عنصر نشط',
+      many: '$count عنصرًا نشطًا',
+      few: '$count عناصر نشطة',
+      two: 'عنصران نشطان',
+      one: 'عنصر نشط واحد',
+      zero: 'لا توجد عناصر نشطة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwAppsAllInstalledApps => 'كل التطبيقات المثبتة';
+
+  @override
+  String get cwAppsAllInstalledAppsHint => 'أوقف التبديل لمنع أي تطبيق من إضافة عناصر إلى متابعة المشاهدة';
+
+  @override
+  String get cwAppsBlocked => 'محظور';
+
+  @override
+  String get cwAppsAllowed => 'مسموح';
+
+  @override
+  String cwCardSizeOption(int height, String size) {
+    return '$height dp • $size';
+  }
+
+  @override
+  String cwCardSizeDimensions(int width, int height) {
+    return '$width × $height dp';
+  }
+
+  @override
+  String cwCardSizeDp(int height) {
+    return '$height dp';
+  }
+
+  @override
+  String cwCardSizeDpNamed(int height, String size) {
+    return '$height dp ($size)';
+  }
+
+  @override
+  String get cwCardSizeExtraSmall => 'صغير للغاية';
+
+  @override
+  String get cwCardSizeVerySmall => 'صغير جدًا';
+
+  @override
+  String get cwCardSizeSmall => 'صغير';
+
+  @override
+  String get cwCardSizeCompact => 'مدمج';
+
+  @override
+  String get cwCardSizeMediumSmall => 'متوسط صغير';
+
+  @override
+  String get cwCardSizeMedium => 'متوسط';
+
+  @override
+  String get cwCardSizeStandardDefault => 'قياسي (افتراضي)';
+
+  @override
+  String get cwCardSizeStandard => 'قياسي';
+
+  @override
+  String get cwCardSizeMediumLarge => 'متوسط كبير';
+
+  @override
+  String get cwCardSizeLarge => 'كبير';
+
+  @override
+  String get cwCardSizeVeryLarge => 'كبير جدًا';
+
+  @override
+  String get cwCardSizeExtraLarge => 'كبير للغاية';
+
+  @override
+  String get cwCardSizeHuge => 'ضخم';
+
+  @override
+  String cwMaxItemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count عنصر',
+      many: '$count عنصرًا',
+      few: '$count عناصر',
+      two: 'عنصران',
+      one: 'عنصر واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cwMaxItemsUpTo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'عرض حتى $count عنصر حديث',
+      many: 'عرض حتى $count عنصرًا حديثًا',
+      few: 'عرض حتى $count عناصر حديثة',
+      two: 'عرض عنصرين حديثين كحد أقصى',
+      one: 'عرض عنصر حديث واحد كحد أقصى',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cwMaxItemsDefaultNote(String description) {
+    return '$description • افتراضي';
+  }
+
+  @override
+  String get cwUnlimited => 'غير محدود';
+
+  @override
+  String get cwMaxItemsAll => 'عرض كل العناصر المتاحة';
+
+  @override
+  String cwMaxItemsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count عنصر',
+      many: '$count عنصرًا',
+      few: '$count عناصر',
+      two: 'عنصران',
+      one: 'عنصر واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwPlaybackProgressBar => 'شريط تقدم التشغيل';
+
+  @override
+  String get cwPlaybackPercentage => 'نسبة التشغيل';
+
+  @override
+  String get cwEpisodeDetails => 'تفاصيل الحلقة والفيديو';
+
+  @override
+  String cwBlockedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count تطبيق محظور',
+      many: '$count تطبيقًا محظورًا',
+      few: '$count تطبيقات محظورة',
+      two: 'تطبيقان محظوران',
+      one: 'تطبيق محظور واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwManage => 'إدارة';
+
+  @override
+  String get cwRestoreHiddenPrograms => 'استعادة البرامج المخفية';
+
+  @override
+  String cwHiddenCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count برنامج مخفي',
+      many: '$count برنامجًا مخفيًا',
+      few: '$count برامج مخفية',
+      two: 'برنامجان مخفيان',
+      one: 'برنامج مخفي واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwHiddenProgramsRestored => 'تمت استعادة كل البرامج المخفية';
+
+  @override
+  String get cwWatchNextAdbTitle => 'الوصول إلى Watch Next (يتطلب ADB)';
+
+  @override
+  String get cwWatchNextAdbMessage => 'يتطلب Android TV إذن READ_WRITE_WATCH_NEXT_PROGRAMS لكي تقرأ المشغّلات صفوف متابعة المشاهدة من التطبيقات المثبتة وتعرضها.\n\nلمنح هذا الإذن، وصّل التلفزيون عبر ADB وشغّل:';
 }

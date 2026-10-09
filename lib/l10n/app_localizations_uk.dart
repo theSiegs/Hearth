@@ -1562,4 +1562,211 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get dataUsageMonthly => 'За місяць';
+
+  @override
+  String cwAppsBlockedHeading(int count) {
+    return 'Заблоковані в «Продовжити перегляд» ($count)';
+  }
+
+  @override
+  String get cwAppsBlockedFromContinueWatching => 'Заблоковано в «Продовжити перегляд»';
+
+  @override
+  String get cwAppsUnblock => 'Розблокувати';
+
+  @override
+  String get cwAppsUnblockAllApps => 'Розблокувати всі застосунки';
+
+  @override
+  String get cwAppsNoBlockedApps => 'Немає заблокованих застосунків';
+
+  @override
+  String get cwAppsNoBlockedAppsMessage => 'Усі підтримувані застосунки можуть показувати елементи в «Продовжити перегляд».';
+
+  @override
+  String get cwAppsWithContinueWatching => 'Застосунки з «Продовжити перегляд»';
+
+  @override
+  String get cwAppsWithContinueWatchingHint => 'Застосунки, які зараз передають елементи Watch Next на головний екран';
+
+  @override
+  String get cwAppsNoActiveApps => 'Зараз жоден застосунок не передає елементи «Продовжити перегляд».\nКоли підтримувані застосунки (наприклад, SmartTube або стримінгові сервіси) додадуть елементи, вони з\'являться тут.';
+
+  @override
+  String cwAppsActiveItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count активного елемента',
+      many: '$count активних елементів',
+      few: '$count активні елементи',
+      one: '$count активний елемент',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwAppsAllInstalledApps => 'Усі встановлені застосунки';
+
+  @override
+  String get cwAppsAllInstalledAppsHint => 'Вимкніть, щоб заборонити застосунку додавати елементи в «Продовжити перегляд»';
+
+  @override
+  String get cwAppsBlocked => 'Заблоковано';
+
+  @override
+  String get cwAppsAllowed => 'Дозволено';
+
+  @override
+  String cwCardSizeOption(int height, String size) {
+    return '$height dp • $size';
+  }
+
+  @override
+  String cwCardSizeDimensions(int width, int height) {
+    return '$width × $height dp';
+  }
+
+  @override
+  String cwCardSizeDp(int height) {
+    return '$height dp';
+  }
+
+  @override
+  String cwCardSizeDpNamed(int height, String size) {
+    return '$height dp ($size)';
+  }
+
+  @override
+  String get cwCardSizeExtraSmall => 'Крихітний';
+
+  @override
+  String get cwCardSizeVerySmall => 'Дуже малий';
+
+  @override
+  String get cwCardSizeSmall => 'Малий';
+
+  @override
+  String get cwCardSizeCompact => 'Компактний';
+
+  @override
+  String get cwCardSizeMediumSmall => 'Нижче середнього';
+
+  @override
+  String get cwCardSizeMedium => 'Середній';
+
+  @override
+  String get cwCardSizeStandardDefault => 'Стандартний (за замовчуванням)';
+
+  @override
+  String get cwCardSizeStandard => 'Стандартний';
+
+  @override
+  String get cwCardSizeMediumLarge => 'Вище середнього';
+
+  @override
+  String get cwCardSizeLarge => 'Великий';
+
+  @override
+  String get cwCardSizeVeryLarge => 'Дуже великий';
+
+  @override
+  String get cwCardSizeExtraLarge => 'Величезний';
+
+  @override
+  String get cwCardSizeHuge => 'Гігантський';
+
+  @override
+  String cwMaxItemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count елемента',
+      many: '$count елементів',
+      few: '$count елементи',
+      one: '$count елемент',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cwMaxItemsUpTo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Показувати до $count нещодавнього елемента',
+      many: 'Показувати до $count нещодавніх елементів',
+      few: 'Показувати до $count нещодавніх елементів',
+      one: 'Показувати до $count нещодавнього елемента',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cwMaxItemsDefaultNote(String description) {
+    return '$description • За замовчуванням';
+  }
+
+  @override
+  String get cwUnlimited => 'Без обмежень';
+
+  @override
+  String get cwMaxItemsAll => 'Показувати всі доступні елементи';
+
+  @override
+  String cwMaxItemsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count елемента',
+      many: '$count елементів',
+      few: '$count елементи',
+      one: '$count елемент',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwPlaybackProgressBar => 'Смуга прогресу відтворення';
+
+  @override
+  String get cwPlaybackPercentage => 'Відсоток відтворення';
+
+  @override
+  String get cwEpisodeDetails => 'Відомості про серію та відео';
+
+  @override
+  String cwBlockedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Заблоковано: $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwManage => 'Керувати';
+
+  @override
+  String get cwRestoreHiddenPrograms => 'Повернути приховані програми';
+
+  @override
+  String cwHiddenCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Приховано: $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwHiddenProgramsRestored => 'Усі приховані програми повернуто';
+
+  @override
+  String get cwWatchNextAdbTitle => 'Доступ до Watch Next (потрібен ADB)';
+
+  @override
+  String get cwWatchNextAdbMessage => 'Android TV вимагає дозвіл READ_WRITE_WATCH_NEXT_PROGRAMS, щоб лаунчери могли читати й показувати ряди «Продовжити перегляд» зі встановлених застосунків.\n\nЩоб надати його, під\'єднайтеся до телевізора через ADB і виконайте:';
 }

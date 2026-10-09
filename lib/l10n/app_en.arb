@@ -1856,5 +1856,262 @@
     "dataUsageMonthly": "Monthly",
     "@dataUsageMonthly": {
         "description": "Choice on the Data Usage Period page"
+    },
+    "cwAppsBlockedHeading": "Blocked from Continue Watching ({count})",
+    "@cwAppsBlockedHeading": {
+        "description": "Heading on the Continue Watching Apps page; {count} is how many apps are blocked",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "cwAppsBlockedFromContinueWatching": "Blocked from Continue Watching",
+    "@cwAppsBlockedFromContinueWatching": {
+        "description": "Status under a blocked app's name on the Continue Watching Apps page"
+    },
+    "cwAppsUnblock": "Unblock",
+    "@cwAppsUnblock": {
+        "description": "Small button on a blocked app's row on the Continue Watching Apps page"
+    },
+    "cwAppsUnblockAllApps": "Unblock All Apps",
+    "@cwAppsUnblockAllApps": {
+        "description": "Row on the Continue Watching Apps page that unblocks every app"
+    },
+    "cwAppsNoBlockedApps": "No Blocked Apps",
+    "@cwAppsNoBlockedApps": {
+        "description": "Card title on the Continue Watching Apps page when no app is blocked"
+    },
+    "cwAppsNoBlockedAppsMessage": "All supported apps can show items in Continue Watching.",
+    "@cwAppsNoBlockedAppsMessage": {
+        "description": "Card text on the Continue Watching Apps page when no app is blocked"
+    },
+    "cwAppsWithContinueWatching": "Apps with Continue Watching",
+    "@cwAppsWithContinueWatching": {
+        "description": "Heading on the Continue Watching Apps page, and the row on the Continue Watching page that opens it"
+    },
+    "cwAppsWithContinueWatchingHint": "Apps currently providing Watch Next items on your home screen",
+    "@cwAppsWithContinueWatchingHint": {
+        "description": "Line under the Apps with Continue Watching heading; Watch Next is Android's name for the feature"
+    },
+    "cwAppsNoActiveApps": "No apps are currently providing Continue Watching items.\nWhen supported apps (such as SmartTube or streaming services) add items, they will appear here.",
+    "@cwAppsNoActiveApps": {
+        "description": "Card on the Continue Watching Apps page when no app provides items; SmartTube is an app name"
+    },
+    "cwAppsActiveItems": "{count, plural, =1{1 active item} other{{count} active items}}",
+    "@cwAppsActiveItems": {
+        "description": "Under an app's name on the Continue Watching Apps page: how many items it shows in Continue Watching",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "cwAppsAllInstalledApps": "All Installed Apps",
+    "@cwAppsAllInstalledApps": {
+        "description": "Heading on the Continue Watching Apps page above every installed app's switch"
+    },
+    "cwAppsAllInstalledAppsHint": "Toggle off to block any app from adding items to Continue Watching",
+    "@cwAppsAllInstalledAppsHint": {
+        "description": "Line under the All Installed Apps heading on the Continue Watching Apps page"
+    },
+    "cwAppsBlocked": "Blocked",
+    "@cwAppsBlocked": {
+        "description": "Under an app's name in All Installed Apps on the Continue Watching Apps page"
+    },
+    "cwAppsAllowed": "Allowed",
+    "@cwAppsAllowed": {
+        "description": "Under an app's name in All Installed Apps on the Continue Watching Apps page"
+    },
+    "cwCardSizeOption": "{height} dp • {size}",
+    "@cwCardSizeOption": {
+        "description": "A choice on the Card Size page: the card height in dp and the size's name",
+        "placeholders": {
+            "height": {
+                "type": "int"
+            },
+            "size": {
+                "type": "String"
+            }
+        }
+    },
+    "cwCardSizeDimensions": "{width} × {height} dp",
+    "@cwCardSizeDimensions": {
+        "description": "Line under a choice on the Card Size page: the card's width and height in dp",
+        "placeholders": {
+            "width": {
+                "type": "int"
+            },
+            "height": {
+                "type": "int"
+            }
+        }
+    },
+    "cwCardSizeDp": "{height} dp",
+    "@cwCardSizeDp": {
+        "description": "Next to Card Size on the Continue Watching page: the chosen card height",
+        "placeholders": {
+            "height": {
+                "type": "int"
+            }
+        }
+    },
+    "cwCardSizeDpNamed": "{height} dp ({size})",
+    "@cwCardSizeDpNamed": {
+        "description": "Next to Card Size on the Continue Watching page, for a height that has a name",
+        "placeholders": {
+            "height": {
+                "type": "int"
+            },
+            "size": {
+                "type": "String"
+            }
+        }
+    },
+    "cwCardSizeExtraSmall": "Extra Small",
+    "@cwCardSizeExtraSmall": {
+        "description": "Card size name on the Card Size page"
+    },
+    "cwCardSizeVerySmall": "Very Small",
+    "@cwCardSizeVerySmall": {
+        "description": "Card size name on the Card Size page"
+    },
+    "cwCardSizeSmall": "Small",
+    "@cwCardSizeSmall": {
+        "description": "Card size name on the Card Size page"
+    },
+    "cwCardSizeCompact": "Compact",
+    "@cwCardSizeCompact": {
+        "description": "Card size name on the Card Size page, also next to Card Size on the Continue Watching page"
+    },
+    "cwCardSizeMediumSmall": "Medium Small",
+    "@cwCardSizeMediumSmall": {
+        "description": "Card size name on the Card Size page"
+    },
+    "cwCardSizeMedium": "Medium",
+    "@cwCardSizeMedium": {
+        "description": "Card size name on the Card Size page"
+    },
+    "cwCardSizeStandardDefault": "Standard (Default)",
+    "@cwCardSizeStandardDefault": {
+        "description": "Card size name on the Card Size page, for the default height"
+    },
+    "cwCardSizeStandard": "Standard",
+    "@cwCardSizeStandard": {
+        "description": "Card size name next to Card Size on the Continue Watching page, for the default height"
+    },
+    "cwCardSizeMediumLarge": "Medium Large",
+    "@cwCardSizeMediumLarge": {
+        "description": "Card size name on the Card Size page"
+    },
+    "cwCardSizeLarge": "Large",
+    "@cwCardSizeLarge": {
+        "description": "Card size name on the Card Size page, also next to Card Size on the Continue Watching page"
+    },
+    "cwCardSizeVeryLarge": "Very Large",
+    "@cwCardSizeVeryLarge": {
+        "description": "Card size name on the Card Size page"
+    },
+    "cwCardSizeExtraLarge": "Extra Large",
+    "@cwCardSizeExtraLarge": {
+        "description": "Card size name on the Card Size page"
+    },
+    "cwCardSizeHuge": "Huge",
+    "@cwCardSizeHuge": {
+        "description": "Card size name on the Card Size page, the biggest"
+    },
+    "cwMaxItemsCount": "{count, plural, =1{1 Item} other{{count} Items}}",
+    "@cwMaxItemsCount": {
+        "description": "A choice on the Maximum Items page",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "cwMaxItemsUpTo": "{count, plural, =1{Display up to 1 recent item} other{Display up to {count} recent items}}",
+    "@cwMaxItemsUpTo": {
+        "description": "Line under a choice on the Maximum Items page",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "cwMaxItemsDefaultNote": "{description} • Default",
+    "@cwMaxItemsDefaultNote": {
+        "description": "Line under the default choice on the Maximum Items page; {description} is that choice's line",
+        "placeholders": {
+            "description": {
+                "type": "String"
+            }
+        }
+    },
+    "cwUnlimited": "Unlimited",
+    "@cwUnlimited": {
+        "description": "The no-limit choice on the Maximum Items page, also next to Maximum Items on the Continue Watching page"
+    },
+    "cwMaxItemsAll": "Display all available items",
+    "@cwMaxItemsAll": {
+        "description": "Line under the Unlimited choice on the Maximum Items page"
+    },
+    "cwMaxItemsLabel": "{count, plural, =1{1 item} other{{count} items}}",
+    "@cwMaxItemsLabel": {
+        "description": "Next to Maximum Items on the Continue Watching page: the chosen maximum",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "cwPlaybackProgressBar": "Playback Progress Bar",
+    "@cwPlaybackProgressBar": {
+        "description": "Switch on the Continue Watching page"
+    },
+    "cwPlaybackPercentage": "Playback Percentage",
+    "@cwPlaybackPercentage": {
+        "description": "Switch on the Continue Watching page"
+    },
+    "cwEpisodeDetails": "Episode & Video Details",
+    "@cwEpisodeDetails": {
+        "description": "Switch on the Continue Watching page"
+    },
+    "cwBlockedCount": "{count, plural, =1{1 blocked} other{{count} blocked}}",
+    "@cwBlockedCount": {
+        "description": "Next to Apps with Continue Watching on the Continue Watching page: how many apps are blocked",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "cwManage": "Manage",
+    "@cwManage": {
+        "description": "Next to Apps with Continue Watching on the Continue Watching page when no app is blocked"
+    },
+    "cwRestoreHiddenPrograms": "Restore Hidden Programs",
+    "@cwRestoreHiddenPrograms": {
+        "description": "Row on the Continue Watching page that brings back programs hidden from the row"
+    },
+    "cwHiddenCount": "{count, plural, =1{1 hidden} other{{count} hidden}}",
+    "@cwHiddenCount": {
+        "description": "Next to Restore Hidden Programs on the Continue Watching page: how many programs are hidden",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "cwHiddenProgramsRestored": "All hidden programs restored",
+    "@cwHiddenProgramsRestored": {
+        "description": "Snackbar after Restore Hidden Programs on the Continue Watching page"
+    },
+    "cwWatchNextAdbTitle": "Watch Next Access (ADB Required)",
+    "@cwWatchNextAdbTitle": {
+        "description": "Title of the dialog explaining how to grant Watch Next access with ADB"
+    },
+    "cwWatchNextAdbMessage": "Android TV requires the READ_WRITE_WATCH_NEXT_PROGRAMS permission for launchers to read and display Continue Watching rows from installed apps.\n\nTo grant this permission, connect your TV via ADB and run:",
+    "@cwWatchNextAdbMessage": {
+        "description": "Text of the Watch Next ADB dialog, shown above the command to run; keep READ_WRITE_WATCH_NEXT_PROGRAMS as is"
     }
 }

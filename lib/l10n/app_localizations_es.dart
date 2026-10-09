@@ -1554,4 +1554,205 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get dataUsageMonthly => 'Mensual';
+
+  @override
+  String cwAppsBlockedHeading(int count) {
+    return 'Bloqueadas en Continuar viendo ($count)';
+  }
+
+  @override
+  String get cwAppsBlockedFromContinueWatching => 'Bloqueada en Continuar viendo';
+
+  @override
+  String get cwAppsUnblock => 'Desbloquear';
+
+  @override
+  String get cwAppsUnblockAllApps => 'Desbloquear todas las apps';
+
+  @override
+  String get cwAppsNoBlockedApps => 'No hay apps bloqueadas';
+
+  @override
+  String get cwAppsNoBlockedAppsMessage => 'Todas las apps compatibles pueden mostrar elementos en Continuar viendo.';
+
+  @override
+  String get cwAppsWithContinueWatching => 'Apps con Continuar viendo';
+
+  @override
+  String get cwAppsWithContinueWatchingHint => 'Apps que ahora ofrecen elementos de Watch Next en tu pantalla de inicio';
+
+  @override
+  String get cwAppsNoActiveApps => 'Ninguna app ofrece ahora elementos de Continuar viendo.\nCuando las apps compatibles (como SmartTube o servicios de streaming) añadan elementos, aparecerán aquí.';
+
+  @override
+  String cwAppsActiveItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count elementos activos',
+      one: '1 elemento activo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwAppsAllInstalledApps => 'Todas las apps instaladas';
+
+  @override
+  String get cwAppsAllInstalledAppsHint => 'Desactívalo para impedir que una app añada elementos a Continuar viendo';
+
+  @override
+  String get cwAppsBlocked => 'Bloqueada';
+
+  @override
+  String get cwAppsAllowed => 'Permitida';
+
+  @override
+  String cwCardSizeOption(int height, String size) {
+    return '$height dp • $size';
+  }
+
+  @override
+  String cwCardSizeDimensions(int width, int height) {
+    return '$width × $height dp';
+  }
+
+  @override
+  String cwCardSizeDp(int height) {
+    return '$height dp';
+  }
+
+  @override
+  String cwCardSizeDpNamed(int height, String size) {
+    return '$height dp ($size)';
+  }
+
+  @override
+  String get cwCardSizeExtraSmall => 'Extrapequeño';
+
+  @override
+  String get cwCardSizeVerySmall => 'Muy pequeño';
+
+  @override
+  String get cwCardSizeSmall => 'Pequeño';
+
+  @override
+  String get cwCardSizeCompact => 'Compacto';
+
+  @override
+  String get cwCardSizeMediumSmall => 'Mediano pequeño';
+
+  @override
+  String get cwCardSizeMedium => 'Mediano';
+
+  @override
+  String get cwCardSizeStandardDefault => 'Estándar (predeterminado)';
+
+  @override
+  String get cwCardSizeStandard => 'Estándar';
+
+  @override
+  String get cwCardSizeMediumLarge => 'Mediano grande';
+
+  @override
+  String get cwCardSizeLarge => 'Grande';
+
+  @override
+  String get cwCardSizeVeryLarge => 'Muy grande';
+
+  @override
+  String get cwCardSizeExtraLarge => 'Extragrande';
+
+  @override
+  String get cwCardSizeHuge => 'Enorme';
+
+  @override
+  String cwMaxItemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count elementos',
+      one: '1 elemento',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cwMaxItemsUpTo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mostrar hasta $count elementos recientes',
+      one: 'Mostrar hasta 1 elemento reciente',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cwMaxItemsDefaultNote(String description) {
+    return '$description • Predeterminado';
+  }
+
+  @override
+  String get cwUnlimited => 'Ilimitado';
+
+  @override
+  String get cwMaxItemsAll => 'Mostrar todos los elementos disponibles';
+
+  @override
+  String cwMaxItemsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count elementos',
+      one: '1 elemento',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwPlaybackProgressBar => 'Barra de progreso de reproducción';
+
+  @override
+  String get cwPlaybackPercentage => 'Porcentaje de reproducción';
+
+  @override
+  String get cwEpisodeDetails => 'Detalles del episodio y del vídeo';
+
+  @override
+  String cwBlockedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count bloqueadas',
+      one: '1 bloqueada',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwManage => 'Gestionar';
+
+  @override
+  String get cwRestoreHiddenPrograms => 'Restaurar programas ocultos';
+
+  @override
+  String cwHiddenCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ocultos',
+      one: '1 oculto',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwHiddenProgramsRestored => 'Se restauraron todos los programas ocultos';
+
+  @override
+  String get cwWatchNextAdbTitle => 'Acceso a Watch Next (requiere ADB)';
+
+  @override
+  String get cwWatchNextAdbMessage => 'Android TV requiere el permiso READ_WRITE_WATCH_NEXT_PROGRAMS para que los launchers lean y muestren las filas de Continuar viendo de las apps instaladas.\n\nPara concederlo, conecta tu TV por ADB y ejecuta:';
 }

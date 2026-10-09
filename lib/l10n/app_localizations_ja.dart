@@ -1550,4 +1550,199 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get dataUsageMonthly => '1か月';
+
+  @override
+  String cwAppsBlockedHeading(int count) {
+    return '「続きを見る」でブロック中（$count）';
+  }
+
+  @override
+  String get cwAppsBlockedFromContinueWatching => '「続きを見る」でブロック中';
+
+  @override
+  String get cwAppsUnblock => 'ブロック解除';
+
+  @override
+  String get cwAppsUnblockAllApps => 'すべてのアプリのブロックを解除';
+
+  @override
+  String get cwAppsNoBlockedApps => 'ブロック中のアプリはありません';
+
+  @override
+  String get cwAppsNoBlockedAppsMessage => '対応しているすべてのアプリが「続きを見る」に項目を表示できます。';
+
+  @override
+  String get cwAppsWithContinueWatching => '「続きを見る」に対応したアプリ';
+
+  @override
+  String get cwAppsWithContinueWatchingHint => '現在ホーム画面に Watch Next の項目を提供しているアプリ';
+
+  @override
+  String get cwAppsNoActiveApps => '現在「続きを見る」の項目を提供しているアプリはありません。\n対応アプリ（SmartTube や動画配信サービスなど）が項目を追加すると、ここに表示されます。';
+
+  @override
+  String cwAppsActiveItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'アクティブな項目 $count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwAppsAllInstalledApps => 'インストール済みのすべてのアプリ';
+
+  @override
+  String get cwAppsAllInstalledAppsHint => 'オフにすると、そのアプリは「続きを見る」に項目を追加できなくなります';
+
+  @override
+  String get cwAppsBlocked => 'ブロック中';
+
+  @override
+  String get cwAppsAllowed => '許可';
+
+  @override
+  String cwCardSizeOption(int height, String size) {
+    return '$height dp • $size';
+  }
+
+  @override
+  String cwCardSizeDimensions(int width, int height) {
+    return '$width × $height dp';
+  }
+
+  @override
+  String cwCardSizeDp(int height) {
+    return '$height dp';
+  }
+
+  @override
+  String cwCardSizeDpNamed(int height, String size) {
+    return '$height dp（$size）';
+  }
+
+  @override
+  String get cwCardSizeExtraSmall => '極小';
+
+  @override
+  String get cwCardSizeVerySmall => 'とても小';
+
+  @override
+  String get cwCardSizeSmall => '小';
+
+  @override
+  String get cwCardSizeCompact => 'コンパクト';
+
+  @override
+  String get cwCardSizeMediumSmall => 'やや小';
+
+  @override
+  String get cwCardSizeMedium => '中';
+
+  @override
+  String get cwCardSizeStandardDefault => '標準（デフォルト）';
+
+  @override
+  String get cwCardSizeStandard => '標準';
+
+  @override
+  String get cwCardSizeMediumLarge => 'やや大';
+
+  @override
+  String get cwCardSizeLarge => '大';
+
+  @override
+  String get cwCardSizeVeryLarge => 'とても大';
+
+  @override
+  String get cwCardSizeExtraLarge => '特大';
+
+  @override
+  String get cwCardSizeHuge => '超特大';
+
+  @override
+  String cwMaxItemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cwMaxItemsUpTo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '最近の項目を最大 $count 件表示',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cwMaxItemsDefaultNote(String description) {
+    return '$description • デフォルト';
+  }
+
+  @override
+  String get cwUnlimited => '無制限';
+
+  @override
+  String get cwMaxItemsAll => '利用可能なすべての項目を表示';
+
+  @override
+  String cwMaxItemsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwPlaybackProgressBar => '再生の進行状況バー';
+
+  @override
+  String get cwPlaybackPercentage => '再生の割合';
+
+  @override
+  String get cwEpisodeDetails => 'エピソードと動画の詳細';
+
+  @override
+  String cwBlockedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件ブロック中',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwManage => '管理';
+
+  @override
+  String get cwRestoreHiddenPrograms => '非表示の番組を元に戻す';
+
+  @override
+  String cwHiddenCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件非表示',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwHiddenProgramsRestored => '非表示の番組をすべて元に戻しました';
+
+  @override
+  String get cwWatchNextAdbTitle => 'Watch Next へのアクセス（ADB が必要）';
+
+  @override
+  String get cwWatchNextAdbMessage => 'ランチャーがインストール済みアプリの「続きを見る」の行を読み取って表示するには、Android TV で READ_WRITE_WATCH_NEXT_PROGRAMS 権限が必要です。\n\nこの権限を付与するには、ADB でテレビに接続して次を実行します:';
 }

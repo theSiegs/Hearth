@@ -2824,6 +2824,288 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Monthly'**
   String get dataUsageMonthly;
+
+  /// Heading on the Continue Watching Apps page; {count} is how many apps are blocked
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked from Continue Watching ({count})'**
+  String cwAppsBlockedHeading(int count);
+
+  /// Status under a blocked app's name on the Continue Watching Apps page
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked from Continue Watching'**
+  String get cwAppsBlockedFromContinueWatching;
+
+  /// Small button on a blocked app's row on the Continue Watching Apps page
+  ///
+  /// In en, this message translates to:
+  /// **'Unblock'**
+  String get cwAppsUnblock;
+
+  /// Row on the Continue Watching Apps page that unblocks every app
+  ///
+  /// In en, this message translates to:
+  /// **'Unblock All Apps'**
+  String get cwAppsUnblockAllApps;
+
+  /// Card title on the Continue Watching Apps page when no app is blocked
+  ///
+  /// In en, this message translates to:
+  /// **'No Blocked Apps'**
+  String get cwAppsNoBlockedApps;
+
+  /// Card text on the Continue Watching Apps page when no app is blocked
+  ///
+  /// In en, this message translates to:
+  /// **'All supported apps can show items in Continue Watching.'**
+  String get cwAppsNoBlockedAppsMessage;
+
+  /// Heading on the Continue Watching Apps page, and the row on the Continue Watching page that opens it
+  ///
+  /// In en, this message translates to:
+  /// **'Apps with Continue Watching'**
+  String get cwAppsWithContinueWatching;
+
+  /// Line under the Apps with Continue Watching heading; Watch Next is Android's name for the feature
+  ///
+  /// In en, this message translates to:
+  /// **'Apps currently providing Watch Next items on your home screen'**
+  String get cwAppsWithContinueWatchingHint;
+
+  /// Card on the Continue Watching Apps page when no app provides items; SmartTube is an app name
+  ///
+  /// In en, this message translates to:
+  /// **'No apps are currently providing Continue Watching items.\nWhen supported apps (such as SmartTube or streaming services) add items, they will appear here.'**
+  String get cwAppsNoActiveApps;
+
+  /// Under an app's name on the Continue Watching Apps page: how many items it shows in Continue Watching
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 active item} other{{count} active items}}'**
+  String cwAppsActiveItems(int count);
+
+  /// Heading on the Continue Watching Apps page above every installed app's switch
+  ///
+  /// In en, this message translates to:
+  /// **'All Installed Apps'**
+  String get cwAppsAllInstalledApps;
+
+  /// Line under the All Installed Apps heading on the Continue Watching Apps page
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle off to block any app from adding items to Continue Watching'**
+  String get cwAppsAllInstalledAppsHint;
+
+  /// Under an app's name in All Installed Apps on the Continue Watching Apps page
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked'**
+  String get cwAppsBlocked;
+
+  /// Under an app's name in All Installed Apps on the Continue Watching Apps page
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed'**
+  String get cwAppsAllowed;
+
+  /// A choice on the Card Size page: the card height in dp and the size's name
+  ///
+  /// In en, this message translates to:
+  /// **'{height} dp • {size}'**
+  String cwCardSizeOption(int height, String size);
+
+  /// Line under a choice on the Card Size page: the card's width and height in dp
+  ///
+  /// In en, this message translates to:
+  /// **'{width} × {height} dp'**
+  String cwCardSizeDimensions(int width, int height);
+
+  /// Next to Card Size on the Continue Watching page: the chosen card height
+  ///
+  /// In en, this message translates to:
+  /// **'{height} dp'**
+  String cwCardSizeDp(int height);
+
+  /// Next to Card Size on the Continue Watching page, for a height that has a name
+  ///
+  /// In en, this message translates to:
+  /// **'{height} dp ({size})'**
+  String cwCardSizeDpNamed(int height, String size);
+
+  /// Card size name on the Card Size page
+  ///
+  /// In en, this message translates to:
+  /// **'Extra Small'**
+  String get cwCardSizeExtraSmall;
+
+  /// Card size name on the Card Size page
+  ///
+  /// In en, this message translates to:
+  /// **'Very Small'**
+  String get cwCardSizeVerySmall;
+
+  /// Card size name on the Card Size page
+  ///
+  /// In en, this message translates to:
+  /// **'Small'**
+  String get cwCardSizeSmall;
+
+  /// Card size name on the Card Size page, also next to Card Size on the Continue Watching page
+  ///
+  /// In en, this message translates to:
+  /// **'Compact'**
+  String get cwCardSizeCompact;
+
+  /// Card size name on the Card Size page
+  ///
+  /// In en, this message translates to:
+  /// **'Medium Small'**
+  String get cwCardSizeMediumSmall;
+
+  /// Card size name on the Card Size page
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get cwCardSizeMedium;
+
+  /// Card size name on the Card Size page, for the default height
+  ///
+  /// In en, this message translates to:
+  /// **'Standard (Default)'**
+  String get cwCardSizeStandardDefault;
+
+  /// Card size name next to Card Size on the Continue Watching page, for the default height
+  ///
+  /// In en, this message translates to:
+  /// **'Standard'**
+  String get cwCardSizeStandard;
+
+  /// Card size name on the Card Size page
+  ///
+  /// In en, this message translates to:
+  /// **'Medium Large'**
+  String get cwCardSizeMediumLarge;
+
+  /// Card size name on the Card Size page, also next to Card Size on the Continue Watching page
+  ///
+  /// In en, this message translates to:
+  /// **'Large'**
+  String get cwCardSizeLarge;
+
+  /// Card size name on the Card Size page
+  ///
+  /// In en, this message translates to:
+  /// **'Very Large'**
+  String get cwCardSizeVeryLarge;
+
+  /// Card size name on the Card Size page
+  ///
+  /// In en, this message translates to:
+  /// **'Extra Large'**
+  String get cwCardSizeExtraLarge;
+
+  /// Card size name on the Card Size page, the biggest
+  ///
+  /// In en, this message translates to:
+  /// **'Huge'**
+  String get cwCardSizeHuge;
+
+  /// A choice on the Maximum Items page
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 Item} other{{count} Items}}'**
+  String cwMaxItemsCount(int count);
+
+  /// Line under a choice on the Maximum Items page
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Display up to 1 recent item} other{Display up to {count} recent items}}'**
+  String cwMaxItemsUpTo(int count);
+
+  /// Line under the default choice on the Maximum Items page; {description} is that choice's line
+  ///
+  /// In en, this message translates to:
+  /// **'{description} • Default'**
+  String cwMaxItemsDefaultNote(String description);
+
+  /// The no-limit choice on the Maximum Items page, also next to Maximum Items on the Continue Watching page
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited'**
+  String get cwUnlimited;
+
+  /// Line under the Unlimited choice on the Maximum Items page
+  ///
+  /// In en, this message translates to:
+  /// **'Display all available items'**
+  String get cwMaxItemsAll;
+
+  /// Next to Maximum Items on the Continue Watching page: the chosen maximum
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item} other{{count} items}}'**
+  String cwMaxItemsLabel(int count);
+
+  /// Switch on the Continue Watching page
+  ///
+  /// In en, this message translates to:
+  /// **'Playback Progress Bar'**
+  String get cwPlaybackProgressBar;
+
+  /// Switch on the Continue Watching page
+  ///
+  /// In en, this message translates to:
+  /// **'Playback Percentage'**
+  String get cwPlaybackPercentage;
+
+  /// Switch on the Continue Watching page
+  ///
+  /// In en, this message translates to:
+  /// **'Episode & Video Details'**
+  String get cwEpisodeDetails;
+
+  /// Next to Apps with Continue Watching on the Continue Watching page: how many apps are blocked
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 blocked} other{{count} blocked}}'**
+  String cwBlockedCount(int count);
+
+  /// Next to Apps with Continue Watching on the Continue Watching page when no app is blocked
+  ///
+  /// In en, this message translates to:
+  /// **'Manage'**
+  String get cwManage;
+
+  /// Row on the Continue Watching page that brings back programs hidden from the row
+  ///
+  /// In en, this message translates to:
+  /// **'Restore Hidden Programs'**
+  String get cwRestoreHiddenPrograms;
+
+  /// Next to Restore Hidden Programs on the Continue Watching page: how many programs are hidden
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 hidden} other{{count} hidden}}'**
+  String cwHiddenCount(int count);
+
+  /// Snackbar after Restore Hidden Programs on the Continue Watching page
+  ///
+  /// In en, this message translates to:
+  /// **'All hidden programs restored'**
+  String get cwHiddenProgramsRestored;
+
+  /// Title of the dialog explaining how to grant Watch Next access with ADB
+  ///
+  /// In en, this message translates to:
+  /// **'Watch Next Access (ADB Required)'**
+  String get cwWatchNextAdbTitle;
+
+  /// Text of the Watch Next ADB dialog, shown above the command to run; keep READ_WRITE_WATCH_NEXT_PROGRAMS as is
+  ///
+  /// In en, this message translates to:
+  /// **'Android TV requires the READ_WRITE_WATCH_NEXT_PROGRAMS permission for launchers to read and display Continue Watching rows from installed apps.\n\nTo grant this permission, connect your TV via ADB and run:'**
+  String get cwWatchNextAdbMessage;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
