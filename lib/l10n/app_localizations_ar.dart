@@ -795,4 +795,88 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get serviceHearthTubeDescription => 'YouTube لـ Hearth؛ يتبع ملفك الشخصي في Hearth';
+
+  @override
+  String get haSummaryOn => 'مفعّل';
+
+  @override
+  String get haSummaryOff => 'متوقف';
+
+  @override
+  String get haSummaryReporting => 'يُرسل التقارير';
+
+  @override
+  String haNotificationsNeedsFix(String path) {
+    return 'فعّل إصلاح زر الرئيسية ($path)؛ فهو الذي يعرض النوافذ المنبثقة.';
+  }
+
+  @override
+  String get haNotificationsShow => 'عرض إشعارات Home Assistant';
+
+  @override
+  String get haNotificationsSendTest => 'إرسال إشعار تجريبي';
+
+  @override
+  String haNotificationsHelp(String host, String path) {
+    return 'في Home Assistant، أضف تكامل \"Notifications for Android TV / Fire TV\" مع المضيف $host. ثم أرسل إليه الإشعارات من الأتمتة، مثلًا لجرس الباب أو عند انتهاء الغسيل.\n\nيمكن فقط للأجهزة الموجودة على شبكتك المنزلية إرسالها (المنفذ 7676). تظهر النوافذ المنبثقة فوق أي تطبيق وتتطلب تفعيل إصلاح زر الرئيسية ($path).';
+  }
+
+  @override
+  String get haNotificationsThisTvIp => '(عنوان IP لهذا التلفزيون)';
+
+  @override
+  String get haPanelSaved => 'تم الحفظ';
+
+  @override
+  String get haPanelSavedNoToken => 'تم الحفظ. أضف رمز وصول لتسجيل الدخول.';
+
+  @override
+  String get haPanelReceived => 'تم استلام العنوان والرمز من هاتفك';
+
+  @override
+  String get haPanelRightEdge => 'الضغط على اليمين عند الحافة اليمنى يفتح اللوحة';
+
+  @override
+  String get haSetUpFromPhone => 'الإعداد من هاتفك';
+
+  @override
+  String get haPanelTokenLabel => 'رمز وصول طويل الأمد';
+
+  @override
+  String get haPanelTokenSavedHint => 'محفوظ (اكتب رمزًا جديدًا لاستبداله)';
+
+  @override
+  String get haPanelDashboardLabel => 'لوحة المعلومات';
+
+  @override
+  String haPanelHelp(String tvStatus) {
+    return 'مفعّل لهذا الملف الشخصي فقط. تعرض اللوحة لوحة معلومات من العنوان المحدد في $tvStatus، مع تسجيل الدخول بالرمز. أنشئ الرمز في Home Assistant أثناء تسجيل الدخول بمستخدم غير مسؤول مخصص لهذا التلفزيون (صفحة الملف الشخصي، علامة تبويب الأمان).';
+  }
+
+  @override
+  String get haStatusReportingOff => 'إرسال الحالة متوقف';
+
+  @override
+  String get haStatusSaved => 'تم الحفظ: يتم الإرسال إلى Home Assistant';
+
+  @override
+  String get haStatusAddressLabel => 'عنوان Home Assistant';
+
+  @override
+  String get haStatusWebhookLabel => 'معرّف Webhook';
+
+  @override
+  String get haStatusNowPlayingOn => 'قيد التشغيل الآن: مفعّل';
+
+  @override
+  String get haStatusNowPlayingOff => 'قيد التشغيل الآن: فعّل الوصول إلى الإشعارات';
+
+  @override
+  String get haStatusHelp => 'يرسل التلفزيون إلى Home Assistant ما يُعرض: التطبيق، وما يُشغَّل، وملف Google TV الشخصي، ووقت شاشة الأطفال. ولا يرسل إلا إلى العنوان أعلاه، عند حدوث التغييرات.';
+
+  @override
+  String get haPhoneSetupNoNetwork => 'هذا التلفزيون غير متصل بالشبكة المنزلية، لذا لا يمكن للهاتف الوصول إليه.';
+
+  @override
+  String get haPhoneSetupScan => 'امسح الرمز بهاتف متصل بشبكة Wi-Fi نفسها، والصق عنوان Home Assistant ورمز الوصول، ثم اضغط Send. تعمل الصفحة فقط ما دامت هذه النافذة مفتوحة.';
 }

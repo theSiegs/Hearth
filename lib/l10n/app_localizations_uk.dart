@@ -791,4 +791,88 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get serviceHearthTubeDescription => 'YouTube для Hearth; відповідає вашому профілю Hearth';
+
+  @override
+  String get haSummaryOn => 'Увімк.';
+
+  @override
+  String get haSummaryOff => 'Вимк.';
+
+  @override
+  String get haSummaryReporting => 'Надсилається';
+
+  @override
+  String haNotificationsNeedsFix(String path) {
+    return 'Увімкніть «Виправлення кнопки Додому» ($path): воно показує спливні вікна.';
+  }
+
+  @override
+  String get haNotificationsShow => 'Показувати сповіщення Home Assistant';
+
+  @override
+  String get haNotificationsSendTest => 'Надіслати тестове сповіщення';
+
+  @override
+  String haNotificationsHelp(String host, String path) {
+    return 'У Home Assistant додайте інтеграцію \"Notifications for Android TV / Fire TV\" з хостом $host. Потім надсилайте на неї сповіщення з автоматизацій, наприклад для дверного дзвінка або коли закінчилося прання.\n\nНадсилати їх можуть лише пристрої у вашій домашній мережі (порт 7676). Спливні вікна з\'являються поверх будь-якого застосунку, і для них має бути увімкнено «Виправлення кнопки Додому» ($path).';
+  }
+
+  @override
+  String get haNotificationsThisTvIp => '(IP-адреса цього телевізора)';
+
+  @override
+  String get haPanelSaved => 'Збережено';
+
+  @override
+  String get haPanelSavedNoToken => 'Збережено. Додайте токен доступу, щоб увійти.';
+
+  @override
+  String get haPanelReceived => 'Адресу й токен отримано з телефона';
+
+  @override
+  String get haPanelRightEdge => 'Вправо біля правого краю відкриває панель';
+
+  @override
+  String get haSetUpFromPhone => 'Налаштувати з телефона';
+
+  @override
+  String get haPanelTokenLabel => 'Довготривалий токен доступу';
+
+  @override
+  String get haPanelTokenSavedHint => 'Збережено (введіть новий, щоб замінити)';
+
+  @override
+  String get haPanelDashboardLabel => 'Дашборд';
+
+  @override
+  String haPanelHelp(String tvStatus) {
+    return 'Увімкнено лише для цього профілю. Панель показує дашборд за адресою з розділу «$tvStatus», вхід виконується за допомогою токена. Створіть токен у Home Assistant, увійшовши як користувач без прав адміністратора, створений для цього телевізора (сторінка профілю, вкладка «Безпека»).';
+  }
+
+  @override
+  String get haStatusReportingOff => 'Надсилання стану вимкнено';
+
+  @override
+  String get haStatusSaved => 'Збережено: надсилання в Home Assistant';
+
+  @override
+  String get haStatusAddressLabel => 'Адреса Home Assistant';
+
+  @override
+  String get haStatusWebhookLabel => 'ID вебхука';
+
+  @override
+  String get haStatusNowPlayingOn => 'Зараз грає: увімк.';
+
+  @override
+  String get haStatusNowPlayingOff => 'Зараз грає: увімкніть доступ до сповіщень';
+
+  @override
+  String get haStatusHelp => 'Телевізор повідомляє Home Assistant, що на екрані: застосунок, що відтворюється, профіль Google TV і екранний час дітей. Дані надсилаються лише на адресу вище й лише під час змін.';
+
+  @override
+  String get haPhoneSetupNoNetwork => 'Цей телевізор не підключено до домашньої мережі, тому телефон не може з ним зв\'язатися.';
+
+  @override
+  String get haPhoneSetupScan => 'Відскануйте телефоном у тій самій мережі Wi-Fi, вставте адресу Home Assistant і токен доступу та натисніть Send. Сторінка працює, лише поки це вікно відкрите.';
 }

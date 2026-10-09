@@ -1474,6 +1474,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'YouTube for Hearth; follows your Hearth profile'**
   String get serviceHearthTubeDescription;
+
+  /// Home Assistant page: shown next to Notifications or Dashboard panel when it is on
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get haSummaryOn;
+
+  /// Home Assistant page: shown next to a feature that is off
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get haSummaryOff;
+
+  /// Home Assistant page: shown next to TV status while the TV reports to Home Assistant
+  ///
+  /// In en, this message translates to:
+  /// **'Reporting'**
+  String get haSummaryReporting;
+
+  /// Home Assistant notifications page: the test pop-up could not show; {path} is where Setup & permissions is
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on Home Button Fix ({path}); it shows the pop-ups.'**
+  String haNotificationsNeedsFix(String path);
+
+  /// Home Assistant notifications page: the on/off switch
+  ///
+  /// In en, this message translates to:
+  /// **'Show Home Assistant notifications'**
+  String get haNotificationsShow;
+
+  /// Home Assistant notifications page: row that shows a test pop-up
+  ///
+  /// In en, this message translates to:
+  /// **'Send a test notification'**
+  String get haNotificationsSendTest;
+
+  /// Home Assistant notifications page: how to set it up; {host} is the TV's IP address, {path} is where Setup & permissions is. The integration's name stays in English, as Home Assistant shows it
+  ///
+  /// In en, this message translates to:
+  /// **'In Home Assistant, add the \"Notifications for Android TV / Fire TV\" integration with host {host}. Then send notifications to it from automations, for example for the doorbell or when the laundry is done.\n\nOnly devices on your home network can send them (port 7676). Pop-ups appear over any app and need Home Button Fix ({path}) to be on.'**
+  String haNotificationsHelp(String host, String path);
+
+  /// Home Assistant notifications page: stands in for the host while the TV's IP address is unknown
+  ///
+  /// In en, this message translates to:
+  /// **'(this TV\'s IP address)'**
+  String get haNotificationsThisTvIp;
+
+  /// Dashboard panel page: shown after Save
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get haPanelSaved;
+
+  /// Dashboard panel page: shown after Save while no token is saved
+  ///
+  /// In en, this message translates to:
+  /// **'Saved. Add an access token to sign in.'**
+  String get haPanelSavedNoToken;
+
+  /// Dashboard panel page: shown after the phone sent its setup
+  ///
+  /// In en, this message translates to:
+  /// **'Received the address and token from your phone'**
+  String get haPanelReceived;
+
+  /// Dashboard panel page: switch; pressing Right on the remote at the screen's right edge slides the panel in
+  ///
+  /// In en, this message translates to:
+  /// **'Right at the right edge opens the panel'**
+  String get haPanelRightEdge;
+
+  /// Dashboard panel page: row that opens the QR code dialog, and that dialog's title
+  ///
+  /// In en, this message translates to:
+  /// **'Set up from your phone'**
+  String get haSetUpFromPhone;
+
+  /// Dashboard panel page: text field label (Home Assistant's name for the token)
+  ///
+  /// In en, this message translates to:
+  /// **'Long-lived access token'**
+  String get haPanelTokenLabel;
+
+  /// Dashboard panel page: hint in the token field once a token is saved
+  ///
+  /// In en, this message translates to:
+  /// **'Saved (type a new one to replace it)'**
+  String get haPanelTokenSavedHint;
+
+  /// Dashboard panel page: text field label for the Home Assistant dashboard path
+  ///
+  /// In en, this message translates to:
+  /// **'Dashboard'**
+  String get haPanelDashboardLabel;
+
+  /// Dashboard panel page: note at the bottom; {tvStatus} is the TV status page's title
+  ///
+  /// In en, this message translates to:
+  /// **'On for this profile only. The panel shows a dashboard from the address under {tvStatus}, signed in with the token. Create the token in Home Assistant while logged in as a non-admin user made for this TV (profile page, Security tab).'**
+  String haPanelHelp(String tvStatus);
+
+  /// TV status page: shown after Save with the address or webhook empty
+  ///
+  /// In en, this message translates to:
+  /// **'Status reporting is off'**
+  String get haStatusReportingOff;
+
+  /// TV status page: shown after Save with an address and webhook
+  ///
+  /// In en, this message translates to:
+  /// **'Saved: reporting to Home Assistant'**
+  String get haStatusSaved;
+
+  /// TV status page: text field label
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant address'**
+  String get haStatusAddressLabel;
+
+  /// TV status page: text field label
+  ///
+  /// In en, this message translates to:
+  /// **'Webhook ID'**
+  String get haStatusWebhookLabel;
+
+  /// TV status page: row when notification access lets the TV report what's playing
+  ///
+  /// In en, this message translates to:
+  /// **'Now playing: on'**
+  String get haStatusNowPlayingOn;
+
+  /// TV status page: row that opens the notification access screen
+  ///
+  /// In en, this message translates to:
+  /// **'Now playing: turn on notification access'**
+  String get haStatusNowPlayingOff;
+
+  /// TV status page: note at the bottom
+  ///
+  /// In en, this message translates to:
+  /// **'The TV sends Home Assistant what\'s on: the app, what\'s playing, the Google TV profile, and kids screen time. It only sends to the address above, as changes happen.'**
+  String get haStatusHelp;
+
+  /// Set up from your phone dialog: shown when the TV has no local network address
+  ///
+  /// In en, this message translates to:
+  /// **'This TV isn\'t on the home network, so the phone can\'t reach it.'**
+  String get haPhoneSetupNoNetwork;
+
+  /// Set up from your phone dialog: under the QR code. Send is the button on the phone's page, which is in English
+  ///
+  /// In en, this message translates to:
+  /// **'Scan with a phone on the same Wi-Fi, paste the Home Assistant address and access token, and tap Send. The page only works while this is open.'**
+  String get haPhoneSetupScan;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

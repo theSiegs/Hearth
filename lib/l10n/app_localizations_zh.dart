@@ -785,4 +785,88 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get serviceHearthTubeDescription => '适用于 Hearth 的 YouTube；跟随你的 Hearth 个人资料';
+
+  @override
+  String get haSummaryOn => '开';
+
+  @override
+  String get haSummaryOff => '关';
+
+  @override
+  String get haSummaryReporting => '正在上报';
+
+  @override
+  String haNotificationsNeedsFix(String path) {
+    return '请打开主页按钮修复（$path），弹窗由它显示。';
+  }
+
+  @override
+  String get haNotificationsShow => '显示 Home Assistant 通知';
+
+  @override
+  String get haNotificationsSendTest => '发送测试通知';
+
+  @override
+  String haNotificationsHelp(String host, String path) {
+    return '在 Home Assistant 中添加“Notifications for Android TV / Fire TV”集成，主机填 $host。然后在自动化中向它发送通知，例如门铃响起或洗衣完成时。\n\n只有家庭网络中的设备可以发送（端口 7676）。弹窗会显示在任何应用之上，并且需要打开主页按钮修复（$path）。';
+  }
+
+  @override
+  String get haNotificationsThisTvIp => '（这台电视的 IP 地址）';
+
+  @override
+  String get haPanelSaved => '已保存';
+
+  @override
+  String get haPanelSavedNoToken => '已保存。请添加访问令牌以登录。';
+
+  @override
+  String get haPanelReceived => '已从手机收到地址和令牌';
+
+  @override
+  String get haPanelRightEdge => '在右边缘按右键打开面板';
+
+  @override
+  String get haSetUpFromPhone => '用手机设置';
+
+  @override
+  String get haPanelTokenLabel => '长期访问令牌';
+
+  @override
+  String get haPanelTokenSavedHint => '已保存（输入新的令牌即可替换）';
+
+  @override
+  String get haPanelDashboardLabel => '仪表板';
+
+  @override
+  String haPanelHelp(String tvStatus) {
+    return '仅对此个人资料开启。面板会显示$tvStatus中所填地址的仪表板，并使用令牌登录。请在 Home Assistant 中以为这台电视创建的非管理员用户登录后创建令牌（个人资料页面的“安全”标签页）。';
+  }
+
+  @override
+  String get haStatusReportingOff => '状态上报已关闭';
+
+  @override
+  String get haStatusSaved => '已保存：正在上报到 Home Assistant';
+
+  @override
+  String get haStatusAddressLabel => 'Home Assistant 地址';
+
+  @override
+  String get haStatusWebhookLabel => 'Webhook ID';
+
+  @override
+  String get haStatusNowPlayingOn => '正在播放：开';
+
+  @override
+  String get haStatusNowPlayingOff => '正在播放：请开启通知访问权限';
+
+  @override
+  String get haStatusHelp => '电视会把当前内容发送给 Home Assistant：应用、正在播放的内容、Google TV 个人资料和儿童屏幕使用时间。只会在有变化时发送到上面的地址。';
+
+  @override
+  String get haPhoneSetupNoNetwork => '这台电视不在家庭网络中，手机无法连接到它。';
+
+  @override
+  String get haPhoneSetupScan => '用连接同一 Wi-Fi 的手机扫描，粘贴 Home Assistant 地址和访问令牌，然后点按 Send。此窗口打开时页面才可用。';
 }
