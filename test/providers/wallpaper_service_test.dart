@@ -54,6 +54,7 @@ void main() {
       final settingsService = MockSettingsService();
       when(settingsService.timeBasedWallpaperEnabled).thenReturn(false);
       when(settingsService.bingWallpaperEnabled).thenReturn(false);
+      when(settingsService.layoutOwner).thenReturn(null);
       when(settingsService.gradientUuid).thenReturn(null);
       when(imagePicker.pickImage(source: ImageSource.gallery)).thenAnswer((_) => Future.value(pickedFile));
       when(fLauncherChannel.checkForGetContentAvailability()).thenAnswer((_) => Future.value(true));
@@ -63,12 +64,63 @@ void main() {
       await wallpaperService.pickWallpaper();
 
       verify(imagePicker.pickImage(source: ImageSource.gallery));
-      expect(File("${documents.path}/wallpaper").readAsBytesSync(), [0x01]);
+      // Before Hearth has seen a profile, pictures are the TV owner's
+      expect(File("${documents.path}/wallpapers/user_0/wallpaper").readAsBytesSync(), [0x01]);
       expect(wallpaperService.wallpaper, isA<FileImage>());
       // HearthTube hears of the new picture through Hearth's provider
       final sent = verify(fLauncherChannel.setWallpaperState(captureAny)).captured.last as Map<String, Object?>;
-      expect(sent["file"], "wallpaper");
+      expect(sent["file"], "wallpapers/user_0/wallpaper");
+      expect(sent["profile"], "user:0");
       expect(sent["bing_credit"], isNull);
+    });
+
+    test("each profile has its own pictures, and the old shared ones become the owner's", () async {
+      final dir = Directory.systemTemp.createTempSync("hearth_wallpaper_profiles");
+      addTearDown(() => dir.deleteSync(recursive: true));
+      when(pathProviderPlatform.getApplicationDocumentsPath()).thenAnswer((_) => Future.value(dir.path));
+      addTearDown(() =>
+          when(pathProviderPlatform.getApplicationDocumentsPath()).thenAnswer((_) => Future.value(documents.path)));
+      // A picture from before pictures were per profile
+      File("${dir.path}/wallpaper").writeAsBytesSync([0x07]);
+
+      final pickedFile = _MockXFile();
+      when(pickedFile.openRead()).thenAnswer((_) => Stream.value(Uint8List.fromList([0x02])));
+      final imagePicker = _MockImagePicker();
+      when(imagePicker.pickImage(source: ImageSource.gallery)).thenAnswer((_) => Future.value(pickedFile));
+      final fLauncherChannel = MockFLauncherChannel();
+      when(fLauncherChannel.checkForGetContentAvailability()).thenAnswer((_) => Future.value(true));
+      final settingsService = MockSettingsService();
+      when(settingsService.timeBasedWallpaperEnabled).thenReturn(false);
+      when(settingsService.bingWallpaperEnabled).thenReturn(false);
+      when(settingsService.gradientUuid).thenReturn(null);
+      // The kid's settings are the ones in place
+      when(settingsService.layoutOwner).thenReturn("user:11");
+      final wallpaperService = WallpaperService(fLauncherChannel, settingsService, imagePicker: imagePicker);
+      await wallpaperService.setProfile("user:11");
+
+      expect(File("${dir.path}/wallpaper").existsSync(), isFalse);
+      expect(File("${dir.path}/wallpapers/user_0/wallpaper").readAsBytesSync(), [0x07]);
+      // The kid has no picture yet: the gradient
+      expect(wallpaperService.profileKey, "user:11");
+      expect(wallpaperService.wallpaper, isNull);
+
+      await wallpaperService.pickWallpaper();
+      expect(File("${dir.path}/wallpapers/user_11/wallpaper").readAsBytesSync(), [0x02]);
+      var sent = verify(fLauncherChannel.setWallpaperState(captureAny)).captured.last as Map<String, Object?>;
+      expect(sent["file"], "wallpapers/user_11/wallpaper");
+      expect(sent["profile"], "user:11");
+
+      // Back to the owner: the owner's own picture, untouched by the kid's pick
+      await wallpaperService.setProfile("user:0");
+      expect((wallpaperService.wallpaper as FileImage).file.path, endsWith("wallpapers/user_0/wallpaper"));
+      sent = verify(fLauncherChannel.setWallpaperState(captureAny)).captured.last as Map<String, Object?>;
+      expect(sent["file"], "wallpapers/user_0/wallpaper");
+      expect(sent["profile"], "user:0");
+    });
+
+    test("profile folders are safe file names", () {
+      expect(WallpaperService.profileFolder("user:11"), "wallpapers/user_11");
+      expect(WallpaperService.profileFolder("Alex's TV"), "wallpapers/Alex_s_TV");
     });
 
     test("throws error when no file explorer installed", () async {
@@ -77,6 +129,7 @@ void main() {
       final settingsService = MockSettingsService();
       when(settingsService.timeBasedWallpaperEnabled).thenReturn(false);
       when(settingsService.bingWallpaperEnabled).thenReturn(false);
+      when(settingsService.layoutOwner).thenReturn(null);
       when(settingsService.gradientUuid).thenReturn(null);
       final wallpaperService = WallpaperService(fLauncherChannel, settingsService);
       await untilCalled(pathProviderPlatform.getApplicationDocumentsPath());
@@ -91,6 +144,7 @@ void main() {
     final settingsService = MockSettingsService();
       when(settingsService.timeBasedWallpaperEnabled).thenReturn(false);
       when(settingsService.bingWallpaperEnabled).thenReturn(false);
+      when(settingsService.layoutOwner).thenReturn(null);
       when(settingsService.gradientUuid).thenReturn(null);
     final wallpaperService = WallpaperService(fLauncherChannel, settingsService);
 
@@ -155,6 +209,7 @@ void main() {
       final settingsService = MockSettingsService();
       when(settingsService.timeBasedWallpaperEnabled).thenReturn(false);
       when(settingsService.bingWallpaperEnabled).thenReturn(false);
+      when(settingsService.layoutOwner).thenReturn(null);
       final wallpaperService = WallpaperService(fLauncherChannel, settingsService);
       when(settingsService.gradientUuid).thenReturn(null);
 
@@ -169,6 +224,7 @@ void main() {
       final settingsService = MockSettingsService();
       when(settingsService.timeBasedWallpaperEnabled).thenReturn(false);
       when(settingsService.bingWallpaperEnabled).thenReturn(false);
+      when(settingsService.layoutOwner).thenReturn(null);
       final wallpaperService = WallpaperService(fLauncherChannel, settingsService);
       when(settingsService.gradientUuid).thenReturn(FLauncherGradients.grassShampoo.uuid);
       await untilCalled(pathProviderPlatform.getApplicationDocumentsPath());

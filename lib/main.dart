@@ -142,7 +142,8 @@ Future<void> main() async {
             lazy: false),
         ChangeNotifierProvider(
             create: (context) => ProfileService(fLauncherChannel, sharedPreferences, context.read<BackupService>(),
-                context.read<SettingsService>(), context.read<AppsService>()),
+                context.read<SettingsService>(), context.read<AppsService>(),
+                wallpaperService: context.read<WallpaperService>()),
             lazy: false),
       ],
       child: FLauncherApp()
