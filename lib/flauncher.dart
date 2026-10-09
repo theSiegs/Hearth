@@ -158,7 +158,14 @@ class _FLauncherState extends State<FLauncher> {
   }
 
   void _submitSearch(String text) {
-    setState(() => _searchTyping = false);
+    setState(() {
+      _searchTyping = false;
+      // The row shows right away (its "Searching…" heading and placeholder cards) where there's a row to show
+      if (_showingSearch || _firstFocusable(_dockFocusNode) != null) {
+        _showingSearch = true;
+        _showingRecents = false;
+      }
+    });
     _awaitingResults = true;
     // Focus waits on the search button until the results are in, then moves to them (_onSearchChanged)
     _appBarKey.currentState?.focusSearch();
@@ -168,14 +175,19 @@ class _FLauncherState extends State<FLauncher> {
   void _cancelSearchEntry() {
     setState(() => _searchTyping = false);
     _appBarKey.currentState?.focusSearch();
+    // A search that finished while the box was open shows now
+    _onSearchChanged();
   }
 
   void _onSearchChanged() {
     final search = _homeSearch;
     if (!mounted || search == null || !_awaitingResults || search.loading || !search.active) return;
+    // The box is open again for a new search: the old one's results mustn't take focus (or the keys) from it
+    if (_searchTyping) return;
     _awaitingResults = false;
-    // No dock on this layout: no row to show them in, so the grid
-    if (_firstFocusable(_dockFocusNode) == null) {
+    // No dock on this layout: no row to show them in, so the grid. (While the row or Continue Watching shows, the
+    // dock is out of the focus tree, so it only counts when neither is up.)
+    if (!_showingSearch && !_showingRecents && _firstFocusable(_dockFocusNode) == null) {
       SearchGridPage.open(context);
       return;
     }
@@ -189,7 +201,7 @@ class _FLauncherState extends State<FLauncher> {
       if (show) _showingRecents = false;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted || _searchTyping) return;
       if (show) {
         (_firstFocusable(_searchRowFocusNode) ?? _firstFocusable(_dockFocusNode))?.requestFocus();
       } else {

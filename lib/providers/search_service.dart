@@ -200,7 +200,8 @@ class SearchService {
       request.headers.set(HttpHeaders.userAgentHeader, _userAgent);
       final response = await request.close().timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) throw HttpException("HTTP ${response.statusCode}", uri: uri);
-      return jsonDecode(await response.transform(utf8.decoder).join());
+      // The body has its own limit: on a slow network it can trickle in for a minute
+      return jsonDecode(await response.transform(utf8.decoder).join().timeout(const Duration(seconds: 12)));
     } finally {
       client.close();
     }
