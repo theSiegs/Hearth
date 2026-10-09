@@ -1,8 +1,11 @@
+import 'dart:math';
+
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:provider/provider.dart';
@@ -81,5 +84,56 @@ void main() {
     }
     await tester.pumpAndSettle();
     expect(allowed, isTrue);
+  });
+
+  testWidgets("the row pad: Up/Down pick a row, Left/OK/Right its first/middle/last digit, ⌫ under the rows",
+      (tester) async {
+    // The same seed shuffles the same way here as in the dialog
+    final places = [for (int d = 0; d <= 9; d++) "$d", "", ""]..shuffle(Random(7));
+    final rows = [for (int r = 0; r < 4; r++) places.sublist(r * 3, r * 3 + 3)];
+    String? result;
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Builder(
+        builder: (context) => TextButton(
+          onPressed: () async => result = await showDialog<String>(
+              context: context, builder: (_) => ParentPinDialog(title: "PIN", random: Random(7))),
+          child: const Text("open"),
+        ),
+      ),
+    ));
+    await tester.tap(find.text("open"));
+    await tester.pumpAndSettle();
+
+    // Each digit as remote keys from row 0: Down to its row, then Left/OK/Right, then back Up to row 0
+    Future<void> enter(String digit) async {
+      final row = rows.indexWhere((r) => r.contains(digit));
+      final place = rows[row].indexOf(digit);
+      for (int i = 0; i < row; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      }
+      await tester.sendKeyEvent(
+          [LogicalKeyboardKey.arrowLeft, LogicalKeyboardKey.select, LogicalKeyboardKey.arrowRight][place]);
+      for (int i = 0; i < row; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      }
+      await tester.pump();
+    }
+
+    await enter("9");
+    // ⌫ is under the last row: it takes the 9 back
+    for (int i = 0; i < 4; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    }
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    for (int i = 0; i < 4; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    }
+    for (final digit in "2468".split("")) {
+      await enter(digit);
+    }
+    await tester.pumpAndSettle();
+    expect(result, "2468");
   });
 }

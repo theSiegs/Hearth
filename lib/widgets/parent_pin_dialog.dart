@@ -15,6 +15,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:math';
+
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,7 +24,6 @@ import 'package:provider/provider.dart';
 
 import '../providers/profile_service.dart';
 import '../providers/settings_service.dart';
-import 'focusable_tap.dart';
 import 'settings/message_dialog.dart';
 
 // Google TV's dark PIN keypad
@@ -57,7 +58,7 @@ Future<bool> requireParent(BuildContext context) async {
   return pin != null;
 }
 
-/// Full-screen PIN entry in Google TV's style: D-pad keypad, number keys type directly.
+/// Full-screen PIN entry in Google TV's style: the shuffled row pad (see [_RowPad]), number keys type directly.
 /// Pops with the entered PIN, or null on Back.
 class ParentPinDialog extends StatefulWidget {
   final String title;
@@ -65,7 +66,10 @@ class ParentPinDialog extends StatefulWidget {
   final bool Function(String pin)? verify;
   static const int digitCount = 4;
 
-  const ParentPinDialog({super.key, required this.title, this.subtitle, this.verify});
+  /// The pad's shuffle (tests pass a seeded one); a secure random by default.
+  final Random? random;
+
+  const ParentPinDialog({super.key, required this.title, this.subtitle, this.verify, this.random});
 
   @override
   State<ParentPinDialog> createState() => _ParentPinDialogState();
@@ -164,7 +168,7 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
                     }),
                   ),
                   const SizedBox(height: 20),
-                  _Keypad(onDigit: _onDigit, onBackspace: _onBackspace),
+                  _RowPad(onDigit: _onDigit, onBackspace: _onBackspace, random: widget.random),
                 ],
               ),
             ],
@@ -175,139 +179,153 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
   }
 }
 
-class _Keypad extends StatefulWidget {
+/// The PIN pad: four pill rows of three digits, shuffled every time it opens (two of the twelve places are empty).
+/// Up and Down pick a row; Left, OK and Right enter its first, middle or last digit. The highlight covers the whole
+/// row, so someone watching the screen learns only that the digit was one of three, and a different three each time.
+class _RowPad extends StatefulWidget {
   final void Function(String) onDigit;
   final VoidCallback onBackspace;
+  final Random? random;
 
-  const _Keypad({required this.onDigit, required this.onBackspace});
+  const _RowPad({required this.onDigit, required this.onBackspace, this.random});
 
-  static const _layout = [
-    ["1", "2", "3"],
-    ["4", "5", "6"],
-    ["7", "8", "9"],
-    ["", "0", "⌫"],
-  ];
+  static const int rows = 4;
+  static const int perRow = 3;
 
   @override
-  State<_Keypad> createState() => _KeypadState();
+  State<_RowPad> createState() => _RowPadState();
 }
 
-/// Moves the selection itself, key by key: it stops at the keypad's edges and skips the empty corner, so it can
-/// never leave the keypad (with nothing else on the screen to land on, the selection would vanish).
-class _KeypadState extends State<_Keypad> {
-  late final List<List<FocusNode?>> _nodes = [
-    for (final row in _Keypad._layout) [for (final label in row) label.isEmpty ? null : FocusNode()],
-  ];
+class _RowPadState extends State<_RowPad> {
+  /// rows x perRow places, each a digit or "" (empty)
+  late final List<List<String>> _layout = _shuffled(widget.random ?? Random.secure());
+  late final List<FocusNode> _rowNodes = List.generate(_RowPad.rows, (_) => FocusNode());
+  final FocusNode _backspaceNode = FocusNode();
+
+  static List<List<String>> _shuffled(Random random) {
+    final places = [for (int d = 0; d <= 9; d++) "$d", "", ""]..shuffle(random);
+    return [for (int r = 0; r < _RowPad.rows; r++) places.sublist(r * _RowPad.perRow, (r + 1) * _RowPad.perRow)];
+  }
 
   @override
   void dispose() {
-    for (final row in _nodes) {
-      for (final node in row) {
-        node?.dispose();
-      }
+    for (final node in _rowNodes) {
+      node.dispose();
     }
+    _backspaceNode.dispose();
     super.dispose();
   }
 
-  KeyEventResult _move(KeyEvent event) {
-    if (event is KeyUpEvent) return KeyEventResult.ignored;
-    final (dr, dc) = switch (event.logicalKey) {
-      LogicalKeyboardKey.arrowUp => (-1, 0),
-      LogicalKeyboardKey.arrowDown => (1, 0),
-      LogicalKeyboardKey.arrowLeft => (0, -1),
-      LogicalKeyboardKey.arrowRight => (0, 1),
-      _ => (0, 0),
-    };
-    if (dr == 0 && dc == 0) return KeyEventResult.ignored;
-    for (int r = 0; r < _nodes.length; r++) {
-      for (int c = 0; c < _nodes[r].length; c++) {
-        if (_nodes[r][c]?.hasFocus != true) continue;
-        // Step in the direction until a key, or stay put at the edge.
-        int nr = r + dr, nc = c + dc;
-        // Up or down onto the empty corner: the nearest key in that row (Down from 7 is 0).
-        if (dr != 0 && nr >= 0 && nr < _nodes.length && _nodes[nr][nc] == null) {
-          for (final offset in [1, -1, 2, -2]) {
-            final alt = nc + offset;
-            if (alt >= 0 && alt < _nodes[nr].length && _nodes[nr][alt] != null) {
-              _nodes[nr][alt]!.requestFocus();
-              return KeyEventResult.handled;
-            }
-          }
-        }
-        while (nr >= 0 && nr < _nodes.length && nc >= 0 && nc < _nodes[nr].length) {
-          final next = _nodes[nr][nc];
-          if (next != null) {
-            next.requestFocus();
-            break;
-          }
-          nr += dr;
-          nc += dc;
-        }
-        return KeyEventResult.handled;
-      }
+  void _enter(int row, int place) {
+    final digit = _layout[row][place];
+    if (digit.isNotEmpty) widget.onDigit(digit);
+  }
+
+  /// Keys on a row: Left/OK/Right enter a digit, Up/Down move between rows (and down to ⌫); it never lets the
+  /// selection leave the pad.
+  KeyEventResult _onRowKey(int row, KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.handled;
+    final key = event.logicalKey;
+    if (event is KeyRepeatEvent && key != LogicalKeyboardKey.arrowUp && key != LogicalKeyboardKey.arrowDown) {
+      return KeyEventResult.handled; // a held OK or arrow doesn't enter the same digit again and again
     }
-    _nodes[0][0]?.requestFocus();
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      _enter(row, 0);
+    } else if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.gameButtonA) {
+      _enter(row, 1);
+    } else if (key == LogicalKeyboardKey.arrowRight) {
+      _enter(row, 2);
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      if (row > 0) _rowNodes[row - 1].requestFocus();
+    } else if (key == LogicalKeyboardKey.arrowDown) {
+      (row < _RowPad.rows - 1 ? _rowNodes[row + 1] : _backspaceNode).requestFocus();
+    } else {
+      return KeyEventResult.ignored;
+    }
     return KeyEventResult.handled;
   }
 
-  Widget _button(String label, FocusNode? focusNode, {required bool autofocus}) {
-    if (label.isEmpty) {
-      return const SizedBox(width: 56, height: 56);
+  KeyEventResult _onBackspaceKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return event is KeyRepeatEvent ? KeyEventResult.handled : KeyEventResult.ignored;
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.gameButtonA) {
+      widget.onBackspace();
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      _rowNodes.last.requestFocus();
+    } else if (key != LogicalKeyboardKey.arrowDown && key != LogicalKeyboardKey.arrowLeft && key != LogicalKeyboardKey.arrowRight) {
+      return KeyEventResult.ignored;
     }
-    return _KeypadButton(
-      label: label,
-      focusNode: focusNode,
-      autofocus: autofocus,
-      onPressed: () => label == "⌫" ? widget.onBackspace() : widget.onDigit(label),
-    );
+    return KeyEventResult.handled;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Focus(
-      canRequestFocus: false,
-      skipTraversal: true,
-      onKeyEvent: (_, event) => _move(event),
-      child: Column(
-        children: [
-          for (int row = 0; row < _Keypad._layout.length; row++)
-            Row(
-              children: [
-                for (int col = 0; col < _Keypad._layout[row].length; col++)
-                  Padding(
-                    padding: const EdgeInsets.all(7),
-                    child: _button(_Keypad._layout[row][col], _nodes[row][col], autofocus: row == 0 && col == 0),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        for (int row = 0; row < _RowPad.rows; row++)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Focus(
+              focusNode: _rowNodes[row],
+              autofocus: row == 0,
+              onKeyEvent: (_, event) => _onRowKey(row, event),
+              child: Builder(builder: (context) {
+                final focused = Focus.of(context).hasFocus;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 120),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: focused ? _keyFocused : _key,
+                    borderRadius: BorderRadius.circular(32),
                   ),
-              ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // The arrows say which button enters which digit; they don't change with the digit pressed
+                      Icon(Icons.chevron_left, size: 22, color: focused ? Colors.black54 : Colors.transparent),
+                      for (int place = 0; place < _RowPad.perRow; place++)
+                        GestureDetector(
+                          onTap: () => _enter(row, place),
+                          child: SizedBox(
+                            width: 48,
+                            height: 44,
+                            child: Center(
+                              child: Text(_layout[row][place],
+                                  style: TextStyle(color: focused ? Colors.black87 : Colors.white, fontSize: 24)),
+                            ),
+                          ),
+                        ),
+                      Icon(Icons.chevron_right, size: 22, color: focused ? Colors.black54 : Colors.transparent),
+                    ],
+                  ),
+                );
+              }),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-class _KeypadButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onPressed;
-  final bool autofocus;
-  final FocusNode? focusNode;
-
-  const _KeypadButton({required this.label, required this.onPressed, this.autofocus = false, this.focusNode});
-
-  @override
-  Widget build(BuildContext context) {
-    return FocusableTap(
-      focusNode: focusNode,
-      autofocus: autofocus,
-      onPressed: onPressed,
-      builder: (context, focused) => AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        width: 56,
-        height: 56,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: focused ? _keyFocused : _key),
-        child: Text(label, style: TextStyle(color: focused ? Colors.black87 : Colors.white, fontSize: 22)),
-      ),
+          ),
+        const SizedBox(height: 8),
+        Focus(
+          focusNode: _backspaceNode,
+          onKeyEvent: (_, event) => _onBackspaceKey(event),
+          child: Builder(builder: (context) {
+            final focused = Focus.of(context).hasFocus;
+            return GestureDetector(
+              onTap: widget.onBackspace,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
+                width: 72,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: focused ? _keyFocused : _key,
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Icon(Icons.backspace_outlined, color: focused ? Colors.black87 : Colors.white, size: 20),
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 }
