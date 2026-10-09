@@ -172,7 +172,7 @@ PIN and then the right one. Recipes: `DisneyPinRecipe`, `AppleTvPinRecipe`, `Net
 | Netflix | No nodes; speech only, in screen-reader mode: "On the PIN entry screen." ... "This is a keyboard with 4 rows and 3 columns. The last row contains 0 and Delete keys." then the focused key | D-pad in the 3x3 grid, 0 bottom left; OK on the spoken digit | Nothing per digit; "Entered 4 of 4 digits." after the last | "Whoops, wrong PIN. Please try again." | "On the browse screen..." |
 | HBO Max | No nodes; announcements: "Enter Your Profile PIN, ..., Numeric Keyboard, 1, Button, Actions are on the far right" | D-pad in the 3x3 grid, 0 alone mid bottom row, actions to the right; OK on the announced digit | An echo of the digit | "That PIN doesn't look right." | "H B O Max Home, ..." |
 | Paramount+ | Opens the last profile without a PIN; a PIN only guards leaving it | Not needed | | | |
-| Hulu | Nothing at all (no nodes, announcements or speech, even in screen-reader mode) | Not supported | | | |
+| Hulu | No nodes or announcements: its own engine draws the screen. It speaks only when a spoken-feedback service is on and TalkBack isn't ("TalkBack doesn't work with the Hulu app"), through the TTS engine it can see, which is Google's (it has no TTS `<queries>`, so Hearth voice is invisible to it, even launched by Hearth); its speech is said aloud and never reaches Hearth | Not supported | | | |
 
 All four ask after the 4th digit by themselves. English-only phrases: in another language nothing matches, no PIN is
 typed and the parent enters it. Lockout messages weren't seen (no lockout was triggered); "too many" is treated as one.
