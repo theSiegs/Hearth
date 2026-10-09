@@ -118,15 +118,18 @@ recognition step on the open PIN screen and reports "recognised" or what differs
 ## 6. Outcomes
 
 - **Success:** the PIN screen goes away → drop the cover. Status stays *Saved*.
-- **Wrong PIN:** **one attempt per app launch, never retried within it.** Drop the cover so the parent types the PIN
-  themselves, mark the saved PIN *not accepted*, and show a pop-up over the app:
+- **Wrong PIN:** **one attempt per app launch, never retried within it.** Hearth marks the saved PIN *not accepted*
+  and, still under the cover, shows a pop-up:
   > **Netflix didn't accept the saved PIN for Alex**
-  > Enter it yourself this time. Update the saved PIN in Hearth's Settings.
-  > [ **Open Settings** ]  [ Close ]
+  > Update the saved PIN in Hearth's Settings, or enter it yourself this time.
+  > [ **Change PIN** ]  [ Close ]
 
-  *Open Settings* opens Hearth's Settings straight on that app profile's PIN row (the parent PIN is asked first);
-  *Close* dismisses it and leaves the parent in the app. The next launch tries the saved PIN once again, and shows the
-  same pop-up if it fails again, until the PIN is updated (then the mark clears) or removed.
+  - **Change PIN** opens Hearth's Settings straight on that app profile's PIN row (the parent PIN is asked first).
+  - **Close** drops the pop-up and the cover and leaves the app's own PIN entry on screen, cleared, for the parent to
+    type the PIN by hand.
+
+  The next launch tries the saved PIN once again, and shows the same pop-up if it fails again, until the PIN is
+  changed (then the mark clears) or removed.
   - **Lockout guard:** each failed launch adds a wrong attempt in the app, and some apps lock a profile after a few.
     Hearth counts consecutive rejections per app profile; if the app's PIN screen shows a lockout or "too many
     attempts" message (part of each recipe), or the count reaches the app's known limit minus one, Hearth stops trying
@@ -152,6 +155,6 @@ recognition step on the open PIN screen and reports "recognised" or what differs
 
 - PINs entered only in Hearth's Settings (no "capture" from the app) — proposed.
 - Typed only in grown-up Google TV profiles, never in a kids profile — proposed.
-- One attempt per launch, then the parent types and a pop-up offers Settings — decided; tried again on every launch
-  until updated, with the lockout guard above.
+- One attempt per launch; on a rejection a pop-up offers **Change PIN** (Settings) or **Close** (the app's own PIN
+  entry, by hand) — decided; tried again on every launch until changed, with the lockout guard above.
 - Which apps first: Netflix (most profiles locked?), then Disney+, Max, Paramount+, Apple TV.
