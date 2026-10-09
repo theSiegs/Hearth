@@ -157,7 +157,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sort => '排序';
 
   @override
-  String get systemSettings => '系统设置';
+  String get systemSettings => 'Google TV 设置';
 
   @override
   String get textEmptyCategory => '此类别为空。';
@@ -397,7 +397,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeScreenTitle => '主屏幕';
 
   @override
-  String get remoteAndSearchTitle => '遥控器和搜索';
+  String get remoteAndSearchTitle => '遥控器';
 
   @override
   String get parentSettingsTitle => '家长设置';

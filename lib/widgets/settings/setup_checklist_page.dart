@@ -7,7 +7,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
 import 'adb_command_dialog.dart';
-import 'family_apps_page.dart';
 import 'focusable_settings_tile.dart';
 import 'settings_page.dart';
 
@@ -274,12 +273,6 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
                   ],
                   const Divider(),
                   _startOnBootTile(context),
-                  FocusableSettingsTile(
-                    leading: const Icon(Icons.people_alt_outlined),
-                    title: Text(l.familyAppsTitle, style: textTheme.bodyMedium),
-                    trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-                    onPressed: () => Navigator.of(context).pushNamed(FamilyAppsPage.routeName),
-                  ),
                 ],
               ),
             ),

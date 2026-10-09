@@ -157,7 +157,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get sort => 'Sırala';
 
   @override
-  String get systemSettings => 'Sistem ayarları';
+  String get systemSettings => 'Google TV ayarları';
 
   @override
   String get textEmptyCategory => 'Bu kategori boş.';
@@ -397,7 +397,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get homeScreenTitle => 'Ana ekran';
 
   @override
-  String get remoteAndSearchTitle => 'Kumanda ve arama';
+  String get remoteAndSearchTitle => 'Kumanda';
 
   @override
   String get parentSettingsTitle => 'Ebeveyn ayarları';

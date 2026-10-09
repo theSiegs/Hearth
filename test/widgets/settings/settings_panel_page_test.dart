@@ -28,7 +28,6 @@ import 'package:flauncher/widgets/settings/notifications_settings_page.dart';
 import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
 import 'package:flauncher/widgets/settings/home_assistant_page.dart';
 import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
-import 'package:flauncher/widgets/settings/remote_search_settings_page.dart';
 import 'package:flauncher/widgets/settings/hearth_about_dialog.dart';
 import 'package:flauncher/widgets/settings/settings_panel_page.dart';
 import 'package:flutter/material.dart';
@@ -49,7 +48,6 @@ const _rows = {
   "Profiles": ProfilesSettingsPage.routeName,
   "Applications": ApplicationsPanelPage.routeName,
   "Home screen": HomeScreenSettingsPage.routeName,
-  "Remote & search": RemoteSearchSettingsPage.routeName,
   "Notifications": NotificationsSettingsPage.routeName,
   "Home Assistant": HomeAssistantPage.routeName,
   "TV & power": TvPowerSettingsPage.routeName,
@@ -147,9 +145,9 @@ void main() {
     final appsService = _apps();
     await _pumpWidgetWithProviders(tester, _settings(), appsService, home: const TvPowerSettingsPage());
 
-    await tester.ensureVisible(find.text("System settings"));
+    await tester.ensureVisible(find.text("Google TV settings"));
     await tester.pumpAndSettle();
-    await tester.tap(find.text("System settings"));
+    await tester.tap(find.text("Google TV settings"));
     await tester.pumpAndSettle();
     verify(appsService.openSettings());
   });

@@ -157,7 +157,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get sort => '정렬';
 
   @override
-  String get systemSettings => '시스템 설정';
+  String get systemSettings => 'Google TV 설정';
 
   @override
   String get textEmptyCategory => '이 카테고리는 비어 있습니다.';
@@ -397,7 +397,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeScreenTitle => '홈 화면';
 
   @override
-  String get remoteAndSearchTitle => '리모컨 및 검색';
+  String get remoteAndSearchTitle => '리모컨';
 
   @override
   String get parentSettingsTitle => '보호자 설정';

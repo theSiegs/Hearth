@@ -157,7 +157,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get sort => '並べ替え';
 
   @override
-  String get systemSettings => 'システム設定';
+  String get systemSettings => 'Google TV の設定';
 
   @override
   String get textEmptyCategory => 'このカテゴリは空です。';
@@ -397,7 +397,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get homeScreenTitle => 'ホーム画面';
 
   @override
-  String get remoteAndSearchTitle => 'リモコンと検索';
+  String get remoteAndSearchTitle => 'リモコン';
 
   @override
   String get parentSettingsTitle => '保護者の設定';
