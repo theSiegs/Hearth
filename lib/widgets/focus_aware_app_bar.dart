@@ -328,8 +328,9 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
   }
 }
 
-/// Opens Google TV's profile chooser and shows the active profile's name. Held, it locks a grown-up profile with
-/// Google TV's own profile lock (its PIN screen), for leaving the TV without leaving the profile open.
+/// Opens Google TV's profile chooser and shows the active profile's name. Held, it leaves the profile: a grown-up
+/// profile is locked with Google TV's own profile lock (its PIN screen, whose Back goes to the chooser), a kids
+/// profile goes to the chooser (leaving a kids profile takes the parent PIN there).
 class _ProfileButton extends StatelessWidget {
   final FocusNode? focusNode;
 
@@ -343,8 +344,12 @@ class _ProfileButton extends StatelessWidget {
           return KeyEventResult.handled;
         },
         onLongPress: (key) {
-          if (context.read<ProfileService?>()?.isKidsProfile ?? false) return KeyEventResult.handled;
-          context.read<FLauncherChannel>().lockProfile();
+          final channel = context.read<FLauncherChannel>();
+          if (context.read<ProfileService?>()?.isKidsProfile ?? false) {
+            channel.openProfileChooser();
+          } else {
+            channel.lockProfile();
+          }
           return KeyEventResult.handled;
         },
         builder: (context) => _FocusableIconButton(
