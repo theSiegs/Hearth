@@ -1,0 +1,3 @@
+- Early development pre-release.
+- A newly added Google TV profile can be switched to: Hearth waits while Google TV sets it up.
+- The fade behind Continue Watching and search reaches both edges of the screen.
