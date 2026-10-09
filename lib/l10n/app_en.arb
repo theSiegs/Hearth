@@ -2396,14 +2396,17 @@
             }
         }
     },
-    "aboutForkOf": "A fork of {launcher} by {author}, with parts of {parts}",
-    "@aboutForkOf": {
-        "description": "Line under the version in the About dialog; the placeholders are project and author names",
+    "aboutBuiltOn": "Built on {launcher} by {author} and {original}, with parts of {parts}",
+    "@aboutBuiltOn": {
+        "description": "Line under the version in the About dialog: the projects Hearth is built on. The placeholders are project and author names (launcher: the project Hearth started from, author: its author, original: the launcher that one came from, parts: a project Hearth took parts from)",
         "placeholders": {
             "launcher": {
                 "type": "String"
             },
             "author": {
+                "type": "String"
+            },
+            "original": {
                 "type": "String"
             },
             "parts": {

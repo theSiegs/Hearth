@@ -74,7 +74,7 @@ class HearthAboutDialog extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            localizations.aboutForkOf("LTvLauncher", "LeanBitLab", "Arc Launcher"),
+            localizations.aboutBuiltOn("LTvLauncher", "LeanBitLab", "FLauncher", "Arc Launcher"),
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white70,

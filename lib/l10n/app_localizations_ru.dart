@@ -1945,8 +1945,8 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String aboutForkOf(String launcher, String author, String parts) {
-    return 'Форк $launcher от $author с частями $parts';
+  String aboutBuiltOn(String launcher, String author, String original, String parts) {
+    return 'Основано на $launcher от $author и $original, с частями $parts';
   }
 
   @override

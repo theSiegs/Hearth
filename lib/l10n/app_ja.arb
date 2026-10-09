@@ -580,7 +580,7 @@
     "updatesInstalling": "インストール中…",
     "updatesError": "エラー",
     "updatesDescriptionWithVersion": "{description} · {version}",
-    "aboutForkOf": "{author} による {launcher} のフォーク。{parts} の一部を含みます",
+    "aboutBuiltOn": "{author} による {launcher} と {original} をベースに、{parts} の一部を含みます",
     "aboutDescription": "Google TV 向けの、プライバシー重視で家族にやさしいランチャー。Google TV のプロフィールと Home Assistant を内蔵。広告なし、トラッカーなし。",
     "aboutHearthOnGitHub": "GitHub の Hearth",
     "aboutCredits": "クレジット",

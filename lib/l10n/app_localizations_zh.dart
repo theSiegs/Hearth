@@ -1921,8 +1921,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String aboutForkOf(String launcher, String author, String parts) {
-    return '$author 的 $launcher 的分支，包含 $parts 的部分代码';
+  String aboutBuiltOn(String launcher, String author, String original, String parts) {
+    return '基于 $author 的 $launcher 和 $original，包含 $parts 的部分代码';
   }
 
   @override

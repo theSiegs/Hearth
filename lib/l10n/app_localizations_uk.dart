@@ -1945,8 +1945,8 @@ class AppLocalizationsUk extends AppLocalizations {
   }
 
   @override
-  String aboutForkOf(String launcher, String author, String parts) {
-    return 'Форк $launcher від $author із частинами $parts';
+  String aboutBuiltOn(String launcher, String author, String original, String parts) {
+    return 'Створено на основі $launcher від $author та $original, із частинами $parts';
   }
 
   @override

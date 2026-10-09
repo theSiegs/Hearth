@@ -580,7 +580,7 @@
     "updatesInstalling": "इंस्टॉल हो रहा है…",
     "updatesError": "त्रुटि",
     "updatesDescriptionWithVersion": "{description} · {version}",
-    "aboutForkOf": "{author} के {launcher} का फ़ोर्क, {parts} के कुछ हिस्सों के साथ",
+    "aboutBuiltOn": "{author} के {launcher} और {original} पर आधारित, {parts} के कुछ हिस्सों के साथ",
     "aboutDescription": "Google TV के लिए एक निजी, परिवार के अनुकूल लॉन्चर, जिसमें Google TV प्रोफ़ाइल और Home Assistant शामिल हैं। विज्ञापन-मुक्त और ट्रैकर-मुक्त।",
     "aboutHearthOnGitHub": "GitHub पर Hearth",
     "aboutCredits": "श्रेय",

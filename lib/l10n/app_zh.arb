@@ -580,7 +580,7 @@
     "updatesInstalling": "正在安装…",
     "updatesError": "错误",
     "updatesDescriptionWithVersion": "{description} · {version}",
-    "aboutForkOf": "{author} 的 {launcher} 的分支，包含 {parts} 的部分代码",
+    "aboutBuiltOn": "基于 {author} 的 {launcher} 和 {original}，包含 {parts} 的部分代码",
     "aboutDescription": "一款注重隐私、适合家庭的 Google TV 启动器，内置 Google TV 个人资料和 Home Assistant。无广告、无跟踪器。",
     "aboutHearthOnGitHub": "GitHub 上的 Hearth",
     "aboutCredits": "致谢",
