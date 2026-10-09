@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/widgets/add_to_category_dialog.dart';
 import 'package:flauncher/widgets/panel_action_button.dart';
+import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/side_panel_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
@@ -50,6 +51,10 @@ class ApplicationInfoPanel extends StatefulWidget
 
 class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
 {
+  /// Kids profiles: adding to Favorites or a category, reordering and opening are free; hiding or showing an app,
+  /// banners, app info and uninstalling need the parent PIN (true in other profiles).
+  Future<bool> _parent(BuildContext context) => requireParent(context);
+
   late Future<bool> _hasCustomBannerFuture;
 
   @override
@@ -151,6 +156,8 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                      icon: widget.application.hidden ? Icons.visibility : Icons.visibility_off_outlined,
                      label: widget.application.hidden ? localizations.show : localizations.hide,
                      onPressed: () async {
+                       if (!await _parent(context)) return;
+                       if (!context.mounted) return;
                        final appsService = context.read<AppsService>();
                        if (widget.application.hidden) {
                          await appsService.showApplication(widget.application);
@@ -186,6 +193,8 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                              icon: Icons.image_search,
                              label: localizations.appInfoSetCustomBanner,
                              onPressed: () async {
+                               if (!await _parent(context)) return;
+                       if (!context.mounted) return;
                                final appsService = context.read<AppsService>();
                                try {
                                  final picker = ImagePicker();
@@ -214,6 +223,8 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                                icon: Icons.hide_image_outlined,
                                label: localizations.appInfoClearCustomBanner,
                                onPressed: () async {
+                                 if (!await _parent(context)) return;
+                       if (!context.mounted) return;
                                  final appsService = context.read<AppsService>();
                                  try {
                                    await appsService.removeCustomAppBanner(widget.application.packageName);
@@ -240,12 +251,18 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                    PanelActionButton(
                      icon: Icons.info_outlined,
                      label: localizations.appInfo,
-                     onPressed: () => context.read<AppsService>().openAppInfo(widget.application),
+                     onPressed: () async {
+                       if (!await _parent(context)) return;
+                       if (!context.mounted) return;
+                       await context.read<AppsService>().openAppInfo(widget.application);
+                     },
                    ),
                    PanelActionButton(
                      icon: Icons.delete_outlined,
                      label: localizations.uninstall,
                      onPressed: () async {
+                       if (!await _parent(context)) return;
+                       if (!context.mounted) return;
                        await context.read<AppsService>().uninstallApp(widget.application);
                        if (context.mounted) Navigator.of(context).pop(ApplicationInfoPanelResult.none);
                      },
