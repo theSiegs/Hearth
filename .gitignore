@@ -80,7 +80,6 @@ test/mocks.mocks.dart
 !.github/scripts/**/*.py
 !tool/*.py
 sqlite_lib/
-com.leanbitlab.ltvL.yml
 com.thesiegs.hearth.yml
 *.db
 *.db-journal
