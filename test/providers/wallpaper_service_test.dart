@@ -149,6 +149,20 @@ void main() {
     expect(WallpaperService.averageLuminance(Uint8List.fromList([255, 255, 255, 255, 0, 0, 0, 255])), closeTo(0.5, 0.01));
   });
 
+  test("Bing's photo is refetched a day after it started, not at local midnight", () {
+    final start = WallpaperService.bingStart("202610080700")!;
+    expect(start, DateTime.utc(2026, 10, 8, 7));
+    // Fetched just after midnight on the 9th: the 8th's photo is still Bing's until 07:00 UTC on the 9th
+    expect(WallpaperService.bingIsStale(now: DateTime.utc(2026, 10, 9, 4, 11), start: start, lastFetchedDay: "2026-10-09"),
+        isFalse);
+    expect(WallpaperService.bingIsStale(now: DateTime.utc(2026, 10, 9, 7, 0), start: start, lastFetchedDay: "2026-10-09"),
+        isTrue);
+    // Without a start (an older fetch): once a calendar day, as before
+    expect(WallpaperService.bingIsStale(now: DateTime(2026, 10, 9, 9), start: null, lastFetchedDay: "2026-10-09"), isFalse);
+    expect(WallpaperService.bingIsStale(now: DateTime(2026, 10, 10, 1), start: null, lastFetchedDay: "2026-10-09"), isTrue);
+    expect(WallpaperService.bingStart("not a date"), isNull);
+  });
+
   group("getGradient", () {
     test("without uuid from settings", () async {
       final fLauncherChannel = MockFLauncherChannel();

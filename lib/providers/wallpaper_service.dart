@@ -110,6 +110,13 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
   File? _shownFile;
   String? _bingTitle;
   String? _bingCredit;
+
+  /// When Bing's photo shown now started being its photo of the day (UTC), from its "fullstartdate"; null when
+  /// unknown (fetched by an older Hearth).
+  DateTime? _bingStart;
+
+  /// Whether the shown Bing photo was saved with its start time (by this version or later).
+  bool _bingStartRecorded = false;
   bool _initialized = false;
   String? _lastPublishedState;
 
@@ -205,6 +212,10 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed && _dayNightTimer != null) {
       _updateWallpaper();
       _scheduleDayNightSwitch();
+    }
+    // The hourly check doesn't run while the TV sleeps: look for a newer Bing photo on coming back
+    if (state == AppLifecycleState.resumed && _initialized && _settingsService.bingWallpaperEnabled) {
+      unawaited(refreshBingWallpaperIfStale());
     }
   }
 
@@ -376,6 +387,8 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
       final info = jsonDecode(await _wallpaperBingInfoFile.readAsString()) as Map<String, dynamic>;
       _bingTitle = info["title"] as String?;
       _bingCredit = info["copyright"] as String?;
+      _bingStart = DateTime.tryParse(info["start"] as String? ?? "");
+      _bingStartRecorded = info.containsKey("start");
     } catch (e) {
       developer.log("Couldn't read the Bing photo's credit", name: "WallpaperService", error: e);
     }
@@ -388,12 +401,34 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
     return (title: text(image['title']), credit: text(image['copyright']));
   }
 
-  /// Refreshes the Bing "Photo of the Day" only if it hasn't been fetched yet today.
+  /// Bing's "fullstartdate" ("202610090700", UTC) as a time; null when it isn't one.
+  @visibleForTesting
+  static DateTime? bingStart(Object? fullStartDate) {
+    final s = fullStartDate is String ? fullStartDate.trim() : "";
+    if (!RegExp(r'^\d{12}$').hasMatch(s)) return null;
+    return DateTime.utc(int.parse(s.substring(0, 4)), int.parse(s.substring(4, 6)), int.parse(s.substring(6, 8)),
+        int.parse(s.substring(8, 10)), int.parse(s.substring(10, 12)));
+  }
+
+  /// Whether Bing has a newer photo than the one shown: a day has passed since the shown one became Bing's photo
+  /// of the day. Bing changes its photo at its own hour (07:00 UTC for en-US), not at local midnight, so a fetch
+  /// just after midnight here gets the day before's photo; with no start known, once a calendar day.
+  @visibleForTesting
+  static bool bingIsStale({required DateTime now, required DateTime? start, required String lastFetchedDay}) {
+    if (start != null) return !now.toUtc().isBefore(start.add(const Duration(days: 1)));
+    final today = "${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-"
+        "${now.day.toString().padLeft(2, '0')}";
+    return lastFetchedDay.trim() != today;
+  }
+
+  /// Refreshes the Bing "Photo of the Day" only when Bing has a newer one (see [bingIsStale]).
   Future<void> refreshBingWallpaperIfStale() async {
     try {
-      final today = _dateStamp(DateTime.now());
       final lastFetched = await _wallpaperBingDateFile.exists() ? await _wallpaperBingDateFile.readAsString() : "";
-      if (lastFetched.trim() != today || !await _wallpaperBingFile.exists()) {
+      // A photo saved without its start time (an older Hearth) is fetched once more to learn it
+      if (!await _wallpaperBingFile.exists() ||
+          !_bingStartRecorded ||
+          bingIsStale(now: DateTime.now(), start: _bingStart, lastFetchedDay: lastFetched)) {
         await refreshBingWallpaper();
       }
     } catch (e) {
@@ -441,7 +476,10 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
       final info = bingInfo(images.first as Map<String, dynamic>);
       _bingTitle = info.title;
       _bingCredit = info.credit;
-      await _wallpaperBingInfoFile.writeAsString(jsonEncode({"title": info.title, "copyright": info.credit}),
+      _bingStart = bingStart(images.first['fullstartdate']);
+      _bingStartRecorded = true;
+      await _wallpaperBingInfoFile.writeAsString(
+          jsonEncode({"title": info.title, "copyright": info.credit, "start": _bingStart?.toIso8601String()}),
           flush: true);
 
       await FileImage(_wallpaperBingFile).evict();
