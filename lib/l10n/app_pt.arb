@@ -600,5 +600,11 @@
     "profilePinEnterTitle": "PIN de {profile} no {app}",
     "profilePinEnterSubtitle": "O Hearth o digita atrás do cartão “Entrando como” quando o {app} pede. Fica criptografado nesta TV e nunca é mostrado.",
     "profilePinNeedsParentPin": "Defina antes um PIN dos pais ({settings} → {profiles} → {parentPin}): ele é necessário para salvar o PIN de um perfil.",
-    "profilePinSaveFailed": "Não foi possível salvar o PIN."
+    "profilePinSaveFailed": "Não foi possível salvar o PIN.",
+    "profileLockNow": "Bloquear meu perfil",
+    "profileLockNowSubtitle": "O Google TV pede o PIN do seu perfil para voltar. Manter pressionado o botão do perfil também faz isso.",
+    "profileLockOnSleep": "Bloquear quando a TV dormir",
+    "profileLockEveryTime": "Sempre",
+    "profileLockAfterMinutes": "Após {minutes} min dormindo",
+    "profileLockNeedsGoogleLock": "Usa o bloqueio de perfil do próprio Google TV: ative-o para sua conta em Configurações do Google TV → Contas e login → sua conta → Bloqueio de perfil."
 }

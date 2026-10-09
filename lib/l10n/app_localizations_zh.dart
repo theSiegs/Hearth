@@ -1994,4 +1994,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profilePinSaveFailed => '无法保存 PIN。';
+
+  @override
+  String get profileLockNow => '锁定我的个人资料';
+
+  @override
+  String get profileLockNowSubtitle => '要回来，Google TV 会要求输入个人资料 PIN。按住个人资料按钮也可以。';
+
+  @override
+  String get profileLockOnSleep => '电视休眠时锁定';
+
+  @override
+  String get profileLockEveryTime => '每次';
+
+  @override
+  String profileLockAfterMinutes(int minutes) {
+    return '休眠 $minutes 分钟后';
+  }
+
+  @override
+  String get profileLockNeedsGoogleLock => '使用 Google TV 自带的个人资料锁：在 Google TV 设置 → 账号与登录 → 你的账号 → 个人资料锁 中为你的账号开启。';
 }

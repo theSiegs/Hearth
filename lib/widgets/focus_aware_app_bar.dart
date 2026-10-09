@@ -18,6 +18,8 @@ import 'focusable_tap.dart';
 import '../providers/home_search.dart';
 import 'weather_status_bar_widget.dart';
 import 'package:flauncher/widgets/title_pill.dart';
+import 'package:flauncher/widgets/focus_keyboard_listener.dart';
+import 'package:flauncher/widgets/app_card_keys.dart';
 
 class FocusAwareAppBar extends StatefulWidget implements PreferredSizeWidget
 {
@@ -326,19 +328,32 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
   }
 }
 
-/// Opens Google TV's profile chooser and shows the active profile's name.
+/// Opens Google TV's profile chooser and shows the active profile's name. Held, it locks a grown-up profile with
+/// Google TV's own profile lock (its PIN screen), for leaving the TV without leaving the profile open.
 class _ProfileButton extends StatelessWidget {
   final FocusNode? focusNode;
 
   const _ProfileButton({this.focusNode});
 
   @override
-  Widget build(BuildContext context) => _FocusableIconButton(
-        icon: Icons.person,
-        focusNode: focusNode,
-        image: context.select<ProfileService?, Uint8List?>((p) => p?.activeProfileAvatar),
-        label: context.select<ProfileService?, String?>((p) => p?.activeProfileName),
-        onPressed: () => context.read<FLauncherChannel>().openProfileChooser(),
+  Widget build(BuildContext context) => FocusKeyboardListener(
+        onPressed: (key) {
+          if (!AppCardKeys.validationKeys.contains(key)) return KeyEventResult.ignored;
+          context.read<FLauncherChannel>().openProfileChooser();
+          return KeyEventResult.handled;
+        },
+        onLongPress: (key) {
+          if (context.read<ProfileService?>()?.isKidsProfile ?? false) return KeyEventResult.handled;
+          context.read<FLauncherChannel>().lockProfile();
+          return KeyEventResult.handled;
+        },
+        builder: (context) => _FocusableIconButton(
+          icon: Icons.person,
+          focusNode: focusNode,
+          image: context.select<ProfileService?, Uint8List?>((p) => p?.activeProfileAvatar),
+          label: context.select<ProfileService?, String?>((p) => p?.activeProfileName),
+          onPressed: () => context.read<FLauncherChannel>().openProfileChooser(),
+        ),
       );
 }
 

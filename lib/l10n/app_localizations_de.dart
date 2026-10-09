@@ -2002,4 +2002,24 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get profilePinSaveFailed => 'Die PIN konnte nicht gespeichert werden.';
+
+  @override
+  String get profileLockNow => 'Mein Profil sperren';
+
+  @override
+  String get profileLockNowSubtitle => 'Google TV fragt nach deiner Profil-PIN, um zurückzukehren. Das Gedrückthalten der Profiltaste tut dasselbe.';
+
+  @override
+  String get profileLockOnSleep => 'Sperren, wenn der Fernseher schläft';
+
+  @override
+  String get profileLockEveryTime => 'Jedes Mal';
+
+  @override
+  String profileLockAfterMinutes(int minutes) {
+    return 'Nach $minutes Min. Ruhezustand';
+  }
+
+  @override
+  String get profileLockNeedsGoogleLock => 'Nutzt die Profilsperre von Google TV: Schalte sie für dein Konto ein unter Google TV-Einstellungen → Konten und Anmeldung → dein Konto → Profilsperre.';
 }

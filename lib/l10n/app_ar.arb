@@ -600,5 +600,11 @@
     "profilePinEnterTitle": "رمز PIN لـ {profile} في {app}",
     "profilePinEnterSubtitle": "يكتبه Hearth خلف بطاقة \"تسجيل الدخول باسم\" عندما يطلبه {app}. يبقى مشفّرًا على هذا التلفزيون ولا يُعرض أبدًا.",
     "profilePinNeedsParentPin": "عيّن أولًا رمز PIN للوالدين ({settings} ← {profiles} ← {parentPin}): هو مطلوب لحفظ رمز ملف شخصي.",
-    "profilePinSaveFailed": "تعذّر حفظ الرمز."
+    "profilePinSaveFailed": "تعذّر حفظ الرمز.",
+    "profileLockNow": "قفل ملفي الشخصي",
+    "profileLockNowSubtitle": "يطلب Google TV رمز PIN لملفك الشخصي للعودة. الضغط مطولاً على زر الملف الشخصي يفعل ذلك أيضًا.",
+    "profileLockOnSleep": "القفل عند سكون التلفزيون",
+    "profileLockEveryTime": "في كل مرة",
+    "profileLockAfterMinutes": "بعد {minutes} دقيقة من السكون",
+    "profileLockNeedsGoogleLock": "يستخدم قفل الملف الشخصي في Google TV: فعّله لحسابك من إعدادات Google TV ← الحسابات وتسجيل الدخول ← حسابك ← قفل الملف الشخصي."
 }

@@ -2018,4 +2018,24 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get profilePinSaveFailed => 'Не удалось сохранить PIN-код.';
+
+  @override
+  String get profileLockNow => 'Заблокировать мой профиль';
+
+  @override
+  String get profileLockNowSubtitle => 'Чтобы вернуться, Google TV попросит PIN-код профиля. Удержание кнопки профиля делает то же самое.';
+
+  @override
+  String get profileLockOnSleep => 'Блокировать, когда телевизор засыпает';
+
+  @override
+  String get profileLockEveryTime => 'Каждый раз';
+
+  @override
+  String profileLockAfterMinutes(int minutes) {
+    return 'Через $minutes мин сна';
+  }
+
+  @override
+  String get profileLockNeedsGoogleLock => 'Использует блокировку профиля Google TV: включите её для своего аккаунта в Настройках Google TV → Аккаунты и вход → ваш аккаунт → Блокировка профиля.';
 }

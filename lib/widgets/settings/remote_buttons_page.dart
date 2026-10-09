@@ -89,6 +89,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
       "search" when action["target"] == "text" => l.remoteButtonsActionSearchKeyboard,
       "home" => l.remoteButtonsActionHome,
       "sleep" => l.remoteButtonsActionSleep,
+      "lock" => l.profileLockNow,
       "settings" => l.remoteButtonsActionAndroidSettings,
       _ => action["label"] as String? ?? "?",
     };
@@ -209,6 +210,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
           _option(context, "Google Assistant (Gemini)", "assistant"),
           _option(context, l.remoteButtonsActionHome, "home"),
           _option(context, l.remoteButtonsActionSleep, "sleep"),
+          _option(context, l.profileLockNow, "lock"),
           _option(context, l.remoteButtonsActionAndroidSettings, "settings"),
         ],
       ),
@@ -250,6 +252,8 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
         return {"type": "home", "label": "Hearth home"};
       case "sleep":
         return {"type": "sleep", "label": "Sleep"};
+      case "lock":
+        return {"type": "lock", "label": "Lock my profile"};
       case "settings":
         return {"type": "settings", "label": "Android settings"};
     }

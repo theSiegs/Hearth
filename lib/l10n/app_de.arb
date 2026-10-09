@@ -600,5 +600,11 @@
     "profilePinEnterTitle": "PIN von {profile} in {app}",
     "profilePinEnterSubtitle": "Hearth gibt sie hinter der Karte „Anmelden als“ ein, wenn {app} danach fragt. Sie bleibt verschlüsselt auf diesem Fernseher und wird nie angezeigt.",
     "profilePinNeedsParentPin": "Lege zuerst eine Eltern-PIN fest ({settings} → {profiles} → {parentPin}): Sie wird zum Speichern einer Profil-PIN benötigt.",
-    "profilePinSaveFailed": "Die PIN konnte nicht gespeichert werden."
+    "profilePinSaveFailed": "Die PIN konnte nicht gespeichert werden.",
+    "profileLockNow": "Mein Profil sperren",
+    "profileLockNowSubtitle": "Google TV fragt nach deiner Profil-PIN, um zurückzukehren. Das Gedrückthalten der Profiltaste tut dasselbe.",
+    "profileLockOnSleep": "Sperren, wenn der Fernseher schläft",
+    "profileLockEveryTime": "Jedes Mal",
+    "profileLockAfterMinutes": "Nach {minutes} Min. Ruhezustand",
+    "profileLockNeedsGoogleLock": "Nutzt die Profilsperre von Google TV: Schalte sie für dein Konto ein unter Google TV-Einstellungen → Konten und Anmeldung → dein Konto → Profilsperre."
 }

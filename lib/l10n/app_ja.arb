@@ -600,5 +600,11 @@
     "profilePinEnterTitle": "{app}での{profile}のPIN",
     "profilePinEnterSubtitle": "{app}が求めると、Hearthが「ログイン中」カードの裏で入力します。このテレビに暗号化して保存され、表示されることはありません。",
     "profilePinNeedsParentPin": "先に保護者のPINを設定してください（{settings} → {profiles} → {parentPin}）。プロフィールのPINを保存するのに必要です。",
-    "profilePinSaveFailed": "PINを保存できませんでした。"
+    "profilePinSaveFailed": "PINを保存できませんでした。",
+    "profileLockNow": "プロフィールをロック",
+    "profileLockNowSubtitle": "戻るにはGoogle TVがプロフィールのPINを求めます。プロフィールボタンの長押しでも同じです。",
+    "profileLockOnSleep": "テレビがスリープしたらロック",
+    "profileLockEveryTime": "毎回",
+    "profileLockAfterMinutes": "{minutes}分以上スリープした後",
+    "profileLockNeedsGoogleLock": "Google TV自体のプロフィールロックを使います。Google TVの設定 → アカウントとログイン → ご自分のアカウント → プロフィールロック でオンにしてください。"
 }

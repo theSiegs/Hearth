@@ -600,5 +600,11 @@
     "profilePinEnterTitle": "PIN-код {profile} в {app}",
     "profilePinEnterSubtitle": "Hearth вводит его за карточкой «Вход как», когда {app} просит. Код хранится на этом телевизоре в зашифрованном виде и никогда не показывается.",
     "profilePinNeedsParentPin": "Сначала задайте родительский PIN-код ({settings} → {profiles} → {parentPin}): он нужен, чтобы сохранить PIN-код профиля.",
-    "profilePinSaveFailed": "Не удалось сохранить PIN-код."
+    "profilePinSaveFailed": "Не удалось сохранить PIN-код.",
+    "profileLockNow": "Заблокировать мой профиль",
+    "profileLockNowSubtitle": "Чтобы вернуться, Google TV попросит PIN-код профиля. Удержание кнопки профиля делает то же самое.",
+    "profileLockOnSleep": "Блокировать, когда телевизор засыпает",
+    "profileLockEveryTime": "Каждый раз",
+    "profileLockAfterMinutes": "Через {minutes} мин сна",
+    "profileLockNeedsGoogleLock": "Использует блокировку профиля Google TV: включите её для своего аккаунта в Настройках Google TV → Аккаунты и вход → ваш аккаунт → Блокировка профиля."
 }

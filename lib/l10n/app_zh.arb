@@ -600,5 +600,11 @@
     "profilePinEnterTitle": "{profile} 在 {app} 中的 PIN",
     "profilePinEnterSubtitle": "当 {app} 要求时，Hearth 会在“正在登录”卡片后面输入。它加密保存在这台电视上，从不显示。",
     "profilePinNeedsParentPin": "请先设置家长 PIN（{settings} → {profiles} → {parentPin}）：保存个人资料 PIN 需要它。",
-    "profilePinSaveFailed": "无法保存 PIN。"
+    "profilePinSaveFailed": "无法保存 PIN。",
+    "profileLockNow": "锁定我的个人资料",
+    "profileLockNowSubtitle": "要回来，Google TV 会要求输入个人资料 PIN。按住个人资料按钮也可以。",
+    "profileLockOnSleep": "电视休眠时锁定",
+    "profileLockEveryTime": "每次",
+    "profileLockAfterMinutes": "休眠 {minutes} 分钟后",
+    "profileLockNeedsGoogleLock": "使用 Google TV 自带的个人资料锁：在 Google TV 设置 → 账号与登录 → 你的账号 → 个人资料锁 中为你的账号开启。"
 }

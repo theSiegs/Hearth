@@ -2037,4 +2037,24 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get profilePinSaveFailed => 'تعذّر حفظ الرمز.';
+
+  @override
+  String get profileLockNow => 'قفل ملفي الشخصي';
+
+  @override
+  String get profileLockNowSubtitle => 'يطلب Google TV رمز PIN لملفك الشخصي للعودة. الضغط مطولاً على زر الملف الشخصي يفعل ذلك أيضًا.';
+
+  @override
+  String get profileLockOnSleep => 'القفل عند سكون التلفزيون';
+
+  @override
+  String get profileLockEveryTime => 'في كل مرة';
+
+  @override
+  String profileLockAfterMinutes(int minutes) {
+    return 'بعد $minutes دقيقة من السكون';
+  }
+
+  @override
+  String get profileLockNeedsGoogleLock => 'يستخدم قفل الملف الشخصي في Google TV: فعّله لحسابك من إعدادات Google TV ← الحسابات وتسجيل الدخول ← حسابك ← قفل الملف الشخصي.';
 }
