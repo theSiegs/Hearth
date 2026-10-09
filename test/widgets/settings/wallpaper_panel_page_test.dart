@@ -46,8 +46,8 @@ void main() {
 
     await tester.tap(find.text("Gradient"));
     await tester.pumpAndSettle();
-    expect(find.byKey(Key("GradientPanelPage")), findsOneWidget);
-  }, skip: true);
+    expect(find.byKey(const Key("GradientPanelPage")), findsOneWidget);
+  });
 
   group("'Custom'", () {
     testWidgets("opens file explorer if available", (tester) async {
