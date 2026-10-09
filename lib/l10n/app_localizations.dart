@@ -3562,6 +3562,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'WALLPAPER PHOTO'**
   String get aboutWallpaperPhoto;
+
+  /// Hearth update dialog: the downloaded APK is another app (e.g. Hearth under its old app id)
+  ///
+  /// In en, this message translates to:
+  /// **'This download isn\'t an update for this Hearth'**
+  String get updateErrorWrongApp;
+
+  /// Profile Pairing: a streaming app profile PIN saved in the old Hearth, which couldn't move to the new one
+  ///
+  /// In en, this message translates to:
+  /// **'Enter it again (Hearth moved)'**
+  String get profilePinReenter;
+
+  /// Shown once after the new Hearth brought the old Hearth's data over (app id change)
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth has moved'**
+  String get moveImportedTitle;
+
+  /// Hearth has moved: what came over
+  ///
+  /// In en, this message translates to:
+  /// **'Your settings, sections, profiles, Profile Pairing choices, wallpapers and Home Assistant setup came over from the old Hearth ({version}).'**
+  String moveImportedBody(String version);
+
+  /// Hearth has moved: saved streaming PINs must be entered again
+  ///
+  /// In en, this message translates to:
+  /// **'Streaming-app PINs stay locked to the old Hearth: enter them again in Settings → Profiles → Profile Pairing ({count}).'**
+  String moveImportedPins(int count);
+
+  /// Hearth has moved: what's left to do
+  ///
+  /// In en, this message translates to:
+  /// **'To finish: turn on the new Hearth\'s services in Setup & permissions (Home Button Fix, notifications, Profile Pairing, Hearth voice), then remove the old Hearth.'**
+  String get moveFinishSteps;
+
+  /// Hearth has moved: button opening Settings > Setup & permissions
+  ///
+  /// In en, this message translates to:
+  /// **'Setup & permissions'**
+  String get moveOpenSetup;
+
+  /// Hearth has moved: button that uninstalls the old Hearth
+  ///
+  /// In en, this message translates to:
+  /// **'Remove the old Hearth'**
+  String get moveRemoveOld;
+
+  /// Confirmation before removing the old Hearth
+  ///
+  /// In en, this message translates to:
+  /// **'The new Hearth takes the old one\'s place in every profile that has it, then the old Hearth is uninstalled.'**
+  String get moveRemoveOldConfirm;
+
+  /// After the old Hearth was removed
+  ///
+  /// In en, this message translates to:
+  /// **'The old Hearth is gone. Restart the TV once so the new Hearth can take over Home Assistant\'s ports.'**
+  String get moveRemoveOldDone;
+
+  /// Removing the old Hearth without Hearth's own adb
+  ///
+  /// In en, this message translates to:
+  /// **'Finish on Android\'s uninstall screen. The old Hearth\'s copies in other profiles remove themselves; add the new Hearth to them in Settings → Profiles → Family apps.'**
+  String get moveRemoveOldManual;
+
+  /// The new Hearth found the old Hearth but it is from before the bridge version
+  ///
+  /// In en, this message translates to:
+  /// **'The old Hearth can\'t hand over its settings'**
+  String get moveUnavailableTitle;
+
+  /// The old Hearth can't hand over its settings
+  ///
+  /// In en, this message translates to:
+  /// **'The old Hearth ({version}) is still on this TV but is too old to hand over its settings. Update it to its bridge version, then use Settings → Backup & restore → Bring over from the old Hearth.'**
+  String moveUnavailableBody(String version);
+
+  /// The import from the old Hearth failed
+  ///
+  /// In en, this message translates to:
+  /// **'Bringing the old Hearth\'s settings over failed ({detail}). Try again in Settings → Backup & restore.'**
+  String moveFailedBody(String detail);
+
+  /// Backup & restore: replace this Hearth's data with the old Hearth's
+  ///
+  /// In en, this message translates to:
+  /// **'Bring over from the old Hearth'**
+  String get moveImportTile;
+
+  /// Backup & restore: confirm bringing the old Hearth's data over
+  ///
+  /// In en, this message translates to:
+  /// **'Replace this Hearth\'s settings, sections, profiles and wallpapers with the old Hearth\'s ({version})? Hearth restarts.'**
+  String moveImportConfirm(String version);
+
+  /// Bridge build (old app id): Hearth has a new app id
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth is moving'**
+  String get bridgeTitle;
+
+  /// Bridge build: the new Hearth isn't installed yet
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth now has an app id of its own. Install the new Hearth in Settings → Updates → Hearth: it brings everything over from this one.'**
+  String get bridgeBody;
+
+  /// Bridge build: the new Hearth is installed
+  ///
+  /// In en, this message translates to:
+  /// **'The new Hearth ({version}) is installed. Open it: it brings your settings over and shows what\'s left to do.'**
+  String bridgeInstalledBody(String version);
+
+  /// Bridge build: button opening the new Hearth
+  ///
+  /// In en, this message translates to:
+  /// **'Open the new Hearth'**
+  String get bridgeOpenNew;
+
+  /// Bridge build: button opening Settings > Updates
+  ///
+  /// In en, this message translates to:
+  /// **'Updates'**
+  String get bridgeOpenUpdates;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

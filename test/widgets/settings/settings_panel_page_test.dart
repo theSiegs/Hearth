@@ -219,7 +219,7 @@ class _MockPackageInfoPlatform with MockPlatformInterfaceMixin implements Packag
   @override
   Future<PackageInfoData> getAll({String? baseUrl}) async => PackageInfoData(
         appName: "Hearth",
-        packageName: "com.leanbitlab.ltvL",
+        packageName: "com.thesiegs.hearth",
         version: "1.0.0",
         buildNumber: "1",
         buildSignature: "",

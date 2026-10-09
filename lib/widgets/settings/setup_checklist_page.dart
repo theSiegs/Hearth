@@ -1,3 +1,4 @@
+import 'package:flauncher/hearth_ids.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
@@ -82,7 +83,7 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
       warning: restricted,
       open: channel.requestAccessibilityPermission,
       adbFallback: "adb shell settings put secure enabled_accessibility_services "
-          "$packageName/$packageName.LauncherAccessibilityService",
+          "${hearthComponent(packageName, "LauncherAccessibilityService")}",
     ),
     SetupStep(
       title: l.setupNotificationsTitle,
@@ -167,7 +168,7 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
   }
 
   Future<void> _refresh() async {
-    String packageName = "com.leanbitlab.ltvL";
+    String packageName = kHearthAppId;
     try {
       packageName = (await PackageInfo.fromPlatform()).packageName;
     } catch (_) {}

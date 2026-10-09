@@ -2017,4 +2017,79 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get aboutWallpaperPhoto => '壁紙の写真';
+
+  @override
+  String get updateErrorWrongApp => 'This download isn\'t an update for this Hearth';
+
+  @override
+  String get profilePinReenter => 'Enter it again (Hearth moved)';
+
+  @override
+  String get moveImportedTitle => 'Hearth has moved';
+
+  @override
+  String moveImportedBody(String version) {
+    return 'Your settings, sections, profiles, Profile Pairing choices, wallpapers and Home Assistant setup came over from the old Hearth ($version).';
+  }
+
+  @override
+  String moveImportedPins(int count) {
+    return 'Streaming-app PINs stay locked to the old Hearth: enter them again in Settings → Profiles → Profile Pairing ($count).';
+  }
+
+  @override
+  String get moveFinishSteps => 'To finish: turn on the new Hearth\'s services in Setup & permissions (Home Button Fix, notifications, Profile Pairing, Hearth voice), then remove the old Hearth.';
+
+  @override
+  String get moveOpenSetup => 'Setup & permissions';
+
+  @override
+  String get moveRemoveOld => 'Remove the old Hearth';
+
+  @override
+  String get moveRemoveOldConfirm => 'The new Hearth takes the old one\'s place in every profile that has it, then the old Hearth is uninstalled.';
+
+  @override
+  String get moveRemoveOldDone => 'The old Hearth is gone. Restart the TV once so the new Hearth can take over Home Assistant\'s ports.';
+
+  @override
+  String get moveRemoveOldManual => 'Finish on Android\'s uninstall screen. The old Hearth\'s copies in other profiles remove themselves; add the new Hearth to them in Settings → Profiles → Family apps.';
+
+  @override
+  String get moveUnavailableTitle => 'The old Hearth can\'t hand over its settings';
+
+  @override
+  String moveUnavailableBody(String version) {
+    return 'The old Hearth ($version) is still on this TV but is too old to hand over its settings. Update it to its bridge version, then use Settings → Backup & restore → Bring over from the old Hearth.';
+  }
+
+  @override
+  String moveFailedBody(String detail) {
+    return 'Bringing the old Hearth\'s settings over failed ($detail). Try again in Settings → Backup & restore.';
+  }
+
+  @override
+  String get moveImportTile => 'Bring over from the old Hearth';
+
+  @override
+  String moveImportConfirm(String version) {
+    return 'Replace this Hearth\'s settings, sections, profiles and wallpapers with the old Hearth\'s ($version)? Hearth restarts.';
+  }
+
+  @override
+  String get bridgeTitle => 'Hearth is moving';
+
+  @override
+  String get bridgeBody => 'Hearth now has an app id of its own. Install the new Hearth in Settings → Updates → Hearth: it brings everything over from this one.';
+
+  @override
+  String bridgeInstalledBody(String version) {
+    return 'The new Hearth ($version) is installed. Open it: it brings your settings over and shows what\'s left to do.';
+  }
+
+  @override
+  String get bridgeOpenNew => 'Open the new Hearth';
+
+  @override
+  String get bridgeOpenUpdates => 'Updates';
 }

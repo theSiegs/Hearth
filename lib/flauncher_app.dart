@@ -26,6 +26,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'flauncher.dart';
+import 'widgets/hearth_move.dart';
 import 'widgets/home_button_fix_check.dart';
 import 'providers/home_search.dart';
 
@@ -153,7 +154,7 @@ class FLauncherApp extends StatelessWidget
                 LauncherState launcherState = context.read<LauncherState>();
                 launcherState.handleBackNavigation(context);
               },
-              child: HomeButtonFixCheck(child: FLauncher()),
+              child: HomeButtonFixCheck(child: HearthMoveCheck(child: FLauncher())),
             ),
           ),
         );

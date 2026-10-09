@@ -38,7 +38,7 @@ function ProfileUsers {
 function Launchables([string] $user) {
     (Dev shell cmd package query-activities --brief --user $user -a android.intent.action.MAIN -c android.intent.category.LEANBACK_LAUNCHER) |
             Select-String '^\s*([\w.]+)/' | ForEach-Object { $_.Matches[0].Groups[1].Value } |
-            Where-Object { $_ -notin @('com.android.vending', 'com.leanbitlab.ltvL', $supervisor) } | Sort-Object -Unique
+            Where-Object { $_ -notin @('com.android.vending', 'com.thesiegs.hearth', $supervisor) } | Sort-Object -Unique
 }
 
 switch ($Command) {
@@ -66,7 +66,7 @@ switch ($Command) {
         if ($Arg2 -eq 'on') { Supervise $Arg1 @('--es', 'suspend', $packages) } else { Supervise $Arg1 @('--es', 'unsuspend', $packages) }
     }
     'hearth' {
-        Dev shell pm install-existing --user $Arg1 com.leanbitlab.ltvL
+        Dev shell pm install-existing --user $Arg1 com.thesiegs.hearth
     }
     'list' {
         Dev shell pm list users

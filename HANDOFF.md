@@ -17,8 +17,8 @@
 >   `dart run drift_dev schema generate drift_schemas/ test/generated_migrations/`, then `flutter test`.
 > - **Release signing:** personal key outside the repo (`~/.android/ltv-release.jks`, passwords in git-ignored
 >   `android/local.properties`). Deployed to the test onn 4K Pro (192.0.2.73).
-> - **Renamed to Hearth** (repo `github.com/theSiegs/Hearth`; the old URL redirects). The application ID stays
->   `com.leanbitlab.ltvL` on purpose so installs upgrade in place. Icon and banner come from `tool/generate_icons.py`.
+> - **Renamed to Hearth** (repo `github.com/theSiegs/Hearth`; the old URL redirects). The application ID was the
+>   fork's `com.leanbitlab.ltvL` until 2026-10; it is `com.thesiegs.hearth` now (docs/design/app-id-change.md). Icon and banner come from `tool/generate_icons.py`.
 >   Upstream is the `upstream` remote (leanbitlab-org/LtvLauncher); arclauncher is the `arclauncher` remote.
 > - **Continue Watching posters are back** (`WatchNextPosters.java`): upstream dropped remote artwork for privacy;
 >   Hearth fetches it with no cookies/referrer, https only (http only on the LAN), downscaled and disk-cached 30 days.
@@ -29,7 +29,7 @@
 >   bottom; other sections follow below. Dock corners follow the theme (`dockRadiusForTheme`). Settings → Interface →
 >   Appearance turns it off or changes blur/dark/shadow. While focus is on that first screen the page is held at the top
 >   (cards otherwise centre themselves). The dock blur and gradient wallpapers are drawn once and cached (arclauncher perf work), and the wallpaper blurs while browsing the sections below the dock (Appearance toggle). Enhanced focus was skipped: LTv already has zoom, dimming and the double outline. Still to port: video wallpaper (maybe), merging the TV and non-TV app sections.
-> - Debug builds install as a separate app (`com.leanbitlab.ltvL.debug`); to test the real launcher on the emulator,
+> - Debug builds install as a separate app (`com.thesiegs.hearth.debug`); to test the real launcher on the emulator,
 >   install the release APK.
 
 **Repo:** `C:\Users\alex\dev\Hearth` (formerly `dev\LtvLauncher`; local clone of `github.com/theSiegs/Hearth`, formerly `theSiegs/LtvLauncher`, a personal fork of `LeanBitLab/LtvLauncher`, itself a fork of the open-source `FLauncher` Android TV launcher — Flutter/Dart app + thin native Android layer)
@@ -53,7 +53,7 @@ Projectivy Launcher (`spocky/miproja1`) was the user's first idea, but that GitH
 ## What was built this session
 
 ### 1. Cleanup
-Deleted `android/app/src/main/java/me/efesser/flauncher/` — a dead duplicate of the native package left over from the pre-fork namespace (`applicationId` is `com.leanbitlab.ltvL`; the old package was unreferenced but still compiled into the APK).
+Deleted `android/app/src/main/java/me/efesser/flauncher/` — a dead duplicate of the native package left over from the pre-fork namespace (`applicationId` was `com.leanbitlab.ltvL` then; the old package was unreferenced but still compiled into the APK).
 
 ### 2. Profile picker at startup
 - `lib/models/profile.dart` — `Profile` model (id, name, avatar color, optional per-profile accent color override, optional PIN hash).
@@ -71,7 +71,7 @@ Deleted `android/app/src/main/java/me/efesser/flauncher/` — a dead duplicate o
 
 ### 4. Self-update from GitHub Releases
 - `lib/providers/update_service.dart` — checks `api.github.com/repos/theSiegs/LtvLauncher/releases/latest`, compares the release tag to the installed version (`package_info_plus`), downloads the `.apk` release asset, hands it to the system installer.
-- Native additions in `android/app/src/main/java/com/leanbitlab/ltvL/MainActivity.java`: `checkInstallPermission`, `requestInstallPermission`, `installApk` (via `FileProvider`, since direct `file://` URIs don't work across the scoped-storage boundary on modern Android).
+- Native additions in `android/app/src/main/java/com/thesiegs/hearth/MainActivity.java`: `checkInstallPermission`, `requestInstallPermission`, `installApk` (via `FileProvider`, since direct `file://` URIs don't work across the scoped-storage boundary on modern Android).
 - New `<provider>` (`FileProvider`) + `android/app/src/main/res/xml/provider_paths.xml` in the manifest, pointing at the app's external-files `updates/` directory (matches where `UpdateService` downloads the APK).
 - UI: `lib/widgets/settings/update_dialog.dart`, reachable from Settings → "Check for Updates" (shows changelog, download progress, install button).
 - This mirrors the GitHub-Releases-as-update-channel model already used for Alex's SmartTube fork (HearthTube, formerly YouTube+), just implemented directly against the GitHub API instead of a separate update-manifest file.
@@ -119,7 +119,7 @@ No Flutter SDK existed on this machine at session start. With the user's explici
 - `lib/widgets/settings/wallpaper_panel_page.dart` (Bing toggle UI)
 - `lib/widgets/settings/settings_panel_page.dart` (Profiles + Check for Updates entries)
 - `lib/widgets/settings/settings_panel.dart` (ManageProfilesPage route)
-- `android/app/src/main/java/com/leanbitlab/ltvL/MainActivity.java` (install-permission + installApk methods)
+- `android/app/src/main/java/com/thesiegs/hearth/MainActivity.java` (install-permission + installApk methods)
 - `android/app/src/main/AndroidManifest.xml` (`INTERNET`, `REQUEST_INSTALL_PACKAGES`, `FileProvider`)
 - `pubspec.yaml` (`crypto` dependency)
 - `test/providers/wallpaper_service_test.dart`, `test/widgets/settings/wallpaper_panel_page_test.dart` (mock stub fixes)

@@ -19,6 +19,7 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:flauncher/hearth_ids.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/notifications_service.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
@@ -156,7 +157,7 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> w
       title: localizations.notifAccessAdbTitle,
       message: localizations.notifAccessAdbMessage,
       command:
-          'adb shell cmd notification allow_listener $packageName/$packageName.LauncherNotificationListenerService',
+          'adb shell cmd notification allow_listener ${hearthComponent(packageName, "LauncherNotificationListenerService")}',
       actionLabel: localizations.notifOpenAppInfo,
       onAction: () => context.read<NotificationsService>().openAppNotificationSettings(),
     );

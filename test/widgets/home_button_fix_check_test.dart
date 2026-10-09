@@ -70,9 +70,9 @@ void main() {
 
   testWidgets("the adb command names the installed build's package", (tester) async {
     PackageInfo.setMockInitialValues(
-        appName: 'Hearth', packageName: 'com.leanbitlab.ltvL.debug', version: '1', buildNumber: '1', buildSignature: '');
+        appName: 'Hearth', packageName: 'com.thesiegs.hearth.debug', version: '1', buildNumber: '1', buildSignature: '');
     await _pump(tester, _FakeChannel({'enabled': false, 'seenBefore': true, 'restricted': true}));
-    expect(find.textContaining('appops set com.leanbitlab.ltvL.debug ACCESS_RESTRICTED_SETTINGS'), findsOneWidget);
+    expect(find.textContaining('appops set com.thesiegs.hearth.debug ACCESS_RESTRICTED_SETTINGS'), findsOneWidget);
   });
 
   testWidgets("Don't remind me forgets the service, and the warning shows once per run", (tester) async {
