@@ -253,24 +253,27 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
     for (final r in rows) {
       byUser.putIfAbsent((r["userId"] as int?) ?? -1, () => []).add(r);
     }
+    // One focusable row per profile: the remote moves down through them and the panel scrolls with it, which
+    // plain text below the rows couldn't do. Its apps' states share one line under the name.
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final entry in byUser.entries)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
-            child: Column(
+          FocusableSettingsTile(
+            leading: Icon(
+              ((entry.value.first["supervised"] as bool?) ?? false) ? Icons.child_care : Icons.person_outline,
+              color: entry.value.any((r) => (r["installed"] as bool?) ?? false) ? Colors.green : Colors.white54,
+            ),
+            title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
+                Text(_profileLabel(l, entry.value.first), style: textTheme.bodyMedium),
+                const SizedBox(height: 2),
                 Text(
-                  _profileLabel(l, entry.value.first),
-                  style: textTheme.labelMedium?.copyWith(color: Colors.white70),
+                  entry.value.map((r) => _appLine(l, r)).join("  ·  "),
+                  style: textTheme.bodySmall?.copyWith(color: Colors.white54),
                 ),
-                for (final r in entry.value)
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(start: 8),
-                    child: Text(_appLine(l, r), style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
-                  ),
               ],
             ),
           ),
