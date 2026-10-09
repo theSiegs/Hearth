@@ -49,8 +49,8 @@ Streaming-app PINs can't move between app ids (they're sealed with the app's Key
 ## Another TV still on the old id
 
 Install Hearth (it starts empty), set it up again or restore a backup made with the old Hearth's Backup & restore,
-turn on the permissions above, then uninstall the old app. The bridge is in the history (commits 6834018 and
-3627ff8) if a data hand-over is ever needed again.
+turn on the permissions above, then uninstall the old app. The bridge is in the history (commits 69aa9b2 and
+87e0921) if a data hand-over is ever needed again.
 
 ## HearthTube
 
