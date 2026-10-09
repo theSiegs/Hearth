@@ -1,7 +1,55 @@
 # Translations to review
 
-Machine-translated strings that a native speaker should check. When a locale's entry is reviewed, remove it here.
+Machine-translated strings that a native speaker should check: every key below, in all 13 locales (ar, de, es, fr, hi, it, ja, ko, pt, ru, tr, uk, zh). When a locale's strings are reviewed, note it here or remove the key from the list.
 
-| Key | Locales | Note |
-|---|---|---|
-| `watchNextAccess` | ar, de, es, fr, hi, it, ja, ko, pt, ru, tr, uk, zh | "Watch Next" is Android TV's feature name and stays untranslated |
+Proper nouns (Hearth, HearthTube, Home Assistant, Google TV, Netflix, Watch Next, Android) stay untranslated on purpose. Android-side strings (popup, Home Assistant panel and phone page, Profile Pairing card) are in `android/app/src/main/res/values-*/strings*.xml` and are machine-translated too.
+
+431 keys, grouped by prefix:
+
+- **watch** (6): `watchNextAccess`, `watchNextInfoRemove`, `watchNextInfoHideAllFrom`, `watchNextInfoPlayResume`, `watchNextInfoOpenApp`, `watchNextInfoAppInfo`
+- **settings** (1): `settingsTitle`
+- **profiles** (4): `profilesTitle`, `profilesSwitchProfile`, `profilesKidsName`, `profilesAdultName`
+- **home** (8): `homeScreenTitle`, `homeNothingToWatch`, `homeButtonFixOffTitle`, `homeButtonFixOffBody`, `homeButtonFixStuck`, `homeButtonFixRestricted`, `homeButtonFixDontRemind`, `homeButtonFixOpenSettings`
+- **remote** (37): `remoteAndSearchTitle`, `remoteButtonsTitle`, `remoteButtonsRemapButton`, `remoteButtonsButtonNumber`, `remoteButtonsNormal`, `remoteButtonsCaptureTitle`, `remoteButtonsCaptureBody`, `remoteButtonsNeedsFixTitle`, `remoteButtonsNeedsFixBody`, `remoteButtonsCantRemapTitle`, `remoteButtonsCantRemapBody`, `remoteButtonsPressOption`, `remoteButtonsHoldOption`, `remoteButtonsSearchPreset`, `remoteButtonsHomeOnlyOn`, `remoteButtonsHomeOnlyOff`, `remoteButtonsRestore`, `remoteButtonsActionTitle`, `remoteButtonsActionApp`, `remoteButtonsActionInput`, `remoteButtonsActionSwitchProfile`, `remoteButtonsActionSearchVoice`, `remoteButtonsActionSearchKeyboard`, `remoteButtonsActionHome`, `remoteButtonsActionSleep`, `remoteButtonsActionAndroidSettings`, `remoteButtonsPickAppTitle`, `remoteButtonsPickInputTitle`, `remoteButtonsHaConnectTitle`, `remoteButtonsHaConnectBody`, `remoteButtonsHaScene`, `remoteButtonsHaRun`, `remoteButtonsHaPress`, `remoteButtonsHaToggle`, `remoteButtonsRowSummary`, `remoteButtonsRowSummaryHomeOnly`, `remoteButtonsFooter`
+- **parent** (15): `parentSettingsTitle`, `parentPinTitle`, `parentPinOn`, `parentPinOff`, `parentPinCurrent`, `parentPinRemove`, `parentPinChange`, `parentPinNew`, `parentPinNewSubtitle`, `parentPinConfirm`, `parentPinAskTitle`, `parentPinAskBody`, `parentPinKidsSubtitle`, `parentPinWrong`, `parentPinEnter`
+- **tv** (8): `tvPowerTitle`, `tvPowerScreensaver`, `tvPowerScreensaverNote`, `tvPowerSleepWhenIdle`, `tvPowerSleepOff`, `tvPowerMinutes`, `tvPowerHours`, `tvPowerSleepNote`
+- **setup** (22): `setupPermissionsTitle`, `setupAccessibilityInstructions`, `setupRestrictedWarning`, `setupDefaultLauncherTitle`, `setupDefaultLauncherWhy`, `setupDefaultLauncherInstructions`, `setupHomeFixTitle`, `setupHomeFixWhy`, `setupNotificationsTitle`, `setupNotificationsWhy`, `setupNotificationsInstructions`, `setupInstallTitle`, `setupInstallWhy`, `setupInstallInstructions`, `setupPairingWhy`, `setupVoiceTitle`, `setupVoiceWhy`, `setupVoiceInstructions`, `setupOpenSettings`, `setupAdbFallback`, `setupProgress`, `setupOptional`
+- **updates** (18): `updatesTitle`, `updatesInstallPermissionTitle`, `updatesInstallPermissionMessage`, `updatesOpenSettings`, `updatesCheckFailed`, `updatesInstallerNotStarted`, `updatesCheckForUpdates`, `updatesAutoUpdate`, `updatesAutoUpdateDescription`, `updatesFooter`, `updatesChecking`, `updatesInstall`, `updatesUpdateTo`, `updatesUpToDate`, `updatesDownloadingPercent`, `updatesInstalling`, `updatesError`, `updatesDescriptionWithVersion`
+- **family** (36): `familyAppsTitle`, `familyAppsIntro`, `familyAppsAddTitle`, `familyAppsAddKids`, `familyAppsAddAdults`, `familyAppsAddOnlyOwnApps`, `familyAppsAddFamilyLink`, `familyAppsAddApproval`, `familyAppsAdd`, `familyAppsRemoveTitle`, `familyAppsRemoveBody`, `familyAppsRemoveFirst`, `familyAppsUninstallTitle`, `familyAppsUninstallBody`, `familyAppsUninstallWhyHere`, `familyAppsApprovalFirstTitle`, `familyAppsApprovalFirstBody`, `familyAppsApprovalFirstRetry`, `familyAppsAddDone`, `familyAppsRemoveDone`, `familyAppsAdded`, `familyAppsRemoved`, `familyAppsNothingToSetUp`, `familyAppsFailedTitle`, `familyAppsFailedBody`, `familyAppsFailedRetry`, `familyAppsAlsoAdults`, `familyAppsOn`, `familyAppsOff`, `familyAppsNoneYet`, `familyAppsAppInstalled`, `familyAppsAppInstalledKept`, `familyAppsAppNotInstalled`, `familyAppsAppNotInstalledKept`, `familyAppsUnnamedKids`, `familyAppsUnnamedAdult`
+- **card** (9): `cardStyleTitle`, `cardSizeTitle`, `cardStyleDefault`, `cardStylePremium`, `cardStyleGlow`, `cardStyleSquircle`, `cardStyleClassic`, `cardStyleMinimal`, `cardStyleCapsule`
+- **dock** (7): `dockLabelsTitle`, `dockFavoritesDock`, `dockFavoritesDockDescription`, `dockFrosted`, `dockDark`, `dockShadow`, `dockBlurWallpaperBelow`
+- **animations** (1): `animationsSoundTitle`
+- **ha** (28): `haPanelTitle`, `haTvStatusTitle`, `haSummaryOn`, `haSummaryOff`, `haSummaryReporting`, `haNotificationsNeedsFix`, `haNotificationsShow`, `haNotificationsSendTest`, `haNotificationsHelp`, `haNotificationsThisTvIp`, `haPanelSaved`, `haPanelSavedNoToken`, `haPanelReceived`, `haPanelRightEdge`, `haSetUpFromPhone`, `haPanelTokenLabel`, `haPanelTokenSavedHint`, `haPanelDashboardLabel`, `haPanelHelp`, `haStatusReportingOff`, `haStatusSaved`, `haStatusAddressLabel`, `haStatusWebhookLabel`, `haStatusNowPlayingOn`, `haStatusNowPlayingOff`, `haStatusHelp`, `haPhoneSetupNoNetwork`, `haPhoneSetupScan`
+- **look** (1): `lookTitle`
+- **profile** (3): `profilePairingTitle`, `profileSwitchGreeting`, `profileSwitchSettingUp`
+- **continue** (1): `continueWatchingAppsTitle`
+- **max** (1): `maxItemsTitle`
+- **ok** (1): `ok`
+- **cancel** (1): `cancel`
+- **close** (1): `close`
+- **try** (1): `tryAgain`
+- **not** (1): `notNow`
+- **done** (1): `done`
+- **remove** (1): `remove`
+- **error** (1): `errorScreenTitle`
+- **app** (10): `appInfoAddToCategory`, `appInfoAddToFavorites`, `appInfoRemoveFromFavorites`, `appInfoSetCustomBanner`, `appInfoClearCustomBanner`, `appInfoSetBannerFailed`, `appInfoClearBannerFailed`, `appDetailsAddToFavorites`, `appDetailsRemoveFromFavorites`, `appDetailsAddToCategory`
+- **cw** (52): `cwGridAll`, `cwRowSeeAll`, `cwRowInProgress`, `cwRowHoursMinutesLeft`, `cwRowMinutesLeft`, `cwAppsBlockedHeading`, `cwAppsBlockedFromContinueWatching`, `cwAppsUnblock`, `cwAppsUnblockAllApps`, `cwAppsNoBlockedApps`, `cwAppsNoBlockedAppsMessage`, `cwAppsWithContinueWatching`, `cwAppsWithContinueWatchingHint`, `cwAppsNoActiveApps`, `cwAppsActiveItems`, `cwAppsAllInstalledApps`, `cwAppsAllInstalledAppsHint`, `cwAppsBlocked`, `cwAppsAllowed`, `cwCardSizeOption`, `cwCardSizeDimensions`, `cwCardSizeDp`, `cwCardSizeDpNamed`, `cwCardSizeExtraSmall`, `cwCardSizeVerySmall`, `cwCardSizeSmall`, `cwCardSizeCompact`, `cwCardSizeMediumSmall`, `cwCardSizeMedium`, `cwCardSizeStandardDefault`, `cwCardSizeStandard`, `cwCardSizeMediumLarge`, `cwCardSizeLarge`, `cwCardSizeVeryLarge`, `cwCardSizeExtraLarge`, `cwCardSizeHuge`, `cwMaxItemsCount`, `cwMaxItemsUpTo`, `cwMaxItemsDefaultNote`, `cwUnlimited`, `cwMaxItemsAll`, `cwMaxItemsLabel`, `cwPlaybackProgressBar`, `cwPlaybackPercentage`, `cwEpisodeDetails`, `cwBlockedCount`, `cwManage`, `cwRestoreHiddenPrograms`, `cwHiddenCount`, `cwHiddenProgramsRestored`, `cwWatchNextAdbTitle`, `cwWatchNextAdbMessage`
+- **data** (7): `dataWidgetGrantPermission`, `dataWidgetDaily`, `dataWidgetWeekly`, `dataWidgetMonthly`, `dataUsageDaily`, `dataUsageWeekly`, `dataUsageMonthly`
+- **weather** (13): `weatherWidgetTemperatureWithWarning`, `weatherTextRain`, `weatherTextSnow`, `weatherTextStorm`, `weatherTextChance`, `weatherLocationNotSet`, `weatherLocationValue`, `weatherLocationTitle`, `weatherLocationHint`, `weatherLocationNoResults`, `weatherLocationSearchError`, `weatherLocationPrivacyNote`, `weatherLocationSearch`
+- **search** (30): `searchWatchOn`, `searchRentOrBuyOn`, `searchMoreWaysToWatch`, `searchListening`, `searchHint`, `searchEntryHelp`, `searchTabWatchNow`, `searchTabRentOrBuy`, `searchTabOtherApps`, `searchGridRentOrBuyApps`, `searchGridWhereToWatchGoogleTv`, `searchGridElsewhere`, `searchGridResults`, `searchGridNothingHere`, `searchGridTmdbNotice`, `searchAppsOr`, `searchListSeparator`, `searchAskGoogleQuery`, `searchAskGoogleDetail`, `searchSearchingFor`, `searchFailed`, `searchNothingFound`, `searchNothingInYourApps`, `searchSeeMoreResults`, `searchMoreResults`, `searchTitles`, `searchAskGoogle`, `searchQuoted`, `searchKindFilm`, `searchKindSeries`
+- **gradient** (11): `gradientNamePitchBlack`, `gradientNameGreatWhale`, `gradientNameViciousStance`, `gradientNameTeenNotebook`, `gradientNameOldHat`, `gradientNameBurningSpring`, `gradientNameDesertHump`, `gradientNameFarawayRiver`, `gradientNameSaintPetersburg`, `gradientNameAfricanField`, `gradientNameGrassShampoo`
+- **update** (14): `updateErrorNoApk`, `updateErrorCheckFailed`, `updateErrorDownloadFailed`, `updateCheckForUpdatesTitle`, `updateCurrentVersion`, `updateChecking`, `updateUpToDate`, `updateVersionAvailable`, `updateDownloading`, `updateDownloadedHint`, `updateSomethingWentWrong`, `updateDownloadAndInstall`, `updateRetryInstall`, `updateCheckAgain`
+- **service** (1): `serviceHearthTubeDescription`
+- **pairing** (16): `pairingShowPicker`, `pairingAlwaysShowPicker`, `pairingMatchedByName`, `pairingNoMatchYet`, `pairingOffSetUp`, `pairingFooter`, `pairingAppNotInstalled`, `pairingAppOff`, `pairingAppNotSeen`, `pairingAppProfilesFound`, `pairingMatchByName`, `pairingMatchByNameNone`, `pairingProfileInApp`, `pairingPairIn`, `pairingAppNotSeenFooter`, `pairingAppProfilesFooter`
+- **accent** (16): `accentPurple`, `accentTeal`, `accentBlue`, `accentOrange`, `accentPink`, `accentGreen`, `accentWhite`, `accentYellow`, `accentRed`, `accentCyan`, `accentIndigo`, `accentLime`, `accentAmber`, `accentRose`, `accentIceBlue`, `accentSelected`
+- **wallpaper** (4): `wallpaperMatchSelectedApp`, `wallpaperBingPhotoOfTheDay`, `wallpaperRefreshNow`, `wallpaperBingError`
+- **status** (3): `statusBarTemperatureUnitValue`, `statusBarWeatherLoadFailed`, `statusBarWeatherSourceHint`
+- **date** (2): `dateTimeInvalidFormat`, `dateTimeSelectFormats`
+- **apps** (1): `appsNoApplicationsFound`
+- **sections** (5): `sectionsCustomOption`, `sectionsSelectName`, `sectionsCustomName`, `sectionsSortLastUsed`, `sectionsReorderHint`
+- **inputs** (1): `inputsNoneDetected`
+- **notif** (9): `notifClearAll`, `notifAllCaughtUp`, `notifBlockAppNotifications`, `notifOpenApp`, `notifAccessAdbTitle`, `notifAccessAdbMessage`, `notifOpenAppInfo`, `notifOverlayPermissionTitle`, `notifOverlayAdbMessage`
+- **blocked** (1): `blockedNotificationsHeading`
+- **system** (1): `systemPageUseGoogleTv`
+- **backup** (14): `backupShareText`, `backupShareFailedTitle`, `backupShareFailed`, `backupExportSuccessTitle`, `backupExportFailedTitle`, `backupImportSuccessTitle`, `backupImportFailedTitle`, `backupImport`, `backupLoadError`, `backupNoFiles`, `backupFileDetails`, `backupSizeBytes`, `backupSizeKilobytes`, `backupSizeMegabytes`
+- **about** (6): `aboutForkOf`, `aboutDescription`, `aboutHearthOnGitHub`, `aboutCredits`, `aboutFlauncherForkCredit`, `aboutLicense`
