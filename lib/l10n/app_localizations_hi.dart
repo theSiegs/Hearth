@@ -1117,4 +1117,95 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get familyAppsUnnamedAdult => 'एक वयस्क प्रोफ़ाइल';
+
+  @override
+  String setupAccessibilityInstructions(String service) {
+    return 'अगली स्क्रीन पर नीचे \"सेवाएं\" तक स्क्रॉल करें, \"$service\" चुनें, फिर \"चालू करें\" चालू करके पुष्टि करें। होम पर लौटने तक \"वापस\" दबाएं।';
+  }
+
+  @override
+  String setupRestrictedWarning(String command) {
+    return 'अगर Android कहे कि सेटिंग प्रतिबंधित है, तो किसी कंप्यूटर से इसे एक बार चलाएं:\n$command';
+  }
+
+  @override
+  String get setupDefaultLauncherTitle => 'Hearth को होम ऐप बनाएं';
+
+  @override
+  String get setupDefaultLauncherWhy => 'बच्चों की प्रोफ़ाइल को Hearth ब्लॉक करने से रोकता है।';
+
+  @override
+  String get setupDefaultLauncherInstructions => 'अगली स्क्रीन पर Hearth चुनें।';
+
+  @override
+  String get setupHomeFixTitle => 'होम बटन फ़िक्स';
+
+  @override
+  String get setupHomeFixWhy => 'होम बटन Google TV की जगह Hearth खोलता है।';
+
+  @override
+  String get setupNotificationsTitle => 'सूचना पहुंच';
+
+  @override
+  String get setupNotificationsWhy => 'सूचनाएं और अभी क्या चल रहा है, दिखाता है।';
+
+  @override
+  String setupNotificationsInstructions(String service) {
+    return 'अगली स्क्रीन पर \"$service\" चुनें और उसे अनुमति दें।';
+  }
+
+  @override
+  String get setupInstallTitle => 'अपडेट इंस्टॉल करना';
+
+  @override
+  String get setupInstallWhy => 'Hearth को खुद अपडेट होने और साथी ऐप्स इंस्टॉल करने देता है।';
+
+  @override
+  String get setupInstallInstructions => 'अगली स्क्रीन पर Hearth चालू करें।';
+
+  @override
+  String get setupPairingWhy => 'Netflix, Disney+, Apple TV, HBO Max और Paramount+ में आपकी प्रोफ़ाइल चुनता है।';
+
+  @override
+  String get setupVoiceTitle => 'Hearth आवाज़';
+
+  @override
+  String get setupVoiceWhy => 'प्रोफ़ाइल पेयरिंग को Netflix की प्रोफ़ाइल स्क्रीन सुनने देता है। अन्य ऐप्स में Google की आवाज़ रहती है।';
+
+  @override
+  String setupVoiceInstructions(String engine) {
+    return 'अगली स्क्रीन पर \"पसंदीदा इंजन\" में \"$engine\" चुनें, फिर चेतावनी पर \"ठीक है\" दबाएं (Hearth सिर्फ़ स्ट्रीमिंग ऐप्स को सुनता है)। लौटने के लिए \"वापस\" दबाएं।';
+  }
+
+  @override
+  String get setupOpenSettings => 'सेटिंग्स खोलें';
+
+  @override
+  String get setupAdbFallback => 'इस टीवी ने वह सेटिंग्स स्क्रीन नहीं खोली। इसके बजाय किसी कंप्यूटर से इसे एक बार चलाएं:';
+
+  @override
+  String setupProgress(int done, int total) {
+    return '$total में से $done पूरे';
+  }
+
+  @override
+  String get setupOptional => 'वैकल्पिक';
+
+  @override
+  String get homeButtonFixOffTitle => 'होम बटन फ़िक्स बंद है';
+
+  @override
+  String get homeButtonFixOffBody => 'Hearth की सुलभता सेवा रुक गई है, आमतौर पर किसी अपडेट के बाद। जब तक यह फिर से चालू न हो, होम बटन Hearth की जगह Google TV खोल सकता है, और प्रोफ़ाइल बदलने पर ध्यान नहीं दिया जाता।';
+
+  @override
+  String get homeButtonFixStuck => 'Android इसे अब भी चालू दिखाता है, लेकिन यह चल नहीं रही। इसे फिर से शुरू करने के लिए सुलभता सेटिंग्स में Hearth को बंद करके फिर चालू करें।';
+
+  @override
+  String get homeButtonFixRestricted => 'अगर वहां Hearth का स्विच धूसर है, तो Android उसे रोक रहा है क्योंकि यह अपडेट डाउनलोड से इंस्टॉल हुआ था। टीवी से जुड़े किसी कंप्यूटर से यह चलाएं, फिर Hearth चालू करें:';
+
+  @override
+  String get homeButtonFixDontRemind => 'मुझे याद न दिलाएं';
+
+  @override
+  String get homeButtonFixOpenSettings => 'सुलभता सेटिंग्स खोलें';
 }

@@ -1212,5 +1212,141 @@
     "familyAppsUnnamedAdult": "An adult profile",
     "@familyAppsUnnamedAdult": {
         "description": "Hearth on other profiles page: heading for an adult profile whose name Hearth doesn't know"
+    },
+    "setupAccessibilityInstructions": "On the next screen, scroll down to Services, select \"{service}\", then turn on Enable and confirm. Press Back until you're home again.",
+    "@setupAccessibilityInstructions": {
+        "description": "Setup & permissions step: how to turn on an accessibility service in Android's settings; {service} is the service's name as Android shows it (in English)",
+        "placeholders": {
+            "service": {
+                "type": "String"
+            }
+        }
+    },
+    "setupRestrictedWarning": "If Android says the setting is restricted, run this once from a computer:\n{command}",
+    "@setupRestrictedWarning": {
+        "description": "Setup & permissions step: warning under an accessibility step; {command} is an adb command",
+        "placeholders": {
+            "command": {
+                "type": "String"
+            }
+        }
+    },
+    "setupDefaultLauncherTitle": "Hearth as the home app",
+    "@setupDefaultLauncherTitle": {
+        "description": "Setup & permissions step title: make Hearth the default launcher"
+    },
+    "setupDefaultLauncherWhy": "Keeps kids profiles from blocking Hearth.",
+    "@setupDefaultLauncherWhy": {
+        "description": "Setup & permissions step: why it matters"
+    },
+    "setupDefaultLauncherInstructions": "On the next screen, choose Hearth.",
+    "@setupDefaultLauncherInstructions": {
+        "description": "Setup & permissions step: what to do in Android's settings"
+    },
+    "setupHomeFixTitle": "Home Button Fix",
+    "@setupHomeFixTitle": {
+        "description": "Setup & permissions step title: Hearth's accessibility service that makes Home open Hearth"
+    },
+    "setupHomeFixWhy": "The Home button opens Hearth instead of Google TV.",
+    "@setupHomeFixWhy": {
+        "description": "Setup & permissions step: why it matters"
+    },
+    "setupNotificationsTitle": "Notification access",
+    "@setupNotificationsTitle": {
+        "description": "Setup & permissions step title"
+    },
+    "setupNotificationsWhy": "Shows notifications and what's playing.",
+    "@setupNotificationsWhy": {
+        "description": "Setup & permissions step: why it matters"
+    },
+    "setupNotificationsInstructions": "On the next screen, select \"{service}\" and allow it.",
+    "@setupNotificationsInstructions": {
+        "description": "Setup & permissions step: what to do; {service} is the service's name as Android shows it (in English)",
+        "placeholders": {
+            "service": {
+                "type": "String"
+            }
+        }
+    },
+    "setupInstallTitle": "Installing updates",
+    "@setupInstallTitle": {
+        "description": "Setup & permissions step title: permission to install apps"
+    },
+    "setupInstallWhy": "Lets Hearth update itself and install companion apps.",
+    "@setupInstallWhy": {
+        "description": "Setup & permissions step: why it matters"
+    },
+    "setupInstallInstructions": "On the next screen, turn on Hearth.",
+    "@setupInstallInstructions": {
+        "description": "Setup & permissions step: what to do in Android's settings"
+    },
+    "setupPairingWhy": "Picks your profile in Netflix, Disney+, Apple TV, HBO Max and Paramount+.",
+    "@setupPairingWhy": {
+        "description": "Setup & permissions step: why Profile Pairing matters"
+    },
+    "setupVoiceTitle": "Hearth voice",
+    "@setupVoiceTitle": {
+        "description": "Setup & permissions step title: Hearth's text-to-speech engine"
+    },
+    "setupVoiceWhy": "Lets Profile Pairing hear Netflix's profile screen. Other apps keep Google's voice.",
+    "@setupVoiceWhy": {
+        "description": "Setup & permissions step: why Hearth voice matters"
+    },
+    "setupVoiceInstructions": "On the next screen, under Preferred engine, choose \"{engine}\", then OK on the warning (Hearth only listens to the streaming apps). Press Back to return.",
+    "@setupVoiceInstructions": {
+        "description": "Setup & permissions step: what to do in Android's text-to-speech settings; {engine} is the engine's name as Android shows it (in English)",
+        "placeholders": {
+            "engine": {
+                "type": "String"
+            }
+        }
+    },
+    "setupOpenSettings": "Open Settings",
+    "@setupOpenSettings": {
+        "description": "Setup & permissions step dialog: button that opens Android's settings screen"
+    },
+    "setupAdbFallback": "This TV wouldn't open that Settings screen. Run this once from a computer instead:",
+    "@setupAdbFallback": {
+        "description": "Dialog when Android couldn't open a settings screen; an adb command follows"
+    },
+    "setupProgress": "{done} of {total} done",
+    "@setupProgress": {
+        "description": "Setup & permissions page: under the title, how many required steps are done",
+        "placeholders": {
+            "done": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
+        }
+    },
+    "setupOptional": "Optional",
+    "@setupOptional": {
+        "description": "Setup & permissions page: heading above the optional steps"
+    },
+    "homeButtonFixOffTitle": "Home Button Fix is off",
+    "@homeButtonFixOffTitle": {
+        "description": "Warning dialog title when Hearth's accessibility service has stopped"
+    },
+    "homeButtonFixOffBody": "Hearth's accessibility service has stopped, usually after an update. Until it is back on, the Home button may open Google TV instead of Hearth, and profile switches aren't followed.",
+    "@homeButtonFixOffBody": {
+        "description": "Home Button Fix is off dialog: first paragraph"
+    },
+    "homeButtonFixStuck": "Android still lists it as on, but it isn't running. Turn Hearth off and on again in Accessibility settings to restart it.",
+    "@homeButtonFixStuck": {
+        "description": "Home Button Fix is off dialog: when Android shows the service as on but it isn't running"
+    },
+    "homeButtonFixRestricted": "If Hearth's switch there is greyed out, Android is blocking it because this update was installed from a download. Run this from a computer connected to the TV, then turn Hearth on:",
+    "@homeButtonFixRestricted": {
+        "description": "Home Button Fix is off dialog: when Android restricts the setting; an adb command follows"
+    },
+    "homeButtonFixDontRemind": "Don't remind me",
+    "@homeButtonFixDontRemind": {
+        "description": "Home Button Fix is off dialog: button that stops the warning"
+    },
+    "homeButtonFixOpenSettings": "Open Accessibility settings",
+    "@homeButtonFixOpenSettings": {
+        "description": "Home Button Fix is off dialog: button that opens Android's accessibility settings"
     }
 }

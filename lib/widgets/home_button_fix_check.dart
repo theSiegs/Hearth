@@ -1,4 +1,5 @@
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -77,30 +78,27 @@ class _HomeButtonFixCheckState extends State<HomeButtonFixCheck> with WidgetsBin
     final String? choice = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Home Button Fix is off'),
+        title: Text(AppLocalizations.of(dialogContext)!.homeButtonFixOffTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Hearth\'s accessibility service has stopped, usually after an update. Until it is back on, the Home '
-              'button may open Google TV instead of Hearth, and profile switches aren\'t followed.',
-              style: TextStyle(fontSize: 13, height: 1.4),
+            Text(
+              AppLocalizations.of(dialogContext)!.homeButtonFixOffBody,
+              style: const TextStyle(fontSize: 13, height: 1.4),
             ),
             if (stuck) ...[
               const SizedBox(height: 12),
-              const Text(
-                'Android still lists it as on, but it isn\'t running. Turn Hearth off and on again in '
-                'Accessibility settings to restart it.',
-                style: TextStyle(fontSize: 13, height: 1.4),
+              Text(
+                AppLocalizations.of(dialogContext)!.homeButtonFixStuck,
+                style: const TextStyle(fontSize: 13, height: 1.4),
               ),
             ],
             if (restricted) ...[
               const SizedBox(height: 12),
-              const Text(
-                "If Hearth's switch there is greyed out, Android is blocking it because this update was installed "
-                'from a download. Run this from a computer connected to the TV, then turn Hearth on:',
-                style: TextStyle(fontSize: 13, height: 1.4),
+              Text(
+                AppLocalizations.of(dialogContext)!.homeButtonFixRestricted,
+                style: const TextStyle(fontSize: 13, height: 1.4),
               ),
               const SizedBox(height: 12),
               Container(
@@ -121,16 +119,16 @@ class _HomeButtonFixCheckState extends State<HomeButtonFixCheck> with WidgetsBin
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop('forget'),
-            child: const Text('Don\'t remind me'),
+            child: Text(AppLocalizations.of(dialogContext)!.homeButtonFixDontRemind),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Not now'),
+            child: Text(AppLocalizations.of(dialogContext)!.notNow),
           ),
           TextButton(
             autofocus: true,
             onPressed: () => Navigator.of(dialogContext).pop('open'),
-            child: const Text('Open Accessibility settings'),
+            child: Text(AppLocalizations.of(dialogContext)!.homeButtonFixOpenSettings),
           ),
         ],
       ),

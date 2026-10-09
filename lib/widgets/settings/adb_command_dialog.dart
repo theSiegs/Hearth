@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// For permissions the TV won't grant from its own screens: why, and the adb command to run from a computer.
@@ -59,7 +60,7 @@ Future<void> showAdbCommandDialog(
           ),
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('OK'),
+          child: Text(AppLocalizations.of(dialogContext)!.ok),
         ),
       ],
     ),

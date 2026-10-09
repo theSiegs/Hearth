@@ -1114,4 +1114,95 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get familyAppsUnnamedAdult => '一个成人个人资料';
+
+  @override
+  String setupAccessibilityInstructions(String service) {
+    return '在下一个屏幕中向下滚动到“服务”，选择“$service”，然后打开“启用”并确认。按返回键直到回到主屏幕。';
+  }
+
+  @override
+  String setupRestrictedWarning(String command) {
+    return '如果 Android 提示该设置受限，请在电脑上运行一次：\n$command';
+  }
+
+  @override
+  String get setupDefaultLauncherTitle => '将 Hearth 设为主屏幕应用';
+
+  @override
+  String get setupDefaultLauncherWhy => '防止儿童个人资料屏蔽 Hearth。';
+
+  @override
+  String get setupDefaultLauncherInstructions => '在下一个屏幕中选择 Hearth。';
+
+  @override
+  String get setupHomeFixTitle => '主页按钮修复';
+
+  @override
+  String get setupHomeFixWhy => '主页按钮会打开 Hearth，而不是 Google TV。';
+
+  @override
+  String get setupNotificationsTitle => '通知访问权限';
+
+  @override
+  String get setupNotificationsWhy => '显示通知和正在播放的内容。';
+
+  @override
+  String setupNotificationsInstructions(String service) {
+    return '在下一个屏幕中选择“$service”并允许。';
+  }
+
+  @override
+  String get setupInstallTitle => '安装更新';
+
+  @override
+  String get setupInstallWhy => '允许 Hearth 自我更新并安装配套应用。';
+
+  @override
+  String get setupInstallInstructions => '在下一个屏幕中打开 Hearth。';
+
+  @override
+  String get setupPairingWhy => '在 Netflix、Disney+、Apple TV、HBO Max 和 Paramount+ 中选择你的个人资料。';
+
+  @override
+  String get setupVoiceTitle => 'Hearth 语音';
+
+  @override
+  String get setupVoiceWhy => '让个人资料配对能“听到”Netflix 的个人资料界面。其他应用仍使用 Google 的语音。';
+
+  @override
+  String setupVoiceInstructions(String engine) {
+    return '在下一个屏幕的“首选引擎”中选择“$engine”，然后在警告中点“确定”（Hearth 只会监听流媒体应用）。按返回键回来。';
+  }
+
+  @override
+  String get setupOpenSettings => '打开设置';
+
+  @override
+  String get setupAdbFallback => '这台电视无法打开该设置界面。请改为在电脑上运行一次：';
+
+  @override
+  String setupProgress(int done, int total) {
+    return '已完成 $done/$total';
+  }
+
+  @override
+  String get setupOptional => '可选';
+
+  @override
+  String get homeButtonFixOffTitle => '主页按钮修复已关闭';
+
+  @override
+  String get homeButtonFixOffBody => 'Hearth 的无障碍服务已停止，通常发生在更新之后。在重新开启之前，主页按钮可能会打开 Google TV 而不是 Hearth，并且不会跟随个人资料切换。';
+
+  @override
+  String get homeButtonFixStuck => 'Android 仍显示它已开启，但它并未运行。请在无障碍设置中将 Hearth 关闭后再打开，以重新启动它。';
+
+  @override
+  String get homeButtonFixRestricted => '如果那里的 Hearth 开关呈灰色，是因为此更新是从下载的文件安装的，Android 阻止了它。请在连接到电视的电脑上运行以下命令，然后打开 Hearth：';
+
+  @override
+  String get homeButtonFixDontRemind => '不再提醒';
+
+  @override
+  String get homeButtonFixOpenSettings => '打开无障碍设置';
 }
