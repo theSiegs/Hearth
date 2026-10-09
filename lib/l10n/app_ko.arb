@@ -344,7 +344,7 @@
     "familyAppsRemoved": "완료되었습니다. 다른 프로필에서 Hearth와 HearthTube를 제거했습니다.",
     "familyAppsNothingToSetUp": "아직 설정할 다른 프로필이 없습니다.",
     "familyAppsFailedTitle": "프로필을 설정할 수 없습니다",
-    "familyAppsFailedBody": "다른 프로필을 설정하려면 TV에서 한 번 승인해야 합니다.",
+    "familyAppsFailedBody": "Hearth가 다른 프로필을 설정하려면 TV에서 한 번 승인해야 합니다.",
     "familyAppsFailedRetry": "TV에 '디버깅을 허용하시겠습니까?'가 표시되면 '항상 허용'을 선택한 다음 다시 시도하세요.",
     "familyAppsAlsoAdults": "다른 성인 프로필도 설정",
     "familyAppsOn": "켜짐",

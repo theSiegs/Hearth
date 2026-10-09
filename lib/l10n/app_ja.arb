@@ -344,7 +344,7 @@
     "familyAppsRemoved": "完了しました。他のプロフィールから Hearth と HearthTube を削除しました。",
     "familyAppsNothingToSetUp": "設定できる他のプロフィールはまだありません。",
     "familyAppsFailedTitle": "プロフィールを設定できませんでした",
-    "familyAppsFailedBody": "他のプロフィールを設定するには、テレビで 1 回だけ許可する必要があります。",
+    "familyAppsFailedBody": "他のプロフィールを設定するには、テレビで Hearth を 1 回だけ許可する必要があります。",
     "familyAppsFailedRetry": "テレビに「デバッグを許可しますか？」と表示されたら「常に許可」を選んで、もう一度お試しください。",
     "familyAppsAlsoAdults": "他の大人のプロフィールも設定",
     "familyAppsOn": "オン",

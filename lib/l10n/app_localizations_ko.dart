@@ -1072,7 +1072,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get familyAppsFailedTitle => '프로필을 설정할 수 없습니다';
 
   @override
-  String get familyAppsFailedBody => '다른 프로필을 설정하려면 TV에서 한 번 승인해야 합니다.';
+  String get familyAppsFailedBody => 'Hearth가 다른 프로필을 설정하려면 TV에서 한 번 승인해야 합니다.';
 
   @override
   String get familyAppsFailedRetry => 'TV에 \'디버깅을 허용하시겠습니까?\'가 표시되면 \'항상 허용\'을 선택한 다음 다시 시도하세요.';
