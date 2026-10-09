@@ -478,10 +478,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appInfoAddToCategory => 'Add to Category';
 
   @override
-  String get appInfoAddToFavorites => 'Add to Fav';
+  String get appInfoAddToFavorites => 'Add to Favorites';
 
   @override
-  String get appInfoRemoveFromFavorites => 'Remove from Fav';
+  String get appInfoRemoveFromFavorites => 'Remove from Favorites';
 
   @override
   String get appInfoSetCustomBanner => 'Set Custom Banner';
@@ -1718,10 +1718,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appsNoApplicationsFound => 'No applications found';
 
   @override
-  String get appDetailsAddToFavorites => 'Add to Fav';
+  String get appDetailsAddToFavorites => 'Add to Favorites';
 
   @override
-  String get appDetailsRemoveFromFavorites => 'Remove from Fav';
+  String get appDetailsRemoveFromFavorites => 'Remove from Favorites';
 
   @override
   String get appDetailsAddToCategory => 'Add to Category';

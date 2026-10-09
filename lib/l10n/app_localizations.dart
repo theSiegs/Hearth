@@ -1037,16 +1037,16 @@ abstract class AppLocalizations {
   /// **'Add to Category'**
   String get appInfoAddToCategory;
 
-  /// App options panel: adds the app to Favorites (the dock); Fav is short for Favorites
+  /// App options panel: adds the app to Favorites (the dock)
   ///
   /// In en, this message translates to:
-  /// **'Add to Fav'**
+  /// **'Add to Favorites'**
   String get appInfoAddToFavorites;
 
-  /// App options panel: takes the app out of Favorites (the dock); Fav is short for Favorites
+  /// App options panel: takes the app out of Favorites (the dock)
   ///
   /// In en, this message translates to:
-  /// **'Remove from Fav'**
+  /// **'Remove from Favorites'**
   String get appInfoRemoveFromFavorites;
 
   /// App options panel: picks a picture to show on the app's card instead of its own banner
@@ -3032,13 +3032,13 @@ abstract class AppLocalizations {
   /// Row on an app's details page in Settings that adds it to Favorites
   ///
   /// In en, this message translates to:
-  /// **'Add to Fav'**
+  /// **'Add to Favorites'**
   String get appDetailsAddToFavorites;
 
   /// Row on an app's details page in Settings that takes it out of Favorites
   ///
   /// In en, this message translates to:
-  /// **'Remove from Fav'**
+  /// **'Remove from Favorites'**
   String get appDetailsRemoveFromFavorites;
 
   /// Row on an app's details page in Settings that opens the category picker
