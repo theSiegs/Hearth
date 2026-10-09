@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -59,16 +60,17 @@ class _HaPhoneSetupDialogState extends State<HaPhoneSetupDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final small = Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70);
     return AlertDialog(
-      title: const Text("Set up from your phone"),
+      title: Text(l.haSetUpFromPhone),
       content: SizedBox(
         width: 360,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (_failed)
-              const Text("This TV isn't on the home network, so the phone can't reach it.")
+              Text(l.haPhoneSetupNoNetwork)
             else if (_link == null)
               const Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator())
             else ...[
@@ -85,8 +87,7 @@ class _HaPhoneSetupDialogState extends State<HaPhoneSetupDialog> {
               ),
               const SizedBox(height: 12),
               Text(
-                "Scan with a phone on the same Wi-Fi, paste the Home Assistant address and access token, and "
-                "tap Send. The page only works while this is open.",
+                l.haPhoneSetupScan,
                 style: small,
                 textAlign: TextAlign.center,
               ),
@@ -100,7 +101,7 @@ class _HaPhoneSetupDialogState extends State<HaPhoneSetupDialog> {
         TextButton(
           autofocus: true,
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text("Close"),
+          child: Text(l.close),
         ),
       ],
     );

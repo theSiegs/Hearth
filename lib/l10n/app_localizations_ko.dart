@@ -785,4 +785,88 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get serviceHearthTubeDescription => 'Hearth용 YouTube, Hearth 프로필을 따릅니다';
+
+  @override
+  String get haSummaryOn => '켜짐';
+
+  @override
+  String get haSummaryOff => '꺼짐';
+
+  @override
+  String get haSummaryReporting => '보고 중';
+
+  @override
+  String haNotificationsNeedsFix(String path) {
+    return '홈 버튼 수정을 켜세요($path). 이 기능이 팝업을 표시합니다.';
+  }
+
+  @override
+  String get haNotificationsShow => 'Home Assistant 알림 표시';
+
+  @override
+  String get haNotificationsSendTest => '테스트 알림 보내기';
+
+  @override
+  String haNotificationsHelp(String host, String path) {
+    return 'Home Assistant에서 호스트 $host로 \"Notifications for Android TV / Fire TV\" 통합을 추가하세요. 그런 다음 자동화에서 알림을 보내세요. 예를 들어 초인종이 울리거나 빨래가 끝났을 때요.\n\n홈 네트워크에 있는 기기만 보낼 수 있습니다(포트 7676). 팝업은 모든 앱 위에 표시되며 홈 버튼 수정($path)이 켜져 있어야 합니다.';
+  }
+
+  @override
+  String get haNotificationsThisTvIp => '(이 TV의 IP 주소)';
+
+  @override
+  String get haPanelSaved => '저장됨';
+
+  @override
+  String get haPanelSavedNoToken => '저장됨. 로그인하려면 액세스 토큰을 추가하세요.';
+
+  @override
+  String get haPanelReceived => '휴대전화에서 주소와 토큰을 받았습니다';
+
+  @override
+  String get haPanelRightEdge => '오른쪽 끝에서 오른쪽을 누르면 패널 열기';
+
+  @override
+  String get haSetUpFromPhone => '휴대전화로 설정';
+
+  @override
+  String get haPanelTokenLabel => '장기 액세스 토큰';
+
+  @override
+  String get haPanelTokenSavedHint => '저장됨(바꾸려면 새 토큰 입력)';
+
+  @override
+  String get haPanelDashboardLabel => '대시보드';
+
+  @override
+  String haPanelHelp(String tvStatus) {
+    return '이 프로필에서만 켜집니다. 패널은 $tvStatus에 입력한 주소의 대시보드를 토큰으로 로그인해 표시합니다. 이 TV용으로 만든 관리자가 아닌 사용자로 Home Assistant에 로그인한 상태에서 토큰을 만드세요(프로필 페이지, 보안 탭).';
+  }
+
+  @override
+  String get haStatusReportingOff => '상태 보고가 꺼져 있습니다';
+
+  @override
+  String get haStatusSaved => '저장됨: Home Assistant에 보고 중';
+
+  @override
+  String get haStatusAddressLabel => 'Home Assistant 주소';
+
+  @override
+  String get haStatusWebhookLabel => '웹훅 ID';
+
+  @override
+  String get haStatusNowPlayingOn => '재생 중인 항목: 켜짐';
+
+  @override
+  String get haStatusNowPlayingOff => '재생 중인 항목: 알림 액세스 켜기';
+
+  @override
+  String get haStatusHelp => 'TV는 지금 표시 중인 앱, 재생 중인 항목, Google TV 프로필, 어린이 스크린 타임을 Home Assistant에 보냅니다. 변경될 때마다 위 주소로만 보냅니다.';
+
+  @override
+  String get haPhoneSetupNoNetwork => '이 TV가 홈 네트워크에 연결되어 있지 않아 휴대전화에서 연결할 수 없습니다.';
+
+  @override
+  String get haPhoneSetupScan => '같은 Wi-Fi에 연결된 휴대전화로 스캔하고 Home Assistant 주소와 액세스 토큰을 붙여넣은 다음 Send를 탭하세요. 이 창이 열려 있는 동안에만 페이지가 작동합니다.';
 }

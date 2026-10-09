@@ -787,4 +787,88 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get serviceHearthTubeDescription => 'Hearth के लिए YouTube; आपकी Hearth प्रोफ़ाइल के साथ चलता है';
+
+  @override
+  String get haSummaryOn => 'चालू';
+
+  @override
+  String get haSummaryOff => 'बंद';
+
+  @override
+  String get haSummaryReporting => 'रिपोर्ट हो रही है';
+
+  @override
+  String haNotificationsNeedsFix(String path) {
+    return 'होम बटन फ़िक्स चालू करें ($path); यही पॉप-अप दिखाता है।';
+  }
+
+  @override
+  String get haNotificationsShow => 'Home Assistant की सूचनाएं दिखाएं';
+
+  @override
+  String get haNotificationsSendTest => 'परीक्षण सूचना भेजें';
+
+  @override
+  String haNotificationsHelp(String host, String path) {
+    return 'Home Assistant में, होस्ट $host के साथ \"Notifications for Android TV / Fire TV\" इंटीग्रेशन जोड़ें। फिर ऑटोमेशन से उसे सूचनाएं भेजें, जैसे दरवाज़े की घंटी के लिए या कपड़े धुल जाने पर।\n\nकेवल आपके होम नेटवर्क के डिवाइस ही इन्हें भेज सकते हैं (पोर्ट 7676)। पॉप-अप किसी भी ऐप के ऊपर दिखते हैं और इनके लिए होम बटन फ़िक्स ($path) चालू होना चाहिए।';
+  }
+
+  @override
+  String get haNotificationsThisTvIp => '(इस टीवी का IP पता)';
+
+  @override
+  String get haPanelSaved => 'सहेजा गया';
+
+  @override
+  String get haPanelSavedNoToken => 'सहेजा गया। साइन इन करने के लिए एक्सेस टोकन जोड़ें।';
+
+  @override
+  String get haPanelReceived => 'आपके फ़ोन से पता और टोकन मिल गया';
+
+  @override
+  String get haPanelRightEdge => 'दाएं किनारे पर दायां बटन दबाने से पैनल खुलता है';
+
+  @override
+  String get haSetUpFromPhone => 'अपने फ़ोन से सेट अप करें';
+
+  @override
+  String get haPanelTokenLabel => 'लंबे समय तक चलने वाला एक्सेस टोकन';
+
+  @override
+  String get haPanelTokenSavedHint => 'सहेजा गया (बदलने के लिए नया टाइप करें)';
+
+  @override
+  String get haPanelDashboardLabel => 'डैशबोर्ड';
+
+  @override
+  String haPanelHelp(String tvStatus) {
+    return 'केवल इस प्रोफ़ाइल के लिए चालू। पैनल $tvStatus में दिए गए पते से डैशबोर्ड दिखाता है, टोकन से साइन इन करके। Home Assistant में इस टीवी के लिए बनाए गए गैर-एडमिन उपयोगकर्ता से लॉग इन करके टोकन बनाएं (प्रोफ़ाइल पेज, सुरक्षा टैब)।';
+  }
+
+  @override
+  String get haStatusReportingOff => 'स्थिति रिपोर्टिंग बंद है';
+
+  @override
+  String get haStatusSaved => 'सहेजा गया: Home Assistant को रिपोर्ट हो रहा है';
+
+  @override
+  String get haStatusAddressLabel => 'Home Assistant का पता';
+
+  @override
+  String get haStatusWebhookLabel => 'वेबहुक ID';
+
+  @override
+  String get haStatusNowPlayingOn => 'अभी चल रहा है: चालू';
+
+  @override
+  String get haStatusNowPlayingOff => 'अभी चल रहा है: सूचना पहुंच चालू करें';
+
+  @override
+  String get haStatusHelp => 'टीवी Home Assistant को बताता है कि क्या चल रहा है: ऐप, क्या प्ले हो रहा है, Google TV प्रोफ़ाइल, और बच्चों का स्क्रीन टाइम। यह केवल ऊपर दिए गए पते पर, बदलाव होने पर भेजता है।';
+
+  @override
+  String get haPhoneSetupNoNetwork => 'यह टीवी होम नेटवर्क पर नहीं है, इसलिए फ़ोन इस तक नहीं पहुंच सकता।';
+
+  @override
+  String get haPhoneSetupScan => 'उसी Wi-Fi पर किसी फ़ोन से स्कैन करें, Home Assistant का पता और एक्सेस टोकन पेस्ट करें, और Send पर टैप करें। यह पेज तभी काम करता है जब तक यह खुला है।';
 }

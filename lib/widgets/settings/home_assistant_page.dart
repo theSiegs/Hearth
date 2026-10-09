@@ -67,10 +67,11 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
     _load();
   }
 
-  String _onOff(bool? on) => on == null ? "" : (on ? "On" : "Off");
+  String _onOff(AppLocalizations l, bool? on) => on == null ? "" : (on ? l.haSummaryOn : l.haSummaryOff);
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final panel = context.select<SettingsService, bool>((s) => s.haPanelEnabled);
     return SettingsPage(
@@ -79,20 +80,21 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
         FocusableSettingsTile(
           autofocus: true,
           leading: const Icon(Icons.notifications_active_outlined),
-          title: Text(AppLocalizations.of(context)!.notifications, style: textTheme.bodyMedium),
-          trailing: Text(_onOff(_notifications), style: textTheme.bodySmall),
+          title: Text(l.notifications, style: textTheme.bodyMedium),
+          trailing: Text(_onOff(l, _notifications), style: textTheme.bodySmall),
           onPressed: () => _open(HaNotificationsPage.routeName),
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.dashboard_outlined),
-          title: Text(AppLocalizations.of(context)!.haPanelTitle, style: textTheme.bodyMedium),
-          trailing: Text(_onOff(panel), style: textTheme.bodySmall),
+          title: Text(l.haPanelTitle, style: textTheme.bodyMedium),
+          trailing: Text(_onOff(l, panel), style: textTheme.bodySmall),
           onPressed: () => _open(HaPanelPage.routeName),
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.sensors_outlined),
-          title: Text(AppLocalizations.of(context)!.haTvStatusTitle, style: textTheme.bodyMedium),
-          trailing: Text(_reporting == null ? "" : (_reporting! ? "Reporting" : "Off"), style: textTheme.bodySmall),
+          title: Text(l.haTvStatusTitle, style: textTheme.bodyMedium),
+          trailing: Text(_reporting == null ? "" : (_reporting! ? l.haSummaryReporting : l.haSummaryOff),
+              style: textTheme.bodySmall),
           onPressed: () => _open(HaStatusPage.routeName),
         ),
       ],
@@ -151,38 +153,32 @@ class _HaNotificationsPageState extends State<HaNotificationsPage> {
   Future<void> _test() async {
     final shown = await _channel.sendHaTestNotification();
     if (mounted) {
-      setState(() => _testResult =
-          shown ? null : "Turn on Home Button Fix (${SetupChecklistPage.breadcrumb(AppLocalizations.of(context)!)}); it shows the pop-ups.");
+      final l = AppLocalizations.of(context)!;
+      setState(() => _testResult = shown ? null : l.haNotificationsNeedsFix(SetupChecklistPage.breadcrumb(l)));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return SettingsPage(
-      title: AppLocalizations.of(context)!.notifications,
+      title: l.notifications,
       children: [
         RoundedSwitchListTile(
           autofocus: true,
           value: _enabled,
           onChanged: _setEnabled,
-          title: const Text("Show Home Assistant notifications"),
+          title: Text(l.haNotificationsShow),
           secondary: const Icon(Icons.home_outlined),
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.notifications_active_outlined),
-          title: Text("Send a test notification", style: Theme.of(context).textTheme.bodyMedium),
+          title: Text(l.haNotificationsSendTest, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: _test,
         ),
         if (_testResult != null) _note(context, _testResult!, color: Colors.orangeAccent),
         const SizedBox(height: 8),
-        _note(
-          context,
-          "In Home Assistant, add the \"Notifications for Android TV / Fire TV\" integration with host "
-          "${_ip ?? "(this TV's IP address)"}. Then send notifications to it from automations, for "
-          "example for the doorbell or when the laundry is done.\n\n"
-          "Only devices on your home network can send them (port 7676). Pop-ups appear over any app "
-          "and need Home Button Fix (${SetupChecklistPage.breadcrumb(AppLocalizations.of(context)!)}) to be on.",
-        ),
+        _note(context, l.haNotificationsHelp(_ip ?? l.haNotificationsThisTvIp, SetupChecklistPage.breadcrumb(l))),
       ],
     );
   }
@@ -239,10 +235,11 @@ class _HaPanelPageState extends State<HaPanelPage> {
     _panelToken.clear();
     final panel = await _channel.getHaPanelConfig();
     if (mounted) {
+      final l = AppLocalizations.of(context)!;
       setState(() {
         _panelHasToken = panel["hasToken"] == true;
         _panelDashboard.text = panel["dashboard"] as String? ?? "";
-        _panelSaved = _panelHasToken ? "Saved" : "Saved. Add an access token to sign in.";
+        _panelSaved = _panelHasToken ? l.haPanelSaved : l.haPanelSavedNoToken;
       });
     }
   }
@@ -251,14 +248,15 @@ class _HaPanelPageState extends State<HaPanelPage> {
     final received = await showDialog<bool>(context: context, builder: (_) => HaPhoneSetupDialog(channel: _channel));
     if (received == true) {
       await _load();
-      if (mounted) setState(() => _panelSaved = "Received the address and token from your phone");
+      if (mounted) setState(() => _panelSaved = AppLocalizations.of(context)!.haPanelReceived);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return SettingsPage(
-      title: AppLocalizations.of(context)!.haPanelTitle,
+      title: l.haPanelTitle,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Selector<SettingsService, bool>(
@@ -267,13 +265,13 @@ class _HaPanelPageState extends State<HaPanelPage> {
             autofocus: true,
             value: panelEnabled,
             onChanged: (enabled) => context.read<SettingsService>().setHaPanelEnabled(enabled),
-            title: const Text("Right at the right edge opens the panel"),
+            title: Text(l.haPanelRightEdge),
             secondary: const Icon(Icons.dashboard_outlined),
           ),
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.qr_code_2),
-          title: Text("Set up from your phone", style: Theme.of(context).textTheme.bodyMedium),
+          title: Text(l.haSetUpFromPhone, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: _setUpFromPhone,
         ),
         Padding(
@@ -285,31 +283,26 @@ class _HaPanelPageState extends State<HaPanelPage> {
                 obscureText: true,
                 textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
-                  labelText: "Long-lived access token",
-                  hintText: _panelHasToken ? "Saved (type a new one to replace it)" : null,
+                  labelText: l.haPanelTokenLabel,
+                  hintText: _panelHasToken ? l.haPanelTokenSavedHint : null,
                 ),
               ),
               TextField(
                 controller: _panelDashboard,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _savePanel(),
-                decoration: const InputDecoration(labelText: "Dashboard", hintText: "lovelace"),
+                decoration: InputDecoration(labelText: l.haPanelDashboardLabel, hintText: "lovelace"),
               ),
             ],
           ),
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.save_outlined),
-          title: Text("Save", style: Theme.of(context).textTheme.bodyMedium),
+          title: Text(l.save, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: _savePanel,
         ),
         if (_panelSaved != null) _note(context, _panelSaved!),
-        _note(
-          context,
-          "On for this profile only. The panel shows a dashboard from the address under TV status, signed "
-          "in with the token. Create the token in Home Assistant while logged in as a non-admin user made "
-          "for this TV (profile page, Security tab).",
-        ),
+        _note(context, l.haPanelHelp(l.haTvStatusTitle)),
       ],
     );
   }
@@ -377,14 +370,16 @@ class _HaStatusPageState extends State<HaStatusPage> with WidgetsBindingObserver
     final webhook = _webhook.text.trim();
     await _channel.setHaStatusConfig(url.isEmpty ? null : url, webhook.isEmpty ? null : webhook);
     if (mounted) {
-      setState(() => _statusSaved = url.isEmpty || webhook.isEmpty ? "Status reporting is off" : "Saved: reporting to Home Assistant");
+      final l = AppLocalizations.of(context)!;
+      setState(() => _statusSaved = url.isEmpty || webhook.isEmpty ? l.haStatusReportingOff : l.haStatusSaved);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return SettingsPage(
-      title: AppLocalizations.of(context)!.haTvStatusTitle,
+      title: l.haTvStatusTitle,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -394,13 +389,13 @@ class _HaStatusPageState extends State<HaStatusPage> with WidgetsBindingObserver
                 controller: _url,
                 keyboardType: TextInputType.url,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(labelText: "Home Assistant address", hintText: "http://192.168.1.10:8123"),
+                decoration: InputDecoration(labelText: l.haStatusAddressLabel, hintText: "http://192.168.1.10:8123"),
               ),
               TextField(
                 controller: _webhook,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _saveStatus(),
-                decoration: const InputDecoration(labelText: "Webhook ID"),
+                decoration: InputDecoration(labelText: l.haStatusWebhookLabel),
               ),
             ],
           ),
@@ -409,25 +404,21 @@ class _HaStatusPageState extends State<HaStatusPage> with WidgetsBindingObserver
         FocusableSettingsTile(
           autofocus: true,
           leading: const Icon(Icons.save_outlined),
-          title: Text("Save", style: Theme.of(context).textTheme.bodyMedium),
+          title: Text(l.save, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: _saveStatus,
         ),
         if (_statusSaved != null) _note(context, _statusSaved!),
         FocusableSettingsTile(
           leading: Icon(Icons.music_note_outlined, color: _notificationAccess ? Colors.green : Colors.orange),
           title: Text(
-            _notificationAccess ? "Now playing: on" : "Now playing: turn on notification access",
+            _notificationAccess ? l.haStatusNowPlayingOn : l.haStatusNowPlayingOff,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           onPressed: () async {
             await _channel.requestNotificationListenerPermission();
           },
         ),
-        _note(
-          context,
-          "The TV sends Home Assistant what's on: the app, what's playing, the Google TV profile, and "
-          "kids screen time. It only sends to the address above, as changes happen.",
-        ),
+        _note(context, l.haStatusHelp),
       ],
     );
   }

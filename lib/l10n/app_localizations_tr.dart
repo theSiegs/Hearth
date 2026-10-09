@@ -785,4 +785,88 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get serviceHearthTubeDescription => 'Hearth için YouTube; Hearth profilinizi takip eder';
+
+  @override
+  String get haSummaryOn => 'Açık';
+
+  @override
+  String get haSummaryOff => 'Kapalı';
+
+  @override
+  String get haSummaryReporting => 'Bildiriliyor';
+
+  @override
+  String haNotificationsNeedsFix(String path) {
+    return 'Ana Ekran Tuşu Düzeltmesi\'ni açın ($path); açılır pencereleri o gösterir.';
+  }
+
+  @override
+  String get haNotificationsShow => 'Home Assistant bildirimlerini göster';
+
+  @override
+  String get haNotificationsSendTest => 'Test bildirimi gönder';
+
+  @override
+  String haNotificationsHelp(String host, String path) {
+    return 'Home Assistant\'ta $host ana bilgisayarıyla \"Notifications for Android TV / Fire TV\" entegrasyonunu ekleyin. Ardından otomasyonlardan ona bildirim gönderin; örneğin kapı zili için veya çamaşır bittiğinde.\n\nYalnızca ev ağınızdaki cihazlar gönderebilir (bağlantı noktası 7676). Açılır pencereler her uygulamanın üzerinde görünür ve Ana Ekran Tuşu Düzeltmesi\'nin ($path) açık olmasını gerektirir.';
+  }
+
+  @override
+  String get haNotificationsThisTvIp => '(bu TV\'nin IP adresi)';
+
+  @override
+  String get haPanelSaved => 'Kaydedildi';
+
+  @override
+  String get haPanelSavedNoToken => 'Kaydedildi. Oturum açmak için bir erişim belirteci ekleyin.';
+
+  @override
+  String get haPanelReceived => 'Adres ve belirteç telefonunuzdan alındı';
+
+  @override
+  String get haPanelRightEdge => 'Sağ kenarda sağa basmak paneli açar';
+
+  @override
+  String get haSetUpFromPhone => 'Telefonunuzdan kurun';
+
+  @override
+  String get haPanelTokenLabel => 'Uzun ömürlü erişim belirteci';
+
+  @override
+  String get haPanelTokenSavedHint => 'Kaydedildi (değiştirmek için yenisini yazın)';
+
+  @override
+  String get haPanelDashboardLabel => 'Pano';
+
+  @override
+  String haPanelHelp(String tvStatus) {
+    return 'Yalnızca bu profil için açık. Panel, $tvStatus altındaki adresten bir panoyu belirteçle oturum açarak gösterir. Belirteci Home Assistant\'ta bu TV için oluşturulmuş yönetici olmayan bir kullanıcıyla oturum açmışken oluşturun (profil sayfası, Güvenlik sekmesi).';
+  }
+
+  @override
+  String get haStatusReportingOff => 'Durum bildirimi kapalı';
+
+  @override
+  String get haStatusSaved => 'Kaydedildi: Home Assistant\'a bildiriliyor';
+
+  @override
+  String get haStatusAddressLabel => 'Home Assistant adresi';
+
+  @override
+  String get haStatusWebhookLabel => 'Webhook kimliği';
+
+  @override
+  String get haStatusNowPlayingOn => 'Şimdi oynatılıyor: açık';
+
+  @override
+  String get haStatusNowPlayingOff => 'Şimdi oynatılıyor: bildirim erişimini açın';
+
+  @override
+  String get haStatusHelp => 'TV, Home Assistant\'a ekranda ne olduğunu gönderir: uygulama, oynatılan içerik, Google TV profili ve çocukların ekran süresi. Yalnızca yukarıdaki adrese, değişiklik oldukça gönderir.';
+
+  @override
+  String get haPhoneSetupNoNetwork => 'Bu TV ev ağında değil, bu yüzden telefon ona ulaşamıyor.';
+
+  @override
+  String get haPhoneSetupScan => 'Aynı Wi-Fi ağındaki bir telefonla tarayın, Home Assistant adresini ve erişim belirtecini yapıştırıp Send\'e dokunun. Sayfa yalnızca bu pencere açıkken çalışır.';
 }

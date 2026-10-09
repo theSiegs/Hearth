@@ -785,4 +785,88 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get serviceHearthTubeDescription => 'Hearth 用の YouTube。Hearth のプロフィールに連動します';
+
+  @override
+  String get haSummaryOn => 'オン';
+
+  @override
+  String get haSummaryOff => 'オフ';
+
+  @override
+  String get haSummaryReporting => '送信中';
+
+  @override
+  String haNotificationsNeedsFix(String path) {
+    return 'ホームボタン修正をオンにしてください（$path）。ポップアップはこの機能で表示されます。';
+  }
+
+  @override
+  String get haNotificationsShow => 'Home Assistant の通知を表示';
+
+  @override
+  String get haNotificationsSendTest => 'テスト通知を送信';
+
+  @override
+  String haNotificationsHelp(String host, String path) {
+    return 'Home Assistant で、ホスト $host を指定して「Notifications for Android TV / Fire TV」統合を追加します。あとはオートメーションから通知を送ります（例：玄関のチャイムや洗濯の完了時）。\n\n送信できるのはホームネットワーク内のデバイスだけです（ポート 7676）。ポップアップはどのアプリの上にも表示され、ホームボタン修正（$path）をオンにする必要があります。';
+  }
+
+  @override
+  String get haNotificationsThisTvIp => '（このテレビの IP アドレス）';
+
+  @override
+  String get haPanelSaved => '保存しました';
+
+  @override
+  String get haPanelSavedNoToken => '保存しました。サインインするにはアクセストークンを追加してください。';
+
+  @override
+  String get haPanelReceived => 'スマートフォンからアドレスとトークンを受信しました';
+
+  @override
+  String get haPanelRightEdge => '右端で右を押すとパネルを開く';
+
+  @override
+  String get haSetUpFromPhone => 'スマートフォンで設定';
+
+  @override
+  String get haPanelTokenLabel => '長期アクセストークン';
+
+  @override
+  String get haPanelTokenSavedHint => '保存済み（置き換えるには新しいトークンを入力）';
+
+  @override
+  String get haPanelDashboardLabel => 'ダッシュボード';
+
+  @override
+  String haPanelHelp(String tvStatus) {
+    return 'このプロフィールでのみオンになります。パネルには $tvStatus のアドレスのダッシュボードが、トークンでサインインした状態で表示されます。トークンは、このテレビ用に作成した管理者ではないユーザーで Home Assistant にログインして作成してください（プロフィールページの「セキュリティ」タブ）。';
+  }
+
+  @override
+  String get haStatusReportingOff => '状態の送信はオフです';
+
+  @override
+  String get haStatusSaved => '保存しました：Home Assistant に送信中';
+
+  @override
+  String get haStatusAddressLabel => 'Home Assistant のアドレス';
+
+  @override
+  String get haStatusWebhookLabel => 'Webhook ID';
+
+  @override
+  String get haStatusNowPlayingOn => '再生中の情報：オン';
+
+  @override
+  String get haStatusNowPlayingOff => '再生中の情報：通知へのアクセスをオンにする';
+
+  @override
+  String get haStatusHelp => 'テレビは表示中の内容（アプリ、再生中のもの、Google TV のプロフィール、子どものスクリーンタイム）を Home Assistant に送ります。送信先は上のアドレスのみで、変化があったときに送信します。';
+
+  @override
+  String get haPhoneSetupNoNetwork => 'このテレビはホームネットワークに接続されていないため、スマートフォンから接続できません。';
+
+  @override
+  String get haPhoneSetupScan => '同じ Wi-Fi に接続したスマートフォンでスキャンし、Home Assistant のアドレスとアクセストークンを貼り付けて「Send」をタップします。このページはこの画面を開いている間だけ使えます。';
 }

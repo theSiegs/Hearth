@@ -787,4 +787,88 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get serviceHearthTubeDescription => 'YouTube para Hearth; sigue su perfil de Hearth';
+
+  @override
+  String get haSummaryOn => 'Activado';
+
+  @override
+  String get haSummaryOff => 'Desactivado';
+
+  @override
+  String get haSummaryReporting => 'Informando';
+
+  @override
+  String haNotificationsNeedsFix(String path) {
+    return 'Active la Corrección del botón Inicio ($path); es la que muestra los avisos.';
+  }
+
+  @override
+  String get haNotificationsShow => 'Mostrar notificaciones de Home Assistant';
+
+  @override
+  String get haNotificationsSendTest => 'Enviar una notificación de prueba';
+
+  @override
+  String haNotificationsHelp(String host, String path) {
+    return 'En Home Assistant, añada la integración \"Notifications for Android TV / Fire TV\" con el host $host. Después envíele notificaciones desde automatizaciones, por ejemplo para el timbre o cuando termine la colada.\n\nSolo los dispositivos de su red doméstica pueden enviarlas (puerto 7676). Los avisos aparecen sobre cualquier aplicación y necesitan la Corrección del botón Inicio ($path) activada.';
+  }
+
+  @override
+  String get haNotificationsThisTvIp => '(la dirección IP de esta TV)';
+
+  @override
+  String get haPanelSaved => 'Guardado';
+
+  @override
+  String get haPanelSavedNoToken => 'Guardado. Añada un token de acceso para iniciar sesión.';
+
+  @override
+  String get haPanelReceived => 'Se recibieron la dirección y el token desde su teléfono';
+
+  @override
+  String get haPanelRightEdge => 'Derecha en el borde derecho abre el panel';
+
+  @override
+  String get haSetUpFromPhone => 'Configurar desde el teléfono';
+
+  @override
+  String get haPanelTokenLabel => 'Token de acceso de larga duración';
+
+  @override
+  String get haPanelTokenSavedHint => 'Guardado (escriba uno nuevo para reemplazarlo)';
+
+  @override
+  String get haPanelDashboardLabel => 'Dashboard';
+
+  @override
+  String haPanelHelp(String tvStatus) {
+    return 'Solo para este perfil. El panel muestra un dashboard de la dirección indicada en $tvStatus, con sesión iniciada mediante el token. Cree el token en Home Assistant con la sesión de un usuario no administrador creado para esta TV (página de perfil, pestaña Seguridad).';
+  }
+
+  @override
+  String get haStatusReportingOff => 'El envío de estado está desactivado';
+
+  @override
+  String get haStatusSaved => 'Guardado: enviando a Home Assistant';
+
+  @override
+  String get haStatusAddressLabel => 'Dirección de Home Assistant';
+
+  @override
+  String get haStatusWebhookLabel => 'ID del webhook';
+
+  @override
+  String get haStatusNowPlayingOn => 'Reproduciendo ahora: activado';
+
+  @override
+  String get haStatusNowPlayingOff => 'Reproduciendo ahora: active el acceso a notificaciones';
+
+  @override
+  String get haStatusHelp => 'La TV envía a Home Assistant lo que hay en pantalla: la aplicación, lo que se reproduce, el perfil de Google TV y el tiempo de pantalla infantil. Solo lo envía a la dirección de arriba, a medida que cambia.';
+
+  @override
+  String get haPhoneSetupNoNetwork => 'Esta TV no está en la red doméstica, así que el teléfono no puede conectarse a ella.';
+
+  @override
+  String get haPhoneSetupScan => 'Escanee con un teléfono conectado a la misma red Wi-Fi, pegue la dirección de Home Assistant y el token de acceso, y toque Send. La página solo funciona mientras esto esté abierto.';
 }

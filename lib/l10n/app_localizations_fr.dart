@@ -787,4 +787,88 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get serviceHearthTubeDescription => 'YouTube pour Hearth ; suit votre profil Hearth';
+
+  @override
+  String get haSummaryOn => 'Activé';
+
+  @override
+  String get haSummaryOff => 'Désactivé';
+
+  @override
+  String get haSummaryReporting => 'Envoi actif';
+
+  @override
+  String haNotificationsNeedsFix(String path) {
+    return 'Activez le Correctif du bouton Accueil ($path) ; c\'est lui qui affiche les fenêtres.';
+  }
+
+  @override
+  String get haNotificationsShow => 'Afficher les notifications Home Assistant';
+
+  @override
+  String get haNotificationsSendTest => 'Envoyer une notification de test';
+
+  @override
+  String haNotificationsHelp(String host, String path) {
+    return 'Dans Home Assistant, ajoutez l\'intégration \"Notifications for Android TV / Fire TV\" avec l\'hôte $host. Envoyez-lui ensuite des notifications depuis des automatisations, par exemple pour la sonnette ou quand la lessive est terminée.\n\nSeuls les appareils de votre réseau domestique peuvent les envoyer (port 7676). Les fenêtres s\'affichent par-dessus n\'importe quelle application et nécessitent le Correctif du bouton Accueil ($path) activé.';
+  }
+
+  @override
+  String get haNotificationsThisTvIp => '(l\'adresse IP de cette TV)';
+
+  @override
+  String get haPanelSaved => 'Enregistré';
+
+  @override
+  String get haPanelSavedNoToken => 'Enregistré. Ajoutez un jeton d\'accès pour vous connecter.';
+
+  @override
+  String get haPanelReceived => 'Adresse et jeton reçus depuis votre téléphone';
+
+  @override
+  String get haPanelRightEdge => 'Droite au bord droit ouvre le panneau';
+
+  @override
+  String get haSetUpFromPhone => 'Configurer depuis votre téléphone';
+
+  @override
+  String get haPanelTokenLabel => 'Jeton d\'accès longue durée';
+
+  @override
+  String get haPanelTokenSavedHint => 'Enregistré (saisissez-en un nouveau pour le remplacer)';
+
+  @override
+  String get haPanelDashboardLabel => 'Tableau de bord';
+
+  @override
+  String haPanelHelp(String tvStatus) {
+    return 'Activé pour ce profil uniquement. Le panneau affiche un tableau de bord depuis l\'adresse indiquée dans $tvStatus, connecté avec le jeton. Créez le jeton dans Home Assistant en étant connecté avec un utilisateur non administrateur créé pour cette TV (page du profil, onglet Sécurité).';
+  }
+
+  @override
+  String get haStatusReportingOff => 'L\'envoi de l\'état est désactivé';
+
+  @override
+  String get haStatusSaved => 'Enregistré : envoi vers Home Assistant';
+
+  @override
+  String get haStatusAddressLabel => 'Adresse de Home Assistant';
+
+  @override
+  String get haStatusWebhookLabel => 'ID du webhook';
+
+  @override
+  String get haStatusNowPlayingOn => 'En cours de lecture : activé';
+
+  @override
+  String get haStatusNowPlayingOff => 'En cours de lecture : activez l\'accès aux notifications';
+
+  @override
+  String get haStatusHelp => 'La TV indique à Home Assistant ce qui est affiché : l\'application, ce qui est en lecture, le profil Google TV et le temps d\'écran des enfants. Elle n\'envoie qu\'à l\'adresse ci-dessus, au fil des changements.';
+
+  @override
+  String get haPhoneSetupNoNetwork => 'Cette TV n\'est pas sur le réseau domestique, le téléphone ne peut donc pas la joindre.';
+
+  @override
+  String get haPhoneSetupScan => 'Scannez avec un téléphone connecté au même Wi-Fi, collez l\'adresse de Home Assistant et le jeton d\'accès, puis appuyez sur Send. La page ne fonctionne que tant que cette fenêtre est ouverte.';
 }

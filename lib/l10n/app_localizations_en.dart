@@ -787,4 +787,88 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serviceHearthTubeDescription => 'YouTube for Hearth; follows your Hearth profile';
+
+  @override
+  String get haSummaryOn => 'On';
+
+  @override
+  String get haSummaryOff => 'Off';
+
+  @override
+  String get haSummaryReporting => 'Reporting';
+
+  @override
+  String haNotificationsNeedsFix(String path) {
+    return 'Turn on Home Button Fix ($path); it shows the pop-ups.';
+  }
+
+  @override
+  String get haNotificationsShow => 'Show Home Assistant notifications';
+
+  @override
+  String get haNotificationsSendTest => 'Send a test notification';
+
+  @override
+  String haNotificationsHelp(String host, String path) {
+    return 'In Home Assistant, add the \"Notifications for Android TV / Fire TV\" integration with host $host. Then send notifications to it from automations, for example for the doorbell or when the laundry is done.\n\nOnly devices on your home network can send them (port 7676). Pop-ups appear over any app and need Home Button Fix ($path) to be on.';
+  }
+
+  @override
+  String get haNotificationsThisTvIp => '(this TV\'s IP address)';
+
+  @override
+  String get haPanelSaved => 'Saved';
+
+  @override
+  String get haPanelSavedNoToken => 'Saved. Add an access token to sign in.';
+
+  @override
+  String get haPanelReceived => 'Received the address and token from your phone';
+
+  @override
+  String get haPanelRightEdge => 'Right at the right edge opens the panel';
+
+  @override
+  String get haSetUpFromPhone => 'Set up from your phone';
+
+  @override
+  String get haPanelTokenLabel => 'Long-lived access token';
+
+  @override
+  String get haPanelTokenSavedHint => 'Saved (type a new one to replace it)';
+
+  @override
+  String get haPanelDashboardLabel => 'Dashboard';
+
+  @override
+  String haPanelHelp(String tvStatus) {
+    return 'On for this profile only. The panel shows a dashboard from the address under $tvStatus, signed in with the token. Create the token in Home Assistant while logged in as a non-admin user made for this TV (profile page, Security tab).';
+  }
+
+  @override
+  String get haStatusReportingOff => 'Status reporting is off';
+
+  @override
+  String get haStatusSaved => 'Saved: reporting to Home Assistant';
+
+  @override
+  String get haStatusAddressLabel => 'Home Assistant address';
+
+  @override
+  String get haStatusWebhookLabel => 'Webhook ID';
+
+  @override
+  String get haStatusNowPlayingOn => 'Now playing: on';
+
+  @override
+  String get haStatusNowPlayingOff => 'Now playing: turn on notification access';
+
+  @override
+  String get haStatusHelp => 'The TV sends Home Assistant what\'s on: the app, what\'s playing, the Google TV profile, and kids screen time. It only sends to the address above, as changes happen.';
+
+  @override
+  String get haPhoneSetupNoNetwork => 'This TV isn\'t on the home network, so the phone can\'t reach it.';
+
+  @override
+  String get haPhoneSetupScan => 'Scan with a phone on the same Wi-Fi, paste the Home Assistant address and access token, and tap Send. The page only works while this is open.';
 }

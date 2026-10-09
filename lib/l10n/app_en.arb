@@ -723,5 +723,127 @@
     "serviceHearthTubeDescription": "YouTube for Hearth; follows your Hearth profile",
     "@serviceHearthTubeDescription": {
         "description": "Updates page: the line under HearthTube, a companion app"
+    },
+    "haSummaryOn": "On",
+    "@haSummaryOn": {
+        "description": "Home Assistant page: shown next to Notifications or Dashboard panel when it is on"
+    },
+    "haSummaryOff": "Off",
+    "@haSummaryOff": {
+        "description": "Home Assistant page: shown next to a feature that is off"
+    },
+    "haSummaryReporting": "Reporting",
+    "@haSummaryReporting": {
+        "description": "Home Assistant page: shown next to TV status while the TV reports to Home Assistant"
+    },
+    "haNotificationsNeedsFix": "Turn on Home Button Fix ({path}); it shows the pop-ups.",
+    "@haNotificationsNeedsFix": {
+        "description": "Home Assistant notifications page: the test pop-up could not show; {path} is where Setup & permissions is",
+        "placeholders": {
+            "path": {
+                "type": "String"
+            }
+        }
+    },
+    "haNotificationsShow": "Show Home Assistant notifications",
+    "@haNotificationsShow": {
+        "description": "Home Assistant notifications page: the on/off switch"
+    },
+    "haNotificationsSendTest": "Send a test notification",
+    "@haNotificationsSendTest": {
+        "description": "Home Assistant notifications page: row that shows a test pop-up"
+    },
+    "haNotificationsHelp": "In Home Assistant, add the \"Notifications for Android TV / Fire TV\" integration with host {host}. Then send notifications to it from automations, for example for the doorbell or when the laundry is done.\n\nOnly devices on your home network can send them (port 7676). Pop-ups appear over any app and need Home Button Fix ({path}) to be on.",
+    "@haNotificationsHelp": {
+        "description": "Home Assistant notifications page: how to set it up; {host} is the TV's IP address, {path} is where Setup & permissions is. The integration's name stays in English, as Home Assistant shows it",
+        "placeholders": {
+            "host": {
+                "type": "String"
+            },
+            "path": {
+                "type": "String"
+            }
+        }
+    },
+    "haNotificationsThisTvIp": "(this TV's IP address)",
+    "@haNotificationsThisTvIp": {
+        "description": "Home Assistant notifications page: stands in for the host while the TV's IP address is unknown"
+    },
+    "haPanelSaved": "Saved",
+    "@haPanelSaved": {
+        "description": "Dashboard panel page: shown after Save"
+    },
+    "haPanelSavedNoToken": "Saved. Add an access token to sign in.",
+    "@haPanelSavedNoToken": {
+        "description": "Dashboard panel page: shown after Save while no token is saved"
+    },
+    "haPanelReceived": "Received the address and token from your phone",
+    "@haPanelReceived": {
+        "description": "Dashboard panel page: shown after the phone sent its setup"
+    },
+    "haPanelRightEdge": "Right at the right edge opens the panel",
+    "@haPanelRightEdge": {
+        "description": "Dashboard panel page: switch; pressing Right on the remote at the screen's right edge slides the panel in"
+    },
+    "haSetUpFromPhone": "Set up from your phone",
+    "@haSetUpFromPhone": {
+        "description": "Dashboard panel page: row that opens the QR code dialog, and that dialog's title"
+    },
+    "haPanelTokenLabel": "Long-lived access token",
+    "@haPanelTokenLabel": {
+        "description": "Dashboard panel page: text field label (Home Assistant's name for the token)"
+    },
+    "haPanelTokenSavedHint": "Saved (type a new one to replace it)",
+    "@haPanelTokenSavedHint": {
+        "description": "Dashboard panel page: hint in the token field once a token is saved"
+    },
+    "haPanelDashboardLabel": "Dashboard",
+    "@haPanelDashboardLabel": {
+        "description": "Dashboard panel page: text field label for the Home Assistant dashboard path"
+    },
+    "haPanelHelp": "On for this profile only. The panel shows a dashboard from the address under {tvStatus}, signed in with the token. Create the token in Home Assistant while logged in as a non-admin user made for this TV (profile page, Security tab).",
+    "@haPanelHelp": {
+        "description": "Dashboard panel page: note at the bottom; {tvStatus} is the TV status page's title",
+        "placeholders": {
+            "tvStatus": {
+                "type": "String"
+            }
+        }
+    },
+    "haStatusReportingOff": "Status reporting is off",
+    "@haStatusReportingOff": {
+        "description": "TV status page: shown after Save with the address or webhook empty"
+    },
+    "haStatusSaved": "Saved: reporting to Home Assistant",
+    "@haStatusSaved": {
+        "description": "TV status page: shown after Save with an address and webhook"
+    },
+    "haStatusAddressLabel": "Home Assistant address",
+    "@haStatusAddressLabel": {
+        "description": "TV status page: text field label"
+    },
+    "haStatusWebhookLabel": "Webhook ID",
+    "@haStatusWebhookLabel": {
+        "description": "TV status page: text field label"
+    },
+    "haStatusNowPlayingOn": "Now playing: on",
+    "@haStatusNowPlayingOn": {
+        "description": "TV status page: row when notification access lets the TV report what's playing"
+    },
+    "haStatusNowPlayingOff": "Now playing: turn on notification access",
+    "@haStatusNowPlayingOff": {
+        "description": "TV status page: row that opens the notification access screen"
+    },
+    "haStatusHelp": "The TV sends Home Assistant what's on: the app, what's playing, the Google TV profile, and kids screen time. It only sends to the address above, as changes happen.",
+    "@haStatusHelp": {
+        "description": "TV status page: note at the bottom"
+    },
+    "haPhoneSetupNoNetwork": "This TV isn't on the home network, so the phone can't reach it.",
+    "@haPhoneSetupNoNetwork": {
+        "description": "Set up from your phone dialog: shown when the TV has no local network address"
+    },
+    "haPhoneSetupScan": "Scan with a phone on the same Wi-Fi, paste the Home Assistant address and access token, and tap Send. The page only works while this is open.",
+    "@haPhoneSetupScan": {
+        "description": "Set up from your phone dialog: under the QR code. Send is the button on the phone's page, which is in English"
     }
 }
