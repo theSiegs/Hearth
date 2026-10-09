@@ -28,6 +28,8 @@ final class ProfilePairing {
     static final String APPLE_TV = "com.apple.atve.androidtv.appletv";
     static final String MAX = "com.wbd.stream";
     static final String PARAMOUNT = "com.cbs.ott";
+    /** Not paired yet. Speaks its screens (no accessibility nodes) when a spoken-feedback service is on. */
+    static final String HULU = "com.hulu.livingroomplus";
     static final String[] APPS = {NETFLIX, DISNEY, APPLE_TV, MAX, PARAMOUNT};
 
     static final String MODE_AUTO = "auto";

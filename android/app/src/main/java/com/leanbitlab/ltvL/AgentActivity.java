@@ -39,7 +39,7 @@ public class AgentActivity extends Activity {
                     Intent intent = Intent.parseUri(pending, Intent.URI_INTENT_SCHEME)
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     intent.setSelector(null);
-                    startActivity(intent);
+                    startActivity(intent, MainActivity.shareIdentity());
                     ok = true;
                 } catch (Exception e) {
                     Log.i("HearthAgent", "Couldn't open " + pending + ": " + e);

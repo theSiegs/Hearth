@@ -791,12 +791,22 @@ public class MainActivity extends FlutterActivity {
         boolean success = true;
 
         try {
-            startActivity(intent);
+            startActivity(intent, shareIdentity());
         } catch (Exception ignored) {
             success = false;
         }
 
         return success;
+    }
+
+    /**
+     * Launch options that let the opened app see Hearth (Android 14+): an app that can't see Hearth can't see Hearth
+     * voice either, and speaks through Google's voice instead, out loud and past Profile Pairing (Hulu, which
+     * declares no TTS queries). Null before Android 14.
+     */
+    static android.os.Bundle shareIdentity() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return null;
+        return android.app.ActivityOptions.makeBasic().setShareIdentityEnabled(true).toBundle();
     }
 
     /** Starts the first of the intents that opens, skipping nulls; false when none does. */
