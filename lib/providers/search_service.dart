@@ -47,6 +47,12 @@ String _paramountLink(String property, String id) => "https://www.paramountplus.
 
 const _googleKnowledgeGraph = "P2671";
 const _tmdbMovie = "P4947";
+
+// Adult titles never show, in any profile: Wikidata files them under the genre (P136) or class (P31) "pornographic
+// film" (Q185529), and TMDB marks them adult (see TitleDetails.adult)
+const _genre = "P136";
+const _instanceOf = "P31";
+const _pornographicFilm = "Q185529";
 const _tmdbShow = "P4983";
 
 /// Where one result can be watched: a service and the link that opens the title in its app.
@@ -127,6 +133,11 @@ class SearchService {
     return _cache[text.toLowerCase()] = results;
   }
 
+  static bool _isAdult(Map claims) => [_genre, _instanceOf].any((p) => (claims[p] as List? ?? const []).any((c) {
+        final value = ((c as Map?)?["mainsnak"] as Map?)?["datavalue"]?["value"];
+        return value is Map && value["id"] == _pornographicFilm;
+      }));
+
   /// Keeps the hits that are films or shows (they have a streaming or TMDB id), in search order.
   static List<SearchResult> parseResults(List<Map> hits, Map entities) {
     final results = <SearchResult>[];
@@ -145,7 +156,7 @@ class SearchService {
         }
       }
       final isTitle = offers.isNotEmpty || claims.containsKey(_tmdbMovie) || claims.containsKey(_tmdbShow);
-      if (!isTitle) continue;
+      if (!isTitle || _isAdult(claims)) continue;
       results.add(SearchResult(
         wikidataId: hit["id"] as String,
         title: (_at(entity, ["labels", "en", "value"]) ?? hit["label"] ?? "") as String,
@@ -221,7 +232,11 @@ class TitleDetails {
   /// Stores where it can be rented or bought (and isn't also included there).
   final List<String> rentOrBuy;
 
-  const TitleDetails({this.posterUrl, this.backdropUrl, this.included = const [], this.rentOrBuy = const []});
+  /// TMDB marks it as adult content: never shown.
+  final bool adult;
+
+  const TitleDetails(
+      {this.posterUrl, this.backdropUrl, this.included = const [], this.rentOrBuy = const [], this.adult = false});
 
   /// Included services (the name older code used: "streaming on").
   List<String> get streamingOn => included;
@@ -377,6 +392,7 @@ class TmdbClient {
       backdropUrl: backdrop is String ? "https://image.tmdb.org/t/p/w500$backdrop" : null,
       included: included,
       rentOrBuy: rentOrBuy,
+      adult: json["adult"] == true,
     );
   }
 }
