@@ -117,9 +117,14 @@ A remap can apply everywhere or only on Hearth's home screen. Remote buttons nee
 
 ## Updates
 
-**Settings → System → Updates.** Hearth checks its GitHub releases daily and can install updates on its own when
-it's not in use. It also installs and updates HearthTube. The first install asks Android for permission to install
-apps; after that, updates go through without asking.
+**Settings → System → Updates.** Choose **Hearth** to check its GitHub releases for a newer version and install it.
+The same page installs HearthTube and keeps it up to date: with **Update automatically** on, Hearth checks daily and
+updates HearthTube when it's not in use. The first install asks Android for permission to install apps; after that,
+updates go through without asking.
+
+**Include pre-releases** (on by default) also offers early test builds, of both Hearth and HearthTube. While Hearth is
+in early development every release is a pre-release, so leave it on to get updates. Turning it off never installs an
+older version.
 
 ## Backup & restore
 
