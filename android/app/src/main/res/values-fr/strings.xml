@@ -35,4 +35,15 @@
     <string name="agent_channel_name">Hearth pour ce profil</string>
     <string name="agent_notification_text">Synchronise l\'écran d\'accueil de Hearth avec ce profil</string>
     <string name="search_voice_prompt">Rechercher des films et des séries</string>
+    <string name="pin_unlocking">Saisie du code PIN du profil…</string>
+    <string name="pin_rejected_title">%1$s n’a pas accepté le code PIN enregistré pour « %2$s »</string>
+    <string name="pin_rejected_body">Modifier le PIN pour le mettre à jour dans les paramètres de Hearth, ou Fermer pour le saisir vous-même.</string>
+    <string name="pin_stopped_body">Hearth ne réessaiera pas ce code avant qu’il soit modifié, pour ne pas bloquer le profil. Modifier le PIN pour le mettre à jour, ou Fermer pour le saisir vous-même.</string>
+    <string name="pin_locked_title">%1$s a bloqué « %2$s »</string>
+    <string name="pin_locked_body">Trop de codes erronés. Débloquez le profil dans l’app, puis mettez à jour le code dans les paramètres de Hearth.</string>
+    <string name="pin_screen_changed">L’écran de code de %1$s a changé, Hearth n’a donc rien saisi. Saisissez le code vous-même.</string>
+    <string name="pin_broken_digits">Hearth s’est arrêté après %1$d chiffres. Effacez-les et saisissez le code vous-même.</string>
+    <string name="pin_broken">Hearth n’a pas pu saisir le code. Saisissez-le vous-même.</string>
+    <string name="pin_change">Modifier le PIN</string>
+    <string name="pin_close">Fermer</string>
 </resources>

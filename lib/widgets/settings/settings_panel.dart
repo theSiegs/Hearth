@@ -62,7 +62,10 @@ import 'package:flutter/services.dart';
 class SettingsPanel extends StatefulWidget {
   final String? initialRoute;
 
-  const SettingsPanel({super.key, this.initialRoute});
+  /// Opens on this app's Profile Pairing page (Profile Pairing's "Change PIN" when a saved PIN wasn't taken).
+  final String? openProfilePinsFor;
+
+  const SettingsPanel({super.key, this.initialRoute, this.openProfilePinsFor});
 
   @override
   State<SettingsPanel> createState() => _SettingsPanelState();
@@ -123,7 +126,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
             notifier: _unlocked,
             child: Navigator(
               key: _navigatorKey,
-              initialRoute: widget.initialRoute ?? SettingsPanelPage.routeName,
+              initialRoute: widget.openProfilePinsFor != null
+                  ? ProfilePairingPage.routeName
+                  : widget.initialRoute ?? SettingsPanelPage.routeName,
               onGenerateRoute: (settings) {
                 switch (settings.name) {
                   case SettingsPanelPage.routeName:
@@ -160,7 +165,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
                   case AccentColorPage.routeName:
                     return _FastPageRoute(builder: (_) => const AccentColorPage());
                   case ProfilePairingPage.routeName:
-                    return _FastPageRoute(builder: (_) => const ProfilePairingPage());
+                    return _FastPageRoute(builder: (_) => ProfilePairingPage(openApp: widget.openProfilePinsFor));
                   case ProfilePairingAppPage.routeName:
                     return _FastPageRoute(
                         builder: (_) => ProfilePairingAppPage(app: settings.arguments as Map<dynamic, dynamic>));

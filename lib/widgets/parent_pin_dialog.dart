@@ -58,6 +58,24 @@ Future<bool> requireParent(BuildContext context) async {
   return pin != null;
 }
 
+/// The parent PIN in any profile, for what only a parent may do anywhere (saving a streaming app's profile PIN).
+/// Without a parent PIN set, says to set one first. Returns true when the caller may go ahead.
+Future<bool> requireParentPin(BuildContext context) async {
+  final settings = context.read<SettingsService>();
+  final l = AppLocalizations.of(context)!;
+  if (!settings.hasParentPin) {
+    await showMessageDialog(context,
+        title: l.parentPinTitle,
+        message: l.profilePinNeedsParentPin(l.settingsTitle, l.profilesTitle, l.parentPinTitle));
+    return false;
+  }
+  final String? pin = await showDialog<String>(
+    context: context,
+    builder: (_) => ParentPinDialog(title: l.parentPinTitle, verify: settings.verifyParentPin),
+  );
+  return pin != null;
+}
+
 /// Full-screen PIN entry in Google TV's style: the shuffled row pad (see [_RowPad]), number keys type directly.
 /// Pops with the entered PIN, or null on Back.
 class ParentPinDialog extends StatefulWidget {
@@ -66,10 +84,14 @@ class ParentPinDialog extends StatefulWidget {
   final bool Function(String pin)? verify;
   static const int digitCount = 4;
 
+  /// How many digits the PIN has ([digitCount] for Hearth's own; a streaming app's may differ).
+  final int length;
+
   /// The pad's shuffle (tests pass a seeded one); a secure random by default.
   final Random? random;
 
-  const ParentPinDialog({super.key, required this.title, this.subtitle, this.verify, this.random});
+  const ParentPinDialog(
+      {super.key, required this.title, this.subtitle, this.verify, this.random, this.length = digitCount});
 
   @override
   State<ParentPinDialog> createState() => _ParentPinDialogState();
@@ -80,12 +102,12 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
   bool _error = false;
 
   void _onDigit(String digit) {
-    if (_entered.length >= ParentPinDialog.digitCount) return;
+    if (_entered.length >= widget.length) return;
     setState(() {
       _entered += digit;
       _error = false;
     });
-    if (_entered.length < ParentPinDialog.digitCount) return;
+    if (_entered.length < widget.length) return;
 
     if (widget.verify == null || widget.verify!(_entered)) {
       Navigator.of(context).pop(_entered);
@@ -148,7 +170,7 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
                           color: _error ? const Color(0xFFF2B8B5) : _textDim, fontSize: 12, letterSpacing: 2)),
                   const SizedBox(height: 16),
                   Row(
-                    children: List.generate(ParentPinDialog.digitCount, (i) {
+                    children: List.generate(widget.length, (i) {
                       final bool current = i == _entered.length;
                       return Container(
                         width: 48,

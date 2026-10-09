@@ -3,6 +3,7 @@ package com.leanbitlab.ltvL;
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -84,6 +85,14 @@ public class ProfilePairingService extends AccessibilityService {
     private View mCover;
     private TextView mCoverTitle;
     private View mBanner;
+    /** Typing a profile PIN after a pick (see PinEntryMachine), or null. */
+    private PinRun mPin;
+    private View mPinPopup;
+    private static final long PIN_SCREEN_WAIT_MS = 6_000;
+    private static final long PIN_STEP_MS = 2_500;
+    private static final long PIN_OVERALL_MS = 15_000;
+    private static final long PIN_MESSAGE_MS = 3_500;
+    private static final int PIN_BREAKS_BEFORE_PAUSE = 3;
 
     /** One app launch. Main thread only. */
     private static final class Session {
@@ -203,6 +212,9 @@ public class ProfilePairingService extends AccessibilityService {
         mHandler.removeCallbacksAndMessages(null);
         hideCover();
         hideBanner();
+        hidePinPopup();
+        if (mPin != null) java.util.Arrays.fill(mPin.pin, '\0');
+        mPin = null;
         super.onDestroy();
     }
 
@@ -235,7 +247,7 @@ public class ProfilePairingService extends AccessibilityService {
     }
 
     private final Runnable mGoIdle = () -> {
-        if (mSession != null) return;
+        if (mSession != null || mPin != null) return;
         setMode(false, false);
         // The app stops speaking once screen-reader mode is off; until then Hearth voice keeps it quiet.
         setListeningTo(null);
@@ -273,6 +285,8 @@ public class ProfilePairingService extends AccessibilityService {
         Log.i(TAG, (outcome == PICKED ? "Picked" : "Stopped") + " in " + s.pkg + ": " + why);
         if (outcome == PICKED) {
             mHandler.postDelayed(() -> {
+                // A PIN-protected profile: the cover stays up while Hearth types the saved PIN behind it
+                if (startPinEntry(s)) return;
                 hideCover();
                 announceMatch(s);
             }, COVER_AFTER_PICK_MS);
@@ -300,6 +314,7 @@ public class ProfilePairingService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
+        if (mPin != null) onPinEvent(event);
         Session s = mSession;
         if (s == null) return;
         CharSequence eventPkg = event.getPackageName();
@@ -746,6 +761,322 @@ public class ProfilePairingService extends AccessibilityService {
             if (hasFocus(node.getChild(i), depth + 1)) return true;
         }
         return false;
+    }
+
+    // ---- Profile PIN entry (docs/design/streaming-pin-entry.md) ----
+
+    /** Hearth is typing a profile PIN: the remote's keys are held (Back and Home cancel). */
+    static boolean isEnteringPin() {
+        ProfilePairingService service = sInstance;
+        return service != null && service.mPin != null;
+    }
+
+    /** Back or Home while a PIN is typed: stop, and leave the app's PIN screen to the parent. */
+    static void cancelPinEntry() {
+        ProfilePairingService service = sInstance;
+        if (service == null) return;
+        service.mHandler.post(() -> {
+            if (service.mPin != null) service.mPin.machine.onCancel();
+        });
+    }
+
+    /**
+     * Starts typing the picked profile's saved PIN when everything allows it: the app has a recipe and isn't paused,
+     * this is a grown-up Google TV profile paired with that app profile by an explicit choice, and a PIN is saved for
+     * it that Hearth may still try. False when not (the cover goes as usual).
+     */
+    private boolean startPinEntry(Session s) {
+        String appProfile = s.pickedName;
+        PinRecipe recipe = PinRecipes.forPackage(s.pkg);
+        if (recipe == null || appProfile == null || s.kids || mCover == null) return false;
+        if (!appProfile.equals(ProfilePairing.getChosenProfile(this, s.pkg, s.key))) return false;
+        if (!PinVault.has(this, s.pkg, appProfile) || PinVault.isPaused(this, s.pkg)) return false;
+        char[] pin = PinVault.open(this, s.pkg, appProfile);
+        if (pin == null) return false;
+        if (pin.length != recipe.pinLength()) {
+            java.util.Arrays.fill(pin, '\0');
+            Log.i(TAG, "PIN for " + s.pkg + " skipped: its length doesn't fit the app");
+            return false;
+        }
+        mPin = new PinRun(s, appProfile, recipe, pin);
+        if (mCoverTitle != null) mCoverTitle.setText(getString(R.string.pin_unlocking));
+        mHandler.postDelayed(mPinNoScreen, PIN_SCREEN_WAIT_MS);
+        mHandler.postDelayed(mPinBroken, PIN_OVERALL_MS);
+        Log.i(TAG, "Waiting for " + s.pkg + "'s PIN screen");
+        checkPinScreen();
+        return true;
+    }
+
+    private final Runnable mPinNoScreen = () -> {
+        if (mPin != null) mPin.machine.onNoScreen();
+    };
+    private final Runnable mPinBroken = () -> {
+        if (mPin != null) mPin.machine.onBroken();
+    };
+
+    private void onPinEvent(AccessibilityEvent event) {
+        PinRun run = mPin;
+        CharSequence pkg = event.getPackageName();
+        int type = event.getEventType();
+        if (pkg != null && !run.session.pkg.contentEquals(pkg)) {
+            // Another app in front: the parent left, or something came up over the app
+            if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && !pkg.toString().startsWith(getPackageName())
+                    && !"com.android.systemui".contentEquals(pkg)) {
+                run.machine.onBroken();
+            }
+            return;
+        }
+        if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+                || type == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+            checkPinScreen();
+        }
+    }
+
+    /** What the recipe makes of the app's window now: the PIN screen to type on, or the app's answer. */
+    private void checkPinScreen() {
+        PinRun run = mPin;
+        if (run == null) return;
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null || !run.session.pkg.contentEquals(root.getPackageName() != null ? root.getPackageName() : "")) {
+            return;
+        }
+        PinEntryMachine.Screen screen = run.recipe.recognize(root);
+        if (screen != null) {
+            mHandler.removeCallbacks(mPinNoScreen);
+            run.machine.onScreen(screen);
+        }
+        if (mPin == run && run.outcomeDue) {
+            PinEntryMachine.Outcome outcome = run.recipe.outcome(root);
+            if (outcome != null) run.machine.onOutcome(outcome);
+        }
+    }
+
+    private final class PinRun implements PinEntryMachine.Driver {
+        final Session session;
+        final String appProfile;
+        final PinRecipe recipe;
+        final PinEntryMachine machine;
+        char[] pin;
+        /** Every digit went in: the app's answer is awaited. */
+        boolean outcomeDue;
+        private final Runnable stepTimeout = () -> machineBroken();
+
+        PinRun(Session session, String appProfile, PinRecipe recipe, char[] pin) {
+            this.session = session;
+            this.appProfile = appProfile;
+            this.recipe = recipe;
+            this.pin = pin;
+            this.machine = new PinEntryMachine(this, pin.length,
+                    PinVault.rejections(ProfilePairingService.this, session.pkg, appProfile), recipe.lockoutAfter());
+        }
+
+        private void machineBroken() {
+            machine.onBroken();
+        }
+
+        @Override
+        public void typeDigit(int index) {
+            AccessibilityNodeInfo root = getRootInActiveWindow();
+            if (root == null) {
+                machine.onDigit(false);
+                return;
+            }
+            mHandler.removeCallbacks(stepTimeout);
+            mHandler.postDelayed(stepTimeout, PIN_STEP_MS);
+            recipe.type(ProfilePairingService.this, root, pin[index], ok -> {
+                mHandler.removeCallbacks(stepTimeout);
+                if (mPin != this) return;
+                if (ok && index == pin.length - 1) {
+                    outcomeDue = true;
+                    mHandler.postDelayed(stepTimeout, PIN_STEP_MS);
+                }
+                machine.onDigit(ok);
+                if (outcomeDue) checkPinScreen();
+            });
+        }
+
+        @Override
+        public void finished(PinEntryMachine.Result result, int digitsTyped) {
+            mHandler.removeCallbacks(stepTimeout);
+            endPinEntry(this, result, digitsTyped);
+        }
+    }
+
+    private void endPinEntry(PinRun run, PinEntryMachine.Result result, int digitsTyped) {
+        if (mPin != run) return;
+        mPin = null;
+        java.util.Arrays.fill(run.pin, '\0');
+        mHandler.removeCallbacks(mPinNoScreen);
+        mHandler.removeCallbacks(mPinBroken);
+        String pkg = run.session.pkg;
+        String app = appLabel(pkg);
+        Log.i(TAG, "PIN entry in " + pkg + ": " + result);
+        switch (result) {
+            case ACCEPTED:
+                PinVault.markAccepted(this, pkg, run.appProfile);
+                PinVault.resetBreaks(this, pkg);
+                hideCover();
+                break;
+            case REJECTED:
+                PinVault.markRejected(this, pkg, run.appProfile, false);
+                showPinPopup(getString(R.string.pin_rejected_title, app, run.appProfile),
+                        getString(R.string.pin_rejected_body), pkg);
+                break;
+            case REJECTED_STOPPED:
+                PinVault.markRejected(this, pkg, run.appProfile, true);
+                showPinPopup(getString(R.string.pin_rejected_title, app, run.appProfile),
+                        getString(R.string.pin_stopped_body), pkg);
+                break;
+            case NOT_TRIED:
+                showPinPopup(getString(R.string.pin_rejected_title, app, run.appProfile),
+                        getString(R.string.pin_stopped_body), pkg);
+                break;
+            case LOCKED_OUT:
+                PinVault.markRejected(this, pkg, run.appProfile, true);
+                showPinPopup(getString(R.string.pin_locked_title, app, run.appProfile),
+                        getString(R.string.pin_locked_body), pkg);
+                break;
+            case SCREEN_CHANGED:
+                PinVault.setPaused(this, pkg, true);
+                coverMessage(getString(R.string.pin_screen_changed, app));
+                break;
+            case BROKEN:
+                if (PinVault.addBreak(this, pkg) >= PIN_BREAKS_BEFORE_PAUSE) PinVault.setPaused(this, pkg, true);
+                coverMessage(digitsTyped > 0
+                        ? getString(R.string.pin_broken_digits, digitsTyped) : getString(R.string.pin_broken));
+                break;
+            case NO_PIN_SCREEN:
+            case CANCELLED:
+            default:
+                hideCover();
+        }
+        mHandler.postDelayed(mGoIdle, IDLE_AFTER_MS);
+    }
+
+    /** Says why Hearth stopped, on the cover, then leaves the app's PIN screen to the parent. */
+    private void coverMessage(String text) {
+        if (mCoverTitle == null) return;
+        mCoverTitle.setText(text);
+        mHandler.postDelayed(this::hideCover, PIN_MESSAGE_MS);
+    }
+
+    /**
+     * Over the cover: the saved PIN wasn't taken. Change PIN opens Hearth's Settings on the app's PINs; Close (and
+     * Back) drop the pop-up and the cover, leaving the app's own PIN entry for the parent to type by hand.
+     */
+    private void showPinPopup(String titleText, String bodyText, String pkg) {
+        hidePinPopup();
+        try {
+            Context c = this;
+            LinearLayout box = new LinearLayout(c);
+            box.setOrientation(LinearLayout.VERTICAL);
+            box.setPadding(dp(40), dp(32), dp(40), dp(28));
+            GradientDrawable background = new GradientDrawable();
+            background.setCornerRadius(dp(16));
+            background.setColor(Color.parseColor("#FF202024"));
+            background.setStroke(dp(2), accentColor());
+            box.setBackground(background);
+
+            TextView title = new TextView(c);
+            title.setText(titleText);
+            title.setTextColor(Color.WHITE);
+            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
+            box.addView(title);
+
+            TextView body = new TextView(c);
+            body.setText(bodyText);
+            body.setTextColor(Color.parseColor("#B3FFFFFF"));
+            body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+            LinearLayout.LayoutParams bodyParams = new LinearLayout.LayoutParams(dp(640),
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
+            bodyParams.topMargin = dp(12);
+            box.addView(body, bodyParams);
+
+            LinearLayout buttons = new LinearLayout(c);
+            buttons.setOrientation(LinearLayout.HORIZONTAL);
+            buttons.setGravity(Gravity.END);
+            LinearLayout.LayoutParams buttonsParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            buttonsParams.topMargin = dp(24);
+            TextView change = popupButton(getString(R.string.pin_change));
+            TextView close = popupButton(getString(R.string.pin_close));
+            buttons.addView(change);
+            LinearLayout.LayoutParams closeParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            closeParams.leftMargin = dp(16);
+            buttons.addView(close, closeParams);
+            box.addView(buttons, buttonsParams);
+
+            change.setOnClickListener(v -> {
+                hidePinPopup();
+                hideCover();
+                Intent open = new Intent(this, MainActivity.class)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        .putExtra(MainActivity.EXTRA_OPEN_PROFILE_PINS, pkg);
+                try {
+                    startActivity(open);
+                } catch (Exception e) {
+                    Log.w(TAG, "Couldn't open Hearth's Settings", e);
+                }
+            });
+            close.setOnClickListener(v -> {
+                hidePinPopup();
+                hideCover();
+            });
+            box.setOnKeyListener((v, keyCode, event) -> {
+                if (keyCode == android.view.KeyEvent.KEYCODE_BACK
+                        && event.getAction() == android.view.KeyEvent.ACTION_UP) {
+                    hidePinPopup();
+                    hideCover();
+                    return true;
+                }
+                return false;
+            });
+
+            WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN, PixelFormat.TRANSLUCENT);
+            params.gravity = Gravity.CENTER;
+            getSystemService(WindowManager.class).addView(box, params);
+            mPinPopup = box;
+            close.requestFocus();
+        } catch (Exception e) {
+            Log.w(TAG, "PIN pop-up failed", e);
+            hideCover();
+        }
+    }
+
+    private TextView popupButton(String label) {
+        TextView button = new TextView(this);
+        button.setText(label);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        button.setPadding(dp(28), dp(12), dp(28), dp(12));
+        button.setFocusable(true);
+        button.setClickable(true);
+        int accent = accentColor();
+        button.setOnFocusChangeListener((v, focused) -> {
+            GradientDrawable pill = new GradientDrawable();
+            pill.setCornerRadius(dp(24));
+            pill.setColor(focused ? accent : Color.parseColor("#33FFFFFF"));
+            v.setBackground(pill);
+            ((TextView) v).setTextColor(focused ? Color.BLACK : Color.WHITE);
+        });
+        GradientDrawable pill = new GradientDrawable();
+        pill.setCornerRadius(dp(24));
+        pill.setColor(Color.parseColor("#33FFFFFF"));
+        button.setBackground(pill);
+        button.setTextColor(Color.WHITE);
+        return button;
+    }
+
+    private void hidePinPopup() {
+        if (mPinPopup == null) return;
+        try {
+            getSystemService(WindowManager.class).removeView(mPinPopup);
+        } catch (Exception ignored) {
+        }
+        mPinPopup = null;
     }
 
     // ---- Cover card ----

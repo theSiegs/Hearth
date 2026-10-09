@@ -1966,4 +1966,45 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'Google TV will remove the unprotected apps here the next time this profile starts. Use Add again to protect them.';
+
+  @override
+  String get profilePinRow => 'Profile PIN';
+
+  @override
+  String get profilePinNone => 'None';
+
+  @override
+  String get profilePinSaved => 'Saved';
+
+  @override
+  String get profilePinRejected => 'Saved — not accepted last time';
+
+  @override
+  String get profilePinStopped => 'Saved — not tried until it’s changed';
+
+  @override
+  String get profilePinPaused => 'Saved — paused (the app changed)';
+
+  @override
+  String profilePinUnsupported(String app) {
+    return 'Hearth can’t type PINs in $app yet';
+  }
+
+  @override
+  String profilePinEnterTitle(String profile, String app) {
+    return '$profile’s PIN in $app';
+  }
+
+  @override
+  String profilePinEnterSubtitle(String app) {
+    return 'Hearth types it behind the “logging in as” card when $app asks. It stays on this TV, encrypted, and is never shown.';
+  }
+
+  @override
+  String profilePinNeedsParentPin(String settings, String profiles, String parentPin) {
+    return 'Set a parent PIN first ($settings → $profiles → $parentPin): saving a profile’s PIN needs it.';
+  }
+
+  @override
+  String get profilePinSaveFailed => 'Couldn’t save the PIN.';
 }

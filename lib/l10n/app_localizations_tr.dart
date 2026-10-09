@@ -1956,4 +1956,45 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'Google TV, bu profil bir sonraki açılışında buradaki korumasız uygulamaları kaldıracak. Korumak için Ekle\'yi yeniden kullanın.';
+
+  @override
+  String get profilePinRow => 'Profil PIN’i';
+
+  @override
+  String get profilePinNone => 'Yok';
+
+  @override
+  String get profilePinSaved => 'Kayıtlı';
+
+  @override
+  String get profilePinRejected => 'Kayıtlı — son seferde kabul edilmedi';
+
+  @override
+  String get profilePinStopped => 'Kayıtlı — değiştirilene kadar denenmez';
+
+  @override
+  String get profilePinPaused => 'Kayıtlı — duraklatıldı (uygulama değişti)';
+
+  @override
+  String profilePinUnsupported(String app) {
+    return 'Hearth henüz $app içinde PIN yazamıyor';
+  }
+
+  @override
+  String profilePinEnterTitle(String profile, String app) {
+    return '$profile için $app PIN’i';
+  }
+
+  @override
+  String profilePinEnterSubtitle(String app) {
+    return '$app sorduğunda Hearth onu “Giriş yapılıyor” kartının arkasında yazar. Bu TV’de şifreli kalır ve asla gösterilmez.';
+  }
+
+  @override
+  String profilePinNeedsParentPin(String settings, String profiles, String parentPin) {
+    return 'Önce bir ebeveyn PIN’i belirleyin ($settings → $profiles → $parentPin): profil PIN’i kaydetmek için gerekir.';
+  }
+
+  @override
+  String get profilePinSaveFailed => 'PIN kaydedilemedi.';
 }

@@ -1966,4 +1966,45 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'O Google TV vai remover daqui os apps sem proteção na próxima vez que este perfil for iniciado. Use Adicionar de novo para protegê-los.';
+
+  @override
+  String get profilePinRow => 'PIN do perfil';
+
+  @override
+  String get profilePinNone => 'Nenhum';
+
+  @override
+  String get profilePinSaved => 'Salvo';
+
+  @override
+  String get profilePinRejected => 'Salvo — não aceito da última vez';
+
+  @override
+  String get profilePinStopped => 'Salvo — não tentado até ser alterado';
+
+  @override
+  String get profilePinPaused => 'Salvo — pausado (o app mudou)';
+
+  @override
+  String profilePinUnsupported(String app) {
+    return 'O Hearth ainda não digita PINs no $app';
+  }
+
+  @override
+  String profilePinEnterTitle(String profile, String app) {
+    return 'PIN de $profile no $app';
+  }
+
+  @override
+  String profilePinEnterSubtitle(String app) {
+    return 'O Hearth o digita atrás do cartão “Entrando como” quando o $app pede. Fica criptografado nesta TV e nunca é mostrado.';
+  }
+
+  @override
+  String profilePinNeedsParentPin(String settings, String profiles, String parentPin) {
+    return 'Defina antes um PIN dos pais ($settings → $profiles → $parentPin): ele é necessário para salvar o PIN de um perfil.';
+  }
+
+  @override
+  String get profilePinSaveFailed => 'Não foi possível salvar o PIN.';
 }

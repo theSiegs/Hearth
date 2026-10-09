@@ -1956,4 +1956,45 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'このプロフィールを次に開いたとき、保護されていないアプリは Google TV に削除されます。もう一度「追加」を使って保護してください。';
+
+  @override
+  String get profilePinRow => 'プロフィールのPIN';
+
+  @override
+  String get profilePinNone => 'なし';
+
+  @override
+  String get profilePinSaved => '保存済み';
+
+  @override
+  String get profilePinRejected => '保存済み — 前回受け付けられませんでした';
+
+  @override
+  String get profilePinStopped => '保存済み — 変更されるまで試しません';
+
+  @override
+  String get profilePinPaused => '保存済み — 一時停止中（アプリが変わりました）';
+
+  @override
+  String profilePinUnsupported(String app) {
+    return 'Hearthはまだ$appでPINを入力できません';
+  }
+
+  @override
+  String profilePinEnterTitle(String profile, String app) {
+    return '$appでの$profileのPIN';
+  }
+
+  @override
+  String profilePinEnterSubtitle(String app) {
+    return '$appが求めると、Hearthが「ログイン中」カードの裏で入力します。このテレビに暗号化して保存され、表示されることはありません。';
+  }
+
+  @override
+  String profilePinNeedsParentPin(String settings, String profiles, String parentPin) {
+    return '先に保護者のPINを設定してください（$settings → $profiles → $parentPin）。プロフィールのPINを保存するのに必要です。';
+  }
+
+  @override
+  String get profilePinSaveFailed => 'PINを保存できませんでした。';
 }

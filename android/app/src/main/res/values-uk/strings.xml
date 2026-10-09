@@ -35,4 +35,15 @@
     <string name="agent_channel_name">Hearth для цього профілю</string>
     <string name="agent_notification_text">Синхронізує головний екран Hearth із цим профілем</string>
     <string name="search_voice_prompt">Пошук фільмів і серіалів</string>
+    <string name="pin_unlocking">Введення PIN-коду профілю…</string>
+    <string name="pin_rejected_title">%1$s не прийняв збережений PIN-код для «%2$s»</string>
+    <string name="pin_rejected_body">«Змінити PIN» відкриє налаштування Hearth, «Закрити» — введіть код самі.</string>
+    <string name="pin_stopped_body">Hearth не пробуватиме цей код, доки його не змінять, щоб профіль не заблокувався. «Змінити PIN» — оновити, «Закрити» — ввести самому.</string>
+    <string name="pin_locked_title">%1$s заблокував «%2$s»</string>
+    <string name="pin_locked_body">Забагато неправильних кодів. Розблокуйте профіль у застосунку, потім оновіть код у налаштуваннях Hearth.</string>
+    <string name="pin_screen_changed">Екран PIN-коду в %1$s змінився, тому Hearth не ввів код. Введіть його самі.</string>
+    <string name="pin_broken_digits">Hearth зупинився після %1$d цифр. Зітріть їх і введіть код самі.</string>
+    <string name="pin_broken">Hearth не зміг ввести код. Введіть його самі.</string>
+    <string name="pin_change">Змінити PIN</string>
+    <string name="pin_close">Закрити</string>
 </resources>

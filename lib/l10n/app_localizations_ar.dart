@@ -1999,4 +1999,45 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'سيزيل Google TV التطبيقات غير المحمية هنا عند بدء هذا الملف الشخصي في المرة القادمة. استخدم \"إضافة\" مرة أخرى لحمايتها.';
+
+  @override
+  String get profilePinRow => 'رمز PIN للملف الشخصي';
+
+  @override
+  String get profilePinNone => 'لا يوجد';
+
+  @override
+  String get profilePinSaved => 'محفوظ';
+
+  @override
+  String get profilePinRejected => 'محفوظ — لم يُقبل في المرة الأخيرة';
+
+  @override
+  String get profilePinStopped => 'محفوظ — لن يُجرَّب حتى يتغيّر';
+
+  @override
+  String get profilePinPaused => 'محفوظ — متوقف مؤقتًا (تغيّر التطبيق)';
+
+  @override
+  String profilePinUnsupported(String app) {
+    return 'لا يستطيع Hearth بعد كتابة رموز PIN في $app';
+  }
+
+  @override
+  String profilePinEnterTitle(String profile, String app) {
+    return 'رمز PIN لـ $profile في $app';
+  }
+
+  @override
+  String profilePinEnterSubtitle(String app) {
+    return 'يكتبه Hearth خلف بطاقة \"تسجيل الدخول باسم\" عندما يطلبه $app. يبقى مشفّرًا على هذا التلفزيون ولا يُعرض أبدًا.';
+  }
+
+  @override
+  String profilePinNeedsParentPin(String settings, String profiles, String parentPin) {
+    return 'عيّن أولًا رمز PIN للوالدين ($settings ← $profiles ← $parentPin): هو مطلوب لحفظ رمز ملف شخصي.';
+  }
+
+  @override
+  String get profilePinSaveFailed => 'تعذّر حفظ الرمز.';
 }

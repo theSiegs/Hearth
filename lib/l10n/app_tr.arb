@@ -590,5 +590,16 @@
     "familyAppsStatusPartial": "Kısmi",
     "familyAppsStatusNotInstalled": "Yüklü değil",
     "familyAppsStatusAtRisk": "Risk altında",
-    "familyAppsAtRiskDetail": "Google TV, bu profil bir sonraki açılışında buradaki korumasız uygulamaları kaldıracak. Korumak için Ekle'yi yeniden kullanın."
+    "familyAppsAtRiskDetail": "Google TV, bu profil bir sonraki açılışında buradaki korumasız uygulamaları kaldıracak. Korumak için Ekle'yi yeniden kullanın.",
+    "profilePinRow": "Profil PIN’i",
+    "profilePinNone": "Yok",
+    "profilePinSaved": "Kayıtlı",
+    "profilePinRejected": "Kayıtlı — son seferde kabul edilmedi",
+    "profilePinStopped": "Kayıtlı — değiştirilene kadar denenmez",
+    "profilePinPaused": "Kayıtlı — duraklatıldı (uygulama değişti)",
+    "profilePinUnsupported": "Hearth henüz {app} içinde PIN yazamıyor",
+    "profilePinEnterTitle": "{profile} için {app} PIN’i",
+    "profilePinEnterSubtitle": "{app} sorduğunda Hearth onu “Giriş yapılıyor” kartının arkasında yazar. Bu TV’de şifreli kalır ve asla gösterilmez.",
+    "profilePinNeedsParentPin": "Önce bir ebeveyn PIN’i belirleyin ({settings} → {profiles} → {parentPin}): profil PIN’i kaydetmek için gerekir.",
+    "profilePinSaveFailed": "PIN kaydedilemedi."
 }

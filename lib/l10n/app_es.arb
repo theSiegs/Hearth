@@ -590,5 +590,16 @@
     "familyAppsStatusPartial": "Parcial",
     "familyAppsStatusNotInstalled": "No instalado",
     "familyAppsStatusAtRisk": "En riesgo",
-    "familyAppsAtRiskDetail": "Google TV quitará de aquí las apps sin proteger la próxima vez que se inicie este perfil. Use Añadir de nuevo para protegerlas."
+    "familyAppsAtRiskDetail": "Google TV quitará de aquí las apps sin proteger la próxima vez que se inicie este perfil. Use Añadir de nuevo para protegerlas.",
+    "profilePinRow": "PIN del perfil",
+    "profilePinNone": "Ninguno",
+    "profilePinSaved": "Guardado",
+    "profilePinRejected": "Guardado: no se aceptó la última vez",
+    "profilePinStopped": "Guardado: no se prueba hasta que lo cambies",
+    "profilePinPaused": "Guardado: en pausa (la app cambió)",
+    "profilePinUnsupported": "Hearth aún no puede escribir PIN en {app}",
+    "profilePinEnterTitle": "PIN de {profile} en {app}",
+    "profilePinEnterSubtitle": "Hearth lo escribe detrás de la tarjeta «Iniciando sesión como» cuando {app} lo pide. Se queda cifrado en esta TV y nunca se muestra.",
+    "profilePinNeedsParentPin": "Primero configura un PIN parental ({settings} → {profiles} → {parentPin}): hace falta para guardar el PIN de un perfil.",
+    "profilePinSaveFailed": "No se pudo guardar el PIN."
 }

@@ -590,5 +590,16 @@
     "familyAppsStatusPartial": "部分安装",
     "familyAppsStatusNotInstalled": "未安装",
     "familyAppsStatusAtRisk": "有风险",
-    "familyAppsAtRiskDetail": "此个人资料下次启动时，Google TV 会移除这里未受保护的应用。请再次使用“添加”来保护它们。"
+    "familyAppsAtRiskDetail": "此个人资料下次启动时，Google TV 会移除这里未受保护的应用。请再次使用“添加”来保护它们。",
+    "profilePinRow": "个人资料 PIN",
+    "profilePinNone": "无",
+    "profilePinSaved": "已保存",
+    "profilePinRejected": "已保存 — 上次未被接受",
+    "profilePinStopped": "已保存 — 更改前不再尝试",
+    "profilePinPaused": "已保存 — 已暂停（应用已变化）",
+    "profilePinUnsupported": "Hearth 暂时还无法在 {app} 中输入 PIN",
+    "profilePinEnterTitle": "{profile} 在 {app} 中的 PIN",
+    "profilePinEnterSubtitle": "当 {app} 要求时，Hearth 会在“正在登录”卡片后面输入。它加密保存在这台电视上，从不显示。",
+    "profilePinNeedsParentPin": "请先设置家长 PIN（{settings} → {profiles} → {parentPin}）：保存个人资料 PIN 需要它。",
+    "profilePinSaveFailed": "无法保存 PIN。"
 }
