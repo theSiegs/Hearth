@@ -1,4 +1,5 @@
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/hearth_ids.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flutter/material.dart';
@@ -324,7 +325,7 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
   }
 
   String _shortName(String? pkg) {
-    if (pkg == "com.leanbitlab.ltvL") return "Hearth";
+    if (isHearthPackage(pkg)) return "Hearth";
     if (pkg == "com.thesiegs.hearthtube") return "HearthTube";
     return pkg ?? "?";
   }

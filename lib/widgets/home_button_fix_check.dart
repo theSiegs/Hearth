@@ -1,3 +1,4 @@
+import 'package:flauncher/hearth_ids.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -26,7 +27,7 @@ class _HomeButtonFixCheckState extends State<HomeButtonFixCheck> with WidgetsBin
   bool _shown = false;
   bool _checking = false;
   // The debug build has its own package name. Read ahead so the dialog doesn't wait for it.
-  String _packageName = 'com.leanbitlab.ltvL';
+  String _packageName = kHearthAppId;
 
   @override
   void initState() {

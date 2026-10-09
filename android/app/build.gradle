@@ -56,6 +56,14 @@ secretProperties.setProperty("signing_keystore_password", "${System.getenv('FLAU
 secretProperties.setProperty("signing_key_password", "${System.getenv('FLAUNCHER_SIGNING_KEY_PASSWORD')}")
 secretProperties.setProperty("signing_key_alias", "${System.getenv('FLAUNCHER_SIGNING_KEY_ALIAS')}")
 
+// Hearth's app id. Up to v2026.10.x it was the fork's "com.leanbitlab.ltvL"; it's "com.thesiegs.hearth" now (see
+// docs/design/app-id-change.md). A "bridge" build (-PhearthBridge=true, or HEARTH_BRIDGE=true in the environment)
+// is this same code under the OLD id: it updates the old app in place, hands its data to the new app through
+// LegacyExportProvider, and its updater installs the new app.
+def hearthAppId = "com.thesiegs.hearth"
+def legacyAppId = "com.leanbitlab.ltvL"
+def bridgeBuild = (project.findProperty('hearthBridge') ?: System.getenv('HEARTH_BRIDGE') ?: 'false').toString() == 'true'
+
 def keystoreFilePath = System.getenv("KEYSTORE_FILE") ?: localProperties['storeFile']
 def hasKeystore = keystoreFilePath != null && file(keystoreFilePath).exists()
 
@@ -72,7 +80,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.leanbitlab.ltvL"
+        applicationId bridgeBuild ? legacyAppId : hearthAppId
         compileSdk 35
         minSdkVersion flutter.minSdkVersion
         targetSdk 35
@@ -81,6 +89,16 @@ android {
         ndk {
             abiFilters 'armeabi-v7a', 'arm64-v8a'
         }
+        // The app ids on both sides of the move (without the debug suffix), and whether this is the bridge build
+        buildConfigField "String", "HEARTH_APP_ID", "\"${hearthAppId}\""
+        buildConfigField "String", "LEGACY_APP_ID", "\"${legacyAppId}\""
+        buildConfigField "boolean", "BRIDGE", "${bridgeBuild}"
+        // Only the bridge build (the old id) offers its data to the new app
+        manifestPlaceholders = [legacyExportEnabled: bridgeBuild.toString()]
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     signingConfigs {
@@ -131,7 +149,8 @@ android {
         targetCompatibility JavaVersion.VERSION_21
     }
 
-    namespace 'com.leanbitlab.ltvL'
+    // The Java package; the same in the bridge build, so component names there are com.leanbitlab.ltvL/com.thesiegs.hearth.X
+    namespace 'com.thesiegs.hearth'
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
