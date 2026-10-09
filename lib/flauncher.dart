@@ -118,6 +118,23 @@ class _FLauncherState extends State<FLauncher> {
     _profileService = context.read<ProfileService?>();
     _lastProfile = _profileService?.activeProfileKey;
     _profileService?.addListener(_onProfileChanged);
+    _appsService = context.read<AppsService?>();
+    _appsService?.addListener(_onAppsChanged);
+  }
+
+  AppsService? _appsService;
+  DateTime? _landedAt;
+
+  /// After a profile switch the profile's apps can arrive well after the welcome card (a kids profile's user is
+  /// still unlocking), and the card that had focus can be rebuilt away: while nothing on the home has focus, the
+  /// selection lands on the dock again as the apps come in. Only for a few minutes after a switch.
+  void _onAppsChanged() {
+    final at = _landedAt;
+    if (at == null || DateTime.now().difference(at) > const Duration(minutes: 3)) return;
+    final focus = FocusManager.instance.primaryFocus;
+    if (focus == null || focus.context == null || focus is FocusScopeNode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _landOnHome());
+    }
   }
 
   /// Arriving in a profile, the selection starts on the first dock app, or the first app when there's no dock.
@@ -136,6 +153,7 @@ class _FLauncherState extends State<FLauncher> {
     final landing = _landingProfile;
     if (landing == null || profiles.transition != null || !profiles.layoutReadyFor(landing)) return;
     _landingProfile = null;
+    _landedAt = DateTime.now();
     WidgetsBinding.instance.addPostFrameCallback((_) => _landOnHome());
     WidgetsBinding.instance.ensureVisualUpdate();
   }
@@ -242,6 +260,7 @@ class _FLauncherState extends State<FLauncher> {
   void dispose() {
     FocusManager.instance.removeListener(_onFocusMoved);
     _profileService?.removeListener(_onProfileChanged);
+    _appsService?.removeListener(_onAppsChanged);
     _homeSearch?.removeListener(_onSearchChanged);
     if (_homeSearch?.backHandler == _searchBack) _homeSearch?.backHandler = null;
     _searchRowFocusNode.dispose();

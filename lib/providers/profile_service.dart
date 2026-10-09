@@ -47,7 +47,7 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     // A switch can land while Hearth is already in front
     FLauncherChannel.listenForProfileChanges(check);
-    FLauncherChannel.listenForProfileSwitching(switchingTo);
+    FLauncherChannel.listenForProfileSwitching(switchingTo, onCancelled: _clearIncoming);
     check();
   }
 
@@ -159,6 +159,9 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
   Uint8List? _incomingAvatar;
   Timer? _incomingExpiry;
 
+  /// The longest an unconfirmed pick's welcome card stays up.
+  static const Duration incomingLimit = Duration(seconds: 30);
+
   /// A profile picked in Google TV's chooser that the switch hasn't confirmed yet: its welcome card shows meanwhile.
   String? get incomingName => _incomingName;
   Uint8List? get incomingAvatar => _incomingAvatar;
@@ -170,8 +173,10 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
     _incomingName = name;
     _incomingAvatar = null;
     _incomingExpiry?.cancel();
-    // A pick Google TV didn't act on (Back out of a PIN prompt): the card goes away on its own
-    _incomingExpiry = Timer(const Duration(seconds: 10), _clearIncoming);
+    // A pick Google TV didn't act on (Back out of a PIN prompt) is cancelled from the Android side as soon as Hearth
+    // is back without Google TV's home in between; this limit is only the fallback. It's long because a slow
+    // switch takes that long, and while the card is down the old profile's home is live.
+    _incomingExpiry = Timer(incomingLimit, _clearIncoming);
     notifyListeners();
     try {
       final avatar = await _channel.getProfileAvatar(name);

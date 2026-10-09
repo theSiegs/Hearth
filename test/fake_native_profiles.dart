@@ -66,6 +66,9 @@ class FakeNativeProfiles {
   /// Google TV's chooser closed on [pickedName]: Hearth shows the welcome card before the switch is confirmed.
   Future<void> pick(String pickedName) => _send("profileSwitching", pickedName);
 
+  /// Hearth came back without Google TV's home in between: the pick was cancelled (Back out of a PIN prompt).
+  Future<void> cancelPick() => _send("profileSwitchCancelled");
+
   /// The switch has settled on the profile user [newKey]: Android now reports it and tells Flutter.
   Future<void> switchTo(String newKey, {String? name, bool kids = false, bool dataReady = true}) {
     key = newKey;
