@@ -179,5 +179,12 @@
     "haTvStatusTitle": "TV durumu",
     "continueWatchingAppsTitle": "İzlemeye Devam Et uygulamaları",
     "cardSizeTitle": "Kart boyutu",
-    "maxItemsTitle": "En fazla öğe"
+    "maxItemsTitle": "En fazla öğe",
+    "ok": "Tamam",
+    "cancel": "İptal",
+    "close": "Kapat",
+    "tryAgain": "Tekrar dene",
+    "notNow": "Şimdi değil",
+    "done": "Bitti",
+    "remove": "Kaldır"
 }

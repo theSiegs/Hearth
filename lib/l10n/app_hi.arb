@@ -179,5 +179,12 @@
     "haTvStatusTitle": "टीवी की स्थिति",
     "continueWatchingAppsTitle": "देखना जारी रखें ऐप्स",
     "cardSizeTitle": "कार्ड का आकार",
-    "maxItemsTitle": "अधिकतम आइटम"
+    "maxItemsTitle": "अधिकतम आइटम",
+    "ok": "ठीक है",
+    "cancel": "रद्द करें",
+    "close": "बंद करें",
+    "tryAgain": "फिर से कोशिश करें",
+    "notNow": "अभी नहीं",
+    "done": "हो गया",
+    "remove": "हटाएँ"
 }

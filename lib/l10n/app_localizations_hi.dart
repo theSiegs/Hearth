@@ -453,4 +453,25 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get maxItemsTitle => 'अधिकतम आइटम';
+
+  @override
+  String get ok => 'ठीक है';
+
+  @override
+  String get cancel => 'रद्द करें';
+
+  @override
+  String get close => 'बंद करें';
+
+  @override
+  String get tryAgain => 'फिर से कोशिश करें';
+
+  @override
+  String get notNow => 'अभी नहीं';
+
+  @override
+  String get done => 'हो गया';
+
+  @override
+  String get remove => 'हटाएँ';
 }

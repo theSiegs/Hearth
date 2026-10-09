@@ -179,5 +179,12 @@
     "haTvStatusTitle": "Состояние телевизора",
     "continueWatchingAppsTitle": "Приложения «Продолжить просмотр»",
     "cardSizeTitle": "Размер карточек",
-    "maxItemsTitle": "Максимум элементов"
+    "maxItemsTitle": "Максимум элементов",
+    "ok": "ОК",
+    "cancel": "Отмена",
+    "close": "Закрыть",
+    "tryAgain": "Повторить",
+    "notNow": "Не сейчас",
+    "done": "Готово",
+    "remove": "Удалить"
 }

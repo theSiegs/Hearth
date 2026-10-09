@@ -453,4 +453,25 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get maxItemsTitle => 'Максимум элементов';
+
+  @override
+  String get ok => 'ОК';
+
+  @override
+  String get cancel => 'Отмена';
+
+  @override
+  String get close => 'Закрыть';
+
+  @override
+  String get tryAgain => 'Повторить';
+
+  @override
+  String get notNow => 'Не сейчас';
+
+  @override
+  String get done => 'Готово';
+
+  @override
+  String get remove => 'Удалить';
 }

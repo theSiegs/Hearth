@@ -453,4 +453,25 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get maxItemsTitle => 'Максимум елементів';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get cancel => 'Скасувати';
+
+  @override
+  String get close => 'Закрити';
+
+  @override
+  String get tryAgain => 'Повторити';
+
+  @override
+  String get notNow => 'Не зараз';
+
+  @override
+  String get done => 'Готово';
+
+  @override
+  String get remove => 'Видалити';
 }

@@ -453,4 +453,25 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get maxItemsTitle => '최대 항목 수';
+
+  @override
+  String get ok => '확인';
+
+  @override
+  String get cancel => '취소';
+
+  @override
+  String get close => '닫기';
+
+  @override
+  String get tryAgain => '다시 시도';
+
+  @override
+  String get notNow => '나중에';
+
+  @override
+  String get done => '완료';
+
+  @override
+  String get remove => '제거';
 }

@@ -242,5 +242,33 @@
     "maxItemsTitle": "Maximum Items",
     "@maxItemsTitle": {
         "description": "Settings page title, also its row in the page that opens it"
+    },
+    "ok": "OK",
+    "@ok": {
+        "description": "Shared button or action label"
+    },
+    "cancel": "Cancel",
+    "@cancel": {
+        "description": "Shared button or action label"
+    },
+    "close": "Close",
+    "@close": {
+        "description": "Shared button or action label"
+    },
+    "tryAgain": "Try again",
+    "@tryAgain": {
+        "description": "Shared button or action label"
+    },
+    "notNow": "Not now",
+    "@notNow": {
+        "description": "Shared button or action label"
+    },
+    "done": "Done",
+    "@done": {
+        "description": "Shared button or action label"
+    },
+    "remove": "Remove",
+    "@remove": {
+        "description": "Shared button or action label"
     }
 }

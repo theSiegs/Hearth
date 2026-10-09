@@ -179,5 +179,12 @@
     "haTvStatusTitle": "Стан телевізора",
     "continueWatchingAppsTitle": "Застосунки «Продовжити перегляд»",
     "cardSizeTitle": "Розмір карток",
-    "maxItemsTitle": "Максимум елементів"
+    "maxItemsTitle": "Максимум елементів",
+    "ok": "OK",
+    "cancel": "Скасувати",
+    "close": "Закрити",
+    "tryAgain": "Повторити",
+    "notNow": "Не зараз",
+    "done": "Готово",
+    "remove": "Видалити"
 }

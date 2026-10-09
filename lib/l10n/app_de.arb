@@ -179,5 +179,12 @@
     "haTvStatusTitle": "TV-Status",
     "continueWatchingAppsTitle": "Weiterschauen-Apps",
     "cardSizeTitle": "Kartengröße",
-    "maxItemsTitle": "Maximale Anzahl"
+    "maxItemsTitle": "Maximale Anzahl",
+    "ok": "OK",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "tryAgain": "Erneut versuchen",
+    "notNow": "Nicht jetzt",
+    "done": "Fertig",
+    "remove": "Entfernen"
 }

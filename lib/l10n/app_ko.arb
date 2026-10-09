@@ -179,5 +179,12 @@
     "haTvStatusTitle": "TV 상태",
     "continueWatchingAppsTitle": "계속 시청 앱",
     "cardSizeTitle": "카드 크기",
-    "maxItemsTitle": "최대 항목 수"
+    "maxItemsTitle": "최대 항목 수",
+    "ok": "확인",
+    "cancel": "취소",
+    "close": "닫기",
+    "tryAgain": "다시 시도",
+    "notNow": "나중에",
+    "done": "완료",
+    "remove": "제거"
 }
