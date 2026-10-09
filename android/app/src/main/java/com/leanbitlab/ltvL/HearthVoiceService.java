@@ -96,6 +96,33 @@ public class HearthVoiceService extends TextToSpeechService {
         return TextToSpeech.LANG_COUNTRY_AVAILABLE;
     }
 
+    // One voice for every language. TextToSpeech.setLanguage() asks for the language's default voice and looks for it
+    // in the engine's voices; without these overrides the names don't match and apps that check the result (Hulu)
+    // think Hearth voice can't speak their language, and stay quiet.
+    private static final String VOICE = "hearth";
+
+    @Override
+    public String onGetDefaultVoiceNameFor(String lang, String country, String variant) {
+        return VOICE;
+    }
+
+    @Override
+    public java.util.List<android.speech.tts.Voice> onGetVoices() {
+        return java.util.Collections.singletonList(new android.speech.tts.Voice(VOICE, Locale.getDefault(),
+                android.speech.tts.Voice.QUALITY_NORMAL, android.speech.tts.Voice.LATENCY_NORMAL, false,
+                java.util.Collections.emptySet()));
+    }
+
+    @Override
+    public int onIsValidVoiceName(String voiceName) {
+        return VOICE.equals(voiceName) ? TextToSpeech.SUCCESS : TextToSpeech.ERROR;
+    }
+
+    @Override
+    public int onLoadVoice(String voiceName) {
+        return onIsValidVoiceName(voiceName);
+    }
+
     @Override
     protected void onStop() {
         mStopped = true;
