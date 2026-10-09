@@ -1,1 +1,1 @@
-An open-source, Flutter-based alternative launcher for Android TV.
+A private, family-friendly home screen for Google TV, with Home Assistant
