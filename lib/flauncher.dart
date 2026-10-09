@@ -59,6 +59,9 @@ class FLauncher extends StatefulWidget {
 class _FLauncherState extends State<FLauncher> {
   final GlobalKey<FocusAwareAppBarState> _appBarKey = GlobalKey();
   final ScrollController _scrollController = ScrollController();
+  /// Whether the fade behind Continue Watching's or the search's details shows. It's drawn full width, behind the
+  /// home's side padding, so the home sets it after each build.
+  final ValueNotifier<bool> _detailsScrimVisible = ValueNotifier(false);
 
   /// Wraps the dock layout's first screen (Continue Watching + dock).
   final FocusNode _firstScreenFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
@@ -307,6 +310,7 @@ class _FLauncherState extends State<FLauncher> {
     _appsService?.removeListener(_onAppsChanged);
     _homeSearch?.removeListener(_onSearchChanged);
     if (_homeSearch?.backHandler == _searchBack) _homeSearch?.backHandler = null;
+    _detailsScrimVisible.dispose();
     _searchRowFocusNode.dispose();
     _appsGridFocusNode.dispose();
     _firstScreenFocusNode.dispose();
@@ -510,6 +514,13 @@ class _FLauncherState extends State<FLauncher> {
                   ),
                 ),
               ),
+              // Behind Continue Watching's or the search's title and details, edge to edge
+              Positioned.fill(
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: _detailsScrimVisible,
+                  builder: (_, visible, __) => DetailsScrim(visible: visible),
+                ),
+              ),
               Consumer<LauncherState>(
                   builder: (_, state, child) => Visibility(
                       visible: state.launcherVisible,
@@ -582,6 +593,14 @@ class _FLauncherState extends State<FLauncher> {
   /// With the dock on and something in Favorites, the first screen shows the wallpaper with
   /// Continue Watching and the Favorites dock along the bottom; the other sections follow below.
   /// Otherwise it's the classic list of sections.
+  /// Shows or hides the details fade once this frame is built (it sits outside the home's own build).
+  void _showDetailsScrim(bool visible) {
+    if (_detailsScrimVisible.value == visible) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _detailsScrimVisible.value = visible;
+    });
+  }
+
   Widget _home(
     List<LauncherSection> sections, {
     required double viewportHeight,
@@ -597,6 +616,7 @@ class _FLauncherState extends State<FLauncher> {
     _layoutBuilt(favorites != null
         ? _HomeLayout.dock
         : (dockEnabled ? _HomeLayout.grid : _HomeLayout.sections));
+    if (favorites == null) _showDetailsScrim(false);
     if (favorites == null && !dockEnabled) {
       return _sections(sections,
           continueWatchingActive: continueWatchingActive, continueWatchingOrder: continueWatchingOrder);
@@ -624,6 +644,7 @@ class _FLauncherState extends State<FLauncher> {
     final search = context.watch<HomeSearch?>();
     final bool showSearch = (search?.active ?? false) && _showingSearch;
     final bool showRecents = continueWatchingActive && _showingRecents && !showSearch;
+    _showDetailsScrim(showRecents || showSearch);
     _recentsAvailable = continueWatchingActive;
     final List<LauncherSection> belowDock =
         sections.where((s) => s != favorites && !(s is Category && s.applications.isEmpty)).toList();
@@ -637,8 +658,6 @@ class _FLauncherState extends State<FLauncher> {
           child: Stack(
             alignment: Alignment.bottomCenter,
             children: [
-              // Behind Continue Watching's or the search's title and details, fading in with them
-              Positioned.fill(child: DetailsScrim(visible: showRecents || showSearch)),
               Focus(
             focusNode: _firstScreenFocusNode,
             child: Stack(
