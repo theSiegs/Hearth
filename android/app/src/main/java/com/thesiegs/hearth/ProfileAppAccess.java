@@ -146,6 +146,35 @@ public final class ProfileAppAccess {
         return removeFromProfiles(context, shell, java.util.Collections.singletonList(userId), true);
     }
 
+    /**
+     * Parent-initiated, the last step of moving to Hearth's new app id (docs/design/app-id-change.md): in each given
+     * profile that has the old Hearth, add this Hearth in its place (kept the same way), then lift the old one's flag
+     * and uninstall it there; finally uninstall the old Hearth from the whole TV. Only ever touches the old app id.
+     */
+    public static List<String> replaceLegacy(Context context, ShellRunner shell, List<Integer> userIds,
+            String legacyPkg, boolean confirmedByParent) throws Exception {
+        requireParent(confirmedByParent, "replace the old Hearth");
+        if (!legacyPkg.equals(BuildConfig.LEGACY_APP_ID) && !legacyPkg.equals(BuildConfig.LEGACY_APP_ID + ".debug")) {
+            throw new IllegalArgumentException("Not the old Hearth: " + legacyPkg);
+        }
+        String apk = context.getPackageCodePath();
+        String self = context.getPackageName();
+        List<String> log = new ArrayList<>();
+        for (int user : userIds) {
+            if (!isInstalledForUser(shell, legacyPkg, user)) continue;
+            boolean kept = isProtected(shell, apk, legacyPkg, user);
+            shell.run("pm install-existing --user " + user + " " + self);
+            if (kept) setProtected(shell, apk, self, user, true);
+            setProtected(shell, apk, legacyPkg, user, false);
+            shell.run("pm uninstall --user " + user + " " + legacyPkg);
+            log.add(String.format(Locale.US, "user %d: replaced %s with %s%s", user, legacyPkg, self,
+                    kept ? " (kept)" : ""));
+        }
+        String out = shell.run("pm uninstall " + legacyPkg);
+        log.add("owner: uninstalled " + legacyPkg + ": " + (out == null ? "" : out.trim()));
+        return log;
+    }
+
     /** Read-only: for the given profiles, which have Hearth / HearthTube and whether each is kept (flagged). */
     public static List<AppStatus> state(Context context, ShellRunner shell, List<Integer> userIds) throws Exception {
         String apk = context.getPackageCodePath();
