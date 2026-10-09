@@ -98,6 +98,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private boolean mGoogleTvScreenInFront = false;
     private long mPendingBounceAt = 0;
     private long mGoogleSetupUntil = 0;
+    /**
+     * When Google TV's profile lock (its PIN screen for the current profile) last came up. Cancelling it opens Google
+     * TV's home and, a moment later, its profile chooser over it: Hearth taking over in between would land back in
+     * the locked profile, unlocked.
+     */
+    private long mProfileLockSeenAt = 0;
+    private static final long PROFILE_LOCK_HOLD_MS = 10 * 60_000;
     // When Google TV last showed a time up / bedtime screen; it blocks the apps a moment around that, so the apps'
     // state doesn't overrule the screen for a while.
     private long mWellbeingSeenAt = 0;
@@ -160,6 +167,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private final Runnable mKidsHomeTakeOver = () -> {
         // Not if Google TV put a screen of its own up (time up, PIN...) or the kid opened an app meanwhile
         if (autoTakeOverAllowed() && !mGoogleTvScreenInFront && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage)) {
+            mProfileLockSeenAt = 0; // a profile lock that led here was passed
             openLauncher();
         }
     };
@@ -223,6 +231,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
     /** Google TV's profile chooser, in either form (ProfileChooserActivity or ProfileChooserTransparentActivity). */
     private static boolean isChooser(String className) {
         return className.startsWith(GOOGLE_TV_PACKAGE + ".profile.chooser.ProfileChooser");
+    }
+
+    /** Google TV's profile lock: its wrapper, or the PIN screen ("Verify your identity") it opens. */
+    private static boolean isProfileLock(String className) {
+        return className.startsWith(GOOGLE_TV_PACKAGE + ".profile.lock.")
+                || className.equals("com.google.android.libraries.tv.reauth.ReauthActivity");
     }
 
     private static boolean isGoogleSetupScreen(String className) {
@@ -707,6 +721,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             setScreenTimeLock();
         }
         reportScreenTimeText(className, event, wellbeing);
+        if (isProfileLock(className)) mProfileLockSeenAt = SystemClock.elapsedRealtime();
         if (isChooser(className)) {
             mHandler.removeCallbacks(mReadChooser);
             mHandler.postDelayed(mReadChooser, CHOOSER_READ_DELAY_MS);
@@ -731,6 +746,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
             // ignoring the default home app. Bring the launcher back whenever that's allowed.
             if (SystemClock.elapsedRealtime() < mGoogleSetupUntil) {
                 Log.i(TAG, "Not taking over: Google TV setup in progress");
+            } else if (autoTakeOverAllowed()
+                    && SystemClock.elapsedRealtime() - mProfileLockSeenAt < PROFILE_LOCK_HOLD_MS) {
+                // Just after Google TV's profile lock: a right PIN leaves its home up (take over then), a cancelled
+                // one brings its chooser up over the home a moment later, which keeps Hearth out (the profile
+                // stays locked until someone picks a profile or enters the PIN)
+                mHandler.removeCallbacks(mKidsHomeTakeOver);
+                mHandler.postDelayed(mKidsHomeTakeOver, KIDS_HOME_GRACE_MS);
             } else if (autoTakeOverAllowed() && ProfileUsers.isKids(this) && !mScreenTimeKnown) {
                 // A kids profile whose screen time the apps can't tell: Google TV opens its time up / bedtime
                 // screen from its home a moment after the home itself, and covering the home first would hide
