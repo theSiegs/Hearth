@@ -146,6 +146,8 @@ class _FLauncherState extends State<FLauncher> {
       _lastProfile = key;
       _landingProfile = key;
       if (_showingRecents) setState(() => _showingRecents = false);
+      // Continue Watching is this profile's from now on, not the last one's
+      context.read<WatchNextService?>()?.profileChanged(key);
       // Another profile, another person: their search isn't this one's
       if (_homeSearch?.active ?? false) _endSearch(focusDock: false);
     }

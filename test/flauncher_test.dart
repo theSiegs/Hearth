@@ -948,6 +948,7 @@ NotificationsService mkNotificationsService() {
 
 WatchNextService mkWatchNextService() {
   final watchNextService = MockWatchNextService();
+  when(watchNextService.profileChanged(any)).thenReturn(null);
   when(watchNextService.programs).thenReturn([]);
   return watchNextService;
 }

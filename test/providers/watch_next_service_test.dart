@@ -439,6 +439,15 @@ void main() {
       expect(service.programs, isEmpty);
     });
 
+    test("a switch to another profile hides the owner's list at once, before it's read again", () async {
+      when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => [entry(1, 'com.netflix.mediaclient')]);
+      final service = await ready();
+      expect(titles(service), ['Show 1']);
+
+      service.profileChanged('user:11');
+      expect(service.programs, isEmpty);
+    });
+
     test("an entry from the active profile's own agent is always shown", () async {
       when(mockChannel.getActiveProfileKey()).thenAnswer((_) async => 'user:10');
       when(mockChannel.getWatchNextPrograms())
