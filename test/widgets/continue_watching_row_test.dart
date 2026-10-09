@@ -135,7 +135,34 @@ void main() {
       expect(find.text('Video 1'), findsNWidgets(2));
     });
 
-    testWidgets('ends with See all, so no program is last in the row', (tester) async {
+    testWidgets('ends with See all once three programs show, so no program is last in the row', (tester) async {
+      final programs = [
+        _fakeProgram(id: 1, packageName: 'app.one', title: 'Video 1'),
+        _fakeProgram(id: 2, packageName: 'app.two', title: 'Video 2'),
+        _fakeProgram(id: 3, packageName: 'app.three', title: 'Video 3'),
+      ];
+      when(watchNextService.programs).thenReturn(programs);
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          child: const ContinueWatchingRow(),
+          settingsService: settingsService,
+          watchNextService: watchNextService,
+          appsService: appsService,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final cards = tester.widgetList<WatchNextCard>(find.byType(WatchNextCard)).toList();
+      expect(cards.length, equals(3));
+      expect(cards[0].isFirstInRow, isTrue);
+      expect(cards[1].isFirstInRow, isFalse);
+      expect(cards.any((c) => c.isLastInRow), isFalse);
+      expect(find.text('See all'), findsOneWidget);
+      expect(find.text('3 in progress'), findsOneWidget);
+    });
+
+    testWidgets('has no See all with fewer than three programs; the last program ends the row', (tester) async {
       final programs = [
         _fakeProgram(id: 1, packageName: 'app.one', title: 'Video 1'),
         _fakeProgram(id: 2, packageName: 'app.two', title: 'Video 2'),
@@ -154,11 +181,9 @@ void main() {
 
       final cards = tester.widgetList<WatchNextCard>(find.byType(WatchNextCard)).toList();
       expect(cards.length, equals(2));
-      expect(cards[0].isFirstInRow, isTrue);
-      expect(cards[1].isFirstInRow, isFalse);
-      expect(cards.any((c) => c.isLastInRow), isFalse);
-      expect(find.text('See all'), findsOneWidget);
-      expect(find.text('2 in progress'), findsOneWidget);
+      expect(cards[0].isLastInRow, isFalse);
+      expect(cards[1].isLastInRow, isTrue);
+      expect(find.text('See all'), findsNothing);
     });
 
     testWidgets('says how long is left, and the See all card, in the app\'s language', (tester) async {
@@ -166,6 +191,7 @@ void main() {
         _fakeProgram(
             id: 1, packageName: 'app.one', title: 'Video 1', playbackPosition: 30 * 60000, duration: 120 * 60000),
         _fakeProgram(id: 2, packageName: 'app.two', title: 'Video 2'),
+        _fakeProgram(id: 3, packageName: 'app.three', title: 'Video 3'),
       ];
       when(watchNextService.programs).thenReturn(programs);
 
@@ -189,7 +215,7 @@ void main() {
       expect(find.text('WEITERSCHAUEN'), findsOneWidget);
       expect(find.text('Description for Video 1 \u00b7 Noch 1 Std. 30 Min.'), findsOneWidget);
       expect(find.text('Alle ansehen'), findsOneWidget);
-      expect(find.text('2 begonnen'), findsOneWidget);
+      expect(find.text('3 begonnen'), findsOneWidget);
     });
   });
 

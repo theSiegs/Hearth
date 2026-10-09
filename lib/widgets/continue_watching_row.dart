@@ -18,6 +18,9 @@ import 'package:flauncher/widgets/continue_watching_grid_page.dart';
 import 'package:flauncher/widgets/search/title_card.dart';
 import 'package:flauncher/widgets/title_pill.dart';
 
+/// The fewest cards Continue Watching shows before it ends with a "See all" card.
+const int _seeAllMinPrograms = 3;
+
 class ContinueWatchingRow extends StatefulWidget {
   final bool isFirstSection;
 
@@ -86,6 +89,9 @@ class _ContinueWatchingRowState extends State<ContinueWatchingRow> {
           return const SizedBox.shrink();
         }
 
+        // "See all" only once the row has a few cards; with one or two it adds nothing
+        final bool showSeeAll = programs.length >= _seeAllMinPrograms;
+
         final double cardHeight = settingsService.continueWatchingCardHeight.toDouble();
         final double rowHeight = cardHeight + 36.0;
 
@@ -152,7 +158,7 @@ class _ContinueWatchingRowState extends State<ContinueWatchingRow> {
                 child: ListView.builder(
                   // By key, so a card keeps its state (and the selection) when a program before it goes
                   findChildIndexCallback: (key) {
-                    if (key == const ValueKey("see_all")) return programs.length;
+                    if (key == const ValueKey("see_all")) return showSeeAll ? programs.length : null;
                     final int index = programs.indexWhere((p) => key == ValueKey(p.id));
                     return index < 0 ? null : index;
                   },
@@ -160,7 +166,7 @@ class _ContinueWatchingRowState extends State<ContinueWatchingRow> {
                   padding: const EdgeInsets.all(8),
                   physics: const ClampingScrollPhysics(),
                   scrollDirection: Axis.horizontal,
-                  itemCount: programs.length + 1,
+                  itemCount: programs.length + (showSeeAll ? 1 : 0),
                   itemBuilder: (context, index) {
                     // Last: "See all", every program in a grid
                     if (index == programs.length) {
@@ -202,7 +208,8 @@ class _ContinueWatchingRowState extends State<ContinueWatchingRow> {
                           watchNextService: watchNextService,
                           upGoesToTopBar: isFirstSection,
                           isFirstInRow: index == 0,
-                          isLastInRow: false,
+                          // Without See all, the last program ends the row
+                          isLastInRow: !showSeeAll && index == programs.length - 1,
                           autofocus: index == 0,
                           onFocused: (p) => _focused.value = p,
                         ),
