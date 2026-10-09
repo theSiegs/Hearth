@@ -42,12 +42,11 @@ public class ProfileProvider extends ContentProvider {
     private static final String DEFAULT_DATE_FORMAT = "EEE, MMM d";
     private static final int MAX_PIN_TRIES = 5;
     private static final long PIN_LOCKOUT_MS = 60_000;
-    // SHA-256 of the certificates HearthTube may be signed with: Hearth's release key, which HearthTube's releases
-    // move to, and the debug key they were signed with before (also HearthTube's debug builds). A rotated HearthTube
-    // passes on either, since the whole signing history is checked.
+    // SHA-256 of the certificate HearthTube must be signed with: Hearth's release key, which HearthTube's releases
+    // use too. HearthTube's debug builds (and its releases before 32.63+4) are signed with a debug key and get no
+    // PIN checks.
     private static final Set<String> TRUSTED_CERTS = new HashSet<>(Arrays.asList(
-            "243bf074648ab3bfebb260d129e7c8203b407ca7677507ce93dbe72b02396d4c",
-            "6748528ff4d17fd57c30b6c5d522c467920d9951ea5d208597f91b66df9a2bfe"));
+            "243bf074648ab3bfebb260d129e7c8203b407ca7677507ce93dbe72b02396d4c"));
 
     // One lockout for every way in (HearthTube here, or a kid's HearthTube through that profile's agent)
     private static int sWrongPins;
