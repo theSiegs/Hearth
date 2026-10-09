@@ -244,5 +244,20 @@
     "searchAskGoogle": "Google'a sor",
     "searchQuoted": "“{query}”",
     "searchKindFilm": "Film",
-    "searchKindSeries": "Dizi"
+    "searchKindSeries": "Dizi",
+    "gradientNamePitchBlack": "Simsiyah",
+    "gradientNameGreatWhale": "Büyük Balina",
+    "gradientNameViciousStance": "Sert Duruş",
+    "gradientNameTeenNotebook": "Genç Defteri",
+    "gradientNameOldHat": "Eski Şapka",
+    "gradientNameBurningSpring": "Yanan Bahar",
+    "gradientNameDesertHump": "Çöl Tepesi",
+    "gradientNameFarawayRiver": "Uzak Nehir",
+    "gradientNameSaintPetersburg": "Sankt-Peterburg",
+    "gradientNameAfricanField": "Afrika Tarlası",
+    "gradientNameGrassShampoo": "Çim Şampuanı",
+    "updateErrorNoApk": "Hiçbir sürümde bu cihaz için APK yok",
+    "updateErrorCheckFailed": "Güncellemeler denetlenemedi",
+    "updateErrorDownloadFailed": "Güncelleme indirilemedi",
+    "serviceHearthTubeDescription": "Hearth için YouTube; Hearth profilinizi takip eder"
 }

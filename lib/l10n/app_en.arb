@@ -663,5 +663,65 @@
     "searchKindSeries": "Series",
     "@searchKindSeries": {
         "description": "Search: kind of title on a result card, after its year (2022 · Series)"
+    },
+    "gradientNamePitchBlack": "Pitch Black",
+    "@gradientNamePitchBlack": {
+        "description": "Name of a background gradient, under its swatch in the gradient wallpaper picker"
+    },
+    "gradientNameGreatWhale": "Great Whale",
+    "@gradientNameGreatWhale": {
+        "description": "Name of a background gradient, under its swatch in the gradient wallpaper picker"
+    },
+    "gradientNameViciousStance": "Vicious Stance",
+    "@gradientNameViciousStance": {
+        "description": "Name of a background gradient, under its swatch in the gradient wallpaper picker"
+    },
+    "gradientNameTeenNotebook": "Teen Notebook",
+    "@gradientNameTeenNotebook": {
+        "description": "Name of a background gradient, under its swatch in the gradient wallpaper picker"
+    },
+    "gradientNameOldHat": "Old Hat",
+    "@gradientNameOldHat": {
+        "description": "Name of a background gradient, under its swatch in the gradient wallpaper picker"
+    },
+    "gradientNameBurningSpring": "Burning Spring",
+    "@gradientNameBurningSpring": {
+        "description": "Name of a background gradient, under its swatch in the gradient wallpaper picker"
+    },
+    "gradientNameDesertHump": "Desert Hump",
+    "@gradientNameDesertHump": {
+        "description": "Name of a background gradient, under its swatch in the gradient wallpaper picker"
+    },
+    "gradientNameFarawayRiver": "Faraway River",
+    "@gradientNameFarawayRiver": {
+        "description": "Name of a background gradient, under its swatch in the gradient wallpaper picker"
+    },
+    "gradientNameSaintPetersburg": "Saint Petersburg",
+    "@gradientNameSaintPetersburg": {
+        "description": "Name of a background gradient, under its swatch in the gradient wallpaper picker"
+    },
+    "gradientNameAfricanField": "African Field",
+    "@gradientNameAfricanField": {
+        "description": "Name of a background gradient, under its swatch in the gradient wallpaper picker"
+    },
+    "gradientNameGrassShampoo": "Grass Shampoo",
+    "@gradientNameGrassShampoo": {
+        "description": "Name of a background gradient, under its swatch in the gradient wallpaper picker"
+    },
+    "updateErrorNoApk": "No release has an APK for this device",
+    "@updateErrorNoApk": {
+        "description": "Hearth update dialog: the update check found no release built for this TV"
+    },
+    "updateErrorCheckFailed": "Couldn't check for updates",
+    "@updateErrorCheckFailed": {
+        "description": "Hearth update dialog: GitHub couldn't be reached or answered with an error"
+    },
+    "updateErrorDownloadFailed": "Couldn't download the update",
+    "@updateErrorDownloadFailed": {
+        "description": "Hearth update dialog: the new version's APK couldn't be downloaded"
+    },
+    "serviceHearthTubeDescription": "YouTube for Hearth; follows your Hearth profile",
+    "@serviceHearthTubeDescription": {
+        "description": "Updates page: the line under HearthTube, a companion app"
     }
 }

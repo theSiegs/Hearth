@@ -742,4 +742,49 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get searchKindSeries => 'सीरीज़';
+
+  @override
+  String get gradientNamePitchBlack => 'गहरा काला';
+
+  @override
+  String get gradientNameGreatWhale => 'विशाल व्हेल';
+
+  @override
+  String get gradientNameViciousStance => 'उग्र मुद्रा';
+
+  @override
+  String get gradientNameTeenNotebook => 'किशोर नोटबुक';
+
+  @override
+  String get gradientNameOldHat => 'पुरानी टोपी';
+
+  @override
+  String get gradientNameBurningSpring => 'दहकता वसंत';
+
+  @override
+  String get gradientNameDesertHump => 'रेगिस्तानी टीला';
+
+  @override
+  String get gradientNameFarawayRiver => 'दूर की नदी';
+
+  @override
+  String get gradientNameSaintPetersburg => 'सेंट पीटर्सबर्ग';
+
+  @override
+  String get gradientNameAfricanField => 'अफ़्रीकी मैदान';
+
+  @override
+  String get gradientNameGrassShampoo => 'घास शैम्पू';
+
+  @override
+  String get updateErrorNoApk => 'किसी भी रिलीज़ में इस डिवाइस के लिए APK नहीं है';
+
+  @override
+  String get updateErrorCheckFailed => 'अपडेट की जांच नहीं हो सकी';
+
+  @override
+  String get updateErrorDownloadFailed => 'अपडेट डाउनलोड नहीं हो सका';
+
+  @override
+  String get serviceHearthTubeDescription => 'Hearth के लिए YouTube; आपकी Hearth प्रोफ़ाइल के साथ चलता है';
 }

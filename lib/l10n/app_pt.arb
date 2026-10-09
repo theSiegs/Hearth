@@ -244,5 +244,20 @@
     "searchAskGoogle": "Perguntar ao Google",
     "searchQuoted": "“{query}”",
     "searchKindFilm": "Filme",
-    "searchKindSeries": "Série"
+    "searchKindSeries": "Série",
+    "gradientNamePitchBlack": "Preto absoluto",
+    "gradientNameGreatWhale": "Grande baleia",
+    "gradientNameViciousStance": "Postura feroz",
+    "gradientNameTeenNotebook": "Caderno adolescente",
+    "gradientNameOldHat": "Chapéu velho",
+    "gradientNameBurningSpring": "Primavera ardente",
+    "gradientNameDesertHump": "Duna do deserto",
+    "gradientNameFarawayRiver": "Rio distante",
+    "gradientNameSaintPetersburg": "São Petersburgo",
+    "gradientNameAfricanField": "Campo africano",
+    "gradientNameGrassShampoo": "Xampu de grama",
+    "updateErrorNoApk": "Nenhuma versão tem um APK para este dispositivo",
+    "updateErrorCheckFailed": "Não foi possível verificar atualizações",
+    "updateErrorDownloadFailed": "Não foi possível baixar a atualização",
+    "serviceHearthTubeDescription": "YouTube para o Hearth; segue seu perfil do Hearth"
 }

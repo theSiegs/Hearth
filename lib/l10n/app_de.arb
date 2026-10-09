@@ -244,5 +244,20 @@
     "searchAskGoogle": "Google fragen",
     "searchQuoted": "„{query}“",
     "searchKindFilm": "Film",
-    "searchKindSeries": "Serie"
+    "searchKindSeries": "Serie",
+    "gradientNamePitchBlack": "Pechschwarz",
+    "gradientNameGreatWhale": "Großer Wal",
+    "gradientNameViciousStance": "Finstere Haltung",
+    "gradientNameTeenNotebook": "Teenie-Notizbuch",
+    "gradientNameOldHat": "Alter Hut",
+    "gradientNameBurningSpring": "Brennender Frühling",
+    "gradientNameDesertHump": "Wüstenhügel",
+    "gradientNameFarawayRiver": "Ferner Fluss",
+    "gradientNameSaintPetersburg": "Sankt Petersburg",
+    "gradientNameAfricanField": "Afrikanisches Feld",
+    "gradientNameGrassShampoo": "Gras-Shampoo",
+    "updateErrorNoApk": "Keine Version hat eine APK für dieses Gerät",
+    "updateErrorCheckFailed": "Suche nach Updates fehlgeschlagen",
+    "updateErrorDownloadFailed": "Update konnte nicht heruntergeladen werden",
+    "serviceHearthTubeDescription": "YouTube für Hearth; folgt Ihrem Hearth-Profil"
 }

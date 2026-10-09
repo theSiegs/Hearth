@@ -244,5 +244,20 @@
     "searchAskGoogle": "اسأل Google",
     "searchQuoted": "«{query}»",
     "searchKindFilm": "فيلم",
-    "searchKindSeries": "مسلسل"
+    "searchKindSeries": "مسلسل",
+    "gradientNamePitchBlack": "أسود حالك",
+    "gradientNameGreatWhale": "الحوت الكبير",
+    "gradientNameViciousStance": "وقفة شرسة",
+    "gradientNameTeenNotebook": "دفتر المراهقين",
+    "gradientNameOldHat": "قبعة قديمة",
+    "gradientNameBurningSpring": "ربيع متقد",
+    "gradientNameDesertHump": "كثبان الصحراء",
+    "gradientNameFarawayRiver": "نهر بعيد",
+    "gradientNameSaintPetersburg": "سانت بطرسبرغ",
+    "gradientNameAfricanField": "حقل أفريقي",
+    "gradientNameGrassShampoo": "شامبو العشب",
+    "updateErrorNoApk": "لا يوجد إصدار يحتوي على APK لهذا الجهاز",
+    "updateErrorCheckFailed": "تعذّر التحقق من وجود تحديثات",
+    "updateErrorDownloadFailed": "تعذّر تنزيل التحديث",
+    "serviceHearthTubeDescription": "YouTube لـ Hearth؛ يتبع ملفك الشخصي في Hearth"
 }

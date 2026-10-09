@@ -740,4 +740,49 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get searchKindSeries => '시리즈';
+
+  @override
+  String get gradientNamePitchBlack => '칠흑';
+
+  @override
+  String get gradientNameGreatWhale => '큰 고래';
+
+  @override
+  String get gradientNameViciousStance => '사나운 자세';
+
+  @override
+  String get gradientNameTeenNotebook => '십대의 노트';
+
+  @override
+  String get gradientNameOldHat => '낡은 모자';
+
+  @override
+  String get gradientNameBurningSpring => '불타는 봄';
+
+  @override
+  String get gradientNameDesertHump => '사막 언덕';
+
+  @override
+  String get gradientNameFarawayRiver => '먼 강';
+
+  @override
+  String get gradientNameSaintPetersburg => '상트페테르부르크';
+
+  @override
+  String get gradientNameAfricanField => '아프리카 들판';
+
+  @override
+  String get gradientNameGrassShampoo => '풀 샴푸';
+
+  @override
+  String get updateErrorNoApk => '이 기기용 APK가 있는 릴리스가 없습니다';
+
+  @override
+  String get updateErrorCheckFailed => '업데이트를 확인할 수 없습니다';
+
+  @override
+  String get updateErrorDownloadFailed => '업데이트를 다운로드할 수 없습니다';
+
+  @override
+  String get serviceHearthTubeDescription => 'Hearth용 YouTube, Hearth 프로필을 따릅니다';
 }

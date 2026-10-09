@@ -18,14 +18,33 @@
 
 import 'dart:math';
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter/widgets.dart';
 
 class FLauncherGradient {
   final String uuid;
+
+  /// The English name; [localizedName] is the one to show.
   final String name;
   final Gradient gradient;
 
   const FLauncherGradient(this.uuid, this.name, this.gradient);
+
+  /// The name in the app's language, as the gradient picker shows it.
+  String localizedName(AppLocalizations localizations) => switch (this) {
+        FLauncherGradients.pitchBlack => localizations.gradientNamePitchBlack,
+        FLauncherGradients.greatWhale => localizations.gradientNameGreatWhale,
+        FLauncherGradients.viciousStance => localizations.gradientNameViciousStance,
+        FLauncherGradients.teenNotebook => localizations.gradientNameTeenNotebook,
+        FLauncherGradients.oldHat => localizations.gradientNameOldHat,
+        FLauncherGradients.burningSprings => localizations.gradientNameBurningSpring,
+        FLauncherGradients.desertHump => localizations.gradientNameDesertHump,
+        FLauncherGradients.farawayRiver => localizations.gradientNameFarawayRiver,
+        FLauncherGradients.saintPetersburg => localizations.gradientNameSaintPetersburg,
+        FLauncherGradients.africanField => localizations.gradientNameAfricanField,
+        FLauncherGradients.grassShampoo => localizations.gradientNameGrassShampoo,
+        _ => name,
+      };
 }
 
 abstract final class FLauncherGradients {

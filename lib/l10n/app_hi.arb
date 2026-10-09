@@ -244,5 +244,20 @@
     "searchAskGoogle": "Google से पूछें",
     "searchQuoted": "“{query}”",
     "searchKindFilm": "फ़िल्म",
-    "searchKindSeries": "सीरीज़"
+    "searchKindSeries": "सीरीज़",
+    "gradientNamePitchBlack": "गहरा काला",
+    "gradientNameGreatWhale": "विशाल व्हेल",
+    "gradientNameViciousStance": "उग्र मुद्रा",
+    "gradientNameTeenNotebook": "किशोर नोटबुक",
+    "gradientNameOldHat": "पुरानी टोपी",
+    "gradientNameBurningSpring": "दहकता वसंत",
+    "gradientNameDesertHump": "रेगिस्तानी टीला",
+    "gradientNameFarawayRiver": "दूर की नदी",
+    "gradientNameSaintPetersburg": "सेंट पीटर्सबर्ग",
+    "gradientNameAfricanField": "अफ़्रीकी मैदान",
+    "gradientNameGrassShampoo": "घास शैम्पू",
+    "updateErrorNoApk": "किसी भी रिलीज़ में इस डिवाइस के लिए APK नहीं है",
+    "updateErrorCheckFailed": "अपडेट की जांच नहीं हो सकी",
+    "updateErrorDownloadFailed": "अपडेट डाउनलोड नहीं हो सका",
+    "serviceHearthTubeDescription": "Hearth के लिए YouTube; आपकी Hearth प्रोफ़ाइल के साथ चलता है"
 }

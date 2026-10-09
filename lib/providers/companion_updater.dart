@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/github_releases.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -24,6 +25,12 @@ class CompanionApp {
     required this.repo,
     this.versionManifest,
   });
+
+  /// [description] in the app's language (the Updates page's line under its name).
+  String localizedDescription(AppLocalizations localizations) => switch (packageName) {
+        "com.thesiegs.hearthtube" => localizations.serviceHearthTubeDescription,
+        _ => description,
+      };
 }
 
 const List<CompanionApp> companionApps = [

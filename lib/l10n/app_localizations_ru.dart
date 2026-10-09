@@ -746,4 +746,49 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get searchKindSeries => 'Сериал';
+
+  @override
+  String get gradientNamePitchBlack => 'Угольно-чёрный';
+
+  @override
+  String get gradientNameGreatWhale => 'Большой кит';
+
+  @override
+  String get gradientNameViciousStance => 'Грозная стойка';
+
+  @override
+  String get gradientNameTeenNotebook => 'Подростковый блокнот';
+
+  @override
+  String get gradientNameOldHat => 'Старая шляпа';
+
+  @override
+  String get gradientNameBurningSpring => 'Пылающая весна';
+
+  @override
+  String get gradientNameDesertHump => 'Пустынный холм';
+
+  @override
+  String get gradientNameFarawayRiver => 'Далёкая река';
+
+  @override
+  String get gradientNameSaintPetersburg => 'Санкт-Петербург';
+
+  @override
+  String get gradientNameAfricanField => 'Африканское поле';
+
+  @override
+  String get gradientNameGrassShampoo => 'Травяной шампунь';
+
+  @override
+  String get updateErrorNoApk => 'Ни в одном выпуске нет APK для этого устройства';
+
+  @override
+  String get updateErrorCheckFailed => 'Не удалось проверить обновления';
+
+  @override
+  String get updateErrorDownloadFailed => 'Не удалось загрузить обновление';
+
+  @override
+  String get serviceHearthTubeDescription => 'YouTube для Hearth; следует вашему профилю Hearth';
 }

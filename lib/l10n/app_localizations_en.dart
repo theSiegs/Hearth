@@ -742,4 +742,49 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchKindSeries => 'Series';
+
+  @override
+  String get gradientNamePitchBlack => 'Pitch Black';
+
+  @override
+  String get gradientNameGreatWhale => 'Great Whale';
+
+  @override
+  String get gradientNameViciousStance => 'Vicious Stance';
+
+  @override
+  String get gradientNameTeenNotebook => 'Teen Notebook';
+
+  @override
+  String get gradientNameOldHat => 'Old Hat';
+
+  @override
+  String get gradientNameBurningSpring => 'Burning Spring';
+
+  @override
+  String get gradientNameDesertHump => 'Desert Hump';
+
+  @override
+  String get gradientNameFarawayRiver => 'Faraway River';
+
+  @override
+  String get gradientNameSaintPetersburg => 'Saint Petersburg';
+
+  @override
+  String get gradientNameAfricanField => 'African Field';
+
+  @override
+  String get gradientNameGrassShampoo => 'Grass Shampoo';
+
+  @override
+  String get updateErrorNoApk => 'No release has an APK for this device';
+
+  @override
+  String get updateErrorCheckFailed => 'Couldn\'t check for updates';
+
+  @override
+  String get updateErrorDownloadFailed => 'Couldn\'t download the update';
+
+  @override
+  String get serviceHearthTubeDescription => 'YouTube for Hearth; follows your Hearth profile';
 }

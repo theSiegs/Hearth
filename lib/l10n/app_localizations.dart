@@ -1384,6 +1384,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Series'**
   String get searchKindSeries;
+
+  /// Name of a background gradient, under its swatch in the gradient wallpaper picker
+  ///
+  /// In en, this message translates to:
+  /// **'Pitch Black'**
+  String get gradientNamePitchBlack;
+
+  /// Name of a background gradient, under its swatch in the gradient wallpaper picker
+  ///
+  /// In en, this message translates to:
+  /// **'Great Whale'**
+  String get gradientNameGreatWhale;
+
+  /// Name of a background gradient, under its swatch in the gradient wallpaper picker
+  ///
+  /// In en, this message translates to:
+  /// **'Vicious Stance'**
+  String get gradientNameViciousStance;
+
+  /// Name of a background gradient, under its swatch in the gradient wallpaper picker
+  ///
+  /// In en, this message translates to:
+  /// **'Teen Notebook'**
+  String get gradientNameTeenNotebook;
+
+  /// Name of a background gradient, under its swatch in the gradient wallpaper picker
+  ///
+  /// In en, this message translates to:
+  /// **'Old Hat'**
+  String get gradientNameOldHat;
+
+  /// Name of a background gradient, under its swatch in the gradient wallpaper picker
+  ///
+  /// In en, this message translates to:
+  /// **'Burning Spring'**
+  String get gradientNameBurningSpring;
+
+  /// Name of a background gradient, under its swatch in the gradient wallpaper picker
+  ///
+  /// In en, this message translates to:
+  /// **'Desert Hump'**
+  String get gradientNameDesertHump;
+
+  /// Name of a background gradient, under its swatch in the gradient wallpaper picker
+  ///
+  /// In en, this message translates to:
+  /// **'Faraway River'**
+  String get gradientNameFarawayRiver;
+
+  /// Name of a background gradient, under its swatch in the gradient wallpaper picker
+  ///
+  /// In en, this message translates to:
+  /// **'Saint Petersburg'**
+  String get gradientNameSaintPetersburg;
+
+  /// Name of a background gradient, under its swatch in the gradient wallpaper picker
+  ///
+  /// In en, this message translates to:
+  /// **'African Field'**
+  String get gradientNameAfricanField;
+
+  /// Name of a background gradient, under its swatch in the gradient wallpaper picker
+  ///
+  /// In en, this message translates to:
+  /// **'Grass Shampoo'**
+  String get gradientNameGrassShampoo;
+
+  /// Hearth update dialog: the update check found no release built for this TV
+  ///
+  /// In en, this message translates to:
+  /// **'No release has an APK for this device'**
+  String get updateErrorNoApk;
+
+  /// Hearth update dialog: GitHub couldn't be reached or answered with an error
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check for updates'**
+  String get updateErrorCheckFailed;
+
+  /// Hearth update dialog: the new version's APK couldn't be downloaded
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t download the update'**
+  String get updateErrorDownloadFailed;
+
+  /// Updates page: the line under HearthTube, a companion app
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube for Hearth; follows your Hearth profile'**
+  String get serviceHearthTubeDescription;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

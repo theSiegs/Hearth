@@ -740,4 +740,49 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get searchKindSeries => '剧集';
+
+  @override
+  String get gradientNamePitchBlack => '漆黑';
+
+  @override
+  String get gradientNameGreatWhale => '巨鲸';
+
+  @override
+  String get gradientNameViciousStance => '凶猛姿态';
+
+  @override
+  String get gradientNameTeenNotebook => '少女笔记本';
+
+  @override
+  String get gradientNameOldHat => '旧帽子';
+
+  @override
+  String get gradientNameBurningSpring => '燃烧之春';
+
+  @override
+  String get gradientNameDesertHump => '沙漠驼峰';
+
+  @override
+  String get gradientNameFarawayRiver => '远方河流';
+
+  @override
+  String get gradientNameSaintPetersburg => '圣彼得堡';
+
+  @override
+  String get gradientNameAfricanField => '非洲原野';
+
+  @override
+  String get gradientNameGrassShampoo => '青草洗发水';
+
+  @override
+  String get updateErrorNoApk => '没有适用于此设备的 APK 版本';
+
+  @override
+  String get updateErrorCheckFailed => '无法检查更新';
+
+  @override
+  String get updateErrorDownloadFailed => '无法下载更新';
+
+  @override
+  String get serviceHearthTubeDescription => '适用于 Hearth 的 YouTube；跟随你的 Hearth 个人资料';
 }
