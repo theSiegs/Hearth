@@ -224,16 +224,22 @@ class _SettingsPanelState extends State<SettingsPanel> {
     );
   }
 
-  /// Right closes the panel, and Left goes back to the page before (on a sub page), unless focus can move that way
-  /// inside the page.
+  /// Toward the screen (Right, or Left in a right-to-left language, where the panel is on the right) closes the
+  /// panel, and the other way goes back to the page before (on a sub page), unless focus can move that way inside
+  /// the page.
   KeyEventResult _onArrowAtEdge(FocusNode node, KeyEvent event) {
-    final bool right = event.logicalKey == LogicalKeyboardKey.arrowRight;
-    final bool left = event.logicalKey == LogicalKeyboardKey.arrowLeft;
+    final bool rtl = Directionality.of(context) == TextDirection.rtl;
+    final bool right = event.logicalKey ==
+        (rtl ? LogicalKeyboardKey.arrowLeft : LogicalKeyboardKey.arrowRight);
+    final bool left = event.logicalKey ==
+        (rtl ? LogicalKeyboardKey.arrowRight : LogicalKeyboardKey.arrowLeft);
     if (!(right || left) || event is KeyUpEvent) return KeyEventResult.ignored;
     if (left && !_navigatorKey.currentState!.canPop()) return KeyEventResult.ignored;
     final focused = FocusManager.instance.primaryFocus;
     if (event is KeyDownEvent &&
-        (focused == null || !focused.focusInDirection(right ? TraversalDirection.right : TraversalDirection.left))) {
+        (focused == null || !focused.focusInDirection(event.logicalKey == LogicalKeyboardKey.arrowRight
+                ? TraversalDirection.right
+                : TraversalDirection.left))) {
       if (right) {
         Navigator.of(context).pop();
       } else {

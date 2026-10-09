@@ -110,15 +110,16 @@ class DateTimeFormatPage extends StatelessWidget {
 
   Widget _buildPreview(BuildContext context, String dateFormat, String timeFormat) {
     final now = DateTime.now();
+    final locale = Localizations.maybeLocaleOf(context)?.toString() ?? Platform.localeName;
     String preview = '';
 
     try {
       if (dateFormat.isNotEmpty) {
-        preview = DateFormat(dateFormat, Platform.localeName).format(now);
+        preview = DateFormat(dateFormat, locale).format(now);
       }
       if (timeFormat.isNotEmpty) {
         if (preview.isNotEmpty) preview += ' — ';
-        preview += DateFormat(timeFormat, Platform.localeName).format(now);
+        preview += DateFormat(timeFormat, locale).format(now);
       }
     } catch (e) {
       preview = AppLocalizations.of(context)!.dateTimeInvalidFormat;

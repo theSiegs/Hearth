@@ -6,10 +6,38 @@ import 'package:intl/date_symbol_data_local.dart';
 
 void main() {
   setUpAll(() async {
-    await initializeDateFormatting('en_US');
+    await initializeDateFormatting();
   });
 
   group('DateTimeWidget Tests', () {
+    testWidgets("names the day in Hearth's language", (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Localizations(
+            locale: const Locale('de'),
+            delegates: const [DefaultWidgetsLocalizations.delegate],
+            child: const DateTimeWidget('EEEE', animate: false),
+          ),
+        ),
+      );
+      final text = tester.widget<Text>(find.byType(Text)).data!;
+      expect(['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'], contains(text));
+    });
+
+    testWidgets('a right-to-left language gets plain text, not one animated character at a time',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Directionality(
+            textDirection: TextDirection.rtl,
+            child: Scaffold(body: DateTimeWidget('HH:mm', animate: true)),
+          ),
+        ),
+      );
+      expect(find.byType(AnimatedTimeDisplay), findsNothing);
+      expect(find.byType(Text), findsOneWidget);
+    });
+
     testWidgets('Renders static text when animate is false', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(

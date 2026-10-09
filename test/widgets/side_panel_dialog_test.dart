@@ -3,6 +3,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('SidePanelDialog opens on the right in a right-to-left language', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(body: SidePanelDialog(child: Text('Test Content'))),
+        ),
+      ),
+    );
+    final screen = tester.getSize(find.byType(Scaffold));
+    final panel = tester.getRect(find.byWidgetPredicate((w) => w is Material && w.elevation == 24));
+    expect(panel.right, screen.width);
+    final Material material = tester.widget(find.byWidgetPredicate((w) => w is Material && w.elevation == 24));
+    expect(material.borderRadius, const BorderRadius.horizontal(left: Radius.circular(24), right: Radius.zero));
+  });
+
   testWidgets('SidePanelDialog renders default state correctly', (WidgetTester tester) async {
     const testChild = Text('Test Content');
 
@@ -19,11 +35,11 @@ void main() {
     // Verify child is rendered
     expect(find.text('Test Content'), findsOneWidget);
 
-    // Verify Align is centerLeft
+    // On the start side (the left here; the right in a right-to-left language)
     final alignFinder = find.byType(Align).first;
     expect(alignFinder, findsOneWidget);
     final Align alignWidget = tester.widget(alignFinder);
-    expect(alignWidget.alignment, Alignment.centerLeft);
+    expect(alignWidget.alignment, AlignmentDirectional.centerStart);
 
     // Verify Material border radius (find the specific Material widget we created)
     final materialFinder = find.byType(Material);
