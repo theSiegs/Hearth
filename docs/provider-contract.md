@@ -39,7 +39,9 @@ answer within a few seconds. Without an agent, a Hearth installed there answers 
 
 **Checking it's really Hearth.** The provider belongs to `com.thesiegs.hearth` (`.debug` for debug builds; up to
 2026.10.x `com.leanbitlab.ltvL`) signed with one of:
-- release: `0438047b1a5eefe8693cad8f2b57189a418337bbcbd3c7dbdb79d20884beaf6e`
+- release: `243bf074648ab3bfebb260d129e7c8203b407ca7677507ce93dbe72b02396d4c` (CN=Hearth, O=theSiegs; from
+  2026.10.10. Earlier builds used `0438047b1a5eefe8693cad8f2b57189a418337bbcbd3c7dbdb79d20884beaf6e`, which a
+  client may keep accepting while installs move)
 - debug: `6748528ff4d17fd57c30b6c5d522c467920d9951ea5d208597f91b66df9a2bfe`
 
 (SHA-256 of the signing certificate.)
