@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="profile_pairing_description">When Hearth opens Netflix, Disney+, Apple TV, HBO Max or Paramount+, picks the profile that goes with the Google TV profile on the app\'s "Who\'s watching?" screen. It reads only those screens, only right after Hearth opens the app.</string>
+    <string name="profile_pairing_description">When Hearth opens Netflix, Disney+, Apple TV, HBO Max or Paramount+, picks the profile that goes with the Google TV profile on the app\'s \"Who\'s watching?\" screen. It reads only those screens, only right after Hearth opens the app.</string>
 </resources>

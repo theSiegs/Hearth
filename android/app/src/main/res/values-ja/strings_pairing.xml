@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profile_pairing_description">Hearth が Netflix、Disney+、Apple TV、HBO Max、Paramount+ を開いたとき、アプリの「視聴するのは誰？」画面で Google TV のプロフィールに対応するプロフィールを選びます。読み取るのはその画面だけで、Hearth がアプリを開いた直後に限られます。</string>
+</resources>

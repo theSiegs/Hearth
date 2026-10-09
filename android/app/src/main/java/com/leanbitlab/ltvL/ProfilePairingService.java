@@ -278,7 +278,7 @@ public class ProfilePairingService extends AccessibilityService {
             }, COVER_AFTER_PICK_MS);
         } else if (outcome == NO_MATCH && s.pickerSeen && mCoverTitle != null) {
             // Say why the picker is staying up, then get out of the way.
-            mCoverTitle.setText("No matching profile for " + s.hearthProfile + ". Choose one on the next screen.");
+            mCoverTitle.setText(getString(R.string.profile_pairing_no_match, s.hearthProfile));
             mHandler.postDelayed(this::hideCover, NO_MATCH_MESSAGE_MS);
         } else {
             hideCover();
@@ -763,7 +763,7 @@ public class ProfilePairingService extends AccessibilityService {
             box.addView(spinner, new LinearLayout.LayoutParams(dp(48), dp(48)));
 
             TextView title = new TextView(c);
-            title.setText("Opening " + appLabel(s.pkg) + " as " + s.hearthProfile + "…");
+            title.setText(getString(R.string.profile_pairing_opening, appLabel(s.pkg), s.hearthProfile));
             title.setTextColor(Color.WHITE);
             title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);
             title.setGravity(Gravity.CENTER);
@@ -815,8 +815,7 @@ public class ProfilePairingService extends AccessibilityService {
         hideBanner();
         try {
             TextView text = new TextView(this);
-            text.setText("Hearth opened " + appLabel(s.pkg) + " as “" + s.pickedName + "” for "
-                    + s.hearthProfile + ". To change it: Hearth Settings → Profile Pairing.");
+            text.setText(getString(R.string.profile_pairing_matched, appLabel(s.pkg), s.pickedName, s.hearthProfile));
             text.setTextColor(Color.WHITE);
             text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
             text.setPadding(dp(24), dp(14), dp(24), dp(14));
@@ -856,7 +855,7 @@ public class ProfilePairingService extends AccessibilityService {
             ApplicationInfo info = pm.getApplicationInfo(pkg, 0);
             return pm.getApplicationLabel(info).toString();
         } catch (Exception e) {
-            return "the app";
+            return getString(R.string.profile_pairing_the_app);
         }
     }
 

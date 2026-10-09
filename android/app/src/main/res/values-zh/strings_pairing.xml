@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profile_pairing_description">当 Hearth 打开 Netflix、Disney+、Apple TV、HBO Max 或 Paramount+ 时，在应用的“谁在观看？”界面中选择与 Google TV 个人资料对应的个人资料。它只读取这些界面，且仅在 Hearth 刚打开应用之后读取。</string>
+</resources>

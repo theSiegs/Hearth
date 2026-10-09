@@ -92,7 +92,7 @@ final class ProfileUsers {
         try {
             long serial = Long.parseLong(key.substring(KEY_PREFIX.length()));
             String name = getName(context, serial);
-            return name != null ? name : "Profile " + serial;
+            return name != null ? name : context.getString(R.string.profile_unnamed, serial);
         } catch (NumberFormatException e) {
             return key;
         }
