@@ -1968,4 +1968,19 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get aboutLicense => 'Вільне ПЗ за ліцензією GNU GPL v3, як і проєкти, на яких воно базується.';
+
+  @override
+  String get familyAppsStatusInstalled => 'Встановлено';
+
+  @override
+  String get familyAppsStatusPartial => 'Частково';
+
+  @override
+  String get familyAppsStatusNotInstalled => 'Не встановлено';
+
+  @override
+  String get familyAppsStatusAtRisk => 'Під загрозою';
+
+  @override
+  String get familyAppsAtRiskDetail => 'Google TV видалить незахищені застосунки в цьому профілі під час його наступного запуску. Скористайтеся «Додати» ще раз, щоб захистити їх.';
 }

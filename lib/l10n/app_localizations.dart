@@ -2006,7 +2006,7 @@ abstract class AppLocalizations {
   /// Hearth on other profiles page: list line; kept means Hearth keeps it installed in a kids profile
   ///
   /// In en, this message translates to:
-  /// **'{app}: installed, kept'**
+  /// **'{app}: installed, protected'**
   String familyAppsAppInstalledKept(String app);
 
   /// Hearth on other profiles page: list line; {app} is Hearth or HearthTube
@@ -2018,7 +2018,7 @@ abstract class AppLocalizations {
   /// Hearth on other profiles page: list line; kept means Hearth keeps it installed in a kids profile
   ///
   /// In en, this message translates to:
-  /// **'{app}: not installed, kept'**
+  /// **'{app}: not installed, protected'**
   String familyAppsAppNotInstalledKept(String app);
 
   /// Hearth on other profiles page: heading for a kids profile whose name Hearth doesn't know
@@ -3436,6 +3436,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Free software under the GNU GPL v3, like the projects it builds on.'**
   String get aboutLicense;
+
+  /// Hearth on other profiles: a profile's status, in green; Hearth and HearthTube are both there (and protected in a kids profile)
+  ///
+  /// In en, this message translates to:
+  /// **'Installed'**
+  String get familyAppsStatusInstalled;
+
+  /// Hearth on other profiles: a profile's status, in yellow; only some of Hearth's apps are there
+  ///
+  /// In en, this message translates to:
+  /// **'Partial'**
+  String get familyAppsStatusPartial;
+
+  /// Hearth on other profiles: a profile's status; neither of Hearth's apps is there
+  ///
+  /// In en, this message translates to:
+  /// **'Not installed'**
+  String get familyAppsStatusNotInstalled;
+
+  /// Hearth on other profiles: a profile's status, in red; a kids profile has an app Google TV will remove at its next start
+  ///
+  /// In en, this message translates to:
+  /// **'At risk'**
+  String get familyAppsStatusAtRisk;
+
+  /// Hearth on other profiles: shown under an At risk profile while it's selected
+  ///
+  /// In en, this message translates to:
+  /// **'Google TV will remove the unprotected apps here the next time this profile starts. Use Add again to protect them.'**
+  String get familyAppsAtRiskDetail;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

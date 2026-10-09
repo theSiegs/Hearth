@@ -1090,7 +1090,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String familyAppsAppInstalledKept(String app) {
-    return '$app: installed, kept';
+    return '$app: installed, protected';
   }
 
   @override
@@ -1100,7 +1100,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String familyAppsAppNotInstalledKept(String app) {
-    return '$app: not installed, kept';
+    return '$app: not installed, protected';
   }
 
   @override
@@ -1954,4 +1954,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutLicense => 'Free software under the GNU GPL v3, like the projects it builds on.';
+
+  @override
+  String get familyAppsStatusInstalled => 'Installed';
+
+  @override
+  String get familyAppsStatusPartial => 'Partial';
+
+  @override
+  String get familyAppsStatusNotInstalled => 'Not installed';
+
+  @override
+  String get familyAppsStatusAtRisk => 'At risk';
+
+  @override
+  String get familyAppsAtRiskDetail => 'Google TV will remove the unprotected apps here the next time this profile starts. Use Add again to protect them.';
 }

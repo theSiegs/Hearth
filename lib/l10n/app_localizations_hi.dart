@@ -1952,4 +1952,19 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get aboutLicense => 'GNU GPL v3 के तहत मुक्त सॉफ़्टवेयर, उन प्रोजेक्ट्स की तरह जिन पर यह बना है।';
+
+  @override
+  String get familyAppsStatusInstalled => 'इंस्टॉल है';
+
+  @override
+  String get familyAppsStatusPartial => 'आंशिक';
+
+  @override
+  String get familyAppsStatusNotInstalled => 'इंस्टॉल नहीं है';
+
+  @override
+  String get familyAppsStatusAtRisk => 'जोखिम में';
+
+  @override
+  String get familyAppsAtRiskDetail => 'इस प्रोफ़ाइल के अगली बार शुरू होने पर Google TV यहाँ के असुरक्षित ऐप्स हटा देगा। उन्हें सुरक्षित करने के लिए फिर से जोड़ें का उपयोग करें।';
 }

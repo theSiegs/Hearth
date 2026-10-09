@@ -1944,4 +1944,19 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aboutLicense => '기반이 된 프로젝트와 마찬가지로 GNU GPL v3에 따른 자유 소프트웨어입니다.';
+
+  @override
+  String get familyAppsStatusInstalled => '설치됨';
+
+  @override
+  String get familyAppsStatusPartial => '일부';
+
+  @override
+  String get familyAppsStatusNotInstalled => '설치되지 않음';
+
+  @override
+  String get familyAppsStatusAtRisk => '위험';
+
+  @override
+  String get familyAppsAtRiskDetail => '이 프로필이 다음에 시작될 때 Google TV가 보호되지 않은 앱을 삭제합니다. 다시 추가를 사용해 보호하세요.';
 }

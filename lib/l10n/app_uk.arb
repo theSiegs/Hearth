@@ -586,5 +586,10 @@
     "aboutHearthOnGitHub": "Hearth на GitHub",
     "aboutCredits": "Подяки",
     "aboutFlauncherForkCredit": "Форк FLauncher · {author}",
-    "aboutLicense": "Вільне ПЗ за ліцензією GNU GPL v3, як і проєкти, на яких воно базується."
+    "aboutLicense": "Вільне ПЗ за ліцензією GNU GPL v3, як і проєкти, на яких воно базується.",
+    "familyAppsStatusInstalled": "Встановлено",
+    "familyAppsStatusPartial": "Частково",
+    "familyAppsStatusNotInstalled": "Не встановлено",
+    "familyAppsStatusAtRisk": "Під загрозою",
+    "familyAppsAtRiskDetail": "Google TV видалить незахищені застосунки в цьому профілі під час його наступного запуску. Скористайтеся «Додати» ще раз, щоб захистити їх."
 }

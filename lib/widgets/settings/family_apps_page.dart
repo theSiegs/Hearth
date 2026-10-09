@@ -26,6 +26,9 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
   List<Map<dynamic, dynamic>>? _state;
   bool _busy = false;
 
+  /// The profile (user id) whose row has focus: it shows what's on that profile.
+  int? _selectedUser;
+
   @override
   void initState() {
     super.initState();
@@ -253,31 +256,56 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
     for (final r in rows) {
       byUser.putIfAbsent((r["userId"] as int?) ?? -1, () => []).add(r);
     }
-    // One focusable row per profile: the remote moves down through them and the panel scrolls with it, which
-    // plain text below the rows couldn't do. Its apps' states share one line under the name.
+    // One focusable row per profile: the remote moves down through them and the panel scrolls with it. Each shows
+    // its status in a word; the selected one also says what's on it.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final entry in byUser.entries)
-          FocusableSettingsTile(
-            leading: Icon(
-              ((entry.value.first["supervised"] as bool?) ?? false) ? Icons.child_care : Icons.person_outline,
-              color: entry.value.any((r) => (r["installed"] as bool?) ?? false) ? Colors.green : Colors.white54,
-            ),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(_profileLabel(l, entry.value.first), style: textTheme.bodyMedium),
-                const SizedBox(height: 2),
-                Text(
-                  entry.value.map((r) => _appLine(l, r)).join("  ·  "),
-                  style: textTheme.bodySmall?.copyWith(color: Colors.white54),
-                ),
-              ],
-            ),
+          Focus(
+            canRequestFocus: false,
+            skipTraversal: true,
+            onFocusChange: (focused) => setState(() {
+              if (focused) {
+                _selectedUser = entry.key;
+              } else if (_selectedUser == entry.key) {
+                _selectedUser = null;
+              }
+            }),
+            child: _profileRow(context, entry.value, selected: _selectedUser == entry.key),
           ),
       ],
+    );
+  }
+
+  Widget _profileRow(BuildContext context, List<Map<dynamic, dynamic>> apps, {required bool selected}) {
+    final l = AppLocalizations.of(context)!;
+    final textTheme = Theme.of(context).textTheme;
+    final supervised = (apps.first["supervised"] as bool?) ?? false;
+    final (String status, Color? color) = switch (_ProfileStatus.of(apps, supervised: supervised)) {
+      _ProfileStatus.installed => (l.familyAppsStatusInstalled, Colors.green),
+      _ProfileStatus.partial => (l.familyAppsStatusPartial, Colors.amber),
+      _ProfileStatus.atRisk => (l.familyAppsStatusAtRisk, Colors.redAccent),
+      _ProfileStatus.notInstalled => (l.familyAppsStatusNotInstalled, null),
+    };
+    final atRisk = color == Colors.redAccent;
+    return FocusableSettingsTile(
+      leading: Icon(supervised ? Icons.child_care : Icons.person_outline),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(_profileLabel(l, apps.first), style: textTheme.bodyMedium),
+          if (selected) ...[
+            const SizedBox(height: 2),
+            Text(apps.map((r) => _appLine(l, r)).join("  ·  "),
+                style: textTheme.bodySmall?.copyWith(color: Colors.white70)),
+            if (atRisk)
+              Text(l.familyAppsAtRiskDetail, style: textTheme.bodySmall?.copyWith(color: Colors.redAccent)),
+          ],
+        ],
+      ),
+      trailing: Text(status, style: textTheme.bodySmall?.copyWith(color: color)),
     );
   }
 
@@ -306,5 +334,23 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
     if (pkg == "com.leanbitlab.ltvL") return "Hearth";
     if (pkg == "com.thesiegs.hearthtube") return "HearthTube";
     return pkg ?? "?";
+  }
+}
+
+/// One profile's state, in a word: Hearth's apps are all there (protected, on a kids profile), some are, none are, or
+/// a kids profile has one Google TV will remove at its next start (installed but not protected).
+enum _ProfileStatus {
+  installed,
+  partial,
+  notInstalled,
+  atRisk;
+
+  static _ProfileStatus of(List<Map<dynamic, dynamic>> apps, {required bool supervised}) {
+    bool installed(Map<dynamic, dynamic> r) => (r["installed"] as bool?) ?? false;
+    bool kept(Map<dynamic, dynamic> r) => (r["protected"] as bool?) ?? false;
+    if (supervised && apps.any((r) => installed(r) && !kept(r))) return atRisk;
+    final count = apps.where(installed).length;
+    if (count == 0) return notInstalled;
+    return count == apps.length ? _ProfileStatus.installed : partial;
   }
 }

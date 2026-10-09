@@ -1944,4 +1944,19 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get aboutLicense => '元になったプロジェクトと同じく、GNU GPL v3 のフリーソフトウェアです。';
+
+  @override
+  String get familyAppsStatusInstalled => 'インストール済み';
+
+  @override
+  String get familyAppsStatusPartial => '一部のみ';
+
+  @override
+  String get familyAppsStatusNotInstalled => '未インストール';
+
+  @override
+  String get familyAppsStatusAtRisk => '削除の恐れ';
+
+  @override
+  String get familyAppsAtRiskDetail => 'このプロフィールを次に開いたとき、保護されていないアプリは Google TV に削除されます。もう一度「追加」を使って保護してください。';
 }

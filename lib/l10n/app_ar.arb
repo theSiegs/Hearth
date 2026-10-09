@@ -586,5 +586,10 @@
     "aboutHearthOnGitHub": "Hearth على GitHub",
     "aboutCredits": "شكر وتقدير",
     "aboutFlauncherForkCredit": "نسخة متفرعة من FLauncher · {author}",
-    "aboutLicense": "برنامج حر بموجب رخصة GNU GPL v3، مثل المشاريع التي يعتمد عليها."
+    "aboutLicense": "برنامج حر بموجب رخصة GNU GPL v3، مثل المشاريع التي يعتمد عليها.",
+    "familyAppsStatusInstalled": "مثبّت",
+    "familyAppsStatusPartial": "جزئي",
+    "familyAppsStatusNotInstalled": "غير مثبّت",
+    "familyAppsStatusAtRisk": "معرّض للخطر",
+    "familyAppsAtRiskDetail": "سيزيل Google TV التطبيقات غير المحمية هنا عند بدء هذا الملف الشخصي في المرة القادمة. استخدم \"إضافة\" مرة أخرى لحمايتها."
 }

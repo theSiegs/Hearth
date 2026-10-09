@@ -586,5 +586,10 @@
     "aboutHearthOnGitHub": "GitHub의 Hearth",
     "aboutCredits": "크레딧",
     "aboutFlauncherForkCredit": "FLauncher 포크 · {author}",
-    "aboutLicense": "기반이 된 프로젝트와 마찬가지로 GNU GPL v3에 따른 자유 소프트웨어입니다."
+    "aboutLicense": "기반이 된 프로젝트와 마찬가지로 GNU GPL v3에 따른 자유 소프트웨어입니다.",
+    "familyAppsStatusInstalled": "설치됨",
+    "familyAppsStatusPartial": "일부",
+    "familyAppsStatusNotInstalled": "설치되지 않음",
+    "familyAppsStatusAtRisk": "위험",
+    "familyAppsAtRiskDetail": "이 프로필이 다음에 시작될 때 Google TV가 보호되지 않은 앱을 삭제합니다. 다시 추가를 사용해 보호하세요."
 }
