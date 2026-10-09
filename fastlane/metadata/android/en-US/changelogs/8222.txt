@@ -1,0 +1,3 @@
+- Early development pre-release.
+- Settings, Inputs, Notifications and the Home Assistant panel no longer darken the home screen behind them.
+- "Lock my profile" is now "Lock Profile".

@@ -3,6 +3,11 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.11 (pre-release)
+
+- Settings, Inputs, Notifications and the Home Assistant panel no longer darken the home screen behind them.
+- "Lock my profile" is now "Lock Profile".
+
 ## 2026.10.10 (pre-release)
 
 **New signing key** (CN=Hearth). Builds up to 2026.10.09 were signed with the key inherited from the
