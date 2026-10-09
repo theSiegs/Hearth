@@ -68,7 +68,7 @@ class UpdateInfo {
 /// Checks Hearth's GitHub releases for a newer APK and hands it to the system installer.
 class UpdateService extends ChangeNotifier {
   final FLauncherChannel _channel;
-  final GitHubReleases _releases = GitHubReleases("theSiegs/Hearth", userAgent: "Hearth-UpdateChecker");
+  final GitHubReleases _releases;
 
   UpdateStatus _status = UpdateStatus.idle;
   UpdateInfo? _updateInfo;
@@ -79,7 +79,13 @@ class UpdateService extends ChangeNotifier {
   String _currentVersion = "";
   String _packageName = kHearthAppId;
 
-  UpdateService(this._channel) {
+  /// Whether pre-releases count, read at each check (Settings → System → Updates).
+  final bool Function() _includePrereleases;
+
+  /// [releases] is for tests; Hearth's own releases otherwise.
+  UpdateService(this._channel, {bool Function()? includePrereleases, GitHubReleases? releases})
+      : _includePrereleases = includePrereleases ?? (() => false),
+        _releases = releases ?? GitHubReleases("theSiegs/Hearth", userAgent: "Hearth-UpdateChecker") {
     _loadCurrentVersion();
   }
 
@@ -115,7 +121,8 @@ class UpdateService extends ChangeNotifier {
         await _loadCurrentVersion();
       }
 
-      final release = await _releases.latestWithApk(await _channel.getSupportedAbis());
+      final release = await _releases.latestWithApk(await _channel.getSupportedAbis(),
+          includePrereleases: _includePrereleases());
       if (release == null) {
         _status = UpdateStatus.error;
         _error = UpdateError.noApkForDevice;

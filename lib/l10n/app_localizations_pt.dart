@@ -1898,6 +1898,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get updatesAutoUpdateDescription => 'O Hearth verifica diariamente e instala atualizações dos apps que instalou, quando não estão em uso';
 
   @override
+  String get updatesIncludePrereleases => 'Incluir pré-lançamentos';
+
+  @override
+  String get updatesIncludePrereleasesDescription => 'Versões de teste iniciais do Hearth e do HearthTube. Podem estar inacabadas.';
+
+  @override
   String get updatesFooter => 'Instalados a partir das versões do GitHub de cada app. Depois que o Hearth instala ou atualiza um app uma vez, as atualizações dele são instaladas sem perguntar e o app deixa as atualizações com o Hearth.';
 
   @override

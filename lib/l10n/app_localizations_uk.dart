@@ -1912,6 +1912,12 @@ class AppLocalizationsUk extends AppLocalizations {
   String get updatesAutoUpdateDescription => 'Hearth щодня перевіряє й установлює оновлення застосунків, які він установив, коли вони не використовуються';
 
   @override
+  String get updatesIncludePrereleases => 'Включати попередні версії';
+
+  @override
+  String get updatesIncludePrereleasesDescription => 'Ранні тестові збірки Hearth і HearthTube. Вони можуть бути незавершеними.';
+
+  @override
   String get updatesFooter => 'Встановлюються з релізів кожного застосунку на GitHub. Після того як Hearth один раз установить або оновить застосунок, його оновлення ставляться без запитань, а сам застосунок довіряє оновлення Hearth.';
 
   @override

@@ -89,6 +89,9 @@ jobs:
           files: |
             build/app/outputs/flutter-apk/Hearth-*.apk
           draft: false
-          prerelease: ${{ contains(github.event.inputs.tag_name || github.ref_name, '-') }}
+          # Every release is a pre-release while Hearth is in early development (the updater includes pre-releases
+          # by default). Once Hearth leaves early development, bring back the old rule: only tags containing '-'
+          # are pre-releases: contains(github.event.inputs.tag_name || github.ref_name, '-') in an expression.
+          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

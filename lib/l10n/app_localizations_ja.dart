@@ -1888,6 +1888,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get updatesAutoUpdateDescription => 'Hearth は毎日確認し、自身がインストールしたアプリのアップデートを、使われていないときにインストールします';
 
   @override
+  String get updatesIncludePrereleases => 'プレリリースを含める';
+
+  @override
+  String get updatesIncludePrereleasesDescription => 'Hearth と HearthTube の初期のテスト版です。未完成の場合があります。';
+
+  @override
   String get updatesFooter => '各アプリの GitHub リリースからインストールします。Hearth が一度アプリをインストールまたはアップデートすると、以降のアップデートは確認なしでインストールされ、アップデートは Hearth に任されます。';
 
   @override

@@ -86,7 +86,15 @@ class CompanionUpdater {
   final SharedPreferences _sharedPreferences;
   Timer? _timer;
 
-  CompanionUpdater(this._channel, this._sharedPreferences);
+  /// Whether pre-releases count, read at each check: the same "Include pre-releases" switch as Hearth's own updates.
+  final bool Function() _includePrereleases;
+  final GitHubReleases Function(String repo) _releasesFor;
+
+  /// [releasesFor] is for tests; GitHub otherwise.
+  CompanionUpdater(this._channel, this._sharedPreferences,
+      {bool Function()? includePrereleases, GitHubReleases Function(String repo)? releasesFor})
+      : _includePrereleases = includePrereleases ?? (() => false),
+        _releasesFor = releasesFor ?? ((repo) => GitHubReleases(repo, userAgent: _userAgent));
 
   /// Starts the background checks (first a couple of minutes after Hearth starts, so it never slows the start).
   void start() {
@@ -137,10 +145,12 @@ class CompanionUpdater {
     await _channel.installApk(apk.path);
   }
 
-  /// The newest non-draft, non-prerelease release with an APK for this TV, or null.
+  /// The newest non-draft release with an APK for this TV, or null; pre-releases count when the
+  /// "Include pre-releases" switch is on.
   Future<CompanionRelease?> latestRelease(CompanionApp app) async {
-    final releases = GitHubReleases(app.repo, userAgent: _userAgent);
-    final release = await releases.latestWithApk(await _channel.getSupportedAbis(), perPage: 10);
+    final releases = _releasesFor(app.repo);
+    final release = await releases.latestWithApk(await _channel.getSupportedAbis(),
+        perPage: 10, includePrereleases: _includePrereleases());
     if (release == null) return null;
     String versionName = release.name.replaceFirst(RegExp(r"^\D+"), "");
     if (versionName.isEmpty) versionName = release.tagName;
@@ -157,7 +167,7 @@ class CompanionUpdater {
   /// Downloads the release's APK, reporting progress (0–1) when the size is known.
   Future<File> download(CompanionApp app, CompanionRelease release, {void Function(double)? onProgress}) async {
     final apk = await downloadedApkFile("${app.packageName}.apk");
-    await GitHubReleases(app.repo, userAgent: _userAgent)
+    await _releasesFor(app.repo)
         .download(release.apkUrl, apk, size: release.apkSize, onProgress: onProgress);
     return apk;
   }

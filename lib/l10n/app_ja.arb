@@ -571,6 +571,8 @@
     "updatesCheckForUpdates": "アップデートを確認",
     "updatesAutoUpdate": "自動的にアップデート",
     "updatesAutoUpdateDescription": "Hearth は毎日確認し、自身がインストールしたアプリのアップデートを、使われていないときにインストールします",
+    "updatesIncludePrereleases": "プレリリースを含める",
+    "updatesIncludePrereleasesDescription": "Hearth と HearthTube の初期のテスト版です。未完成の場合があります。",
     "updatesFooter": "各アプリの GitHub リリースからインストールします。Hearth が一度アプリをインストールまたはアップデートすると、以降のアップデートは確認なしでインストールされ、アップデートは Hearth に任されます。",
     "updatesChecking": "確認中…",
     "updatesInstall": "インストール",

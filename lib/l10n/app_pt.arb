@@ -571,6 +571,8 @@
     "updatesCheckForUpdates": "Verificar atualizações",
     "updatesAutoUpdate": "Atualizar automaticamente",
     "updatesAutoUpdateDescription": "O Hearth verifica diariamente e instala atualizações dos apps que instalou, quando não estão em uso",
+    "updatesIncludePrereleases": "Incluir pré-lançamentos",
+    "updatesIncludePrereleasesDescription": "Versões de teste iniciais do Hearth e do HearthTube. Podem estar inacabadas.",
     "updatesFooter": "Instalados a partir das versões do GitHub de cada app. Depois que o Hearth instala ou atualiza um app uma vez, as atualizações dele são instaladas sem perguntar e o app deixa as atualizações com o Hearth.",
     "updatesChecking": "Verificando…",
     "updatesInstall": "Instalar",

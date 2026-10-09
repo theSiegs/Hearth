@@ -67,6 +67,7 @@ const String _hiddenWatchNextPackagesKey = "hidden_watch_next_packages";
 const String _startOnBootKey = "start_on_boot";
 // device_ prefix: shared by all profiles, never part of a per-profile layout
 const String _parentPinHashKey = "device_parent_pin_hash";
+const String _updatesIncludePrereleasesKey = "device_updates_include_prereleases";
 // A TMDB key users could once type in; search now uses the one built into the release only
 const String _retiredTmdbApiKeyKey = "tmdb_api_key";
 const String _oldDateTimeDefaultsClearedKey = "device_old_date_time_defaults_cleared";
@@ -312,6 +313,12 @@ class SettingsService extends ChangeNotifier {
   bool get pushToAdultProfiles => _bool(_pushToAdultProfilesKey, true);
 
   Future<void> setPushToAdultProfiles(bool value) => _setBool(_pushToAdultProfilesKey, value);
+
+  /// Whether Hearth's updater offers pre-releases too. On by default while Hearth is in early development: every
+  /// Hearth release is a pre-release for now, so with this off nobody would get updates. For the whole TV.
+  bool get updatesIncludePrereleases => _bool(_updatesIncludePrereleasesKey, true);
+
+  Future<void> setUpdatesIncludePrereleases(bool value) => _setBool(_updatesIncludePrereleasesKey, value);
 
   bool get hasParentPin => _sharedPreferences.getString(_parentPinHashKey) != null;
 

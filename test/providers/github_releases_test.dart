@@ -89,6 +89,13 @@ void main() {
       expect(requests.single.headers.value(HttpHeaders.userAgentHeader), "Hearth-Test");
     });
 
+    test("takes pre-releases only when asked, and never drafts", () async {
+      final releases = GitHubReleases("owner/app", userAgent: "Hearth-Test", api: api);
+
+      expect((await releases.latestWithApk(["arm64-v8a"], includePrereleases: false))!.tagName, "v1");
+      expect((await releases.latestWithApk(["arm64-v8a"], includePrereleases: true))!.tagName, "v2");
+    });
+
     test("downloads into the file with progress, and fails on an HTTP error", () async {
       final releases = GitHubReleases("owner/app", userAgent: "Hearth-Test", api: api);
       final dir = await Directory.systemTemp.createTemp("github_releases_test");
