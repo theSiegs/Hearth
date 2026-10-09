@@ -23,6 +23,7 @@ import 'package:collection/collection.dart';
 import 'package:flauncher/actions.dart';
 import 'package:flauncher/custom_traversal_policy.dart';
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flauncher/providers/wallpaper_service.dart';
@@ -615,12 +616,13 @@ class _FLauncherState extends State<FLauncher> {
             color: Colors.black.withOpacity(0.55),
             borderRadius: BorderRadius.circular(20),
           ),
-          child: const Column(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.nightlight_round, color: Colors.white70, size: 40),
-              SizedBox(height: 12),
-              Text("Nothing to watch right now", style: TextStyle(color: Colors.white, fontSize: 24)),
+              const Icon(Icons.nightlight_round, color: Colors.white70, size: 40),
+              const SizedBox(height: 12),
+              Text(AppLocalizations.of(context)!.homeNothingToWatch,
+                  style: const TextStyle(color: Colors.white, fontSize: 24)),
             ],
           ),
         ),

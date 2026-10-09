@@ -18,6 +18,7 @@
 
 import 'dart:typed_data';
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/models/watch_next_program.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
@@ -66,6 +67,7 @@ class _WatchNextInfoPanelState extends State<WatchNextInfoPanel> {
     final theme = Theme.of(context);
     final app = widget.appsService.applications.where((a) => a.packageName == widget.program.packageName).firstOrNull;
     final appName = (app != null && app.name.isNotEmpty) ? app.name : widget.program.packageName;
+    final localizations = AppLocalizations.of(context)!;
 
     return SidePanelDialog(
       width: 300,
@@ -142,7 +144,7 @@ class _WatchNextInfoPanelState extends State<WatchNextInfoPanel> {
                   Consumer<SettingsService>(
                     builder: (context, settingsService, _) => PanelActionButton(
                       icon: Icons.visibility_off_outlined,
-                      label: 'Remove from Continue Watching',
+                      label: localizations.watchNextInfoRemove,
                       onPressed: () => _safeAction(() async {
                         Navigator.of(context).pop();
                         await settingsService.hideWatchNextProgram(widget.program.id);
@@ -153,7 +155,7 @@ class _WatchNextInfoPanelState extends State<WatchNextInfoPanel> {
                   Consumer<SettingsService>(
                     builder: (context, settingsService, _) => PanelActionButton(
                       icon: Icons.block,
-                      label: 'Hide all from $appName',
+                      label: localizations.watchNextInfoHideAllFrom(appName),
                       onPressed: () => _safeAction(() async {
                         Navigator.of(context).pop();
                         await settingsService.hideWatchNextPackage(widget.program.packageName);
@@ -163,7 +165,7 @@ class _WatchNextInfoPanelState extends State<WatchNextInfoPanel> {
                   ),
                   PanelActionButton(
                     icon: Icons.play_arrow_rounded,
-                    label: 'Play / Resume',
+                    label: localizations.watchNextInfoPlayResume,
                     onPressed: () => _safeAction(() {
                       Navigator.of(context).pop();
                       widget.watchNextService.launch(widget.program);
@@ -171,7 +173,7 @@ class _WatchNextInfoPanelState extends State<WatchNextInfoPanel> {
                   ),
                   PanelActionButton(
                     icon: Icons.open_in_new_rounded,
-                    label: 'Open $appName',
+                    label: localizations.watchNextInfoOpenApp(appName),
                     onPressed: () => _safeAction(() async {
                       Navigator.of(context).pop();
                       if (app != null) {
@@ -183,7 +185,7 @@ class _WatchNextInfoPanelState extends State<WatchNextInfoPanel> {
                   ),
                   PanelActionButton(
                     icon: Icons.info_outline_rounded,
-                    label: 'App Info',
+                    label: localizations.watchNextInfoAppInfo,
                     onPressed: () => _safeAction(() async {
                       Navigator.of(context).pop();
                       if (app != null) {

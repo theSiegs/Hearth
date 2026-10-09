@@ -474,4 +474,75 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get remove => '제거';
+
+  @override
+  String get homeNothingToWatch => '지금 볼 수 있는 항목이 없습니다';
+
+  @override
+  String get errorScreenTitle => '문제가 발생했습니다';
+
+  @override
+  String get appInfoAddToCategory => '카테고리에 추가';
+
+  @override
+  String get appInfoAddToFavorites => '즐겨찾기에 추가';
+
+  @override
+  String get appInfoRemoveFromFavorites => '즐겨찾기에서 제거';
+
+  @override
+  String get appInfoSetCustomBanner => '사용자 지정 배너 설정';
+
+  @override
+  String get appInfoClearCustomBanner => '사용자 지정 배너 지우기';
+
+  @override
+  String appInfoSetBannerFailed(String error) {
+    return '배너를 설정하지 못했습니다: $error';
+  }
+
+  @override
+  String appInfoClearBannerFailed(String error) {
+    return '배너를 지우지 못했습니다: $error';
+  }
+
+  @override
+  String get cwGridAll => '전체';
+
+  @override
+  String get cwRowSeeAll => '모두 보기';
+
+  @override
+  String cwRowInProgress(int count) {
+    return '시청 중 $count개';
+  }
+
+  @override
+  String cwRowHoursMinutesLeft(int hours, int minutes) {
+    return '$hours시간 $minutes분 남음';
+  }
+
+  @override
+  String cwRowMinutesLeft(int minutes) {
+    return '$minutes분 남음';
+  }
+
+  @override
+  String get watchNextInfoRemove => '계속 시청에서 제거';
+
+  @override
+  String watchNextInfoHideAllFrom(String appName) {
+    return '$appName의 항목 모두 숨기기';
+  }
+
+  @override
+  String get watchNextInfoPlayResume => '재생 / 이어보기';
+
+  @override
+  String watchNextInfoOpenApp(String appName) {
+    return '$appName 열기';
+  }
+
+  @override
+  String get watchNextInfoAppInfo => '앱 정보';
 }

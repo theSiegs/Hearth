@@ -21,6 +21,7 @@ import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'dart:async';
 
 import 'package:flauncher/app_image_type.dart';
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/application_info_panel.dart';
@@ -359,16 +360,16 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
           );
         }
         else {
-          return const Padding(
-            padding: EdgeInsets.all(8),
+          return Padding(
+            padding: const EdgeInsets.all(8),
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 0, width: 16),
-                  Text("Loading")
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 0, width: 16),
+                  Text(AppLocalizations.of(context)!.loading)
                 ],
               ),
             ),

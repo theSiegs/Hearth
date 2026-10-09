@@ -107,7 +107,7 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                  children: [
                    PanelActionButton(
                      icon: Icons.add_box_outlined,
-                     label: 'Add to Category',
+                     label: localizations.appInfoAddToCategory,
                      onPressed: () async {
                        Navigator.of(context).pop(ApplicationInfoPanelResult.none);
                        await showDialog(
@@ -136,7 +136,9 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                        final isInFavorites = appsService.isAppInFavorites(widget.application);
                        return PanelActionButton(
                          icon: isInFavorites ? Icons.star : Icons.star_border,
-                         label: isInFavorites ? 'Remove from Fav' : 'Add to Fav',
+                         label: isInFavorites
+                             ? localizations.appInfoRemoveFromFavorites
+                             : localizations.appInfoAddToFavorites,
                          onPressed: () async {
                            await appsService.toggleFavorite(widget.application);
                            if (context.mounted) Navigator.of(context).pop(ApplicationInfoPanelResult.none);
@@ -180,7 +182,7 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                          children: [
                            PanelActionButton(
                              icon: Icons.image_search,
-                             label: 'Set Custom Banner',
+                             label: localizations.appInfoSetCustomBanner,
                              onPressed: () async {
                                final appsService = context.read<AppsService>();
                                try {
@@ -198,7 +200,7 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                                } catch (e) {
                                  if (context.mounted) {
                                    ScaffoldMessenger.of(context).showSnackBar(
-                                     SnackBar(content: Text('Failed to set banner: $e')),
+                                     SnackBar(content: Text(localizations.appInfoSetBannerFailed(e.toString()))),
                                    );
                                  }
                                }
@@ -208,7 +210,7 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                            if (hasCustom)
                              PanelActionButton(
                                icon: Icons.hide_image_outlined,
-                               label: 'Clear Custom Banner',
+                               label: localizations.appInfoClearCustomBanner,
                                onPressed: () async {
                                  final appsService = context.read<AppsService>();
                                  try {
@@ -221,7 +223,7 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                                  } catch (e) {
                                    if (context.mounted) {
                                      ScaffoldMessenger.of(context).showSnackBar(
-                                       SnackBar(content: Text('Failed to clear banner: $e')),
+                                       SnackBar(content: Text(localizations.appInfoClearBannerFailed(e.toString()))),
                                      );
                                    }
                                  }

@@ -270,5 +270,119 @@
     "remove": "Remove",
     "@remove": {
         "description": "Shared button or action label"
+    },
+    "homeNothingToWatch": "Nothing to watch right now",
+    "@homeNothingToWatch": {
+        "description": "Home screen card when the profile can open no apps at all (a kids profile at bedtime, or before apps are approved)"
+    },
+    "errorScreenTitle": "Something went wrong",
+    "@errorScreenTitle": {
+        "description": "Heading shown in place of a part of the screen that failed to draw; the error's own text follows in English"
+    },
+    "appInfoAddToCategory": "Add to Category",
+    "@appInfoAddToCategory": {
+        "description": "App options panel (long press on an app): opens the list of sections to add the app to"
+    },
+    "appInfoAddToFavorites": "Add to Fav",
+    "@appInfoAddToFavorites": {
+        "description": "App options panel: adds the app to Favorites (the dock); Fav is short for Favorites"
+    },
+    "appInfoRemoveFromFavorites": "Remove from Fav",
+    "@appInfoRemoveFromFavorites": {
+        "description": "App options panel: takes the app out of Favorites (the dock); Fav is short for Favorites"
+    },
+    "appInfoSetCustomBanner": "Set Custom Banner",
+    "@appInfoSetCustomBanner": {
+        "description": "App options panel: picks a picture to show on the app's card instead of its own banner"
+    },
+    "appInfoClearCustomBanner": "Clear Custom Banner",
+    "@appInfoClearCustomBanner": {
+        "description": "App options panel: goes back to the app's own banner"
+    },
+    "appInfoSetBannerFailed": "Failed to set banner: {error}",
+    "@appInfoSetBannerFailed": {
+        "description": "Snackbar when the custom banner couldn't be saved; error is the system's reason",
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "appInfoClearBannerFailed": "Failed to clear banner: {error}",
+    "@appInfoClearBannerFailed": {
+        "description": "Snackbar when the custom banner couldn't be removed; error is the system's reason",
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "cwGridAll": "All",
+    "@cwGridAll": {
+        "description": "Continue Watching's See all page: the first pill, which shows programs from every app"
+    },
+    "cwRowSeeAll": "See all",
+    "@cwRowSeeAll": {
+        "description": "Card at the end of the Continue Watching row that opens every program in a grid"
+    },
+    "cwRowInProgress": "{count} in progress",
+    "@cwRowInProgress": {
+        "description": "Under See all at the end of the Continue Watching row: how many programs are part-watched",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "cwRowHoursMinutesLeft": "{hours} h {minutes} min left",
+    "@cwRowHoursMinutesLeft": {
+        "description": "Continue Watching, under the focused program's name: time left to watch, an hour or more",
+        "placeholders": {
+            "hours": {
+                "type": "int"
+            },
+            "minutes": {
+                "type": "int"
+            }
+        }
+    },
+    "cwRowMinutesLeft": "{minutes} min left",
+    "@cwRowMinutesLeft": {
+        "description": "Continue Watching, under the focused program's name: time left to watch, under an hour",
+        "placeholders": {
+            "minutes": {
+                "type": "int"
+            }
+        }
+    },
+    "watchNextInfoRemove": "Remove from Continue Watching",
+    "@watchNextInfoRemove": {
+        "description": "Options panel of a Continue Watching program (long press): hides this program from the row"
+    },
+    "watchNextInfoHideAllFrom": "Hide all from {appName}",
+    "@watchNextInfoHideAllFrom": {
+        "description": "Options panel of a Continue Watching program: hides every program from that app",
+        "placeholders": {
+            "appName": {
+                "type": "String"
+            }
+        }
+    },
+    "watchNextInfoPlayResume": "Play / Resume",
+    "@watchNextInfoPlayResume": {
+        "description": "Options panel of a Continue Watching program: plays it from where it was left"
+    },
+    "watchNextInfoOpenApp": "Open {appName}",
+    "@watchNextInfoOpenApp": {
+        "description": "Options panel of a Continue Watching program: opens the app it's from",
+        "placeholders": {
+            "appName": {
+                "type": "String"
+            }
+        }
+    },
+    "watchNextInfoAppInfo": "App Info",
+    "@watchNextInfoAppInfo": {
+        "description": "Options panel of a Continue Watching program: opens Android's info page for the app it's from"
     }
 }

@@ -1036,6 +1036,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove'**
   String get remove;
+
+  /// Home screen card when the profile can open no apps at all (a kids profile at bedtime, or before apps are approved)
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to watch right now'**
+  String get homeNothingToWatch;
+
+  /// Heading shown in place of a part of the screen that failed to draw; the error's own text follows in English
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get errorScreenTitle;
+
+  /// App options panel (long press on an app): opens the list of sections to add the app to
+  ///
+  /// In en, this message translates to:
+  /// **'Add to Category'**
+  String get appInfoAddToCategory;
+
+  /// App options panel: adds the app to Favorites (the dock); Fav is short for Favorites
+  ///
+  /// In en, this message translates to:
+  /// **'Add to Fav'**
+  String get appInfoAddToFavorites;
+
+  /// App options panel: takes the app out of Favorites (the dock); Fav is short for Favorites
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from Fav'**
+  String get appInfoRemoveFromFavorites;
+
+  /// App options panel: picks a picture to show on the app's card instead of its own banner
+  ///
+  /// In en, this message translates to:
+  /// **'Set Custom Banner'**
+  String get appInfoSetCustomBanner;
+
+  /// App options panel: goes back to the app's own banner
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Custom Banner'**
+  String get appInfoClearCustomBanner;
+
+  /// Snackbar when the custom banner couldn't be saved; error is the system's reason
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to set banner: {error}'**
+  String appInfoSetBannerFailed(String error);
+
+  /// Snackbar when the custom banner couldn't be removed; error is the system's reason
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to clear banner: {error}'**
+  String appInfoClearBannerFailed(String error);
+
+  /// Continue Watching's See all page: the first pill, which shows programs from every app
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get cwGridAll;
+
+  /// Card at the end of the Continue Watching row that opens every program in a grid
+  ///
+  /// In en, this message translates to:
+  /// **'See all'**
+  String get cwRowSeeAll;
+
+  /// Under See all at the end of the Continue Watching row: how many programs are part-watched
+  ///
+  /// In en, this message translates to:
+  /// **'{count} in progress'**
+  String cwRowInProgress(int count);
+
+  /// Continue Watching, under the focused program's name: time left to watch, an hour or more
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} h {minutes} min left'**
+  String cwRowHoursMinutesLeft(int hours, int minutes);
+
+  /// Continue Watching, under the focused program's name: time left to watch, under an hour
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min left'**
+  String cwRowMinutesLeft(int minutes);
+
+  /// Options panel of a Continue Watching program (long press): hides this program from the row
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from Continue Watching'**
+  String get watchNextInfoRemove;
+
+  /// Options panel of a Continue Watching program: hides every program from that app
+  ///
+  /// In en, this message translates to:
+  /// **'Hide all from {appName}'**
+  String watchNextInfoHideAllFrom(String appName);
+
+  /// Options panel of a Continue Watching program: plays it from where it was left
+  ///
+  /// In en, this message translates to:
+  /// **'Play / Resume'**
+  String get watchNextInfoPlayResume;
+
+  /// Options panel of a Continue Watching program: opens the app it's from
+  ///
+  /// In en, this message translates to:
+  /// **'Open {appName}'**
+  String watchNextInfoOpenApp(String appName);
+
+  /// Options panel of a Continue Watching program: opens Android's info page for the app it's from
+  ///
+  /// In en, this message translates to:
+  /// **'App Info'**
+  String get watchNextInfoAppInfo;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

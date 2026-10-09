@@ -474,4 +474,75 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get remove => 'Kaldır';
+
+  @override
+  String get homeNothingToWatch => 'Şu anda izlenecek bir şey yok';
+
+  @override
+  String get errorScreenTitle => 'Bir şeyler ters gitti';
+
+  @override
+  String get appInfoAddToCategory => 'Kategoriye ekle';
+
+  @override
+  String get appInfoAddToFavorites => 'Favorilere ekle';
+
+  @override
+  String get appInfoRemoveFromFavorites => 'Favorilerden kaldır';
+
+  @override
+  String get appInfoSetCustomBanner => 'Özel afiş ayarla';
+
+  @override
+  String get appInfoClearCustomBanner => 'Özel afişi kaldır';
+
+  @override
+  String appInfoSetBannerFailed(String error) {
+    return 'Afiş ayarlanamadı: $error';
+  }
+
+  @override
+  String appInfoClearBannerFailed(String error) {
+    return 'Afiş kaldırılamadı: $error';
+  }
+
+  @override
+  String get cwGridAll => 'Tümü';
+
+  @override
+  String get cwRowSeeAll => 'Tümünü gör';
+
+  @override
+  String cwRowInProgress(int count) {
+    return '$count devam ediyor';
+  }
+
+  @override
+  String cwRowHoursMinutesLeft(int hours, int minutes) {
+    return '$hours sa $minutes dk kaldı';
+  }
+
+  @override
+  String cwRowMinutesLeft(int minutes) {
+    return '$minutes dk kaldı';
+  }
+
+  @override
+  String get watchNextInfoRemove => 'İzlemeye Devam Et\'ten kaldır';
+
+  @override
+  String watchNextInfoHideAllFrom(String appName) {
+    return '$appName içeriklerinin tümünü gizle';
+  }
+
+  @override
+  String get watchNextInfoPlayResume => 'Oynat / Devam et';
+
+  @override
+  String watchNextInfoOpenApp(String appName) {
+    return '$appName uygulamasını aç';
+  }
+
+  @override
+  String get watchNextInfoAppInfo => 'Uygulama bilgisi';
 }

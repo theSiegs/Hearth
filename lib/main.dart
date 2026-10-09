@@ -20,6 +20,7 @@ import 'dart:ui';
 
 import 'package:flauncher/database.dart';
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/home_search.dart';
 import 'package:flauncher/providers/search_service.dart';
 import 'package:flauncher/providers/apps_service.dart';
@@ -72,9 +73,13 @@ Future<void> main() async {
             children: [
               const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 48),
               const SizedBox(height: 12),
-              const Text(
-                'Something went wrong',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              // Drawn where the failed widget was: usually inside the app's localizations, but not always
+              Builder(
+                builder: (context) => Text(
+                  Localizations.of<AppLocalizations>(context, AppLocalizations)?.errorScreenTitle ??
+                      'Something went wrong',
+                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
               const SizedBox(height: 8),
               Text(

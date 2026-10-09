@@ -59,6 +59,7 @@ class _ContinueWatchingGridPageState extends State<ContinueWatchingGridPage> {
     String appName(String pkg) =>
         appsService.applications.where((a) => a.packageName == pkg).firstOrNull?.name ?? pkg;
     final shown = _app == null ? widget.programs : widget.programs.where((p) => p.packageName == _app).toList();
+    final localizations = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: const Color(0xFF121612),
@@ -67,14 +68,14 @@ class _ContinueWatchingGridPageState extends State<ContinueWatchingGridPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(AppLocalizations.of(context)!.continueWatching, style: textTheme.headlineSmall),
+            Text(localizations.continueWatching, style: textTheme.headlineSmall),
             const SizedBox(height: 18),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               clipBehavior: Clip.none,
               child: Row(children: [
                 _AppPill(
-                    label: "All",
+                    label: localizations.cwGridAll,
                     count: widget.programs.length,
                     selected: _app == null,
                     onSelected: () => setState(() => _app = null)),

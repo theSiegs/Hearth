@@ -474,4 +474,75 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get remove => '移除';
+
+  @override
+  String get homeNothingToWatch => '现在没有可看的内容';
+
+  @override
+  String get errorScreenTitle => '出了点问题';
+
+  @override
+  String get appInfoAddToCategory => '添加到类别';
+
+  @override
+  String get appInfoAddToFavorites => '添加到收藏';
+
+  @override
+  String get appInfoRemoveFromFavorites => '从收藏中移除';
+
+  @override
+  String get appInfoSetCustomBanner => '设置自定义横幅';
+
+  @override
+  String get appInfoClearCustomBanner => '清除自定义横幅';
+
+  @override
+  String appInfoSetBannerFailed(String error) {
+    return '无法设置横幅：$error';
+  }
+
+  @override
+  String appInfoClearBannerFailed(String error) {
+    return '无法清除横幅：$error';
+  }
+
+  @override
+  String get cwGridAll => '全部';
+
+  @override
+  String get cwRowSeeAll => '查看全部';
+
+  @override
+  String cwRowInProgress(int count) {
+    return '$count 个观看中';
+  }
+
+  @override
+  String cwRowHoursMinutesLeft(int hours, int minutes) {
+    return '剩余 $hours 小时 $minutes 分钟';
+  }
+
+  @override
+  String cwRowMinutesLeft(int minutes) {
+    return '剩余 $minutes 分钟';
+  }
+
+  @override
+  String get watchNextInfoRemove => '从“继续观看”中移除';
+
+  @override
+  String watchNextInfoHideAllFrom(String appName) {
+    return '隐藏来自 $appName 的全部内容';
+  }
+
+  @override
+  String get watchNextInfoPlayResume => '播放 / 继续';
+
+  @override
+  String watchNextInfoOpenApp(String appName) {
+    return '打开 $appName';
+  }
+
+  @override
+  String get watchNextInfoAppInfo => '应用信息';
 }
