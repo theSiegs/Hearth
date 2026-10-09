@@ -1,3 +1,5 @@
+import 'package:flauncher/l10n/app_localizations_de.dart';
+import 'package:flauncher/l10n/app_localizations_en.dart';
 import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -23,5 +25,11 @@ void main() {
     final hearthTube = companionApps.singleWhere((app) => app.packageName == "com.thesiegs.hearthtube");
     expect(hearthTube.repo, "theSiegs/HearthTube");
     expect(hearthTube.versionManifest, "hearthtube.json");
+  });
+
+  test("HearthTube's description is translated", () {
+    final hearthTube = companionApps.singleWhere((app) => app.packageName == "com.thesiegs.hearthtube");
+    expect(hearthTube.localizedDescription(AppLocalizationsEn()), hearthTube.description);
+    expect(hearthTube.localizedDescription(AppLocalizationsDe()), "YouTube für Hearth; folgt Ihrem Hearth-Profil");
   });
 }

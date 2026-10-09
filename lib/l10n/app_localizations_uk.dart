@@ -746,4 +746,49 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get searchKindSeries => 'Серіал';
+
+  @override
+  String get gradientNamePitchBlack => 'Вугільно-чорний';
+
+  @override
+  String get gradientNameGreatWhale => 'Великий кит';
+
+  @override
+  String get gradientNameViciousStance => 'Грізна стійка';
+
+  @override
+  String get gradientNameTeenNotebook => 'Підлітковий блокнот';
+
+  @override
+  String get gradientNameOldHat => 'Старий капелюх';
+
+  @override
+  String get gradientNameBurningSpring => 'Палаюча весна';
+
+  @override
+  String get gradientNameDesertHump => 'Пустельний пагорб';
+
+  @override
+  String get gradientNameFarawayRiver => 'Далека річка';
+
+  @override
+  String get gradientNameSaintPetersburg => 'Санкт-Петербург';
+
+  @override
+  String get gradientNameAfricanField => 'Африканське поле';
+
+  @override
+  String get gradientNameGrassShampoo => 'Трав\'яний шампунь';
+
+  @override
+  String get updateErrorNoApk => 'У жодному випуску немає APK для цього пристрою';
+
+  @override
+  String get updateErrorCheckFailed => 'Не вдалося перевірити оновлення';
+
+  @override
+  String get updateErrorDownloadFailed => 'Не вдалося завантажити оновлення';
+
+  @override
+  String get serviceHearthTubeDescription => 'YouTube для Hearth; відповідає вашому профілю Hearth';
 }

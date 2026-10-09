@@ -22,9 +22,29 @@ import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/github_releases.dart';
 
 enum UpdateStatus { idle, checking, upToDate, available, downloading, readyToInstall, error }
+
+/// Why the last check or download failed.
+enum UpdateError {
+  /// No release has an APK built for this device.
+  noApkForDevice,
+
+  /// GitHub couldn't be asked (no connection, or it answered with an error).
+  checkFailed,
+
+  /// The APK couldn't be downloaded.
+  downloadFailed;
+
+  /// What to tell the person, in the app's language.
+  String message(AppLocalizations localizations) => switch (this) {
+        noApkForDevice => localizations.updateErrorNoApk,
+        checkFailed => localizations.updateErrorCheckFailed,
+        downloadFailed => localizations.updateErrorDownloadFailed,
+      };
+}
 
 class UpdateInfo {
   final String tagName;
@@ -48,6 +68,7 @@ class UpdateService extends ChangeNotifier {
   UpdateStatus _status = UpdateStatus.idle;
   UpdateInfo? _updateInfo;
   double _downloadProgress = 0;
+  UpdateError? _error;
   String? _errorMessage;
   String? _downloadedApkPath;
   String _currentVersion = "";
@@ -59,6 +80,11 @@ class UpdateService extends ChangeNotifier {
   UpdateStatus get status => _status;
   UpdateInfo? get updateInfo => _updateInfo;
   double get downloadProgress => _downloadProgress;
+
+  /// Why the status is [UpdateStatus.error]; [UpdateError.message] says it in the app's language.
+  UpdateError? get error => _error;
+
+  /// The failure in English, or the exception's own text.
   String? get errorMessage => _errorMessage;
   String get currentVersion => _currentVersion;
 
@@ -73,6 +99,7 @@ class UpdateService extends ChangeNotifier {
 
   Future<void> checkForUpdate() async {
     _status = UpdateStatus.checking;
+    _error = null;
     _errorMessage = null;
     notifyListeners();
 
@@ -84,6 +111,7 @@ class UpdateService extends ChangeNotifier {
       final release = await _releases.latestWithApk(await _channel.getSupportedAbis());
       if (release == null) {
         _status = UpdateStatus.error;
+        _error = UpdateError.noApkForDevice;
         _errorMessage = "No release has an APK for this device";
         notifyListeners();
         return;
@@ -106,6 +134,7 @@ class UpdateService extends ChangeNotifier {
     } catch (e, stack) {
       developer.log("Update check failed", name: "UpdateService", error: e, stackTrace: stack);
       _status = UpdateStatus.error;
+      _error = UpdateError.checkFailed;
       _errorMessage = e.toString();
       notifyListeners();
     }
@@ -134,6 +163,7 @@ class UpdateService extends ChangeNotifier {
     } catch (e, stack) {
       developer.log("Update download failed", name: "UpdateService", error: e, stackTrace: stack);
       _status = UpdateStatus.error;
+      _error = UpdateError.downloadFailed;
       _errorMessage = e.toString();
       notifyListeners();
     }

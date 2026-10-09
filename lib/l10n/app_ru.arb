@@ -244,5 +244,20 @@
     "searchAskGoogle": "Спросить Google",
     "searchQuoted": "«{query}»",
     "searchKindFilm": "Фильм",
-    "searchKindSeries": "Сериал"
+    "searchKindSeries": "Сериал",
+    "gradientNamePitchBlack": "Угольно-чёрный",
+    "gradientNameGreatWhale": "Большой кит",
+    "gradientNameViciousStance": "Грозная стойка",
+    "gradientNameTeenNotebook": "Подростковый блокнот",
+    "gradientNameOldHat": "Старая шляпа",
+    "gradientNameBurningSpring": "Пылающая весна",
+    "gradientNameDesertHump": "Пустынный холм",
+    "gradientNameFarawayRiver": "Далёкая река",
+    "gradientNameSaintPetersburg": "Санкт-Петербург",
+    "gradientNameAfricanField": "Африканское поле",
+    "gradientNameGrassShampoo": "Травяной шампунь",
+    "updateErrorNoApk": "Ни в одном выпуске нет APK для этого устройства",
+    "updateErrorCheckFailed": "Не удалось проверить обновления",
+    "updateErrorDownloadFailed": "Не удалось загрузить обновление",
+    "serviceHearthTubeDescription": "YouTube для Hearth; следует вашему профилю Hearth"
 }

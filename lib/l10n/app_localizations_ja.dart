@@ -740,4 +740,49 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get searchKindSeries => 'シリーズ';
+
+  @override
+  String get gradientNamePitchBlack => '漆黒';
+
+  @override
+  String get gradientNameGreatWhale => '大きなクジラ';
+
+  @override
+  String get gradientNameViciousStance => '凶暴な構え';
+
+  @override
+  String get gradientNameTeenNotebook => 'ティーンのノート';
+
+  @override
+  String get gradientNameOldHat => '古い帽子';
+
+  @override
+  String get gradientNameBurningSpring => '燃える春';
+
+  @override
+  String get gradientNameDesertHump => '砂漠の丘';
+
+  @override
+  String get gradientNameFarawayRiver => '遠い川';
+
+  @override
+  String get gradientNameSaintPetersburg => 'サンクトペテルブルク';
+
+  @override
+  String get gradientNameAfricanField => 'アフリカの草原';
+
+  @override
+  String get gradientNameGrassShampoo => '草のシャンプー';
+
+  @override
+  String get updateErrorNoApk => 'このデバイス用の APK があるリリースはありません';
+
+  @override
+  String get updateErrorCheckFailed => 'アップデートを確認できませんでした';
+
+  @override
+  String get updateErrorDownloadFailed => 'アップデートをダウンロードできませんでした';
+
+  @override
+  String get serviceHearthTubeDescription => 'Hearth 用の YouTube。Hearth のプロフィールに連動します';
 }

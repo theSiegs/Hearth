@@ -244,5 +244,20 @@
     "searchAskGoogle": "问 Google",
     "searchQuoted": "“{query}”",
     "searchKindFilm": "电影",
-    "searchKindSeries": "剧集"
+    "searchKindSeries": "剧集",
+    "gradientNamePitchBlack": "漆黑",
+    "gradientNameGreatWhale": "巨鲸",
+    "gradientNameViciousStance": "凶猛姿态",
+    "gradientNameTeenNotebook": "少女笔记本",
+    "gradientNameOldHat": "旧帽子",
+    "gradientNameBurningSpring": "燃烧之春",
+    "gradientNameDesertHump": "沙漠驼峰",
+    "gradientNameFarawayRiver": "远方河流",
+    "gradientNameSaintPetersburg": "圣彼得堡",
+    "gradientNameAfricanField": "非洲原野",
+    "gradientNameGrassShampoo": "青草洗发水",
+    "updateErrorNoApk": "没有适用于此设备的 APK 版本",
+    "updateErrorCheckFailed": "无法检查更新",
+    "updateErrorDownloadFailed": "无法下载更新",
+    "serviceHearthTubeDescription": "适用于 Hearth 的 YouTube；跟随你的 Hearth 个人资料"
 }

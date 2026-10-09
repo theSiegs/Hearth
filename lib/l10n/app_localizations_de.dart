@@ -742,4 +742,49 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get searchKindSeries => 'Serie';
+
+  @override
+  String get gradientNamePitchBlack => 'Pechschwarz';
+
+  @override
+  String get gradientNameGreatWhale => 'Großer Wal';
+
+  @override
+  String get gradientNameViciousStance => 'Finstere Haltung';
+
+  @override
+  String get gradientNameTeenNotebook => 'Teenie-Notizbuch';
+
+  @override
+  String get gradientNameOldHat => 'Alter Hut';
+
+  @override
+  String get gradientNameBurningSpring => 'Brennender Frühling';
+
+  @override
+  String get gradientNameDesertHump => 'Wüstenhügel';
+
+  @override
+  String get gradientNameFarawayRiver => 'Ferner Fluss';
+
+  @override
+  String get gradientNameSaintPetersburg => 'Sankt Petersburg';
+
+  @override
+  String get gradientNameAfricanField => 'Afrikanisches Feld';
+
+  @override
+  String get gradientNameGrassShampoo => 'Gras-Shampoo';
+
+  @override
+  String get updateErrorNoApk => 'Keine Version hat eine APK für dieses Gerät';
+
+  @override
+  String get updateErrorCheckFailed => 'Suche nach Updates fehlgeschlagen';
+
+  @override
+  String get updateErrorDownloadFailed => 'Update konnte nicht heruntergeladen werden';
+
+  @override
+  String get serviceHearthTubeDescription => 'YouTube für Hearth; folgt Ihrem Hearth-Profil';
 }

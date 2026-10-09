@@ -740,4 +740,49 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get searchKindSeries => 'Dizi';
+
+  @override
+  String get gradientNamePitchBlack => 'Simsiyah';
+
+  @override
+  String get gradientNameGreatWhale => 'Büyük Balina';
+
+  @override
+  String get gradientNameViciousStance => 'Sert Duruş';
+
+  @override
+  String get gradientNameTeenNotebook => 'Genç Defteri';
+
+  @override
+  String get gradientNameOldHat => 'Eski Şapka';
+
+  @override
+  String get gradientNameBurningSpring => 'Yanan Bahar';
+
+  @override
+  String get gradientNameDesertHump => 'Çöl Tepesi';
+
+  @override
+  String get gradientNameFarawayRiver => 'Uzak Nehir';
+
+  @override
+  String get gradientNameSaintPetersburg => 'Sankt-Peterburg';
+
+  @override
+  String get gradientNameAfricanField => 'Afrika Tarlası';
+
+  @override
+  String get gradientNameGrassShampoo => 'Çim Şampuanı';
+
+  @override
+  String get updateErrorNoApk => 'Hiçbir sürümde bu cihaz için APK yok';
+
+  @override
+  String get updateErrorCheckFailed => 'Güncellemeler denetlenemedi';
+
+  @override
+  String get updateErrorDownloadFailed => 'Güncelleme indirilemedi';
+
+  @override
+  String get serviceHearthTubeDescription => 'Hearth için YouTube; Hearth profilinizi takip eder';
 }

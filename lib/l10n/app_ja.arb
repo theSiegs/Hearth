@@ -244,5 +244,20 @@
     "searchAskGoogle": "Google に聞く",
     "searchQuoted": "「{query}」",
     "searchKindFilm": "映画",
-    "searchKindSeries": "シリーズ"
+    "searchKindSeries": "シリーズ",
+    "gradientNamePitchBlack": "漆黒",
+    "gradientNameGreatWhale": "大きなクジラ",
+    "gradientNameViciousStance": "凶暴な構え",
+    "gradientNameTeenNotebook": "ティーンのノート",
+    "gradientNameOldHat": "古い帽子",
+    "gradientNameBurningSpring": "燃える春",
+    "gradientNameDesertHump": "砂漠の丘",
+    "gradientNameFarawayRiver": "遠い川",
+    "gradientNameSaintPetersburg": "サンクトペテルブルク",
+    "gradientNameAfricanField": "アフリカの草原",
+    "gradientNameGrassShampoo": "草のシャンプー",
+    "updateErrorNoApk": "このデバイス用の APK があるリリースはありません",
+    "updateErrorCheckFailed": "アップデートを確認できませんでした",
+    "updateErrorDownloadFailed": "アップデートをダウンロードできませんでした",
+    "serviceHearthTubeDescription": "Hearth 用の YouTube。Hearth のプロフィールに連動します"
 }
