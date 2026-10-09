@@ -1550,4 +1550,199 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dataUsageMonthly => '每月';
+
+  @override
+  String cwAppsBlockedHeading(int count) {
+    return '已从「继续观看」屏蔽（$count）';
+  }
+
+  @override
+  String get cwAppsBlockedFromContinueWatching => '已从「继续观看」屏蔽';
+
+  @override
+  String get cwAppsUnblock => '取消屏蔽';
+
+  @override
+  String get cwAppsUnblockAllApps => '取消屏蔽所有应用';
+
+  @override
+  String get cwAppsNoBlockedApps => '没有屏蔽的应用';
+
+  @override
+  String get cwAppsNoBlockedAppsMessage => '所有支持的应用都可以在「继续观看」中显示内容。';
+
+  @override
+  String get cwAppsWithContinueWatching => '支持「继续观看」的应用';
+
+  @override
+  String get cwAppsWithContinueWatchingHint => '目前在主屏幕上提供 Watch Next 内容的应用';
+
+  @override
+  String get cwAppsNoActiveApps => '目前没有应用提供「继续观看」内容。\n支持的应用（如 SmartTube 或流媒体服务）添加内容后，会显示在这里。';
+
+  @override
+  String cwAppsActiveItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个活跃项目',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwAppsAllInstalledApps => '所有已安装的应用';
+
+  @override
+  String get cwAppsAllInstalledAppsHint => '关闭即可阻止应用向「继续观看」添加内容';
+
+  @override
+  String get cwAppsBlocked => '已屏蔽';
+
+  @override
+  String get cwAppsAllowed => '已允许';
+
+  @override
+  String cwCardSizeOption(int height, String size) {
+    return '$height dp • $size';
+  }
+
+  @override
+  String cwCardSizeDimensions(int width, int height) {
+    return '$width × $height dp';
+  }
+
+  @override
+  String cwCardSizeDp(int height) {
+    return '$height dp';
+  }
+
+  @override
+  String cwCardSizeDpNamed(int height, String size) {
+    return '$height dp（$size）';
+  }
+
+  @override
+  String get cwCardSizeExtraSmall => '特小';
+
+  @override
+  String get cwCardSizeVerySmall => '很小';
+
+  @override
+  String get cwCardSizeSmall => '小';
+
+  @override
+  String get cwCardSizeCompact => '紧凑';
+
+  @override
+  String get cwCardSizeMediumSmall => '中小';
+
+  @override
+  String get cwCardSizeMedium => '中';
+
+  @override
+  String get cwCardSizeStandardDefault => '标准（默认）';
+
+  @override
+  String get cwCardSizeStandard => '标准';
+
+  @override
+  String get cwCardSizeMediumLarge => '中大';
+
+  @override
+  String get cwCardSizeLarge => '大';
+
+  @override
+  String get cwCardSizeVeryLarge => '很大';
+
+  @override
+  String get cwCardSizeExtraLarge => '特大';
+
+  @override
+  String get cwCardSizeHuge => '超大';
+
+  @override
+  String cwMaxItemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 项',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cwMaxItemsUpTo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '最多显示 $count 个最近项目',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cwMaxItemsDefaultNote(String description) {
+    return '$description • 默认';
+  }
+
+  @override
+  String get cwUnlimited => '无限制';
+
+  @override
+  String get cwMaxItemsAll => '显示所有可用项目';
+
+  @override
+  String cwMaxItemsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 项',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwPlaybackProgressBar => '播放进度条';
+
+  @override
+  String get cwPlaybackPercentage => '播放百分比';
+
+  @override
+  String get cwEpisodeDetails => '剧集和视频详情';
+
+  @override
+  String cwBlockedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已屏蔽 $count 个',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwManage => '管理';
+
+  @override
+  String get cwRestoreHiddenPrograms => '恢复已隐藏的节目';
+
+  @override
+  String cwHiddenCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已隐藏 $count 个',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwHiddenProgramsRestored => '已恢复所有隐藏的节目';
+
+  @override
+  String get cwWatchNextAdbTitle => 'Watch Next 访问权限（需要 ADB）';
+
+  @override
+  String get cwWatchNextAdbMessage => 'Android TV 要求启动器拥有 READ_WRITE_WATCH_NEXT_PROGRAMS 权限，才能读取并显示已安装应用的「继续观看」行。\n\n要授予此权限，请通过 ADB 连接电视并运行：';
 }

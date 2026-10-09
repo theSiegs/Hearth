@@ -29,34 +29,36 @@ class ContinueWatchingCardSizePage extends StatelessWidget {
 
   const ContinueWatchingCardSizePage({super.key});
 
-  static const List<(int, String, String)> cardSizePresets = [
-    (80, '80 dp • Extra Small', '142 × 80 dp'),
-    (90, '90 dp • Very Small', '160 × 90 dp'),
-    (100, '100 dp • Small', '178 × 100 dp'),
-    (110, '110 dp • Compact', '196 × 110 dp'),
-    (120, '120 dp • Medium Small', '213 × 120 dp'),
-    (130, '130 dp • Medium', '231 × 130 dp'),
-    (135, '135 dp • Standard (Default)', '240 × 135 dp'),
-    (140, '140 dp • Medium Large', '249 × 140 dp'),
-    (150, '150 dp • Large', '267 × 150 dp'),
-    (160, '160 dp • Very Large', '284 × 160 dp'),
-    (170, '170 dp • Extra Large', '302 × 170 dp'),
-    (180, '180 dp • Huge', '320 × 180 dp'),
-  ];
+  /// The heights to pick from, each with its card's width and its size's name in the current language.
+  static List<(int height, int width, String name)> cardSizePresets(AppLocalizations localizations) => [
+        (80, 142, localizations.cwCardSizeExtraSmall),
+        (90, 160, localizations.cwCardSizeVerySmall),
+        (100, 178, localizations.cwCardSizeSmall),
+        (110, 196, localizations.cwCardSizeCompact),
+        (120, 213, localizations.cwCardSizeMediumSmall),
+        (130, 231, localizations.cwCardSizeMedium),
+        (135, 240, localizations.cwCardSizeStandardDefault),
+        (140, 249, localizations.cwCardSizeMediumLarge),
+        (150, 267, localizations.cwCardSizeLarge),
+        (160, 284, localizations.cwCardSizeVeryLarge),
+        (170, 302, localizations.cwCardSizeExtraLarge),
+        (180, 320, localizations.cwCardSizeHuge),
+      ];
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
     return Selector<SettingsService, int>(
       selector: (_, settingsService) => settingsService.continueWatchingCardHeight,
       builder: (context, currentHeight, _) {
         final settingsService = context.read<SettingsService>();
         return SettingsPage(
-          title: AppLocalizations.of(context)!.cardSizeTitle,
+          title: localizations.cardSizeTitle,
           children: [
-            for (final (height, title, subtitle) in cardSizePresets)
+            for (final (height, width, name) in cardSizePresets(localizations))
               SettingsChoiceTile<int>(
-                title: title,
-                subtitle: subtitle,
+                title: localizations.cwCardSizeOption(height, name),
+                subtitle: localizations.cwCardSizeDimensions(width, height),
                 value: height,
                 groupValue: currentHeight,
                 onChanged: (height) => settingsService.setContinueWatchingCardHeight(height),

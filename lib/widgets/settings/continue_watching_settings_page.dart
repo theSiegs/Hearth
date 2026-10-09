@@ -68,11 +68,17 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
 
     final cardHeight = settingsService.continueWatchingCardHeight;
     // The heights of the sizes that had names before a height could be picked
-    final sizeName = const {112: 'Compact', 135: 'Standard', 157: 'Large'}[cardHeight];
-    final sizeLabel = sizeName == null ? '$cardHeight dp' : '$cardHeight dp ($sizeName)';
+    final sizeName = {
+      112: localizations.cwCardSizeCompact,
+      135: localizations.cwCardSizeStandard,
+      157: localizations.cwCardSizeLarge,
+    }[cardHeight];
+    final sizeLabel = sizeName == null
+        ? localizations.cwCardSizeDp(cardHeight)
+        : localizations.cwCardSizeDpNamed(cardHeight, sizeName);
 
     final maxItems = settingsService.continueWatchingMaxItems;
-    final maxItemsLabel = maxItems <= 0 ? 'Unlimited' : '$maxItems items';
+    final maxItemsLabel = maxItems <= 0 ? localizations.cwUnlimited : localizations.cwMaxItemsLabel(maxItems);
 
     final blockedCount = settingsService.hiddenWatchNextPackages.length;
     final hiddenProgramsCount = settingsService.hiddenWatchNextProgramIds.length;
@@ -133,26 +139,26 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
           RoundedSwitchListTile(
             value: settingsService.continueWatchingShowProgress,
             onChanged: (v) => settingsService.setContinueWatchingShowProgress(v),
-            title: Text('Playback Progress Bar', style: Theme.of(context).textTheme.bodyMedium),
+            title: Text(localizations.cwPlaybackProgressBar, style: Theme.of(context).textTheme.bodyMedium),
             secondary: const Icon(Icons.linear_scale_outlined),
           ),
           RoundedSwitchListTile(
             value: settingsService.continueWatchingShowPercentage,
             onChanged: (v) => settingsService.setContinueWatchingShowPercentage(v),
-            title: Text('Playback Percentage', style: Theme.of(context).textTheme.bodyMedium),
+            title: Text(localizations.cwPlaybackPercentage, style: Theme.of(context).textTheme.bodyMedium),
             secondary: const Icon(Icons.percent_outlined),
           ),
           RoundedSwitchListTile(
             value: settingsService.continueWatchingShowDescription,
             onChanged: (v) => settingsService.setContinueWatchingShowDescription(v),
-            title: Text('Episode & Video Details', style: Theme.of(context).textTheme.bodyMedium),
+            title: Text(localizations.cwEpisodeDetails, style: Theme.of(context).textTheme.bodyMedium),
             secondary: const Icon(Icons.subtitles_outlined),
           ),
           FocusableSettingsTile(
             leading: const Icon(Icons.apps_outlined),
-            title: Text('Apps with Continue Watching', style: Theme.of(context).textTheme.bodyMedium),
+            title: Text(localizations.cwAppsWithContinueWatching, style: Theme.of(context).textTheme.bodyMedium),
             trailing: Text(
-              blockedCount > 0 ? '$blockedCount blocked' : 'Manage',
+              blockedCount > 0 ? localizations.cwBlockedCount(blockedCount) : localizations.cwManage,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: blockedCount > 0 ? Colors.orange : Colors.grey,
                   ),
@@ -163,11 +169,11 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
             FocusableSettingsTile(
               leading: const Icon(Icons.restore, color: Colors.orangeAccent),
               title: Text(
-                'Restore Hidden Programs',
+                localizations.cwRestoreHiddenPrograms,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.orangeAccent),
               ),
               trailing: Text(
-                '$hiddenProgramsCount hidden',
+                localizations.cwHiddenCount(hiddenProgramsCount),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orangeAccent),
               ),
               onPressed: () async {
@@ -175,7 +181,7 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
                 await watchNextService.refresh();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('All hidden programs restored')),
+                    SnackBar(content: Text(localizations.cwHiddenProgramsRestored)),
                   );
                 }
               },
@@ -216,13 +222,12 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
     final packageInfo = await PackageInfo.fromPlatform();
     final packageName = packageInfo.packageName;
     if (!context.mounted) return;
+    final localizations = AppLocalizations.of(context)!;
 
     showAdbCommandDialog(
       context,
-      title: 'Watch Next Access (ADB Required)',
-      message:
-          'Android TV requires the READ_WRITE_WATCH_NEXT_PROGRAMS permission for launchers to read and display Continue Watching rows from installed apps.\n\n'
-          'To grant this permission, connect your TV via ADB and run:',
+      title: localizations.cwWatchNextAdbTitle,
+      message: localizations.cwWatchNextAdbMessage,
       command: 'adb shell pm grant $packageName com.android.providers.tv.permission.READ_WRITE_WATCH_NEXT_PROGRAMS',
     );
   }

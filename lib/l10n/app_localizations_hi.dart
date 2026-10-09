@@ -1554,4 +1554,203 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get dataUsageMonthly => 'मासिक';
+
+  @override
+  String cwAppsBlockedHeading(int count) {
+    return '\'देखना जारी रखें\' से अवरुद्ध ($count)';
+  }
+
+  @override
+  String get cwAppsBlockedFromContinueWatching => '\'देखना जारी रखें\' से अवरुद्ध';
+
+  @override
+  String get cwAppsUnblock => 'अनब्लॉक करें';
+
+  @override
+  String get cwAppsUnblockAllApps => 'सभी ऐप्स अनब्लॉक करें';
+
+  @override
+  String get cwAppsNoBlockedApps => 'कोई अवरुद्ध ऐप नहीं';
+
+  @override
+  String get cwAppsNoBlockedAppsMessage => 'सभी समर्थित ऐप्स \'देखना जारी रखें\' में आइटम दिखा सकते हैं।';
+
+  @override
+  String get cwAppsWithContinueWatching => '\'देखना जारी रखें\' वाले ऐप्स';
+
+  @override
+  String get cwAppsWithContinueWatchingHint => 'वे ऐप्स जो अभी आपकी होम स्क्रीन पर Watch Next आइटम दे रहे हैं';
+
+  @override
+  String get cwAppsNoActiveApps => 'अभी कोई ऐप \'देखना जारी रखें\' आइटम नहीं दे रहा है।\nजब समर्थित ऐप्स (जैसे SmartTube या स्ट्रीमिंग सेवाएं) आइटम जोड़ेंगे, वे यहां दिखेंगे।';
+
+  @override
+  String cwAppsActiveItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count सक्रिय आइटम',
+      one: '1 सक्रिय आइटम',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwAppsAllInstalledApps => 'सभी इंस्टॉल किए गए ऐप्स';
+
+  @override
+  String get cwAppsAllInstalledAppsHint => 'किसी ऐप को \'देखना जारी रखें\' में आइटम जोड़ने से रोकने के लिए बंद करें';
+
+  @override
+  String get cwAppsBlocked => 'अवरुद्ध';
+
+  @override
+  String get cwAppsAllowed => 'अनुमति है';
+
+  @override
+  String cwCardSizeOption(int height, String size) {
+    return '$height dp • $size';
+  }
+
+  @override
+  String cwCardSizeDimensions(int width, int height) {
+    return '$width × $height dp';
+  }
+
+  @override
+  String cwCardSizeDp(int height) {
+    return '$height dp';
+  }
+
+  @override
+  String cwCardSizeDpNamed(int height, String size) {
+    return '$height dp ($size)';
+  }
+
+  @override
+  String get cwCardSizeExtraSmall => 'अति छोटा';
+
+  @override
+  String get cwCardSizeVerySmall => 'बहुत छोटा';
+
+  @override
+  String get cwCardSizeSmall => 'छोटा';
+
+  @override
+  String get cwCardSizeCompact => 'कॉम्पैक्ट';
+
+  @override
+  String get cwCardSizeMediumSmall => 'मध्यम छोटा';
+
+  @override
+  String get cwCardSizeMedium => 'मध्यम';
+
+  @override
+  String get cwCardSizeStandardDefault => 'मानक (डिफ़ॉल्ट)';
+
+  @override
+  String get cwCardSizeStandard => 'मानक';
+
+  @override
+  String get cwCardSizeMediumLarge => 'मध्यम बड़ा';
+
+  @override
+  String get cwCardSizeLarge => 'बड़ा';
+
+  @override
+  String get cwCardSizeVeryLarge => 'बहुत बड़ा';
+
+  @override
+  String get cwCardSizeExtraLarge => 'अति बड़ा';
+
+  @override
+  String get cwCardSizeHuge => 'विशाल';
+
+  @override
+  String cwMaxItemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count आइटम',
+      one: '1 आइटम',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cwMaxItemsUpTo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'अधिकतम $count हाल के आइटम दिखाएं',
+      one: 'अधिकतम 1 हाल का आइटम दिखाएं',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cwMaxItemsDefaultNote(String description) {
+    return '$description • डिफ़ॉल्ट';
+  }
+
+  @override
+  String get cwUnlimited => 'असीमित';
+
+  @override
+  String get cwMaxItemsAll => 'सभी उपलब्ध आइटम दिखाएं';
+
+  @override
+  String cwMaxItemsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count आइटम',
+      one: '1 आइटम',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwPlaybackProgressBar => 'प्लेबैक प्रोग्रेस बार';
+
+  @override
+  String get cwPlaybackPercentage => 'प्लेबैक प्रतिशत';
+
+  @override
+  String get cwEpisodeDetails => 'एपिसोड और वीडियो विवरण';
+
+  @override
+  String cwBlockedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count अवरुद्ध',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwManage => 'प्रबंधित करें';
+
+  @override
+  String get cwRestoreHiddenPrograms => 'छिपे हुए कार्यक्रम वापस लाएं';
+
+  @override
+  String cwHiddenCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count छिपे हुए',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwHiddenProgramsRestored => 'सभी छिपे हुए कार्यक्रम वापस आ गए';
+
+  @override
+  String get cwWatchNextAdbTitle => 'Watch Next पहुंच (ADB आवश्यक)';
+
+  @override
+  String get cwWatchNextAdbMessage => 'लॉन्चर को इंस्टॉल किए गए ऐप्स की \'देखना जारी रखें\' पंक्तियां पढ़ने और दिखाने के लिए Android TV को READ_WRITE_WATCH_NEXT_PROGRAMS अनुमति चाहिए।\n\nयह अनुमति देने के लिए, अपने टीवी को ADB से कनेक्ट करें और चलाएं:';
 }

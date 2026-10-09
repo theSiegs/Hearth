@@ -1554,4 +1554,203 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get dataUsageMonthly => 'Monatlich';
+
+  @override
+  String cwAppsBlockedHeading(int count) {
+    return 'Von Weiterschauen ausgeschlossen ($count)';
+  }
+
+  @override
+  String get cwAppsBlockedFromContinueWatching => 'Von Weiterschauen ausgeschlossen';
+
+  @override
+  String get cwAppsUnblock => 'Freigeben';
+
+  @override
+  String get cwAppsUnblockAllApps => 'Alle Apps freigeben';
+
+  @override
+  String get cwAppsNoBlockedApps => 'Keine blockierten Apps';
+
+  @override
+  String get cwAppsNoBlockedAppsMessage => 'Alle unterstützten Apps können Inhalte in Weiterschauen anzeigen.';
+
+  @override
+  String get cwAppsWithContinueWatching => 'Apps mit Weiterschauen';
+
+  @override
+  String get cwAppsWithContinueWatchingHint => 'Apps, die gerade Watch-Next-Inhalte auf deinem Startbildschirm liefern';
+
+  @override
+  String get cwAppsNoActiveApps => 'Derzeit liefern keine Apps Inhalte für Weiterschauen.\nSobald unterstützte Apps (etwa SmartTube oder Streamingdienste) Inhalte hinzufügen, erscheinen sie hier.';
+
+  @override
+  String cwAppsActiveItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count aktive Einträge',
+      one: '1 aktiver Eintrag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwAppsAllInstalledApps => 'Alle installierten Apps';
+
+  @override
+  String get cwAppsAllInstalledAppsHint => 'Ausschalten, um eine App vom Hinzufügen zu Weiterschauen auszuschließen';
+
+  @override
+  String get cwAppsBlocked => 'Blockiert';
+
+  @override
+  String get cwAppsAllowed => 'Erlaubt';
+
+  @override
+  String cwCardSizeOption(int height, String size) {
+    return '$height dp • $size';
+  }
+
+  @override
+  String cwCardSizeDimensions(int width, int height) {
+    return '$width × $height dp';
+  }
+
+  @override
+  String cwCardSizeDp(int height) {
+    return '$height dp';
+  }
+
+  @override
+  String cwCardSizeDpNamed(int height, String size) {
+    return '$height dp ($size)';
+  }
+
+  @override
+  String get cwCardSizeExtraSmall => 'Extra klein';
+
+  @override
+  String get cwCardSizeVerySmall => 'Sehr klein';
+
+  @override
+  String get cwCardSizeSmall => 'Klein';
+
+  @override
+  String get cwCardSizeCompact => 'Kompakt';
+
+  @override
+  String get cwCardSizeMediumSmall => 'Mittelklein';
+
+  @override
+  String get cwCardSizeMedium => 'Mittel';
+
+  @override
+  String get cwCardSizeStandardDefault => 'Standard (Voreinstellung)';
+
+  @override
+  String get cwCardSizeStandard => 'Standard';
+
+  @override
+  String get cwCardSizeMediumLarge => 'Mittelgroß';
+
+  @override
+  String get cwCardSizeLarge => 'Groß';
+
+  @override
+  String get cwCardSizeVeryLarge => 'Sehr groß';
+
+  @override
+  String get cwCardSizeExtraLarge => 'Extra groß';
+
+  @override
+  String get cwCardSizeHuge => 'Riesig';
+
+  @override
+  String cwMaxItemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Einträge',
+      one: '1 Eintrag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cwMaxItemsUpTo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Bis zu $count aktuelle Einträge anzeigen',
+      one: 'Bis zu 1 aktuellen Eintrag anzeigen',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cwMaxItemsDefaultNote(String description) {
+    return '$description • Standard';
+  }
+
+  @override
+  String get cwUnlimited => 'Unbegrenzt';
+
+  @override
+  String get cwMaxItemsAll => 'Alle verfügbaren Einträge anzeigen';
+
+  @override
+  String cwMaxItemsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Einträge',
+      one: '1 Eintrag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwPlaybackProgressBar => 'Wiedergabe-Fortschrittsbalken';
+
+  @override
+  String get cwPlaybackPercentage => 'Wiedergabe in Prozent';
+
+  @override
+  String get cwEpisodeDetails => 'Episoden- & Videodetails';
+
+  @override
+  String cwBlockedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count blockiert',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwManage => 'Verwalten';
+
+  @override
+  String get cwRestoreHiddenPrograms => 'Ausgeblendete Sendungen wiederherstellen';
+
+  @override
+  String cwHiddenCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ausgeblendet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cwHiddenProgramsRestored => 'Alle ausgeblendeten Sendungen wiederhergestellt';
+
+  @override
+  String get cwWatchNextAdbTitle => 'Watch-Next-Zugriff (ADB erforderlich)';
+
+  @override
+  String get cwWatchNextAdbMessage => 'Android TV verlangt die Berechtigung READ_WRITE_WATCH_NEXT_PROGRAMS, damit Launcher Weiterschauen-Zeilen installierter Apps lesen und anzeigen können.\n\nUm sie zu erteilen, verbinde deinen Fernseher per ADB und führe aus:';
 }

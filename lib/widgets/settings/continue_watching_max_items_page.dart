@@ -29,25 +29,30 @@ class ContinueWatchingMaxItemsPage extends StatelessWidget {
 
   const ContinueWatchingMaxItemsPage({super.key});
 
-  static const List<(int, String, String)> maxItemsPresets = [
-    (5, '5 Items', 'Display up to 5 recent items'),
-    (10, '10 Items', 'Display up to 10 recent items'),
-    (15, '15 Items', 'Display up to 15 recent items • Default'),
-    (20, '20 Items', 'Display up to 20 recent items'),
-    (0, 'Unlimited', 'Display all available items'),
-  ];
+  /// The maximums to pick from (0 is no limit), each with its label and line in the current language.
+  static List<(int, String, String)> maxItemsPresets(AppLocalizations localizations) {
+    String upTo(int count) => localizations.cwMaxItemsUpTo(count);
+    return [
+      (5, localizations.cwMaxItemsCount(5), upTo(5)),
+      (10, localizations.cwMaxItemsCount(10), upTo(10)),
+      (15, localizations.cwMaxItemsCount(15), localizations.cwMaxItemsDefaultNote(upTo(15))),
+      (20, localizations.cwMaxItemsCount(20), upTo(20)),
+      (0, localizations.cwUnlimited, localizations.cwMaxItemsAll),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
     return Selector<SettingsService, int>(
       selector: (_, settingsService) => settingsService.continueWatchingMaxItems,
       builder: (context, currentCount, _) {
         final settingsService = context.read<SettingsService>();
 
         return SettingsPage(
-          title: AppLocalizations.of(context)!.maxItemsTitle,
+          title: localizations.maxItemsTitle,
           children: [
-            for (final (count, title, subtitle) in maxItemsPresets)
+            for (final (count, title, subtitle) in maxItemsPresets(localizations))
               SettingsChoiceTile<int>(
                 title: title,
                 subtitle: subtitle,
