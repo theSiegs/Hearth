@@ -2536,12 +2536,8 @@
     "@profilePinSaveFailed": {
         "description": "Profile Pairing: streaming app profile PIN"
     },
-    "profileLockNow": "Lock my profile",
+    "profileLockNow": "Lock Profile",
     "@profileLockNow": {
-        "description": "Settings > Profiles: locking a grown-up profile with Google TV's profile lock"
-    },
-    "profileLockNowSubtitle": "Google TV asks for your profile PIN to come back. Holding the profile button does it too.",
-    "@profileLockNowSubtitle": {
         "description": "Settings > Profiles: locking a grown-up profile with Google TV's profile lock"
     },
     "profileLockOnSleep": "Lock when the TV sleeps",

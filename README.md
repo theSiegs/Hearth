@@ -49,7 +49,7 @@ profiles, Family Link screen time, and the Google Assistant.
 - Follows Google TV's own profiles: each profile gets its own home layout, wallpaper and Continue Watching.
 - **Profile Pairing**: opening Netflix, Disney+, Apple TV, HBO Max or Paramount+ from Hearth picks the matching
   profile in that app, and can type that profile's PIN for you.
-- **Lock my profile** with Google TV's own profile lock, from Settings, the remote, or automatically when the TV
+- **Lock Profile** with Google TV's own profile lock, from Settings, the remote, or automatically when the TV
   sleeps.
 
 **Families**

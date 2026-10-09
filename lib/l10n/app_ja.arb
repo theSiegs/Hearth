@@ -604,7 +604,6 @@
     "profilePinNeedsParentPin": "先に保護者のPINを設定してください（{settings} → {profiles} → {parentPin}）。プロフィールのPINを保存するのに必要です。",
     "profilePinSaveFailed": "PINを保存できませんでした。",
     "profileLockNow": "プロフィールをロック",
-    "profileLockNowSubtitle": "戻るにはGoogle TVがプロフィールのPINを求めます。プロフィールボタンの長押しでも同じです。",
     "profileLockOnSleep": "テレビがスリープしたらロック",
     "profileLockEveryTime": "毎回",
     "profileLockAfterMinutes": "{minutes}分以上スリープした後",

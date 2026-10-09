@@ -69,10 +69,10 @@ with. Open each app once from Hearth so it can learn the app's profiles. If an a
 in Hearth; Hearth types it behind a "logging in as" card and never shows it. Saved PINs are encrypted with a key
 that never leaves the TV.
 
-**Lock my profile** (**Settings → Profiles**). Uses Google TV's own profile lock, so Google TV asks for your
+**Lock Profile** (**Settings → Profiles**). Uses Google TV's own profile lock, so Google TV asks for your
 profile's PIN to come back. Turn the PIN on for your account in Google TV first. You can also:
 - hold the profile button in the top bar;
-- map a remote button to "Lock my profile";
+- map a remote button to "Lock Profile";
 - set **Lock when the TV sleeps** (every time, or after some minutes asleep).
 
 In a kids profile, holding the profile button opens the profile chooser instead.
@@ -97,7 +97,7 @@ Hearth treats a profile as a kids profile when Family Link supervises it.
 **Settings → TV & power → Remote → Remote buttons.** Pick a button, then what a press and a hold do:
 
 - open an app or a TV input;
-- switch profile, or lock my profile;
+- switch profile, or lock the profile;
 - search by voice or keyboard;
 - Home, sleep, or Android settings;
 - run a Home Assistant scene, script, button or toggle.

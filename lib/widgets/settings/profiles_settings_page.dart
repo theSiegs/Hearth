@@ -55,13 +55,7 @@ class ProfilesSettingsPage extends StatelessWidget {
         if (!(context.select<ProfileService?, bool>((p) => p?.isKidsProfile ?? false))) ...[
           FocusableSettingsTile(
             leading: const Icon(Icons.lock_person_outlined),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l.profileLockNow, style: textTheme.bodyMedium),
-                Text(l.profileLockNowSubtitle, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
-              ],
-            ),
+            title: Text(l.profileLockNow, style: textTheme.bodyMedium),
             onPressed: () => context.read<FLauncherChannel?>()?.lockProfile(),
           ),
           const _LockOnSleepTile(),

@@ -2005,9 +2005,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profileLockNow => 'プロフィールをロック';
 
   @override
-  String get profileLockNowSubtitle => '戻るにはGoogle TVがプロフィールのPINを求めます。プロフィールボタンの長押しでも同じです。';
-
-  @override
   String get profileLockOnSleep => 'テレビがスリープしたらロック';
 
   @override
