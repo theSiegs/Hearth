@@ -24,6 +24,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/github_releases.dart';
+import 'package:flauncher/hearth_ids.dart';
 
 enum UpdateStatus { idle, checking, upToDate, available, downloading, readyToInstall, error }
 
@@ -36,13 +37,17 @@ enum UpdateError {
   checkFailed,
 
   /// The APK couldn't be downloaded.
-  downloadFailed;
+  downloadFailed,
+
+  /// The downloaded APK isn't this Hearth (e.g. an APK from before Hearth's app id changed).
+  wrongApp;
 
   /// What to tell the person, in the app's language.
   String message(AppLocalizations localizations) => switch (this) {
         noApkForDevice => localizations.updateErrorNoApk,
         checkFailed => localizations.updateErrorCheckFailed,
         downloadFailed => localizations.updateErrorDownloadFailed,
+        wrongApp => localizations.updateErrorWrongApp,
       };
 }
 
@@ -72,6 +77,7 @@ class UpdateService extends ChangeNotifier {
   String? _errorMessage;
   String? _downloadedApkPath;
   String _currentVersion = "";
+  String _packageName = kHearthAppId;
 
   UpdateService(this._channel) {
     _loadCurrentVersion();
@@ -92,6 +98,7 @@ class UpdateService extends ChangeNotifier {
     try {
       final info = await PackageInfo.fromPlatform();
       _currentVersion = info.buildNumber.isEmpty ? info.version : "${info.version}+${info.buildNumber}";
+      if (info.packageName.isNotEmpty) _packageName = info.packageName;
     } catch (e) {
       developer.log("Failed to read current version", name: "UpdateService", error: e);
     }
@@ -108,7 +115,8 @@ class UpdateService extends ChangeNotifier {
         await _loadCurrentVersion();
       }
 
-      final release = await _releases.latestWithApk(await _channel.getSupportedAbis());
+      // Never a bridge APK (the old app id); the bridge build's own update is the new Hearth
+      final release = await _releases.latestWithApk(await _channel.getSupportedAbis(), accept: isHearthUpdateAsset);
       if (release == null) {
         _status = UpdateStatus.error;
         _error = UpdateError.noApkForDevice;
@@ -154,6 +162,20 @@ class UpdateService extends ChangeNotifier {
         _downloadProgress = fraction;
         notifyListeners();
       });
+
+      // Only Hearth under the id it updates to: an APK of another app id would install beside it, not over it
+      final expected = expectedUpdatePackage(_packageName);
+      final apkPackage = await _channel.getApkPackageName(apkFile.path);
+      if (apkPackage != expected) {
+        try {
+          await apkFile.delete();
+        } catch (_) {}
+        _status = UpdateStatus.error;
+        _error = UpdateError.wrongApp;
+        _errorMessage = "The download is $apkPackage, not $expected";
+        notifyListeners();
+        return;
+      }
 
       _downloadedApkPath = apkFile.path;
       _status = UpdateStatus.readyToInstall;

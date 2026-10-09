@@ -45,7 +45,7 @@ kid profile; nothing was removed). Consequences baked into the design:
   its own uninstall until the kid copies are gone, because once Hearth is gone the flags can't be lifted from the
   device.
 - **Manual undo if Hearth is already gone** (from any computer with adb to the TV), per kid user `N` and each
-  package `P` in `com.leanbitlab.ltvL`, `com.thesiegs.hearthtube`:
+  package `P` in `com.thesiegs.hearth`, `com.thesiegs.hearthtube`:
 
   ```
   adb connect <tv-ip>:5555

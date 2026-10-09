@@ -42,10 +42,13 @@ int compareVersions(String left, String right) {
 /// The ABI token may sit anywhere between separators: "LTvLauncher-armeabi-v7a-release.apk", "app-arm64-v8a.apk".
 /// Picks the release APK for this device: one built for its ABIs (in preference order), else a universal APK.
 /// Never returns an APK built for another ABI — it would fail to install (e.g. arm64 on a 32-bit stick).
-Map<String, dynamic>? pickApkAsset(List<dynamic> assets, List<String> deviceAbis) {
+/// With [accept], only APKs whose file name it accepts are considered.
+Map<String, dynamic>? pickApkAsset(List<dynamic> assets, List<String> deviceAbis,
+    {bool Function(String name)? accept}) {
   final apks = assets
       .whereType<Map<String, dynamic>>()
       .where((a) => (a['name'] as String? ?? "").toLowerCase().endsWith(".apk") && a['browser_download_url'] is String)
+      .where((a) => accept == null || accept(a['name'] as String))
       .toList();
   String? abiOf(Map<String, dynamic> asset) =>
       RegExp(r"(?:^|[-_.])" "$_abiPattern" r"(?=[-_.])", caseSensitive: false).firstMatch(asset['name'] as String)?.group(1)?.toLowerCase();
@@ -101,11 +104,12 @@ class GitHubReleases {
 
   /// The newest release among the last [perPage] that isn't a draft or pre-release and has an APK for [abis].
   /// The full list, not /latest, so a newer release without an APK for this device doesn't hide an older one.
-  Future<GitHubRelease?> latestWithApk(List<String> abis, {int perPage = 20}) async {
+  /// With [accept], only APKs whose file name it accepts count (see [pickApkAsset]).
+  Future<GitHubRelease?> latestWithApk(List<String> abis, {int perPage = 20, bool Function(String name)? accept}) async {
     final releases = await getJson(_api.resolve("/repos/$repo/releases?per_page=$perPage")) as List<dynamic>;
     for (final release in releases.whereType<Map<String, dynamic>>()) {
       if (release['draft'] == true || release['prerelease'] == true) continue;
-      final apk = pickApkAsset((release['assets'] as List<dynamic>?) ?? [], abis);
+      final apk = pickApkAsset((release['assets'] as List<dynamic>?) ?? [], abis, accept: accept);
       if (apk != null) return GitHubRelease(release, apk);
     }
     return null;

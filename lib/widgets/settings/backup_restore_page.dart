@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'package:flauncher/widgets/hearth_move.dart';
 import 'message_dialog.dart';
 import 'package:flauncher/widgets/settings/settings_page.dart';
 
@@ -38,6 +39,8 @@ class BackupRestorePage extends StatelessWidget {
           title: Text(localizations.shareBackup, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: () => _share(context, localizations),
         ),
+        // Only while the old Hearth (before the app id change) is on the TV
+        const OldHearthImportTile(),
       ],
     );
   }

@@ -616,6 +616,36 @@ class FLauncherChannel {
   Future<Map<dynamic, dynamic>?> getPackageVersion(String packageName) async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getPackageVersion", packageName);
 
+  /// The move from Hearth's old app id to the new one (docs/design/app-id-change.md): {bridge, state ("none",
+  /// "imported", "unavailable", "failed", "requested", "not_owner" or null), detail, at, files, bytes,
+  /// pinsToReenter, fromVersion, noticeShown, legacyPackage, legacyInstalled, legacyVersion, legacyOffersData,
+  /// newPackage, newInstalled, newVersion}.
+  Future<Map<dynamic, dynamic>> getMoveStatus() async {
+    try {
+      return await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getMoveStatus") ?? const {};
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  Future<void> markMoveNoticeShown() async => await _methodChannel.invokeMethod("markMoveNoticeShown");
+
+  /// Replaces this Hearth's data with the old Hearth's: Hearth restarts and copies it as it starts.
+  Future<void> importFromOldHearth() async => await _methodChannel.invokeMethod("importFromOldHearth");
+
+  /// The old Hearth replaced by this one in every profile, then uninstalled; returns what was done. Throws a
+  /// PlatformException "SELF_ADB" when Hearth's own adb isn't available, after opening Android's uninstall screen.
+  Future<List<String>> replaceOldHearth() async =>
+      (await _methodChannel.invokeListMethod<String>("replaceOldHearth")) ?? const [];
+
+  /// Opens the new Hearth (bridge build); false when it isn't installed.
+  Future<bool> openNewHearth(String packageName) async =>
+      await _methodChannel.invokeMethod<bool>("openNewHearth", packageName) ?? false;
+
+  /// The package an APK file installs, or null when it can't be read.
+  Future<String?> getApkPackageName(String path) async =>
+      await _methodChannel.invokeMethod<String>("getApkPackageName", path);
+
   /// Hands Hearth's current wallpaper (WallpaperService.providerState) to the provider HearthTube reads.
   Future<void> setWallpaperState(Map<String, Object?> state) async {
     try {

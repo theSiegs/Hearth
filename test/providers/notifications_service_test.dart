@@ -72,7 +72,7 @@ void main() {
       when(mockChannel.getActiveNotifications())
           .thenAnswer((_) async => [
                 for (var i = 0; i < 2; i++) clearable('com.android.settings', 'settings_$i'),
-                for (var i = 0; i < 5; i++) clearable('com.leanbitlab.ltvL', 'ltv_$i'),
+                for (var i = 0; i < 5; i++) clearable('com.thesiegs.hearth', 'ltv_$i'),
               ]);
 
       notificationsService = NotificationsService(mockChannel, prefs);
@@ -84,7 +84,7 @@ void main() {
       expect(notificationsService.initialized, true);
       expect(notificationsService.hasPermission, true);
       expect(notificationsService.getNotificationCount('com.android.settings'), 2);
-      expect(notificationsService.getNotificationCount('com.leanbitlab.ltvL'), 5);
+      expect(notificationsService.getNotificationCount('com.thesiegs.hearth'), 5);
       verify(mockChannel.checkNotificationListenerPermission()).called(1);
       verify(mockChannel.getActiveNotifications()).called(1);
       verify(mockChannel.addNotificationsChangedListener(any)).called(1);
@@ -260,7 +260,7 @@ void main() {
       when(mockChannel.getActiveNotifications())
           .thenAnswer((_) async => [
                 {'packageName': 'com.android.settings', 'key': 'key_1', 'isClearable': true},
-                {'packageName': 'com.leanbitlab.ltvL', 'key': 'key_2', 'isClearable': true},
+                {'packageName': 'com.thesiegs.hearth', 'key': 'key_2', 'isClearable': true},
               ]);
       when(mockChannel.dismissAllNotifications())
           .thenAnswer((_) async => true);
