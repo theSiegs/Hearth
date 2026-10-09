@@ -304,6 +304,10 @@ public class MainActivity extends FlutterActivity {
                 LauncherAccessibilityService.setIdleStandbyMinutes(this, minutes != null ? minutes : 0);
                 result.success(null);
             }
+            case "setWallpaperState" -> {
+                HearthWallpaper.save(this, call.arguments());
+                result.success(null);
+            }
             case "getActiveProfileName" -> result.success(LauncherAccessibilityService.getActiveProfileName(this));
             case "getActiveProfileKey" -> result.success(LauncherAccessibilityService.getActiveProfileKey(this));
             case "isProfileDataReady" -> result.success(isProfileDataReady());

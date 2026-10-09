@@ -94,6 +94,7 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
   late File _wallpaperNightFile;
   late File _wallpaperBingFile;
   late File _wallpaperBingDateFile;
+  late File _wallpaperBingInfoFile;
   Timer? _dayNightTimer;
   Timer? _bingTimer;
   bool _bingRefreshInFlight = false;
@@ -104,6 +105,16 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
   bool _bingWallpaperError = false;
 
   bool get bingWallpaperError => _bingWallpaperError;
+
+  // The picture shown (null: the gradient), and the Bing photo's title and credit as Bing gave them
+  File? _shownFile;
+  String? _bingTitle;
+  String? _bingCredit;
+  bool _initialized = false;
+  String? _lastPublishedState;
+
+  String? get bingTitle => _bingTitle;
+  String? get bingCredit => _bingCredit;
 
   ImageProvider?  get wallpaper     => _wallpaper;
   int             get version       => _version;
@@ -169,6 +180,7 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
     if (gradientUuid != _lastGradientUuid) {
       _lastGradientUuid = gradientUuid;
       if (_wallpaper == null) notifyListeners();
+      _publishState();
     }
     final timeBasedEnabled = _settingsService.timeBasedWallpaperEnabled;
     final bingEnabled = _settingsService.bingWallpaperEnabled;
@@ -212,9 +224,12 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
     _wallpaperNightFile = File("${directory.path}/wallpaper_night");
     _wallpaperBingFile = File("${directory.path}/wallpaper_bing");
     _wallpaperBingDateFile = File("${directory.path}/wallpaper_bing_date");
+    _wallpaperBingInfoFile = File("${directory.path}/wallpaper_bing_info");
+    await _loadBingInfo();
 
     _lastTimeBasedEnabled = _settingsService.timeBasedWallpaperEnabled;
     _lastBingEnabled = _settingsService.bingWallpaperEnabled;
+    _initialized = true;
     await _updateWallpaper();
     _updateTimerState();
 
@@ -288,6 +303,7 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
     if (callId == _updateWallpaperCallCount) {
       if (_wallpaper != newWallpaper || force) {
         _wallpaper = newWallpaper;
+        _shownFile = file;
         notifyListeners();
         final brightness = file != null ? await imageBrightness(file) : null;
         if (callId == _updateWallpaperCallCount && brightness != _wallpaperBrightness) {
@@ -295,7 +311,81 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
           notifyListeners();
         }
       }
+      if (callId == _updateWallpaperCallCount) _publishState();
     }
+  }
+
+  /// What HearthTube gets of the wallpaper through Hearth's provider (ProfileProvider, HearthWallpaper.java;
+  /// docs/design/wallpaper-sync.md). Android picks the picture file itself; this adds what only Flutter knows.
+  Map<String, Object?> get providerState {
+    final gradient = this.gradient.gradient;
+    final gradientBrightness = WallpaperService.gradientBrightness(gradient);
+    return {
+      "file": _shownFile?.uri.pathSegments.last,
+      "brightness": _shownFile != null ? _wallpaperBrightness : null,
+      "gradient_uuid": _settingsService.gradientUuid,
+      "gradient": jsonEncode(describeGradient(gradient, gradientBrightness)),
+      "gradient_brightness": gradientBrightness,
+      "bing_title": _bingTitle,
+      "bing_credit": _bingCredit,
+      // A new picture in the same file (a new pick, a new day's Bing photo) is news too
+      "picked": _version,
+    };
+  }
+
+  /// Tells the provider when [providerState] changed, which tells HearthTube.
+  void _publishState() {
+    if (!_initialized) return;
+    final state = providerState;
+    final encoded = jsonEncode(state);
+    if (encoded == _lastPublishedState) return;
+    _lastPublishedState = encoded;
+    unawaited(_fLauncherChannel.setWallpaperState(state));
+  }
+
+  /// A gradient for another app to draw: colors as "#AARRGGBB", stops (null: evenly spaced), and for a linear one
+  /// its begin and end as alignments (-1..1 across the screen, x to the right, y down) turned by `rotation` radians
+  /// clockwise about the screen's center; for a radial one its center and radius (a fraction of the shorter side).
+  @visibleForTesting
+  static Map<String, Object?> describeGradient(Gradient gradient, double brightness) {
+    Map<String, double> point(AlignmentGeometry a) {
+      final alignment = a.resolve(TextDirection.ltr);
+      return {"x": alignment.x, "y": alignment.y};
+    }
+
+    final transform = gradient.transform;
+    final description = <String, Object?>{
+      "colors": [for (final c in gradient.colors) "#${c.value.toRadixString(16).padLeft(8, '0').toUpperCase()}"],
+      "stops": gradient.stops,
+      "rotation": transform is GradientRotation ? transform.radians : 0.0,
+      "brightness": brightness,
+    };
+    if (gradient is LinearGradient) {
+      description.addAll({"type": "linear", "begin": point(gradient.begin), "end": point(gradient.end)});
+    } else if (gradient is RadialGradient) {
+      description.addAll({"type": "radial", "center": point(gradient.center), "radius": gradient.radius});
+    } else {
+      description["type"] = "other";
+    }
+    return description;
+  }
+
+  Future<void> _loadBingInfo() async {
+    try {
+      if (!await _wallpaperBingInfoFile.exists()) return;
+      final info = jsonDecode(await _wallpaperBingInfoFile.readAsString()) as Map<String, dynamic>;
+      _bingTitle = info["title"] as String?;
+      _bingCredit = info["copyright"] as String?;
+    } catch (e) {
+      developer.log("Couldn't read the Bing photo's credit", name: "WallpaperService", error: e);
+    }
+  }
+
+  /// The title and credit of Bing's photo, from its metadata (empty ones are none).
+  @visibleForTesting
+  static ({String? title, String? credit}) bingInfo(Map<String, dynamic> image) {
+    String? text(Object? value) => value is String && value.trim().isNotEmpty ? value.trim() : null;
+    return (title: text(image['title']), credit: text(image['copyright']));
   }
 
   /// Refreshes the Bing "Photo of the Day" only if it hasn't been fetched yet today.
@@ -348,6 +438,11 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
       final bytes = await consolidateHttpClientResponseBytes(imageResponse);
       await _wallpaperBingFile.writeAsBytes(bytes, flush: true);
       await _wallpaperBingDateFile.writeAsString(_dateStamp(DateTime.now()), flush: true);
+      final info = bingInfo(images.first as Map<String, dynamic>);
+      _bingTitle = info.title;
+      _bingCredit = info.credit;
+      await _wallpaperBingInfoFile.writeAsString(jsonEncode({"title": info.title, "copyright": info.credit}),
+          flush: true);
 
       await FileImage(_wallpaperBingFile).evict();
       _bingWallpaperError = false;
