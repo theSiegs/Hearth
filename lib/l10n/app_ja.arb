@@ -318,9 +318,9 @@
     "pairingPairIn": "{app} のプロフィールを連携",
     "pairingAppNotSeenFooter": "Hearth はまだこのアプリのプロフィールを読み取っていません。Hearth から一度開いてから戻ってください。",
     "pairingAppProfilesFooter": "このアプリのプロフィール：{profiles}。Google TV のプロフィールは、Hearth が読み取るとここに表示されます。",
-    "familyAppsIntro": "Hearth と HearthTube を Google TV の他のプロフィールにも入れます。キッズプロフィールでは、HearthTube を使うためと、Netflix や Disney+ などのアプリで Hearth が正しいプロフィールを選ぶために必要です。大人のプロフィールでは、手動でインストールする手間を省くためのものです。",
+    "familyAppsIntro": "Hearth と HearthTube を他の Google TV プロフィールにも入れます。お子様のプロフィールでは、HearthTube が動作し、Hearth がストリーミング サービスで正しいプロフィールを選ぶために必要です。大人のプロフィールでは、手動でインストールする手間を省くためのものです。",
     "familyAppsAddTitle": "他のプロフィールに Hearth を追加",
-    "familyAppsAddKids": "お子さんのプロフィールに Hearth と HearthTube を入れます。これで HearthTube が使えるようになり、Netflix や Disney+ などのアプリで Hearth が正しいプロフィールを選べます。",
+    "familyAppsAddKids": "Hearth と HearthTube をお子様のプロフィールに入れます。これで HearthTube がそこで動作し、Hearth がストリーミング サービスで正しいプロフィールを選べるようになります。",
     "familyAppsAddAdults": "テレビの他の大人のプロフィールにもインストールするので、他の大人が自分で設定する必要はありません。",
     "familyAppsAddOnlyOwnApps": "追加するのは Hearth 自身の 2 つのアプリだけです。下の「削除」でいつでも元に戻せます。",
     "familyAppsAddFamilyLink": "お子さんごとに Family Link の「アプリが追加されました」という通知が 1 件届きます。",
@@ -591,5 +591,6 @@
     "familyAppsStatusPartial": "一部のみ",
     "familyAppsStatusNotInstalled": "未インストール",
     "familyAppsStatusAtRisk": "削除の恐れ",
-    "familyAppsAtRiskDetail": "このプロフィールを次に開いたとき、保護されていないアプリは Google TV に削除されます。もう一度「追加」を使って保護してください。"
+    "familyAppsAtRiskDetail": "このプロフィールを次に開いたとき、保護されていないアプリは Google TV に削除されます。もう一度「追加」を使って保護してください。",
+    "familyAppsAbout": "これは何？"
 }

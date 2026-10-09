@@ -318,9 +318,9 @@
     "pairingPairIn": "在 {app} 中配对个人资料",
     "pairingAppNotSeenFooter": "Hearth 还没有看到此应用的个人资料。请从 Hearth 打开一次，然后再回来。",
     "pairingAppProfilesFooter": "此应用中的个人资料：{profiles}。Hearth 看到 Google TV 个人资料后，它们会显示在这里。",
-    "familyAppsIntro": "将 Hearth 和 HearthTube 安装到其他 Google TV 个人资料中。在儿童个人资料中，这是 HearthTube 正常工作以及 Hearth 在 Netflix、Disney+ 等应用中选对个人资料所必需的。在成人个人资料中只是为了方便，免得手动安装。",
+    "familyAppsIntro": "将 Hearth 和 HearthTube 安装到其他 Google TV 个人资料中。在儿童个人资料中，这是 HearthTube 正常运行以及 Hearth 在流媒体服务中选择正确个人资料所必需的。在成人个人资料中，这只是为了方便，免得手动安装。",
     "familyAppsAddTitle": "将 Hearth 添加到其他个人资料",
-    "familyAppsAddKids": "这会把 Hearth 和 HearthTube 安装到孩子的个人资料中，让 HearthTube 在那里可用，并让 Hearth 能在 Netflix 和 Disney+ 等应用中选对个人资料。",
+    "familyAppsAddKids": "这会将 Hearth 和 HearthTube 安装到孩子的个人资料中，让 HearthTube 在那里正常运行，并让 Hearth 能在流媒体服务中选择正确的个人资料。",
     "familyAppsAddAdults": "它还会安装到电视上的其他成人个人资料中，其他成人无需自己设置。",
     "familyAppsAddOnlyOwnApps": "只会添加 Hearth 自己的两个应用，你可以随时用下方的“移除”撤销。",
     "familyAppsAddFamilyLink": "每个孩子会收到一条 Family Link“已添加应用”通知。",
@@ -591,5 +591,6 @@
     "familyAppsStatusPartial": "部分安装",
     "familyAppsStatusNotInstalled": "未安装",
     "familyAppsStatusAtRisk": "有风险",
-    "familyAppsAtRiskDetail": "此个人资料下次启动时，Google TV 会移除这里未受保护的应用。请再次使用“添加”来保护它们。"
+    "familyAppsAtRiskDetail": "此个人资料下次启动时，Google TV 会移除这里未受保护的应用。请再次使用“添加”来保护它们。",
+    "familyAppsAbout": "这是什么？"
 }

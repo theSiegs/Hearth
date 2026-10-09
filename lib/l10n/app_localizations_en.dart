@@ -997,13 +997,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get familyAppsIntro => 'Put Hearth and HearthTube on your other Google TV profiles. On kids\' profiles this is needed for HearthTube to work and for Hearth to pick the right profile in Netflix, Disney+ and other apps. On adult profiles it\'s just a convenience, so they don\'t have to install them by hand.';
+  String get familyAppsIntro => 'Put Hearth and HearthTube on your other Google TV profiles. On kids\' profiles this is needed for HearthTube to work and for Hearth to pick the right profile in streaming services. On adult profiles it\'s just a convenience, so they don\'t have to install them by hand.';
 
   @override
   String get familyAppsAddTitle => 'Add Hearth to other profiles';
 
   @override
-  String get familyAppsAddKids => 'This puts Hearth and HearthTube on your kids\' profiles, so HearthTube works there and Hearth can pick the right profile in apps like Netflix and Disney+.';
+  String get familyAppsAddKids => 'This puts Hearth and HearthTube on your kids\' profiles, so HearthTube works there and Hearth can pick the right profile in streaming services.';
 
   @override
   String get familyAppsAddAdults => 'It also installs them on the TV\'s other adult profiles, so another adult doesn\'t have to set it up themselves.';
@@ -1969,4 +1969,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'Google TV will remove the unprotected apps here the next time this profile starts. Use Add again to protect them.';
+
+  @override
+  String get familyAppsAbout => 'What is this?';
 }

@@ -318,9 +318,9 @@
     "pairingPairIn": "Зв'язувати профілі в {app}",
     "pairingAppNotSeenFooter": "Hearth ще не бачив профілів цього застосунку. Відкрийте його один раз із Hearth і поверніться.",
     "pairingAppProfilesFooter": "Профілі в цьому застосунку: {profiles}. Профілі Google TV з'являться тут, коли Hearth їх побачить.",
-    "familyAppsIntro": "Установіть Hearth і HearthTube в інші профілі Google TV. У дитячих профілях це потрібно, щоб працював HearthTube і щоб Hearth вибирав правильний профіль у Netflix, Disney+ та інших застосунках. У дорослих профілях це просто зручність: не доведеться встановлювати їх вручну.",
+    "familyAppsIntro": "Установіть Hearth і HearthTube в інші профілі Google TV. У дитячих профілях це потрібно, щоб працював HearthTube і щоб Hearth вибирав потрібний профіль у стрімінгових сервісах. У профілях дорослих це лише зручність: не доведеться встановлювати їх вручну.",
     "familyAppsAddTitle": "Додати Hearth в інші профілі",
-    "familyAppsAddKids": "Hearth і HearthTube буде встановлено в профілі ваших дітей: там запрацює HearthTube, а Hearth зможе вибирати правильний профіль у таких застосунках, як Netflix і Disney+.",
+    "familyAppsAddKids": "Hearth і HearthTube буде встановлено в профілі ваших дітей: там працюватиме HearthTube, а Hearth зможе вибирати потрібний профіль у стрімінгових сервісах.",
     "familyAppsAddAdults": "Їх також буде встановлено в інші дорослі профілі телевізора, щоб іншим дорослим не довелося налаштовувати все самим.",
     "familyAppsAddOnlyOwnApps": "Додаються лише два застосунки Hearth, і це можна будь-коли скасувати кнопкою «Видалити» нижче.",
     "familyAppsAddFamilyLink": "Кожна дитина отримає одне сповіщення Family Link «Застосунок додано».",
@@ -591,5 +591,6 @@
     "familyAppsStatusPartial": "Частково",
     "familyAppsStatusNotInstalled": "Не встановлено",
     "familyAppsStatusAtRisk": "Під загрозою",
-    "familyAppsAtRiskDetail": "Google TV видалить незахищені застосунки в цьому профілі під час його наступного запуску. Скористайтеся «Додати» ще раз, щоб захистити їх."
+    "familyAppsAtRiskDetail": "Google TV видалить незахищені застосунки в цьому профілі під час його наступного запуску. Скористайтеся «Додати» ще раз, щоб захистити їх.",
+    "familyAppsAbout": "Що це?"
 }
