@@ -45,6 +45,9 @@ import 'flauncher_app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // A TV is driven by its remote: show what has focus from the start. Flutter otherwise hides focus highlights
+  // until the first key press, so a dialog that opens as Hearth starts showed no selected button.
+  FocusManager.instance.highlightStrategy = FocusHighlightStrategy.alwaysTraditional;
   await initializeDateFormatting();
 
   // Configure LRU Image Cache bounds to preserve RAM on Android TV devices
