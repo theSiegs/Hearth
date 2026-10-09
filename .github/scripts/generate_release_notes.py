@@ -112,11 +112,11 @@ def main():
 
 | File | Target Devices | Architecture | Size |
 |:---|:---|:---|:---|
-| **`Hearth-universal-release.apk`** | All Android TV & Fire TV devices (Universal) | All | {size_universal} |
-| **`Hearth-arm64-v8a-release.apk`** | Chromecast with Google TV, Nvidia Shield, modern TVs | 64-bit ARM (`arm64-v8a`) | {size_arm64} |
-| **`Hearth-armeabi-v7a-release.apk`** | Fire TV Stick (Lite, 4K, 4K Max), older smart TVs | 32-bit ARM (`armeabi-v7a`) | {size_armv7} |
+| **`Hearth-universal-release.apk`** | Either, if you're not sure (larger) | All | {size_universal} |
+| **`Hearth-arm64-v8a-release.apk`** | Most current Google TV devices (Chromecast with Google TV, onn 4K, Nvidia Shield) | 64-bit ARM (`arm64-v8a`) | {size_arm64} |
+| **`Hearth-armeabi-v7a-release.apk`** | Older 32-bit devices | 32-bit ARM (`armeabi-v7a`) | {size_armv7} |
 
-Already using Hearth? It updates itself: Settings → Check for Updates. New here? See the [setup guide](https://github.com/theSiegs/Hearth#setup).
+Already using Hearth? It updates itself: Settings → System → Updates. New here? See [Install](https://github.com/theSiegs/Hearth#install) and the [user guide](https://github.com/theSiegs/Hearth/blob/master/docs/user-guide.md).
 """
 
     with open("release_notes.md", "w") as f:
