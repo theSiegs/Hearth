@@ -4,6 +4,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.app.admin.DevicePolicyManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -301,6 +302,7 @@ public class AgentService extends Service {
             connected = true;
             onConnectionChanged(true);
             mHandler.post(mSendWatchNext);
+            mHandler.post(this::retireOldAdmin);
             mHandler.postDelayed(mPing, PING_MS);
             String line;
             while ((line = in.readLine()) != null) onMessage(new JSONObject(line));
@@ -343,6 +345,7 @@ public class AgentService extends Service {
             }
             case "adbKey":
                 storeSharedKey(message.optString("priv"), message.optString("pub"));
+                mHandler.post(this::retireOldAdmin);
                 break;
             default:
                 break;
@@ -398,6 +401,29 @@ public class AgentService extends Service {
     private static void write(File f, String text) throws IOException {
         try (FileOutputStream o = new FileOutputStream(f)) {
             o.write(text.getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    private void retireOldAdmin() {
+        // Kids profiles set up before the block-uninstall flag kept Hearth installed by making it a device admin
+        // (AgentAdminReceiver). Android won't uninstall an active admin, and only the app itself can give it up, so
+        // "remove from profiles" failed there. Swap it for the flag (through the shell, with the key owner-Hearth
+        // shared), then give the admin up: the profile stays protected, and the flag can be lifted for a removal.
+        DevicePolicyManager dpm = getSystemService(DevicePolicyManager.class);
+        ComponentName admin = new ComponentName(this, AgentAdminReceiver.class);
+        if (dpm == null || !dpm.isAdminActive(admin)) return;
+        if (!new File(new File(getFilesDir(), "selfadb"), "adbkey").exists()) return; // no shell yet: next connect
+        int me = userIdSelf();
+        if (me <= 0) return;
+        try (SelfAdb shell = SelfAdb.open(this)) {
+            if (!ProfileAppAccess.keepInstalled(this, shell, getPackageName(), me)) {
+                Log.w(TAG, "couldn't set the keep-installed flag; keeping the old device admin");
+                return;
+            }
+            dpm.removeActiveAdmin(admin);
+            Log.i(TAG, "replaced the old device admin with the keep-installed flag in user " + me);
+        } catch (Exception e) {
+            Log.i(TAG, "old device admin not retired yet (will retry on the next connect): " + e.getMessage());
         }
     }
 
