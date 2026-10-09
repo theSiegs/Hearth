@@ -50,8 +50,8 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
         (apps) => apps.applications.where((app) => app.sideloaded && !app.hidden).toList()),
     _TabData(2, Icons.star, (l) => l.favoriteApps, (apps) {
       final favorites = apps.categories.firstWhere(
-        (category) => category.name == 'Favorites',
-        orElse: () => Category(name: 'Favorites'),
+        (category) => category.name == AppsService.favoritesName,
+        orElse: () => Category(name: AppsService.favoritesName),
       );
       return favorites.applications.where((app) => !app.hidden).toList();
     }),
