@@ -581,7 +581,7 @@
     "updatesInstallPermissionTitle": "Permitir que o Hearth instale apps",
     "updatesInstallPermissionMessage": "Na próxima tela, encontre o Hearth e ative-o; depois pressione Voltar. A instalação continua quando você voltar aqui.",
     "updatesOpenSettings": "Abrir configurações",
-    "updatesCheckFailed": "Não foi possível verificar atualizações",
+    "updatesCheckFailed": "Falha ao verificar",
     "updatesInstallerNotStarted": "O instalador não foi iniciado",
     "updatesCheckForUpdates": "Verificar atualizações",
     "updatesAutoUpdate": "Atualizar automaticamente",

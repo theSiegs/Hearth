@@ -1942,7 +1942,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get updatesOpenSettings => 'Открыть настройки';
 
   @override
-  String get updatesCheckFailed => 'Не удалось проверить обновления';
+  String get updatesCheckFailed => 'Ошибка проверки';
 
   @override
   String get updatesInstallerNotStarted => 'Установщик не запустился';

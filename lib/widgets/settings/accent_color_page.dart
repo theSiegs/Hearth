@@ -175,12 +175,18 @@ class _ColorTile extends StatelessWidget {
               child: isSelected ? Icon(Icons.check, color: iconColor, size: 10) : null,
             ),
             const SizedBox(width: 8),
-            Text(
-              name,
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: focused || isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: 13,
+            // Some languages' names are longer than the tile is wide: they wrap onto a second line
+            Flexible(
+              child: Text(
+                name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: focused || isSelected ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 13,
+                ),
               ),
             ),
           ],

@@ -1928,7 +1928,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get updatesOpenSettings => 'Abrir configurações';
 
   @override
-  String get updatesCheckFailed => 'Não foi possível verificar atualizações';
+  String get updatesCheckFailed => 'Falha ao verificar';
 
   @override
   String get updatesInstallerNotStarted => 'O instalador não foi iniciado';

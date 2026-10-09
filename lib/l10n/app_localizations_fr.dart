@@ -1928,10 +1928,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get updatesOpenSettings => 'Ouvrir les paramètres';
 
   @override
-  String get updatesCheckFailed => 'Impossible de rechercher les mises à jour';
+  String get updatesCheckFailed => 'Échec de la vérification';
 
   @override
-  String get updatesInstallerNotStarted => 'Le programme d\'installation n\'a pas démarré';
+  String get updatesInstallerNotStarted => 'L\'installateur n\'a pas démarré';
 
   @override
   String get updatesCheckForUpdates => 'Rechercher des mises à jour';

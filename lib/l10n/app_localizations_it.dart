@@ -1928,10 +1928,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get updatesOpenSettings => 'Apri impostazioni';
 
   @override
-  String get updatesCheckFailed => 'Impossibile verificare gli aggiornamenti';
+  String get updatesCheckFailed => 'Verifica non riuscita';
 
   @override
-  String get updatesInstallerNotStarted => 'Il programma di installazione non si è avviato';
+  String get updatesInstallerNotStarted => 'L\'installer non si è avviato';
 
   @override
   String get updatesCheckForUpdates => 'Verifica aggiornamenti';
