@@ -1003,9 +1003,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get familyAppsIntro => 'Установите Hearth и HearthTube в другие профили Google TV. В детских профилях это нужно, чтобы работал HearthTube и чтобы Hearth выбирал нужный профиль в стриминговых сервисах. Во взрослых профилях это просто удобство: не придётся устанавливать их вручную.';
-
-  @override
   String get familyAppsAddTitle => 'Добавить Hearth в другие профили';
 
   @override
@@ -1983,7 +1980,4 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'Google TV удалит незащищённые приложения в этом профиле при его следующем запуске. Нажмите «Добавить» ещё раз, чтобы защитить их.';
-
-  @override
-  String get familyAppsAbout => 'Что это?';
 }

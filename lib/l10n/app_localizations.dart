@@ -1823,12 +1823,6 @@ abstract class AppLocalizations {
   /// **'Profiles in this app: {profiles}. Google TV profiles appear here once Hearth has seen them.'**
   String pairingAppProfilesFooter(String profiles);
 
-  /// Hearth on other profiles page: text at the top
-  ///
-  /// In en, this message translates to:
-  /// **'Put Hearth and HearthTube on your other Google TV profiles. On kids\' profiles this is needed for HearthTube to work and for Hearth to pick the right profile in streaming services. On adult profiles it\'s just a convenience, so they don\'t have to install them by hand.'**
-  String get familyAppsIntro;
-
   /// Hearth on other profiles page: row, and the title of its confirmation dialog
   ///
   /// In en, this message translates to:
@@ -3466,12 +3460,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Google TV will remove the unprotected apps here the next time this profile starts. Use Add again to protect them.'**
   String get familyAppsAtRiskDetail;
-
-  /// Hearth on other profiles: a row that shows what the page does while it's selected
-  ///
-  /// In en, this message translates to:
-  /// **'What is this?'**
-  String get familyAppsAbout;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

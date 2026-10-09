@@ -997,9 +997,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get familyAppsIntro => 'Ponga Hearth y HearthTube en sus otros perfiles de Google TV. En los perfiles infantiles es necesario para que HearthTube funcione y para que Hearth elija el perfil correcto en los servicios de streaming. En los perfiles de adultos es solo una comodidad, para no tener que instalarlas a mano.';
-
-  @override
   String get familyAppsAddTitle => 'Añadir Hearth a otros perfiles';
 
   @override
@@ -1969,7 +1966,4 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'Google TV quitará de aquí las apps sin proteger la próxima vez que se inicie este perfil. Use Añadir de nuevo para protegerlas.';
-
-  @override
-  String get familyAppsAbout => '¿Qué es esto?';
 }
