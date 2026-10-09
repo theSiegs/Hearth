@@ -17,8 +17,10 @@ Later scope (same machinery): an app's parental-control PIN (mature content, lea
 ## 1. Accepting the PIN
 
 Where: **Settings → Profiles → Profile Pairing → an app → a profile row → "Profile PIN"** (only rows paired by an
-explicit choice, not a name match). Status on the row: *None*, *Saved*, *Saved — not accepted last time*,
-*Saved — paused (app changed)*.
+explicit choice, not a name match). **Every supported streaming service keeps its own PINs**, one per app profile: a
+Netflix PIN, a Disney+ PIN and a Max PIN are separate entries even when they're the same digits, and changing one
+never touches another. Status on the row: *None*, *Saved*, *Saved — not accepted last time*, *Saved — paused (app
+changed)*.
 
 How:
 
@@ -109,15 +111,26 @@ recognition step on the open PIN screen and reports "recognised" or what differs
 1. Profile Pairing picked that app profile itself in this launch (not the parent choosing in the app).
 2. The active Google TV profile is known, is **not a kids profile**, and is paired with that app profile by an
    explicit choice in Settings.
-3. A PIN is saved for it, its status isn't *not accepted* or *paused*, and PIN entry is on for the app.
+3. A PIN is saved for it, its recipe isn't *paused*, and PIN entry is on for the app. (A PIN marked *not accepted* is
+   still tried, once per launch; see §6.)
 4. The PIN screen appears within ~6 s of the pick and matches the recipe's fingerprint.
 
 ## 6. Outcomes
 
 - **Success:** the PIN screen goes away → drop the cover. Status stays *Saved*.
-- **Wrong PIN:** **one attempt only, never retried.** Mark the PIN *not accepted* (no more tries until it's
-  re-entered), drop the cover, say "Netflix didn't accept the saved PIN for Alex. Enter it yourself, then update it in
-  Hearth's Settings."
+- **Wrong PIN:** **one attempt per app launch, never retried within it.** Drop the cover so the parent types the PIN
+  themselves, mark the saved PIN *not accepted*, and show a pop-up over the app:
+  > **Netflix didn't accept the saved PIN for Alex**
+  > Enter it yourself this time. Update the saved PIN in Hearth's Settings.
+  > [ **Open Settings** ]  [ Close ]
+
+  *Open Settings* opens Hearth's Settings straight on that app profile's PIN row (the parent PIN is asked first);
+  *Close* dismisses it and leaves the parent in the app. The next launch tries the saved PIN once again, and shows the
+  same pop-up if it fails again, until the PIN is updated (then the mark clears) or removed.
+  - **Lockout guard:** each failed launch adds a wrong attempt in the app, and some apps lock a profile after a few.
+    Hearth counts consecutive rejections per app profile; if the app's PIN screen shows a lockout or "too many
+    attempts" message (part of each recipe), or the count reaches the app's known limit minus one, Hearth stops trying
+    that PIN until it's updated and the pop-up says so ("…not tried again until you update it").
 - **Broken** (anything unexpected, timeout, left the app): stop before any unverified OK, drop the cover, say "Hearth
   couldn't enter the PIN this time; please enter it." Three breaks in a row for an app → *paused* until a successful
   *Try it now*.
@@ -139,5 +152,6 @@ recognition step on the open PIN screen and reports "recognised" or what differs
 
 - PINs entered only in Hearth's Settings (no "capture" from the app) — proposed.
 - Typed only in grown-up Google TV profiles, never in a kids profile — proposed.
-- One attempt, then the parent types — proposed (lockouts are app-specific and unforgiving).
+- One attempt per launch, then the parent types and a pop-up offers Settings — decided; tried again on every launch
+  until updated, with the lockout guard above.
 - Which apps first: Netflix (most profiles locked?), then Disney+, Max, Paramount+, Apple TV.
