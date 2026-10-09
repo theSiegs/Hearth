@@ -695,7 +695,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mLastWindowPackage = packageName;
         // Not the keyboard, a system pop-up or the assistant's bar: those come up over the app that's still in use
         if (isHearth || isApp) mLastAppPackage = packageName;
-        mWellbeingInFront = isGoogleTv && className.startsWith(GOOGLE_TV_WELLBEING_PREFIX);
+        mWellbeingInFront = wellbeingInFront(mWellbeingInFront, isGoogleTv, isHearth || isApp, className);
         // The chooser stays "open" while Google TV lays its account check / PIN screens over it; it's over once
         // Google TV's home or any other app comes up.
         boolean wasOnScreen = mChooserOnScreen;
@@ -718,6 +718,21 @@ public class LauncherAccessibilityService extends AccessibilityService {
         } else {
             onOtherWindow(packageName, isHearth, isApp);
         }
+    }
+
+    /**
+     * Whether Google TV's time up / bedtime screen is still in front after this window change. Only Google TV's own
+     * windows, Hearth and apps replace it: the keyboard, a system pop-up (volume, a toast-like panel) or Google's
+     * "ask a parent" flow (Play services) come up over it while it's still there, and must not lift the lock under it.
+     * Nor do Google TV's plain view classes (android.widget..., android.app.Dialog): those are overlays on whichever
+     * of its screens is up.
+     */
+    static boolean wellbeingInFront(boolean before, boolean isGoogleTv, boolean isHearthOrApp, String className) {
+        if (isGoogleTv) {
+            if (className.startsWith("android.")) return before;
+            return className.startsWith(GOOGLE_TV_WELLBEING_PREFIX);
+        }
+        return !isHearthOrApp && before;
     }
 
     /** One of Google TV's windows: its home, the chooser, a screen time screen, a setup flow, or another screen. */
