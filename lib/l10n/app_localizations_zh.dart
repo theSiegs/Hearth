@@ -994,9 +994,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get familyAppsIntro => '将 Hearth 和 HearthTube 安装到其他 Google TV 个人资料中。在儿童个人资料中，这是 HearthTube 正常运行以及 Hearth 在流媒体服务中选择正确个人资料所必需的。在成人个人资料中，这只是为了方便，免得手动安装。';
-
-  @override
   String get familyAppsAddTitle => '将 Hearth 添加到其他个人资料';
 
   @override
@@ -1959,7 +1956,4 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => '此个人资料下次启动时，Google TV 会移除这里未受保护的应用。请再次使用“添加”来保护它们。';
-
-  @override
-  String get familyAppsAbout => '这是什么？';
 }

@@ -994,9 +994,6 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get familyAppsIntro => 'Hearth ve HearthTube\'u diğer Google TV profillerinize ekleyin. Çocuk profillerinde bu, HearthTube\'un çalışması ve Hearth\'ün yayın hizmetlerinde doğru profili seçmesi için gereklidir. Yetişkin profillerinde ise yalnızca kolaylık sağlar; elle yüklemeleri gerekmez.';
-
-  @override
   String get familyAppsAddTitle => 'Hearth\'ü diğer profillere ekle';
 
   @override
@@ -1959,7 +1956,4 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => 'Google TV, bu profil bir sonraki açılışında buradaki korumasız uygulamaları kaldıracak. Korumak için Ekle\'yi yeniden kullanın.';
-
-  @override
-  String get familyAppsAbout => 'Bu nedir?';
 }

@@ -29,9 +29,6 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
   /// The profile (user id) whose row has focus: it shows what's on that profile.
   int? _selectedUser;
 
-  /// The "What is this?" row is selected: it shows the page's explanation.
-  bool _aboutShown = false;
-
   @override
   void initState() {
     super.initState();
@@ -228,26 +225,6 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
           trailing: Text(adultsOn ? l.familyAppsOn : l.familyAppsOff,
               style: textTheme.bodySmall?.copyWith(color: adultsOn ? Colors.green : Colors.white54)),
           onPressed: () => settings.setPushToAdultProfiles(!adultsOn),
-        ),
-        // "What is this?": the page explained, shown while this row is selected (it used to sit over the buttons)
-        Focus(
-          canRequestFocus: false,
-          skipTraversal: true,
-          onFocusChange: (focused) => setState(() => _aboutShown = focused),
-          child: FocusableSettingsTile(
-            leading: const Icon(Icons.info_outline),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(l.familyAppsAbout, style: textTheme.bodyMedium),
-                if (_aboutShown) ...[
-                  const SizedBox(height: 4),
-                  Text(l.familyAppsIntro, style: textTheme.bodySmall?.copyWith(color: Colors.white70)),
-                ],
-              ],
-            ),
-          ),
         ),
         const Divider(),
         _stateSection(context),

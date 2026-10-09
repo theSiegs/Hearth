@@ -994,9 +994,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get familyAppsIntro => 'Hearth와 HearthTube를 다른 Google TV 프로필에도 설치합니다. 어린이 프로필에서는 HearthTube가 작동하고 Hearth가 스트리밍 서비스에서 올바른 프로필을 선택하려면 필요합니다. 성인 프로필에서는 직접 설치할 필요가 없도록 하는 편의 기능입니다.';
-
-  @override
   String get familyAppsAddTitle => '다른 프로필에 Hearth 추가';
 
   @override
@@ -1959,7 +1956,4 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get familyAppsAtRiskDetail => '이 프로필이 다음에 시작될 때 Google TV가 보호되지 않은 앱을 삭제합니다. 다시 추가를 사용해 보호하세요.';
-
-  @override
-  String get familyAppsAbout => '이게 뭔가요?';
 }
