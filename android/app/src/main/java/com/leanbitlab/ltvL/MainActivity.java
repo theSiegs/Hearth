@@ -1378,6 +1378,10 @@ public class MainActivity extends FlutterActivity {
                         RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
                 .putExtra(RecognizerIntent.EXTRA_PROMPT, getString(R.string.search_voice_prompt))
                 .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+        // Google TV has two answers to this (its own voice input and Google's speech engine), so Android would show
+        // an "Open with" chooser instead of listening: ask Google TV's voice input directly when it's there
+        Intent tvVoice = new Intent(intent).setPackage("com.google.android.katniss");
+        if (tvVoice.resolveActivity(getPackageManager()) != null) intent = tvVoice;
         try {
             mPendingVoiceResult = result;
             startActivityForResult(intent, VOICE_REQUEST);
