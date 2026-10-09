@@ -358,6 +358,28 @@ public class MainActivity extends FlutterActivity {
                 result.success(null);
             }
             case "getPackageVersion" -> result.success(getPackageVersion(call.arguments()));
+            // Moving to Hearth's new app id (LegacyMove, docs/design/app-id-change.md)
+            case "getMoveStatus" -> answerFrom(sIoExecutor, result, () -> LegacyMove.status(this));
+            case "markMoveNoticeShown" -> {
+                LegacyMove.markNoticeShown(this);
+                result.success(null);
+            }
+            case "importFromOldHearth" -> {
+                LegacyMove.request(this);
+                result.success(true);
+                // The import runs at the next process start, before anything has read a setting
+                new Handler(Looper.getMainLooper()).postDelayed(() -> RestartActivity.restart(this), 300);
+            }
+            case "replaceOldHearth" -> sIoExecutor.execute(() -> runReplaceOldHearth(result));
+            case "openNewHearth" -> {
+                Intent open = getPackageManager().getLeanbackLaunchIntentForPackage(call.arguments());
+                if (open == null) open = getPackageManager().getLaunchIntentForPackage(call.arguments());
+                result.success(open != null && tryStartActivity(open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
+            }
+            case "getApkPackageName" -> answerFrom(sIoExecutor, result, () -> {
+                PackageInfo info = getPackageManager().getPackageArchiveInfo(call.<String>arguments(), 0);
+                return info != null ? info.packageName : null;
+            });
             case "playClickSound" -> {
                 getWindow().getDecorView().playSoundEffect(SoundEffectConstants.CLICK);
                 result.success(null);
@@ -972,6 +994,28 @@ public class MainActivity extends FlutterActivity {
             runOnUiThread(() -> result.success(log));
         } catch (Exception e) {
             runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
+        }
+    }
+
+    /**
+     * The move's last step: the old Hearth replaced by this one in every profile and uninstalled, through Hearth's
+     * own adb. Without it (no approved key yet), Android's uninstall screen for the old Hearth opens instead and the
+     * answer is the error SELF_ADB; the old Hearth's copies in the profiles then clean themselves up.
+     */
+    private void runReplaceOldHearth(MethodChannel.Result result) {
+        String legacy = LegacyMove.legacyPackage(getPackageName());
+        try (SelfAdb shell = SelfAdb.open(this)) {
+            List<Integer> all = new ArrayList<>(supervisedKidUserIds());
+            all.addAll(adultProfileUserIds());
+            List<String> log = ProfileAppAccess.replaceLegacy(this, shell, all, legacy, true);
+            runOnUiThread(() -> result.success(log));
+        } catch (Exception e) {
+            Log.w(TAG, "couldn't replace the old Hearth through adb", e);
+            runOnUiThread(() -> {
+                tryStartActivity(new Intent(Intent.ACTION_DELETE, Uri.parse("package:" + legacy))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                result.error("SELF_ADB", e.getMessage(), null);
+            });
         }
     }
 
