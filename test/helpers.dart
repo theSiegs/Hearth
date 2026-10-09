@@ -98,3 +98,21 @@ class FakeProfileService extends ChangeNotifier implements ProfileService {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
+
+/// Real listeners for a generated mock of a ChangeNotifier service (the mock's own addListener does nothing), so a
+/// test can change what it returns and have the home rebuild: mix it into the mock and call [changed].
+mixin LiveListeners {
+  final List<VoidCallback> _listeners = [];
+
+  void addListener(VoidCallback? listener) {
+    if (listener != null) _listeners.add(listener);
+  }
+
+  void removeListener(VoidCallback? listener) => _listeners.remove(listener);
+
+  void changed() {
+    for (final listener in List.of(_listeners)) {
+      listener();
+    }
+  }
+}
