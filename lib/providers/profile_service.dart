@@ -257,10 +257,15 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
       if (owner != null) {
         await _backupService.saveProfileLayout(owner, _settingsService);
       }
-      // A profile seen for the first time starts from the current layout.
       if (await _backupService.loadProfileLayout(key, _settingsService) ||
           (name != null && await _backupService.loadProfileLayout(name, _settingsService))) {
         await _appsService.refreshState();
+      } else if (owner != null) {
+        // A profile seen for the first time starts from the defaults, not the last profile's look and dock (a new
+        // grown-up profile right after a kid's would get the kid's). Hearth's very first profile keeps the layout
+        // it was set up with.
+        await _backupService.resetProfileSettings(_settingsService);
+        await _appsService.resetToDefaultLayout();
       }
       await _sharedPreferences.setString(layoutOwnerKey, key);
       await _fillEmptyDock();
