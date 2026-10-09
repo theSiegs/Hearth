@@ -389,12 +389,6 @@ class TitleMatch {
 
   const TitleMatch(this.result, this.details, this.availability);
 
-  /// "2022 · Series", "2014 · Film": what the card's second line says.
-  String get meta {
-    final kind = result.tmdbId == null ? null : (result.tmdbIsMovie ? "Film" : "Series");
-    return [if (result.year != null) "${result.year}", if (kind != null) kind].join(" · ");
-  }
-
   /// The best picture for a wide card: TMDB's still, else its poster.
   String? get imageUrl => details?.backdropUrl ?? details?.posterUrl;
 }

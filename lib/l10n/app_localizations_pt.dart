@@ -614,4 +614,132 @@ class AppLocalizationsPt extends AppLocalizations {
   String weatherTextChance(int percent, String forecast) {
     return '$percent% $forecast';
   }
+
+  @override
+  String searchWatchOn(String apps) {
+    return 'Assistir em $apps';
+  }
+
+  @override
+  String searchRentOrBuyOn(String app) {
+    return 'Alugar ou comprar em $app';
+  }
+
+  @override
+  String get searchMoreWaysToWatch => 'Mais formas de assistir (Google TV)';
+
+  @override
+  String get searchListening => 'Ouvindo…';
+
+  @override
+  String get searchHint => 'Pesquisar filmes e séries';
+
+  @override
+  String get searchEntryHelp => 'Digite, use o microfone ou digite no celular com o app Google TV.';
+
+  @override
+  String get searchTabWatchNow => 'Assistir agora';
+
+  @override
+  String get searchTabRentOrBuy => 'Alugar ou comprar';
+
+  @override
+  String get searchTabOtherApps => 'Outros apps';
+
+  @override
+  String searchGridRentOrBuyApps(String apps) {
+    return 'Alugar ou comprar · $apps';
+  }
+
+  @override
+  String get searchGridWhereToWatchGoogleTv => 'Onde assistir: Google TV';
+
+  @override
+  String searchGridElsewhere(String services) {
+    return 'Em $services (não nesta TV)';
+  }
+
+  @override
+  String searchGridResults(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count resultados',
+      one: '$count resultado',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String searchGridNothingHere(String query) {
+    return 'Nada aqui para “$query”.';
+  }
+
+  @override
+  String get searchGridTmdbNotice => 'Onde assistir, pelo TMDB (via JustWatch). Este produto usa a API do TMDB, mas não é endossado nem certificado pelo TMDB.';
+
+  @override
+  String searchAppsOr(String apps, String last) {
+    return '$apps ou $last';
+  }
+
+  @override
+  String get searchListSeparator => ', ';
+
+  @override
+  String searchAskGoogleQuery(String query) {
+    return 'Perguntar ao Google: “$query”';
+  }
+
+  @override
+  String get searchAskGoogleDetail => 'Para perguntas, o clima e tudo o que não for um programa';
+
+  @override
+  String searchSearchingFor(String query) {
+    return 'Pesquisando “$query”…';
+  }
+
+  @override
+  String get searchFailed => 'Não foi possível pesquisar agora. Verifique a conexão com a internet.';
+
+  @override
+  String searchNothingFound(String query) {
+    return 'Nada encontrado para “$query”';
+  }
+
+  @override
+  String searchNothingInYourApps(String query) {
+    return 'Nada de “$query” nos seus apps agora';
+  }
+
+  @override
+  String get searchSeeMoreResults => 'Veja onde mais está disponível em Mais resultados.';
+
+  @override
+  String get searchMoreResults => 'Mais resultados';
+
+  @override
+  String searchTitles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count títulos',
+      one: '$count título',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get searchAskGoogle => 'Perguntar ao Google';
+
+  @override
+  String searchQuoted(String query) {
+    return '“$query”';
+  }
+
+  @override
+  String get searchKindFilm => 'Filme';
+
+  @override
+  String get searchKindSeries => 'Série';
 }

@@ -75,4 +75,20 @@ void main() {
     expect(search.rentOrBuy, isEmpty);
     expect(search.otherApps.map((m) => m.result.title), ["Nowhere here"]);
   });
+
+  test("a search that can't be done says so, and the next one starts clean", () async {
+    final failing = search.search("bluey");
+    service.pending["bluey"]!.completeError(Exception("offline"));
+    await failing;
+    expect(search.failed, isTrue);
+    expect(search.loading, isFalse);
+    expect(search.matches, isEmpty);
+
+    final next = search.search("the bear");
+    expect(search.failed, isFalse);
+    service.pending["the bear"]!.complete([_title("Q2", "The Bear", netflixId: "2")]);
+    await next;
+    expect(search.failed, isFalse);
+    expect(search.matches.map((m) => m.result.title), ["The Bear"]);
+  });
 }

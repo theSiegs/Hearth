@@ -614,4 +614,130 @@ class AppLocalizationsKo extends AppLocalizations {
   String weatherTextChance(int percent, String forecast) {
     return '$forecast ($percent%)';
   }
+
+  @override
+  String searchWatchOn(String apps) {
+    return '$apps에서 보기';
+  }
+
+  @override
+  String searchRentOrBuyOn(String app) {
+    return '$app에서 대여 또는 구매';
+  }
+
+  @override
+  String get searchMoreWaysToWatch => '다른 시청 방법 (Google TV)';
+
+  @override
+  String get searchListening => '듣는 중…';
+
+  @override
+  String get searchHint => '영화 및 프로그램 검색';
+
+  @override
+  String get searchEntryHelp => '입력하거나 마이크를 사용하거나 Google TV 앱으로 휴대전화에서 입력하세요.';
+
+  @override
+  String get searchTabWatchNow => '지금 보기';
+
+  @override
+  String get searchTabRentOrBuy => '대여 또는 구매';
+
+  @override
+  String get searchTabOtherApps => '다른 앱';
+
+  @override
+  String searchGridRentOrBuyApps(String apps) {
+    return '대여 또는 구매 · $apps';
+  }
+
+  @override
+  String get searchGridWhereToWatchGoogleTv => '시청 위치: Google TV';
+
+  @override
+  String searchGridElsewhere(String services) {
+    return '$services에서 시청 가능 (이 TV에 없음)';
+  }
+
+  @override
+  String searchGridResults(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '결과 $count개',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String searchGridNothingHere(String query) {
+    return '여기에는 “$query”에 대한 결과가 없습니다.';
+  }
+
+  @override
+  String get searchGridTmdbNotice => '시청 정보 제공: TMDB (JustWatch 경유). 이 제품은 TMDB API를 사용하지만 TMDB의 보증이나 인증을 받지 않았습니다.';
+
+  @override
+  String searchAppsOr(String apps, String last) {
+    return '$apps 또는 $last';
+  }
+
+  @override
+  String get searchListSeparator => ', ';
+
+  @override
+  String searchAskGoogleQuery(String query) {
+    return 'Google에 묻기: “$query”';
+  }
+
+  @override
+  String get searchAskGoogleDetail => '질문, 날씨 등 프로그램이 아닌 모든 것';
+
+  @override
+  String searchSearchingFor(String query) {
+    return '“$query” 검색 중…';
+  }
+
+  @override
+  String get searchFailed => '지금은 검색할 수 없습니다. 인터넷 연결을 확인하세요.';
+
+  @override
+  String searchNothingFound(String query) {
+    return '“$query”에 대한 결과가 없습니다';
+  }
+
+  @override
+  String searchNothingInYourApps(String query) {
+    return '지금은 내 앱에 “$query” 항목이 없습니다';
+  }
+
+  @override
+  String get searchSeeMoreResults => '다른 시청처는 결과 더보기에서 확인하세요.';
+
+  @override
+  String get searchMoreResults => '결과 더보기';
+
+  @override
+  String searchTitles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '타이틀 $count개',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get searchAskGoogle => 'Google에 묻기';
+
+  @override
+  String searchQuoted(String query) {
+    return '“$query”';
+  }
+
+  @override
+  String get searchKindFilm => '영화';
+
+  @override
+  String get searchKindSeries => '시리즈';
 }

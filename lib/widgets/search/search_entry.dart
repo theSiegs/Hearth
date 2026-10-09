@@ -20,6 +20,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../flauncher_channel.dart';
+import '../../l10n/app_localizations.dart';
 import '../focusable_tap.dart';
 
 /// Where a search is typed or spoken, over the home: Google's own on-screen keyboard (also what a phone's Google
@@ -102,6 +103,7 @@ class _SearchEntryState extends State<SearchEntry> {
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
     final textTheme = Theme.of(context).textTheme;
+    final localizations = AppLocalizations.of(context)!;
     // Its own scope: while it's open the arrows stay between the mic and the box, never the home underneath
     return FocusScope(
       child: Align(
@@ -127,7 +129,7 @@ class _SearchEntryState extends State<SearchEntry> {
                       onSubmitted: _submit,
                       style: textTheme.headlineSmall,
                       decoration: InputDecoration(
-                        hintText: _listening ? "Listening…" : "Search films and shows",
+                        hintText: _listening ? localizations.searchListening : localizations.searchHint,
                         prefixIcon: const Icon(Icons.search),
                         filled: true,
                         fillColor: const Color(0xEE1E2026),
@@ -145,7 +147,7 @@ class _SearchEntryState extends State<SearchEntry> {
               Padding(
                 padding: const EdgeInsets.only(left: 74),
                 child: Text(
-                  "Type, use the mic, or type on your phone with the Google TV app.",
+                  localizations.searchEntryHelp,
                   style: textTheme.bodyMedium?.copyWith(
                       color: Colors.white70,
                       shadows: [const Shadow(color: Colors.black87, offset: Offset(1, 1), blurRadius: 6)]),

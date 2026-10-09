@@ -1204,6 +1204,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{percent}% {forecast}'**
   String weatherTextChance(int percent, String forecast);
+
+  /// Search: button in the choice of apps for a title, and the detail line under the focused result; apps is one app name, or several joined by searchAppsOr
+  ///
+  /// In en, this message translates to:
+  /// **'Watch on {apps}'**
+  String searchWatchOn(String apps);
+
+  /// Search: button in the choice of stores for a title that can only be rented or bought
+  ///
+  /// In en, this message translates to:
+  /// **'Rent or buy on {app}'**
+  String searchRentOrBuyOn(String app);
+
+  /// Search: last button in the choice of apps for a title; opens the title's Google TV page
+  ///
+  /// In en, this message translates to:
+  /// **'More ways to watch (Google TV)'**
+  String get searchMoreWaysToWatch;
+
+  /// Search box hint while the microphone is listening
+  ///
+  /// In en, this message translates to:
+  /// **'Listening…'**
+  String get searchListening;
+
+  /// Search box hint
+  ///
+  /// In en, this message translates to:
+  /// **'Search films and shows'**
+  String get searchHint;
+
+  /// Search: help line under the search box
+  ///
+  /// In en, this message translates to:
+  /// **'Type, use the mic, or type on your phone with the Google TV app.'**
+  String get searchEntryHelp;
+
+  /// Search results page: pill for titles included in an app on this TV
+  ///
+  /// In en, this message translates to:
+  /// **'Watch now'**
+  String get searchTabWatchNow;
+
+  /// Search results page: pill for titles that can be rented or bought in a store on this TV
+  ///
+  /// In en, this message translates to:
+  /// **'Rent or buy'**
+  String get searchTabRentOrBuy;
+
+  /// Search results page: pill for titles only on apps that aren't on this TV
+  ///
+  /// In en, this message translates to:
+  /// **'Other apps'**
+  String get searchTabOtherApps;
+
+  /// Search results page, Rent or buy pill: a card's detail line; apps is a list of store names
+  ///
+  /// In en, this message translates to:
+  /// **'Rent or buy · {apps}'**
+  String searchGridRentOrBuyApps(String apps);
+
+  /// Search results page, Other apps pill: a card's detail line when no service is known
+  ///
+  /// In en, this message translates to:
+  /// **'Where to watch: Google TV'**
+  String get searchGridWhereToWatchGoogleTv;
+
+  /// Search results page, Other apps pill: a card's detail line; services is one or two streaming service names
+  ///
+  /// In en, this message translates to:
+  /// **'On {services} (not on this TV)'**
+  String searchGridElsewhere(String services);
+
+  /// Search results page: how many titles were found, beside the search
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 result} other{{count} results}}'**
+  String searchGridResults(int count);
+
+  /// Search results page: the selected pill has no titles; query is what was searched
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here for “{query}”.'**
+  String searchGridNothingHere(String query);
+
+  /// Search results page: attribution at the bottom, which TMDB's terms ask for
+  ///
+  /// In en, this message translates to:
+  /// **'Where to watch from TMDB (via JustWatch). This product uses the TMDB API but is not endorsed or certified by TMDB.'**
+  String get searchGridTmdbNotice;
+
+  /// Search: the last of several app names; apps is the others, joined by searchListSeparator (A, B or C)
+  ///
+  /// In en, this message translates to:
+  /// **'{apps} or {last}'**
+  String searchAppsOr(String apps, String last);
+
+  /// Search: what goes between names in a list of apps or services (Netflix, Disney+)
+  ///
+  /// In en, this message translates to:
+  /// **', '**
+  String get searchListSeparator;
+
+  /// Search results row, heading while Ask Google is focused; query is what was searched
+  ///
+  /// In en, this message translates to:
+  /// **'Ask Google “{query}”'**
+  String searchAskGoogleQuery(String query);
+
+  /// Search results row, under the heading while Ask Google is focused
+  ///
+  /// In en, this message translates to:
+  /// **'For questions, the weather and anything else that isn\'t a show'**
+  String get searchAskGoogleDetail;
+
+  /// Search results row heading while the search runs; query is what was searched
+  ///
+  /// In en, this message translates to:
+  /// **'Searching for “{query}”…'**
+  String searchSearchingFor(String query);
+
+  /// Search results row heading when the search couldn't be done
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t search right now. Check the internet connection.'**
+  String get searchFailed;
+
+  /// Search results row heading when the search found no titles; query is what was searched
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing found for “{query}”'**
+  String searchNothingFound(String query);
+
+  /// Search results row heading when titles were found but none is watchable in this TV's apps
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing for “{query}” in your apps right now'**
+  String searchNothingInYourApps(String query);
+
+  /// Search results row, under searchNothingInYourApps; More results is the searchMoreResults card
+  ///
+  /// In en, this message translates to:
+  /// **'See where else it\'s available in More results.'**
+  String get searchSeeMoreResults;
+
+  /// Search results row: card that opens every result in a grid
+  ///
+  /// In en, this message translates to:
+  /// **'More results'**
+  String get searchMoreResults;
+
+  /// Search results row, under More results: how many titles were found
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 title} other{{count} titles}}'**
+  String searchTitles(int count);
+
+  /// Search results row: last card, which hands the same words to Google TV's own search
+  ///
+  /// In en, this message translates to:
+  /// **'Ask Google'**
+  String get searchAskGoogle;
+
+  /// Search results row, under Ask Google: what was searched, in the language's quotation marks
+  ///
+  /// In en, this message translates to:
+  /// **'“{query}”'**
+  String searchQuoted(String query);
+
+  /// Search: kind of title on a result card, after its year (2014 · Film)
+  ///
+  /// In en, this message translates to:
+  /// **'Film'**
+  String get searchKindFilm;
+
+  /// Search: kind of title on a result card, after its year (2022 · Series)
+  ///
+  /// In en, this message translates to:
+  /// **'Series'**
+  String get searchKindSeries;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

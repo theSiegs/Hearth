@@ -614,4 +614,130 @@ class AppLocalizationsZh extends AppLocalizations {
   String weatherTextChance(int percent, String forecast) {
     return '$forecast（$percent%）';
   }
+
+  @override
+  String searchWatchOn(String apps) {
+    return '在 $apps 上观看';
+  }
+
+  @override
+  String searchRentOrBuyOn(String app) {
+    return '在 $app 上租借或购买';
+  }
+
+  @override
+  String get searchMoreWaysToWatch => '更多观看方式 (Google TV)';
+
+  @override
+  String get searchListening => '正在聆听…';
+
+  @override
+  String get searchHint => '搜索电影和剧集';
+
+  @override
+  String get searchEntryHelp => '输入文字、使用麦克风，或通过 Google TV 应用在手机上输入。';
+
+  @override
+  String get searchTabWatchNow => '立即观看';
+
+  @override
+  String get searchTabRentOrBuy => '租借或购买';
+
+  @override
+  String get searchTabOtherApps => '其他应用';
+
+  @override
+  String searchGridRentOrBuyApps(String apps) {
+    return '租借或购买 · $apps';
+  }
+
+  @override
+  String get searchGridWhereToWatchGoogleTv => '观看途径：Google TV';
+
+  @override
+  String searchGridElsewhere(String services) {
+    return '在 $services 上（不在这台电视上）';
+  }
+
+  @override
+  String searchGridResults(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个结果',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String searchGridNothingHere(String query) {
+    return '这里没有与“$query”相关的内容。';
+  }
+
+  @override
+  String get searchGridTmdbNotice => '观看途径信息来自 TMDB（通过 JustWatch）。本产品使用 TMDB API，但未获得 TMDB 的认可或认证。';
+
+  @override
+  String searchAppsOr(String apps, String last) {
+    return '$apps或$last';
+  }
+
+  @override
+  String get searchListSeparator => '、';
+
+  @override
+  String searchAskGoogleQuery(String query) {
+    return '问 Google：“$query”';
+  }
+
+  @override
+  String get searchAskGoogleDetail => '用于提问、查天气以及节目以外的任何内容';
+
+  @override
+  String searchSearchingFor(String query) {
+    return '正在搜索“$query”…';
+  }
+
+  @override
+  String get searchFailed => '暂时无法搜索。请检查网络连接。';
+
+  @override
+  String searchNothingFound(String query) {
+    return '未找到与“$query”相关的内容';
+  }
+
+  @override
+  String searchNothingInYourApps(String query) {
+    return '目前你的应用中没有“$query”';
+  }
+
+  @override
+  String get searchSeeMoreResults => '在“更多结果”中查看其他可观看途径。';
+
+  @override
+  String get searchMoreResults => '更多结果';
+
+  @override
+  String searchTitles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 部作品',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get searchAskGoogle => '问 Google';
+
+  @override
+  String searchQuoted(String query) {
+    return '“$query”';
+  }
+
+  @override
+  String get searchKindFilm => '电影';
+
+  @override
+  String get searchKindSeries => '剧集';
 }

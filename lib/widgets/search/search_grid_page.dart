@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../flauncher_channel.dart';
+import '../../l10n/app_localizations.dart';
 import '../../providers/home_search.dart';
 import '../../providers/search_service.dart';
 import '../focusable_tap.dart';
@@ -51,15 +52,17 @@ class _SearchGridPageState extends State<SearchGridPage> {
         _Tab.otherApps => search.otherApps,
       };
 
-  String _detail(TitleMatch m, _Tab tab) {
+  String _detail(AppLocalizations localizations, TitleMatch m, _Tab tab) {
+    final separator = localizations.searchListSeparator;
     final where = switch (tab) {
-      _Tab.watchNow => appsFor(m).map((a) => a.name).join(", "),
-      _Tab.rentOrBuy => "Rent or buy · ${appsFor(m, rentOrBuy: true).map((a) => a.name).join(", ")}",
+      _Tab.watchNow => appsFor(m).map((a) => a.name).join(separator),
+      _Tab.rentOrBuy =>
+        localizations.searchGridRentOrBuyApps(appsFor(m, rentOrBuy: true).map((a) => a.name).join(separator)),
       _Tab.otherApps => m.availability.elsewhere.isEmpty
-          ? "Where to watch: Google TV"
-          : "On ${m.availability.elsewhere.take(2).join(", ")} (not on this TV)",
+          ? localizations.searchGridWhereToWatchGoogleTv
+          : localizations.searchGridElsewhere(m.availability.elsewhere.take(2).join(separator)),
     };
-    return [m.meta, where].where((s) => s.isNotEmpty).join(" · ");
+    return [titleMeta(localizations, m), where].where((s) => s.isNotEmpty).join(" · ");
   }
 
   Future<void> _press(TitleMatch m, _Tab tab) async {
@@ -79,7 +82,12 @@ class _SearchGridPageState extends State<SearchGridPage> {
     // Opens on the first pill that has anything
     final tab = _tab ?? _Tab.values.firstWhere((t) => counts[t]! > 0, orElse: () => _Tab.watchNow);
     final items = _items(search, tab);
-    const labels = {_Tab.watchNow: "Watch now", _Tab.rentOrBuy: "Rent or buy", _Tab.otherApps: "Other apps"};
+    final localizations = AppLocalizations.of(context)!;
+    final labels = {
+      _Tab.watchNow: localizations.searchTabWatchNow,
+      _Tab.rentOrBuy: localizations.searchTabRentOrBuy,
+      _Tab.otherApps: localizations.searchTabOtherApps,
+    };
 
     return Scaffold(
       backgroundColor: const Color(0xFF121612),
@@ -99,7 +107,8 @@ class _SearchGridPageState extends State<SearchGridPage> {
                 ]),
               ),
               const SizedBox(width: 16),
-              Text("${search.matches.length} results", style: textTheme.titleMedium?.copyWith(color: Colors.white70)),
+              Text(localizations.searchGridResults(search.matches.length),
+                  style: textTheme.titleMedium?.copyWith(color: Colors.white70)),
             ]),
             const SizedBox(height: 18),
             Row(children: [
@@ -117,7 +126,7 @@ class _SearchGridPageState extends State<SearchGridPage> {
             const SizedBox(height: 18),
             Expanded(
               child: items.isEmpty
-                  ? Text("Nothing here for “${search.query}”.", style: textTheme.bodyLarge)
+                  ? Text(localizations.searchGridNothingHere(search.query), style: textTheme.bodyLarge)
                   : LayoutBuilder(builder: (context, constraints) {
                       const columns = 4;
                       const gap = 22.0;
@@ -139,7 +148,7 @@ class _SearchGridPageState extends State<SearchGridPage> {
                             width: width,
                             height: width * 9 / 16,
                             title: m.result.title,
-                            detail: _detail(m, tab),
+                            detail: _detail(localizations, m, tab),
                             imageUrl: m.imageUrl,
                             packageName: switch (tab) {
                               _Tab.watchNow => appsFor(m).firstOrNull?.packageName,
@@ -154,9 +163,7 @@ class _SearchGridPageState extends State<SearchGridPage> {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Text(
-                  "Where to watch from TMDB (via JustWatch). This product uses the TMDB API but is not endorsed or "
-                  "certified by TMDB.",
+              child: Text(localizations.searchGridTmdbNotice,
                   style: textTheme.bodySmall?.copyWith(color: Colors.white38)),
             ),
           ],

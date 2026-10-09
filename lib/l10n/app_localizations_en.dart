@@ -614,4 +614,132 @@ class AppLocalizationsEn extends AppLocalizations {
   String weatherTextChance(int percent, String forecast) {
     return '$percent% $forecast';
   }
+
+  @override
+  String searchWatchOn(String apps) {
+    return 'Watch on $apps';
+  }
+
+  @override
+  String searchRentOrBuyOn(String app) {
+    return 'Rent or buy on $app';
+  }
+
+  @override
+  String get searchMoreWaysToWatch => 'More ways to watch (Google TV)';
+
+  @override
+  String get searchListening => 'Listening…';
+
+  @override
+  String get searchHint => 'Search films and shows';
+
+  @override
+  String get searchEntryHelp => 'Type, use the mic, or type on your phone with the Google TV app.';
+
+  @override
+  String get searchTabWatchNow => 'Watch now';
+
+  @override
+  String get searchTabRentOrBuy => 'Rent or buy';
+
+  @override
+  String get searchTabOtherApps => 'Other apps';
+
+  @override
+  String searchGridRentOrBuyApps(String apps) {
+    return 'Rent or buy · $apps';
+  }
+
+  @override
+  String get searchGridWhereToWatchGoogleTv => 'Where to watch: Google TV';
+
+  @override
+  String searchGridElsewhere(String services) {
+    return 'On $services (not on this TV)';
+  }
+
+  @override
+  String searchGridResults(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count results',
+      one: '1 result',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String searchGridNothingHere(String query) {
+    return 'Nothing here for “$query”.';
+  }
+
+  @override
+  String get searchGridTmdbNotice => 'Where to watch from TMDB (via JustWatch). This product uses the TMDB API but is not endorsed or certified by TMDB.';
+
+  @override
+  String searchAppsOr(String apps, String last) {
+    return '$apps or $last';
+  }
+
+  @override
+  String get searchListSeparator => ', ';
+
+  @override
+  String searchAskGoogleQuery(String query) {
+    return 'Ask Google “$query”';
+  }
+
+  @override
+  String get searchAskGoogleDetail => 'For questions, the weather and anything else that isn\'t a show';
+
+  @override
+  String searchSearchingFor(String query) {
+    return 'Searching for “$query”…';
+  }
+
+  @override
+  String get searchFailed => 'Couldn\'t search right now. Check the internet connection.';
+
+  @override
+  String searchNothingFound(String query) {
+    return 'Nothing found for “$query”';
+  }
+
+  @override
+  String searchNothingInYourApps(String query) {
+    return 'Nothing for “$query” in your apps right now';
+  }
+
+  @override
+  String get searchSeeMoreResults => 'See where else it\'s available in More results.';
+
+  @override
+  String get searchMoreResults => 'More results';
+
+  @override
+  String searchTitles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count titles',
+      one: '1 title',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get searchAskGoogle => 'Ask Google';
+
+  @override
+  String searchQuoted(String query) {
+    return '“$query”';
+  }
+
+  @override
+  String get searchKindFilm => 'Film';
+
+  @override
+  String get searchKindSeries => 'Series';
 }

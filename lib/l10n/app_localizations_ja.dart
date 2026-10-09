@@ -614,4 +614,130 @@ class AppLocalizationsJa extends AppLocalizations {
   String weatherTextChance(int percent, String forecast) {
     return '$forecast（$percent%）';
   }
+
+  @override
+  String searchWatchOn(String apps) {
+    return '$apps で見る';
+  }
+
+  @override
+  String searchRentOrBuyOn(String app) {
+    return '$app でレンタル・購入';
+  }
+
+  @override
+  String get searchMoreWaysToWatch => 'その他の視聴方法 (Google TV)';
+
+  @override
+  String get searchListening => '聞き取り中…';
+
+  @override
+  String get searchHint => '映画や番組を検索';
+
+  @override
+  String get searchEntryHelp => '入力するか、マイクを使うか、Google TV アプリでスマートフォンから入力してください。';
+
+  @override
+  String get searchTabWatchNow => '今すぐ見る';
+
+  @override
+  String get searchTabRentOrBuy => 'レンタル・購入';
+
+  @override
+  String get searchTabOtherApps => 'その他のアプリ';
+
+  @override
+  String searchGridRentOrBuyApps(String apps) {
+    return 'レンタル・購入 · $apps';
+  }
+
+  @override
+  String get searchGridWhereToWatchGoogleTv => '視聴方法: Google TV';
+
+  @override
+  String searchGridElsewhere(String services) {
+    return '$services で配信中 (このテレビにはありません)';
+  }
+
+  @override
+  String searchGridResults(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件の結果',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String searchGridNothingHere(String query) {
+    return 'ここには「$query」に該当するものはありません。';
+  }
+
+  @override
+  String get searchGridTmdbNotice => '視聴情報は TMDB (JustWatch 経由) によるものです。この製品は TMDB API を使用していますが、TMDB による承認や認定は受けていません。';
+
+  @override
+  String searchAppsOr(String apps, String last) {
+    return '$apps または $last';
+  }
+
+  @override
+  String get searchListSeparator => '、';
+
+  @override
+  String searchAskGoogleQuery(String query) {
+    return 'Google に聞く:「$query」';
+  }
+
+  @override
+  String get searchAskGoogleDetail => '質問や天気など、番組以外のことはこちら';
+
+  @override
+  String searchSearchingFor(String query) {
+    return '「$query」を検索中…';
+  }
+
+  @override
+  String get searchFailed => '現在検索できません。インターネット接続を確認してください。';
+
+  @override
+  String searchNothingFound(String query) {
+    return '「$query」は見つかりませんでした';
+  }
+
+  @override
+  String searchNothingInYourApps(String query) {
+    return '今のところ、お使いのアプリに「$query」はありません';
+  }
+
+  @override
+  String get searchSeeMoreResults => 'ほかの視聴先は「その他の結果」で確認できます。';
+
+  @override
+  String get searchMoreResults => 'その他の結果';
+
+  @override
+  String searchTitles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件のタイトル',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get searchAskGoogle => 'Google に聞く';
+
+  @override
+  String searchQuoted(String query) {
+    return '「$query」';
+  }
+
+  @override
+  String get searchKindFilm => '映画';
+
+  @override
+  String get searchKindSeries => 'シリーズ';
 }
