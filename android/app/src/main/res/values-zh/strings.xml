@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
+    <string name="profile_pairing_opening">正在以 %2$s 的身份打开 %1$s…</string>
+    <string name="profile_pairing_no_match">没有与 %1$s 匹配的个人资料。请在下一个界面中选择。</string>
+    <string name="profile_pairing_matched">Hearth 已为 %3$s 以“%2$s”打开 %1$s。如需更改：Hearth 设置 → 个人资料配对。</string>
+    <string name="profile_pairing_the_app">应用</string>
+
+    <!-- A Google TV profile before Hearth has learned its name (ProfileUsers) -->
+    <string name="profile_unnamed">个人资料 %1$d</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
+    <string name="profile_pairing_opening">Apro %1$s come %2$s…</string>
+    <string name="profile_pairing_no_match">Nessun profilo corrispondente per %1$s. Scegline uno nella schermata successiva.</string>
+    <string name="profile_pairing_matched">Hearth ha aperto %1$s come “%2$s” per %3$s. Per cambiarlo: Impostazioni di Hearth → Abbinamento profili.</string>
+    <string name="profile_pairing_the_app">l\'app</string>
+
+    <!-- A Google TV profile before Hearth has learned its name (ProfileUsers) -->
+    <string name="profile_unnamed">Profilo %1$d</string>
+</resources>

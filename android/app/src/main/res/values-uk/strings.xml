@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
+    <string name="profile_pairing_opening">Відкриваємо %1$s як %2$s…</string>
+    <string name="profile_pairing_no_match">Немає відповідного профілю для %1$s. Виберіть профіль на наступному екрані.</string>
+    <string name="profile_pairing_matched">Hearth відкрив %1$s як «%2$s» для %3$s. Змінити: Налаштування Hearth → Зв\'язування профілів.</string>
+    <string name="profile_pairing_the_app">застосунок</string>
+
+    <!-- A Google TV profile before Hearth has learned its name (ProfileUsers) -->
+    <string name="profile_unnamed">Профіль %1$d</string>
+</resources>

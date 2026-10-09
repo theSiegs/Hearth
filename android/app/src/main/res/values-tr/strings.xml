@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
+    <string name="profile_pairing_opening">%2$s profiliyle açılıyor: %1$s…</string>
+    <string name="profile_pairing_no_match">%1$s için eşleşen profil yok. Sonraki ekranda bir profil seçin.</string>
+    <string name="profile_pairing_matched">Hearth, %3$s için %1$s içinde “%2$s” profilini açtı. Değiştirmek için: Hearth Ayarları → Profil eşleştirme.</string>
+    <string name="profile_pairing_the_app">uygulama</string>
+
+    <!-- A Google TV profile before Hearth has learned its name (ProfileUsers) -->
+    <string name="profile_unnamed">Profil %1$d</string>
+</resources>

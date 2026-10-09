@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Text the Java side shows or says, translated in values-xx/strings.xml. Proper nouns (Hearth, Home Assistant, Google TV...) stay untranslated. -->
+<resources>
+    <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
+    <string name="profile_pairing_opening">Opening %1$s as %2$s…</string>
+    <string name="profile_pairing_no_match">No matching profile for %1$s. Choose one on the next screen.</string>
+    <string name="profile_pairing_matched">Hearth opened %1$s as “%2$s” for %3$s. To change it: Hearth Settings → Profile Pairing.</string>
+    <string name="profile_pairing_the_app">the app</string>
+
+    <!-- A Google TV profile before Hearth has learned its name (ProfileUsers) -->
+    <string name="profile_unnamed">Profile %1$d</string>
+</resources>

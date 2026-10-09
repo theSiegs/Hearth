@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
+    <string name="profile_pairing_opening">جارٍ فتح %1$s باسم %2$s…</string>
+    <string name="profile_pairing_no_match">لا يوجد ملف شخصي مطابق لـ %1$s. اختر ملفًا في الشاشة التالية.</string>
+    <string name="profile_pairing_matched">فتح Hearth %1$s باسم «%2$s» لـ %3$s. لتغيير ذلك: إعدادات Hearth ← ربط الملفات الشخصية.</string>
+    <string name="profile_pairing_the_app">التطبيق</string>
+
+    <!-- A Google TV profile before Hearth has learned its name (ProfileUsers) -->
+    <string name="profile_unnamed">الملف الشخصي %1$d</string>
+</resources>
