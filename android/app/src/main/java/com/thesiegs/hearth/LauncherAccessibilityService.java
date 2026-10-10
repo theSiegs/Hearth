@@ -40,6 +40,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class LauncherAccessibilityService extends AccessibilityService {
     private static final String TAG = "HearthProfile";
@@ -281,6 +283,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         sInstance = this;
+        Log.i(GoogleSwitchProbe.TAG, "Google TV's switches readable: " + GoogleSwitchProbe.canReadSwitches(this));
         mKidsState = ProfileUsers.isKids(this);
         IntentFilter userFilter = new IntentFilter(ProfileUsers.ACTION_PROFILE_ACCESSIBLE);
         userFilter.addAction(ProfileUsers.ACTION_PROFILE_INACCESSIBLE);
@@ -320,6 +323,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     @Override
     public void onDestroy() {
         if (sInstance == this) sInstance = null;
+        mSwitchProbe.shutdownNow();
         ProfileProvider.notifyChanged(this);  // service_running
         mHandler.removeCallbacksAndMessages(null);
         if (mHaServer != null) mHaServer.stop();
@@ -747,7 +751,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (wasOnScreen != mChooserOnScreen) {
             Log.i(TAG, "chooser " + (mChooserOnScreen ? "open" : "closed") + " (" + packageName
                     + "/" + className + ")");
-            if (!mChooserOnScreen) checkProfileUser("chooser closed");
+            if (!mChooserOnScreen) {
+                checkProfileUser("chooser closed");
+                probeSwitch();
+            }
         }
 
         if (isGoogleTv) {
@@ -772,8 +779,40 @@ public class LauncherAccessibilityService extends AccessibilityService {
         return !isHearthOrApp && before;
     }
 
+    // --- Following Google TV's account switches: logged only (GoogleSwitchProbe) ---
+
+    private final ExecutorService mSwitchProbe = Executors.newSingleThreadExecutor();
+    private String mLoggedHomeAccount;
+
+    /** The chooser closed: whether Google TV recorded a switch, now and once it has had time to finish one. */
+    private void probeSwitch() {
+        final String closedAt = new java.text.SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.ROOT)
+                .format(new java.util.Date());
+        for (long delay : new long[]{2_000, 8_000}) {
+            mHandler.postDelayed(() -> mSwitchProbe.execute(() -> Log.i(GoogleSwitchProbe.TAG,
+                    "Chooser closed at " + closedAt + "; Google TV's last switch: "
+                            + GoogleSwitchProbe.latestSwitch(this))), delay);
+        }
+    }
+
+    /** Google TV's home is up: which account it says is logged in, as its profile picture loads. */
+    private void probeHomeAccount() {
+        for (long delay : new long[]{300, 1_500, 4_000}) {
+            mHandler.postDelayed(() -> {
+                AccessibilityNodeInfo root = getRootInActiveWindow();
+                if (root == null || !TextUtils.equals(GOOGLE_TV_PACKAGE, root.getPackageName())) return;
+                String account = GoogleSwitchProbe.homeAccount(root);
+                if (account != null && !account.equals(mLoggedHomeAccount)) {
+                    mLoggedHomeAccount = account;
+                    Log.i(GoogleSwitchProbe.TAG, "Google TV's home says logged in as " + account);
+                }
+            }, delay);
+        }
+    }
+
     /** One of Google TV's windows: its home, the chooser, a screen time screen, a setup flow, or another screen. */
     private void onGoogleTvWindow(String className, AccessibilityEvent event) {
+        if (GOOGLE_TV_HOME_ACTIVITY.equals(className)) probeHomeAccount();
         boolean wellbeing = className.startsWith(GOOGLE_TV_WELLBEING_PREFIX);
         if (wellbeing) {
             mWellbeingSeenAt = SystemClock.elapsedRealtime();
