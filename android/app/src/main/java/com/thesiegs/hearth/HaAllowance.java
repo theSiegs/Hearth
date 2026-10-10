@@ -11,8 +11,8 @@ import org.json.JSONObject;
 /**
  * Each profile's allowance as Home Assistant works it out (a YouTube time pool shared with the family's other
  * devices, Family Link schedules), for HearthTube to enforce: read from one entity, {@link #ENTITY}, whose attribute
- * "profiles" maps a profile_id (the key Hearth sends Home Assistant, "user:11") to {"youtube_minutes_left": int or
- * null, "schedule_locked": bool, "message": optional text}. Read with the Home Assistant panel's address and token,
+ * "profiles" (or else its state, as JSON) maps a profile_id (the key Hearth sends Home Assistant, "user:11") to
+ * {"youtube_minutes_left": int or null, "schedule_locked": bool, "message": optional text}. Read with the Home Assistant panel's address and token,
  * every minute or so and at once when the profile changes; the last good read is kept for the day (a new day forgets
  * it), and when it was read goes with it, so HearthTube can tell how fresh it is and decide what to do without one.
  */
@@ -65,9 +65,9 @@ final class HaAllowance {
         }
         if (!HaConfig.isConfigured(context)) return false;
         JSONObject state = HaApi.state(context, ENTITY);
-        JSONObject attributes = state != null ? state.optJSONObject("attributes") : null;
-        JSONObject profiles = attributes != null ? attributes.optJSONObject("profiles") : null;
+        JSONObject profiles = profilesOf(state);
         if (profiles == null) {
+            // Unreadable, or not a profiles map (unknown, unavailable): what was read today still counts (fail-open)
             Log.i(TAG, "No allowance from Home Assistant (" + ENTITY + (state == null ? " unreadable)" : " has no profiles)"));
             return false;
         }
@@ -82,6 +82,25 @@ final class HaAllowance {
                 .apply();
         // Even the same values: the read time changed, and HearthTube judges freshness by it
         return true;
+    }
+
+    /**
+     * The profiles map from the entity: its "profiles" attribute, else its state as JSON (a template helper made in
+     * Home Assistant's UI can't have attributes, and a state is at most 255 characters, enough for a few profiles).
+     * "{}" is a map with no limits; anything else (unknown, unavailable, not JSON) is null.
+     */
+    static JSONObject profilesOf(JSONObject state) {
+        if (state == null) return null;
+        JSONObject attributes = state.optJSONObject("attributes");
+        JSONObject profiles = attributes != null ? attributes.optJSONObject("profiles") : null;
+        if (profiles != null) return profiles;
+        String value = state.optString("state", "").trim();
+        if (!value.startsWith("{")) return null;
+        try {
+            return new JSONObject(value);
+        } catch (JSONException e) {
+            return null;
+        }
     }
 
     /** This profile's allowance as last read today; values null when Home Assistant has said nothing today. */

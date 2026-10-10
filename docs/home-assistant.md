@@ -122,8 +122,10 @@ playing and for how long.
 **Allowance for HearthTube (optional).** Hearth enforces a daily YouTube limit on its own (Settings → Profiles →
 YouTube time per day). Home Assistant can add its say, e.g. a pool shared with the family's phones and tablets:
 with the Home Assistant panel's address and token set, Hearth reads `sensor.hearth_allowance` about once a minute.
-Its attribute `profiles` maps a `profile_id` to `{"youtube_minutes_left": int or null, "schedule_locked": bool,
-"message": optional text}`; a profile it doesn't list has no limit from it. The stricter of the two counts, and
+Its attribute `profiles`, or else its state as JSON (a template helper made in the UI can't have attributes), maps a
+`profile_id` to `{"youtube_minutes_left": int or null, "schedule_locked": bool, "message": optional text}`; a
+profile it doesn't list has no limit from it, and `{}` means none. A state that isn't such a map (unknown,
+unavailable) is treated as unreadable: what Hearth read earlier that day still counts. The stricter of the two counts, and
 HearthTube gets the result through Hearth (see [provider-contract.md](provider-contract.md)).
 
 A minimal automation that keeps the current app in a helper:
