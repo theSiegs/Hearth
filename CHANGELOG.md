@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.33 (pre-release)
+
+- Kids' profiles: Hearth (and HearthTube, when it's installed) goes on every kids' profile from the setup flow, and new kids' profiles get it automatically. Settings → Profiles shows each kid as Ready or Needs a fix with one Fix button, and a page per kid with how Hearth stands there, HearthTube, and its YouTube time per day, set without switching profiles. HearthTube can be added to a kid from that page, even from inside the kid's profile.
+- Streaming app PINs (Settings → Profiles): each profile sets its own, kids' profiles included (behind the parent PIN), without pairing by hand first.
+- Pushing Hearth into grown-ups' profiles is gone (they share the TV's main user).
+
 ## 2026.10.32 (pre-release)
 
 - With HearthTube installed, kids profiles watch YouTube only in HearthTube (where their YouTube time applies): YouTube's own app is hidden, and opening it anyway opens HearthTube. Grown-ups' profiles start with YouTube hidden too.
