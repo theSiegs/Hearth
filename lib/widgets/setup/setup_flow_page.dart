@@ -19,6 +19,7 @@ import 'dart:async';
 
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/models/kids_profiles.dart';
 import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flauncher/providers/home_looks.dart';
 import 'package:flauncher/providers/open_meteo_client.dart';
@@ -31,7 +32,7 @@ import 'package:flauncher/widgets/settings/adb_command_dialog.dart';
 import 'package:flauncher/widgets/settings/app_language_page.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/settings/backup_restore_page.dart';
-import 'package:flauncher/widgets/settings/family_apps_page.dart';
+import 'package:flauncher/widgets/settings/kids_profiles_page.dart';
 import 'package:flauncher/widgets/settings/ha_phone_setup_dialog.dart';
 import 'package:flauncher/widgets/settings/look_settings_page.dart';
 import 'package:flauncher/widgets/settings/message_dialog.dart';
@@ -225,7 +226,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   SettingsService? _lookSettings;
 
   /// What the kids' step left on each profile, once Hearth was put on them.
-  List<Map<dynamic, dynamic>>? _kidsRows;
+  KidsProfilesState? _kidsState;
 
   /// How the Home Assistant test pop-up went: null when it showed (or none was sent).
   String? _haTestResult;
@@ -357,7 +358,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       // Only Netflix needs it, and only once Profile Pairing is on
       SetupScreen.familyVoice =>
         !snap.netflix || !snap.isDone(SetupStepId.profilePairing) || snap.isDone(SetupStepId.voice),
-      SetupScreen.familyKids => snap.kidsProfiles == 0 || snap.kidsProfiles <= _flow.kidsProtected,
+      SetupScreen.familyKids => snap.kidsProfiles == 0 ||
+          SetupSnapshot.kidsCovered(snap.kidsProfiles, kidsProtected: _flow.kidsProtected, kidsReady: snap.kidsReady),
       SetupScreen.look => _restored,
       SetupScreen.haAlerts => snap.haAlerts,
       SetupScreen.haDashboard => snap.haPanel && (context.read<SettingsService?>()?.haPanelEnabled ?? false),

@@ -17,17 +17,19 @@
 
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/models/kids_profiles.dart';
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'family_apps_page.dart';
 import 'focusable_settings_tile.dart';
+import 'kids_profiles_page.dart';
 import 'profile_pairing_page.dart';
 import 'settings_lock.dart';
 import 'settings_page.dart';
+import 'streaming_pins_page.dart';
 
 /// Google TV profiles, Profile Pairing in the streaming apps, and the parent PIN.
 class ProfilesSettingsPage extends StatelessWidget {
@@ -68,15 +70,18 @@ class ProfilesSettingsPage extends StatelessWidget {
             title: Text(l.profilePairingTitle, style: textTheme.bodyMedium),
             onPressed: () => Navigator.of(context).pushNamed(ProfilePairingPage.routeName),
           ),
+        // Each streaming app's profile PINs in one place, matched by name or chosen in Profile Pairing
         if (!locked)
           FocusableSettingsTile(
-            leading: const Icon(Icons.people_alt_outlined),
-            title: Text(l.familyAppsTitle, style: textTheme.bodyMedium),
+            leading: const Icon(Icons.pin_outlined),
+            title: Text(l.streamingPinsTitle, style: textTheme.bodyMedium),
             trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-            onPressed: () => Navigator.of(context).pushNamed(FamilyAppsPage.routeName),
+            onPressed: () => Navigator.of(context).pushNamed(StreamingPinsPage.routeName),
           ),
-        // A kids profile's limit is the parent's to set (past the PIN); a grown-up may set their own
-        if (!locked) const _YouTubeLimitTile(),
+        if (!locked) const _KidsProfilesTile(),
+        // A grown-up may set their own limit here; each kid's is set in Kids' profiles, without switching to them
+        if (!locked && !(context.select<ProfileService?, bool>((p) => p?.isKidsProfile ?? false)))
+          const YouTubeLimitTile(),
         if (!locked)
           FocusableSettingsTile(
             leading: const Icon(Icons.lock_outline),
@@ -121,6 +126,52 @@ class ProfilesSettingsPage extends StatelessWidget {
       }
     }
     await chooseNewParentPin(context);
+  }
+}
+
+/// Kids' profiles: how many need a fix, read as the page opens (what Android lists; no adb).
+class _KidsProfilesTile extends StatefulWidget {
+  const _KidsProfilesTile();
+
+  @override
+  State<_KidsProfilesTile> createState() => _KidsProfilesTileState();
+}
+
+class _KidsProfilesTileState extends State<_KidsProfilesTile> {
+  late final FLauncherChannel? _channel = context.read<FLauncherChannel?>();
+  KidsProfilesState? _state;
+
+  @override
+  void initState() {
+    super.initState();
+    _read();
+  }
+
+  Future<void> _read() async {
+    try {
+      final map = await _channel?.getKidsProfilesState();
+      if (mounted && map != null) setState(() => _state = KidsProfilesState.fromMap(map));
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final textTheme = Theme.of(context).textTheme;
+    final state = _state;
+    final needing = state?.needingFix ?? 0;
+    return FocusableSettingsTile(
+      leading: const Icon(Icons.child_care),
+      title: Text(l.kidsProfilesTitle, style: textTheme.bodyMedium),
+      trailing: state == null || state.kids.isEmpty
+          ? const Icon(Icons.chevron_right, color: Colors.white54)
+          : Text(needing > 0 ? l.kidsProfilesNeedFixCount(needing) : l.kidsProfilesReady,
+              style: textTheme.bodySmall?.copyWith(color: needing > 0 ? Colors.amber : Colors.green)),
+      onPressed: () async {
+        await Navigator.of(context).pushNamed(KidsProfilesPage.routeName);
+        _read();
+      },
+    );
   }
 }
 
@@ -198,16 +249,20 @@ class _LockOnSleepTileState extends State<_LockOnSleepTile> {
   }
 }
 
-/// How long HearthTube may play a day for this profile. Hearth counts it on its own; with Home Assistant set up, a
-/// limit shared with the family's other devices can count too (the stricter wins).
-class _YouTubeLimitTile extends StatefulWidget {
-  const _YouTubeLimitTile();
+/// How long HearthTube may play a day for a profile: the one on now, or a kids' profile by its [profileKey]. Hearth
+/// counts it on its own; with Home Assistant set up, a limit shared with the family's other devices can count too
+/// (the stricter wins).
+class YouTubeLimitTile extends StatefulWidget {
+  final String? profileKey;
+  final bool autofocus;
+
+  const YouTubeLimitTile({super.key, this.profileKey, this.autofocus = false});
 
   @override
-  State<_YouTubeLimitTile> createState() => _YouTubeLimitTileState();
+  State<YouTubeLimitTile> createState() => _YouTubeLimitTileState();
 }
 
-class _YouTubeLimitTileState extends State<_YouTubeLimitTile> {
+class _YouTubeLimitTileState extends State<YouTubeLimitTile> {
   /// 0 is no limit.
   static const List<int> _options = [0, 15, 30, 45, 60, 90, 120, 180];
   late final FLauncherChannel? _channel = context.read<FLauncherChannel?>();
@@ -216,7 +271,7 @@ class _YouTubeLimitTileState extends State<_YouTubeLimitTile> {
   @override
   void initState() {
     super.initState();
-    _channel?.getYouTubeDailyMinutes().then((m) {
+    _channel?.getYouTubeDailyMinutes(profileKey: widget.profileKey).then((m) {
       if (mounted) setState(() => _minutes = m);
     }).catchError((_) {});
   }
@@ -254,7 +309,7 @@ class _YouTubeLimitTileState extends State<_YouTubeLimitTile> {
       ),
     );
     if (picked == null) return;
-    await _channel?.setYouTubeDailyMinutes(picked);
+    await _channel?.setYouTubeDailyMinutes(picked, profileKey: widget.profileKey);
     if (mounted) setState(() => _minutes = picked);
   }
 
@@ -262,6 +317,7 @@ class _YouTubeLimitTileState extends State<_YouTubeLimitTile> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     return FocusableSettingsTile(
+      autofocus: widget.autofocus,
       leading: const Icon(Icons.timer_outlined),
       title: Text(l.youTubeLimitTitle, style: Theme.of(context).textTheme.bodyMedium),
       trailing: Text(_label(l, _minutes), style: Theme.of(context).textTheme.bodySmall),

@@ -334,7 +334,7 @@ void main() {
       expect(find.text("Profile Pairing is on"), findsOneWidget);
     });
 
-    testWidgets("kids' profiles: turn on debugging, then add Hearth to them after saying what it does",
+    testWidgets("kids' profiles: turn on debugging, then Hearth goes on them from the screen that says what it does",
         (tester) async {
       await SettingsService(prefs).setParentPin("1357");
       channel.pairing = true;
@@ -349,13 +349,12 @@ void main() {
       await comeBack(tester);
       expect(find.text("Keep Hearth on your kids' profiles"), findsOneWidget);
 
-      await press(tester, "Add to their profiles");
-      // Nothing happens before the parent has read what adding does
+      // The screen says what it does: one press, no question after it
       expect(channel.profilesAdded, 0);
-      expect(find.text("Add Hearth to other profiles"), findsOneWidget);
-      await press(tester, "Add");
+      await press(tester, "Add to their profiles");
       expect(channel.profilesAdded, 1);
       expect(find.text("Hearth is on your kids' profiles"), findsOneWidget);
+      expect(find.text("Ready"), findsNWidgets(2));
       expect(flow.kidsProtected, 2);
     });
 
@@ -368,13 +367,12 @@ void main() {
       await openAtFamily(tester);
       await press(tester, "Turn on");
       await press(tester, "Add to their profiles");
-      await press(tester, "Add");
       expect(find.text("Hearth isn't on every kids' profile yet"), findsOneWidget);
-      expect(find.text("Not installed"), findsOneWidget);
+      expect(find.text("Needs a fix"), findsOneWidget);
+      expect(find.textContaining("Hearth isn't on it"), findsOneWidget);
       expect(flow.kidsProtected, 0);
       channel.profilesKept = true;
       await press(tester, "Try again");
-      await press(tester, "Add");
       expect(find.text("Hearth is on your kids' profiles"), findsOneWidget);
     });
 
@@ -387,8 +385,8 @@ void main() {
       await openAtFamily(tester);
       await press(tester, "Turn on");
       await press(tester, "Add to their profiles");
-      await press(tester, "Add");
       expect(find.text("Hearth is on your kids' profiles"), findsNothing);
+      expect(find.text("Couldn't change the kids' profiles"), findsOneWidget);
       expect(flow.kidsProtected, 0);
     });
 
@@ -410,7 +408,7 @@ void main() {
       await SettingsService(prefs).setParentPin("1357");
       channel.pairing = true;
       channel.kidsProfiles = 2;
-      channel.kidsWithHearth = 2;
+      channel.kidsReady = 2;
       await openAtFamily(tester);
       expect(itemMarks(Icons.radio_button_unchecked), findsNothing);
       expect(find.text("Next"), findsOneWidget);

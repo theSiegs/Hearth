@@ -188,9 +188,118 @@
     "@updatesTitle": {
         "description": "Settings page title, also its row in the page that opens it"
     },
-    "familyAppsTitle": "Hearth on other profiles",
-    "@familyAppsTitle": {
-        "description": "Settings page title, also its row in the page that opens it"
+    "kidsProfilesTitle": "Kids' profiles",
+    "@kidsProfilesTitle": {
+        "description": "Settings > Profiles: the page (and its row) about Hearth on the TV's kids' profiles"
+    },
+    "kidsProfilesUnnamed": "A kids' profile",
+    "@kidsProfilesUnnamed": {
+        "description": "Kids' profiles page: a kids' profile whose name Hearth doesn't know yet"
+    },
+    "kidsProfilesReady": "Ready",
+    "@kidsProfilesReady": {
+        "description": "Kids' profiles page: status word for a kids' profile that has all of Hearth's apps"
+    },
+    "kidsProfilesNeedsFix": "Needs a fix",
+    "@kidsProfilesNeedsFix": {
+        "description": "Kids' profiles page: status word for a kids' profile missing one of Hearth's apps"
+    },
+    "kidsProfilesNeedFixCount": "{count, plural, =1{1 needs a fix} other{{count} need a fix}}",
+    "@kidsProfilesNeedFixCount": {
+        "description": "Profiles page: beside Kids' profiles, how many need a fix (short)",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "kidsProfilesHearthOn": "Hearth is on it",
+    "@kidsProfilesHearthOn": {
+        "description": "Kids' profiles page: under a profile's name when Hearth is on it"
+    },
+    "kidsProfilesBothOn": "Hearth and HearthTube are on it",
+    "@kidsProfilesBothOn": {
+        "description": "Kids' profiles page: under a profile's name when Hearth and HearthTube are on it"
+    },
+    "kidsProfilesHearthMissing": "Hearth isn't on it",
+    "@kidsProfilesHearthMissing": {
+        "description": "Kids' profiles page: under a profile's name when Hearth isn't on it"
+    },
+    "kidsProfilesHearthTubeMissing": "HearthTube isn't on it",
+    "@kidsProfilesHearthTubeMissing": {
+        "description": "Kids' profiles page: under a profile's name when HearthTube isn't on it"
+    },
+    "kidsProfilesNotKept": "Not protected: Google TV will remove Hearth's apps when this profile next starts",
+    "@kidsProfilesNotKept": {
+        "description": "Kids' profiles page: under a profile's name when Google TV could remove Hearth's apps"
+    },
+    "kidsProfilesFix": "Fix",
+    "@kidsProfilesFix": {
+        "description": "Kids' profiles page: the button that puts Hearth back on the profiles that need it"
+    },
+    "kidsProfilesFixBody": "Puts Hearth and HearthTube back where they're missing. Each kid they're added for gets one Family Link notice.",
+    "@kidsProfilesFixBody": {
+        "description": "Kids' profiles page: under the Fix button"
+    },
+    "kidsProfilesNone": "There are no kids' profiles on this TV.",
+    "@kidsProfilesNone": {
+        "description": "Kids' profiles page: when the TV has no kids' profiles"
+    },
+    "kidsProfilesAutoOn": "Hearth also puts itself on new kids' profiles.",
+    "@kidsProfilesAutoOn": {
+        "description": "Kids' profiles page: note that new kids' profiles get Hearth by themselves"
+    },
+    "kidsProfilesApproval": "The first time, the TV asks \"Allow debugging?\" — choose Always allow; that's what lets Hearth do the setup.",
+    "@kidsProfilesApproval": {
+        "description": "Kids' profiles page: note before the first Fix; quotes Android's debugging prompt and its Always allow button"
+    },
+    "kidsProfilesRemoveTitle": "Remove Hearth from kids' profiles",
+    "@kidsProfilesRemoveTitle": {
+        "description": "Kids' profiles page: button and dialog title"
+    },
+    "kidsProfilesRemoveBody": "This takes Hearth and HearthTube off your kids' profiles, and Hearth stops adding itself to new ones. Do this before you uninstall Hearth.",
+    "@kidsProfilesRemoveBody": {
+        "description": "Kids' profiles page: Remove dialog text"
+    },
+    "kidsProfilesUninstallTitle": "Uninstall Hearth",
+    "@kidsProfilesUninstallTitle": {
+        "description": "Kids' profiles page: button and dialog title"
+    },
+    "kidsProfilesUninstallBody": "This first takes Hearth and HearthTube off your kids' profiles, then uninstalls Hearth.",
+    "@kidsProfilesUninstallBody": {
+        "description": "Kids' profiles page: Uninstall dialog, first paragraph"
+    },
+    "kidsProfilesUninstallWhyHere": "Uninstalling here — rather than from Android's settings — makes sure nothing is left behind on the kids' profiles.",
+    "@kidsProfilesUninstallWhyHere": {
+        "description": "Kids' profiles page: Uninstall dialog, second paragraph"
+    },
+    "kidsProfilesApprovalFirstTitle": "Finish the one-time approval first",
+    "@kidsProfilesApprovalFirstTitle": {
+        "description": "Kids' profiles page: dialog title when Uninstall couldn't take Hearth off the kids' profiles"
+    },
+    "kidsProfilesApprovalFirstBody": "Hearth couldn't take itself off the kids' profiles yet: it needs the one-time \"Allow debugging?\" approval on the TV.",
+    "@kidsProfilesApprovalFirstBody": {
+        "description": "Kids' profiles page: that dialog's first paragraph; quotes Android's debugging prompt"
+    },
+    "kidsProfilesApprovalFirstRetry": "Approve it, then try Uninstall again, so nothing is left on the kids' profiles.",
+    "@kidsProfilesApprovalFirstRetry": {
+        "description": "Kids' profiles page: that dialog's second paragraph"
+    },
+    "kidsProfilesFailedTitle": "Couldn't change the kids' profiles",
+    "@kidsProfilesFailedTitle": {
+        "description": "Kids' profiles page and setup flow: dialog title when Fix or Remove couldn't run"
+    },
+    "kidsProfilesFailedBody": "Hearth needs a one-time approval on the TV before it can change the kids' profiles.",
+    "@kidsProfilesFailedBody": {
+        "description": "That dialog's first paragraph"
+    },
+    "kidsProfilesFailedRetry": "On the TV, choose Always allow when it asks to \"Allow debugging?\", then try again.",
+    "@kidsProfilesFailedRetry": {
+        "description": "That dialog's second paragraph; quotes Android's debugging prompt and its Always allow button"
+    },
+    "kidProfileHint": "Everything here is this kid's own. You can change it from here without switching to their profile.",
+    "@kidProfileHint": {
+        "description": "One kid's page (from Kids' profiles): footer"
     },
     "cardStyleTitle": "Card style",
     "@cardStyleTitle": {
@@ -932,15 +1041,6 @@
             }
         }
     },
-    "profilesAdultName": "{name} (adult)",
-    "@profilesAdultName": {
-        "description": "Hearth on other profiles: a Google TV profile's name, marked as an adult profile",
-        "placeholders": {
-            "name": {
-                "type": "String"
-            }
-        }
-    },
     "pairingShowPicker": "Show the picker",
     "@pairingShowPicker": {
         "description": "Profile Pairing: summary when the chosen app profile is unknown; the app's own profile picker shows"
@@ -1045,162 +1145,6 @@
                 "type": "String"
             }
         }
-    },
-    "familyAppsAddTitle": "Add Hearth to other profiles",
-    "@familyAppsAddTitle": {
-        "description": "Hearth on other profiles page: row, and the title of its confirmation dialog"
-    },
-    "familyAppsAddKids": "This puts Hearth and HearthTube on your kids' profiles, so HearthTube works there and Hearth can pick the right profile in streaming services.",
-    "@familyAppsAddKids": {
-        "description": "Add Hearth to other profiles dialog: first paragraph"
-    },
-    "familyAppsAddAdults": "It also installs them on the TV's other adult profiles, so another adult doesn't have to set it up themselves.",
-    "@familyAppsAddAdults": {
-        "description": "Add Hearth to other profiles dialog: paragraph shown when adult profiles are included"
-    },
-    "familyAppsAddOnlyOwnApps": "It only adds Hearth's own two apps, and you can undo it anytime with Remove below.",
-    "@familyAppsAddOnlyOwnApps": {
-        "description": "Add Hearth to other profiles dialog: paragraph"
-    },
-    "familyAppsAddFamilyLink": "Each kid gets one Family Link \"app added\" notification.",
-    "@familyAppsAddFamilyLink": {
-        "description": "Add Hearth to other profiles dialog: paragraph about the Family Link notification"
-    },
-    "familyAppsAddApproval": "The first time, the TV asks \"Allow debugging?\" — choose Always allow; that's what lets Hearth do the setup.",
-    "@familyAppsAddApproval": {
-        "description": "Add Hearth to other profiles dialog: paragraph; quotes Android's debugging prompt and its Always allow button"
-    },
-    "familyAppsAdd": "Add",
-    "@familyAppsAdd": {
-        "description": "Add Hearth to other profiles dialog: the button that goes ahead"
-    },
-    "familyAppsRemoveTitle": "Remove Hearth from other profiles",
-    "@familyAppsRemoveTitle": {
-        "description": "Hearth on other profiles page: row, and the title of its confirmation dialog"
-    },
-    "familyAppsRemoveBody": "This removes Hearth and HearthTube from your other profiles.",
-    "@familyAppsRemoveBody": {
-        "description": "Remove Hearth from other profiles dialog: first paragraph"
-    },
-    "familyAppsRemoveFirst": "If you plan to uninstall Hearth itself, run this first — otherwise its copies on the kids' profiles can be stranded and need a computer to clear.",
-    "@familyAppsRemoveFirst": {
-        "description": "Remove Hearth from other profiles dialog: second paragraph"
-    },
-    "familyAppsUninstallTitle": "Uninstall Hearth",
-    "@familyAppsUninstallTitle": {
-        "description": "Hearth on other profiles page: row, and the title of its confirmation dialog"
-    },
-    "familyAppsUninstallBody": "This first removes Hearth and HearthTube from your other profiles, then uninstalls Hearth from this one.",
-    "@familyAppsUninstallBody": {
-        "description": "Uninstall Hearth dialog: first paragraph"
-    },
-    "familyAppsUninstallWhyHere": "Uninstalling here — rather than from Android's settings — makes sure nothing is left behind on the kids' profiles.",
-    "@familyAppsUninstallWhyHere": {
-        "description": "Uninstall Hearth dialog: second paragraph"
-    },
-    "familyAppsApprovalFirstTitle": "Finish the one-time approval first",
-    "@familyAppsApprovalFirstTitle": {
-        "description": "Dialog title when Uninstall Hearth can't clean up the other profiles yet"
-    },
-    "familyAppsApprovalFirstBody": "Hearth couldn't clean up the other profiles yet — it needs the one-time \"Allow debugging?\" approval on the TV.",
-    "@familyAppsApprovalFirstBody": {
-        "description": "Finish the one-time approval first dialog: first paragraph; quotes Android's debugging prompt"
-    },
-    "familyAppsApprovalFirstRetry": "Approve it, then try Uninstall again, so nothing is left on the kids' profiles.",
-    "@familyAppsApprovalFirstRetry": {
-        "description": "Finish the one-time approval first dialog: second paragraph"
-    },
-    "familyAppsAddDone": "Add done",
-    "@familyAppsAddDone": {
-        "description": "Dialog title after Add Hearth to other profiles finished"
-    },
-    "familyAppsRemoveDone": "Remove done",
-    "@familyAppsRemoveDone": {
-        "description": "Dialog title after Remove Hearth from other profiles finished"
-    },
-    "familyAppsAdded": "Done. Hearth and HearthTube are now on your other profiles — see the list below.",
-    "@familyAppsAdded": {
-        "description": "Add done dialog: message"
-    },
-    "familyAppsRemoved": "Done. Hearth and HearthTube have been removed from your other profiles.",
-    "@familyAppsRemoved": {
-        "description": "Remove done dialog: message"
-    },
-    "familyAppsNothingToSetUp": "There are no other profiles to set up yet.",
-    "@familyAppsNothingToSetUp": {
-        "description": "Add done / Remove done dialog: when the TV has no other profiles"
-    },
-    "familyAppsFailedTitle": "Couldn't set up the profiles",
-    "@familyAppsFailedTitle": {
-        "description": "Dialog title when adding or removing failed for lack of approval"
-    },
-    "familyAppsFailedBody": "Hearth needs a one-time approval on the TV before it can set up the other profiles.",
-    "@familyAppsFailedBody": {
-        "description": "Couldn't set up the profiles dialog: first paragraph"
-    },
-    "familyAppsFailedRetry": "On the TV, choose Always allow when it asks to \"Allow debugging?\", then try again.",
-    "@familyAppsFailedRetry": {
-        "description": "Couldn't set up the profiles dialog: second paragraph; quotes Android's debugging prompt and its Always allow button"
-    },
-    "familyAppsAlsoAdults": "Also set up other adult profiles",
-    "@familyAppsAlsoAdults": {
-        "description": "Hearth on other profiles page: on/off row"
-    },
-    "familyAppsOn": "On",
-    "@familyAppsOn": {
-        "description": "Hearth on other profiles page: shown next to Also set up other adult profiles when on"
-    },
-    "familyAppsOff": "Off",
-    "@familyAppsOff": {
-        "description": "Hearth on other profiles page: shown next to Also set up other adult profiles when off"
-    },
-    "familyAppsNoneYet": "No other profiles set up yet.",
-    "@familyAppsNoneYet": {
-        "description": "Hearth on other profiles page: the list when it's empty"
-    },
-    "familyAppsAppInstalled": "{app}: installed",
-    "@familyAppsAppInstalled": {
-        "description": "Hearth on other profiles page: list line; {app} is Hearth or HearthTube",
-        "placeholders": {
-            "app": {
-                "type": "String"
-            }
-        }
-    },
-    "familyAppsAppInstalledKept": "{app}: installed, protected",
-    "@familyAppsAppInstalledKept": {
-        "description": "Hearth on other profiles page: list line; kept means Hearth keeps it installed in a kids profile",
-        "placeholders": {
-            "app": {
-                "type": "String"
-            }
-        }
-    },
-    "familyAppsAppNotInstalled": "{app}: not installed",
-    "@familyAppsAppNotInstalled": {
-        "description": "Hearth on other profiles page: list line; {app} is Hearth or HearthTube",
-        "placeholders": {
-            "app": {
-                "type": "String"
-            }
-        }
-    },
-    "familyAppsAppNotInstalledKept": "{app}: not installed, protected",
-    "@familyAppsAppNotInstalledKept": {
-        "description": "Hearth on other profiles page: list line; kept means Hearth keeps it installed in a kids profile",
-        "placeholders": {
-            "app": {
-                "type": "String"
-            }
-        }
-    },
-    "familyAppsUnnamedKids": "A kids profile",
-    "@familyAppsUnnamedKids": {
-        "description": "Hearth on other profiles page: heading for a kids profile whose name Hearth doesn't know"
-    },
-    "familyAppsUnnamedAdult": "An adult profile",
-    "@familyAppsUnnamedAdult": {
-        "description": "Hearth on other profiles page: heading for an adult profile whose name Hearth doesn't know"
     },
     "setupAccessibilityInstructions": "On the next screen, scroll down to Services, select \"{service}\", then turn on Enable and confirm. Press Back until you're home again.",
     "@setupAccessibilityInstructions": {
@@ -2411,26 +2355,6 @@
     "@aboutLicense": {
         "description": "Small print at the bottom of the About dialog"
     },
-    "familyAppsStatusInstalled": "Installed",
-    "@familyAppsStatusInstalled": {
-        "description": "Hearth on other profiles: a profile's status, in green; Hearth and HearthTube are both there (and protected in a kids profile)"
-    },
-    "familyAppsStatusPartial": "Partial",
-    "@familyAppsStatusPartial": {
-        "description": "Hearth on other profiles: a profile's status, in yellow; only some of Hearth's apps are there"
-    },
-    "familyAppsStatusNotInstalled": "Not installed",
-    "@familyAppsStatusNotInstalled": {
-        "description": "Hearth on other profiles: a profile's status; neither of Hearth's apps is there"
-    },
-    "familyAppsStatusAtRisk": "At risk",
-    "@familyAppsStatusAtRisk": {
-        "description": "Hearth on other profiles: a profile's status, in red; a kids profile has an app Google TV will remove at its next start"
-    },
-    "familyAppsAtRiskDetail": "Google TV will remove the unprotected apps here the next time this profile starts. Use Add again to protect them.",
-    "@familyAppsAtRiskDetail": {
-        "description": "Hearth on other profiles: shown under an At risk profile while it's selected"
-    },
     "profilePinRow": "Profile PIN",
     "@profilePinRow": {
         "description": "Profile Pairing: the row for a streaming app profile's saved PIN"
@@ -2499,6 +2423,18 @@
     "profilePinSaveFailed": "Couldn’t save the PIN.",
     "@profilePinSaveFailed": {
         "description": "Profile Pairing: streaming app profile PIN"
+    },
+    "streamingPinsTitle": "Streaming app PINs",
+    "@streamingPinsTitle": {
+        "description": "Settings > Profiles: the page (and its row) with each streaming app's profile PINs"
+    },
+    "streamingPinsFooter": "When one of these apps asks for a profile's PIN, Hearth types it for you. Setting a PIN pairs that Google TV profile with that app profile for good.",
+    "@streamingPinsFooter": {
+        "description": "Streaming app PINs page: footer"
+    },
+    "streamingPinsNone": "None of the apps Hearth can type PINs in is installed.",
+    "@streamingPinsNone": {
+        "description": "Streaming app PINs page: when none of the apps it supports is installed"
     },
     "profileLockNow": "Lock Profile",
     "@profileLockNow": {

@@ -278,6 +278,17 @@ void main() async {
     });
   });
 
+  group("retired grown-ups' profiles setting", () {
+    test("is removed at startup, and an old backup's is not imported", () async {
+      await sharedPreferences.setBool("push_to_adult_profiles", false);
+      final service = SettingsService(sharedPreferences);
+      await Future<void>.delayed(Duration.zero);
+      expect(sharedPreferences.containsKey("push_to_adult_profiles"), isFalse);
+      await service.importSettingsMap({"push_to_adult_profiles": true});
+      expect(sharedPreferences.containsKey("push_to_adult_profiles"), isFalse);
+    });
+  });
+
   group("accentColor safety", () {
     test("returns fallback color if accentColorHex is malformed", () async {
       final sp = await SharedPreferences.getInstance();

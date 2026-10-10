@@ -2,7 +2,7 @@ package com.thesiegs.hearth;
 
 /**
  * Tiny command-line entry point, run as the {@code shell} user through Hearth's own loopback adb connection
- * (see {@link KidsAppAccess}), that sets or reads Android's per-user "block uninstall" flag for one package.
+ * (see {@link ProfileAppAccess}), that sets or reads Android's per-user "block uninstall" flag for one package.
  *
  * <p>Why it exists: the flag is what keeps a kid profile's copy of Hearth / HearthTube from being removed by
  * Google TV's launcher at a profile start. No {@code pm} verb exposes it; the only entry point is
@@ -12,10 +12,10 @@ package com.thesiegs.hearth;
  * <pre>CLASSPATH=&lt;Hearth's base.apk&gt; app_process /system/bin \
  *     com.thesiegs.hearth.KidsBlockUninstallMain &lt;package&gt; &lt;userId&gt; [true|false]</pre>
  *
- * <p>USER CONTROL: this is never invoked on its own. It runs only as one step of a parent-initiated
- * "Add Hearth to kids' profiles" / "Remove Hearth from kids' profiles" action (see {@link KidsAppAccess}), and only
- * ever for Hearth's own two packages. Setting {@code true} protects a copy; setting {@code false} releases it so it
- * can be uninstalled again. Reading (no third argument) changes nothing.
+ * <p>This is never invoked on its own. It runs only as one step of putting Hearth on the kids' profiles or taking
+ * it off them ({@link ProfileAppAccess}, for {@link KidsProfiles}), and only ever for Hearth's own two packages.
+ * Setting {@code true} protects a copy; setting {@code false} releases it so it can be uninstalled again. Reading
+ * (no third argument) changes nothing.
  *
  * <p>Reflection-only so it has no compile-time dependency on hidden framework APIs.
  */

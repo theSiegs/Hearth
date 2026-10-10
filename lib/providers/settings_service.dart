@@ -47,7 +47,6 @@ const String _showNetworkIndicatorInStatusBarKey = "show_network_indicator_in_st
 const String _accentColorKey = "accent_color";
 const String _timeBasedWallpaperEnabledKey = "time_based_wallpaper_enabled";
 const String _bingWallpaperEnabledKey = "bing_wallpaper_enabled";
-const String _pushToAdultProfilesKey = "push_to_adult_profiles";
 const String _matchSelectedAppBackgroundKey = "match_selected_app_background";
 const String _dockEnabledKey = "dock_enabled";
 const String _dockBlurEnabledKey = "dock_blur_enabled";
@@ -69,8 +68,10 @@ const String _startOnBootKey = "start_on_boot";
 // device_ prefix: shared by all profiles, never part of a per-profile layout
 const String _parentPinHashKey = "device_parent_pin_hash";
 const String _updatesIncludePrereleasesKey = "device_updates_include_prereleases";
-// A TMDB key users could once type in; search now uses the one built into the release only
-const String _retiredTmdbApiKeyKey = "tmdb_api_key";
+// Settings that are gone: a TMDB key users could once type in (search now uses the one built into the release
+// only), and whether setting up the kids' profiles also put Hearth on other grown-ups' (they're accounts in the
+// owner's user, which has Hearth already)
+const Set<String> _retiredKeys = {"tmdb_api_key", "push_to_adult_profiles"};
 const String _oldDateTimeDefaultsClearedKey = "device_old_date_time_defaults_cleared";
 const String _showNotificationsWidgetInStatusBarKey = "show_notifications_widget_in_status_bar";
 const String _autoHideNotificationsWidgetKey = "auto_hide_notifications_widget";
@@ -158,7 +159,6 @@ class SettingsService extends ChangeNotifier {
     _accentColorKey,
     _timeBasedWallpaperEnabledKey,
     _bingWallpaperEnabledKey,
-    _pushToAdultProfilesKey,
     _matchSelectedAppBackgroundKey,
     _dockEnabledKey,
     _dockBlurEnabledKey,
@@ -193,8 +193,8 @@ class SettingsService extends ChangeNotifier {
 
   SettingsService(this._sharedPreferences, {Locale Function()? region})
       : _region = region ?? (() => ui.PlatformDispatcher.instance.locale) {
-    if (_sharedPreferences.containsKey(_retiredTmdbApiKeyKey)) {
-      unawaited(_sharedPreferences.remove(_retiredTmdbApiKeyKey));
+    for (final key in _retiredKeys) {
+      if (_sharedPreferences.containsKey(key)) unawaited(_sharedPreferences.remove(key));
     }
     _clearOldDateTimeDefaults();
   }
@@ -325,12 +325,6 @@ class SettingsService extends ChangeNotifier {
   /// On unless turned off: on Google TV, Hearth then comes up after a restart instead of Google TV's home.
   bool get startOnBoot => _bool(_startOnBootKey, true);
 
-  /// When on (the default), setting up Hearth on the kids' profiles also installs it on the TV's other adult
-  /// profiles, so another adult doesn't have to sideload it themselves. Adult profiles need no keep-installed flag.
-  bool get pushToAdultProfiles => _bool(_pushToAdultProfilesKey, true);
-
-  Future<void> setPushToAdultProfiles(bool value) => _setBool(_pushToAdultProfilesKey, value);
-
   /// Whether Hearth's updater offers pre-releases too. On by default while Hearth is in early development: every
   /// Hearth release is a pre-release for now, so with this off nobody would get updates. For the whole TV.
   bool get updatesIncludePrereleases => _bool(_updatesIncludePrereleasesKey, true);
@@ -378,7 +372,7 @@ class SettingsService extends ChangeNotifier {
     for (final entry in settingsMap.entries) {
       final key = entry.key;
       final value = entry.value;
-      if (key == _retiredTmdbApiKeyKey) continue; // old backups and layouts may still carry it
+      if (_retiredKeys.contains(key)) continue; // old backups and layouts may still carry them
       if (value is bool) {
         await _sharedPreferences.setBool(key, value);
       } else if (value is int) {

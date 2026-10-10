@@ -164,28 +164,30 @@ class FLauncherChannel {
 
   Future<bool> isKidsProfile() async => await _methodChannel.invokeMethod<bool>("isKidsProfile") ?? false;
 
-  /// Parent-initiated: add Hearth and HearthTube to the TV's other Google TV profiles. Supervised kids profiles are
-  /// kept installed (protected from Google TV's profile-start uninstall); when [includeAdults] is true, the other
-  /// adult profiles get a plain install too (the launcher leaves theirs alone). Returns a short log of what was done.
-  /// The first time, the TV shows a one-time "Allow debugging?" prompt the parent approves; until then this throws a
-  /// PlatformException (code "SELF_ADB"). Only ever touches Hearth's own two apps. Adding sends one Family Link
-  /// "app added" notification per kid — the Settings confirmation copy should say so.
-  Future<List<String>> addHearthToProfiles({required bool includeAdults}) async =>
-      await _methodChannel.invokeListMethod<String>("addHearthToProfiles", includeAdults) ?? [];
+  /// The TV's kids' profiles (Family Link-supervised profile users) and whether Hearth is on each, as Android lists
+  /// it: {kids: [{userId, profileKey, name, running, hearth, hearthKept, hearthTube, hearthTubeKept}], hearthTubeOnOwner, keep
+  /// (new kids' profiles get Hearth by themselves), trusted (the TV trusts Hearth's adb key), adbEnabled,
+  /// protectionRead}. The *Kept columns are null unless [checkProtection] read them over Hearth's own adb, which
+  /// happens only over a key the TV trusts already, so looking never asks "Allow debugging?". See
+  /// [KidsProfilesState].
+  Future<Map<dynamic, dynamic>> getKidsProfilesState({bool checkProtection = false}) async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getKidsProfilesState", checkProtection) ?? {};
 
-  /// Parent-initiated: release any keep-installed flag and uninstall Hearth and HearthTube from every other profile
-  /// (kids and adults) — the clean undo of [addHearthToProfiles], and what must run before Hearth itself is
-  /// uninstalled.
-  Future<List<String>> removeHearthFromProfiles() async =>
-      await _methodChannel.invokeListMethod<String>("removeHearthFromProfiles") ?? [];
+  /// A parent's Fix: puts Hearth, and HearthTube when the owner has it, on every kids' profile where one is missing
+  /// or Google TV could remove it, and from then on Hearth puts itself on new kids' profiles too. Only ever touches
+  /// Hearth's own two apps; each kids' profile an app is added to sends Family Link's "app added" notice. The first
+  /// time, the TV asks "Allow debugging?"; until the parent allows it this throws a PlatformException ("SELF_ADB").
+  /// Returns a short log of what was done.
+  Future<List<String>> fixKidsProfiles() async =>
+      await _methodChannel.invokeListMethod<String>("fixKidsProfiles") ?? [];
 
-  /// Read-only: for each other profile, [{userId, packageName, installed, protected, supervised}] — so Settings can
-  /// show exactly where Hearth's apps are and nothing is hidden.
-  Future<List<Map<dynamic, dynamic>>> getHearthProfilesState() async =>
-      await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getHearthProfilesState") ?? [];
+  /// A parent's Remove: takes Hearth and HearthTube off the kids' profiles (and any other profile they're on), and
+  /// Hearth stops putting itself on new ones. What must run before Hearth itself is uninstalled.
+  Future<List<String>> removeHearthFromKidsProfiles() async =>
+      await _methodChannel.invokeListMethod<String>("removeHearthFromKidsProfiles") ?? [];
 
-  /// Opens Android's uninstall screen for Hearth itself. Call [removeHearthFromProfiles] first so the copies on the
-  /// other profiles are cleaned up before Hearth goes (otherwise the kids' copies would be left behind).
+  /// Opens Android's uninstall screen for Hearth itself. Call [removeHearthFromKidsProfiles] first so the kids'
+  /// copies are taken off before Hearth goes (otherwise they'd be left behind).
   Future<void> uninstallHearth() async => await _methodChannel.invokeMethod("uninstallHearth");
 
   /// Hands control to Google TV's own home so the parent can use the native interface for a bit. Hearth stops
@@ -255,11 +257,13 @@ class FLauncherChannel {
   Future<void> setLockOnSleepMinutes(int minutes) async =>
       await _methodChannel.invokeMethod("setLockOnSleepMinutes", minutes);
 
-  /// The active profile's daily YouTube limit in HearthTube, in minutes; 0 for none.
-  Future<int> getYouTubeDailyMinutes() async => await _methodChannel.invokeMethod<int>("getYouTubeDailyMinutes") ?? 0;
+  /// A profile's daily YouTube limit in HearthTube, in minutes; 0 for none. [profileKey]: a kids' profile's
+  /// ("user:11", from [getKidsProfilesState]); without it, the profile on now.
+  Future<int> getYouTubeDailyMinutes({String? profileKey}) async =>
+      await _methodChannel.invokeMethod<int>("getYouTubeDailyMinutes", profileKey) ?? 0;
 
-  Future<void> setYouTubeDailyMinutes(int minutes) async =>
-      await _methodChannel.invokeMethod("setYouTubeDailyMinutes", minutes);
+  Future<void> setYouTubeDailyMinutes(int minutes, {String? profileKey}) async =>
+      await _methodChannel.invokeMethod("setYouTubeDailyMinutes", {"minutes": minutes, "profileKey": profileKey});
 
   /// Every saved profile PIN (when the parent PIN that guards them is removed).
   Future<void> removeAllProfilePins() async => await _methodChannel.invokeMethod("removeAllProfilePins");
@@ -365,7 +369,8 @@ class FLauncherChannel {
   Future<bool> isAdbEnabled() async => await _methodChannel.invokeMethod<bool>("isAdbEnabled") ?? false;
 
   /// What the setup flow's family card needs, read without Hearth's own adb: {googleTv, kidsProfiles (how many
-  /// Family Link-supervised profiles Android lists), netflix}.
+  /// Family Link-supervised profiles Android lists), kidsReady (how many have Hearth, and HearthTube when the owner
+  /// has it), netflix}.
   Future<Map<dynamic, dynamic>> getSetupFamilyState() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getSetupFamilyState") ?? {};
 

@@ -315,25 +315,25 @@ extension _CardScreens on _SetupFlowPageState {
         done: l.setupFlowVoiceDone,
       );
 
-  /// Keep Hearth on the kids' profiles, where Google TV removes apps it didn't install at each profile start. Needs
-  /// the TV's debugging switch, then the one-time "Allow debugging?".
+  /// Hearth on the kids' profiles, where Google TV removes apps it didn't install at each profile start: on by
+  /// default once the family card is on. Needs the TV's debugging switch, then the one-time "Allow debugging?".
   Widget _kids(AppLocalizations l) {
     final snap = _snap!;
     final skip = SetupButton(label: l.setupFlowSkip, onPressed: _next);
-    final rows = _kidsRows;
-    // Where Hearth's apps are now, one row per profile, as Settings' Family apps page shows them
+    final kidsState = _kidsState;
+    // How each kids' profile stands now, one row each, as Settings' Kids' profiles page shows them
     final profileRows = [
-      for (final apps in FamilyAppsPage.byProfile(rows ?? const []).values)
-        Builder(builder: (context) {
-          final (:label, :status, :color) = FamilyAppsPage.describeProfile(l, apps);
-          return Row(children: [
-            Icon((apps.first["supervised"] as bool?) == true ? Icons.child_care : Icons.person_outline,
-                size: 18, color: Colors.white70),
-            const SizedBox(width: 8),
-            Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14))),
-            Text(status, style: TextStyle(color: color ?? Colors.white54, fontSize: 13)),
-          ]);
-        }),
+      if (kidsState != null)
+        for (final kid in kidsState.kids)
+          Builder(builder: (context) {
+            final (:label, :status, :detail, :color) = KidsProfilesPage.describe(l, kidsState, kid);
+            return Row(children: [
+              const Icon(Icons.child_care, size: 18, color: Colors.white70),
+              const SizedBox(width: 8),
+              Expanded(child: Text("$label · $detail", style: const TextStyle(color: Colors.white, fontSize: 14))),
+              Text(status, style: TextStyle(color: color ?? Colors.white54, fontSize: 13)),
+            ]);
+          }),
     ];
     if (_state == SetupStepState.done) {
       return SetupScreenBody(
@@ -347,7 +347,7 @@ extension _CardScreens on _SetupFlowPageState {
         buttons: [SetupButton(label: l.setupFlowNext, focusNode: _primary, autofocus: true, onPressed: _next)],
       );
     }
-    if (_state == SetupStepState.notYet && rows != null) {
+    if (_state == SetupStepState.notYet && kidsState != null) {
       // It ran, but not every kids' profile has Hearth kept on it
       return SetupScreenBody(
         icon: Icons.warning_amber_rounded,
@@ -391,78 +391,37 @@ extension _CardScreens on _SetupFlowPageState {
     } catch (_) {}
   }
 
-  /// Says what adding does (Settings' own words), then adds Hearth and HearthTube to the kids' profiles over
-  /// Hearth's own adb, and shows where they are.
+  /// Puts Hearth (and HearthTube, when the owner has it) on the kids' profiles over Hearth's own adb, as Settings'
+  /// Fix does, and shows how each stands. The screen itself says what it does, so no question first: this is the
+  /// flow's default for kids' profiles.
   Future<void> _addToKids() async {
     final l = AppLocalizations.of(context)!;
-    final includeAdults = context.read<SettingsService?>()?.pushToAdultProfiles ?? true;
-    final go = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l.familyAppsAddTitle),
-        content: SizedBox(
-          width: 520,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final line in [
-                  l.familyAppsAddKids,
-                  if (includeAdults) l.familyAppsAddAdults,
-                  l.familyAppsAddOnlyOwnApps,
-                  l.familyAppsAddFamilyLink,
-                  l.familyAppsAddApproval,
-                ]) ...[
-                  Text(line),
-                  const SizedBox(height: 10),
-                ],
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(l.cancel)),
-          TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(true), child: Text(l.familyAppsAdd)),
-        ],
-      ),
-    );
-    if (go != true || !mounted) {
-      _focusPrimary();
-      return;
-    }
     _update(() => _fixing = true);
-    List<Map<dynamic, dynamic>>? rows;
+    KidsProfilesState? kidsState;
     try {
-      await _channel.addHearthToProfiles(includeAdults: includeAdults).timeout(_SetupFlowPageState._selfAdbLimit);
-      rows = await _channel.getHearthProfilesState().timeout(_SetupFlowPageState._selfAdbLimit);
+      await _channel.fixKidsProfiles().timeout(_SetupFlowPageState._selfAdbLimit);
+      kidsState = KidsProfilesState.fromMap(
+          await _channel.getKidsProfilesState(checkProtection: true).timeout(_SetupFlowPageState._selfAdbLimit));
     } catch (_) {
-      rows = null;
+      kidsState = null;
     }
     if (!mounted) return;
     _update(() => _fixing = false);
-    if (rows == null) {
+    if (kidsState == null) {
       // Most likely "Allow debugging?" wasn't approved
       await showMessageDialog(context,
-          title: l.familyAppsFailedTitle, message: "${l.familyAppsFailedBody}\n\n${l.familyAppsFailedRetry}");
+          title: l.kidsProfilesFailedTitle, message: "${l.kidsProfilesFailedBody}\n\n${l.kidsProfilesFailedRetry}");
       _focusPrimary();
       return;
     }
-    // Done only when every kids' profile keeps Hearth: Google TV removes it from the others at their next start
-    final kept = _hearthKeptOnKids(rows);
-    if (kept) await _flow.setKidsProtected(_snap?.kidsProfiles ?? 0);
+    // Done only when every kids' profile has it all, kept: Google TV removes it from the others at their next start
+    final ready = kidsState.allReady;
+    if (ready) await _flow.setKidsProtected(kidsState.kids.length);
     _update(() {
-      _kidsRows = rows;
-      _state = kept ? SetupStepState.done : SetupStepState.notYet;
+      _kidsState = kidsState;
+      _state = ready ? SetupStepState.done : SetupStepState.notYet;
     });
     _focusPrimary();
-  }
-
-  /// Whether Hearth is installed and kept installed on every kids' profile in [rows] (HearthTube may be missing:
-  /// it's only there when the owner has it).
-  static bool _hearthKeptOnKids(List<Map<dynamic, dynamic>> rows) {
-    final kids = rows.where((r) => r["supervised"] == true && r["packageName"] != "com.thesiegs.hearthtube");
-    return kids.isNotEmpty && kids.every((r) => r["installed"] == true && r["protected"] == true);
   }
 
   // --- Watching ---

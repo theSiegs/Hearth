@@ -3,52 +3,53 @@ package com.thesiegs.hearth;
 import android.content.Context;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 /**
- * Lets a parent put Hearth's OWN apps (Hearth, HearthTube) into the TV's other Google TV profiles and — just as
- * easily — take them back out. Entirely parent-controlled: see the entry points below, each reached only from a
- * Settings action the parent started.
+ * The shell commands that put Hearth's OWN apps (Hearth, HearthTube) on the TV's kids' profiles, keep them there,
+ * and take them back off. Which users are kids' profiles, and when to act, is {@link KidsProfiles}' call; this class
+ * only runs the commands, as the {@code shell} user over Hearth's own adb ({@link SelfAdb}).
  *
- * <h3>Two kinds of profile, one difference</h3>
- * <ul>
- *   <li><b>Supervised kids profiles</b> — Google TV's launcher uninstalls any non-Play app from them at every
- *       profile start, so these are added with {@code keepInstalled = true}: the per-user "block uninstall" flag
- *       ({@link KidsBlockUninstallMain}) keeps the copy.</li>
- *   <li><b>Other adult profiles</b> — the launcher leaves their apps alone, so these are added with
- *       {@code keepInstalled = false}: a plain install, no flag. This is purely a convenience so another adult in
- *       the family doesn't have to sideload Hearth themselves.</li>
- * </ul>
- * The caller ({@code MainActivity}) classifies each profile (supervised vs. not) and passes the right
- * {@code keepInstalled}; this class never guesses.
+ * <p>Only kids' profiles get them: Google TV runs each one as an Android user of its own, supervised by Family Link.
+ * A grown-up's profile is another Google account in the owner's user, which has Hearth already.
  *
- * <h3>User control is enforced, not just documented</h3>
+ * <h3>Kept installed</h3>
+ * Google TV's launcher uninstalls every app that didn't come from the Play Store from a kids' profile, at each
+ * profile start and whenever an app there changes. So each copy gets Android's per-user "block uninstall" flag
+ * ({@link KidsBlockUninstallMain}), which stops that.
+ *
+ * <h3>Limits that hold whoever calls</h3>
  * <ul>
- *   <li>{@link #addToProfiles} and {@link #removeFromProfiles} require {@code confirmedByParent == true} and throw
- *       otherwise, so neither runs as a side effect of anything automatic.</li>
- *   <li>They act only on the user ids the caller passes, and touch only {@link #OWN_PACKAGES} — Hearth and
- *       HearthTube — never any other app.</li>
- *   <li>{@link #state} only reads; Settings shows it so nothing is hidden.</li>
- *   <li>Adding is reversible: {@link #removeFromProfiles} releases any keep-installed flag and uninstalls the copy.
- *       No device-admin is used, so nothing can be left stuck (shell can always lift the flag).</li>
+ *   <li>Only {@link #OWN_PACKAGES}, Hearth and HearthTube: never another app.</li>
+ *   <li>Never the owner's user: {@link #addToKids} and {@link #remove} refuse user 0.</li>
+ *   <li>Only what the owner has: install-existing copies the owner's app, so one the owner doesn't have is skipped.</li>
+ *   <li>Adding changes only what's out of place: a copy that's there and kept is left alone, so Family Link's "app
+ *       added" notice goes out only for a copy that's actually added.</li>
  * </ul>
  *
  * <h3>The one safety rule</h3>
  * A kept copy can't be uninstalled until its flag is lifted ({@code DELETE_FAILED_OWNER_BLOCKED}). So
- * {@link #removeFromProfiles} lifts the flag BEFORE it uninstalls, and Hearth's own uninstall flow must run
- * {@link #removeFromProfiles} first — otherwise kid copies would be orphaned once Hearth (and its adb) is gone.
+ * {@link #remove} lifts the flag BEFORE it uninstalls, and Hearth's own uninstall flow runs it first: otherwise the
+ * kids' copies would be left behind once Hearth (and its adb) is gone. Shell can always lift the flag, so nothing can
+ * get stuck.
  */
 public final class ProfileAppAccess {
 
     /** Hearth's app id, without the debug suffix. */
     public static final String HEARTH = BuildConfig.HEARTH_APP_ID;
     public static final String HEARTHTUBE = "com.thesiegs.hearthtube";
-    /** Hearth's own packages: the ONLY packages this feature ever installs, protects, or removes. */
-    private static final String[] OWN_PACKAGES = {HEARTH, HEARTHTUBE};
+    /** Hearth's own packages: the ONLY packages this class ever installs, protects, or removes. */
+    static final String[] OWN_PACKAGES = {HEARTH, HEARTHTUBE};
 
-    /** The owner (TV account) user, whose copy of each app the others are cloned from via install-existing. */
-    private static final int OWNER_USER = 0;
+    /** The owner (TV account) user, whose copy of each app the kids' copies are made from via install-existing. */
+    static final int OWNER_USER = 0;
 
     /** The class {@link KidsBlockUninstallMain} runs as, invoked via app_process over the shell connection. */
     private static final String HELPER_CLASS = KidsBlockUninstallMain.class.getName();
@@ -58,13 +59,14 @@ public final class ProfileAppAccess {
 
     /**
      * Runs a single command as the {@code shell} user. The only implementation is {@link SelfAdb} (Hearth's own
-     * loopback adb connection). A tiny interface so the provisioning logic has no direct dependency on the transport.
+     * loopback adb connection); tests pass a fake. A tiny interface so the commands have no direct dependency on the
+     * transport.
      */
     public interface ShellRunner {
         String run(String command) throws Exception;
     }
 
-    /** One app's state in one profile, for the Settings "what's where" view. */
+    /** One app's state in one profile, for Settings' kids' profiles page. */
     public static final class AppStatus {
         public final int userId;
         public final String packageName;
@@ -80,35 +82,51 @@ public final class ProfileAppAccess {
     }
 
     /**
-     * Parent-initiated: add Hearth's apps to the given profiles. Called only from a Settings action.
+     * Puts Hearth's apps on the given kids' profiles and keeps them there: for each app the owner has, adds the copy
+     * where it's missing and sets the keep flag where it isn't set. Only for user ids {@link KidsProfiles} found to
+     * be kids' profiles.
      *
-     * @param userIds           the profile user ids to act on (supervised kids and/or adults — caller decides).
-     * @param keepInstalled     true for supervised kids (set the block-uninstall flag so the launcher can't strip
-     *                          them); false for adult profiles (plain install — the launcher leaves them alone).
-     * @param confirmedByParent must be true; the in-code record that a parent started this.
-     * @return a human-readable log of what was done.
+     * @param apk Hearth's own APK, which the flag helper runs from.
+     * @return a short log of what was done.
      */
-    public static List<String> addToProfiles(Context context, ShellRunner shell, List<Integer> userIds,
-            boolean keepInstalled, boolean confirmedByParent) throws Exception {
-        requireParent(confirmedByParent, "add Hearth to other profiles");
-        String apk = context.getPackageCodePath();
+    static List<String> addToKids(String apk, ShellRunner shell, List<Integer> kidUserIds) throws Exception {
+        Map<Integer, List<String>> packages = new LinkedHashMap<>();
+        for (int user : kidUserIds) packages.put(user, Arrays.asList(OWN_PACKAGES));
+        return addToKids(apk, shell, packages);
+    }
+
+    /** {@link #addToKids(String, ShellRunner, List)} for only some of Hearth's apps on each profile. */
+    static List<String> addToKids(String apk, ShellRunner shell, Map<Integer, List<String>> packagesByUser)
+            throws Exception {
         List<String> log = new ArrayList<>();
-        for (int user : userIds) {
+        Set<String> owner = installedFor(shell, OWNER_USER);
+        for (Map.Entry<Integer, List<String>> entry : packagesByUser.entrySet()) {
+            int user = entry.getKey();
+            requireOtherUser(user);
+            Set<String> there = installedFor(shell, user);
             for (String pkg : OWN_PACKAGES) {
-                // Only clone apps the owner actually has: install-existing fails for a package not installed in
-                // user 0 (e.g. HearthTube not installed yet), so skip it and say so rather than log a failure.
-                if (!isInstalledForUser(shell, pkg, OWNER_USER)) {
+                if (!entry.getValue().contains(pkg)) continue;
+                // install-existing copies the owner's app, so one the owner doesn't have (HearthTube not installed
+                // yet) is skipped rather than logged as a failure
+                if (!owner.contains(pkg)) {
                     log.add(String.format(Locale.US, "user %d: skipped %s (not installed for the owner)", user, pkg));
                     continue;
                 }
-                // INSTALL here: make the owner's copy launchable in this profile (instant — APK already on device).
-                shell.run("pm install-existing --user " + user + " " + pkg);
-                if (keepInstalled) {
-                    // KEEP here (kids only): stop the launcher uninstalling it at the next profile start.
+                boolean added = false;
+                if (!there.contains(pkg)) {
+                    // Keep first: while that profile runs, Google TV's launcher checks its apps as soon as one is
+                    // added, and would remove the copy before a flag set afterwards could stop it
                     setProtected(shell, apk, pkg, user, true);
-                    log.add(String.format(Locale.US, "user %d: added + kept %s", user, pkg));
-                } else {
-                    log.add(String.format(Locale.US, "user %d: added %s", user, pkg));
+                    shell.run("pm install-existing --user " + user + " " + pkg);
+                    added = true;
+                }
+                // Set it again when it didn't take: the flag may only hold for a copy that's installed
+                boolean kept = isProtected(shell, apk, pkg, user);
+                if (!kept) setProtected(shell, apk, pkg, user, true);
+                if (added) {
+                    log.add(String.format(Locale.US, "user %d: added and kept %s", user, pkg));
+                } else if (!kept) {
+                    log.add(String.format(Locale.US, "user %d: kept %s", user, pkg));
                 }
             }
         }
@@ -116,18 +134,16 @@ public final class ProfileAppAccess {
     }
 
     /**
-     * Parent-initiated: release any keep-installed flag and uninstall Hearth's apps from the given profiles — the
-     * clean undo of {@link #addToProfiles}, and the step Hearth must run on itself before it can be uninstalled.
-     * Safe for adult profiles too: lifting a flag that was never set is a no-op.
+     * Lifts the keep flag and uninstalls Hearth's apps from the given profiles: the undo of {@link #addToKids}, and
+     * the step Hearth runs before it's uninstalled itself. Safe on any profile but the owner's: lifting a flag that
+     * was never set, or uninstalling an app that isn't there, changes nothing.
      */
-    public static List<String> removeFromProfiles(Context context, ShellRunner shell, List<Integer> userIds,
-            boolean confirmedByParent) throws Exception {
-        requireParent(confirmedByParent, "remove Hearth from other profiles");
-        String apk = context.getPackageCodePath();
+    static List<String> remove(String apk, ShellRunner shell, List<Integer> userIds) throws Exception {
         List<String> log = new ArrayList<>();
         for (int user : userIds) {
+            requireOtherUser(user);
             for (String pkg : OWN_PACKAGES) {
-                // SAFETY: release the flag FIRST — a kept package can't be uninstalled (DELETE_FAILED_OWNER_BLOCKED).
+                // SAFETY: release the flag FIRST: a kept package can't be uninstalled (DELETE_FAILED_OWNER_BLOCKED)
                 setProtected(shell, apk, pkg, user, false);
                 shell.run("pm uninstall --user " + user + " " + pkg);
                 log.add(String.format(Locale.US, "user %d: removed %s", user, pkg));
@@ -139,21 +155,20 @@ public final class ProfileAppAccess {
     /**
      * Automatic, safe self-cleanup used when Hearth is being removed (a profile's agent found owner-Hearth gone):
      * releases any keep flag and uninstalls Hearth's own apps for that one profile, so Google TV's launcher drops
-     * them. Removal-only (it never installs or protects), so no parent confirmation is needed — this is the undo that
-     * must be able to run on its own to avoid leaving zombies behind.
+     * them. Removal only (it never installs or protects): the undo that must be able to run on its own so nothing is
+     * left behind.
      */
-    public static List<String> cleanupUser(Context context, ShellRunner shell, int userId) throws Exception {
-        return removeFromProfiles(context, shell, java.util.Collections.singletonList(userId), true);
+    static List<String> cleanupUser(Context context, ShellRunner shell, int userId) throws Exception {
+        return remove(context.getPackageCodePath(), shell, Collections.singletonList(userId));
     }
 
     /** Read-only: for the given profiles, which have Hearth / HearthTube and whether each is kept (flagged). */
-    public static List<AppStatus> state(Context context, ShellRunner shell, List<Integer> userIds) throws Exception {
-        String apk = context.getPackageCodePath();
+    static List<AppStatus> state(String apk, ShellRunner shell, List<Integer> userIds) throws Exception {
         List<AppStatus> out = new ArrayList<>();
         for (int user : userIds) {
+            Set<String> there = installedFor(shell, user);
             for (String pkg : OWN_PACKAGES) {
-                out.add(new AppStatus(user, pkg, isInstalledForUser(shell, pkg, user),
-                        isProtected(shell, apk, pkg, user)));
+                out.add(new AppStatus(user, pkg, there.contains(pkg), isProtected(shell, apk, pkg, user)));
             }
         }
         return out;
@@ -171,18 +186,23 @@ public final class ProfileAppAccess {
 
     // --- internals ---
 
-    private static void requireParent(boolean confirmedByParent, String action) {
-        if (!confirmedByParent) {
-            throw new IllegalStateException("Refusing to " + action + ": not a parent-confirmed action.");
+    private static void requireOtherUser(int user) {
+        if (user <= OWNER_USER) {
+            throw new IllegalArgumentException("Refusing to act on user " + user + ": only other profiles' users.");
         }
     }
 
-    private static boolean isInstalledForUser(ShellRunner shell, String pkg, int user) throws Exception {
-        String target = "package:" + pkg;
-        for (String line : shell.run("pm list packages --user " + user).split("\\r?\\n")) {
-            if (line.trim().equals(target)) return true;
+    /** Hearth's own packages installed for this user, from one {@code pm list packages}. */
+    private static Set<String> installedFor(ShellRunner shell, int user) throws Exception {
+        Set<String> own = new HashSet<>();
+        String out = shell.run("pm list packages --user " + user);
+        if (out == null) return own;
+        for (String line : out.split("\\r?\\n")) {
+            for (String pkg : OWN_PACKAGES) {
+                if (line.trim().equals("package:" + pkg)) own.add(pkg);
+            }
         }
-        return false;
+        return own;
     }
 
     private static void setProtected(ShellRunner shell, String apk, String pkg, int user, boolean value)

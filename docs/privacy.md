@@ -46,8 +46,8 @@ as Wikidata asks.
 | Network and Wi-Fi state | The data usage and network shortcuts. |
 | Start at boot | Brings Hearth and its services back after a restart. |
 
-**Hearth on other profiles** uses the TV's own debugging connection (Android asks you to allow it once) to install
-Hearth's two apps in other profiles and keep them there. It connects only to the TV itself and only touches Hearth
-and HearthTube.
+**Hearth on the kids' profiles** uses the TV's own debugging connection (Android asks you to allow it once) to install
+Hearth's two apps in your kids' profiles and keep them there, including a kids' profile added later. It connects
+only to the TV itself and only touches Hearth and HearthTube.
 
 **Saved streaming PINs** are encrypted with a key kept in the TV's secure key store, which never leaves the TV.

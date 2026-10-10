@@ -31,7 +31,7 @@ class FakeSetupChannel extends FLauncherChannel {
   bool haSetupReceived = false;
   bool haTestShows = false;
   int kidsProfiles = 0;
-  int kidsWithHearth = 0;
+  int kidsReady = 0;
   bool netflix = false;
   bool pairing = false;
   bool voice = false;
@@ -94,7 +94,7 @@ class FakeSetupChannel extends FLauncherChannel {
 
   @override
   Future<Map<dynamic, dynamic>> getSetupFamilyState() async =>
-      {"googleTv": googleTv, "kidsProfiles": kidsProfiles, "kidsWithHearth": kidsWithHearth, "netflix": netflix};
+      {"googleTv": googleTv, "kidsProfiles": kidsProfiles, "kidsReady": kidsReady, "netflix": netflix};
 
   @override
   Future<bool> getHaNotificationsEnabled() async => haAlerts;
@@ -133,24 +133,30 @@ class FakeSetupChannel extends FLauncherChannel {
   }
 
   @override
-  Future<List<String>> addHearthToProfiles({required bool includeAdults}) async {
+  Future<List<String>> fixKidsProfiles() async {
     if (!profilesWork) throw PlatformException(code: "SELF_ADB");
     profilesAdded++;
     return ["added"];
   }
 
   @override
-  Future<List<Map<dynamic, dynamic>>> getHearthProfilesState() async => [
-        for (int i = 0; i < kidsProfiles; i++) ...[
-          {
-            "userId": 10 + i,
-            "packageName": "com.example.hearth",
-            "installed": profilesKept,
-            "protected": profilesKept,
-            "supervised": true,
-          },
+  Future<Map<dynamic, dynamic>> getKidsProfilesState({bool checkProtection = false}) async => {
+        "kids": [
+          for (int i = 0; i < kidsProfiles; i++)
+            {
+              "userId": 10 + i,
+              "name": null,
+              "hearth": profilesKept,
+              "hearthKept": checkProtection ? profilesKept : null,
+              "hearthTube": false,
+              "hearthTubeKept": null,
+            },
         ],
-      ];
+        "hearthTubeOnOwner": false,
+        "keep": profilesAdded > 0,
+        "trusted": profilesAdded > 0,
+        "adbEnabled": adb,
+      };
 
   @override
   Future<bool> isAdbEnabled() async => adb;
