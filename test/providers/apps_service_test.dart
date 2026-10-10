@@ -17,6 +17,22 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  group("YouTube with HearthTube installed", () {
+    test("a grown-up's profile hides it once, so showing it again sticks", () {
+      expect(AppsService.hidesYouTube(hearthTubeInstalled: true, kids: false, hiddenBefore: false), isTrue);
+      expect(AppsService.hidesYouTube(hearthTubeInstalled: true, kids: false, hiddenBefore: true), isFalse);
+    });
+
+    test("a kids profile hides it every time", () {
+      expect(AppsService.hidesYouTube(hearthTubeInstalled: true, kids: true, hiddenBefore: true), isTrue);
+    });
+
+    test("without HearthTube YouTube stays", () {
+      expect(AppsService.hidesYouTube(hearthTubeInstalled: false, kids: true, hiddenBefore: false), isFalse);
+      expect(AppsService.hidesYouTube(hearthTubeInstalled: false, kids: false, hiddenBefore: false), isFalse);
+    });
+  });
+
   group("removeCustomAppBanner", () {
     test("removes custom banner and deletes file if it exists", () async {
       final channel = mockChannelForAppsService();

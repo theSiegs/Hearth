@@ -48,4 +48,5 @@
     <string name="pin_broken">Hearth couldn’t enter the PIN. Please type it yourself.</string>
     <string name="pin_change">Change PIN</string>
     <string name="pin_close">Close</string>
+    <string name="youtube_in_hearthtube">YouTube is in HearthTube here</string>
 </resources>

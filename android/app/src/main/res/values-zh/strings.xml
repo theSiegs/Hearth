@@ -47,4 +47,5 @@
     <string name="pin_broken">Hearth 无法输入 PIN。请自行输入。</string>
     <string name="pin_change">更改 PIN</string>
     <string name="pin_close">关闭</string>
+    <string name="youtube_in_hearthtube">这里的 YouTube 在 HearthTube 中</string>
 </resources>

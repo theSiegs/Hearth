@@ -47,4 +47,5 @@
     <string name="pin_broken">Hearth PIN’i giremedi. Lütfen kendiniz yazın.</string>
     <string name="pin_change">PIN’i Değiştir</string>
     <string name="pin_close">Kapat</string>
+    <string name="youtube_in_hearthtube">Burada YouTube, HearthTube’da</string>
 </resources>

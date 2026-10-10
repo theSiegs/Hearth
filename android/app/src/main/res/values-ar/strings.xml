@@ -47,4 +47,5 @@
     <string name="pin_broken">تعذّر على Hearth إدخال الرمز. يُرجى كتابته بنفسك.</string>
     <string name="pin_change">تغيير PIN</string>
     <string name="pin_close">إغلاق</string>
+    <string name="youtube_in_hearthtube">YouTube متاح هنا في HearthTube</string>
 </resources>
