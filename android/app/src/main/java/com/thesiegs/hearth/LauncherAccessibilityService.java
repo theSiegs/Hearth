@@ -70,6 +70,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final long GOOGLE_TV_ALLOW_MS = 10 * 60 * 1000L;
     /** How long after Google's last setup screen Hearth keeps out of the way (refreshed by each setup screen). */
     private static final long GOOGLE_SETUP_HOLD_MS = 2 * 60_000;
+    private static final long NEW_PROFILE_HOLD_MS = 15_000;
     private static final long KIDS_HOME_GRACE_MS = 1_500;
     private static final long PROFILE_USER_RECHECK_MS = 1_500;
     private static final long PROFILE_SETTLE_MS = 2_000;
@@ -100,6 +101,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private long mGoogleSetupUntil = 0;
     /** The setup hold is for a just-added profile: it ends as soon as that profile's user starts. */
     private boolean mNewProfileHold = false;
+    /** The just-added profile last picked, until a profile user starts: Google TV may mark it current regardless. */
+    private String mUnstartedPick;
     /**
      * When Google TV's profile lock (its PIN screen for the current profile) last came up. Cancelling it opens Google
      * TV's home and, a moment later, its profile chooser over it: Hearth taking over in between would land back in
@@ -409,6 +412,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mCandidateSerial = ProfileUsers.UNKNOWN;
         long previous = mActiveSerial;
         mActiveSerial = serial;
+        mUnstartedPick = null;
         if (mNewProfileHold && previous != ProfileUsers.UNKNOWN) {
             // The just-added profile is running: Hearth takes over its home again (unless a setup screen is up)
             mNewProfileHold = false;
@@ -506,14 +510,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
         List<String> names = new ArrayList<>();
         List<Rect> photos = new ArrayList<>();
         String current = collectChooserTiles(root, names, photos, 0);
-        // The current account's tile names the running profile user, unless a switch is still settling. A name
-        // already learned is replaced only when the chooser no longer lists it (the profile was renamed): Google TV
-        // can mark a profile current that never started (a new one whose switch didn't finish), and that mustn't
-        // rename the profile that's actually running.
+        // The current account's tile names the running profile user, unless a switch is still settling. Not when
+        // it's a just-added profile that was picked but never started: Google TV can mark that one current while
+        // the last profile still runs, and it mustn't rename the profile that's actually running.
         String known = mActiveSerial == ProfileUsers.UNKNOWN ? null : ProfileUsers.getName(this, mActiveSerial);
         if (current != null && mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN
                 && !current.equals(known)) {
-            if (known == null || !names.contains(known)) {
+            if (known == null || !names.contains(known) || !current.equals(mUnstartedPick)) {
                 nameSerial(mActiveSerial, current, "chooser's current account");
             } else {
                 Log.i(TAG, "Chooser marks " + current + " current, but serial " + mActiveSerial + " (" + known
@@ -790,16 +793,17 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         if (GOOGLE_TV_HOME_ACTIVITY.equals(className)) {
             // A new profile's home: the last one's screen time no longer applies (its own comes up next)
-            boolean picked = mPendingProfile != null || mLastChooserFocus != null;
-            if (commitPendingProfile()) clearScreenTimeLock();
-            // A profile no profile user has run as yet (just added): Google TV sets it up from its own home in this
-            // user before it starts the new one, and gives up if Hearth covers that home. Hearth can't always tell
-            // which name that is (Google may already mark it current), so any pick while such a profile exists waits.
-            if (picked && (mLastPick != null && ProfileUsers.serialOf(this, mLastPick) == ProfileUsers.UNKNOWN
-                    || ProfileUsers.hasUnnamedProfile(this))) {
-                mGoogleSetupUntil = SystemClock.elapsedRealtime() + GOOGLE_SETUP_HOLD_MS;
-                mNewProfileHold = true;
-                Log.i(TAG, "A profile that has never run exists: Google TV may set it up before Hearth takes over");
+            if (commitPendingProfile()) {
+                clearScreenTimeLock();
+                // A profile no profile user has run as yet (just added): Google TV sets it up from its own home in
+                // this user before it starts the new one, and gives up if Hearth covers that home. Briefly: when
+                // Google can't start it, it just stays on its home, and the Home button is the only way back.
+                if (mLastPick != null && ProfileUsers.serialOf(this, mLastPick) == ProfileUsers.UNKNOWN) {
+                    mGoogleSetupUntil = SystemClock.elapsedRealtime() + NEW_PROFILE_HOLD_MS;
+                    mNewProfileHold = true;
+                    mUnstartedPick = mLastPick;
+                    Log.i(TAG, "New profile " + mLastPick + ": Google TV sets it up before Hearth takes over");
+                }
             }
             // Google TV only opens its home once a switch is done: take the new profile user now, before
             // Hearth takes over, so Hearth never comes up showing the last profile
