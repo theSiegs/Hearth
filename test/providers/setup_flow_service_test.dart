@@ -136,7 +136,7 @@ void main() {
 
   group("the chip", () {
     test("counts the essentials neither on nor skipped", () async {
-      const allOn = {SetupCard.watching: true, SetupCard.tv: true, SetupCard.updates: true};
+      final allOn = {for (final card in SetupCard.values) card: true};
       expect(flow.remaining(homeButtonOn: false, homeAppOn: false, cardOn: allOn), 2);
       await flow.decide(SetupFlowService.homeAppDecision, SetupChoice.notNow);
       expect(flow.remaining(homeButtonOn: false, homeAppOn: false, cardOn: allOn), 1);
@@ -148,6 +148,7 @@ void main() {
       expect(flow.remaining(homeButtonOn: true, homeAppOn: true, cardOn: {SetupCard.updates: true}),
           SetupCard.values.length - 1);
       await flow.decide(SetupCard.watching.name, SetupChoice.notNow);
+      await flow.decide(SetupCard.home.name, SetupChoice.on);
       await flow.decide(SetupCard.tv.name, SetupChoice.on);
       expect(flow.remaining(homeButtonOn: true, homeAppOn: true, cardOn: {SetupCard.updates: true}), 0);
     });

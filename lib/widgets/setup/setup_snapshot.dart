@@ -62,8 +62,8 @@ class SetupSnapshot {
         hearthTubeInstalled: hearthTubeInstalled,
       );
 
-  /// The rule behind [cardOn], for the home's checks that have no snapshot. A card that is a choice by itself (TV &
-  /// power) is never on until chosen.
+  /// The rule behind [cardOn], for the home's checks that have no snapshot. A card that is a choice by itself (the
+  /// look, TV & power) is never on until chosen.
   static bool cardOnFrom(
     SetupCard card, {
     required bool watchNextAllowed,
@@ -74,7 +74,7 @@ class SetupSnapshot {
   }) =>
       switch (card) {
         SetupCard.watching => watchNextAllowed && showContinueWatching && notifications,
-        SetupCard.tv => false,
+        SetupCard.home || SetupCard.tv => false,
         SetupCard.updates => install && hearthTubeInstalled,
       };
 

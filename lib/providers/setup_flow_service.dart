@@ -21,16 +21,19 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'home_looks.dart';
 import 'settings_service.dart';
 
 /// How the setup flow runs: the whole of it (first run, or picking up where it was left), again from Settings, or
 /// only the Home button screen after an update switched Home Button Fix off.
-enum SetupMode { full, rerun, lostFix }
+/// [look]: only "Pick a look for your home", for a grown-up's first visit to a profile after the flow has run.
+enum SetupMode { full, rerun, lostFix, look }
 
 /// The flow's optional cards, in the order they show (docs/design/first-run-setup.md). [introducedIn] is the flow
 /// version that added each, so a later update can offer only what's new.
 enum SetupCard {
   watching(1),
+  home(1),
   tv(1),
   updates(1);
 
@@ -99,6 +102,9 @@ class SetupFlowService extends ChangeNotifier {
   static const String _decisionsKey = "device_setup_decisions";
   static const String _chipHiddenKey = "device_setup_chip_hidden";
 
+  /// The look chosen in the flow (a [HomeLook]'s name): the starting look for new grown-up profiles.
+  static const String lookKey = "device_setup_look";
+
   /// Choices that aren't a card's.
   static const String homeButtonDecision = "homeButton";
   static const String homeAppDecision = "homeApp";
@@ -132,6 +138,10 @@ class SetupFlowService extends ChangeNotifier {
 
   /// The newest card version the owner has been shown.
   int get seenVersion => _prefs.getInt(_seenVersionKey) ?? 0;
+
+  HomeLook? get look => HomeLook.byName(_prefs.getString(lookKey));
+
+  Future<void> setLook(HomeLook look) => _prefs.setString(lookKey, look.name);
 
   bool get chipHidden => _prefs.getBool(_chipHiddenKey) ?? false;
 

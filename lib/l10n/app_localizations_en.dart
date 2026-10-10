@@ -2320,4 +2320,57 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setupFlowTubeInstalled => 'HearthTube is installed';
+
+  @override
+  String get setupCardHome => 'Your home';
+
+  @override
+  String get setupFlowLookTitle => 'Pick a look';
+
+  @override
+  String setupFlowLookBody(String where) {
+    return 'Each one shows behind this card as you move to it. You can change any part later in $where.';
+  }
+
+  @override
+  String get setupFlowLookOtherTitle => 'Pick a look for your home';
+
+  @override
+  String get setupFlowLookOtherBody => 'Each profile has its own home. Choose how yours looks.';
+
+  @override
+  String get setupLookHearth => 'Hearth';
+
+  @override
+  String get setupLookPhoto => 'Photo of the day';
+
+  @override
+  String get setupLookCalmDark => 'Calm dark';
+
+  @override
+  String get setupLookBold => 'Bold';
+
+  @override
+  String get setupFlowLookNow => 'Now';
+
+  @override
+  String get setupFlowLookUse => 'Use this look';
+
+  @override
+  String get setupFlowLookKeep => 'Keep current';
+
+  @override
+  String get setupFlowLookCustomize => 'Customize';
+
+  @override
+  String get setupFlowWeatherTitle => 'Show the weather?';
+
+  @override
+  String get setupFlowWeatherBody => 'Choose your town. Only its location is sent, to Open-Meteo; no account.';
+
+  @override
+  String get setupFlowWeatherChoose => 'Choose town';
+
+  @override
+  String get setupFlowWeatherDone => 'The weather shows in the top bar';
 }

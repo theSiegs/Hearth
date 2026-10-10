@@ -700,5 +700,22 @@
     "setupFlowInstallDone": "Hearth puede instalar actualizaciones",
     "setupFlowTubeTitle": "¿Instalar HearthTube?",
     "setupFlowTubeBody": "Una app de YouTube hecha para Hearth: sigue tus perfiles, el estilo del reloj y la hora de dormir de los niños.",
-    "setupFlowTubeInstalled": "HearthTube está instalado"
+    "setupFlowTubeInstalled": "HearthTube está instalado",
+    "setupCardHome": "Tu inicio",
+    "setupFlowLookTitle": "Elige un estilo",
+    "setupFlowLookBody": "Cada uno se ve detrás de esta tarjeta al moverte a él. Puedes cambiar cualquier parte más tarde en {where}.",
+    "setupFlowLookOtherTitle": "Elige un estilo para tu inicio",
+    "setupFlowLookOtherBody": "Cada perfil tiene su propio inicio. Elige cómo se ve el tuyo.",
+    "setupLookHearth": "Hearth",
+    "setupLookPhoto": "Foto del día",
+    "setupLookCalmDark": "Oscuro sereno",
+    "setupLookBold": "Atrevido",
+    "setupFlowLookNow": "Actual",
+    "setupFlowLookUse": "Usar este estilo",
+    "setupFlowLookKeep": "Mantener el actual",
+    "setupFlowLookCustomize": "Personalizar",
+    "setupFlowWeatherTitle": "¿Mostrar el tiempo?",
+    "setupFlowWeatherBody": "Elige tu localidad. Solo se envía su ubicación, a Open-Meteo; sin cuenta.",
+    "setupFlowWeatherChoose": "Elegir localidad",
+    "setupFlowWeatherDone": "El tiempo aparece en la barra superior"
 }

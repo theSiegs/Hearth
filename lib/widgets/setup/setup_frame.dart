@@ -44,7 +44,11 @@ class SetupFrame extends StatelessWidget {
   final VoidCallback? onFinishLater;
   final Widget child;
 
-  const SetupFrame({super.key, this.strip, this.finishLaterLabel, this.onFinishLater, required this.child});
+  /// The home shows through clearly (no blur, little dimming): the look screen previews it.
+  final bool preview;
+
+  const SetupFrame(
+      {super.key, this.strip, this.finishLaterLabel, this.onFinishLater, required this.child, this.preview = false});
 
   @override
   Widget build(BuildContext context) {
@@ -56,11 +60,18 @@ class SetupFrame extends StatelessWidget {
       child: Stack(
         children: [
           Positioned.fill(
-            child: hasWallpaper
-                ? const CachedBlurBackdrop(sigma: 18, child: SizedBox.expand())
-                : const ColoredBox(color: Color(0xFF0A0A0A)),
+            child: preview
+                ? const SizedBox.expand()
+                : hasWallpaper
+                    ? const CachedBlurBackdrop(sigma: 18, child: SizedBox.expand())
+                    : const ColoredBox(color: Color(0xFF0A0A0A)),
           ),
-          Positioned.fill(child: ColoredBox(color: Colors.black.withOpacity(0.55))),
+          Positioned.fill(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              color: Colors.black.withOpacity(preview ? 0.15 : 0.55),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(48, 24, 48, 24),
             child: Column(
@@ -484,6 +495,129 @@ class _SetupSwitchState extends State<SetupSwitch> {
                 const SizedBox(width: 12),
                 // Shows the state only; the row takes the presses
                 ExcludeFocus(child: IgnorePointer(child: Switch(value: widget.value, onChanged: (_) {}))),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One of the look screen's choices, made for the remote: a small picture of the home (its wallpaper, a row of
+/// cards in the look's accent) over its name. Focusing it previews the look; OK chooses it.
+class SetupLookTile extends StatefulWidget {
+  final String label;
+
+  /// The wallpaper: a gradient, or null for a picture (the photo of the day).
+  final Gradient? gradient;
+  final Color accent;
+
+  /// A quiet line under the name ("Now").
+  final String? note;
+  final VoidCallback onFocused;
+  final VoidCallback onPressed;
+  final FocusNode? focusNode;
+  final bool autofocus;
+
+  const SetupLookTile({
+    super.key,
+    required this.label,
+    required this.gradient,
+    required this.accent,
+    this.note,
+    required this.onFocused,
+    required this.onPressed,
+    this.focusNode,
+    this.autofocus = false,
+  });
+
+  @override
+  State<SetupLookTile> createState() => _SetupLookTileState();
+}
+
+class _SetupLookTileState extends State<SetupLookTile> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    final gradient = widget.gradient;
+    return Actions(
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => widget.onPressed()),
+        ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) => widget.onPressed()),
+      },
+      child: Focus(
+        focusNode: widget.focusNode,
+        autofocus: widget.autofocus,
+        onFocusChange: (focused) {
+          setState(() => _focused = focused);
+          if (focused) widget.onFocused();
+        },
+        child: GestureDetector(
+          onTap: widget.onPressed,
+          child: AnimatedScale(
+            scale: _focused ? 1.05 : 1,
+            duration: const Duration(milliseconds: 120),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      // The photo of the day: a sky, with a picture sign on it
+                      gradient: gradient ??
+                          const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0xFF4A7AB5), Color(0xFF9BC1D9), Color(0xFF5E7D4A)],
+                          ),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: _focused ? accent : Colors.white24, width: _focused ? 3 : 1),
+                    ),
+                    child: Stack(
+                      children: [
+                        if (gradient == null)
+                          const Center(child: Icon(Icons.landscape_outlined, color: Colors.white70, size: 28)),
+                        // A row of app cards, the first one focused in the look's accent
+                        Positioned(
+                          left: 10,
+                          right: 10,
+                          bottom: 10,
+                          child: Row(
+                            children: [
+                              for (int i = 0; i < 3; i++) ...[
+                                Expanded(
+                                  child: AspectRatio(
+                                    aspectRatio: 16 / 9,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.45),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: i == 0 ? Border.all(color: widget.accent, width: 2) : null,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                if (i < 2) const SizedBox(width: 6),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(widget.label,
+                    style: TextStyle(
+                        color: _focused ? Colors.white : Colors.white70,
+                        fontSize: 14,
+                        fontWeight: _focused ? FontWeight.w600 : FontWeight.normal)),
+                if (widget.note != null)
+                  Text(widget.note!, style: const TextStyle(color: Colors.white54, fontSize: 12)),
               ],
             ),
           ),

@@ -700,5 +700,22 @@
     "setupFlowInstallDone": "Hearth अपडेट इंस्टॉल कर सकता है",
     "setupFlowTubeTitle": "HearthTube इंस्टॉल करें?",
     "setupFlowTubeBody": "Hearth के लिए बना YouTube ऐप: यह आपकी प्रोफ़ाइलों, घड़ी की शैली और बच्चों के सोने के समय को मानता है।",
-    "setupFlowTubeInstalled": "HearthTube इंस्टॉल हो गया है"
+    "setupFlowTubeInstalled": "HearthTube इंस्टॉल हो गया है",
+    "setupCardHome": "आपकी होम स्क्रीन",
+    "setupFlowLookTitle": "एक रूप चुनें",
+    "setupFlowLookBody": "हर रूप पर जाते ही वह इस कार्ड के पीछे दिखता है। आप बाद में {where} में कोई भी हिस्सा बदल सकते हैं।",
+    "setupFlowLookOtherTitle": "अपनी होम स्क्रीन के लिए रूप चुनें",
+    "setupFlowLookOtherBody": "हर प्रोफ़ाइल की अपनी होम स्क्रीन होती है। चुनें कि आपकी कैसी दिखे।",
+    "setupLookHearth": "Hearth",
+    "setupLookPhoto": "आज की तस्वीर",
+    "setupLookCalmDark": "शांत गहरा",
+    "setupLookBold": "चटक",
+    "setupFlowLookNow": "अभी",
+    "setupFlowLookUse": "यह रूप इस्तेमाल करें",
+    "setupFlowLookKeep": "मौजूदा रहने दें",
+    "setupFlowLookCustomize": "अपने हिसाब से बदलें",
+    "setupFlowWeatherTitle": "मौसम दिखाएँ?",
+    "setupFlowWeatherBody": "अपना शहर चुनें। सिर्फ़ उसकी जगह Open-Meteo को भेजी जाती है; कोई खाता नहीं।",
+    "setupFlowWeatherChoose": "शहर चुनें",
+    "setupFlowWeatherDone": "मौसम ऊपर की पट्टी में दिखता है"
 }

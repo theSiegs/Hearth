@@ -700,5 +700,22 @@
     "setupFlowInstallDone": "Hearth 可以安装更新了",
     "setupFlowTubeTitle": "安装 HearthTube？",
     "setupFlowTubeBody": "为 Hearth 打造的 YouTube 应用：跟随你的个人资料、时钟样式和孩子的就寝时间。",
-    "setupFlowTubeInstalled": "HearthTube 已安装"
+    "setupFlowTubeInstalled": "HearthTube 已安装",
+    "setupCardHome": "你的主屏幕",
+    "setupFlowLookTitle": "选择外观",
+    "setupFlowLookBody": "移到某个外观上，它就会显示在这张卡片后面。之后可以在 {where} 中更改任何部分。",
+    "setupFlowLookOtherTitle": "为你的主屏幕选择外观",
+    "setupFlowLookOtherBody": "每个个人资料都有自己的主屏幕。选择你的外观。",
+    "setupLookHearth": "Hearth",
+    "setupLookPhoto": "每日图片",
+    "setupLookCalmDark": "沉静深色",
+    "setupLookBold": "醒目",
+    "setupFlowLookNow": "当前",
+    "setupFlowLookUse": "使用此外观",
+    "setupFlowLookKeep": "保留当前",
+    "setupFlowLookCustomize": "自定义",
+    "setupFlowWeatherTitle": "显示天气？",
+    "setupFlowWeatherBody": "选择你所在的城镇。只会把它的位置发送给 Open-Meteo，无需帐户。",
+    "setupFlowWeatherChoose": "选择城镇",
+    "setupFlowWeatherDone": "天气会显示在顶部栏中"
 }

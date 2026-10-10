@@ -700,5 +700,22 @@
     "setupFlowInstallDone": "يمكن لـ Hearth تثبيت التحديثات",
     "setupFlowTubeTitle": "تثبيت HearthTube؟",
     "setupFlowTubeBody": "تطبيق YouTube مصمم لـ Hearth: يتبع ملفاتك الشخصية ونمط الساعة ووقت نوم الأطفال.",
-    "setupFlowTubeInstalled": "تم تثبيت HearthTube"
+    "setupFlowTubeInstalled": "تم تثبيت HearthTube",
+    "setupCardHome": "شاشتك الرئيسية",
+    "setupFlowLookTitle": "اختر مظهرًا",
+    "setupFlowLookBody": "يظهر كل مظهر خلف هذه البطاقة عند الانتقال إليه. يمكنك تغيير أي جزء لاحقًا من {where}.",
+    "setupFlowLookOtherTitle": "اختر مظهرًا لشاشتك الرئيسية",
+    "setupFlowLookOtherBody": "لكل ملف شخصي شاشته الرئيسية. اختر مظهر شاشتك.",
+    "setupLookHearth": "Hearth",
+    "setupLookPhoto": "صورة اليوم",
+    "setupLookCalmDark": "داكن هادئ",
+    "setupLookBold": "جريء",
+    "setupFlowLookNow": "الحالي",
+    "setupFlowLookUse": "استخدام هذا المظهر",
+    "setupFlowLookKeep": "إبقاء الحالي",
+    "setupFlowLookCustomize": "تخصيص",
+    "setupFlowWeatherTitle": "عرض الطقس؟",
+    "setupFlowWeatherBody": "اختر مدينتك. يُرسل موقعها فقط إلى Open-Meteo، دون حساب.",
+    "setupFlowWeatherChoose": "اختيار المدينة",
+    "setupFlowWeatherDone": "يظهر الطقس في الشريط العلوي"
 }

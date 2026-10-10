@@ -2310,4 +2310,57 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get setupFlowTubeInstalled => 'HearthTube 已安装';
+
+  @override
+  String get setupCardHome => '你的主屏幕';
+
+  @override
+  String get setupFlowLookTitle => '选择外观';
+
+  @override
+  String setupFlowLookBody(String where) {
+    return '移到某个外观上，它就会显示在这张卡片后面。之后可以在 $where 中更改任何部分。';
+  }
+
+  @override
+  String get setupFlowLookOtherTitle => '为你的主屏幕选择外观';
+
+  @override
+  String get setupFlowLookOtherBody => '每个个人资料都有自己的主屏幕。选择你的外观。';
+
+  @override
+  String get setupLookHearth => 'Hearth';
+
+  @override
+  String get setupLookPhoto => '每日图片';
+
+  @override
+  String get setupLookCalmDark => '沉静深色';
+
+  @override
+  String get setupLookBold => '醒目';
+
+  @override
+  String get setupFlowLookNow => '当前';
+
+  @override
+  String get setupFlowLookUse => '使用此外观';
+
+  @override
+  String get setupFlowLookKeep => '保留当前';
+
+  @override
+  String get setupFlowLookCustomize => '自定义';
+
+  @override
+  String get setupFlowWeatherTitle => '显示天气？';
+
+  @override
+  String get setupFlowWeatherBody => '选择你所在的城镇。只会把它的位置发送给 Open-Meteo，无需帐户。';
+
+  @override
+  String get setupFlowWeatherChoose => '选择城镇';
+
+  @override
+  String get setupFlowWeatherDone => '天气会显示在顶部栏中';
 }

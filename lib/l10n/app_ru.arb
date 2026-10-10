@@ -700,5 +700,22 @@
     "setupFlowInstallDone": "Hearth может устанавливать обновления",
     "setupFlowTubeTitle": "Установить HearthTube?",
     "setupFlowTubeBody": "Приложение YouTube для Hearth: следует вашим профилям, стилю часов и времени сна детей.",
-    "setupFlowTubeInstalled": "HearthTube установлен"
+    "setupFlowTubeInstalled": "HearthTube установлен",
+    "setupCardHome": "Ваш главный экран",
+    "setupFlowLookTitle": "Выберите оформление",
+    "setupFlowLookBody": "Каждое оформление видно за этой карточкой, когда вы на него переходите. Любую часть можно изменить позже: {where}.",
+    "setupFlowLookOtherTitle": "Выберите оформление главного экрана",
+    "setupFlowLookOtherBody": "У каждого профиля свой главный экран. Выберите, как будет выглядеть ваш.",
+    "setupLookHearth": "Hearth",
+    "setupLookPhoto": "Фото дня",
+    "setupLookCalmDark": "Спокойный тёмный",
+    "setupLookBold": "Яркий",
+    "setupFlowLookNow": "Сейчас",
+    "setupFlowLookUse": "Выбрать это оформление",
+    "setupFlowLookKeep": "Оставить как есть",
+    "setupFlowLookCustomize": "Настроить",
+    "setupFlowWeatherTitle": "Показывать погоду?",
+    "setupFlowWeatherBody": "Выберите свой город. Отправляется только его местоположение, в Open-Meteo; без аккаунта.",
+    "setupFlowWeatherChoose": "Выбрать город",
+    "setupFlowWeatherDone": "Погода показывается в верхней панели"
 }

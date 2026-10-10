@@ -4120,6 +4120,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'HearthTube is installed'**
   String get setupFlowTubeInstalled;
+
+  /// Setup flow: the look card's name in the progress strip and on the last screen
+  ///
+  /// In en, this message translates to:
+  /// **'Your home'**
+  String get setupCardHome;
+
+  /// Setup flow: the look screen's title
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a look'**
+  String get setupFlowLookTitle;
+
+  /// Setup flow: the look screen; {where} is where the look settings are ("Settings > Home screen > Look")
+  ///
+  /// In en, this message translates to:
+  /// **'Each one shows behind this card as you move to it. You can change any part later in {where}.'**
+  String setupFlowLookBody(String where);
+
+  /// Look screen shown on a grown-up's first visit to their own profile, after the setup flow ran
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a look for your home'**
+  String get setupFlowLookOtherTitle;
+
+  /// Look screen on a grown-up's first visit to their own profile
+  ///
+  /// In en, this message translates to:
+  /// **'Each profile has its own home. Choose how yours looks.'**
+  String get setupFlowLookOtherBody;
+
+  /// Look screen: Hearth's own look (purple, a purple-teal gradient); "Hearth" is the app's name
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth'**
+  String get setupLookHearth;
+
+  /// Look screen: the look with Bing's photo of the day as the wallpaper
+  ///
+  /// In en, this message translates to:
+  /// **'Photo of the day'**
+  String get setupLookPhoto;
+
+  /// Look screen: the all-black, quiet look
+  ///
+  /// In en, this message translates to:
+  /// **'Calm dark'**
+  String get setupLookCalmDark;
+
+  /// Look screen: the bright pink look with glowing cards
+  ///
+  /// In en, this message translates to:
+  /// **'Bold'**
+  String get setupLookBold;
+
+  /// Look screen: note under the look the home has now
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get setupFlowLookNow;
+
+  /// Look screen: button that keeps the focused look
+  ///
+  /// In en, this message translates to:
+  /// **'Use this look'**
+  String get setupFlowLookUse;
+
+  /// Look screen: button that leaves the home as it was
+  ///
+  /// In en, this message translates to:
+  /// **'Keep current'**
+  String get setupFlowLookKeep;
+
+  /// Look screen: button that opens Settings' Look page
+  ///
+  /// In en, this message translates to:
+  /// **'Customize'**
+  String get setupFlowLookCustomize;
+
+  /// Setup flow: weather step's title
+  ///
+  /// In en, this message translates to:
+  /// **'Show the weather?'**
+  String get setupFlowWeatherTitle;
+
+  /// Setup flow: weather step; Open-Meteo is the weather service's name
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your town. Only its location is sent, to Open-Meteo; no account.'**
+  String get setupFlowWeatherBody;
+
+  /// Setup flow: weather step's button that opens the town search
+  ///
+  /// In en, this message translates to:
+  /// **'Choose town'**
+  String get setupFlowWeatherChoose;
+
+  /// Setup flow: weather step, once a town is chosen
+  ///
+  /// In en, this message translates to:
+  /// **'The weather shows in the top bar'**
+  String get setupFlowWeatherDone;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

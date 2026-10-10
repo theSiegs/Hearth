@@ -36,6 +36,9 @@ void main() {
     when(profiles.settledOnce).thenReturn(true);
     when(profiles.isKidsProfile).thenReturn(false);
     when(profiles.activeProfileKey).thenReturn("user:0");
+    when(profiles.firstVisitKey).thenReturn(null);
+    when(profiles.transition).thenReturn(null);
+    when(profiles.incomingName).thenReturn(null);
     PackageInfo.setMockInitialValues(
         appName: 'Hearth', packageName: 'com.example.hearth', version: '1', buildNumber: '1', buildSignature: '');
   });
@@ -131,18 +134,39 @@ void main() {
     expect(find.text("Not chosen yet"), findsOneWidget);
   });
 
+  testWidgets("a grown-up's first visit to their profile: one card offers a look, once", (tester) async {
+    await prefs.setInt("device_setup_flow_version", 1);
+    channel.homeButtonOn = true;
+    when(profiles.activeProfileKey).thenReturn("user:11");
+    when(profiles.firstVisitKey).thenReturn("user:11");
+    await pumpHome(tester);
+    expect(find.text("Pick a look for your home"), findsOneWidget);
+    // No strip and no Finish later: it's one screen
+    expect(find.text("Finish later"), findsNothing);
+    verify(profiles.lookOffered()).called(1);
+  });
+
+  testWidgets("no look card on a first visit before the flow has run, or in a kids' profile", (tester) async {
+    when(profiles.activeProfileKey).thenReturn("user:11");
+    when(profiles.firstVisitKey).thenReturn("user:11");
+    when(profiles.isKidsProfile).thenReturn(true);
+    await prefs.setInt("device_setup_flow_version", 1);
+    await pumpHome(tester);
+    expect(find.text("Pick a look for your home"), findsNothing);
+  });
+
   group("the chip", () {
     testWidgets("says how much is left and carries on where the flow was left", (tester) async {
       await prefs.setInt("device_setup_flow_version", 1);
       await prefs.setString("device_setup_resume",
           '{"screen":"homeApp","mode":"full","at":${now.subtract(const Duration(days: 1)).millisecondsSinceEpoch},"closed":true}');
       channel.homeButtonOn = true;
-      // Updates is all on already: only the home app and the two other cards are left
+      // Updates is all on already: only the home app and the three other cards are left
       channel.install = true;
       channel.hearthTube = true;
       await pumpHome(tester);
-      expect(find.text("Finish setting up · 3 left"), findsOneWidget);
-      await tester.tap(find.text("Finish setting up · 3 left"));
+      expect(find.text("Finish setting up · 4 left"), findsOneWidget);
+      await tester.tap(find.text("Finish setting up · 4 left"));
       await tester.pumpAndSettle();
       expect(find.text("Make Hearth your home app"), findsOneWidget);
     });

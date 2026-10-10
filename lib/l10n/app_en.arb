@@ -2967,5 +2967,78 @@
     "setupFlowTubeInstalled": "HearthTube is installed",
     "@setupFlowTubeInstalled": {
         "description": "Setup flow: Updates card, once HearthTube is installed"
+    },
+    "setupCardHome": "Your home",
+    "@setupCardHome": {
+        "description": "Setup flow: the look card's name in the progress strip and on the last screen"
+    },
+    "setupFlowLookTitle": "Pick a look",
+    "@setupFlowLookTitle": {
+        "description": "Setup flow: the look screen's title"
+    },
+    "setupFlowLookBody": "Each one shows behind this card as you move to it. You can change any part later in {where}.",
+    "@setupFlowLookBody": {
+        "description": "Setup flow: the look screen; {where} is where the look settings are (\"Settings > Home screen > Look\")",
+        "placeholders": {
+            "where": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowLookOtherTitle": "Pick a look for your home",
+    "@setupFlowLookOtherTitle": {
+        "description": "Look screen shown on a grown-up's first visit to their own profile, after the setup flow ran"
+    },
+    "setupFlowLookOtherBody": "Each profile has its own home. Choose how yours looks.",
+    "@setupFlowLookOtherBody": {
+        "description": "Look screen on a grown-up's first visit to their own profile"
+    },
+    "setupLookHearth": "Hearth",
+    "@setupLookHearth": {
+        "description": "Look screen: Hearth's own look (purple, a purple-teal gradient); \"Hearth\" is the app's name"
+    },
+    "setupLookPhoto": "Photo of the day",
+    "@setupLookPhoto": {
+        "description": "Look screen: the look with Bing's photo of the day as the wallpaper"
+    },
+    "setupLookCalmDark": "Calm dark",
+    "@setupLookCalmDark": {
+        "description": "Look screen: the all-black, quiet look"
+    },
+    "setupLookBold": "Bold",
+    "@setupLookBold": {
+        "description": "Look screen: the bright pink look with glowing cards"
+    },
+    "setupFlowLookNow": "Now",
+    "@setupFlowLookNow": {
+        "description": "Look screen: note under the look the home has now"
+    },
+    "setupFlowLookUse": "Use this look",
+    "@setupFlowLookUse": {
+        "description": "Look screen: button that keeps the focused look"
+    },
+    "setupFlowLookKeep": "Keep current",
+    "@setupFlowLookKeep": {
+        "description": "Look screen: button that leaves the home as it was"
+    },
+    "setupFlowLookCustomize": "Customize",
+    "@setupFlowLookCustomize": {
+        "description": "Look screen: button that opens Settings' Look page"
+    },
+    "setupFlowWeatherTitle": "Show the weather?",
+    "@setupFlowWeatherTitle": {
+        "description": "Setup flow: weather step's title"
+    },
+    "setupFlowWeatherBody": "Choose your town. Only its location is sent, to Open-Meteo; no account.",
+    "@setupFlowWeatherBody": {
+        "description": "Setup flow: weather step; Open-Meteo is the weather service's name"
+    },
+    "setupFlowWeatherChoose": "Choose town",
+    "@setupFlowWeatherChoose": {
+        "description": "Setup flow: weather step's button that opens the town search"
+    },
+    "setupFlowWeatherDone": "The weather shows in the top bar",
+    "@setupFlowWeatherDone": {
+        "description": "Setup flow: weather step, once a town is chosen"
     }
 }

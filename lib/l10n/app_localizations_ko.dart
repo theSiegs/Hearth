@@ -2310,4 +2310,57 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get setupFlowTubeInstalled => 'HearthTube가 설치되었습니다';
+
+  @override
+  String get setupCardHome => '내 홈';
+
+  @override
+  String get setupFlowLookTitle => '스타일 선택';
+
+  @override
+  String setupFlowLookBody(String where) {
+    return '선택하면 이 카드 뒤에 바로 보입니다. 나중에 $where에서 무엇이든 바꿀 수 있습니다.';
+  }
+
+  @override
+  String get setupFlowLookOtherTitle => '내 홈의 스타일을 선택하세요';
+
+  @override
+  String get setupFlowLookOtherBody => '프로필마다 홈이 따로 있습니다. 내 홈의 모습을 고르세요.';
+
+  @override
+  String get setupLookHearth => 'Hearth';
+
+  @override
+  String get setupLookPhoto => '오늘의 사진';
+
+  @override
+  String get setupLookCalmDark => '차분한 어둠';
+
+  @override
+  String get setupLookBold => '선명하게';
+
+  @override
+  String get setupFlowLookNow => '현재';
+
+  @override
+  String get setupFlowLookUse => '이 스타일 사용';
+
+  @override
+  String get setupFlowLookKeep => '현재 유지';
+
+  @override
+  String get setupFlowLookCustomize => '맞춤 설정';
+
+  @override
+  String get setupFlowWeatherTitle => '날씨를 표시할까요?';
+
+  @override
+  String get setupFlowWeatherBody => '사는 곳을 선택하세요. 위치만 Open-Meteo로 보내며 계정은 필요 없습니다.';
+
+  @override
+  String get setupFlowWeatherChoose => '지역 선택';
+
+  @override
+  String get setupFlowWeatherDone => '날씨가 상단 바에 표시됩니다';
 }
