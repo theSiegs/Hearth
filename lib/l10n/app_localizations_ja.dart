@@ -2526,4 +2526,25 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get setupFlowChooseAgain => 'もう一度選ぶ';
+
+  @override
+  String get weatherForecastNextHours => 'この先の数時間';
+
+  @override
+  String get weatherForecastNextDays => '今後5日間';
+
+  @override
+  String get weatherForecastShowDays => 'OK: 今後5日間';
+
+  @override
+  String get weatherForecastShowHours => 'OK: この先の数時間';
+
+  @override
+  String get weatherForecastNow => '現在';
+
+  @override
+  String get weatherForecastToday => '今日';
+
+  @override
+  String get weatherForecastNone => '予報はまだ届いていません';
 }

@@ -2569,4 +2569,25 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get setupFlowChooseAgain => 'اختر مرة أخرى';
+
+  @override
+  String get weatherForecastNextHours => 'الساعات القادمة';
+
+  @override
+  String get weatherForecastNextDays => 'الأيام الخمسة القادمة';
+
+  @override
+  String get weatherForecastShowDays => 'موافق: الأيام الخمسة القادمة';
+
+  @override
+  String get weatherForecastShowHours => 'موافق: الساعات القادمة';
+
+  @override
+  String get weatherForecastNow => 'الآن';
+
+  @override
+  String get weatherForecastToday => 'اليوم';
+
+  @override
+  String get weatherForecastNone => 'لم تصل التوقعات بعد';
 }

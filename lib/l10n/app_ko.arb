@@ -768,5 +768,12 @@
     "setupFlowKidsNotAll": "아직 모든 아이 프로필에 Hearth가 있지는 않습니다",
     "setupFlowLeaveAsIs": "그대로 두기",
     "setupFlowSetUpMissing": "빠진 항목 설정",
-    "setupFlowChooseAgain": "다시 선택"
+    "setupFlowChooseAgain": "다시 선택",
+    "weatherForecastNextHours": "앞으로 몇 시간",
+    "weatherForecastNextDays": "앞으로 5일",
+    "weatherForecastShowDays": "확인: 앞으로 5일",
+    "weatherForecastShowHours": "확인: 앞으로 몇 시간",
+    "weatherForecastNow": "지금",
+    "weatherForecastToday": "오늘",
+    "weatherForecastNone": "아직 예보가 없습니다"
 }

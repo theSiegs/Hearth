@@ -64,6 +64,9 @@ class OpenMeteoClient {
       "longitude": place.longitude.toStringAsFixed(3),
       "current": "temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m",
       "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,relative_humidity_2m_mean",
+      "hourly": "temperature_2m,weather_code,precipitation_probability",
+      "forecast_hours": "24",
+      "timeformat": "unixtime",
       "wind_speed_unit": "ms",
       "timezone": "auto",
       "forecast_days": "7",
@@ -102,6 +105,13 @@ class OpenMeteoClient {
     final humidity = series("relative_humidity_2m_mean");
     num? at(List<dynamic> list, int i) => i < list.length ? list[i] as num? : null;
 
+    final hourly = response["hourly"] as Map<String, dynamic>? ?? {};
+    List<dynamic> hourSeries(String key) => hourly[key] as List<dynamic>? ?? const [];
+    final hourTimes = hourSeries("time");
+    final hourTemps = hourSeries("temperature_2m");
+    final hourCodes = hourSeries("weather_code");
+    final hourPrecip = hourSeries("precipitation_probability");
+
     final int? currentCode = (current["weather_code"] as num?)?.toInt();
     return {
       "timestamp": ((now ?? DateTime.now()).millisecondsSinceEpoch / 1000).round(),
@@ -113,6 +123,17 @@ class OpenMeteoClient {
       "windSpeed": (current["wind_speed_10m"] as num?)?.toDouble(),
       "todayMaxTemp": at(maxTemps, 0)?.round(),
       "todayMinTemp": at(minTemps, 0)?.round(),
+      // The coming hours, in Gadgetbridge's keys (timestamp in seconds)
+      "hourly": [
+        for (int i = 0; i < hourTimes.length; i++)
+          if (hourTimes[i] is num)
+            {
+              "timestamp": (hourTimes[i] as num).toInt(),
+              "temp": at(hourTemps, i)?.round(),
+              "conditionCode": at(hourCodes, i) == null ? null : wmoToOwm(at(hourCodes, i)!.toInt()),
+              "precipProbability": at(hourPrecip, i)?.round(),
+            },
+      ],
       "forecasts": [
         for (int i = 0; i < codes.length; i++)
           {

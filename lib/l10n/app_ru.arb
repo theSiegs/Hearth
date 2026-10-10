@@ -768,5 +768,12 @@
     "setupFlowKidsNotAll": "Hearth пока есть не во всех детских профилях",
     "setupFlowLeaveAsIs": "Оставить как есть",
     "setupFlowSetUpMissing": "Настроить недостающее",
-    "setupFlowChooseAgain": "Выбрать заново"
+    "setupFlowChooseAgain": "Выбрать заново",
+    "weatherForecastNextHours": "Ближайшие часы",
+    "weatherForecastNextDays": "Ближайшие 5 дней",
+    "weatherForecastShowDays": "OK: ближайшие 5 дней",
+    "weatherForecastShowHours": "OK: ближайшие часы",
+    "weatherForecastNow": "Сейчас",
+    "weatherForecastToday": "Сегодня",
+    "weatherForecastNone": "Прогноз ещё не получен"
 }

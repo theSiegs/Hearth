@@ -34,6 +34,29 @@ class WeatherForecastItem {
   }
 }
 
+/// One hour of the forecast: when, how warm (°C) and what the sky does.
+class WeatherHourItem {
+  final DateTime time;
+  final int? temp;
+  final int? conditionCode;
+  final int? precipProbability;
+
+  const WeatherHourItem({required this.time, this.temp, this.conditionCode, this.precipProbability});
+
+  /// From a feed's "hourly" entry (Breezy Weather's Gadgetbridge format and Hearth's own use the same keys; the
+  /// timestamp is in seconds); null without one.
+  static WeatherHourItem? fromJson(Map<String, dynamic> json) {
+    final seconds = (json['timestamp'] as num?)?.toInt();
+    if (seconds == null) return null;
+    return WeatherHourItem(
+      time: DateTime.fromMillisecondsSinceEpoch(seconds * 1000),
+      temp: WeatherData.parseTemperature(json['temp']),
+      conditionCode: (json['conditionCode'] as num?)?.toInt(),
+      precipProbability: (json['precipProbability'] as num?)?.toInt(),
+    );
+  }
+}
+
 class WeatherData {
   final int? timestamp;
   final String? location;
@@ -45,6 +68,9 @@ class WeatherData {
   final int? todayMaxTemp;
   final int? todayMinTemp;
   final List<WeatherForecastItem> forecasts;
+
+  /// The coming hours, earliest first (empty when the source gives none).
+  final List<WeatherHourItem> hourly;
 
   // The first rain, snow or storm in the coming week, if any
   final WeatherWarningType warningType;
@@ -74,6 +100,7 @@ class WeatherData {
     this.todayMaxTemp,
     this.todayMinTemp,
     this.forecasts = const [],
+    this.hourly = const [],
     this.warningType = WeatherWarningType.none,
     this.warningText,
     this.warningConditionCode,
@@ -179,6 +206,10 @@ class WeatherData {
       todayMaxTemp: parseTemperature(json['todayMaxTemp']),
       todayMinTemp: parseTemperature(json['todayMinTemp']),
       forecasts: forecasts,
+      hourly: [
+        for (final entry in (json['hourly'] as List<dynamic>? ?? const []).whereType<Map<String, dynamic>>())
+          if (WeatherHourItem.fromJson(entry) case final WeatherHourItem hour) hour,
+      ]..sort((a, b) => a.time.compareTo(b.time)),
       warningType: warningType,
       warningText: warningText,
       warningConditionCode: warningConditionCode,
@@ -188,8 +219,11 @@ class WeatherData {
     );
   }
 
-  IconData getConditionIcon({bool isWarning = false}) {
-    final code = isWarning ? (warningConditionCode ?? currentConditionCode) : currentConditionCode;
+  IconData getConditionIcon({bool isWarning = false}) =>
+      iconFor(isWarning ? (warningConditionCode ?? currentConditionCode) : currentConditionCode);
+
+  /// The icon for a condition code (OpenWeatherMap's, as the feeds give them).
+  static IconData iconFor(int? code) {
     if (code == null) return Icons.cloud_outlined;
 
     if (code == 800) return Icons.wb_sunny_outlined;
@@ -206,12 +240,12 @@ class WeatherData {
     return Icons.cloud_outlined;
   }
 
-  String formatTemperature({bool useFahrenheit = false}) {
-    if (currentTemp == null) return "--°";
-    if (useFahrenheit) {
-      final fahrenheit = (currentTemp! * 9 / 5 + 32).round();
-      return "$fahrenheit°F";
-    }
-    return "$currentTemp°C";
+  String formatTemperature({bool useFahrenheit = false}) => formatDegrees(currentTemp, useFahrenheit: useFahrenheit);
+
+  /// A temperature given in °C as the TV shows it: "21°C", "70°F", or just "70°" without [withUnit].
+  static String formatDegrees(int? celsius, {bool useFahrenheit = false, bool withUnit = true}) {
+    if (celsius == null) return "--°";
+    final value = useFahrenheit ? (celsius * 9 / 5 + 32).round() : celsius;
+    return withUnit ? "$value°${useFahrenheit ? "F" : "C"}" : "$value°";
   }
 }

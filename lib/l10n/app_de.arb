@@ -768,5 +768,12 @@
     "setupFlowKidsNotAll": "Hearth ist noch nicht auf jedem Kinderprofil",
     "setupFlowLeaveAsIs": "So lassen",
     "setupFlowSetUpMissing": "Fehlendes einrichten",
-    "setupFlowChooseAgain": "Neu wählen"
+    "setupFlowChooseAgain": "Neu wählen",
+    "weatherForecastNextHours": "Nächste Stunden",
+    "weatherForecastNextDays": "Nächste 5 Tage",
+    "weatherForecastShowDays": "OK: nächste 5 Tage",
+    "weatherForecastShowHours": "OK: nächste Stunden",
+    "weatherForecastNow": "Jetzt",
+    "weatherForecastToday": "Heute",
+    "weatherForecastNone": "Die Vorhersage ist noch nicht da"
 }
