@@ -762,5 +762,7 @@
     "setupFlowHaStatusTitle": "Decirle a Home Assistant qué se ve",
     "setupFlowHaStatusBody": "La tele puede enviar a Home Assistant lo que se reproduce y el perfil activo. En la misma página del móvil, añade el ID de una automatización con webhook de Home Assistant.",
     "setupFlowHaStatusNoWebhook": "El móvil no envió un ID de webhook. Rellena la última casilla de la página.",
-    "setupFlowHaStatusDone": "La tele le dice a Home Assistant qué se ve"
+    "setupFlowHaStatusDone": "La tele le dice a Home Assistant qué se ve",
+    "setupChipNewOne": "Novedad en Hearth: {feature}",
+    "setupChipNewMany": "Novedades en Hearth · {count}"
 }

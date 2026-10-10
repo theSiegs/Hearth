@@ -762,5 +762,7 @@
     "setupFlowHaStatusTitle": "告诉 Home Assistant 正在播放什么",
     "setupFlowHaStatusBody": "电视可以把正在播放的内容和当前个人资料发送给 Home Assistant。在同一个手机页面上，填写 Home Assistant 中某个 Webhook 自动化的 ID。",
     "setupFlowHaStatusNoWebhook": "手机没有发送 Webhook ID。请填写页面上的最后一个框。",
-    "setupFlowHaStatusDone": "电视会告诉 Home Assistant 正在播放什么"
+    "setupFlowHaStatusDone": "电视会告诉 Home Assistant 正在播放什么",
+    "setupChipNewOne": "Hearth 新功能：{feature}",
+    "setupChipNewMany": "Hearth 新功能 · {count}"
 }

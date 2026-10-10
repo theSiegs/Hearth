@@ -762,5 +762,7 @@
     "setupFlowHaStatusTitle": "أخبر Home Assistant بما يُعرض",
     "setupFlowHaStatusBody": "يمكن للتلفزيون إرسال ما يتم تشغيله والملف الشخصي النشط إلى Home Assistant. في صفحة الهاتف نفسها، أضف معرّف أتمتة Webhook من Home Assistant.",
     "setupFlowHaStatusNoWebhook": "لم يرسل الهاتف معرّف Webhook. املأ المربع الأخير في الصفحة.",
-    "setupFlowHaStatusDone": "يُخبر التلفزيون Home Assistant بما يُعرض"
+    "setupFlowHaStatusDone": "يُخبر التلفزيون Home Assistant بما يُعرض",
+    "setupChipNewOne": "جديد في Hearth: {feature}",
+    "setupChipNewMany": "جديد في Hearth · {count}"
 }

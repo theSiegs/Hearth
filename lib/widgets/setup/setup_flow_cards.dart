@@ -676,7 +676,8 @@ extension _CardScreens on _SetupFlowPageState {
     try {
       shown = await _channel.sendHaTestNotification();
     } catch (_) {}
-    if (mounted) _update(() => _haTestResult = shown ? null : l.haNotificationsNeedsFix(SetupChecklistPage.breadcrumb(l)));
+    if (!mounted) return;
+    _update(() => _haTestResult = shown ? null : l.haNotificationsNeedsFix(SetupChecklistPage.breadcrumb(l)));
   }
 
   /// The dashboard panel: the address and a token come from the phone, never typed with the remote.

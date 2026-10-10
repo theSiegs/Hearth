@@ -2512,4 +2512,14 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get setupFlowHaStatusDone => 'टीवी Home Assistant को बताता है कि क्या चल रहा है';
+
+  @override
+  String setupChipNewOne(String feature) {
+    return 'Hearth में नया: $feature';
+  }
+
+  @override
+  String setupChipNewMany(int count) {
+    return 'Hearth में नया · $count';
+  }
 }

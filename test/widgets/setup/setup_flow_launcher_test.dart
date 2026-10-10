@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/profile_service.dart';
@@ -169,6 +171,26 @@ void main() {
       await tester.tap(find.text("Finish setting up · 5 left"));
       await tester.pumpAndSettle();
       expect(find.text("Make Hearth your home app"), findsOneWidget);
+    });
+
+    testWidgets("after an update that added a card: New in Hearth, opening on that card", (tester) async {
+      await prefs.setInt("device_setup_flow_version", 1);
+      await prefs.setInt("device_setup_seen_version", 0);
+      final decided = {
+        for (final card in SetupCard.values)
+          if (card != SetupCard.smartHome) card.name: {"state": "notNow", "at": 1},
+      };
+      await prefs.setString("device_setup_decisions", jsonEncode(decided));
+      // Hidden before: something new shows anyway
+      await prefs.setBool("device_setup_chip_hidden", true);
+      channel.homeButtonOn = true;
+      channel.homeApp = true;
+      final flow = await pumpHome(tester);
+      expect(find.text("New in Hearth: Smart home"), findsOneWidget);
+      await tester.tap(find.text("New in Hearth: Smart home"));
+      await tester.pumpAndSettle();
+      expect(find.text("I use Home Assistant"), findsOneWidget);
+      expect(flow.seenVersion, SetupFlowService.currentVersion);
     });
 
     testWidgets("asks for the Home button's fix after it was skipped", (tester) async {

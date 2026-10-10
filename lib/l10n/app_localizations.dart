@@ -4492,6 +4492,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The TV tells Home Assistant what\'s on'**
   String get setupFlowHaStatusDone;
+
+  /// Home screen top bar: chip after an update added one setup card; {feature} is the card's name ("Smart home")
+  ///
+  /// In en, this message translates to:
+  /// **'New in Hearth: {feature}'**
+  String setupChipNewOne(String feature);
+
+  /// Home screen top bar: chip after an update added several setup cards; {count} is how many (2 or more)
+  ///
+  /// In en, this message translates to:
+  /// **'New in Hearth · {count}'**
+  String setupChipNewMany(int count);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

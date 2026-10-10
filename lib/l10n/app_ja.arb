@@ -762,5 +762,7 @@
     "setupFlowHaStatusTitle": "表示中の内容を Home Assistant に伝える",
     "setupFlowHaStatusBody": "テレビは再生中の内容と使用中のプロフィールを Home Assistant に送れます。同じスマートフォンのページで、Home Assistant の Webhook オートメーションの ID を入力してください。",
     "setupFlowHaStatusNoWebhook": "スマートフォンから Webhook ID が送られませんでした。ページの最後の欄に入力してください。",
-    "setupFlowHaStatusDone": "テレビが表示中の内容を Home Assistant に伝えます"
+    "setupFlowHaStatusDone": "テレビが表示中の内容を Home Assistant に伝えます",
+    "setupChipNewOne": "Hearth の新機能：{feature}",
+    "setupChipNewMany": "Hearth の新機能 · {count}"
 }

@@ -2504,4 +2504,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get setupFlowHaStatusDone => '电视会告诉 Home Assistant 正在播放什么';
+
+  @override
+  String setupChipNewOne(String feature) {
+    return 'Hearth 新功能：$feature';
+  }
+
+  @override
+  String setupChipNewMany(int count) {
+    return 'Hearth 新功能 · $count';
+  }
 }

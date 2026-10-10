@@ -2504,4 +2504,14 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get setupFlowHaStatusDone => 'TV, Home Assistant\'a neyin açık olduğunu bildiriyor';
+
+  @override
+  String setupChipNewOne(String feature) {
+    return 'Hearth\'te yeni: $feature';
+  }
+
+  @override
+  String setupChipNewMany(int count) {
+    return 'Hearth\'te yeni · $count';
+  }
 }
