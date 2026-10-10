@@ -577,11 +577,12 @@ extension _CardScreens on _SetupFlowPageState {
   /// Your home: four looks, each previewed on the home behind the card as it's focused. The card is the choice.
   Widget _lookScreen(AppLocalizations l) {
     final settings = _lookSettings ?? context.read<SettingsService?>();
-    final current = settings == null ? null : HomeLook.current(settings);
-    // Focus starts on the look the home has now, or Hearth's own
+    // The look as it was when the screen opened, not the one previewed now
+    final kept = _lookBefore ?? (settings == null ? null : HomeLookSnapshot.of(settings));
+    final current = kept == null ? null : HomeLook.currentOf(kept);
+    // Focus starts on the look the home had, or Hearth's own
     final first = current ?? HomeLook.hearth;
     final where = "${l.settingsTitle} > ${l.homeScreenTitle} > ${l.lookTitle}";
-    final kept = settings == null ? null : (_lookBefore ?? HomeLookSnapshot.of(settings));
     return SetupScreenBody(
       icon: Icons.palette_outlined,
       title: _lookOnly ? l.setupFlowLookOtherTitle : l.setupFlowLookTitle,

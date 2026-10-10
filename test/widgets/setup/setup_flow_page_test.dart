@@ -544,6 +544,14 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.pumpAndSettle();
       expect(HomeLook.photo.matches(SettingsService(prefs)), isTrue);
+      // Focus moves on from the look previewed: what the home had stays the starting point
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(HomeLook.calmDark.matches(SettingsService(prefs)), isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(HomeLook.bold.matches(SettingsService(prefs)), isTrue);
+      expect(find.text("Now"), findsNothing);
 
       await press(tester, "Keep current");
       final settings = SettingsService(prefs);

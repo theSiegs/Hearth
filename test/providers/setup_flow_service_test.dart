@@ -189,6 +189,11 @@ void main() {
       expect(flow.newCards(), isEmpty);
     });
 
+    test("nothing is new while the first run is still going", () async {
+      await flow.saveResume("watching", SetupMode.full);
+      expect(flow.newCards(), isEmpty);
+    });
+
     test("a TV that went through this flow has nothing new", () async {
       await flow.finish();
       expect(flow.newCards(), isEmpty);

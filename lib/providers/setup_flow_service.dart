@@ -280,10 +280,12 @@ class SetupFlowService extends ChangeNotifier {
       !homeButtonOn && (homeButtonSeenBefore || choiceFor(homeButtonDecision) == SetupChoice.notNow);
 
   /// Cards added since the owner last went through the flow ([seenVersion]) that nobody decided on and aren't all
-  /// on anyway ([cardOn]): the chip offers them as "New in Hearth".
+  /// on anyway ([cardOn]): the chip offers them as "New in Hearth". Nothing is new before the flow has been finished
+  /// or closed once: it offers every card itself.
   List<SetupCard> newCards({Map<SetupCard, bool> cardOn = const {}}) => [
-        for (final card in SetupCard.values)
-          if (card.introducedIn > seenVersion && cardChoice(card) == null && cardOn[card] != true) card,
+        if (flowVersion != null)
+          for (final card in SetupCard.values)
+            if (card.introducedIn > seenVersion && cardChoice(card) == null && cardOn[card] != true) card,
       ];
 
   /// The owner has seen what's new (opened it, or dismissed the chip): it isn't offered again.
