@@ -60,7 +60,15 @@ public class UsageTodayTest {
         Allowance.Values locked = Allowance.combine(0, 0, null, true, "Bedtime", 5L);
         assertTrue(locked.scheduleLocked);
         assertNull(locked.youtubeMinutesLeft);
+        assertEquals(Allowance.SOURCE_HOME_ASSISTANT, locked.source);
         assertEquals("Bedtime", locked.message);
+        // Home Assistant locks while Hearth's own limit has the minutes: the minutes stay Hearth's, the lock and its
+        // message Home Assistant's
+        Allowance.Values school = Allowance.combine(60, 10 * 60_000L, null, true, "School time", 5L);
+        assertEquals(Integer.valueOf(50), school.youtubeMinutesLeft);
+        assertEquals(Allowance.SOURCE_HEARTH, school.source);
+        assertTrue(school.scheduleLocked);
+        assertEquals("School time", school.message);
     }
 
     @Test

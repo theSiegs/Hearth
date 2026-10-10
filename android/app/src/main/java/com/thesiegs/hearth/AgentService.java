@@ -178,10 +178,16 @@ public class AgentService extends Service {
         return values;
     }
 
-    /** An app played this long in this profile's user (HearthTube reports its own): Hearth counts it today. */
-    static void relayPlaying(String packageName, long ms) {
+    /**
+     * An app played this long in this profile's user (HearthTube reports its own): Hearth counts it today. False when
+     * Hearth isn't connected, so nothing was passed on.
+     */
+    static boolean relayPlaying(String packageName, long ms) {
         AgentService service = sInstance;
-        if (service != null) service.send(json("type", "playing", "package", packageName, "ms", ms));
+        // Not connected: the caller keeps the time and reports it again later
+        if (service == null || !sConnected) return false;
+        service.send(json("type", "playing", "package", packageName, "ms", ms));
+        return true;
     }
 
     /** Checks a PIN with Hearth (it stays there); null when Hearth doesn't answer within a few seconds. */

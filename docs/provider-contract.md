@@ -73,9 +73,9 @@ answer within a few seconds. Without an agent, a Hearth installed there answers 
 | `wallpaper_credit` | text or null | When `wallpaper_kind` is "bing": Bing's caption and credit for the photo ("A quiet lake at dawn (© Photographer/Agency)"), to show where the photo is credited. Otherwise null. |
 | `youtube_minutes_left` | integer or null | The active profile's YouTube minutes left today. Hearth works it out itself: the daily limit set for the profile in Hearth (Settings → Profiles → YouTube time per day) less what HearthTube reported playing for it today (`report_playing`). With Home Assistant set up (optional), its say counts too (entity `sensor.hearth_allowance`, its attribute `profiles` or else its state as JSON → this profile's `profile_id` → `youtube_minutes_left`, e.g. a pool shared with the family's other devices) and the smaller wins. Null when there's no limit. At 0 HearthTube stops playing. |
 | `schedule_locked` | 0/1 | 1 while Home Assistant says the active profile's schedule is locked (bedtime, school time: `schedule_locked` in the same entry). HearthTube doesn't play then. 0 when not, or not known. |
-| `allowance_message` | text or null | What to tell the viewer when it stops, if Home Assistant gives one (`message` in the same entry). |
-| `allowance_checked_at` | integer or null | When Hearth last read the allowance from Home Assistant (epoch ms), today; null when it hasn't today (not set up, unreachable, or a new day). Hearth reads it every minute or so and at each profile change. How old a value may be before it no longer counts is the caller's choice. |
-| `allowance_source` | text or null | Whose limit `youtube_minutes_left` and `schedule_locked` are: "hearth" (the limit set in Hearth) or "home_assistant"; null when there's none. |
+| `allowance_message` | text or null | What to tell the viewer when it stops, if Home Assistant gives one (`message` in the same entry): set when Home Assistant's minutes are the ones that count, or it locks. |
+| `allowance_checked_at` | integer or null | When Hearth last read the allowance from Home Assistant (epoch ms), today; null when it hasn't today (not set up, unreachable, or a new day). Hearth reads it every minute or so and at each profile change; after a failed read it tries again within 10 minutes. How old a value may be before it no longer counts is the caller's choice. |
+| `allowance_source` | text or null | Whose minutes `youtube_minutes_left` are: "hearth" (the limit set in Hearth) or "home_assistant"; "home_assistant" too when there are no minutes but Home Assistant locks; null when there's neither. A lock is always Home Assistant's. |
 | `contract_version` | integer | This page's version (6). Missing on Hearth builds from before version 2. |
 
 None of these are secret: everything is on screen in Hearth.
@@ -90,7 +90,8 @@ a minute.
 `call(uri /active, "report_playing", null, extras {"ms": long})`: HearthTube played that long (milliseconds, at most
 10 minutes per call) for the active profile; its YouTube allowance counts down from it. Call it every 30 seconds or
 so while playing and when playback stops. Same callers as above; returns a Bundle with `ok` true. In a profile's
-agent it's passed on to Hearth.
+agent it's passed on to Hearth, and returns null when it couldn't be (Hearth not connected): report that time again
+later. Observers on `/active` are told when a report changes `youtube_minutes_left`, not at every report.
 
 ## History
 

@@ -59,7 +59,8 @@ final class Allowance {
 
     /**
      * Hearth's own limit (minutes, 0: none) less what was played, and Home Assistant's say (minutes left, null: no
-     * limit), the stricter counting. Home Assistant's lock and message come along whenever it gave them.
+     * limit), the stricter counting. The source names whose minutes they are (Home Assistant's when only its lock
+     * applies); Home Assistant's lock comes along whenever it gave one, and its message when its say applies.
      */
     static Values combine(int limitMinutes, long playedMs, Integer haMinutesLeft, boolean haLocked, String haMessage,
             Long haCheckedAt) {
@@ -70,8 +71,10 @@ final class Allowance {
             left = haMinutesLeft;
             source = SOURCE_HOME_ASSISTANT;
         }
-        if (haLocked) source = SOURCE_HOME_ASSISTANT;
-        return new Values(left, haLocked, SOURCE_HOME_ASSISTANT.equals(source) ? haMessage : null, haCheckedAt, source);
+        // The source says whose minutes they are; with no minutes, whose lock it is
+        if (source == null && haLocked) source = SOURCE_HOME_ASSISTANT;
+        String message = haLocked || SOURCE_HOME_ASSISTANT.equals(source) ? haMessage : null;
+        return new Values(left, haLocked, message, haCheckedAt, source);
     }
 
     private static SharedPreferences prefs(Context context) {
