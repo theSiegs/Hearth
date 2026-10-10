@@ -27,11 +27,16 @@ class FocusKeyboardListener extends StatefulWidget {
   final KeyEventResult Function(LogicalKeyboardKey)? onPressed;
   final KeyEventResult Function(LogicalKeyboardKey)? onLongPress;
 
+  /// A long press's action that opens another app's screen: run once the key is let go, not while it's held. A
+  /// key released over another app's screen presses whatever has focus there (Android's buttons act on release).
+  final void Function(LogicalKeyboardKey)? onLongPressReleased;
+
   const FocusKeyboardListener({
     super.key,
     required this.builder,
     this.onPressed,
     this.onLongPress,
+    this.onLongPressReleased,
   });
 
   @override
@@ -74,7 +79,8 @@ class _FocusKeyboardListenerState extends State<FocusKeyboardListener> {
     // Menu or info key opens options immediately without waiting
     if (AppCardKeys.menuKeys.contains(key)) {
       _longPressTimer?.cancel();
-      _longPressFired = false;
+      // A long press already: its release runs onLongPressReleased
+      _longPressFired = widget.onLongPressReleased != null;
       _keyDownAt = null;
       return widget.onLongPress?.call(key) ?? KeyEventResult.ignored;
     }
@@ -87,6 +93,8 @@ class _FocusKeyboardListenerState extends State<FocusKeyboardListener> {
       return result;
     }
 
+    // Still held after the long press fired: the repeats belong to it, not to a new press
+    if (_longPressFired) return KeyEventResult.handled;
     if (_keyDownAt == null) {
       _keyDownAt = DateTime.now().millisecondsSinceEpoch;
       _longPressFired = false;
@@ -116,6 +124,7 @@ class _FocusKeyboardListenerState extends State<FocusKeyboardListener> {
     }
     if (_longPressFired) {
       _longPressFired = false;
+      widget.onLongPressReleased?.call(key);
       return KeyEventResult.handled;
     }
     if (_keyDownAt != null) {
