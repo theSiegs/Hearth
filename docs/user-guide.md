@@ -98,6 +98,9 @@ Hearth treats a profile as a kids profile when Family Link supervises it.
   when the kid is allowed back. Remote button remaps pause while those screens show.
 - **Parent PIN** (**Settings → Profiles → Parent PIN**). Kids see their own settings plus one "Parent settings" row;
   anything that could undo your setup asks for the PIN.
+- **YouTube only in HearthTube.** With HearthTube installed, a kids profile watches YouTube only there, where its
+  YouTube time applies: YouTube's own app is hidden, and if it opens anyway (a voice search, a link) HearthTube opens
+  over it. Grown-ups' profiles start with YouTube's app hidden too; show it again from its app options if you want it.
 - **YouTube time per day** (**Settings → Profiles**, in that profile, past the parent PIN). How long HearthTube may
   play a day for this profile; Hearth counts it on the TV, and HearthTube stops when it's used up. With Home Assistant
   set up (optional), a limit shared with the family's other devices can count too, and the stricter one wins (see

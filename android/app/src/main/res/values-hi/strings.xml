@@ -47,4 +47,5 @@
     <string name="pin_broken">Hearth PIN नहीं डाल सका। कृपया ख़ुद टाइप करें।</string>
     <string name="pin_change">PIN बदलें</string>
     <string name="pin_close">बंद करें</string>
+    <string name="youtube_in_hearthtube">यहाँ YouTube, HearthTube में है</string>
 </resources>

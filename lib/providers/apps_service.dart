@@ -309,17 +309,36 @@ class AppsService extends ChangeNotifier {
   /// shouldn't find it on the home). Shown again from the app's options like any hidden app.
   static const Set<String> hiddenByDefault = {"com.android.tv.settings"};
 
+  /// YouTube's TV app, and HearthTube (YouTube for Hearth, which follows the Hearth profile and its YouTube allowance).
+  static const String youTube = "com.google.android.youtube.tv";
+  static const String hearthTube = "com.thesiegs.hearthtube";
+
   /// Hides [hiddenByDefault] once per [scope] ("device" on this TV, or a profile key for its layout), so a parent who
-  /// shows one again keeps it shown.
-  Future<void> hideDefaultHiddenApps(String scope) async {
+  /// shows one again keeps it shown. With HearthTube installed, YouTube is hidden too: once per profile for a grown-up
+  /// (who may show it again), and every time in a kids profile, where YouTube is watched only in HearthTube.
+  Future<void> hideDefaultHiddenApps(String scope, {bool kids = false}) async {
     final flag = "hidden_by_default_v1_$scope";
-    if (_prefs.getBool(flag) == true) return;
-    for (final pkg in hiddenByDefault) {
-      final app = _applications[pkg];
-      if (app != null && !app.hidden) await hideApplication(app);
+    if (_prefs.getBool(flag) != true) {
+      for (final pkg in hiddenByDefault) {
+        final app = _applications[pkg];
+        if (app != null && !app.hidden) await hideApplication(app);
+      }
+      await _prefs.setBool(flag, true);
     }
-    await _prefs.setBool(flag, true);
+    final youTubeFlag = "youtube_hidden_for_hearthtube_v1_$scope";
+    final app = _applications[youTube];
+    if (app != null &&
+        hidesYouTube(hearthTubeInstalled: _applications.containsKey(hearthTube), kids: kids,
+            hiddenBefore: _prefs.getBool(youTubeFlag) == true)) {
+      if (!app.hidden) await hideApplication(app);
+      await _prefs.setBool(youTubeFlag, true);
+    }
   }
+
+  /// Whether YouTube gets hidden now: only with HearthTube installed; in a kids profile every time, in a grown-up's
+  /// once (a grown-up who shows it again keeps it).
+  static bool hidesYouTube({required bool hearthTubeInstalled, required bool kids, required bool hiddenBefore}) =>
+      hearthTubeInstalled && (kids || !hiddenBefore);
 
   /// One-time migration: moves "TV Apps" above "Non-TV Apps".
   Future<void> _ensureTvAppsSectionOrder() async {

@@ -47,4 +47,5 @@
     <string name="pin_broken">O Hearth não conseguiu inserir o PIN. Digite-o você mesmo.</string>
     <string name="pin_change">Alterar PIN</string>
     <string name="pin_close">Fechar</string>
+    <string name="youtube_in_hearthtube">Aqui, o YouTube está no HearthTube</string>
 </resources>

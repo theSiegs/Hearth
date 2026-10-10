@@ -47,4 +47,5 @@
     <string name="pin_broken">Hearth가 PIN을 입력하지 못했습니다. 직접 입력하세요.</string>
     <string name="pin_change">PIN 변경</string>
     <string name="pin_close">닫기</string>
+    <string name="youtube_in_hearthtube">여기서는 YouTube를 HearthTube에서 볼 수 있어요</string>
 </resources>
