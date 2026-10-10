@@ -62,12 +62,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final String APP_USERS_PREFS = "ltv_app_last_profile";
     static final String DEVICE_PREFS = "ltv_device";
     private static final String IDLE_MINUTES_KEY = "idle_standby_minutes";
+    // On: Google TV's own home stays in front; Hearth no longer takes over (DEVICE_PREFS)
+    static final String GOOGLE_TV_HOME_KEY = "google_tv_home";
     private static final String HOME_FIX_SEEN_KEY = "home_button_fix_seen";
     private static final String HA_ENABLED_KEY = "ha_notifications_enabled";
 
     private static final long PENDING_BOUNCE_WINDOW_MS = 10_000;
     // How long "use Google TV for now" holds off the automatic bounce-back (the parent returns sooner via Home).
-    private static final long GOOGLE_TV_ALLOW_MS = 10 * 60 * 1000L;
     /** How long after Google's last setup screen Hearth keeps out of the way (refreshed by each setup screen). */
     private static final long GOOGLE_SETUP_HOLD_MS = 2 * 60_000;
     private static final long NEW_PROFILE_HOLD_MS = 15_000;
@@ -88,8 +89,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     // Volatile: ProfileProvider's binder calls and AgentHub's socket threads read it too
     private static volatile LauncherAccessibilityService sInstance;
-    // > now while the parent chose to use Google TV for a while: the automatic bounce-back pauses until then.
-    private static volatile long sAllowGoogleTvUntil = 0;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
@@ -1326,17 +1325,22 @@ public class LauncherAccessibilityService extends AccessibilityService {
     }
 
     /**
-     * Like {@link #canTakeOver()}, but also false while the parent chose to use Google TV for a while (see
-     * {@link #allowGoogleTvTemporarily()}). The AUTOMATIC bounce-backs use this so Hearth stops grabbing the screen;
-     * the Home button keeps using canTakeOver(), so the parent can always get back to Hearth.
+     * Like {@link #canTakeOver()}, but also false while Google TV's home is turned on in Settings (see
+     * {@link #setGoogleTvHome}). The AUTOMATIC bounce-backs use this so Hearth stops grabbing the screen; the Home
+     * button keeps using canTakeOver(), so Hearth (and the switch to turn this off) is always one press away.
      */
     private boolean autoTakeOverAllowed() {
-        return canTakeOver() && SystemClock.elapsedRealtime() >= sAllowGoogleTvUntil;
+        return canTakeOver() && !isGoogleTvHome(this);
     }
 
-    /** The parent picked "use Google TV for now": hold off the automatic bounce-back until they return or it lapses. */
-    static void allowGoogleTvTemporarily() {
-        sAllowGoogleTvUntil = SystemClock.elapsedRealtime() + GOOGLE_TV_ALLOW_MS;
+    /** Whether Google TV's home is on: Hearth leaves it in front instead of taking over. */
+    static boolean isGoogleTvHome(Context context) {
+        return context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).getBoolean(GOOGLE_TV_HOME_KEY, false);
+    }
+
+    static void setGoogleTvHome(Context context, boolean on) {
+        context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).edit().putBoolean(GOOGLE_TV_HOME_KEY, on).apply();
+        Log.i(TAG, "Google TV's home " + (on ? "on" : "off"));
     }
 
     private boolean isLaunchableApp(String packageName) {
@@ -1345,8 +1349,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
     }
 
     private void openLauncher() {
-        // Returning to Hearth (the Home button, or any explicit open) ends a "use Google TV for now" window.
-        sAllowGoogleTvUntil = 0;
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(intent);

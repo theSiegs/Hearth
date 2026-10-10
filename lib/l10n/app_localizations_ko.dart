@@ -1768,9 +1768,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get systemPageUseGoogleTv => '지금은 Google TV 사용';
-
-  @override
   String get backupShareText => 'Hearth 백업';
 
   @override
@@ -2029,4 +2026,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get notifOpenHint => '확인: 열기 · 왼쪽: 닫기 · 오른쪽: 더 보기';
+
+  @override
+  String get tvPowerGoogleTvHome => 'Google TV 홈 사용';
+
+  @override
+  String get tvPowerGoogleTvHomeNote => '이 설정을 끌 때까지 Hearth가 나서지 않습니다. 홈 버튼은 계속 Hearth를 엽니다.';
 }

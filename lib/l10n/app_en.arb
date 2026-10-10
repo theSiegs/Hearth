@@ -2158,10 +2158,6 @@
             }
         }
     },
-    "systemPageUseGoogleTv": "Use Google TV for now",
-    "@systemPageUseGoogleTv": {
-        "description": "Row on the System page that opens the Google TV home screen instead of Hearth"
-    },
     "backupShareText": "Hearth Backup",
     "@backupShareText": {
         "description": "Text sent along with the backup file when it's shared from the Backup & Restore page"
@@ -2576,5 +2572,13 @@
     "notifOpenHint": "OK: Open · Left: Dismiss · Right: More",
     "@notifOpenHint": {
         "description": "Notifications panel: remote keys under a notification that can be opened"
+    },
+    "tvPowerGoogleTvHome": "Use Google TV's home",
+    "@tvPowerGoogleTvHome": {
+        "description": "TV & power: switch that leaves Google TV's own home in front instead of Hearth"
+    },
+    "tvPowerGoogleTvHomeNote": "Hearth stays out of the way until you turn this off. The Home button still opens Hearth.",
+    "@tvPowerGoogleTvHomeNote": {
+        "description": "TV & power: explanation under the Use Google TV's home switch"
     }
 }

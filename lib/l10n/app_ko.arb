@@ -537,7 +537,6 @@
     "notifOverlayPermissionTitle": "오버레이 권한",
     "notifOverlayAdbMessage": "이 기기에서는 오버레이 권한 설정 화면을 자동으로 열 수 없습니다.\n\n오버레이 팝업을 사용하려면 TV에 연결된 컴퓨터에서 ADB로 직접 권한을 부여하세요:",
     "blockedNotificationsHeading": "차단된 앱({count})",
-    "systemPageUseGoogleTv": "지금은 Google TV 사용",
     "backupShareText": "Hearth 백업",
     "backupShareFailedTitle": "공유 실패",
     "backupShareFailed": "백업 공유 실패: {error}",
@@ -611,5 +610,7 @@
     "aboutWallpaperPhoto": "배경화면 사진",
     "updateErrorWrongApp": "이 다운로드는 이 Hearth의 업데이트가 아닙니다",
     "notifOpen": "열기",
-    "notifOpenHint": "확인: 열기 · 왼쪽: 닫기 · 오른쪽: 더 보기"
+    "notifOpenHint": "확인: 열기 · 왼쪽: 닫기 · 오른쪽: 더 보기",
+    "tvPowerGoogleTvHome": "Google TV 홈 사용",
+    "tvPowerGoogleTvHomeNote": "이 설정을 끌 때까지 Hearth가 나서지 않습니다. 홈 버튼은 계속 Hearth를 엽니다."
 }

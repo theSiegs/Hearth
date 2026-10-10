@@ -1768,9 +1768,6 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get systemPageUseGoogleTv => 'Şimdilik Google TV\'yi kullan';
-
-  @override
   String get backupShareText => 'Hearth Yedeği';
 
   @override
@@ -2029,4 +2026,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get notifOpenHint => 'Tamam: Aç · Sol: Kapat · Sağ: Diğer';
+
+  @override
+  String get tvPowerGoogleTvHome => 'Google TV ana ekranını kullan';
+
+  @override
+  String get tvPowerGoogleTvHomeNote => 'Bunu kapatana kadar Hearth araya girmez. Ana ekran düğmesi yine Hearth\'ü açar.';
 }

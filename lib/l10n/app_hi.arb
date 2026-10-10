@@ -537,7 +537,6 @@
     "notifOverlayPermissionTitle": "ओवरले अनुमति",
     "notifOverlayAdbMessage": "इस डिवाइस पर ओवरले अनुमति सेटिंग स्क्रीन अपने आप नहीं खुल सकी।\n\nओवरले पॉपअप चालू करने के लिए, टीवी से जुड़े कंप्यूटर से ADB के ज़रिए मैन्युअल रूप से अनुमति दें:",
     "blockedNotificationsHeading": "अवरुद्ध ऐप्स ({count})",
-    "systemPageUseGoogleTv": "अभी के लिए Google TV इस्तेमाल करें",
     "backupShareText": "Hearth बैकअप",
     "backupShareFailedTitle": "साझा करना विफल",
     "backupShareFailed": "बैकअप साझा करने में विफल: {error}",
@@ -611,5 +610,7 @@
     "aboutWallpaperPhoto": "वॉलपेपर फ़ोटो",
     "updateErrorWrongApp": "यह डाउनलोड इस Hearth का अपडेट नहीं है",
     "notifOpen": "खोलें",
-    "notifOpenHint": "OK: खोलें · बाएँ: हटाएँ · दाएँ: और"
+    "notifOpenHint": "OK: खोलें · बाएँ: हटाएँ · दाएँ: और",
+    "tvPowerGoogleTvHome": "Google TV की होम स्क्रीन इस्तेमाल करें",
+    "tvPowerGoogleTvHomeNote": "जब तक आप इसे बंद नहीं करते, Hearth बीच में नहीं आता। होम बटन अब भी Hearth खोलता है।"
 }

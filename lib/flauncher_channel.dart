@@ -193,6 +193,12 @@ class FLauncherChannel {
   Future<bool> openGoogleTvHome() async =>
       await _methodChannel.invokeMethod<bool>("openGoogleTvHome") ?? false;
 
+  /// Whether Google TV's own home is on (Hearth stays out of its way; the Home button still opens Hearth).
+  Future<bool> getGoogleTvHome() async => await _methodChannel.invokeMethod<bool>("getGoogleTvHome") ?? false;
+
+  /// Turns Google TV's home on (showing it) or off.
+  Future<void> setGoogleTvHome(bool on) async => await _methodChannel.invokeMethod("setGoogleTvHome", on);
+
   /// Profile Pairing's state: {enabled, voiceDefault}.
   Future<Map<dynamic, dynamic>> getProfilePairingStatus() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getProfilePairingStatus") ?? {};

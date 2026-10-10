@@ -537,7 +537,6 @@
     "notifOverlayPermissionTitle": "Kaplama İzni",
     "notifOverlayAdbMessage": "Bu cihazda Kaplama İzni ayarları ekranı otomatik olarak açılamadı.\n\nKaplama açılır pencerelerini etkinleştirmek için TV'ye bağlı bir bilgisayardan ADB ile izni elle verin:",
     "blockedNotificationsHeading": "Engellenen Uygulamalar ({count})",
-    "systemPageUseGoogleTv": "Şimdilik Google TV'yi kullan",
     "backupShareText": "Hearth Yedeği",
     "backupShareFailedTitle": "Paylaşılamadı",
     "backupShareFailed": "Yedek paylaşılamadı: {error}",
@@ -611,5 +610,7 @@
     "aboutWallpaperPhoto": "DUVAR KAĞIDI FOTOĞRAFI",
     "updateErrorWrongApp": "Bu indirme bu Hearth için bir güncelleme değil",
     "notifOpen": "Aç",
-    "notifOpenHint": "Tamam: Aç · Sol: Kapat · Sağ: Diğer"
+    "notifOpenHint": "Tamam: Aç · Sol: Kapat · Sağ: Diğer",
+    "tvPowerGoogleTvHome": "Google TV ana ekranını kullan",
+    "tvPowerGoogleTvHomeNote": "Bunu kapatana kadar Hearth araya girmez. Ana ekran düğmesi yine Hearth'ü açar."
 }

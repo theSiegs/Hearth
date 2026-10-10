@@ -537,7 +537,6 @@
     "notifOverlayPermissionTitle": "Autorizzazione sovrapposizione",
     "notifOverlayAdbMessage": "Su questo dispositivo non è stato possibile aprire automaticamente la schermata delle impostazioni dell'autorizzazione di sovrapposizione.\n\nPer attivare i popup in sovrapposizione, concedi l'autorizzazione manualmente tramite ADB da un computer collegato alla TV:",
     "blockedNotificationsHeading": "App bloccate ({count})",
-    "systemPageUseGoogleTv": "Usa Google TV per ora",
     "backupShareText": "Backup di Hearth",
     "backupShareFailedTitle": "Condivisione non riuscita",
     "backupShareFailed": "Impossibile condividere il backup: {error}",
@@ -611,5 +610,7 @@
     "aboutWallpaperPhoto": "FOTO DI SFONDO",
     "updateErrorWrongApp": "Questo download non è un aggiornamento di questo Hearth",
     "notifOpen": "Apri",
-    "notifOpenHint": "OK: Apri · Sinistra: Ignora · Destra: Altro"
+    "notifOpenHint": "OK: Apri · Sinistra: Ignora · Destra: Altro",
+    "tvPowerGoogleTvHome": "Usa la schermata Home di Google TV",
+    "tvPowerGoogleTvHomeNote": "Hearth resta in disparte finché non lo disattivi. Il tasto Home apre ancora Hearth."
 }

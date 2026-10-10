@@ -537,7 +537,6 @@
     "notifOverlayPermissionTitle": "Overlay-Berechtigung",
     "notifOverlayAdbMessage": "Auf diesem Gerät ließ sich der Einstellungsbildschirm für die Overlay-Berechtigung nicht automatisch öffnen.\n\nUm Overlay-Popups zu aktivieren, erteile die Berechtigung manuell per ADB von einem Computer, der mit dem Fernseher verbunden ist:",
     "blockedNotificationsHeading": "Blockierte Apps ({count})",
-    "systemPageUseGoogleTv": "Vorerst Google TV verwenden",
     "backupShareText": "Hearth-Sicherung",
     "backupShareFailedTitle": "Teilen fehlgeschlagen",
     "backupShareFailed": "Teilen der Sicherung fehlgeschlagen: {error}",
@@ -611,5 +610,7 @@
     "aboutWallpaperPhoto": "HINTERGRUNDFOTO",
     "updateErrorWrongApp": "Dieser Download ist kein Update für dieses Hearth",
     "notifOpen": "Öffnen",
-    "notifOpenHint": "OK: Öffnen · Links: Schließen · Rechts: Mehr"
+    "notifOpenHint": "OK: Öffnen · Links: Schließen · Rechts: Mehr",
+    "tvPowerGoogleTvHome": "Google TV-Startbildschirm verwenden",
+    "tvPowerGoogleTvHomeNote": "Hearth hält sich zurück, bis du das ausschaltest. Die Home-Taste öffnet weiterhin Hearth."
 }

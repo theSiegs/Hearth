@@ -537,7 +537,6 @@
     "notifOverlayPermissionTitle": "Разрешение на наложение",
     "notifOverlayAdbMessage": "На этом устройстве не удалось автоматически открыть экран настроек разрешения на наложение.\n\nЧтобы включить всплывающие окна поверх других, выдайте разрешение вручную через ADB с компьютера, подключённого к телевизору:",
     "blockedNotificationsHeading": "Заблокированные приложения ({count})",
-    "systemPageUseGoogleTv": "Пока использовать Google TV",
     "backupShareText": "Резервная копия Hearth",
     "backupShareFailedTitle": "Не удалось поделиться",
     "backupShareFailed": "Не удалось поделиться резервной копией: {error}",
@@ -611,5 +610,7 @@
     "aboutWallpaperPhoto": "ФОТО НА ФОНЕ",
     "updateErrorWrongApp": "Эта загрузка не является обновлением этого Hearth",
     "notifOpen": "Открыть",
-    "notifOpenHint": "OK: открыть · Влево: закрыть · Вправо: ещё"
+    "notifOpenHint": "OK: открыть · Влево: закрыть · Вправо: ещё",
+    "tvPowerGoogleTvHome": "Использовать главный экран Google TV",
+    "tvPowerGoogleTvHomeNote": "Hearth не вмешивается, пока вы это не выключите. Кнопка «Домой» по-прежнему открывает Hearth."
 }

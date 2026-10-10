@@ -25,8 +25,6 @@ import 'hearth_about_dialog.dart';
 import 'setup_checklist_page.dart';
 import 'backup_restore_page.dart';
 import 'app_language_page.dart';
-import 'package:flauncher/flauncher_channel.dart';
-import 'package:provider/provider.dart';
 import 'settings_page.dart';
 
 class SystemSettingsPage extends StatelessWidget {
@@ -56,11 +54,6 @@ class SystemSettingsPage extends StatelessWidget {
           leading: const Icon(Icons.system_update_outlined),
           title: Text(AppLocalizations.of(context)!.updatesTitle, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: () => Navigator.of(context).pushNamed(UpdatesPage.routeName),
-        ),
-        FocusableSettingsTile(
-          leading: const Icon(Icons.tv_outlined),
-          title: Text(localizations.systemPageUseGoogleTv, style: Theme.of(context).textTheme.bodyMedium),
-          onPressed: () => context.read<FLauncherChannel>().openGoogleTvHome(),
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.settings_backup_restore),

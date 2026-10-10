@@ -1768,9 +1768,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get systemPageUseGoogleTv => '暂时使用 Google TV';
-
-  @override
   String get backupShareText => 'Hearth 备份';
 
   @override
@@ -2029,4 +2026,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notifOpenHint => '确定：打开 · 左：关闭 · 右：更多';
+
+  @override
+  String get tvPowerGoogleTvHome => '使用 Google TV 主屏幕';
+
+  @override
+  String get tvPowerGoogleTvHomeNote => '在您关闭此项之前，Hearth 不会介入。主屏幕按钮仍会打开 Hearth。';
 }
