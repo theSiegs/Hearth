@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.32 (pre-release)
+
+- With HearthTube installed, kids profiles watch YouTube only in HearthTube (where their YouTube time applies): YouTube's own app is hidden, and opening it anyway opens HearthTube. Grown-ups' profiles start with YouTube hidden too.
+
 ## 2026.10.31 (pre-release)
 
 - Dismissing one notification no longer dismisses all of that app's notifications (Android's group summary no longer shows as a notification of its own).
