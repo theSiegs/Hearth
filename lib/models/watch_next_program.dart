@@ -15,6 +15,10 @@ class WatchNextProgram {
   /// Reported by the active profile's Hearth agent from its own user: already this profile's, no owner to work out.
   final bool profileOwned;
 
+  /// From Hearth's own user, which all the grown-ups' profiles share (one per Google account): the profile (its key)
+  /// that had the app open when this was last watched. Null when Hearth doesn't know: the user's first profile's.
+  final String? watchedBy;
+
   /// Downscaled poster art, filled in after the row first appears.
   Uint8List? posterBytes;
 
@@ -30,6 +34,7 @@ class WatchNextProgram {
     required this.intentUri,
     required this.posterArtUri,
     this.profileOwned = false,
+    this.watchedBy,
     this.posterBytes,
   });
 
@@ -46,6 +51,7 @@ class WatchNextProgram {
       intentUri: map['intentUri'] as String? ?? '',
       posterArtUri: map['posterArtUri'] as String? ?? '',
       profileOwned: map['profileOwned'] == true,
+      watchedBy: map['watchedBy'] as String?,
     );
   }
 }

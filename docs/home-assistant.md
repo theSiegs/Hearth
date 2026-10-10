@@ -90,7 +90,7 @@ Hearth posts JSON to `<address>/api/webhook/<webhook ID>`:
 | `media_app`, `media_title`, `media_artist`, `media_album`, `media_duration_s` | now playing, from any app's media session (needs notification access) |
 | `now_playing_available` | whether Hearth can see what's playing |
 | `profile` | the Google TV profile's name |
-| `profile_id` | a stable key for the profile (`user:<serial>`), unchanged by renames |
+| `profile_id` | a stable key for the profile (`user:<serial>`, or `user:<serial>:<account>` for another grown-up's account in the same user), unchanged by renames |
 | `kids_profile` | `true` in a kids profile |
 | `screen_time_up` | `true` while Google TV's bedtime or time's-up screen is showing |
 | `screen_time_reason`, `screen_time_text`, `screen_time_minutes_left`, `screen_time_unlocks_at`, `screen_time_seen_at` | what that screen said |

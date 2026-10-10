@@ -16,8 +16,7 @@
   ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
   -->
 
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-feature
         android:name="android.hardware.touchscreen"
@@ -30,8 +29,6 @@
         android:required="false" />
 
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"/>
-    <!-- Granted over adb, for reading when Google TV switches profile (GoogleSwitchProbe) -->
-    <uses-permission android:name="android.permission.DUMP" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <!-- Hearth as an agent in another profile's user (AgentService) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />

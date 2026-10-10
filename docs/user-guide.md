@@ -68,6 +68,12 @@ and open straight in that app. Adult titles never appear. The voice button hands
 Hearth follows Google TV's own profiles; there's nothing extra to set up. Each profile has its own home layout,
 wallpaper and Continue Watching. The profile button in the top bar opens Google TV's profile chooser.
 
+Grown-ups' profiles (Google accounts added in Google TV's chooser) share the TV's main user and its apps. Hearth
+still gives each its own home: after a switch it reads who Google TV's home says is logged in (English only, for
+now), so Google TV's home shows for a moment first. Their Continue Watching comes from the same apps, and each
+profile sees what was watched while it was on. The first switch to a grown-up's profile Hearth hasn't seen waits
+about 15 seconds on Google TV's home, in case it's a new kids profile Google TV is still setting up.
+
 **Profile Pairing** (**Settings → Profiles → Profile Pairing**). When Hearth opens Netflix, Disney+, Apple TV,
 HBO Max or Paramount+, it picks the app profile that matches your Google TV profile: by name, or the one you pair it
 with. Open each app once from Hearth so it can learn the app's profiles. If an app profile has a PIN, you can save it

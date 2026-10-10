@@ -456,6 +456,26 @@ void main() {
       final service = await ready();
       expect(titles(service), ['Show 1']);
     });
+
+    test("the grown-ups sharing the owner's user each see what they watched", () async {
+      when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => [
+            entry(1, 'com.netflix.mediaclient')..['watchedBy'] = 'user:0',
+            entry(2, 'com.disney.disneyplus')..['watchedBy'] = 'user:0:sam',
+            // Watched before Hearth knew who had the app: the user's first profile's
+            entry(3, 'com.hulu.plus'),
+          ]);
+      final service = await ready();
+      expect(titles(service), unorderedEquals(['Show 1', 'Show 3']));
+
+      when(mockChannel.getActiveProfileKey()).thenAnswer((_) async => 'user:0:sam');
+      await service.refresh();
+      expect(titles(service), ['Show 2']);
+
+      // A kids profile without an agent sees none of them
+      when(mockChannel.getActiveProfileKey()).thenAnswer((_) async => 'user:11');
+      await service.refresh();
+      expect(service.programs, isEmpty);
+    });
   });
 
   group('WatchNextService hidden apps', () {
