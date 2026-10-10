@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.23 (pre-release)
+
+- Groundwork for grown-up profiles that share the TV's main user: Hearth notes Google TV's profile switches in its log.
+
 ## 2026.10.22 (pre-release)
 
 - Holding the profile button locks the profile again: Google TV's Verify it's you screen stays up, instead of the chooser opening over it.
