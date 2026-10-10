@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.27 (pre-release)
+
+- Continue Watching per profile, from Hearth's own history: what each profile plays is recorded on the TV (title, episode, how far it got), so its entries are its own, shows from apps that don't fill Google TV's Continue Watching list (Hulu, Paramount+) appear too, and an entry an app dropped when someone else used it (Netflix keeps only its current profile's) stays until that profile opens the app again.
+
 ## 2026.10.26 (pre-release)
 
 - Grown-ups' profiles that share the TV's main user (Google accounts added in Google TV's chooser) are profiles of their own in Hearth: switching to one brings its own home, look, dock, name and photo, and its own Continue Watching (whatever was watched while it was on). Hearth knows whose profile is on from Google TV's home, which says who's logged in. The first switch to a new one waits about 15 seconds on Google TV's home.
