@@ -2552,16 +2552,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get setupFlowChooseAgain => 'Выбрать заново';
 
   @override
-  String get weatherForecastNextHours => 'Ближайшие часы';
+  String get weatherForecastHourly => 'По часам';
 
   @override
-  String get weatherForecastNextDays => 'Ближайшие 5 дней';
+  String get weatherForecastDaily => 'По дням';
 
   @override
-  String get weatherForecastShowDays => 'OK: ближайшие 5 дней';
+  String get weatherForecastShowDaily => 'OK: по дням';
 
   @override
-  String get weatherForecastShowHours => 'OK: ближайшие часы';
+  String get weatherForecastShowHourly => 'OK: по часам';
 
   @override
   String get weatherForecastNow => 'Сейчас';

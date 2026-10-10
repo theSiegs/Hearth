@@ -2528,16 +2528,16 @@ class AppLocalizationsTr extends AppLocalizations {
   String get setupFlowChooseAgain => 'Yeniden seç';
 
   @override
-  String get weatherForecastNextHours => 'Önümüzdeki saatler';
+  String get weatherForecastHourly => 'Saatlik';
 
   @override
-  String get weatherForecastNextDays => 'Önümüzdeki 5 gün';
+  String get weatherForecastDaily => 'Günlük';
 
   @override
-  String get weatherForecastShowDays => 'Tamam: önümüzdeki 5 gün';
+  String get weatherForecastShowDaily => 'Tamam: günlük';
 
   @override
-  String get weatherForecastShowHours => 'Tamam: önümüzdeki saatler';
+  String get weatherForecastShowHourly => 'Tamam: saatlik';
 
   @override
   String get weatherForecastNow => 'Şimdi';

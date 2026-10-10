@@ -63,12 +63,12 @@ class WeatherForecastRow extends StatelessWidget {
           Text(
             [
               if (weather.location != null && weather.location!.isNotEmpty) weather.location!,
-              showDays ? l.weatherForecastNextDays : l.weatherForecastNextHours,
+              showDays ? l.weatherForecastDaily : l.weatherForecastHourly,
             ].join(" · "),
             style: Theme.of(context).textTheme.headlineSmall!.copyWith(fontWeight: FontWeight.w700, shadows: shadow),
           ),
           Text(
-            showDays ? l.weatherForecastShowHours : l.weatherForecastShowDays,
+            showDays ? l.weatherForecastShowHourly : l.weatherForecastShowDaily,
             style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Colors.white70, shadows: shadow),
           ),
           const SizedBox(height: 12),

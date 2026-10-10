@@ -2538,16 +2538,16 @@ class AppLocalizationsIt extends AppLocalizations {
   String get setupFlowChooseAgain => 'Scegli di nuovo';
 
   @override
-  String get weatherForecastNextHours => 'Prossime ore';
+  String get weatherForecastHourly => 'Ogni ora';
 
   @override
-  String get weatherForecastNextDays => 'Prossimi 5 giorni';
+  String get weatherForecastDaily => 'Giornaliero';
 
   @override
-  String get weatherForecastShowDays => 'OK: prossimi 5 giorni';
+  String get weatherForecastShowDaily => 'OK: giornaliero';
 
   @override
-  String get weatherForecastShowHours => 'OK: prossime ore';
+  String get weatherForecastShowHourly => 'OK: ogni ora';
 
   @override
   String get weatherForecastNow => 'Ora';

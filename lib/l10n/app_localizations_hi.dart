@@ -2536,16 +2536,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get setupFlowChooseAgain => 'फिर से चुनें';
 
   @override
-  String get weatherForecastNextHours => 'अगले घंटे';
+  String get weatherForecastHourly => 'प्रति घंटा';
 
   @override
-  String get weatherForecastNextDays => 'अगले 5 दिन';
+  String get weatherForecastDaily => 'दैनिक';
 
   @override
-  String get weatherForecastShowDays => 'OK: अगले 5 दिन';
+  String get weatherForecastShowDaily => 'OK: दैनिक';
 
   @override
-  String get weatherForecastShowHours => 'OK: अगले घंटे';
+  String get weatherForecastShowHourly => 'OK: प्रति घंटा';
 
   @override
   String get weatherForecastNow => 'अभी';
