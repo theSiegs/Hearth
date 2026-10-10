@@ -998,9 +998,7 @@ public class MainActivity extends FlutterActivity {
     /** Parent-initiated removal from every other profile (kids and adults): the clean undo of add. */
     private void runRemoveFromProfiles(MethodChannel.Result result) {
         try (SelfAdb shell = SelfAdb.open(this)) {
-            List<Integer> all = new ArrayList<>(supervisedKidUserIds());
-            all.addAll(adultProfileUserIds());
-            List<String> log = ProfileAppAccess.removeFromProfiles(this, shell, all, true);
+            List<String> log = ProfileAppAccess.removeFromProfiles(this, shell, allOtherProfileUserIds(), true);
             runOnUiThread(() -> result.success(log));
         } catch (Exception e) {
             runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
@@ -1059,12 +1057,25 @@ public class MainActivity extends FlutterActivity {
 
     /** The SUPERVISED kid profiles' user ids — Family Link-supervised profiles of this user. */
     private List<Integer> supervisedKidUserIds() {
-        return profileUserIds(true);
+        return userIds(profileHandles(true));
     }
 
     /** The OTHER ADULT profiles' user ids — secondary profiles that are NOT supervised (grown-ups). */
     private List<Integer> adultProfileUserIds() {
-        return profileUserIds(false);
+        return userIds(profileHandles(false));
+    }
+
+    /** Every other profile user, Google TV's spare included: for taking Hearth off them all. */
+    private List<Integer> allOtherProfileUserIds() {
+        List<Integer> ids = new ArrayList<>(supervisedKidUserIds());
+        UserManager um = (UserManager) getSystemService(Context.USER_SERVICE);
+        if (um == null) return ids;
+        UserHandle me = Process.myUserHandle();
+        for (UserHandle profile : um.getUserProfiles()) {
+            int userId = userIdOf(profile);
+            if (!profile.equals(me) && userId >= 0 && !ids.contains(userId)) ids.add(userId);
+        }
+        return ids;
     }
 
     /**
@@ -1073,17 +1084,28 @@ public class MainActivity extends FlutterActivity {
      * NOTE: the adult branch is unverified on a real 2-adult TV (no test device yet); confirm getUserProfiles()
      * returns adult Google TV profiles there.
      */
-    private List<Integer> profileUserIds(boolean wantSupervised) {
-        List<Integer> ids = new ArrayList<>();
+    private List<UserHandle> profileHandles(boolean wantSupervised) {
+        List<UserHandle> handles = new ArrayList<>();
         UserManager um = (UserManager) getSystemService(Context.USER_SERVICE);
-        if (um == null) return ids;
+        if (um == null) return handles;
         UserHandle me = Process.myUserHandle();
         for (UserHandle profile : um.getUserProfiles()) {
             if (profile.equals(me)) continue;
             long serial = um.getSerialNumberForUser(profile);
             boolean supervised = Boolean.TRUE.equals(ProfileUsers.isSupervised(this, serial));
             if (supervised != wantSupervised) continue;
-            int userId = userIdOf(profile);
+            // An unsupervised profile user that never ran (no name from the chooser) is Google TV's spare: it makes
+            // one ahead of time for the next profile added, and it isn't anybody's profile
+            if (!supervised && ProfileUsers.getName(this, serial) == null) continue;
+            handles.add(profile);
+        }
+        return handles;
+    }
+
+    private static List<Integer> userIds(List<UserHandle> handles) {
+        List<Integer> ids = new ArrayList<>();
+        for (UserHandle handle : handles) {
+            int userId = userIdOf(handle);
             if (userId >= 0) ids.add(userId);
         }
         return ids;
@@ -1618,12 +1640,19 @@ public class MainActivity extends FlutterActivity {
         Map<String, Object> state = new HashMap<>();
         state.put("googleTv", getPackageVersion(LauncherAccessibilityService.GOOGLE_TV_PACKAGE) != null);
         int kids = 0;
+        int withHearth = 0;
         try {
-            kids = supervisedKidUserIds().size();
+            List<UserHandle> kidProfiles = profileHandles(true);
+            kids = kidProfiles.size();
+            // Installed there: Hearth's own adb isn't needed to see that, only to change it
+            for (UserHandle kid : kidProfiles) {
+                if (AgentHub.canHaveAgent(this, kid)) withHearth++;
+            }
         } catch (RuntimeException e) {
             Log.w(TAG, "Couldn't list the kids' profiles", e);
         }
         state.put("kidsProfiles", kids);
+        state.put("kidsWithHearth", withHearth);
         state.put("netflix", getPackageVersion(ProfilePairing.NETFLIX) != null);
         return state;
     }
