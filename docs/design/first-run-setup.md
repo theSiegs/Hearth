@@ -43,7 +43,7 @@ Key:
 |---|---|---|---|---|---|---|---|
 | 1 | **Default home app** | Hearth holds Android's Home role. Its reason ("keeps kids' profiles from blocking Hearth") is to be confirmed on the TV | Bounce: `Settings.ACTION_HOME_SETTINGS` → `MANAGE_DEFAULT_APPS_SETTINGS` → `ACTION_SETTINGS` | `isDefaultLauncher()` (Home role) | Essential, after #2 | – | Not shown |
 | 2 | **Home Button Fix** (`LauncherAccessibilityService`) | Home opens Hearth. Also how Hearth notices profile switches, kids' profiles, bedtime / screen time, pop-ups over apps, Sleep when idle, remote-button remapping | Bounce: `ACTION_ACCESSIBILITY_SETTINGS`, list only (`ACCESSIBILITY_DETAILS_SETTINGS` doesn't resolve on Google TV): *Services* → *Hearth Home Button Fix* → Enable → OK | `getHomeButtonFixStatus()` → `enabled`, `seenBefore`, `listedButStopped`, `restricted` | **Essential** | Self-adb or a computer: `settings put secure enabled_accessibility_services …` | Not shown |
-| 3 | **Restricted settings** | Not a feature. Android 13+ greys out accessibility switches for an APK installed from a downloaded file. Google TV has no "Allow restricted settings" item | Only adb (self-adb or a computer), or a store-style session install (`SessionInstaller`, `PACKAGE_SOURCE_STORE`) | The real `ACCESS_RESTRICTED_SETTINGS` app-op (§3.2 E2R); the install source only when the app-op can't be read | Blocks #2 and #4 | `appops set <pkg> ACCESS_RESTRICTED_SETTINGS allow`; the "Hearth Setup" installer (§9) avoids it | – |
+| 3 | **Restricted settings** | Not a feature. Android 13+ greys out accessibility switches for an APK installed from a downloaded file. Google TV has no "Allow restricted settings" item | Only adb (self-adb or a computer), or a store-style session install (`SessionInstaller`, `PACKAGE_SOURCE_STORE`) | The install source (LOCAL_FILE / DOWNLOADED_FILE), unless Hearth lifted the block itself on this install. Apps can't read the `ACCESS_RESTRICTED_SETTINGS` app-op (§7.3) | Blocks #2 and #4 | `appops set <pkg> ACCESS_RESTRICTED_SETTINGS allow`; the "Hearth Setup" installer (§9) avoids it | – |
 | 4 | **Profile Pairing** (`ProfilePairingService`) | Netflix, Disney+, Apple TV, Max and Paramount+ open on the right profile | Bounce: same Accessibility list, *Hearth Profile Pairing* | `getProfilePairingStatus().enabled` | Optional | Same as #2 and #3 | Not shown |
 | 5 | **Hearth voice** (TTS engine) | Lets Profile Pairing hear Netflix's profile screen. Other apps keep Google's voice | Bounce: `android.settings.TTS_SETTINGS`. Preferred engine → "Hearth voice" → OK | `getProfilePairingStatus().voiceDefault` | Optional, **only if Netflix is installed** | Per kids' user: `settings put --user N secure tts_default_synth …` | – |
 | 6 | **Notification access** (`LauncherNotificationListenerService`) | Notifications bell, "what's playing", music info sent to Home Assistant | Bounce: `ACTION_NOTIFICATION_LISTENER_SETTINGS` (detail screen first where it exists) | `checkNotificationListenerPermission()` | Optional | `cmd notification allow_listener …` | – |
@@ -168,10 +168,9 @@ home wallpaper (`CachedBlurBackdrop`). Sub-steps reuse the existing Settings wid
 
 **E2R Android blocked this switch**
 
-Shown after a failed E2 or F1 try when the `ACCESS_RESTRICTED_SETTINGS` app-op is denied for Hearth. Hearth reads
-the real app-op (`AppOpsManager.unsafeCheckOpNoThrow("android:access_restricted_settings", …)`); only on a TV where
-it can't be read does it fall back to the install source, and then the copy's "if the switch was grey" still holds.
-Choices, in this order:
+Shown after a failed E2 or F1 try when Android may be blocking Hearth's switches: Hearth was installed from a
+downloaded or local file and hasn't lifted the block itself since (§7.3 on why it can't read the block directly).
+The copy says "if the switch was grey" because it's a strong guess, not a reading. Choices, in this order:
 1. **Let Hearth fix it** (only when ADB debugging is on): Hearth shows what it will run (lift the block, then turn on
    Home Button Fix) and runs it through self-adb after the parent confirms. The first time, the TV asks "Allow
    debugging?"; the copy says to choose *Always allow*. This is the same approval F1's kids' step needs, so the parent
@@ -541,8 +540,12 @@ Focus: first tile (the current look). ←/→ across tiles. ↓ → Use this loo
    visible confirmation.
 2. **Debugging stays on.** The flow doesn't suggest turning it off; it says Hearth needs it again for a new kids'
    profile and for Remove / Uninstall.
-3. **Restricted detection: the real app-op.** E2R shows only when `ACCESS_RESTRICTED_SETTINGS` is denied (the install
-   source is the fallback where the app-op can't be read).
+3. **Restricted detection: the real app-op**, asked for, but not possible: Android 13+ marks
+   `ACCESS_RESTRICTED_SETTINGS` as an app-op apps may not read, their own included (`unsafeCheckOpNoThrow` throws
+   "uid … does not have android.permission.MANAGE_APPOPS" on the Android 14 emulator). So E2R goes by the install
+   source, and Hearth remembers when it lifted the block itself (self-adb) for the current install. A reading through
+   self-adb (`appops get`) would work once debugging is approved, but connecting would raise "Allow debugging?" just
+   to check, so it isn't done.
 4. **"Hearth Setup" bootstrap installer: yes**, before any public release (§9).
 5. **Default-home step: kept**, after E2, once its reason is confirmed on the TV.
 6. **Kids' profiles are detected through Family Link supervision** of the profile users Android lists; no question.
@@ -576,8 +579,8 @@ To confirm on the TV:
 - The Home role's reason (E1: "keeps kids' profiles from blocking Hearth").
 - That a service bound by the system can bring Hearth to the front (automatic return), including the notification
   listener, and that the "Who's watching?" chooser doesn't break it.
-- That `unsafeCheckOpNoThrow("android:access_restricted_settings")` reads the real state on Google TV (Android 12
-  has no such app-op; Android 14 may route it through enhanced confirmation).
+- That `settings put secure enabled_accessibility_services` (self-adb) turns on a service whose switch Android
+  greyed out, once the block is lifted, as it does from a computer.
 
 ---
 

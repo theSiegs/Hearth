@@ -482,8 +482,8 @@ class FLauncherChannel {
   }
 
   /// {enabled, listedButStopped, seenBefore, restricted}: whether Home Button Fix is on, whether Android lists it as
-  /// on while it isn't running, whether it has ever been on here, and whether Android blocks turning it on (its
-  /// restricted-settings app-op is denied; where that can't be read, a guess from an install from an APK file).
+  /// on while it isn't running, whether it has ever been on here, and whether Android may block turning it on
+  /// (installed from an APK file, and Hearth hasn't lifted the block itself since: apps can't read the block).
   Future<Map<dynamic, dynamic>> getHomeButtonFixStatus() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getHomeButtonFixStatus") ?? {};
 
