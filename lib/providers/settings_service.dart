@@ -77,7 +77,9 @@ const String _autoHideNotificationsWidgetKey = "auto_hide_notifications_widget";
 const String _appLanguageKey = "app_language";
 const String _showWeatherInStatusBarKey = "show_weather_in_status_bar";
 const String _showWeatherWarningsKey = "show_weather_warnings";
-const String _temperatureUnitKey = "temperature_unit";
+// One unit for the whole TV (it's in one place), and a new key: the old "temperature_unit" was saved into layouts and
+// backups as the old default (Celsius) even when nobody chose it, and mustn't override the region's unit.
+const String _temperatureUnitKey = "device_temperature_unit";
 
 // What Back does on the home screen
 const String backButtonActionNothing = "";
