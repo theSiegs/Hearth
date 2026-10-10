@@ -163,6 +163,29 @@ void main() {
       expect(flow.homeButtonNeedsFix(homeButtonOn: true, homeButtonSeenBefore: true), isFalse);
     });
 
+    test("offers the cards added since the owner last went through the flow, until seen", () async {
+      // A TV that went through an older flow, before any of today's cards
+      await prefs.setInt("device_setup_flow_version", 1);
+      await prefs.setInt("device_setup_seen_version", 0);
+      await flow.decide(SetupCard.watching.name, SetupChoice.notNow);
+      expect(flow.newCards(cardOn: {SetupCard.updates: true}),
+          [SetupCard.family, SetupCard.home, SetupCard.smartHome, SetupCard.tv]);
+
+      // Something new shows even on a hidden chip
+      await flow.hideChip();
+      expect(flow.chipAllowed(kids: false), isFalse);
+      expect(flow.chipAllowed(kids: false, news: true), isTrue);
+      expect(flow.chipAllowed(kids: true, news: true), isFalse);
+
+      await flow.markNewSeen();
+      expect(flow.newCards(), isEmpty);
+    });
+
+    test("a TV that went through this flow has nothing new", () async {
+      await flow.finish();
+      expect(flow.newCards(), isEmpty);
+    });
+
     test("shows only once the flow has run, never for kids, and not once hidden", () async {
       expect(flow.chipAllowed(kids: false), isFalse);
       await flow.close();

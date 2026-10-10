@@ -111,6 +111,19 @@ class SetupFlowPage extends StatefulWidget {
         transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
       ));
 
+  /// The screen a card starts on, by name (to open the flow there).
+  static String cardStart(SetupCard card) => _SetupFlowPageState._cardScreens[card]!.first.name;
+
+  /// A card's name, as the strip and the chip say it.
+  static String cardTitle(AppLocalizations l, SetupCard card) => switch (card) {
+        SetupCard.family => l.setupCardFamily,
+        SetupCard.watching => l.setupCardWatching,
+        SetupCard.home => l.setupCardHome,
+        SetupCard.smartHome => l.setupCardSmartHome,
+        SetupCard.tv => l.tvPowerTitle,
+        SetupCard.updates => l.updatesTitle,
+      };
+
   @override
   State<SetupFlowPage> createState() => _SetupFlowPageState();
 }

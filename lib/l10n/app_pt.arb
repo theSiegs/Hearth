@@ -762,5 +762,7 @@
     "setupFlowHaStatusTitle": "Contar ao Home Assistant o que está passando",
     "setupFlowHaStatusBody": "A TV pode enviar ao Home Assistant o que está tocando e o perfil ativo. Na mesma página do celular, adicione o ID de uma automação com webhook do Home Assistant.",
     "setupFlowHaStatusNoWebhook": "O celular não enviou um ID de webhook. Preencha o último campo da página.",
-    "setupFlowHaStatusDone": "A TV conta ao Home Assistant o que está passando"
+    "setupFlowHaStatusDone": "A TV conta ao Home Assistant o que está passando",
+    "setupChipNewOne": "Novo no Hearth: {feature}",
+    "setupChipNewMany": "Novidades no Hearth · {count}"
 }

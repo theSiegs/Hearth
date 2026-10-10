@@ -762,5 +762,7 @@
     "setupFlowHaStatusTitle": "Home Assistant को बताएँ कि क्या चल रहा है",
     "setupFlowHaStatusBody": "टीवी Home Assistant को भेज सकता है कि क्या चल रहा है और कौन सी प्रोफ़ाइल चालू है। उसी फ़ोन पेज पर Home Assistant के webhook ऑटोमेशन का ID जोड़ें।",
     "setupFlowHaStatusNoWebhook": "फ़ोन ने webhook ID नहीं भेजा। पेज का आख़िरी बॉक्स भरें।",
-    "setupFlowHaStatusDone": "टीवी Home Assistant को बताता है कि क्या चल रहा है"
+    "setupFlowHaStatusDone": "टीवी Home Assistant को बताता है कि क्या चल रहा है",
+    "setupChipNewOne": "Hearth में नया: {feature}",
+    "setupChipNewMany": "Hearth में नया · {count}"
 }

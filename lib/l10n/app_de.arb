@@ -762,5 +762,7 @@
     "setupFlowHaStatusTitle": "Home Assistant melden, was läuft",
     "setupFlowHaStatusBody": "Der Fernseher kann Home Assistant melden, was läuft und welches Profil aktiv ist. Tragen Sie auf derselben Handy-Seite die ID einer Webhook-Automation aus Home Assistant ein.",
     "setupFlowHaStatusNoWebhook": "Das Handy hat keine Webhook-ID gesendet. Füllen Sie das letzte Feld der Seite aus.",
-    "setupFlowHaStatusDone": "Der Fernseher meldet Home Assistant, was läuft"
+    "setupFlowHaStatusDone": "Der Fernseher meldet Home Assistant, was läuft",
+    "setupChipNewOne": "Neu in Hearth: {feature}",
+    "setupChipNewMany": "Neu in Hearth · {count}"
 }

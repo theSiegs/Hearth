@@ -3235,5 +3235,23 @@
     "setupFlowHaStatusDone": "The TV tells Home Assistant what's on",
     "@setupFlowHaStatusDone": {
         "description": "Setup flow: Home Assistant TV status step, once set up"
+    },
+    "setupChipNewOne": "New in Hearth: {feature}",
+    "@setupChipNewOne": {
+        "description": "Home screen top bar: chip after an update added one setup card; {feature} is the card's name (\"Smart home\")",
+        "placeholders": {
+            "feature": {
+                "type": "String"
+            }
+        }
+    },
+    "setupChipNewMany": "New in Hearth · {count}",
+    "@setupChipNewMany": {
+        "description": "Home screen top bar: chip after an update added several setup cards; {count} is how many (2 or more)",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
     }
 }

@@ -30,7 +30,9 @@ import 'settings_service.dart';
 enum SetupMode { full, rerun, lostFix, look }
 
 /// The flow's optional cards, in the order they show (docs/design/first-run-setup.md). [introducedIn] is the flow
-/// version that added each, so a later update can offer only what's new.
+/// version that added each, so a later update can offer only what's new: a card added later gets the next version
+/// here and in [SetupFlowService.currentVersion], and TVs that went through the flow before see it in the home's
+/// chip ("New in Hearth"), never as a takeover.
 enum SetupCard {
   family(1),
   watching(1),
@@ -141,8 +143,8 @@ class SetupFlowService extends ChangeNotifier {
   /// The flow version last finished or closed; null when the flow has never run here.
   int? get flowVersion => _prefs.getInt(_flowVersionKey);
 
-  /// The newest card version the owner has been shown.
-  int get seenVersion => _prefs.getInt(_seenVersionKey) ?? 0;
+  /// The newest card version the owner has been shown: the flow's own version when it was never saved apart.
+  int get seenVersion => _prefs.getInt(_seenVersionKey) ?? flowVersion ?? 0;
 
   int get kidsProtected => _prefs.getInt(_kidsProtectedKey) ?? 0;
 
@@ -277,6 +279,19 @@ class SetupFlowService extends ChangeNotifier {
   bool homeButtonNeedsFix({required bool homeButtonOn, required bool homeButtonSeenBefore}) =>
       !homeButtonOn && (homeButtonSeenBefore || choiceFor(homeButtonDecision) == SetupChoice.notNow);
 
+  /// Cards added since the owner last went through the flow ([seenVersion]) that nobody decided on and aren't all
+  /// on anyway ([cardOn]): the chip offers them as "New in Hearth".
+  List<SetupCard> newCards({Map<SetupCard, bool> cardOn = const {}}) => [
+        for (final card in SetupCard.values)
+          if (card.introducedIn > seenVersion && cardChoice(card) == null && cardOn[card] != true) card,
+      ];
+
+  /// The owner has seen what's new (opened it, or dismissed the chip): it isn't offered again.
+  Future<void> markNewSeen() async {
+    await _prefs.setInt(_seenVersionKey, currentVersion);
+    notifyListeners();
+  }
+
   /// How many things the chip says are left: the essentials neither on nor skipped, and the cards nobody decided on
   /// that aren't all on anyway ([cardOn]).
   int remaining({required bool homeButtonOn, required bool homeAppOn, Map<SetupCard, bool> cardOn = const {}}) {
@@ -290,6 +305,7 @@ class SetupFlowService extends ChangeNotifier {
   }
 
   /// Whether the home may show its "Finish setting up" chip: once the flow has run (before, the flow shows itself),
-  /// never in a kids' profile, and not once dismissed.
-  bool chipAllowed({required bool kids}) => !kids && !chipHidden && (flowVersion != null || resume != null);
+  /// never in a kids' profile, and not once dismissed, unless there's something new ([news]).
+  bool chipAllowed({required bool kids, bool news = false}) =>
+      !kids && (!chipHidden || news) && (flowVersion != null || resume != null);
 }

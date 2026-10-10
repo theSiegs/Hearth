@@ -29,11 +29,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'setup_flow_launcher.dart';
+import 'setup_flow_page.dart';
 import 'setup_snapshot.dart';
 
-/// The top bar's "Finish setting up · 3 left", or "Home button needs a fix": what the setup flow left undone, one
-/// press from carrying on. Not shown in kids' profiles, before the flow has ever run (it shows itself then), when
-/// nothing is left, or ever again after holding OK on it and choosing to hide it.
+/// The top bar's "Finish setting up · 3 left", "Home button needs a fix", or after an update that added a card
+/// "New in Hearth: Smart home": what the setup flow left undone or has new, one press from carrying on. Not shown in
+/// kids' profiles, before the flow has ever run (it shows itself then), when nothing is left, or after holding OK
+/// on it and choosing to hide it (until something new comes).
 class SetupChip extends StatefulWidget {
   final FocusNode? focusNode;
 
@@ -47,6 +49,9 @@ class _SetupChipState extends State<SetupChip> with WidgetsBindingObserver {
   SetupFlowService? _flow;
   int _left = 0;
   bool _fix = false;
+
+  /// Cards added since the owner last went through the flow.
+  List<SetupCard> _new = const [];
 
   @override
   void initState() {
@@ -86,6 +91,7 @@ class _SetupChipState extends State<SetupChip> with WidgetsBindingObserver {
       if (!mounted) return;
       setState(() {
         _left = flow.remaining(homeButtonOn: homeButtonOn, homeAppOn: homeApp, cardOn: cardsOn);
+        _new = flow.newCards(cardOn: cardsOn);
         _fix = flow.homeButtonNeedsFix(
             homeButtonOn: homeButtonOn, homeButtonSeenBefore: status["seenBefore"] == true);
       });
@@ -99,6 +105,13 @@ class _SetupChipState extends State<SetupChip> with WidgetsBindingObserver {
     if (flow == null || flow.showing) return;
     if (_fix) {
       SetupFlowLauncher.openFlow(context, mode: SetupMode.rerun, startAt: "homeButton");
+      return;
+    }
+    if (_new.isNotEmpty) {
+      // What's new, from its card on
+      final first = _new.first;
+      flow.markNewSeen();
+      SetupFlowLauncher.openFlow(context, mode: SetupMode.rerun, startAt: SetupFlowPage.cardStart(first));
       return;
     }
     final resume = flow.resume;
@@ -118,7 +131,10 @@ class _SetupChipState extends State<SetupChip> with WidgetsBindingObserver {
         ],
       ),
     );
-    if (hide == true) await _flow?.hideChip();
+    if (hide != true) return;
+    // Dismissing news hides only the news; the chip comes back for the next
+    if (_new.isNotEmpty) await _flow?.markNewSeen();
+    await _flow?.hideChip();
   }
 
   @override
@@ -127,9 +143,16 @@ class _SetupChipState extends State<SetupChip> with WidgetsBindingObserver {
     // Without the flow's state (a test's home) there's nothing to say
     if (flow == null) return const SizedBox.shrink();
     final kids = context.select<ProfileService?, bool>((profiles) => profiles?.isKidsProfile ?? false);
-    if (!flow.chipAllowed(kids: kids) || (!_fix && _left == 0)) return const SizedBox.shrink();
+    final news = _new.isNotEmpty && !_fix;
+    if (!flow.chipAllowed(kids: kids, news: news) || (!_fix && _left == 0)) return const SizedBox.shrink();
     final l = AppLocalizations.of(context)!;
-    final label = _fix ? l.setupChipFix : l.setupChipLeft(_left);
+    final label = _fix
+        ? l.setupChipFix
+        : !news
+            ? l.setupChipLeft(_left)
+            : _new.length == 1
+                ? l.setupChipNewOne(SetupFlowPage.cardTitle(l, _new.first))
+                : l.setupChipNewMany(_new.length);
     final accent = Theme.of(context).colorScheme.primary;
     return Padding(
       padding: const EdgeInsetsDirectional.only(end: 12),
@@ -155,7 +178,7 @@ class _SetupChipState extends State<SetupChip> with WidgetsBindingObserver {
               border: Border.all(color: focused ? Colors.white : Colors.white.withOpacity(0.12), width: focused ? 2 : 1),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(_fix ? Icons.warning_amber_rounded : Icons.settings_suggest_outlined,
+              Icon(_fix ? Icons.warning_amber_rounded : (news ? Icons.auto_awesome : Icons.settings_suggest_outlined),
                   size: 18, color: _fix && !focused ? Colors.amber : Colors.white),
               const SizedBox(width: 6),
               Text(label, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),

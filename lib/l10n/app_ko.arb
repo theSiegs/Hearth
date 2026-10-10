@@ -762,5 +762,7 @@
     "setupFlowHaStatusTitle": "Home Assistant에 지금 보는 것 알리기",
     "setupFlowHaStatusBody": "TV가 재생 중인 콘텐츠와 현재 프로필을 Home Assistant로 보낼 수 있습니다. 같은 휴대전화 페이지에 Home Assistant 웹훅 자동화의 ID를 넣으세요.",
     "setupFlowHaStatusNoWebhook": "휴대전화에서 웹훅 ID를 보내지 않았습니다. 페이지의 마지막 칸을 채우세요.",
-    "setupFlowHaStatusDone": "TV가 Home Assistant에 지금 보는 것을 알립니다"
+    "setupFlowHaStatusDone": "TV가 Home Assistant에 지금 보는 것을 알립니다",
+    "setupChipNewOne": "Hearth 새 기능: {feature}",
+    "setupChipNewMany": "Hearth 새 기능 · {count}"
 }

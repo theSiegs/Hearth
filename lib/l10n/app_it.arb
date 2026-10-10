@@ -762,5 +762,7 @@
     "setupFlowHaStatusTitle": "Dire a Home Assistant cosa c'è",
     "setupFlowHaStatusBody": "La TV può inviare a Home Assistant cosa è in riproduzione e il profilo attivo. Nella stessa pagina sul telefono, aggiungi l'ID di un'automazione webhook di Home Assistant.",
     "setupFlowHaStatusNoWebhook": "Il telefono non ha inviato un ID webhook. Compila l'ultima casella della pagina.",
-    "setupFlowHaStatusDone": "La TV dice a Home Assistant cosa c'è"
+    "setupFlowHaStatusDone": "La TV dice a Home Assistant cosa c'è",
+    "setupChipNewOne": "Novità in Hearth: {feature}",
+    "setupChipNewMany": "Novità in Hearth · {count}"
 }

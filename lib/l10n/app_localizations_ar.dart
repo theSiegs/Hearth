@@ -2547,4 +2547,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get setupFlowHaStatusDone => 'يُخبر التلفزيون Home Assistant بما يُعرض';
+
+  @override
+  String setupChipNewOne(String feature) {
+    return 'جديد في Hearth: $feature';
+  }
+
+  @override
+  String setupChipNewMany(int count) {
+    return 'جديد في Hearth · $count';
+  }
 }

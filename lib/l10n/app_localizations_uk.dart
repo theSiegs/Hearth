@@ -2528,4 +2528,14 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get setupFlowHaStatusDone => 'Телевізор повідомляє Home Assistant, що йде';
+
+  @override
+  String setupChipNewOne(String feature) {
+    return 'Нове в Hearth: $feature';
+  }
+
+  @override
+  String setupChipNewMany(int count) {
+    return 'Нове в Hearth · $count';
+  }
 }

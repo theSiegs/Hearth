@@ -2504,4 +2504,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get setupFlowHaStatusDone => 'テレビが表示中の内容を Home Assistant に伝えます';
+
+  @override
+  String setupChipNewOne(String feature) {
+    return 'Hearth の新機能：$feature';
+  }
+
+  @override
+  String setupChipNewMany(int count) {
+    return 'Hearth の新機能 · $count';
+  }
 }

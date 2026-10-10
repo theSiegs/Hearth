@@ -762,5 +762,7 @@
     "setupFlowHaStatusTitle": "Повідомляти Home Assistant, що йде",
     "setupFlowHaStatusBody": "Телевізор може надсилати до Home Assistant, що грає і який профіль активний. На тій самій сторінці в телефоні вкажіть ID автоматизації з вебхуком із Home Assistant.",
     "setupFlowHaStatusNoWebhook": "Телефон не надіслав ID вебхука. Заповніть останнє поле на сторінці.",
-    "setupFlowHaStatusDone": "Телевізор повідомляє Home Assistant, що йде"
+    "setupFlowHaStatusDone": "Телевізор повідомляє Home Assistant, що йде",
+    "setupChipNewOne": "Нове в Hearth: {feature}",
+    "setupChipNewMany": "Нове в Hearth · {count}"
 }

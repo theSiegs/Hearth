@@ -2504,4 +2504,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get setupFlowHaStatusDone => 'TV가 Home Assistant에 지금 보는 것을 알립니다';
+
+  @override
+  String setupChipNewOne(String feature) {
+    return 'Hearth 새 기능: $feature';
+  }
+
+  @override
+  String setupChipNewMany(int count) {
+    return 'Hearth 새 기능 · $count';
+  }
 }
