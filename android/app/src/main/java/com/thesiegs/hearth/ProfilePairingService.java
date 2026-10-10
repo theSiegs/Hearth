@@ -210,6 +210,8 @@ public class ProfilePairingService extends AccessibilityService {
         getContentResolver().registerContentObserver(Settings.Global.getUriFor(RESEARCH_SETTING), false,
                 mResearchObserver);
         applyResearch();
+        // Just turned on from the setup flow: back to it
+        SetupReturn.onConnected(this, SetupReturn.PROFILE_PAIRING);
     }
 
     // ---- Research mode, for writing PIN recipes (adb only) ----

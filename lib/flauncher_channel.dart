@@ -290,6 +290,7 @@ class FLauncherChannel {
       if (call.method == "profileSwitching") _onProfileSwitching?.call(call.arguments as String);
       if (call.method == "profileSwitchCancelled") _onProfileSwitchCancelled?.call();
       if (call.method == "openProfilePins") _onOpenProfilePins?.call(call.arguments as String);
+      if (call.method == "resumeSetup") _onResumeSetup?.call(call.arguments as String? ?? "");
       return null;
     });
   }
@@ -325,6 +326,19 @@ class FLauncherChannel {
         "mode": mode,
         "appProfile": appProfile,
       });
+
+  /// The setup flow is about to send the owner to Android's screen for a switch ("home_button_fix",
+  /// "profile_pairing" or "notification_access"): when that switch's service starts, Hearth comes back to the front
+  /// by itself. Null: no longer waiting.
+  Future<void> setSetupWaitingFor(String? what) async => await _methodChannel.invokeMethod("setSetupWaitingFor", what);
+
+  /// Calls [onResume] when a switch the setup flow was waiting for came on and brought Hearth back.
+  static void listenForSetupResume(void Function(String what) onResume) {
+    _onResumeSetup = onResume;
+    _listen();
+  }
+
+  static void Function(String what)? _onResumeSetup;
 
   /// Whether the TV's debugging switch (Developer options) is on: Hearth's own fixes ([runSetupFixes]) need it.
   Future<bool> isAdbEnabled() async => await _methodChannel.invokeMethod<bool>("isAdbEnabled") ?? false;

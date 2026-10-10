@@ -338,6 +338,10 @@ public class MainActivity extends FlutterActivity {
             // First-run setup: whether self-adb can work, and the named fixes it may run (SetupFixes), shown to the
             // parent before they run. Off the main thread: adb I/O, and the first time a wait for "Allow debugging?".
             case "isAdbEnabled" -> result.success(SetupFixes.isAdbEnabled(this));
+            case "setSetupWaitingFor" -> {
+                SetupReturn.setWaitingFor(this, call.arguments());
+                result.success(null);
+            }
             case "getSetupFixCommands" -> result.success(SetupFixes.commands(this, call.arguments()));
             case "runSetupFixes" -> {
                 List<String> fixes = call.arguments();
@@ -1493,6 +1497,19 @@ public class MainActivity extends FlutterActivity {
         super.onNewIntent(intent);
         handleSearchIntent(intent);
         handleProfilePinsIntent(intent);
+        handleResumeSetupIntent(intent);
+    }
+
+    /**
+     * A switch the setup flow sent the owner for came on, and its service brought Hearth back: Flutter makes sure the
+     * flow is showing (it checks the switch again as Hearth comes to the front). On a cold start the flow's own
+     * resume point does the same.
+     */
+    private void handleResumeSetupIntent(Intent intent) {
+        String what = intent != null ? intent.getStringExtra(SetupReturn.EXTRA_RESUME_SETUP) : null;
+        if (what == null) return;
+        intent.removeExtra(SetupReturn.EXTRA_RESUME_SETUP);
+        if (mMethodChannel != null) mMethodChannel.invokeMethod("resumeSetup", what);
     }
 
     /** Profile Pairing's "Change PIN": Flutter opens Settings on the app's page (now, or with takePendingProfilePins). */
