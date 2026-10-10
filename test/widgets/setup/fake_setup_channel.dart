@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
@@ -56,6 +58,9 @@ class FakeSetupChannel extends FLauncherChannel {
   /// The self-adb fixes run, and whether they work (false: "Allow debugging?" wasn't approved).
   final List<List<String>> fixesRun = [];
   bool fixesWork = true;
+
+  /// "Allow debugging?" declined: Hearth's adb connection never answers.
+  bool fixesHang = false;
 
   /// The switch Hearth waits for to bring it back from Android's settings.
   String? waitingFor;
@@ -204,6 +209,7 @@ class FakeSetupChannel extends FLauncherChannel {
   @override
   Future<List<String>> runSetupFixes(List<String> fixes) async {
     fixesRun.add(fixes);
+    if (fixesHang) await Completer<void>().future;
     if (!fixesWork) throw PlatformException(code: "SELF_ADB");
     if (fixes.contains("restricted_settings")) restricted = false;
     if (fixes.contains("home_button_fix")) homeButtonOn = true;

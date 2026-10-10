@@ -178,6 +178,19 @@ void main() {
       expect(find.text("Hearth couldn't do it"), findsOneWidget);
     });
 
+    testWidgets("Allow debugging? declined: Hearth stops waiting and says what to do", (tester) async {
+      channel.restricted = true;
+      channel.adb = true;
+      channel.fixesHang = true;
+      await openAtHomeButton(tester);
+      await press(tester, "Open Accessibility");
+      await comeBack(tester);
+      await press(tester, "Let Hearth fix it");
+      // Settling runs the clock on while the spinner turns: past the limit, it gives up and says so
+      await press(tester, "Run it");
+      expect(find.text("Hearth couldn't do it"), findsOneWidget);
+    });
+
     testWidgets("the screen won't open: the adb command instead", (tester) async {
       channel.accessibilityOpens = false;
       await openAtHomeButton(tester);
