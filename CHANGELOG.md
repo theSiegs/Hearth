@@ -3,6 +3,11 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.26 (pre-release)
+
+- Grown-ups' profiles that share the TV's main user (Google accounts added in Google TV's chooser) are profiles of their own in Hearth: switching to one brings its own home, look, dock, name and photo, and its own Continue Watching (whatever was watched while it was on). Hearth knows whose profile is on from Google TV's home, which says who's logged in. The first switch to a new one waits about 15 seconds on Google TV's home.
+- Weather forecast: the headings say Hourly and Daily.
+
 ## 2026.10.25 (pre-release)
 
 - Weather forecast: with the top bar's weather selected, the coming hours show over the home; OK swaps them for the next five days.
