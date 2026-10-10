@@ -1,0 +1,4 @@
+- Early development pre-release.
+- First-run setup: a guided flow on a new TV, Set up Hearth in Settings, and a chip on the home for anything left. TVs already set up aren't taken over.
+- Four looks to start from: Hearth, Photo of the day, Calm dark and Bold.
+- The phone setup page also takes a Home Assistant webhook ID for TV status.
