@@ -3,6 +3,11 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.29 (pre-release)
+
+- YouTube allowance: no play time lost when a kids profile's helper is briefly disconnected; a Home Assistant lock (bedtime, school time) keeps Hearth's own minutes as Hearth's, with Home Assistant's message; Home Assistant can give its per-profile limits as the entity's state.
+- Home Assistant status: usage goes out every 2 minutes while watching (changes still go out at once).
+
 ## 2026.10.28 (pre-release)
 
 - YouTube time per day (Settings → Profiles; in a kids profile past the parent PIN): how long HearthTube may play a day for that profile. Hearth counts it on the TV; Home Assistant, if you use it, can add a limit shared with the family's other devices (the stricter wins). HearthTube enforces it once it has its matching update.
