@@ -672,9 +672,6 @@
     "setupChipHide": "Gizle",
     "setupFlowCardIncluded": "Neler var",
     "setupFlowCardNeeds": "Gerekenler",
-    "setupFlowCardSkipped": "Atlandı",
-    "setupFlowChange": "Değiştir",
-    "setupFlowKeep": "Koru",
     "setupFlowTurnOn": "Aç",
     "setupFlowNeedsQuestion": "Android'den bir soru",
     "setupFlowNeedsOneSwitch": "Android ayarlarında bir anahtar",
@@ -768,5 +765,8 @@
     "setupFlowHaStatusDone": "TV, Home Assistant'a neyin açık olduğunu bildiriyor",
     "setupChipNewOne": "Hearth'te yeni: {feature}",
     "setupChipNewMany": "Hearth'te yeni · {count}",
-    "setupFlowKidsNotAll": "Hearth henüz her çocuk profilinde değil"
+    "setupFlowKidsNotAll": "Hearth henüz her çocuk profilinde değil",
+    "setupFlowLeaveAsIs": "Olduğu gibi bırak",
+    "setupFlowSetUpMissing": "Eksik olanları ayarla",
+    "setupFlowChooseAgain": "Yeniden seç"
 }

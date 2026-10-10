@@ -1,6 +1,7 @@
 import 'package:flauncher/providers/home_looks.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';
+import 'package:flauncher/widgets/setup/setup_frame.dart';
 import 'package:flauncher/widgets/setup/setup_flow_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +13,10 @@ import 'package:shared_preferences_platform_interface/shared_preferences_platfor
 import 'fake_setup_channel.dart';
 
 void main() {
+  /// The marks beside a card's items (not the progress strip's)
+  Finder itemMarks(IconData icon) =>
+      find.descendant(of: find.byType(SetupStatusList), matching: find.byIcon(icon));
+
   late SharedPreferences prefs;
   late SetupFlowService flow;
   late FakeSetupChannel channel;
@@ -387,22 +392,37 @@ void main() {
       expect(flow.kidsProtected, 0);
     });
 
-    testWidgets("kept on with a new kids' profile: Keep goes on to the kids' step", (tester) async {
+    testWidgets("on before, with a new kids' profile: Set up what's missing goes on to the kids' step", (tester) async {
       await SettingsService(prefs).setParentPin("1357");
       await flow.decide(SetupCard.family.name, SetupChoice.on);
       channel.pairing = true;
       channel.kidsProfiles = 1;
       channel.adb = true;
       await openAtFamily(tester);
-      await press(tester, "Keep");
+      // The PIN and pairing are checked, the kids' item isn't
+      expect(itemMarks(Icons.check_circle), findsNWidgets(2));
+      expect(itemMarks(Icons.radio_button_unchecked), findsOneWidget);
+      await press(tester, "Set up what's missing");
       expect(find.text("Keep Hearth on your kids' profiles"), findsOneWidget);
     });
 
-    testWidgets("all on already: the card says so, with Keep", (tester) async {
+    testWidgets("Hearth on the kids' profiles already (put there from Settings) counts as done", (tester) async {
+      await SettingsService(prefs).setParentPin("1357");
+      channel.pairing = true;
+      channel.kidsProfiles = 2;
+      channel.kidsWithHearth = 2;
+      await openAtFamily(tester);
+      expect(itemMarks(Icons.radio_button_unchecked), findsNothing);
+      expect(find.text("Next"), findsOneWidget);
+    });
+
+    testWidgets("all on already: each item is checked, and Next goes on", (tester) async {
       await SettingsService(prefs).setParentPin("1357");
       channel.pairing = true;
       await openAtFamily(tester);
-      expect(find.text("Keep"), findsOneWidget);
+      expect(find.text("Next"), findsOneWidget);
+      expect(find.text("Set up what's missing"), findsNothing);
+      expect(find.text("What it needs"), findsNothing);
     });
   });
 
@@ -508,22 +528,24 @@ void main() {
       expect(find.text("Hearth is ready"), findsOneWidget);
     });
 
-    testWidgets("Keep on a card skipped before goes past it", (tester) async {
+    testWidgets("Leave it as it is on a card skipped before goes past it", (tester) async {
       await flow.decide(SetupCard.watching.name, SetupChoice.notNow);
       await openAtCards(tester);
-      await press(tester, "Keep");
+      await press(tester, "Leave it as it is");
       expect(find.text("Pick a look"), findsOneWidget);
       expect(channel.watchNextAsked, 0);
+      expect(flow.cardChoice(SetupCard.watching), SetupChoice.notNow);
     });
 
-    testWidgets("a decided card says so, with Keep, and Change asks again", (tester) async {
+    testWidgets("a skipped card shows what's off, and Set up what's missing goes through its steps", (tester) async {
       await flow.decide(SetupCard.watching.name, SetupChoice.notNow);
       await openAtCards(tester);
-      expect(find.text("Skipped"), findsOneWidget);
-      await press(tester, "Change");
-      expect(find.text("Turn on"), findsOneWidget);
-      await press(tester, "Turn on");
+      expect(find.text("Skipped"), findsNothing);
+      expect(itemMarks(Icons.radio_button_unchecked), findsNWidgets(2));
+      await press(tester, "Set up what's missing");
       expect(flow.cardChoice(SetupCard.watching), SetupChoice.on);
+      await press(tester, "Turn on");
+      expect(channel.watchNextAsked, 1);
     });
 
     testWidgets("a rerun starts at the first card when the essentials are on", (tester) async {
@@ -673,13 +695,13 @@ void main() {
       await prefs.setBool("show_continue_watching", true);
       await open(tester);
       await press(tester, "Get started");
-      // The cards say they're on already, with Keep
+      // The cards that are all on say so, with Next
       expect(find.text("Watching"), findsWidgets);
-      await press(tester, "Keep");
+      await press(tester, "Next");
       await press(tester, "Keep current");
       await press(tester, "Not now");
       await press(tester, "Next");
-      await press(tester, "Keep");
+      await press(tester, "Next");
       expect(find.text("Hearth is ready"), findsOneWidget);
       expect(flow.resume, isNull);
       expect(flow.flowVersion, SetupFlowService.currentVersion);

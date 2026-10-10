@@ -2842,18 +2842,6 @@
     "@setupFlowCardNeeds": {
         "description": "Setup flow: a feature card's heading over what turning it on takes (Android switches, time)"
     },
-    "setupFlowCardSkipped": "Skipped",
-    "@setupFlowCardSkipped": {
-        "description": "Setup flow: status line on a feature card the owner chose Not now for earlier"
-    },
-    "setupFlowChange": "Change",
-    "@setupFlowChange": {
-        "description": "Setup flow: button on a feature card decided earlier, to choose again"
-    },
-    "setupFlowKeep": "Keep",
-    "@setupFlowKeep": {
-        "description": "Setup flow: button on a feature card decided earlier, to leave it as it is and go on"
-    },
     "setupFlowTurnOn": "Turn on",
     "@setupFlowTurnOn": {
         "description": "Setup flow: main button of a feature card or step"
@@ -3269,5 +3257,17 @@
     "setupFlowKidsNotAll": "Hearth isn't on every kids' profile yet",
     "@setupFlowKidsNotAll": {
         "description": "Setup flow: kids' profiles step, when Hearth couldn't be kept on every kids' profile; the rows below say which"
+    },
+    "setupFlowLeaveAsIs": "Leave it as it is",
+    "@setupFlowLeaveAsIs": {
+        "description": "Setup flow: a card button that goes on to the next card without changing anything"
+    },
+    "setupFlowSetUpMissing": "Set up what's missing",
+    "@setupFlowSetUpMissing": {
+        "description": "Setup flow: a card button that goes through the card's steps that aren't on yet"
+    },
+    "setupFlowChooseAgain": "Choose again",
+    "@setupFlowChooseAgain": {
+        "description": "Setup flow: on a card that is a choice (the look, TV & power), choose it again"
     }
 }

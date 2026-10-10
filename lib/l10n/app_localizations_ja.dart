@@ -2221,15 +2221,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get setupFlowCardNeeds => '必要なもの';
 
   @override
-  String get setupFlowCardSkipped => 'スキップ済み';
-
-  @override
-  String get setupFlowChange => '変更';
-
-  @override
-  String get setupFlowKeep => 'このまま';
-
-  @override
   String get setupFlowTurnOn => 'オンにする';
 
   @override
@@ -2526,4 +2517,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get setupFlowKidsNotAll => 'まだすべての子どものプロフィールに Hearth がありません';
+
+  @override
+  String get setupFlowLeaveAsIs => 'このままにする';
+
+  @override
+  String get setupFlowSetUpMissing => '足りないものを設定';
+
+  @override
+  String get setupFlowChooseAgain => 'もう一度選ぶ';
 }

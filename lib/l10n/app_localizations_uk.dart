@@ -2245,15 +2245,6 @@ class AppLocalizationsUk extends AppLocalizations {
   String get setupFlowCardNeeds => 'Що потрібно';
 
   @override
-  String get setupFlowCardSkipped => 'Пропущено';
-
-  @override
-  String get setupFlowChange => 'Змінити';
-
-  @override
-  String get setupFlowKeep => 'Залишити';
-
-  @override
   String get setupFlowTurnOn => 'Увімкнути';
 
   @override
@@ -2550,4 +2541,13 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get setupFlowKidsNotAll => 'Hearth поки є не в усіх дитячих профілях';
+
+  @override
+  String get setupFlowLeaveAsIs => 'Залишити як є';
+
+  @override
+  String get setupFlowSetUpMissing => 'Налаштувати решту';
+
+  @override
+  String get setupFlowChooseAgain => 'Вибрати знову';
 }

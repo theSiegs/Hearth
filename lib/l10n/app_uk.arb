@@ -672,9 +672,6 @@
     "setupChipHide": "Сховати",
     "setupFlowCardIncluded": "Що входить",
     "setupFlowCardNeeds": "Що потрібно",
-    "setupFlowCardSkipped": "Пропущено",
-    "setupFlowChange": "Змінити",
-    "setupFlowKeep": "Залишити",
     "setupFlowTurnOn": "Увімкнути",
     "setupFlowNeedsQuestion": "Одне запитання від Android",
     "setupFlowNeedsOneSwitch": "Один перемикач у налаштуваннях Android",
@@ -768,5 +765,8 @@
     "setupFlowHaStatusDone": "Телевізор повідомляє Home Assistant, що йде",
     "setupChipNewOne": "Нове в Hearth: {feature}",
     "setupChipNewMany": "Нове в Hearth · {count}",
-    "setupFlowKidsNotAll": "Hearth поки є не в усіх дитячих профілях"
+    "setupFlowKidsNotAll": "Hearth поки є не в усіх дитячих профілях",
+    "setupFlowLeaveAsIs": "Залишити як є",
+    "setupFlowSetUpMissing": "Налаштувати решту",
+    "setupFlowChooseAgain": "Вибрати знову"
 }

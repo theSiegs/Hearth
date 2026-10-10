@@ -672,9 +672,6 @@
     "setupChipHide": "非表示",
     "setupFlowCardIncluded": "含まれるもの",
     "setupFlowCardNeeds": "必要なもの",
-    "setupFlowCardSkipped": "スキップ済み",
-    "setupFlowChange": "変更",
-    "setupFlowKeep": "このまま",
     "setupFlowTurnOn": "オンにする",
     "setupFlowNeedsQuestion": "Android からの確認が1回",
     "setupFlowNeedsOneSwitch": "Android の設定でスイッチを1つ",
@@ -768,5 +765,8 @@
     "setupFlowHaStatusDone": "テレビが表示中の内容を Home Assistant に伝えます",
     "setupChipNewOne": "Hearth の新機能：{feature}",
     "setupChipNewMany": "Hearth の新機能 · {count}",
-    "setupFlowKidsNotAll": "まだすべての子どものプロフィールに Hearth がありません"
+    "setupFlowKidsNotAll": "まだすべての子どものプロフィールに Hearth がありません",
+    "setupFlowLeaveAsIs": "このままにする",
+    "setupFlowSetUpMissing": "足りないものを設定",
+    "setupFlowChooseAgain": "もう一度選ぶ"
 }

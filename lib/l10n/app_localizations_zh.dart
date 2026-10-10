@@ -2221,15 +2221,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get setupFlowCardNeeds => '需要什么';
 
   @override
-  String get setupFlowCardSkipped => '已跳过';
-
-  @override
-  String get setupFlowChange => '更改';
-
-  @override
-  String get setupFlowKeep => '保留';
-
-  @override
   String get setupFlowTurnOn => '开启';
 
   @override
@@ -2526,4 +2517,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get setupFlowKidsNotAll => 'Hearth 还没有在所有孩子的个人资料中';
+
+  @override
+  String get setupFlowLeaveAsIs => '保持不变';
+
+  @override
+  String get setupFlowSetUpMissing => '设置缺少的项目';
+
+  @override
+  String get setupFlowChooseAgain => '重新选择';
 }
