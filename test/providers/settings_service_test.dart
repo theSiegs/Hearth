@@ -321,16 +321,27 @@ void main() async {
   group("weather settings", () {
     test("default weather preferences", () async {
       final sp = await SharedPreferences.getInstance();
-      final service = SettingsService(sp);
+      final service = SettingsService(sp, region: () => const Locale("en", "GB"));
       expect(service.showWeatherInStatusBar, isFalse);
       expect(service.showWeatherWarnings, isTrue);
       expect(service.temperatureUnit, temperatureUnitCelsius);
       expect(service.useFahrenheit, isFalse);
     });
 
+    test("the temperature unit follows the TV's region until one is picked", () async {
+      final sp = await SharedPreferences.getInstance();
+      expect(SettingsService(sp, region: () => const Locale("en", "US")).useFahrenheit, isTrue);
+      expect(SettingsService(sp, region: () => const Locale("es", "US")).useFahrenheit, isTrue);
+      expect(SettingsService(sp, region: () => const Locale("en", "CA")).useFahrenheit, isFalse);
+      expect(SettingsService(sp, region: () => const Locale("de")).useFahrenheit, isFalse);
+      final us = SettingsService(sp, region: () => const Locale("en", "US"));
+      await us.setTemperatureUnit(temperatureUnitCelsius);
+      expect(us.useFahrenheit, isFalse);
+    });
+
     test("set and update weather preferences", () async {
       final sp = await SharedPreferences.getInstance();
-      final service = SettingsService(sp);
+      final service = SettingsService(sp, region: () => const Locale("en", "GB"));
 
       await service.setShowWeatherInStatusBar(true);
       await service.setShowWeatherWarnings(false);
