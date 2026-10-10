@@ -2557,4 +2557,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String setupChipNewMany(int count) {
     return 'جديد في Hearth · $count';
   }
+
+  @override
+  String get setupFlowKidsNotAll => 'لم يُثبَّت Hearth بعد على كل ملفات الأطفال';
 }

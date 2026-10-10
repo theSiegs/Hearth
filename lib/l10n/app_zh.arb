@@ -764,5 +764,6 @@
     "setupFlowHaStatusNoWebhook": "手机没有发送 Webhook ID。请填写页面上的最后一个框。",
     "setupFlowHaStatusDone": "电视会告诉 Home Assistant 正在播放什么",
     "setupChipNewOne": "Hearth 新功能：{feature}",
-    "setupChipNewMany": "Hearth 新功能 · {count}"
+    "setupChipNewMany": "Hearth 新功能 · {count}",
+    "setupFlowKidsNotAll": "Hearth 还没有在所有孩子的个人资料中"
 }

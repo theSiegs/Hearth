@@ -3253,5 +3253,9 @@
                 "type": "int"
             }
         }
+    },
+    "setupFlowKidsNotAll": "Hearth isn't on every kids' profile yet",
+    "@setupFlowKidsNotAll": {
+        "description": "Setup flow: kids' profiles step, when Hearth couldn't be kept on every kids' profile; the rows below say which"
     }
 }

@@ -2522,4 +2522,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String setupChipNewMany(int count) {
     return 'Hearth में नया · $count';
   }
+
+  @override
+  String get setupFlowKidsNotAll => 'Hearth अभी हर बच्चों की प्रोफ़ाइल पर नहीं है';
 }

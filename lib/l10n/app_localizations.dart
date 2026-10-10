@@ -4504,6 +4504,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New in Hearth · {count}'**
   String setupChipNewMany(int count);
+
+  /// Setup flow: kids' profiles step, when Hearth couldn't be kept on every kids' profile; the rows below say which
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth isn\'t on every kids\' profile yet'**
+  String get setupFlowKidsNotAll;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

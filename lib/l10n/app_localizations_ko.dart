@@ -2514,4 +2514,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String setupChipNewMany(int count) {
     return 'Hearth 새 기능 · $count';
   }
+
+  @override
+  String get setupFlowKidsNotAll => '아직 모든 아이 프로필에 Hearth가 있지는 않습니다';
 }

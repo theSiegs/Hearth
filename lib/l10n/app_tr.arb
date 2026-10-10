@@ -764,5 +764,6 @@
     "setupFlowHaStatusNoWebhook": "Telefon bir webhook kimliği göndermedi. Sayfadaki son kutuyu doldurun.",
     "setupFlowHaStatusDone": "TV, Home Assistant'a neyin açık olduğunu bildiriyor",
     "setupChipNewOne": "Hearth'te yeni: {feature}",
-    "setupChipNewMany": "Hearth'te yeni · {count}"
+    "setupChipNewMany": "Hearth'te yeni · {count}",
+    "setupFlowKidsNotAll": "Hearth henüz her çocuk profilinde değil"
 }

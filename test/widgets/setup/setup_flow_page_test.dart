@@ -354,6 +354,25 @@ void main() {
       expect(flow.kidsProtected, 2);
     });
 
+    testWidgets("kids' profiles where Hearth didn't stay: says so, with Try again", (tester) async {
+      await SettingsService(prefs).setParentPin("1357");
+      channel.pairing = true;
+      channel.kidsProfiles = 1;
+      channel.adb = true;
+      channel.profilesKept = false;
+      await openAtFamily(tester);
+      await press(tester, "Turn on");
+      await press(tester, "Add to their profiles");
+      await press(tester, "Add");
+      expect(find.text("Hearth isn't on every kids' profile yet"), findsOneWidget);
+      expect(find.text("Not installed"), findsOneWidget);
+      expect(flow.kidsProtected, 0);
+      channel.profilesKept = true;
+      await press(tester, "Try again");
+      await press(tester, "Add");
+      expect(find.text("Hearth is on your kids' profiles"), findsOneWidget);
+    });
+
     testWidgets("kids' profiles without the debugging approval: says what to do", (tester) async {
       await SettingsService(prefs).setParentPin("1357");
       channel.pairing = true;

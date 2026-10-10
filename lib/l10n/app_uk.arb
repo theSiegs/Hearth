@@ -764,5 +764,6 @@
     "setupFlowHaStatusNoWebhook": "Телефон не надіслав ID вебхука. Заповніть останнє поле на сторінці.",
     "setupFlowHaStatusDone": "Телевізор повідомляє Home Assistant, що йде",
     "setupChipNewOne": "Нове в Hearth: {feature}",
-    "setupChipNewMany": "Нове в Hearth · {count}"
+    "setupChipNewMany": "Нове в Hearth · {count}",
+    "setupFlowKidsNotAll": "Hearth поки є не в усіх дитячих профілях"
 }

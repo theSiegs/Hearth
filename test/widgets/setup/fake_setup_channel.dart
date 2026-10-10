@@ -37,6 +37,9 @@ class FakeSetupChannel extends FLauncherChannel {
 
   /// Whether adding Hearth to the kids' profiles works (false: "Allow debugging?" wasn't approved).
   bool profilesWork = true;
+
+  /// Whether Hearth ends up kept on the kids' profiles after adding.
+  bool profilesKept = true;
   int profilesAdded = 0;
   int aboutOpened = 0;
   int voiceSettingsOpened = 0;
@@ -138,7 +141,13 @@ class FakeSetupChannel extends FLauncherChannel {
   @override
   Future<List<Map<dynamic, dynamic>>> getHearthProfilesState() async => [
         for (int i = 0; i < kidsProfiles; i++) ...[
-          {"userId": 10 + i, "packageName": "com.example.hearth", "installed": true, "protected": true, "supervised": true},
+          {
+            "userId": 10 + i,
+            "packageName": "com.example.hearth",
+            "installed": profilesKept,
+            "protected": profilesKept,
+            "supervised": true,
+          },
         ],
       ];
 
