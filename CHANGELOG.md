@@ -3,6 +3,11 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.31 (pre-release)
+
+- Dismissing one notification no longer dismisses all of that app's notifications (Android's group summary no longer shows as a notification of its own).
+- The weather shows in the top bar by default (once there's weather to show).
+
 ## 2026.10.30 (pre-release)
 
 - After entering the PIN on Google TV's profile lock (when the TV wakes, or Lock Profile), Hearth comes back about a second sooner.
