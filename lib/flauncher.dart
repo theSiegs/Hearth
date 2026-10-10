@@ -120,6 +120,8 @@ class _FLauncherState extends State<FLauncher> {
     FLauncherChannel.listenForSearch(_openSearch);
     // Profile Pairing's "Change PIN": Settings on that app's profile PINs.
     FLauncherChannel.listenForProfilePins(_openProfilePins);
+    // Home means the home: whatever is open over it closes
+    FLauncherChannel.listenForHomePressed(_onHomePressed);
     final channel = context.read<FLauncherChannel>();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
@@ -235,6 +237,13 @@ class _FLauncherState extends State<FLauncher> {
     // Focus waits on the search button until the results are in, then moves to them (_onSearchChanged)
     _appBarKey.currentState?.focusSearch();
     _homeSearch?.search(text);
+  }
+
+  /// The Home button, pressed while Hearth is up: Settings, a panel, a dialog or the search box over the home close.
+  void _onHomePressed() {
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
+    if (_searchTyping) _cancelSearchEntry();
   }
 
   void _cancelSearchEntry() {
