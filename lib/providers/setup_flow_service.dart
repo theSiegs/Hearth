@@ -293,14 +293,21 @@ class SetupFlowService extends ChangeNotifier {
   }
 
   /// How many things the chip says are left: the essentials neither on nor skipped, and the cards nobody decided on
-  /// that aren't all on anyway ([cardOn]).
-  int remaining({required bool homeButtonOn, required bool homeAppOn, Map<SetupCard, bool> cardOn = const {}}) {
+  /// that aren't all on anyway ([cardOn]). [newKidsProfile]: Android lists a kids' profile Hearth wasn't put on, which
+  /// Google TV would strip Hearth from; with the family card on, that counts too.
+  int remaining({
+    required bool homeButtonOn,
+    required bool homeAppOn,
+    Map<SetupCard, bool> cardOn = const {},
+    bool newKidsProfile = false,
+  }) {
     int left = 0;
     if (!homeButtonOn && choiceFor(homeButtonDecision) == null) left++;
     if (!homeAppOn && choiceFor(homeAppDecision) == null) left++;
     for (final card in SetupCard.values) {
       if (cardChoice(card) == null && cardOn[card] != true) left++;
     }
+    if (newKidsProfile && cardChoice(SetupCard.family) == SetupChoice.on) left++;
     return left;
   }
 

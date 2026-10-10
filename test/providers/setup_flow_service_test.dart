@@ -163,6 +163,14 @@ void main() {
       expect(flow.homeButtonNeedsFix(homeButtonOn: true, homeButtonSeenBefore: true), isFalse);
     });
 
+    test("a new kids' profile counts once the family card is on", () async {
+      final allOn = {for (final card in SetupCard.values) card: true};
+      expect(flow.remaining(homeButtonOn: true, homeAppOn: true, cardOn: allOn, newKidsProfile: true), 0);
+      await flow.decide(SetupCard.family.name, SetupChoice.on);
+      expect(flow.remaining(homeButtonOn: true, homeAppOn: true, cardOn: allOn, newKidsProfile: true), 1);
+      expect(flow.remaining(homeButtonOn: true, homeAppOn: true, cardOn: allOn), 0);
+    });
+
     test("offers the cards added since the owner last went through the flow, until seen", () async {
       // A TV that went through an older flow, before any of today's cards
       await prefs.setInt("device_setup_flow_version", 1);

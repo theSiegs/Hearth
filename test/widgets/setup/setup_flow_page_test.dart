@@ -355,6 +355,17 @@ void main() {
       expect(flow.kidsProtected, 0);
     });
 
+    testWidgets("kept on with a new kids' profile: Keep goes on to the kids' step", (tester) async {
+      await SettingsService(prefs).setParentPin("1357");
+      await flow.decide(SetupCard.family.name, SetupChoice.on);
+      channel.pairing = true;
+      channel.kidsProfiles = 1;
+      channel.adb = true;
+      await openAtFamily(tester);
+      await press(tester, "Keep");
+      expect(find.text("Keep Hearth on your kids' profiles"), findsOneWidget);
+    });
+
     testWidgets("all on already: the card says so, with Keep", (tester) async {
       await SettingsService(prefs).setParentPin("1357");
       channel.pairing = true;
@@ -463,6 +474,14 @@ void main() {
       expect(find.text("Install HearthTube?"), findsOneWidget);
       await press(tester, "Not now");
       expect(find.text("Hearth is ready"), findsOneWidget);
+    });
+
+    testWidgets("Keep on a card skipped before goes past it", (tester) async {
+      await flow.decide(SetupCard.watching.name, SetupChoice.notNow);
+      await openAtCards(tester);
+      await press(tester, "Keep");
+      expect(find.text("Pick a look"), findsOneWidget);
+      expect(channel.watchNextAsked, 0);
     });
 
     testWidgets("a decided card says so, with Keep, and Change asks again", (tester) async {

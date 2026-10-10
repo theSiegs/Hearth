@@ -2,6 +2,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/hearth_ids.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/providers/setup_flow_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -92,6 +93,7 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
   Future<void> _add() async {
     final l = AppLocalizations.of(context)!;
     final includeAdults = context.read<SettingsService>().pushToAdultProfiles;
+    final flow = context.read<SetupFlowService?>();
     final go = await _confirm(
       title: l.familyAppsAddTitle,
       lines: [
@@ -104,7 +106,15 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
       action: l.familyAppsAdd,
     );
     if (go != true) return;
-    await _run(() => _channel.addHearthToProfiles(includeAdults: includeAdults), adding: true);
+    await _run(() async {
+      final log = await _channel.addHearthToProfiles(includeAdults: includeAdults);
+      // The setup flow's kids' step and its chip count the kids' profiles Hearth is on
+      try {
+        final kids = (await _channel.getSetupFamilyState())["kidsProfiles"] as int?;
+        if (kids != null) await flow?.setKidsProtected(kids);
+      } catch (_) {}
+      return log;
+    }, adding: true);
   }
 
   Future<void> _remove() async {
