@@ -1,0 +1,3 @@
+- Early development pre-release.
+- YouTube time per day for each profile (Settings > Profiles), counted on the TV; Home Assistant optional.
+- Today's app and playing time per profile, sent to Home Assistant when it's set up.

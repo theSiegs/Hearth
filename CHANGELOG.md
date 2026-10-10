@@ -3,6 +3,11 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.28 (pre-release)
+
+- YouTube time per day (Settings → Profiles; in a kids profile past the parent PIN): how long HearthTube may play a day for that profile. Hearth counts it on the TV; Home Assistant, if you use it, can add a limit shared with the family's other devices (the stricter wins). HearthTube enforces it once it has its matching update.
+- Hearth keeps today's app and playing time per profile, and with Home Assistant set up sends it with the TV's status, along with when screen time came up or cleared.
+
 ## 2026.10.27 (pre-release)
 
 - Continue Watching per profile, from Hearth's own history: what each profile plays is recorded on the TV (title, episode, how far it got), so its entries are its own, shows from apps that don't fill Google TV's Continue Watching list (Hulu, Paramount+) appear too, and an entry an app dropped when someone else used it (Netflix keeps only its current profile's) stays until that profile opens the app again.
