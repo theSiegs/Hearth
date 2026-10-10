@@ -75,6 +75,21 @@ final class ProfileUsers {
         }
     }
 
+    /** Whether a profile user exists that Hearth has never seen run (it has no name yet): a profile just added. */
+    static boolean hasUnnamedProfile(Context context) {
+        UserManager users = (UserManager) context.getSystemService(Context.USER_SERVICE);
+        if (users == null) return false;
+        try {
+            UserHandle me = Process.myUserHandle();
+            for (UserHandle profile : users.getUserProfiles()) {
+                if (profile.equals(me)) continue;
+                if (getName(context, users.getSerialNumberForUser(profile)) == null) return true;
+            }
+        } catch (SecurityException ignored) {
+        }
+        return false;
+    }
+
     /**
      * A profile's lasting key ("user:11"): what Hearth stores per-profile things under, so renaming a profile in
      * Google TV doesn't orphan them. Null for UNKNOWN.
