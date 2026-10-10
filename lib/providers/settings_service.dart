@@ -356,7 +356,7 @@ class SettingsService extends ChangeNotifier {
 
   bool get autoHideNotificationsWidget => _bool(_autoHideNotificationsWidgetKey, false);
 
-  bool get showWeatherInStatusBar => _bool(_showWeatherInStatusBarKey, false);
+  bool get showWeatherInStatusBar => _bool(_showWeatherInStatusBarKey, true);
 
   bool get showWeatherWarnings => _bool(_showWeatherWarningsKey, true);
 

@@ -322,7 +322,7 @@ void main() async {
     test("default weather preferences", () async {
       final sp = await SharedPreferences.getInstance();
       final service = SettingsService(sp, region: () => const Locale("en", "GB"));
-      expect(service.showWeatherInStatusBar, isFalse);
+      expect(service.showWeatherInStatusBar, isTrue);
       expect(service.showWeatherWarnings, isTrue);
       expect(service.temperatureUnit, temperatureUnitCelsius);
       expect(service.useFahrenheit, isFalse);
