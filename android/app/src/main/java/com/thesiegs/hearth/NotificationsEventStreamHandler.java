@@ -12,8 +12,10 @@ import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import io.flutter.plugin.common.EventChannel;
 
@@ -59,7 +61,16 @@ final class NotificationsEventStreamHandler implements EventChannel.StreamHandle
         try {
             StatusBarNotification[] sbns = service.getActiveNotifications();
             if (sbns != null) {
+                // Groups that have notifications of their own listed
+                Set<String> groupsWithMembers = new HashSet<>();
                 for (StatusBarNotification sbn : sbns) {
+                    if (!isGroupSummary(sbn)) groupsWithMembers.add(sbn.getGroupKey());
+                }
+                for (StatusBarNotification sbn : sbns) {
+                    // A group's summary (an app's, or the one Android makes when it bundles an app's notifications)
+                    // isn't a notification of its own while its members are listed, as in Android's own shade:
+                    // dismissing it would dismiss the whole group
+                    if (isGroupSummary(sbn) && groupsWithMembers.contains(sbn.getGroupKey())) continue;
                     Map<String, Object> map = new HashMap<>();
                     map.put("key", sbn.getKey());
                     map.put("packageName", sbn.getPackageName());
@@ -98,6 +109,11 @@ final class NotificationsEventStreamHandler implements EventChannel.StreamHandle
             Log.w(TAG, "Couldn't read the active notifications", e);
         }
         return list;
+    }
+
+    private static boolean isGroupSummary(StatusBarNotification sbn) {
+        Notification notification = sbn.getNotification();
+        return notification != null && (notification.flags & Notification.FLAG_GROUP_SUMMARY) != 0;
     }
 
     /**

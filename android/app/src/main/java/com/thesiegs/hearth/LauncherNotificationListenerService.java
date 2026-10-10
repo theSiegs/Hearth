@@ -151,6 +151,8 @@ public class LauncherNotificationListenerService extends NotificationListenerSer
         if (!FlutterPrefs.getBoolean(this, "system_notifications_popup", false) || !canShowPopup()) return false;
         Notification notification = sbn.getNotification();
         if (notification == null) return false;
+        // A group's summary stands for notifications that pop up themselves
+        if ((notification.flags & Notification.FLAG_GROUP_SUMMARY) != 0) return false;
         if (Notification.CATEGORY_SERVICE.equals(notification.category)
                 || Notification.CATEGORY_TRANSPORT.equals(notification.category)) {
             return false;
