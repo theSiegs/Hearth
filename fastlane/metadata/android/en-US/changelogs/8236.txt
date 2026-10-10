@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Weather forecast: with the top bar's weather selected, the coming hours show over the home; OK swaps them for the next five days.
