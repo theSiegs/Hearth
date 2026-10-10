@@ -764,5 +764,6 @@
     "setupFlowHaStatusNoWebhook": "لم يرسل الهاتف معرّف Webhook. املأ المربع الأخير في الصفحة.",
     "setupFlowHaStatusDone": "يُخبر التلفزيون Home Assistant بما يُعرض",
     "setupChipNewOne": "جديد في Hearth: {feature}",
-    "setupChipNewMany": "جديد في Hearth · {count}"
+    "setupChipNewMany": "جديد في Hearth · {count}",
+    "setupFlowKidsNotAll": "لم يُثبَّت Hearth بعد على كل ملفات الأطفال"
 }

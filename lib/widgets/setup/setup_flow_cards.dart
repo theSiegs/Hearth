@@ -292,27 +292,44 @@ extension _CardScreens on _SetupFlowPageState {
   Widget _kids(AppLocalizations l) {
     final snap = _snap!;
     final skip = SetupButton(label: l.setupFlowSkip, onPressed: _next);
+    final rows = _kidsRows;
+    // Where Hearth's apps are now, one row per profile, as Settings' Family apps page shows them
+    final profileRows = [
+      for (final apps in FamilyAppsPage.byProfile(rows ?? const []).values)
+        Builder(builder: (context) {
+          final (:label, :status, :color) = FamilyAppsPage.describeProfile(l, apps);
+          return Row(children: [
+            Icon((apps.first["supervised"] as bool?) == true ? Icons.child_care : Icons.person_outline,
+                size: 18, color: Colors.white70),
+            const SizedBox(width: 8),
+            Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14))),
+            Text(status, style: TextStyle(color: color ?? Colors.white54, fontSize: 13)),
+          ]);
+        }),
+    ];
     if (_state == SetupStepState.done) {
-      final rows = _kidsRows ?? const [];
       return SetupScreenBody(
         icon: Icons.check_circle,
         iconColor: Colors.green,
         title: l.setupFlowKidsDone,
         content: [
-          for (final apps in FamilyAppsPage.byProfile(rows).values)
-            Builder(builder: (context) {
-              final (:label, :status, :color) = FamilyAppsPage.describeProfile(l, apps);
-              return Row(children: [
-                Icon((apps.first["supervised"] as bool?) == true ? Icons.child_care : Icons.person_outline,
-                    size: 18, color: Colors.white70),
-                const SizedBox(width: 8),
-                Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14))),
-                Text(status, style: TextStyle(color: color ?? Colors.white54, fontSize: 13)),
-              ]);
-            }),
+          ...profileRows,
           Text(l.setupFlowKidsKeepDebugging, style: const TextStyle(color: Colors.white54, fontSize: 13)),
         ],
         buttons: [SetupButton(label: l.setupFlowNext, focusNode: _primary, autofocus: true, onPressed: _next)],
+      );
+    }
+    if (_state == SetupStepState.notYet && rows != null) {
+      // It ran, but not every kids' profile has Hearth kept on it
+      return SetupScreenBody(
+        icon: Icons.warning_amber_rounded,
+        iconColor: Colors.amber,
+        title: l.setupFlowKidsNotAll,
+        content: profileRows,
+        buttons: [
+          skip,
+          SetupButton(label: l.tryAgain, focusNode: _primary, autofocus: true, onPressed: _addToKids),
+        ],
       );
     }
     if (!snap.adbEnabled) {
@@ -403,12 +420,21 @@ extension _CardScreens on _SetupFlowPageState {
       _focusPrimary();
       return;
     }
-    await _flow.setKidsProtected(_snap?.kidsProfiles ?? 0);
+    // Done only when every kids' profile keeps Hearth: Google TV removes it from the others at their next start
+    final kept = _hearthKeptOnKids(rows);
+    if (kept) await _flow.setKidsProtected(_snap?.kidsProfiles ?? 0);
     _update(() {
       _kidsRows = rows;
-      _state = SetupStepState.done;
+      _state = kept ? SetupStepState.done : SetupStepState.notYet;
     });
     _focusPrimary();
+  }
+
+  /// Whether Hearth is installed and kept installed on every kids' profile in [rows] (HearthTube may be missing:
+  /// it's only there when the owner has it).
+  static bool _hearthKeptOnKids(List<Map<dynamic, dynamic>> rows) {
+    final kids = rows.where((r) => r["supervised"] == true && r["packageName"] != "com.thesiegs.hearthtube");
+    return kids.isNotEmpty && kids.every((r) => r["installed"] == true && r["protected"] == true);
   }
 
   // --- Watching ---

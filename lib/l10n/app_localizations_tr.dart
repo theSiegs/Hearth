@@ -2514,4 +2514,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String setupChipNewMany(int count) {
     return 'Hearth\'te yeni · $count';
   }
+
+  @override
+  String get setupFlowKidsNotAll => 'Hearth henüz her çocuk profilinde değil';
 }

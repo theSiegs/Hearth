@@ -2524,4 +2524,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String setupChipNewMany(int count) {
     return 'Novità in Hearth · $count';
   }
+
+  @override
+  String get setupFlowKidsNotAll => 'Hearth non è ancora su tutti i profili dei bambini';
 }

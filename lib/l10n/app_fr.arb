@@ -764,5 +764,6 @@
     "setupFlowHaStatusNoWebhook": "Le téléphone n'a pas envoyé d'ID de webhook. Remplissez la dernière case de la page.",
     "setupFlowHaStatusDone": "La TV dit à Home Assistant ce qui passe",
     "setupChipNewOne": "Nouveau dans Hearth : {feature}",
-    "setupChipNewMany": "Nouveau dans Hearth · {count}"
+    "setupChipNewMany": "Nouveau dans Hearth · {count}",
+    "setupFlowKidsNotAll": "Hearth n'est pas encore sur tous les profils enfants"
 }

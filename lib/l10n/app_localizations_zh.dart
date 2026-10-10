@@ -2514,4 +2514,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String setupChipNewMany(int count) {
     return 'Hearth 新功能 · $count';
   }
+
+  @override
+  String get setupFlowKidsNotAll => 'Hearth 还没有在所有孩子的个人资料中';
 }

@@ -764,5 +764,6 @@
     "setupFlowHaStatusNoWebhook": "スマートフォンから Webhook ID が送られませんでした。ページの最後の欄に入力してください。",
     "setupFlowHaStatusDone": "テレビが表示中の内容を Home Assistant に伝えます",
     "setupChipNewOne": "Hearth の新機能：{feature}",
-    "setupChipNewMany": "Hearth の新機能 · {count}"
+    "setupChipNewMany": "Hearth の新機能 · {count}",
+    "setupFlowKidsNotAll": "まだすべての子どものプロフィールに Hearth がありません"
 }

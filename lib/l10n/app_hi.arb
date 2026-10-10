@@ -764,5 +764,6 @@
     "setupFlowHaStatusNoWebhook": "फ़ोन ने webhook ID नहीं भेजा। पेज का आख़िरी बॉक्स भरें।",
     "setupFlowHaStatusDone": "टीवी Home Assistant को बताता है कि क्या चल रहा है",
     "setupChipNewOne": "Hearth में नया: {feature}",
-    "setupChipNewMany": "Hearth में नया · {count}"
+    "setupChipNewMany": "Hearth में नया · {count}",
+    "setupFlowKidsNotAll": "Hearth अभी हर बच्चों की प्रोफ़ाइल पर नहीं है"
 }
