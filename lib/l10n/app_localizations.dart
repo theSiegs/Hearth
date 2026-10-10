@@ -4570,6 +4570,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The forecast isn\'t in yet'**
   String get weatherForecastNone;
+
+  /// Settings > Profiles: how long HearthTube may play a day for this profile
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube time per day'**
+  String get youTubeLimitTitle;
+
+  /// YouTube time per day: no limit set
+  ///
+  /// In en, this message translates to:
+  /// **'No limit'**
+  String get youTubeLimitNone;
+
+  /// YouTube time per day: a limit in minutes
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes, plural, =1{1 minute} other{{minutes} minutes}}'**
+  String youTubeLimitMinutes(int minutes);
+
+  /// YouTube time per day: what it applies to, under the choices
+  ///
+  /// In en, this message translates to:
+  /// **'For this profile, in HearthTube. With Home Assistant set up, a limit it shares with your other devices counts too.'**
+  String get youTubeLimitHint;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -775,5 +775,9 @@
     "weatherForecastShowHourly": "확인: 시간별",
     "weatherForecastNow": "지금",
     "weatherForecastToday": "오늘",
-    "weatherForecastNone": "아직 예보가 없습니다"
+    "weatherForecastNone": "아직 예보가 없습니다",
+    "youTubeLimitTitle": "하루 YouTube 시간",
+    "youTubeLimitNone": "제한 없음",
+    "youTubeLimitMinutes": "{minutes, plural, other{{minutes}분}}",
+    "youTubeLimitHint": "이 프로필의 HearthTube 시간입니다. Home Assistant를 설정하면 다른 기기와 공유하는 제한도 적용됩니다."
 }

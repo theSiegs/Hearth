@@ -4,7 +4,7 @@ Hearth shares its state with other apps (today: HearthTube) through one content 
 contract: what each column means, when it changes, and what callers may rely on. The provider's `contract_version`
 column says which version of this page it implements.
 
-**Current version: 5** (Hearth 2026.10, `ProfileProvider.CONTRACT_VERSION`).
+**Current version: 6** (Hearth 2026.10, `ProfileProvider.CONTRACT_VERSION`).
 
 Change rules: adding, removing or changing the meaning of a column or call bumps the version and gets a line in
 the history below. A reader that sees a newer version than it knows keeps using the columns it understands; columns
@@ -71,7 +71,12 @@ answer within a few seconds. Without an agent, a Hearth installed there answers 
 | `wallpaper_gradient` | text (JSON) or null | Hearth's gradient: shown when `wallpaper_kind` is "gradient", and what Hearth falls back to otherwise. `{"type": "linear" or "radial", "colors": ["#AARRGGBB", ...], "stops": [0..1, ...] or null (evenly spaced), "rotation": radians clockwise about the screen's center, "brightness": 0..1}`, plus for linear `"begin"` and `"end"` and for radial `"center"` as `{"x", "y"}` alignments (-1..1 across the screen, x right, y down) and `"radius"` (a fraction of the screen's shorter side). Null before Hearth has described the chosen gradient (a moment after a change, or a Hearth not opened since it was updated). |
 | `wallpaper_title` | text or null | When `wallpaper_kind` is "bing": the photo's title as Bing gives it ("A quiet lake"). Otherwise null; also null for a photo fetched before Hearth kept titles. |
 | `wallpaper_credit` | text or null | When `wallpaper_kind` is "bing": Bing's caption and credit for the photo ("A quiet lake at dawn (© Photographer/Agency)"), to show where the photo is credited. Otherwise null. |
-| `contract_version` | integer | This page's version (5). Missing on Hearth builds from before version 2. |
+| `youtube_minutes_left` | integer or null | The active profile's YouTube minutes left today. Hearth works it out itself: the daily limit set for the profile in Hearth (Settings → Profiles → YouTube time per day) less what HearthTube reported playing for it today (`report_playing`). With Home Assistant set up (optional), its say counts too (entity `sensor.hearth_allowance`, attribute `profiles` → this profile's `profile_id` → `youtube_minutes_left`, e.g. a pool shared with the family's other devices) and the smaller wins. Null when there's no limit. At 0 HearthTube stops playing. |
+| `schedule_locked` | 0/1 | 1 while Home Assistant says the active profile's schedule is locked (bedtime, school time: `schedule_locked` in the same entry). HearthTube doesn't play then. 0 when not, or not known. |
+| `allowance_message` | text or null | What to tell the viewer when it stops, if Home Assistant gives one (`message` in the same entry). |
+| `allowance_checked_at` | integer or null | When Hearth last read the allowance from Home Assistant (epoch ms), today; null when it hasn't today (not set up, unreachable, or a new day). Hearth reads it every minute or so and at each profile change. How old a value may be before it no longer counts is the caller's choice. |
+| `allowance_source` | text or null | Whose limit `youtube_minutes_left` and `schedule_locked` are: "hearth" (the limit set in Hearth) or "home_assistant"; null when there's none. |
+| `contract_version` | integer | This page's version (6). Missing on Hearth builds from before version 2. |
 
 None of these are secret: everything is on screen in Hearth.
 
@@ -82,8 +87,16 @@ the PIN or its hash. Only for `com.thesiegs.hearthtube` signed with one of the t
 gets null. Returns a Bundle: `ok` (boolean), and when locked, `wait_seconds` (int): five wrong tries lock checks for
 a minute.
 
+`call(uri /active, "report_playing", null, extras {"ms": long})`: HearthTube played that long (milliseconds, at most
+10 minutes per call) for the active profile; its YouTube allowance counts down from it. Call it every 30 seconds or
+so while playing and when playback stops. Same callers as above; returns a Bundle with `ok` true. In a profile's
+agent it's passed on to Hearth.
+
 ## History
 
+- **6** (2026-10-10): added `youtube_minutes_left`, `schedule_locked`, `allowance_message`, `allowance_checked_at`,
+  `allowance_source` (the active profile's YouTube allowance: Hearth's own limit, and Home Assistant's if set up), and
+  the `report_playing` call. Also in a profile's agent, as Hearth sends it.
 - **5, new app id** (2026-10): no column changes. Hearth's app id is `com.thesiegs.hearth`, so the authority is
   `com.thesiegs.hearth.profile` (Hearth up to 2026.10.x: `com.leanbitlab.ltvL.profile`).
 - **5** (2026-10-09): added `wallpaper_kind`, `wallpaper_version`, `wallpaper_brightness`, `wallpaper_gradient`,

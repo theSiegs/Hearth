@@ -188,6 +188,15 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private HaStatusReporter mHaStatus;
     /** What plays, into each grown-up profile's watch history. */
     private PlaybackRecorder mPlayback;
+    /** How long apps play in this user, into today's usage (UsageToday). */
+    private PlayingClock mPlaying;
+    // Today's usage: the app in front (Hearth, Google TV's own screens and the screensaver count as none), whose
+    // profile it's counted for, and since when (elapsed realtime; 0 while not counting: screen off or dreaming)
+    private String mFrontApp;
+    private String mFrontProfile;
+    private long mFrontSince;
+    private boolean mInteractive = true;
+    private boolean mDreaming;
     private HaNotificationServer mHaServer;
     private HaNotificationOverlay mHaOverlay;
 
@@ -242,6 +251,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
             checkIdle();
             // Notification access may have come on since
             if (mPlayback != null) mPlayback.ensureStarted();
+            if (mPlaying != null && mPlaying.ensureStarted()) mPlaying.flush();
+            addFrontSoFar();
+            readAllowance();
             // In case a switch broadcast was missed
             checkProfileUser("periodic check");
             updateScreenTimeLock("periodic check");
@@ -264,7 +276,18 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private final BroadcastReceiver mScreenReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            boolean on = Intent.ACTION_SCREEN_ON.equals(intent.getAction());
+            String action = intent.getAction();
+            if (Intent.ACTION_DREAMING_STARTED.equals(action) || Intent.ACTION_DREAMING_STOPPED.equals(action)) {
+                // The screensaver: nobody's using the app behind it
+                addFrontSoFar();
+                mDreaming = Intent.ACTION_DREAMING_STARTED.equals(action);
+                restartFront();
+                return;
+            }
+            boolean on = Intent.ACTION_SCREEN_ON.equals(action);
+            addFrontSoFar();
+            mInteractive = on;
+            restartFront();
             if (mHaStatus != null) mHaStatus.setScreenOn(on);
             // "Lock when the TV sleeps": Google TV's profile lock on waking after long enough asleep
             if (on) {
@@ -355,10 +378,22 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mHaStatus.start();
         mPlayback = new PlaybackRecorder(this);
         mPlayback.ensureStarted();
+        mPlaying = new PlayingClock(this, mHandler, (pkg, ms, now) -> {
+            // Hearth's own user's sessions: a grown-up's profile (a kid's apps play in its own user)
+            String profile = getActiveProfileKey(this);
+            if (ProfileUsers.serialOfKey(profile) == ProfileUsers.ownerSerial(this)) {
+                UsageToday.addPlaying(this, profile, pkg, ms, now);
+            }
+        });
+        mPlaying.ensureStarted();
         if (mScreenTimeLock) mHaStatus.setScreenTimeLock(true);
         ProfileProvider.notifyChanged(this);  // service_running
         IntentFilter screenFilter = new IntentFilter(Intent.ACTION_SCREEN_ON);
         screenFilter.addAction(Intent.ACTION_SCREEN_OFF);
+        screenFilter.addAction(Intent.ACTION_DREAMING_STARTED);
+        screenFilter.addAction(Intent.ACTION_DREAMING_STOPPED);
+        PowerManager power = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        mInteractive = power == null || power.isInteractive();
         registerReceiver(mScreenReceiver, screenFilter);
         LauncherApps launcherApps = (LauncherApps) getSystemService(Context.LAUNCHER_APPS_SERVICE);
         if (launcherApps != null) {
@@ -378,6 +413,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (mHaServer != null) mHaServer.stop();
         if (mHaStatus != null) mHaStatus.stop();
         if (mPlayback != null) mPlayback.stop();
+        if (mPlaying != null) mPlaying.stop();
+        addFrontSoFar();
         try {
             unregisterReceiver(mScreenReceiver);
         } catch (Exception ignored) {
@@ -505,6 +542,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
      * home is complete. Returns whether the key changed.
      */
     private boolean startProfile(String why) {
+        // Usage so far was the last profile's
+        addFrontSoFar();
         long serial = mActiveSerial;
         String key = ProfileUsers.profileKey(this, serial);
         SharedPreferences prefs = getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE);
@@ -519,7 +558,44 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mHandler.removeCallbacks(mReadyFallback);
         mHandler.postDelayed(mReadyFallback, PROFILE_READY_FALLBACK_MS);
         Log.i(TAG, "Profile is now " + key + " (" + ProfileUsers.profileName(this, serial) + ", " + why + ")");
+        restartFront();
+        // The new profile's allowance, fresh
+        HaAllowance.readSoon();
+        readAllowance();
         return keyChanged;
+    }
+
+    /** Reads each profile's allowance from Home Assistant when due; HearthTube hears through the provider. */
+    private void readAllowance() {
+        if (!HaAllowance.due()) return;
+        HaApi.EXECUTOR.execute(() -> {
+            if (HaAllowance.read(this)) mHandler.post(() -> ProfileProvider.notifyChanged(this));
+        });
+    }
+
+    // --- Today's usage (UsageToday) ---
+
+    /** The app in front changed (null: none counted, e.g. Hearth or Google TV's home). */
+    private void setFrontApp(String packageName) {
+        if (Objects.equals(packageName, mFrontApp)) return;
+        addFrontSoFar();
+        mFrontApp = packageName;
+        restartFront();
+    }
+
+    /** Adds the time the app has been in front since counting (re)started, and goes on counting from now. */
+    private void addFrontSoFar() {
+        if (mFrontSince == 0 || mFrontApp == null) return;
+        long now = SystemClock.elapsedRealtime();
+        UsageToday.addFront(this, mFrontProfile, mFrontApp, now - mFrontSince, System.currentTimeMillis());
+        mFrontSince = now;
+    }
+
+    /** Counts from now if an app is in front with the screen on, for the profile that's on now. */
+    private void restartFront() {
+        boolean counting = mFrontApp != null && mInteractive && !mDreaming;
+        mFrontSince = counting ? SystemClock.elapsedRealtime() : 0;
+        mFrontProfile = counting ? getActiveProfileKey(this) : null;
     }
 
     /**
@@ -861,6 +937,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mLastWindowPackage = packageName;
         // Not the keyboard, a system pop-up or the assistant's bar: those come up over the app that's still in use
         if (isHearth || isApp) mLastAppPackage = packageName;
+        if (isApp && !isGoogleTv) {
+            setFrontApp(packageName);
+        } else if (isHearth || isGoogleTv || className.startsWith("android.service.dreams.")) {
+            setFrontApp(null);
+        }
         mWellbeingInFront = wellbeingInFront(mWellbeingInFront, isGoogleTv, isHearth || isApp, className);
         // The chooser stays "open" while Google TV lays its account check / PIN screens over it; it's over once
         // Google TV's home or any other app comes up.

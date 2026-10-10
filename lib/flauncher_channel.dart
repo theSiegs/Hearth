@@ -255,6 +255,12 @@ class FLauncherChannel {
   Future<void> setLockOnSleepMinutes(int minutes) async =>
       await _methodChannel.invokeMethod("setLockOnSleepMinutes", minutes);
 
+  /// The active profile's daily YouTube limit in HearthTube, in minutes; 0 for none.
+  Future<int> getYouTubeDailyMinutes() async => await _methodChannel.invokeMethod<int>("getYouTubeDailyMinutes") ?? 0;
+
+  Future<void> setYouTubeDailyMinutes(int minutes) async =>
+      await _methodChannel.invokeMethod("setYouTubeDailyMinutes", minutes);
+
   /// Every saved profile PIN (when the parent PIN that guards them is removed).
   Future<void> removeAllProfilePins() async => await _methodChannel.invokeMethod("removeAllProfilePins");
 

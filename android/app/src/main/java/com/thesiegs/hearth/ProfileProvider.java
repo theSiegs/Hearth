@@ -34,9 +34,10 @@ public class ProfileProvider extends ContentProvider {
             "name", "accent_color", "time_format", "app_language", "has_parent_pin", "gradient_uuid", "wallpaper_stamp",
             "date_format", "kids_profile", "screen_time_up", "service_running", "profile_id", "contract_version",
             "profile_ready", "switch_generation", "updates_hearthtube", "wallpaper_kind", "wallpaper_version",
-            "wallpaper_brightness", "wallpaper_gradient", "wallpaper_title", "wallpaper_credit"};
+            "wallpaper_brightness", "wallpaper_gradient", "wallpaper_title", "wallpaper_credit",
+            "youtube_minutes_left", "schedule_locked", "allowance_message", "allowance_checked_at", "allowance_source"};
     /** docs/provider-contract.md: bumped when a column's meaning changes or one is added or removed. */
-    static final int CONTRACT_VERSION = 5;
+    static final int CONTRACT_VERSION = 6;
     // SettingsService.defaultTimeFormat / defaultDateFormat
     private static final String DEFAULT_TIME_FORMAT = "h:mm a";
     private static final String DEFAULT_DATE_FORMAT = "EEE, MMM d";
@@ -83,6 +84,8 @@ public class ProfileProvider extends ContentProvider {
     /** The /active row's values, in {@link #COLUMNS} order (as Hearth itself, in the owner's user). */
     static Object[] row(Context context) {
         HearthWallpaper.State wallpaper = HearthWallpaper.current(context);
+        Allowance.Values allowance = Allowance.forProfile(context,
+                LauncherAccessibilityService.getActiveProfileKey(context), System.currentTimeMillis());
         String[] formats = dateTimeFormats(context);
         return new Object[]{
                 LauncherAccessibilityService.getActiveProfileName(context),
@@ -106,7 +109,12 @@ public class ProfileProvider extends ContentProvider {
                 wallpaper.brightness,
                 wallpaper.gradient,
                 wallpaper.title,
-                wallpaper.credit};
+                wallpaper.credit,
+                allowance.youtubeMinutesLeft,
+                allowance.scheduleLocked ? 1 : 0,
+                allowance.message,
+                allowance.checkedAt,
+                allowance.source};
     }
 
     static String[] columns() {
@@ -150,6 +158,23 @@ public class ProfileProvider extends ContentProvider {
             // An agent asks Hearth (the PIN lives only there); null when Hearth doesn't answer
             return AgentService.isAgent(getContext()) ? AgentService.verifyPinWithHearth(arg)
                     : verifyParentPin(getContext(), arg);
+        }
+
+        if ("report_playing".equals(method)) {
+            // HearthTube played this long for the active profile (its YouTube allowance counts down from it)
+            long ms = extras != null ? extras.getLong("ms", 0) : 0;
+            if (ms <= 0 || ms > 10 * 60_000) return null;
+            if (AgentService.isAgent(getContext())) {
+                AgentService.relayPlaying(CompanionApps.HEARTHTUBE, ms);
+            } else {
+                Context context = getContext();
+                String profile = LauncherAccessibilityService.getActiveProfileKey(context);
+                UsageToday.addPlaying(context, profile, CompanionApps.HEARTHTUBE, ms, System.currentTimeMillis());
+                notifyChanged(context);
+            }
+            Bundle result = new Bundle();
+            result.putBoolean("ok", true);
+            return result;
         }
 
         return null;

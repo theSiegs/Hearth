@@ -38,6 +38,11 @@ final class HaStatusReporter {
     private static final String TAG = "HearthHaStatus";
     private static final long DEBOUNCE_MS = 1_500;
     private static final long HEARTBEAT_MS = 10 * 60_000;
+    /** Today's usage keeps growing while something is in front or playing: a post at least this often then. */
+    private static final long USAGE_TICK_MS = 60_000;
+    private static final String STATE_PREFS = "ltv_ha_status";
+    private static final String EVENT_KEY = "screen_time_event";
+    private static final String EVENT_AT_KEY = "screen_time_event_at";
 
     private final Context mContext;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -105,6 +110,14 @@ final class HaStatusReporter {
             mHandler.postDelayed(this, HEARTBEAT_MS);
         }
     };
+    /** Sends if today's usage changed (an unchanged status isn't sent again). */
+    private final Runnable mUsageTick = new Runnable() {
+        @Override
+        public void run() {
+            scheduleSend();
+            mHandler.postDelayed(this, USAGE_TICK_MS);
+        }
+    };
 
     HaStatusReporter(Context context) {
         mContext = context;
@@ -138,10 +151,12 @@ final class HaStatusReporter {
             mSessionManager = null;
         }
         mHandler.post(mHeartbeat);
+        mHandler.postDelayed(mUsageTick, USAGE_TICK_MS);
     }
 
     void stop() {
         mHandler.removeCallbacks(mHeartbeat);
+        mHandler.removeCallbacks(mUsageTick);
         if (mSessionManager != null) {
             try {
                 mSessionManager.removeOnActiveSessionsChangedListener(mSessionsListener);
@@ -174,8 +189,22 @@ final class HaStatusReporter {
     void setScreenTimeLock(boolean locked) {
         if (locked != mScreenTimeLock) {
             mScreenTimeLock = locked;
+            recordScreenTimeEvent(locked);
             scheduleSend();
         }
+    }
+
+    /**
+     * Screen time came up or went: kept (and sent with every status until the next change) so Home Assistant can
+     * trigger on screen_time_event_at changing, even if the post at the change is lost. A lock restored after a
+     * restart is no new event.
+     */
+    private void recordScreenTimeEvent(boolean locked) {
+        String event = locked ? "appeared" : "cleared";
+        android.content.SharedPreferences prefs = mContext.getSharedPreferences(STATE_PREFS, Context.MODE_PRIVATE);
+        String last = prefs.getString(EVENT_KEY, null);
+        if (event.equals(last) || last == null && !locked) return;
+        prefs.edit().putString(EVENT_KEY, event).putLong(EVENT_AT_KEY, System.currentTimeMillis()).apply();
     }
 
     /** What Google TV last said about screen time: why it locks and how long is left. */
@@ -262,6 +291,28 @@ final class HaStatusReporter {
         status.put("screen_time_text", screenTime == null ? JSONObject.NULL : screenTime.text);
         status.put("screen_time_seen_at", screenTime == null ? JSONObject.NULL : s.screenTimeSeenAt);
         status.put("screen_time_unlocks_at", screenTime == null ? JSONObject.NULL : nullable(screenTime.unlocksAt));
+        status.put("screen_time_unlocks_at_iso", screenTime == null ? JSONObject.NULL
+                : nullable(ScreenTimeScreen.unlocksAtIso(screenTime.unlocksAt, s.screenTimeSeenAt)));
+        android.content.SharedPreferences events = mContext.getSharedPreferences(STATE_PREFS, Context.MODE_PRIVATE);
+        status.put("screen_time_event", nullable(events.getString(EVENT_KEY, null)));
+        long eventAt = events.getLong(EVENT_AT_KEY, 0);
+        status.put("screen_time_event_at", eventAt > 0 ? eventAt : JSONObject.NULL);
+        // Today's usage: the active profile's, and every profile's (so Home Assistant needn't keep a profile's last
+        // post); cumulative for the TV's local day
+        long now = System.currentTimeMillis();
+        JSONObject usage = UsageToday.today(mContext, now);
+        // Each profile's name beside its key, so Home Assistant can tell who's who without knowing the keys
+        for (java.util.Iterator<String> keys = usage.keys(); keys.hasNext(); ) {
+            String key = keys.next();
+            JSONObject entry = usage.optJSONObject(key);
+            if (entry != null) entry.put("profile_name", nullable(ProfileUsers.displayName(mContext, key)));
+        }
+        JSONObject mine = usage.optJSONObject(String.valueOf(LauncherAccessibilityService.getActiveProfileKey(mContext)));
+        status.put("day", UsageToday.day(now));
+        status.put("seconds_today", mine != null ? mine.optLong("seconds") : 0);
+        status.put("app_seconds_today", mine != null ? mine.optJSONObject(UsageToday.FRONT) : new JSONObject());
+        status.put("playing_seconds_today", mine != null ? mine.optJSONObject(UsageToday.PLAYING) : new JSONObject());
+        status.put("usage_today", usage);
         status.put("allowed_apps", kids ? allowedApps(mContext, pm) : JSONObject.NULL);
 
         String state = "idle";

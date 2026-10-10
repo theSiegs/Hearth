@@ -775,5 +775,9 @@
     "weatherForecastShowHourly": "OK: 時間別",
     "weatherForecastNow": "現在",
     "weatherForecastToday": "今日",
-    "weatherForecastNone": "予報はまだ届いていません"
+    "weatherForecastNone": "予報はまだ届いていません",
+    "youTubeLimitTitle": "1日のYouTube時間",
+    "youTubeLimitNone": "制限なし",
+    "youTubeLimitMinutes": "{minutes, plural, other{{minutes}分}}",
+    "youTubeLimitHint": "このプロフィールのHearthTubeでの時間です。Home Assistantを設定している場合、ほかのデバイスと共有する制限も適用されます。"
 }

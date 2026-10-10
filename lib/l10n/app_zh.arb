@@ -775,5 +775,9 @@
     "weatherForecastShowHourly": "确定：逐小时",
     "weatherForecastNow": "现在",
     "weatherForecastToday": "今天",
-    "weatherForecastNone": "还没有天气预报"
+    "weatherForecastNone": "还没有天气预报",
+    "youTubeLimitTitle": "每天的 YouTube 时间",
+    "youTubeLimitNone": "不限",
+    "youTubeLimitMinutes": "{minutes, plural, other{{minutes} 分钟}}",
+    "youTubeLimitHint": "适用于此个人资料的 HearthTube。设置 Home Assistant 后，与其他设备共享的限制也会生效。"
 }

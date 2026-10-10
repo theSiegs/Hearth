@@ -775,5 +775,9 @@
     "weatherForecastShowHourly": "OK : par heure",
     "weatherForecastNow": "Maintenant",
     "weatherForecastToday": "Aujourd'hui",
-    "weatherForecastNone": "Les prévisions ne sont pas encore arrivées"
+    "weatherForecastNone": "Les prévisions ne sont pas encore arrivées",
+    "youTubeLimitTitle": "Temps YouTube par jour",
+    "youTubeLimitNone": "Aucune limite",
+    "youTubeLimitMinutes": "{minutes, plural, =1{1 minute} other{{minutes} minutes}}",
+    "youTubeLimitHint": "Pour ce profil, dans HearthTube. Avec Home Assistant configuré, une limite partagée avec vos autres appareils compte aussi."
 }

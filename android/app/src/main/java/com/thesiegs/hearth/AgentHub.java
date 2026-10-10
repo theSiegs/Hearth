@@ -8,6 +8,8 @@ import android.content.pm.LauncherApps;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.UserHandle;
 import android.util.Log;
 
@@ -42,7 +44,8 @@ import java.util.concurrent.Executors;
  *
  * Agent to Hearth: {"type":"hello","serial":n,"key":"…","voiceDefault":bool,"wallpaperVersion":n},
  * {"type":"watchNext","rows":[…]},
- * {"type":"ping"}, {"type":"opened","ok":bool}, {"type":"speech","package":"…","text":"…"} (what an app said through
+ * {"type":"ping"}, {"type":"playing","package":"…","ms":n} (an app played that long in the profile's user),
+ * {"type":"opened","ok":bool}, {"type":"speech","package":"…","text":"…"} (what an app said through
  * Hearth's voice there, for Profile Pairing). Hearth to agent: {"type":"welcome"}, {"type":"open","intent":"intent:…"},
  * {"type":"listen","package":"…" or null} (the app Profile Pairing is handling, whose speech to relay),
  * {"type":"hearth","row":{column: value}} (Hearth's provider row, mirrored by the agent's provider there),
@@ -182,6 +185,13 @@ final class AgentHub {
                     case "watchNext":
                         sWatchNext.put(serial, rows(serial, message.optJSONArray("rows")));
                         notifyWatchNextChanged();
+                        break;
+                    case "playing":
+                        // An app played in this profile's user (its agent counts what Hearth can't see)
+                        UsageToday.addPlaying(sContext, ProfileUsers.key(serial), message.optString("package", null),
+                                message.optLong("ms"), System.currentTimeMillis());
+                        // The profile's allowance went down: its agent gets the new row
+                        new Handler(Looper.getMainLooper()).post(() -> ProfileProvider.notifyChanged(sContext));
                         break;
                     case "speech": {
                         // Only the app Profile Pairing is handling (ProfilePairingService checks too)

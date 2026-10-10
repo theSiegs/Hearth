@@ -94,7 +94,26 @@ Hearth posts JSON to `<address>/api/webhook/<webhook ID>`:
 | `kids_profile` | `true` in a kids profile |
 | `screen_time_up` | `true` while Google TV's bedtime or time's-up screen is showing |
 | `screen_time_reason`, `screen_time_text`, `screen_time_minutes_left`, `screen_time_unlocks_at`, `screen_time_seen_at` | what that screen said |
+| `screen_time_unlocks_at_iso` | the unlock time as the next such moment, in ISO 8601 with the TV's offset |
+| `screen_time_event`, `screen_time_event_at` | `appeared` or `cleared`, and when (epoch ms): the last change, sent with every status until the next, so trigger on `screen_time_event_at` changing |
 | `allowed_apps` | in a kids profile, the apps Family Link currently allows |
+| `day` | the TV's local date (`YYYY-MM-DD`) the usage counts are for |
+| `seconds_today`, `app_seconds_today`, `playing_seconds_today` | the active profile's usage today: seconds any app was in front with the screen on, seconds per app (package) in front, and seconds per app playing (media session). Hearth, Google TV's own screens and the screensaver don't count |
+| `usage_today` | every profile's usage today: `{"<profile_id>": {"profile_name": "…", "seconds": n, "apps": {"<package>": n}, "playing": {"<package>": n}}}` |
+
+The usage counts are cumulative for the day (a lost post loses nothing), kept across Hearth restarts, and start again
+at local midnight. While something is in front or playing, Hearth posts at least once a minute. HearthTube reports
+its own playing time, in every profile. Other apps' playing time comes from their media sessions, which Hearth sees in
+the TV's main user only: a kids profile's apps play in its own Android user, where Hearth's agent would need
+notification access (`adb shell cmd notification allow_listener
+com.thesiegs.hearth/com.thesiegs.hearth.LauncherNotificationListenerService <user id>`).
+
+**Allowance for HearthTube (optional).** Hearth enforces a daily YouTube limit on its own (Settings → Profiles →
+YouTube time per day). Home Assistant can add its say, e.g. a pool shared with the family's phones and tablets:
+with the Home Assistant panel's address and token set, Hearth reads `sensor.hearth_allowance` about once a minute.
+Its attribute `profiles` maps a `profile_id` to `{"youtube_minutes_left": int or null, "schedule_locked": bool,
+"message": optional text}`; a profile it doesn't list has no limit from it. The stricter of the two counts, and
+HearthTube gets the result through Hearth (see [provider-contract.md](provider-contract.md)).
 
 A minimal automation that keeps the current app in a helper:
 
