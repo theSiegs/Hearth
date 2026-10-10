@@ -324,6 +324,8 @@ doesn't have.
 | `device_setup_decisions` | JSON `{ "watching": {"state": "on\|notNow", "at": …}, … }` | User choices only. **Grants are never stored**: they're read live |
 | `device_setup_chip_hidden` | bool | Chip dismissed |
 | `device_setup_look` | string | The look chosen in F3, the starting look for new adult profiles |
+| `device_setup_look_preview` | JSON `{previewing, before}` | While F3 previews a look: which, and the look before it (a restart mid-preview puts it back) |
+| `device_setup_kids_profiles` | int | How many kids' profiles Android listed when Hearth was last put on them (F1.4 or Settings › Family apps) |
 
 **Android side**, in its own prefs file (`hearth_setup`), read by the services: `waiting_for` (`home_button_fix` /
 `profile_pairing` / `notification_access`) and `waiting_since` (ignored after 15 minutes).
@@ -584,10 +586,14 @@ where it differs from the screens above:
 - **F1.4** counts as done for as many kids' profiles as Android listed when Hearth was last put on them (from the flow
   or from Settings › Family apps), kept in `device_setup_kids_profiles`: what's on each profile can't be read without
   self-adb, and connecting just to check would raise "Allow debugging?". A kids' profile added later brings the
-  family card back into the chip. F1.4a opens Android's About screen directly.
+  family card back into the chip. F1.4a opens Android's About screen directly. The step is done only when every
+  kids' profile keeps Hearth (otherwise it shows the profiles' rows with Try again), and Hearth's own adb gives up
+  after two minutes when "Allow debugging?" is declined (the connection would otherwise wait for good).
 - **F3:** the home behind the card is barely dimmed and not blurred on the look screen, so the preview shows. A picture
   picked as the wallpaper stays in front of a gradient look until that look is chosen (choosing removes it). Customize
-  opens Settings' Look page over the flow. Other grown-ups get the look card once the "Hi <name>" card is down.
+  opens Settings' Look page over the flow. Other grown-ups get the look card once the "Hi <name>" card is down. The
+  look being previewed is noted (`device_setup_look_preview`), so a preview cut off by a restart is put back the next
+  time the look screen opens.
 - **F4.1** turns the pop-ups on with its own **Turn on** button, then offers the test. **F4.3:** the phone page has a
   third, optional field for the webhook ID; a webhook ID alone is enough (no token needed for TV status).
 - **"New in Hearth":** a card whose `introducedIn` is newer than `device_setup_seen_version` and that nobody decided
