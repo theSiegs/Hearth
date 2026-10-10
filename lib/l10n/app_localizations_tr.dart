@@ -2363,4 +2363,89 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get setupFlowWeatherDone => 'Hava durumu üst çubukta görünür';
+
+  @override
+  String get setupFlowFamilyBenefit => 'Yayın uygulamaları doğru kişiyle açılır ve çocuklar Hearth\'ü değiştiremez.';
+
+  @override
+  String get setupFlowFamilyIncluded1 => 'Çocuklar Hearth\'ü değiştiremesin diye ebeveyn PIN\'i';
+
+  @override
+  String get setupFlowFamilyIncluded2 => 'Netflix, Disney+, Apple TV, Max ve Paramount+\'ta doğru profil';
+
+  @override
+  String get setupFlowFamilyIncluded3 => 'Hearth çocuklarınızın profillerinde kalır';
+
+  @override
+  String get setupFlowNeedsPin => 'Seçeceğiniz dört rakam';
+
+  @override
+  String get setupFlowNeedsTwoMinutes => 'Yaklaşık 2 dakika';
+
+  @override
+  String get setupFlowPinTitle => 'Ebeveyn PIN\'i seçin';
+
+  @override
+  String get setupFlowPinBody => 'Çocukların Hearth\'ü değiştirmesi için gerekir. Bir çocuğun tahmin edemeyeceği dört rakam seçin.';
+
+  @override
+  String get setupFlowPinChoose => 'PIN seç';
+
+  @override
+  String get setupFlowPinDone => 'Ebeveyn PIN\'i ayarlandı';
+
+  @override
+  String get setupFlowPairingTitle => 'Yayın uygulamalarında doğru profil';
+
+  @override
+  String setupFlowPairingBody(String name) {
+    return 'Hearth; Netflix, Disney+, Apple TV, Max ve Paramount+\'ta her kişinin profilini seçer. Aynı Android ekranında bir anahtar daha gerekir: \"$name\".';
+  }
+
+  @override
+  String get setupFlowPairingDone => 'Profil eşleştirme açık';
+
+  @override
+  String get setupFlowPairingDoneBody => 'Hearth adları kendisi eşleştirir: \"Alex\", \"Alex Morgan\" ile eşleşir. Her uygulamanın profilleri, \"Kim izliyor?\" ekranı bir kez göründükten sonra çıkar.';
+
+  @override
+  String get setupFlowCheckPairings => 'Eşleştirmeleri kontrol et';
+
+  @override
+  String get setupFlowVoiceTitle => 'Netflix için bir adım daha';
+
+  @override
+  String setupFlowVoiceBody(String name) {
+    return 'Netflix profil ekranını sesli okur; bu yüzden Hearth kendi sesiyle dinler. Sonraki ekranda Tercih edilen motor altında \"$name\" seçin, sonra Tamam. Diğer uygulamalar Google\'ın sesini kullanmaya devam eder.';
+  }
+
+  @override
+  String get setupFlowVoiceDone => 'Hearth sesi açık';
+
+  @override
+  String get setupFlowKidsTitle => 'Hearth\'ü çocuklarınızın profillerinde tutun';
+
+  @override
+  String get setupFlowKidsBody => 'Google TV, çocuk profilleri her başladığında kendi yüklemediği uygulamaları kaldırır. Hearth orada kendisini ve HearthTube\'u koruyabilir. Her çocuk bir Family Link \"uygulama eklendi\" bildirimi alır; istediğiniz zaman Ayarlar\'dan geri alın.';
+
+  @override
+  String get setupFlowKidsApprove => 'TV \"Hata ayıklamaya izin verilsin mi?\" diye soracak. Her zaman izin ver\'i işaretleyip İzin ver\'i seçin. Bunu yalnızca bir kez yaparsınız.';
+
+  @override
+  String get setupFlowKidsAdd => 'Profillerine ekle';
+
+  @override
+  String get setupFlowKidsDone => 'Hearth çocuklarınızın profillerinde';
+
+  @override
+  String get setupFlowKidsKeepDebugging => 'Hata ayıklamayı açık bırakın: Hearth\'ün yeni bir çocuk profili için ve kendini kaldırmak için buna yine ihtiyacı olacak.';
+
+  @override
+  String get setupFlowDebugTitle => 'Önce hata ayıklamayı açın';
+
+  @override
+  String get setupFlowDebugBody => 'Hearth\'ün çocuk profillerini kurmak için TV\'nin hata ayıklama anahtarına ihtiyacı var. Sonraki ekranda \"Android TV OS derlemesi\" öğesini yedi kez seçin. Ardından Ayarlar > Sistem > Geliştirici seçenekleri\'nde USB hata ayıklama\'yı açıp geri gelin. Açık bırakın: Hearth\'ün yeni bir çocuk profili için buna yine ihtiyacı olacak.';
+
+  @override
+  String get setupFlowDebugOpen => 'Hakkında\'yı aç';
 }

@@ -2363,4 +2363,89 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get setupFlowWeatherDone => '天気は上部のバーに表示されます';
+
+  @override
+  String get setupFlowFamilyBenefit => '動画アプリが正しい人のプロフィールで開き、子どもは Hearth を変更できません。';
+
+  @override
+  String get setupFlowFamilyIncluded1 => '保護者用 PIN（子どもが Hearth を変更できないように）';
+
+  @override
+  String get setupFlowFamilyIncluded2 => 'Netflix、Disney+、Apple TV、Max、Paramount+ で正しいプロフィール';
+
+  @override
+  String get setupFlowFamilyIncluded3 => '子どものプロフィールに Hearth を残す';
+
+  @override
+  String get setupFlowNeedsPin => '自分で決める4桁の数字';
+
+  @override
+  String get setupFlowNeedsTwoMinutes => '約2分';
+
+  @override
+  String get setupFlowPinTitle => '保護者用 PIN を決める';
+
+  @override
+  String get setupFlowPinBody => '子どもが Hearth を変更するには、この PIN が必要です。子どもに推測されない4桁を選んでください。';
+
+  @override
+  String get setupFlowPinChoose => 'PIN を決める';
+
+  @override
+  String get setupFlowPinDone => '保護者用 PIN を設定しました';
+
+  @override
+  String get setupFlowPairingTitle => '動画アプリで正しいプロフィールを選ぶ';
+
+  @override
+  String setupFlowPairingBody(String name) {
+    return 'Hearth が Netflix、Disney+、Apple TV、Max、Paramount+ で各自のプロフィールを選びます。同じ Android の画面で、もう1つのスイッチ「$name」が必要です。';
+  }
+
+  @override
+  String get setupFlowPairingDone => 'プロフィールの連携がオンになりました';
+
+  @override
+  String get setupFlowPairingDoneBody => 'Hearth が名前を自動で照合します（「Alex」と「Alex Morgan」など）。各アプリのプロフィールは、そのアプリの「誰が見ていますか？」画面が一度表示されると現れます。';
+
+  @override
+  String get setupFlowCheckPairings => '連携を確認';
+
+  @override
+  String get setupFlowVoiceTitle => 'Netflix 用にもう1ステップ';
+
+  @override
+  String setupFlowVoiceBody(String name) {
+    return 'Netflix はプロフィール画面を読み上げるので、Hearth は自分の音声で聞き取ります。次の画面の「優先するエンジン」で「$name」を選び、OK を押してください。ほかのアプリは Google の音声のままです。';
+  }
+
+  @override
+  String get setupFlowVoiceDone => 'Hearth の音声がオンになりました';
+
+  @override
+  String get setupFlowKidsTitle => '子どものプロフィールに Hearth を残す';
+
+  @override
+  String get setupFlowKidsBody => 'Google TV は、子どものプロフィールが起動するたびに、自分でインストールしていないアプリを削除します。Hearth はそこで自分自身と HearthTube を守れます。お子さまごとに Family Link の「アプリが追加されました」通知が1回届きます。設定からいつでも元に戻せます。';
+
+  @override
+  String get setupFlowKidsApprove => 'テレビに「デバッグを許可しますか？」と表示されます。「常に許可」にチェックを入れて「許可」を選んでください。これは一度だけです。';
+
+  @override
+  String get setupFlowKidsAdd => '子どものプロフィールに追加';
+
+  @override
+  String get setupFlowKidsDone => '子どものプロフィールに Hearth を追加しました';
+
+  @override
+  String get setupFlowKidsKeepDebugging => 'デバッグはオンのままにしてください。新しい子どものプロフィールや、Hearth の削除・アンインストールの際に再び必要です。';
+
+  @override
+  String get setupFlowDebugTitle => 'まずデバッグをオンにする';
+
+  @override
+  String get setupFlowDebugBody => '子どものプロフィールを設定するには、テレビのデバッグのスイッチが必要です。次の画面で「Android TV OS ビルド」を7回選んでください。次に「設定」>「システム」>「開発者向けオプション」で「USB デバッグ」をオンにして、戻ってきてください。オンのままにしてください。新しい子どものプロフィールで再び必要になります。';
+
+  @override
+  String get setupFlowDebugOpen => 'デバイス情報を開く';
 }

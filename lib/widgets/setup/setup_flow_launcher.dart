@@ -134,7 +134,9 @@ class _SetupFlowLauncherState extends State<SetupFlowLauncher> with WidgetsBindi
           }
         case SetupLaunchExistingInstall():
           final cardsOn = await SetupSnapshot.loadCardsOn(_channel,
-              showContinueWatching: context.read<SettingsService?>()?.showContinueWatching ?? false);
+              showContinueWatching: context.read<SettingsService?>()?.showContinueWatching ?? false,
+              hasParentPin: context.read<SettingsService?>()?.hasParentPin ?? false,
+              kidsProtected: flow.kidsProtected);
           await flow.markExistingInstall(cardsOn);
         case SetupLaunchNothing():
           if (profiles != null && _lookDue(profiles) && flow.flowVersion != null) {

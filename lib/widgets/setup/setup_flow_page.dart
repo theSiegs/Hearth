@@ -29,9 +29,12 @@ import 'package:flauncher/providers/watch_next_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/widgets/settings/adb_command_dialog.dart';
 import 'package:flauncher/widgets/settings/app_language_page.dart';
+import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/settings/backup_restore_page.dart';
+import 'package:flauncher/widgets/settings/family_apps_page.dart';
 import 'package:flauncher/widgets/settings/look_settings_page.dart';
 import 'package:flauncher/widgets/settings/message_dialog.dart';
+import 'package:flauncher/widgets/settings/profile_pairing_page.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
 import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
 import 'package:flauncher/widgets/settings/weather_location_dialog.dart';
@@ -50,6 +53,12 @@ enum SetupScreen {
   homeButton,
   homeButtonBlocked,
   homeApp,
+  family,
+  familyPin,
+  familyPairing,
+  familyPairingBlocked,
+  familyVoice,
+  familyKids,
   watching,
   watchingContinue,
   watchingNotifications,
@@ -107,6 +116,11 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     SetupScreen.welcome,
     SetupScreen.homeButton,
     SetupScreen.homeApp,
+    SetupScreen.family,
+    SetupScreen.familyPin,
+    SetupScreen.familyPairing,
+    SetupScreen.familyVoice,
+    SetupScreen.familyKids,
     SetupScreen.watching,
     SetupScreen.watchingContinue,
     SetupScreen.watchingNotifications,
@@ -121,6 +135,13 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
 
   /// Each card's own screen, then its steps (shown only after Turn on).
   static const Map<SetupCard, List<SetupScreen>> _cardScreens = {
+    SetupCard.family: [
+      SetupScreen.family,
+      SetupScreen.familyPin,
+      SetupScreen.familyPairing,
+      SetupScreen.familyVoice,
+      SetupScreen.familyKids,
+    ],
     SetupCard.watching: [SetupScreen.watching, SetupScreen.watchingContinue, SetupScreen.watchingNotifications],
     SetupCard.home: [SetupScreen.look, SetupScreen.lookWeather],
     SetupCard.tv: [SetupScreen.tv],
@@ -132,7 +153,17 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     SetupScreen.homeApp: SetupStepId.homeApp,
     SetupScreen.watchingNotifications: SetupStepId.notifications,
     SetupScreen.updatesInstall: SetupStepId.install,
+    SetupScreen.familyVoice: SetupStepId.voice,
   };
+
+  /// The screens that say Android blocked a switch, a side trip from the switch's own screen.
+  static const Map<SetupScreen, SetupScreen> _blockedFrom = {
+    SetupScreen.homeButtonBlocked: SetupScreen.homeButton,
+    SetupScreen.familyPairingBlocked: SetupScreen.familyPairing,
+  };
+
+  /// A screen, or for a blocked-switch screen the switch's own.
+  static SetupScreen _mainScreen(SetupScreen screen) => _blockedFrom[screen] ?? screen;
 
   /// How often the blocked-switch screen checks whether the switch was turned on from a computer.
   static const Duration _pollEvery = Duration(seconds: 2);
@@ -165,6 +196,9 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   HomeLookSnapshot? _lookBefore;
   HomeLook? _previewing;
   SettingsService? _lookSettings;
+
+  /// What the kids' step left on each profile, once Hearth was put on them.
+  List<Map<dynamic, dynamic>>? _kidsRows;
 
   /// A backup was restored from Welcome: its look came with it, so the look screen isn't shown.
   bool _restored = false;
@@ -259,7 +293,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     if (screen == SetupScreen.look) _startPreview();
     if (!_single && screen != SetupScreen.finish) unawaited(_flow.saveResume(screen.name, widget.mode));
     if (screen == SetupScreen.finish) unawaited(_flow.finish());
-    if (screen == SetupScreen.homeButtonBlocked) _startPolling();
+    if (_blockedFrom.containsKey(screen)) _startPolling();
     if (resumed && state == null) _recheck(fromResume: true);
     _focusPrimary();
   }
@@ -286,6 +320,12 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       SetupScreen.watchingNotifications => snap.isDone(SetupStepId.notifications),
       SetupScreen.updatesInstall => snap.isDone(SetupStepId.install),
       SetupScreen.updatesHearthTube => snap.hearthTubeInstalled,
+      SetupScreen.familyPin => _hasParentPin,
+      SetupScreen.familyPairing => snap.isDone(SetupStepId.profilePairing),
+      // Only Netflix needs it, and only once Profile Pairing is on
+      SetupScreen.familyVoice =>
+        !snap.netflix || !snap.isDone(SetupStepId.profilePairing) || snap.isDone(SetupStepId.voice),
+      SetupScreen.familyKids => snap.kidsProfiles == 0 || snap.kidsProfiles <= _flow.kidsProtected,
       SetupScreen.look => _restored,
       SetupScreen.lookWeather => _weatherSet,
       _ => false,
@@ -294,10 +334,14 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
 
   bool get _showContinueWatching => context.read<SettingsService?>()?.showContinueWatching ?? false;
 
+  bool get _hasParentPin => context.read<SettingsService?>()?.hasParentPin ?? false;
+
+  /// Whether a card is offered on this TV: the family card is Google TV's only (profiles, Profile Pairing).
+  bool _cardShown(SetupCard card) => card != SetupCard.family || (_snap?.googleTv ?? false);
   /// The card a screen belongs to, if any.
   SetupCard? _cardOf(SetupScreen screen) {
     for (final entry in _cardScreens.entries) {
-      if (entry.value.contains(screen)) return entry.key;
+      if (entry.value.contains(_mainScreen(screen))) return entry.key;
     }
     return null;
   }
@@ -305,11 +349,12 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   /// The next screen to show after [screen]: steps that are done are passed over, and so are a card's steps unless the
   /// owner turned it on. [leaveCard]: past the rest of [screen]'s card too (Not now, Keep).
   SetupScreen _nextAfter(SetupScreen screen, {bool leaveCard = false}) {
-    final from = screen == SetupScreen.homeButtonBlocked ? SetupScreen.homeButton : screen;
+    final from = _mainScreen(screen);
     final leaving = leaveCard ? _cardOf(from) : null;
     for (final candidate in _order.skip(_order.indexOf(from) + 1)) {
       final card = _cardOf(candidate);
       if (leaving != null && card == leaving) continue;
+      if (card != null && !_cardShown(card)) continue;
       final isStep = card != null && _cardScreens[card]!.first != candidate;
       if (isStep && _flow.cardChoice(card) != SetupChoice.on) continue;
       if (!_alreadyDone(candidate)) return candidate;
@@ -378,7 +423,28 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
             _focusPrimary();
           }
         }
+      case SetupScreen.familyPairing:
+      case SetupScreen.familyPairingBlocked:
+        final step = snap.step(SetupStepId.profilePairing);
+        if (step.done) {
+          // No moving on by itself: the screen says how pairing works, and offers to check the pairings
+          _showDone(SetupScreen.familyPairing, null);
+        } else if (_screen == SetupScreen.familyPairing && reporting) {
+          if (step.blocked) {
+            _show(SetupScreen.familyPairingBlocked);
+          } else {
+            setState(() => _state = SetupStepState.notYet);
+            _focusPrimary();
+          }
+        }
+      case SetupScreen.familyKids:
+        // Back from turning debugging on: on to adding Hearth
+        if (_state == SetupStepState.waiting && snap.adbEnabled) {
+          setState(() => _state = SetupStepState.intro);
+          _focusPrimary();
+        }
       case SetupScreen.homeApp:
+      case SetupScreen.familyVoice:
       case SetupScreen.watchingNotifications:
       case SetupScreen.updatesInstall:
         if (snap.isDone(_bounceSteps[_screen]!)) {
@@ -402,8 +468,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     }
   }
 
-  /// A step's switch is on: says so, then moves on by itself after [pause].
-  void _showDone(SetupScreen screen, Duration pause) {
+  /// A step's switch is on: says so, then moves on by itself after [pause] (null: on Next).
+  void _showDone(SetupScreen screen, Duration? pause) {
     _waitFor(null);
     if (_screen != screen) {
       _show(screen, state: SetupStepState.done);
@@ -414,6 +480,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       return;
     }
     _autoNext?.cancel();
+    if (pause == null) return;
     _autoNext = Timer(pause, () {
       if (mounted && _screen == screen && _state == SetupStepState.done) _next();
     });
@@ -422,7 +489,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   void _startPolling() {
     _poll?.cancel();
     _poll = Timer.periodic(_pollEvery, (_) {
-      if (mounted && _screen == SetupScreen.homeButtonBlocked) _recheck();
+      if (mounted && _blockedFrom.containsKey(_screen)) _recheck();
     });
     _channel.getLocalIpAddress().then((ip) {
       if (mounted) setState(() => _ip = ip);
@@ -577,8 +644,14 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   Widget _body(AppLocalizations l) => switch (_screen) {
         SetupScreen.welcome => _welcome(l),
         SetupScreen.homeButton => _homeButton(l),
-        SetupScreen.homeButtonBlocked => _blocked(l),
+        SetupScreen.homeButtonBlocked => _blocked(l, SetupStepId.homeButton),
         SetupScreen.homeApp => _homeApp(l),
+        SetupScreen.family => _cardScreen(l, SetupCard.family),
+        SetupScreen.familyPin => _parentPin(l),
+        SetupScreen.familyPairing => _pairing(l),
+        SetupScreen.familyPairingBlocked => _blocked(l, SetupStepId.profilePairing),
+        SetupScreen.familyVoice => _voice(l),
+        SetupScreen.familyKids => _kids(l),
         SetupScreen.watching => _cardScreen(l, SetupCard.watching),
         SetupScreen.watchingContinue => _continueWatching(l),
         SetupScreen.watchingNotifications => _notifications(l),
@@ -608,7 +681,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
             SetupFlowService.homeButtonDecision),
         dot(SetupStepId.homeApp, {SetupScreen.homeApp}, SetupFlowService.homeAppDecision),
       ]),
-      for (final card in SetupCard.values) _cardStrip(l, card),
+      for (final card in SetupCard.values)
+        if (_cardShown(card)) _cardStrip(l, card),
     ];
   }
 
@@ -762,9 +836,11 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     _next();
   }
 
-  Widget _blocked(AppLocalizations l) {
+  /// Android blocked [id]'s switch (Home Button Fix, or Profile Pairing): lifting the block needs adb.
+  Widget _blocked(AppLocalizations l, SetupStepId id) {
     final snap = _snap!;
     final adb = snap.adbEnabled;
+    final homeButton = id == SetupStepId.homeButton;
     final command = "adb shell appops set ${snap.packageName} ACCESS_RESTRICTED_SETTINGS allow";
     return SetupScreenBody(
       icon: Icons.block,
@@ -783,7 +859,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
         SetupButton(
           label: l.setupFlowSkipForNow,
           onPressed: () async {
-            await _flow.decide(SetupFlowService.homeButtonDecision, SetupChoice.notNow);
+            if (homeButton) await _flow.decide(SetupFlowService.homeButtonDecision, SetupChoice.notNow);
             _next();
           },
         ),
@@ -791,18 +867,19 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
           label: l.setupFlowOpenAccessibility,
           focusNode: adb ? null : _primary,
           autofocus: !adb,
-          onPressed: () => _openStep(SetupStepId.homeButton),
+          onPressed: () => _openStep(id),
         ),
         if (adb)
           SetupButton(
             label: l.setupFlowLetHearthFix,
             focusNode: _primary,
             autofocus: true,
-            onPressed: () => _runFixes(
-                const ["restricted_settings", "home_button_fix"], (snap) => snap.isDone(SetupStepId.homeButton)),
+            onPressed: () => _runFixes(["restricted_settings", _switchFor(id)!], (snap) => snap.isDone(id)),
           ),
       ],
-      below: [Text(l.setupFlowBlockedSkipLine, style: const TextStyle(color: Colors.white54, fontSize: 13))],
+      below: [
+        if (homeButton) Text(l.setupFlowBlockedSkipLine, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+      ],
     );
   }
 
@@ -857,13 +934,13 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       if (snap.isDone(SetupStepId.homeButton)) l.setupFlowHomeButtonDone,
       if (snap.isDone(SetupStepId.homeApp)) l.setupFlowHomeAppDone,
       for (final card in SetupCard.values)
-        if (cardOn(card)) _cardInfo(l, card).title,
+        if (_cardShown(card) && cardOn(card)) _cardInfo(l, card).title,
     ];
     final later = <String>[
       if (!snap.isDone(SetupStepId.homeButton)) snap.step(SetupStepId.homeButton).title,
       if (!snap.isDone(SetupStepId.homeApp)) snap.step(SetupStepId.homeApp).title,
       for (final card in SetupCard.values)
-        if (!cardOn(card)) _cardInfo(l, card).title,
+        if (_cardShown(card) && !cardOn(card)) _cardInfo(l, card).title,
     ];
     const heading = TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600);
     return SetupScreenBody(

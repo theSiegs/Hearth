@@ -2363,4 +2363,89 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get setupFlowWeatherDone => '날씨가 상단 바에 표시됩니다';
+
+  @override
+  String get setupFlowFamilyBenefit => '스트리밍 앱이 맞는 사람으로 열리고, 아이들은 Hearth를 바꿀 수 없습니다.';
+
+  @override
+  String get setupFlowFamilyIncluded1 => '아이들이 Hearth를 바꾸지 못하게 하는 부모 PIN';
+
+  @override
+  String get setupFlowFamilyIncluded2 => 'Netflix, Disney+, Apple TV, Max, Paramount+에서 맞는 프로필';
+
+  @override
+  String get setupFlowFamilyIncluded3 => '아이 프로필에 Hearth 유지';
+
+  @override
+  String get setupFlowNeedsPin => '직접 고르는 숫자 네 자리';
+
+  @override
+  String get setupFlowNeedsTwoMinutes => '약 2분';
+
+  @override
+  String get setupFlowPinTitle => '부모 PIN 정하기';
+
+  @override
+  String get setupFlowPinBody => '아이가 Hearth를 바꾸려면 이 PIN이 필요합니다. 아이가 짐작하지 못할 숫자 네 자리를 고르세요.';
+
+  @override
+  String get setupFlowPinChoose => 'PIN 정하기';
+
+  @override
+  String get setupFlowPinDone => '부모 PIN이 설정되었습니다';
+
+  @override
+  String get setupFlowPairingTitle => '스트리밍 앱에서 맞는 프로필 선택';
+
+  @override
+  String setupFlowPairingBody(String name) {
+    return 'Hearth가 Netflix, Disney+, Apple TV, Max, Paramount+에서 각 사람의 프로필을 고릅니다. 같은 Android 화면의 스위치가 하나 더 필요합니다: \"$name\".';
+  }
+
+  @override
+  String get setupFlowPairingDone => '프로필 연결이 켜졌습니다';
+
+  @override
+  String get setupFlowPairingDoneBody => 'Hearth가 이름을 알아서 맞춥니다: \"Alex\"는 \"Alex Morgan\"과 연결됩니다. 각 앱의 프로필은 그 앱의 \"누가 보고 있나요?\" 화면이 한 번 나온 뒤에 나타납니다.';
+
+  @override
+  String get setupFlowCheckPairings => '연결 확인';
+
+  @override
+  String get setupFlowVoiceTitle => 'Netflix를 위한 한 단계 더';
+
+  @override
+  String setupFlowVoiceBody(String name) {
+    return 'Netflix는 프로필 화면을 소리 내어 읽으므로 Hearth가 자체 음성으로 듣습니다. 다음 화면의 기본 엔진에서 \"$name\"을(를) 선택한 다음 확인을 누르세요. 다른 앱은 Google 음성을 그대로 씁니다.';
+  }
+
+  @override
+  String get setupFlowVoiceDone => 'Hearth 음성이 켜졌습니다';
+
+  @override
+  String get setupFlowKidsTitle => '아이 프로필에 Hearth 유지하기';
+
+  @override
+  String get setupFlowKidsBody => 'Google TV는 아이 프로필이 시작될 때마다 직접 설치하지 않은 앱을 지웁니다. Hearth가 그곳에서 자신과 HearthTube를 보호할 수 있습니다. 아이마다 Family Link의 \"앱 추가됨\" 알림이 한 번 갑니다. 설정에서 언제든 되돌릴 수 있습니다.';
+
+  @override
+  String get setupFlowKidsApprove => 'TV에서 \"디버깅을 허용하시겠습니까?\"라고 묻습니다. 항상 허용에 체크한 다음 허용을 누르세요. 한 번만 하면 됩니다.';
+
+  @override
+  String get setupFlowKidsAdd => '아이 프로필에 추가';
+
+  @override
+  String get setupFlowKidsDone => '아이 프로필에 Hearth가 있습니다';
+
+  @override
+  String get setupFlowKidsKeepDebugging => '디버깅을 켜 두세요. 새 아이 프로필을 추가하거나 Hearth를 제거하거나 삭제할 때 다시 필요합니다.';
+
+  @override
+  String get setupFlowDebugTitle => '먼저 디버깅 켜기';
+
+  @override
+  String get setupFlowDebugBody => '아이 프로필을 설정하려면 TV의 디버깅 스위치가 필요합니다. 다음 화면에서 \"Android TV OS 빌드\"를 일곱 번 선택하세요. 그런 다음 설정 > 시스템 > 개발자 옵션에서 USB 디버깅을 켜고 돌아오세요. 켜 두세요. 새 아이 프로필에 다시 필요합니다.';
+
+  @override
+  String get setupFlowDebugOpen => '정보 열기';
 }

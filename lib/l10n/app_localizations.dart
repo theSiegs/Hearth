@@ -4222,6 +4222,168 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The weather shows in the top bar'**
   String get setupFlowWeatherDone;
+
+  /// Setup flow: the Your family card's one-line benefit
+  ///
+  /// In en, this message translates to:
+  /// **'Streaming apps open on the right person, and kids can\'t change Hearth.'**
+  String get setupFlowFamilyBenefit;
+
+  /// Setup flow: Your family card, first thing it includes
+  ///
+  /// In en, this message translates to:
+  /// **'A parent PIN, so kids can\'t change Hearth'**
+  String get setupFlowFamilyIncluded1;
+
+  /// Setup flow: Your family card, second thing it includes (Profile Pairing); app names stay as they are
+  ///
+  /// In en, this message translates to:
+  /// **'The right profile in Netflix, Disney+, Apple TV, Max and Paramount+'**
+  String get setupFlowFamilyIncluded2;
+
+  /// Setup flow: Your family card, third thing it includes (shown when the TV has kids' profiles)
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth kept on your kids\' profiles'**
+  String get setupFlowFamilyIncluded3;
+
+  /// Setup flow: what the Your family card needs: a four-digit PIN the parent picks
+  ///
+  /// In en, this message translates to:
+  /// **'Four digits you choose'**
+  String get setupFlowNeedsPin;
+
+  /// Setup flow: what a feature card needs: about two minutes
+  ///
+  /// In en, this message translates to:
+  /// **'About 2 minutes'**
+  String get setupFlowNeedsTwoMinutes;
+
+  /// Setup flow: parent PIN step's title
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a parent PIN'**
+  String get setupFlowPinTitle;
+
+  /// Setup flow: parent PIN step
+  ///
+  /// In en, this message translates to:
+  /// **'Kids need it to change Hearth. Pick four digits a child won\'t guess.'**
+  String get setupFlowPinBody;
+
+  /// Setup flow: parent PIN step's button that opens the PIN pad
+  ///
+  /// In en, this message translates to:
+  /// **'Choose PIN'**
+  String get setupFlowPinChoose;
+
+  /// Setup flow: parent PIN step, once set
+  ///
+  /// In en, this message translates to:
+  /// **'The parent PIN is set'**
+  String get setupFlowPinDone;
+
+  /// Setup flow: Profile Pairing step's title
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the right profile in streaming apps'**
+  String get setupFlowPairingTitle;
+
+  /// Setup flow: Profile Pairing step; {name} is the service's name as Android shows it (in English); app names stay as they are
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth chooses each person\'s profile in Netflix, Disney+, Apple TV, Max and Paramount+. It needs one more switch on the same Android screen: \"{name}\".'**
+  String setupFlowPairingBody(String name);
+
+  /// Setup flow: Profile Pairing step, once on
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Pairing is on'**
+  String get setupFlowPairingDone;
+
+  /// Setup flow: Profile Pairing step, once on; "Alex" and "Alex Morgan" are example names (keep or adapt), "Who's watching?" is the apps' profile screen
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth matches names by itself: \"Alex\" goes with \"Alex Morgan\". Each app\'s profiles appear after its \"Who\'s watching?\" screen has shown once.'**
+  String get setupFlowPairingDoneBody;
+
+  /// Setup flow: Profile Pairing step, button that opens Settings' Profile Pairing page
+  ///
+  /// In en, this message translates to:
+  /// **'Check pairings'**
+  String get setupFlowCheckPairings;
+
+  /// Setup flow: Hearth voice step's title (shown when Netflix is installed)
+  ///
+  /// In en, this message translates to:
+  /// **'One more step for Netflix'**
+  String get setupFlowVoiceTitle;
+
+  /// Setup flow: Hearth voice step; {name} is the voice engine's name as Android shows it (in English); "Preferred engine" is Android's label
+  ///
+  /// In en, this message translates to:
+  /// **'Netflix reads its profile screen aloud, so Hearth listens through its own voice. On the next screen, under Preferred engine, choose \"{name}\", then OK. Other apps keep Google\'s voice.'**
+  String setupFlowVoiceBody(String name);
+
+  /// Setup flow: Hearth voice step, once it's the preferred engine
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth voice is on'**
+  String get setupFlowVoiceDone;
+
+  /// Setup flow: kids' profiles step's title
+  ///
+  /// In en, this message translates to:
+  /// **'Keep Hearth on your kids\' profiles'**
+  String get setupFlowKidsTitle;
+
+  /// Setup flow: kids' profiles step; Family Link and its "app added" notice are Google's
+  ///
+  /// In en, this message translates to:
+  /// **'Google TV removes apps it didn\'t install from kids\' profiles each time they start. Hearth can protect itself and HearthTube there. Each child gets one Family Link \"app added\" notice; undo anytime in Settings.'**
+  String get setupFlowKidsBody;
+
+  /// Setup flow: kids' profiles step, what the TV will ask; "Allow debugging?", Always allow and Allow are Android's labels
+  ///
+  /// In en, this message translates to:
+  /// **'The TV will ask \"Allow debugging?\". Tick Always allow, then Allow. You only do this once.'**
+  String get setupFlowKidsApprove;
+
+  /// Setup flow: kids' profiles step's main button
+  ///
+  /// In en, this message translates to:
+  /// **'Add to their profiles'**
+  String get setupFlowKidsAdd;
+
+  /// Setup flow: kids' profiles step, once Hearth was added
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth is on your kids\' profiles'**
+  String get setupFlowKidsDone;
+
+  /// Setup flow: kids' profiles step, once done: debugging stays on
+  ///
+  /// In en, this message translates to:
+  /// **'Leave debugging on: Hearth needs it again for a new kids\' profile, and to remove or uninstall itself.'**
+  String get setupFlowKidsKeepDebugging;
+
+  /// Setup flow: kids' profiles step when the TV's debugging switch is off
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on debugging first'**
+  String get setupFlowDebugTitle;
+
+  /// Setup flow: how to turn on debugging; "Android TV OS build", Developer options and USB debugging are Android's labels
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth needs the TV\'s debugging switch to set up the kids\' profiles. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids\' profile.'**
+  String get setupFlowDebugBody;
+
+  /// Setup flow: button that opens Android's About screen
+  ///
+  /// In en, this message translates to:
+  /// **'Open About'**
+  String get setupFlowDebugOpen;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

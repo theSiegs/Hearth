@@ -34,6 +34,17 @@ class _CardInfo {
 /// TV & power is a choice in itself.
 extension _CardScreens on _SetupFlowPageState {
   _CardInfo _cardInfo(AppLocalizations l, SetupCard card) => switch (card) {
+        SetupCard.family => _CardInfo(
+            Icons.family_restroom,
+            l.setupCardFamily,
+            l.setupFlowFamilyBenefit,
+            [
+              l.setupFlowFamilyIncluded1,
+              l.setupFlowFamilyIncluded2,
+              if ((_snap?.kidsProfiles ?? 0) > 0) l.setupFlowFamilyIncluded3,
+            ],
+            [l.setupFlowNeedsPin, l.setupFlowNeedsOneSwitch, l.setupFlowNeedsTwoMinutes],
+          ),
         SetupCard.watching => _CardInfo(
             Icons.play_circle_outline,
             l.setupCardWatching,
@@ -55,11 +66,16 @@ extension _CardScreens on _SetupFlowPageState {
       };
 
   /// Whether all a card turns on is on already.
-  bool _cardOn(SetupCard card) => _snap?.cardOn(card, showContinueWatching: _showContinueWatching) ?? false;
+  bool _cardOn(SetupCard card) =>
+      _snap?.cardOn(card,
+          showContinueWatching: _showContinueWatching,
+          hasParentPin: _hasParentPin,
+          kidsProtected: _flow.kidsProtected) ??
+      false;
 
   SetupStripGroup _cardStrip(AppLocalizations l, SetupCard card) {
     final screens = _SetupFlowPageState._cardScreens[card]!;
-    final here = screens.contains(_screen);
+    final here = screens.contains(_SetupFlowPageState._mainScreen(_screen));
     final choice = _flow.cardChoice(card);
     final SetupDot dot;
     if (here) {
@@ -72,7 +88,7 @@ extension _CardScreens on _SetupFlowPageState {
       dot = SetupDot.todo;
     }
     // In a card's steps: how far along ("1/2")
-    final step = screens.indexOf(_screen);
+    final step = screens.indexOf(_SetupFlowPageState._mainScreen(_screen));
     return SetupStripGroup(_cardInfo(l, card).title, [dot],
         progress: step > 0 && screens.length > 1 ? "$step/${screens.length - 1}" : null);
   }
@@ -154,6 +170,233 @@ extension _CardScreens on _SetupFlowPageState {
               ),
             ],
     );
+  }
+
+  // --- Your family ---
+
+  Widget _parentPin(AppLocalizations l) {
+    if (_state == SetupStepState.done) return _doneBody(l, l.setupFlowPinDone);
+    return SetupScreenBody(
+      icon: Icons.pin_outlined,
+      title: l.setupFlowPinTitle,
+      body: l.setupFlowPinBody,
+      buttons: [
+        SetupButton(label: l.setupFlowSkip, onPressed: _next),
+        SetupButton(label: l.setupFlowPinChoose, focusNode: _primary, autofocus: true, onPressed: _chooseParentPin),
+      ],
+    );
+  }
+
+  /// The row pad twice (Settings' own PIN dialogs), then on.
+  Future<void> _chooseParentPin() async {
+    final set = await chooseNewParentPin(context);
+    if (!mounted) return;
+    if (set) {
+      _showDone(SetupScreen.familyPin, const Duration(seconds: 2));
+    } else {
+      _focusPrimary();
+    }
+  }
+
+  /// Profile Pairing: the same Accessibility screen as the Home button, another switch on it.
+  Widget _pairing(AppLocalizations l) {
+    const name = "Hearth Profile Pairing";
+    final skip = SetupButton(label: l.setupFlowSkip, onPressed: _next);
+    final picture = SetupStepsPicture(
+      heading: l.setupFlowOnNextScreen,
+      steps: [l.setupFlowStepServices, l.setupFlowStepSelect(name), l.setupFlowStepEnable],
+    );
+    final selfFix = (_snap?.adbEnabled ?? false)
+        ? SetupButton(
+            label: l.setupFlowLetHearthFix,
+            onPressed: () =>
+                _runFixes(const ["profile_pairing"], (snap) => snap.isDone(SetupStepId.profilePairing)),
+          )
+        : null;
+    return switch (_state) {
+      SetupStepState.done => SetupScreenBody(
+          icon: Icons.check_circle,
+          iconColor: Colors.green,
+          title: l.setupFlowPairingDone,
+          body: l.setupFlowPairingDoneBody,
+          buttons: [
+            SetupButton(
+              label: l.setupFlowCheckPairings,
+              icon: Icons.switch_account,
+              onPressed: () => _openSettingsPage(ProfilePairingPage.routeName),
+            ),
+            SetupButton(label: l.setupFlowNext, focusNode: _primary, autofocus: true, onPressed: _next),
+          ],
+        ),
+      SetupStepState.notYet => SetupScreenBody(
+          icon: Icons.info_outline,
+          title: l.setupFlowNotOnYetTitle,
+          body: l.setupFlowNotOnYetBody,
+          content: [picture],
+          buttons: [
+            skip,
+            if (selfFix != null) selfFix,
+            SetupButton(
+              label: l.tryAgain,
+              focusNode: _primary,
+              autofocus: true,
+              onPressed: () => _openStep(SetupStepId.profilePairing),
+            ),
+          ],
+        ),
+      _ => SetupScreenBody(
+          icon: Icons.switch_account,
+          title: l.setupFlowPairingTitle,
+          body: l.setupFlowPairingBody(name),
+          content: [
+            picture,
+            Text(l.setupFlowComesBack, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+          ],
+          buttons: [
+            skip,
+            SetupButton(
+              label: l.setupFlowOpenAccessibility,
+              focusNode: _primary,
+              autofocus: true,
+              onPressed: () => _openStep(SetupStepId.profilePairing),
+            ),
+          ],
+        ),
+    };
+  }
+
+  /// Hearth voice: Netflix reads its profile screen aloud, and Profile Pairing listens through Hearth's own voice.
+  Widget _voice(AppLocalizations l) => _bounceStepBody(
+        l,
+        SetupStepId.voice,
+        icon: Icons.record_voice_over,
+        title: l.setupFlowVoiceTitle,
+        body: l.setupFlowVoiceBody("Hearth voice"),
+        done: l.setupFlowVoiceDone,
+      );
+
+  /// Keep Hearth on the kids' profiles, where Google TV removes apps it didn't install at each profile start. Needs
+  /// the TV's debugging switch, then the one-time "Allow debugging?".
+  Widget _kids(AppLocalizations l) {
+    final snap = _snap!;
+    final skip = SetupButton(label: l.setupFlowSkip, onPressed: _next);
+    if (_state == SetupStepState.done) {
+      final rows = _kidsRows ?? const [];
+      return SetupScreenBody(
+        icon: Icons.check_circle,
+        iconColor: Colors.green,
+        title: l.setupFlowKidsDone,
+        content: [
+          for (final apps in FamilyAppsPage.byProfile(rows).values)
+            Builder(builder: (context) {
+              final (:label, :status, :color) = FamilyAppsPage.describeProfile(l, apps);
+              return Row(children: [
+                Icon((apps.first["supervised"] as bool?) == true ? Icons.child_care : Icons.person_outline,
+                    size: 18, color: Colors.white70),
+                const SizedBox(width: 8),
+                Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14))),
+                Text(status, style: TextStyle(color: color ?? Colors.white54, fontSize: 13)),
+              ]);
+            }),
+          Text(l.setupFlowKidsKeepDebugging, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+        ],
+        buttons: [SetupButton(label: l.setupFlowNext, focusNode: _primary, autofocus: true, onPressed: _next)],
+      );
+    }
+    if (!snap.adbEnabled) {
+      return SetupScreenBody(
+        icon: Icons.developer_mode,
+        title: l.setupFlowDebugTitle,
+        body: l.setupFlowDebugBody,
+        buttons: [
+          skip,
+          SetupButton(label: l.setupFlowDebugOpen, focusNode: _primary, autofocus: true, onPressed: _openAbout),
+        ],
+      );
+    }
+    return SetupScreenBody(
+      icon: Icons.child_care,
+      title: l.setupFlowKidsTitle,
+      body: l.setupFlowKidsBody,
+      content: [Text(l.setupFlowKidsApprove, style: const TextStyle(color: Colors.white, fontSize: 14))],
+      buttons: [
+        skip,
+        SetupButton(label: l.setupFlowKidsAdd, focusNode: _primary, autofocus: true, onPressed: _addToKids),
+      ],
+    );
+  }
+
+  /// Android's About screen, to turn on Developer options and debugging; checked again when Hearth is back.
+  Future<void> _openAbout() async {
+    _update(() => _state = SetupStepState.waiting);
+    try {
+      await _channel.openDeviceInfoSettings();
+    } catch (_) {}
+  }
+
+  /// Says what adding does (Settings' own words), then adds Hearth and HearthTube to the kids' profiles over
+  /// Hearth's own adb, and shows where they are.
+  Future<void> _addToKids() async {
+    final l = AppLocalizations.of(context)!;
+    final includeAdults = context.read<SettingsService?>()?.pushToAdultProfiles ?? true;
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l.familyAppsAddTitle),
+        content: SizedBox(
+          width: 520,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final line in [
+                  l.familyAppsAddKids,
+                  if (includeAdults) l.familyAppsAddAdults,
+                  l.familyAppsAddOnlyOwnApps,
+                  l.familyAppsAddFamilyLink,
+                  l.familyAppsAddApproval,
+                ]) ...[
+                  Text(line),
+                  const SizedBox(height: 10),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(l.cancel)),
+          TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(true), child: Text(l.familyAppsAdd)),
+        ],
+      ),
+    );
+    if (go != true || !mounted) {
+      _focusPrimary();
+      return;
+    }
+    _update(() => _fixing = true);
+    List<Map<dynamic, dynamic>>? rows;
+    try {
+      await _channel.addHearthToProfiles(includeAdults: includeAdults);
+      rows = await _channel.getHearthProfilesState();
+    } catch (_) {
+      rows = null;
+    }
+    if (!mounted) return;
+    _update(() => _fixing = false);
+    if (rows == null) {
+      // Most likely "Allow debugging?" wasn't approved
+      await showMessageDialog(context,
+          title: l.familyAppsFailedTitle, message: "${l.familyAppsFailedBody}\n\n${l.familyAppsFailedRetry}");
+      _focusPrimary();
+      return;
+    }
+    await _flow.setKidsProtected(_snap?.kidsProfiles ?? 0);
+    _update(() {
+      _kidsRows = rows;
+      _state = SetupStepState.done;
+    });
+    _focusPrimary();
   }
 
   // --- Watching ---

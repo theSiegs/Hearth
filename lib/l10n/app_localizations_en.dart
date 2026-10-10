@@ -2373,4 +2373,89 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setupFlowWeatherDone => 'The weather shows in the top bar';
+
+  @override
+  String get setupFlowFamilyBenefit => 'Streaming apps open on the right person, and kids can\'t change Hearth.';
+
+  @override
+  String get setupFlowFamilyIncluded1 => 'A parent PIN, so kids can\'t change Hearth';
+
+  @override
+  String get setupFlowFamilyIncluded2 => 'The right profile in Netflix, Disney+, Apple TV, Max and Paramount+';
+
+  @override
+  String get setupFlowFamilyIncluded3 => 'Hearth kept on your kids\' profiles';
+
+  @override
+  String get setupFlowNeedsPin => 'Four digits you choose';
+
+  @override
+  String get setupFlowNeedsTwoMinutes => 'About 2 minutes';
+
+  @override
+  String get setupFlowPinTitle => 'Choose a parent PIN';
+
+  @override
+  String get setupFlowPinBody => 'Kids need it to change Hearth. Pick four digits a child won\'t guess.';
+
+  @override
+  String get setupFlowPinChoose => 'Choose PIN';
+
+  @override
+  String get setupFlowPinDone => 'The parent PIN is set';
+
+  @override
+  String get setupFlowPairingTitle => 'Pick the right profile in streaming apps';
+
+  @override
+  String setupFlowPairingBody(String name) {
+    return 'Hearth chooses each person\'s profile in Netflix, Disney+, Apple TV, Max and Paramount+. It needs one more switch on the same Android screen: \"$name\".';
+  }
+
+  @override
+  String get setupFlowPairingDone => 'Profile Pairing is on';
+
+  @override
+  String get setupFlowPairingDoneBody => 'Hearth matches names by itself: \"Alex\" goes with \"Alex Morgan\". Each app\'s profiles appear after its \"Who\'s watching?\" screen has shown once.';
+
+  @override
+  String get setupFlowCheckPairings => 'Check pairings';
+
+  @override
+  String get setupFlowVoiceTitle => 'One more step for Netflix';
+
+  @override
+  String setupFlowVoiceBody(String name) {
+    return 'Netflix reads its profile screen aloud, so Hearth listens through its own voice. On the next screen, under Preferred engine, choose \"$name\", then OK. Other apps keep Google\'s voice.';
+  }
+
+  @override
+  String get setupFlowVoiceDone => 'Hearth voice is on';
+
+  @override
+  String get setupFlowKidsTitle => 'Keep Hearth on your kids\' profiles';
+
+  @override
+  String get setupFlowKidsBody => 'Google TV removes apps it didn\'t install from kids\' profiles each time they start. Hearth can protect itself and HearthTube there. Each child gets one Family Link \"app added\" notice; undo anytime in Settings.';
+
+  @override
+  String get setupFlowKidsApprove => 'The TV will ask \"Allow debugging?\". Tick Always allow, then Allow. You only do this once.';
+
+  @override
+  String get setupFlowKidsAdd => 'Add to their profiles';
+
+  @override
+  String get setupFlowKidsDone => 'Hearth is on your kids\' profiles';
+
+  @override
+  String get setupFlowKidsKeepDebugging => 'Leave debugging on: Hearth needs it again for a new kids\' profile, and to remove or uninstall itself.';
+
+  @override
+  String get setupFlowDebugTitle => 'Turn on debugging first';
+
+  @override
+  String get setupFlowDebugBody => 'Hearth needs the TV\'s debugging switch to set up the kids\' profiles. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids\' profile.';
+
+  @override
+  String get setupFlowDebugOpen => 'Open About';
 }

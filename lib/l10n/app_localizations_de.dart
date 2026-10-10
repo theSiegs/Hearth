@@ -2371,4 +2371,89 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get setupFlowWeatherDone => 'Das Wetter erscheint in der oberen Leiste';
+
+  @override
+  String get setupFlowFamilyBenefit => 'Streaming-Apps öffnen sich mit der richtigen Person, und Kinder können Hearth nicht ändern.';
+
+  @override
+  String get setupFlowFamilyIncluded1 => 'Eine Eltern-PIN, damit Kinder Hearth nicht ändern';
+
+  @override
+  String get setupFlowFamilyIncluded2 => 'Das richtige Profil in Netflix, Disney+, Apple TV, Max und Paramount+';
+
+  @override
+  String get setupFlowFamilyIncluded3 => 'Hearth bleibt auf den Profilen Ihrer Kinder';
+
+  @override
+  String get setupFlowNeedsPin => 'Vier Ziffern Ihrer Wahl';
+
+  @override
+  String get setupFlowNeedsTwoMinutes => 'Etwa 2 Minuten';
+
+  @override
+  String get setupFlowPinTitle => 'Eltern-PIN wählen';
+
+  @override
+  String get setupFlowPinBody => 'Kinder brauchen sie, um Hearth zu ändern. Wählen Sie vier Ziffern, die ein Kind nicht errät.';
+
+  @override
+  String get setupFlowPinChoose => 'PIN wählen';
+
+  @override
+  String get setupFlowPinDone => 'Die Eltern-PIN ist festgelegt';
+
+  @override
+  String get setupFlowPairingTitle => 'Das richtige Profil in Streaming-Apps';
+
+  @override
+  String setupFlowPairingBody(String name) {
+    return 'Hearth wählt in Netflix, Disney+, Apple TV, Max und Paramount+ das Profil jeder Person. Dafür braucht es einen weiteren Schalter auf demselben Android-Bildschirm: „$name“.';
+  }
+
+  @override
+  String get setupFlowPairingDone => 'Profilzuordnung ist eingeschaltet';
+
+  @override
+  String get setupFlowPairingDoneBody => 'Hearth ordnet Namen selbst zu: „Alex“ passt zu „Alex Morgan“. Die Profile einer App erscheinen, nachdem ihr Bildschirm „Wer schaut?“ einmal angezeigt wurde.';
+
+  @override
+  String get setupFlowCheckPairings => 'Zuordnungen prüfen';
+
+  @override
+  String get setupFlowVoiceTitle => 'Noch ein Schritt für Netflix';
+
+  @override
+  String setupFlowVoiceBody(String name) {
+    return 'Netflix liest seinen Profilbildschirm vor, deshalb hört Hearth über seine eigene Stimme mit. Wählen Sie auf dem nächsten Bildschirm unter „Bevorzugtes Modul“ „$name“ und dann OK. Andere Apps behalten die Stimme von Google.';
+  }
+
+  @override
+  String get setupFlowVoiceDone => 'Hearth-Stimme ist eingeschaltet';
+
+  @override
+  String get setupFlowKidsTitle => 'Hearth auf den Profilen Ihrer Kinder behalten';
+
+  @override
+  String get setupFlowKidsBody => 'Google TV entfernt bei jedem Start eines Kinderprofils Apps, die es nicht selbst installiert hat. Hearth kann sich und HearthTube dort schützen. Jedes Kind erhält einen Family-Link-Hinweis „App hinzugefügt“; rückgängig machen jederzeit in den Einstellungen.';
+
+  @override
+  String get setupFlowKidsApprove => 'Der Fernseher fragt „Debugging zulassen?“. Haken Sie „Immer zulassen“ an und wählen Sie dann „Zulassen“. Das ist nur einmal nötig.';
+
+  @override
+  String get setupFlowKidsAdd => 'Zu ihren Profilen hinzufügen';
+
+  @override
+  String get setupFlowKidsDone => 'Hearth ist auf den Profilen Ihrer Kinder';
+
+  @override
+  String get setupFlowKidsKeepDebugging => 'Lassen Sie Debugging eingeschaltet: Hearth braucht es wieder für ein neues Kinderprofil und um sich zu entfernen oder zu deinstallieren.';
+
+  @override
+  String get setupFlowDebugTitle => 'Zuerst Debugging einschalten';
+
+  @override
+  String get setupFlowDebugBody => 'Hearth braucht den Debugging-Schalter des Fernsehers, um die Kinderprofile einzurichten. Wählen Sie auf dem nächsten Bildschirm siebenmal „Android TV OS-Build“. Schalten Sie dann unter Einstellungen > System > Entwickleroptionen USB-Debugging ein und kommen Sie zurück. Lassen Sie es eingeschaltet: Hearth braucht es wieder für ein neues Kinderprofil.';
+
+  @override
+  String get setupFlowDebugOpen => 'Info öffnen';
 }

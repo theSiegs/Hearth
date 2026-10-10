@@ -2371,4 +2371,89 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get setupFlowWeatherDone => 'मौसम ऊपर की पट्टी में दिखता है';
+
+  @override
+  String get setupFlowFamilyBenefit => 'स्ट्रीमिंग ऐप्स सही व्यक्ति के साथ खुलते हैं, और बच्चे Hearth नहीं बदल सकते।';
+
+  @override
+  String get setupFlowFamilyIncluded1 => 'माता-पिता का PIN, ताकि बच्चे Hearth न बदल सकें';
+
+  @override
+  String get setupFlowFamilyIncluded2 => 'Netflix, Disney+, Apple TV, Max और Paramount+ में सही प्रोफ़ाइल';
+
+  @override
+  String get setupFlowFamilyIncluded3 => 'आपके बच्चों की प्रोफ़ाइलों पर Hearth बना रहता है';
+
+  @override
+  String get setupFlowNeedsPin => 'आपके चुने चार अंक';
+
+  @override
+  String get setupFlowNeedsTwoMinutes => 'लगभग 2 मिनट';
+
+  @override
+  String get setupFlowPinTitle => 'माता-पिता का PIN चुनें';
+
+  @override
+  String get setupFlowPinBody => 'Hearth बदलने के लिए बच्चों को इसकी ज़रूरत होगी। ऐसे चार अंक चुनें जो बच्चा अंदाज़ा न लगा सके।';
+
+  @override
+  String get setupFlowPinChoose => 'PIN चुनें';
+
+  @override
+  String get setupFlowPinDone => 'माता-पिता का PIN सेट हो गया';
+
+  @override
+  String get setupFlowPairingTitle => 'स्ट्रीमिंग ऐप्स में सही प्रोफ़ाइल चुनें';
+
+  @override
+  String setupFlowPairingBody(String name) {
+    return 'Hearth, Netflix, Disney+, Apple TV, Max और Paramount+ में हर व्यक्ति की प्रोफ़ाइल चुनता है। इसके लिए उसी Android स्क्रीन पर एक और स्विच चाहिए: \"$name\"।';
+  }
+
+  @override
+  String get setupFlowPairingDone => 'प्रोफ़ाइल पेयरिंग चालू है';
+
+  @override
+  String get setupFlowPairingDoneBody => 'Hearth खुद नाम मिलाता है: \"Alex\" का मेल \"Alex Morgan\" से होता है। हर ऐप की प्रोफ़ाइलें उसकी \"कौन देख रहा है?\" स्क्रीन एक बार दिखने के बाद दिखती हैं।';
+
+  @override
+  String get setupFlowCheckPairings => 'पेयरिंग देखें';
+
+  @override
+  String get setupFlowVoiceTitle => 'Netflix के लिए एक और कदम';
+
+  @override
+  String setupFlowVoiceBody(String name) {
+    return 'Netflix अपनी प्रोफ़ाइल स्क्रीन ज़ोर से पढ़ता है, इसलिए Hearth अपनी आवाज़ से सुनता है। अगली स्क्रीन पर पसंदीदा इंजन में \"$name\" चुनें, फिर ठीक है। दूसरे ऐप्स Google की आवाज़ ही रखते हैं।';
+  }
+
+  @override
+  String get setupFlowVoiceDone => 'Hearth की आवाज़ चालू है';
+
+  @override
+  String get setupFlowKidsTitle => 'अपने बच्चों की प्रोफ़ाइलों पर Hearth बनाए रखें';
+
+  @override
+  String get setupFlowKidsBody => 'Google TV हर बार बच्चों की प्रोफ़ाइल शुरू होने पर वे ऐप्स हटा देता है जिन्हें उसने इंस्टॉल नहीं किया। Hearth वहाँ खुद को और HearthTube को बचा सकता है। हर बच्चे को Family Link की एक \"ऐप जोड़ा गया\" सूचना मिलती है; सेटिंग में कभी भी वापस लें।';
+
+  @override
+  String get setupFlowKidsApprove => 'टीवी पूछेगा \"डीबग करने की अनुमति दें?\"। हमेशा अनुमति दें पर टिक करें, फिर अनुमति दें। यह सिर्फ़ एक बार करना है।';
+
+  @override
+  String get setupFlowKidsAdd => 'उनकी प्रोफ़ाइलों में जोड़ें';
+
+  @override
+  String get setupFlowKidsDone => 'Hearth आपके बच्चों की प्रोफ़ाइलों पर है';
+
+  @override
+  String get setupFlowKidsKeepDebugging => 'डीबगिंग चालू रहने दें: नई बच्चों की प्रोफ़ाइल के लिए, और खुद को हटाने या अनइंस्टॉल करने के लिए Hearth को इसकी फिर ज़रूरत होगी।';
+
+  @override
+  String get setupFlowDebugTitle => 'पहले डीबगिंग चालू करें';
+
+  @override
+  String get setupFlowDebugBody => 'बच्चों की प्रोफ़ाइलें सेट करने के लिए Hearth को टीवी का डीबगिंग स्विच चाहिए। अगली स्क्रीन पर \"Android TV OS build\" सात बार चुनें। फिर सेटिंग > सिस्टम > डेवलपर के लिए सेटिंग और टूल में USB डीबगिंग चालू करें, और वापस आएँ। इसे चालू रहने दें: नई बच्चों की प्रोफ़ाइल के लिए Hearth को इसकी फिर ज़रूरत होगी।';
+
+  @override
+  String get setupFlowDebugOpen => 'जानकारी खोलें';
 }

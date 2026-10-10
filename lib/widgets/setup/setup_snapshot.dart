@@ -40,30 +40,52 @@ class SetupSnapshot {
   /// HearthTube, Hearth's companion app, is installed.
   final bool hearthTubeInstalled;
 
+  /// Google TV, with its profiles: the family card shows only there.
+  final bool googleTv;
+
+  /// How many Family Link-supervised (kids') profiles Android lists.
+  final int kidsProfiles;
+
+  /// Netflix is installed: its profile screen needs Hearth voice.
+  final bool netflix;
+
   const SetupSnapshot({
     required this.steps,
     required this.packageName,
     this.adbEnabled = false,
     this.watchNextAllowed = false,
     this.hearthTubeInstalled = false,
+    this.googleTv = false,
+    this.kidsProfiles = 0,
+    this.netflix = false,
   });
 
   SetupStep step(SetupStepId id) => steps.firstWhere((step) => step.id == id);
 
   bool isDone(SetupStepId id) => step(id).done;
 
-  /// Whether everything a card turns on is on already. [showContinueWatching]: the home shows the row.
-  bool cardOn(SetupCard card, {required bool showContinueWatching}) => cardOnFrom(
+  /// Whether everything a card turns on is on already. [showContinueWatching]: the home shows the row;
+  /// [hasParentPin]: a parent PIN is set; [kidsProtected]: how many kids' profiles Hearth was put on.
+  bool cardOn(SetupCard card,
+          {required bool showContinueWatching, required bool hasParentPin, required int kidsProtected}) =>
+      cardOnFrom(
         card,
         watchNextAllowed: watchNextAllowed,
         showContinueWatching: showContinueWatching,
         notifications: isDone(SetupStepId.notifications),
         install: isDone(SetupStepId.install),
         hearthTubeInstalled: hearthTubeInstalled,
+        googleTv: googleTv,
+        hasParentPin: hasParentPin,
+        pairing: isDone(SetupStepId.profilePairing),
+        voice: !netflix || isDone(SetupStepId.voice),
+        kids: kidsProfiles <= kidsProtected,
       );
 
   /// The rule behind [cardOn], for the home's checks that have no snapshot. A card that is a choice by itself (the
-  /// look, TV & power) is never on until chosen.
+  /// look, TV & power) is never on until chosen. The family card counts as on away from Google TV, where it isn't
+  /// shown. [voice]: Hearth voice is the preferred engine, or there's no Netflix to need it. [kids]: Hearth was put
+  /// on every kids' profile from the flow (what's on them can't be read without Hearth's own adb), or there's none.
   static bool cardOnFrom(
     SetupCard card, {
     required bool watchNextAllowed,
@@ -71,8 +93,14 @@ class SetupSnapshot {
     required bool notifications,
     required bool install,
     required bool hearthTubeInstalled,
+    required bool googleTv,
+    required bool hasParentPin,
+    required bool pairing,
+    required bool voice,
+    required bool kids,
   }) =>
       switch (card) {
+        SetupCard.family => !googleTv || (hasParentPin && pairing && voice && kids),
         SetupCard.watching => watchNextAllowed && showContinueWatching && notifications,
         SetupCard.home || SetupCard.tv => false,
         SetupCard.updates => install && hearthTubeInstalled,
@@ -81,11 +109,13 @@ class SetupSnapshot {
   /// Which cards are all on already, read straight from the TV: for marking an install from before the flow, and the
   /// chip's count.
   static Future<Map<SetupCard, bool>> loadCardsOn(FLauncherChannel channel,
-      {required bool showContinueWatching}) async {
+      {required bool showContinueWatching, required bool hasParentPin, required int kidsProtected}) async {
     final watchNext = await _safe(channel.checkWatchNextPermission, false);
     final notifications = await _safe(channel.checkNotificationListenerPermission, false);
     final install = await _safe(channel.checkInstallPermission, false);
     final tube = await _hearthTubeInstalled(channel);
+    final family = await _safe(channel.getSetupFamilyState, <dynamic, dynamic>{});
+    final pairing = await _safe(channel.getProfilePairingStatus, <dynamic, dynamic>{});
     return {
       for (final card in SetupCard.values)
         card: cardOnFrom(card,
@@ -93,7 +123,12 @@ class SetupSnapshot {
             showContinueWatching: showContinueWatching,
             notifications: notifications,
             install: install,
-            hearthTubeInstalled: tube),
+            hearthTubeInstalled: tube,
+            googleTv: family["googleTv"] == true,
+            hasParentPin: hasParentPin,
+            pairing: pairing["enabled"] == true,
+            voice: family["netflix"] != true || pairing["voiceDefault"] == true,
+            kids: ((family["kidsProfiles"] as int?) ?? 0) <= kidsProtected),
     };
   }
 
@@ -114,12 +149,16 @@ class SetupSnapshot {
       packageName = (await PackageInfo.fromPlatform()).packageName;
     } catch (_) {}
     final steps = await loadSetupSteps(channel, packageName, l);
+    final family = await _safe(channel.getSetupFamilyState, <dynamic, dynamic>{});
     return SetupSnapshot(
       steps: steps,
       packageName: packageName,
       adbEnabled: await _safe(channel.isAdbEnabled, false),
       watchNextAllowed: await _safe(channel.checkWatchNextPermission, false),
       hearthTubeInstalled: await _hearthTubeInstalled(channel),
+      googleTv: family["googleTv"] == true,
+      kidsProfiles: (family["kidsProfiles"] as int?) ?? 0,
+      netflix: family["netflix"] == true,
     );
   }
 }

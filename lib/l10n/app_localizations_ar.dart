@@ -2406,4 +2406,89 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get setupFlowWeatherDone => 'يظهر الطقس في الشريط العلوي';
+
+  @override
+  String get setupFlowFamilyBenefit => 'تفتح تطبيقات البث على الشخص الصحيح، ولا يمكن للأطفال تغيير Hearth.';
+
+  @override
+  String get setupFlowFamilyIncluded1 => 'رمز PIN للوالدين، حتى لا يغيّر الأطفال Hearth';
+
+  @override
+  String get setupFlowFamilyIncluded2 => 'الملف الشخصي الصحيح في Netflix وDisney+ وApple TV وMax وParamount+';
+
+  @override
+  String get setupFlowFamilyIncluded3 => 'إبقاء Hearth على ملفات أطفالك';
+
+  @override
+  String get setupFlowNeedsPin => 'أربعة أرقام تختارها';
+
+  @override
+  String get setupFlowNeedsTwoMinutes => 'دقيقتان تقريبًا';
+
+  @override
+  String get setupFlowPinTitle => 'اختر رمز PIN للوالدين';
+
+  @override
+  String get setupFlowPinBody => 'يحتاجه الأطفال لتغيير Hearth. اختر أربعة أرقام لن يخمنها طفل.';
+
+  @override
+  String get setupFlowPinChoose => 'اختيار رمز PIN';
+
+  @override
+  String get setupFlowPinDone => 'تم تعيين رمز PIN للوالدين';
+
+  @override
+  String get setupFlowPairingTitle => 'اختيار الملف الشخصي الصحيح في تطبيقات البث';
+
+  @override
+  String setupFlowPairingBody(String name) {
+    return 'يختار Hearth الملف الشخصي لكل شخص في Netflix وDisney+ وApple TV وMax وParamount+. يحتاج إلى مفتاح آخر في شاشة Android نفسها: \"$name\".';
+  }
+
+  @override
+  String get setupFlowPairingDone => 'تم تشغيل ربط الملفات الشخصية';
+
+  @override
+  String get setupFlowPairingDoneBody => 'يطابق Hearth الأسماء تلقائيًا: \"Alex\" يتوافق مع \"Alex Morgan\". تظهر الملفات الشخصية لكل تطبيق بعد ظهور شاشة \"من يشاهد؟\" فيه مرة واحدة.';
+
+  @override
+  String get setupFlowCheckPairings => 'التحقق من الربط';
+
+  @override
+  String get setupFlowVoiceTitle => 'خطوة إضافية لـ Netflix';
+
+  @override
+  String setupFlowVoiceBody(String name) {
+    return 'يقرأ Netflix شاشة الملفات الشخصية بصوت عالٍ، لذا يستمع Hearth عبر صوته الخاص. في الشاشة التالية، ضمن المحرك المفضل، اختر \"$name\" ثم موافق. تحتفظ التطبيقات الأخرى بصوت Google.';
+  }
+
+  @override
+  String get setupFlowVoiceDone => 'تم تشغيل صوت Hearth';
+
+  @override
+  String get setupFlowKidsTitle => 'إبقاء Hearth على ملفات أطفالك';
+
+  @override
+  String get setupFlowKidsBody => 'يزيل Google TV التطبيقات التي لم يثبتها من ملفات الأطفال في كل مرة تبدأ فيها. يمكن لـ Hearth حماية نفسه وHearthTube هناك. يتلقى كل طفل إشعار Family Link واحدًا \"تمت إضافة تطبيق\"؛ يمكنك التراجع في أي وقت من الإعدادات.';
+
+  @override
+  String get setupFlowKidsApprove => 'سيسأل التلفزيون \"السماح بتصحيح الأخطاء؟\". حدّد السماح دائمًا، ثم السماح. تفعل ذلك مرة واحدة فقط.';
+
+  @override
+  String get setupFlowKidsAdd => 'إضافة إلى ملفاتهم';
+
+  @override
+  String get setupFlowKidsDone => 'أصبح Hearth على ملفات أطفالك';
+
+  @override
+  String get setupFlowKidsKeepDebugging => 'اترك تصحيح الأخطاء مفعّلًا: يحتاجه Hearth مجددًا لملف طفل جديد، ولإزالة نفسه أو إلغاء تثبيته.';
+
+  @override
+  String get setupFlowDebugTitle => 'شغّل تصحيح الأخطاء أولًا';
+
+  @override
+  String get setupFlowDebugBody => 'يحتاج Hearth إلى مفتاح تصحيح الأخطاء في التلفزيون لإعداد ملفات الأطفال. في الشاشة التالية، اختر \"Android TV OS build\" سبع مرات. ثم من الإعدادات > النظام > خيارات المطوّرين، شغّل تصحيح أخطاء USB وارجع. اتركه مفعّلًا: يحتاجه Hearth مجددًا لملف طفل جديد.';
+
+  @override
+  String get setupFlowDebugOpen => 'فتح \"حول\"';
 }
