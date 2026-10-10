@@ -563,6 +563,19 @@ void main() {
       expect(find.text("I use Home Assistant"), findsOneWidget);
     });
 
+    testWidgets("a preview cut off by a restart is put back when the look screen shows again", (tester) async {
+      final settings = SettingsService(prefs);
+      await settings.setThemes("classic");
+      final before = HomeLookSnapshot.of(settings);
+      // Hearth stopped while Bold was previewed: the home still shows it
+      await HomeLook.bold.apply(settings);
+      await flow.setLookPreview(HomeLook.bold, before);
+      await open(tester, startAt: "look");
+      await press(tester, "Keep current");
+      expect(SettingsService(prefs).themes, "classic");
+      expect(flow.lookPreview, isNull);
+    });
+
     testWidgets("a look picked is kept, and is where new grown-up profiles start", (tester) async {
       await open(tester, startAt: "look");
       await tester.tap(find.text("Bold"));

@@ -113,6 +113,25 @@ class HomeLookSnapshot {
         darkDock = settings.dockDarkBackground,
         dockBlur = settings.dockBlurEnabled;
 
+  HomeLookSnapshot.fromJson(Map<String, dynamic> json)
+      : cardStyle = json["cardStyle"] as String,
+        accent = json["accent"] as String,
+        gradientUuid = json["gradientUuid"] as String,
+        bing = json["bing"] as bool,
+        timeBased = json["timeBased"] as bool,
+        darkDock = json["darkDock"] as bool,
+        dockBlur = json["dockBlur"] as bool;
+
+  Map<String, dynamic> toJson() => {
+        "cardStyle": cardStyle,
+        "accent": accent,
+        "gradientUuid": gradientUuid,
+        "bing": bing,
+        "timeBased": timeBased,
+        "darkDock": darkDock,
+        "dockBlur": dockBlur,
+      };
+
   bool sameAs(HomeLookSnapshot other) =>
       cardStyle == other.cardStyle &&
       accent == other.accent &&

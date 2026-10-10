@@ -514,12 +514,20 @@ extension _CardScreens on _SetupFlowPageState {
         HomeLook.bold => l.setupLookBold,
       };
 
-  /// The look screen opened: notes the look as it is, to put back unless one is chosen.
+  /// The look screen opened: notes the look as it is, to put back unless one is chosen. A preview a restart cut off
+  /// (the home still shows it) is put back first.
   void _startPreview() {
     final settings = context.read<SettingsService?>();
     if (settings == null) return;
     _lookSettings = settings;
-    _lookBefore = HomeLookSnapshot.of(settings);
+    final cut = _flow.lookPreview;
+    if (cut != null && cut.previewing.matches(settings)) {
+      _lookBefore = cut.before;
+      unawaited(cut.before.restore(settings));
+    } else {
+      _lookBefore = HomeLookSnapshot.of(settings);
+    }
+    unawaited(_flow.setLookPreview(null, null));
     _previewing = null;
   }
 
@@ -528,6 +536,7 @@ extension _CardScreens on _SetupFlowPageState {
     final settings = _lookSettings;
     if (settings == null || _previewing == look) return;
     _previewing = look;
+    unawaited(_flow.setLookPreview(look, _lookBefore));
     unawaited(look.apply(settings));
   }
 
@@ -538,6 +547,7 @@ extension _CardScreens on _SetupFlowPageState {
     if (_previewing != null && settings != null && before != null) {
       // From dispose too, when Hearth itself may be closing: nothing to put back then
       unawaited(before.restore(settings).catchError((Object _) {}));
+      unawaited(_flow.setLookPreview(null, null).catchError((Object _) {}));
     }
     _previewing = null;
   }
@@ -545,6 +555,7 @@ extension _CardScreens on _SetupFlowPageState {
   Future<void> _useLook(HomeLook look) async {
     final settings = _lookSettings;
     _previewing = null;
+    await _flow.setLookPreview(null, null);
     if (settings != null) {
       await look.apply(settings);
       // Chosen for good: a picture picked as the wallpaper makes way for the look's gradient
@@ -571,6 +582,7 @@ extension _CardScreens on _SetupFlowPageState {
     final settings = _lookSettings;
     if (settings != null) _lookBefore = HomeLookSnapshot.of(settings);
     _previewing = null;
+    await _flow.setLookPreview(null, null);
     if (!_lookOnly) await _flow.decide(SetupCard.home.name, SetupChoice.on);
   }
 
@@ -922,7 +934,8 @@ extension _CardScreens on _SetupFlowPageState {
         if (_tubeError != null) Text(_tubeError!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
       ],
       buttons: [
-        SetupButton(label: l.notNow, onPressed: _next),
+        // While it downloads, the button that's left takes the focus the Install button had
+        SetupButton(label: l.notNow, focusNode: downloading ? _primary : null, onPressed: _next),
         if (updater != null && !downloading)
           SetupButton(
             label: _tubeError == null ? l.updatesInstall : l.tryAgain,
@@ -946,6 +959,7 @@ extension _CardScreens on _SetupFlowPageState {
       _tubeProgress = null;
       _tubeError = null;
     });
+    _focusPrimary();
     try {
       final release = await updater.latestRelease(app);
       if (release == null) throw Exception(l.updatesCheckFailed);
