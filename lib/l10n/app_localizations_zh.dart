@@ -406,9 +406,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tvPowerTitle => '电视和电源';
 
   @override
-  String get setupPermissionsTitle => '设置和权限';
-
-  @override
   String get updatesTitle => '更新';
 
   @override
@@ -1172,27 +1169,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String setupProgress(int done, int total) {
     return '已完成 $done/$total';
   }
-
-  @override
-  String get setupOptional => '可选';
-
-  @override
-  String get homeButtonFixOffTitle => '主页按钮修复已关闭';
-
-  @override
-  String get homeButtonFixOffBody => 'Hearth 的无障碍服务已停止，通常发生在更新之后。在重新开启之前，主页按钮可能会打开 Google TV 而不是 Hearth，并且不会跟随个人资料切换。';
-
-  @override
-  String get homeButtonFixStuck => 'Android 仍显示它已开启，但它并未运行。请在无障碍设置中将 Hearth 关闭后再打开，以重新启动它。';
-
-  @override
-  String get homeButtonFixRestricted => '如果那里的 Hearth 开关呈灰色，是因为此更新是从下载的文件安装的，Android 阻止了它。请在连接到电视的电脑上运行以下命令，然后打开 Hearth：';
-
-  @override
-  String get homeButtonFixDontRemind => '不再提醒';
-
-  @override
-  String get homeButtonFixOpenSettings => '打开无障碍设置';
 
   @override
   String get remoteButtonsRemapButton => '重新映射按钮';
@@ -2197,4 +2173,35 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get setupFlowGoHome => '前往我的主屏幕';
+
+  @override
+  String get setupHearthTitle => '设置 Hearth';
+
+  @override
+  String get setupRunAgain => '重新运行设置';
+
+  @override
+  String get setupCardFamily => '您的家人';
+
+  @override
+  String get setupCardWatching => '观看';
+
+  @override
+  String setupChipLeft(int count) {
+    return '完成设置 · 还剩 $count 项';
+  }
+
+  @override
+  String get setupChipFix => '主页按钮需要修复';
+
+  @override
+  String get setupChipHideTitle => '隐藏此提醒？';
+
+  @override
+  String setupChipHideBody(String where) {
+    return '您仍可以在 $where 中运行设置。';
+  }
+
+  @override
+  String get setupChipHide => '隐藏';
 }

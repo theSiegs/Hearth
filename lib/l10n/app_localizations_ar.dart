@@ -406,9 +406,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get tvPowerTitle => 'التلفزيون والطاقة';
 
   @override
-  String get setupPermissionsTitle => 'الإعداد والأذونات';
-
-  @override
   String get updatesTitle => 'التحديثات';
 
   @override
@@ -1186,27 +1183,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String setupProgress(int done, int total) {
     return 'تم $done من $total';
   }
-
-  @override
-  String get setupOptional => 'اختياري';
-
-  @override
-  String get homeButtonFixOffTitle => 'إصلاح زر الرئيسية متوقف';
-
-  @override
-  String get homeButtonFixOffBody => 'توقفت خدمة إمكانية الوصول في Hearth، عادةً بعد تحديث. وإلى أن تعود للعمل، قد يفتح زر الرئيسية Google TV بدلًا من Hearth، ولن يتابع Hearth تبديل الملفات الشخصية.';
-
-  @override
-  String get homeButtonFixStuck => 'لا يزال Android يعرضها على أنها مفعّلة، لكنها لا تعمل. أوقف Hearth ثم شغّله مرة أخرى في إعدادات إمكانية الوصول لإعادة تشغيلها.';
-
-  @override
-  String get homeButtonFixRestricted => 'إذا كان مفتاح Hearth هناك باهتًا، فإن Android يحظره لأن هذا التحديث ثُبّت من ملف تم تنزيله. شغّل هذا من كمبيوتر متصل بالتلفزيون، ثم فعّل Hearth:';
-
-  @override
-  String get homeButtonFixDontRemind => 'لا تذكّرني';
-
-  @override
-  String get homeButtonFixOpenSettings => 'فتح إعدادات إمكانية الوصول';
 
   @override
   String get remoteButtonsRemapButton => 'إعادة تعيين زر';
@@ -2240,4 +2216,35 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get setupFlowGoHome => 'الانتقال إلى شاشتي الرئيسية';
+
+  @override
+  String get setupHearthTitle => 'إعداد Hearth';
+
+  @override
+  String get setupRunAgain => 'تشغيل الإعداد مرة أخرى';
+
+  @override
+  String get setupCardFamily => 'عائلتك';
+
+  @override
+  String get setupCardWatching => 'المشاهدة';
+
+  @override
+  String setupChipLeft(int count) {
+    return 'إكمال الإعداد · المتبقي: $count';
+  }
+
+  @override
+  String get setupChipFix => 'زر الصفحة الرئيسية يحتاج إلى إصلاح';
+
+  @override
+  String get setupChipHideTitle => 'هل تريد إخفاء هذا التذكير؟';
+
+  @override
+  String setupChipHideBody(String where) {
+    return 'لا يزال بإمكانك تشغيل الإعداد من $where.';
+  }
+
+  @override
+  String get setupChipHide => 'إخفاء';
 }

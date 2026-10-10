@@ -406,9 +406,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get tvPowerTitle => 'TV e alimentazione';
 
   @override
-  String get setupPermissionsTitle => 'Configurazione e autorizzazioni';
-
-  @override
   String get updatesTitle => 'Aggiornamenti';
 
   @override
@@ -1175,27 +1172,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String setupProgress(int done, int total) {
     return '$done di $total completati';
   }
-
-  @override
-  String get setupOptional => 'Facoltativo';
-
-  @override
-  String get homeButtonFixOffTitle => 'La Correzione tasto Home è disattivata';
-
-  @override
-  String get homeButtonFixOffBody => 'Il servizio di accessibilità di Hearth si è fermato, di solito dopo un aggiornamento. Finché non viene riattivato, il tasto Home può aprire Google TV invece di Hearth e i cambi di profilo non vengono seguiti.';
-
-  @override
-  String get homeButtonFixStuck => 'Android lo mostra ancora come attivo, ma non è in esecuzione. Disattiva e riattiva Hearth nelle impostazioni di accessibilità per riavviarlo.';
-
-  @override
-  String get homeButtonFixRestricted => 'Se l\'interruttore di Hearth è disattivato (grigio), Android lo blocca perché questo aggiornamento è stato installato da un download. Esegui questo da un computer collegato alla TV, poi attiva Hearth:';
-
-  @override
-  String get homeButtonFixDontRemind => 'Non ricordarmelo';
-
-  @override
-  String get homeButtonFixOpenSettings => 'Apri impostazioni di accessibilità';
 
   @override
   String get remoteButtonsRemapButton => 'Riassegna un tasto';
@@ -2207,4 +2183,35 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get setupFlowGoHome => 'Vai alla mia Home';
+
+  @override
+  String get setupHearthTitle => 'Configura Hearth';
+
+  @override
+  String get setupRunAgain => 'Ripeti la configurazione';
+
+  @override
+  String get setupCardFamily => 'La tua famiglia';
+
+  @override
+  String get setupCardWatching => 'Guardare';
+
+  @override
+  String setupChipLeft(int count) {
+    return 'Completa la configurazione · mancanti: $count';
+  }
+
+  @override
+  String get setupChipFix => 'Il tasto Home va sistemato';
+
+  @override
+  String get setupChipHideTitle => 'Nascondere questo promemoria?';
+
+  @override
+  String setupChipHideBody(String where) {
+    return 'Puoi sempre avviare la configurazione da $where.';
+  }
+
+  @override
+  String get setupChipHide => 'Nascondi';
 }

@@ -2,6 +2,8 @@ import 'package:flauncher/hearth_ids.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/providers/setup_flow_service.dart';
+import 'package:flauncher/widgets/setup/setup_flow_launcher.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -156,11 +158,20 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
   ];
 }
 
-/// Setup & permissions: what to turn on in Android's Settings for Hearth, each with its status, and Start on boot.
+/// Set up Hearth: runs the setup flow again, and lists what to turn on in Android's Settings for Hearth, each with its
+/// status, in the flow's groups (the essentials, then each card's), with Start on boot last.
 class SetupChecklistPage extends StatefulWidget {
   static const String routeName = "setup_checklist";
   /// Where this page is, for the hints on other pages that send people here.
-  static String breadcrumb(AppLocalizations l) => "${l.settingsTitle} > ${l.system} > ${l.setupPermissionsTitle}";
+  static String breadcrumb(AppLocalizations l) => "${l.settingsTitle} > ${l.system} > ${l.setupHearthTitle}";
+
+  /// The steps in the setup flow's groups: the essentials first, then each card's switches.
+  static List<(String, List<SetupStepId>)> groups(AppLocalizations l) => [
+        (l.setupFlowStripEssentials, [SetupStepId.homeButton, SetupStepId.homeApp]),
+        (l.setupCardFamily, [SetupStepId.profilePairing, SetupStepId.voice]),
+        (l.setupCardWatching, [SetupStepId.notifications]),
+        (l.updatesTitle, [SetupStepId.install]),
+      ];
 
   const SetupChecklistPage({super.key});
 
@@ -257,6 +268,14 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
     );
   }
 
+  Widget _heading(String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
+        child: Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Text(text, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.white54)),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -264,7 +283,7 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
     final steps = _steps;
     final required = steps?.where((s) => !s.optional).toList() ?? [];
     return SettingsPage.custom(
-      title: l.setupPermissionsTitle,
+      title: l.setupHearthTitle,
       subtitle: steps == null
           ? null
           : Text(
@@ -276,27 +295,28 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
           : SingleChildScrollView(
               child: Column(
                 children: [
-                  for (final (index, step) in steps.indexed) ...[
-                    if (step.optional && (index == 0 || !steps[index - 1].optional))
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(l.setupOptional, style: textTheme.labelMedium?.copyWith(color: Colors.white54)),
+                  FocusableSettingsTile(
+                    autofocus: true,
+                    leading: const Icon(Icons.play_circle_outline),
+                    title: Text(l.setupRunAgain, style: textTheme.bodyMedium),
+                    trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                    onPressed: () => SetupFlowLauncher.openFlow(context, mode: SetupMode.rerun, fromSettings: true)
+                        .then((_) => _refresh()),
+                  ),
+                  for (final (heading, ids) in SetupChecklistPage.groups(l)) ...[
+                    _heading(heading),
+                    for (final step in steps.where((step) => ids.contains(step.id)))
+                      FocusableSettingsTile(
+                        leading: Icon(step.icon, color: step.done ? Colors.green : null),
+                        title: Text(step.title, style: textTheme.bodyMedium),
+                        trailing: Icon(
+                          step.done ? Icons.check_circle : Icons.chevron_right,
+                          color: step.done ? Colors.green : Colors.white54,
                         ),
+                        onPressed: () => _showCard(step),
                       ),
-                    FocusableSettingsTile(
-                      autofocus: index == 0,
-                      leading: Icon(step.icon, color: step.done ? Colors.green : null),
-                      title: Text(step.title, style: textTheme.bodyMedium),
-                      trailing: Icon(
-                        step.done ? Icons.check_circle : Icons.chevron_right,
-                        color: step.done ? Colors.green : Colors.white54,
-                      ),
-                      onPressed: () => _showCard(step),
-                    ),
                   ],
-                  const Divider(),
+                  _heading(l.tvPowerTitle),
                   _startOnBootTile(context),
                 ],
               ),

@@ -406,9 +406,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get tvPowerTitle => 'TV et alimentation';
 
   @override
-  String get setupPermissionsTitle => 'Configuration et autorisations';
-
-  @override
   String get updatesTitle => 'Mises à jour';
 
   @override
@@ -1175,27 +1172,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String setupProgress(int done, int total) {
     return '$done sur $total terminés';
   }
-
-  @override
-  String get setupOptional => 'Facultatif';
-
-  @override
-  String get homeButtonFixOffTitle => 'Le Correctif du bouton Accueil est désactivé';
-
-  @override
-  String get homeButtonFixOffBody => 'Le service d\'accessibilité de Hearth s\'est arrêté, généralement après une mise à jour. Tant qu\'il n\'est pas réactivé, le bouton Accueil peut ouvrir Google TV au lieu de Hearth, et les changements de profil ne sont pas suivis.';
-
-  @override
-  String get homeButtonFixStuck => 'Android l\'indique toujours comme activé, mais il ne tourne pas. Désactivez puis réactivez Hearth dans les paramètres d\'accessibilité pour le redémarrer.';
-
-  @override
-  String get homeButtonFixRestricted => 'Si l\'interrupteur de Hearth y est grisé, Android le bloque car cette mise à jour a été installée depuis un téléchargement. Exécutez ceci depuis un ordinateur connecté à la TV, puis activez Hearth :';
-
-  @override
-  String get homeButtonFixDontRemind => 'Ne plus me le rappeler';
-
-  @override
-  String get homeButtonFixOpenSettings => 'Ouvrir les paramètres d\'accessibilité';
 
   @override
   String get remoteButtonsRemapButton => 'Réattribuer un bouton';
@@ -2207,4 +2183,35 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get setupFlowGoHome => 'Aller à mon accueil';
+
+  @override
+  String get setupHearthTitle => 'Configurer Hearth';
+
+  @override
+  String get setupRunAgain => 'Relancer la configuration';
+
+  @override
+  String get setupCardFamily => 'Votre famille';
+
+  @override
+  String get setupCardWatching => 'Visionnage';
+
+  @override
+  String setupChipLeft(int count) {
+    return 'Terminer la configuration · reste : $count';
+  }
+
+  @override
+  String get setupChipFix => 'Le bouton Accueil est à réparer';
+
+  @override
+  String get setupChipHideTitle => 'Masquer ce rappel ?';
+
+  @override
+  String setupChipHideBody(String where) {
+    return 'Vous pouvez toujours lancer la configuration depuis $where.';
+  }
+
+  @override
+  String get setupChipHide => 'Masquer';
 }

@@ -20,6 +20,7 @@ import 'weather_status_bar_widget.dart';
 import 'package:flauncher/widgets/title_pill.dart';
 import 'package:flauncher/widgets/focus_keyboard_listener.dart';
 import 'package:flauncher/widgets/app_card_keys.dart';
+import 'package:flauncher/widgets/setup/setup_chip.dart';
 
 class FocusAwareAppBar extends StatefulWidget implements PreferredSizeWidget
 {
@@ -235,13 +236,14 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
               ),
             ],
           ),
-          // Right side: Weather and Date/Time
+          // Right side: what setup left undone, Weather and Date/Time
           actions: [
             Padding(
               padding: const EdgeInsets.only(left: 16, right: 32),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  const SetupChip(),
                   Consumer<WeatherService>(
                     builder: (context, weatherService, _) {
                       return Selector<SettingsService, bool>(

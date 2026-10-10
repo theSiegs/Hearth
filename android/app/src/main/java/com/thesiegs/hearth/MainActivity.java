@@ -330,10 +330,6 @@ public class MainActivity extends FlutterActivity {
             case "requestOverlayPermission" -> result.success(requestOverlayPermission());
             case "requestAccessibilityPermission" -> result.success(openAccessibilitySettings());
             case "getHomeButtonFixStatus" -> result.success(getHomeButtonFixStatus());
-            case "forgetHomeButtonFix" -> {
-                LauncherAccessibilityService.forgetHomeButtonFix(this);
-                result.success(null);
-            }
             case "getProfilePairingStatus" -> result.success(getProfilePairingStatus());
             // First-run setup: whether self-adb can work, and the named fixes it may run (SetupFixes), shown to the
             // parent before they run. Off the main thread: adb I/O, and the first time a wait for "Allow debugging?".

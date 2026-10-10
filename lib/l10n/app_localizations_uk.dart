@@ -406,9 +406,6 @@ class AppLocalizationsUk extends AppLocalizations {
   String get tvPowerTitle => 'Телевізор і живлення';
 
   @override
-  String get setupPermissionsTitle => 'Налаштування та дозволи';
-
-  @override
   String get updatesTitle => 'Оновлення';
 
   @override
@@ -1181,27 +1178,6 @@ class AppLocalizationsUk extends AppLocalizations {
   String setupProgress(int done, int total) {
     return 'Виконано: $done з $total';
   }
-
-  @override
-  String get setupOptional => 'Необов\'язково';
-
-  @override
-  String get homeButtonFixOffTitle => '«Виправлення кнопки Додому» вимкнено';
-
-  @override
-  String get homeButtonFixOffBody => 'Службу спеціальних можливостей Hearth зупинено — зазвичай це стається після оновлення. Доки її знову не ввімкнено, кнопка «Додому» може відкривати Google TV замість Hearth, а зміна профілю не відстежується.';
-
-  @override
-  String get homeButtonFixStuck => 'Android досі показує її як увімкнену, але вона не працює. Вимкніть і знову ввімкніть Hearth у налаштуваннях спеціальних можливостей, щоб перезапустити її.';
-
-  @override
-  String get homeButtonFixRestricted => 'Якщо перемикач Hearth там неактивний (сірий), Android блокує його, бо це оновлення встановлено із завантаженого файлу. Виконайте це на комп\'ютері, підключеному до телевізора, а потім увімкніть Hearth:';
-
-  @override
-  String get homeButtonFixDontRemind => 'Не нагадувати';
-
-  @override
-  String get homeButtonFixOpenSettings => 'Відкрити спеціальні можливості';
 
   @override
   String get remoteButtonsRemapButton => 'Перепризначити кнопку';
@@ -2221,4 +2197,35 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get setupFlowGoHome => 'На головний екран';
+
+  @override
+  String get setupHearthTitle => 'Налаштування Hearth';
+
+  @override
+  String get setupRunAgain => 'Пройти налаштування знову';
+
+  @override
+  String get setupCardFamily => 'Ваша родина';
+
+  @override
+  String get setupCardWatching => 'Перегляд';
+
+  @override
+  String setupChipLeft(int count) {
+    return 'Завершити налаштування · залишилося: $count';
+  }
+
+  @override
+  String get setupChipFix => 'Кнопку «Додому» треба виправити';
+
+  @override
+  String get setupChipHideTitle => 'Сховати це нагадування?';
+
+  @override
+  String setupChipHideBody(String where) {
+    return 'Налаштування й далі можна запустити в розділі $where.';
+  }
+
+  @override
+  String get setupChipHide => 'Сховати';
 }

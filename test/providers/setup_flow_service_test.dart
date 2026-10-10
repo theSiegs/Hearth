@@ -62,4 +62,97 @@ void main() {
     expect(flow.resume, isNull);
     expect(flow.decisions, isEmpty);
   });
+
+  group("what the home opens", () {
+    SetupLaunch launch(SetupFlowService flow,
+            {bool kids = false, bool on = false, bool seen = false, bool pin = false}) =>
+        flow.launch(kids: kids, homeButtonOn: on, homeButtonSeenBefore: seen, hasParentPin: pin);
+
+    test("a TV Hearth was never set up on: the whole flow", () {
+      expect(launch(flow), isA<SetupLaunchFirstRun>());
+    });
+
+    test("never in a kids' profile, whatever is pending", () async {
+      expect(launch(flow, kids: true), isA<SetupLaunchNothing>());
+      expect(launch(flow, kids: true, seen: true), isA<SetupLaunchNothing>());
+    });
+
+    test("Hearth in use before the flow existed: marked as through it, nothing shown", () async {
+      expect(launch(flow, seen: true, on: true), isA<SetupLaunchExistingInstall>());
+      expect(launch(flow, pin: true), isA<SetupLaunchExistingInstall>());
+      await prefs.setString("device_layout_owner", "user:0");
+      expect(launch(SetupFlowService(prefs, now: () => now)), isA<SetupLaunchExistingInstall>());
+
+      await flow.markExistingInstall();
+      expect(flow.flowVersion, SetupFlowService.currentVersion);
+      expect(launch(flow, seen: true, on: true), isA<SetupLaunchNothing>());
+    });
+
+    test("a layout saved by this start's own profile check isn't a sign of an earlier setup", () async {
+      final fresh = SetupFlowService(prefs, now: () => now);
+      await prefs.setString("device_layout_owner", "user:0");
+      expect(launch(fresh), isA<SetupLaunchFirstRun>());
+    });
+
+    test("picks up a step left for Android's settings within 30 minutes, not later", () async {
+      await flow.saveResume("homeButton", SetupMode.full);
+      now = now.add(const Duration(minutes: 29));
+      final resumed = launch(flow);
+      expect(resumed, isA<SetupLaunchResume>());
+      expect((resumed as SetupLaunchResume).resume.screen, "homeButton");
+
+      now = now.add(const Duration(minutes: 2));
+      expect(launch(flow), isA<SetupLaunchNothing>());
+    });
+
+    test("a first run interrupted long ago leaves it to the chip, not to a new first run", () async {
+      await flow.saveResume("homeApp", SetupMode.full);
+      now = now.add(const Duration(hours: 5));
+      expect(launch(flow), isA<SetupLaunchNothing>());
+    });
+
+    test("Finish later isn't picked up by itself", () async {
+      await flow.saveResume("homeButton", SetupMode.full);
+      await flow.close();
+      expect(launch(flow), isA<SetupLaunchNothing>());
+    });
+
+    test("an update switched the Home button off: takes over until Not now, and again after the next loss", () async {
+      await flow.finish();
+      expect(launch(flow, seen: true), isA<SetupLaunchLostFix>());
+      await flow.decide(SetupFlowService.lostFixDecision, SetupChoice.notNow);
+      expect(launch(flow, seen: true), isA<SetupLaunchNothing>());
+
+      // Turned back on, then lost again
+      expect(launch(flow, seen: true, on: true), isA<SetupLaunchNothing>());
+      await Future<void>.delayed(Duration.zero);
+      expect(launch(flow, seen: true), isA<SetupLaunchLostFix>());
+    });
+  });
+
+  group("the chip", () {
+    test("counts the essentials neither on nor skipped", () async {
+      expect(flow.remaining(homeButtonOn: false, homeAppOn: false), 2);
+      await flow.decide(SetupFlowService.homeAppDecision, SetupChoice.notNow);
+      expect(flow.remaining(homeButtonOn: false, homeAppOn: false), 1);
+      expect(flow.remaining(homeButtonOn: true, homeAppOn: false), 0);
+    });
+
+    test("asks for a fix when the Home button was skipped or lost", () async {
+      expect(flow.homeButtonNeedsFix(homeButtonOn: false, homeButtonSeenBefore: false), isFalse);
+      expect(flow.homeButtonNeedsFix(homeButtonOn: false, homeButtonSeenBefore: true), isTrue);
+      await flow.decide(SetupFlowService.homeButtonDecision, SetupChoice.notNow);
+      expect(flow.homeButtonNeedsFix(homeButtonOn: false, homeButtonSeenBefore: false), isTrue);
+      expect(flow.homeButtonNeedsFix(homeButtonOn: true, homeButtonSeenBefore: true), isFalse);
+    });
+
+    test("shows only once the flow has run, never for kids, and not once hidden", () async {
+      expect(flow.chipAllowed(kids: false), isFalse);
+      await flow.close();
+      expect(flow.chipAllowed(kids: false), isTrue);
+      expect(flow.chipAllowed(kids: true), isFalse);
+      await flow.hideChip();
+      expect(flow.chipAllowed(kids: false), isFalse);
+    });
+  });
 }

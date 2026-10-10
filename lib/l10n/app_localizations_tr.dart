@@ -406,9 +406,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get tvPowerTitle => 'TV ve güç';
 
   @override
-  String get setupPermissionsTitle => 'Kurulum ve izinler';
-
-  @override
   String get updatesTitle => 'Güncellemeler';
 
   @override
@@ -1172,27 +1169,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String setupProgress(int done, int total) {
     return '$total adımdan $done tamamlandı';
   }
-
-  @override
-  String get setupOptional => 'İsteğe bağlı';
-
-  @override
-  String get homeButtonFixOffTitle => 'Ana Ekran Tuşu Düzeltmesi kapalı';
-
-  @override
-  String get homeButtonFixOffBody => 'Hearth\'ün erişilebilirlik hizmeti durdu; bu genellikle bir güncellemeden sonra olur. Yeniden açılana kadar ana ekran tuşu Hearth yerine Google TV\'yi açabilir ve profil değişiklikleri izlenmez.';
-
-  @override
-  String get homeButtonFixStuck => 'Android onu hâlâ açık gösteriyor ama çalışmıyor. Yeniden başlatmak için Erişilebilirlik ayarlarında Hearth\'ü kapatıp yeniden açın.';
-
-  @override
-  String get homeButtonFixRestricted => 'Oradaki Hearth anahtarı griyse, bu güncelleme bir indirmeden yüklendiği için Android onu engelliyor. TV\'ye bağlı bir bilgisayardan bunu çalıştırın, ardından Hearth\'ü açın:';
-
-  @override
-  String get homeButtonFixDontRemind => 'Bana hatırlatma';
-
-  @override
-  String get homeButtonFixOpenSettings => 'Erişilebilirlik ayarlarını aç';
 
   @override
   String get remoteButtonsRemapButton => 'Bir tuşu yeniden ata';
@@ -2197,4 +2173,35 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get setupFlowGoHome => 'Ana ekranıma git';
+
+  @override
+  String get setupHearthTitle => 'Hearth\'ü kur';
+
+  @override
+  String get setupRunAgain => 'Kurulumu yeniden çalıştır';
+
+  @override
+  String get setupCardFamily => 'Aileniz';
+
+  @override
+  String get setupCardWatching => 'İzleme';
+
+  @override
+  String setupChipLeft(int count) {
+    return 'Kurulumu bitir · kalan: $count';
+  }
+
+  @override
+  String get setupChipFix => 'Ana Sayfa düğmesinin düzeltilmesi gerekiyor';
+
+  @override
+  String get setupChipHideTitle => 'Bu hatırlatıcı gizlensin mi?';
+
+  @override
+  String setupChipHideBody(String where) {
+    return 'Kurulumu yine de $where bölümünden çalıştırabilirsiniz.';
+  }
+
+  @override
+  String get setupChipHide => 'Gizle';
 }

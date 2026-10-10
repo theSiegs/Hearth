@@ -52,17 +52,22 @@ class SetupFlowPage extends StatefulWidget {
 
   final SetupMode mode;
 
-  /// The screen to pick up on (a resume point), by name.
+  /// The screen to start on, by name (a resume point).
   final String? startAt;
 
-  const SetupFlowPage({super.key, this.mode = SetupMode.full, this.startAt});
+  /// Back from a trip to Android's settings for [startAt]'s step: it reports how that went right away ("It's not on
+  /// yet") rather than explaining the step again.
+  final bool resumed;
 
-  /// Opens the flow over whatever is showing.
-  static Future<SetupFlowResult?> open(BuildContext context, {SetupMode mode = SetupMode.full, String? startAt}) =>
-      Navigator.of(context).push<SetupFlowResult>(PageRouteBuilder(
+  const SetupFlowPage({super.key, this.mode = SetupMode.full, this.startAt, this.resumed = false});
+
+  /// Opens the flow over whatever is showing, Settings' side panel included.
+  static Future<SetupFlowResult?> open(BuildContext context,
+          {SetupMode mode = SetupMode.full, String? startAt, bool resumed = false}) =>
+      Navigator.of(context, rootNavigator: true).push<SetupFlowResult>(PageRouteBuilder(
         opaque: false,
         settings: const RouteSettings(name: routeName),
-        pageBuilder: (_, __, ___) => SetupFlowPage(mode: mode, startAt: startAt),
+        pageBuilder: (_, __, ___) => SetupFlowPage(mode: mode, startAt: startAt, resumed: resumed),
         transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
       ));
 
@@ -110,6 +115,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _flow.showing = true;
     WidgetsBinding.instance.addPostFrameCallback((_) => _start());
   }
 
@@ -121,6 +127,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     _primary.dispose();
     // Closed while the owner was away in Android's settings: nothing to come back to
     _waitFor(null);
+    _flow.showing = false;
     super.dispose();
   }
 
@@ -133,9 +140,13 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   Future<void> _start() async {
     await _refresh();
     if (!mounted) return;
-    final resumeAt = SetupScreen.values.asNameMap()[widget.startAt];
-    if (resumeAt != null) {
-      _show(resumeAt, resumed: true);
+    final startAt = SetupScreen.values.asNameMap()[widget.startAt];
+    if (startAt != null && widget.resumed) {
+      _show(startAt, resumed: true);
+    } else if (startAt != null && _alreadyDone(startAt)) {
+      _showDone(startAt, const Duration(seconds: 1));
+    } else if (startAt != null) {
+      _show(startAt);
     } else if (_lostFix) {
       _show(SetupScreen.homeButton);
     } else if (widget.mode == SetupMode.rerun) {

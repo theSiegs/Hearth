@@ -406,9 +406,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get tvPowerTitle => 'टीवी और पावर';
 
   @override
-  String get setupPermissionsTitle => 'सेटअप और अनुमतियाँ';
-
-  @override
   String get updatesTitle => 'अपडेट';
 
   @override
@@ -1175,27 +1172,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String setupProgress(int done, int total) {
     return '$total में से $done पूरे';
   }
-
-  @override
-  String get setupOptional => 'वैकल्पिक';
-
-  @override
-  String get homeButtonFixOffTitle => 'होम बटन फ़िक्स बंद है';
-
-  @override
-  String get homeButtonFixOffBody => 'Hearth की सुलभता सेवा रुक गई है, आमतौर पर किसी अपडेट के बाद। जब तक यह फिर से चालू न हो, होम बटन Hearth की जगह Google TV खोल सकता है, और प्रोफ़ाइल बदलने पर ध्यान नहीं दिया जाता।';
-
-  @override
-  String get homeButtonFixStuck => 'Android इसे अब भी चालू दिखाता है, लेकिन यह चल नहीं रही। इसे फिर से शुरू करने के लिए सुलभता सेटिंग्स में Hearth को बंद करके फिर चालू करें।';
-
-  @override
-  String get homeButtonFixRestricted => 'अगर वहां Hearth का स्विच धूसर है, तो Android उसे रोक रहा है क्योंकि यह अपडेट डाउनलोड से इंस्टॉल हुआ था। टीवी से जुड़े किसी कंप्यूटर से यह चलाएं, फिर Hearth चालू करें:';
-
-  @override
-  String get homeButtonFixDontRemind => 'मुझे याद न दिलाएं';
-
-  @override
-  String get homeButtonFixOpenSettings => 'सुलभता सेटिंग्स खोलें';
 
   @override
   String get remoteButtonsRemapButton => 'बटन रीमैप करें';
@@ -2205,4 +2181,35 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get setupFlowGoHome => 'मेरे होम पर जाएं';
+
+  @override
+  String get setupHearthTitle => 'Hearth सेट अप करें';
+
+  @override
+  String get setupRunAgain => 'सेटअप फिर से चलाएं';
+
+  @override
+  String get setupCardFamily => 'आपका परिवार';
+
+  @override
+  String get setupCardWatching => 'देखना';
+
+  @override
+  String setupChipLeft(int count) {
+    return 'सेटअप पूरा करें · बाकी: $count';
+  }
+
+  @override
+  String get setupChipFix => 'होम बटन को ठीक करना है';
+
+  @override
+  String get setupChipHideTitle => 'यह रिमाइंडर छिपाएं?';
+
+  @override
+  String setupChipHideBody(String where) {
+    return 'आप अब भी $where से सेटअप चला सकते हैं।';
+  }
+
+  @override
+  String get setupChipHide => 'छिपाएं';
 }
