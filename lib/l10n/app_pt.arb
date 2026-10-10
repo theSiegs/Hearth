@@ -537,7 +537,6 @@
     "notifOverlayPermissionTitle": "Permissão de sobreposição",
     "notifOverlayAdbMessage": "Neste dispositivo, não foi possível abrir automaticamente a tela de configurações da permissão de sobreposição.\n\nPara ativar os pop-ups sobrepostos, conceda a permissão manualmente via ADB de um computador conectado à TV:",
     "blockedNotificationsHeading": "Aplicativos bloqueados ({count})",
-    "systemPageUseGoogleTv": "Usar o Google TV por enquanto",
     "backupShareText": "Backup do Hearth",
     "backupShareFailedTitle": "Falha ao compartilhar",
     "backupShareFailed": "Falha ao compartilhar backup: {error}",
@@ -611,5 +610,7 @@
     "aboutWallpaperPhoto": "FOTO DO PLANO DE FUNDO",
     "updateErrorWrongApp": "Este download não é uma atualização deste Hearth",
     "notifOpen": "Abrir",
-    "notifOpenHint": "OK: Abrir · Esquerda: Dispensar · Direita: Mais"
+    "notifOpenHint": "OK: Abrir · Esquerda: Dispensar · Direita: Mais",
+    "tvPowerGoogleTvHome": "Usar a tela inicial do Google TV",
+    "tvPowerGoogleTvHomeNote": "O Hearth fica de fora até você desativar isto. O botão Início ainda abre o Hearth."
 }

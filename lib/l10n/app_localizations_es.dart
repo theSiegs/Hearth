@@ -1778,9 +1778,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get systemPageUseGoogleTv => 'Usar Google TV por ahora';
-
-  @override
   String get backupShareText => 'Copia de seguridad de Hearth';
 
   @override
@@ -2039,4 +2036,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get notifOpenHint => 'OK: Abrir · Izquierda: Descartar · Derecha: Más';
+
+  @override
+  String get tvPowerGoogleTvHome => 'Usar la pantalla de inicio de Google TV';
+
+  @override
+  String get tvPowerGoogleTvHomeNote => 'Hearth no interviene hasta que desactives esto. El botón de inicio sigue abriendo Hearth.';
 }

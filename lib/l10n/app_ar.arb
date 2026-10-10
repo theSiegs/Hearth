@@ -537,7 +537,6 @@
     "notifOverlayPermissionTitle": "إذن التراكب",
     "notifOverlayAdbMessage": "تعذّر فتح شاشة إعدادات إذن التراكب تلقائيًا على هذا الجهاز.\n\nلتفعيل النوافذ المنبثقة، امنح الإذن يدويًا عبر ADB من كمبيوتر متصل بالتلفزيون:",
     "blockedNotificationsHeading": "التطبيقات المحظورة ({count})",
-    "systemPageUseGoogleTv": "استخدام Google TV مؤقتًا",
     "backupShareText": "نسخة Hearth الاحتياطية",
     "backupShareFailedTitle": "فشلت المشاركة",
     "backupShareFailed": "فشلت مشاركة النسخ الاحتياطي: {error}",
@@ -611,5 +610,7 @@
     "aboutWallpaperPhoto": "صورة الخلفية",
     "updateErrorWrongApp": "هذا التنزيل ليس تحديثًا لـ Hearth هذا",
     "notifOpen": "فتح",
-    "notifOpenHint": "موافق: فتح · يسار: تجاهل · يمين: المزيد"
+    "notifOpenHint": "موافق: فتح · يسار: تجاهل · يمين: المزيد",
+    "tvPowerGoogleTvHome": "استخدام الشاشة الرئيسية لـ Google TV",
+    "tvPowerGoogleTvHomeNote": "يبقى Hearth بعيدًا حتى توقف هذا الخيار. لا يزال زر الصفحة الرئيسية يفتح Hearth."
 }

@@ -537,7 +537,6 @@
     "notifOverlayPermissionTitle": "悬浮窗权限",
     "notifOverlayAdbMessage": "此设备无法自动打开悬浮窗权限设置页面。\n\n要启用悬浮弹窗，请在连接到电视的电脑上通过 ADB 手动授予权限：",
     "blockedNotificationsHeading": "已屏蔽的应用（{count}）",
-    "systemPageUseGoogleTv": "暂时使用 Google TV",
     "backupShareText": "Hearth 备份",
     "backupShareFailedTitle": "共享失败",
     "backupShareFailed": "共享备份失败：{error}",
@@ -611,5 +610,7 @@
     "aboutWallpaperPhoto": "壁纸照片",
     "updateErrorWrongApp": "此下载不是此 Hearth 的更新",
     "notifOpen": "打开",
-    "notifOpenHint": "确定：打开 · 左：关闭 · 右：更多"
+    "notifOpenHint": "确定：打开 · 左：关闭 · 右：更多",
+    "tvPowerGoogleTvHome": "使用 Google TV 主屏幕",
+    "tvPowerGoogleTvHomeNote": "在您关闭此项之前，Hearth 不会介入。主屏幕按钮仍会打开 Hearth。"
 }

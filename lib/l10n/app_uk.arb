@@ -537,7 +537,6 @@
     "notifOverlayPermissionTitle": "Дозвіл на накладання",
     "notifOverlayAdbMessage": "На цьому пристрої не вдалося автоматично відкрити екран налаштувань дозволу на накладання.\n\nЩоб увімкнути спливні вікна поверх інших, надайте дозвіл вручну через ADB з комп'ютера, під'єднаного до телевізора:",
     "blockedNotificationsHeading": "Заблоковані додатки ({count})",
-    "systemPageUseGoogleTv": "Поки що використовувати Google TV",
     "backupShareText": "Резервна копія Hearth",
     "backupShareFailedTitle": "Не вдалося поділитися",
     "backupShareFailed": "Не вдалося поділитися резервною копією: {error}",
@@ -611,5 +610,7 @@
     "aboutWallpaperPhoto": "ФОТО НА ТЛІ",
     "updateErrorWrongApp": "Це завантаження не є оновленням цього Hearth",
     "notifOpen": "Відкрити",
-    "notifOpenHint": "OK: відкрити · Ліворуч: закрити · Праворуч: більше"
+    "notifOpenHint": "OK: відкрити · Ліворуч: закрити · Праворуч: більше",
+    "tvPowerGoogleTvHome": "Використовувати головний екран Google TV",
+    "tvPowerGoogleTvHomeNote": "Hearth не втручається, доки ви це не вимкнете. Кнопка «Додому» й далі відкриває Hearth."
 }

@@ -185,6 +185,13 @@ public class MainActivity extends FlutterActivity {
             case "getHearthProfilesState" -> sIoExecutor.execute(() -> runProfilesState(result));
             case "uninstallHearth" -> result.success(uninstallSelf());
             case "openGoogleTvHome" -> result.success(openGoogleTvHome());
+            case "getGoogleTvHome" -> result.success(LauncherAccessibilityService.isGoogleTvHome(this));
+            case "setGoogleTvHome" -> {
+                boolean on = Boolean.TRUE.equals(call.arguments());
+                LauncherAccessibilityService.setGoogleTvHome(this, on);
+                // Turned on: show Google TV's home now
+                result.success(!on || openGoogleTvHome());
+            }
             case "voiceSearch" -> startVoiceSearch(result);
             case "getAppLastProfiles" -> {
                 Map<String, Object> users = new HashMap<>(LauncherAccessibilityService.getAppLastProfiles(this));
@@ -1013,7 +1020,6 @@ public class MainActivity extends FlutterActivity {
      */
     private boolean openGoogleTvHome() {
         final String googleTv = LauncherAccessibilityService.GOOGLE_TV_PACKAGE;
-        LauncherAccessibilityService.allowGoogleTvTemporarily();
         Intent intent = new Intent(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_HOME)
                 .setPackage(googleTv)

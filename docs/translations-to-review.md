@@ -50,6 +50,6 @@ Proper nouns (Hearth, HearthTube, Home Assistant, Google TV, Netflix, Watch Next
 - **inputs** (1): `inputsNoneDetected`
 - **notif** (9): `notifClearAll`, `notifAllCaughtUp`, `notifBlockAppNotifications`, `notifOpenApp`, `notifAccessAdbTitle`, `notifAccessAdbMessage`, `notifOpenAppInfo`, `notifOverlayPermissionTitle`, `notifOverlayAdbMessage`
 - **blocked** (1): `blockedNotificationsHeading`
-- **system** (1): `systemPageUseGoogleTv`
+- **tvPower** (2): `tvPowerGoogleTvHome`, `tvPowerGoogleTvHomeNote`
 - **backup** (14): `backupShareText`, `backupShareFailedTitle`, `backupShareFailed`, `backupExportSuccessTitle`, `backupExportFailedTitle`, `backupImportSuccessTitle`, `backupImportFailedTitle`, `backupImport`, `backupLoadError`, `backupNoFiles`, `backupFileDetails`, `backupSizeBytes`, `backupSizeKilobytes`, `backupSizeMegabytes`
 - **about** (6): `aboutBuiltOn`, `aboutDescription`, `aboutHearthOnGitHub`, `aboutCredits`, `aboutFlauncherForkCredit`, `aboutLicense`

@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'focusable_settings_tile.dart';
 import 'remote_search_settings_page.dart';
 import 'setup_checklist_page.dart';
@@ -66,7 +67,46 @@ class TvPowerSettingsPage extends StatelessWidget {
           title: Text(localizations.systemSettings, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: () => context.read<AppsService>().openSettings(),
         ),
+        const _GoogleTvHomeTile(),
       ],
+    );
+  }
+}
+
+/// Google TV's own home instead of Hearth's, for as long as it's on: Hearth stops taking over from it. The Home
+/// button still opens Hearth, so this switch is always one press away.
+class _GoogleTvHomeTile extends StatefulWidget {
+  const _GoogleTvHomeTile();
+
+  @override
+  State<_GoogleTvHomeTile> createState() => _GoogleTvHomeTileState();
+}
+
+class _GoogleTvHomeTileState extends State<_GoogleTvHomeTile> {
+  late final FLauncherChannel _channel = context.read<FLauncherChannel>();
+  bool _on = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _channel.getGoogleTvHome().then((on) {
+      if (mounted) setState(() => _on = on);
+    }).catchError((_) {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    return RoundedSwitchListTile(
+      value: _on,
+      onChanged: (on) async {
+        setState(() => _on = on);
+        await _channel.setGoogleTvHome(on);
+      },
+      title: Text(l.tvPowerGoogleTvHome, style: Theme.of(context).textTheme.bodyMedium),
+      subtitle: Text(l.tvPowerGoogleTvHomeNote,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54)),
+      secondary: const Icon(Icons.tv_outlined),
     );
   }
 }

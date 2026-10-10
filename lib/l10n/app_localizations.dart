@@ -3137,12 +3137,6 @@ abstract class AppLocalizations {
   /// **'Blocked Apps ({count})'**
   String blockedNotificationsHeading(int count);
 
-  /// Row on the System page that opens the Google TV home screen instead of Hearth
-  ///
-  /// In en, this message translates to:
-  /// **'Use Google TV for now'**
-  String get systemPageUseGoogleTv;
-
   /// Text sent along with the backup file when it's shared from the Backup & Restore page
   ///
   /// In en, this message translates to:
@@ -3586,6 +3580,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'OK: Open · Left: Dismiss · Right: More'**
   String get notifOpenHint;
+
+  /// TV & power: switch that leaves Google TV's own home in front instead of Hearth
+  ///
+  /// In en, this message translates to:
+  /// **'Use Google TV\'s home'**
+  String get tvPowerGoogleTvHome;
+
+  /// TV & power: explanation under the Use Google TV's home switch
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth stays out of the way until you turn this off. The Home button still opens Hearth.'**
+  String get tvPowerGoogleTvHomeNote;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

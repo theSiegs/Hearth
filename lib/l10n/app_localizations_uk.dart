@@ -1792,9 +1792,6 @@ class AppLocalizationsUk extends AppLocalizations {
   }
 
   @override
-  String get systemPageUseGoogleTv => 'Поки що використовувати Google TV';
-
-  @override
   String get backupShareText => 'Резервна копія Hearth';
 
   @override
@@ -2053,4 +2050,10 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get notifOpenHint => 'OK: відкрити · Ліворуч: закрити · Праворуч: більше';
+
+  @override
+  String get tvPowerGoogleTvHome => 'Використовувати головний екран Google TV';
+
+  @override
+  String get tvPowerGoogleTvHomeNote => 'Hearth не втручається, доки ви це не вимкнете. Кнопка «Додому» й далі відкриває Hearth.';
 }
