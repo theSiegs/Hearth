@@ -60,14 +60,9 @@ class FLauncherApp extends StatelessWidget
             overscroll: false,
           ),
           shortcuts: {
-            ...WidgetsApp.defaultShortcuts,
+            ...hearthActivateShortcuts(WidgetsApp.defaultShortcuts),
             const SingleActivator(LogicalKeyboardKey.escape): _backIntents,
             const SingleActivator(LogicalKeyboardKey.gameButtonB): _backIntents,
-            const SingleActivator(LogicalKeyboardKey.select): const ActivateIntent(),
-            const SingleActivator(LogicalKeyboardKey.enter): const ActivateIntent(),
-            const SingleActivator(LogicalKeyboardKey.numpadEnter): const ActivateIntent(),
-            const SingleActivator(LogicalKeyboardKey.gameButtonA): const ActivateIntent(),
-            const SingleActivator(LogicalKeyboardKey.gameButtonSelect): const ActivateIntent(),
           },
           actions: {
             ...WidgetsApp.defaultActions,
@@ -161,3 +156,22 @@ class FLauncherApp extends StatelessWidget
     );
   }
 }
+
+/// The keys that press what has focus (OK on the remote, Enter, Space, a gamepad's A).
+const List<LogicalKeyboardKey> activateKeys = [
+  LogicalKeyboardKey.select,
+  LogicalKeyboardKey.enter,
+  LogicalKeyboardKey.numpadEnter,
+  LogicalKeyboardKey.space,
+  LogicalKeyboardKey.gameButtonA,
+  LogicalKeyboardKey.gameButtonSelect,
+];
+
+/// [defaults] with [activateKeys] pressing once per press: a held OK sends repeats, and the repeats mustn't press
+/// whatever got focus meanwhile, such as the first action of the menu that holding OK just opened.
+Map<ShortcutActivator, Intent> hearthActivateShortcuts(Map<ShortcutActivator, Intent> defaults) => {
+      for (final entry in defaults.entries)
+        if (!(entry.key is SingleActivator && activateKeys.contains((entry.key as SingleActivator).trigger)))
+          entry.key: entry.value,
+      for (final key in activateKeys) SingleActivator(key, includeRepeats: false): const ActivateIntent(),
+    };
