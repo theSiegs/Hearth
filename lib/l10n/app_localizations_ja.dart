@@ -2528,16 +2528,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get setupFlowChooseAgain => 'もう一度選ぶ';
 
   @override
-  String get weatherForecastNextHours => 'この先の数時間';
+  String get weatherForecastHourly => '時間別';
 
   @override
-  String get weatherForecastNextDays => '今後5日間';
+  String get weatherForecastDaily => '日別';
 
   @override
-  String get weatherForecastShowDays => 'OK: 今後5日間';
+  String get weatherForecastShowDaily => 'OK: 日別';
 
   @override
-  String get weatherForecastShowHours => 'OK: この先の数時間';
+  String get weatherForecastShowHourly => 'OK: 時間別';
 
   @override
   String get weatherForecastNow => '現在';

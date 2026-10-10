@@ -2528,16 +2528,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get setupFlowChooseAgain => '重新选择';
 
   @override
-  String get weatherForecastNextHours => '未来几小时';
+  String get weatherForecastHourly => '逐小时';
 
   @override
-  String get weatherForecastNextDays => '未来 5 天';
+  String get weatherForecastDaily => '逐日';
 
   @override
-  String get weatherForecastShowDays => '确定：未来 5 天';
+  String get weatherForecastShowDaily => '确定：逐日';
 
   @override
-  String get weatherForecastShowHours => '确定：未来几小时';
+  String get weatherForecastShowHourly => '确定：逐小时';
 
   @override
   String get weatherForecastNow => '现在';

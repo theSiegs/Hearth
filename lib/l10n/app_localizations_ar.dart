@@ -2571,16 +2571,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get setupFlowChooseAgain => 'اختر مرة أخرى';
 
   @override
-  String get weatherForecastNextHours => 'الساعات القادمة';
+  String get weatherForecastHourly => 'كل ساعة';
 
   @override
-  String get weatherForecastNextDays => 'الأيام الخمسة القادمة';
+  String get weatherForecastDaily => 'يوميًا';
 
   @override
-  String get weatherForecastShowDays => 'موافق: الأيام الخمسة القادمة';
+  String get weatherForecastShowDaily => 'موافق: يوميًا';
 
   @override
-  String get weatherForecastShowHours => 'موافق: الساعات القادمة';
+  String get weatherForecastShowHourly => 'موافق: كل ساعة';
 
   @override
   String get weatherForecastNow => 'الآن';
