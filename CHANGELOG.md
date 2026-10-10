@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.25 (pre-release)
+
+- Weather forecast: with the top bar's weather selected, the coming hours show over the home; OK swaps them for the next five days.
+
 ## 2026.10.24 (pre-release)
 
 - The Home button closes Settings, side panels, dialogs and the Home Assistant panel.
