@@ -3,6 +3,13 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.18 (pre-release)
+
+- First-run setup: a guided flow on a new TV (the Home button, the home app, then family, watching, a look for the home, smart home, TV & power and updates), Set up Hearth in Settings, and a chip on the home for anything left. TVs already set up aren't taken over.
+- Four looks to start from: Hearth, Photo of the day, Calm dark and Bold.
+- The phone setup page also takes a Home Assistant webhook ID for TV status.
+- Start on boot is on unless it was turned off.
+
 ## 2026.10.17 (pre-release)
 
 - "Use Google TV's home" in TV & power: a switch that leaves Google TV's own home in front until it's turned off. It replaces "Use Google TV for now" in System.
