@@ -3,13 +3,12 @@ package com.thesiegs.hearth;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Debug;
+import android.os.ParcelFileDescriptor;
 import android.util.Log;
 import android.view.accessibility.AccessibilityNodeInfo;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
+import java.io.InputStreamReader;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.regex.Matcher;
@@ -43,30 +42,54 @@ final class GoogleSwitchProbe {
      */
     static String latestSwitch(Context context) {
         if (!canReadSwitches(context)) return null;
-        File dump = new File(context.getCacheDir(), "google_tv_dump.txt");
+        // Through a pipe: the system may not write into a file of Hearth's own
+        ParcelFileDescriptor[] pipe;
         try {
-            try (FileOutputStream out = new FileOutputStream(dump)) {
-                if (!Debug.dumpService("activity", out.getFD(),
-                        new String[]{"service", LauncherAccessibilityService.GOOGLE_TV_PACKAGE})) {
-                    return null;
+            pipe = ParcelFileDescriptor.createPipe();
+        } catch (Exception e) {
+            Log.w(TAG, "Couldn't open a pipe for Google TV's dump", e);
+            return null;
+        }
+        final ParcelFileDescriptor writeSide = pipe[1];
+        final boolean[] dumped = new boolean[1];
+        Thread writer = new Thread(() -> {
+            try {
+                dumped[0] = Debug.dumpService("activity", writeSide.getFileDescriptor(),
+                        new String[]{"service", LauncherAccessibilityService.GOOGLE_TV_PACKAGE});
+            } catch (Exception e) {
+                Log.w(TAG, "Google TV's dump failed", e);
+            } finally {
+                try {
+                    writeSide.close();
+                } catch (Exception ignored) {
                 }
             }
-            // Its log isn't strictly in order: the latest is the largest time (same year)
-            String latest = null;
-            try (BufferedReader in = new BufferedReader(new FileReader(dump))) {
-                for (String line; (line = in.readLine()) != null; ) {
-                    Matcher m = SWITCH.matcher(line);
-                    if (m.find() && (latest == null || m.group(1).compareTo(latest) > 0)) latest = m.group(1);
-                }
+        }, "HearthDumpWriter");
+        writer.start();
+        // Its log isn't strictly in order: the latest is the largest time (same year)
+        String latest = null;
+        int lines = 0;
+        String first = null;
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(
+                new ParcelFileDescriptor.AutoCloseInputStream(pipe[0])))) {
+            for (String line; (line = in.readLine()) != null; ) {
+                if (lines++ == 0) first = line;
+                Matcher m = SWITCH.matcher(line);
+                if (m.find() && (latest == null || m.group(1).compareTo(latest) > 0)) latest = m.group(1);
             }
-            return latest;
         } catch (Exception e) {
             Log.w(TAG, "Couldn't read Google TV's dump", e);
-            return null;
-        } finally {
-            //noinspection ResultOfMethodCallIgnored
-            dump.delete();
         }
+        try {
+            writer.join(5_000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        if (latest == null) {
+            Log.i(TAG, "Google TV's dump: " + lines + " lines, dumped=" + dumped[0]
+                    + (first != null ? ", starting [" + first.substring(0, Math.min(80, first.length())) + "]" : ""));
+        }
+        return latest;
     }
 
     /** The account Google TV's home names on its profile picture, or null when it isn't showing. */
