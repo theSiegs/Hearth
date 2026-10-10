@@ -83,6 +83,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
     /** How long after a pick the home that comes up is the one it leads to. */
     private static final long HOME_PICK_FRESH_MS = 10_000;
     private static final long KIDS_HOME_GRACE_MS = 1_500;
+    /**
+     * After Google TV's profile lock: a cancelled PIN opens its home and then its chooser, which on the TV showed
+     * 0.27 s after the home (2026-10-10); a right PIN leaves the home up. Long enough for the chooser to show, with
+     * margin, before Hearth covers the home.
+     */
+    private static final long PROFILE_LOCK_GRACE_MS = 800;
     private static final long PROFILE_USER_RECHECK_MS = 1_500;
     private static final long PROFILE_SETTLE_MS = 2_000;
     private static final long OWNER_SETTLE_MS = 5_000;
@@ -1134,8 +1140,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 // one brings its chooser up over the home a moment later, which keeps Hearth out (the profile
                 // stays locked until someone picks a profile or enters the PIN)
                 mHandler.removeCallbacks(mKidsHomeTakeOver);
-                mHandler.postDelayed(mKidsHomeTakeOver, KIDS_HOME_GRACE_MS);
-                if (readAccount) readHomeAccount(false, pick);
+                mHandler.postDelayed(mKidsHomeTakeOver, PROFILE_LOCK_GRACE_MS);
+                // Only a pick in the chooser changes whose profile is on (a right PIN doesn't): only then is the home
+                // read first, which the takeover waits for
+                if (readAccount && pick != null) readHomeAccount(false, pick);
             } else if (autoTakeOverAllowed() && ProfileUsers.isKids(this) && !mScreenTimeKnown) {
                 // A kids profile whose screen time the apps can't tell: Google TV opens its time up / bedtime
                 // screen from its home a moment after the home itself, and covering the home first would hide
