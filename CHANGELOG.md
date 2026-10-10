@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.30 (pre-release)
+
+- After entering the PIN on Google TV's profile lock (when the TV wakes, or Lock Profile), Hearth comes back about a second sooner.
+
 ## 2026.10.29 (pre-release)
 
 - YouTube allowance: no play time lost when a kids profile's helper is briefly disconnected; a Home Assistant lock (bedtime, school time) keeps Hearth's own minutes as Hearth's, with Home Assistant's message; Home Assistant can give its per-profile limits as the entity's state.
