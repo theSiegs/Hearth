@@ -103,6 +103,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private boolean mNewProfileHold = false;
     /** The just-added profile last picked, until a profile user starts: Google TV may mark it current regardless. */
     private String mUnstartedPick;
+    /** The profile Google TV's chooser marked as its current account when it was last read. */
+    private String mChooserCurrent;
     /**
      * When Google TV's profile lock (its PIN screen for the current profile) last came up. Cancelling it opens Google
      * TV's home and, a moment later, its profile chooser over it: Hearth taking over in between would land back in
@@ -510,6 +512,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         List<String> names = new ArrayList<>();
         List<Rect> photos = new ArrayList<>();
         String current = collectChooserTiles(root, names, photos, 0);
+        if (current != null) mChooserCurrent = current;
         // The current account's tile names the running profile user, unless a switch is still settling. Not when
         // it's a just-added profile that was picked but never started: Google TV can mark that one current while
         // the last profile still runs, and it mustn't rename the profile that's actually running.
@@ -798,7 +801,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 // A profile no profile user has run as yet (just added): Google TV sets it up from its own home in
                 // this user before it starts the new one, and gives up if Hearth covers that home. Briefly: when
                 // Google can't start it, it just stays on its home, and the Home button is the only way back.
-                if (mLastPick != null && ProfileUsers.serialOf(this, mLastPick) == ProfileUsers.UNKNOWN) {
+                // (Not the profile Google itself marks current: that's the one on now, whatever Hearth calls it)
+                if (mLastPick != null && ProfileUsers.serialOf(this, mLastPick) == ProfileUsers.UNKNOWN
+                        && !mLastPick.equals(mChooserCurrent)) {
                     mGoogleSetupUntil = SystemClock.elapsedRealtime() + NEW_PROFILE_HOLD_MS;
                     mNewProfileHold = true;
                     mUnstartedPick = mLastPick;
