@@ -75,16 +75,22 @@ enum HomeLook {
   }
 
   /// Whether the home looks like this now.
-  bool matches(SettingsService settings) =>
-      settings.themes == cardStyle &&
-      (accent == null || settings.accentColorHex == accent) &&
-      settings.bingWallpaperEnabled == bing &&
-      (bing || settings.gradientUuid == gradientUuid) &&
-      settings.dockDarkBackground == darkDock;
+  bool matches(SettingsService settings) => matchesSnapshot(HomeLookSnapshot.of(settings));
+
+  /// Whether a home as [snapshot] keeps it looks like this.
+  bool matchesSnapshot(HomeLookSnapshot snapshot) =>
+      snapshot.cardStyle == cardStyle &&
+      (accent == null || snapshot.accent == accent) &&
+      snapshot.bing == bing &&
+      (bing || snapshot.gradientUuid == gradientUuid) &&
+      snapshot.darkDock == darkDock;
 
   /// The look the home has now, if it's one of these.
-  static HomeLook? current(SettingsService settings) =>
-      HomeLook.values.where((look) => look.matches(settings)).firstOrNull;
+  static HomeLook? current(SettingsService settings) => currentOf(HomeLookSnapshot.of(settings));
+
+  /// The look a home as [snapshot] keeps it has, if it's one of these.
+  static HomeLook? currentOf(HomeLookSnapshot snapshot) =>
+      HomeLook.values.where((look) => look.matchesSnapshot(snapshot)).firstOrNull;
 }
 
 /// What a look changes, as it was: the flow previews each look as it's focused and puts this back on Keep current.

@@ -72,6 +72,24 @@ class SetupFrame extends StatelessWidget {
               color: Colors.black.withOpacity(preview ? 0.15 : 0.55),
             ),
           ),
+          // While previewing, the home's own top bar would show through under the strip
+          if (preview)
+            const Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              height: 160,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.black, Color(0xE6000000), Colors.transparent],
+                    stops: [0, 0.6, 1],
+                  ),
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(48, 24, 48, 24),
             child: Column(
