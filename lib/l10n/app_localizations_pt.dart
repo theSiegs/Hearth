@@ -406,9 +406,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get tvPowerTitle => 'TV e energia';
 
   @override
-  String get setupPermissionsTitle => 'Configuração e permissões';
-
-  @override
   String get updatesTitle => 'Atualizações';
 
   @override
@@ -1175,27 +1172,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String setupProgress(int done, int total) {
     return '$done de $total concluídos';
   }
-
-  @override
-  String get setupOptional => 'Opcional';
-
-  @override
-  String get homeButtonFixOffTitle => 'A Correção do botão Início está desativada';
-
-  @override
-  String get homeButtonFixOffBody => 'O serviço de acessibilidade do Hearth parou, geralmente após uma atualização. Até ele voltar, o botão Início pode abrir o Google TV em vez do Hearth, e as trocas de perfil não são acompanhadas.';
-
-  @override
-  String get homeButtonFixStuck => 'O Android ainda mostra o serviço como ativado, mas ele não está em execução. Desative e ative o Hearth de novo nas configurações de acessibilidade para reiniciá-lo.';
-
-  @override
-  String get homeButtonFixRestricted => 'Se o botão do Hearth estiver acinzentado, o Android o está bloqueando porque esta atualização foi instalada a partir de um download. Execute isto em um computador conectado à TV e depois ative o Hearth:';
-
-  @override
-  String get homeButtonFixDontRemind => 'Não me lembrar';
-
-  @override
-  String get homeButtonFixOpenSettings => 'Abrir configurações de acessibilidade';
 
   @override
   String get remoteButtonsRemapButton => 'Remapear um botão';
@@ -2207,4 +2183,35 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get setupFlowGoHome => 'Ir para meu início';
+
+  @override
+  String get setupHearthTitle => 'Configurar o Hearth';
+
+  @override
+  String get setupRunAgain => 'Configurar de novo';
+
+  @override
+  String get setupCardFamily => 'Sua família';
+
+  @override
+  String get setupCardWatching => 'Assistir';
+
+  @override
+  String setupChipLeft(int count) {
+    return 'Concluir a configuração · faltam: $count';
+  }
+
+  @override
+  String get setupChipFix => 'O botão Início precisa de ajuste';
+
+  @override
+  String get setupChipHideTitle => 'Ocultar este lembrete?';
+
+  @override
+  String setupChipHideBody(String where) {
+    return 'Você ainda pode configurar em $where.';
+  }
+
+  @override
+  String get setupChipHide => 'Ocultar';
 }

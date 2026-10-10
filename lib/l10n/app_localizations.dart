@@ -896,12 +896,6 @@ abstract class AppLocalizations {
   /// Settings page title, also its row in the page that opens it
   ///
   /// In en, this message translates to:
-  /// **'Setup & permissions'**
-  String get setupPermissionsTitle;
-
-  /// Settings page title, also its row in the page that opens it
-  ///
-  /// In en, this message translates to:
   /// **'Updates'**
   String get updatesTitle;
 
@@ -2146,48 +2140,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{done} of {total} done'**
   String setupProgress(int done, int total);
-
-  /// Setup & permissions page: heading above the optional steps
-  ///
-  /// In en, this message translates to:
-  /// **'Optional'**
-  String get setupOptional;
-
-  /// Warning dialog title when Hearth's accessibility service has stopped
-  ///
-  /// In en, this message translates to:
-  /// **'Home Button Fix is off'**
-  String get homeButtonFixOffTitle;
-
-  /// Home Button Fix is off dialog: first paragraph
-  ///
-  /// In en, this message translates to:
-  /// **'Hearth\'s accessibility service has stopped, usually after an update. Until it is back on, the Home button may open Google TV instead of Hearth, and profile switches aren\'t followed.'**
-  String get homeButtonFixOffBody;
-
-  /// Home Button Fix is off dialog: when Android shows the service as on but it isn't running
-  ///
-  /// In en, this message translates to:
-  /// **'Android still lists it as on, but it isn\'t running. Turn Hearth off and on again in Accessibility settings to restart it.'**
-  String get homeButtonFixStuck;
-
-  /// Home Button Fix is off dialog: when Android restricts the setting; an adb command follows
-  ///
-  /// In en, this message translates to:
-  /// **'If Hearth\'s switch there is greyed out, Android is blocking it because this update was installed from a download. Run this from a computer connected to the TV, then turn Hearth on:'**
-  String get homeButtonFixRestricted;
-
-  /// Home Button Fix is off dialog: button that stops the warning
-  ///
-  /// In en, this message translates to:
-  /// **'Don\'t remind me'**
-  String get homeButtonFixDontRemind;
-
-  /// Home Button Fix is off dialog: button that opens Android's accessibility settings
-  ///
-  /// In en, this message translates to:
-  /// **'Open Accessibility settings'**
-  String get homeButtonFixOpenSettings;
 
   /// Remote buttons page: row that starts remapping a button
   ///
@@ -3910,6 +3862,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Go to my home'**
   String get setupFlowGoHome;
+
+  /// Settings > System: the page that runs the setup flow again and lists what Hearth needs from Android
+  ///
+  /// In en, this message translates to:
+  /// **'Set up Hearth'**
+  String get setupHearthTitle;
+
+  /// Set up Hearth page: first row, opens the setup flow
+  ///
+  /// In en, this message translates to:
+  /// **'Run setup again'**
+  String get setupRunAgain;
+
+  /// Setup: the group for the parent PIN, Profile Pairing and kids' profiles (a card in the setup flow, a heading on the Set up Hearth page)
+  ///
+  /// In en, this message translates to:
+  /// **'Your family'**
+  String get setupCardFamily;
+
+  /// Setup: the group for Continue Watching and notifications (a card in the setup flow, a heading on the Set up Hearth page)
+  ///
+  /// In en, this message translates to:
+  /// **'Watching'**
+  String get setupCardWatching;
+
+  /// Home screen top bar: chip that opens the setup flow; {count} is how many steps or cards are left (1 or more)
+  ///
+  /// In en, this message translates to:
+  /// **'Finish setting up · {count} left'**
+  String setupChipLeft(int count);
+
+  /// Home screen top bar: chip shown when Home Button Fix is off (skipped, or switched off by an update)
+  ///
+  /// In en, this message translates to:
+  /// **'Home button needs a fix'**
+  String get setupChipFix;
+
+  /// Home screen: asked when OK is held on the setup chip
+  ///
+  /// In en, this message translates to:
+  /// **'Hide this reminder?'**
+  String get setupChipHideTitle;
+
+  /// Home screen: under "Hide this reminder?"; {where} is where the setup page is in Settings
+  ///
+  /// In en, this message translates to:
+  /// **'You can still run setup from {where}.'**
+  String setupChipHideBody(String where);
+
+  /// Home screen: button that hides the setup chip for good
+  ///
+  /// In en, this message translates to:
+  /// **'Hide'**
+  String get setupChipHide;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

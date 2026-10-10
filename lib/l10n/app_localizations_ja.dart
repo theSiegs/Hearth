@@ -406,9 +406,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get tvPowerTitle => 'テレビと電源';
 
   @override
-  String get setupPermissionsTitle => 'セットアップと権限';
-
-  @override
   String get updatesTitle => 'アップデート';
 
   @override
@@ -1172,27 +1169,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String setupProgress(int done, int total) {
     return '$total 件中 $done 件完了';
   }
-
-  @override
-  String get setupOptional => 'オプション';
-
-  @override
-  String get homeButtonFixOffTitle => 'ホームボタン修正がオフです';
-
-  @override
-  String get homeButtonFixOffBody => 'Hearth のユーザー補助サービスが停止しました（通常はアップデート後に起こります）。再びオンにするまで、ホームボタンで Hearth ではなく Google TV が開くことがあり、プロフィールの切り替えにも追従しません。';
-
-  @override
-  String get homeButtonFixStuck => 'Android ではまだオンと表示されていますが、動作していません。ユーザー補助の設定で Hearth をオフにしてから再度オンにし、再起動してください。';
-
-  @override
-  String get homeButtonFixRestricted => 'そこで Hearth のスイッチがグレー表示になっている場合、このアップデートがダウンロードからインストールされたため Android がブロックしています。テレビに接続したパソコンから次を実行してから、Hearth をオンにしてください：';
-
-  @override
-  String get homeButtonFixDontRemind => '今後表示しない';
-
-  @override
-  String get homeButtonFixOpenSettings => 'ユーザー補助の設定を開く';
 
   @override
   String get remoteButtonsRemapButton => 'ボタンの割り当てを変更';
@@ -2197,4 +2173,35 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get setupFlowGoHome => 'ホームへ';
+
+  @override
+  String get setupHearthTitle => 'Hearth の設定';
+
+  @override
+  String get setupRunAgain => '設定をもう一度行う';
+
+  @override
+  String get setupCardFamily => '家族';
+
+  @override
+  String get setupCardWatching => '視聴';
+
+  @override
+  String setupChipLeft(int count) {
+    return '設定を完了 · 残り $count';
+  }
+
+  @override
+  String get setupChipFix => 'ホームボタンの修正が必要です';
+
+  @override
+  String get setupChipHideTitle => 'このリマインダーを非表示にしますか?';
+
+  @override
+  String setupChipHideBody(String where) {
+    return '$where からいつでも設定できます。';
+  }
+
+  @override
+  String get setupChipHide => '非表示';
 }

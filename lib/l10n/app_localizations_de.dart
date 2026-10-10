@@ -406,9 +406,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get tvPowerTitle => 'TV & Energie';
 
   @override
-  String get setupPermissionsTitle => 'Einrichtung & Berechtigungen';
-
-  @override
   String get updatesTitle => 'Updates';
 
   @override
@@ -1175,27 +1172,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String setupProgress(int done, int total) {
     return '$done von $total erledigt';
   }
-
-  @override
-  String get setupOptional => 'Optional';
-
-  @override
-  String get homeButtonFixOffTitle => 'Home-Tasten-Korrektur ist aus';
-
-  @override
-  String get homeButtonFixOffBody => 'Der Bedienungshilfen-Dienst von Hearth wurde beendet, meist nach einem Update. Bis er wieder an ist, öffnet die Home-Taste eventuell Google TV statt Hearth, und Profilwechsel werden nicht erkannt.';
-
-  @override
-  String get homeButtonFixStuck => 'Android zeigt den Dienst noch als an, aber er läuft nicht. Schalten Sie Hearth in den Bedienungshilfen-Einstellungen aus und wieder ein, um ihn neu zu starten.';
-
-  @override
-  String get homeButtonFixRestricted => 'Wenn der Schalter für Hearth dort ausgegraut ist, blockiert Android ihn, weil dieses Update aus einem Download installiert wurde. Führen Sie dies auf einem mit dem Fernseher verbundenen Computer aus und schalten Sie Hearth dann ein:';
-
-  @override
-  String get homeButtonFixDontRemind => 'Nicht mehr erinnern';
-
-  @override
-  String get homeButtonFixOpenSettings => 'Bedienungshilfen öffnen';
 
   @override
   String get remoteButtonsRemapButton => 'Taste neu belegen';
@@ -2205,4 +2181,35 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get setupFlowGoHome => 'Zum Startbildschirm';
+
+  @override
+  String get setupHearthTitle => 'Hearth einrichten';
+
+  @override
+  String get setupRunAgain => 'Einrichtung erneut starten';
+
+  @override
+  String get setupCardFamily => 'Ihre Familie';
+
+  @override
+  String get setupCardWatching => 'Fernsehen';
+
+  @override
+  String setupChipLeft(int count) {
+    return 'Einrichtung abschließen · noch $count';
+  }
+
+  @override
+  String get setupChipFix => 'Home-Taste muss repariert werden';
+
+  @override
+  String get setupChipHideTitle => 'Diese Erinnerung ausblenden?';
+
+  @override
+  String setupChipHideBody(String where) {
+    return 'Die Einrichtung können Sie weiterhin unter $where starten.';
+  }
+
+  @override
+  String get setupChipHide => 'Ausblenden';
 }

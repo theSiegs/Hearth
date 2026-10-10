@@ -184,10 +184,6 @@
     "@tvPowerTitle": {
         "description": "Settings page title, also its row in the page that opens it"
     },
-    "setupPermissionsTitle": "Setup & permissions",
-    "@setupPermissionsTitle": {
-        "description": "Settings page title, also its row in the page that opens it"
-    },
     "updatesTitle": "Updates",
     "@updatesTitle": {
         "description": "Settings page title, also its row in the page that opens it"
@@ -1313,34 +1309,6 @@
                 "type": "int"
             }
         }
-    },
-    "setupOptional": "Optional",
-    "@setupOptional": {
-        "description": "Setup & permissions page: heading above the optional steps"
-    },
-    "homeButtonFixOffTitle": "Home Button Fix is off",
-    "@homeButtonFixOffTitle": {
-        "description": "Warning dialog title when Hearth's accessibility service has stopped"
-    },
-    "homeButtonFixOffBody": "Hearth's accessibility service has stopped, usually after an update. Until it is back on, the Home button may open Google TV instead of Hearth, and profile switches aren't followed.",
-    "@homeButtonFixOffBody": {
-        "description": "Home Button Fix is off dialog: first paragraph"
-    },
-    "homeButtonFixStuck": "Android still lists it as on, but it isn't running. Turn Hearth off and on again in Accessibility settings to restart it.",
-    "@homeButtonFixStuck": {
-        "description": "Home Button Fix is off dialog: when Android shows the service as on but it isn't running"
-    },
-    "homeButtonFixRestricted": "If Hearth's switch there is greyed out, Android is blocking it because this update was installed from a download. Run this from a computer connected to the TV, then turn Hearth on:",
-    "@homeButtonFixRestricted": {
-        "description": "Home Button Fix is off dialog: when Android restricts the setting; an adb command follows"
-    },
-    "homeButtonFixDontRemind": "Don't remind me",
-    "@homeButtonFixDontRemind": {
-        "description": "Home Button Fix is off dialog: button that stops the warning"
-    },
-    "homeButtonFixOpenSettings": "Open Accessibility settings",
-    "@homeButtonFixOpenSettings": {
-        "description": "Home Button Fix is off dialog: button that opens Android's accessibility settings"
     },
     "remoteButtonsRemapButton": "Remap a button",
     "@remoteButtonsRemapButton": {
@@ -2807,5 +2775,51 @@
     "setupFlowGoHome": "Go to my home",
     "@setupFlowGoHome": {
         "description": "Setup flow: last screen's main button"
+    },
+    "setupHearthTitle": "Set up Hearth",
+    "@setupHearthTitle": {
+        "description": "Settings > System: the page that runs the setup flow again and lists what Hearth needs from Android"
+    },
+    "setupRunAgain": "Run setup again",
+    "@setupRunAgain": {
+        "description": "Set up Hearth page: first row, opens the setup flow"
+    },
+    "setupCardFamily": "Your family",
+    "@setupCardFamily": {
+        "description": "Setup: the group for the parent PIN, Profile Pairing and kids' profiles (a card in the setup flow, a heading on the Set up Hearth page)"
+    },
+    "setupCardWatching": "Watching",
+    "@setupCardWatching": {
+        "description": "Setup: the group for Continue Watching and notifications (a card in the setup flow, a heading on the Set up Hearth page)"
+    },
+    "setupChipLeft": "Finish setting up · {count} left",
+    "@setupChipLeft": {
+        "description": "Home screen top bar: chip that opens the setup flow; {count} is how many steps or cards are left (1 or more)",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "setupChipFix": "Home button needs a fix",
+    "@setupChipFix": {
+        "description": "Home screen top bar: chip shown when Home Button Fix is off (skipped, or switched off by an update)"
+    },
+    "setupChipHideTitle": "Hide this reminder?",
+    "@setupChipHideTitle": {
+        "description": "Home screen: asked when OK is held on the setup chip"
+    },
+    "setupChipHideBody": "You can still run setup from {where}.",
+    "@setupChipHideBody": {
+        "description": "Home screen: under \"Hide this reminder?\"; {where} is where the setup page is in Settings",
+        "placeholders": {
+            "where": {
+                "type": "String"
+            }
+        }
+    },
+    "setupChipHide": "Hide",
+    "@setupChipHide": {
+        "description": "Home screen: button that hides the setup chip for good"
     }
 }

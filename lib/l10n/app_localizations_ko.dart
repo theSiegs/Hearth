@@ -406,9 +406,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get tvPowerTitle => 'TV 및 전원';
 
   @override
-  String get setupPermissionsTitle => '설정 및 권한';
-
-  @override
   String get updatesTitle => '업데이트';
 
   @override
@@ -1172,27 +1169,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String setupProgress(int done, int total) {
     return '$total개 중 $done개 완료';
   }
-
-  @override
-  String get setupOptional => '선택 사항';
-
-  @override
-  String get homeButtonFixOffTitle => '홈 버튼 수정이 꺼져 있습니다';
-
-  @override
-  String get homeButtonFixOffBody => 'Hearth의 접근성 서비스가 중지되었습니다. 보통 업데이트 후에 발생합니다. 다시 켜기 전까지는 홈 버튼이 Hearth 대신 Google TV를 열 수 있고 프로필 전환도 따라가지 않습니다.';
-
-  @override
-  String get homeButtonFixStuck => 'Android에는 아직 켜짐으로 표시되지만 실행 중이 아닙니다. 접근성 설정에서 Hearth를 껐다가 다시 켜서 다시 시작하세요.';
-
-  @override
-  String get homeButtonFixRestricted => 'Hearth의 스위치가 회색으로 표시되면, 이 업데이트가 다운로드로 설치되어 Android가 차단하고 있는 것입니다. TV에 연결된 컴퓨터에서 다음을 실행한 다음 Hearth를 켜세요.';
-
-  @override
-  String get homeButtonFixDontRemind => '다시 알리지 않기';
-
-  @override
-  String get homeButtonFixOpenSettings => '접근성 설정 열기';
 
   @override
   String get remoteButtonsRemapButton => '버튼 다시 지정';
@@ -2197,4 +2173,35 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get setupFlowGoHome => '내 홈으로';
+
+  @override
+  String get setupHearthTitle => 'Hearth 설정';
+
+  @override
+  String get setupRunAgain => '설정 다시 실행';
+
+  @override
+  String get setupCardFamily => '가족';
+
+  @override
+  String get setupCardWatching => '시청';
+
+  @override
+  String setupChipLeft(int count) {
+    return '설정 마치기 · $count개 남음';
+  }
+
+  @override
+  String get setupChipFix => '홈 버튼 설정 필요';
+
+  @override
+  String get setupChipHideTitle => '이 알림을 숨길까요?';
+
+  @override
+  String setupChipHideBody(String where) {
+    return '$where에서 언제든지 설정을 실행할 수 있습니다.';
+  }
+
+  @override
+  String get setupChipHide => '숨기기';
 }

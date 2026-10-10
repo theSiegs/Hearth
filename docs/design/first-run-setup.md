@@ -11,7 +11,8 @@ example name here is made up ("Alex", "Sam", "the TV", 192.0.2.10).
 ## 0. Summary
 
 Hearth already had the parts of a setup flow, but they were scattered:
-- the **Setup & permissions** checklist (`setup_checklist_page.dart`: `SetupStep`, `loadSetupSteps`);
+- the **Setup & permissions** checklist, now **Set up Hearth** (`setup_checklist_page.dart`: `SetupStep`,
+  `loadSetupSteps`);
 - the **Home Button Fix is off** dialog (`home_button_fix_check.dart`);
 - adb fallback dialogs (`adb_command_dialog.dart`);
 - the shuffled row-pad **parent PIN** (`parent_pin_dialog.dart`);

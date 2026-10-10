@@ -15,10 +15,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'settings_service.dart';
 
 /// How the setup flow runs: the whole of it (first run, or picking up where it was left), again from Settings, or
 /// only the Home button screen after an update switched Home Button Fix off.
@@ -36,6 +39,38 @@ class SetupResume {
   final bool closed;
 
   const SetupResume(this.screen, this.mode, this.at, {this.closed = false});
+}
+
+/// What the home opens as it starts or comes back to the front.
+sealed class SetupLaunch {
+  const SetupLaunch();
+}
+
+class SetupLaunchNothing extends SetupLaunch {
+  const SetupLaunchNothing();
+}
+
+/// The whole flow, from Welcome: a TV Hearth was never set up on.
+class SetupLaunchFirstRun extends SetupLaunch {
+  const SetupLaunchFirstRun();
+}
+
+/// Hearth was in use before the flow existed: nobody redoes a setup that's done
+/// ([SetupFlowService.markExistingInstall]).
+class SetupLaunchExistingInstall extends SetupLaunch {
+  const SetupLaunchExistingInstall();
+}
+
+/// The flow at the screen it was left on, within [SetupFlowService.resumeWindow].
+class SetupLaunchResume extends SetupLaunch {
+  final SetupResume resume;
+
+  const SetupLaunchResume(this.resume);
+}
+
+/// An update switched Home Button Fix off: the one case that takes over the screen after the first run.
+class SetupLaunchLostFix extends SetupLaunch {
+  const SetupLaunchLostFix();
 }
 
 /// Hearth's first-run setup flow: what the owner chose, where the flow was left, and which version of it they've been
@@ -66,7 +101,16 @@ class SetupFlowService extends ChangeNotifier {
   final SharedPreferences _prefs;
   final DateTime Function() _now;
 
-  SetupFlowService(this._prefs, {DateTime Function()? now}) : _now = now ?? DateTime.now;
+  /// Whether Hearth ran on this TV before this start: it kept a profile's layout. Read before this start's first
+  /// profile check saves one.
+  final bool _ranBefore;
+
+  SetupFlowService(this._prefs, {DateTime Function()? now})
+      : _now = now ?? DateTime.now,
+        _ranBefore = _prefs.containsKey(SettingsService.layoutOwnerKey);
+
+  /// The flow is on screen (opened by the home, its chip or Settings): nothing else opens it a second time.
+  bool showing = false;
 
   /// Whether a key is the flow's own state (kept out of backups and layouts).
   static bool isSetupKey(String key) => key.startsWith(keyPrefix);
@@ -160,4 +204,47 @@ class SetupFlowService extends ChangeNotifier {
     await _prefs.setInt(_seenVersionKey, currentVersion);
     notifyListeners();
   }
+
+  /// What to open now. [kids]: nothing in a kids' profile (a child can't set Hearth up; it waits for an adult one).
+  /// [homeButtonSeenBefore]: Home Button Fix has been on on this TV; [homeButtonOn]: it's on now. Those, a parent
+  /// PIN, or a layout from before this start mean Hearth was in use before the flow existed.
+  SetupLaunch launch({
+    required bool kids,
+    required bool homeButtonOn,
+    required bool homeButtonSeenBefore,
+    required bool hasParentPin,
+  }) {
+    if (kids) return const SetupLaunchNothing();
+    // Back on: a later loss takes over again
+    if (homeButtonOn && choiceFor(lostFixDecision) != null) unawaited(decide(lostFixDecision, null));
+    final left = resume;
+    final bool fresh = left != null && !left.closed && _now().difference(left.at) < resumeWindow;
+    if (fresh) return SetupLaunchResume(left);
+    if (homeButtonSeenBefore && !homeButtonOn && choiceFor(lostFixDecision) == null) {
+      return const SetupLaunchLostFix();
+    }
+    // Run before (finished, closed, or a first run interrupted long ago): the chip carries on from here
+    if (flowVersion != null || left != null) return const SetupLaunchNothing();
+    if (homeButtonSeenBefore || hasParentPin || _ranBefore) return const SetupLaunchExistingInstall();
+    return const SetupLaunchFirstRun();
+  }
+
+  /// An install from before the flow: counts as through it, without showing it.
+  Future<void> markExistingInstall() => _markVersion();
+
+  /// Whether the Home button needs a fix: it's off, and the owner skipped it or an update switched it off.
+  bool homeButtonNeedsFix({required bool homeButtonOn, required bool homeButtonSeenBefore}) =>
+      !homeButtonOn && (homeButtonSeenBefore || choiceFor(homeButtonDecision) == SetupChoice.notNow);
+
+  /// How many things the chip says are left: the essentials neither on nor skipped.
+  int remaining({required bool homeButtonOn, required bool homeAppOn}) {
+    int left = 0;
+    if (!homeButtonOn && choiceFor(homeButtonDecision) == null) left++;
+    if (!homeAppOn && choiceFor(homeAppDecision) == null) left++;
+    return left;
+  }
+
+  /// Whether the home may show its "Finish setting up" chip: once the flow has run (before, the flow shows itself),
+  /// never in a kids' profile, and not once dismissed.
+  bool chipAllowed({required bool kids}) => !kids && !chipHidden && (flowVersion != null || resume != null);
 }

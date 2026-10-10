@@ -27,7 +27,7 @@ void main() {
   });
 
   /// Opens the flow over a home page, as Hearth does.
-  Future<void> open(WidgetTester tester, {SetupMode mode = SetupMode.full, String? startAt}) async {
+  Future<void> open(WidgetTester tester, {SetupMode mode = SetupMode.full, String? startAt, bool resumed = false}) async {
     // A TV's screen: 1920x1080 at twice the density
     tester.view.physicalSize = const Size(1920, 1080);
     tester.view.devicePixelRatio = 2;
@@ -40,7 +40,7 @@ void main() {
         return Scaffold(
           body: Center(
             child: TextButton(
-              onPressed: () => SetupFlowPage.open(context, mode: mode, startAt: startAt),
+              onPressed: () => SetupFlowPage.open(context, mode: mode, startAt: startAt, resumed: resumed),
               child: const Text("home"),
             ),
           ),
@@ -194,12 +194,12 @@ void main() {
   group("picking up where it was left", () {
     testWidgets("back on the Home button screen with the switch now on: says so", (tester) async {
       channel.homeButtonOn = true;
-      await open(tester, startAt: "homeButton");
+      await open(tester, startAt: "homeButton", resumed: true);
       expect(find.text("The Home button now opens Hearth"), findsOneWidget);
     });
 
     testWidgets("back on the Home button screen with the switch still off: not on yet", (tester) async {
-      await open(tester, startAt: "homeButton");
+      await open(tester, startAt: "homeButton", resumed: true);
       expect(find.text("It's not on yet"), findsOneWidget);
     });
   });

@@ -406,9 +406,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tvPowerTitle => 'TV & power';
 
   @override
-  String get setupPermissionsTitle => 'Setup & permissions';
-
-  @override
   String get updatesTitle => 'Updates';
 
   @override
@@ -1175,27 +1172,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String setupProgress(int done, int total) {
     return '$done of $total done';
   }
-
-  @override
-  String get setupOptional => 'Optional';
-
-  @override
-  String get homeButtonFixOffTitle => 'Home Button Fix is off';
-
-  @override
-  String get homeButtonFixOffBody => 'Hearth\'s accessibility service has stopped, usually after an update. Until it is back on, the Home button may open Google TV instead of Hearth, and profile switches aren\'t followed.';
-
-  @override
-  String get homeButtonFixStuck => 'Android still lists it as on, but it isn\'t running. Turn Hearth off and on again in Accessibility settings to restart it.';
-
-  @override
-  String get homeButtonFixRestricted => 'If Hearth\'s switch there is greyed out, Android is blocking it because this update was installed from a download. Run this from a computer connected to the TV, then turn Hearth on:';
-
-  @override
-  String get homeButtonFixDontRemind => 'Don\'t remind me';
-
-  @override
-  String get homeButtonFixOpenSettings => 'Open Accessibility settings';
 
   @override
   String get remoteButtonsRemapButton => 'Remap a button';
@@ -2207,4 +2183,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setupFlowGoHome => 'Go to my home';
+
+  @override
+  String get setupHearthTitle => 'Set up Hearth';
+
+  @override
+  String get setupRunAgain => 'Run setup again';
+
+  @override
+  String get setupCardFamily => 'Your family';
+
+  @override
+  String get setupCardWatching => 'Watching';
+
+  @override
+  String setupChipLeft(int count) {
+    return 'Finish setting up · $count left';
+  }
+
+  @override
+  String get setupChipFix => 'Home button needs a fix';
+
+  @override
+  String get setupChipHideTitle => 'Hide this reminder?';
+
+  @override
+  String setupChipHideBody(String where) {
+    return 'You can still run setup from $where.';
+  }
+
+  @override
+  String get setupChipHide => 'Hide';
 }
