@@ -48,7 +48,8 @@ final class WatchNextRows {
             TvContract.WatchNextPrograms.COLUMN_DURATION_MILLIS,
             TvContract.WatchNextPrograms.COLUMN_INTENT_URI,
             TvContract.WatchNextPrograms.COLUMN_POSTER_ART_URI,
-            TvContract.WatchNextPrograms.COLUMN_THUMBNAIL_URI
+            TvContract.WatchNextPrograms.COLUMN_THUMBNAIL_URI,
+            TvContract.WatchNextPrograms.COLUMN_INTERNAL_PROVIDER_ID
         };
 
         try (Cursor cursor = context.getContentResolver().query(
@@ -109,6 +110,8 @@ final class WatchNextRows {
                 map.put("duration", cursor.getLong(cursor.getColumnIndexOrThrow(TvContract.WatchNextPrograms.COLUMN_DURATION_MILLIS)));
                 map.put("intentUri", cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_INTENT_URI));
                 map.put("posterArtUri", poster);
+                // The app's own id for it: the same entry when the app writes it again
+                map.put("internalId", cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_INTERNAL_PROVIDER_ID));
                 list.add(map);
             }
 

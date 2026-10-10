@@ -35,9 +35,7 @@ final class AppWatchers {
      * knows (then it's the user's first profile's, as before Hearth kept these).
      */
     static String watcherAt(Context context, String packageName, long time, long serial) {
-        if (packageName == null) return null;
-        String history = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(packageName, null);
-        return watcherAt(history, time, serial);
+        return watcherAt(history(context, packageName), time, serial);
     }
 
     /** The record with this profile opening the app at that time: a new line only when the app changes hands. */
@@ -72,6 +70,37 @@ final class AppWatchers {
             }
         }
         return watcher;
+    }
+
+    /** The profile (key) that has the app now: the last one that opened it; null when none has, as far as Hearth knows. */
+    static String holder(Context context, String packageName) {
+        String history = history(context, packageName);
+        if (history == null || history.isEmpty()) return null;
+        String[] lines = history.split("\n");
+        return keyOf(lines[lines.length - 1]);
+    }
+
+    /** Whether this profile opened the app after that time. */
+    static boolean openedSince(Context context, String packageName, String profileKey, long since) {
+        return openedSince(history(context, packageName), profileKey, since);
+    }
+
+    static boolean openedSince(String history, String profileKey, long since) {
+        if (history == null || history.isEmpty()) return false;
+        for (String line : history.split("\n")) {
+            int space = line.indexOf(' ');
+            if (space <= 0 || !line.substring(space + 1).equals(profileKey)) continue;
+            try {
+                if (Long.parseLong(line.substring(0, space)) > since) return true;
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return false;
+    }
+
+    private static String history(Context context, String packageName) {
+        if (packageName == null) return null;
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(packageName, null);
     }
 
     private static String keyOf(String line) {

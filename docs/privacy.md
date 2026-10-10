@@ -4,7 +4,8 @@
 > setup steps may change or be incomplete.
 
 Hearth has no ads, analytics, crash reporting or trackers, and no Hearth account or server. Your settings, layouts,
-profile pairings and backups stay on the TV.
+profile pairings and backups stay on the TV. So does each profile's watch history: the titles apps say are playing,
+and the Continue Watching entries Hearth keeps for each profile (forgotten after 90 days, or when you remove a card).
 
 ## What Hearth connects to
 

@@ -1390,23 +1390,25 @@ public class MainActivity extends FlutterActivity {
         if (ProfileApps.activeProfileUser(this) != null) {
             return AgentHub.watchNext(ProfileUsers.settledSerial(this));
         }
-        // This user's list is all its grown-ups' profiles' (one per account): each entry is the profile's that had
-        // its app open when it was last watched (none known: the user's first profile's)
-        List<Map<String, Object>> rows = WatchNextRows.read(this);
-        long serial = ProfileUsers.ownerSerial(this);
-        for (Map<String, Object> row : rows) {
-            Object time = row.get("lastEngagementTime");
-            String watcher = AppWatchers.watcherAt(this, (String) row.get("packageName"),
-                    time instanceof Number ? ((Number) time).longValue() : 0, serial);
-            if (watcher != null) row.put("watchedBy", watcher);
-        }
-        return rows;
+        // This user's list is all its grown-ups' profiles' (one per account): Hearth's own watch history says whose
+        // each entry is, keeps the ones an app dropped for another profile, and adds what was played without one
+        return WatchHistory.get(this).continueWatching(this, WatchNextRows.read(this), ProfileUsers.ownerSerial(this),
+                System.currentTimeMillis());
     }
 
     private void deleteWatchNextProgram(Number id, MethodChannel.Result result) {
         if (id == null) {
             result.error("INVALID_ARGUMENT", "Missing id", null);
+        } else if (id.longValue() < 0) {
+            // One of Hearth's own (kept or played): only Hearth has it
+            result.success(WatchHistory.get(this).forget(id.longValue()));
         } else {
+            // Hearth's copy goes too, or it would come back as kept
+            for (Map<String, Object> row : WatchNextRows.read(this)) {
+                if (row.get("id") instanceof Number && ((Number) row.get("id")).longValue() == id.longValue()) {
+                    WatchHistory.get(this).forgetListed((String) row.get("packageName"), row);
+                }
+            }
             result.success(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && deleteWatchNextProgramApi26(id.longValue()));
         }
     }
