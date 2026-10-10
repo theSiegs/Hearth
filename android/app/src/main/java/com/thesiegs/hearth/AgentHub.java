@@ -188,10 +188,15 @@ final class AgentHub {
                         break;
                     case "playing":
                         // An app played in this profile's user (its agent counts what Hearth can't see)
-                        UsageToday.addPlaying(sContext, ProfileUsers.key(serial), message.optString("package", null),
-                                message.optLong("ms"), System.currentTimeMillis());
-                        // The profile's allowance went down: its agent gets the new row
-                        new Handler(Looper.getMainLooper()).post(() -> ProfileProvider.notifyChanged(sContext));
+                        String played = message.optString("package", null);
+                        if (CompanionApps.HEARTHTUBE.equals(played)) {
+                            // Its allowance may have gone down: the agent gets the new row when it did
+                            new Handler(Looper.getMainLooper()).post(() -> ProfileProvider.addHearthTubePlaying(
+                                    sContext, ProfileUsers.key(serial), message.optLong("ms")));
+                        } else {
+                            UsageToday.addPlaying(sContext, ProfileUsers.key(serial), played, message.optLong("ms"),
+                                    System.currentTimeMillis());
+                        }
                         break;
                     case "speech": {
                         // Only the app Profile Pairing is handling (ProfilePairingService checks too)

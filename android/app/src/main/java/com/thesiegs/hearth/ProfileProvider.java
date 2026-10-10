@@ -165,12 +165,12 @@ public class ProfileProvider extends ContentProvider {
             long ms = extras != null ? extras.getLong("ms", 0) : 0;
             if (ms <= 0 || ms > 10 * 60_000) return null;
             if (AgentService.isAgent(getContext())) {
-                AgentService.relayPlaying(CompanionApps.HEARTHTUBE, ms);
+                // Not passed on (Hearth not connected): null, and HearthTube reports it again later
+                if (!AgentService.relayPlaying(CompanionApps.HEARTHTUBE, ms)) return null;
             } else {
                 Context context = getContext();
                 String profile = LauncherAccessibilityService.getActiveProfileKey(context);
-                UsageToday.addPlaying(context, profile, CompanionApps.HEARTHTUBE, ms, System.currentTimeMillis());
-                notifyChanged(context);
+                addHearthTubePlaying(context, profile, ms);
             }
             Bundle result = new Bundle();
             result.putBoolean("ok", true);
@@ -178,6 +178,18 @@ public class ProfileProvider extends ContentProvider {
         }
 
         return null;
+    }
+
+    /**
+     * Counts HearthTube's playing time for a profile, and tells HearthTube (and the agents) only when that changed what
+     * it may play: the minutes left go down a minute at a time, so not at every 30-second report.
+     */
+    static void addHearthTubePlaying(Context context, String profile, long ms) {
+        long now = System.currentTimeMillis();
+        Integer before = Allowance.forProfile(context, profile, now).youtubeMinutesLeft;
+        UsageToday.addPlaying(context, profile, CompanionApps.HEARTHTUBE, ms, now);
+        Integer after = Allowance.forProfile(context, profile, now).youtubeMinutesLeft;
+        if (!java.util.Objects.equals(before, after)) notifyChanged(context);
     }
 
     /** HearthTube is signed with one of the trusted certificates, so another app can't pose as it to guess PINs. */
