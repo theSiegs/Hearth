@@ -137,9 +137,12 @@ void main() {
       await prefs.setString("device_setup_resume",
           '{"screen":"homeApp","mode":"full","at":${now.subtract(const Duration(days: 1)).millisecondsSinceEpoch},"closed":true}');
       channel.homeButtonOn = true;
+      // Updates is all on already: only the home app and the two other cards are left
+      channel.install = true;
+      channel.hearthTube = true;
       await pumpHome(tester);
-      expect(find.text("Finish setting up · 1 left"), findsOneWidget);
-      await tester.tap(find.text("Finish setting up · 1 left"));
+      expect(find.text("Finish setting up · 3 left"), findsOneWidget);
+      await tester.tap(find.text("Finish setting up · 3 left"));
       await tester.pumpAndSettle();
       expect(find.text("Make Hearth your home app"), findsOneWidget);
     });

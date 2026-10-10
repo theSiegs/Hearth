@@ -2204,4 +2204,110 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get setupChipHide => '隐藏';
+
+  @override
+  String get setupFlowCardIncluded => '包含内容';
+
+  @override
+  String get setupFlowCardNeeds => '需要什么';
+
+  @override
+  String get setupFlowCardSkipped => '已跳过';
+
+  @override
+  String get setupFlowChange => '更改';
+
+  @override
+  String get setupFlowKeep => '保留';
+
+  @override
+  String get setupFlowTurnOn => '开启';
+
+  @override
+  String get setupFlowNeedsQuestion => 'Android 询问一次';
+
+  @override
+  String get setupFlowNeedsOneSwitch => 'Android 设置中的一个开关';
+
+  @override
+  String get setupFlowNeedsAboutAMinute => '大约一分钟';
+
+  @override
+  String get setupFlowWatchingBenefit => '从上次停下的地方继续，并查看正在播放的内容。';
+
+  @override
+  String get setupFlowWatchingIncluded1 => '主屏幕上的“继续观看”';
+
+  @override
+  String get setupFlowWatchingIncluded2 => '通知和正在播放的内容';
+
+  @override
+  String get setupFlowSearchWorks => '搜索已经可以用了：在主屏幕上按“搜索”。';
+
+  @override
+  String get setupFlowContinueBody => '在主屏幕上显示你在各个应用中看过的内容。Android 会询问一次，请选择“允许”。';
+
+  @override
+  String get setupFlowContinueDone => '“继续观看”已开启';
+
+  @override
+  String get setupFlowContinueDeniedTitle => 'Android 未允许';
+
+  @override
+  String setupFlowContinueDeniedBody(String where) {
+    return '你可以稍后在 $where 中开启。';
+  }
+
+  @override
+  String get setupFlowNotificationsTitle => '正在播放的内容和通知';
+
+  @override
+  String setupFlowNotificationsBody(String name) {
+    return '查看通知和正在播放的内容。在下一个界面中选择“$name”并允许。';
+  }
+
+  @override
+  String get setupFlowNotificationsDone => '通知已开启';
+
+  @override
+  String get setupFlowTvTitle => '没人看时关闭电视？';
+
+  @override
+  String get setupFlowTvBody => '在这么长时间没有按遥控器后。播放视频或音乐算作在看。';
+
+  @override
+  String get setupFlowTvNeedsHomeButton => '这需要前面步骤中的主页按钮开关：没有它，Hearth 无法知道遥控器何时被使用。';
+
+  @override
+  String get setupFlowStartOnBoot => '电视启动时启动 Hearth';
+
+  @override
+  String get setupFlowScreensaver => '选择屏保照片';
+
+  @override
+  String get setupFlowUpdatesBenefit => 'Hearth 会让自己和配套应用保持最新。';
+
+  @override
+  String get setupFlowUpdatesIncluded1 => 'Hearth 自动更新';
+
+  @override
+  String get setupFlowUpdatesIncluded2 => 'HearthTube，为 Hearth 打造的 YouTube 应用';
+
+  @override
+  String get setupFlowInstallTitle => '允许 Hearth 安装更新';
+
+  @override
+  String get setupFlowInstallBody => '在下一个界面中找到 Hearth 并开启，然后按返回。';
+
+  @override
+  String get setupFlowInstallDone => 'Hearth 可以安装更新了';
+
+  @override
+  String get setupFlowTubeTitle => '安装 HearthTube？';
+
+  @override
+  String get setupFlowTubeBody => '为 Hearth 打造的 YouTube 应用：跟随你的个人资料、时钟样式和孩子的就寝时间。';
+
+  @override
+  String get setupFlowTubeInstalled => 'HearthTube 已安装';
 }

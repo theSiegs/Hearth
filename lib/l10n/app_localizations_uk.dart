@@ -2228,4 +2228,110 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get setupChipHide => 'Сховати';
+
+  @override
+  String get setupFlowCardIncluded => 'Що входить';
+
+  @override
+  String get setupFlowCardNeeds => 'Що потрібно';
+
+  @override
+  String get setupFlowCardSkipped => 'Пропущено';
+
+  @override
+  String get setupFlowChange => 'Змінити';
+
+  @override
+  String get setupFlowKeep => 'Залишити';
+
+  @override
+  String get setupFlowTurnOn => 'Увімкнути';
+
+  @override
+  String get setupFlowNeedsQuestion => 'Одне запитання від Android';
+
+  @override
+  String get setupFlowNeedsOneSwitch => 'Один перемикач у налаштуваннях Android';
+
+  @override
+  String get setupFlowNeedsAboutAMinute => 'Близько хвилини';
+
+  @override
+  String get setupFlowWatchingBenefit => 'Продовжуйте з того місця, де зупинилися, і бачте, що грає.';
+
+  @override
+  String get setupFlowWatchingIncluded1 => '«Продовжити перегляд» на головному екрані';
+
+  @override
+  String get setupFlowWatchingIncluded2 => 'Сповіщення і що зараз грає';
+
+  @override
+  String get setupFlowSearchWorks => 'Пошук уже працює: натисніть «Пошук» на головному екрані.';
+
+  @override
+  String get setupFlowContinueBody => 'Показуйте на головному екрані те, що ви дивилися в застосунках. Android запитає один раз — виберіть «Дозволити».';
+
+  @override
+  String get setupFlowContinueDone => '«Продовжити перегляд» увімкнено';
+
+  @override
+  String get setupFlowContinueDeniedTitle => 'Android не дозволив';
+
+  @override
+  String setupFlowContinueDeniedBody(String where) {
+    return 'Увімкнути можна пізніше: $where.';
+  }
+
+  @override
+  String get setupFlowNotificationsTitle => 'Що грає і сповіщення';
+
+  @override
+  String setupFlowNotificationsBody(String name) {
+    return 'Бачте сповіщення і те, що грає. На наступному екрані виберіть «$name» і дозвольте доступ.';
+  }
+
+  @override
+  String get setupFlowNotificationsDone => 'Сповіщення увімкнено';
+
+  @override
+  String get setupFlowTvTitle => 'Вимикати телевізор, коли ніхто не дивиться?';
+
+  @override
+  String get setupFlowTvBody => 'Після цього часу без натискань на пульт. Відтворення відео чи музики вважається переглядом.';
+
+  @override
+  String get setupFlowTvNeedsHomeButton => 'Потрібен перемикач кнопки «Додому» з перших кроків: без нього Hearth не знає, коли користуються пультом.';
+
+  @override
+  String get setupFlowStartOnBoot => 'Запускати Hearth під час увімкнення телевізора';
+
+  @override
+  String get setupFlowScreensaver => 'Вибрати фото для заставки';
+
+  @override
+  String get setupFlowUpdatesBenefit => 'Hearth сам оновлює себе і свої застосунки-компаньйони.';
+
+  @override
+  String get setupFlowUpdatesIncluded1 => 'Hearth оновлюється сам';
+
+  @override
+  String get setupFlowUpdatesIncluded2 => 'HearthTube — застосунок YouTube для Hearth';
+
+  @override
+  String get setupFlowInstallTitle => 'Дозволити Hearth встановлювати оновлення';
+
+  @override
+  String get setupFlowInstallBody => 'На наступному екрані знайдіть Hearth, увімкніть його і натисніть «Назад».';
+
+  @override
+  String get setupFlowInstallDone => 'Hearth може встановлювати оновлення';
+
+  @override
+  String get setupFlowTubeTitle => 'Встановити HearthTube?';
+
+  @override
+  String get setupFlowTubeBody => 'Застосунок YouTube для Hearth: дотримується ваших профілів, стилю годинника і часу сну дітей.';
+
+  @override
+  String get setupFlowTubeInstalled => 'HearthTube встановлено';
 }

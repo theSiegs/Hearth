@@ -18,6 +18,8 @@
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/hearth_ids.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/providers/companion_updater.dart';
+import 'package:flauncher/providers/setup_flow_service.dart';
 import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -32,11 +34,79 @@ class SetupSnapshot {
   /// The TV's debugging switch is on, so Hearth can run its own fixes.
   final bool adbEnabled;
 
-  const SetupSnapshot({required this.steps, required this.packageName, this.adbEnabled = false});
+  /// Android lets Hearth read what was being watched (Continue Watching).
+  final bool watchNextAllowed;
+
+  /// HearthTube, Hearth's companion app, is installed.
+  final bool hearthTubeInstalled;
+
+  const SetupSnapshot({
+    required this.steps,
+    required this.packageName,
+    this.adbEnabled = false,
+    this.watchNextAllowed = false,
+    this.hearthTubeInstalled = false,
+  });
 
   SetupStep step(SetupStepId id) => steps.firstWhere((step) => step.id == id);
 
   bool isDone(SetupStepId id) => step(id).done;
+
+  /// Whether everything a card turns on is on already. [showContinueWatching]: the home shows the row.
+  bool cardOn(SetupCard card, {required bool showContinueWatching}) => cardOnFrom(
+        card,
+        watchNextAllowed: watchNextAllowed,
+        showContinueWatching: showContinueWatching,
+        notifications: isDone(SetupStepId.notifications),
+        install: isDone(SetupStepId.install),
+        hearthTubeInstalled: hearthTubeInstalled,
+      );
+
+  /// The rule behind [cardOn], for the home's checks that have no snapshot. A card that is a choice by itself (TV &
+  /// power) is never on until chosen.
+  static bool cardOnFrom(
+    SetupCard card, {
+    required bool watchNextAllowed,
+    required bool showContinueWatching,
+    required bool notifications,
+    required bool install,
+    required bool hearthTubeInstalled,
+  }) =>
+      switch (card) {
+        SetupCard.watching => watchNextAllowed && showContinueWatching && notifications,
+        SetupCard.tv => false,
+        SetupCard.updates => install && hearthTubeInstalled,
+      };
+
+  /// Which cards are all on already, read straight from the TV: for marking an install from before the flow, and the
+  /// chip's count.
+  static Future<Map<SetupCard, bool>> loadCardsOn(FLauncherChannel channel,
+      {required bool showContinueWatching}) async {
+    final watchNext = await _safe(channel.checkWatchNextPermission, false);
+    final notifications = await _safe(channel.checkNotificationListenerPermission, false);
+    final install = await _safe(channel.checkInstallPermission, false);
+    final tube = await _hearthTubeInstalled(channel);
+    return {
+      for (final card in SetupCard.values)
+        card: cardOnFrom(card,
+            watchNextAllowed: watchNext,
+            showContinueWatching: showContinueWatching,
+            notifications: notifications,
+            install: install,
+            hearthTubeInstalled: tube),
+    };
+  }
+
+  static Future<T> _safe<T>(Future<T> Function() read, T fallback) async {
+    try {
+      return await read();
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  static Future<bool> _hearthTubeInstalled(FLauncherChannel channel) =>
+      _safe(() async => await channel.getPackageVersion(companionApps.first.packageName) != null, false);
 
   static Future<SetupSnapshot> load(FLauncherChannel channel, AppLocalizations l) async {
     String packageName = kHearthAppId;
@@ -44,10 +114,12 @@ class SetupSnapshot {
       packageName = (await PackageInfo.fromPlatform()).packageName;
     } catch (_) {}
     final steps = await loadSetupSteps(channel, packageName, l);
-    bool adb = false;
-    try {
-      adb = await channel.isAdbEnabled();
-    } catch (_) {}
-    return SetupSnapshot(steps: steps, packageName: packageName, adbEnabled: adb);
+    return SetupSnapshot(
+      steps: steps,
+      packageName: packageName,
+      adbEnabled: await _safe(channel.isAdbEnabled, false),
+      watchNextAllowed: await _safe(channel.checkWatchNextPermission, false),
+      hearthTubeInstalled: await _hearthTubeInstalled(channel),
+    );
   }
 }

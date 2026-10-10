@@ -83,8 +83,12 @@ void main() {
       await prefs.setString("device_layout_owner", "user:0");
       expect(launch(SetupFlowService(prefs, now: () => now)), isA<SetupLaunchExistingInstall>());
 
-      await flow.markExistingInstall();
+      await flow.markExistingInstall({SetupCard.watching: true});
       expect(flow.flowVersion, SetupFlowService.currentVersion);
+      // Each card from the TV's state: on when all on already, otherwise Not now
+      expect(flow.cardChoice(SetupCard.watching), SetupChoice.on);
+      expect(flow.cardChoice(SetupCard.tv), SetupChoice.notNow);
+      expect(flow.cardChoice(SetupCard.updates), SetupChoice.notNow);
       expect(launch(flow, seen: true, on: true), isA<SetupLaunchNothing>());
     });
 
@@ -132,10 +136,20 @@ void main() {
 
   group("the chip", () {
     test("counts the essentials neither on nor skipped", () async {
-      expect(flow.remaining(homeButtonOn: false, homeAppOn: false), 2);
+      const allOn = {SetupCard.watching: true, SetupCard.tv: true, SetupCard.updates: true};
+      expect(flow.remaining(homeButtonOn: false, homeAppOn: false, cardOn: allOn), 2);
       await flow.decide(SetupFlowService.homeAppDecision, SetupChoice.notNow);
-      expect(flow.remaining(homeButtonOn: false, homeAppOn: false), 1);
-      expect(flow.remaining(homeButtonOn: true, homeAppOn: false), 0);
+      expect(flow.remaining(homeButtonOn: false, homeAppOn: false, cardOn: allOn), 1);
+      expect(flow.remaining(homeButtonOn: true, homeAppOn: false, cardOn: allOn), 0);
+    });
+
+    test("counts the cards nobody decided on that aren't all on anyway", () async {
+      expect(flow.remaining(homeButtonOn: true, homeAppOn: true), SetupCard.values.length);
+      expect(flow.remaining(homeButtonOn: true, homeAppOn: true, cardOn: {SetupCard.updates: true}),
+          SetupCard.values.length - 1);
+      await flow.decide(SetupCard.watching.name, SetupChoice.notNow);
+      await flow.decide(SetupCard.tv.name, SetupChoice.on);
+      expect(flow.remaining(homeButtonOn: true, homeAppOn: true, cardOn: {SetupCard.updates: true}), 0);
     });
 
     test("asks for a fix when the Home button was skipped or lost", () async {

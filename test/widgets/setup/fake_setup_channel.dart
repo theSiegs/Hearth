@@ -19,6 +19,15 @@ class FakeSetupChannel extends FLauncherChannel {
   bool notifications = false;
   bool install = false;
   bool adb = false;
+  bool watchNext = false;
+  bool hearthTube = false;
+  int idleMinutes = 0;
+
+  /// What Android's Continue Watching dialog answers.
+  bool watchNextAnswer = true;
+  int watchNextAsked = 0;
+  int notificationSettingsOpened = 0;
+  int installSettingsOpened = 0;
 
   /// What opening Android's Accessibility screen returns: false when the TV wouldn't open it.
   bool accessibilityOpens = true;
@@ -60,6 +69,41 @@ class FakeSetupChannel extends FLauncherChannel {
   Future<bool> isAdbEnabled() async => adb;
 
   @override
+  Future<bool> checkWatchNextPermission() async => watchNext;
+
+  @override
+  Future<bool> requestWatchNextPermission() async {
+    watchNextAsked++;
+    if (watchNextAnswer) watchNext = true;
+    return watchNextAnswer;
+  }
+
+  @override
+  Future<Map<dynamic, dynamic>?> getPackageVersion(String packageName) async =>
+      hearthTube ? {"versionName": "1.0", "versionCode": 1} : null;
+
+  @override
+  Future<int> getIdleStandbyMinutes() async => idleMinutes;
+
+  @override
+  Future<void> setIdleStandbyMinutes(int minutes) async => idleMinutes = minutes;
+
+  @override
+  Future<bool> openScreensaverSettings() async => true;
+
+  @override
+  Future<bool> requestNotificationListenerPermission() async {
+    notificationSettingsOpened++;
+    return true;
+  }
+
+  @override
+  Future<bool> requestInstallPermission() async {
+    installSettingsOpened++;
+    return true;
+  }
+
+  @override
   Future<void> setSetupWaitingFor(String? what) async => waitingFor = what;
 
   @override
@@ -79,6 +123,8 @@ class FakeSetupChannel extends FLauncherChannel {
   Future<List<String>?> getSetupFixCommands(String fix) async => switch (fix) {
         "restricted_settings" => ["appops set com.example.hearth ACCESS_RESTRICTED_SETTINGS allow"],
         "home_button_fix" => ["settings put secure enabled_accessibility_services 'x'"],
+        "watch_next" => ["pm grant com.example.hearth android.permission.READ_TV_LISTINGS"],
+        "notification_access" => ["cmd notification allow_listener com.example.hearth/x"],
         _ => null,
       };
 
@@ -88,6 +134,8 @@ class FakeSetupChannel extends FLauncherChannel {
     if (!fixesWork) throw PlatformException(code: "SELF_ADB");
     if (fixes.contains("restricted_settings")) restricted = false;
     if (fixes.contains("home_button_fix")) homeButtonOn = true;
+    if (fixes.contains("watch_next")) watchNext = true;
+    if (fixes.contains("notification_access")) notifications = true;
     return [];
   }
 }

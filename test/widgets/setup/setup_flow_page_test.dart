@@ -1,3 +1,4 @@
+import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';
 import 'package:flauncher/widgets/setup/setup_flow_page.dart';
 import 'package:flutter/material.dart';
@@ -226,12 +227,142 @@ void main() {
     });
   });
 
-  group("finish", () {
-    testWidgets("everything on: Finish says so, and nothing is left to resume", (tester) async {
+  group("the cards", () {
+    /// Past the essentials (both on) to the first card.
+    Future<void> openAtCards(WidgetTester tester) async {
       channel.homeButtonOn = true;
       channel.homeApp = true;
       await open(tester);
       await press(tester, "Get started");
+    }
+
+    testWidgets("Not now records the choice and goes to the next card, past the card's steps", (tester) async {
+      await openAtCards(tester);
+      expect(find.text("Pick up where you left off, and see what's playing."), findsOneWidget);
+      await press(tester, "Not now");
+      expect(flow.cardChoice(SetupCard.watching), SetupChoice.notNow);
+      expect(find.text("Turn the TV off when nobody's watching?"), findsOneWidget);
+      expect(channel.watchNextAsked, 0);
+    });
+
+    testWidgets("Watching: Android's question turns the row on, then notification access", (tester) async {
+      await openAtCards(tester);
+      await press(tester, "Turn on");
+      expect(flow.cardChoice(SetupCard.watching), SetupChoice.on);
+      expect(find.text("Continue Watching"), findsWidgets);
+      await press(tester, "Turn on");
+      expect(channel.watchNextAsked, 1);
+      expect(find.text("Continue Watching is on"), findsOneWidget);
+      expect(prefs.getBool("show_continue_watching"), isTrue);
+
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+      expect(find.text("What's playing and notifications"), findsOneWidget);
+      channel.notifications = true;
+      await press(tester, "Open Settings");
+      expect(channel.notificationSettingsOpened, 1);
+      // The notification listener brings Hearth back when it connects
+      expect(channel.waitingFor, "notification_access");
+      await comeBack(tester);
+      expect(find.text("Notifications are on"), findsOneWidget);
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+      expect(find.text("Turn the TV off when nobody's watching?"), findsOneWidget);
+    });
+
+    testWidgets("Continue Watching declined: where to find it, and Hearth's own fix with debugging on",
+        (tester) async {
+      channel.watchNextAnswer = false;
+      channel.adb = true;
+      await openAtCards(tester);
+      await press(tester, "Turn on");
+      await press(tester, "Turn on");
+      expect(find.text("Android didn't allow it"), findsOneWidget);
+      await press(tester, "Let Hearth fix it");
+      expect(channel.fixesRun, isEmpty);
+      await press(tester, "Run it");
+      expect(channel.fixesRun, [
+        ["watch_next"]
+      ]);
+      expect(find.text("Continue Watching is on"), findsOneWidget);
+    });
+
+    testWidgets("TV & power: sleep choices need the Home button; Start on boot is on and can be turned off",
+        (tester) async {
+      channel.homeApp = true;
+      await open(tester, startAt: "tv");
+      expect(find.text("Turn the TV off when nobody's watching?"), findsOneWidget);
+      // Without Home Button Fix, the choices can't be picked
+      await tester.tap(find.text("2 hours"), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(channel.idleMinutes, 0);
+      expect(find.textContaining("Home button switch"), findsOneWidget);
+
+      final settings = SettingsService(prefs);
+      expect(settings.startOnBoot, isTrue);
+      await press(tester, "Start Hearth when the TV starts");
+      expect(SettingsService(prefs).startOnBoot, isFalse);
+      await press(tester, "Next");
+      expect(flow.cardChoice(SetupCard.tv), SetupChoice.on);
+    });
+
+    testWidgets("TV & power with the Home button on: picks how long", (tester) async {
+      channel.homeButtonOn = true;
+      await open(tester, startAt: "tv");
+      await press(tester, "2 hours");
+      expect(channel.idleMinutes, 120);
+    });
+
+    testWidgets("Updates: allow installs, then HearthTube can wait", (tester) async {
+      channel.homeButtonOn = true;
+      await open(tester, startAt: "updates");
+      await press(tester, "Turn on");
+      expect(find.text("Allow Hearth to install updates"), findsOneWidget);
+      channel.install = true;
+      await press(tester, "Open Settings");
+      expect(channel.installSettingsOpened, 1);
+      await comeBack(tester);
+      expect(find.text("Hearth can install updates"), findsOneWidget);
+      await press(tester, "Next");
+      expect(find.text("Install HearthTube?"), findsOneWidget);
+      await press(tester, "Not now");
+      expect(find.text("Hearth is ready"), findsOneWidget);
+    });
+
+    testWidgets("a decided card says so, with Keep, and Change asks again", (tester) async {
+      await flow.decide(SetupCard.watching.name, SetupChoice.notNow);
+      await openAtCards(tester);
+      expect(find.text("Skipped"), findsOneWidget);
+      await press(tester, "Change");
+      expect(find.text("Turn on"), findsOneWidget);
+      await press(tester, "Turn on");
+      expect(flow.cardChoice(SetupCard.watching), SetupChoice.on);
+    });
+
+    testWidgets("a rerun starts at the first card when the essentials are on", (tester) async {
+      channel.homeButtonOn = true;
+      channel.homeApp = true;
+      await open(tester, mode: SetupMode.rerun);
+      expect(find.text("Pick up where you left off, and see what's playing."), findsOneWidget);
+    });
+  });
+
+  group("finish", () {
+    testWidgets("everything on: Finish says so, and nothing is left to resume", (tester) async {
+      channel.homeButtonOn = true;
+      channel.homeApp = true;
+      channel.watchNext = true;
+      channel.notifications = true;
+      channel.install = true;
+      channel.hearthTube = true;
+      await prefs.setBool("show_continue_watching", true);
+      await open(tester);
+      await press(tester, "Get started");
+      // The cards say they're on already, with Keep
+      expect(find.text("Watching"), findsWidgets);
+      await press(tester, "Keep");
+      await press(tester, "Next");
+      await press(tester, "Keep");
       expect(find.text("Hearth is ready"), findsOneWidget);
       expect(flow.resume, isNull);
       expect(flow.flowVersion, SetupFlowService.currentVersion);
