@@ -1390,7 +1390,17 @@ public class MainActivity extends FlutterActivity {
         if (ProfileApps.activeProfileUser(this) != null) {
             return AgentHub.watchNext(ProfileUsers.settledSerial(this));
         }
-        return WatchNextRows.read(this);
+        // This user's list is all its grown-ups' profiles' (one per account): each entry is the profile's that had
+        // its app open when it was last watched (none known: the user's first profile's)
+        List<Map<String, Object>> rows = WatchNextRows.read(this);
+        long serial = ProfileUsers.ownerSerial(this);
+        for (Map<String, Object> row : rows) {
+            Object time = row.get("lastEngagementTime");
+            String watcher = AppWatchers.watcherAt(this, (String) row.get("packageName"),
+                    time instanceof Number ? ((Number) time).longValue() : 0, serial);
+            if (watcher != null) row.put("watchedBy", watcher);
+        }
+        return rows;
     }
 
     private void deleteWatchNextProgram(Number id, MethodChannel.Result result) {

@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 public class LauncherAccessibilityService extends AccessibilityService {
     private static final String TAG = "HearthProfile";
@@ -74,6 +75,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
     /** How long after Google's last setup screen Hearth keeps out of the way (refreshed by each setup screen). */
     private static final long GOOGLE_SETUP_HOLD_MS = 2 * 60_000;
     private static final long NEW_PROFILE_HOLD_MS = 15_000;
+    // Reading who Google TV's home says is logged in (GoogleTvAccount): it says within about half a second
+    private static final long HOME_ACCOUNT_POLL_MS = 150;
+    private static final long HOME_ACCOUNT_WAIT_MS = 2_500;
+    /** A home naming someone other than the pick is taken at its word once it has had this long to catch up. */
+    private static final long HOME_ACCOUNT_SETTLE_MS = 1_200;
+    /** How long after a pick the home that comes up is the one it leads to. */
+    private static final long HOME_PICK_FRESH_MS = 10_000;
     private static final long KIDS_HOME_GRACE_MS = 1_500;
     private static final long PROFILE_USER_RECHECK_MS = 1_500;
     private static final long PROFILE_SETTLE_MS = 2_000;
@@ -100,12 +108,29 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private boolean mGoogleTvScreenInFront = false;
     private long mPendingBounceAt = 0;
     private long mGoogleSetupUntil = 0;
-    /** The setup hold is for a just-added profile: it ends as soon as that profile's user starts. */
+    /**
+     * The setup hold is for a just-added profile: it ends as soon as that profile's user starts (a kids profile), or
+     * when it runs out with none started and Google TV's home names the pick (a grown-up's account, see
+     * mNewProfileHoldEnd).
+     */
     private boolean mNewProfileHold = false;
     /** The just-added profile last picked, until a profile user starts: Google TV may mark it current regardless. */
     private String mUnstartedPick;
     /** The profile Google TV's chooser marked as its current account when it was last read. */
     private String mChooserCurrent;
+    /** Reading who Google TV's home says is logged in, before Hearth covers it (readHomeAccount). */
+    private boolean mReadingHomeAccount;
+    private long mHomeAccountStartedAt;
+    /** Who the home should name: the pick that led to it, if any. A read that agrees ends the wait at once. */
+    private String mHomeAccountExpected;
+    /** The last name the home gave during this read. */
+    private String mHomeAccountRead;
+    /** Hearth takes over the home once the read is done: always, or only if the home confirmed the pick. */
+    private boolean mTakeOverAfterRead;
+    private boolean mTakeOverIfConfirmed;
+    /** The last pick settled, for the read of the home it leads to. */
+    private String mHomePick;
+    private long mHomePickAt;
     /**
      * When Google TV's profile lock (its PIN screen for the current profile) last came up. Cancelling it opens Google
      * TV's home and, a moment later, its profile chooser over it: Hearth taking over in between would land back in
@@ -188,9 +213,27 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // Not if Google TV put a screen of its own up (time up, PIN...) or the kid opened an app meanwhile
         if (autoTakeOverAllowed() && !mGoogleTvScreenInFront && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage)) {
             mProfileLockSeenAt = 0; // a profile lock that led here was passed
-            openLauncher();
+            takeOverHome();
         }
     };
+    /**
+     * The hold for a just-added profile ran out and no profile user started: not a kids profile, then, but maybe a
+     * grown-up's account, which lives in the owner's user. Google TV's home says; Hearth takes over if it names the
+     * pick (otherwise Google TV may still be busy, and the Home button gets back).
+     */
+    private final Runnable mNewProfileHoldEnd = () -> {
+        if (!mNewProfileHold) return;
+        mNewProfileHold = false;
+        if (SystemClock.elapsedRealtime() < mGoogleSetupUntil) {
+            // Google TV's own setup screens are up: it's still setting the profile up
+            Log.i(TAG, "No profile user started for " + mUnstartedPick + " yet; Google TV setup in progress");
+            return;
+        }
+        Log.i(TAG, "No profile user started for " + mUnstartedPick + ": asking Google TV's home");
+        mTakeOverIfConfirmed = true;
+        readHomeAccount(false, mUnstartedPick);
+    };
+    private final Runnable mReadHomeAccount = this::readHomeAccountOnce;
     private final Runnable mPeriodicCheck = new Runnable() {
         @Override
         public void run() {
@@ -283,7 +326,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         sInstance = this;
-        Log.i(GoogleSwitchProbe.TAG, "Google TV's switches readable: " + GoogleSwitchProbe.canReadSwitches(this));
         mKidsState = ProfileUsers.isKids(this);
         IntentFilter userFilter = new IntentFilter(ProfileUsers.ACTION_PROFILE_ACCESSIBLE);
         userFilter.addAction(ProfileUsers.ACTION_PROFILE_INACCESSIBLE);
@@ -323,7 +365,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     @Override
     public void onDestroy() {
         if (sInstance == this) sInstance = null;
-        mSwitchProbe.shutdownNow();
+        mReadingHomeAccount = false;
+        mAccountReader.shutdownNow();
         ProfileProvider.notifyChanged(this);  // service_running
         mHandler.removeCallbacksAndMessages(null);
         if (mHaServer != null) mHaServer.stop();
@@ -360,7 +403,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (flipped) ProfileProvider.notifyChanged(this);  // kids_profile changed
         // Not mid-switch, when the kids state may still be the last profile's
         if (mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN) {
-            ProfilePairing.rememberHearthProfile(this, ProfileUsers.key(mActiveSerial), kids);
+            ProfilePairing.rememberHearthProfile(this, ProfileUsers.profileKey(this, mActiveSerial), kids);
         }
         if (mayLiftLock(mKidsLockHold, picked, flipped, kids)) {
             clearScreenTimeLock();
@@ -375,7 +418,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (mPendingBounceAt != 0 && SystemClock.elapsedRealtime() - mPendingBounceAt < PENDING_BOUNCE_WINDOW_MS
                 && autoTakeOverAllowed()) {
             mPendingBounceAt = 0;
-            openLauncher();
+            takeOverHome();
         }
     }
 
@@ -423,12 +466,40 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (mNewProfileHold && previous != ProfileUsers.UNKNOWN) {
             // The just-added profile is running: Hearth takes over its home again (unless a setup screen is up)
             mNewProfileHold = false;
+            mHandler.removeCallbacks(mNewProfileHoldEnd);
             mGoogleSetupUntil = 0;
             mHandler.removeCallbacks(mKidsHomeTakeOver);
             mHandler.postDelayed(mKidsHomeTakeOver, KIDS_HOME_GRACE_MS);
         }
-        // A new profile (or Hearth starting): not ready until Flutter says its home is complete
-        String key = ProfileUsers.key(serial);
+        // Back to a grown-ups' user: the account picked to get there, if Hearth knows it as one of that user's
+        // (Google TV's home confirms it, see onAccountLoggedIn)
+        String pick = previous != ProfileUsers.UNKNOWN ? recentPick() : null;
+        if (pick != null && ProfileUsers.serialOf(this, pick) == serial && ProfileUsers.isGrownUps(this, serial)) {
+            ProfileUsers.setLoggedIn(this, serial, pick);
+        }
+        boolean keyChanged = startProfile(why);
+        boolean named = false;
+        if (previous != ProfileUsers.UNKNOWN) {
+            // A switch, seen whether or not Hearth saw the chooser: pair it with the pick that made it, if any
+            mSwitchedSerial = serial;
+            mSwitchedAt = SystemClock.elapsedRealtime();
+            named = learnProfileUserName();
+        }
+        announceProfile(keyChanged, named);
+        if (previous != ProfileUsers.UNKNOWN) {
+            clearScreenTimeLock();
+            updateScreenTimeLock("profile switch");
+            retryPendingBounce();
+        }
+    }
+
+    /**
+     * A profile comes on (or Hearth starts): its key in place, a new generation, and not ready until Flutter says its
+     * home is complete. Returns whether the key changed.
+     */
+    private boolean startProfile(String why) {
+        long serial = mActiveSerial;
+        String key = ProfileUsers.profileKey(this, serial);
         SharedPreferences prefs = getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE);
         boolean keyChanged = !key.equals(prefs.getString(PROFILE_KEY_KEY, null));
         prefs.edit()
@@ -440,31 +511,32 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // restart) nothing would, so ready after the card's own limit regardless
         mHandler.removeCallbacks(mReadyFallback);
         mHandler.postDelayed(mReadyFallback, PROFILE_READY_FALLBACK_MS);
-        Log.i(TAG, "Profile user is now serial " + serial + " ("
-                + ProfileUsers.getName(this, serial) + ", " + why + ")");
-        boolean named = false;
-        if (previous != ProfileUsers.UNKNOWN) {
-            // A switch, seen whether or not Hearth saw the chooser: pair it with the pick that made it, if any
-            mSwitchedSerial = serial;
-            mSwitchedAt = SystemClock.elapsedRealtime();
-            named = learnProfileUserName();
-        }
+        Log.i(TAG, "Profile is now " + key + " (" + ProfileUsers.profileName(this, serial) + ", " + why + ")");
+        return keyChanged;
+    }
+
+    /**
+     * HearthTube, the agents and Flutter hear once, with key and name in place: setActiveProfileName tells them, and
+     * a new key under the same name is told here (unless naming the profile told them already).
+     */
+    private void announceProfile(boolean keyChanged, boolean named) {
         // Not named yet: no name until the chooser shows who this is, rather than a guess
-        String name = ProfileUsers.getName(this, serial);
-        if (name == null) Log.i(TAG, "Serial " + serial + " not named yet: profile unknown");
-        // HearthTube, the agents and Flutter hear once, with key and name in place: setActiveProfileName tells them
-        // (here, or above when the pick named this serial); a new key under the same name tells them itself
+        String name = ProfileUsers.profileName(this, mActiveSerial);
+        if (name == null) Log.i(TAG, "Serial " + mActiveSerial + " not named yet: profile unknown");
         if (!Objects.equals(name, getActiveProfileName(this))) {
             setActiveProfileName(name);
         } else if (keyChanged && !named) {
             ProfileProvider.notifyChanged(this);
             MainActivity.notifyProfileChanged();
         }
-        if (previous != ProfileUsers.UNKNOWN) {
-            clearScreenTimeLock();
-            updateScreenTimeLock("profile switch");
-            retryPendingBounce();
-        }
+    }
+
+    /** The profile last picked in the chooser, if recent: settled (Google TV's home came up) or only clicked. */
+    private String recentPick() {
+        long now = SystemClock.elapsedRealtime();
+        if (mPendingProfile != null && now - mPendingProfileAt < PROFILE_CLICK_WINDOW_MS) return mPendingProfile;
+        if (mHomePick != null && now - mHomePickAt < PROFILE_CLICK_WINDOW_MS) return mHomePick;
+        return null;
     }
 
     private void scheduleProfileUserRechecks() {
@@ -486,7 +558,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
         boolean named = false;
         String existing = ProfileUsers.getName(this, mSwitchedSerial);
         long owner = ProfileUsers.serialOf(this, mLastPick);
-        if (!mLastPickClicked && owner != ProfileUsers.UNKNOWN && owner != mSwitchedSerial) {
+        if (existing != null && ProfileUsers.isGrownUps(this, mSwitchedSerial)) {
+            // A grown-ups' user holds a profile per account: the pick is one of them, not a new name for the user
+            // (checkProfileUser took it if Hearth knows it; otherwise Google TV's home says, see onAccountLoggedIn)
+        } else if (!mLastPickClicked && owner != ProfileUsers.UNKNOWN && owner != mSwitchedSerial) {
             // A guess naming a profile already known to be another serial
             Log.i(TAG, "Not naming serial " + mSwitchedSerial + " " + mLastPick
                     + ": that's serial " + owner);
@@ -522,9 +597,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // it's a just-added profile that was picked but never started: Google TV can mark that one current while
         // the last profile still runs, and it mustn't rename the profile that's actually running.
         String known = mActiveSerial == ProfileUsers.UNKNOWN ? null : ProfileUsers.getName(this, mActiveSerial);
-        if (current != null && mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN
-                && !current.equals(known)) {
-            if (known == null || !names.contains(known) || !current.equals(mUnstartedPick)) {
+        if (current != null && mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN) {
+            if (known != null && ProfileUsers.isGrownUps(this, mActiveSerial)) {
+                // A grown-ups' user holds a profile per account: the current one is the profile that's on
+                onAccountLoggedIn(current, "chooser's current account");
+            } else if (current.equals(known)) {
+                // Already known
+            } else if (known == null || !names.contains(known) || !current.equals(mUnstartedPick)) {
                 nameSerial(mActiveSerial, current, "chooser's current account");
             } else {
                 Log.i(TAG, "Chooser marks " + current + " current, but serial " + mActiveSerial + " (" + known
@@ -540,7 +619,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // Nor mid-switch: picking a PIN-protected profile from another one shows its tile locked until the switch
         // is done, so only a profile that's already running (settled, no switch under way) is photographed
         boolean settled = mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN;
-        if (current != null && (!settled || !current.equals(ProfileUsers.getName(this, mActiveSerial)))) {
+        if (current != null && (!settled || !current.equals(ProfileUsers.profileName(this, mActiveSerial)))) {
             Log.i(TAG, "Chooser shows " + names + "; photo waits until " + current + " is the running profile");
             return;
         }
@@ -676,9 +755,48 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // Migrate pairings saved under the profile's name to its key
         ProfilePairing.adoptNameChoices(this, ProfileUsers.key(serial), name);
         if (serial == mActiveSerial) {
-            setActiveProfileName(name);
-            ProfilePairing.rememberHearthProfile(this, ProfileUsers.key(serial), ProfileUsers.isKids(this));
+            // The name may have been one of the user's other accounts, which it now stands for: then the key changed
+            boolean keyChanged = !ProfileUsers.profileKey(this, serial).equals(getActiveProfileKey(this))
+                    && startProfile(how);
+            announceProfile(keyChanged, false);
+            ProfilePairing.rememberHearthProfile(this, ProfileUsers.profileKey(this, serial), ProfileUsers.isKids(this));
         }
+    }
+
+    /**
+     * Google TV says this account is logged in (its home, or the chooser's current account). In a grown-ups' user
+     * that's whose profile is on: the user's first account keeps the user's key, and another account is a profile
+     * of its own (ProfileUsers.profileKey), with its own home. A kids user has the one account.
+     */
+    private void onAccountLoggedIn(String account, String how) {
+        long serial = mActiveSerial;
+        // Mid-switch, or a kid's bedtime (Google TV shows it from the owner's user): not this user's account
+        if (account == null || serial == ProfileUsers.UNKNOWN || mCandidateSerial != ProfileUsers.UNKNOWN
+                || mKidsLockHold || !ProfileUsers.isGrownUps(this, serial)) {
+            return;
+        }
+        if (account.equals(ProfileUsers.profileName(this, serial))) return;
+        long elsewhere = ProfileUsers.serialOf(this, account);
+        if (elsewhere != ProfileUsers.UNKNOWN && elsewhere != serial && !ProfileUsers.isGrownUps(this, elsewhere)) {
+            Log.i(TAG, "Google TV names " + account + ", serial " + elsewhere + "'s profile: serial " + serial
+                    + " stays as it is (" + how + ")");
+            return;
+        }
+        if (elsewhere == ProfileUsers.UNKNOWN && mNewProfileHold) {
+            // Maybe a kids profile Google TV is still setting up, whose own user starts next: the hold's end decides
+            Log.i(TAG, "Google TV names " + account + ", new: waiting to see if a profile user starts (" + how + ")");
+            return;
+        }
+        if (ProfileUsers.getName(this, serial) == null) {
+            nameSerial(serial, account, how);
+            return;
+        }
+        Log.i(TAG, "Serial " + serial + " is logged in as " + account + " (" + how + ")");
+        ProfileUsers.setLoggedIn(this, serial, account);
+        mUnstartedPick = null;
+        boolean keyChanged = startProfile(how);
+        announceProfile(keyChanged, false);
+        ProfilePairing.rememberHearthProfile(this, ProfileUsers.profileKey(this, serial), false);
     }
 
     public static class UnsuspendedReceiver extends BroadcastReceiver {
@@ -751,14 +869,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (wasOnScreen != mChooserOnScreen) {
             Log.i(TAG, "chooser " + (mChooserOnScreen ? "open" : "closed") + " (" + packageName
                     + "/" + className + ")");
-            if (!mChooserOnScreen) {
-                checkProfileUser("chooser closed");
-                probeSwitch();
-            }
+            if (!mChooserOnScreen) checkProfileUser("chooser closed");
         }
 
         if (isGoogleTv) {
-            onGoogleTvWindow(className, event);
+            onGoogleTvWindow(className, event, wasOnScreen && !mChooserOnScreen);
         } else {
             onOtherWindow(packageName, isHearth, isApp);
         }
@@ -779,40 +894,100 @@ public class LauncherAccessibilityService extends AccessibilityService {
         return !isHearthOrApp && before;
     }
 
-    // --- Following Google TV's account switches: logged only (GoogleSwitchProbe) ---
+    // --- Whose profile is on in a grown-ups' user: Google TV's home names the account (GoogleTvAccount) ---
 
-    private final ExecutorService mSwitchProbe = Executors.newSingleThreadExecutor();
-    private String mLoggedHomeAccount;
+    /** Searches Google TV's window off the main thread: each search is a call into Google TV. */
+    private final ExecutorService mAccountReader = Executors.newSingleThreadExecutor();
 
-    /** The chooser closed: whether Google TV recorded a switch, now and once it has had time to finish one. */
-    private void probeSwitch() {
-        final String closedAt = new java.text.SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.ROOT)
-                .format(new java.util.Date());
-        for (long delay : new long[]{2_000, 8_000}) {
-            mHandler.postDelayed(() -> mSwitchProbe.execute(() -> Log.i(GoogleSwitchProbe.TAG,
-                    "Chooser closed at " + closedAt + "; Google TV's last switch: "
-                            + GoogleSwitchProbe.latestSwitch(this))), delay);
+    /**
+     * Reads who Google TV's home says is logged in, a few times a second for a moment (it says once its profile
+     * picture is in), and acts on it (onAccountLoggedIn). takeOver: Hearth takes over the home once it has said,
+     * holding off till then. expected: the pick that led here, if any; a home that agrees ends the wait at once.
+     */
+    private void readHomeAccount(boolean takeOver, String expected) {
+        mTakeOverAfterRead |= takeOver;
+        if (mReadingHomeAccount) return;
+        mReadingHomeAccount = true;
+        mHomeAccountStartedAt = SystemClock.elapsedRealtime();
+        mHomeAccountExpected = expected;
+        mHomeAccountRead = null;
+        mHandler.removeCallbacks(mReadHomeAccount);
+        mHandler.postDelayed(mReadHomeAccount, HOME_ACCOUNT_POLL_MS);
+    }
+
+    private void readHomeAccountOnce() {
+        if (!mReadingHomeAccount) return;
+        final AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null || !TextUtils.equals(GOOGLE_TV_PACKAGE, root.getPackageName()) || mGoogleTvScreenInFront) {
+            // The home is gone: Hearth, an app or another of Google TV's screens came up
+            finishHomeAccount();
+            return;
+        }
+        try {
+            mAccountReader.execute(() -> {
+                String account = GoogleTvAccount.loggedIn(root);
+                mHandler.post(() -> onHomeAccountRead(account));
+            });
+        } catch (RejectedExecutionException e) {
+            // The service is stopping
+            mReadingHomeAccount = false;
         }
     }
 
-    /** Google TV's home is up: which account it says is logged in, as its profile picture loads. */
-    private void probeHomeAccount() {
-        for (long delay : new long[]{300, 1_500, 4_000}) {
-            mHandler.postDelayed(() -> {
-                AccessibilityNodeInfo root = getRootInActiveWindow();
-                if (root == null || !TextUtils.equals(GOOGLE_TV_PACKAGE, root.getPackageName())) return;
-                String account = GoogleSwitchProbe.homeAccount(root);
-                if (account != null && !account.equals(mLoggedHomeAccount)) {
-                    mLoggedHomeAccount = account;
-                    Log.i(GoogleSwitchProbe.TAG, "Google TV's home says logged in as " + account);
-                }
-            }, delay);
+    private void onHomeAccountRead(String account) {
+        if (!mReadingHomeAccount) return;
+        if (account != null) mHomeAccountRead = account;
+        long waited = SystemClock.elapsedRealtime() - mHomeAccountStartedAt;
+        boolean agrees = account != null && (mHomeAccountExpected == null || account.equals(mHomeAccountExpected));
+        if (agrees || waited >= HOME_ACCOUNT_WAIT_MS || mHomeAccountRead != null && waited >= HOME_ACCOUNT_SETTLE_MS) {
+            finishHomeAccount();
+        } else {
+            mHandler.postDelayed(mReadHomeAccount, HOME_ACCOUNT_POLL_MS);
         }
     }
 
-    /** One of Google TV's windows: its home, the chooser, a screen time screen, a setup flow, or another screen. */
-    private void onGoogleTvWindow(String className, AccessibilityEvent event) {
-        if (GOOGLE_TV_HOME_ACTIVITY.equals(className)) probeHomeAccount();
+    /** The home has said who's logged in (or won't): act on it, then take over if that was waiting. */
+    private void finishHomeAccount() {
+        mHandler.removeCallbacks(mReadHomeAccount);
+        mReadingHomeAccount = false;
+        String expected = mHomeAccountExpected;
+        boolean takeOver = mTakeOverAfterRead;
+        boolean ifConfirmed = mTakeOverIfConfirmed;
+        mTakeOverAfterRead = false;
+        mTakeOverIfConfirmed = false;
+        if (mHomeAccountRead != null) {
+            onAccountLoggedIn(mHomeAccountRead, "Google TV's home");
+        } else {
+            Log.i(TAG, "Google TV's home didn't say who's logged in");
+        }
+        String on = ProfileUsers.profileName(this, mActiveSerial);
+        boolean confirmed = expected != null && expected.equals(on);
+        if (expected != null && !confirmed && ProfileUsers.serialOf(this, expected) == mActiveSerial) {
+            // One of this user's profiles was picked, but Google TV kept the last: its welcome card goes
+            Log.i(TAG, "Picked " + expected + ", but " + on + " is on");
+            MainActivity.notifyProfileSwitchCancelled();
+        }
+        if ((takeOver || ifConfirmed && confirmed) && autoTakeOverAllowed() && !mGoogleTvScreenInFront
+                && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage) && SystemClock.elapsedRealtime() >= mGoogleSetupUntil
+                && !mNewProfileHold) {
+            openLauncher();
+        }
+    }
+
+    /** Hearth takes over Google TV's home: now, or once the home has said who's logged in, if that's being read. */
+    private void takeOverHome() {
+        if (mReadingHomeAccount) {
+            mTakeOverAfterRead = true;
+            return;
+        }
+        openLauncher();
+    }
+
+    /**
+     * One of Google TV's windows: its home, the chooser, a screen time screen, a setup flow, or another screen.
+     * chooserClosed: it closed the chooser.
+     */
+    private void onGoogleTvWindow(String className, AccessibilityEvent event, boolean chooserClosed) {
         boolean wellbeing = className.startsWith(GOOGLE_TV_WELLBEING_PREFIX);
         if (wellbeing) {
             mWellbeingSeenAt = SystemClock.elapsedRealtime();
@@ -844,9 +1019,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 // (Not the profile Google itself marks current: that's the one on now, whatever Hearth calls it)
                 if (mLastPick != null && ProfileUsers.serialOf(this, mLastPick) == ProfileUsers.UNKNOWN
                         && !mLastPick.equals(mChooserCurrent)) {
-                    mGoogleSetupUntil = SystemClock.elapsedRealtime() + NEW_PROFILE_HOLD_MS;
                     mNewProfileHold = true;
                     mUnstartedPick = mLastPick;
+                    mHandler.removeCallbacks(mNewProfileHoldEnd);
+                    mHandler.postDelayed(mNewProfileHoldEnd, NEW_PROFILE_HOLD_MS);
                     Log.i(TAG, "New profile " + mLastPick + ": Google TV sets it up before Hearth takes over");
                 }
             }
@@ -855,17 +1031,23 @@ public class LauncherAccessibilityService extends AccessibilityService {
             checkProfileUser("Google TV home", true);
             updateScreenTimeLock("Google TV home");
             mGoogleTvScreenInFront = false;
+            // In a grown-ups' user (a profile per account), whose profile is on is whoever the home says is logged
+            // in: after the chooser Hearth reads that before it covers the home
+            long now = SystemClock.elapsedRealtime();
+            boolean readAccount = mCandidateSerial == ProfileUsers.UNKNOWN
+                    && ProfileUsers.isGrownUps(this, mActiveSerial);
+            String pick = mHomePick != null && now - mHomePickAt < HOME_PICK_FRESH_MS ? mHomePick : null;
             // Google TV opens its own home by component after a profile switch, on Back from apps, etc.,
             // ignoring the default home app. Bring the launcher back whenever that's allowed.
-            if (SystemClock.elapsedRealtime() < mGoogleSetupUntil) {
+            if (now < mGoogleSetupUntil || mNewProfileHold) {
                 Log.i(TAG, "Not taking over: Google TV setup in progress");
-            } else if (autoTakeOverAllowed()
-                    && SystemClock.elapsedRealtime() - mProfileLockSeenAt < PROFILE_LOCK_HOLD_MS) {
+            } else if (autoTakeOverAllowed() && now - mProfileLockSeenAt < PROFILE_LOCK_HOLD_MS) {
                 // Just after Google TV's profile lock: a right PIN leaves its home up (take over then), a cancelled
                 // one brings its chooser up over the home a moment later, which keeps Hearth out (the profile
                 // stays locked until someone picks a profile or enters the PIN)
                 mHandler.removeCallbacks(mKidsHomeTakeOver);
                 mHandler.postDelayed(mKidsHomeTakeOver, KIDS_HOME_GRACE_MS);
+                if (readAccount) readHomeAccount(false, pick);
             } else if (autoTakeOverAllowed() && ProfileUsers.isKids(this) && !mScreenTimeKnown) {
                 // A kids profile whose screen time the apps can't tell: Google TV opens its time up / bedtime
                 // screen from its home a moment after the home itself, and covering the home first would hide
@@ -873,9 +1055,15 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 mHandler.removeCallbacks(mKidsHomeTakeOver);
                 mHandler.postDelayed(mKidsHomeTakeOver, KIDS_HOME_GRACE_MS);
             } else if (autoTakeOverAllowed()) {
-                openLauncher();
+                if (readAccount && chooserClosed) {
+                    readHomeAccount(true, pick);
+                } else {
+                    openLauncher();
+                }
             } else {
-                mPendingBounceAt = SystemClock.elapsedRealtime();
+                mPendingBounceAt = now;
+                // Google TV's home stays: it's read whenever it comes up
+                if (readAccount) readHomeAccount(false, pick);
             }
         } else if (className.startsWith(GOOGLE_TV_PACKAGE + ".") || className.startsWith("com.google.android.libraries.tv.")) {
             // Its own screens (chooser, PIN, time up); plain view classes are overlays on its home.
@@ -1073,8 +1261,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         if (chosen != null) {
             Log.i(TAG, "Pick settled: " + chosen);
+            mHomePick = chosen;
+            mHomePickAt = now;
             // Picking the profile that's already on (or backing out of the chooser) starts no profile user
-            if (chosen.equals(ProfileUsers.getName(this, mActiveSerial)) && mCandidateSerial == ProfileUsers.UNKNOWN) {
+            if (chosen.equals(ProfileUsers.profileName(this, mActiveSerial))
+                    && mCandidateSerial == ProfileUsers.UNKNOWN) {
                 chosen = null;
             }
             mLastPick = chosen;
@@ -1103,6 +1294,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (profile == null) return;
         SharedPreferences prefs = context.getSharedPreferences(APP_USERS_PREFS, MODE_PRIVATE);
         if (!profile.equals(prefs.getString(packageName, null))) prefs.edit().putString(packageName, profile).apply();
+        AppWatchers.opened(context, packageName, profile);
     }
 
     /**

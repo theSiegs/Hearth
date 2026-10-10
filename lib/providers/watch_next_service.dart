@@ -85,10 +85,11 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
   static bool _isFinished(WatchNextProgram p) =>
       p.watchNextType == 0 && p.duration > 0 && p.playbackPosition >= p.duration * finishedFraction;
 
-  // Each Google TV profile is its own Android user with its own Watch Next list: Hearth reads the owner's (user 0)
-  // itself, and another profile's comes from that profile's agent (marked profileOwned). So an entry from Hearth's
-  // own list belongs to the owner's profile, and never shows while another profile is on (Hearth falls back to its
-  // own list when that profile has no agent).
+  // Each kids profile is its own Android user with its own Watch Next list, which comes from that profile's agent
+  // (marked profileOwned). Hearth reads the owner's (user 0) itself, and that list is all the grown-ups' profiles'
+  // (each a Google account in user 0): an entry is the profile's that had its app open when it was last watched
+  // (watchedBy), else the owner's first profile's. So it never shows while another profile is on (Hearth falls back
+  // to its own list when a kids profile has no agent).
   static const String _ownerProfile = "user:0";
   // The active profile's key, read with each refresh; null while Hearth can't tell.
   String? _activeProfile;
@@ -103,7 +104,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   bool _visibleToActiveProfile(WatchNextProgram p) =>
-      p.profileOwned || _activeProfile == null || _activeProfile == _ownerProfile;
+      p.profileOwned || _activeProfile == null || (p.watchedBy ?? _ownerProfile) == _activeProfile;
 
   /// One line in the TV's log per refresh (tag flutter, "HearthWatchNext"): how many entries there are, how many
   /// Continue Watching shows, and why the rest are hidden. Counts and package names only, no titles.

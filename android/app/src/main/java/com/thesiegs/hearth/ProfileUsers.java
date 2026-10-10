@@ -27,6 +27,11 @@ import java.util.TreeSet;
  * profile can be read at any time, keyed by the user's serial number (which never changes), and Android announces
  * switches with PROFILE_ACCESSIBLE / PROFILE_INACCESSIBLE. The users' own names are all "configured_user", so each
  * serial's profile name is still learned from Google TV's chooser, once.
+ *
+ * <p>Only kids get users of their own, though: a grown-up's profile is another Google account in the owner's user,
+ * and switching between those starts no user. So the owner's user can hold several profiles, one per account, and
+ * which one is on is whichever account Google TV says is logged in (see {@link #setLoggedIn}). The user's first
+ * account (its learned name) keeps the user's own key; each other account gets a key of its own.
  */
 final class ProfileUsers {
     static final long UNKNOWN = -1;
@@ -34,6 +39,10 @@ final class ProfileUsers {
     static final String ACTION_PROFILE_INACCESSIBLE = "android.intent.action.PROFILE_INACCESSIBLE";
     private static final String PREFS = "ltv_profile_users";
     private static final String NAME_PREFIX = "name|";
+    /** "account|serial|slug": another account in that serial's user (a grown-up's profile), by name. */
+    private static final String ACCOUNT_PREFIX = "account|";
+    /** "logged_in|serial": the other account Google TV has logged in in that user (none: its first account). */
+    private static final String LOGGED_IN_PREFIX = "logged_in|";
     private static final String KEY_PREFIX = "user:";
     private static final String SCREEN_TIME_SERIAL = "screen_time_up_serial";
 
@@ -76,11 +85,67 @@ final class ProfileUsers {
     }
 
     /**
-     * A profile's lasting key ("user:11"): what Hearth stores per-profile things under, so renaming a profile in
-     * Google TV doesn't orphan them. Null for UNKNOWN.
+     * A user's lasting key ("user:11"): what Hearth stores per-profile things under, so renaming a profile in
+     * Google TV doesn't orphan them. It's the key of the user's first account's profile; another account's profile
+     * in the same user has {@link #profileKey}. Null for UNKNOWN.
      */
     static String key(long serial) {
         return serial == UNKNOWN ? null : KEY_PREFIX + serial;
+    }
+
+    /** The key of an account's profile in this user: the user's own key, plus the account ("user:0:sam"). */
+    static String accountKey(long serial, String account) {
+        return serial == UNKNOWN ? null : account == null ? key(serial) : key(serial) + ":" + slug(account);
+    }
+
+    /** The key of the profile that's on in this user: the account logged in there (its first account's, if none). */
+    static String profileKey(Context context, long serial) {
+        return accountKey(serial, loggedIn(context, serial));
+    }
+
+    /** The name of the profile that's on in this user: the account logged in there, else the user's own name. */
+    static String profileName(Context context, long serial) {
+        String account = loggedIn(context, serial);
+        return account != null ? account : getName(context, serial);
+    }
+
+    /** The user in a profile key ("user:0", "user:0:sam"), or UNKNOWN for anything else (a name saved before keys). */
+    static long serialOfKey(String key) {
+        if (key == null || !key.startsWith(KEY_PREFIX)) return UNKNOWN;
+        int end = key.indexOf(':', KEY_PREFIX.length());
+        try {
+            return Long.parseLong(key.substring(KEY_PREFIX.length(), end < 0 ? key.length() : end));
+        } catch (NumberFormatException e) {
+            return UNKNOWN;
+        }
+    }
+
+    /** The account part of a profile key ("sam" in "user:0:sam"), or null for a user's own key. */
+    static String accountOfKey(String key) {
+        if (serialOfKey(key) == UNKNOWN) return null;
+        int end = key.indexOf(':', KEY_PREFIX.length());
+        return end < 0 ? null : key.substring(end + 1);
+    }
+
+    /**
+     * An account's part of a profile key: its letters and digits in lower case, words joined by "-" ("Sam Lee" is
+     * "sam-lee"). A name with neither gets a stand-in from its characters.
+     */
+    static String slug(String name) {
+        StringBuilder out = new StringBuilder();
+        boolean gap = false;
+        for (int i = 0; i < name.length(); ) {
+            int c = name.codePointAt(i);
+            i += Character.charCount(c);
+            if (Character.isLetterOrDigit(c)) {
+                if (gap && out.length() > 0) out.append('-');
+                out.appendCodePoint(Character.toLowerCase(c));
+                gap = false;
+            } else {
+                gap = true;
+            }
+        }
+        return out.length() > 0 ? out.toString() : "a" + Integer.toHexString(name.hashCode());
     }
 
     /**
@@ -88,14 +153,15 @@ final class ProfileUsers {
      * for a name saved before keys.
      */
     static String displayName(Context context, String key) {
-        if (key == null || !key.startsWith(KEY_PREFIX)) return key;
-        try {
-            long serial = Long.parseLong(key.substring(KEY_PREFIX.length()));
-            String name = getName(context, serial);
-            return name != null ? name : context.getString(R.string.profile_unnamed, serial);
-        } catch (NumberFormatException e) {
-            return key;
+        long serial = serialOfKey(key);
+        if (serial == UNKNOWN) return key;
+        String account = accountOfKey(key);
+        if (account != null) {
+            String name = prefs(context).getString(ACCOUNT_PREFIX + serial + "|" + account, null);
+            return name != null ? name : account;
         }
+        String name = getName(context, serial);
+        return name != null ? name : context.getString(R.string.profile_unnamed, serial);
     }
 
     /**
@@ -164,14 +230,13 @@ final class ProfileUsers {
 
     /** The settled active serial (as Hearth's service last saw it), else a fresh read. */
     static long settledSerial(Context context) {
-        String key = LauncherAccessibilityService.getActiveProfileKey(context);
-        if (key != null && key.startsWith(KEY_PREFIX)) {
-            try {
-                return Long.parseLong(key.substring(KEY_PREFIX.length()));
-            } catch (NumberFormatException ignored) {
-            }
-        }
-        return activeSerial(context);
+        long serial = serialOfKey(LauncherAccessibilityService.getActiveProfileKey(context));
+        return serial != UNKNOWN ? serial : activeSerial(context);
+    }
+
+    /** Whether this is a grown-up's user (not supervised by Family Link), which can hold several accounts' profiles. */
+    static boolean isGrownUps(Context context, long serial) {
+        return Boolean.FALSE.equals(isSupervised(context, serial));
     }
 
     /** Whether this profile's user carries Family Link's supervision restrictions; null when that can't be read. */
@@ -239,25 +304,43 @@ final class ProfileUsers {
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    /** The Google TV profile name learned for this serial, or null. */
+    /** The Google TV profile name learned for this serial (its first account's), or null. */
     static String getName(Context context, long serial) {
         return serial == UNKNOWN ? null : prefs(context).getString(NAME_PREFIX + serial, null);
     }
 
-    /** The serial this name was learned for, or UNKNOWN. */
+    /** The serial this name was learned for (the user's own name, or another account in it), or UNKNOWN. */
     static long serialOf(Context context, String name) {
+        if (name == null) return UNKNOWN;
         for (Map.Entry<String, ?> entry : prefs(context).getAll().entrySet()) {
-            if (name != null && name.equals(entry.getValue()) && entry.getKey().startsWith(NAME_PREFIX)) {
-                try {
-                    return Long.parseLong(entry.getKey().substring(NAME_PREFIX.length()));
-                } catch (NumberFormatException ignored) {
-                }
+            String key = entry.getKey();
+            if (name.equals(entry.getValue()) && (key.startsWith(NAME_PREFIX) || key.startsWith(ACCOUNT_PREFIX))) {
+                long serial = serialOfEntry(key);
+                if (serial != UNKNOWN) return serial;
             }
         }
         return UNKNOWN;
     }
 
-    /** Remembers which profile a serial is; a name moves off any other serial (profile names are unique). */
+    /** The serial a name entry is about ("name|0", "account|0|sam", "logged_in|0"), or UNKNOWN. */
+    private static long serialOfEntry(String key) {
+        String rest;
+        if (key.startsWith(NAME_PREFIX)) rest = key.substring(NAME_PREFIX.length());
+        else if (key.startsWith(ACCOUNT_PREFIX)) rest = key.substring(ACCOUNT_PREFIX.length());
+        else if (key.startsWith(LOGGED_IN_PREFIX)) rest = key.substring(LOGGED_IN_PREFIX.length());
+        else return UNKNOWN;
+        int end = rest.indexOf('|');
+        try {
+            return Long.parseLong(end < 0 ? rest : rest.substring(0, end));
+        } catch (NumberFormatException e) {
+            return UNKNOWN;
+        }
+    }
+
+    /**
+     * Remembers which profile a serial is (its first account's name); the name moves off any other serial, and off
+     * this one's other accounts (profile names are unique).
+     */
     static void setName(Context context, long serial, String name) {
         if (serial == UNKNOWN || name == null || name.isEmpty()) return;
         SharedPreferences prefs = prefs(context);
@@ -266,5 +349,32 @@ final class ProfileUsers {
             if (name.equals(entry.getValue())) editor.remove(entry.getKey());
         }
         editor.putString(NAME_PREFIX + serial, name).apply();
+    }
+
+    /** The account Google TV has logged in in this user, when it isn't the user's first one; else null. */
+    static String loggedIn(Context context, long serial) {
+        return serial == UNKNOWN ? null : prefs(context).getString(LOGGED_IN_PREFIX + serial, null);
+    }
+
+    /**
+     * Google TV has this account logged in in this (grown-ups') user: its profile is the one on there. Another
+     * account than the user's first is remembered as one of the user's; the name moves off any other serial.
+     */
+    static void setLoggedIn(Context context, long serial, String account) {
+        if (serial == UNKNOWN || account == null || account.isEmpty()) return;
+        SharedPreferences prefs = prefs(context);
+        SharedPreferences.Editor editor = prefs.edit();
+        for (Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
+            if (account.equals(entry.getValue()) && serialOfEntry(entry.getKey()) != serial) {
+                editor.remove(entry.getKey());
+            }
+        }
+        if (account.equals(getName(context, serial))) {
+            editor.remove(LOGGED_IN_PREFIX + serial);
+        } else {
+            editor.putString(ACCOUNT_PREFIX + serial + "|" + slug(account), account);
+            editor.putString(LOGGED_IN_PREFIX + serial, account);
+        }
+        editor.apply();
     }
 }
