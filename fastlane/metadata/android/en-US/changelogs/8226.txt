@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Profile switching works normally again while a newly added profile can't start.

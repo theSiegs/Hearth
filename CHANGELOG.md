@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.15 (pre-release)
+
+- Profile switching works normally again while a newly added profile can't start.
+
 ## 2026.10.14 (pre-release)
 
 - Notifications can be opened, and their buttons pressed, from Hearth's notifications panel.
