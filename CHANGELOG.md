@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.19 (pre-release)
+
+- Blocking an app with Family Link (and unblocking it) no longer removes it from a kids' profile's dock and sections.
+
 ## 2026.10.18 (pre-release)
 
 - First-run setup: a guided flow on a new TV (the Home button, the home app, then family, watching, a look for the home, smart home, TV & power and updates), Set up Hearth in Settings, and a chip on the home for anything left. TVs already set up aren't taken over.
