@@ -790,15 +790,16 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         if (GOOGLE_TV_HOME_ACTIVITY.equals(className)) {
             // A new profile's home: the last one's screen time no longer applies (its own comes up next)
-            if (commitPendingProfile()) {
-                clearScreenTimeLock();
-                // A profile no profile user has run as yet (just added): Google TV sets it up from its own home in
-                // this user before it starts the new one, and gives up if Hearth covers that home
-                if (mLastPick != null && ProfileUsers.serialOf(this, mLastPick) == ProfileUsers.UNKNOWN) {
-                    mGoogleSetupUntil = SystemClock.elapsedRealtime() + GOOGLE_SETUP_HOLD_MS;
-                    mNewProfileHold = true;
-                    Log.i(TAG, "New profile " + mLastPick + ": Google TV sets it up before Hearth takes over");
-                }
+            boolean picked = mPendingProfile != null || mLastChooserFocus != null;
+            if (commitPendingProfile()) clearScreenTimeLock();
+            // A profile no profile user has run as yet (just added): Google TV sets it up from its own home in this
+            // user before it starts the new one, and gives up if Hearth covers that home. Hearth can't always tell
+            // which name that is (Google may already mark it current), so any pick while such a profile exists waits.
+            if (picked && (mLastPick != null && ProfileUsers.serialOf(this, mLastPick) == ProfileUsers.UNKNOWN
+                    || ProfileUsers.hasUnnamedProfile(this))) {
+                mGoogleSetupUntil = SystemClock.elapsedRealtime() + GOOGLE_SETUP_HOLD_MS;
+                mNewProfileHold = true;
+                Log.i(TAG, "A profile that has never run exists: Google TV may set it up before Hearth takes over");
             }
             // Google TV only opens its home once a switch is done: take the new profile user now, before
             // Hearth takes over, so Hearth never comes up showing the last profile
