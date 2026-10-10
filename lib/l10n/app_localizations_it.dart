@@ -2033,4 +2033,178 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get updateErrorWrongApp => 'Questo download non è un aggiornamento di questo Hearth';
+
+  @override
+  String get setupFlowFinishLater => 'Finisci più tardi';
+
+  @override
+  String get setupFlowStripEssentials => 'Essenziali';
+
+  @override
+  String get setupFlowWelcomeTitle => 'Benvenuto in Hearth';
+
+  @override
+  String get setupFlowWelcomeBody => 'Una schermata iniziale per tutta la famiglia: le tue app, cosa stavi guardando e il profilo giusto in ogni app di streaming.';
+
+  @override
+  String get setupFlowWelcomeTime => 'Circa 5 minuti. Puoi saltare qualsiasi passaggio.';
+
+  @override
+  String get setupFlowGetStarted => 'Inizia';
+
+  @override
+  String get setupFlowSetUpLater => 'Configura più tardi';
+
+  @override
+  String setupFlowLanguageLink(String language) {
+    return 'Lingua: $language';
+  }
+
+  @override
+  String get setupFlowRestoreLink => 'Ripristina da un backup';
+
+  @override
+  String get setupFlowHomeButtonTitle => 'Il tasto Home apre Hearth';
+
+  @override
+  String get setupFlowHomeButtonBody => 'Google TV tiene la propria schermata sul tasto Home. Un interruttore nelle impostazioni di Android lo risolve e permette anche a Hearth di:';
+
+  @override
+  String get setupFlowHomeButtonPoint1 => 'seguire i cambi di profilo e l\'ora della nanna dei bambini';
+
+  @override
+  String get setupFlowHomeButtonPoint2 => 'mostrare avvisi e spegnere la TV quando non è in uso';
+
+  @override
+  String get setupFlowOnNextScreen => 'Nella schermata successiva:';
+
+  @override
+  String get setupFlowStepServices => 'Scorri fino a Servizi';
+
+  @override
+  String setupFlowStepSelect(String name) {
+    return 'Seleziona \"$name\"';
+  }
+
+  @override
+  String get setupFlowStepEnable => 'Attiva Attiva, poi OK';
+
+  @override
+  String get setupFlowComesBack => 'Hearth torna da solo quando è attivo. Se Google TV chiede chi sta guardando, scegli te stesso.';
+
+  @override
+  String get setupFlowOpenAccessibility => 'Apri Accessibilità';
+
+  @override
+  String get setupFlowHomeButtonDone => 'Ora il tasto Home apre Hearth';
+
+  @override
+  String get setupFlowNotOnYetTitle => 'Non è ancora attivo';
+
+  @override
+  String get setupFlowNotOnYetBody => 'Riprova, oppure salta e fallo più tardi nelle Impostazioni.';
+
+  @override
+  String get setupFlowStuckTitle => 'È attivo ma non in esecuzione';
+
+  @override
+  String get setupFlowStuckBody => 'Android lo mostra come attivo, ma non è in esecuzione. Disattivalo e riattivalo.';
+
+  @override
+  String get setupFlowSkipHomeButtonTitle => 'Saltare il tasto Home?';
+
+  @override
+  String get setupFlowSkipHomeButtonBody => 'Senza, il tasto Home apre Google TV e Hearth non sa quando è in uso un profilo bambini.';
+
+  @override
+  String get setupFlowSkipAnyway => 'Salta comunque';
+
+  @override
+  String get setupFlowSkip => 'Salta';
+
+  @override
+  String get setupFlowNext => 'Avanti';
+
+  @override
+  String get setupFlowLostTitle => 'L\'aggiornamento ha disattivato il tasto Home';
+
+  @override
+  String get setupFlowLostBody => 'Android lo disattiva dopo alcuni aggiornamenti. Riattivalo in un passaggio.';
+
+  @override
+  String get setupFlowBlockedTitle => 'Android ha bloccato questo interruttore';
+
+  @override
+  String get setupFlowBlockedBody => 'Se l\'interruttore era grigio, è perché Hearth è stato installato da un file scaricato. La TV non ha un\'impostazione per consentirlo.';
+
+  @override
+  String get setupFlowBlockedComputer => 'Con un computer:';
+
+  @override
+  String get setupFlowBlockedComputerThen => 'Poi attiva l\'interruttore. Hearth se ne accorge da solo.';
+
+  @override
+  String get setupFlowBlockedSelfFixBody => 'Il debug è attivo, quindi Hearth può risolvere da solo. La TV chiederà \"Consentire il debug?\": scegli Consenti sempre e Hearth sbloccherà il suo interruttore e lo attiverà.';
+
+  @override
+  String get setupFlowSkipForNow => 'Salta per ora';
+
+  @override
+  String get setupFlowBlockedSkipLine => 'App, ricerca e Continua a guardare funzionano comunque. Tasto Home, profili, avvisi e timer di spegnimento no.';
+
+  @override
+  String get setupFlowLetHearthFix => 'Lascia che Hearth lo risolva';
+
+  @override
+  String get setupFlowFixConfirmBody => 'Hearth eseguirà questo sulla TV, tramite la propria connessione di debug:';
+
+  @override
+  String get setupFlowFixConfirmApproval => 'La prima volta la TV chiede \"Consentire il debug?\". Scegli Consenti sempre. Cambia solo i permessi di Hearth.';
+
+  @override
+  String get setupFlowFixRun => 'Esegui';
+
+  @override
+  String get setupFlowFixWaiting => 'In corso. Se la TV chiede \"Consentire il debug?\", scegli Consenti sempre.';
+
+  @override
+  String get setupFlowFixFailedTitle => 'Hearth non ci è riuscito';
+
+  @override
+  String get setupFlowFixFailedBody => 'Hearth non è riuscito a raggiungere il debug della TV. Se la TV ha chiesto \"Consentire il debug?\", scegli Consenti sempre e riprova. Il debug deve restare attivo nelle Opzioni sviluppatore.';
+
+  @override
+  String get setupFlowHomeAppTitle => 'Imposta Hearth come app Home';
+
+  @override
+  String get setupFlowHomeAppBody => 'Android mostrerà un elenco di app Home. Scegli Hearth. Così i profili bambini non bloccano Hearth.';
+
+  @override
+  String get setupFlowChooseHearth => 'Scegli Hearth';
+
+  @override
+  String get setupFlowHomeAppDone => 'Hearth è la tua app Home';
+
+  @override
+  String get setupFlowNotChosenTitle => 'Non ancora scelta';
+
+  @override
+  String get setupFlowFinishTitle => 'Hearth è pronto';
+
+  @override
+  String setupFlowFinishBody(String where) {
+    return 'Ciò che hai saltato è nelle Impostazioni, e puoi ripetere tutto da $where.';
+  }
+
+  @override
+  String get setupFlowFinishOn => 'Attivo';
+
+  @override
+  String get setupFlowFinishLaterHeading => 'Più tardi, nelle Impostazioni';
+
+  @override
+  String get setupFlowFinishMore => 'Altro nelle Impostazioni: tasti del telecomando, sezioni, notifiche e backup.';
+
+  @override
+  String get setupFlowGoHome => 'Vai alla mia Home';
 }

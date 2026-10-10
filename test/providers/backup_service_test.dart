@@ -233,6 +233,21 @@ void main() {
       expect((await database.getApplications()).map((a) => a.packageName), ["com.kid.app"]);
     });
 
+    test("leave the setup flow's progress out of a backup, and keep this TV's on restore", () async {
+      final settingsService = SettingsService(sharedPreferences);
+      await sharedPreferences.setInt("device_setup_flow_version", 1);
+      await sharedPreferences.setString("device_setup_decisions", '{"watching":{"state":"on","at":1}}');
+      final data = await backupService.buildBackupData(settingsService);
+      expect((data["settings"] as Map).keys.where((k) => k.startsWith("device_setup_")), isEmpty);
+
+      // A backup made before they were left out still carries them: this TV's own stay
+      data["settings"] = {...data["settings"] as Map<String, dynamic>, "device_setup_flow_version": 7};
+      await sharedPreferences.remove("device_setup_flow_version");
+      await backupService.restoreBackupData(data, settingsService);
+      expect(sharedPreferences.getInt("device_setup_flow_version"), isNull);
+      expect(sharedPreferences.getString("device_setup_decisions"), isNotNull);
+    });
+
     test("a profile without a saved layout reports none", () async {
       final settingsService = SettingsService(sharedPreferences);
       expect(await backupService.loadProfileLayout("New Person", settingsService), isFalse);

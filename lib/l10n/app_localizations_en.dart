@@ -2033,4 +2033,178 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateErrorWrongApp => 'This download isn\'t an update for this Hearth';
+
+  @override
+  String get setupFlowFinishLater => 'Finish later';
+
+  @override
+  String get setupFlowStripEssentials => 'Essentials';
+
+  @override
+  String get setupFlowWelcomeTitle => 'Welcome to Hearth';
+
+  @override
+  String get setupFlowWelcomeBody => 'A home screen for the whole family: your apps, what you were watching, and the right profile in every streaming app.';
+
+  @override
+  String get setupFlowWelcomeTime => 'Takes about 5 minutes. Skip anything.';
+
+  @override
+  String get setupFlowGetStarted => 'Get started';
+
+  @override
+  String get setupFlowSetUpLater => 'Set up later';
+
+  @override
+  String setupFlowLanguageLink(String language) {
+    return 'Language: $language';
+  }
+
+  @override
+  String get setupFlowRestoreLink => 'Restore from a backup';
+
+  @override
+  String get setupFlowHomeButtonTitle => 'Make the Home button open Hearth';
+
+  @override
+  String get setupFlowHomeButtonBody => 'Google TV keeps its own home on the Home button. One switch in Android\'s settings fixes that, and also lets Hearth:';
+
+  @override
+  String get setupFlowHomeButtonPoint1 => 'follow profile switches and kids\' bedtime';
+
+  @override
+  String get setupFlowHomeButtonPoint2 => 'show pop-ups and turn the TV off when idle';
+
+  @override
+  String get setupFlowOnNextScreen => 'On the next screen:';
+
+  @override
+  String get setupFlowStepServices => 'Scroll down to Services';
+
+  @override
+  String setupFlowStepSelect(String name) {
+    return 'Select \"$name\"';
+  }
+
+  @override
+  String get setupFlowStepEnable => 'Turn on Enable, then OK';
+
+  @override
+  String get setupFlowComesBack => 'Hearth comes back by itself when it\'s on. If Google TV asks who\'s watching, choose yourself.';
+
+  @override
+  String get setupFlowOpenAccessibility => 'Open Accessibility';
+
+  @override
+  String get setupFlowHomeButtonDone => 'The Home button now opens Hearth';
+
+  @override
+  String get setupFlowNotOnYetTitle => 'It\'s not on yet';
+
+  @override
+  String get setupFlowNotOnYetBody => 'Try again, or skip and do it later in Settings.';
+
+  @override
+  String get setupFlowStuckTitle => 'It\'s on but not running';
+
+  @override
+  String get setupFlowStuckBody => 'Android lists it as on, but it isn\'t running. Turn it off and on again.';
+
+  @override
+  String get setupFlowSkipHomeButtonTitle => 'Skip the Home button?';
+
+  @override
+  String get setupFlowSkipHomeButtonBody => 'Without it, the Home button opens Google TV, and Hearth can\'t tell when a kids\' profile is in use.';
+
+  @override
+  String get setupFlowSkipAnyway => 'Skip anyway';
+
+  @override
+  String get setupFlowSkip => 'Skip';
+
+  @override
+  String get setupFlowNext => 'Next';
+
+  @override
+  String get setupFlowLostTitle => 'The update turned the Home button off';
+
+  @override
+  String get setupFlowLostBody => 'Android switches it off after some updates. Turn it back on in one step.';
+
+  @override
+  String get setupFlowBlockedTitle => 'Android blocked this switch';
+
+  @override
+  String get setupFlowBlockedBody => 'If the switch was grey, it\'s because Hearth was installed from a downloaded file. The TV has no setting to allow it.';
+
+  @override
+  String get setupFlowBlockedComputer => 'With a computer:';
+
+  @override
+  String get setupFlowBlockedComputerThen => 'Then turn the switch on. Hearth notices on its own.';
+
+  @override
+  String get setupFlowBlockedSelfFixBody => 'Debugging is on, so Hearth can fix it itself. The TV will ask \"Allow debugging?\": choose Always allow, and Hearth will unblock its switch and turn it on.';
+
+  @override
+  String get setupFlowSkipForNow => 'Skip for now';
+
+  @override
+  String get setupFlowBlockedSkipLine => 'Apps, search and Continue Watching still work. The Home button, profiles, pop-ups and the sleep timer don\'t.';
+
+  @override
+  String get setupFlowLetHearthFix => 'Let Hearth fix it';
+
+  @override
+  String get setupFlowFixConfirmBody => 'Hearth will run this on the TV, through its own debugging connection:';
+
+  @override
+  String get setupFlowFixConfirmApproval => 'The first time, the TV asks \"Allow debugging?\". Choose Always allow. It only changes Hearth\'s own permissions.';
+
+  @override
+  String get setupFlowFixRun => 'Run it';
+
+  @override
+  String get setupFlowFixWaiting => 'Working on it. If the TV asks \"Allow debugging?\", choose Always allow.';
+
+  @override
+  String get setupFlowFixFailedTitle => 'Hearth couldn\'t do it';
+
+  @override
+  String get setupFlowFixFailedBody => 'Hearth couldn\'t reach the TV\'s debugging. If the TV asked \"Allow debugging?\", choose Always allow and try again. Debugging must stay on in Developer options.';
+
+  @override
+  String get setupFlowHomeAppTitle => 'Make Hearth your home app';
+
+  @override
+  String get setupFlowHomeAppBody => 'Android will show a list of home apps. Choose Hearth. It keeps kids\' profiles from blocking Hearth.';
+
+  @override
+  String get setupFlowChooseHearth => 'Choose Hearth';
+
+  @override
+  String get setupFlowHomeAppDone => 'Hearth is your home app';
+
+  @override
+  String get setupFlowNotChosenTitle => 'Not chosen yet';
+
+  @override
+  String get setupFlowFinishTitle => 'Hearth is ready';
+
+  @override
+  String setupFlowFinishBody(String where) {
+    return 'Anything you skipped is in Settings, and you can run this again from $where.';
+  }
+
+  @override
+  String get setupFlowFinishOn => 'On';
+
+  @override
+  String get setupFlowFinishLaterHeading => 'Set up later, in Settings';
+
+  @override
+  String get setupFlowFinishMore => 'More in Settings: remote buttons, sections, notifications and backup.';
+
+  @override
+  String get setupFlowGoHome => 'Go to my home';
 }

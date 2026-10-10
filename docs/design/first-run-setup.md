@@ -359,7 +359,7 @@ through `SelfAdb`, each only after a confirmation that shows the exact commands:
 |---|---|
 | Lift restricted settings | `appops set <pkg> ACCESS_RESTRICTED_SETTINGS allow` |
 | Turn on Home Button Fix / Profile Pairing | `settings put secure enabled_accessibility_services <current>:<pkg>/<service>` and `settings put secure accessibility_enabled 1` |
-| Allow Continue Watching | `pm grant <pkg> com.android.providers.tv.permission.READ_WRITE_WATCH_NEXT_PROGRAMS` |
+| Allow Continue Watching | `pm grant <pkg> android.permission.READ_TV_LISTINGS` (the permission Hearth asks for in its dialog) |
 | Allow notification access | `cmd notification allow_listener <pkg>/<pkg>.LauncherNotificationListenerService` |
 
 The Android side builds the commands from a fixed list (no command text comes from Flutter), and keeps the other

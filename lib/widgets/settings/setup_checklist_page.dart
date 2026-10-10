@@ -11,9 +11,14 @@ import 'adb_command_dialog.dart';
 import 'focusable_settings_tile.dart';
 import 'settings_page.dart';
 
+/// The things the TV owner turns on in Android's Settings for Hearth. The setup flow and this checklist both work
+/// from [loadSetupSteps], so they agree on what's done.
+enum SetupStepId { homeButton, homeApp, notifications, install, profilePairing, voice }
+
 /// One thing the TV owner turns on in Android's Settings for Hearth. Android doesn't let an app jump to (or
 /// highlight) the exact switch on Google TV, so each step explains what to pick on the screen it opens.
 class SetupStep {
+  final SetupStepId id;
   final String title;
   final String why;
   final String instructions;
@@ -22,6 +27,12 @@ class SetupStep {
   final bool done;
   final String? warning;
 
+  /// Android blocks the switch (restricted settings), so it can't be turned on from the TV alone.
+  final bool blocked;
+
+  /// Android lists it as on, but the service isn't running.
+  final bool stuck;
+
   /// Opens the Settings screen for it; false when Android couldn't open it.
   final Future<bool> Function() open;
 
@@ -29,6 +40,7 @@ class SetupStep {
   final String? adbFallback;
 
   const SetupStep({
+    required this.id,
     required this.title,
     required this.why,
     required this.instructions,
@@ -37,6 +49,8 @@ class SetupStep {
     required this.open,
     this.optional = false,
     this.warning,
+    this.blocked = false,
+    this.stuck = false,
     this.adbFallback,
   });
 }
@@ -58,12 +72,14 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
   final install = await safe(channel.checkInstallPermission, false);
   final pairing = await safe(channel.getProfilePairingStatus, <dynamic, dynamic>{});
 
-  final restricted = homeFix["restricted"] == true
+  final bool blocked = homeFix["restricted"] == true;
+  final restricted = blocked
       ? l.setupRestrictedWarning("adb shell appops set $packageName ACCESS_RESTRICTED_SETTINGS allow")
       : null;
 
   return [
     SetupStep(
+      id: SetupStepId.homeApp,
       title: l.setupDefaultLauncherTitle,
       why: l.setupDefaultLauncherWhy,
       instructions: l.setupDefaultLauncherInstructions,
@@ -75,17 +91,21 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
       },
     ),
     SetupStep(
+      id: SetupStepId.homeButton,
       title: l.setupHomeFixTitle,
       why: l.setupHomeFixWhy,
       instructions: l.setupAccessibilityInstructions("Hearth Home Button Fix"),
       icon: Icons.settings_remote_outlined,
       done: homeFix["enabled"] == true,
       warning: restricted,
+      blocked: blocked,
+      stuck: homeFix["listedButStopped"] == true,
       open: channel.requestAccessibilityPermission,
       adbFallback: "adb shell settings put secure enabled_accessibility_services "
           "${hearthComponent(packageName, "LauncherAccessibilityService")}",
     ),
     SetupStep(
+      id: SetupStepId.notifications,
       title: l.setupNotificationsTitle,
       why: l.setupNotificationsWhy,
       instructions: l.setupNotificationsInstructions("Hearth Notification Service"),
@@ -97,6 +117,7 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
       },
     ),
     SetupStep(
+      id: SetupStepId.install,
       title: l.setupInstallTitle,
       why: l.setupInstallWhy,
       instructions: l.setupInstallInstructions,
@@ -108,6 +129,7 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
       },
     ),
     SetupStep(
+      id: SetupStepId.profilePairing,
       title: l.profilePairingTitle,
       why: l.setupPairingWhy,
       instructions: l.setupAccessibilityInstructions("Hearth Profile Pairing"),
@@ -115,9 +137,11 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
       optional: true,
       done: pairing["enabled"] == true,
       warning: restricted,
+      blocked: blocked,
       open: channel.requestAccessibilityPermission,
     ),
     SetupStep(
+      id: SetupStepId.voice,
       title: l.setupVoiceTitle,
       why: l.setupVoiceWhy,
       instructions: l.setupVoiceInstructions("Hearth voice"),

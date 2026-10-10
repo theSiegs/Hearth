@@ -2047,4 +2047,178 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get updateErrorWrongApp => 'Эта загрузка не является обновлением этого Hearth';
+
+  @override
+  String get setupFlowFinishLater => 'Завершить позже';
+
+  @override
+  String get setupFlowStripEssentials => 'Главное';
+
+  @override
+  String get setupFlowWelcomeTitle => 'Добро пожаловать в Hearth';
+
+  @override
+  String get setupFlowWelcomeBody => 'Главный экран для всей семьи: ваши приложения, то, что вы смотрели, и нужный профиль в каждом стриминговом приложении.';
+
+  @override
+  String get setupFlowWelcomeTime => 'Около 5 минут. Любой шаг можно пропустить.';
+
+  @override
+  String get setupFlowGetStarted => 'Начать';
+
+  @override
+  String get setupFlowSetUpLater => 'Настроить позже';
+
+  @override
+  String setupFlowLanguageLink(String language) {
+    return 'Язык: $language';
+  }
+
+  @override
+  String get setupFlowRestoreLink => 'Восстановить из резервной копии';
+
+  @override
+  String get setupFlowHomeButtonTitle => 'Кнопка «Домой» открывает Hearth';
+
+  @override
+  String get setupFlowHomeButtonBody => 'Google TV держит на кнопке «Домой» свой главный экран. Один переключатель в настройках Android исправляет это и позволяет Hearth:';
+
+  @override
+  String get setupFlowHomeButtonPoint1 => 'следить за сменой профиля и временем сна детей';
+
+  @override
+  String get setupFlowHomeButtonPoint2 => 'показывать всплывающие уведомления и выключать телевизор при простое';
+
+  @override
+  String get setupFlowOnNextScreen => 'На следующем экране:';
+
+  @override
+  String get setupFlowStepServices => 'Прокрутите вниз до «Службы»';
+
+  @override
+  String setupFlowStepSelect(String name) {
+    return 'Выберите «$name»';
+  }
+
+  @override
+  String get setupFlowStepEnable => 'Включите «Включить», затем «ОК»';
+
+  @override
+  String get setupFlowComesBack => 'Когда переключатель включён, Hearth вернётся сам. Если Google TV спросит, кто смотрит, выберите себя.';
+
+  @override
+  String get setupFlowOpenAccessibility => 'Открыть спец. возможности';
+
+  @override
+  String get setupFlowHomeButtonDone => 'Теперь кнопка «Домой» открывает Hearth';
+
+  @override
+  String get setupFlowNotOnYetTitle => 'Пока не включено';
+
+  @override
+  String get setupFlowNotOnYetBody => 'Попробуйте ещё раз или пропустите и сделайте это позже в настройках.';
+
+  @override
+  String get setupFlowStuckTitle => 'Включено, но не работает';
+
+  @override
+  String get setupFlowStuckBody => 'Android показывает, что он включён, но он не работает. Выключите и снова включите его.';
+
+  @override
+  String get setupFlowSkipHomeButtonTitle => 'Пропустить кнопку «Домой»?';
+
+  @override
+  String get setupFlowSkipHomeButtonBody => 'Без него кнопка «Домой» открывает Google TV, а Hearth не может понять, когда используется детский профиль.';
+
+  @override
+  String get setupFlowSkipAnyway => 'Всё равно пропустить';
+
+  @override
+  String get setupFlowSkip => 'Пропустить';
+
+  @override
+  String get setupFlowNext => 'Далее';
+
+  @override
+  String get setupFlowLostTitle => 'Обновление отключило кнопку «Домой»';
+
+  @override
+  String get setupFlowLostBody => 'Android отключает его после некоторых обновлений. Включите его снова за один шаг.';
+
+  @override
+  String get setupFlowBlockedTitle => 'Android заблокировал этот переключатель';
+
+  @override
+  String get setupFlowBlockedBody => 'Если переключатель был серым, это потому, что Hearth установлен из скачанного файла. В телевизоре нет настройки, чтобы это разрешить.';
+
+  @override
+  String get setupFlowBlockedComputer => 'С компьютера:';
+
+  @override
+  String get setupFlowBlockedComputerThen => 'Затем включите переключатель. Hearth заметит это сам.';
+
+  @override
+  String get setupFlowBlockedSelfFixBody => 'Отладка включена, поэтому Hearth может исправить это сам. Телевизор спросит «Разрешить отладку?»: выберите «Всегда разрешать», и Hearth разблокирует свой переключатель и включит его.';
+
+  @override
+  String get setupFlowSkipForNow => 'Пока пропустить';
+
+  @override
+  String get setupFlowBlockedSkipLine => 'Приложения, поиск и «Продолжить просмотр» работают. Кнопка «Домой», профили, всплывающие уведомления и таймер сна — нет.';
+
+  @override
+  String get setupFlowLetHearthFix => 'Пусть Hearth исправит';
+
+  @override
+  String get setupFlowFixConfirmBody => 'Hearth выполнит на телевизоре следующее через своё отладочное подключение:';
+
+  @override
+  String get setupFlowFixConfirmApproval => 'В первый раз телевизор спросит «Разрешить отладку?». Выберите «Всегда разрешать». Меняются только разрешения самого Hearth.';
+
+  @override
+  String get setupFlowFixRun => 'Выполнить';
+
+  @override
+  String get setupFlowFixWaiting => 'Выполняется. Если телевизор спросит «Разрешить отладку?», выберите «Всегда разрешать».';
+
+  @override
+  String get setupFlowFixFailedTitle => 'Hearth не удалось это сделать';
+
+  @override
+  String get setupFlowFixFailedBody => 'Hearth не смог подключиться к отладке телевизора. Если телевизор спросил «Разрешить отладку?», выберите «Всегда разрешать» и попробуйте ещё раз. Отладка должна оставаться включённой в параметрах разработчика.';
+
+  @override
+  String get setupFlowHomeAppTitle => 'Сделайте Hearth главным приложением';
+
+  @override
+  String get setupFlowHomeAppBody => 'Android покажет список приложений главного экрана. Выберите Hearth. Тогда детские профили не заблокируют Hearth.';
+
+  @override
+  String get setupFlowChooseHearth => 'Выбрать Hearth';
+
+  @override
+  String get setupFlowHomeAppDone => 'Hearth — ваше главное приложение';
+
+  @override
+  String get setupFlowNotChosenTitle => 'Пока не выбрано';
+
+  @override
+  String get setupFlowFinishTitle => 'Hearth готов';
+
+  @override
+  String setupFlowFinishBody(String where) {
+    return 'Всё пропущенное есть в настройках, а запустить это снова можно в разделе $where.';
+  }
+
+  @override
+  String get setupFlowFinishOn => 'Включено';
+
+  @override
+  String get setupFlowFinishLaterHeading => 'Позже, в настройках';
+
+  @override
+  String get setupFlowFinishMore => 'Ещё в настройках: кнопки пульта, разделы, уведомления и резервное копирование.';
+
+  @override
+  String get setupFlowGoHome => 'На главный экран';
 }

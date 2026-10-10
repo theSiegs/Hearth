@@ -335,6 +335,21 @@ public class MainActivity extends FlutterActivity {
                 result.success(null);
             }
             case "getProfilePairingStatus" -> result.success(getProfilePairingStatus());
+            // First-run setup: whether self-adb can work, and the named fixes it may run (SetupFixes), shown to the
+            // parent before they run. Off the main thread: adb I/O, and the first time a wait for "Allow debugging?".
+            case "isAdbEnabled" -> result.success(SetupFixes.isAdbEnabled(this));
+            case "getSetupFixCommands" -> result.success(SetupFixes.commands(this, call.arguments()));
+            case "runSetupFixes" -> {
+                List<String> fixes = call.arguments();
+                sIoExecutor.execute(() -> {
+                    try {
+                        List<String> log = SetupFixes.run(this, fixes);
+                        runOnUiThread(() -> result.success(log));
+                    } catch (Exception e) {
+                        runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
+                    }
+                });
+            }
             case "openTextToSpeechSettings" -> result.success(openTextToSpeechSettings());
             case "checkWatchNextPermission" -> result.success(checkWatchNextPermission());
             case "requestWatchNextPermission" -> requestWatchNextPermission(result);
@@ -1550,19 +1565,9 @@ public class MainActivity extends FlutterActivity {
         return false;
     }
 
-    /**
-     * Android 13+ blocks accessibility for apps installed from a file; apps can't read that app op, so this reports
-     * whether the install came from a file.
-     */
+    /** Android 13+ blocks accessibility for apps installed from a file: the app-op, or a guess where it can't be read. */
     private boolean mayHaveRestrictedSettings() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false;
-        try {
-            int source = getPackageManager().getInstallSourceInfo(getPackageName()).getPackageSource();
-            return source == PackageInstaller.PACKAGE_SOURCE_LOCAL_FILE
-                    || source == PackageInstaller.PACKAGE_SOURCE_DOWNLOADED_FILE;
-        } catch (Exception e) {
-            return false;
-        }
+        return SetupFixes.mayHaveRestrictedSettings(this);
     }
 
     private boolean openAccessibilitySettings() {

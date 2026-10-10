@@ -2568,5 +2568,244 @@
     "updateErrorWrongApp": "This download isn't an update for this Hearth",
     "@updateErrorWrongApp": {
         "description": "Hearth update dialog: the downloaded APK is another app"
+    },
+    "setupFlowFinishLater": "Finish later",
+    "@setupFlowFinishLater": {
+        "description": "Setup flow: top-right button that closes the flow; the home-screen chip offers to carry on"
+    },
+    "setupFlowStripEssentials": "Essentials",
+    "@setupFlowStripEssentials": {
+        "description": "Setup flow: progress strip label for the first, essential steps (the Home button and the home app)"
+    },
+    "setupFlowWelcomeTitle": "Welcome to Hearth",
+    "@setupFlowWelcomeTitle": {
+        "description": "Setup flow: first screen's title"
+    },
+    "setupFlowWelcomeBody": "A home screen for the whole family: your apps, what you were watching, and the right profile in every streaming app.",
+    "@setupFlowWelcomeBody": {
+        "description": "Setup flow: first screen, what Hearth is in one line"
+    },
+    "setupFlowWelcomeTime": "Takes about 5 minutes. Skip anything.",
+    "@setupFlowWelcomeTime": {
+        "description": "Setup flow: first screen, small line at the bottom"
+    },
+    "setupFlowGetStarted": "Get started",
+    "@setupFlowGetStarted": {
+        "description": "Setup flow: first screen's main button"
+    },
+    "setupFlowSetUpLater": "Set up later",
+    "@setupFlowSetUpLater": {
+        "description": "Setup flow: first screen's button that closes the flow; the home-screen chip offers to carry on"
+    },
+    "setupFlowLanguageLink": "Language: {language}",
+    "@setupFlowLanguageLink": {
+        "description": "Setup flow: first screen, link that opens the language choice; {language} is the current choice (\"System Default\", \"English\"...)",
+        "placeholders": {
+            "language": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowRestoreLink": "Restore from a backup",
+    "@setupFlowRestoreLink": {
+        "description": "Setup flow: first screen, link that opens Backup & restore"
+    },
+    "setupFlowHomeButtonTitle": "Make the Home button open Hearth",
+    "@setupFlowHomeButtonTitle": {
+        "description": "Setup flow: the Home Button Fix step's title"
+    },
+    "setupFlowHomeButtonBody": "Google TV keeps its own home on the Home button. One switch in Android's settings fixes that, and also lets Hearth:",
+    "@setupFlowHomeButtonBody": {
+        "description": "Setup flow: the Home Button Fix step, before two bullet points of what else it gives"
+    },
+    "setupFlowHomeButtonPoint1": "follow profile switches and kids' bedtime",
+    "@setupFlowHomeButtonPoint1": {
+        "description": "Setup flow: the Home Button Fix step, first bullet of what else it gives"
+    },
+    "setupFlowHomeButtonPoint2": "show pop-ups and turn the TV off when idle",
+    "@setupFlowHomeButtonPoint2": {
+        "description": "Setup flow: the Home Button Fix step, second bullet of what else it gives"
+    },
+    "setupFlowOnNextScreen": "On the next screen:",
+    "@setupFlowOnNextScreen": {
+        "description": "Setup flow: heading over the numbered steps to follow on Android's settings screen"
+    },
+    "setupFlowStepServices": "Scroll down to Services",
+    "@setupFlowStepServices": {
+        "description": "Setup flow: first step on Android's Accessibility screen; Services is Android's own heading there"
+    },
+    "setupFlowStepSelect": "Select \"{name}\"",
+    "@setupFlowStepSelect": {
+        "description": "Setup flow: second step on Android's Accessibility screen; {name} is the service's name as Android shows it (in English)",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowStepEnable": "Turn on Enable, then OK",
+    "@setupFlowStepEnable": {
+        "description": "Setup flow: last step on Android's Accessibility screen; Enable and OK are Android's own labels"
+    },
+    "setupFlowComesBack": "Hearth comes back by itself when it's on. If Google TV asks who's watching, choose yourself.",
+    "@setupFlowComesBack": {
+        "description": "Setup flow: note under the Accessibility steps"
+    },
+    "setupFlowOpenAccessibility": "Open Accessibility",
+    "@setupFlowOpenAccessibility": {
+        "description": "Setup flow: button that opens Android's Accessibility settings"
+    },
+    "setupFlowHomeButtonDone": "The Home button now opens Hearth",
+    "@setupFlowHomeButtonDone": {
+        "description": "Setup flow: Home Button Fix is on; also a line in the final summary"
+    },
+    "setupFlowNotOnYetTitle": "It's not on yet",
+    "@setupFlowNotOnYetTitle": {
+        "description": "Setup flow: back from Android's settings, the switch still isn't on"
+    },
+    "setupFlowNotOnYetBody": "Try again, or skip and do it later in Settings.",
+    "@setupFlowNotOnYetBody": {
+        "description": "Setup flow: under \"It's not on yet\""
+    },
+    "setupFlowStuckTitle": "It's on but not running",
+    "@setupFlowStuckTitle": {
+        "description": "Setup flow: Android lists Home Button Fix as on, but the service isn't running"
+    },
+    "setupFlowStuckBody": "Android lists it as on, but it isn't running. Turn it off and on again.",
+    "@setupFlowStuckBody": {
+        "description": "Setup flow: under \"It's on but not running\""
+    },
+    "setupFlowSkipHomeButtonTitle": "Skip the Home button?",
+    "@setupFlowSkipHomeButtonTitle": {
+        "description": "Setup flow: asked once before skipping the Home Button Fix step"
+    },
+    "setupFlowSkipHomeButtonBody": "Without it, the Home button opens Google TV, and Hearth can't tell when a kids' profile is in use.",
+    "@setupFlowSkipHomeButtonBody": {
+        "description": "Setup flow: under \"Skip the Home button?\""
+    },
+    "setupFlowSkipAnyway": "Skip anyway",
+    "@setupFlowSkipAnyway": {
+        "description": "Setup flow: button under \"Skip the Home button?\""
+    },
+    "setupFlowSkip": "Skip",
+    "@setupFlowSkip": {
+        "description": "Setup flow: button that skips a step"
+    },
+    "setupFlowNext": "Next",
+    "@setupFlowNext": {
+        "description": "Setup flow: button that goes on to the next screen"
+    },
+    "setupFlowLostTitle": "The update turned the Home button off",
+    "@setupFlowLostTitle": {
+        "description": "Setup flow: shown after an update switched Home Button Fix off"
+    },
+    "setupFlowLostBody": "Android switches it off after some updates. Turn it back on in one step.",
+    "@setupFlowLostBody": {
+        "description": "Setup flow: under \"The update turned the Home button off\""
+    },
+    "setupFlowBlockedTitle": "Android blocked this switch",
+    "@setupFlowBlockedTitle": {
+        "description": "Setup flow: Android restricts Hearth's accessibility switch (installed from a downloaded file)"
+    },
+    "setupFlowBlockedBody": "If the switch was grey, it's because Hearth was installed from a downloaded file. The TV has no setting to allow it.",
+    "@setupFlowBlockedBody": {
+        "description": "Setup flow: under \"Android blocked this switch\""
+    },
+    "setupFlowBlockedComputer": "With a computer:",
+    "@setupFlowBlockedComputer": {
+        "description": "Setup flow: heading over the adb commands to run from a computer"
+    },
+    "setupFlowBlockedComputerThen": "Then turn the switch on. Hearth notices on its own.",
+    "@setupFlowBlockedComputerThen": {
+        "description": "Setup flow: under the adb commands"
+    },
+    "setupFlowBlockedSelfFixBody": "Debugging is on, so Hearth can fix it itself. The TV will ask \"Allow debugging?\": choose Always allow, and Hearth will unblock its switch and turn it on.",
+    "@setupFlowBlockedSelfFixBody": {
+        "description": "Setup flow: Android blocked the switch and the TV's debugging is on; explains Hearth's own fix. \"Allow debugging?\" and Always allow are Android's own labels"
+    },
+    "setupFlowSkipForNow": "Skip for now",
+    "@setupFlowSkipForNow": {
+        "description": "Setup flow: button that skips the blocked switch for now"
+    },
+    "setupFlowBlockedSkipLine": "Apps, search and Continue Watching still work. The Home button, profiles, pop-ups and the sleep timer don't.",
+    "@setupFlowBlockedSkipLine": {
+        "description": "Setup flow: under the blocked switch's buttons, what still works without it"
+    },
+    "setupFlowLetHearthFix": "Let Hearth fix it",
+    "@setupFlowLetHearthFix": {
+        "description": "Setup flow: button (and dialog title) for Hearth running the fix itself over the TV's debugging"
+    },
+    "setupFlowFixConfirmBody": "Hearth will run this on the TV, through its own debugging connection:",
+    "@setupFlowFixConfirmBody": {
+        "description": "Setup flow: before Hearth runs a fix, shows the exact commands below this line"
+    },
+    "setupFlowFixConfirmApproval": "The first time, the TV asks \"Allow debugging?\". Choose Always allow. It only changes Hearth's own permissions.",
+    "@setupFlowFixConfirmApproval": {
+        "description": "Setup flow: under the commands of a fix; \"Allow debugging?\" and Always allow are Android's own labels"
+    },
+    "setupFlowFixRun": "Run it",
+    "@setupFlowFixRun": {
+        "description": "Setup flow: button that runs the fix shown above it"
+    },
+    "setupFlowFixWaiting": "Working on it. If the TV asks \"Allow debugging?\", choose Always allow.",
+    "@setupFlowFixWaiting": {
+        "description": "Setup flow: while Hearth runs a fix; \"Allow debugging?\" and Always allow are Android's own labels"
+    },
+    "setupFlowFixFailedTitle": "Hearth couldn't do it",
+    "@setupFlowFixFailedTitle": {
+        "description": "Setup flow: Hearth's own fix didn't run"
+    },
+    "setupFlowFixFailedBody": "Hearth couldn't reach the TV's debugging. If the TV asked \"Allow debugging?\", choose Always allow and try again. Debugging must stay on in Developer options.",
+    "@setupFlowFixFailedBody": {
+        "description": "Setup flow: why Hearth's own fix didn't run; \"Allow debugging?\", Always allow and Developer options are Android's own labels"
+    },
+    "setupFlowHomeAppTitle": "Make Hearth your home app",
+    "@setupFlowHomeAppTitle": {
+        "description": "Setup flow: the default home app step's title"
+    },
+    "setupFlowHomeAppBody": "Android will show a list of home apps. Choose Hearth. It keeps kids' profiles from blocking Hearth.",
+    "@setupFlowHomeAppBody": {
+        "description": "Setup flow: the default home app step"
+    },
+    "setupFlowChooseHearth": "Choose Hearth",
+    "@setupFlowChooseHearth": {
+        "description": "Setup flow: button that opens Android's home app choice"
+    },
+    "setupFlowHomeAppDone": "Hearth is your home app",
+    "@setupFlowHomeAppDone": {
+        "description": "Setup flow: Hearth is the default home app; also a line in the final summary"
+    },
+    "setupFlowNotChosenTitle": "Not chosen yet",
+    "@setupFlowNotChosenTitle": {
+        "description": "Setup flow: back from Android's home app choice, Hearth isn't the home app"
+    },
+    "setupFlowFinishTitle": "Hearth is ready",
+    "@setupFlowFinishTitle": {
+        "description": "Setup flow: last screen's title"
+    },
+    "setupFlowFinishBody": "Anything you skipped is in Settings, and you can run this again from {where}.",
+    "@setupFlowFinishBody": {
+        "description": "Setup flow: last screen; {where} is where the setup page is in Settings (\"Settings > System > Set up Hearth\")",
+        "placeholders": {
+            "where": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowFinishOn": "On",
+    "@setupFlowFinishOn": {
+        "description": "Setup flow: last screen, heading over what's on"
+    },
+    "setupFlowFinishLaterHeading": "Set up later, in Settings",
+    "@setupFlowFinishLaterHeading": {
+        "description": "Setup flow: last screen, heading over what was skipped"
+    },
+    "setupFlowFinishMore": "More in Settings: remote buttons, sections, notifications and backup.",
+    "@setupFlowFinishMore": {
+        "description": "Setup flow: last screen, what else Settings has"
+    },
+    "setupFlowGoHome": "Go to my home",
+    "@setupFlowGoHome": {
+        "description": "Setup flow: last screen's main button"
     }
 }

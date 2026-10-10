@@ -2066,4 +2066,178 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get updateErrorWrongApp => 'هذا التنزيل ليس تحديثًا لـ Hearth هذا';
+
+  @override
+  String get setupFlowFinishLater => 'إكمال لاحقًا';
+
+  @override
+  String get setupFlowStripEssentials => 'الأساسيات';
+
+  @override
+  String get setupFlowWelcomeTitle => 'مرحبًا بك في Hearth';
+
+  @override
+  String get setupFlowWelcomeBody => 'شاشة رئيسية للعائلة كلها: تطبيقاتك، وما كنت تشاهده، والملف الشخصي الصحيح في كل تطبيق بث.';
+
+  @override
+  String get setupFlowWelcomeTime => 'يستغرق نحو 5 دقائق. يمكنك تخطي أي شيء.';
+
+  @override
+  String get setupFlowGetStarted => 'ابدأ';
+
+  @override
+  String get setupFlowSetUpLater => 'الإعداد لاحقًا';
+
+  @override
+  String setupFlowLanguageLink(String language) {
+    return 'اللغة: $language';
+  }
+
+  @override
+  String get setupFlowRestoreLink => 'الاستعادة من نسخة احتياطية';
+
+  @override
+  String get setupFlowHomeButtonTitle => 'اجعل زر الصفحة الرئيسية يفتح Hearth';
+
+  @override
+  String get setupFlowHomeButtonBody => 'يحتفظ Google TV بشاشته الرئيسية على زر الصفحة الرئيسية. مفتاح واحد في إعدادات Android يصلح ذلك، ويتيح لـ Hearth أيضًا:';
+
+  @override
+  String get setupFlowHomeButtonPoint1 => 'متابعة تبديل الملفات الشخصية ووقت نوم الأطفال';
+
+  @override
+  String get setupFlowHomeButtonPoint2 => 'عرض النوافذ المنبثقة وإطفاء التلفزيون عند عدم الاستخدام';
+
+  @override
+  String get setupFlowOnNextScreen => 'في الشاشة التالية:';
+
+  @override
+  String get setupFlowStepServices => 'مرّر لأسفل إلى \"الخدمات\"';
+
+  @override
+  String setupFlowStepSelect(String name) {
+    return 'اختر \"$name\"';
+  }
+
+  @override
+  String get setupFlowStepEnable => 'فعّل \"تفعيل\" ثم \"حسنًا\"';
+
+  @override
+  String get setupFlowComesBack => 'يعود Hearth من تلقاء نفسه عند تفعيله. إذا سأل Google TV عمّن يشاهد، فاختر نفسك.';
+
+  @override
+  String get setupFlowOpenAccessibility => 'فتح إمكانية الوصول';
+
+  @override
+  String get setupFlowHomeButtonDone => 'زر الصفحة الرئيسية يفتح Hearth الآن';
+
+  @override
+  String get setupFlowNotOnYetTitle => 'لم يتم التفعيل بعد';
+
+  @override
+  String get setupFlowNotOnYetBody => 'حاول مرة أخرى، أو تخطَّ الخطوة وأكملها لاحقًا في الإعدادات.';
+
+  @override
+  String get setupFlowStuckTitle => 'مفعّل لكنه لا يعمل';
+
+  @override
+  String get setupFlowStuckBody => 'يعرضه Android على أنه مفعّل، لكنه لا يعمل. أوقفه ثم شغّله مرة أخرى.';
+
+  @override
+  String get setupFlowSkipHomeButtonTitle => 'هل تريد تخطي زر الصفحة الرئيسية؟';
+
+  @override
+  String get setupFlowSkipHomeButtonBody => 'من دونه، يفتح زر الصفحة الرئيسية Google TV، ولا يستطيع Hearth معرفة متى يكون ملف الأطفال قيد الاستخدام.';
+
+  @override
+  String get setupFlowSkipAnyway => 'تخطٍّ على أي حال';
+
+  @override
+  String get setupFlowSkip => 'تخطٍّ';
+
+  @override
+  String get setupFlowNext => 'التالي';
+
+  @override
+  String get setupFlowLostTitle => 'أوقف التحديث زر الصفحة الرئيسية';
+
+  @override
+  String get setupFlowLostBody => 'يوقفه Android بعد بعض التحديثات. أعد تفعيله بخطوة واحدة.';
+
+  @override
+  String get setupFlowBlockedTitle => 'حظر Android هذا المفتاح';
+
+  @override
+  String get setupFlowBlockedBody => 'إذا كان المفتاح رماديًا، فذلك لأن Hearth ثُبّت من ملف تم تنزيله. لا يوجد في التلفزيون إعداد للسماح به.';
+
+  @override
+  String get setupFlowBlockedComputer => 'باستخدام كمبيوتر:';
+
+  @override
+  String get setupFlowBlockedComputerThen => 'ثم فعّل المفتاح. سيلاحظ Hearth ذلك تلقائيًا.';
+
+  @override
+  String get setupFlowBlockedSelfFixBody => 'التصحيح مفعّل، لذا يمكن لـ Hearth إصلاح ذلك بنفسه. سيسأل التلفزيون \"هل تريد السماح بتصحيح الأخطاء؟\": اختر \"السماح دائمًا\"، وسيرفع Hearth الحظر عن مفتاحه ويفعّله.';
+
+  @override
+  String get setupFlowSkipForNow => 'تخطٍّ الآن';
+
+  @override
+  String get setupFlowBlockedSkipLine => 'تظل التطبيقات والبحث و\"متابعة المشاهدة\" تعمل. أما زر الصفحة الرئيسية والملفات الشخصية والنوافذ المنبثقة ومؤقت النوم فلا.';
+
+  @override
+  String get setupFlowLetHearthFix => 'دع Hearth يصلحه';
+
+  @override
+  String get setupFlowFixConfirmBody => 'سيشغّل Hearth ما يلي على التلفزيون عبر اتصال التصحيح الخاص به:';
+
+  @override
+  String get setupFlowFixConfirmApproval => 'في المرة الأولى، يسأل التلفزيون \"هل تريد السماح بتصحيح الأخطاء؟\". اختر \"السماح دائمًا\". لا يغيّر ذلك سوى أذونات Hearth نفسه.';
+
+  @override
+  String get setupFlowFixRun => 'تشغيل';
+
+  @override
+  String get setupFlowFixWaiting => 'جارٍ التنفيذ. إذا سأل التلفزيون \"هل تريد السماح بتصحيح الأخطاء؟\"، فاختر \"السماح دائمًا\".';
+
+  @override
+  String get setupFlowFixFailedTitle => 'تعذّر على Hearth تنفيذ ذلك';
+
+  @override
+  String get setupFlowFixFailedBody => 'تعذّر على Hearth الوصول إلى تصحيح الأخطاء في التلفزيون. إذا سأل التلفزيون \"هل تريد السماح بتصحيح الأخطاء؟\"، فاختر \"السماح دائمًا\" وحاول مرة أخرى. يجب أن يبقى التصحيح مفعّلًا في \"خيارات المطوّرين\".';
+
+  @override
+  String get setupFlowHomeAppTitle => 'اجعل Hearth تطبيق الشاشة الرئيسية';
+
+  @override
+  String get setupFlowHomeAppBody => 'سيعرض Android قائمة بتطبيقات الشاشة الرئيسية. اختر Hearth. فهذا يمنع ملفات الأطفال من حظر Hearth.';
+
+  @override
+  String get setupFlowChooseHearth => 'اختيار Hearth';
+
+  @override
+  String get setupFlowHomeAppDone => 'Hearth هو تطبيق الشاشة الرئيسية لديك';
+
+  @override
+  String get setupFlowNotChosenTitle => 'لم يتم الاختيار بعد';
+
+  @override
+  String get setupFlowFinishTitle => 'Hearth جاهز';
+
+  @override
+  String setupFlowFinishBody(String where) {
+    return 'كل ما تخطيته موجود في الإعدادات، ويمكنك تشغيل هذا مرة أخرى من $where.';
+  }
+
+  @override
+  String get setupFlowFinishOn => 'مفعّل';
+
+  @override
+  String get setupFlowFinishLaterHeading => 'للإعداد لاحقًا في الإعدادات';
+
+  @override
+  String get setupFlowFinishMore => 'المزيد في الإعدادات: أزرار جهاز التحكم، والأقسام، والإشعارات، والنسخ الاحتياطي.';
+
+  @override
+  String get setupFlowGoHome => 'الانتقال إلى شاشتي الرئيسية';
 }
