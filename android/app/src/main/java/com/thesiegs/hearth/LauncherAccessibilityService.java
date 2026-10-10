@@ -309,6 +309,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (launcherApps != null) {
             launcherApps.registerCallback(mSuspensionCallback);
         }
+        // Just turned on from the setup flow: back to it
+        SetupReturn.onConnected(this, SetupReturn.HOME_BUTTON_FIX);
     }
 
     @Override

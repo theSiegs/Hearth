@@ -30,6 +30,9 @@ class FakeSetupChannel extends FLauncherChannel {
   final List<List<String>> fixesRun = [];
   bool fixesWork = true;
 
+  /// The switch Hearth waits for to bring it back from Android's settings.
+  String? waitingFor;
+
   int accessibilityOpened = 0;
   int homeSettingsOpened = 0;
 
@@ -55,6 +58,9 @@ class FakeSetupChannel extends FLauncherChannel {
 
   @override
   Future<bool> isAdbEnabled() async => adb;
+
+  @override
+  Future<void> setSetupWaitingFor(String? what) async => waitingFor = what;
 
   @override
   Future<bool> requestAccessibilityPermission() async {

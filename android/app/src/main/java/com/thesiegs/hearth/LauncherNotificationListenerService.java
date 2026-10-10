@@ -72,6 +72,13 @@ public class LauncherNotificationListenerService extends NotificationListenerSer
     }
 
     @Override
+    public void onListenerConnected() {
+        super.onListenerConnected();
+        // Just allowed from the setup flow: back to it
+        SetupReturn.onConnected(this, SetupReturn.NOTIFICATION_ACCESS);
+    }
+
+    @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
         notifyListeners();
         showNotificationPopup(sbn);

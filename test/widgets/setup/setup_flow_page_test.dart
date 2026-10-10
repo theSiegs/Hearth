@@ -88,8 +88,11 @@ void main() {
       await openAtHomeButton(tester);
       await press(tester, "Open Accessibility");
       expect(channel.accessibilityOpened, 1);
+      // Home Button Fix brings Hearth back when it starts
+      expect(channel.waitingFor, "home_button_fix");
       await comeBack(tester);
       expect(find.text("The Home button now opens Hearth"), findsOneWidget);
+      expect(channel.waitingFor, isNull);
 
       await tester.pump(const Duration(seconds: 3));
       await tester.pumpAndSettle();

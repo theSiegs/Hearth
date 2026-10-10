@@ -119,6 +119,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     _poll?.cancel();
     _autoNext?.cancel();
     _primary.dispose();
+    // Closed while the owner was away in Android's settings: nothing to come back to
+    _waitFor(null);
     super.dispose();
   }
 
@@ -258,6 +260,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
 
   /// A step's switch is on: says so, then moves on by itself after [pause].
   void _showDone(SetupScreen screen, Duration pause) {
+    _waitFor(null);
     if (_screen != screen) {
       _show(screen, state: SetupStepState.done);
     } else if (_state != SetupStepState.done) {
@@ -288,6 +291,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     final step = _snap?.step(id);
     if (step == null) return;
     setState(() => _state = SetupStepState.waiting);
+    // Its service brings Hearth back when the owner turns the switch on
+    await _waitFor(_switchFor(id));
     bool opened;
     try {
       opened = await step.open();
@@ -299,7 +304,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     final fallback = step.adbFallback;
     if (fallback == null) return;
     final l = AppLocalizations.of(context)!;
-    final fix = _fixFor(id);
+    final fix = _switchFor(id);
     await showAdbCommandDialog(
       context,
       title: step.title,
@@ -311,13 +316,22 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     _focusPrimary();
   }
 
-  /// The fix Hearth can run itself (over its own adb) for a step, if there is one.
-  String? _fixFor(SetupStepId id) => switch (id) {
+  /// The name of the service a step turns on: what Hearth waits for to come back by itself, and the fix it can run
+  /// itself over its own adb. Null for a step without one.
+  String? _switchFor(SetupStepId id) => switch (id) {
         SetupStepId.homeButton => "home_button_fix",
         SetupStepId.profilePairing => "profile_pairing",
         SetupStepId.notifications => "notification_access",
         _ => null,
       };
+
+  Future<void> _waitFor(String? what) async {
+    try {
+      await _channel.setSetupWaitingFor(what);
+    } catch (_) {
+      // No Android side: the step is checked when Hearth is back in front anyway
+    }
+  }
 
   /// Shows exactly what Hearth will run, and runs it when the parent says so. Then waits a moment for [step]'s
   /// service to start, as it does a second or two after its switch is set.
