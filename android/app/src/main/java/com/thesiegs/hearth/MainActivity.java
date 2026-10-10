@@ -1429,6 +1429,13 @@ public class MainActivity extends FlutterActivity {
     }
 
     /** Tells Flutter the active profile changed (it also re-reads it whenever Hearth comes back). */
+    /** The Home button, pressed for Hearth: Flutter closes whatever is open over the home (Settings, a panel). */
+    static void notifyHomePressed() {
+        MethodChannel channel = sMethodChannel != null ? sMethodChannel.get() : null;
+        if (channel == null) return;
+        new Handler(Looper.getMainLooper()).post(() -> channel.invokeMethod("homePressed", null));
+    }
+
     static void notifyProfileChanged() {
         MethodChannel channel = sMethodChannel != null ? sMethodChannel.get() : null;
         if (channel == null) return;

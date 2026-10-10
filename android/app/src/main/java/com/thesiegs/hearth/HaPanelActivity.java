@@ -86,6 +86,7 @@ public class HaPanelActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        sOpen = new java.lang.ref.WeakReference<>(this);
         Window window = getWindow();
         window.setLayout(Dp.px(this, PANEL_WIDTH_DP), WindowManager.LayoutParams.MATCH_PARENT);
         window.setGravity(Gravity.END);
@@ -154,6 +155,15 @@ public class HaPanelActivity extends Activity {
         return super.dispatchKeyEvent(event);
     }
 
+    /** The panel that's open, if any: the Home button closes it. */
+    private static java.lang.ref.WeakReference<HaPanelActivity> sOpen;
+
+    /** Closes the panel if it's open (the Home button). */
+    static void closeIfOpen() {
+        HaPanelActivity open = sOpen != null ? sOpen.get() : null;
+        if (open != null) open.runOnUiThread(open::finish);
+    }
+
     @Override
     public void finish() {
         super.finish();
@@ -162,6 +172,7 @@ public class HaPanelActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (sOpen != null && sOpen.get() == this) sOpen = null;
         if (mWebView != null) {
             mWebView.destroy();
             mWebView = null;

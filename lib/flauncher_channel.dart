@@ -297,6 +297,7 @@ class FLauncherChannel {
       if (call.method == "profileSwitchCancelled") _onProfileSwitchCancelled?.call();
       if (call.method == "openProfilePins") _onOpenProfilePins?.call(call.arguments as String);
       if (call.method == "resumeSetup") _onResumeSetup?.call(call.arguments as String? ?? "");
+      if (call.method == "homePressed") _onHomePressed?.call();
       return null;
     });
   }
@@ -345,6 +346,14 @@ class FLauncherChannel {
   }
 
   static void Function(String what)? _onResumeSetup;
+
+  /// Calls [onHome] when the Home button is pressed for Hearth, so whatever is open over the home closes.
+  static void listenForHomePressed(void Function() onHome) {
+    _onHomePressed = onHome;
+    _listen();
+  }
+
+  static void Function()? _onHomePressed;
 
   /// Whether the TV's debugging switch (Developer options) is on: Hearth's own fixes ([runSetupFixes]) need it.
   Future<bool> isAdbEnabled() async => await _methodChannel.invokeMethod<bool>("isAdbEnabled") ?? false;

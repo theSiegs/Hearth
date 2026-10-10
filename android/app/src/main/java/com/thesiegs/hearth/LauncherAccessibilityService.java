@@ -1348,6 +1348,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         if (event.getKeyCode() == KeyEvent.KEYCODE_HOME && canTakeOver() && !mGoogleTvScreenInFront) {
             if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                // Home means the home: Settings, a panel or the Home Assistant panel over it close too
+                HaPanelActivity.closeIfOpen();
+                MainActivity.notifyHomePressed();
                 openLauncher();
             }
             return true;
