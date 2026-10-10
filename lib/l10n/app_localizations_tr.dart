@@ -2023,4 +2023,178 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get updateErrorWrongApp => 'Bu indirme bu Hearth için bir güncelleme değil';
+
+  @override
+  String get setupFlowFinishLater => 'Sonra bitir';
+
+  @override
+  String get setupFlowStripEssentials => 'Temel';
+
+  @override
+  String get setupFlowWelcomeTitle => 'Hearth\'e hoş geldiniz';
+
+  @override
+  String get setupFlowWelcomeBody => 'Tüm aile için bir ana ekran: uygulamalarınız, izlemekte olduklarınız ve her yayın uygulamasında doğru profil.';
+
+  @override
+  String get setupFlowWelcomeTime => 'Yaklaşık 5 dakika sürer. İstediğinizi atlayabilirsiniz.';
+
+  @override
+  String get setupFlowGetStarted => 'Başlayın';
+
+  @override
+  String get setupFlowSetUpLater => 'Sonra kur';
+
+  @override
+  String setupFlowLanguageLink(String language) {
+    return 'Dil: $language';
+  }
+
+  @override
+  String get setupFlowRestoreLink => 'Yedekten geri yükle';
+
+  @override
+  String get setupFlowHomeButtonTitle => 'Ana Sayfa düğmesi Hearth\'ü açsın';
+
+  @override
+  String get setupFlowHomeButtonBody => 'Google TV, Ana Sayfa düğmesinde kendi ana ekranını tutar. Android ayarlarındaki tek bir anahtar bunu düzeltir ve Hearth\'ün şunları yapmasını da sağlar:';
+
+  @override
+  String get setupFlowHomeButtonPoint1 => 'profil değişikliklerini ve çocukların yatma saatini izlemesini';
+
+  @override
+  String get setupFlowHomeButtonPoint2 => 'açılır bildirimler göstermesini ve boştayken TV\'yi kapatmasını';
+
+  @override
+  String get setupFlowOnNextScreen => 'Sonraki ekranda:';
+
+  @override
+  String get setupFlowStepServices => 'Hizmetler\'e kaydırın';
+
+  @override
+  String setupFlowStepSelect(String name) {
+    return '\"$name\" öğesini seçin';
+  }
+
+  @override
+  String get setupFlowStepEnable => 'Etkinleştir\'i açın, sonra Tamam';
+
+  @override
+  String get setupFlowComesBack => 'Açıldığında Hearth kendiliğinden geri gelir. Google TV kimin izlediğini sorarsa kendinizi seçin.';
+
+  @override
+  String get setupFlowOpenAccessibility => 'Erişilebilirlik\'i aç';
+
+  @override
+  String get setupFlowHomeButtonDone => 'Ana Sayfa düğmesi artık Hearth\'ü açıyor';
+
+  @override
+  String get setupFlowNotOnYetTitle => 'Henüz açık değil';
+
+  @override
+  String get setupFlowNotOnYetBody => 'Yeniden deneyin ya da atlayıp daha sonra Ayarlar\'dan yapın.';
+
+  @override
+  String get setupFlowStuckTitle => 'Açık ama çalışmıyor';
+
+  @override
+  String get setupFlowStuckBody => 'Android onu açık gösteriyor ama çalışmıyor. Kapatıp yeniden açın.';
+
+  @override
+  String get setupFlowSkipHomeButtonTitle => 'Ana Sayfa düğmesi atlansın mı?';
+
+  @override
+  String get setupFlowSkipHomeButtonBody => 'Bu olmadan Ana Sayfa düğmesi Google TV\'yi açar ve Hearth bir çocuk profilinin ne zaman kullanıldığını anlayamaz.';
+
+  @override
+  String get setupFlowSkipAnyway => 'Yine de atla';
+
+  @override
+  String get setupFlowSkip => 'Atla';
+
+  @override
+  String get setupFlowNext => 'İleri';
+
+  @override
+  String get setupFlowLostTitle => 'Güncelleme Ana Sayfa düğmesini kapattı';
+
+  @override
+  String get setupFlowLostBody => 'Android bazı güncellemelerden sonra onu kapatır. Tek adımda yeniden açın.';
+
+  @override
+  String get setupFlowBlockedTitle => 'Android bu anahtarı engelledi';
+
+  @override
+  String get setupFlowBlockedBody => 'Anahtar griyse bunun nedeni Hearth\'ün indirilmiş bir dosyadan yüklenmiş olmasıdır. TV\'de buna izin veren bir ayar yok.';
+
+  @override
+  String get setupFlowBlockedComputer => 'Bir bilgisayarla:';
+
+  @override
+  String get setupFlowBlockedComputerThen => 'Ardından anahtarı açın. Hearth bunu kendisi fark eder.';
+
+  @override
+  String get setupFlowBlockedSelfFixBody => 'Hata ayıklama açık, bu yüzden Hearth bunu kendisi düzeltebilir. TV \"Hata ayıklamaya izin verilsin mi?\" diye soracak: Her zaman izin ver\'i seçin; Hearth anahtarının engelini kaldırıp açacak.';
+
+  @override
+  String get setupFlowSkipForNow => 'Şimdilik atla';
+
+  @override
+  String get setupFlowBlockedSkipLine => 'Uygulamalar, arama ve İzlemeye Devam Et çalışmaya devam eder. Ana Sayfa düğmesi, profiller, açılır bildirimler ve uyku zamanlayıcısı çalışmaz.';
+
+  @override
+  String get setupFlowLetHearthFix => 'Hearth düzeltsin';
+
+  @override
+  String get setupFlowFixConfirmBody => 'Hearth kendi hata ayıklama bağlantısıyla TV\'de şunu çalıştıracak:';
+
+  @override
+  String get setupFlowFixConfirmApproval => 'İlk seferde TV \"Hata ayıklamaya izin verilsin mi?\" diye sorar. Her zaman izin ver\'i seçin. Yalnızca Hearth\'ün kendi izinleri değişir.';
+
+  @override
+  String get setupFlowFixRun => 'Çalıştır';
+
+  @override
+  String get setupFlowFixWaiting => 'Çalışılıyor. TV \"Hata ayıklamaya izin verilsin mi?\" diye sorarsa Her zaman izin ver\'i seçin.';
+
+  @override
+  String get setupFlowFixFailedTitle => 'Hearth bunu yapamadı';
+
+  @override
+  String get setupFlowFixFailedBody => 'Hearth TV\'nin hata ayıklamasına ulaşamadı. TV \"Hata ayıklamaya izin verilsin mi?\" diye sorduysa Her zaman izin ver\'i seçip yeniden deneyin. Hata ayıklama Geliştirici seçenekleri\'nde açık kalmalıdır.';
+
+  @override
+  String get setupFlowHomeAppTitle => 'Hearth\'ü ana ekran uygulamanız yapın';
+
+  @override
+  String get setupFlowHomeAppBody => 'Android ana ekran uygulamalarının listesini gösterecek. Hearth\'ü seçin. Böylece çocuk profilleri Hearth\'ü engellemez.';
+
+  @override
+  String get setupFlowChooseHearth => 'Hearth\'ü seç';
+
+  @override
+  String get setupFlowHomeAppDone => 'Hearth ana ekran uygulamanız';
+
+  @override
+  String get setupFlowNotChosenTitle => 'Henüz seçilmedi';
+
+  @override
+  String get setupFlowFinishTitle => 'Hearth hazır';
+
+  @override
+  String setupFlowFinishBody(String where) {
+    return 'Atladığınız her şey Ayarlar\'da; bunu $where bölümünden yeniden çalıştırabilirsiniz.';
+  }
+
+  @override
+  String get setupFlowFinishOn => 'Açık';
+
+  @override
+  String get setupFlowFinishLaterHeading => 'Sonra, Ayarlar\'da';
+
+  @override
+  String get setupFlowFinishMore => 'Ayarlar\'da daha fazlası: kumanda düğmeleri, bölümler, bildirimler ve yedekleme.';
+
+  @override
+  String get setupFlowGoHome => 'Ana ekranıma git';
 }

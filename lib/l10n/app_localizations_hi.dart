@@ -2031,4 +2031,178 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get updateErrorWrongApp => 'यह डाउनलोड इस Hearth का अपडेट नहीं है';
+
+  @override
+  String get setupFlowFinishLater => 'बाद में पूरा करें';
+
+  @override
+  String get setupFlowStripEssentials => 'ज़रूरी';
+
+  @override
+  String get setupFlowWelcomeTitle => 'Hearth में आपका स्वागत है';
+
+  @override
+  String get setupFlowWelcomeBody => 'पूरे परिवार के लिए एक होम स्क्रीन: आपके ऐप, आप क्या देख रहे थे, और हर स्ट्रीमिंग ऐप में सही प्रोफ़ाइल।';
+
+  @override
+  String get setupFlowWelcomeTime => 'लगभग 5 मिनट लगते हैं। कुछ भी छोड़ सकते हैं।';
+
+  @override
+  String get setupFlowGetStarted => 'शुरू करें';
+
+  @override
+  String get setupFlowSetUpLater => 'बाद में सेट अप करें';
+
+  @override
+  String setupFlowLanguageLink(String language) {
+    return 'भाषा: $language';
+  }
+
+  @override
+  String get setupFlowRestoreLink => 'बैकअप से पुनर्स्थापित करें';
+
+  @override
+  String get setupFlowHomeButtonTitle => 'होम बटन से Hearth खुले';
+
+  @override
+  String get setupFlowHomeButtonBody => 'Google TV होम बटन पर अपना होम रखता है। Android की सेटिंग्स में एक स्विच इसे ठीक करता है, और Hearth को यह भी करने देता है:';
+
+  @override
+  String get setupFlowHomeButtonPoint1 => 'प्रोफ़ाइल बदलना और बच्चों के सोने का समय समझ पाना';
+
+  @override
+  String get setupFlowHomeButtonPoint2 => 'पॉप-अप दिखाना और इस्तेमाल न होने पर टीवी बंद करना';
+
+  @override
+  String get setupFlowOnNextScreen => 'अगली स्क्रीन पर:';
+
+  @override
+  String get setupFlowStepServices => 'नीचे \"सेवाएं\" तक स्क्रॉल करें';
+
+  @override
+  String setupFlowStepSelect(String name) {
+    return '\"$name\" चुनें';
+  }
+
+  @override
+  String get setupFlowStepEnable => '\"चालू करें\" चालू करें, फिर \"ठीक है\"';
+
+  @override
+  String get setupFlowComesBack => 'चालू होते ही Hearth अपने आप वापस आ जाता है। अगर Google TV पूछे कि कौन देख रहा है, तो खुद को चुनें।';
+
+  @override
+  String get setupFlowOpenAccessibility => 'सुलभता खोलें';
+
+  @override
+  String get setupFlowHomeButtonDone => 'होम बटन अब Hearth खोलता है';
+
+  @override
+  String get setupFlowNotOnYetTitle => 'अभी चालू नहीं है';
+
+  @override
+  String get setupFlowNotOnYetBody => 'फिर से कोशिश करें, या छोड़ें और बाद में सेटिंग्स में करें।';
+
+  @override
+  String get setupFlowStuckTitle => 'चालू है पर चल नहीं रहा';
+
+  @override
+  String get setupFlowStuckBody => 'Android इसे चालू दिखाता है, पर यह चल नहीं रहा। इसे बंद करके फिर चालू करें।';
+
+  @override
+  String get setupFlowSkipHomeButtonTitle => 'होम बटन छोड़ें?';
+
+  @override
+  String get setupFlowSkipHomeButtonBody => 'इसके बिना होम बटन Google TV खोलता है, और Hearth यह नहीं जान पाता कि बच्चों की प्रोफ़ाइल कब इस्तेमाल हो रही है।';
+
+  @override
+  String get setupFlowSkipAnyway => 'फिर भी छोड़ें';
+
+  @override
+  String get setupFlowSkip => 'छोड़ें';
+
+  @override
+  String get setupFlowNext => 'आगे';
+
+  @override
+  String get setupFlowLostTitle => 'अपडेट ने होम बटन बंद कर दिया';
+
+  @override
+  String get setupFlowLostBody => 'कुछ अपडेट के बाद Android इसे बंद कर देता है। इसे एक कदम में फिर से चालू करें।';
+
+  @override
+  String get setupFlowBlockedTitle => 'Android ने यह स्विच रोक दिया';
+
+  @override
+  String get setupFlowBlockedBody => 'अगर स्विच धूसर था, तो इसलिए कि Hearth डाउनलोड की गई फ़ाइल से इंस्टॉल हुआ था। टीवी में इसकी अनुमति देने की कोई सेटिंग नहीं है।';
+
+  @override
+  String get setupFlowBlockedComputer => 'कंप्यूटर से:';
+
+  @override
+  String get setupFlowBlockedComputerThen => 'फिर स्विच चालू करें। Hearth अपने आप जान लेता है।';
+
+  @override
+  String get setupFlowBlockedSelfFixBody => 'डीबगिंग चालू है, इसलिए Hearth इसे खुद ठीक कर सकता है। टीवी पूछेगा \"डीबगिंग की अनुमति दें?\": \"हमेशा अनुमति दें\" चुनें, और Hearth अपना स्विच खोलकर चालू कर देगा।';
+
+  @override
+  String get setupFlowSkipForNow => 'अभी छोड़ें';
+
+  @override
+  String get setupFlowBlockedSkipLine => 'ऐप, खोज और \"देखना जारी रखें\" काम करते रहेंगे। होम बटन, प्रोफ़ाइल, पॉप-अप और स्लीप टाइमर नहीं।';
+
+  @override
+  String get setupFlowLetHearthFix => 'Hearth को ठीक करने दें';
+
+  @override
+  String get setupFlowFixConfirmBody => 'Hearth अपने डीबगिंग कनेक्शन से टीवी पर यह चलाएगा:';
+
+  @override
+  String get setupFlowFixConfirmApproval => 'पहली बार टीवी पूछता है \"डीबगिंग की अनुमति दें?\"। \"हमेशा अनुमति दें\" चुनें। यह सिर्फ़ Hearth की अपनी अनुमतियां बदलता है।';
+
+  @override
+  String get setupFlowFixRun => 'चलाएं';
+
+  @override
+  String get setupFlowFixWaiting => 'काम चल रहा है। अगर टीवी पूछे \"डीबगिंग की अनुमति दें?\", तो \"हमेशा अनुमति दें\" चुनें।';
+
+  @override
+  String get setupFlowFixFailedTitle => 'Hearth यह नहीं कर सका';
+
+  @override
+  String get setupFlowFixFailedBody => 'Hearth टीवी की डीबगिंग तक नहीं पहुंच सका। अगर टीवी ने पूछा \"डीबगिंग की अनुमति दें?\", तो \"हमेशा अनुमति दें\" चुनें और फिर कोशिश करें। डेवलपर के लिए सेटिंग में डीबगिंग चालू रहनी चाहिए।';
+
+  @override
+  String get setupFlowHomeAppTitle => 'Hearth को अपना होम ऐप बनाएं';
+
+  @override
+  String get setupFlowHomeAppBody => 'Android होम ऐप की सूची दिखाएगा। Hearth चुनें। इससे बच्चों की प्रोफ़ाइल Hearth को ब्लॉक नहीं करतीं।';
+
+  @override
+  String get setupFlowChooseHearth => 'Hearth चुनें';
+
+  @override
+  String get setupFlowHomeAppDone => 'Hearth आपका होम ऐप है';
+
+  @override
+  String get setupFlowNotChosenTitle => 'अभी चुना नहीं गया';
+
+  @override
+  String get setupFlowFinishTitle => 'Hearth तैयार है';
+
+  @override
+  String setupFlowFinishBody(String where) {
+    return 'आपने जो छोड़ा वह सेटिंग्स में है, और आप इसे $where से फिर चला सकते हैं।';
+  }
+
+  @override
+  String get setupFlowFinishOn => 'चालू';
+
+  @override
+  String get setupFlowFinishLaterHeading => 'बाद में, सेटिंग्स में';
+
+  @override
+  String get setupFlowFinishMore => 'सेटिंग्स में और भी: रिमोट बटन, सेक्शन, सूचनाएं और बैकअप।';
+
+  @override
+  String get setupFlowGoHome => 'मेरे होम पर जाएं';
 }

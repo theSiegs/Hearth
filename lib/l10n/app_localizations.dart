@@ -3574,6 +3574,342 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This download isn\'t an update for this Hearth'**
   String get updateErrorWrongApp;
+
+  /// Setup flow: top-right button that closes the flow; the home-screen chip offers to carry on
+  ///
+  /// In en, this message translates to:
+  /// **'Finish later'**
+  String get setupFlowFinishLater;
+
+  /// Setup flow: progress strip label for the first, essential steps (the Home button and the home app)
+  ///
+  /// In en, this message translates to:
+  /// **'Essentials'**
+  String get setupFlowStripEssentials;
+
+  /// Setup flow: first screen's title
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Hearth'**
+  String get setupFlowWelcomeTitle;
+
+  /// Setup flow: first screen, what Hearth is in one line
+  ///
+  /// In en, this message translates to:
+  /// **'A home screen for the whole family: your apps, what you were watching, and the right profile in every streaming app.'**
+  String get setupFlowWelcomeBody;
+
+  /// Setup flow: first screen, small line at the bottom
+  ///
+  /// In en, this message translates to:
+  /// **'Takes about 5 minutes. Skip anything.'**
+  String get setupFlowWelcomeTime;
+
+  /// Setup flow: first screen's main button
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get setupFlowGetStarted;
+
+  /// Setup flow: first screen's button that closes the flow; the home-screen chip offers to carry on
+  ///
+  /// In en, this message translates to:
+  /// **'Set up later'**
+  String get setupFlowSetUpLater;
+
+  /// Setup flow: first screen, link that opens the language choice; {language} is the current choice ("System Default", "English"...)
+  ///
+  /// In en, this message translates to:
+  /// **'Language: {language}'**
+  String setupFlowLanguageLink(String language);
+
+  /// Setup flow: first screen, link that opens Backup & restore
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from a backup'**
+  String get setupFlowRestoreLink;
+
+  /// Setup flow: the Home Button Fix step's title
+  ///
+  /// In en, this message translates to:
+  /// **'Make the Home button open Hearth'**
+  String get setupFlowHomeButtonTitle;
+
+  /// Setup flow: the Home Button Fix step, before two bullet points of what else it gives
+  ///
+  /// In en, this message translates to:
+  /// **'Google TV keeps its own home on the Home button. One switch in Android\'s settings fixes that, and also lets Hearth:'**
+  String get setupFlowHomeButtonBody;
+
+  /// Setup flow: the Home Button Fix step, first bullet of what else it gives
+  ///
+  /// In en, this message translates to:
+  /// **'follow profile switches and kids\' bedtime'**
+  String get setupFlowHomeButtonPoint1;
+
+  /// Setup flow: the Home Button Fix step, second bullet of what else it gives
+  ///
+  /// In en, this message translates to:
+  /// **'show pop-ups and turn the TV off when idle'**
+  String get setupFlowHomeButtonPoint2;
+
+  /// Setup flow: heading over the numbered steps to follow on Android's settings screen
+  ///
+  /// In en, this message translates to:
+  /// **'On the next screen:'**
+  String get setupFlowOnNextScreen;
+
+  /// Setup flow: first step on Android's Accessibility screen; Services is Android's own heading there
+  ///
+  /// In en, this message translates to:
+  /// **'Scroll down to Services'**
+  String get setupFlowStepServices;
+
+  /// Setup flow: second step on Android's Accessibility screen; {name} is the service's name as Android shows it (in English)
+  ///
+  /// In en, this message translates to:
+  /// **'Select \"{name}\"'**
+  String setupFlowStepSelect(String name);
+
+  /// Setup flow: last step on Android's Accessibility screen; Enable and OK are Android's own labels
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on Enable, then OK'**
+  String get setupFlowStepEnable;
+
+  /// Setup flow: note under the Accessibility steps
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth comes back by itself when it\'s on. If Google TV asks who\'s watching, choose yourself.'**
+  String get setupFlowComesBack;
+
+  /// Setup flow: button that opens Android's Accessibility settings
+  ///
+  /// In en, this message translates to:
+  /// **'Open Accessibility'**
+  String get setupFlowOpenAccessibility;
+
+  /// Setup flow: Home Button Fix is on; also a line in the final summary
+  ///
+  /// In en, this message translates to:
+  /// **'The Home button now opens Hearth'**
+  String get setupFlowHomeButtonDone;
+
+  /// Setup flow: back from Android's settings, the switch still isn't on
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s not on yet'**
+  String get setupFlowNotOnYetTitle;
+
+  /// Setup flow: under "It's not on yet"
+  ///
+  /// In en, this message translates to:
+  /// **'Try again, or skip and do it later in Settings.'**
+  String get setupFlowNotOnYetBody;
+
+  /// Setup flow: Android lists Home Button Fix as on, but the service isn't running
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s on but not running'**
+  String get setupFlowStuckTitle;
+
+  /// Setup flow: under "It's on but not running"
+  ///
+  /// In en, this message translates to:
+  /// **'Android lists it as on, but it isn\'t running. Turn it off and on again.'**
+  String get setupFlowStuckBody;
+
+  /// Setup flow: asked once before skipping the Home Button Fix step
+  ///
+  /// In en, this message translates to:
+  /// **'Skip the Home button?'**
+  String get setupFlowSkipHomeButtonTitle;
+
+  /// Setup flow: under "Skip the Home button?"
+  ///
+  /// In en, this message translates to:
+  /// **'Without it, the Home button opens Google TV, and Hearth can\'t tell when a kids\' profile is in use.'**
+  String get setupFlowSkipHomeButtonBody;
+
+  /// Setup flow: button under "Skip the Home button?"
+  ///
+  /// In en, this message translates to:
+  /// **'Skip anyway'**
+  String get setupFlowSkipAnyway;
+
+  /// Setup flow: button that skips a step
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get setupFlowSkip;
+
+  /// Setup flow: button that goes on to the next screen
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get setupFlowNext;
+
+  /// Setup flow: shown after an update switched Home Button Fix off
+  ///
+  /// In en, this message translates to:
+  /// **'The update turned the Home button off'**
+  String get setupFlowLostTitle;
+
+  /// Setup flow: under "The update turned the Home button off"
+  ///
+  /// In en, this message translates to:
+  /// **'Android switches it off after some updates. Turn it back on in one step.'**
+  String get setupFlowLostBody;
+
+  /// Setup flow: Android restricts Hearth's accessibility switch (installed from a downloaded file)
+  ///
+  /// In en, this message translates to:
+  /// **'Android blocked this switch'**
+  String get setupFlowBlockedTitle;
+
+  /// Setup flow: under "Android blocked this switch"
+  ///
+  /// In en, this message translates to:
+  /// **'If the switch was grey, it\'s because Hearth was installed from a downloaded file. The TV has no setting to allow it.'**
+  String get setupFlowBlockedBody;
+
+  /// Setup flow: heading over the adb commands to run from a computer
+  ///
+  /// In en, this message translates to:
+  /// **'With a computer:'**
+  String get setupFlowBlockedComputer;
+
+  /// Setup flow: under the adb commands
+  ///
+  /// In en, this message translates to:
+  /// **'Then turn the switch on. Hearth notices on its own.'**
+  String get setupFlowBlockedComputerThen;
+
+  /// Setup flow: Android blocked the switch and the TV's debugging is on; explains Hearth's own fix. "Allow debugging?" and Always allow are Android's own labels
+  ///
+  /// In en, this message translates to:
+  /// **'Debugging is on, so Hearth can fix it itself. The TV will ask \"Allow debugging?\": choose Always allow, and Hearth will unblock its switch and turn it on.'**
+  String get setupFlowBlockedSelfFixBody;
+
+  /// Setup flow: button that skips the blocked switch for now
+  ///
+  /// In en, this message translates to:
+  /// **'Skip for now'**
+  String get setupFlowSkipForNow;
+
+  /// Setup flow: under the blocked switch's buttons, what still works without it
+  ///
+  /// In en, this message translates to:
+  /// **'Apps, search and Continue Watching still work. The Home button, profiles, pop-ups and the sleep timer don\'t.'**
+  String get setupFlowBlockedSkipLine;
+
+  /// Setup flow: button (and dialog title) for Hearth running the fix itself over the TV's debugging
+  ///
+  /// In en, this message translates to:
+  /// **'Let Hearth fix it'**
+  String get setupFlowLetHearthFix;
+
+  /// Setup flow: before Hearth runs a fix, shows the exact commands below this line
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth will run this on the TV, through its own debugging connection:'**
+  String get setupFlowFixConfirmBody;
+
+  /// Setup flow: under the commands of a fix; "Allow debugging?" and Always allow are Android's own labels
+  ///
+  /// In en, this message translates to:
+  /// **'The first time, the TV asks \"Allow debugging?\". Choose Always allow. It only changes Hearth\'s own permissions.'**
+  String get setupFlowFixConfirmApproval;
+
+  /// Setup flow: button that runs the fix shown above it
+  ///
+  /// In en, this message translates to:
+  /// **'Run it'**
+  String get setupFlowFixRun;
+
+  /// Setup flow: while Hearth runs a fix; "Allow debugging?" and Always allow are Android's own labels
+  ///
+  /// In en, this message translates to:
+  /// **'Working on it. If the TV asks \"Allow debugging?\", choose Always allow.'**
+  String get setupFlowFixWaiting;
+
+  /// Setup flow: Hearth's own fix didn't run
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth couldn\'t do it'**
+  String get setupFlowFixFailedTitle;
+
+  /// Setup flow: why Hearth's own fix didn't run; "Allow debugging?", Always allow and Developer options are Android's own labels
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth couldn\'t reach the TV\'s debugging. If the TV asked \"Allow debugging?\", choose Always allow and try again. Debugging must stay on in Developer options.'**
+  String get setupFlowFixFailedBody;
+
+  /// Setup flow: the default home app step's title
+  ///
+  /// In en, this message translates to:
+  /// **'Make Hearth your home app'**
+  String get setupFlowHomeAppTitle;
+
+  /// Setup flow: the default home app step
+  ///
+  /// In en, this message translates to:
+  /// **'Android will show a list of home apps. Choose Hearth. It keeps kids\' profiles from blocking Hearth.'**
+  String get setupFlowHomeAppBody;
+
+  /// Setup flow: button that opens Android's home app choice
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Hearth'**
+  String get setupFlowChooseHearth;
+
+  /// Setup flow: Hearth is the default home app; also a line in the final summary
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth is your home app'**
+  String get setupFlowHomeAppDone;
+
+  /// Setup flow: back from Android's home app choice, Hearth isn't the home app
+  ///
+  /// In en, this message translates to:
+  /// **'Not chosen yet'**
+  String get setupFlowNotChosenTitle;
+
+  /// Setup flow: last screen's title
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth is ready'**
+  String get setupFlowFinishTitle;
+
+  /// Setup flow: last screen; {where} is where the setup page is in Settings ("Settings > System > Set up Hearth")
+  ///
+  /// In en, this message translates to:
+  /// **'Anything you skipped is in Settings, and you can run this again from {where}.'**
+  String setupFlowFinishBody(String where);
+
+  /// Setup flow: last screen, heading over what's on
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get setupFlowFinishOn;
+
+  /// Setup flow: last screen, heading over what was skipped
+  ///
+  /// In en, this message translates to:
+  /// **'Set up later, in Settings'**
+  String get setupFlowFinishLaterHeading;
+
+  /// Setup flow: last screen, what else Settings has
+  ///
+  /// In en, this message translates to:
+  /// **'More in Settings: remote buttons, sections, notifications and backup.'**
+  String get setupFlowFinishMore;
+
+  /// Setup flow: last screen's main button
+  ///
+  /// In en, this message translates to:
+  /// **'Go to my home'**
+  String get setupFlowGoHome;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -2023,4 +2023,178 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get updateErrorWrongApp => '此下载不是此 Hearth 的更新';
+
+  @override
+  String get setupFlowFinishLater => '稍后完成';
+
+  @override
+  String get setupFlowStripEssentials => '基本';
+
+  @override
+  String get setupFlowWelcomeTitle => '欢迎使用 Hearth';
+
+  @override
+  String get setupFlowWelcomeBody => '全家人的主屏幕：您的应用、您在看的内容，以及每个流媒体应用中正确的个人资料。';
+
+  @override
+  String get setupFlowWelcomeTime => '大约需要 5 分钟。任何步骤都可以跳过。';
+
+  @override
+  String get setupFlowGetStarted => '开始';
+
+  @override
+  String get setupFlowSetUpLater => '稍后设置';
+
+  @override
+  String setupFlowLanguageLink(String language) {
+    return '语言：$language';
+  }
+
+  @override
+  String get setupFlowRestoreLink => '从备份恢复';
+
+  @override
+  String get setupFlowHomeButtonTitle => '让主页按钮打开 Hearth';
+
+  @override
+  String get setupFlowHomeButtonBody => 'Google TV 将主页按钮留给自己的主屏幕。在 Android 设置中打开一个开关即可解决，同时还能让 Hearth：';
+
+  @override
+  String get setupFlowHomeButtonPoint1 => '跟随个人资料切换和孩子的就寝时间';
+
+  @override
+  String get setupFlowHomeButtonPoint2 => '显示弹出通知，并在无人使用时关闭电视';
+
+  @override
+  String get setupFlowOnNextScreen => '在下一个屏幕中：';
+
+  @override
+  String get setupFlowStepServices => '向下滚动到“服务”';
+
+  @override
+  String setupFlowStepSelect(String name) {
+    return '选择“$name”';
+  }
+
+  @override
+  String get setupFlowStepEnable => '打开“启用”，然后选择“确定”';
+
+  @override
+  String get setupFlowComesBack => '开启后 Hearth 会自动回来。如果 Google TV 询问谁在观看，请选择您自己。';
+
+  @override
+  String get setupFlowOpenAccessibility => '打开无障碍设置';
+
+  @override
+  String get setupFlowHomeButtonDone => '主页按钮现在会打开 Hearth';
+
+  @override
+  String get setupFlowNotOnYetTitle => '尚未开启';
+
+  @override
+  String get setupFlowNotOnYetBody => '请重试，或跳过并稍后在设置中完成。';
+
+  @override
+  String get setupFlowStuckTitle => '已开启但未运行';
+
+  @override
+  String get setupFlowStuckBody => 'Android 显示它已开启，但它并未运行。请关闭后再重新打开。';
+
+  @override
+  String get setupFlowSkipHomeButtonTitle => '跳过主页按钮设置？';
+
+  @override
+  String get setupFlowSkipHomeButtonBody => '没有它，主页按钮会打开 Google TV，Hearth 也无法知道何时在使用儿童个人资料。';
+
+  @override
+  String get setupFlowSkipAnyway => '仍然跳过';
+
+  @override
+  String get setupFlowSkip => '跳过';
+
+  @override
+  String get setupFlowNext => '下一步';
+
+  @override
+  String get setupFlowLostTitle => '更新关闭了主页按钮设置';
+
+  @override
+  String get setupFlowLostBody => '某些更新后 Android 会将其关闭。只需一步即可重新开启。';
+
+  @override
+  String get setupFlowBlockedTitle => 'Android 阻止了此开关';
+
+  @override
+  String get setupFlowBlockedBody => '如果开关是灰色的，那是因为 Hearth 是从下载的文件安装的。电视上没有允许它的设置。';
+
+  @override
+  String get setupFlowBlockedComputer => '使用电脑：';
+
+  @override
+  String get setupFlowBlockedComputerThen => '然后打开开关。Hearth 会自动察觉。';
+
+  @override
+  String get setupFlowBlockedSelfFixBody => '调试已开启，因此 Hearth 可以自行修复。电视会询问“允许调试吗？”：请选择“始终允许”，Hearth 会解除对其开关的阻止并将其打开。';
+
+  @override
+  String get setupFlowSkipForNow => '暂时跳过';
+
+  @override
+  String get setupFlowBlockedSkipLine => '应用、搜索和“继续观看”仍可使用。主页按钮、个人资料、弹出通知和睡眠定时器则不行。';
+
+  @override
+  String get setupFlowLetHearthFix => '让 Hearth 修复';
+
+  @override
+  String get setupFlowFixConfirmBody => 'Hearth 将通过自己的调试连接在电视上运行以下内容：';
+
+  @override
+  String get setupFlowFixConfirmApproval => '第一次时，电视会询问“允许调试吗？”。请选择“始终允许”。这只会更改 Hearth 自己的权限。';
+
+  @override
+  String get setupFlowFixRun => '运行';
+
+  @override
+  String get setupFlowFixWaiting => '正在处理。如果电视询问“允许调试吗？”，请选择“始终允许”。';
+
+  @override
+  String get setupFlowFixFailedTitle => 'Hearth 无法完成';
+
+  @override
+  String get setupFlowFixFailedBody => 'Hearth 无法连接电视的调试功能。如果电视询问了“允许调试吗？”，请选择“始终允许”后重试。调试必须在开发者选项中保持开启。';
+
+  @override
+  String get setupFlowHomeAppTitle => '将 Hearth 设为主屏幕应用';
+
+  @override
+  String get setupFlowHomeAppBody => 'Android 会显示主屏幕应用列表。请选择 Hearth。这样儿童个人资料就不会阻止 Hearth。';
+
+  @override
+  String get setupFlowChooseHearth => '选择 Hearth';
+
+  @override
+  String get setupFlowHomeAppDone => 'Hearth 已是您的主屏幕应用';
+
+  @override
+  String get setupFlowNotChosenTitle => '尚未选择';
+
+  @override
+  String get setupFlowFinishTitle => 'Hearth 已就绪';
+
+  @override
+  String setupFlowFinishBody(String where) {
+    return '跳过的内容都在设置中，您可以在 $where 中再次运行。';
+  }
+
+  @override
+  String get setupFlowFinishOn => '已开启';
+
+  @override
+  String get setupFlowFinishLaterHeading => '稍后在设置中完成';
+
+  @override
+  String get setupFlowFinishMore => '设置中还有更多：遥控器按钮、版块、通知和备份。';
+
+  @override
+  String get setupFlowGoHome => '前往我的主屏幕';
 }

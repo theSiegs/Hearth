@@ -326,6 +326,21 @@ class FLauncherChannel {
         "appProfile": appProfile,
       });
 
+  /// Whether the TV's debugging switch (Developer options) is on: Hearth's own fixes ([runSetupFixes]) need it.
+  Future<bool> isAdbEnabled() async => await _methodChannel.invokeMethod<bool>("isAdbEnabled") ?? false;
+
+  /// The shell commands one of the setup flow's named fixes runs, to show the parent before it does: "restricted_settings",
+  /// "home_button_fix", "profile_pairing", "watch_next" or "notification_access". Null for another name, or when the
+  /// fix can't be run safely as things are.
+  Future<List<String>?> getSetupFixCommands(String fix) async =>
+      await _methodChannel.invokeListMethod<String>("getSetupFixCommands", fix);
+
+  /// Parent-confirmed: runs the named fixes through Hearth's own loopback adb, and returns what the TV's shell said.
+  /// The first time, the TV asks "Allow debugging?"; until the parent allows it this throws a PlatformException
+  /// (code "SELF_ADB"). They only ever change Hearth's own permissions.
+  Future<List<String>> runSetupFixes(List<String> fixes) async =>
+      await _methodChannel.invokeListMethod<String>("runSetupFixes", fixes) ?? [];
+
   Future<bool> openTextToSpeechSettings() async =>
       await _methodChannel.invokeMethod<bool>("openTextToSpeechSettings") ?? false;
 
@@ -452,8 +467,9 @@ class FLauncherChannel {
     return success ?? false;
   }
 
-  /// {enabled, seenBefore, restricted}: whether Home Button Fix is on, whether it has ever been on here,
-  /// and whether Android may block turning it on (last installed from an APK file, e.g. by the updater).
+  /// {enabled, listedButStopped, seenBefore, restricted}: whether Home Button Fix is on, whether Android lists it as
+  /// on while it isn't running, whether it has ever been on here, and whether Android blocks turning it on (its
+  /// restricted-settings app-op is denied; where that can't be read, a guess from an install from an APK file).
   Future<Map<dynamic, dynamic>> getHomeButtonFixStatus() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getHomeButtonFixStatus") ?? {};
 

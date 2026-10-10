@@ -2031,4 +2031,178 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get updateErrorWrongApp => 'Dieser Download ist kein Update für dieses Hearth';
+
+  @override
+  String get setupFlowFinishLater => 'Später fertigstellen';
+
+  @override
+  String get setupFlowStripEssentials => 'Das Wichtigste';
+
+  @override
+  String get setupFlowWelcomeTitle => 'Willkommen bei Hearth';
+
+  @override
+  String get setupFlowWelcomeBody => 'Ein Startbildschirm für die ganze Familie: Ihre Apps, was Sie zuletzt geschaut haben, und das richtige Profil in jeder Streaming-App.';
+
+  @override
+  String get setupFlowWelcomeTime => 'Dauert etwa 5 Minuten. Alles lässt sich überspringen.';
+
+  @override
+  String get setupFlowGetStarted => 'Los geht\'s';
+
+  @override
+  String get setupFlowSetUpLater => 'Später einrichten';
+
+  @override
+  String setupFlowLanguageLink(String language) {
+    return 'Sprache: $language';
+  }
+
+  @override
+  String get setupFlowRestoreLink => 'Aus einer Sicherung wiederherstellen';
+
+  @override
+  String get setupFlowHomeButtonTitle => 'Die Home-Taste öffnet Hearth';
+
+  @override
+  String get setupFlowHomeButtonBody => 'Google TV belegt die Home-Taste mit dem eigenen Startbildschirm. Ein Schalter in den Android-Einstellungen ändert das und ermöglicht Hearth außerdem:';
+
+  @override
+  String get setupFlowHomeButtonPoint1 => 'Profilwechsel und die Schlafenszeit der Kinder erkennen';
+
+  @override
+  String get setupFlowHomeButtonPoint2 => 'Einblendungen zeigen und den Fernseher bei Nichtnutzung ausschalten';
+
+  @override
+  String get setupFlowOnNextScreen => 'Auf dem nächsten Bildschirm:';
+
+  @override
+  String get setupFlowStepServices => 'Nach unten zu „Dienste“ scrollen';
+
+  @override
+  String setupFlowStepSelect(String name) {
+    return '„$name“ auswählen';
+  }
+
+  @override
+  String get setupFlowStepEnable => '„Aktivieren“ einschalten, dann „OK“';
+
+  @override
+  String get setupFlowComesBack => 'Hearth kommt von selbst zurück, sobald der Schalter an ist. Fragt Google TV, wer zuschaut, wählen Sie sich selbst.';
+
+  @override
+  String get setupFlowOpenAccessibility => 'Bedienungshilfen öffnen';
+
+  @override
+  String get setupFlowHomeButtonDone => 'Die Home-Taste öffnet jetzt Hearth';
+
+  @override
+  String get setupFlowNotOnYetTitle => 'Noch nicht eingeschaltet';
+
+  @override
+  String get setupFlowNotOnYetBody => 'Versuchen Sie es noch einmal, oder überspringen Sie es und erledigen Sie es später in den Einstellungen.';
+
+  @override
+  String get setupFlowStuckTitle => 'Eingeschaltet, läuft aber nicht';
+
+  @override
+  String get setupFlowStuckBody => 'Android zeigt ihn als eingeschaltet an, aber er läuft nicht. Schalten Sie ihn aus und wieder ein.';
+
+  @override
+  String get setupFlowSkipHomeButtonTitle => 'Home-Taste überspringen?';
+
+  @override
+  String get setupFlowSkipHomeButtonBody => 'Ohne ihn öffnet die Home-Taste Google TV, und Hearth erkennt nicht, wann ein Kinderprofil verwendet wird.';
+
+  @override
+  String get setupFlowSkipAnyway => 'Trotzdem überspringen';
+
+  @override
+  String get setupFlowSkip => 'Überspringen';
+
+  @override
+  String get setupFlowNext => 'Weiter';
+
+  @override
+  String get setupFlowLostTitle => 'Das Update hat die Home-Taste ausgeschaltet';
+
+  @override
+  String get setupFlowLostBody => 'Android schaltet ihn nach manchen Updates aus. Schalten Sie ihn mit einem Schritt wieder ein.';
+
+  @override
+  String get setupFlowBlockedTitle => 'Android hat diesen Schalter gesperrt';
+
+  @override
+  String get setupFlowBlockedBody => 'War der Schalter grau, liegt das daran, dass Hearth aus einer heruntergeladenen Datei installiert wurde. Der Fernseher hat keine Einstellung, um ihn freizugeben.';
+
+  @override
+  String get setupFlowBlockedComputer => 'Mit einem Computer:';
+
+  @override
+  String get setupFlowBlockedComputerThen => 'Schalten Sie danach den Schalter ein. Hearth merkt es von selbst.';
+
+  @override
+  String get setupFlowBlockedSelfFixBody => 'Debugging ist an, daher kann Hearth das selbst beheben. Der Fernseher fragt „USB-Debugging zulassen?“: Wählen Sie „Immer zulassen“, dann gibt Hearth seinen Schalter frei und schaltet ihn ein.';
+
+  @override
+  String get setupFlowSkipForNow => 'Vorerst überspringen';
+
+  @override
+  String get setupFlowBlockedSkipLine => 'Apps, Suche und „Weiterschauen“ funktionieren weiter. Home-Taste, Profile, Einblendungen und der Schlaf-Timer nicht.';
+
+  @override
+  String get setupFlowLetHearthFix => 'Hearth beheben lassen';
+
+  @override
+  String get setupFlowFixConfirmBody => 'Hearth führt dies über seine eigene Debugging-Verbindung auf dem Fernseher aus:';
+
+  @override
+  String get setupFlowFixConfirmApproval => 'Beim ersten Mal fragt der Fernseher „USB-Debugging zulassen?“. Wählen Sie „Immer zulassen“. Es ändert nur Hearths eigene Berechtigungen.';
+
+  @override
+  String get setupFlowFixRun => 'Ausführen';
+
+  @override
+  String get setupFlowFixWaiting => 'Wird ausgeführt. Fragt der Fernseher „USB-Debugging zulassen?“, wählen Sie „Immer zulassen“.';
+
+  @override
+  String get setupFlowFixFailedTitle => 'Hearth konnte es nicht ausführen';
+
+  @override
+  String get setupFlowFixFailedBody => 'Hearth konnte das Debugging des Fernsehers nicht erreichen. Hat der Fernseher „USB-Debugging zulassen?“ gefragt, wählen Sie „Immer zulassen“ und versuchen Sie es erneut. Debugging muss in den Entwickleroptionen eingeschaltet bleiben.';
+
+  @override
+  String get setupFlowHomeAppTitle => 'Hearth als Start-App festlegen';
+
+  @override
+  String get setupFlowHomeAppBody => 'Android zeigt eine Liste von Start-Apps. Wählen Sie Hearth. So können Kinderprofile Hearth nicht sperren.';
+
+  @override
+  String get setupFlowChooseHearth => 'Hearth wählen';
+
+  @override
+  String get setupFlowHomeAppDone => 'Hearth ist Ihre Start-App';
+
+  @override
+  String get setupFlowNotChosenTitle => 'Noch nicht gewählt';
+
+  @override
+  String get setupFlowFinishTitle => 'Hearth ist bereit';
+
+  @override
+  String setupFlowFinishBody(String where) {
+    return 'Alles Übersprungene finden Sie in den Einstellungen, und Sie können dies erneut starten unter $where.';
+  }
+
+  @override
+  String get setupFlowFinishOn => 'Eingeschaltet';
+
+  @override
+  String get setupFlowFinishLaterHeading => 'Später in den Einstellungen';
+
+  @override
+  String get setupFlowFinishMore => 'Mehr in den Einstellungen: Fernbedienungstasten, Abschnitte, Benachrichtigungen und Sicherung.';
+
+  @override
+  String get setupFlowGoHome => 'Zum Startbildschirm';
 }
