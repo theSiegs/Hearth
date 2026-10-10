@@ -38,7 +38,7 @@ as Wikidata asks.
 | Accessibility (Home Button Fix) | Opens Hearth when you press Home; follows Google TV profile switches and its screen time screens; remote button remaps; idle sleep; pop-ups. It reads Google TV's own screens, not your apps' content. |
 | Accessibility (Profile Pairing) | Reads the profile screen of a streaming app that Hearth opened, picks your profile, and types its PIN if you saved one. It acts only when Hearth itself opened the app. |
 | Text-to-speech engine (Hearth voice) | Some apps only announce their profile screen out loud; Hearth voice lets Profile Pairing hear it, and passes all speech on to the TV's usual voice, so apps sound the same. Nothing is recorded or sent. |
-| Notification access | Shows notifications in Hearth; sees what's playing for Continue Watching and TV status. |
+| Notification access | Shows notifications in Hearth; sees what's playing for Continue Watching, each profile's watch history and usage today, and TV status. In a kids profile (granted there over adb), only lets Hearth's agent count what plays and for how long, for that profile's usage today. |
 | Usage access | Knows which app is in front, for TV status and idle sleep. |
 | Install apps / delete apps | Updates Hearth and HearthTube; puts them on other profiles. |
 | Display over other apps | Home Assistant pop-ups. |

@@ -38,8 +38,12 @@ final class HaStatusReporter {
     private static final String TAG = "HearthHaStatus";
     private static final long DEBOUNCE_MS = 1_500;
     private static final long HEARTBEAT_MS = 10 * 60_000;
-    /** Today's usage keeps growing while something is in front or playing: a post at least this often then. */
-    private static final long USAGE_TICK_MS = 60_000;
+    /**
+     * Today's usage keeps growing while something is in front or playing: then a post this often (only when the counts
+     * changed). Every post runs Home Assistant's webhook automation (a logbook line, a trace), so not every minute;
+     * what matters at once (another app, play or pause, the profile, the screen, screen time) is posted as it happens.
+     */
+    private static final long USAGE_TICK_MS = 2 * 60_000;
     private static final String STATE_PREFS = "ltv_ha_status";
     private static final String EVENT_KEY = "screen_time_event";
     private static final String EVENT_AT_KEY = "screen_time_event_at";
