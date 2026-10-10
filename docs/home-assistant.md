@@ -102,11 +102,22 @@ Hearth posts JSON to `<address>/api/webhook/<webhook ID>`:
 | `usage_today` | every profile's usage today: `{"<profile_id>": {"profile_name": "…", "seconds": n, "apps": {"<package>": n}, "playing": {"<package>": n}}}` |
 
 The usage counts are cumulative for the day (a lost post loses nothing), kept across Hearth restarts, and start again
-at local midnight. While something is in front or playing, Hearth posts at least once a minute. HearthTube reports
-its own playing time, in every profile. Other apps' playing time comes from their media sessions, which Hearth sees in
-the TV's main user only: a kids profile's apps play in its own Android user, where Hearth's agent would need
-notification access (`adb shell cmd notification allow_listener
-com.thesiegs.hearth/com.thesiegs.hearth.LauncherNotificationListenerService <user id>`).
+at local midnight.
+
+**How often Hearth posts.** Within about 2 seconds of a change that matters (another app in front, play or pause, a
+profile switch, the screen going on or off, screen time coming up or clearing); every 2 minutes while an app is in
+front or playing, so the usage counts are never more than 2 minutes behind; otherwise every 10 minutes, so Home
+Assistant can tell the TV is there. A status the same as the last one isn't sent again (the 10-minute one aside).
+Each post runs your webhook automation once.
+
+**Where the playing time comes from.** HearthTube reports its own playing time, in every profile. Other apps' comes
+from their media sessions, which Android only shows to a notification listener in the same Android user. In the TV's
+main user that's Hearth itself (its notification access). A kids profile's apps play in that profile's own Android
+user, so there it's Hearth's agent, which needs notification access granted in that user, once, over adb:
+`adb shell cmd notification allow_listener com.thesiegs.hearth/com.thesiegs.hearth.LauncherNotificationListenerService
+<user id>`. Without it, that profile's `playing` lists HearthTube only (its `apps` time in front is counted either
+way). In a kids profile the agent's notification access does nothing else: no pop-ups, nothing read or kept but what's
+playing and for how long.
 
 **Allowance for HearthTube (optional).** Hearth enforces a daily YouTube limit on its own (Settings → Profiles →
 YouTube time per day). Home Assistant can add its say, e.g. a pool shared with the family's phones and tablets:
