@@ -1,0 +1,3 @@
+- Early development pre-release.
+- Notifications can be opened, and their buttons pressed, from Hearth's notifications panel.
+- A newly added Google TV profile can be switched to more reliably.

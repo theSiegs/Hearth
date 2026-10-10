@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.14 (pre-release)
+
+- Notifications can be opened, and their buttons pressed, from Hearth's notifications panel.
+- A newly added Google TV profile can be switched to more reliably.
+- Only HearthTube signed with Hearth's release key gets parent PIN checks.
+
 ## 2026.10.13 (pre-release)
 
 - A newly added Google TV profile can be switched to: Hearth waits while Google TV sets it up.
