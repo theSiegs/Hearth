@@ -1,7 +1,7 @@
 name: flauncher
 description: "Hearth: a private home screen for Google TV."
 
-version: 2026.10.21+8232
+version: 2026.10.22+8233
 
 environment:
   sdk: ">=3.4.3"

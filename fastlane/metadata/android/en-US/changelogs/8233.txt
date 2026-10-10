@@ -1,0 +1,3 @@
+- Early development pre-release.
+- Holding the profile button locks the profile again (Google TV's Verify it's you screen).
+- Letting go after holding OK no longer also counts as a press.
