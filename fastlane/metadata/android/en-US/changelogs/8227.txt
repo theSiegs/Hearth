@@ -1,0 +1,2 @@
+- Early development pre-release.
+- A profile name Hearth got wrong after a failed switch corrects itself.
