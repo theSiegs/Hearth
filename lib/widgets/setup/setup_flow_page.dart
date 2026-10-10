@@ -191,6 +191,10 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   /// How often the blocked-switch screen checks whether the switch was turned on from a computer.
   static const Duration _pollEvery = Duration(seconds: 2);
 
+  /// How long Hearth's own adb may take, "Allow debugging?" included: declining it leaves the connection waiting for
+  /// good, so the flow stops waiting and says what to do.
+  static const Duration _selfAdbLimit = Duration(minutes: 2);
+
   late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   late final SetupFlowService _flow = context.read<SetupFlowService>();
 
@@ -629,7 +633,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     setState(() => _fixing = true);
     bool ran = false;
     try {
-      await _channel.runSetupFixes(fixes);
+      await _channel.runSetupFixes(fixes).timeout(_selfAdbLimit);
       ran = true;
     } on PlatformException {
       ran = false;

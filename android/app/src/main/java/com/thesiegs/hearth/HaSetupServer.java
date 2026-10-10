@@ -2,6 +2,8 @@ package com.thesiegs.hearth;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Base64;
 import android.util.Log;
 
@@ -145,8 +147,11 @@ final class HaSetupServer {
         SharedPreferences.Editor edit = HaConfig.prefs(mContext).edit().putString(HaConfig.URL_KEY, url);
         if (!token.isEmpty()) edit.putString(HaConfig.TOKEN_KEY, token);
         edit.apply();
-        // Starts reporting right away when Home Button Fix runs
-        if (webhookOk) LauncherAccessibilityService.setHaStatusConfig(mContext, url, webhook);
+        // Starts reporting right away when Home Button Fix runs; the reporter lives on the main thread
+        if (webhookOk) {
+            new Handler(Looper.getMainLooper())
+                    .post(() -> LauncherAccessibilityService.setHaStatusConfig(mContext, url, webhook));
+        }
         mReceived = true;
         synchronized (HaSetupServer.class) {
             sLastReceived = true;

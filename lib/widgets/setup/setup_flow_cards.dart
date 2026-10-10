@@ -389,8 +389,8 @@ extension _CardScreens on _SetupFlowPageState {
     _update(() => _fixing = true);
     List<Map<dynamic, dynamic>>? rows;
     try {
-      await _channel.addHearthToProfiles(includeAdults: includeAdults);
-      rows = await _channel.getHearthProfilesState();
+      await _channel.addHearthToProfiles(includeAdults: includeAdults).timeout(_SetupFlowPageState._selfAdbLimit);
+      rows = await _channel.getHearthProfilesState().timeout(_SetupFlowPageState._selfAdbLimit);
     } catch (_) {
       rows = null;
     }
