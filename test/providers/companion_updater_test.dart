@@ -49,6 +49,29 @@ void main() {
     test("is null when no entry has a versionCode", () {
       expect(newestInManifest({"package": {}}), isNull);
     });
+
+    test("takes HearthTube's date versions over its SmartTube-style ones", () {
+      final manifest = {
+        "32.63+7": {"versionCode": 2453007},
+        "2026.10.10": {"versionCode": 26101001},
+        "2026.10.10.2": {"versionCode": 26101002},
+      };
+      expect(newestInManifest(manifest), ("2026.10.10.2", 26101002));
+    });
+  });
+
+  group("a HearthTube update is newer", () {
+    test("by versionCode when the manifest gives one", () {
+      final release = CompanionRelease("2026.10.10", 26101001, "https://example/ht.apk", 1);
+      expect(release.isNewerThan({"versionName": "32.63+7", "versionCode": 2453007}), isTrue);
+      expect(release.isNewerThan({"versionName": "2026.10.10.2", "versionCode": 26101002}), isFalse);
+    });
+
+    test("by version name without one", () {
+      expect(CompanionRelease("2026.10.10", null, "", 1).isNewerThan({"versionName": "32.63+7"}), isTrue);
+      expect(CompanionRelease("2026.10.10.2", null, "", 1).isNewerThan({"versionName": "2026.10.10"}), isTrue);
+      expect(CompanionRelease("2026.10.10", null, "", 1).isNewerThan({"versionName": "2026.10.10.2"}), isFalse);
+    });
   });
 
   test("HearthTube is listed with its release manifest", () {
