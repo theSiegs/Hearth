@@ -19,7 +19,8 @@ public class BootReceiver extends BroadcastReceiver {
             AgentService.start(context);
             return;
         }
-        if (!FlutterPrefs.getBoolean(context, "start_on_boot", false)) return;
+        // On unless turned off (SettingsService.startOnBoot)
+        if (!FlutterPrefs.getBoolean(context, "start_on_boot", true)) return;
         context.startActivity(new Intent(context, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 }

@@ -7,6 +7,7 @@ import 'package:flauncher/database.dart';
 import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/providers/setup_flow_service.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -200,6 +201,8 @@ class BackupService {
     if (profileOnly) {
       settingsMap.removeWhere((key, _) => isDeviceLevelKey(key));
     }
+    // The setup flow's progress belongs to this TV: another TV restoring it would skip steps it hasn't done
+    settingsMap.removeWhere((key, _) => SetupFlowService.isSetupKey(key));
 
     final List<Category> categories = await _database.getCategories();
     final List<App> apps = await _database.getApplications();
@@ -261,6 +264,7 @@ class BackupService {
     if (profileOnly) {
       settingsMap.removeWhere((key, _) => isDeviceLevelKey(key));
     }
+    settingsMap.removeWhere((key, _) => SetupFlowService.isSetupKey(key));
     if (backupData["onlyChosenSettings"] != true) SettingsService.forgetOldDefaults(settingsMap);
     // A setting the backup doesn't carry was at its default
     for (final key in settingsService.settingKeys) {

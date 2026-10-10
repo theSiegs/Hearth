@@ -89,8 +89,9 @@ Sideload it with the Downloader app (enter the release APK's URL) or from a comp
 adb install Hearth-arm64-v8a-release.apk
 ```
 
-Then open Hearth and go to **Settings → System → Setup & permissions**. The checklist explains each permission and
-opens the right Android screen for it. See the [user guide](docs/user-guide.md) for details.
+Then open Hearth: its first-run setup walks you through what it needs from Android, one screen at a time, and opens
+the right Android screen for each. Run it again from **Settings → System → Set up Hearth**. See the
+[user guide](docs/user-guide.md) for details.
 
 Hearth is developed and tested on Google TV with Android 14. It may run on other Android TV devices, but the
 profile and kids features need Google TV.

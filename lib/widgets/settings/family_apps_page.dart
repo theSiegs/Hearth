@@ -2,6 +2,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/hearth_ids.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/providers/setup_flow_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -17,6 +18,37 @@ class FamilyAppsPage extends StatefulWidget {
   static const String routeName = "family_apps";
 
   const FamilyAppsPage({super.key});
+
+  /// One profile's row from [FLauncherChannel.getHearthProfilesState] (its apps' rows): its name, and its status in
+  /// a word with that word's colour.
+  static ({String label, String status, Color? color}) describeProfile(
+      AppLocalizations l, List<Map<dynamic, dynamic>> apps) {
+    final supervised = (apps.first["supervised"] as bool?) ?? false;
+    final (String status, Color? color) = switch (_ProfileStatus.of(apps, supervised: supervised)) {
+      _ProfileStatus.installed => (l.familyAppsStatusInstalled, Colors.green),
+      _ProfileStatus.partial => (l.familyAppsStatusPartial, Colors.amber),
+      _ProfileStatus.atRisk => (l.familyAppsStatusAtRisk, Colors.redAccent),
+      _ProfileStatus.notInstalled => (l.familyAppsStatusNotInstalled, null),
+    };
+    return (label: _profileLabel(l, apps.first), status: status, color: color);
+  }
+
+  /// A friendly label for a profile row: its name if Hearth knows it, with whether it's a kids or adult profile.
+  static String _profileLabel(AppLocalizations l, Map<dynamic, dynamic> row) {
+    final supervised = (row["supervised"] as bool?) ?? false;
+    final name = row["name"] as String?;
+    if (name != null && name.isNotEmpty) return supervised ? l.profilesKidsName(name) : l.profilesAdultName(name);
+    return supervised ? l.familyAppsUnnamedKids : l.familyAppsUnnamedAdult;
+  }
+
+  /// The rows grouped by profile (user id), in order.
+  static Map<int, List<Map<dynamic, dynamic>>> byProfile(List<Map<dynamic, dynamic>> rows) {
+    final byUser = <int, List<Map<dynamic, dynamic>>>{};
+    for (final r in rows) {
+      byUser.putIfAbsent((r["userId"] as int?) ?? -1, () => []).add(r);
+    }
+    return byUser;
+  }
 
   @override
   State<FamilyAppsPage> createState() => _FamilyAppsPageState();
@@ -61,6 +93,7 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
   Future<void> _add() async {
     final l = AppLocalizations.of(context)!;
     final includeAdults = context.read<SettingsService>().pushToAdultProfiles;
+    final flow = context.read<SetupFlowService?>();
     final go = await _confirm(
       title: l.familyAppsAddTitle,
       lines: [
@@ -73,7 +106,15 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
       action: l.familyAppsAdd,
     );
     if (go != true) return;
-    await _run(() => _channel.addHearthToProfiles(includeAdults: includeAdults), adding: true);
+    await _run(() async {
+      final log = await _channel.addHearthToProfiles(includeAdults: includeAdults);
+      // The setup flow's kids' step and its chip count the kids' profiles Hearth is on
+      try {
+        final kids = (await _channel.getSetupFamilyState())["kidsProfiles"] as int?;
+        if (kids != null) await flow?.setKidsProtected(kids);
+      } catch (_) {}
+      return log;
+    }, adding: true);
   }
 
   Future<void> _remove() async {
@@ -246,10 +287,7 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
         child: Text(l.familyAppsNoneYet, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
       );
     }
-    final byUser = <int, List<Map<dynamic, dynamic>>>{};
-    for (final r in rows) {
-      byUser.putIfAbsent((r["userId"] as int?) ?? -1, () => []).add(r);
-    }
+    final byUser = FamilyAppsPage.byProfile(rows);
     // One focusable row per profile: the remote moves down through them and the panel scrolls with it. Each shows
     // its status in a word; the selected one also says what's on it.
     return Column(
@@ -276,12 +314,7 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
     final l = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final supervised = (apps.first["supervised"] as bool?) ?? false;
-    final (String status, Color? color) = switch (_ProfileStatus.of(apps, supervised: supervised)) {
-      _ProfileStatus.installed => (l.familyAppsStatusInstalled, Colors.green),
-      _ProfileStatus.partial => (l.familyAppsStatusPartial, Colors.amber),
-      _ProfileStatus.atRisk => (l.familyAppsStatusAtRisk, Colors.redAccent),
-      _ProfileStatus.notInstalled => (l.familyAppsStatusNotInstalled, null),
-    };
+    final (:label, :status, :color) = FamilyAppsPage.describeProfile(l, apps);
     final atRisk = color == Colors.redAccent;
     return FocusableSettingsTile(
       leading: Icon(supervised ? Icons.child_care : Icons.person_outline),
@@ -289,7 +322,7 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(_profileLabel(l, apps.first), style: textTheme.bodyMedium),
+          Text(label, style: textTheme.bodyMedium),
           if (selected) ...[
             const SizedBox(height: 2),
             Text(apps.map((r) => _appLine(l, r)).join("  ·  "),
@@ -301,14 +334,6 @@ class _FamilyAppsPageState extends State<FamilyAppsPage> with WidgetsBindingObse
       ),
       trailing: Text(status, style: textTheme.bodySmall?.copyWith(color: color)),
     );
-  }
-
-  /// A friendly label for a profile row: its name if Hearth knows it, with whether it's a kids or adult profile.
-  String _profileLabel(AppLocalizations l, Map<dynamic, dynamic> row) {
-    final supervised = (row["supervised"] as bool?) ?? false;
-    final name = row["name"] as String?;
-    if (name != null && name.isNotEmpty) return supervised ? l.profilesKidsName(name) : l.profilesAdultName(name);
-    return supervised ? l.familyAppsUnnamedKids : l.familyAppsUnnamedAdult;
   }
 
   /// One of Hearth's apps on a profile: whether it's installed there, and whether Hearth keeps it installed.

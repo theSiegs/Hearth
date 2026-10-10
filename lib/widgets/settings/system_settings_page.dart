@@ -47,7 +47,7 @@ class SystemSettingsPage extends StatelessWidget {
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.checklist),
-          title: Text(AppLocalizations.of(context)!.setupPermissionsTitle, style: Theme.of(context).textTheme.bodyMedium),
+          title: Text(AppLocalizations.of(context)!.setupHearthTitle, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: () => Navigator.of(context).pushNamed(SetupChecklistPage.routeName),
         ),
         FocusableSettingsTile(

@@ -28,6 +28,7 @@ import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flauncher/providers/network_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/providers/setup_flow_service.dart';
 import 'package:flauncher/providers/wallpaper_service.dart';
 import 'package:flauncher/providers/tv_inputs_service.dart';
 import 'package:flauncher/providers/notifications_service.dart';
@@ -109,6 +110,8 @@ Future<void> main() async {
         ChangeNotifierProvider(
             create: (_) => SettingsService(sharedPreferences),
             lazy: false),
+        // Made before the first profile check, which saves a layout: it tells a first start from an existing install
+        ChangeNotifierProvider(create: (_) => SetupFlowService(sharedPreferences), lazy: false),
         Provider<BackupService>(
             create: (context) =>
                 BackupService(fLauncherDatabase, sharedPreferences)..start(context.read<SettingsService>()),

@@ -7,8 +7,11 @@
 
 1. Install the APK from the [latest release](https://github.com/theSiegs/Hearth/releases/latest) (see the
    [README](../README.md#install)).
-2. Open Hearth. Go to **Settings → System → Setup & permissions**.
-3. Work through the checklist. Each item says why Hearth needs it and opens the Android screen where you turn it on.
+2. Open Hearth. Its first-run setup starts by itself: it makes the Home button open Hearth, makes Hearth the home
+   app, and ends with what's on. Skip anything; the home screen's **Finish setting up** chip and **Settings → System →
+   Set up Hearth** carry on later.
+3. **Settings → System → Set up Hearth** also lists each item below with its state. Each says why Hearth needs it
+   and opens the Android screen where you turn it on.
 
 | Item | What it's for |
 |---|---|
@@ -20,13 +23,15 @@
 | Hearth voice | A text-to-speech engine that lets Profile Pairing hear apps that announce their profile screens (optional). |
 
 **"Restricted setting".** Android blocks accessibility services for apps installed outside the Play Store until you
-allow it. If it says the setting is restricted, run this once from a computer, then try again:
+allow it. The setup says so when it happens. With the TV's debugging on (Developer options), Hearth can lift the
+block itself after showing you what it will run; otherwise run this once from a computer, then try again:
 
 ```sh
 adb shell appops set com.thesiegs.hearth ACCESS_RESTRICTED_SETTINGS allow
 ```
 
-**After an update** Android may switch the Home Button Fix off. Hearth notices and shows a reminder until it's back.
+**After an update** Android may switch the Home Button Fix off. Hearth notices and shows its Home button screen
+again (never in a kids' profile), or the **Home button needs a fix** chip if you chose Not now.
 
 ## Moving around
 
@@ -141,8 +146,8 @@ are welcome ([list of strings to review](translations-to-review.md)).
 
 ## When something's wrong
 
-- **The Home button opens Google TV.** The Home Button Fix is off; Hearth shows a reminder. Turn it back on in
-  **Setup & permissions**.
+- **The Home button opens Google TV.** The Home Button Fix is off; the home screen shows **Home button needs a fix**.
+  Turn it back on from there, or in **Set up Hearth**.
 - **Use Google TV's home** (**Settings → TV & power**) leaves Google TV's own home in front until you turn it off,
   without uninstalling Hearth. The Home button still opens Hearth.
 - **Profile Pairing stopped picking a profile.** The app may have changed its screens; you get the app's own picker

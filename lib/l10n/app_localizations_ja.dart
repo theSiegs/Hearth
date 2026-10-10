@@ -406,9 +406,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get tvPowerTitle => 'テレビと電源';
 
   @override
-  String get setupPermissionsTitle => 'セットアップと権限';
-
-  @override
   String get updatesTitle => 'アップデート';
 
   @override
@@ -1172,27 +1169,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String setupProgress(int done, int total) {
     return '$total 件中 $done 件完了';
   }
-
-  @override
-  String get setupOptional => 'オプション';
-
-  @override
-  String get homeButtonFixOffTitle => 'ホームボタン修正がオフです';
-
-  @override
-  String get homeButtonFixOffBody => 'Hearth のユーザー補助サービスが停止しました（通常はアップデート後に起こります）。再びオンにするまで、ホームボタンで Hearth ではなく Google TV が開くことがあり、プロフィールの切り替えにも追従しません。';
-
-  @override
-  String get homeButtonFixStuck => 'Android ではまだオンと表示されていますが、動作していません。ユーザー補助の設定で Hearth をオフにしてから再度オンにし、再起動してください。';
-
-  @override
-  String get homeButtonFixRestricted => 'そこで Hearth のスイッチがグレー表示になっている場合、このアップデートがダウンロードからインストールされたため Android がブロックしています。テレビに接続したパソコンから次を実行してから、Hearth をオンにしてください：';
-
-  @override
-  String get homeButtonFixDontRemind => '今後表示しない';
-
-  @override
-  String get homeButtonFixOpenSettings => 'ユーザー補助の設定を開く';
 
   @override
   String get remoteButtonsRemapButton => 'ボタンの割り当てを変更';
@@ -2032,4 +2008,522 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get tvPowerGoogleTvHomeNote => 'これをオフにするまで Hearth は表示されません。ホームボタンでは引き続き Hearth が開きます。';
+
+  @override
+  String get setupFlowFinishLater => '後で続ける';
+
+  @override
+  String get setupFlowStripEssentials => '基本';
+
+  @override
+  String get setupFlowWelcomeTitle => 'Hearth へようこそ';
+
+  @override
+  String get setupFlowWelcomeBody => '家族みんなのホーム画面。アプリ、見ていた番組、そして各ストリーミングアプリの正しいプロフィール。';
+
+  @override
+  String get setupFlowWelcomeTime => '約5分です。どれもスキップできます。';
+
+  @override
+  String get setupFlowGetStarted => '始める';
+
+  @override
+  String get setupFlowSetUpLater => '後で設定';
+
+  @override
+  String setupFlowLanguageLink(String language) {
+    return '言語: $language';
+  }
+
+  @override
+  String get setupFlowRestoreLink => 'バックアップから復元';
+
+  @override
+  String get setupFlowHomeButtonTitle => 'ホームボタンで Hearth を開く';
+
+  @override
+  String get setupFlowHomeButtonBody => 'Google TV はホームボタンに自分のホーム画面を割り当てています。Android の設定のスイッチを1つ入れると解決し、Hearth は次のこともできるようになります:';
+
+  @override
+  String get setupFlowHomeButtonPoint1 => 'プロフィールの切り替えや子どもの就寝時間に合わせる';
+
+  @override
+  String get setupFlowHomeButtonPoint2 => 'ポップアップを表示し、使われていないときにテレビを切る';
+
+  @override
+  String get setupFlowOnNextScreen => '次の画面で:';
+
+  @override
+  String get setupFlowStepServices => '「サービス」までスクロール';
+
+  @override
+  String setupFlowStepSelect(String name) {
+    return '「$name」を選択';
+  }
+
+  @override
+  String get setupFlowStepEnable => '「有効にする」をオンにして「OK」';
+
+  @override
+  String get setupFlowComesBack => 'オンになると Hearth は自動で戻ります。Google TV に「誰が見ていますか」と聞かれたら、ご自身を選んでください。';
+
+  @override
+  String get setupFlowOpenAccessibility => 'ユーザー補助を開く';
+
+  @override
+  String get setupFlowHomeButtonDone => 'ホームボタンで Hearth が開くようになりました';
+
+  @override
+  String get setupFlowNotOnYetTitle => 'まだオンになっていません';
+
+  @override
+  String get setupFlowNotOnYetBody => 'もう一度試すか、スキップして後で設定から行ってください。';
+
+  @override
+  String get setupFlowStuckTitle => 'オンですが動作していません';
+
+  @override
+  String get setupFlowStuckBody => 'Android ではオンと表示されていますが、動作していません。いったんオフにしてから再度オンにしてください。';
+
+  @override
+  String get setupFlowSkipHomeButtonTitle => 'ホームボタンの設定をスキップしますか?';
+
+  @override
+  String get setupFlowSkipHomeButtonBody => 'これがないと、ホームボタンで Google TV が開き、Hearth はキッズ プロフィールの使用中を判別できません。';
+
+  @override
+  String get setupFlowSkipAnyway => 'それでもスキップ';
+
+  @override
+  String get setupFlowSkip => 'スキップ';
+
+  @override
+  String get setupFlowNext => '次へ';
+
+  @override
+  String get setupFlowLostTitle => 'アップデートでホームボタンの設定がオフになりました';
+
+  @override
+  String get setupFlowLostBody => '一部のアップデート後に Android がオフにします。1ステップで再びオンにできます。';
+
+  @override
+  String get setupFlowBlockedTitle => 'Android がこのスイッチをブロックしました';
+
+  @override
+  String get setupFlowBlockedBody => 'スイッチがグレー表示だったのは、Hearth がダウンロードしたファイルからインストールされたためです。テレビにはこれを許可する設定がありません。';
+
+  @override
+  String get setupFlowBlockedComputer => 'パソコンを使う場合:';
+
+  @override
+  String get setupFlowBlockedComputerThen => 'その後スイッチをオンにしてください。Hearth が自動で検出します。';
+
+  @override
+  String get setupFlowBlockedSelfFixBody => 'デバッグがオンなので、Hearth が自分で解決できます。テレビに「デバッグを許可しますか?」と表示されたら「常に許可」を選ぶと、Hearth がスイッチのブロックを解除してオンにします。';
+
+  @override
+  String get setupFlowSkipForNow => '今はスキップ';
+
+  @override
+  String get setupFlowBlockedSkipLine => 'アプリ、検索、続きを見るは使えます。ホームボタン、プロフィール、ポップアップ、スリープタイマーは使えません。';
+
+  @override
+  String get setupFlowLetHearthFix => 'Hearth に修正させる';
+
+  @override
+  String get setupFlowFixConfirmBody => 'Hearth は自身のデバッグ接続を使って、テレビで次を実行します:';
+
+  @override
+  String get setupFlowFixConfirmApproval => '初回はテレビに「デバッグを許可しますか?」と表示されます。「常に許可」を選んでください。変更されるのは Hearth 自身の権限だけです。';
+
+  @override
+  String get setupFlowFixRun => '実行';
+
+  @override
+  String get setupFlowFixWaiting => '処理中です。テレビに「デバッグを許可しますか?」と表示されたら「常に許可」を選んでください。';
+
+  @override
+  String get setupFlowFixFailedTitle => 'Hearth は実行できませんでした';
+
+  @override
+  String get setupFlowFixFailedBody => 'Hearth はテレビのデバッグに接続できませんでした。「デバッグを許可しますか?」と表示された場合は「常に許可」を選んで、もう一度お試しください。開発者向けオプションでデバッグをオンのままにしておく必要があります。';
+
+  @override
+  String get setupFlowHomeAppTitle => 'Hearth をホームアプリにする';
+
+  @override
+  String get setupFlowHomeAppBody => 'Android にホームアプリの一覧が表示されます。Hearth を選んでください。キッズ プロフィールで Hearth がブロックされるのを防ぎます。';
+
+  @override
+  String get setupFlowChooseHearth => 'Hearth を選ぶ';
+
+  @override
+  String get setupFlowHomeAppDone => 'Hearth がホームアプリになりました';
+
+  @override
+  String get setupFlowNotChosenTitle => 'まだ選ばれていません';
+
+  @override
+  String get setupFlowFinishTitle => 'Hearth の準備ができました';
+
+  @override
+  String setupFlowFinishBody(String where) {
+    return 'スキップした項目は設定にあります。$where からもう一度実行できます。';
+  }
+
+  @override
+  String get setupFlowFinishOn => 'オン';
+
+  @override
+  String get setupFlowFinishLaterHeading => '後で設定から';
+
+  @override
+  String get setupFlowFinishMore => '設定にはほかにも、リモコンのボタン、セクション、通知、バックアップがあります。';
+
+  @override
+  String get setupFlowGoHome => 'ホームへ';
+
+  @override
+  String get setupHearthTitle => 'Hearth の設定';
+
+  @override
+  String get setupRunAgain => '設定をもう一度行う';
+
+  @override
+  String get setupCardFamily => '家族';
+
+  @override
+  String get setupCardWatching => '視聴';
+
+  @override
+  String setupChipLeft(int count) {
+    return '設定を完了 · 残り $count';
+  }
+
+  @override
+  String get setupChipFix => 'ホームボタンの修正が必要です';
+
+  @override
+  String get setupChipHideTitle => 'このリマインダーを非表示にしますか?';
+
+  @override
+  String setupChipHideBody(String where) {
+    return '$where からいつでも設定できます。';
+  }
+
+  @override
+  String get setupChipHide => '非表示';
+
+  @override
+  String get setupFlowCardIncluded => '含まれるもの';
+
+  @override
+  String get setupFlowCardNeeds => '必要なもの';
+
+  @override
+  String get setupFlowCardSkipped => 'スキップ済み';
+
+  @override
+  String get setupFlowChange => '変更';
+
+  @override
+  String get setupFlowKeep => 'このまま';
+
+  @override
+  String get setupFlowTurnOn => 'オンにする';
+
+  @override
+  String get setupFlowNeedsQuestion => 'Android からの確認が1回';
+
+  @override
+  String get setupFlowNeedsOneSwitch => 'Android の設定でスイッチを1つ';
+
+  @override
+  String get setupFlowNeedsAboutAMinute => '約1分';
+
+  @override
+  String get setupFlowWatchingBenefit => '続きから見られて、再生中のものもわかります。';
+
+  @override
+  String get setupFlowWatchingIncluded1 => 'ホーム画面に「続きを見る」';
+
+  @override
+  String get setupFlowWatchingIncluded2 => '通知と再生中の内容';
+
+  @override
+  String get setupFlowSearchWorks => '検索はすでに使えます。ホーム画面で検索を押してください。';
+
+  @override
+  String get setupFlowContinueBody => 'アプリで見ていたものをホーム画面に表示します。Android から一度確認されるので、「許可」を選んでください。';
+
+  @override
+  String get setupFlowContinueDone => '「続きを見る」がオンになりました';
+
+  @override
+  String get setupFlowContinueDeniedTitle => 'Android で許可されませんでした';
+
+  @override
+  String setupFlowContinueDeniedBody(String where) {
+    return 'あとで $where からオンにできます。';
+  }
+
+  @override
+  String get setupFlowNotificationsTitle => '再生中の内容と通知';
+
+  @override
+  String setupFlowNotificationsBody(String name) {
+    return '通知と再生中の内容が見られます。次の画面で「$name」を選んで許可してください。';
+  }
+
+  @override
+  String get setupFlowNotificationsDone => '通知がオンになりました';
+
+  @override
+  String get setupFlowTvTitle => '誰も見ていないときにテレビを消しますか？';
+
+  @override
+  String get setupFlowTvBody => 'リモコン操作がこの時間ないとき。動画や音楽の再生中は視聴中とみなします。';
+
+  @override
+  String get setupFlowTvNeedsHomeButton => '最初の手順のホームボタンのスイッチが必要です。それがないと、Hearth はリモコンが使われたかわかりません。';
+
+  @override
+  String get setupFlowStartOnBoot => 'テレビの起動時に Hearth を開始';
+
+  @override
+  String get setupFlowScreensaver => 'スクリーンセーバーの写真を選ぶ';
+
+  @override
+  String get setupFlowUpdatesBenefit => 'Hearth が自分自身と関連アプリを最新に保ちます。';
+
+  @override
+  String get setupFlowUpdatesIncluded1 => 'Hearth が自動で更新';
+
+  @override
+  String get setupFlowUpdatesIncluded2 => 'HearthTube（Hearth 用の YouTube アプリ）';
+
+  @override
+  String get setupFlowInstallTitle => 'Hearth にアップデートのインストールを許可';
+
+  @override
+  String get setupFlowInstallBody => '次の画面で Hearth を探してオンにし、戻るを押してください。';
+
+  @override
+  String get setupFlowInstallDone => 'Hearth がアップデートをインストールできます';
+
+  @override
+  String get setupFlowTubeTitle => 'HearthTube をインストールしますか？';
+
+  @override
+  String get setupFlowTubeBody => 'Hearth 用に作られた YouTube アプリ。プロフィール、時計のスタイル、子どもの就寝時間に従います。';
+
+  @override
+  String get setupFlowTubeInstalled => 'HearthTube がインストールされました';
+
+  @override
+  String get setupCardHome => 'ホーム画面';
+
+  @override
+  String get setupFlowLookTitle => '見た目を選ぶ';
+
+  @override
+  String setupFlowLookBody(String where) {
+    return '選ぶと、このカードの後ろに表示されます。あとで $where からどこでも変更できます。';
+  }
+
+  @override
+  String get setupFlowLookOtherTitle => 'ホーム画面の見た目を選ぶ';
+
+  @override
+  String get setupFlowLookOtherBody => 'プロフィールごとに自分のホーム画面があります。見た目を選んでください。';
+
+  @override
+  String get setupLookHearth => 'Hearth';
+
+  @override
+  String get setupLookPhoto => '今日の写真';
+
+  @override
+  String get setupLookCalmDark => '落ち着いたダーク';
+
+  @override
+  String get setupLookBold => '大胆';
+
+  @override
+  String get setupFlowLookNow => '現在';
+
+  @override
+  String get setupFlowLookUse => 'この見た目にする';
+
+  @override
+  String get setupFlowLookKeep => '今のままにする';
+
+  @override
+  String get setupFlowLookCustomize => 'カスタマイズ';
+
+  @override
+  String get setupFlowWeatherTitle => '天気を表示しますか？';
+
+  @override
+  String get setupFlowWeatherBody => 'お住まいの町を選んでください。送られるのはその位置だけで、送り先は Open-Meteo です。アカウントは不要です。';
+
+  @override
+  String get setupFlowWeatherChoose => '町を選ぶ';
+
+  @override
+  String get setupFlowWeatherDone => '天気は上部のバーに表示されます';
+
+  @override
+  String get setupFlowFamilyBenefit => '動画アプリが正しい人のプロフィールで開き、子どもは Hearth を変更できません。';
+
+  @override
+  String get setupFlowFamilyIncluded1 => '保護者用 PIN（子どもが Hearth を変更できないように）';
+
+  @override
+  String get setupFlowFamilyIncluded2 => 'Netflix、Disney+、Apple TV、Max、Paramount+ で正しいプロフィール';
+
+  @override
+  String get setupFlowFamilyIncluded3 => '子どものプロフィールに Hearth を残す';
+
+  @override
+  String get setupFlowNeedsPin => '自分で決める4桁の数字';
+
+  @override
+  String get setupFlowNeedsTwoMinutes => '約2分';
+
+  @override
+  String get setupFlowPinTitle => '保護者用 PIN を決める';
+
+  @override
+  String get setupFlowPinBody => '子どもが Hearth を変更するには、この PIN が必要です。子どもに推測されない4桁を選んでください。';
+
+  @override
+  String get setupFlowPinChoose => 'PIN を決める';
+
+  @override
+  String get setupFlowPinDone => '保護者用 PIN を設定しました';
+
+  @override
+  String get setupFlowPairingTitle => '動画アプリで正しいプロフィールを選ぶ';
+
+  @override
+  String setupFlowPairingBody(String name) {
+    return 'Hearth が Netflix、Disney+、Apple TV、Max、Paramount+ で各自のプロフィールを選びます。同じ Android の画面で、もう1つのスイッチ「$name」が必要です。';
+  }
+
+  @override
+  String get setupFlowPairingDone => 'プロフィールの連携がオンになりました';
+
+  @override
+  String get setupFlowPairingDoneBody => 'Hearth が名前を自動で照合します（「Alex」と「Alex Morgan」など）。各アプリのプロフィールは、そのアプリの「誰が見ていますか？」画面が一度表示されると現れます。';
+
+  @override
+  String get setupFlowCheckPairings => '連携を確認';
+
+  @override
+  String get setupFlowVoiceTitle => 'Netflix 用にもう1ステップ';
+
+  @override
+  String setupFlowVoiceBody(String name) {
+    return 'Netflix はプロフィール画面を読み上げるので、Hearth は自分の音声で聞き取ります。次の画面の「優先するエンジン」で「$name」を選び、OK を押してください。ほかのアプリは Google の音声のままです。';
+  }
+
+  @override
+  String get setupFlowVoiceDone => 'Hearth の音声がオンになりました';
+
+  @override
+  String get setupFlowKidsTitle => '子どものプロフィールに Hearth を残す';
+
+  @override
+  String get setupFlowKidsBody => 'Google TV は、子どものプロフィールが起動するたびに、自分でインストールしていないアプリを削除します。Hearth はそこで自分自身と HearthTube を守れます。お子さまごとに Family Link の「アプリが追加されました」通知が1回届きます。設定からいつでも元に戻せます。';
+
+  @override
+  String get setupFlowKidsApprove => 'テレビに「デバッグを許可しますか？」と表示されます。「常に許可」にチェックを入れて「許可」を選んでください。これは一度だけです。';
+
+  @override
+  String get setupFlowKidsAdd => '子どものプロフィールに追加';
+
+  @override
+  String get setupFlowKidsDone => '子どものプロフィールに Hearth を追加しました';
+
+  @override
+  String get setupFlowKidsKeepDebugging => 'デバッグはオンのままにしてください。新しい子どものプロフィールや、Hearth の削除・アンインストールの際に再び必要です。';
+
+  @override
+  String get setupFlowDebugTitle => 'まずデバッグをオンにする';
+
+  @override
+  String get setupFlowDebugBody => '子どものプロフィールを設定するには、テレビのデバッグのスイッチが必要です。次の画面で「Android TV OS ビルド」を7回選んでください。次に「設定」>「システム」>「開発者向けオプション」で「USB デバッグ」をオンにして、戻ってきてください。オンのままにしてください。新しい子どものプロフィールで再び必要になります。';
+
+  @override
+  String get setupFlowDebugOpen => 'デバイス情報を開く';
+
+  @override
+  String get setupCardSmartHome => 'スマートホーム';
+
+  @override
+  String get setupFlowHaBenefit => '玄関チャイムなどの通知をテレビに表示し、Home Assistant のダッシュボードをワンタッチで開けます。';
+
+  @override
+  String get setupFlowHaIncluded1 => 'どのアプリの上にも玄関チャイムなどの通知';
+
+  @override
+  String get setupFlowHaIncluded2 => 'ダッシュボードをワンタッチで';
+
+  @override
+  String get setupFlowHaIncluded3 => '表示中の内容を Home Assistant に送信';
+
+  @override
+  String get setupFlowNeedsPhone => '同じ Wi-Fi につながったスマートフォン';
+
+  @override
+  String get setupFlowNeedsFewMinutes => '数分';
+
+  @override
+  String get setupFlowHaUse => 'Home Assistant を使っている';
+
+  @override
+  String get setupFlowHaAlertsTitle => 'Home Assistant の通知';
+
+  @override
+  String setupFlowHaAlertsBody(String ip) {
+    return 'Home Assistant で「Notifications for Android TV / Fire TV」を、このテレビのアドレス $ip で追加してください。次にテストを送ります。';
+  }
+
+  @override
+  String get setupFlowHaAlertsDone => '通知がオンになりました';
+
+  @override
+  String get setupFlowHaDashboardTitle => 'テレビでダッシュボード';
+
+  @override
+  String get setupFlowHaDashboardBody => 'スマートフォンでスキャンし、Home Assistant のアドレスとトークンを貼り付けて送信します。管理者ではなく、テレビ用に作った Home Assistant ユーザーを使ってください。';
+
+  @override
+  String get setupFlowHaDashboardDone => 'ダッシュボードを設定しました';
+
+  @override
+  String get setupFlowHaStatusTitle => '表示中の内容を Home Assistant に伝える';
+
+  @override
+  String get setupFlowHaStatusBody => 'テレビは再生中の内容と使用中のプロフィールを Home Assistant に送れます。同じスマートフォンのページで、Home Assistant の Webhook オートメーションの ID を入力してください。';
+
+  @override
+  String get setupFlowHaStatusNoWebhook => 'スマートフォンから Webhook ID が送られませんでした。ページの最後の欄に入力してください。';
+
+  @override
+  String get setupFlowHaStatusDone => 'テレビが表示中の内容を Home Assistant に伝えます';
+
+  @override
+  String setupChipNewOne(String feature) {
+    return 'Hearth の新機能：$feature';
+  }
+
+  @override
+  String setupChipNewMany(int count) {
+    return 'Hearth の新機能 · $count';
+  }
+
+  @override
+  String get setupFlowKidsNotAll => 'まだすべての子どものプロフィールに Hearth がありません';
 }

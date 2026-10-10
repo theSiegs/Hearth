@@ -296,6 +296,7 @@ class FLauncherChannel {
       if (call.method == "profileSwitching") _onProfileSwitching?.call(call.arguments as String);
       if (call.method == "profileSwitchCancelled") _onProfileSwitchCancelled?.call();
       if (call.method == "openProfilePins") _onOpenProfilePins?.call(call.arguments as String);
+      if (call.method == "resumeSetup") _onResumeSetup?.call(call.arguments as String? ?? "");
       return null;
     });
   }
@@ -331,6 +332,43 @@ class FLauncherChannel {
         "mode": mode,
         "appProfile": appProfile,
       });
+
+  /// The setup flow is about to send the owner to Android's screen for a switch ("home_button_fix",
+  /// "profile_pairing" or "notification_access"): when that switch's service starts, Hearth comes back to the front
+  /// by itself. Null: no longer waiting.
+  Future<void> setSetupWaitingFor(String? what) async => await _methodChannel.invokeMethod("setSetupWaitingFor", what);
+
+  /// Calls [onResume] when a switch the setup flow was waiting for came on and brought Hearth back.
+  static void listenForSetupResume(void Function(String what) onResume) {
+    _onResumeSetup = onResume;
+    _listen();
+  }
+
+  static void Function(String what)? _onResumeSetup;
+
+  /// Whether the TV's debugging switch (Developer options) is on: Hearth's own fixes ([runSetupFixes]) need it.
+  Future<bool> isAdbEnabled() async => await _methodChannel.invokeMethod<bool>("isAdbEnabled") ?? false;
+
+  /// What the setup flow's family card needs, read without Hearth's own adb: {googleTv, kidsProfiles (how many
+  /// Family Link-supervised profiles Android lists), netflix}.
+  Future<Map<dynamic, dynamic>> getSetupFamilyState() async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getSetupFamilyState") ?? {};
+
+  /// Opens Android's About screen, where tapping the build number turns on Developer options (and so debugging).
+  Future<bool> openDeviceInfoSettings() async =>
+      await _methodChannel.invokeMethod<bool>("openDeviceInfoSettings") ?? false;
+
+  /// The shell commands one of the setup flow's named fixes runs, to show the parent before it does: "restricted_settings",
+  /// "home_button_fix", "profile_pairing", "watch_next" or "notification_access". Null for another name, or when the
+  /// fix can't be run safely as things are.
+  Future<List<String>?> getSetupFixCommands(String fix) async =>
+      await _methodChannel.invokeListMethod<String>("getSetupFixCommands", fix);
+
+  /// Parent-confirmed: runs the named fixes through Hearth's own loopback adb, and returns what the TV's shell said.
+  /// The first time, the TV asks "Allow debugging?"; until the parent allows it this throws a PlatformException
+  /// (code "SELF_ADB"). They only ever change Hearth's own permissions.
+  Future<List<String>> runSetupFixes(List<String> fixes) async =>
+      await _methodChannel.invokeListMethod<String>("runSetupFixes", fixes) ?? [];
 
   Future<bool> openTextToSpeechSettings() async =>
       await _methodChannel.invokeMethod<bool>("openTextToSpeechSettings") ?? false;
@@ -458,13 +496,11 @@ class FLauncherChannel {
     return success ?? false;
   }
 
-  /// {enabled, seenBefore, restricted}: whether Home Button Fix is on, whether it has ever been on here,
-  /// and whether Android may block turning it on (last installed from an APK file, e.g. by the updater).
+  /// {enabled, listedButStopped, seenBefore, restricted}: whether Home Button Fix is on, whether Android lists it as
+  /// on while it isn't running, whether it has ever been on here, and whether Android may block turning it on
+  /// (installed from an APK file, and Hearth hasn't lifted the block itself since: apps can't read the block).
   Future<Map<dynamic, dynamic>> getHomeButtonFixStatus() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getHomeButtonFixStatus") ?? {};
-
-  /// Stops the "Home Button Fix is off" reminder until the service is turned on again.
-  Future<void> forgetHomeButtonFix() async => await _methodChannel.invokeMethod("forgetHomeButtonFix");
 
   Future<bool> requestAccessibilityPermission() async {
     final bool? success = await _methodChannel.invokeMethod<bool>("requestAccessibilityPermission");

@@ -19,6 +19,8 @@
     <string name="ha_setup_missing">Home Assistant 주소와 토큰을 입력하세요.</string>
     <string name="ha_setup_sent_title">TV로 전송됨</string>
     <string name="ha_setup_sent_detail">Hearth가 주소와 토큰을 받았습니다. 이 페이지를 닫아도 됩니다.</string>
+    <string name="ha_setup_webhook_label">TV 상태 Webhook ID(선택)</string>
+    <string name="ha_setup_webhook_help">TV가 Home Assistant에 무엇이 켜져 있는지(앱, 재생 중인 콘텐츠, 프로필) 알리게 하려면 Home Assistant에서 Webhook 트리거 자동화를 추가하고 그 ID를 여기에 넣으세요. 이것만 쓸 때는 토큰을 비워 둬도 됩니다.</string>
 
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">%2$s(으)로 %1$s 여는 중…</string>

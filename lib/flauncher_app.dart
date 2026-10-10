@@ -26,7 +26,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'flauncher.dart';
-import 'widgets/home_button_fix_check.dart';
+import 'widgets/setup/setup_flow_launcher.dart';
 import 'providers/home_search.dart';
 
 /// Cards and dialogs.
@@ -153,7 +153,7 @@ class FLauncherApp extends StatelessWidget
                 LauncherState launcherState = context.read<LauncherState>();
                 launcherState.handleBackNavigation(context);
               },
-              child: HomeButtonFixCheck(child: FLauncher()),
+              child: SetupFlowLauncher(child: FLauncher()),
             ),
           ),
         );

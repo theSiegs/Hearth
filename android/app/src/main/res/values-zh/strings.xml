@@ -19,6 +19,8 @@
     <string name="ha_setup_missing">请输入 Home Assistant 地址和令牌。</string>
     <string name="ha_setup_sent_title">已发送到电视</string>
     <string name="ha_setup_sent_detail">Hearth 已收到地址和令牌。你可以关闭此页面。</string>
+    <string name="ha_setup_webhook_label">电视状态 Webhook ID（可选）</string>
+    <string name="ha_setup_webhook_help">要让电视告诉 Home Assistant 正在播放什么（应用、播放内容、个人资料），请在 Home Assistant 中添加一个带 Webhook 触发器的自动化，并在此填写它的 ID。仅用于此功能时，令牌可以留空。</string>
 
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">正在以 %2$s 的身份打开 %1$s…</string>

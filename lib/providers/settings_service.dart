@@ -306,7 +306,8 @@ class SettingsService extends ChangeNotifier {
 
   List<String> get hiddenWatchNextPackages => _list(_hiddenWatchNextPackagesKey);
 
-  bool get startOnBoot => _bool(_startOnBootKey, false);
+  /// On unless turned off: on Google TV, Hearth then comes up after a restart instead of Google TV's home.
+  bool get startOnBoot => _bool(_startOnBootKey, true);
 
   /// When on (the default), setting up Hearth on the kids' profiles also installs it on the TV's other adult
   /// profiles, so another adult doesn't have to sideload it themselves. Adult profiles need no keep-installed flag.

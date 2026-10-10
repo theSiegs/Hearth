@@ -19,6 +19,8 @@
     <string name="ha_setup_missing">Введите адрес Home Assistant и токен.</string>
     <string name="ha_setup_sent_title">Отправлено на телевизор</string>
     <string name="ha_setup_sent_detail">Hearth получил адрес и токен. Эту страницу можно закрыть.</string>
+    <string name="ha_setup_webhook_label">ID вебхука для состояния телевизора (необязательно)</string>
+    <string name="ha_setup_webhook_help">Чтобы телевизор сообщал Home Assistant, что сейчас идёт (приложение, что играет, профиль), добавьте в Home Assistant автоматизацию с триггером Webhook и укажите здесь её ID. Только для этого токен можно оставить пустым.</string>
 
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">Открываем %1$s как %2$s…</string>
