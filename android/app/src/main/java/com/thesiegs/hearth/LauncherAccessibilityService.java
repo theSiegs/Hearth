@@ -186,6 +186,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private boolean mChooserOnScreen;
 
     private HaStatusReporter mHaStatus;
+    /** What plays, into each grown-up profile's watch history. */
+    private PlaybackRecorder mPlayback;
     private HaNotificationServer mHaServer;
     private HaNotificationOverlay mHaOverlay;
 
@@ -238,6 +240,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         @Override
         public void run() {
             checkIdle();
+            // Notification access may have come on since
+            if (mPlayback != null) mPlayback.ensureStarted();
             // In case a switch broadcast was missed
             checkProfileUser("periodic check");
             updateScreenTimeLock("periodic check");
@@ -349,6 +353,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         updateHaServer();
         mHaStatus = new HaStatusReporter(this);
         mHaStatus.start();
+        mPlayback = new PlaybackRecorder(this);
+        mPlayback.ensureStarted();
         if (mScreenTimeLock) mHaStatus.setScreenTimeLock(true);
         ProfileProvider.notifyChanged(this);  // service_running
         IntentFilter screenFilter = new IntentFilter(Intent.ACTION_SCREEN_ON);
@@ -371,6 +377,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mHandler.removeCallbacksAndMessages(null);
         if (mHaServer != null) mHaServer.stop();
         if (mHaStatus != null) mHaStatus.stop();
+        if (mPlayback != null) mPlayback.stop();
         try {
             unregisterReceiver(mScreenReceiver);
         } catch (Exception ignored) {
