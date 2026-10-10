@@ -40,6 +40,9 @@ class KidProfile {
   /// The profile's name as Hearth learned it from Google TV's chooser; null until it has.
   final String? name;
 
+  /// Its user runs: it is the profile on now.
+  final bool running;
+
   final bool hearth;
   final bool hearthTube;
 
@@ -51,6 +54,7 @@ class KidProfile {
     required this.userId,
     this.profileKey,
     this.name,
+    this.running = false,
     this.hearth = false,
     this.hearthTube = false,
     this.hearthKept,
@@ -61,6 +65,7 @@ class KidProfile {
       : userId = (map["userId"] as int?) ?? -1,
         profileKey = map["profileKey"] as String?,
         name = map["name"] as String?,
+        running = map["running"] == true,
         hearth = map["hearth"] == true,
         hearthTube = map["hearthTube"] == true,
         hearthKept = map["hearthKept"] as bool?,

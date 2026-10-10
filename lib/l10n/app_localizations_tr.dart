@@ -497,6 +497,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String get kidProfileHint => 'Buradaki her şey yalnızca bu çocuğa ait. Profiline geçmeden buradan değiştirebilirsiniz.';
 
   @override
+  String get kidProfileGetHearthTube => 'HearthTube\'u edinin';
+
+  @override
+  String get kidProfileGetHearthTubeBody => 'Önce bu TV\'ye, sonra bu profile yükler.';
+
+  @override
+  String get kidProfileHearthTubeSettings => 'HearthTube ayarları';
+
+  @override
   String get cardStyleTitle => 'Kart stili';
 
   @override
@@ -1933,7 +1942,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get streamingPinsTitle => 'Yayın uygulaması PIN\'leri';
 
   @override
-  String get streamingPinsFooter => 'Bu uygulamalardan biri bir profilin PIN\'ini istediğinde Hearth sizin yerinize girer. PIN belirlemek, o Google TV profilini o uygulama profiliyle kalıcı olarak eşler.';
+  String get streamingPinsFooter => 'Burada yalnızca bu profilin PIN\'leri var. Bu uygulamalardan biri bu profilin PIN\'ini istediğinde Hearth sizin yerinize girer. PIN belirlemek, bu profili o uygulama profiliyle kalıcı olarak eşler.';
 
   @override
   String get streamingPinsNone => 'Hearth\'ün PIN girebildiği uygulamaların hiçbiri yüklü değil.';

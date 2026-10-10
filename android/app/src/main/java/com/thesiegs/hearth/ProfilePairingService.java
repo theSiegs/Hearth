@@ -860,7 +860,7 @@ public class ProfilePairingService extends AccessibilityService {
 
     /**
      * Starts typing the picked profile's saved PIN when everything allows it: the app has a recipe and isn't paused,
-     * this is a grown-up Google TV profile paired with that app profile by an explicit choice, and a PIN is saved for
+     * this Google TV profile (a kids' one too) is paired with that app profile by an explicit choice, and a PIN is saved for
      * it that Hearth may still try. False when not (the cover goes as usual).
      */
     /**
@@ -895,7 +895,8 @@ public class ProfilePairingService extends AccessibilityService {
     private boolean startPinEntry(Session s) {
         String appProfile = s.pickedName;
         PinRecipe recipe = PinRecipes.forPackage(s.pkg);
-        if (recipe == null || appProfile == null || s.kids || mCover == null) return false;
+        // Kids' profiles too: a kid's app profile can have a PIN, which their parent saved for that profile only
+        if (recipe == null || appProfile == null || mCover == null) return false;
         if (!appProfile.equals(ProfilePairing.getChosenProfile(this, s.pkg, s.key))) return false;
         if (!PinVault.has(this, s.pkg, appProfile) || PinVault.isPaused(this, s.pkg)) return false;
         char[] pin = PinVault.open(this, s.pkg, appProfile);

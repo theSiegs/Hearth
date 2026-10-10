@@ -1,6 +1,7 @@
 package com.thesiegs.hearth;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.LauncherApps;
 import android.content.pm.PackageManager;
@@ -177,14 +178,16 @@ final class KidsProfiles {
 
     /**
      * A parent's Fix (Settings, or the setup flow's kids' step): puts Hearth's apps on every kids' profile where one
-     * is missing or not kept, and from now on on new kids' profiles too. The first time, the TV asks "Allow
-     * debugging?"; until the parent allows it this throws. Call off the main thread.
+     * is missing or not kept, or only on the kids' profile with {@code onlyUser} (one kid's page, after it got
+     * HearthTube), and from now on on new kids' profiles too. The first time, the TV asks "Allow debugging?"; until
+     * the parent allows it this throws. Call off the main thread.
      */
-    static List<String> fix(Context context) throws Exception {
+    static List<String> fix(Context context, Integer onlyUser) throws Exception {
         synchronized (WORK) {
             // A parent's fix: each profile may get one more try of Hearth's own later
             setKeep(context, true);
             List<Kid> kids = list(context);
+            if (onlyUser != null) kids.removeIf(kid -> kid.userId != onlyUser);
             if (kids.isEmpty()) return new ArrayList<>();
             try (SelfAdb shell = SelfAdb.open(context, PARENT_TIMEOUT_MS)) {
                 List<String> log = ProfileAppAccess.addToKids(context.getPackageCodePath(), shell, userIds(kids));
@@ -337,6 +340,28 @@ final class KidsProfiles {
         List<Integer> ids = new ArrayList<>();
         for (Kid kid : kids) ids.add(kid.userId);
         return ids;
+    }
+
+    /** HearthTube's screen for a profile's settings (HearthTube asks for the parent PIN in a kids' profile). */
+    static final String HEARTHTUBE_SETTINGS = "com.thesiegs.hearthtube.action.OPEN_SETTINGS";
+
+    /**
+     * Opens HearthTube's settings in the active kids' profile's user (through its agent), at {@code section} when
+     * given; its main screen when this HearthTube has no settings screen to open yet. One APK serves every user, so
+     * what the owner's copy can open, the kid's copy can. False when no kids' profile is on, or it lacks HearthTube.
+     */
+    static boolean openHearthTubeSettings(Context context, String section) {
+        Intent intent = new Intent(HEARTHTUBE_SETTINGS).setPackage(ProfileAppAccess.HEARTHTUBE);
+        if (section != null) intent.putExtra("section", section);
+        if (context.getPackageManager().resolveActivity(intent, 0) == null) {
+            intent = context.getPackageManager().getLeanbackLaunchIntentForPackage(ProfileAppAccess.HEARTHTUBE);
+            if (intent == null) {
+                intent = context.getPackageManager().getLaunchIntentForPackage(ProfileAppAccess.HEARTHTUBE);
+            }
+            if (intent == null) return false;
+            intent.setPackage(ProfileAppAccess.HEARTHTUBE);
+        }
+        return Boolean.TRUE.equals(ProfileApps.open(context, intent));
     }
 
     /** Whether the owner (Hearth's own user) has HearthTube: only then do the kids' profiles get it. */

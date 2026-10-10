@@ -498,6 +498,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get kidProfileHint => 'Todo lo de aquí es solo de este niño. Puedes cambiarlo desde aquí sin cambiar a su perfil.';
 
   @override
+  String get kidProfileGetHearthTube => 'Obtener HearthTube';
+
+  @override
+  String get kidProfileGetHearthTubeBody => 'Lo instala en esta TV y después en este perfil.';
+
+  @override
+  String get kidProfileHearthTubeSettings => 'Ajustes de HearthTube';
+
+  @override
   String get cardStyleTitle => 'Estilo de tarjetas';
 
   @override
@@ -1944,7 +1953,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get streamingPinsTitle => 'PIN de apps de streaming';
 
   @override
-  String get streamingPinsFooter => 'Cuando una de estas apps pide el PIN de un perfil, Hearth lo escribe por ti. Al poner un PIN, ese perfil de Google TV queda asociado para siempre con ese perfil de la app.';
+  String get streamingPinsFooter => 'Aquí solo están los PIN de este perfil. Cuando una de estas apps pide el PIN de este perfil, Hearth lo escribe por ti. Al poner un PIN, este perfil queda asociado para siempre con ese perfil de la app.';
 
   @override
   String get streamingPinsNone => 'No está instalada ninguna de las apps en las que Hearth puede escribir PIN.';

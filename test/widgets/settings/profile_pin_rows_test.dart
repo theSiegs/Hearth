@@ -1,5 +1,6 @@
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/settings/profile_pairing_page.dart';
 import 'package:flutter/material.dart';
@@ -15,11 +16,15 @@ import '../../mocks.mocks.dart';
 void main() {
   late MockFLauncherChannel channel;
   late SettingsService settings;
+  late MockProfileService profiles;
 
   setUp(() async {
     SharedPreferencesStorePlatform.instance = InMemorySharedPreferencesStore.empty();
     settings = SettingsService(await SharedPreferences.getInstance());
     channel = MockFLauncherChannel();
+    // Alex's profile is on: only its own PIN shows
+    profiles = MockProfileService();
+    when(profiles.activeProfileKey).thenReturn("user:0");
     when(channel.getProfilePairingChoices("com.example.tv")).thenAnswer((_) async => [
           {"hearthProfile": "user:0", "displayName": "Alex", "kids": false, "mode": "profile", "chosenProfile": "Alex M"},
           {"hearthProfile": "user:11", "displayName": "Sam", "kids": false, "mode": "auto", "autoMatch": "Sam"},
@@ -41,6 +46,7 @@ void main() {
           providers: [
             Provider<FLauncherChannel>.value(value: channel),
             ChangeNotifierProvider<SettingsService>.value(value: settings),
+            ChangeNotifierProvider<ProfileService>.value(value: profiles),
           ],
           child: const Scaffold(
             body: ProfilePairingAppPage(app: {
@@ -52,7 +58,7 @@ void main() {
         ),
       );
 
-  testWidgets("only grown-up profiles paired by an explicit choice get a PIN row", (tester) async {
+  testWidgets("only the profile on now, paired by an explicit choice, gets a PIN row", (tester) async {
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
 

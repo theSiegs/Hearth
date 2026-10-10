@@ -110,8 +110,9 @@ recognition step on the open PIN screen and reports "recognised" or what differs
 ## 5. When Hearth types it (all must hold)
 
 1. Profile Pairing picked that app profile itself in this launch (not the parent choosing in the app).
-2. The active Google TV profile is known, is **not a kids profile**, and is paired with that app profile by an
-   explicit choice in Settings.
+2. The active Google TV profile is known and is paired with that app profile by an explicit choice in Settings (a
+   kids' profile too, since 2026-10: its app runs in the kid's own user, which Hearth's accessibility service and the
+   agent's speech relay reach as they do for picking the profile; its PIN is saved past the parent PIN).
 3. A PIN is saved for it, its recipe isn't *paused*, and PIN entry is on for the app. (A PIN marked *not accepted* is
    still tried, once per launch; see §6.)
 4. The PIN screen appears within ~6 s of the pick and matches the recipe's fingerprint.
@@ -155,7 +156,8 @@ recognition step on the open PIN screen and reports "recognised" or what differs
 ## Decisions for the owner
 
 - PINs entered only in Hearth's Settings (no "capture" from the app) — proposed.
-- Typed only in grown-up Google TV profiles, never in a kids profile — proposed.
+- Typed in grown-up and kids' Google TV profiles alike; each profile sees and sets only its own PINs (Settings ›
+  Profiles › Streaming app PINs), always past the parent PIN — decided 2026-10.
 - One attempt per launch; on a rejection a pop-up offers **Change PIN** (Settings) or **Close** (the app's own PIN
   entry, by hand) — decided; tried again on every launch until changed or removed, with no give-up state.
 - Which apps first: Netflix (most profiles locked?), then Disney+, Max, Paramount+, Apple TV.

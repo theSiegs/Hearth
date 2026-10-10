@@ -301,6 +301,18 @@
     "@kidProfileHint": {
         "description": "One kid's page (from Kids' profiles): footer"
     },
+    "kidProfileGetHearthTube": "Get HearthTube",
+    "@kidProfileGetHearthTube": {
+        "description": "One kid's page: installs HearthTube when the TV doesn't have it"
+    },
+    "kidProfileGetHearthTubeBody": "Installs it on this TV, then on this profile.",
+    "@kidProfileGetHearthTubeBody": {
+        "description": "One kid's page: under Get HearthTube"
+    },
+    "kidProfileHearthTubeSettings": "HearthTube settings",
+    "@kidProfileHearthTubeSettings": {
+        "description": "One kid's page: opens HearthTube's settings for that kid (only while their profile is on)"
+    },
     "cardStyleTitle": "Card style",
     "@cardStyleTitle": {
         "description": "Settings page title, also its row in the page that opens it"
@@ -2428,7 +2440,7 @@
     "@streamingPinsTitle": {
         "description": "Settings > Profiles: the page (and its row) with each streaming app's profile PINs"
     },
-    "streamingPinsFooter": "When one of these apps asks for a profile's PIN, Hearth types it for you. Setting a PIN pairs that Google TV profile with that app profile for good.",
+    "streamingPinsFooter": "Only this profile's PINs are here. When one of these apps asks for this profile's PIN, Hearth types it for you. Setting a PIN pairs this profile with that app profile for good.",
     "@streamingPinsFooter": {
         "description": "Streaming app PINs page: footer"
     },

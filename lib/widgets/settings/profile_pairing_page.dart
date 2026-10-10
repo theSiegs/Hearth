@@ -1,5 +1,6 @@
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
@@ -282,9 +283,13 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
     }
   }
 
-  /// Only grown-up profiles paired with an app profile by an explicit choice get a PIN (never a name match, never kids).
-  /// Settings' Streaming app PINs pairs a name match for good when its PIN is set.
-  static bool _hasPin(PairingChoice choice) => choice.mode == "profile" && !choice.kids && choice.chosenProfile != null;
+  /// A Google TV profile paired with an app profile by an explicit choice (Streaming app PINs pairs a name match for
+  /// good when its PIN is set), a kids' one too.
+  static bool _paired(PairingChoice choice) => choice.mode == "profile" && choice.chosenProfile != null;
+
+  /// Only the profile on now sees and sets its PIN here: each profile controls only its own.
+  bool _hasPin(PairingChoice choice) =>
+      _paired(choice) && choice.hearthProfile == context.read<ProfileService?>()?.activeProfileKey;
 
   String _pinStatus(AppLocalizations l, String appProfile) {
     String text = profilePinStatus(l, _pins[appProfile]);
@@ -341,8 +346,8 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
     await _channel.setProfilePairingChoice(_packageName, choice.hearthProfile, picked.$1, picked.$2);
     // A PIN saved for the app profile this pairing leaves goes, unless another Google TV profile still uses it
     final old = choice.chosenProfile;
-    if (_hasPin(choice) && !(picked.$1 == "profile" && picked.$2 == old)) {
-      final stillUsed = (_choices ?? []).any((c) => c != choice && _hasPin(c) && c.chosenProfile == old);
+    if (_paired(choice) && !(picked.$1 == "profile" && picked.$2 == old)) {
+      final stillUsed = (_choices ?? []).any((c) => c != choice && _paired(c) && c.chosenProfile == old);
       if (!stillUsed) await _channel.removeProfilePin(_packageName, old!);
     }
     _load();

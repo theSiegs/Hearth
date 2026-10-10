@@ -19,7 +19,10 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';
+import 'dart:io';
+
 import 'package:flauncher/models/kids_profiles.dart';
+import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flauncher/widgets/settings/kid_profile_page.dart';
 import 'package:flauncher/widgets/settings/kids_profiles_page.dart';
 import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
@@ -77,12 +80,13 @@ class _KidsChannel extends FLauncherChannel {
   }
 
   @override
-  Future<List<String>> fixKidsProfiles() async {
+  Future<List<String>> fixKidsProfiles({int? userId}) async {
     if (!works) throw PlatformException(code: "SELF_ADB");
     fixes++;
+    fixedOnly.add(userId);
     keep = true;
     trusted = true;
-    for (final kid in kids) {
+    for (final kid in kids.where((k) => userId == null || k["userId"] == userId)) {
       kid["hearth"] = true;
       kid["hearthKept"] = true;
       if (tubeOnOwner) {
@@ -108,6 +112,36 @@ class _KidsChannel extends FLauncherChannel {
   @override
   Future<void> uninstallHearth() async => uninstalls++;
 
+  /// Which kids' profiles each Fix was for (null: all of them).
+  final List<int?> fixedOnly = [];
+
+  /// HearthTube on the TV (the owner's), and what Android's installer does with it.
+  bool tubeInstalled = false;
+  bool installPermission = true;
+  int installs = 0;
+  int tubeSettingsOpened = 0;
+
+  @override
+  Future<Map<dynamic, dynamic>?> getPackageVersion(String packageName) async =>
+      tubeInstalled ? {"versionName": "1.0", "versionCode": 1} : null;
+
+  @override
+  Future<bool> checkInstallPermission() async => installPermission;
+
+  @override
+  Future<bool> installApk(String path) async {
+    installs++;
+    tubeInstalled = true;
+    tubeOnOwner = true;
+    return true;
+  }
+
+  @override
+  Future<bool> openHearthTubeSettings({String? section}) async {
+    tubeSettingsOpened++;
+    return true;
+  }
+
   @override
   Future<int> getLockOnSleepMinutes() async => -1;
 
@@ -121,10 +155,28 @@ class _KidsChannel extends FLauncherChannel {
   Future<void> setYouTubeDailyMinutes(int minutes, {String? profileKey}) async => limits[profileKey] = minutes;
 }
 
+/// HearthTube's newest release, downloaded at once.
+class _FakeUpdater extends Fake implements CompanionUpdater {
+  bool autoUpdate = false;
+
+  @override
+  Future<CompanionRelease?> latestRelease(CompanionApp app) async => CompanionRelease("1.0", 1, "https://example.com/t.apk", 1);
+
+  @override
+  Future<File> download(CompanionApp app, CompanionRelease release, {void Function(double)? onProgress}) async {
+    onProgress?.call(1);
+    return File("hearthtube.apk");
+  }
+
+  @override
+  Future<void> setAutoUpdate(bool enabled) async => autoUpdate = enabled;
+}
+
 void main() {
   late _KidsChannel channel;
   late SharedPreferences prefs;
   late SetupFlowService flow;
+  late _FakeUpdater updater;
 
   setUp(() async {
     SharedPreferencesStorePlatform.instance = InMemorySharedPreferencesStore.empty();
@@ -132,6 +184,7 @@ void main() {
     await prefs.clear();
     flow = SetupFlowService(prefs);
     channel = _KidsChannel();
+    updater = _FakeUpdater();
   });
 
   Future<void> pump(WidgetTester tester, Widget page) async {
@@ -143,6 +196,7 @@ void main() {
         Provider<FLauncherChannel>.value(value: channel),
         ChangeNotifierProvider<SetupFlowService>.value(value: flow),
         ChangeNotifierProvider(create: (_) => SettingsService(prefs)),
+        Provider<CompanionUpdater>.value(value: updater),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -302,6 +356,67 @@ void main() {
     await press(tester, "Fix");
     expect(channel.fixes, 1);
     expect(find.text("Ready"), findsOneWidget);
+  });
+
+  testWidgets("HearthTube on the TV but not on this kid: their page puts it on them only", (tester) async {
+    channel.tubeOnOwner = true;
+    channel.tubeInstalled = true;
+    channel.kids = [
+      {"userId": 10, "profileKey": "user:10", "name": "Sam", "hearth": true, "hearthTube": false},
+      {"userId": 11, "profileKey": "user:11", "name": "Alex", "hearth": true, "hearthTube": false},
+    ];
+    await pump(tester, const KidsProfilesPage());
+    await press(tester, "Sam");
+    await press(tester, "HearthTube 1.0");
+    expect(channel.fixedOnly, [10]);
+    expect(channel.kids[1]["hearthTube"], isFalse);
+    expect(find.text("HearthTube isn't on it"), findsNothing);
+  });
+
+  testWidgets("no HearthTube on the TV: a kid's page installs it, then puts it on that kid", (tester) async {
+    channel.kids = [
+      {"userId": 10, "profileKey": "user:10", "name": "Sam", "hearth": true, "hearthTube": false},
+    ];
+    await pump(tester, const KidsProfilesPage());
+    await press(tester, "Sam");
+    expect(find.text("Get HearthTube"), findsOneWidget);
+    await tester.tap(find.text("Get HearthTube"));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    expect(channel.installs, 1);
+    expect(updater.autoUpdate, isTrue);
+    expect(channel.fixedOnly, [10]);
+    expect(find.text("Get HearthTube"), findsNothing);
+  });
+
+  testWidgets("Get HearthTube asks for installing apps first when Android doesn't allow it yet", (tester) async {
+    channel.installPermission = false;
+    channel.kids = [
+      {"userId": 10, "profileKey": "user:10", "name": "Sam", "hearth": true},
+    ];
+    await pump(tester, const KidsProfilesPage());
+    await press(tester, "Sam");
+    await press(tester, "Get HearthTube");
+    expect(find.text("Allow Hearth to install apps"), findsOneWidget);
+    expect(channel.installs, 0);
+  });
+
+  testWidgets("HearthTube's settings only while that kid's profile is on", (tester) async {
+    channel.tubeOnOwner = true;
+    channel.tubeInstalled = true;
+    channel.kids = [
+      {"userId": 10, "profileKey": "user:10", "name": "Sam", "running": true, "hearth": true, "hearthTube": true},
+      {"userId": 11, "profileKey": "user:11", "name": "Alex", "hearth": true, "hearthTube": true},
+    ];
+    await pump(tester, const KidsProfilesPage());
+    await press(tester, "Sam");
+    await press(tester, "HearthTube settings");
+    expect(channel.tubeSettingsOpened, 1);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    await press(tester, "Alex");
+    expect(find.text("HearthTube settings"), findsNothing);
   });
 
   testWidgets("no kids' profiles: says so, and Uninstall is still there", (tester) async {
