@@ -177,9 +177,16 @@ class FLauncherChannel {
   /// or Google TV could remove it, and from then on Hearth puts itself on new kids' profiles too. Only ever touches
   /// Hearth's own two apps; each kids' profile an app is added to sends Family Link's "app added" notice. The first
   /// time, the TV asks "Allow debugging?"; until the parent allows it this throws a PlatformException ("SELF_ADB").
-  /// Returns a short log of what was done.
-  Future<List<String>> fixKidsProfiles() async =>
-      await _methodChannel.invokeListMethod<String>("fixKidsProfiles") ?? [];
+  /// Returns a short log of what was done. [userId]: only that kids' profile (one kid's page, once HearthTube is
+  /// on the TV).
+  Future<List<String>> fixKidsProfiles({int? userId}) async =>
+      await _methodChannel.invokeListMethod<String>("fixKidsProfiles", userId) ?? [];
+
+  /// Opens HearthTube's settings for the kids' profile on now, in that kid's own copy (at [section]: general, player,
+  /// accounts, blocked_words...), or HearthTube's main screen when its settings screen can't be opened directly.
+  /// False when no kids' profile is on, or it doesn't have HearthTube.
+  Future<bool> openHearthTubeSettings({String? section}) async =>
+      await _methodChannel.invokeMethod<bool>("openHearthTubeSettings", section) ?? false;
 
   /// A parent's Remove: takes Hearth and HearthTube off the kids' profiles (and any other profile they're on), and
   /// Hearth stops putting itself on new ones. What must run before Hearth itself is uninstalled.

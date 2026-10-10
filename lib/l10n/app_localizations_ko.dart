@@ -497,6 +497,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get kidProfileHint => '여기 있는 설정은 모두 이 아이만의 것입니다. 아이 프로필로 전환하지 않고도 여기서 바꿀 수 있습니다.';
 
   @override
+  String get kidProfileGetHearthTube => 'HearthTube 받기';
+
+  @override
+  String get kidProfileGetHearthTubeBody => '이 TV에 설치한 다음 이 프로필에 추가합니다.';
+
+  @override
+  String get kidProfileHearthTubeSettings => 'HearthTube 설정';
+
+  @override
   String get cardStyleTitle => '카드 스타일';
 
   @override
@@ -1933,7 +1942,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get streamingPinsTitle => '스트리밍 앱 PIN';
 
   @override
-  String get streamingPinsFooter => '이 앱들이 프로필 PIN을 요청하면 Hearth가 대신 입력합니다. PIN을 설정하면 그 Google TV 프로필이 해당 앱 프로필과 계속 연결됩니다.';
+  String get streamingPinsFooter => '여기에는 이 프로필의 PIN만 있습니다. 이 앱들이 이 프로필의 PIN을 요청하면 Hearth가 대신 입력합니다. PIN을 설정하면 이 프로필이 해당 앱 프로필과 계속 연결됩니다.';
 
   @override
   String get streamingPinsNone => 'Hearth가 PIN을 입력할 수 있는 앱이 설치되어 있지 않습니다.';

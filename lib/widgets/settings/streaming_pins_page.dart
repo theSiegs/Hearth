@@ -17,6 +17,7 @@
 
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/providers/profile_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -26,7 +27,7 @@ import 'profile_pairing_page.dart';
 import 'settings_page.dart';
 import 'setup_checklist_page.dart';
 
-/// One grown-up's Google TV profile in one app: the app profile Hearth picks for it, and that profile's PIN.
+/// The Google TV profile on now, in one app: the app profile Hearth picks for it, and that profile's PIN.
 class _PinRow {
   final PairingChoice choice;
 
@@ -37,10 +38,10 @@ class _PinRow {
   const _PinRow(this.choice, this.appProfile, this.pin);
 }
 
-/// Settings > Profiles > Streaming app PINs: for each installed app Hearth can type PINs in, each grown-up's Google TV
-/// profile with the app profile Hearth picks for it and that profile's PIN, all in one place. Setting a PIN on a
-/// profile Hearth matched by name pairs the two for good, so the PIN always goes with the right app profile. Kids'
-/// profiles never get one.
+/// Settings > Profiles > Streaming app PINs: the PINs of the Google TV profile on now (each profile sees and sets
+/// only its own), one row per installed app Hearth can type PINs in, with the app profile Hearth picks for it. A
+/// kids' profile has them too, set past the parent PIN like every profile PIN. Setting a PIN on a profile Hearth
+/// matched by name pairs the two for good, so the PIN always goes with the right app profile.
 class StreamingPinsPage extends StatefulWidget {
   static const String routeName = "streaming_pins";
 
@@ -66,6 +67,7 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
   Future<void> _load() async {
     final apps = <(Map<dynamic, dynamic>, List<_PinRow>)>[];
     bool serviceOn = true;
+    final active = context.read<ProfileService?>()?.activeProfileKey;
     try {
       serviceOn = (await _channel.getProfilePairingStatus())["enabled"] == true;
       for (final app in await _channel.getProfilePairingApps()) {
@@ -74,7 +76,7 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
         final rows = <_PinRow>[];
         for (final map in await _channel.getProfilePairingChoices(pkg)) {
           final choice = PairingChoice.fromMap(map);
-          if (choice.kids) continue;
+          if (choice.hearthProfile != active) continue;
           final appProfile = switch (choice.mode) {
             "profile" => choice.chosenProfile,
             "auto" => choice.autoMatch,
@@ -82,6 +84,10 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
           };
           rows.add(_PinRow(choice, appProfile,
               appProfile != null ? await _channel.getProfilePinStatus(pkg, appProfile) : null));
+        }
+        // Not seen with this app yet: matched by name, which finds nothing until a profile is picked
+        if (rows.isEmpty && active != null) {
+          rows.add(_PinRow(PairingChoice.fromMap({"hearthProfile": active, "mode": "auto"}), null, null));
         }
         apps.add((app, rows));
       }
@@ -102,6 +108,7 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
     final l = AppLocalizations.of(context)!;
     final pkg = app["packageName"] as String;
     final label = app["label"] as String;
+    final name = context.read<ProfileService?>()?.activeProfileName ?? row.choice.displayName;
     String? appProfile = row.appProfile;
     Map<dynamic, dynamic>? pin = row.pin;
     if (appProfile == null) {
@@ -113,7 +120,7 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
       appProfile = await showDialog<String>(
         context: context,
         builder: (context) => SimpleDialog(
-          title: Text(l.pairingProfileInApp(row.choice.displayName, label)),
+          title: Text(l.pairingProfileInApp(name, label)),
           children: [
             for (final (index, profile) in seen.indexed)
               SimpleDialogOption(
@@ -160,7 +167,6 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
       return was;
     }
 
-    final heading = textTheme.bodySmall?.copyWith(color: Colors.white70, fontWeight: FontWeight.w600);
     final small = textTheme.bodySmall?.copyWith(color: Colors.white54);
     return SettingsPage(
       title: l.streamingPinsTitle,
@@ -181,10 +187,6 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
             child: Text(l.streamingPinsNone, style: small),
           ),
         for (final (app, rows) in apps) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
-            child: Text(app["label"] as String, style: heading),
-          ),
           // Pairing turned off for the app: no PIN is typed there, so the way to turn it back on
           if (app["enabled"] == false)
             FocusableSettingsTile(
@@ -211,7 +213,7 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
                 title: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(row.choice.displayName, style: textTheme.bodyMedium),
+                    Text(app["label"] as String, style: textTheme.bodyMedium),
                     Text(
                       row.appProfile != null
                           ? "${row.appProfile} · ${l.profilePinRow}: ${profilePinStatus(l, row.pin)}"

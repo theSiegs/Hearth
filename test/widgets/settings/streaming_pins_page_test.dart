@@ -17,14 +17,18 @@
 
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/settings/streaming_pins_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
+
+import '../../mocks.mocks.dart';
 
 const _pkg = "com.example.tv";
 
@@ -95,12 +99,21 @@ class _PinsChannel extends FLauncherChannel {
 void main() {
   late _PinsChannel channel;
   late SharedPreferences prefs;
+  late MockProfileService profiles;
+
+  /// The Google TV profile on now: its key and name.
+  void on(String key, String name) {
+    when(profiles.activeProfileKey).thenReturn(key);
+    when(profiles.activeProfileName).thenReturn(name);
+  }
 
   setUp(() async {
     SharedPreferencesStorePlatform.instance = InMemorySharedPreferencesStore.empty();
     prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     channel = _PinsChannel();
+    profiles = MockProfileService();
+    on("user:0:sam", "Sam");
   });
 
   Future<void> pump(WidgetTester tester) async {
@@ -111,6 +124,7 @@ void main() {
       providers: [
         Provider<FLauncherChannel>.value(value: channel),
         ChangeNotifierProvider(create: (_) => SettingsService(prefs)),
+        ChangeNotifierProvider<ProfileService>.value(value: profiles),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -133,24 +147,37 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets("each grown-up's profile in the apps Hearth can type PINs in, with its app profile and PIN",
+  testWidgets("only the profile on now, in each app Hearth can type PINs in, with its app profile and PIN",
       (tester) async {
     await pump(tester);
     expect(find.text("Example TV"), findsOneWidget);
-    expect(find.text("Alex M · Profile PIN: Saved"), findsOneWidget);
     // Matched by name: its PIN can be set too
     expect(find.text("Sam M · Profile PIN: None"), findsOneWidget);
-    expect(find.text("No match yet: shows the picker"), findsOneWidget);
-    // Never a kids' profile; never an app Hearth can't type in, or one that isn't installed
-    expect(find.text("Riley"), findsNothing);
+    // Another profile's PIN isn't this one's to see or change
+    expect(find.textContaining("Alex M"), findsNothing);
+    // Never an app Hearth can't type in, or one that isn't installed
     expect(find.text("Other TV"), findsNothing);
     expect(find.text("Gone TV"), findsNothing);
+  });
+
+  testWidgets("a kids' profile has its own PINs, set past the parent PIN", (tester) async {
+    on("user:10", "Riley");
+    await SettingsService(prefs).setParentPin("2468");
+    await pump(tester);
+    expect(find.text("Kids · Profile PIN: None"), findsOneWidget);
+    await tap(tester, "Example TV");
+    expect(find.text("Parent PIN"), findsOneWidget);
+    await type(tester, "2468");
+    await type(tester, "1357");
+    await type(tester, "1357");
+    // Paired by an explicit choice already: just the PIN
+    expect(channel.events, ["save Kids 1357"]);
   });
 
   testWidgets("a PIN for a name match pairs it for good, just before the PIN is saved", (tester) async {
     await SettingsService(prefs).setParentPin("2468");
     await pump(tester);
-    await tap(tester, "Sam");
+    await tap(tester, "Example TV");
     await type(tester, "2468");
     expect(find.text("Sam M’s PIN in Example TV"), findsOneWidget);
     await type(tester, "1357");
@@ -162,7 +189,7 @@ void main() {
   testWidgets("backing out of the PIN changes no pairing", (tester) async {
     await SettingsService(prefs).setParentPin("2468");
     await pump(tester);
-    await tap(tester, "Sam");
+    await tap(tester, "Example TV");
     await type(tester, "2468");
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -171,15 +198,17 @@ void main() {
 
   testWidgets("without a parent PIN, says to set one first", (tester) async {
     await pump(tester);
-    await tap(tester, "Sam");
+    await tap(tester, "Example TV");
     expect(find.textContaining("Set a parent PIN first"), findsOneWidget);
     expect(channel.events, isEmpty);
   });
 
   testWidgets("no match yet: the app profile is picked first", (tester) async {
+    on("user:0:jordan", "Jordan");
     await SettingsService(prefs).setParentPin("2468");
     await pump(tester);
-    await tap(tester, "Jordan");
+    expect(find.text("No match yet: shows the picker"), findsOneWidget);
+    await tap(tester, "Example TV");
     expect(find.text("Jordan in Example TV"), findsOneWidget);
     await tap(tester, "Jo M");
     await type(tester, "2468");
@@ -189,9 +218,10 @@ void main() {
   });
 
   testWidgets("a saved PIN can be removed, and the pairing stays", (tester) async {
+    on("user:0", "Alex");
     await SettingsService(prefs).setParentPin("2468");
     await pump(tester);
-    await tap(tester, "Alex");
+    await tap(tester, "Example TV");
     await type(tester, "2468");
     await tap(tester, "Remove PIN");
     expect(channel.events, ["remove Alex M"]);

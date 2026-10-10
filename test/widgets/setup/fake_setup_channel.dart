@@ -133,7 +133,7 @@ class FakeSetupChannel extends FLauncherChannel {
   }
 
   @override
-  Future<List<String>> fixKidsProfiles() async {
+  Future<List<String>> fixKidsProfiles({int? userId}) async {
     if (!profilesWork) throw PlatformException(code: "SELF_ADB");
     profilesAdded++;
     return ["added"];

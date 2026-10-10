@@ -501,6 +501,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get kidProfileHint => 'كل ما هنا خاص بهذا الطفل. يمكنك تغييره من هنا دون التبديل إلى ملفه الشخصي.';
 
   @override
+  String get kidProfileGetHearthTube => 'الحصول على HearthTube';
+
+  @override
+  String get kidProfileGetHearthTubeBody => 'يثبّته على هذا التلفزيون، ثم على هذا الملف الشخصي.';
+
+  @override
+  String get kidProfileHearthTubeSettings => 'إعدادات HearthTube';
+
+  @override
   String get cardStyleTitle => 'نمط البطاقات';
 
   @override
@@ -1980,7 +1989,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get streamingPinsTitle => 'رموز PIN لتطبيقات البث';
 
   @override
-  String get streamingPinsFooter => 'عندما يطلب أحد هذه التطبيقات رمز PIN لملف شخصي، يكتبه Hearth نيابةً عنك. يؤدي تعيين رمز PIN إلى ربط ملف Google TV هذا بملف التطبيق هذا بشكل دائم.';
+  String get streamingPinsFooter => 'هنا رموز PIN لهذا الملف الشخصي فقط. عندما يطلب أحد هذه التطبيقات رمز PIN لهذا الملف، يكتبه Hearth نيابةً عنك. يؤدي تعيين رمز PIN إلى ربط هذا الملف بملف التطبيق هذا بشكل دائم.';
 
   @override
   String get streamingPinsNone => 'لا يوجد أي تطبيق مثبّت من التطبيقات التي يستطيع Hearth كتابة رموز PIN فيها.';

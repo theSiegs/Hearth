@@ -80,9 +80,10 @@ about 15 seconds on Google TV's home, in case it's a new kids profile Google TV 
 HBO Max or Paramount+, it picks the app profile that matches your Google TV profile: by name, or the one you pair it
 with. Open each app once from Hearth so it can learn the app's profiles.
 
-**Streaming app PINs** (**Settings → Profiles → Streaming app PINs**). If an app profile has a PIN, save it here:
-each grown-up's profile is listed under each app Hearth can type PINs in (Netflix, Disney+, Apple TV, HBO Max), with
-the app profile Hearth picks for it. Hearth types the PIN behind a "logging in as" card and never shows it. Saving a
+**Streaming app PINs** (**Settings → Profiles → Streaming app PINs**). If an app profile has a PIN, save it here.
+Each Google TV profile sees only its own: under each app Hearth can type PINs in (Netflix, Disney+, Apple TV, HBO Max),
+the app profile Hearth picks for this profile and its PIN. That works for a kids' profile too (a kid's Netflix profile
+with a PIN, say), past the parent PIN. Hearth types the PIN behind a "logging in as" card and never shows it. Saving a
 PIN for a profile matched by name pairs the two for good, so the PIN always goes with the right app profile. Saved
 PINs are encrypted with a key that never leaves the TV, and saving one needs the parent PIN.
 
@@ -116,7 +117,11 @@ Hearth treats a profile as a kids profile when Family Link supervises it.
   profile, like their **YouTube time per day** (how long HearthTube may play a day; Hearth counts it on the TV, and
   HearthTube stops when it's used up). With Home Assistant set up (optional), a limit shared with the family's other
   devices can count too, and the stricter one wins (see docs/home-assistant.md). A grown-up sets their own limit in
-  **Settings → Profiles**.
+  **Settings → Profiles**. The kid's page also shows HearthTube there: **Get HearthTube** installs it on the TV and
+  then on that kid's profile when the TV doesn't have it yet, missing HearthTube is put on that kid with one press,
+  and while that kid's profile is on, **HearthTube settings** opens HearthTube's own settings for them (HearthTube
+  asks for the parent PIN). When you install HearthTube later from **Updates**, Hearth puts it on the kids' profiles
+  by itself once you switch away from them, or use **Fix**.
 - **Uninstalling.** Use **Settings → Profiles → Kids' profiles → Uninstall Hearth**, which takes Hearth off the
   kids' profiles first. Uninstalling from Android's settings would leave copies behind there. **Remove Hearth from
   kids' profiles** does only the first part, and Hearth stops adding itself to new ones.

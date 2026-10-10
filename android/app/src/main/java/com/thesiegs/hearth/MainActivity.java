@@ -179,7 +179,11 @@ public class MainActivity extends FlutterActivity {
                 boolean checkProtection = Boolean.TRUE.equals(call.arguments());
                 answerFrom(sIoExecutor, result, () -> KidsProfiles.state(this, checkProtection));
             }
-            case "fixKidsProfiles" -> runSelfAdb(result, () -> KidsProfiles.fix(this));
+            case "fixKidsProfiles" -> {
+                Integer onlyUser = call.arguments();
+                runSelfAdb(result, () -> KidsProfiles.fix(this, onlyUser));
+            }
+            case "openHearthTubeSettings" -> result.success(KidsProfiles.openHearthTubeSettings(this, call.arguments()));
             case "removeHearthFromKidsProfiles" -> runSelfAdb(result, () -> KidsProfiles.remove(this));
             case "uninstallHearth" -> result.success(uninstallSelf());
             case "openGoogleTvHome" -> result.success(openGoogleTvHome());

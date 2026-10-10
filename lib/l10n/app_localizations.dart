@@ -1061,6 +1061,24 @@ abstract class AppLocalizations {
   /// **'Everything here is this kid\'s own. You can change it from here without switching to their profile.'**
   String get kidProfileHint;
 
+  /// One kid's page: installs HearthTube when the TV doesn't have it
+  ///
+  /// In en, this message translates to:
+  /// **'Get HearthTube'**
+  String get kidProfileGetHearthTube;
+
+  /// One kid's page: under Get HearthTube
+  ///
+  /// In en, this message translates to:
+  /// **'Installs it on this TV, then on this profile.'**
+  String get kidProfileGetHearthTubeBody;
+
+  /// One kid's page: opens HearthTube's settings for that kid (only while their profile is on)
+  ///
+  /// In en, this message translates to:
+  /// **'HearthTube settings'**
+  String get kidProfileHearthTubeSettings;
+
   /// Settings page title, also its row in the page that opens it
   ///
   /// In en, this message translates to:
@@ -3404,7 +3422,7 @@ abstract class AppLocalizations {
   /// Streaming app PINs page: footer
   ///
   /// In en, this message translates to:
-  /// **'When one of these apps asks for a profile\'s PIN, Hearth types it for you. Setting a PIN pairs that Google TV profile with that app profile for good.'**
+  /// **'Only this profile\'s PINs are here. When one of these apps asks for this profile\'s PIN, Hearth types it for you. Setting a PIN pairs this profile with that app profile for good.'**
   String get streamingPinsFooter;
 
   /// Streaming app PINs page: when none of the apps it supports is installed

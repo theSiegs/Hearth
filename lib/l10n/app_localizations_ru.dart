@@ -497,6 +497,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get kidProfileHint => 'Всё здесь относится только к этому ребёнку. Это можно изменить отсюда, не переключаясь на его профиль.';
 
   @override
+  String get kidProfileGetHearthTube => 'Установить HearthTube';
+
+  @override
+  String get kidProfileGetHearthTubeBody => 'Устанавливает его на этот телевизор, затем в этот профиль.';
+
+  @override
+  String get kidProfileHearthTubeSettings => 'Настройки HearthTube';
+
+  @override
   String get cardStyleTitle => 'Стиль карточек';
 
   @override
@@ -1957,7 +1966,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get streamingPinsTitle => 'PIN-коды стриминговых приложений';
 
   @override
-  String get streamingPinsFooter => 'Когда одно из этих приложений просит PIN-код профиля, Hearth вводит его за вас. Если задать PIN-код, этот профиль Google TV навсегда связывается с этим профилем приложения.';
+  String get streamingPinsFooter => 'Здесь только PIN-коды этого профиля. Когда одно из этих приложений просит PIN-код этого профиля, Hearth вводит его за вас. Если задать PIN-код, этот профиль навсегда связывается с этим профилем приложения.';
 
   @override
   String get streamingPinsNone => 'Не установлено ни одного приложения, в котором Hearth умеет вводить PIN-коды.';

@@ -497,6 +497,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get kidProfileHint => '这里的一切都只属于这个孩子。无需切换到孩子的个人资料，就能在这里更改。';
 
   @override
+  String get kidProfileGetHearthTube => '获取 HearthTube';
+
+  @override
+  String get kidProfileGetHearthTubeBody => '先安装到这台电视上，再添加到这个个人资料。';
+
+  @override
+  String get kidProfileHearthTubeSettings => 'HearthTube 设置';
+
+  @override
   String get cardStyleTitle => '卡片样式';
 
   @override
@@ -1933,7 +1942,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get streamingPinsTitle => '流媒体应用 PIN';
 
   @override
-  String get streamingPinsFooter => '当这些应用要求输入某个个人资料的 PIN 时，Hearth 会替你输入。设置 PIN 后，该 Google TV 个人资料会与该应用个人资料长期配对。';
+  String get streamingPinsFooter => '这里只有这个个人资料的 PIN。当这些应用要求输入这个个人资料的 PIN 时，Hearth 会替你输入。设置 PIN 后，这个个人资料会与该应用个人资料长期配对。';
 
   @override
   String get streamingPinsNone => '未安装任何 Hearth 能输入 PIN 的应用。';
