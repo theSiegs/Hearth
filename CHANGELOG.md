@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.21 (pre-release)
+
+- Setup cards show each item with a check or an open circle for how it stands, and say Next, Leave it as it is / Set up what's missing, or Not now / Turn on.
+- Google TV's spare, never-used profile no longer shows up as another adult's profile, and Hearth isn't put on it.
+- The temperature is in Fahrenheit on TVs in the US (and the few other places that use it) until a unit is picked.
+
 ## 2026.10.20 (pre-release)
 
 - Holding OK on an app always opens its menu; the held key no longer goes on to open Add to section.

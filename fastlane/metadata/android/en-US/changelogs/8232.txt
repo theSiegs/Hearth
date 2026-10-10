@@ -1,0 +1,4 @@
+- Early development pre-release.
+- Setup cards show how each item stands, with clearer buttons.
+- Google TV's spare, never-used profile no longer shows up as another adult's profile.
+- Fahrenheit on TVs in the US until a unit is picked.
