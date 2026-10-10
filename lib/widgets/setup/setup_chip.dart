@@ -80,7 +80,9 @@ class _SetupChipState extends State<SetupChip> with WidgetsBindingObserver {
       final homeButtonOn = status["enabled"] == true;
       if (!mounted) return;
       final cardsOn = await SetupSnapshot.loadCardsOn(channel,
-          showContinueWatching: context.read<SettingsService?>()?.showContinueWatching ?? false);
+          showContinueWatching: context.read<SettingsService?>()?.showContinueWatching ?? false,
+          hasParentPin: context.read<SettingsService?>()?.hasParentPin ?? false,
+          kidsProtected: flow.kidsProtected);
       if (!mounted) return;
       setState(() {
         _left = flow.remaining(homeButtonOn: homeButtonOn, homeAppOn: homeApp, cardOn: cardsOn);

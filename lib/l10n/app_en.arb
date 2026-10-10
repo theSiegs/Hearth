@@ -3040,5 +3040,123 @@
     "setupFlowWeatherDone": "The weather shows in the top bar",
     "@setupFlowWeatherDone": {
         "description": "Setup flow: weather step, once a town is chosen"
+    },
+    "setupFlowFamilyBenefit": "Streaming apps open on the right person, and kids can't change Hearth.",
+    "@setupFlowFamilyBenefit": {
+        "description": "Setup flow: the Your family card's one-line benefit"
+    },
+    "setupFlowFamilyIncluded1": "A parent PIN, so kids can't change Hearth",
+    "@setupFlowFamilyIncluded1": {
+        "description": "Setup flow: Your family card, first thing it includes"
+    },
+    "setupFlowFamilyIncluded2": "The right profile in Netflix, Disney+, Apple TV, Max and Paramount+",
+    "@setupFlowFamilyIncluded2": {
+        "description": "Setup flow: Your family card, second thing it includes (Profile Pairing); app names stay as they are"
+    },
+    "setupFlowFamilyIncluded3": "Hearth kept on your kids' profiles",
+    "@setupFlowFamilyIncluded3": {
+        "description": "Setup flow: Your family card, third thing it includes (shown when the TV has kids' profiles)"
+    },
+    "setupFlowNeedsPin": "Four digits you choose",
+    "@setupFlowNeedsPin": {
+        "description": "Setup flow: what the Your family card needs: a four-digit PIN the parent picks"
+    },
+    "setupFlowNeedsTwoMinutes": "About 2 minutes",
+    "@setupFlowNeedsTwoMinutes": {
+        "description": "Setup flow: what a feature card needs: about two minutes"
+    },
+    "setupFlowPinTitle": "Choose a parent PIN",
+    "@setupFlowPinTitle": {
+        "description": "Setup flow: parent PIN step's title"
+    },
+    "setupFlowPinBody": "Kids need it to change Hearth. Pick four digits a child won't guess.",
+    "@setupFlowPinBody": {
+        "description": "Setup flow: parent PIN step"
+    },
+    "setupFlowPinChoose": "Choose PIN",
+    "@setupFlowPinChoose": {
+        "description": "Setup flow: parent PIN step's button that opens the PIN pad"
+    },
+    "setupFlowPinDone": "The parent PIN is set",
+    "@setupFlowPinDone": {
+        "description": "Setup flow: parent PIN step, once set"
+    },
+    "setupFlowPairingTitle": "Pick the right profile in streaming apps",
+    "@setupFlowPairingTitle": {
+        "description": "Setup flow: Profile Pairing step's title"
+    },
+    "setupFlowPairingBody": "Hearth chooses each person's profile in Netflix, Disney+, Apple TV, Max and Paramount+. It needs one more switch on the same Android screen: \"{name}\".",
+    "@setupFlowPairingBody": {
+        "description": "Setup flow: Profile Pairing step; {name} is the service's name as Android shows it (in English); app names stay as they are",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowPairingDone": "Profile Pairing is on",
+    "@setupFlowPairingDone": {
+        "description": "Setup flow: Profile Pairing step, once on"
+    },
+    "setupFlowPairingDoneBody": "Hearth matches names by itself: \"Alex\" goes with \"Alex Morgan\". Each app's profiles appear after its \"Who's watching?\" screen has shown once.",
+    "@setupFlowPairingDoneBody": {
+        "description": "Setup flow: Profile Pairing step, once on; \"Alex\" and \"Alex Morgan\" are example names (keep or adapt), \"Who's watching?\" is the apps' profile screen"
+    },
+    "setupFlowCheckPairings": "Check pairings",
+    "@setupFlowCheckPairings": {
+        "description": "Setup flow: Profile Pairing step, button that opens Settings' Profile Pairing page"
+    },
+    "setupFlowVoiceTitle": "One more step for Netflix",
+    "@setupFlowVoiceTitle": {
+        "description": "Setup flow: Hearth voice step's title (shown when Netflix is installed)"
+    },
+    "setupFlowVoiceBody": "Netflix reads its profile screen aloud, so Hearth listens through its own voice. On the next screen, under Preferred engine, choose \"{name}\", then OK. Other apps keep Google's voice.",
+    "@setupFlowVoiceBody": {
+        "description": "Setup flow: Hearth voice step; {name} is the voice engine's name as Android shows it (in English); \"Preferred engine\" is Android's label",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowVoiceDone": "Hearth voice is on",
+    "@setupFlowVoiceDone": {
+        "description": "Setup flow: Hearth voice step, once it's the preferred engine"
+    },
+    "setupFlowKidsTitle": "Keep Hearth on your kids' profiles",
+    "@setupFlowKidsTitle": {
+        "description": "Setup flow: kids' profiles step's title"
+    },
+    "setupFlowKidsBody": "Google TV removes apps it didn't install from kids' profiles each time they start. Hearth can protect itself and HearthTube there. Each child gets one Family Link \"app added\" notice; undo anytime in Settings.",
+    "@setupFlowKidsBody": {
+        "description": "Setup flow: kids' profiles step; Family Link and its \"app added\" notice are Google's"
+    },
+    "setupFlowKidsApprove": "The TV will ask \"Allow debugging?\". Tick Always allow, then Allow. You only do this once.",
+    "@setupFlowKidsApprove": {
+        "description": "Setup flow: kids' profiles step, what the TV will ask; \"Allow debugging?\", Always allow and Allow are Android's labels"
+    },
+    "setupFlowKidsAdd": "Add to their profiles",
+    "@setupFlowKidsAdd": {
+        "description": "Setup flow: kids' profiles step's main button"
+    },
+    "setupFlowKidsDone": "Hearth is on your kids' profiles",
+    "@setupFlowKidsDone": {
+        "description": "Setup flow: kids' profiles step, once Hearth was added"
+    },
+    "setupFlowKidsKeepDebugging": "Leave debugging on: Hearth needs it again for a new kids' profile, and to remove or uninstall itself.",
+    "@setupFlowKidsKeepDebugging": {
+        "description": "Setup flow: kids' profiles step, once done: debugging stays on"
+    },
+    "setupFlowDebugTitle": "Turn on debugging first",
+    "@setupFlowDebugTitle": {
+        "description": "Setup flow: kids' profiles step when the TV's debugging switch is off"
+    },
+    "setupFlowDebugBody": "Hearth needs the TV's debugging switch to set up the kids' profiles. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids' profile.",
+    "@setupFlowDebugBody": {
+        "description": "Setup flow: how to turn on debugging; \"Android TV OS build\", Developer options and USB debugging are Android's labels"
+    },
+    "setupFlowDebugOpen": "Open About",
+    "@setupFlowDebugOpen": {
+        "description": "Setup flow: button that opens Android's About screen"
     }
 }

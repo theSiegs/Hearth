@@ -32,6 +32,7 @@ enum SetupMode { full, rerun, lostFix, look }
 /// The flow's optional cards, in the order they show (docs/design/first-run-setup.md). [introducedIn] is the flow
 /// version that added each, so a later update can offer only what's new.
 enum SetupCard {
+  family(1),
   watching(1),
   home(1),
   tv(1),
@@ -105,6 +106,9 @@ class SetupFlowService extends ChangeNotifier {
   /// The look chosen in the flow (a [HomeLook]'s name): the starting look for new grown-up profiles.
   static const String lookKey = "device_setup_look";
 
+  /// How many kids' profiles Android listed when Hearth was last put on them from the flow: a new one asks again.
+  static const String _kidsProtectedKey = "device_setup_kids_profiles";
+
   /// Choices that aren't a card's.
   static const String homeButtonDecision = "homeButton";
   static const String homeAppDecision = "homeApp";
@@ -138,6 +142,10 @@ class SetupFlowService extends ChangeNotifier {
 
   /// The newest card version the owner has been shown.
   int get seenVersion => _prefs.getInt(_seenVersionKey) ?? 0;
+
+  int get kidsProtected => _prefs.getInt(_kidsProtectedKey) ?? 0;
+
+  Future<void> setKidsProtected(int count) => _prefs.setInt(_kidsProtectedKey, count);
 
   HomeLook? get look => HomeLook.byName(_prefs.getString(lookKey));
 

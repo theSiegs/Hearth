@@ -20,6 +20,17 @@ class FakeSetupChannel extends FLauncherChannel {
   bool install = false;
   bool adb = false;
   bool watchNext = false;
+  bool googleTv = false;
+  int kidsProfiles = 0;
+  bool netflix = false;
+  bool pairing = false;
+  bool voice = false;
+
+  /// Whether adding Hearth to the kids' profiles works (false: "Allow debugging?" wasn't approved).
+  bool profilesWork = true;
+  int profilesAdded = 0;
+  int aboutOpened = 0;
+  int voiceSettingsOpened = 0;
   bool hearthTube = false;
   int idleMinutes = 0;
 
@@ -63,7 +74,37 @@ class FakeSetupChannel extends FLauncherChannel {
   Future<bool> checkInstallPermission() async => install;
 
   @override
-  Future<Map<dynamic, dynamic>> getProfilePairingStatus() async => {"enabled": false, "voiceDefault": false};
+  Future<Map<dynamic, dynamic>> getProfilePairingStatus() async => {"enabled": pairing, "voiceDefault": voice};
+
+  @override
+  Future<Map<dynamic, dynamic>> getSetupFamilyState() async =>
+      {"googleTv": googleTv, "kidsProfiles": kidsProfiles, "netflix": netflix};
+
+  @override
+  Future<bool> openDeviceInfoSettings() async {
+    aboutOpened++;
+    return true;
+  }
+
+  @override
+  Future<bool> openTextToSpeechSettings() async {
+    voiceSettingsOpened++;
+    return true;
+  }
+
+  @override
+  Future<List<String>> addHearthToProfiles({required bool includeAdults}) async {
+    if (!profilesWork) throw PlatformException(code: "SELF_ADB");
+    profilesAdded++;
+    return ["added"];
+  }
+
+  @override
+  Future<List<Map<dynamic, dynamic>>> getHearthProfilesState() async => [
+        for (int i = 0; i < kidsProfiles; i++) ...[
+          {"userId": 10 + i, "packageName": "com.example.hearth", "installed": true, "protected": true, "supervised": true},
+        ],
+      ];
 
   @override
   Future<bool> isAdbEnabled() async => adb;
@@ -123,6 +164,7 @@ class FakeSetupChannel extends FLauncherChannel {
   Future<List<String>?> getSetupFixCommands(String fix) async => switch (fix) {
         "restricted_settings" => ["appops set com.example.hearth ACCESS_RESTRICTED_SETTINGS allow"],
         "home_button_fix" => ["settings put secure enabled_accessibility_services 'x'"],
+        "profile_pairing" => ["settings put secure enabled_accessibility_services 'y'"],
         "watch_next" => ["pm grant com.example.hearth android.permission.READ_TV_LISTINGS"],
         "notification_access" => ["cmd notification allow_listener com.example.hearth/x"],
         _ => null,
@@ -135,6 +177,7 @@ class FakeSetupChannel extends FLauncherChannel {
     if (fixes.contains("restricted_settings")) restricted = false;
     if (fixes.contains("home_button_fix")) homeButtonOn = true;
     if (fixes.contains("watch_next")) watchNext = true;
+    if (fixes.contains("profile_pairing")) pairing = true;
     if (fixes.contains("notification_access")) notifications = true;
     return [];
   }

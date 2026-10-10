@@ -2373,4 +2373,89 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get setupFlowWeatherDone => 'La météo s\'affiche dans la barre du haut';
+
+  @override
+  String get setupFlowFamilyBenefit => 'Les applis de streaming s\'ouvrent sur la bonne personne, et les enfants ne peuvent pas modifier Hearth.';
+
+  @override
+  String get setupFlowFamilyIncluded1 => 'Un code parental, pour que les enfants ne modifient pas Hearth';
+
+  @override
+  String get setupFlowFamilyIncluded2 => 'Le bon profil dans Netflix, Disney+, Apple TV, Max et Paramount+';
+
+  @override
+  String get setupFlowFamilyIncluded3 => 'Hearth conservé sur les profils de vos enfants';
+
+  @override
+  String get setupFlowNeedsPin => 'Quatre chiffres de votre choix';
+
+  @override
+  String get setupFlowNeedsTwoMinutes => 'Environ 2 minutes';
+
+  @override
+  String get setupFlowPinTitle => 'Choisissez un code parental';
+
+  @override
+  String get setupFlowPinBody => 'Les enfants en ont besoin pour modifier Hearth. Choisissez quatre chiffres qu\'un enfant ne devinera pas.';
+
+  @override
+  String get setupFlowPinChoose => 'Choisir le code';
+
+  @override
+  String get setupFlowPinDone => 'Le code parental est défini';
+
+  @override
+  String get setupFlowPairingTitle => 'Le bon profil dans les applis de streaming';
+
+  @override
+  String setupFlowPairingBody(String name) {
+    return 'Hearth choisit le profil de chacun dans Netflix, Disney+, Apple TV, Max et Paramount+. Il faut un autre interrupteur sur le même écran Android : « $name ».';
+  }
+
+  @override
+  String get setupFlowPairingDone => 'L\'association des profils est activée';
+
+  @override
+  String get setupFlowPairingDoneBody => 'Hearth associe les noms tout seul : « Alex » va avec « Alex Morgan ». Les profils de chaque appli apparaissent après le premier affichage de son écran « Qui regarde ? ».';
+
+  @override
+  String get setupFlowCheckPairings => 'Vérifier les associations';
+
+  @override
+  String get setupFlowVoiceTitle => 'Une étape de plus pour Netflix';
+
+  @override
+  String setupFlowVoiceBody(String name) {
+    return 'Netflix lit son écran de profils à voix haute, donc Hearth écoute avec sa propre voix. Sur l\'écran suivant, sous Moteur préféré, choisissez « $name », puis OK. Les autres applis gardent la voix de Google.';
+  }
+
+  @override
+  String get setupFlowVoiceDone => 'La voix de Hearth est activée';
+
+  @override
+  String get setupFlowKidsTitle => 'Garder Hearth sur les profils de vos enfants';
+
+  @override
+  String get setupFlowKidsBody => 'Google TV retire des profils enfants, à chaque démarrage, les applis qu\'il n\'a pas installées. Hearth peut s\'y protéger, ainsi que HearthTube. Chaque enfant reçoit une notification Family Link « appli ajoutée » ; annulable à tout moment dans les Paramètres.';
+
+  @override
+  String get setupFlowKidsApprove => 'La TV demandera « Autoriser le débogage ? ». Cochez Toujours autoriser, puis Autoriser. À faire une seule fois.';
+
+  @override
+  String get setupFlowKidsAdd => 'Ajouter à leurs profils';
+
+  @override
+  String get setupFlowKidsDone => 'Hearth est sur les profils de vos enfants';
+
+  @override
+  String get setupFlowKidsKeepDebugging => 'Laissez le débogage activé : Hearth en aura besoin pour un nouveau profil enfant, et pour se retirer ou se désinstaller.';
+
+  @override
+  String get setupFlowDebugTitle => 'Activez d\'abord le débogage';
+
+  @override
+  String get setupFlowDebugBody => 'Hearth a besoin de l\'interrupteur de débogage de la TV pour configurer les profils enfants. Sur l\'écran suivant, sélectionnez sept fois « Build d\'Android TV OS ». Puis dans Paramètres > Système > Options pour les développeurs, activez Débogage USB, et revenez. Laissez-le activé : Hearth en aura besoin pour un nouveau profil enfant.';
+
+  @override
+  String get setupFlowDebugOpen => 'Ouvrir À propos';
 }

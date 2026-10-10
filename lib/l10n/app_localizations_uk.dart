@@ -2387,4 +2387,89 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get setupFlowWeatherDone => 'Погода показується у верхній панелі';
+
+  @override
+  String get setupFlowFamilyBenefit => 'Стрімінгові застосунки відкриваються на потрібній людині, а діти не можуть змінювати Hearth.';
+
+  @override
+  String get setupFlowFamilyIncluded1 => 'Батьківський PIN, щоб діти не змінювали Hearth';
+
+  @override
+  String get setupFlowFamilyIncluded2 => 'Потрібний профіль у Netflix, Disney+, Apple TV, Max і Paramount+';
+
+  @override
+  String get setupFlowFamilyIncluded3 => 'Hearth залишається в профілях дітей';
+
+  @override
+  String get setupFlowNeedsPin => 'Чотири цифри на ваш вибір';
+
+  @override
+  String get setupFlowNeedsTwoMinutes => 'Близько 2 хвилин';
+
+  @override
+  String get setupFlowPinTitle => 'Виберіть батьківський PIN';
+
+  @override
+  String get setupFlowPinBody => 'Він потрібен, щоб діти не могли змінювати Hearth. Виберіть чотири цифри, які дитина не вгадає.';
+
+  @override
+  String get setupFlowPinChoose => 'Вибрати PIN';
+
+  @override
+  String get setupFlowPinDone => 'Батьківський PIN задано';
+
+  @override
+  String get setupFlowPairingTitle => 'Потрібний профіль у стрімінгових застосунках';
+
+  @override
+  String setupFlowPairingBody(String name) {
+    return 'Hearth вибирає профіль кожної людини в Netflix, Disney+, Apple TV, Max і Paramount+. Потрібен ще один перемикач на тому самому екрані Android: «$name».';
+  }
+
+  @override
+  String get setupFlowPairingDone => 'Зіставлення профілів увімкнено';
+
+  @override
+  String get setupFlowPairingDoneBody => 'Hearth сам зіставляє імена: «Alex» відповідає «Alex Morgan». Профілі застосунку з\'являться після того, як його екран «Хто дивиться?» покажеться один раз.';
+
+  @override
+  String get setupFlowCheckPairings => 'Перевірити зіставлення';
+
+  @override
+  String get setupFlowVoiceTitle => 'Ще один крок для Netflix';
+
+  @override
+  String setupFlowVoiceBody(String name) {
+    return 'Netflix зачитує екран профілів уголос, тож Hearth слухає через власний голос. На наступному екрані в розділі «Бажана система» виберіть «$name», потім OK. Інші застосунки зберігають голос Google.';
+  }
+
+  @override
+  String get setupFlowVoiceDone => 'Голос Hearth увімкнено';
+
+  @override
+  String get setupFlowKidsTitle => 'Зберегти Hearth у профілях дітей';
+
+  @override
+  String get setupFlowKidsBody => 'Google TV під час кожного запуску дитячого профілю видаляє застосунки, які встановив не він. Hearth може захистити там себе і HearthTube. Кожна дитина отримає одне сповіщення Family Link «Додано застосунок»; скасувати можна будь-коли в налаштуваннях.';
+
+  @override
+  String get setupFlowKidsApprove => 'Телевізор запитає «Дозволити налагодження?». Позначте «Завжди дозволяти», потім «Дозволити». Це потрібно лише один раз.';
+
+  @override
+  String get setupFlowKidsAdd => 'Додати до їхніх профілів';
+
+  @override
+  String get setupFlowKidsDone => 'Hearth додано до профілів дітей';
+
+  @override
+  String get setupFlowKidsKeepDebugging => 'Залиште налагодження увімкненим: Hearth знадобиться воно знову для нового дитячого профілю, а також щоб видалити себе.';
+
+  @override
+  String get setupFlowDebugTitle => 'Спочатку увімкніть налагодження';
+
+  @override
+  String get setupFlowDebugBody => 'Щоб налаштувати дитячі профілі, Hearth потрібен перемикач налагодження телевізора. На наступному екрані сім разів виберіть «Збірка Android TV OS». Потім у розділі «Налаштування» > «Система» > «Параметри розробника» увімкніть «Налагодження USB» і поверніться. Залиште його увімкненим: Hearth знадобиться воно для нового дитячого профілю.';
+
+  @override
+  String get setupFlowDebugOpen => 'Відкрити «Про пристрій»';
 }

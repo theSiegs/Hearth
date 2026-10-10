@@ -343,6 +343,15 @@ class FLauncherChannel {
   /// Whether the TV's debugging switch (Developer options) is on: Hearth's own fixes ([runSetupFixes]) need it.
   Future<bool> isAdbEnabled() async => await _methodChannel.invokeMethod<bool>("isAdbEnabled") ?? false;
 
+  /// What the setup flow's family card needs, read without Hearth's own adb: {googleTv, kidsProfiles (how many
+  /// Family Link-supervised profiles Android lists), netflix}.
+  Future<Map<dynamic, dynamic>> getSetupFamilyState() async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getSetupFamilyState") ?? {};
+
+  /// Opens Android's About screen, where tapping the build number turns on Developer options (and so debugging).
+  Future<bool> openDeviceInfoSettings() async =>
+      await _methodChannel.invokeMethod<bool>("openDeviceInfoSettings") ?? false;
+
   /// The shell commands one of the setup flow's named fixes runs, to show the parent before it does: "restricted_settings",
   /// "home_button_fix", "profile_pairing", "watch_next" or "notification_access". Null for another name, or when the
   /// fix can't be run safely as things are.

@@ -228,6 +228,141 @@ void main() {
     });
   });
 
+  group("your family", () {
+    /// Past the essentials (both on) to the family card, on Google TV.
+    Future<void> openAtFamily(WidgetTester tester) async {
+      channel.homeButtonOn = true;
+      channel.homeApp = true;
+      channel.googleTv = true;
+      await open(tester);
+      await press(tester, "Get started");
+    }
+
+    Future<void> typePin(WidgetTester tester) async {
+      for (final key in [
+        LogicalKeyboardKey.digit2,
+        LogicalKeyboardKey.digit4,
+        LogicalKeyboardKey.digit6,
+        LogicalKeyboardKey.digit8,
+      ]) {
+        await tester.sendKeyEvent(key);
+      }
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets("only on Google TV", (tester) async {
+      await openAtFamily(tester);
+      expect(find.text("Streaming apps open on the right person, and kids can't change Hearth."), findsOneWidget);
+      await press(tester, "Not now");
+      expect(flow.cardChoice(SetupCard.family), SetupChoice.notNow);
+      expect(find.text("Pick up where you left off, and see what's playing."), findsOneWidget);
+    });
+
+    testWidgets("a parent PIN, chosen twice on the row pad", (tester) async {
+      await openAtFamily(tester);
+      await press(tester, "Turn on");
+      expect(find.text("Choose a parent PIN"), findsOneWidget);
+      await press(tester, "Choose PIN");
+      await typePin(tester);
+      await typePin(tester);
+      expect(find.text("The parent PIN is set"), findsOneWidget);
+      expect(SettingsService(prefs).verifyParentPin("2468"), isTrue);
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(find.text("Pick the right profile in streaming apps"), findsOneWidget);
+    });
+
+    testWidgets("Profile Pairing: Android's switch, then how pairing works; Netflix also needs Hearth voice",
+        (tester) async {
+      channel.netflix = true;
+      await SettingsService(prefs).setParentPin("1357");
+      channel.onAccessibilityOpened = () => channel.pairing = true;
+      await openAtFamily(tester);
+      await press(tester, "Turn on");
+      // The PIN is set already: straight to pairing
+      expect(find.text("Pick the right profile in streaming apps"), findsOneWidget);
+      await press(tester, "Open Accessibility");
+      expect(channel.waitingFor, "profile_pairing");
+      await comeBack(tester);
+      expect(find.text("Profile Pairing is on"), findsOneWidget);
+      // It waits for Next: there's something to read
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(find.text("Profile Pairing is on"), findsOneWidget);
+      await press(tester, "Next");
+      expect(find.text("One more step for Netflix"), findsOneWidget);
+      channel.voice = true;
+      await press(tester, "Open Settings");
+      expect(channel.voiceSettingsOpened, 1);
+      await comeBack(tester);
+      expect(find.text("Hearth voice is on"), findsOneWidget);
+    });
+
+    testWidgets("Profile Pairing blocked by Android, with debugging on: Hearth lifts the block and turns it on",
+        (tester) async {
+      await SettingsService(prefs).setParentPin("1357");
+      channel.restricted = true;
+      channel.adb = true;
+      await openAtFamily(tester);
+      await press(tester, "Turn on");
+      await press(tester, "Open Accessibility");
+      await comeBack(tester);
+      expect(find.text("Android blocked this switch"), findsOneWidget);
+      await press(tester, "Let Hearth fix it");
+      await press(tester, "Run it");
+      expect(channel.fixesRun, [
+        ["restricted_settings", "profile_pairing"]
+      ]);
+      expect(find.text("Profile Pairing is on"), findsOneWidget);
+    });
+
+    testWidgets("kids' profiles: turn on debugging, then add Hearth to them after saying what it does",
+        (tester) async {
+      await SettingsService(prefs).setParentPin("1357");
+      channel.pairing = true;
+      channel.kidsProfiles = 2;
+      await openAtFamily(tester);
+      expect(find.text("Hearth kept on your kids' profiles"), findsOneWidget);
+      await press(tester, "Turn on");
+      expect(find.text("Turn on debugging first"), findsOneWidget);
+      await press(tester, "Open About");
+      expect(channel.aboutOpened, 1);
+      channel.adb = true;
+      await comeBack(tester);
+      expect(find.text("Keep Hearth on your kids' profiles"), findsOneWidget);
+
+      await press(tester, "Add to their profiles");
+      // Nothing happens before the parent has read what adding does
+      expect(channel.profilesAdded, 0);
+      expect(find.text("Add Hearth to other profiles"), findsOneWidget);
+      await press(tester, "Add");
+      expect(channel.profilesAdded, 1);
+      expect(find.text("Hearth is on your kids' profiles"), findsOneWidget);
+      expect(flow.kidsProtected, 2);
+    });
+
+    testWidgets("kids' profiles without the debugging approval: says what to do", (tester) async {
+      await SettingsService(prefs).setParentPin("1357");
+      channel.pairing = true;
+      channel.kidsProfiles = 1;
+      channel.adb = true;
+      channel.profilesWork = false;
+      await openAtFamily(tester);
+      await press(tester, "Turn on");
+      await press(tester, "Add to their profiles");
+      await press(tester, "Add");
+      expect(find.text("Hearth is on your kids' profiles"), findsNothing);
+      expect(flow.kidsProtected, 0);
+    });
+
+    testWidgets("all on already: the card says so, with Keep", (tester) async {
+      await SettingsService(prefs).setParentPin("1357");
+      channel.pairing = true;
+      await openAtFamily(tester);
+      expect(find.text("Keep"), findsOneWidget);
+    });
+  });
+
   group("the cards", () {
     /// Past the essentials (both on) to the first card.
     Future<void> openAtCards(WidgetTester tester) async {

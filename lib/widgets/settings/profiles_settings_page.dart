@@ -118,18 +118,7 @@ class ProfilesSettingsPage extends StatelessWidget {
         return;
       }
     }
-    final first = await showDialog<String>(
-      context: context,
-      builder: (_) => ParentPinDialog(title: l.parentPinNew, subtitle: l.parentPinNewSubtitle),
-    );
-    if (first == null || !context.mounted) return;
-    final second = await showDialog<String>(
-      context: context,
-      builder: (_) => ParentPinDialog(title: l.parentPinConfirm, verify: (pin) => pin == first),
-    );
-    if (second != null) {
-      await settings.setParentPin(first);
-    }
+    await chooseNewParentPin(context);
   }
 }
 

@@ -2363,4 +2363,89 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get setupFlowWeatherDone => '天气会显示在顶部栏中';
+
+  @override
+  String get setupFlowFamilyBenefit => '流媒体应用会以正确的人打开，孩子也无法更改 Hearth。';
+
+  @override
+  String get setupFlowFamilyIncluded1 => '家长 PIN 码，让孩子无法更改 Hearth';
+
+  @override
+  String get setupFlowFamilyIncluded2 => '在 Netflix、Disney+、Apple TV、Max 和 Paramount+ 中使用正确的个人资料';
+
+  @override
+  String get setupFlowFamilyIncluded3 => '在孩子的个人资料中保留 Hearth';
+
+  @override
+  String get setupFlowNeedsPin => '你选择的四位数字';
+
+  @override
+  String get setupFlowNeedsTwoMinutes => '大约 2 分钟';
+
+  @override
+  String get setupFlowPinTitle => '设置家长 PIN 码';
+
+  @override
+  String get setupFlowPinBody => '孩子需要它才能更改 Hearth。请选择孩子猜不到的四位数字。';
+
+  @override
+  String get setupFlowPinChoose => '设置 PIN 码';
+
+  @override
+  String get setupFlowPinDone => '家长 PIN 码已设置';
+
+  @override
+  String get setupFlowPairingTitle => '在流媒体应用中选择正确的个人资料';
+
+  @override
+  String setupFlowPairingBody(String name) {
+    return 'Hearth 会在 Netflix、Disney+、Apple TV、Max 和 Paramount+ 中为每个人选择个人资料。需要在同一个 Android 界面上再打开一个开关：“$name”。';
+  }
+
+  @override
+  String get setupFlowPairingDone => '个人资料配对已开启';
+
+  @override
+  String get setupFlowPairingDoneBody => 'Hearth 会自动匹配名字：“Alex”对应“Alex Morgan”。每个应用的“谁在观看？”界面出现过一次后，它的个人资料就会显示。';
+
+  @override
+  String get setupFlowCheckPairings => '查看配对';
+
+  @override
+  String get setupFlowVoiceTitle => 'Netflix 还需一步';
+
+  @override
+  String setupFlowVoiceBody(String name) {
+    return 'Netflix 会朗读它的个人资料界面，所以 Hearth 通过自己的语音来聆听。在下一个界面的“首选引擎”中选择“$name”，然后按“确定”。其他应用仍使用 Google 的语音。';
+  }
+
+  @override
+  String get setupFlowVoiceDone => 'Hearth 语音已开启';
+
+  @override
+  String get setupFlowKidsTitle => '在孩子的个人资料中保留 Hearth';
+
+  @override
+  String get setupFlowKidsBody => 'Google TV 每次启动孩子的个人资料时，都会移除不是它安装的应用。Hearth 可以在那里保护自己和 HearthTube。每个孩子会收到一条 Family Link“已添加应用”通知；可以随时在设置中撤消。';
+
+  @override
+  String get setupFlowKidsApprove => '电视会询问“允许调试吗？”。勾选“始终允许”，然后选择“允许”。只需操作一次。';
+
+  @override
+  String get setupFlowKidsAdd => '添加到他们的个人资料';
+
+  @override
+  String get setupFlowKidsDone => 'Hearth 已在孩子的个人资料中';
+
+  @override
+  String get setupFlowKidsKeepDebugging => '请保持调试开启：添加新的孩子个人资料，以及移除或卸载 Hearth 时还需要它。';
+
+  @override
+  String get setupFlowDebugTitle => '请先开启调试';
+
+  @override
+  String get setupFlowDebugBody => 'Hearth 需要电视的调试开关来设置孩子的个人资料。在下一个界面中选择“Android TV OS 版本”七次。然后在“设置”>“系统”>“开发者选项”中开启“USB 调试”，再回来。请保持开启：添加新的孩子个人资料时 Hearth 还需要它。';
+
+  @override
+  String get setupFlowDebugOpen => '打开“关于”';
 }

@@ -76,6 +76,25 @@ Future<bool> requireParentPin(BuildContext context) async {
   return pin != null;
 }
 
+/// Asks for a new parent PIN twice (the second time must match) and saves it: from Settings, and from the setup
+/// flow. Returns whether one was set; Back at either step leaves things as they were.
+Future<bool> chooseNewParentPin(BuildContext context) async {
+  final l = AppLocalizations.of(context)!;
+  final settings = context.read<SettingsService>();
+  final first = await showDialog<String>(
+    context: context,
+    builder: (_) => ParentPinDialog(title: l.parentPinNew, subtitle: l.parentPinNewSubtitle),
+  );
+  if (first == null || !context.mounted) return false;
+  final second = await showDialog<String>(
+    context: context,
+    builder: (_) => ParentPinDialog(title: l.parentPinConfirm, verify: (pin) => pin == first),
+  );
+  if (second == null) return false;
+  await settings.setParentPin(first);
+  return true;
+}
+
 /// Full-screen PIN entry in Google TV's style: the shuffled row pad (see [_RowPad]), number keys type directly.
 /// Pops with the entered PIN, or null on Back.
 class ParentPinDialog extends StatefulWidget {
