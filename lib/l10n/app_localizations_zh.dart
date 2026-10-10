@@ -2023,4 +2023,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get updateErrorWrongApp => '此下载不是此 Hearth 的更新';
+
+  @override
+  String get notifOpen => '打开';
+
+  @override
+  String get notifOpenHint => '确定：打开 · 左：关闭 · 右：更多';
 }

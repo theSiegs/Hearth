@@ -609,5 +609,7 @@
     "profileLockAfterMinutes": "{minutes}분 절전 후",
     "profileLockNeedsGoogleLock": "Google TV 자체의 프로필 잠금을 사용합니다. Google TV 설정 → 계정 및 로그인 → 내 계정 → 프로필 잠금에서 켜세요.",
     "aboutWallpaperPhoto": "배경화면 사진",
-    "updateErrorWrongApp": "이 다운로드는 이 Hearth의 업데이트가 아닙니다"
+    "updateErrorWrongApp": "이 다운로드는 이 Hearth의 업데이트가 아닙니다",
+    "notifOpen": "열기",
+    "notifOpenHint": "확인: 열기 · 왼쪽: 닫기 · 오른쪽: 더 보기"
 }

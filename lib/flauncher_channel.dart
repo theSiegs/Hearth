@@ -489,6 +489,15 @@ class FLauncherChannel {
     }
   }
 
+  /// Sends the notification's tap action, or button [action] (its index); whether it was sent.
+  Future<bool> openNotification(String key, {int action = -1}) async {
+    try {
+      return await _methodChannel.invokeMethod<bool>("openNotification", {"key": key, "action": action}) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> dismissAllNotifications() async {
     try {
       final bool success = await _methodChannel.invokeMethod("dismissAllNotifications");

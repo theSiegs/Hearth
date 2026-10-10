@@ -2023,4 +2023,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get updateErrorWrongApp => '이 다운로드는 이 Hearth의 업데이트가 아닙니다';
+
+  @override
+  String get notifOpen => '열기';
+
+  @override
+  String get notifOpenHint => '확인: 열기 · 왼쪽: 닫기 · 오른쪽: 더 보기';
 }

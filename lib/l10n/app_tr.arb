@@ -609,5 +609,7 @@
     "profileLockAfterMinutes": "{minutes} dk uykudan sonra",
     "profileLockNeedsGoogleLock": "Google TV'nin kendi profil kilidini kullanır: Google TV Ayarları → Hesaplar ve Oturum Açma → hesabınız → Profil kilidi'nden hesabınız için açın.",
     "aboutWallpaperPhoto": "DUVAR KAĞIDI FOTOĞRAFI",
-    "updateErrorWrongApp": "Bu indirme bu Hearth için bir güncelleme değil"
+    "updateErrorWrongApp": "Bu indirme bu Hearth için bir güncelleme değil",
+    "notifOpen": "Aç",
+    "notifOpenHint": "Tamam: Aç · Sol: Kapat · Sağ: Diğer"
 }

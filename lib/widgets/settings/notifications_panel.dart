@@ -211,7 +211,9 @@ class NotificationsPanel extends StatelessWidget {
                                         ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        localizations.dpadDismissHint,
+                                        notification.canOpen
+                                            ? localizations.notifOpenHint
+                                            : localizations.dpadDismissHint,
                                         style: const TextStyle(fontSize: 10, color: Colors.white38),
                                       ),
                                     ],
@@ -237,6 +239,11 @@ class NotificationsPanel extends StatelessWidget {
                                     ],
                                   ),
                                   onPressed: () {
+                                    if (notification.canOpen) {
+                                      Navigator.of(context).pop();
+                                      notificationsService.open(notification.key);
+                                      return;
+                                    }
                                     _showNotificationOptions(
                                       context,
                                       notification,
@@ -292,9 +299,30 @@ class NotificationsPanel extends StatelessWidget {
             ],
             const SizedBox(height: 12),
             const Divider(),
-            if (app != null)
+            if (notification.canOpen)
               FocusableSettingsTile(
                 autofocus: true,
+                leading: const Icon(Icons.open_in_new, color: Colors.blueAccent),
+                title: Text(localizations.notifOpen),
+                onPressed: () {
+                  Navigator.of(dialogCtx).pop();
+                  Navigator.of(context).pop();
+                  notificationsService.open(notification.key);
+                },
+              ),
+            for (final action in notification.actions)
+              FocusableSettingsTile(
+                autofocus: !notification.canOpen && action == notification.actions.first,
+                leading: const Icon(Icons.touch_app_outlined),
+                title: Text(action.title),
+                onPressed: () {
+                  Navigator.of(dialogCtx).pop();
+                  notificationsService.open(notification.key, action: action.index);
+                },
+              ),
+            if (app != null)
+              FocusableSettingsTile(
+                autofocus: !notification.canOpen && notification.actions.isEmpty,
                 leading: const Icon(Icons.launch, color: Colors.blueAccent),
                 title: Text(localizations.notifOpenApp(appName)),
                 onPressed: () {
@@ -305,7 +333,7 @@ class NotificationsPanel extends StatelessWidget {
               ),
             if (notification.isClearable)
               FocusableSettingsTile(
-                autofocus: app == null,
+                autofocus: app == null && !notification.canOpen && notification.actions.isEmpty,
                 leading: const Icon(Icons.close),
                 title: Text(localizations.dismiss),
                 onPressed: () {

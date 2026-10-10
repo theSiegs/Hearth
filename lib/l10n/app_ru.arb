@@ -609,5 +609,7 @@
     "profileLockAfterMinutes": "Через {minutes} мин сна",
     "profileLockNeedsGoogleLock": "Использует блокировку профиля Google TV: включите её для своего аккаунта в Настройках Google TV → Аккаунты и вход → ваш аккаунт → Блокировка профиля.",
     "aboutWallpaperPhoto": "ФОТО НА ФОНЕ",
-    "updateErrorWrongApp": "Эта загрузка не является обновлением этого Hearth"
+    "updateErrorWrongApp": "Эта загрузка не является обновлением этого Hearth",
+    "notifOpen": "Открыть",
+    "notifOpenHint": "OK: открыть · Влево: закрыть · Вправо: ещё"
 }

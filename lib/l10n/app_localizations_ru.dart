@@ -2047,4 +2047,10 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get updateErrorWrongApp => 'Эта загрузка не является обновлением этого Hearth';
+
+  @override
+  String get notifOpen => 'Открыть';
+
+  @override
+  String get notifOpenHint => 'OK: открыть · Влево: закрыть · Вправо: ещё';
 }

@@ -2023,4 +2023,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get updateErrorWrongApp => 'このダウンロードはこの Hearth の更新ではありません';
+
+  @override
+  String get notifOpen => '開く';
+
+  @override
+  String get notifOpenHint => 'OK: 開く · 左: 閉じる · 右: その他';
 }

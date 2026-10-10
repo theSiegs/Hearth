@@ -2031,4 +2031,10 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get updateErrorWrongApp => 'यह डाउनलोड इस Hearth का अपडेट नहीं है';
+
+  @override
+  String get notifOpen => 'खोलें';
+
+  @override
+  String get notifOpenHint => 'OK: खोलें · बाएँ: हटाएँ · दाएँ: और';
 }

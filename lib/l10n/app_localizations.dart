@@ -3574,6 +3574,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This download isn\'t an update for this Hearth'**
   String get updateErrorWrongApp;
+
+  /// Notifications panel: open a notification, as a tap on it would
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get notifOpen;
+
+  /// Notifications panel: remote keys under a notification that can be opened
+  ///
+  /// In en, this message translates to:
+  /// **'OK: Open · Left: Dismiss · Right: More'**
+  String get notifOpenHint;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

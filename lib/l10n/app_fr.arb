@@ -609,5 +609,7 @@
     "profileLockAfterMinutes": "Après {minutes} min de veille",
     "profileLockNeedsGoogleLock": "Utilise le verrouillage de profil de Google TV : activez-le pour votre compte dans Paramètres de Google TV → Comptes et connexion → votre compte → Verrouillage du profil.",
     "aboutWallpaperPhoto": "PHOTO DU FOND D'ÉCRAN",
-    "updateErrorWrongApp": "Ce téléchargement n'est pas une mise à jour de ce Hearth"
+    "updateErrorWrongApp": "Ce téléchargement n'est pas une mise à jour de ce Hearth",
+    "notifOpen": "Ouvrir",
+    "notifOpenHint": "OK : Ouvrir · Gauche : Ignorer · Droite : Plus"
 }
