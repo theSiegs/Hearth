@@ -104,8 +104,9 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   /// The TV's address, for `adb connect` on the blocked-switch screen.
   String? _ip;
 
-  /// The button each screen starts on.
-  final FocusNode _primary = FocusNode(debugLabel: "setup_primary");
+  /// The button each screen starts on. A new node for each screen: the old screen's button lets go of its node only
+  /// after the new one has taken it, which would leave the new button without it.
+  FocusNode _primary = FocusNode(debugLabel: "setup_primary");
   Timer? _poll;
   Timer? _autoNext;
 
@@ -179,9 +180,15 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     _focusPrimary();
   }
 
-  void _focusPrimary() => WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _primary.context != null) _primary.requestFocus();
-      });
+  void _focusPrimary() {
+    if (!mounted) return;
+    final old = _primary;
+    setState(() => _primary = FocusNode(debugLabel: "setup_primary"));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      old.dispose();
+      if (mounted && _primary.context != null) _primary.requestFocus();
+    });
+  }
 
   /// Whether a step's screen can be passed over going forward: what it asks for is on already.
   bool _alreadyDone(SetupScreen screen) => switch (screen) {
