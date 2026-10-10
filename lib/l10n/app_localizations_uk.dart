@@ -2571,4 +2571,26 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get weatherForecastNone => 'Прогноз ще не надійшов';
+
+  @override
+  String get youTubeLimitTitle => 'Час YouTube на день';
+
+  @override
+  String get youTubeLimitNone => 'Без обмежень';
+
+  @override
+  String youTubeLimitMinutes(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes хвилини',
+      many: '$minutes хвилин',
+      few: '$minutes хвилини',
+      one: '1 хвилина',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get youTubeLimitHint => 'Для цього профілю, у HearthTube. Якщо налаштовано Home Assistant, враховується й спільний ліміт з іншими пристроями.';
 }

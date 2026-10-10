@@ -775,5 +775,9 @@
     "weatherForecastShowHourly": "موافق: كل ساعة",
     "weatherForecastNow": "الآن",
     "weatherForecastToday": "اليوم",
-    "weatherForecastNone": "لم تصل التوقعات بعد"
+    "weatherForecastNone": "لم تصل التوقعات بعد",
+    "youTubeLimitTitle": "وقت YouTube في اليوم",
+    "youTubeLimitNone": "بلا حد",
+    "youTubeLimitMinutes": "{minutes, plural, =1{دقيقة واحدة} other{{minutes} دقيقة}}",
+    "youTubeLimitHint": "لهذا الملف الشخصي، في HearthTube. عند إعداد Home Assistant، يُحتسب أيضًا حد يشاركه مع أجهزتك الأخرى."
 }

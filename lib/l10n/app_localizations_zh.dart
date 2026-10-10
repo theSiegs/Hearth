@@ -2547,4 +2547,23 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get weatherForecastNone => '还没有天气预报';
+
+  @override
+  String get youTubeLimitTitle => '每天的 YouTube 时间';
+
+  @override
+  String get youTubeLimitNone => '不限';
+
+  @override
+  String youTubeLimitMinutes(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes 分钟',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get youTubeLimitHint => '适用于此个人资料的 HearthTube。设置 Home Assistant 后，与其他设备共享的限制也会生效。';
 }

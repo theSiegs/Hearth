@@ -4,6 +4,7 @@ import android.content.Context;
 import android.util.Log;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
@@ -33,6 +34,17 @@ final class HaApi {
     static boolean callService(Context context, String domain, String service, JSONObject data) {
         byte[] body = (data == null ? new JSONObject() : data).toString().getBytes(StandardCharsets.UTF_8);
         return request(context, "POST", "/api/services/" + domain + "/" + service, body) != null;
+    }
+
+    /** An entity's state object ({entity_id, state, attributes, ...}), or null when it can't be read. */
+    static JSONObject state(Context context, String entityId) {
+        byte[] raw = request(context, "GET", "/api/states/" + entityId, null);
+        if (raw == null) return null;
+        try {
+            return new JSONObject(new String(raw, StandardCharsets.UTF_8));
+        } catch (JSONException e) {
+            return null;
+        }
     }
 
     /** A still picture from a camera entity, or null. */

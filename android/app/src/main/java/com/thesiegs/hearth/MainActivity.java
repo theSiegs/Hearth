@@ -229,6 +229,16 @@ public class MainActivity extends FlutterActivity {
                 ProfileLock.setLockOnSleepMinutes(this, minutes != null ? minutes : ProfileLock.OFF);
                 result.success(null);
             }
+            // The active profile's daily YouTube limit in HearthTube, in minutes (0: none)
+            case "getYouTubeDailyMinutes" -> result.success(
+                    Allowance.dailyMinutes(this, LauncherAccessibilityService.getActiveProfileKey(this)));
+            case "setYouTubeDailyMinutes" -> {
+                Integer minutes = call.arguments();
+                Allowance.setDailyMinutes(this, LauncherAccessibilityService.getActiveProfileKey(this),
+                        minutes != null ? minutes : 0);
+                ProfileProvider.notifyChanged(this);
+                result.success(null);
+            }
             case "removeProfilePin" -> {
                 PinVault.remove(this, call.argument("packageName"), call.argument("appProfile"));
                 result.success(null);

@@ -1,7 +1,10 @@
 package com.thesiegs.hearth;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
+import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -96,5 +99,39 @@ final class ScreenTimeScreen {
      */
     boolean isScreenTimeText() {
         return reason != Reason.UNKNOWN || minutesLeft != null && minutesLeft == 0;
+    }
+
+    private static final Pattern CLOCK = Pattern.compile(
+            "(\\d{1,2})(?::(\\d{2}))?\\s*(?:([ap])\\.?m\\.?)?", Pattern.CASE_INSENSITIVE);
+
+    /**
+     * Google TV's unlock time ("7:00 AM", as the screen said it at seenAt) as the next such moment, in ISO 8601 with
+     * the TV's UTC offset ("2026-10-11T07:00:00-04:00"); null when it can't be read.
+     */
+    static String unlocksAtIso(String unlocksAt, long seenAt) {
+        if (unlocksAt == null || seenAt <= 0) return null;
+        Matcher m = CLOCK.matcher(unlocksAt.trim());
+        if (!m.matches()) return null;
+        int hour = Integer.parseInt(m.group(1));
+        int minute = m.group(2) != null ? Integer.parseInt(m.group(2)) : 0;
+        String half = m.group(3);
+        if (half != null) {
+            if (hour < 1 || hour > 12) return null;
+            hour = hour % 12 + ("p".equalsIgnoreCase(half) ? 12 : 0);
+        }
+        if (hour > 23 || minute > 59) return null;
+        Calendar at = Calendar.getInstance();
+        at.setTimeInMillis(seenAt);
+        at.set(Calendar.HOUR_OF_DAY, hour);
+        at.set(Calendar.MINUTE, minute);
+        at.set(Calendar.SECOND, 0);
+        at.set(Calendar.MILLISECOND, 0);
+        if (at.getTimeInMillis() <= seenAt) at.add(Calendar.DAY_OF_MONTH, 1);
+        long time = at.getTimeInMillis();
+        int offset = TimeZone.getDefault().getOffset(time) / 60_000;
+        String sign = offset < 0 ? "-" : "+";
+        offset = Math.abs(offset);
+        return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.ROOT).format(at.getTime())
+                + String.format(Locale.ROOT, "%s%02d:%02d", sign, offset / 60, offset % 60);
     }
 }

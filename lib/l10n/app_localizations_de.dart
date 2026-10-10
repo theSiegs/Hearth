@@ -2555,4 +2555,24 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get weatherForecastNone => 'Die Vorhersage ist noch nicht da';
+
+  @override
+  String get youTubeLimitTitle => 'YouTube-Zeit pro Tag';
+
+  @override
+  String get youTubeLimitNone => 'Kein Limit';
+
+  @override
+  String youTubeLimitMinutes(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes Minuten',
+      one: '1 Minute',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get youTubeLimitHint => 'Für dieses Profil, in HearthTube. Mit Home Assistant zählt auch ein Limit, das es mit deinen anderen Geräten teilt.';
 }

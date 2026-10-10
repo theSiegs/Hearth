@@ -3297,5 +3297,26 @@
     "weatherForecastNone": "The forecast isn't in yet",
     "@weatherForecastNone": {
         "description": "Weather forecast over the home: shown before the source has sent hours or days"
+    },
+    "youTubeLimitTitle": "YouTube time per day",
+    "@youTubeLimitTitle": {
+        "description": "Settings > Profiles: how long HearthTube may play a day for this profile"
+    },
+    "youTubeLimitNone": "No limit",
+    "@youTubeLimitNone": {
+        "description": "YouTube time per day: no limit set"
+    },
+    "youTubeLimitMinutes": "{minutes, plural, =1{1 minute} other{{minutes} minutes}}",
+    "@youTubeLimitMinutes": {
+        "description": "YouTube time per day: a limit in minutes",
+        "placeholders": {
+            "minutes": {
+                "type": "int"
+            }
+        }
+    },
+    "youTubeLimitHint": "For this profile, in HearthTube. With Home Assistant set up, a limit it shares with your other devices counts too.",
+    "@youTubeLimitHint": {
+        "description": "YouTube time per day: what it applies to, under the choices"
     }
 }

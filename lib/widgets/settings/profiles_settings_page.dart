@@ -75,6 +75,8 @@ class ProfilesSettingsPage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right, color: Colors.white54),
             onPressed: () => Navigator.of(context).pushNamed(FamilyAppsPage.routeName),
           ),
+        // A kids profile's limit is the parent's to set (past the PIN); a grown-up may set their own
+        if (!locked) const _YouTubeLimitTile(),
         if (!locked)
           FocusableSettingsTile(
             leading: const Icon(Icons.lock_outline),
@@ -190,6 +192,78 @@ class _LockOnSleepTileState extends State<_LockOnSleepTile> {
     return FocusableSettingsTile(
       leading: const Icon(Icons.bedtime_outlined),
       title: Text(l.profileLockOnSleep, style: Theme.of(context).textTheme.bodyMedium),
+      trailing: Text(_label(l, _minutes), style: Theme.of(context).textTheme.bodySmall),
+      onPressed: _choose,
+    );
+  }
+}
+
+/// How long HearthTube may play a day for this profile. Hearth counts it on its own; with Home Assistant set up, a
+/// limit shared with the family's other devices can count too (the stricter wins).
+class _YouTubeLimitTile extends StatefulWidget {
+  const _YouTubeLimitTile();
+
+  @override
+  State<_YouTubeLimitTile> createState() => _YouTubeLimitTileState();
+}
+
+class _YouTubeLimitTileState extends State<_YouTubeLimitTile> {
+  /// 0 is no limit.
+  static const List<int> _options = [0, 15, 30, 45, 60, 90, 120, 180];
+  late final FLauncherChannel? _channel = context.read<FLauncherChannel?>();
+  int _minutes = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _channel?.getYouTubeDailyMinutes().then((m) {
+      if (mounted) setState(() => _minutes = m);
+    }).catchError((_) {});
+  }
+
+  static String _label(AppLocalizations l, int minutes) =>
+      minutes <= 0 ? l.youTubeLimitNone : l.youTubeLimitMinutes(minutes);
+
+  Future<void> _choose() async {
+    final l = AppLocalizations.of(context)!;
+    final int? picked = await showDialog<int>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(l.youTubeLimitTitle),
+        children: [
+          for (final option in _options)
+            SimpleDialogOption(
+              child: TextButton(
+                autofocus: option == _minutes,
+                onPressed: () => Navigator.of(context).pop(option),
+                child: Row(
+                  children: [
+                    Icon(option == _minutes ? Icons.radio_button_checked : Icons.radio_button_unchecked, size: 20),
+                    const SizedBox(width: 12),
+                    Flexible(child: Text(_label(l, option), style: Theme.of(context).textTheme.bodyMedium)),
+                  ],
+                ),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+            child: Text(l.youTubeLimitHint,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54)),
+          ),
+        ],
+      ),
+    );
+    if (picked == null) return;
+    await _channel?.setYouTubeDailyMinutes(picked);
+    if (mounted) setState(() => _minutes = picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    return FocusableSettingsTile(
+      leading: const Icon(Icons.timer_outlined),
+      title: Text(l.youTubeLimitTitle, style: Theme.of(context).textTheme.bodyMedium),
       trailing: Text(_label(l, _minutes), style: Theme.of(context).textTheme.bodySmall),
       onPressed: _choose,
     );

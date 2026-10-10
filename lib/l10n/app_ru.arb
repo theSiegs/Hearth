@@ -775,5 +775,9 @@
     "weatherForecastShowHourly": "OK: по часам",
     "weatherForecastNow": "Сейчас",
     "weatherForecastToday": "Сегодня",
-    "weatherForecastNone": "Прогноз ещё не получен"
+    "weatherForecastNone": "Прогноз ещё не получен",
+    "youTubeLimitTitle": "Время YouTube в день",
+    "youTubeLimitNone": "Без ограничений",
+    "youTubeLimitMinutes": "{minutes, plural, =1{1 минута} few{{minutes} минуты} many{{minutes} минут} other{{minutes} минуты}}",
+    "youTubeLimitHint": "Для этого профиля, в HearthTube. Если настроен Home Assistant, учитывается и общий лимит с другими устройствами."
 }

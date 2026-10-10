@@ -178,6 +178,12 @@ public class AgentService extends Service {
         return values;
     }
 
+    /** An app played this long in this profile's user (HearthTube reports its own): Hearth counts it today. */
+    static void relayPlaying(String packageName, long ms) {
+        AgentService service = sInstance;
+        if (service != null) service.send(json("type", "playing", "package", packageName, "ms", ms));
+    }
+
     /** Checks a PIN with Hearth (it stays there); null when Hearth doesn't answer within a few seconds. */
     static Bundle verifyPinWithHearth(String pin) {
         AgentService service = sInstance;
@@ -238,6 +244,10 @@ public class AgentService extends Service {
         mThread.start();
         mHandler = new Handler(mThread.getLooper());
         mRunning = true;
+        // How long apps play in this profile's user, for its usage today in Hearth (needs notification access here)
+        mPlaying = new PlayingClock(this, mHandler,
+                (pkg, ms, now) -> send(json("type", "playing", "package", pkg, "ms", ms)));
+        mHandler.post(mPlayingTick);
         mWatchNextObserver = new ContentObserver(mHandler) {
             @Override
             public void onChange(boolean selfChange) {
@@ -406,6 +416,16 @@ public class AgentService extends Service {
         send(json("type", "watchNext", "rows", rows));
     };
 
+    private PlayingClock mPlaying;
+    /** Starts counting once notification access is there, and hands over what's played so far. */
+    private final Runnable mPlayingTick = new Runnable() {
+        @Override
+        public void run() {
+            if (mPlaying.ensureStarted()) mPlaying.flush();
+            mHandler.postDelayed(this, PING_MS);
+        }
+    };
+
     private final Runnable mPing = new Runnable() {
         @Override
         public void run() {
@@ -508,6 +528,7 @@ public class AgentService extends Service {
     @Override
     public void onDestroy() {
         mRunning = false;
+        if (mPlaying != null) mHandler.post(mPlaying::stop);
         // Ends the socket thread's read, so it stops handling Hearth's messages and Hearth sees the agent go.
         Socket socket = mSocket;
         if (socket != null) {

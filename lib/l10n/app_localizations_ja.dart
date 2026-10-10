@@ -2547,4 +2547,23 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get weatherForecastNone => '予報はまだ届いていません';
+
+  @override
+  String get youTubeLimitTitle => '1日のYouTube時間';
+
+  @override
+  String get youTubeLimitNone => '制限なし';
+
+  @override
+  String youTubeLimitMinutes(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes分',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get youTubeLimitHint => 'このプロフィールのHearthTubeでの時間です。Home Assistantを設定している場合、ほかのデバイスと共有する制限も適用されます。';
 }

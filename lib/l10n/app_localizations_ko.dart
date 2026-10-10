@@ -2547,4 +2547,23 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get weatherForecastNone => '아직 예보가 없습니다';
+
+  @override
+  String get youTubeLimitTitle => '하루 YouTube 시간';
+
+  @override
+  String get youTubeLimitNone => '제한 없음';
+
+  @override
+  String youTubeLimitMinutes(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes분',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get youTubeLimitHint => '이 프로필의 HearthTube 시간입니다. Home Assistant를 설정하면 다른 기기와 공유하는 제한도 적용됩니다.';
 }
