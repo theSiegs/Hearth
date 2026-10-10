@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Continue Watching per profile, from Hearth's own history of what each profile plays: its own entries, shows from apps that don't fill Google TV's list, and entries an app dropped when someone else used it.
