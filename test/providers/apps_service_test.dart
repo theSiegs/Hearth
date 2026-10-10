@@ -228,6 +228,31 @@ void main() {
       expect(appsInCategory[2].packageName, "app.3");
     });
 
+    test("an empty app list from Android is a failed read: no app (or its place in a section) is dropped", () async {
+      final channel = mockChannelForAppsService();
+      final database = MockFLauncherDatabase();
+      final known = App(packageName: "app.1", name: "App 1", version: "1.0.0", hidden: false);
+
+      when(channel.getApplications()).thenAnswer((_) => Future.value([]));
+      when(database.getApplications()).thenAnswer((_) => Future.value([known]));
+      when(database.getCategories())
+          .thenAnswer((_) => Future.value([Category(id: 1, name: "Favorites", order: 0)]));
+      when(database.getAppsCategories()).thenAnswer(
+          (_) => Future.value([AppCategory(categoryId: 1, appPackageName: "app.1", order: 0)]));
+      when(database.getLauncherSpacers()).thenAnswer((_) => Future.value([]));
+      when(database.transaction(any)).thenAnswer((realInvocation) => realInvocation.positionalArguments[0]());
+      when(database.wasCreated).thenReturn(false);
+      when(database.persistApps(any)).thenAnswer((_) => Future.value());
+      when(database.deleteApps(any)).thenAnswer((_) => Future.value());
+
+      final appsService = AppsService(channel, database, await SharedPreferences.getInstance());
+      while (!appsService.initialized) {
+        await Future.delayed(const Duration(milliseconds: 10));
+      }
+
+      verifyNever(database.deleteApps(any));
+    });
+
     test("saveApplicationOrderInCategory updates local categoryOrders map",
         () async {
       final channel = mockChannelForAppsService();
