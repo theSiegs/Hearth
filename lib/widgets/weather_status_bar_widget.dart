@@ -1,5 +1,6 @@
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/models/weather_data.dart';
+import 'package:flauncher/providers/home_forecast.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/widgets/focusable_tap.dart';
@@ -68,9 +69,14 @@ class WeatherStatusBarWidget extends StatelessWidget {
 
             final theme = Theme.of(context);
 
+            // Focused, the forecast shows over the home; OK swaps the next hours and the next days. Without a
+            // forecast to show, OK opens Breezy Weather (when it's the source), as before.
+            final forecast = context.read<HomeForecast?>();
+            final hasForecast = weather.hourly.isNotEmpty || weather.forecasts.isNotEmpty;
             return FocusableTap(
               focusNode: focusNode,
-              onPressed: () => weatherService.openBreezyWeather(),
+              onFocusChange: (focused) => forecast?.setShowing(focused && hasForecast),
+              onPressed: () => forecast != null && hasForecast ? forecast.swap() : weatherService.openBreezyWeather(),
               splashShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               builder: (context, focused) => AnimatedContainer(
                 duration: const Duration(milliseconds: 150),

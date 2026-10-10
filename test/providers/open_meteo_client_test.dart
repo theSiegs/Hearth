@@ -32,6 +32,25 @@ void main() {
     expect(weather.warningText, "85% Rain tomorrow");
   });
 
+  test("carries the coming hours, in the feed's keys", () {
+    final json = OpenMeteoClient.toGadgetbridgeWeather({
+      ...forecast,
+      "hourly": {
+        "time": [1791640800, 1791644400],
+        "temperature_2m": [12.4, 11.6],
+        "weather_code": [61, 0],
+        "precipitation_probability": [70, 5],
+      },
+    }, "Chicago", now: DateTime(2026, 10, 4));
+    final weather = WeatherData.fromJson(json);
+    expect(weather.hourly.length, 2);
+    expect(weather.hourly.first.time, DateTime.fromMillisecondsSinceEpoch(1791640800 * 1000));
+    expect(weather.hourly.first.temp, 12);
+    expect(WeatherData.rainCodes, contains(weather.hourly.first.conditionCode));
+    expect(weather.hourly.first.precipProbability, 70);
+    expect(weather.hourly.last.conditionCode, 800);
+  });
+
   test("maps WMO codes onto the condition codes warnings look for", () {
     expect(WeatherData.rainCodes, contains(OpenMeteoClient.wmoToOwm(61)));
     expect(WeatherData.rainCodes, contains(OpenMeteoClient.wmoToOwm(81)));

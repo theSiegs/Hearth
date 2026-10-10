@@ -768,5 +768,12 @@
     "setupFlowKidsNotAll": "Hearth henüz her çocuk profilinde değil",
     "setupFlowLeaveAsIs": "Olduğu gibi bırak",
     "setupFlowSetUpMissing": "Eksik olanları ayarla",
-    "setupFlowChooseAgain": "Yeniden seç"
+    "setupFlowChooseAgain": "Yeniden seç",
+    "weatherForecastNextHours": "Önümüzdeki saatler",
+    "weatherForecastNextDays": "Önümüzdeki 5 gün",
+    "weatherForecastShowDays": "Tamam: önümüzdeki 5 gün",
+    "weatherForecastShowHours": "Tamam: önümüzdeki saatler",
+    "weatherForecastNow": "Şimdi",
+    "weatherForecastToday": "Bugün",
+    "weatherForecastNone": "Tahmin henüz gelmedi"
 }

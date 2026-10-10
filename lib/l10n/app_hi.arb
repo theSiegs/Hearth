@@ -768,5 +768,12 @@
     "setupFlowKidsNotAll": "Hearth अभी हर बच्चों की प्रोफ़ाइल पर नहीं है",
     "setupFlowLeaveAsIs": "जैसा है वैसा छोड़ें",
     "setupFlowSetUpMissing": "जो बाकी है उसे सेट करें",
-    "setupFlowChooseAgain": "फिर से चुनें"
+    "setupFlowChooseAgain": "फिर से चुनें",
+    "weatherForecastNextHours": "अगले घंटे",
+    "weatherForecastNextDays": "अगले 5 दिन",
+    "weatherForecastShowDays": "OK: अगले 5 दिन",
+    "weatherForecastShowHours": "OK: अगले घंटे",
+    "weatherForecastNow": "अभी",
+    "weatherForecastToday": "आज",
+    "weatherForecastNone": "पूर्वानुमान अभी नहीं आया"
 }

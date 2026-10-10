@@ -2536,4 +2536,25 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get setupFlowChooseAgain => 'Choisir à nouveau';
+
+  @override
+  String get weatherForecastNextHours => 'Prochaines heures';
+
+  @override
+  String get weatherForecastNextDays => '5 prochains jours';
+
+  @override
+  String get weatherForecastShowDays => 'OK : 5 prochains jours';
+
+  @override
+  String get weatherForecastShowHours => 'OK : prochaines heures';
+
+  @override
+  String get weatherForecastNow => 'Maintenant';
+
+  @override
+  String get weatherForecastToday => 'Aujourd\'hui';
+
+  @override
+  String get weatherForecastNone => 'Les prévisions ne sont pas encore arrivées';
 }

@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/providers/home_forecast.dart';
+import 'package:flauncher/widgets/weather_forecast_row.dart';
 import 'package:flauncher/widgets/profile_transition_overlay.dart';
 import 'dart:ui' as ui;
 
@@ -653,7 +655,9 @@ class _FLauncherState extends State<FLauncher> {
     final search = context.watch<HomeSearch?>();
     final bool showSearch = (search?.active ?? false) && _showingSearch;
     final bool showRecents = continueWatchingActive && _showingRecents && !showSearch;
-    _showDetailsScrim(showRecents || showSearch);
+    // The weather forecast, while the top bar's weather has focus: over whatever the spot showed
+    final bool showForecast = context.watch<HomeForecast?>()?.showing ?? false;
+    _showDetailsScrim(showRecents || showSearch || showForecast);
     _recentsAvailable = continueWatchingActive;
     final List<LauncherSection> belowDock =
         sections.where((s) => s != favorites && !(s is Category && s.applications.isEmpty)).toList();
@@ -679,7 +683,7 @@ class _FLauncherState extends State<FLauncher> {
                       focusNode: _recentsFocusNode,
                       onKeyEvent: _recentsKey,
                       child: _swapAnimation(
-                        visible: showRecents,
+                        visible: showRecents && !showForecast,
                         hiddenOffset: const Offset(0, 0.25),
                         child: const Padding(
                           padding: EdgeInsets.only(bottom: 24),
@@ -696,7 +700,7 @@ class _FLauncherState extends State<FLauncher> {
                       focusNode: _searchRowFocusNode,
                       onKeyEvent: _searchRowKey,
                       child: _swapAnimation(
-                        visible: showSearch,
+                        visible: showSearch && !showForecast,
                         hiddenOffset: const Offset(0, 0.25),
                         child: Padding(
                           padding: const EdgeInsets.only(bottom: 24),
@@ -707,6 +711,17 @@ class _FLauncherState extends State<FLauncher> {
                       ),
                     ),
                   ),
+                // The forecast (nothing in it takes focus: the weather keeps it)
+                ExcludeFocus(
+                  child: _swapAnimation(
+                    visible: showForecast,
+                    hiddenOffset: const Offset(0, 0.25),
+                    child: const Padding(
+                      padding: EdgeInsets.only(bottom: 32),
+                      child: WeatherForecastRow(key: Key("home_forecast")),
+                    ),
+                  ),
+                ),
                 ExcludeFocus(
                   excluding: showRecents || showSearch,
                   child: Focus(

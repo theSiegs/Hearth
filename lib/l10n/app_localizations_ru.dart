@@ -2550,4 +2550,25 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get setupFlowChooseAgain => 'Выбрать заново';
+
+  @override
+  String get weatherForecastNextHours => 'Ближайшие часы';
+
+  @override
+  String get weatherForecastNextDays => 'Ближайшие 5 дней';
+
+  @override
+  String get weatherForecastShowDays => 'OK: ближайшие 5 дней';
+
+  @override
+  String get weatherForecastShowHours => 'OK: ближайшие часы';
+
+  @override
+  String get weatherForecastNow => 'Сейчас';
+
+  @override
+  String get weatherForecastToday => 'Сегодня';
+
+  @override
+  String get weatherForecastNone => 'Прогноз ещё не получен';
 }

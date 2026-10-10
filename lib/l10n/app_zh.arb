@@ -768,5 +768,12 @@
     "setupFlowKidsNotAll": "Hearth 还没有在所有孩子的个人资料中",
     "setupFlowLeaveAsIs": "保持不变",
     "setupFlowSetUpMissing": "设置缺少的项目",
-    "setupFlowChooseAgain": "重新选择"
+    "setupFlowChooseAgain": "重新选择",
+    "weatherForecastNextHours": "未来几小时",
+    "weatherForecastNextDays": "未来 5 天",
+    "weatherForecastShowDays": "确定：未来 5 天",
+    "weatherForecastShowHours": "确定：未来几小时",
+    "weatherForecastNow": "现在",
+    "weatherForecastToday": "今天",
+    "weatherForecastNone": "还没有天气预报"
 }

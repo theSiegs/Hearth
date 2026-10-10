@@ -2526,4 +2526,25 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get setupFlowChooseAgain => '다시 선택';
+
+  @override
+  String get weatherForecastNextHours => '앞으로 몇 시간';
+
+  @override
+  String get weatherForecastNextDays => '앞으로 5일';
+
+  @override
+  String get weatherForecastShowDays => '확인: 앞으로 5일';
+
+  @override
+  String get weatherForecastShowHours => '확인: 앞으로 몇 시간';
+
+  @override
+  String get weatherForecastNow => '지금';
+
+  @override
+  String get weatherForecastToday => '오늘';
+
+  @override
+  String get weatherForecastNone => '아직 예보가 없습니다';
 }

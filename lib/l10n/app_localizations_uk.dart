@@ -2550,4 +2550,25 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get setupFlowChooseAgain => 'Вибрати знову';
+
+  @override
+  String get weatherForecastNextHours => 'Найближчі години';
+
+  @override
+  String get weatherForecastNextDays => 'Наступні 5 днів';
+
+  @override
+  String get weatherForecastShowDays => 'OK: наступні 5 днів';
+
+  @override
+  String get weatherForecastShowHours => 'OK: найближчі години';
+
+  @override
+  String get weatherForecastNow => 'Зараз';
+
+  @override
+  String get weatherForecastToday => 'Сьогодні';
+
+  @override
+  String get weatherForecastNone => 'Прогноз ще не надійшов';
 }

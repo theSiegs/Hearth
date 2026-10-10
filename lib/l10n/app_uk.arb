@@ -768,5 +768,12 @@
     "setupFlowKidsNotAll": "Hearth поки є не в усіх дитячих профілях",
     "setupFlowLeaveAsIs": "Залишити як є",
     "setupFlowSetUpMissing": "Налаштувати решту",
-    "setupFlowChooseAgain": "Вибрати знову"
+    "setupFlowChooseAgain": "Вибрати знову",
+    "weatherForecastNextHours": "Найближчі години",
+    "weatherForecastNextDays": "Наступні 5 днів",
+    "weatherForecastShowDays": "OK: наступні 5 днів",
+    "weatherForecastShowHours": "OK: найближчі години",
+    "weatherForecastNow": "Зараз",
+    "weatherForecastToday": "Сьогодні",
+    "weatherForecastNone": "Прогноз ще не надійшов"
 }

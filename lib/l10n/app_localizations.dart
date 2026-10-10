@@ -4528,6 +4528,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Choose again'**
   String get setupFlowChooseAgain;
+
+  /// Weather forecast over the home: heading for the coming hours
+  ///
+  /// In en, this message translates to:
+  /// **'Next hours'**
+  String get weatherForecastNextHours;
+
+  /// Weather forecast over the home: heading for the coming days
+  ///
+  /// In en, this message translates to:
+  /// **'Next 5 days'**
+  String get weatherForecastNextDays;
+
+  /// Weather forecast: what OK on the weather does while the hours show
+  ///
+  /// In en, this message translates to:
+  /// **'OK: next 5 days'**
+  String get weatherForecastShowDays;
+
+  /// Weather forecast: what OK on the weather does while the days show
+  ///
+  /// In en, this message translates to:
+  /// **'OK: next hours'**
+  String get weatherForecastShowHours;
+
+  /// Weather forecast: the current hour's tile
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get weatherForecastNow;
+
+  /// Weather forecast: today's tile among the days
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get weatherForecastToday;
+
+  /// Weather forecast over the home: shown before the source has sent hours or days
+  ///
+  /// In en, this message translates to:
+  /// **'The forecast isn\'t in yet'**
+  String get weatherForecastNone;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

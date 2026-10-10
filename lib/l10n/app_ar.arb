@@ -768,5 +768,12 @@
     "setupFlowKidsNotAll": "لم يُثبَّت Hearth بعد على كل ملفات الأطفال",
     "setupFlowLeaveAsIs": "اتركه كما هو",
     "setupFlowSetUpMissing": "إعداد ما ينقص",
-    "setupFlowChooseAgain": "اختر مرة أخرى"
+    "setupFlowChooseAgain": "اختر مرة أخرى",
+    "weatherForecastNextHours": "الساعات القادمة",
+    "weatherForecastNextDays": "الأيام الخمسة القادمة",
+    "weatherForecastShowDays": "موافق: الأيام الخمسة القادمة",
+    "weatherForecastShowHours": "موافق: الساعات القادمة",
+    "weatherForecastNow": "الآن",
+    "weatherForecastToday": "اليوم",
+    "weatherForecastNone": "لم تصل التوقعات بعد"
 }

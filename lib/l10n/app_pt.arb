@@ -768,5 +768,12 @@
     "setupFlowKidsNotAll": "O Hearth ainda não está em todos os perfis infantis",
     "setupFlowLeaveAsIs": "Deixar como está",
     "setupFlowSetUpMissing": "Configurar o que falta",
-    "setupFlowChooseAgain": "Escolher de novo"
+    "setupFlowChooseAgain": "Escolher de novo",
+    "weatherForecastNextHours": "Próximas horas",
+    "weatherForecastNextDays": "Próximos 5 dias",
+    "weatherForecastShowDays": "OK: próximos 5 dias",
+    "weatherForecastShowHours": "OK: próximas horas",
+    "weatherForecastNow": "Agora",
+    "weatherForecastToday": "Hoje",
+    "weatherForecastNone": "A previsão ainda não chegou"
 }

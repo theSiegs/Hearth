@@ -21,6 +21,7 @@ import 'dart:ui';
 import 'package:flauncher/database.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/providers/home_forecast.dart';
 import 'package:flauncher/providers/home_search.dart';
 import 'package:flauncher/providers/search_service.dart';
 import 'package:flauncher/providers/apps_service.dart';
@@ -134,6 +135,8 @@ Future<void> main() async {
           final settings = context.read<SettingsService>();
           return UpdateService(fLauncherChannel, includePrereleases: () => settings.updatesIncludePrereleases);
         }),
+        // The weather forecast over the home (the top bar's weather shows it)
+        ChangeNotifierProvider(create: (_) => HomeForecast()),
         // The home's search (top bar, results row, results grid)
         ChangeNotifierProvider(create: (context) {
           final apps = Provider.of<AppsService>(context, listen: false);
