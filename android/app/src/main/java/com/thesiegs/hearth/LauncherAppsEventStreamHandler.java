@@ -2,6 +2,7 @@ package com.thesiegs.hearth;
 
 import android.content.Context;
 import android.content.pm.LauncherApps;
+import android.os.Process;
 import android.os.UserHandle;
 import android.util.Log;
 
@@ -66,13 +67,24 @@ public class LauncherAppsEventStreamHandler implements EventChannel.StreamHandle
             _eventSink = eventSink;
         }
 
+        // Hearth lists this user's apps; a kids' profile shows the ones its own user has. A change in another
+        // profile's user (Family Link blocking or approving an app there) isn't an uninstall or a new app here: it
+        // only changes which apps that profile may open, so the rows are rebuilt and every layout stays as it was.
+        private boolean otherUser(UserHandle user) {
+            if (user == null || user.equals(Process.myUserHandle())) return false;
+            send(event("PACKAGES_SUSPENSION_CHANGED", null, null));
+            return true;
+        }
+
         @Override
         public void onPackageRemoved(String packageName, UserHandle user) {
+            if (otherUser(user)) return;
             send(event("PACKAGE_REMOVED", "packageName", packageName));
         }
 
         @Override
         public void onPackageAdded(String packageName, UserHandle user) {
+            if (otherUser(user)) return;
             Map<String, Serializable> application = _activity.getApplication(packageName);
 
             if (!application.isEmpty()) {
@@ -82,6 +94,7 @@ public class LauncherAppsEventStreamHandler implements EventChannel.StreamHandle
 
         @Override
         public void onPackageChanged(String packageName, UserHandle user) {
+            if (otherUser(user)) return;
             Map<String, Serializable> application = _activity.getApplication(packageName);
 
             if (!application.isEmpty()) {
@@ -91,6 +104,7 @@ public class LauncherAppsEventStreamHandler implements EventChannel.StreamHandle
 
         @Override
         public void onPackagesAvailable(String[] packageNames, UserHandle user, boolean replacing) {
+            if (otherUser(user)) return;
             List<Map<String, Serializable>> applications = new ArrayList<>(packageNames.length);
 
             for (String name : packageNames) {

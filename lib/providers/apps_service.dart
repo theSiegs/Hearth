@@ -376,9 +376,10 @@ class AppsService extends ChangeNotifier {
     final Set<String> knownPackageNames =
         appsFromDatabaseBefore.map((a) => a.packageName).toSet();
 
-    final List<String> uninstalledPackageNames = knownPackageNames
-        .where((pkg) => !appsFromSystemByPackageName.containsKey(pkg))
-        .toList();
+    // An empty list is a failed read, not every app uninstalled: dropping them all would lose every layout
+    final List<String> uninstalledPackageNames = appsFromSystemByPackageName.isEmpty
+        ? const []
+        : knownPackageNames.where((pkg) => !appsFromSystemByPackageName.containsKey(pkg)).toList();
     if (uninstalledPackageNames.isNotEmpty) {
       await _database.deleteApps(uninstalledPackageNames);
     }
