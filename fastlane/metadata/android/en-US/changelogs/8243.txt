@@ -1,0 +1,2 @@
+- Early development pre-release.
+- With HearthTube installed, kids profiles watch YouTube only in HearthTube; grown-ups start with YouTube hidden.
