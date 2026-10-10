@@ -406,9 +406,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get tvPowerTitle => 'TV et alimentation';
 
   @override
-  String get setupPermissionsTitle => 'Configuration et autorisations';
-
-  @override
   String get updatesTitle => 'Mises à jour';
 
   @override
@@ -1175,27 +1172,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String setupProgress(int done, int total) {
     return '$done sur $total terminés';
   }
-
-  @override
-  String get setupOptional => 'Facultatif';
-
-  @override
-  String get homeButtonFixOffTitle => 'Le Correctif du bouton Accueil est désactivé';
-
-  @override
-  String get homeButtonFixOffBody => 'Le service d\'accessibilité de Hearth s\'est arrêté, généralement après une mise à jour. Tant qu\'il n\'est pas réactivé, le bouton Accueil peut ouvrir Google TV au lieu de Hearth, et les changements de profil ne sont pas suivis.';
-
-  @override
-  String get homeButtonFixStuck => 'Android l\'indique toujours comme activé, mais il ne tourne pas. Désactivez puis réactivez Hearth dans les paramètres d\'accessibilité pour le redémarrer.';
-
-  @override
-  String get homeButtonFixRestricted => 'Si l\'interrupteur de Hearth y est grisé, Android le bloque car cette mise à jour a été installée depuis un téléchargement. Exécutez ceci depuis un ordinateur connecté à la TV, puis activez Hearth :';
-
-  @override
-  String get homeButtonFixDontRemind => 'Ne plus me le rappeler';
-
-  @override
-  String get homeButtonFixOpenSettings => 'Ouvrir les paramètres d\'accessibilité';
 
   @override
   String get remoteButtonsRemapButton => 'Réattribuer un bouton';
@@ -2042,4 +2018,522 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get tvPowerGoogleTvHomeNote => 'Hearth reste en retrait jusqu\'à ce que vous désactiviez ceci. Le bouton Accueil ouvre toujours Hearth.';
+
+  @override
+  String get setupFlowFinishLater => 'Terminer plus tard';
+
+  @override
+  String get setupFlowStripEssentials => 'L\'essentiel';
+
+  @override
+  String get setupFlowWelcomeTitle => 'Bienvenue dans Hearth';
+
+  @override
+  String get setupFlowWelcomeBody => 'Un écran d\'accueil pour toute la famille : vos applis, ce que vous regardiez, et le bon profil dans chaque appli de streaming.';
+
+  @override
+  String get setupFlowWelcomeTime => 'Environ 5 minutes. Tout peut être ignoré.';
+
+  @override
+  String get setupFlowGetStarted => 'Commencer';
+
+  @override
+  String get setupFlowSetUpLater => 'Configurer plus tard';
+
+  @override
+  String setupFlowLanguageLink(String language) {
+    return 'Langue : $language';
+  }
+
+  @override
+  String get setupFlowRestoreLink => 'Restaurer une sauvegarde';
+
+  @override
+  String get setupFlowHomeButtonTitle => 'Le bouton Accueil ouvre Hearth';
+
+  @override
+  String get setupFlowHomeButtonBody => 'Google TV garde son propre accueil sur le bouton Accueil. Un interrupteur dans les paramètres d\'Android corrige cela, et permet aussi à Hearth de :';
+
+  @override
+  String get setupFlowHomeButtonPoint1 => 'suivre les changements de profil et l\'heure du coucher des enfants';
+
+  @override
+  String get setupFlowHomeButtonPoint2 => 'afficher des fenêtres et éteindre la TV quand elle n\'est pas utilisée';
+
+  @override
+  String get setupFlowOnNextScreen => 'Sur l\'écran suivant :';
+
+  @override
+  String get setupFlowStepServices => 'Faites défiler jusqu\'à Services';
+
+  @override
+  String setupFlowStepSelect(String name) {
+    return 'Sélectionnez « $name »';
+  }
+
+  @override
+  String get setupFlowStepEnable => 'Activez Activer, puis OK';
+
+  @override
+  String get setupFlowComesBack => 'Hearth revient tout seul une fois activé. Si Google TV demande qui regarde, choisissez-vous.';
+
+  @override
+  String get setupFlowOpenAccessibility => 'Ouvrir Accessibilité';
+
+  @override
+  String get setupFlowHomeButtonDone => 'Le bouton Accueil ouvre maintenant Hearth';
+
+  @override
+  String get setupFlowNotOnYetTitle => 'Pas encore activé';
+
+  @override
+  String get setupFlowNotOnYetBody => 'Réessayez, ou passez et faites-le plus tard dans les Paramètres.';
+
+  @override
+  String get setupFlowStuckTitle => 'Activé mais pas en marche';
+
+  @override
+  String get setupFlowStuckBody => 'Android l\'indique comme activé, mais il ne tourne pas. Désactivez-le puis réactivez-le.';
+
+  @override
+  String get setupFlowSkipHomeButtonTitle => 'Ignorer le bouton Accueil ?';
+
+  @override
+  String get setupFlowSkipHomeButtonBody => 'Sans lui, le bouton Accueil ouvre Google TV, et Hearth ne peut pas savoir quand un profil enfant est utilisé.';
+
+  @override
+  String get setupFlowSkipAnyway => 'Ignorer quand même';
+
+  @override
+  String get setupFlowSkip => 'Ignorer';
+
+  @override
+  String get setupFlowNext => 'Suivant';
+
+  @override
+  String get setupFlowLostTitle => 'La mise à jour a désactivé le bouton Accueil';
+
+  @override
+  String get setupFlowLostBody => 'Android le désactive après certaines mises à jour. Réactivez-le en une étape.';
+
+  @override
+  String get setupFlowBlockedTitle => 'Android a bloqué cet interrupteur';
+
+  @override
+  String get setupFlowBlockedBody => 'Si l\'interrupteur était grisé, c\'est parce que Hearth a été installé depuis un fichier téléchargé. La TV n\'a aucun réglage pour l\'autoriser.';
+
+  @override
+  String get setupFlowBlockedComputer => 'Avec un ordinateur :';
+
+  @override
+  String get setupFlowBlockedComputerThen => 'Activez ensuite l\'interrupteur. Hearth le remarque tout seul.';
+
+  @override
+  String get setupFlowBlockedSelfFixBody => 'Le débogage est activé, Hearth peut donc régler cela lui-même. La TV demandera « Autoriser le débogage ? » : choisissez Toujours autoriser, et Hearth débloquera son interrupteur et l\'activera.';
+
+  @override
+  String get setupFlowSkipForNow => 'Ignorer pour l\'instant';
+
+  @override
+  String get setupFlowBlockedSkipLine => 'Les applis, la recherche et Reprendre la lecture fonctionnent toujours. Le bouton Accueil, les profils, les fenêtres et la mise en veille, non.';
+
+  @override
+  String get setupFlowLetHearthFix => 'Laisser Hearth corriger';
+
+  @override
+  String get setupFlowFixConfirmBody => 'Hearth va exécuter ceci sur la TV, via sa propre connexion de débogage :';
+
+  @override
+  String get setupFlowFixConfirmApproval => 'La première fois, la TV demande « Autoriser le débogage ? ». Choisissez Toujours autoriser. Cela ne change que les autorisations de Hearth.';
+
+  @override
+  String get setupFlowFixRun => 'Exécuter';
+
+  @override
+  String get setupFlowFixWaiting => 'En cours. Si la TV demande « Autoriser le débogage ? », choisissez Toujours autoriser.';
+
+  @override
+  String get setupFlowFixFailedTitle => 'Hearth n\'a pas pu le faire';
+
+  @override
+  String get setupFlowFixFailedBody => 'Hearth n\'a pas pu joindre le débogage de la TV. Si la TV a demandé « Autoriser le débogage ? », choisissez Toujours autoriser et réessayez. Le débogage doit rester activé dans les Options pour les développeurs.';
+
+  @override
+  String get setupFlowHomeAppTitle => 'Faites de Hearth votre appli d\'accueil';
+
+  @override
+  String get setupFlowHomeAppBody => 'Android va afficher une liste d\'applis d\'accueil. Choisissez Hearth. Cela évite que les profils enfants bloquent Hearth.';
+
+  @override
+  String get setupFlowChooseHearth => 'Choisir Hearth';
+
+  @override
+  String get setupFlowHomeAppDone => 'Hearth est votre appli d\'accueil';
+
+  @override
+  String get setupFlowNotChosenTitle => 'Pas encore choisie';
+
+  @override
+  String get setupFlowFinishTitle => 'Hearth est prêt';
+
+  @override
+  String setupFlowFinishBody(String where) {
+    return 'Tout ce que vous avez ignoré se trouve dans les Paramètres, et vous pouvez relancer ceci depuis $where.';
+  }
+
+  @override
+  String get setupFlowFinishOn => 'Activé';
+
+  @override
+  String get setupFlowFinishLaterHeading => 'Plus tard, dans les Paramètres';
+
+  @override
+  String get setupFlowFinishMore => 'Plus dans les Paramètres : boutons de la télécommande, sections, notifications et sauvegarde.';
+
+  @override
+  String get setupFlowGoHome => 'Aller à mon accueil';
+
+  @override
+  String get setupHearthTitle => 'Configurer Hearth';
+
+  @override
+  String get setupRunAgain => 'Relancer la configuration';
+
+  @override
+  String get setupCardFamily => 'Votre famille';
+
+  @override
+  String get setupCardWatching => 'Visionnage';
+
+  @override
+  String setupChipLeft(int count) {
+    return 'Terminer la configuration · reste : $count';
+  }
+
+  @override
+  String get setupChipFix => 'Le bouton Accueil est à réparer';
+
+  @override
+  String get setupChipHideTitle => 'Masquer ce rappel ?';
+
+  @override
+  String setupChipHideBody(String where) {
+    return 'Vous pouvez toujours lancer la configuration depuis $where.';
+  }
+
+  @override
+  String get setupChipHide => 'Masquer';
+
+  @override
+  String get setupFlowCardIncluded => 'Ce qui est inclus';
+
+  @override
+  String get setupFlowCardNeeds => 'Ce qu\'il faut';
+
+  @override
+  String get setupFlowCardSkipped => 'Ignoré';
+
+  @override
+  String get setupFlowChange => 'Modifier';
+
+  @override
+  String get setupFlowKeep => 'Conserver';
+
+  @override
+  String get setupFlowTurnOn => 'Activer';
+
+  @override
+  String get setupFlowNeedsQuestion => 'Une question d\'Android';
+
+  @override
+  String get setupFlowNeedsOneSwitch => 'Un interrupteur dans les paramètres d\'Android';
+
+  @override
+  String get setupFlowNeedsAboutAMinute => 'Environ une minute';
+
+  @override
+  String get setupFlowWatchingBenefit => 'Reprenez là où vous en étiez et voyez ce qui est en cours de lecture.';
+
+  @override
+  String get setupFlowWatchingIncluded1 => 'Reprendre la lecture sur l\'écran d\'accueil';
+
+  @override
+  String get setupFlowWatchingIncluded2 => 'Notifications et lecture en cours';
+
+  @override
+  String get setupFlowSearchWorks => 'La recherche fonctionne déjà : appuyez sur Rechercher sur l\'écran d\'accueil.';
+
+  @override
+  String get setupFlowContinueBody => 'Affichez sur l\'écran d\'accueil ce que vous regardiez dans vos applis. Android vous le demandera une fois ; choisissez Autoriser.';
+
+  @override
+  String get setupFlowContinueDone => 'Reprendre la lecture est activé';
+
+  @override
+  String get setupFlowContinueDeniedTitle => 'Android ne l\'a pas autorisé';
+
+  @override
+  String setupFlowContinueDeniedBody(String where) {
+    return 'Vous pourrez l\'activer plus tard dans $where.';
+  }
+
+  @override
+  String get setupFlowNotificationsTitle => 'Lecture en cours et notifications';
+
+  @override
+  String setupFlowNotificationsBody(String name) {
+    return 'Voyez vos notifications et ce qui est en cours de lecture. Sur l\'écran suivant, sélectionnez « $name » et autorisez-le.';
+  }
+
+  @override
+  String get setupFlowNotificationsDone => 'Les notifications sont activées';
+
+  @override
+  String get setupFlowTvTitle => 'Éteindre la TV quand personne ne regarde ?';
+
+  @override
+  String get setupFlowTvBody => 'Après ce délai sans appui sur la télécommande. La lecture de vidéo ou de musique compte comme regarder.';
+
+  @override
+  String get setupFlowTvNeedsHomeButton => 'Il faut l\'interrupteur du bouton Accueil des premières étapes : sans lui, Hearth ne sait pas quand la télécommande est utilisée.';
+
+  @override
+  String get setupFlowStartOnBoot => 'Lancer Hearth au démarrage de la TV';
+
+  @override
+  String get setupFlowScreensaver => 'Choisir les photos de l\'écran de veille';
+
+  @override
+  String get setupFlowUpdatesBenefit => 'Hearth se met à jour, ainsi que ses applis compagnons.';
+
+  @override
+  String get setupFlowUpdatesIncluded1 => 'Hearth se met à jour tout seul';
+
+  @override
+  String get setupFlowUpdatesIncluded2 => 'HearthTube, une appli YouTube conçue pour Hearth';
+
+  @override
+  String get setupFlowInstallTitle => 'Autoriser Hearth à installer les mises à jour';
+
+  @override
+  String get setupFlowInstallBody => 'Sur l\'écran suivant, trouvez Hearth, activez-le, puis appuyez sur Retour.';
+
+  @override
+  String get setupFlowInstallDone => 'Hearth peut installer les mises à jour';
+
+  @override
+  String get setupFlowTubeTitle => 'Installer HearthTube ?';
+
+  @override
+  String get setupFlowTubeBody => 'Une appli YouTube conçue pour Hearth : elle suit vos profils, le style d\'horloge et l\'heure du coucher des enfants.';
+
+  @override
+  String get setupFlowTubeInstalled => 'HearthTube est installé';
+
+  @override
+  String get setupCardHome => 'Votre accueil';
+
+  @override
+  String get setupFlowLookTitle => 'Choisissez un style';
+
+  @override
+  String setupFlowLookBody(String where) {
+    return 'Chaque style s\'affiche derrière cette carte quand vous passez dessus. Vous pourrez modifier chaque élément plus tard dans $where.';
+  }
+
+  @override
+  String get setupFlowLookOtherTitle => 'Choisissez un style pour votre accueil';
+
+  @override
+  String get setupFlowLookOtherBody => 'Chaque profil a son propre accueil. Choisissez l\'apparence du vôtre.';
+
+  @override
+  String get setupLookHearth => 'Hearth';
+
+  @override
+  String get setupLookPhoto => 'Photo du jour';
+
+  @override
+  String get setupLookCalmDark => 'Sombre et sobre';
+
+  @override
+  String get setupLookBold => 'Audacieux';
+
+  @override
+  String get setupFlowLookNow => 'Actuel';
+
+  @override
+  String get setupFlowLookUse => 'Utiliser ce style';
+
+  @override
+  String get setupFlowLookKeep => 'Garder l\'actuel';
+
+  @override
+  String get setupFlowLookCustomize => 'Personnaliser';
+
+  @override
+  String get setupFlowWeatherTitle => 'Afficher la météo ?';
+
+  @override
+  String get setupFlowWeatherBody => 'Choisissez votre ville. Seule sa position est envoyée, à Open-Meteo ; aucun compte.';
+
+  @override
+  String get setupFlowWeatherChoose => 'Choisir la ville';
+
+  @override
+  String get setupFlowWeatherDone => 'La météo s\'affiche dans la barre du haut';
+
+  @override
+  String get setupFlowFamilyBenefit => 'Les applis de streaming s\'ouvrent sur la bonne personne, et les enfants ne peuvent pas modifier Hearth.';
+
+  @override
+  String get setupFlowFamilyIncluded1 => 'Un code parental, pour que les enfants ne modifient pas Hearth';
+
+  @override
+  String get setupFlowFamilyIncluded2 => 'Le bon profil dans Netflix, Disney+, Apple TV, Max et Paramount+';
+
+  @override
+  String get setupFlowFamilyIncluded3 => 'Hearth conservé sur les profils de vos enfants';
+
+  @override
+  String get setupFlowNeedsPin => 'Quatre chiffres de votre choix';
+
+  @override
+  String get setupFlowNeedsTwoMinutes => 'Environ 2 minutes';
+
+  @override
+  String get setupFlowPinTitle => 'Choisissez un code parental';
+
+  @override
+  String get setupFlowPinBody => 'Les enfants en ont besoin pour modifier Hearth. Choisissez quatre chiffres qu\'un enfant ne devinera pas.';
+
+  @override
+  String get setupFlowPinChoose => 'Choisir le code';
+
+  @override
+  String get setupFlowPinDone => 'Le code parental est défini';
+
+  @override
+  String get setupFlowPairingTitle => 'Le bon profil dans les applis de streaming';
+
+  @override
+  String setupFlowPairingBody(String name) {
+    return 'Hearth choisit le profil de chacun dans Netflix, Disney+, Apple TV, Max et Paramount+. Il faut un autre interrupteur sur le même écran Android : « $name ».';
+  }
+
+  @override
+  String get setupFlowPairingDone => 'L\'association des profils est activée';
+
+  @override
+  String get setupFlowPairingDoneBody => 'Hearth associe les noms tout seul : « Alex » va avec « Alex Morgan ». Les profils de chaque appli apparaissent après le premier affichage de son écran « Qui regarde ? ».';
+
+  @override
+  String get setupFlowCheckPairings => 'Vérifier les associations';
+
+  @override
+  String get setupFlowVoiceTitle => 'Une étape de plus pour Netflix';
+
+  @override
+  String setupFlowVoiceBody(String name) {
+    return 'Netflix lit son écran de profils à voix haute, donc Hearth écoute avec sa propre voix. Sur l\'écran suivant, sous Moteur préféré, choisissez « $name », puis OK. Les autres applis gardent la voix de Google.';
+  }
+
+  @override
+  String get setupFlowVoiceDone => 'La voix de Hearth est activée';
+
+  @override
+  String get setupFlowKidsTitle => 'Garder Hearth sur les profils de vos enfants';
+
+  @override
+  String get setupFlowKidsBody => 'Google TV retire des profils enfants, à chaque démarrage, les applis qu\'il n\'a pas installées. Hearth peut s\'y protéger, ainsi que HearthTube. Chaque enfant reçoit une notification Family Link « appli ajoutée » ; annulable à tout moment dans les Paramètres.';
+
+  @override
+  String get setupFlowKidsApprove => 'La TV demandera « Autoriser le débogage ? ». Cochez Toujours autoriser, puis Autoriser. À faire une seule fois.';
+
+  @override
+  String get setupFlowKidsAdd => 'Ajouter à leurs profils';
+
+  @override
+  String get setupFlowKidsDone => 'Hearth est sur les profils de vos enfants';
+
+  @override
+  String get setupFlowKidsKeepDebugging => 'Laissez le débogage activé : Hearth en aura besoin pour un nouveau profil enfant, et pour se retirer ou se désinstaller.';
+
+  @override
+  String get setupFlowDebugTitle => 'Activez d\'abord le débogage';
+
+  @override
+  String get setupFlowDebugBody => 'Hearth a besoin de l\'interrupteur de débogage de la TV pour configurer les profils enfants. Sur l\'écran suivant, sélectionnez sept fois « Build d\'Android TV OS ». Puis dans Paramètres > Système > Options pour les développeurs, activez Débogage USB, et revenez. Laissez-le activé : Hearth en aura besoin pour un nouveau profil enfant.';
+
+  @override
+  String get setupFlowDebugOpen => 'Ouvrir À propos';
+
+  @override
+  String get setupCardSmartHome => 'Maison connectée';
+
+  @override
+  String get setupFlowHaBenefit => 'La sonnette et d\'autres alertes sur la TV, et votre tableau de bord Home Assistant à une touche.';
+
+  @override
+  String get setupFlowHaIncluded1 => 'La sonnette et d\'autres alertes par-dessus toute appli';
+
+  @override
+  String get setupFlowHaIncluded2 => 'Votre tableau de bord, à une touche';
+
+  @override
+  String get setupFlowHaIncluded3 => 'Ce qui passe, envoyé à Home Assistant';
+
+  @override
+  String get setupFlowNeedsPhone => 'Un téléphone sur le même Wi-Fi';
+
+  @override
+  String get setupFlowNeedsFewMinutes => 'Quelques minutes';
+
+  @override
+  String get setupFlowHaUse => 'J\'utilise Home Assistant';
+
+  @override
+  String get setupFlowHaAlertsTitle => 'Alertes Home Assistant';
+
+  @override
+  String setupFlowHaAlertsBody(String ip) {
+    return 'Dans Home Assistant, ajoutez « Notifications for Android TV / Fire TV » avec l\'adresse de cette TV : $ip. Puis envoyez un test.';
+  }
+
+  @override
+  String get setupFlowHaAlertsDone => 'Les alertes sont activées';
+
+  @override
+  String get setupFlowHaDashboardTitle => 'Votre tableau de bord sur la TV';
+
+  @override
+  String get setupFlowHaDashboardBody => 'Scannez avec votre téléphone, collez l\'adresse de Home Assistant et un jeton, puis Envoyer. Utilisez un utilisateur Home Assistant créé pour la TV, pas un administrateur.';
+
+  @override
+  String get setupFlowHaDashboardDone => 'Votre tableau de bord est configuré';
+
+  @override
+  String get setupFlowHaStatusTitle => 'Dire à Home Assistant ce qui passe';
+
+  @override
+  String get setupFlowHaStatusBody => 'La TV peut envoyer à Home Assistant ce qui est en lecture et le profil actif. Sur la même page du téléphone, ajoutez l\'ID d\'une automatisation webhook de Home Assistant.';
+
+  @override
+  String get setupFlowHaStatusNoWebhook => 'Le téléphone n\'a pas envoyé d\'ID de webhook. Remplissez la dernière case de la page.';
+
+  @override
+  String get setupFlowHaStatusDone => 'La TV dit à Home Assistant ce qui passe';
+
+  @override
+  String setupChipNewOne(String feature) {
+    return 'Nouveau dans Hearth : $feature';
+  }
+
+  @override
+  String setupChipNewMany(int count) {
+    return 'Nouveau dans Hearth · $count';
+  }
+
+  @override
+  String get setupFlowKidsNotAll => 'Hearth n\'est pas encore sur tous les profils enfants';
 }

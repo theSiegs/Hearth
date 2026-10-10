@@ -39,7 +39,7 @@ Search artwork and where-to-watch details come from TMDB. Builds without a key w
 through Wikidata only (no artwork or availability); to include one, pass
 `--dart-define=TMDB_API_KEY=<key>`. Never commit the key.
 
-**Install on a Google TV** with `adb install -r --user 0 <apk>`, then turn the services back on (Setup & permissions
+**Install on a Google TV** with `adb install -r --user 0 <apk>`, then turn the services back on (Set up Hearth
 shows what's off). Reinstalling or force-stopping Hearth switches its accessibility services off.
 
 ## Project layout

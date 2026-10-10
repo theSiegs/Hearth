@@ -339,11 +339,29 @@ public class MainActivity extends FlutterActivity {
             case "requestOverlayPermission" -> result.success(requestOverlayPermission());
             case "requestAccessibilityPermission" -> result.success(openAccessibilitySettings());
             case "getHomeButtonFixStatus" -> result.success(getHomeButtonFixStatus());
-            case "forgetHomeButtonFix" -> {
-                LauncherAccessibilityService.forgetHomeButtonFix(this);
+            case "getProfilePairingStatus" -> result.success(getProfilePairingStatus());
+            // First-run setup: whether self-adb can work, and the named fixes it may run (SetupFixes), shown to the
+            // parent before they run. Off the main thread: adb I/O, and the first time a wait for "Allow debugging?".
+            case "isAdbEnabled" -> result.success(SetupFixes.isAdbEnabled(this));
+            case "getSetupFamilyState" -> result.success(getSetupFamilyState());
+            case "openDeviceInfoSettings" -> result.success(
+                    tryStartActivity(new Intent(Settings.ACTION_DEVICE_INFO_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
+            case "setSetupWaitingFor" -> {
+                SetupReturn.setWaitingFor(this, call.arguments());
                 result.success(null);
             }
-            case "getProfilePairingStatus" -> result.success(getProfilePairingStatus());
+            case "getSetupFixCommands" -> result.success(SetupFixes.commands(this, call.arguments()));
+            case "runSetupFixes" -> {
+                List<String> fixes = call.arguments();
+                sIoExecutor.execute(() -> {
+                    try {
+                        List<String> log = SetupFixes.run(this, fixes);
+                        runOnUiThread(() -> result.success(log));
+                    } catch (Exception e) {
+                        runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
+                    }
+                });
+            }
             case "openTextToSpeechSettings" -> result.success(openTextToSpeechSettings());
             case "checkWatchNextPermission" -> result.success(checkWatchNextPermission());
             case "requestWatchNextPermission" -> requestWatchNextPermission(result);
@@ -1486,6 +1504,19 @@ public class MainActivity extends FlutterActivity {
         super.onNewIntent(intent);
         handleSearchIntent(intent);
         handleProfilePinsIntent(intent);
+        handleResumeSetupIntent(intent);
+    }
+
+    /**
+     * A switch the setup flow sent the owner for came on, and its service brought Hearth back: Flutter makes sure the
+     * flow is showing (it checks the switch again as Hearth comes to the front). On a cold start the flow's own
+     * resume point does the same.
+     */
+    private void handleResumeSetupIntent(Intent intent) {
+        String what = intent != null ? intent.getStringExtra(SetupReturn.EXTRA_RESUME_SETUP) : null;
+        if (what == null) return;
+        intent.removeExtra(SetupReturn.EXTRA_RESUME_SETUP);
+        if (mMethodChannel != null) mMethodChannel.invokeMethod("resumeSetup", what);
     }
 
     /** Profile Pairing's "Change PIN": Flutter opens Settings on the app's page (now, or with takePendingProfilePins). */
@@ -1558,19 +1589,9 @@ public class MainActivity extends FlutterActivity {
         return false;
     }
 
-    /**
-     * Android 13+ blocks accessibility for apps installed from a file; apps can't read that app op, so this reports
-     * whether the install came from a file.
-     */
+    /** Android 13+ blocks accessibility for apps installed from a file: the app-op, or a guess where it can't be read. */
     private boolean mayHaveRestrictedSettings() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false;
-        try {
-            int source = getPackageManager().getInstallSourceInfo(getPackageName()).getPackageSource();
-            return source == PackageInstaller.PACKAGE_SOURCE_LOCAL_FILE
-                    || source == PackageInstaller.PACKAGE_SOURCE_DOWNLOADED_FILE;
-        } catch (Exception e) {
-            return false;
-        }
+        return SetupFixes.mayHaveRestrictedSettings(this);
     }
 
     private boolean openAccessibilitySettings() {
@@ -1588,6 +1609,25 @@ public class MainActivity extends FlutterActivity {
 
     /** {versionName, versionCode} of an installed app, or null when it isn't installed. */
     @SuppressWarnings("deprecation")
+    /**
+     * What the setup flow's family card needs to know, read without self-adb: whether this is Google TV (profiles,
+     * Profile Pairing), how many Family Link-supervised kids' profiles Android lists, and whether Netflix is
+     * installed (its profile screen needs Hearth voice).
+     */
+    private Map<String, Object> getSetupFamilyState() {
+        Map<String, Object> state = new HashMap<>();
+        state.put("googleTv", getPackageVersion(LauncherAccessibilityService.GOOGLE_TV_PACKAGE) != null);
+        int kids = 0;
+        try {
+            kids = supervisedKidUserIds().size();
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Couldn't list the kids' profiles", e);
+        }
+        state.put("kidsProfiles", kids);
+        state.put("netflix", getPackageVersion(ProfilePairing.NETFLIX) != null);
+        return state;
+    }
+
     private Map<String, Object> getPackageVersion(String packageName) {
         try {
             PackageInfo info = getPackageManager().getPackageInfo(packageName, 0);

@@ -184,10 +184,6 @@
     "@tvPowerTitle": {
         "description": "Settings page title, also its row in the page that opens it"
     },
-    "setupPermissionsTitle": "Setup & permissions",
-    "@setupPermissionsTitle": {
-        "description": "Settings page title, also its row in the page that opens it"
-    },
     "updatesTitle": "Updates",
     "@updatesTitle": {
         "description": "Settings page title, also its row in the page that opens it"
@@ -1313,34 +1309,6 @@
                 "type": "int"
             }
         }
-    },
-    "setupOptional": "Optional",
-    "@setupOptional": {
-        "description": "Setup & permissions page: heading above the optional steps"
-    },
-    "homeButtonFixOffTitle": "Home Button Fix is off",
-    "@homeButtonFixOffTitle": {
-        "description": "Warning dialog title when Hearth's accessibility service has stopped"
-    },
-    "homeButtonFixOffBody": "Hearth's accessibility service has stopped, usually after an update. Until it is back on, the Home button may open Google TV instead of Hearth, and profile switches aren't followed.",
-    "@homeButtonFixOffBody": {
-        "description": "Home Button Fix is off dialog: first paragraph"
-    },
-    "homeButtonFixStuck": "Android still lists it as on, but it isn't running. Turn Hearth off and on again in Accessibility settings to restart it.",
-    "@homeButtonFixStuck": {
-        "description": "Home Button Fix is off dialog: when Android shows the service as on but it isn't running"
-    },
-    "homeButtonFixRestricted": "If Hearth's switch there is greyed out, Android is blocking it because this update was installed from a download. Run this from a computer connected to the TV, then turn Hearth on:",
-    "@homeButtonFixRestricted": {
-        "description": "Home Button Fix is off dialog: when Android restricts the setting; an adb command follows"
-    },
-    "homeButtonFixDontRemind": "Don't remind me",
-    "@homeButtonFixDontRemind": {
-        "description": "Home Button Fix is off dialog: button that stops the warning"
-    },
-    "homeButtonFixOpenSettings": "Open Accessibility settings",
-    "@homeButtonFixOpenSettings": {
-        "description": "Home Button Fix is off dialog: button that opens Android's accessibility settings"
     },
     "remoteButtonsRemapButton": "Remap a button",
     "@remoteButtonsRemapButton": {
@@ -2580,5 +2548,726 @@
     "tvPowerGoogleTvHomeNote": "Hearth stays out of the way until you turn this off. The Home button still opens Hearth.",
     "@tvPowerGoogleTvHomeNote": {
         "description": "TV & power: explanation under the Use Google TV's home switch"
+    },
+    "setupFlowFinishLater": "Finish later",
+    "@setupFlowFinishLater": {
+        "description": "Setup flow: top-right button that closes the flow; the home-screen chip offers to carry on"
+    },
+    "setupFlowStripEssentials": "Essentials",
+    "@setupFlowStripEssentials": {
+        "description": "Setup flow: progress strip label for the first, essential steps (the Home button and the home app)"
+    },
+    "setupFlowWelcomeTitle": "Welcome to Hearth",
+    "@setupFlowWelcomeTitle": {
+        "description": "Setup flow: first screen's title"
+    },
+    "setupFlowWelcomeBody": "A home screen for the whole family: your apps, what you were watching, and the right profile in every streaming app.",
+    "@setupFlowWelcomeBody": {
+        "description": "Setup flow: first screen, what Hearth is in one line"
+    },
+    "setupFlowWelcomeTime": "Takes about 5 minutes. Skip anything.",
+    "@setupFlowWelcomeTime": {
+        "description": "Setup flow: first screen, small line at the bottom"
+    },
+    "setupFlowGetStarted": "Get started",
+    "@setupFlowGetStarted": {
+        "description": "Setup flow: first screen's main button"
+    },
+    "setupFlowSetUpLater": "Set up later",
+    "@setupFlowSetUpLater": {
+        "description": "Setup flow: first screen's button that closes the flow; the home-screen chip offers to carry on"
+    },
+    "setupFlowLanguageLink": "Language: {language}",
+    "@setupFlowLanguageLink": {
+        "description": "Setup flow: first screen, link that opens the language choice; {language} is the current choice (\"System Default\", \"English\"...)",
+        "placeholders": {
+            "language": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowRestoreLink": "Restore from a backup",
+    "@setupFlowRestoreLink": {
+        "description": "Setup flow: first screen, link that opens Backup & restore"
+    },
+    "setupFlowHomeButtonTitle": "Make the Home button open Hearth",
+    "@setupFlowHomeButtonTitle": {
+        "description": "Setup flow: the Home Button Fix step's title"
+    },
+    "setupFlowHomeButtonBody": "Google TV keeps its own home on the Home button. One switch in Android's settings fixes that, and also lets Hearth:",
+    "@setupFlowHomeButtonBody": {
+        "description": "Setup flow: the Home Button Fix step, before two bullet points of what else it gives"
+    },
+    "setupFlowHomeButtonPoint1": "follow profile switches and kids' bedtime",
+    "@setupFlowHomeButtonPoint1": {
+        "description": "Setup flow: the Home Button Fix step, first bullet of what else it gives"
+    },
+    "setupFlowHomeButtonPoint2": "show pop-ups and turn the TV off when idle",
+    "@setupFlowHomeButtonPoint2": {
+        "description": "Setup flow: the Home Button Fix step, second bullet of what else it gives"
+    },
+    "setupFlowOnNextScreen": "On the next screen:",
+    "@setupFlowOnNextScreen": {
+        "description": "Setup flow: heading over the numbered steps to follow on Android's settings screen"
+    },
+    "setupFlowStepServices": "Scroll down to Services",
+    "@setupFlowStepServices": {
+        "description": "Setup flow: first step on Android's Accessibility screen; Services is Android's own heading there"
+    },
+    "setupFlowStepSelect": "Select \"{name}\"",
+    "@setupFlowStepSelect": {
+        "description": "Setup flow: second step on Android's Accessibility screen; {name} is the service's name as Android shows it (in English)",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowStepEnable": "Turn on Enable, then OK",
+    "@setupFlowStepEnable": {
+        "description": "Setup flow: last step on Android's Accessibility screen; Enable and OK are Android's own labels"
+    },
+    "setupFlowComesBack": "Hearth comes back by itself when it's on. If Google TV asks who's watching, choose yourself.",
+    "@setupFlowComesBack": {
+        "description": "Setup flow: note under the Accessibility steps"
+    },
+    "setupFlowOpenAccessibility": "Open Accessibility",
+    "@setupFlowOpenAccessibility": {
+        "description": "Setup flow: button that opens Android's Accessibility settings"
+    },
+    "setupFlowHomeButtonDone": "The Home button now opens Hearth",
+    "@setupFlowHomeButtonDone": {
+        "description": "Setup flow: Home Button Fix is on; also a line in the final summary"
+    },
+    "setupFlowNotOnYetTitle": "It's not on yet",
+    "@setupFlowNotOnYetTitle": {
+        "description": "Setup flow: back from Android's settings, the switch still isn't on"
+    },
+    "setupFlowNotOnYetBody": "Try again, or skip and do it later in Settings.",
+    "@setupFlowNotOnYetBody": {
+        "description": "Setup flow: under \"It's not on yet\""
+    },
+    "setupFlowStuckTitle": "It's on but not running",
+    "@setupFlowStuckTitle": {
+        "description": "Setup flow: Android lists Home Button Fix as on, but the service isn't running"
+    },
+    "setupFlowStuckBody": "Android lists it as on, but it isn't running. Turn it off and on again.",
+    "@setupFlowStuckBody": {
+        "description": "Setup flow: under \"It's on but not running\""
+    },
+    "setupFlowSkipHomeButtonTitle": "Skip the Home button?",
+    "@setupFlowSkipHomeButtonTitle": {
+        "description": "Setup flow: asked once before skipping the Home Button Fix step"
+    },
+    "setupFlowSkipHomeButtonBody": "Without it, the Home button opens Google TV, and Hearth can't tell when a kids' profile is in use.",
+    "@setupFlowSkipHomeButtonBody": {
+        "description": "Setup flow: under \"Skip the Home button?\""
+    },
+    "setupFlowSkipAnyway": "Skip anyway",
+    "@setupFlowSkipAnyway": {
+        "description": "Setup flow: button under \"Skip the Home button?\""
+    },
+    "setupFlowSkip": "Skip",
+    "@setupFlowSkip": {
+        "description": "Setup flow: button that skips a step"
+    },
+    "setupFlowNext": "Next",
+    "@setupFlowNext": {
+        "description": "Setup flow: button that goes on to the next screen"
+    },
+    "setupFlowLostTitle": "The update turned the Home button off",
+    "@setupFlowLostTitle": {
+        "description": "Setup flow: shown after an update switched Home Button Fix off"
+    },
+    "setupFlowLostBody": "Android switches it off after some updates. Turn it back on in one step.",
+    "@setupFlowLostBody": {
+        "description": "Setup flow: under \"The update turned the Home button off\""
+    },
+    "setupFlowBlockedTitle": "Android blocked this switch",
+    "@setupFlowBlockedTitle": {
+        "description": "Setup flow: Android restricts Hearth's accessibility switch (installed from a downloaded file)"
+    },
+    "setupFlowBlockedBody": "If the switch was grey, it's because Hearth was installed from a downloaded file. The TV has no setting to allow it.",
+    "@setupFlowBlockedBody": {
+        "description": "Setup flow: under \"Android blocked this switch\""
+    },
+    "setupFlowBlockedComputer": "With a computer:",
+    "@setupFlowBlockedComputer": {
+        "description": "Setup flow: heading over the adb commands to run from a computer"
+    },
+    "setupFlowBlockedComputerThen": "Then turn the switch on. Hearth notices on its own.",
+    "@setupFlowBlockedComputerThen": {
+        "description": "Setup flow: under the adb commands"
+    },
+    "setupFlowBlockedSelfFixBody": "Debugging is on, so Hearth can fix it itself. The TV will ask \"Allow debugging?\": choose Always allow, and Hearth will unblock its switch and turn it on.",
+    "@setupFlowBlockedSelfFixBody": {
+        "description": "Setup flow: Android blocked the switch and the TV's debugging is on; explains Hearth's own fix. \"Allow debugging?\" and Always allow are Android's own labels"
+    },
+    "setupFlowSkipForNow": "Skip for now",
+    "@setupFlowSkipForNow": {
+        "description": "Setup flow: button that skips the blocked switch for now"
+    },
+    "setupFlowBlockedSkipLine": "Apps, search and Continue Watching still work. The Home button, profiles, pop-ups and the sleep timer don't.",
+    "@setupFlowBlockedSkipLine": {
+        "description": "Setup flow: under the blocked switch's buttons, what still works without it"
+    },
+    "setupFlowLetHearthFix": "Let Hearth fix it",
+    "@setupFlowLetHearthFix": {
+        "description": "Setup flow: button (and dialog title) for Hearth running the fix itself over the TV's debugging"
+    },
+    "setupFlowFixConfirmBody": "Hearth will run this on the TV, through its own debugging connection:",
+    "@setupFlowFixConfirmBody": {
+        "description": "Setup flow: before Hearth runs a fix, shows the exact commands below this line"
+    },
+    "setupFlowFixConfirmApproval": "The first time, the TV asks \"Allow debugging?\". Choose Always allow. It only changes Hearth's own permissions.",
+    "@setupFlowFixConfirmApproval": {
+        "description": "Setup flow: under the commands of a fix; \"Allow debugging?\" and Always allow are Android's own labels"
+    },
+    "setupFlowFixRun": "Run it",
+    "@setupFlowFixRun": {
+        "description": "Setup flow: button that runs the fix shown above it"
+    },
+    "setupFlowFixWaiting": "Working on it. If the TV asks \"Allow debugging?\", choose Always allow.",
+    "@setupFlowFixWaiting": {
+        "description": "Setup flow: while Hearth runs a fix; \"Allow debugging?\" and Always allow are Android's own labels"
+    },
+    "setupFlowFixFailedTitle": "Hearth couldn't do it",
+    "@setupFlowFixFailedTitle": {
+        "description": "Setup flow: Hearth's own fix didn't run"
+    },
+    "setupFlowFixFailedBody": "Hearth couldn't reach the TV's debugging. If the TV asked \"Allow debugging?\", choose Always allow and try again. Debugging must stay on in Developer options.",
+    "@setupFlowFixFailedBody": {
+        "description": "Setup flow: why Hearth's own fix didn't run; \"Allow debugging?\", Always allow and Developer options are Android's own labels"
+    },
+    "setupFlowHomeAppTitle": "Make Hearth your home app",
+    "@setupFlowHomeAppTitle": {
+        "description": "Setup flow: the default home app step's title"
+    },
+    "setupFlowHomeAppBody": "Android will show a list of home apps. Choose Hearth. It keeps kids' profiles from blocking Hearth.",
+    "@setupFlowHomeAppBody": {
+        "description": "Setup flow: the default home app step"
+    },
+    "setupFlowChooseHearth": "Choose Hearth",
+    "@setupFlowChooseHearth": {
+        "description": "Setup flow: button that opens Android's home app choice"
+    },
+    "setupFlowHomeAppDone": "Hearth is your home app",
+    "@setupFlowHomeAppDone": {
+        "description": "Setup flow: Hearth is the default home app; also a line in the final summary"
+    },
+    "setupFlowNotChosenTitle": "Not chosen yet",
+    "@setupFlowNotChosenTitle": {
+        "description": "Setup flow: back from Android's home app choice, Hearth isn't the home app"
+    },
+    "setupFlowFinishTitle": "Hearth is ready",
+    "@setupFlowFinishTitle": {
+        "description": "Setup flow: last screen's title"
+    },
+    "setupFlowFinishBody": "Anything you skipped is in Settings, and you can run this again from {where}.",
+    "@setupFlowFinishBody": {
+        "description": "Setup flow: last screen; {where} is where the setup page is in Settings (\"Settings > System > Set up Hearth\")",
+        "placeholders": {
+            "where": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowFinishOn": "On",
+    "@setupFlowFinishOn": {
+        "description": "Setup flow: last screen, heading over what's on"
+    },
+    "setupFlowFinishLaterHeading": "Set up later, in Settings",
+    "@setupFlowFinishLaterHeading": {
+        "description": "Setup flow: last screen, heading over what was skipped"
+    },
+    "setupFlowFinishMore": "More in Settings: remote buttons, sections, notifications and backup.",
+    "@setupFlowFinishMore": {
+        "description": "Setup flow: last screen, what else Settings has"
+    },
+    "setupFlowGoHome": "Go to my home",
+    "@setupFlowGoHome": {
+        "description": "Setup flow: last screen's main button"
+    },
+    "setupHearthTitle": "Set up Hearth",
+    "@setupHearthTitle": {
+        "description": "Settings > System: the page that runs the setup flow again and lists what Hearth needs from Android"
+    },
+    "setupRunAgain": "Run setup again",
+    "@setupRunAgain": {
+        "description": "Set up Hearth page: first row, opens the setup flow"
+    },
+    "setupCardFamily": "Your family",
+    "@setupCardFamily": {
+        "description": "Setup: the group for the parent PIN, Profile Pairing and kids' profiles (a card in the setup flow, a heading on the Set up Hearth page)"
+    },
+    "setupCardWatching": "Watching",
+    "@setupCardWatching": {
+        "description": "Setup: the group for Continue Watching and notifications (a card in the setup flow, a heading on the Set up Hearth page)"
+    },
+    "setupChipLeft": "Finish setting up · {count} left",
+    "@setupChipLeft": {
+        "description": "Home screen top bar: chip that opens the setup flow; {count} is how many steps or cards are left (1 or more)",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "setupChipFix": "Home button needs a fix",
+    "@setupChipFix": {
+        "description": "Home screen top bar: chip shown when Home Button Fix is off (skipped, or switched off by an update)"
+    },
+    "setupChipHideTitle": "Hide this reminder?",
+    "@setupChipHideTitle": {
+        "description": "Home screen: asked when OK is held on the setup chip"
+    },
+    "setupChipHideBody": "You can still run setup from {where}.",
+    "@setupChipHideBody": {
+        "description": "Home screen: under \"Hide this reminder?\"; {where} is where the setup page is in Settings",
+        "placeholders": {
+            "where": {
+                "type": "String"
+            }
+        }
+    },
+    "setupChipHide": "Hide",
+    "@setupChipHide": {
+        "description": "Home screen: button that hides the setup chip for good"
+    },
+    "setupFlowCardIncluded": "What's included",
+    "@setupFlowCardIncluded": {
+        "description": "Setup flow: a feature card's heading over what the feature gives"
+    },
+    "setupFlowCardNeeds": "What it needs",
+    "@setupFlowCardNeeds": {
+        "description": "Setup flow: a feature card's heading over what turning it on takes (Android switches, time)"
+    },
+    "setupFlowCardSkipped": "Skipped",
+    "@setupFlowCardSkipped": {
+        "description": "Setup flow: status line on a feature card the owner chose Not now for earlier"
+    },
+    "setupFlowChange": "Change",
+    "@setupFlowChange": {
+        "description": "Setup flow: button on a feature card decided earlier, to choose again"
+    },
+    "setupFlowKeep": "Keep",
+    "@setupFlowKeep": {
+        "description": "Setup flow: button on a feature card decided earlier, to leave it as it is and go on"
+    },
+    "setupFlowTurnOn": "Turn on",
+    "@setupFlowTurnOn": {
+        "description": "Setup flow: main button of a feature card or step"
+    },
+    "setupFlowNeedsQuestion": "One question from Android",
+    "@setupFlowNeedsQuestion": {
+        "description": "Setup flow: what a feature card needs: Android asks one question (a permission dialog)"
+    },
+    "setupFlowNeedsOneSwitch": "One switch in Android's settings",
+    "@setupFlowNeedsOneSwitch": {
+        "description": "Setup flow: what a feature card needs: one switch to turn on in Android's settings"
+    },
+    "setupFlowNeedsAboutAMinute": "About a minute",
+    "@setupFlowNeedsAboutAMinute": {
+        "description": "Setup flow: what a feature card needs: about one minute of the owner's time"
+    },
+    "setupFlowWatchingBenefit": "Pick up where you left off, and see what's playing.",
+    "@setupFlowWatchingBenefit": {
+        "description": "Setup flow: the Watching card's one-line benefit"
+    },
+    "setupFlowWatchingIncluded1": "Continue Watching on the home screen",
+    "@setupFlowWatchingIncluded1": {
+        "description": "Setup flow: Watching card, first thing it includes"
+    },
+    "setupFlowWatchingIncluded2": "Notifications and what's playing",
+    "@setupFlowWatchingIncluded2": {
+        "description": "Setup flow: Watching card, second thing it includes"
+    },
+    "setupFlowSearchWorks": "Search already works: press Search on the home screen.",
+    "@setupFlowSearchWorks": {
+        "description": "Setup flow: info line on the Watching card; search needs no setup"
+    },
+    "setupFlowContinueBody": "Show what you were watching in your apps on the home screen. Android will ask once; choose Allow.",
+    "@setupFlowContinueBody": {
+        "description": "Setup flow: Continue Watching step; Android then shows its permission dialog"
+    },
+    "setupFlowContinueDone": "Continue Watching is on",
+    "@setupFlowContinueDone": {
+        "description": "Setup flow: Continue Watching step, after Android allowed it"
+    },
+    "setupFlowContinueDeniedTitle": "Android didn't allow it",
+    "@setupFlowContinueDeniedTitle": {
+        "description": "Setup flow: Continue Watching step, after Android's dialog was declined"
+    },
+    "setupFlowContinueDeniedBody": "You can turn it on later in {where}.",
+    "@setupFlowContinueDeniedBody": {
+        "description": "Setup flow: Continue Watching step, declined; {where} is where it is in Settings (\"Settings > Home screen > Continue Watching\")",
+        "placeholders": {
+            "where": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowNotificationsTitle": "What's playing and notifications",
+    "@setupFlowNotificationsTitle": {
+        "description": "Setup flow: notification access step's title"
+    },
+    "setupFlowNotificationsBody": "See your notifications and what's playing. On the next screen, select \"{name}\" and allow it.",
+    "@setupFlowNotificationsBody": {
+        "description": "Setup flow: notification access step; {name} is the service's name as Android shows it (in English)",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowNotificationsDone": "Notifications are on",
+    "@setupFlowNotificationsDone": {
+        "description": "Setup flow: notification access step, once it's on"
+    },
+    "setupFlowTvTitle": "Turn the TV off when nobody's watching?",
+    "@setupFlowTvTitle": {
+        "description": "Setup flow: TV & power screen's question (sleep when idle)"
+    },
+    "setupFlowTvBody": "After this long with no remote presses. Playing video or music counts as watching.",
+    "@setupFlowTvBody": {
+        "description": "Setup flow: TV & power screen, how sleep when idle works"
+    },
+    "setupFlowTvNeedsHomeButton": "This needs the Home button switch from the first steps: without it Hearth can't tell when the remote is used.",
+    "@setupFlowTvNeedsHomeButton": {
+        "description": "Setup flow: TV & power screen, shown when Home Button Fix is off (the sleep choices are greyed out)"
+    },
+    "setupFlowStartOnBoot": "Start Hearth when the TV starts",
+    "@setupFlowStartOnBoot": {
+        "description": "Setup flow: TV & power screen, switch that starts Hearth after the TV restarts"
+    },
+    "setupFlowScreensaver": "Choose screensaver photos",
+    "@setupFlowScreensaver": {
+        "description": "Setup flow: TV & power screen, link to Google TV's screensaver settings"
+    },
+    "setupFlowUpdatesBenefit": "Hearth keeps itself and its companion apps up to date.",
+    "@setupFlowUpdatesBenefit": {
+        "description": "Setup flow: the Updates card's one-line benefit"
+    },
+    "setupFlowUpdatesIncluded1": "Hearth updates itself",
+    "@setupFlowUpdatesIncluded1": {
+        "description": "Setup flow: Updates card, first thing it includes"
+    },
+    "setupFlowUpdatesIncluded2": "HearthTube, a YouTube app made for Hearth",
+    "@setupFlowUpdatesIncluded2": {
+        "description": "Setup flow: Updates card, second thing it includes"
+    },
+    "setupFlowInstallTitle": "Allow Hearth to install updates",
+    "@setupFlowInstallTitle": {
+        "description": "Setup flow: Updates card, the step that opens Android's Install unknown apps screen"
+    },
+    "setupFlowInstallBody": "On the next screen, find Hearth and turn it on, then press Back.",
+    "@setupFlowInstallBody": {
+        "description": "Setup flow: Updates card, what to do on Android's Install unknown apps screen"
+    },
+    "setupFlowInstallDone": "Hearth can install updates",
+    "@setupFlowInstallDone": {
+        "description": "Setup flow: Updates card, once Hearth may install apps"
+    },
+    "setupFlowTubeTitle": "Install HearthTube?",
+    "@setupFlowTubeTitle": {
+        "description": "Setup flow: Updates card, the step that offers HearthTube"
+    },
+    "setupFlowTubeBody": "A YouTube app made for Hearth: it follows your profiles, the clock style and kids' bedtime.",
+    "@setupFlowTubeBody": {
+        "description": "Setup flow: Updates card, what HearthTube is"
+    },
+    "setupFlowTubeInstalled": "HearthTube is installed",
+    "@setupFlowTubeInstalled": {
+        "description": "Setup flow: Updates card, once HearthTube is installed"
+    },
+    "setupCardHome": "Your home",
+    "@setupCardHome": {
+        "description": "Setup flow: the look card's name in the progress strip and on the last screen"
+    },
+    "setupFlowLookTitle": "Pick a look",
+    "@setupFlowLookTitle": {
+        "description": "Setup flow: the look screen's title"
+    },
+    "setupFlowLookBody": "Each one shows behind this card as you move to it. You can change any part later in {where}.",
+    "@setupFlowLookBody": {
+        "description": "Setup flow: the look screen; {where} is where the look settings are (\"Settings > Home screen > Look\")",
+        "placeholders": {
+            "where": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowLookOtherTitle": "Pick a look for your home",
+    "@setupFlowLookOtherTitle": {
+        "description": "Look screen shown on a grown-up's first visit to their own profile, after the setup flow ran"
+    },
+    "setupFlowLookOtherBody": "Each profile has its own home. Choose how yours looks.",
+    "@setupFlowLookOtherBody": {
+        "description": "Look screen on a grown-up's first visit to their own profile"
+    },
+    "setupLookHearth": "Hearth",
+    "@setupLookHearth": {
+        "description": "Look screen: Hearth's own look (purple, a purple-teal gradient); \"Hearth\" is the app's name"
+    },
+    "setupLookPhoto": "Photo of the day",
+    "@setupLookPhoto": {
+        "description": "Look screen: the look with Bing's photo of the day as the wallpaper"
+    },
+    "setupLookCalmDark": "Calm dark",
+    "@setupLookCalmDark": {
+        "description": "Look screen: the all-black, quiet look"
+    },
+    "setupLookBold": "Bold",
+    "@setupLookBold": {
+        "description": "Look screen: the bright pink look with glowing cards"
+    },
+    "setupFlowLookNow": "Now",
+    "@setupFlowLookNow": {
+        "description": "Look screen: note under the look the home has now"
+    },
+    "setupFlowLookUse": "Use this look",
+    "@setupFlowLookUse": {
+        "description": "Look screen: button that keeps the focused look"
+    },
+    "setupFlowLookKeep": "Keep current",
+    "@setupFlowLookKeep": {
+        "description": "Look screen: button that leaves the home as it was"
+    },
+    "setupFlowLookCustomize": "Customize",
+    "@setupFlowLookCustomize": {
+        "description": "Look screen: button that opens Settings' Look page"
+    },
+    "setupFlowWeatherTitle": "Show the weather?",
+    "@setupFlowWeatherTitle": {
+        "description": "Setup flow: weather step's title"
+    },
+    "setupFlowWeatherBody": "Choose your town. Only its location is sent, to Open-Meteo; no account.",
+    "@setupFlowWeatherBody": {
+        "description": "Setup flow: weather step; Open-Meteo is the weather service's name"
+    },
+    "setupFlowWeatherChoose": "Choose town",
+    "@setupFlowWeatherChoose": {
+        "description": "Setup flow: weather step's button that opens the town search"
+    },
+    "setupFlowWeatherDone": "The weather shows in the top bar",
+    "@setupFlowWeatherDone": {
+        "description": "Setup flow: weather step, once a town is chosen"
+    },
+    "setupFlowFamilyBenefit": "Streaming apps open on the right person, and kids can't change Hearth.",
+    "@setupFlowFamilyBenefit": {
+        "description": "Setup flow: the Your family card's one-line benefit"
+    },
+    "setupFlowFamilyIncluded1": "A parent PIN, so kids can't change Hearth",
+    "@setupFlowFamilyIncluded1": {
+        "description": "Setup flow: Your family card, first thing it includes"
+    },
+    "setupFlowFamilyIncluded2": "The right profile in Netflix, Disney+, Apple TV, Max and Paramount+",
+    "@setupFlowFamilyIncluded2": {
+        "description": "Setup flow: Your family card, second thing it includes (Profile Pairing); app names stay as they are"
+    },
+    "setupFlowFamilyIncluded3": "Hearth kept on your kids' profiles",
+    "@setupFlowFamilyIncluded3": {
+        "description": "Setup flow: Your family card, third thing it includes (shown when the TV has kids' profiles)"
+    },
+    "setupFlowNeedsPin": "Four digits you choose",
+    "@setupFlowNeedsPin": {
+        "description": "Setup flow: what the Your family card needs: a four-digit PIN the parent picks"
+    },
+    "setupFlowNeedsTwoMinutes": "About 2 minutes",
+    "@setupFlowNeedsTwoMinutes": {
+        "description": "Setup flow: what a feature card needs: about two minutes"
+    },
+    "setupFlowPinTitle": "Choose a parent PIN",
+    "@setupFlowPinTitle": {
+        "description": "Setup flow: parent PIN step's title"
+    },
+    "setupFlowPinBody": "Kids need it to change Hearth. Pick four digits a child won't guess.",
+    "@setupFlowPinBody": {
+        "description": "Setup flow: parent PIN step"
+    },
+    "setupFlowPinChoose": "Choose PIN",
+    "@setupFlowPinChoose": {
+        "description": "Setup flow: parent PIN step's button that opens the PIN pad"
+    },
+    "setupFlowPinDone": "The parent PIN is set",
+    "@setupFlowPinDone": {
+        "description": "Setup flow: parent PIN step, once set"
+    },
+    "setupFlowPairingTitle": "Pick the right profile in streaming apps",
+    "@setupFlowPairingTitle": {
+        "description": "Setup flow: Profile Pairing step's title"
+    },
+    "setupFlowPairingBody": "Hearth chooses each person's profile in Netflix, Disney+, Apple TV, Max and Paramount+. It needs one more switch on the same Android screen: \"{name}\".",
+    "@setupFlowPairingBody": {
+        "description": "Setup flow: Profile Pairing step; {name} is the service's name as Android shows it (in English); app names stay as they are",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowPairingDone": "Profile Pairing is on",
+    "@setupFlowPairingDone": {
+        "description": "Setup flow: Profile Pairing step, once on"
+    },
+    "setupFlowPairingDoneBody": "Hearth matches names by itself: \"Alex\" goes with \"Alex Morgan\". Each app's profiles appear after its \"Who's watching?\" screen has shown once.",
+    "@setupFlowPairingDoneBody": {
+        "description": "Setup flow: Profile Pairing step, once on; \"Alex\" and \"Alex Morgan\" are example names (keep or adapt), \"Who's watching?\" is the apps' profile screen"
+    },
+    "setupFlowCheckPairings": "Check pairings",
+    "@setupFlowCheckPairings": {
+        "description": "Setup flow: Profile Pairing step, button that opens Settings' Profile Pairing page"
+    },
+    "setupFlowVoiceTitle": "One more step for Netflix",
+    "@setupFlowVoiceTitle": {
+        "description": "Setup flow: Hearth voice step's title (shown when Netflix is installed)"
+    },
+    "setupFlowVoiceBody": "Netflix reads its profile screen aloud, so Hearth listens through its own voice. On the next screen, under Preferred engine, choose \"{name}\", then OK. Other apps keep Google's voice.",
+    "@setupFlowVoiceBody": {
+        "description": "Setup flow: Hearth voice step; {name} is the voice engine's name as Android shows it (in English); \"Preferred engine\" is Android's label",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowVoiceDone": "Hearth voice is on",
+    "@setupFlowVoiceDone": {
+        "description": "Setup flow: Hearth voice step, once it's the preferred engine"
+    },
+    "setupFlowKidsTitle": "Keep Hearth on your kids' profiles",
+    "@setupFlowKidsTitle": {
+        "description": "Setup flow: kids' profiles step's title"
+    },
+    "setupFlowKidsBody": "Google TV removes apps it didn't install from kids' profiles each time they start. Hearth can protect itself and HearthTube there. Each child gets one Family Link \"app added\" notice; undo anytime in Settings.",
+    "@setupFlowKidsBody": {
+        "description": "Setup flow: kids' profiles step; Family Link and its \"app added\" notice are Google's"
+    },
+    "setupFlowKidsApprove": "The TV will ask \"Allow debugging?\". Tick Always allow, then Allow. You only do this once.",
+    "@setupFlowKidsApprove": {
+        "description": "Setup flow: kids' profiles step, what the TV will ask; \"Allow debugging?\", Always allow and Allow are Android's labels"
+    },
+    "setupFlowKidsAdd": "Add to their profiles",
+    "@setupFlowKidsAdd": {
+        "description": "Setup flow: kids' profiles step's main button"
+    },
+    "setupFlowKidsDone": "Hearth is on your kids' profiles",
+    "@setupFlowKidsDone": {
+        "description": "Setup flow: kids' profiles step, once Hearth was added"
+    },
+    "setupFlowKidsKeepDebugging": "Leave debugging on: Hearth needs it again for a new kids' profile, and to remove or uninstall itself.",
+    "@setupFlowKidsKeepDebugging": {
+        "description": "Setup flow: kids' profiles step, once done: debugging stays on"
+    },
+    "setupFlowDebugTitle": "Turn on debugging first",
+    "@setupFlowDebugTitle": {
+        "description": "Setup flow: kids' profiles step when the TV's debugging switch is off"
+    },
+    "setupFlowDebugBody": "Hearth needs the TV's debugging switch to set up the kids' profiles. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids' profile.",
+    "@setupFlowDebugBody": {
+        "description": "Setup flow: how to turn on debugging; \"Android TV OS build\", Developer options and USB debugging are Android's labels"
+    },
+    "setupFlowDebugOpen": "Open About",
+    "@setupFlowDebugOpen": {
+        "description": "Setup flow: button that opens Android's About screen"
+    },
+    "setupCardSmartHome": "Smart home",
+    "@setupCardSmartHome": {
+        "description": "Setup flow: the Home Assistant card's name"
+    },
+    "setupFlowHaBenefit": "Doorbell and other alerts on the TV, and your Home Assistant dashboard one press away.",
+    "@setupFlowHaBenefit": {
+        "description": "Setup flow: the Smart home card's one-line benefit"
+    },
+    "setupFlowHaIncluded1": "Doorbell and other alerts over any app",
+    "@setupFlowHaIncluded1": {
+        "description": "Setup flow: Smart home card, first thing it includes"
+    },
+    "setupFlowHaIncluded2": "Your dashboard, one press away",
+    "@setupFlowHaIncluded2": {
+        "description": "Setup flow: Smart home card, second thing it includes"
+    },
+    "setupFlowHaIncluded3": "What's on, sent to Home Assistant",
+    "@setupFlowHaIncluded3": {
+        "description": "Setup flow: Smart home card, third thing it includes (TV status reporting)"
+    },
+    "setupFlowNeedsPhone": "A phone on the same Wi-Fi",
+    "@setupFlowNeedsPhone": {
+        "description": "Setup flow: what the Smart home card needs: a phone on the home Wi-Fi"
+    },
+    "setupFlowNeedsFewMinutes": "A few minutes",
+    "@setupFlowNeedsFewMinutes": {
+        "description": "Setup flow: what a feature card needs: a few minutes"
+    },
+    "setupFlowHaUse": "I use Home Assistant",
+    "@setupFlowHaUse": {
+        "description": "Setup flow: Smart home card's main button"
+    },
+    "setupFlowHaAlertsTitle": "Home Assistant alerts",
+    "@setupFlowHaAlertsTitle": {
+        "description": "Setup flow: Home Assistant pop-ups step's title"
+    },
+    "setupFlowHaAlertsBody": "In Home Assistant, add \"Notifications for Android TV / Fire TV\" with this TV's address: {ip}. Then send a test.",
+    "@setupFlowHaAlertsBody": {
+        "description": "Setup flow: Home Assistant pop-ups step; the integration's name stays in English as Home Assistant shows it; {ip} is this TV's address",
+        "placeholders": {
+            "ip": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowHaAlertsDone": "Alerts are on",
+    "@setupFlowHaAlertsDone": {
+        "description": "Setup flow: Home Assistant pop-ups step, once on"
+    },
+    "setupFlowHaDashboardTitle": "Your dashboard on the TV",
+    "@setupFlowHaDashboardTitle": {
+        "description": "Setup flow: Home Assistant dashboard step's title"
+    },
+    "setupFlowHaDashboardBody": "Scan with your phone, paste your Home Assistant address and a token, then Send. Use a Home Assistant user made for the TV, not an admin.",
+    "@setupFlowHaDashboardBody": {
+        "description": "Setup flow: Home Assistant dashboard step"
+    },
+    "setupFlowHaDashboardDone": "Your dashboard is set up",
+    "@setupFlowHaDashboardDone": {
+        "description": "Setup flow: Home Assistant dashboard step, once the phone sent the sign-in"
+    },
+    "setupFlowHaStatusTitle": "Tell Home Assistant what's on",
+    "@setupFlowHaStatusTitle": {
+        "description": "Setup flow: Home Assistant TV status step's title"
+    },
+    "setupFlowHaStatusBody": "The TV can send what's playing and the active profile to Home Assistant. On the same phone page, add the ID of a webhook automation from Home Assistant.",
+    "@setupFlowHaStatusBody": {
+        "description": "Setup flow: Home Assistant TV status step"
+    },
+    "setupFlowHaStatusNoWebhook": "The phone didn't send a webhook ID. Fill in the last box on the page.",
+    "@setupFlowHaStatusNoWebhook": {
+        "description": "Setup flow: Home Assistant TV status step, when the phone sent no webhook ID"
+    },
+    "setupFlowHaStatusDone": "The TV tells Home Assistant what's on",
+    "@setupFlowHaStatusDone": {
+        "description": "Setup flow: Home Assistant TV status step, once set up"
+    },
+    "setupChipNewOne": "New in Hearth: {feature}",
+    "@setupChipNewOne": {
+        "description": "Home screen top bar: chip after an update added one setup card; {feature} is the card's name (\"Smart home\")",
+        "placeholders": {
+            "feature": {
+                "type": "String"
+            }
+        }
+    },
+    "setupChipNewMany": "New in Hearth · {count}",
+    "@setupChipNewMany": {
+        "description": "Home screen top bar: chip after an update added several setup cards; {count} is how many (2 or more)",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "setupFlowKidsNotAll": "Hearth isn't on every kids' profile yet",
+    "@setupFlowKidsNotAll": {
+        "description": "Setup flow: kids' profiles step, when Hearth couldn't be kept on every kids' profile; the rows below say which"
     }
 }

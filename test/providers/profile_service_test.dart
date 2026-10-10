@@ -1,7 +1,9 @@
 import 'package:flauncher/database.dart';
 import 'package:flauncher/providers/backup_service.dart';
+import 'package:flauncher/providers/home_looks.dart';
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/providers/setup_flow_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -118,6 +120,39 @@ void main() {
     await settings.setBingWallpaperEnabled(false);
     await service.check();
     expect(settings.bingWallpaperEnabled, isFalse);
+  });
+
+  test("a new grown-up profile starts with the look chosen in setup, and is offered its own", () async {
+    await prefs.setString(ProfileService.layoutOwnerKey, "user:0");
+    await prefs.setString(SetupFlowService.lookKey, HomeLook.bold.name);
+    when(channel.getActiveProfileName()).thenAnswer((_) async => "Sam");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:11");
+    when(appsService.resetToDefaultLayout()).thenAnswer((_) async {});
+    when(appsService.initialized).thenReturn(false);
+    final settings = SettingsService(prefs);
+    final service = ProfileService(channel, prefs, _RecordingBackupService(database, prefs, {}), settings, appsService);
+
+    await service.check();
+    expect(HomeLook.bold.matches(settings), isTrue);
+    expect(service.firstVisitKey, "user:11");
+    service.lookOffered();
+    expect(service.firstVisitKey, isNull);
+  });
+
+  test("a new kids' profile isn't given the setup look or offered one", () async {
+    await prefs.setString(ProfileService.layoutOwnerKey, "user:0");
+    await prefs.setString(SetupFlowService.lookKey, HomeLook.bold.name);
+    when(channel.getActiveProfileName()).thenAnswer((_) async => "Jordan");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:10");
+    when(channel.isKidsProfile()).thenAnswer((_) async => true);
+    when(appsService.resetToDefaultLayout()).thenAnswer((_) async {});
+    when(appsService.initialized).thenReturn(false);
+    final settings = SettingsService(prefs);
+    final service = ProfileService(channel, prefs, _RecordingBackupService(database, prefs, {}), settings, appsService);
+
+    await service.check();
+    expect(HomeLook.bold.matches(settings), isFalse);
+    expect(service.firstVisitKey, isNull);
   });
 
   test("a grown-up profile's wallpaper is left alone", () async {

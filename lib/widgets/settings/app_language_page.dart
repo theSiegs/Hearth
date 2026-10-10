@@ -28,6 +28,29 @@ class AppLanguagePage extends StatelessWidget {
 
   const AppLanguagePage({super.key});
 
+  /// Each choice: its code ("" for the TV's own language) and its name in the current language.
+  static List<(String, String)> choices(AppLocalizations l) => [
+        ("", l.systemDefault),
+        ("en", l.english),
+        ("es", l.spanish),
+        ("fr", l.french),
+        ("de", l.german),
+        ("it", l.italian),
+        ("pt", l.portuguese),
+        ("ru", l.russian),
+        ("uk", l.ukrainian),
+        ("tr", l.turkish),
+        ("ar", l.arabic),
+        ("hi", l.hindi),
+        ("zh", l.chinese),
+        ("ja", l.japanese),
+        ("ko", l.korean),
+      ];
+
+  /// The name of the language Hearth is set to, as this page lists it.
+  static String nameOf(AppLocalizations l, String code) =>
+      choices(l).firstWhere((choice) => choice.$1 == code, orElse: () => choices(l).first).$2;
+
   @override
   Widget build(BuildContext context) {
     AppLocalizations localizations = AppLocalizations.of(context)!;
@@ -36,21 +59,7 @@ class AppLanguagePage extends StatelessWidget {
         return SettingsPage(
           title: localizations.appLanguage,
           children: [
-            _choice(service, localizations.systemDefault, ""),
-            _choice(service, localizations.english, "en"),
-            _choice(service, localizations.spanish, "es"),
-            _choice(service, localizations.french, "fr"),
-            _choice(service, localizations.german, "de"),
-            _choice(service, localizations.italian, "it"),
-            _choice(service, localizations.portuguese, "pt"),
-            _choice(service, localizations.russian, "ru"),
-            _choice(service, localizations.ukrainian, "uk"),
-            _choice(service, localizations.turkish, "tr"),
-            _choice(service, localizations.arabic, "ar"),
-            _choice(service, localizations.hindi, "hi"),
-            _choice(service, localizations.chinese, "zh"),
-            _choice(service, localizations.japanese, "ja"),
-            _choice(service, localizations.korean, "ko"),
+            for (final (code, label) in choices(localizations)) _choice(service, label, code),
           ],
         );
       },

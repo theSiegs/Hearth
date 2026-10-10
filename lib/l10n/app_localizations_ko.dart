@@ -406,9 +406,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get tvPowerTitle => 'TV 및 전원';
 
   @override
-  String get setupPermissionsTitle => '설정 및 권한';
-
-  @override
   String get updatesTitle => '업데이트';
 
   @override
@@ -1172,27 +1169,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String setupProgress(int done, int total) {
     return '$total개 중 $done개 완료';
   }
-
-  @override
-  String get setupOptional => '선택 사항';
-
-  @override
-  String get homeButtonFixOffTitle => '홈 버튼 수정이 꺼져 있습니다';
-
-  @override
-  String get homeButtonFixOffBody => 'Hearth의 접근성 서비스가 중지되었습니다. 보통 업데이트 후에 발생합니다. 다시 켜기 전까지는 홈 버튼이 Hearth 대신 Google TV를 열 수 있고 프로필 전환도 따라가지 않습니다.';
-
-  @override
-  String get homeButtonFixStuck => 'Android에는 아직 켜짐으로 표시되지만 실행 중이 아닙니다. 접근성 설정에서 Hearth를 껐다가 다시 켜서 다시 시작하세요.';
-
-  @override
-  String get homeButtonFixRestricted => 'Hearth의 스위치가 회색으로 표시되면, 이 업데이트가 다운로드로 설치되어 Android가 차단하고 있는 것입니다. TV에 연결된 컴퓨터에서 다음을 실행한 다음 Hearth를 켜세요.';
-
-  @override
-  String get homeButtonFixDontRemind => '다시 알리지 않기';
-
-  @override
-  String get homeButtonFixOpenSettings => '접근성 설정 열기';
 
   @override
   String get remoteButtonsRemapButton => '버튼 다시 지정';
@@ -2032,4 +2008,522 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get tvPowerGoogleTvHomeNote => '이 설정을 끌 때까지 Hearth가 나서지 않습니다. 홈 버튼은 계속 Hearth를 엽니다.';
+
+  @override
+  String get setupFlowFinishLater => '나중에 마치기';
+
+  @override
+  String get setupFlowStripEssentials => '필수';
+
+  @override
+  String get setupFlowWelcomeTitle => 'Hearth에 오신 것을 환영합니다';
+
+  @override
+  String get setupFlowWelcomeBody => '온 가족을 위한 홈 화면: 내 앱, 보던 콘텐츠, 그리고 모든 스트리밍 앱의 올바른 프로필.';
+
+  @override
+  String get setupFlowWelcomeTime => '약 5분 걸립니다. 무엇이든 건너뛸 수 있습니다.';
+
+  @override
+  String get setupFlowGetStarted => '시작하기';
+
+  @override
+  String get setupFlowSetUpLater => '나중에 설정';
+
+  @override
+  String setupFlowLanguageLink(String language) {
+    return '언어: $language';
+  }
+
+  @override
+  String get setupFlowRestoreLink => '백업에서 복원';
+
+  @override
+  String get setupFlowHomeButtonTitle => '홈 버튼으로 Hearth 열기';
+
+  @override
+  String get setupFlowHomeButtonBody => 'Google TV는 홈 버튼에 자체 홈을 연결해 둡니다. Android 설정의 스위치 하나로 이를 바꿀 수 있고, Hearth가 다음도 할 수 있게 됩니다:';
+
+  @override
+  String get setupFlowHomeButtonPoint1 => '프로필 전환과 아이들의 취침 시간 따르기';
+
+  @override
+  String get setupFlowHomeButtonPoint2 => '팝업 표시 및 사용하지 않을 때 TV 끄기';
+
+  @override
+  String get setupFlowOnNextScreen => '다음 화면에서:';
+
+  @override
+  String get setupFlowStepServices => '\'서비스\'까지 스크롤';
+
+  @override
+  String setupFlowStepSelect(String name) {
+    return '\'$name\' 선택';
+  }
+
+  @override
+  String get setupFlowStepEnable => '\'사용\'을 켠 다음 \'확인\'';
+
+  @override
+  String get setupFlowComesBack => '켜지면 Hearth가 알아서 돌아옵니다. Google TV가 누가 시청 중인지 물으면 본인을 선택하세요.';
+
+  @override
+  String get setupFlowOpenAccessibility => '접근성 열기';
+
+  @override
+  String get setupFlowHomeButtonDone => '이제 홈 버튼으로 Hearth가 열립니다';
+
+  @override
+  String get setupFlowNotOnYetTitle => '아직 켜지지 않았습니다';
+
+  @override
+  String get setupFlowNotOnYetBody => '다시 시도하거나, 건너뛰고 나중에 설정에서 하세요.';
+
+  @override
+  String get setupFlowStuckTitle => '켜져 있지만 실행되지 않습니다';
+
+  @override
+  String get setupFlowStuckBody => 'Android에는 켜짐으로 표시되지만 실행되지 않습니다. 껐다가 다시 켜세요.';
+
+  @override
+  String get setupFlowSkipHomeButtonTitle => '홈 버튼 설정을 건너뛸까요?';
+
+  @override
+  String get setupFlowSkipHomeButtonBody => '이 설정이 없으면 홈 버튼이 Google TV를 열고, Hearth는 어린이 프로필이 사용 중인지 알 수 없습니다.';
+
+  @override
+  String get setupFlowSkipAnyway => '그래도 건너뛰기';
+
+  @override
+  String get setupFlowSkip => '건너뛰기';
+
+  @override
+  String get setupFlowNext => '다음';
+
+  @override
+  String get setupFlowLostTitle => '업데이트로 홈 버튼 설정이 꺼졌습니다';
+
+  @override
+  String get setupFlowLostBody => '일부 업데이트 후 Android가 이를 끕니다. 한 단계로 다시 켜세요.';
+
+  @override
+  String get setupFlowBlockedTitle => 'Android가 이 스위치를 차단했습니다';
+
+  @override
+  String get setupFlowBlockedBody => '스위치가 회색이었다면 Hearth가 다운로드한 파일로 설치되었기 때문입니다. TV에는 이를 허용하는 설정이 없습니다.';
+
+  @override
+  String get setupFlowBlockedComputer => '컴퓨터로:';
+
+  @override
+  String get setupFlowBlockedComputerThen => '그런 다음 스위치를 켜세요. Hearth가 알아서 감지합니다.';
+
+  @override
+  String get setupFlowBlockedSelfFixBody => '디버깅이 켜져 있으므로 Hearth가 직접 해결할 수 있습니다. TV에서 \'디버깅을 허용하시겠습니까?\'라고 물으면 \'항상 허용\'을 선택하세요. Hearth가 스위치 차단을 풀고 켭니다.';
+
+  @override
+  String get setupFlowSkipForNow => '지금은 건너뛰기';
+
+  @override
+  String get setupFlowBlockedSkipLine => '앱, 검색, 이어 보기는 계속 작동합니다. 홈 버튼, 프로필, 팝업, 취침 타이머는 작동하지 않습니다.';
+
+  @override
+  String get setupFlowLetHearthFix => 'Hearth가 해결하기';
+
+  @override
+  String get setupFlowFixConfirmBody => 'Hearth가 자체 디버깅 연결로 TV에서 다음을 실행합니다:';
+
+  @override
+  String get setupFlowFixConfirmApproval => '처음에는 TV에서 \'디버깅을 허용하시겠습니까?\'라고 묻습니다. \'항상 허용\'을 선택하세요. Hearth 자체의 권한만 바뀝니다.';
+
+  @override
+  String get setupFlowFixRun => '실행';
+
+  @override
+  String get setupFlowFixWaiting => '처리 중입니다. TV에서 \'디버깅을 허용하시겠습니까?\'라고 물으면 \'항상 허용\'을 선택하세요.';
+
+  @override
+  String get setupFlowFixFailedTitle => 'Hearth가 실행하지 못했습니다';
+
+  @override
+  String get setupFlowFixFailedBody => 'Hearth가 TV의 디버깅에 연결하지 못했습니다. TV에서 \'디버깅을 허용하시겠습니까?\'라고 물었다면 \'항상 허용\'을 선택하고 다시 시도하세요. 개발자 옵션에서 디버깅이 켜져 있어야 합니다.';
+
+  @override
+  String get setupFlowHomeAppTitle => 'Hearth를 홈 앱으로 설정';
+
+  @override
+  String get setupFlowHomeAppBody => 'Android에 홈 앱 목록이 표시됩니다. Hearth를 선택하세요. 어린이 프로필이 Hearth를 차단하지 않게 됩니다.';
+
+  @override
+  String get setupFlowChooseHearth => 'Hearth 선택';
+
+  @override
+  String get setupFlowHomeAppDone => 'Hearth가 홈 앱입니다';
+
+  @override
+  String get setupFlowNotChosenTitle => '아직 선택되지 않았습니다';
+
+  @override
+  String get setupFlowFinishTitle => 'Hearth 준비 완료';
+
+  @override
+  String setupFlowFinishBody(String where) {
+    return '건너뛴 항목은 설정에 있으며, $where에서 다시 실행할 수 있습니다.';
+  }
+
+  @override
+  String get setupFlowFinishOn => '켜짐';
+
+  @override
+  String get setupFlowFinishLaterHeading => '나중에 설정에서';
+
+  @override
+  String get setupFlowFinishMore => '설정에서 더 보기: 리모컨 버튼, 섹션, 알림, 백업.';
+
+  @override
+  String get setupFlowGoHome => '내 홈으로';
+
+  @override
+  String get setupHearthTitle => 'Hearth 설정';
+
+  @override
+  String get setupRunAgain => '설정 다시 실행';
+
+  @override
+  String get setupCardFamily => '가족';
+
+  @override
+  String get setupCardWatching => '시청';
+
+  @override
+  String setupChipLeft(int count) {
+    return '설정 마치기 · $count개 남음';
+  }
+
+  @override
+  String get setupChipFix => '홈 버튼 설정 필요';
+
+  @override
+  String get setupChipHideTitle => '이 알림을 숨길까요?';
+
+  @override
+  String setupChipHideBody(String where) {
+    return '$where에서 언제든지 설정을 실행할 수 있습니다.';
+  }
+
+  @override
+  String get setupChipHide => '숨기기';
+
+  @override
+  String get setupFlowCardIncluded => '포함된 기능';
+
+  @override
+  String get setupFlowCardNeeds => '필요한 것';
+
+  @override
+  String get setupFlowCardSkipped => '건너뜀';
+
+  @override
+  String get setupFlowChange => '변경';
+
+  @override
+  String get setupFlowKeep => '유지';
+
+  @override
+  String get setupFlowTurnOn => '켜기';
+
+  @override
+  String get setupFlowNeedsQuestion => 'Android의 질문 한 번';
+
+  @override
+  String get setupFlowNeedsOneSwitch => 'Android 설정의 스위치 하나';
+
+  @override
+  String get setupFlowNeedsAboutAMinute => '약 1분';
+
+  @override
+  String get setupFlowWatchingBenefit => '보던 곳에서 이어 보고, 무엇이 재생 중인지 확인하세요.';
+
+  @override
+  String get setupFlowWatchingIncluded1 => '홈 화면의 이어 보기';
+
+  @override
+  String get setupFlowWatchingIncluded2 => '알림과 재생 중인 콘텐츠';
+
+  @override
+  String get setupFlowSearchWorks => '검색은 이미 작동합니다. 홈 화면에서 검색을 누르세요.';
+
+  @override
+  String get setupFlowContinueBody => '앱에서 보던 콘텐츠를 홈 화면에 표시합니다. Android가 한 번 물으면 허용을 선택하세요.';
+
+  @override
+  String get setupFlowContinueDone => '이어 보기가 켜졌습니다';
+
+  @override
+  String get setupFlowContinueDeniedTitle => 'Android에서 허용하지 않았습니다';
+
+  @override
+  String setupFlowContinueDeniedBody(String where) {
+    return '나중에 $where에서 켤 수 있습니다.';
+  }
+
+  @override
+  String get setupFlowNotificationsTitle => '재생 중인 콘텐츠와 알림';
+
+  @override
+  String setupFlowNotificationsBody(String name) {
+    return '알림과 재생 중인 콘텐츠를 볼 수 있습니다. 다음 화면에서 \"$name\"을(를) 선택하고 허용하세요.';
+  }
+
+  @override
+  String get setupFlowNotificationsDone => '알림이 켜졌습니다';
+
+  @override
+  String get setupFlowTvTitle => '아무도 보지 않을 때 TV를 끌까요?';
+
+  @override
+  String get setupFlowTvBody => '리모컨을 이 시간 동안 누르지 않으면 꺼집니다. 동영상이나 음악 재생은 시청으로 봅니다.';
+
+  @override
+  String get setupFlowTvNeedsHomeButton => '처음 단계의 홈 버튼 스위치가 필요합니다. 없으면 Hearth가 리모컨 사용 여부를 알 수 없습니다.';
+
+  @override
+  String get setupFlowStartOnBoot => 'TV가 시작될 때 Hearth 시작';
+
+  @override
+  String get setupFlowScreensaver => '화면 보호기 사진 선택';
+
+  @override
+  String get setupFlowUpdatesBenefit => 'Hearth가 자신과 함께 쓰는 앱을 최신 상태로 유지합니다.';
+
+  @override
+  String get setupFlowUpdatesIncluded1 => 'Hearth 자동 업데이트';
+
+  @override
+  String get setupFlowUpdatesIncluded2 => 'HearthTube, Hearth용 YouTube 앱';
+
+  @override
+  String get setupFlowInstallTitle => 'Hearth가 업데이트를 설치하도록 허용';
+
+  @override
+  String get setupFlowInstallBody => '다음 화면에서 Hearth를 찾아 켠 다음 뒤로를 누르세요.';
+
+  @override
+  String get setupFlowInstallDone => 'Hearth가 업데이트를 설치할 수 있습니다';
+
+  @override
+  String get setupFlowTubeTitle => 'HearthTube를 설치할까요?';
+
+  @override
+  String get setupFlowTubeBody => 'Hearth용으로 만든 YouTube 앱: 프로필, 시계 스타일, 아이들의 취침 시간을 따릅니다.';
+
+  @override
+  String get setupFlowTubeInstalled => 'HearthTube가 설치되었습니다';
+
+  @override
+  String get setupCardHome => '내 홈';
+
+  @override
+  String get setupFlowLookTitle => '스타일 선택';
+
+  @override
+  String setupFlowLookBody(String where) {
+    return '선택하면 이 카드 뒤에 바로 보입니다. 나중에 $where에서 무엇이든 바꿀 수 있습니다.';
+  }
+
+  @override
+  String get setupFlowLookOtherTitle => '내 홈의 스타일을 선택하세요';
+
+  @override
+  String get setupFlowLookOtherBody => '프로필마다 홈이 따로 있습니다. 내 홈의 모습을 고르세요.';
+
+  @override
+  String get setupLookHearth => 'Hearth';
+
+  @override
+  String get setupLookPhoto => '오늘의 사진';
+
+  @override
+  String get setupLookCalmDark => '차분한 어둠';
+
+  @override
+  String get setupLookBold => '선명하게';
+
+  @override
+  String get setupFlowLookNow => '현재';
+
+  @override
+  String get setupFlowLookUse => '이 스타일 사용';
+
+  @override
+  String get setupFlowLookKeep => '현재 유지';
+
+  @override
+  String get setupFlowLookCustomize => '맞춤 설정';
+
+  @override
+  String get setupFlowWeatherTitle => '날씨를 표시할까요?';
+
+  @override
+  String get setupFlowWeatherBody => '사는 곳을 선택하세요. 위치만 Open-Meteo로 보내며 계정은 필요 없습니다.';
+
+  @override
+  String get setupFlowWeatherChoose => '지역 선택';
+
+  @override
+  String get setupFlowWeatherDone => '날씨가 상단 바에 표시됩니다';
+
+  @override
+  String get setupFlowFamilyBenefit => '스트리밍 앱이 맞는 사람으로 열리고, 아이들은 Hearth를 바꿀 수 없습니다.';
+
+  @override
+  String get setupFlowFamilyIncluded1 => '아이들이 Hearth를 바꾸지 못하게 하는 부모 PIN';
+
+  @override
+  String get setupFlowFamilyIncluded2 => 'Netflix, Disney+, Apple TV, Max, Paramount+에서 맞는 프로필';
+
+  @override
+  String get setupFlowFamilyIncluded3 => '아이 프로필에 Hearth 유지';
+
+  @override
+  String get setupFlowNeedsPin => '직접 고르는 숫자 네 자리';
+
+  @override
+  String get setupFlowNeedsTwoMinutes => '약 2분';
+
+  @override
+  String get setupFlowPinTitle => '부모 PIN 정하기';
+
+  @override
+  String get setupFlowPinBody => '아이가 Hearth를 바꾸려면 이 PIN이 필요합니다. 아이가 짐작하지 못할 숫자 네 자리를 고르세요.';
+
+  @override
+  String get setupFlowPinChoose => 'PIN 정하기';
+
+  @override
+  String get setupFlowPinDone => '부모 PIN이 설정되었습니다';
+
+  @override
+  String get setupFlowPairingTitle => '스트리밍 앱에서 맞는 프로필 선택';
+
+  @override
+  String setupFlowPairingBody(String name) {
+    return 'Hearth가 Netflix, Disney+, Apple TV, Max, Paramount+에서 각 사람의 프로필을 고릅니다. 같은 Android 화면의 스위치가 하나 더 필요합니다: \"$name\".';
+  }
+
+  @override
+  String get setupFlowPairingDone => '프로필 연결이 켜졌습니다';
+
+  @override
+  String get setupFlowPairingDoneBody => 'Hearth가 이름을 알아서 맞춥니다: \"Alex\"는 \"Alex Morgan\"과 연결됩니다. 각 앱의 프로필은 그 앱의 \"누가 보고 있나요?\" 화면이 한 번 나온 뒤에 나타납니다.';
+
+  @override
+  String get setupFlowCheckPairings => '연결 확인';
+
+  @override
+  String get setupFlowVoiceTitle => 'Netflix를 위한 한 단계 더';
+
+  @override
+  String setupFlowVoiceBody(String name) {
+    return 'Netflix는 프로필 화면을 소리 내어 읽으므로 Hearth가 자체 음성으로 듣습니다. 다음 화면의 기본 엔진에서 \"$name\"을(를) 선택한 다음 확인을 누르세요. 다른 앱은 Google 음성을 그대로 씁니다.';
+  }
+
+  @override
+  String get setupFlowVoiceDone => 'Hearth 음성이 켜졌습니다';
+
+  @override
+  String get setupFlowKidsTitle => '아이 프로필에 Hearth 유지하기';
+
+  @override
+  String get setupFlowKidsBody => 'Google TV는 아이 프로필이 시작될 때마다 직접 설치하지 않은 앱을 지웁니다. Hearth가 그곳에서 자신과 HearthTube를 보호할 수 있습니다. 아이마다 Family Link의 \"앱 추가됨\" 알림이 한 번 갑니다. 설정에서 언제든 되돌릴 수 있습니다.';
+
+  @override
+  String get setupFlowKidsApprove => 'TV에서 \"디버깅을 허용하시겠습니까?\"라고 묻습니다. 항상 허용에 체크한 다음 허용을 누르세요. 한 번만 하면 됩니다.';
+
+  @override
+  String get setupFlowKidsAdd => '아이 프로필에 추가';
+
+  @override
+  String get setupFlowKidsDone => '아이 프로필에 Hearth가 있습니다';
+
+  @override
+  String get setupFlowKidsKeepDebugging => '디버깅을 켜 두세요. 새 아이 프로필을 추가하거나 Hearth를 제거하거나 삭제할 때 다시 필요합니다.';
+
+  @override
+  String get setupFlowDebugTitle => '먼저 디버깅 켜기';
+
+  @override
+  String get setupFlowDebugBody => '아이 프로필을 설정하려면 TV의 디버깅 스위치가 필요합니다. 다음 화면에서 \"Android TV OS 빌드\"를 일곱 번 선택하세요. 그런 다음 설정 > 시스템 > 개발자 옵션에서 USB 디버깅을 켜고 돌아오세요. 켜 두세요. 새 아이 프로필에 다시 필요합니다.';
+
+  @override
+  String get setupFlowDebugOpen => '정보 열기';
+
+  @override
+  String get setupCardSmartHome => '스마트 홈';
+
+  @override
+  String get setupFlowHaBenefit => '초인종 등 알림을 TV에서 보고, Home Assistant 대시보드를 버튼 하나로 엽니다.';
+
+  @override
+  String get setupFlowHaIncluded1 => '어떤 앱 위에서도 초인종 등 알림';
+
+  @override
+  String get setupFlowHaIncluded2 => '버튼 하나로 여는 대시보드';
+
+  @override
+  String get setupFlowHaIncluded3 => '지금 보는 것을 Home Assistant로 전송';
+
+  @override
+  String get setupFlowNeedsPhone => '같은 Wi-Fi에 연결된 휴대전화';
+
+  @override
+  String get setupFlowNeedsFewMinutes => '몇 분';
+
+  @override
+  String get setupFlowHaUse => 'Home Assistant를 사용합니다';
+
+  @override
+  String get setupFlowHaAlertsTitle => 'Home Assistant 알림';
+
+  @override
+  String setupFlowHaAlertsBody(String ip) {
+    return 'Home Assistant에서 이 TV의 주소 $ip로 \"Notifications for Android TV / Fire TV\"를 추가하세요. 그런 다음 테스트를 보내세요.';
+  }
+
+  @override
+  String get setupFlowHaAlertsDone => '알림이 켜졌습니다';
+
+  @override
+  String get setupFlowHaDashboardTitle => 'TV에서 보는 대시보드';
+
+  @override
+  String get setupFlowHaDashboardBody => '휴대전화로 스캔하고 Home Assistant 주소와 토큰을 붙여 넣은 다음 보내기를 누르세요. 관리자가 아닌 TV용으로 만든 Home Assistant 사용자를 쓰세요.';
+
+  @override
+  String get setupFlowHaDashboardDone => '대시보드가 설정되었습니다';
+
+  @override
+  String get setupFlowHaStatusTitle => 'Home Assistant에 지금 보는 것 알리기';
+
+  @override
+  String get setupFlowHaStatusBody => 'TV가 재생 중인 콘텐츠와 현재 프로필을 Home Assistant로 보낼 수 있습니다. 같은 휴대전화 페이지에 Home Assistant 웹훅 자동화의 ID를 넣으세요.';
+
+  @override
+  String get setupFlowHaStatusNoWebhook => '휴대전화에서 웹훅 ID를 보내지 않았습니다. 페이지의 마지막 칸을 채우세요.';
+
+  @override
+  String get setupFlowHaStatusDone => 'TV가 Home Assistant에 지금 보는 것을 알립니다';
+
+  @override
+  String setupChipNewOne(String feature) {
+    return 'Hearth 새 기능: $feature';
+  }
+
+  @override
+  String setupChipNewMany(int count) {
+    return 'Hearth 새 기능 · $count';
+  }
+
+  @override
+  String get setupFlowKidsNotAll => '아직 모든 아이 프로필에 Hearth가 있지는 않습니다';
 }

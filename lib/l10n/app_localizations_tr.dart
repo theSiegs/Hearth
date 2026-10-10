@@ -406,9 +406,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get tvPowerTitle => 'TV ve güç';
 
   @override
-  String get setupPermissionsTitle => 'Kurulum ve izinler';
-
-  @override
   String get updatesTitle => 'Güncellemeler';
 
   @override
@@ -1172,27 +1169,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String setupProgress(int done, int total) {
     return '$total adımdan $done tamamlandı';
   }
-
-  @override
-  String get setupOptional => 'İsteğe bağlı';
-
-  @override
-  String get homeButtonFixOffTitle => 'Ana Ekran Tuşu Düzeltmesi kapalı';
-
-  @override
-  String get homeButtonFixOffBody => 'Hearth\'ün erişilebilirlik hizmeti durdu; bu genellikle bir güncellemeden sonra olur. Yeniden açılana kadar ana ekran tuşu Hearth yerine Google TV\'yi açabilir ve profil değişiklikleri izlenmez.';
-
-  @override
-  String get homeButtonFixStuck => 'Android onu hâlâ açık gösteriyor ama çalışmıyor. Yeniden başlatmak için Erişilebilirlik ayarlarında Hearth\'ü kapatıp yeniden açın.';
-
-  @override
-  String get homeButtonFixRestricted => 'Oradaki Hearth anahtarı griyse, bu güncelleme bir indirmeden yüklendiği için Android onu engelliyor. TV\'ye bağlı bir bilgisayardan bunu çalıştırın, ardından Hearth\'ü açın:';
-
-  @override
-  String get homeButtonFixDontRemind => 'Bana hatırlatma';
-
-  @override
-  String get homeButtonFixOpenSettings => 'Erişilebilirlik ayarlarını aç';
 
   @override
   String get remoteButtonsRemapButton => 'Bir tuşu yeniden ata';
@@ -2032,4 +2008,522 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get tvPowerGoogleTvHomeNote => 'Bunu kapatana kadar Hearth araya girmez. Ana ekran düğmesi yine Hearth\'ü açar.';
+
+  @override
+  String get setupFlowFinishLater => 'Sonra bitir';
+
+  @override
+  String get setupFlowStripEssentials => 'Temel';
+
+  @override
+  String get setupFlowWelcomeTitle => 'Hearth\'e hoş geldiniz';
+
+  @override
+  String get setupFlowWelcomeBody => 'Tüm aile için bir ana ekran: uygulamalarınız, izlemekte olduklarınız ve her yayın uygulamasında doğru profil.';
+
+  @override
+  String get setupFlowWelcomeTime => 'Yaklaşık 5 dakika sürer. İstediğinizi atlayabilirsiniz.';
+
+  @override
+  String get setupFlowGetStarted => 'Başlayın';
+
+  @override
+  String get setupFlowSetUpLater => 'Sonra kur';
+
+  @override
+  String setupFlowLanguageLink(String language) {
+    return 'Dil: $language';
+  }
+
+  @override
+  String get setupFlowRestoreLink => 'Yedekten geri yükle';
+
+  @override
+  String get setupFlowHomeButtonTitle => 'Ana Sayfa düğmesi Hearth\'ü açsın';
+
+  @override
+  String get setupFlowHomeButtonBody => 'Google TV, Ana Sayfa düğmesinde kendi ana ekranını tutar. Android ayarlarındaki tek bir anahtar bunu düzeltir ve Hearth\'ün şunları yapmasını da sağlar:';
+
+  @override
+  String get setupFlowHomeButtonPoint1 => 'profil değişikliklerini ve çocukların yatma saatini izlemesini';
+
+  @override
+  String get setupFlowHomeButtonPoint2 => 'açılır bildirimler göstermesini ve boştayken TV\'yi kapatmasını';
+
+  @override
+  String get setupFlowOnNextScreen => 'Sonraki ekranda:';
+
+  @override
+  String get setupFlowStepServices => 'Hizmetler\'e kaydırın';
+
+  @override
+  String setupFlowStepSelect(String name) {
+    return '\"$name\" öğesini seçin';
+  }
+
+  @override
+  String get setupFlowStepEnable => 'Etkinleştir\'i açın, sonra Tamam';
+
+  @override
+  String get setupFlowComesBack => 'Açıldığında Hearth kendiliğinden geri gelir. Google TV kimin izlediğini sorarsa kendinizi seçin.';
+
+  @override
+  String get setupFlowOpenAccessibility => 'Erişilebilirlik\'i aç';
+
+  @override
+  String get setupFlowHomeButtonDone => 'Ana Sayfa düğmesi artık Hearth\'ü açıyor';
+
+  @override
+  String get setupFlowNotOnYetTitle => 'Henüz açık değil';
+
+  @override
+  String get setupFlowNotOnYetBody => 'Yeniden deneyin ya da atlayıp daha sonra Ayarlar\'dan yapın.';
+
+  @override
+  String get setupFlowStuckTitle => 'Açık ama çalışmıyor';
+
+  @override
+  String get setupFlowStuckBody => 'Android onu açık gösteriyor ama çalışmıyor. Kapatıp yeniden açın.';
+
+  @override
+  String get setupFlowSkipHomeButtonTitle => 'Ana Sayfa düğmesi atlansın mı?';
+
+  @override
+  String get setupFlowSkipHomeButtonBody => 'Bu olmadan Ana Sayfa düğmesi Google TV\'yi açar ve Hearth bir çocuk profilinin ne zaman kullanıldığını anlayamaz.';
+
+  @override
+  String get setupFlowSkipAnyway => 'Yine de atla';
+
+  @override
+  String get setupFlowSkip => 'Atla';
+
+  @override
+  String get setupFlowNext => 'İleri';
+
+  @override
+  String get setupFlowLostTitle => 'Güncelleme Ana Sayfa düğmesini kapattı';
+
+  @override
+  String get setupFlowLostBody => 'Android bazı güncellemelerden sonra onu kapatır. Tek adımda yeniden açın.';
+
+  @override
+  String get setupFlowBlockedTitle => 'Android bu anahtarı engelledi';
+
+  @override
+  String get setupFlowBlockedBody => 'Anahtar griyse bunun nedeni Hearth\'ün indirilmiş bir dosyadan yüklenmiş olmasıdır. TV\'de buna izin veren bir ayar yok.';
+
+  @override
+  String get setupFlowBlockedComputer => 'Bir bilgisayarla:';
+
+  @override
+  String get setupFlowBlockedComputerThen => 'Ardından anahtarı açın. Hearth bunu kendisi fark eder.';
+
+  @override
+  String get setupFlowBlockedSelfFixBody => 'Hata ayıklama açık, bu yüzden Hearth bunu kendisi düzeltebilir. TV \"Hata ayıklamaya izin verilsin mi?\" diye soracak: Her zaman izin ver\'i seçin; Hearth anahtarının engelini kaldırıp açacak.';
+
+  @override
+  String get setupFlowSkipForNow => 'Şimdilik atla';
+
+  @override
+  String get setupFlowBlockedSkipLine => 'Uygulamalar, arama ve İzlemeye Devam Et çalışmaya devam eder. Ana Sayfa düğmesi, profiller, açılır bildirimler ve uyku zamanlayıcısı çalışmaz.';
+
+  @override
+  String get setupFlowLetHearthFix => 'Hearth düzeltsin';
+
+  @override
+  String get setupFlowFixConfirmBody => 'Hearth kendi hata ayıklama bağlantısıyla TV\'de şunu çalıştıracak:';
+
+  @override
+  String get setupFlowFixConfirmApproval => 'İlk seferde TV \"Hata ayıklamaya izin verilsin mi?\" diye sorar. Her zaman izin ver\'i seçin. Yalnızca Hearth\'ün kendi izinleri değişir.';
+
+  @override
+  String get setupFlowFixRun => 'Çalıştır';
+
+  @override
+  String get setupFlowFixWaiting => 'Çalışılıyor. TV \"Hata ayıklamaya izin verilsin mi?\" diye sorarsa Her zaman izin ver\'i seçin.';
+
+  @override
+  String get setupFlowFixFailedTitle => 'Hearth bunu yapamadı';
+
+  @override
+  String get setupFlowFixFailedBody => 'Hearth TV\'nin hata ayıklamasına ulaşamadı. TV \"Hata ayıklamaya izin verilsin mi?\" diye sorduysa Her zaman izin ver\'i seçip yeniden deneyin. Hata ayıklama Geliştirici seçenekleri\'nde açık kalmalıdır.';
+
+  @override
+  String get setupFlowHomeAppTitle => 'Hearth\'ü ana ekran uygulamanız yapın';
+
+  @override
+  String get setupFlowHomeAppBody => 'Android ana ekran uygulamalarının listesini gösterecek. Hearth\'ü seçin. Böylece çocuk profilleri Hearth\'ü engellemez.';
+
+  @override
+  String get setupFlowChooseHearth => 'Hearth\'ü seç';
+
+  @override
+  String get setupFlowHomeAppDone => 'Hearth ana ekran uygulamanız';
+
+  @override
+  String get setupFlowNotChosenTitle => 'Henüz seçilmedi';
+
+  @override
+  String get setupFlowFinishTitle => 'Hearth hazır';
+
+  @override
+  String setupFlowFinishBody(String where) {
+    return 'Atladığınız her şey Ayarlar\'da; bunu $where bölümünden yeniden çalıştırabilirsiniz.';
+  }
+
+  @override
+  String get setupFlowFinishOn => 'Açık';
+
+  @override
+  String get setupFlowFinishLaterHeading => 'Sonra, Ayarlar\'da';
+
+  @override
+  String get setupFlowFinishMore => 'Ayarlar\'da daha fazlası: kumanda düğmeleri, bölümler, bildirimler ve yedekleme.';
+
+  @override
+  String get setupFlowGoHome => 'Ana ekranıma git';
+
+  @override
+  String get setupHearthTitle => 'Hearth\'ü kur';
+
+  @override
+  String get setupRunAgain => 'Kurulumu yeniden çalıştır';
+
+  @override
+  String get setupCardFamily => 'Aileniz';
+
+  @override
+  String get setupCardWatching => 'İzleme';
+
+  @override
+  String setupChipLeft(int count) {
+    return 'Kurulumu bitir · kalan: $count';
+  }
+
+  @override
+  String get setupChipFix => 'Ana Sayfa düğmesinin düzeltilmesi gerekiyor';
+
+  @override
+  String get setupChipHideTitle => 'Bu hatırlatıcı gizlensin mi?';
+
+  @override
+  String setupChipHideBody(String where) {
+    return 'Kurulumu yine de $where bölümünden çalıştırabilirsiniz.';
+  }
+
+  @override
+  String get setupChipHide => 'Gizle';
+
+  @override
+  String get setupFlowCardIncluded => 'Neler var';
+
+  @override
+  String get setupFlowCardNeeds => 'Gerekenler';
+
+  @override
+  String get setupFlowCardSkipped => 'Atlandı';
+
+  @override
+  String get setupFlowChange => 'Değiştir';
+
+  @override
+  String get setupFlowKeep => 'Koru';
+
+  @override
+  String get setupFlowTurnOn => 'Aç';
+
+  @override
+  String get setupFlowNeedsQuestion => 'Android\'den bir soru';
+
+  @override
+  String get setupFlowNeedsOneSwitch => 'Android ayarlarında bir anahtar';
+
+  @override
+  String get setupFlowNeedsAboutAMinute => 'Yaklaşık bir dakika';
+
+  @override
+  String get setupFlowWatchingBenefit => 'Kaldığınız yerden devam edin ve neyin oynatıldığını görün.';
+
+  @override
+  String get setupFlowWatchingIncluded1 => 'Ana ekranda İzlemeye devam et';
+
+  @override
+  String get setupFlowWatchingIncluded2 => 'Bildirimler ve oynatılanlar';
+
+  @override
+  String get setupFlowSearchWorks => 'Arama zaten çalışıyor: ana ekranda Ara\'ya basın.';
+
+  @override
+  String get setupFlowContinueBody => 'Uygulamalarınızda izlediklerinizi ana ekranda gösterin. Android bir kez soracak; İzin ver\'i seçin.';
+
+  @override
+  String get setupFlowContinueDone => 'İzlemeye devam et açık';
+
+  @override
+  String get setupFlowContinueDeniedTitle => 'Android izin vermedi';
+
+  @override
+  String setupFlowContinueDeniedBody(String where) {
+    return 'Daha sonra $where bölümünden açabilirsiniz.';
+  }
+
+  @override
+  String get setupFlowNotificationsTitle => 'Oynatılanlar ve bildirimler';
+
+  @override
+  String setupFlowNotificationsBody(String name) {
+    return 'Bildirimlerinizi ve oynatılanları görün. Sonraki ekranda \"$name\" öğesini seçip izin verin.';
+  }
+
+  @override
+  String get setupFlowNotificationsDone => 'Bildirimler açık';
+
+  @override
+  String get setupFlowTvTitle => 'Kimse izlemediğinde TV kapatılsın mı?';
+
+  @override
+  String get setupFlowTvBody => 'Bu süre boyunca kumandaya basılmazsa. Video veya müzik çalması izleme sayılır.';
+
+  @override
+  String get setupFlowTvNeedsHomeButton => 'Bunun için ilk adımlardaki Ana Ekran düğmesi anahtarı gerekir: o olmadan Hearth kumandanın ne zaman kullanıldığını bilemez.';
+
+  @override
+  String get setupFlowStartOnBoot => 'TV açıldığında Hearth\'ü başlat';
+
+  @override
+  String get setupFlowScreensaver => 'Ekran koruyucu fotoğraflarını seç';
+
+  @override
+  String get setupFlowUpdatesBenefit => 'Hearth kendini ve yardımcı uygulamalarını güncel tutar.';
+
+  @override
+  String get setupFlowUpdatesIncluded1 => 'Hearth kendini günceller';
+
+  @override
+  String get setupFlowUpdatesIncluded2 => 'HearthTube, Hearth için yapılmış bir YouTube uygulaması';
+
+  @override
+  String get setupFlowInstallTitle => 'Hearth\'ün güncelleme yüklemesine izin ver';
+
+  @override
+  String get setupFlowInstallBody => 'Sonraki ekranda Hearth\'ü bulup açın, ardından Geri\'ye basın.';
+
+  @override
+  String get setupFlowInstallDone => 'Hearth güncelleme yükleyebilir';
+
+  @override
+  String get setupFlowTubeTitle => 'HearthTube yüklensin mi?';
+
+  @override
+  String get setupFlowTubeBody => 'Hearth için yapılmış bir YouTube uygulaması: profillerinizi, saat stilini ve çocukların yatma saatini izler.';
+
+  @override
+  String get setupFlowTubeInstalled => 'HearthTube yüklü';
+
+  @override
+  String get setupCardHome => 'Ana ekranınız';
+
+  @override
+  String get setupFlowLookTitle => 'Bir görünüm seçin';
+
+  @override
+  String setupFlowLookBody(String where) {
+    return 'Her biri, üzerine geldiğinizde bu kartın arkasında görünür. Herhangi bir parçasını daha sonra $where bölümünden değiştirebilirsiniz.';
+  }
+
+  @override
+  String get setupFlowLookOtherTitle => 'Ana ekranınız için bir görünüm seçin';
+
+  @override
+  String get setupFlowLookOtherBody => 'Her profilin kendi ana ekranı vardır. Sizinkinin nasıl görüneceğini seçin.';
+
+  @override
+  String get setupLookHearth => 'Hearth';
+
+  @override
+  String get setupLookPhoto => 'Günün fotoğrafı';
+
+  @override
+  String get setupLookCalmDark => 'Sakin koyu';
+
+  @override
+  String get setupLookBold => 'Canlı';
+
+  @override
+  String get setupFlowLookNow => 'Şu anki';
+
+  @override
+  String get setupFlowLookUse => 'Bu görünümü kullan';
+
+  @override
+  String get setupFlowLookKeep => 'Mevcut kalsın';
+
+  @override
+  String get setupFlowLookCustomize => 'Özelleştir';
+
+  @override
+  String get setupFlowWeatherTitle => 'Hava durumu gösterilsin mi?';
+
+  @override
+  String get setupFlowWeatherBody => 'Şehrinizi seçin. Yalnızca konumu Open-Meteo\'ya gönderilir; hesap gerekmez.';
+
+  @override
+  String get setupFlowWeatherChoose => 'Şehir seç';
+
+  @override
+  String get setupFlowWeatherDone => 'Hava durumu üst çubukta görünür';
+
+  @override
+  String get setupFlowFamilyBenefit => 'Yayın uygulamaları doğru kişiyle açılır ve çocuklar Hearth\'ü değiştiremez.';
+
+  @override
+  String get setupFlowFamilyIncluded1 => 'Çocuklar Hearth\'ü değiştiremesin diye ebeveyn PIN\'i';
+
+  @override
+  String get setupFlowFamilyIncluded2 => 'Netflix, Disney+, Apple TV, Max ve Paramount+\'ta doğru profil';
+
+  @override
+  String get setupFlowFamilyIncluded3 => 'Hearth çocuklarınızın profillerinde kalır';
+
+  @override
+  String get setupFlowNeedsPin => 'Seçeceğiniz dört rakam';
+
+  @override
+  String get setupFlowNeedsTwoMinutes => 'Yaklaşık 2 dakika';
+
+  @override
+  String get setupFlowPinTitle => 'Ebeveyn PIN\'i seçin';
+
+  @override
+  String get setupFlowPinBody => 'Çocukların Hearth\'ü değiştirmesi için gerekir. Bir çocuğun tahmin edemeyeceği dört rakam seçin.';
+
+  @override
+  String get setupFlowPinChoose => 'PIN seç';
+
+  @override
+  String get setupFlowPinDone => 'Ebeveyn PIN\'i ayarlandı';
+
+  @override
+  String get setupFlowPairingTitle => 'Yayın uygulamalarında doğru profil';
+
+  @override
+  String setupFlowPairingBody(String name) {
+    return 'Hearth; Netflix, Disney+, Apple TV, Max ve Paramount+\'ta her kişinin profilini seçer. Aynı Android ekranında bir anahtar daha gerekir: \"$name\".';
+  }
+
+  @override
+  String get setupFlowPairingDone => 'Profil eşleştirme açık';
+
+  @override
+  String get setupFlowPairingDoneBody => 'Hearth adları kendisi eşleştirir: \"Alex\", \"Alex Morgan\" ile eşleşir. Her uygulamanın profilleri, \"Kim izliyor?\" ekranı bir kez göründükten sonra çıkar.';
+
+  @override
+  String get setupFlowCheckPairings => 'Eşleştirmeleri kontrol et';
+
+  @override
+  String get setupFlowVoiceTitle => 'Netflix için bir adım daha';
+
+  @override
+  String setupFlowVoiceBody(String name) {
+    return 'Netflix profil ekranını sesli okur; bu yüzden Hearth kendi sesiyle dinler. Sonraki ekranda Tercih edilen motor altında \"$name\" seçin, sonra Tamam. Diğer uygulamalar Google\'ın sesini kullanmaya devam eder.';
+  }
+
+  @override
+  String get setupFlowVoiceDone => 'Hearth sesi açık';
+
+  @override
+  String get setupFlowKidsTitle => 'Hearth\'ü çocuklarınızın profillerinde tutun';
+
+  @override
+  String get setupFlowKidsBody => 'Google TV, çocuk profilleri her başladığında kendi yüklemediği uygulamaları kaldırır. Hearth orada kendisini ve HearthTube\'u koruyabilir. Her çocuk bir Family Link \"uygulama eklendi\" bildirimi alır; istediğiniz zaman Ayarlar\'dan geri alın.';
+
+  @override
+  String get setupFlowKidsApprove => 'TV \"Hata ayıklamaya izin verilsin mi?\" diye soracak. Her zaman izin ver\'i işaretleyip İzin ver\'i seçin. Bunu yalnızca bir kez yaparsınız.';
+
+  @override
+  String get setupFlowKidsAdd => 'Profillerine ekle';
+
+  @override
+  String get setupFlowKidsDone => 'Hearth çocuklarınızın profillerinde';
+
+  @override
+  String get setupFlowKidsKeepDebugging => 'Hata ayıklamayı açık bırakın: Hearth\'ün yeni bir çocuk profili için ve kendini kaldırmak için buna yine ihtiyacı olacak.';
+
+  @override
+  String get setupFlowDebugTitle => 'Önce hata ayıklamayı açın';
+
+  @override
+  String get setupFlowDebugBody => 'Hearth\'ün çocuk profillerini kurmak için TV\'nin hata ayıklama anahtarına ihtiyacı var. Sonraki ekranda \"Android TV OS derlemesi\" öğesini yedi kez seçin. Ardından Ayarlar > Sistem > Geliştirici seçenekleri\'nde USB hata ayıklama\'yı açıp geri gelin. Açık bırakın: Hearth\'ün yeni bir çocuk profili için buna yine ihtiyacı olacak.';
+
+  @override
+  String get setupFlowDebugOpen => 'Hakkında\'yı aç';
+
+  @override
+  String get setupCardSmartHome => 'Akıllı ev';
+
+  @override
+  String get setupFlowHaBenefit => 'Kapı zili ve diğer uyarılar TV\'de, Home Assistant panonuz tek tuş uzağınızda.';
+
+  @override
+  String get setupFlowHaIncluded1 => 'Her uygulamanın üstünde kapı zili ve diğer uyarılar';
+
+  @override
+  String get setupFlowHaIncluded2 => 'Panonuz tek tuş uzağınızda';
+
+  @override
+  String get setupFlowHaIncluded3 => 'Açık olan şey Home Assistant\'a gönderilir';
+
+  @override
+  String get setupFlowNeedsPhone => 'Aynı Wi-Fi\'de bir telefon';
+
+  @override
+  String get setupFlowNeedsFewMinutes => 'Birkaç dakika';
+
+  @override
+  String get setupFlowHaUse => 'Home Assistant kullanıyorum';
+
+  @override
+  String get setupFlowHaAlertsTitle => 'Home Assistant uyarıları';
+
+  @override
+  String setupFlowHaAlertsBody(String ip) {
+    return 'Home Assistant\'ta bu TV\'nin adresiyle \"Notifications for Android TV / Fire TV\" ekleyin: $ip. Ardından bir test gönderin.';
+  }
+
+  @override
+  String get setupFlowHaAlertsDone => 'Uyarılar açık';
+
+  @override
+  String get setupFlowHaDashboardTitle => 'Panonuz TV\'de';
+
+  @override
+  String get setupFlowHaDashboardBody => 'Telefonunuzla tarayın, Home Assistant adresini ve bir belirteci yapıştırıp Gönder\'e dokunun. Yönetici değil, TV için oluşturulmuş bir Home Assistant kullanıcısı kullanın.';
+
+  @override
+  String get setupFlowHaDashboardDone => 'Panonuz kuruldu';
+
+  @override
+  String get setupFlowHaStatusTitle => 'Home Assistant\'a neyin açık olduğunu bildir';
+
+  @override
+  String get setupFlowHaStatusBody => 'TV, oynatılanı ve etkin profili Home Assistant\'a gönderebilir. Aynı telefon sayfasında Home Assistant\'taki bir webhook otomasyonunun kimliğini ekleyin.';
+
+  @override
+  String get setupFlowHaStatusNoWebhook => 'Telefon bir webhook kimliği göndermedi. Sayfadaki son kutuyu doldurun.';
+
+  @override
+  String get setupFlowHaStatusDone => 'TV, Home Assistant\'a neyin açık olduğunu bildiriyor';
+
+  @override
+  String setupChipNewOne(String feature) {
+    return 'Hearth\'te yeni: $feature';
+  }
+
+  @override
+  String setupChipNewMany(int count) {
+    return 'Hearth\'te yeni · $count';
+  }
+
+  @override
+  String get setupFlowKidsNotAll => 'Hearth henüz her çocuk profilinde değil';
 }

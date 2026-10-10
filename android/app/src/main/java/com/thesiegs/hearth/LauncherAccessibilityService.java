@@ -313,6 +313,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (launcherApps != null) {
             launcherApps.registerCallback(mSuspensionCallback);
         }
+        // Just turned on from the setup flow: back to it
+        SetupReturn.onConnected(this, SetupReturn.HOME_BUTTON_FIX);
     }
 
     @Override
@@ -1112,11 +1114,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     static boolean wasHomeButtonFixSeen(Context context) {
         return context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).getBoolean(HOME_FIX_SEEN_KEY, false);
-    }
-
-    /** Stops the "Home Button Fix is off" reminder until the service is turned on again. */
-    static void forgetHomeButtonFix(Context context) {
-        context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).edit().remove(HOME_FIX_SEEN_KEY).apply();
     }
 
     // --- Idle standby: sleep after N minutes without a remote press, unless something is playing ---

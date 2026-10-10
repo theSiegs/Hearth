@@ -19,6 +19,8 @@
     <string name="ha_setup_missing">Введіть адресу Home Assistant і токен.</string>
     <string name="ha_setup_sent_title">Надіслано на телевізор</string>
     <string name="ha_setup_sent_detail">Hearth отримав адресу й токен. Цю сторінку можна закрити.</string>
+    <string name="ha_setup_webhook_label">ID вебхука для стану телевізора (необов\'язково)</string>
+    <string name="ha_setup_webhook_help">Щоб телевізор повідомляв Home Assistant, що зараз іде (застосунок, що грає, профіль), додайте в Home Assistant автоматизацію з тригером Webhook і вкажіть тут її ID. Лише для цього токен можна залишити порожнім.</string>
 
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">Відкриваємо %1$s як %2$s…</string>

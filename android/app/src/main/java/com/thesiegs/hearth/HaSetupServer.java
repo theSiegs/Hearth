@@ -1,6 +1,9 @@
 package com.thesiegs.hearth;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Base64;
 import android.util.Log;
 
@@ -19,13 +22,16 @@ import java.util.Map;
  * with a remote. While Settings shows its QR code, this serves a small form at a one-time secret link on the home
  * network; the phone opens it, pastes the token and sends it. Idea and flow from QuickBars for Home Assistant
  * (github.com/Trooped/QuickBars, GPL-3.0), with the secret link added so nothing else on the network can push a
- * token in the meantime. Stops after one successful send, when Settings closes it, or after ten minutes.
+ * token in the meantime. Stops after one successful send, when Settings closes it, or after ten minutes. The same page
+ * takes the webhook id for TV status (HaStatusReporter), so that needs no typing on the TV either.
  */
 final class HaSetupServer {
     private static final String TAG = "HearthHaSetup";
     private static final int[] PORTS = {8765, 8766, 8767, 8768, 8769};
     private static final int MAX_BODY_BYTES = 16 * 1024;
     private static final long LIFETIME_MS = 10 * 60 * 1000;
+    /** What a webhook id may hold: it goes into the URL Hearth posts the TV's status to. */
+    private static final java.util.regex.Pattern WEBHOOK_ID = java.util.regex.Pattern.compile("[A-Za-z0-9_-]{1,128}");
 
     private static HaSetupServer sCurrent;
     private static boolean sLastReceived;
@@ -117,7 +123,8 @@ final class HaSetupServer {
             return;
         }
         if (!"POST".equals(request.method)) {
-            MiniHttp.respondHtml(out, formPage(HaConfig.prefs(mContext).getString(HaConfig.URL_KEY, "")));
+            MiniHttp.respondHtml(out, formPage(HaConfig.prefs(mContext).getString(HaConfig.URL_KEY, ""),
+                    HaConfig.prefs(mContext).getString(HaConfig.WEBHOOK_KEY, "")));
             return;
         }
 
@@ -129,12 +136,22 @@ final class HaSetupServer {
         Map<String, String> fields = MiniHttp.parseForm(new String(MiniHttp.readBody(in, length), StandardCharsets.UTF_8));
         String url = HaConfig.normalizeUrl(fields.getOrDefault("url", ""));
         String token = fields.getOrDefault("token", "").replaceAll("\\s", "");
-        if (token.isEmpty() || url == null) {
-            MiniHttp.respondHtml(out, formPage(fields.getOrDefault("url", ""))
+        String webhook = fields.getOrDefault("webhook", "").trim();
+        boolean webhookOk = WEBHOOK_ID.matcher(webhook).matches();
+        // The address, and a token or a webhook id (TV status alone needs no token)
+        if (url == null || (token.isEmpty() && !webhookOk) || (!webhook.isEmpty() && !webhookOk)) {
+            MiniHttp.respondHtml(out, formPage(fields.getOrDefault("url", ""), webhook)
                     .replace("<!--error-->", "<p class='err'>" + text(R.string.ha_setup_missing) + "</p>"));
             return;
         }
-        HaConfig.prefs(mContext).edit().putString(HaConfig.URL_KEY, url).putString(HaConfig.TOKEN_KEY, token).apply();
+        SharedPreferences.Editor edit = HaConfig.prefs(mContext).edit().putString(HaConfig.URL_KEY, url);
+        if (!token.isEmpty()) edit.putString(HaConfig.TOKEN_KEY, token);
+        edit.apply();
+        // Starts reporting right away when Home Button Fix runs; the reporter lives on the main thread
+        if (webhookOk) {
+            new Handler(Looper.getMainLooper())
+                    .post(() -> LauncherAccessibilityService.setHaStatusConfig(mContext, url, webhook));
+        }
         mReceived = true;
         synchronized (HaSetupServer.class) {
             sLastReceived = true;
@@ -143,7 +160,7 @@ final class HaSetupServer {
                 "<p>" + text(R.string.ha_setup_sent_detail) + "</p>"));
     }
 
-    private String formPage(String url) {
+    private String formPage(String url, String webhook) {
         return page(mContext.getString(R.string.ha_setup_title),
                 "<!--error--><form method='POST'>"
                         + "<label for='url'>" + text(R.string.ha_setup_address_label) + "</label>"
@@ -151,6 +168,9 @@ final class HaSetupServer {
                         + "<label for='token'>" + text(R.string.ha_setup_token_label) + "</label>"
                         + "<textarea id='token' name='token' rows='5' placeholder='" + text(R.string.ha_setup_token_hint)
                         + "' autofocus></textarea>"
+                        + "<label for='webhook'>" + text(R.string.ha_setup_webhook_label) + "</label>"
+                        + "<input id='webhook' name='webhook' value='" + escape(webhook) + "' autocapitalize='off'>"
+                        + "<p class='help'>" + text(R.string.ha_setup_webhook_help) + "</p>"
                         + "<button type='submit'>" + text(R.string.ha_setup_send) + "</button></form>"
                         + "<p class='help'>" + text(R.string.ha_setup_help) + "</p>");
     }

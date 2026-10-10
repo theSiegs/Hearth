@@ -19,6 +19,8 @@
     <string name="ha_setup_missing">أدخل عنوان Home Assistant والرمز.</string>
     <string name="ha_setup_sent_title">تم الإرسال إلى التلفزيون</string>
     <string name="ha_setup_sent_detail">حصل Hearth على العنوان والرمز. يمكنك إغلاق هذه الصفحة.</string>
+    <string name="ha_setup_webhook_label">معرّف Webhook لحالة التلفزيون (اختياري)</string>
+    <string name="ha_setup_webhook_help">ليُخبر التلفزيون Home Assistant بما يُعرض (التطبيق وما يتم تشغيله والملف الشخصي)، أضف أتمتة بمشغّل Webhook في Home Assistant وضع معرّفه هنا. لهذا وحده، يمكن ترك الرمز فارغًا.</string>
 
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">جارٍ فتح %1$s باسم %2$s…</string>
