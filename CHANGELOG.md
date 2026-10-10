@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.20 (pre-release)
+
+- Holding OK on an app always opens its menu; the held key no longer goes on to open Add to section.
+
 ## 2026.10.19 (pre-release)
 
 - Blocking an app with Family Link (and unblocking it) no longer removes it from a kids' profile's dock and sections.
