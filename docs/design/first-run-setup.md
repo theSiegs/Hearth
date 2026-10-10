@@ -509,7 +509,7 @@ Focus: first tile (the current look). ←/→ across tiles. ↓ → Use this loo
 | F1.2 done | Profile Pairing is on | Hearth matches names by itself: "Alex" goes with "Alex Morgan". Each app's profiles appear after its "Who's watching?" screen has shown once. |
 | F1.3 | One more step for Netflix | Netflix reads its profile screen aloud, so Hearth listens through its own voice. On the next screen, under Preferred engine, choose "Hearth voice", then OK. Other apps keep Google's voice. |
 | F1.4 | Keep Hearth on your kids' profiles | Google TV removes apps it didn't install from kids' profiles each time they start. Hearth can protect itself and HearthTube there. Each child gets one Family Link "app added" notice; undo anytime in Settings. |
-| F1.4a | Turn on debugging first | Hearth needs the TV's debugging switch to set up the kids' profiles. In Settings › System › About, select "Android TV OS build" seven times. Then in Developer options, turn on USB debugging. Leave it on: Hearth needs it again for a new kids' profile. |
+| F1.4a | Turn on debugging first | Hearth needs the TV's debugging switch to set up the kids' profiles. On the next screen (About), select "Android TV OS build" seven times. Then in Settings › System › Developer options, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids' profile. |
 | F1.4 approve | Allow Hearth on this TV | The TV will ask "Allow debugging?". Tick Always allow, then Allow. You only do this once. |
 | F2 | Watching | Pick up where you left off, and see what's playing. |
 | F2.1 | Continue Watching | Show what you were watching in your apps on the home screen. Android will ask once; choose Allow. |
@@ -574,6 +574,25 @@ Focus: first tile (the current look). ←/→ across tiles. ↓ → Use this loo
 6. **F1 Your family:** PIN, Profile Pairing, Hearth voice, kids' profiles with the debugging guide and self-adb.
 7. **F4 Smart home:** wraps the HA pages and phone QR; TV status on the phone page.
 8. **"New in Hearth":** the `introducedIn` registry for later cards.
+
+Where the build is (2026-10-09): steps 1 to 8 are built, with widget tests against a fake channel. How it turned out
+where it differs from the screens above:
+- **Card order on screen:** Essentials, then F1 Family (Google TV only), F2 Watching, F3 Your home, F4 Smart home,
+  F5 TV & power, F6 Updates, as in the map.
+- **Keep** on a card that's on goes through whatever of it isn't on yet (a skipped step, a kids' profile added since);
+  Keep on a skipped card passes it.
+- **F1.4** counts as done for as many kids' profiles as Android listed when Hearth was last put on them (from the flow
+  or from Settings › Family apps), kept in `device_setup_kids_profiles`: what's on each profile can't be read without
+  self-adb, and connecting just to check would raise "Allow debugging?". A kids' profile added later brings the
+  family card back into the chip. F1.4a opens Android's About screen directly.
+- **F3:** the home behind the card is barely dimmed and not blurred on the look screen, so the preview shows. A picture
+  picked as the wallpaper stays in front of a gradient look until that look is chosen (choosing removes it). Customize
+  opens Settings' Look page over the flow. Other grown-ups get the look card once the "Hi <name>" card is down.
+- **F4.1** turns the pop-ups on with its own **Turn on** button, then offers the test. **F4.3:** the phone page has a
+  third, optional field for the webhook ID; a webhook ID alone is enough (no token needed for TV status).
+- **"New in Hearth":** a card whose `introducedIn` is newer than `device_setup_seen_version` and that nobody decided
+  shows as "New in Hearth: <card>" (or a count) in the chip, even after the chip was hidden; opening or dismissing it
+  marks it seen. Adding a card later: give it the next version there and in `SetupFlowService.currentVersion`.
 
 To confirm on the TV:
 - The Home role's reason (E1: "keeps kids' profiles from blocking Hearth").
