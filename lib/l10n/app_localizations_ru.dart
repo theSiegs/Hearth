@@ -2472,4 +2472,60 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get setupFlowDebugOpen => 'Открыть «Об устройстве»';
+
+  @override
+  String get setupCardSmartHome => 'Умный дом';
+
+  @override
+  String get setupFlowHaBenefit => 'Дверной звонок и другие оповещения на телевизоре, а панель Home Assistant — в одно нажатие.';
+
+  @override
+  String get setupFlowHaIncluded1 => 'Звонок в дверь и другие оповещения поверх любого приложения';
+
+  @override
+  String get setupFlowHaIncluded2 => 'Ваша панель — в одно нажатие';
+
+  @override
+  String get setupFlowHaIncluded3 => 'Что сейчас идёт — в Home Assistant';
+
+  @override
+  String get setupFlowNeedsPhone => 'Телефон в той же сети Wi-Fi';
+
+  @override
+  String get setupFlowNeedsFewMinutes => 'Несколько минут';
+
+  @override
+  String get setupFlowHaUse => 'У меня есть Home Assistant';
+
+  @override
+  String get setupFlowHaAlertsTitle => 'Оповещения Home Assistant';
+
+  @override
+  String setupFlowHaAlertsBody(String ip) {
+    return 'В Home Assistant добавьте «Notifications for Android TV / Fire TV» с адресом этого телевизора: $ip. Затем отправьте тест.';
+  }
+
+  @override
+  String get setupFlowHaAlertsDone => 'Оповещения включены';
+
+  @override
+  String get setupFlowHaDashboardTitle => 'Ваша панель на телевизоре';
+
+  @override
+  String get setupFlowHaDashboardBody => 'Отсканируйте телефоном, вставьте адрес Home Assistant и токен, затем нажмите «Отправить». Используйте пользователя Home Assistant, созданного для телевизора, а не администратора.';
+
+  @override
+  String get setupFlowHaDashboardDone => 'Панель настроена';
+
+  @override
+  String get setupFlowHaStatusTitle => 'Сообщать Home Assistant, что идёт';
+
+  @override
+  String get setupFlowHaStatusBody => 'Телевизор может отправлять в Home Assistant, что играет и какой профиль активен. На той же странице в телефоне укажите ID автоматизации с вебхуком из Home Assistant.';
+
+  @override
+  String get setupFlowHaStatusNoWebhook => 'Телефон не отправил ID вебхука. Заполните последнее поле на странице.';
+
+  @override
+  String get setupFlowHaStatusDone => 'Телевизор сообщает Home Assistant, что идёт';
 }

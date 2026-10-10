@@ -500,8 +500,8 @@ void main() {
       expect(settings.bingWallpaperEnabled, isFalse);
       expect(flow.cardChoice(SetupCard.home), SetupChoice.on);
       expect(flow.look, isNull);
-      // The weather needs nothing here (no weather service): on to TV & power
-      expect(find.text("Turn the TV off when nobody's watching?"), findsOneWidget);
+      // The weather needs nothing here (no weather service): on to Smart home
+      expect(find.text("I use Home Assistant"), findsOneWidget);
     });
 
     testWidgets("a look picked is kept, and is where new grown-up profiles start", (tester) async {
@@ -543,6 +543,53 @@ void main() {
     });
   });
 
+  group("smart home", () {
+    testWidgets("Not now goes on to TV & power", (tester) async {
+      await open(tester, startAt: "smartHome");
+      expect(find.text("Doorbell and other alerts on the TV, and your Home Assistant dashboard one press away."),
+          findsOneWidget);
+      await press(tester, "Not now");
+      expect(flow.cardChoice(SetupCard.smartHome), SetupChoice.notNow);
+      expect(find.text("Turn the TV off when nobody's watching?"), findsOneWidget);
+    });
+
+    testWidgets("alerts, the dashboard and TV status, the last two from the phone", (tester) async {
+      await open(tester, startAt: "smartHome");
+      await press(tester, "I use Home Assistant");
+      expect(find.textContaining("192.0.2.10"), findsOneWidget);
+      await press(tester, "Turn on");
+      expect(channel.haAlerts, isTrue);
+      expect(find.text("Alerts are on"), findsOneWidget);
+      // Without Home Button Fix the test can't show: that's what's said
+      await press(tester, "Send a test notification");
+      expect(find.textContaining("Home Button Fix"), findsOneWidget);
+      await press(tester, "Next");
+
+      expect(find.text("Your dashboard on the TV"), findsOneWidget);
+      await press(tester, "Set up from your phone");
+      expect(find.text("http://192.0.2.10:8765/secret"), findsOneWidget);
+      channel.haPanelToken = true;
+      channel.haSetupReceived = true;
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      expect(find.text("Your dashboard is set up"), findsOneWidget);
+      expect(SettingsService(prefs).haPanelEnabled, isTrue);
+      await press(tester, "Next");
+
+      expect(find.text("Tell Home Assistant what's on"), findsOneWidget);
+      // Sent without a webhook ID: says what's missing
+      await press(tester, "Set up from your phone");
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      expect(find.textContaining("didn't send a webhook ID"), findsOneWidget);
+      channel.haWebhook = "hearth_tv";
+      await press(tester, "Set up from your phone");
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      expect(find.text("The TV tells Home Assistant what's on"), findsOneWidget);
+    });
+  });
+
   group("finish", () {
     testWidgets("everything on: Finish says so, and nothing is left to resume", (tester) async {
       channel.homeButtonOn = true;
@@ -558,6 +605,7 @@ void main() {
       expect(find.text("Watching"), findsWidgets);
       await press(tester, "Keep");
       await press(tester, "Keep current");
+      await press(tester, "Not now");
       await press(tester, "Next");
       await press(tester, "Keep");
       expect(find.text("Hearth is ready"), findsOneWidget);

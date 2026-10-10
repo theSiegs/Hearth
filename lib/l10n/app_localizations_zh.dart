@@ -2448,4 +2448,60 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get setupFlowDebugOpen => '打开“关于”';
+
+  @override
+  String get setupCardSmartHome => '智能家居';
+
+  @override
+  String get setupFlowHaBenefit => '门铃等提醒显示在电视上，Home Assistant 仪表板一键即达。';
+
+  @override
+  String get setupFlowHaIncluded1 => '在任何应用上方显示门铃等提醒';
+
+  @override
+  String get setupFlowHaIncluded2 => '仪表板一键即达';
+
+  @override
+  String get setupFlowHaIncluded3 => '把正在播放的内容发送给 Home Assistant';
+
+  @override
+  String get setupFlowNeedsPhone => '连接同一 Wi-Fi 的手机';
+
+  @override
+  String get setupFlowNeedsFewMinutes => '几分钟';
+
+  @override
+  String get setupFlowHaUse => '我在用 Home Assistant';
+
+  @override
+  String get setupFlowHaAlertsTitle => 'Home Assistant 提醒';
+
+  @override
+  String setupFlowHaAlertsBody(String ip) {
+    return '在 Home Assistant 中添加“Notifications for Android TV / Fire TV”，地址填这台电视的：$ip。然后发送一条测试。';
+  }
+
+  @override
+  String get setupFlowHaAlertsDone => '提醒已开启';
+
+  @override
+  String get setupFlowHaDashboardTitle => '在电视上查看仪表板';
+
+  @override
+  String get setupFlowHaDashboardBody => '用手机扫描，粘贴 Home Assistant 地址和令牌，然后点“发送”。请使用为电视创建的 Home Assistant 用户，不要用管理员。';
+
+  @override
+  String get setupFlowHaDashboardDone => '仪表板已设置好';
+
+  @override
+  String get setupFlowHaStatusTitle => '告诉 Home Assistant 正在播放什么';
+
+  @override
+  String get setupFlowHaStatusBody => '电视可以把正在播放的内容和当前个人资料发送给 Home Assistant。在同一个手机页面上，填写 Home Assistant 中某个 Webhook 自动化的 ID。';
+
+  @override
+  String get setupFlowHaStatusNoWebhook => '手机没有发送 Webhook ID。请填写页面上的最后一个框。';
+
+  @override
+  String get setupFlowHaStatusDone => '电视会告诉 Home Assistant 正在播放什么';
 }

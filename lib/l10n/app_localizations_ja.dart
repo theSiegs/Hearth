@@ -2448,4 +2448,60 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get setupFlowDebugOpen => 'デバイス情報を開く';
+
+  @override
+  String get setupCardSmartHome => 'スマートホーム';
+
+  @override
+  String get setupFlowHaBenefit => '玄関チャイムなどの通知をテレビに表示し、Home Assistant のダッシュボードをワンタッチで開けます。';
+
+  @override
+  String get setupFlowHaIncluded1 => 'どのアプリの上にも玄関チャイムなどの通知';
+
+  @override
+  String get setupFlowHaIncluded2 => 'ダッシュボードをワンタッチで';
+
+  @override
+  String get setupFlowHaIncluded3 => '表示中の内容を Home Assistant に送信';
+
+  @override
+  String get setupFlowNeedsPhone => '同じ Wi-Fi につながったスマートフォン';
+
+  @override
+  String get setupFlowNeedsFewMinutes => '数分';
+
+  @override
+  String get setupFlowHaUse => 'Home Assistant を使っている';
+
+  @override
+  String get setupFlowHaAlertsTitle => 'Home Assistant の通知';
+
+  @override
+  String setupFlowHaAlertsBody(String ip) {
+    return 'Home Assistant で「Notifications for Android TV / Fire TV」を、このテレビのアドレス $ip で追加してください。次にテストを送ります。';
+  }
+
+  @override
+  String get setupFlowHaAlertsDone => '通知がオンになりました';
+
+  @override
+  String get setupFlowHaDashboardTitle => 'テレビでダッシュボード';
+
+  @override
+  String get setupFlowHaDashboardBody => 'スマートフォンでスキャンし、Home Assistant のアドレスとトークンを貼り付けて送信します。管理者ではなく、テレビ用に作った Home Assistant ユーザーを使ってください。';
+
+  @override
+  String get setupFlowHaDashboardDone => 'ダッシュボードを設定しました';
+
+  @override
+  String get setupFlowHaStatusTitle => '表示中の内容を Home Assistant に伝える';
+
+  @override
+  String get setupFlowHaStatusBody => 'テレビは再生中の内容と使用中のプロフィールを Home Assistant に送れます。同じスマートフォンのページで、Home Assistant の Webhook オートメーションの ID を入力してください。';
+
+  @override
+  String get setupFlowHaStatusNoWebhook => 'スマートフォンから Webhook ID が送られませんでした。ページの最後の欄に入力してください。';
+
+  @override
+  String get setupFlowHaStatusDone => 'テレビが表示中の内容を Home Assistant に伝えます';
 }

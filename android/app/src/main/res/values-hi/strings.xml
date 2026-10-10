@@ -19,6 +19,8 @@
     <string name="ha_setup_missing">Home Assistant का पता और टोकन दर्ज करें।</string>
     <string name="ha_setup_sent_title">टीवी पर भेज दिया गया</string>
     <string name="ha_setup_sent_detail">Hearth को पता और टोकन मिल गया है। आप यह पेज बंद कर सकते हैं।</string>
+    <string name="ha_setup_webhook_label">टीवी स्थिति का Webhook ID (वैकल्पिक)</string>
+    <string name="ha_setup_webhook_help">टीवी से Home Assistant को यह बताने के लिए कि क्या चल रहा है (ऐप, प्लेबैक, प्रोफ़ाइल), Home Assistant में Webhook ट्रिगर वाला ऑटोमेशन जोड़ें और उसका ID यहाँ डालें। सिर्फ़ इसके लिए टोकन खाली रह सकता है।</string>
 
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">%1$s को %2$s के रूप में खोला जा रहा है…</string>

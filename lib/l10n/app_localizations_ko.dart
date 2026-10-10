@@ -2448,4 +2448,60 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get setupFlowDebugOpen => '정보 열기';
+
+  @override
+  String get setupCardSmartHome => '스마트 홈';
+
+  @override
+  String get setupFlowHaBenefit => '초인종 등 알림을 TV에서 보고, Home Assistant 대시보드를 버튼 하나로 엽니다.';
+
+  @override
+  String get setupFlowHaIncluded1 => '어떤 앱 위에서도 초인종 등 알림';
+
+  @override
+  String get setupFlowHaIncluded2 => '버튼 하나로 여는 대시보드';
+
+  @override
+  String get setupFlowHaIncluded3 => '지금 보는 것을 Home Assistant로 전송';
+
+  @override
+  String get setupFlowNeedsPhone => '같은 Wi-Fi에 연결된 휴대전화';
+
+  @override
+  String get setupFlowNeedsFewMinutes => '몇 분';
+
+  @override
+  String get setupFlowHaUse => 'Home Assistant를 사용합니다';
+
+  @override
+  String get setupFlowHaAlertsTitle => 'Home Assistant 알림';
+
+  @override
+  String setupFlowHaAlertsBody(String ip) {
+    return 'Home Assistant에서 이 TV의 주소 $ip로 \"Notifications for Android TV / Fire TV\"를 추가하세요. 그런 다음 테스트를 보내세요.';
+  }
+
+  @override
+  String get setupFlowHaAlertsDone => '알림이 켜졌습니다';
+
+  @override
+  String get setupFlowHaDashboardTitle => 'TV에서 보는 대시보드';
+
+  @override
+  String get setupFlowHaDashboardBody => '휴대전화로 스캔하고 Home Assistant 주소와 토큰을 붙여 넣은 다음 보내기를 누르세요. 관리자가 아닌 TV용으로 만든 Home Assistant 사용자를 쓰세요.';
+
+  @override
+  String get setupFlowHaDashboardDone => '대시보드가 설정되었습니다';
+
+  @override
+  String get setupFlowHaStatusTitle => 'Home Assistant에 지금 보는 것 알리기';
+
+  @override
+  String get setupFlowHaStatusBody => 'TV가 재생 중인 콘텐츠와 현재 프로필을 Home Assistant로 보낼 수 있습니다. 같은 휴대전화 페이지에 Home Assistant 웹훅 자동화의 ID를 넣으세요.';
+
+  @override
+  String get setupFlowHaStatusNoWebhook => '휴대전화에서 웹훅 ID를 보내지 않았습니다. 페이지의 마지막 칸을 채우세요.';
+
+  @override
+  String get setupFlowHaStatusDone => 'TV가 Home Assistant에 지금 보는 것을 알립니다';
 }

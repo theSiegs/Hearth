@@ -150,6 +150,7 @@ void main() {
       await flow.decide(SetupCard.family.name, SetupChoice.on);
       await flow.decide(SetupCard.watching.name, SetupChoice.notNow);
       await flow.decide(SetupCard.home.name, SetupChoice.on);
+      await flow.decide(SetupCard.smartHome.name, SetupChoice.notNow);
       await flow.decide(SetupCard.tv.name, SetupChoice.on);
       expect(flow.remaining(homeButtonOn: true, homeAppOn: true, cardOn: {SetupCard.updates: true}), 0);
     });

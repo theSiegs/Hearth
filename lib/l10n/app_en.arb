@@ -3158,5 +3158,82 @@
     "setupFlowDebugOpen": "Open About",
     "@setupFlowDebugOpen": {
         "description": "Setup flow: button that opens Android's About screen"
+    },
+    "setupCardSmartHome": "Smart home",
+    "@setupCardSmartHome": {
+        "description": "Setup flow: the Home Assistant card's name"
+    },
+    "setupFlowHaBenefit": "Doorbell and other alerts on the TV, and your Home Assistant dashboard one press away.",
+    "@setupFlowHaBenefit": {
+        "description": "Setup flow: the Smart home card's one-line benefit"
+    },
+    "setupFlowHaIncluded1": "Doorbell and other alerts over any app",
+    "@setupFlowHaIncluded1": {
+        "description": "Setup flow: Smart home card, first thing it includes"
+    },
+    "setupFlowHaIncluded2": "Your dashboard, one press away",
+    "@setupFlowHaIncluded2": {
+        "description": "Setup flow: Smart home card, second thing it includes"
+    },
+    "setupFlowHaIncluded3": "What's on, sent to Home Assistant",
+    "@setupFlowHaIncluded3": {
+        "description": "Setup flow: Smart home card, third thing it includes (TV status reporting)"
+    },
+    "setupFlowNeedsPhone": "A phone on the same Wi-Fi",
+    "@setupFlowNeedsPhone": {
+        "description": "Setup flow: what the Smart home card needs: a phone on the home Wi-Fi"
+    },
+    "setupFlowNeedsFewMinutes": "A few minutes",
+    "@setupFlowNeedsFewMinutes": {
+        "description": "Setup flow: what a feature card needs: a few minutes"
+    },
+    "setupFlowHaUse": "I use Home Assistant",
+    "@setupFlowHaUse": {
+        "description": "Setup flow: Smart home card's main button"
+    },
+    "setupFlowHaAlertsTitle": "Home Assistant alerts",
+    "@setupFlowHaAlertsTitle": {
+        "description": "Setup flow: Home Assistant pop-ups step's title"
+    },
+    "setupFlowHaAlertsBody": "In Home Assistant, add \"Notifications for Android TV / Fire TV\" with this TV's address: {ip}. Then send a test.",
+    "@setupFlowHaAlertsBody": {
+        "description": "Setup flow: Home Assistant pop-ups step; the integration's name stays in English as Home Assistant shows it; {ip} is this TV's address",
+        "placeholders": {
+            "ip": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowHaAlertsDone": "Alerts are on",
+    "@setupFlowHaAlertsDone": {
+        "description": "Setup flow: Home Assistant pop-ups step, once on"
+    },
+    "setupFlowHaDashboardTitle": "Your dashboard on the TV",
+    "@setupFlowHaDashboardTitle": {
+        "description": "Setup flow: Home Assistant dashboard step's title"
+    },
+    "setupFlowHaDashboardBody": "Scan with your phone, paste your Home Assistant address and a token, then Send. Use a Home Assistant user made for the TV, not an admin.",
+    "@setupFlowHaDashboardBody": {
+        "description": "Setup flow: Home Assistant dashboard step"
+    },
+    "setupFlowHaDashboardDone": "Your dashboard is set up",
+    "@setupFlowHaDashboardDone": {
+        "description": "Setup flow: Home Assistant dashboard step, once the phone sent the sign-in"
+    },
+    "setupFlowHaStatusTitle": "Tell Home Assistant what's on",
+    "@setupFlowHaStatusTitle": {
+        "description": "Setup flow: Home Assistant TV status step's title"
+    },
+    "setupFlowHaStatusBody": "The TV can send what's playing and the active profile to Home Assistant. On the same phone page, add the ID of a webhook automation from Home Assistant.",
+    "@setupFlowHaStatusBody": {
+        "description": "Setup flow: Home Assistant TV status step"
+    },
+    "setupFlowHaStatusNoWebhook": "The phone didn't send a webhook ID. Fill in the last box on the page.",
+    "@setupFlowHaStatusNoWebhook": {
+        "description": "Setup flow: Home Assistant TV status step, when the phone sent no webhook ID"
+    },
+    "setupFlowHaStatusDone": "The TV tells Home Assistant what's on",
+    "@setupFlowHaStatusDone": {
+        "description": "Setup flow: Home Assistant TV status step, once set up"
     }
 }

@@ -19,6 +19,8 @@
     <string name="ha_setup_missing">Home Assistant adresini ve jetonu girin.</string>
     <string name="ha_setup_sent_title">TV\'ye gönderildi</string>
     <string name="ha_setup_sent_detail">Hearth adresi ve jetonu aldı. Bu sayfayı kapatabilirsiniz.</string>
+    <string name="ha_setup_webhook_label">TV durumu Webhook kimliği (isteğe bağlı)</string>
+    <string name="ha_setup_webhook_help">TV\'nin Home Assistant\'a neyin açık olduğunu (uygulama, oynatılan, profil) bildirmesi için Home Assistant\'ta Webhook tetikleyicili bir otomasyon ekleyip kimliğini buraya yazın. Yalnızca bunun için belirteç boş kalabilir.</string>
 
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">%2$s profiliyle açılıyor: %1$s…</string>

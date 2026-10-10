@@ -19,6 +19,8 @@
     <string name="ha_setup_missing">Digite o endereço do Home Assistant e o token.</string>
     <string name="ha_setup_sent_title">Enviado para a TV</string>
     <string name="ha_setup_sent_detail">O Hearth recebeu o endereço e o token. Você já pode fechar esta página.</string>
+    <string name="ha_setup_webhook_label">ID do webhook do status da TV (opcional)</string>
+    <string name="ha_setup_webhook_help">Para a TV contar ao Home Assistant o que está passando (o app, o que está tocando, o perfil), adicione no Home Assistant uma automação com um gatilho Webhook e coloque o ID dela aqui. Só para isso, o token pode ficar vazio.</string>
 
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">Abrindo %1$s como %2$s…</string>

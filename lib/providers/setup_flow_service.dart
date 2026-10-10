@@ -35,6 +35,7 @@ enum SetupCard {
   family(1),
   watching(1),
   home(1),
+  smartHome(1),
   tv(1),
   updates(1);
 
