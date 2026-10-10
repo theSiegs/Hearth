@@ -13,14 +13,18 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import '../../helpers.dart';
 import '../../mocks.mocks.dart';
 import 'fake_setup_channel.dart';
+
+/// The profile check, with listeners that hear it change.
+class _Profiles extends MockProfileService with LiveListeners {}
 
 void main() {
   late SharedPreferences prefs;
   late FakeSetupChannel channel;
   late DateTime now;
-  late MockProfileService profiles;
+  late _Profiles profiles;
 
   setUp(() async {
     SharedPreferencesStorePlatform.instance = InMemorySharedPreferencesStore.empty();
@@ -28,7 +32,7 @@ void main() {
     await prefs.clear();
     now = DateTime(2026, 10, 9, 20);
     channel = FakeSetupChannel();
-    profiles = MockProfileService();
+    profiles = _Profiles();
     when(profiles.settledOnce).thenReturn(true);
     when(profiles.isKidsProfile).thenReturn(false);
     when(profiles.activeProfileKey).thenReturn("user:0");
@@ -67,6 +71,18 @@ void main() {
     expect(find.text("Welcome to Hearth"), findsOneWidget);
   });
 
+  testWidgets("waits for the first profile check, even when the profile can't be told yet", (tester) async {
+    when(profiles.settledOnce).thenReturn(false);
+    when(profiles.activeProfileKey).thenReturn(null);
+    await pumpHome(tester);
+    expect(find.text("Welcome to Hearth"), findsNothing);
+
+    when(profiles.settledOnce).thenReturn(true);
+    profiles.changed();
+    await tester.pumpAndSettle();
+    expect(find.text("Welcome to Hearth"), findsOneWidget);
+  });
+
   testWidgets("an existing install: nothing opens, and it counts as set up", (tester) async {
     channel.homeButtonOn = true;
     channel.homeButtonSeen = true;
@@ -90,6 +106,21 @@ void main() {
     expect(find.text("Welcome to Hearth"), findsNothing);
     expect(find.text("The update turned the Home button off"), findsNothing);
     expect(find.byKey(const Key("setup_chip")), findsNothing);
+  });
+
+  testWidgets("the lost Home button waits for a grown-up's profile", (tester) async {
+    when(profiles.isKidsProfile).thenReturn(true);
+    when(profiles.activeProfileKey).thenReturn("user:10");
+    channel.homeButtonSeen = true;
+    await prefs.setInt("device_setup_flow_version", 1);
+    await pumpHome(tester);
+    expect(find.text("The update turned the Home button off"), findsNothing);
+
+    when(profiles.isKidsProfile).thenReturn(false);
+    when(profiles.activeProfileKey).thenReturn("user:0");
+    profiles.changed();
+    await tester.pumpAndSettle();
+    expect(find.text("The update turned the Home button off"), findsOneWidget);
   });
 
   testWidgets("Hearth restarted right after a trip to Android's settings: back at that step", (tester) async {
