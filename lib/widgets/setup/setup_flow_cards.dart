@@ -32,9 +32,9 @@ class _CardInfo {
   const _CardInfo(this.icon, this.title, this.benefit, this.included, this.needs, {this.note, this.turnOn});
 }
 
-/// The flow's optional cards (docs/design/first-run-setup.md, F2 Watching, F5 TV & power, F6 Updates): each is one
-/// screen saying what it gives and what it needs, with Not now / Turn on, and its steps come only after Turn on.
-/// TV & power is a choice in itself.
+/// The flow's optional cards (docs/design/first-run-setup.md, F1 to F6): each is one screen saying what it gives and
+/// what it needs, with Not now / Turn on, and its steps come only after Turn on. Your home (the look) and TV & power
+/// are a choice in themselves.
 extension _CardScreens on _SetupFlowPageState {
   _CardInfo _cardInfo(AppLocalizations l, SetupCard card) => switch (card) {
         SetupCard.family => _CardInfo(
@@ -159,7 +159,8 @@ extension _CardScreens on _SetupFlowPageState {
                 label: l.setupFlowKeep,
                 focusNode: _primary,
                 autofocus: true,
-                onPressed: () => _show(_nextAfter(_screen, leaveCard: true)),
+                // Kept on: on through whatever of it isn't on (a step skipped, a new kids' profile); kept off: past it
+                onPressed: () => _show(_nextAfter(_screen, leaveCard: choice != SetupChoice.on)),
               ),
             ]
           : [

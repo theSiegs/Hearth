@@ -88,9 +88,14 @@ class _SetupChipState extends State<SetupChip> with WidgetsBindingObserver {
           showContinueWatching: context.read<SettingsService?>()?.showContinueWatching ?? false,
           hasParentPin: context.read<SettingsService?>()?.hasParentPin ?? false,
           kidsProtected: flow.kidsProtected);
+      final kidsProfiles = await SetupSnapshot.loadKidsProfiles(channel);
       if (!mounted) return;
       setState(() {
-        _left = flow.remaining(homeButtonOn: homeButtonOn, homeAppOn: homeApp, cardOn: cardsOn);
+        _left = flow.remaining(
+            homeButtonOn: homeButtonOn,
+            homeAppOn: homeApp,
+            cardOn: cardsOn,
+            newKidsProfile: kidsProfiles > flow.kidsProtected);
         _new = flow.newCards(cardOn: cardsOn);
         _fix = flow.homeButtonNeedsFix(
             homeButtonOn: homeButtonOn, homeButtonSeenBefore: status["seenBefore"] == true);

@@ -153,6 +153,12 @@ class SetupSnapshot {
     }
   }
 
+  /// How many Family Link-supervised (kids') profiles Android lists, read without Hearth's own adb.
+  static Future<int> loadKidsProfiles(FLauncherChannel channel) async {
+    final family = await _safe(channel.getSetupFamilyState, <dynamic, dynamic>{});
+    return (family["kidsProfiles"] as int?) ?? 0;
+  }
+
   static Future<({bool alerts, bool panel, bool status})> _loadHomeAssistant(FLauncherChannel channel) async {
     final panel = await _safe(channel.getHaPanelConfig, <dynamic, dynamic>{});
     final status = await _safe(channel.getHaStatusConfig, <dynamic, dynamic>{});
