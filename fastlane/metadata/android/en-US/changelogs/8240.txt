@@ -1,0 +1,3 @@
+- Early development pre-release.
+- YouTube allowance fixes: no lost play time, Home Assistant locks keep their own message.
+- Home Assistant status: usage every 2 minutes while watching.
