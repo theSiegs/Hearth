@@ -18,6 +18,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:crypto/crypto.dart';
 
@@ -85,6 +86,14 @@ const String backButtonActionScreensaver = "SCREENSAVER";
 
 const String temperatureUnitCelsius = "celsius";
 const String temperatureUnitFahrenheit = "fahrenheit";
+
+/// The regions that use Fahrenheit (as Android's own temperature preference has it): the US and its territories,
+/// the Bahamas, Belize, the Cayman Islands, Liberia, Palau and the Marshall Islands and Micronesia.
+const Set<String> _fahrenheitRegions = {"US", "AS", "GU", "MP", "PR", "UM", "VI", "BS", "BZ", "KY", "LR", "PW", "MH", "FM"};
+
+/// The temperature unit a TV in [locale]'s region uses.
+String defaultTemperatureUnit(Locale locale) =>
+    _fahrenheitRegions.contains(locale.countryCode?.toUpperCase()) ? temperatureUnitFahrenheit : temperatureUnitCelsius;
 
 // WiFi usage period options
 const String dataUsageDaily = "daily";
@@ -176,7 +185,12 @@ class SettingsService extends ChangeNotifier {
 
   final SharedPreferences _sharedPreferences;
 
-  SettingsService(this._sharedPreferences) {
+  /// The TV's language and region, for defaults that depend on where it is (the temperature unit); the platform's
+  /// unless a test gives one.
+  final Locale Function() _region;
+
+  SettingsService(this._sharedPreferences, {Locale Function()? region})
+      : _region = region ?? (() => ui.PlatformDispatcher.instance.locale) {
     if (_sharedPreferences.containsKey(_retiredTmdbApiKeyKey)) {
       unawaited(_sharedPreferences.remove(_retiredTmdbApiKeyKey));
     }
@@ -344,7 +358,9 @@ class SettingsService extends ChangeNotifier {
 
   bool get showWeatherWarnings => _bool(_showWeatherWarningsKey, true);
 
-  String get temperatureUnit => _string(_temperatureUnitKey, temperatureUnitCelsius);
+  /// Celsius or Fahrenheit: until someone picks one, whichever the TV's region uses ([defaultTemperatureUnit]).
+  String get temperatureUnit =>
+      _string(_temperatureUnitKey, defaultTemperatureUnit(_region()));
 
   bool get useFahrenheit => temperatureUnit == temperatureUnitFahrenheit;
 
