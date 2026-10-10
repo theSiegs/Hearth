@@ -1,11 +1,10 @@
 package com.thesiegs.hearth;
 
-import android.app.AppOpsManager;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInstaller;
 import android.os.Build;
-import android.os.Process;
 import android.provider.Settings;
 import android.util.Log;
 
@@ -31,8 +30,9 @@ final class SetupFixes {
     static final String WATCH_NEXT = "watch_next";
     static final String NOTIFICATION_ACCESS = "notification_access";
 
-    /** Hidden in AppOpsManager (OPSTR_ACCESS_RESTRICTED_SETTINGS), but the name is what Android 13+ knows it by. */
-    private static final String OP_RESTRICTED_SETTINGS = "android:access_restricted_settings";
+    private static final String PREFS = "hearth_setup";
+    /** The install (its lastUpdateTime) whose block Hearth lifted itself: an update may bring the block back. */
+    private static final String LIFTED_FOR_INSTALL = "restricted_lifted_for";
 
     /** What a component list may hold before Hearth puts it in a shell command: package and class names only. */
     private static final Pattern SAFE_COMPONENTS = Pattern.compile("[A-Za-z0-9_.$/:]*");
@@ -41,38 +41,36 @@ final class SetupFixes {
     }
 
     /**
-     * Whether Android blocks Hearth's accessibility switches (they show greyed out), from the app-op Android sets on
-     * an app installed from a downloaded file. Null when the app-op can't be read; Android 12 and older have none.
-     */
-    static Boolean restrictedSettingsDenied(Context context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false;
-        try {
-            AppOpsManager ops = context.getSystemService(AppOpsManager.class);
-            if (ops == null) return null;
-            int mode = ops.unsafeCheckOpNoThrow(OP_RESTRICTED_SETTINGS, Process.myUid(), context.getPackageName());
-            return mode == AppOpsManager.MODE_ERRORED || mode == AppOpsManager.MODE_IGNORED;
-        } catch (RuntimeException e) {
-            // An Android that doesn't know the op by that name
-            Log.i(TAG, "Can't read the restricted settings app-op: " + e);
-            return null;
-        }
-    }
-
-    /**
-     * {@link #restrictedSettingsDenied}, or when that can't be read, a guess from where Hearth was installed from
-     * (a downloaded or local file is what Android restricts).
+     * Whether Android may block Hearth's accessibility switches (they show greyed out): Android 13+ does that to an app
+     * installed from a downloaded or local file. The block itself is the ACCESS_RESTRICTED_SETTINGS app-op, but Android
+     * doesn't let an app read it, not even its own (it wants MANAGE_APPOPS; seen on Android 14), so this goes by where
+     * Hearth was installed from, unless Hearth lifted the block itself for this install.
      */
     static boolean mayHaveRestrictedSettings(Context context) {
-        Boolean denied = restrictedSettingsDenied(context);
-        if (denied != null) return denied;
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false;
         try {
+            long installed = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).lastUpdateTime;
+            if (prefs(context).getLong(LIFTED_FOR_INSTALL, 0) == installed) return false;
             int source = context.getPackageManager().getInstallSourceInfo(context.getPackageName()).getPackageSource();
             return source == PackageInstaller.PACKAGE_SOURCE_LOCAL_FILE
                     || source == PackageInstaller.PACKAGE_SOURCE_DOWNLOADED_FILE;
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /** Hearth lifted the block on this install with its own adb: its switches aren't blocked until the next install. */
+    private static void rememberLifted(Context context) {
+        try {
+            long installed = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).lastUpdateTime;
+            prefs(context).edit().putLong(LIFTED_FOR_INSTALL, installed).apply();
+        } catch (Exception e) {
+            Log.w(TAG, "Couldn't note the lifted block", e);
+        }
+    }
+
+    private static SharedPreferences prefs(Context context) {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
     /** Whether the TV's debugging switch (Developer options) is on: self-adb needs it. Apps may read this setting. */
@@ -141,6 +139,7 @@ final class SetupFixes {
                 if (output != null && !output.trim().isEmpty()) log.add(output.trim());
             }
         }
+        if (fixes.contains(RESTRICTED_SETTINGS)) rememberLifted(context);
         return log;
     }
 }
