@@ -109,6 +109,10 @@ class SetupFlowService extends ChangeNotifier {
   /// The look chosen in the flow (a [HomeLook]'s name): the starting look for new grown-up profiles.
   static const String lookKey = "device_setup_look";
 
+  /// A look being previewed, and the home's look before it: kept while the look screen previews, so a restart in
+  /// the middle (Hearth stopped, the TV rebooted) can still put the home back.
+  static const String _lookPreviewKey = "device_setup_look_preview";
+
   /// How many kids' profiles Android listed when Hearth was last put on them from the flow: a new one asks again.
   static const String _kidsProtectedKey = "device_setup_kids_profiles";
 
@@ -151,6 +155,29 @@ class SetupFlowService extends ChangeNotifier {
   Future<void> setKidsProtected(int count) => _prefs.setInt(_kidsProtectedKey, count);
 
   HomeLook? get look => HomeLook.byName(_prefs.getString(lookKey));
+
+  /// The look previewed when the look screen was left without a choice (Hearth stopped), and the look before it.
+  ({HomeLook previewing, HomeLookSnapshot before})? get lookPreview {
+    final raw = _prefs.getString(_lookPreviewKey);
+    if (raw == null) return null;
+    try {
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      final previewing = HomeLook.byName(map["previewing"] as String?);
+      if (previewing == null) return null;
+      return (previewing: previewing, before: HomeLookSnapshot.fromJson(map["before"] as Map<String, dynamic>));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Notes the look being previewed ([previewing] null: none any more).
+  Future<void> setLookPreview(HomeLook? previewing, HomeLookSnapshot? before) async {
+    if (previewing == null || before == null) {
+      await _prefs.remove(_lookPreviewKey);
+    } else {
+      await _prefs.setString(_lookPreviewKey, jsonEncode({"previewing": previewing.name, "before": before.toJson()}));
+    }
+  }
 
   Future<void> setLook(HomeLook look) => _prefs.setString(lookKey, look.name);
 
