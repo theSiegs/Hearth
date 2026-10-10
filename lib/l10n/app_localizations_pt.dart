@@ -2231,15 +2231,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get setupFlowCardNeeds => 'O que é preciso';
 
   @override
-  String get setupFlowCardSkipped => 'Ignorado';
-
-  @override
-  String get setupFlowChange => 'Alterar';
-
-  @override
-  String get setupFlowKeep => 'Manter';
-
-  @override
   String get setupFlowTurnOn => 'Ativar';
 
   @override
@@ -2536,4 +2527,13 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get setupFlowKidsNotAll => 'O Hearth ainda não está em todos os perfis infantis';
+
+  @override
+  String get setupFlowLeaveAsIs => 'Deixar como está';
+
+  @override
+  String get setupFlowSetUpMissing => 'Configurar o que falta';
+
+  @override
+  String get setupFlowChooseAgain => 'Escolher de novo';
 }

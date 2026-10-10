@@ -31,6 +31,7 @@ class FakeSetupChannel extends FLauncherChannel {
   bool haSetupReceived = false;
   bool haTestShows = false;
   int kidsProfiles = 0;
+  int kidsWithHearth = 0;
   bool netflix = false;
   bool pairing = false;
   bool voice = false;
@@ -93,7 +94,7 @@ class FakeSetupChannel extends FLauncherChannel {
 
   @override
   Future<Map<dynamic, dynamic>> getSetupFamilyState() async =>
-      {"googleTv": googleTv, "kidsProfiles": kidsProfiles, "netflix": netflix};
+      {"googleTv": googleTv, "kidsProfiles": kidsProfiles, "kidsWithHearth": kidsWithHearth, "netflix": netflix};
 
   @override
   Future<bool> getHaNotificationsEnabled() async => haAlerts;

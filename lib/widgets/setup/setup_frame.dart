@@ -21,7 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 /// One dot in the setup flow's progress strip.
-enum SetupDot { todo, here, done, skipped }
+enum SetupDot { todo, here, done, partial, skipped }
 
 /// A group in the progress strip: the essentials, or one card, with its dots and, while its steps run, how far along
 /// it is ("1/2").
@@ -132,7 +132,8 @@ class SetupFrame extends StatelessWidget {
   }
 }
 
-/// Where the flow is, across the top: "Essentials ● ●   Watching ◉   Updates ○". Not focusable.
+/// Where the flow is, across the top: "Essentials ✓ ✓   Watching ◉   Updates ◐   Your home ○": a check when it's
+/// all on, half filled when part of it is, the ring around where the flow is now. Not focusable.
 class SetupProgressStrip extends StatelessWidget {
   final List<SetupStripGroup> groups;
 
@@ -164,11 +165,12 @@ class SetupProgressStrip extends StatelessWidget {
   }
 
   Widget _dot(SetupDot dot, Color accent) {
+    if (dot == SetupDot.done) return Icon(Icons.check_circle, size: 13, color: accent);
+    if (dot == SetupDot.partial) return Icon(Icons.incomplete_circle, size: 12, color: accent);
     final (Color fill, Color border) = switch (dot) {
-      SetupDot.done => (accent, accent),
       SetupDot.here => (accent.withOpacity(0.35), Colors.white),
       SetupDot.skipped => (Colors.transparent, Colors.white38),
-      SetupDot.todo => (Colors.transparent, Colors.white70),
+      _ => (Colors.transparent, Colors.white70),
     };
     return Container(
       width: 10,
@@ -411,6 +413,39 @@ class SetupCommandBox extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A card's items with how each stands now: a green check when it's on, an open circle when it isn't.
+class SetupStatusList extends StatelessWidget {
+  final List<String> items;
+  final List<bool> on;
+
+  const SetupStatusList({super.key, required this.items, required this.on});
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < items.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8, top: 1),
+                    child: Icon(on[i] ? Icons.check_circle : Icons.radio_button_unchecked,
+                        size: 16, color: on[i] ? Colors.green : Colors.white54),
+                  ),
+                  Expanded(
+                    child: Text(items[i],
+                        style: TextStyle(color: on[i] ? Colors.white : Colors.white70, fontSize: 14)),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      );
 }
 
 /// A bullet list ("• follow profile switches…").

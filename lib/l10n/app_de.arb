@@ -672,9 +672,6 @@
     "setupChipHide": "Ausblenden",
     "setupFlowCardIncluded": "Das ist dabei",
     "setupFlowCardNeeds": "Das wird gebraucht",
-    "setupFlowCardSkipped": "Übersprungen",
-    "setupFlowChange": "Ändern",
-    "setupFlowKeep": "Beibehalten",
     "setupFlowTurnOn": "Einschalten",
     "setupFlowNeedsQuestion": "Eine Frage von Android",
     "setupFlowNeedsOneSwitch": "Ein Schalter in den Android-Einstellungen",
@@ -768,5 +765,8 @@
     "setupFlowHaStatusDone": "Der Fernseher meldet Home Assistant, was läuft",
     "setupChipNewOne": "Neu in Hearth: {feature}",
     "setupChipNewMany": "Neu in Hearth · {count}",
-    "setupFlowKidsNotAll": "Hearth ist noch nicht auf jedem Kinderprofil"
+    "setupFlowKidsNotAll": "Hearth ist noch nicht auf jedem Kinderprofil",
+    "setupFlowLeaveAsIs": "So lassen",
+    "setupFlowSetUpMissing": "Fehlendes einrichten",
+    "setupFlowChooseAgain": "Neu wählen"
 }

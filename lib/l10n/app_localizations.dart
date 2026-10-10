@@ -3947,24 +3947,6 @@ abstract class AppLocalizations {
   /// **'What it needs'**
   String get setupFlowCardNeeds;
 
-  /// Setup flow: status line on a feature card the owner chose Not now for earlier
-  ///
-  /// In en, this message translates to:
-  /// **'Skipped'**
-  String get setupFlowCardSkipped;
-
-  /// Setup flow: button on a feature card decided earlier, to choose again
-  ///
-  /// In en, this message translates to:
-  /// **'Change'**
-  String get setupFlowChange;
-
-  /// Setup flow: button on a feature card decided earlier, to leave it as it is and go on
-  ///
-  /// In en, this message translates to:
-  /// **'Keep'**
-  String get setupFlowKeep;
-
   /// Setup flow: main button of a feature card or step
   ///
   /// In en, this message translates to:
@@ -4528,6 +4510,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hearth isn\'t on every kids\' profile yet'**
   String get setupFlowKidsNotAll;
+
+  /// Setup flow: a card button that goes on to the next card without changing anything
+  ///
+  /// In en, this message translates to:
+  /// **'Leave it as it is'**
+  String get setupFlowLeaveAsIs;
+
+  /// Setup flow: a card button that goes through the card's steps that aren't on yet
+  ///
+  /// In en, this message translates to:
+  /// **'Set up what\'s missing'**
+  String get setupFlowSetUpMissing;
+
+  /// Setup flow: on a card that is a choice (the look, TV & power), choose it again
+  ///
+  /// In en, this message translates to:
+  /// **'Choose again'**
+  String get setupFlowChooseAgain;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

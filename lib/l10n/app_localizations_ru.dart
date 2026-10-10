@@ -2245,15 +2245,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get setupFlowCardNeeds => 'Что нужно';
 
   @override
-  String get setupFlowCardSkipped => 'Пропущено';
-
-  @override
-  String get setupFlowChange => 'Изменить';
-
-  @override
-  String get setupFlowKeep => 'Оставить';
-
-  @override
   String get setupFlowTurnOn => 'Включить';
 
   @override
@@ -2550,4 +2541,13 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get setupFlowKidsNotAll => 'Hearth пока есть не во всех детских профилях';
+
+  @override
+  String get setupFlowLeaveAsIs => 'Оставить как есть';
+
+  @override
+  String get setupFlowSetUpMissing => 'Настроить недостающее';
+
+  @override
+  String get setupFlowChooseAgain => 'Выбрать заново';
 }

@@ -2221,15 +2221,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get setupFlowCardNeeds => '필요한 것';
 
   @override
-  String get setupFlowCardSkipped => '건너뜀';
-
-  @override
-  String get setupFlowChange => '변경';
-
-  @override
-  String get setupFlowKeep => '유지';
-
-  @override
   String get setupFlowTurnOn => '켜기';
 
   @override
@@ -2526,4 +2517,13 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get setupFlowKidsNotAll => '아직 모든 아이 프로필에 Hearth가 있지는 않습니다';
+
+  @override
+  String get setupFlowLeaveAsIs => '그대로 두기';
+
+  @override
+  String get setupFlowSetUpMissing => '빠진 항목 설정';
+
+  @override
+  String get setupFlowChooseAgain => '다시 선택';
 }

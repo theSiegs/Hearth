@@ -672,9 +672,6 @@
     "setupChipHide": "숨기기",
     "setupFlowCardIncluded": "포함된 기능",
     "setupFlowCardNeeds": "필요한 것",
-    "setupFlowCardSkipped": "건너뜀",
-    "setupFlowChange": "변경",
-    "setupFlowKeep": "유지",
     "setupFlowTurnOn": "켜기",
     "setupFlowNeedsQuestion": "Android의 질문 한 번",
     "setupFlowNeedsOneSwitch": "Android 설정의 스위치 하나",
@@ -768,5 +765,8 @@
     "setupFlowHaStatusDone": "TV가 Home Assistant에 지금 보는 것을 알립니다",
     "setupChipNewOne": "Hearth 새 기능: {feature}",
     "setupChipNewMany": "Hearth 새 기능 · {count}",
-    "setupFlowKidsNotAll": "아직 모든 아이 프로필에 Hearth가 있지는 않습니다"
+    "setupFlowKidsNotAll": "아직 모든 아이 프로필에 Hearth가 있지는 않습니다",
+    "setupFlowLeaveAsIs": "그대로 두기",
+    "setupFlowSetUpMissing": "빠진 항목 설정",
+    "setupFlowChooseAgain": "다시 선택"
 }

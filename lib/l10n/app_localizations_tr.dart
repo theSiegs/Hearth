@@ -2221,15 +2221,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get setupFlowCardNeeds => 'Gerekenler';
 
   @override
-  String get setupFlowCardSkipped => 'Atlandı';
-
-  @override
-  String get setupFlowChange => 'Değiştir';
-
-  @override
-  String get setupFlowKeep => 'Koru';
-
-  @override
   String get setupFlowTurnOn => 'Aç';
 
   @override
@@ -2526,4 +2517,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get setupFlowKidsNotAll => 'Hearth henüz her çocuk profilinde değil';
+
+  @override
+  String get setupFlowLeaveAsIs => 'Olduğu gibi bırak';
+
+  @override
+  String get setupFlowSetUpMissing => 'Eksik olanları ayarla';
+
+  @override
+  String get setupFlowChooseAgain => 'Yeniden seç';
 }

@@ -46,6 +46,9 @@ class SetupSnapshot {
   /// How many Family Link-supervised (kids') profiles Android lists.
   final int kidsProfiles;
 
+  /// How many of them have Hearth installed (put there by the flow or by Settings' Hearth on other profiles).
+  final int kidsWithHearth;
+
   /// Netflix is installed: its profile screen needs Hearth voice.
   final bool netflix;
 
@@ -62,6 +65,7 @@ class SetupSnapshot {
     this.hearthTubeInstalled = false,
     this.googleTv = false,
     this.kidsProfiles = 0,
+    this.kidsWithHearth = 0,
     this.netflix = false,
     this.haAlerts = false,
     this.haPanel = false,
@@ -87,9 +91,31 @@ class SetupSnapshot {
         hasParentPin: hasParentPin,
         pairing: isDone(SetupStepId.profilePairing),
         voice: !netflix || isDone(SetupStepId.voice),
-        kids: kidsProfiles <= kidsProtected,
+        kids: kidsCovered(kidsProfiles, kidsProtected: kidsProtected, kidsWithHearth: kidsWithHearth),
         homeAssistant: haAlerts && haPanel && haStatus,
       );
+
+  /// Whether Hearth is on every kids' profile: the flow put it on that many ([kidsProtected]), or Android lists it
+  /// installed on that many ([kidsWithHearth], however it got there).
+  static bool kidsCovered(int kidsProfiles, {required int kidsProtected, required int kidsWithHearth}) =>
+      kidsProfiles <= kidsProtected || kidsProfiles <= kidsWithHearth;
+
+  /// Each item a card lists, and whether it's on now; empty for the cards that are a choice in themselves (the look,
+  /// TV & power). [voiceNeeded]: Netflix is installed, so the right-profile item also needs Hearth voice.
+  List<bool> cardItems(SetupCard card,
+          {required bool showContinueWatching, required bool hasParentPin, required int kidsProtected}) =>
+      switch (card) {
+        SetupCard.family => [
+            hasParentPin,
+            isDone(SetupStepId.profilePairing) && (!netflix || isDone(SetupStepId.voice)),
+            if (kidsProfiles > 0)
+              kidsCovered(kidsProfiles, kidsProtected: kidsProtected, kidsWithHearth: kidsWithHearth),
+          ],
+        SetupCard.watching => [watchNextAllowed && showContinueWatching, isDone(SetupStepId.notifications)],
+        SetupCard.smartHome => [haAlerts, haPanel, haStatus],
+        SetupCard.updates => [isDone(SetupStepId.install), hearthTubeInstalled],
+        SetupCard.home || SetupCard.tv => const [],
+      };
 
   /// The rule behind [cardOn], for the home's checks that have no snapshot. A card that is a choice by itself (the
   /// look, TV & power) is never on until chosen. The family card counts as on away from Google TV, where it isn't
@@ -140,7 +166,8 @@ class SetupSnapshot {
             hasParentPin: hasParentPin,
             pairing: pairing["enabled"] == true,
             voice: family["netflix"] != true || pairing["voiceDefault"] == true,
-            kids: ((family["kidsProfiles"] as int?) ?? 0) <= kidsProtected,
+            kids: kidsCovered((family["kidsProfiles"] as int?) ?? 0,
+                kidsProtected: kidsProtected, kidsWithHearth: (family["kidsWithHearth"] as int?) ?? 0),
             homeAssistant: ha.alerts && ha.panel && ha.status),
     };
   }
@@ -189,6 +216,7 @@ class SetupSnapshot {
       hearthTubeInstalled: await _hearthTubeInstalled(channel),
       googleTv: family["googleTv"] == true,
       kidsProfiles: (family["kidsProfiles"] as int?) ?? 0,
+      kidsWithHearth: (family["kidsWithHearth"] as int?) ?? 0,
       netflix: family["netflix"] == true,
       haAlerts: ha.alerts,
       haPanel: ha.panel,

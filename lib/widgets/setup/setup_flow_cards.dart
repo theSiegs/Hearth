@@ -76,6 +76,14 @@ extension _CardScreens on _SetupFlowPageState {
           ),
       };
 
+  /// How each of a card's items stands now, in [_CardInfo.included]'s order; empty for the choice cards.
+  List<bool> _cardItems(SetupCard card) =>
+      _snap?.cardItems(card,
+          showContinueWatching: _showContinueWatching,
+          hasParentPin: _hasParentPin,
+          kidsProtected: _flow.kidsProtected) ??
+      const [];
+
   /// Whether all a card turns on is on already.
   bool _cardOn(SetupCard card) =>
       _snap?.cardOn(card,
@@ -88,11 +96,14 @@ extension _CardScreens on _SetupFlowPageState {
     final screens = _SetupFlowPageState._cardScreens[card]!;
     final here = screens.contains(_SetupFlowPageState._mainScreen(_screen));
     final choice = _flow.cardChoice(card);
+    final items = _cardItems(card);
     final SetupDot dot;
     if (here) {
       dot = SetupDot.here;
-    } else if (choice == SetupChoice.on || _cardOn(card)) {
+    } else if (_cardOn(card) || items.isEmpty && choice == SetupChoice.on) {
       dot = SetupDot.done;
+    } else if (items.contains(true)) {
+      dot = SetupDot.partial;
     } else if (choice == SetupChoice.notNow) {
       dot = SetupDot.skipped;
     } else {
@@ -104,13 +115,23 @@ extension _CardScreens on _SetupFlowPageState {
         progress: step > 0 && screens.length > 1 ? "$step/${screens.length - 1}" : null);
   }
 
-  /// A card's own screen: Turn on or Not now; once decided, how it was decided, with Keep or Change.
+  /// A card's own screen: what it includes, each item with how it stands now, and what it needs. Never decided: Not
+  /// now / Turn on. Decided with something still off: Leave it as it is / Set up what's missing; all on: Next. The
+  /// choice cards (the look, TV & power), once decided: Leave it as it is / Choose again.
   Widget _cardScreen(AppLocalizations l, SetupCard card) {
     final info = _cardInfo(l, card);
     final choice = _flow.cardChoice(card);
-    final on = choice == SetupChoice.on || _cardOn(card);
-    final decided = (choice != null || on) && !_changing;
+    final items = _cardItems(card);
+    // Each item's state, when the card has items to measure (the family card's kids' item comes and goes with them)
+    final status = items.length == info.included.length ? items : null;
+    final allOn = status != null ? !status.contains(false) : _cardOn(card);
+    // Never decided and not all on: Not now / Turn on, as on a first run (with each item's state showing)
+    final decided = (choice != null || allOn) && !_changing;
     const heading = TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600);
+    Future<void> leave() async {
+      if (choice == null) await _flow.decide(card.name, allOn ? SetupChoice.on : SetupChoice.notNow);
+      _show(_nextAfter(_screen, leaveCard: true));
+    }
     return SetupScreenBody(
       icon: info.icon,
       title: info.title,
@@ -123,47 +144,54 @@ extension _CardScreens on _SetupFlowPageState {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(l.setupFlowCardIncluded, style: heading),
                 const SizedBox(height: 6),
-                SetupBullets(items: info.included),
+                status != null
+                    ? SetupStatusList(items: info.included, on: status)
+                    : SetupBullets(items: info.included),
               ]),
             ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(l.setupFlowCardNeeds, style: heading),
-                const SizedBox(height: 6),
-                SetupBullets(items: info.needs),
-              ]),
-            ),
+            // What it needs matters only while something is still to set up
+            if (!allOn) ...[
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(l.setupFlowCardNeeds, style: heading),
+                  const SizedBox(height: 6),
+                  SetupBullets(items: info.needs),
+                ]),
+              ),
+            ],
           ],
         ),
         if (info.note != null) Text(info.note!, style: const TextStyle(color: Colors.white54, fontSize: 13)),
-        if (decided)
-          Row(children: [
-            Icon(on ? Icons.check_circle : Icons.radio_button_unchecked,
-                size: 18, color: on ? Colors.green : Colors.white54),
-            const SizedBox(width: 8),
-            Text(on ? l.setupFlowFinishOn : l.setupFlowCardSkipped,
-                style: TextStyle(color: on ? Colors.green : Colors.white70, fontSize: 14)),
-          ]),
       ],
-      buttons: decided
-          ? [
-              SetupButton(
-                label: l.setupFlowChange,
-                onPressed: () {
-                  _update(() => _changing = true);
-                  _focusPrimary();
-                },
-              ),
-              SetupButton(
-                label: l.setupFlowKeep,
-                focusNode: _primary,
-                autofocus: true,
-                // Kept on: on through whatever of it isn't on (a step skipped, a new kids' profile); kept off: past it
-                onPressed: () => _show(_nextAfter(_screen, leaveCard: choice != SetupChoice.on)),
-              ),
-            ]
-          : [
+      buttons: decided && allOn && status != null
+          ? [SetupButton(label: l.setupFlowNext, focusNode: _primary, autofocus: true, onPressed: leave)]
+          : decided && status != null
+              ? [
+                  SetupButton(label: l.setupFlowLeaveAsIs, onPressed: leave),
+                  SetupButton(
+                    label: l.setupFlowSetUpMissing,
+                    focusNode: _primary,
+                    autofocus: true,
+                    // Through the card's steps: the ones on already pass straight on
+                    onPressed: () async {
+                      await _flow.decide(card.name, SetupChoice.on);
+                      _next();
+                    },
+                  ),
+                ]
+              : decided
+                  ? [
+                      SetupButton(
+                        label: l.setupFlowChooseAgain,
+                        onPressed: () {
+                          _update(() => _changing = true);
+                          _focusPrimary();
+                        },
+                      ),
+                      SetupButton(label: l.setupFlowLeaveAsIs, focusNode: _primary, autofocus: true, onPressed: leave),
+                    ]
+                  : [
               SetupButton(
                 label: l.notNow,
                 onPressed: () async {

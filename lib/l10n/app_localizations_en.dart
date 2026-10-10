@@ -2231,15 +2231,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowCardNeeds => 'What it needs';
 
   @override
-  String get setupFlowCardSkipped => 'Skipped';
-
-  @override
-  String get setupFlowChange => 'Change';
-
-  @override
-  String get setupFlowKeep => 'Keep';
-
-  @override
   String get setupFlowTurnOn => 'Turn on';
 
   @override
@@ -2536,4 +2527,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setupFlowKidsNotAll => 'Hearth isn\'t on every kids\' profile yet';
+
+  @override
+  String get setupFlowLeaveAsIs => 'Leave it as it is';
+
+  @override
+  String get setupFlowSetUpMissing => 'Set up what\'s missing';
+
+  @override
+  String get setupFlowChooseAgain => 'Choose again';
 }

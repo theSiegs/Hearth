@@ -672,9 +672,6 @@
     "setupChipHide": "隐藏",
     "setupFlowCardIncluded": "包含内容",
     "setupFlowCardNeeds": "需要什么",
-    "setupFlowCardSkipped": "已跳过",
-    "setupFlowChange": "更改",
-    "setupFlowKeep": "保留",
     "setupFlowTurnOn": "开启",
     "setupFlowNeedsQuestion": "Android 询问一次",
     "setupFlowNeedsOneSwitch": "Android 设置中的一个开关",
@@ -768,5 +765,8 @@
     "setupFlowHaStatusDone": "电视会告诉 Home Assistant 正在播放什么",
     "setupChipNewOne": "Hearth 新功能：{feature}",
     "setupChipNewMany": "Hearth 新功能 · {count}",
-    "setupFlowKidsNotAll": "Hearth 还没有在所有孩子的个人资料中"
+    "setupFlowKidsNotAll": "Hearth 还没有在所有孩子的个人资料中",
+    "setupFlowLeaveAsIs": "保持不变",
+    "setupFlowSetUpMissing": "设置缺少的项目",
+    "setupFlowChooseAgain": "重新选择"
 }

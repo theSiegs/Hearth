@@ -672,9 +672,6 @@
     "setupChipHide": "إخفاء",
     "setupFlowCardIncluded": "ما الذي يتضمنه",
     "setupFlowCardNeeds": "ما يحتاجه",
-    "setupFlowCardSkipped": "تم التخطي",
-    "setupFlowChange": "تغيير",
-    "setupFlowKeep": "إبقاء",
     "setupFlowTurnOn": "تشغيل",
     "setupFlowNeedsQuestion": "سؤال واحد من Android",
     "setupFlowNeedsOneSwitch": "مفتاح واحد في إعدادات Android",
@@ -768,5 +765,8 @@
     "setupFlowHaStatusDone": "يُخبر التلفزيون Home Assistant بما يُعرض",
     "setupChipNewOne": "جديد في Hearth: {feature}",
     "setupChipNewMany": "جديد في Hearth · {count}",
-    "setupFlowKidsNotAll": "لم يُثبَّت Hearth بعد على كل ملفات الأطفال"
+    "setupFlowKidsNotAll": "لم يُثبَّت Hearth بعد على كل ملفات الأطفال",
+    "setupFlowLeaveAsIs": "اتركه كما هو",
+    "setupFlowSetUpMissing": "إعداد ما ينقص",
+    "setupFlowChooseAgain": "اختر مرة أخرى"
 }

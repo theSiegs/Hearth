@@ -2229,15 +2229,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get setupFlowCardNeeds => 'क्या चाहिए';
 
   @override
-  String get setupFlowCardSkipped => 'छोड़ा गया';
-
-  @override
-  String get setupFlowChange => 'बदलें';
-
-  @override
-  String get setupFlowKeep => 'रहने दें';
-
-  @override
   String get setupFlowTurnOn => 'चालू करें';
 
   @override
@@ -2534,4 +2525,13 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get setupFlowKidsNotAll => 'Hearth अभी हर बच्चों की प्रोफ़ाइल पर नहीं है';
+
+  @override
+  String get setupFlowLeaveAsIs => 'जैसा है वैसा छोड़ें';
+
+  @override
+  String get setupFlowSetUpMissing => 'जो बाकी है उसे सेट करें';
+
+  @override
+  String get setupFlowChooseAgain => 'फिर से चुनें';
 }

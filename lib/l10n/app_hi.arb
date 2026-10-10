@@ -672,9 +672,6 @@
     "setupChipHide": "छिपाएं",
     "setupFlowCardIncluded": "इसमें क्या है",
     "setupFlowCardNeeds": "क्या चाहिए",
-    "setupFlowCardSkipped": "छोड़ा गया",
-    "setupFlowChange": "बदलें",
-    "setupFlowKeep": "रहने दें",
     "setupFlowTurnOn": "चालू करें",
     "setupFlowNeedsQuestion": "Android से एक सवाल",
     "setupFlowNeedsOneSwitch": "Android की सेटिंग में एक स्विच",
@@ -768,5 +765,8 @@
     "setupFlowHaStatusDone": "टीवी Home Assistant को बताता है कि क्या चल रहा है",
     "setupChipNewOne": "Hearth में नया: {feature}",
     "setupChipNewMany": "Hearth में नया · {count}",
-    "setupFlowKidsNotAll": "Hearth अभी हर बच्चों की प्रोफ़ाइल पर नहीं है"
+    "setupFlowKidsNotAll": "Hearth अभी हर बच्चों की प्रोफ़ाइल पर नहीं है",
+    "setupFlowLeaveAsIs": "जैसा है वैसा छोड़ें",
+    "setupFlowSetUpMissing": "जो बाकी है उसे सेट करें",
+    "setupFlowChooseAgain": "फिर से चुनें"
 }
