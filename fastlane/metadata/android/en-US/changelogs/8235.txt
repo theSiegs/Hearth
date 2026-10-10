@@ -1,0 +1,3 @@
+- Early development pre-release.
+- The Home button closes Settings, side panels, dialogs and the Home Assistant panel.
+- One temperature unit for the whole TV, starting from its region's (Fahrenheit in the US).

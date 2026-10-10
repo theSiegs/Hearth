@@ -3,6 +3,11 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.24 (pre-release)
+
+- The Home button closes Settings, side panels, dialogs and the Home Assistant panel.
+- One temperature unit for the whole TV, starting from its region's (Fahrenheit in the US).
+
 ## 2026.10.23 (pre-release)
 
 - Groundwork for grown-up profiles that share the TV's main user: Hearth notes Google TV's profile switches in its log.
