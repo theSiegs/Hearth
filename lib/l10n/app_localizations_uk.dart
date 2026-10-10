@@ -2047,4 +2047,10 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get updateErrorWrongApp => 'Це завантаження не є оновленням цього Hearth';
+
+  @override
+  String get notifOpen => 'Відкрити';
+
+  @override
+  String get notifOpenHint => 'OK: відкрити · Ліворуч: закрити · Праворуч: більше';
 }

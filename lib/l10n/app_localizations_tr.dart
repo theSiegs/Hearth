@@ -2023,4 +2023,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get updateErrorWrongApp => 'Bu indirme bu Hearth için bir güncelleme değil';
+
+  @override
+  String get notifOpen => 'Aç';
+
+  @override
+  String get notifOpenHint => 'Tamam: Aç · Sol: Kapat · Sağ: Diğer';
 }

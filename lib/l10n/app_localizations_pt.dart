@@ -2033,4 +2033,10 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get updateErrorWrongApp => 'Este download não é uma atualização deste Hearth';
+
+  @override
+  String get notifOpen => 'Abrir';
+
+  @override
+  String get notifOpenHint => 'OK: Abrir · Esquerda: Dispensar · Direita: Mais';
 }

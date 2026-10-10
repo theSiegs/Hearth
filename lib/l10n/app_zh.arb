@@ -609,5 +609,7 @@
     "profileLockAfterMinutes": "休眠 {minutes} 分钟后",
     "profileLockNeedsGoogleLock": "使用 Google TV 自带的个人资料锁：在 Google TV 设置 → 账号与登录 → 你的账号 → 个人资料锁 中为你的账号开启。",
     "aboutWallpaperPhoto": "壁纸照片",
-    "updateErrorWrongApp": "此下载不是此 Hearth 的更新"
+    "updateErrorWrongApp": "此下载不是此 Hearth 的更新",
+    "notifOpen": "打开",
+    "notifOpenHint": "确定：打开 · 左：关闭 · 右：更多"
 }

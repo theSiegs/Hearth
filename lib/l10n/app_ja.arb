@@ -609,5 +609,7 @@
     "profileLockAfterMinutes": "{minutes}分以上スリープした後",
     "profileLockNeedsGoogleLock": "Google TV自体のプロフィールロックを使います。Google TVの設定 → アカウントとログイン → ご自分のアカウント → プロフィールロック でオンにしてください。",
     "aboutWallpaperPhoto": "壁紙の写真",
-    "updateErrorWrongApp": "このダウンロードはこの Hearth の更新ではありません"
+    "updateErrorWrongApp": "このダウンロードはこの Hearth の更新ではありません",
+    "notifOpen": "開く",
+    "notifOpenHint": "OK: 開く · 左: 閉じる · 右: その他"
 }

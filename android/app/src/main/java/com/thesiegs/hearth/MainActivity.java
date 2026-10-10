@@ -325,6 +325,8 @@ public class MainActivity extends FlutterActivity {
             case "openAppNotificationSettings" -> result.success(openAppNotificationSettings());
             case "getActiveNotifications" -> result.success(NotificationsEventStreamHandler.activeNotifications());
             case "dismissNotification" -> result.success(dismissNotification(call.argument("key")));
+            case "openNotification" -> result.success(NotificationsEventStreamHandler.open(this, call.argument("key"),
+                    call.argument("action") == null ? -1 : call.<Integer>argument("action")));
             case "dismissAllNotifications" -> result.success(dismissAllNotifications());
             case "checkOverlayPermission" -> result.success(checkOverlayPermission());
             case "requestOverlayPermission" -> result.success(requestOverlayPermission());

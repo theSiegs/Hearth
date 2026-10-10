@@ -609,5 +609,7 @@
     "profileLockAfterMinutes": "Dopo {minutes} min di standby",
     "profileLockNeedsGoogleLock": "Usa il blocco del profilo di Google TV: attivalo per il tuo account in Impostazioni di Google TV → Account e accesso → il tuo account → Blocco profilo.",
     "aboutWallpaperPhoto": "FOTO DI SFONDO",
-    "updateErrorWrongApp": "Questo download non è un aggiornamento di questo Hearth"
+    "updateErrorWrongApp": "Questo download non è un aggiornamento di questo Hearth",
+    "notifOpen": "Apri",
+    "notifOpenHint": "OK: Apri · Sinistra: Ignora · Destra: Altro"
 }

@@ -609,5 +609,7 @@
     "profileLockAfterMinutes": "Nach {minutes} Min. Ruhezustand",
     "profileLockNeedsGoogleLock": "Nutzt die Profilsperre von Google TV: Schalte sie für dein Konto ein unter Google TV-Einstellungen → Konten und Anmeldung → dein Konto → Profilsperre.",
     "aboutWallpaperPhoto": "HINTERGRUNDFOTO",
-    "updateErrorWrongApp": "Dieser Download ist kein Update für dieses Hearth"
+    "updateErrorWrongApp": "Dieser Download ist kein Update für dieses Hearth",
+    "notifOpen": "Öffnen",
+    "notifOpenHint": "OK: Öffnen · Links: Schließen · Rechts: Mehr"
 }

@@ -2568,5 +2568,13 @@
     "updateErrorWrongApp": "This download isn't an update for this Hearth",
     "@updateErrorWrongApp": {
         "description": "Hearth update dialog: the downloaded APK is another app"
+    },
+    "notifOpen": "Open",
+    "@notifOpen": {
+        "description": "Notifications panel: open a notification, as a tap on it would"
+    },
+    "notifOpenHint": "OK: Open · Left: Dismiss · Right: More",
+    "@notifOpenHint": {
+        "description": "Notifications panel: remote keys under a notification that can be opened"
     }
 }

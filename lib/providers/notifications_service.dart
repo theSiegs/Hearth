@@ -5,6 +5,14 @@ import 'package:flutter/widgets.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// One of a notification's buttons: [index] is its place among the notification's own actions.
+class NotificationAction {
+  final int index;
+  final String title;
+
+  const NotificationAction(this.index, this.title);
+}
+
 class NotificationItem {
   final String key;
   final String packageName;
@@ -12,12 +20,20 @@ class NotificationItem {
   final String text;
   final bool isClearable;
 
+  /// Whether the notification does something when opened, as a tap in the system shade would.
+  final bool canOpen;
+
+  /// Its buttons, except ones that need typed text.
+  final List<NotificationAction> actions;
+
   NotificationItem({
     required this.key,
     required this.packageName,
     required this.title,
     required this.text,
     required this.isClearable,
+    this.canOpen = false,
+    this.actions = const [],
   });
 
   factory NotificationItem.fromMap(Map<dynamic, dynamic> map) {
@@ -27,6 +43,12 @@ class NotificationItem {
       title: map['title'] as String? ?? '',
       text: map['text'] as String? ?? '',
       isClearable: map['isClearable'] as bool? ?? false,
+      canOpen: map['canOpen'] as bool? ?? false,
+      actions: [
+        for (final action in (map['actions'] as List<dynamic>? ?? const []))
+          if (action is Map && action['index'] is int && action['title'] is String)
+            NotificationAction(action['index'] as int, action['title'] as String),
+      ],
     );
   }
 }
@@ -257,6 +279,13 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
     if (success) {
       await refreshNotifications();
     }
+  }
+
+  /// Does what tapping the notification does, or presses one of its buttons ([action], its index).
+  Future<bool> open(String key, {int action = -1}) async {
+    final bool sent = await _channel.openNotification(key, action: action);
+    if (sent) await refreshNotifications();
+    return sent;
   }
 
   Future<void> dismissAll() async {
