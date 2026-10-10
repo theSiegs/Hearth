@@ -8,7 +8,8 @@ what was tested on the TV.
 
 ## The shape (what the Hearth app would do)
 
-Two matching rows in **Settings → Profiles → Hearth on other profiles**, both parent-initiated, nothing automatic:
+(Built as **Settings → Profiles → Kids' profiles**, with Fix and Remove, and the setup flow's kids' step; see
+docs/kids-profile-installs.md. The original shape, kept for reference:)
 
 - **"Add Hearth to kids' profiles"** → runs `add`: for each kid profile, `install-existing` Hearth + HearthTube
   and set the per-user block-uninstall flag. Explains first; lists what it did.

@@ -409,7 +409,92 @@ class AppLocalizationsZh extends AppLocalizations {
   String get updatesTitle => '更新';
 
   @override
-  String get familyAppsTitle => '其他个人资料中的 Hearth';
+  String get kidsProfilesTitle => '儿童个人资料';
+
+  @override
+  String get kidsProfilesUnnamed => '一个儿童个人资料';
+
+  @override
+  String get kidsProfilesReady => '就绪';
+
+  @override
+  String get kidsProfilesNeedsFix => '需要修复';
+
+  @override
+  String kidsProfilesNeedFixCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个需要修复',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get kidsProfilesHearthOn => '已安装 Hearth';
+
+  @override
+  String get kidsProfilesBothOn => '已安装 Hearth 和 HearthTube';
+
+  @override
+  String get kidsProfilesHearthMissing => '未安装 Hearth';
+
+  @override
+  String get kidsProfilesHearthTubeMissing => '未安装 HearthTube';
+
+  @override
+  String get kidsProfilesNotKept => '未受保护：此个人资料下次启动时，Google TV 会移除 Hearth 的应用';
+
+  @override
+  String get kidsProfilesFix => '修复';
+
+  @override
+  String get kidsProfilesFixBody => '把 Hearth 和 HearthTube 放回缺少它们的地方。每为一个孩子添加一次，该孩子会收到一条 Family Link 通知。';
+
+  @override
+  String get kidsProfilesNone => '这台电视上没有儿童个人资料。';
+
+  @override
+  String get kidsProfilesAutoOn => 'Hearth 也会自动添加到新的儿童个人资料中。';
+
+  @override
+  String get kidsProfilesApproval => '第一次时，电视会询问“允许调试吗？”——请选择“始终允许”，这样 Hearth 才能完成设置。';
+
+  @override
+  String get kidsProfilesRemoveTitle => '从儿童个人资料中移除 Hearth';
+
+  @override
+  String get kidsProfilesRemoveBody => '这会从孩子的个人资料中移除 Hearth 和 HearthTube，Hearth 也不再自动添加到新的个人资料。请在卸载 Hearth 之前执行此操作。';
+
+  @override
+  String get kidsProfilesUninstallTitle => '卸载 Hearth';
+
+  @override
+  String get kidsProfilesUninstallBody => '这会先从孩子的个人资料中移除 Hearth 和 HearthTube，然后卸载 Hearth。';
+
+  @override
+  String get kidsProfilesUninstallWhyHere => '在这里卸载（而不是在 Android 设置中卸载）可以确保儿童个人资料中不留下任何东西。';
+
+  @override
+  String get kidsProfilesApprovalFirstTitle => '请先完成一次性授权';
+
+  @override
+  String get kidsProfilesApprovalFirstBody => 'Hearth 还无法从儿童个人资料中移除自己——需要先在电视上对“允许调试吗？”授权一次。';
+
+  @override
+  String get kidsProfilesApprovalFirstRetry => '授权后再试一次卸载，这样儿童个人资料中就不会有残留。';
+
+  @override
+  String get kidsProfilesFailedTitle => '无法更改儿童个人资料';
+
+  @override
+  String get kidsProfilesFailedBody => 'Hearth 需要先在电视上获得一次性授权，才能更改儿童个人资料。';
+
+  @override
+  String get kidsProfilesFailedRetry => '当电视询问“允许调试吗？”时，请选择“始终允许”，然后重试。';
+
+  @override
+  String get kidProfileHint => '这里的一切都只属于这个孩子。无需切换到孩子的个人资料，就能在这里更改。';
 
   @override
   String get cardStyleTitle => '卡片样式';
@@ -919,11 +1004,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String profilesAdultName(String name) {
-    return '$name（成人）';
-  }
-
-  @override
   String get pairingShowPicker => '显示选择界面';
 
   @override
@@ -989,116 +1069,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String pairingAppProfilesFooter(String profiles) {
     return '此应用中的个人资料：$profiles。Hearth 看到 Google TV 个人资料后，它们会显示在这里。';
   }
-
-  @override
-  String get familyAppsAddTitle => '将 Hearth 添加到其他个人资料';
-
-  @override
-  String get familyAppsAddKids => '这会将 Hearth 和 HearthTube 安装到孩子的个人资料中，让 HearthTube 在那里正常运行，并让 Hearth 能在流媒体服务中选择正确的个人资料。';
-
-  @override
-  String get familyAppsAddAdults => '它还会安装到电视上的其他成人个人资料中，其他成人无需自己设置。';
-
-  @override
-  String get familyAppsAddOnlyOwnApps => '只会添加 Hearth 自己的两个应用，你可以随时用下方的“移除”撤销。';
-
-  @override
-  String get familyAppsAddFamilyLink => '每个孩子会收到一条 Family Link“已添加应用”通知。';
-
-  @override
-  String get familyAppsAddApproval => '第一次时，电视会询问“允许调试吗？”——请选择“始终允许”，这样 Hearth 才能完成设置。';
-
-  @override
-  String get familyAppsAdd => '添加';
-
-  @override
-  String get familyAppsRemoveTitle => '从其他个人资料中移除 Hearth';
-
-  @override
-  String get familyAppsRemoveBody => '这会从其他个人资料中移除 Hearth 和 HearthTube。';
-
-  @override
-  String get familyAppsRemoveFirst => '如果你打算卸载 Hearth 本身，请先执行此操作，否则它在儿童个人资料中的副本可能会残留，需要用电脑才能清除。';
-
-  @override
-  String get familyAppsUninstallTitle => '卸载 Hearth';
-
-  @override
-  String get familyAppsUninstallBody => '这会先从其他个人资料中移除 Hearth 和 HearthTube，然后从当前个人资料中卸载 Hearth。';
-
-  @override
-  String get familyAppsUninstallWhyHere => '在这里卸载（而不是在 Android 设置中卸载）可以确保儿童个人资料中不留下任何东西。';
-
-  @override
-  String get familyAppsApprovalFirstTitle => '请先完成一次性授权';
-
-  @override
-  String get familyAppsApprovalFirstBody => 'Hearth 还无法清理其他个人资料——需要先在电视上对“允许调试吗？”授权一次。';
-
-  @override
-  String get familyAppsApprovalFirstRetry => '授权后再试一次卸载，这样儿童个人资料中就不会有残留。';
-
-  @override
-  String get familyAppsAddDone => '添加完成';
-
-  @override
-  String get familyAppsRemoveDone => '移除完成';
-
-  @override
-  String get familyAppsAdded => '完成。Hearth 和 HearthTube 现已安装到其他个人资料中，请查看下方列表。';
-
-  @override
-  String get familyAppsRemoved => '完成。已从其他个人资料中移除 Hearth 和 HearthTube。';
-
-  @override
-  String get familyAppsNothingToSetUp => '目前还没有其他需要设置的个人资料。';
-
-  @override
-  String get familyAppsFailedTitle => '无法设置个人资料';
-
-  @override
-  String get familyAppsFailedBody => 'Hearth 需要先在电视上获得一次性授权，才能设置其他个人资料。';
-
-  @override
-  String get familyAppsFailedRetry => '当电视询问“允许调试吗？”时，请选择“始终允许”，然后重试。';
-
-  @override
-  String get familyAppsAlsoAdults => '同时设置其他成人个人资料';
-
-  @override
-  String get familyAppsOn => '开';
-
-  @override
-  String get familyAppsOff => '关';
-
-  @override
-  String get familyAppsNoneYet => '尚未设置其他个人资料。';
-
-  @override
-  String familyAppsAppInstalled(String app) {
-    return '$app：已安装';
-  }
-
-  @override
-  String familyAppsAppInstalledKept(String app) {
-    return '$app：已安装，已保留';
-  }
-
-  @override
-  String familyAppsAppNotInstalled(String app) {
-    return '$app：未安装';
-  }
-
-  @override
-  String familyAppsAppNotInstalledKept(String app) {
-    return '$app：未安装，已保留';
-  }
-
-  @override
-  String get familyAppsUnnamedKids => '一个儿童个人资料';
-
-  @override
-  String get familyAppsUnnamedAdult => '一个成人个人资料';
 
   @override
   String setupAccessibilityInstructions(String service) {
@@ -1922,21 +1892,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aboutLicense => '与其所基于的项目一样，是遵循 GNU GPL v3 的自由软件。';
 
   @override
-  String get familyAppsStatusInstalled => '已安装';
-
-  @override
-  String get familyAppsStatusPartial => '部分安装';
-
-  @override
-  String get familyAppsStatusNotInstalled => '未安装';
-
-  @override
-  String get familyAppsStatusAtRisk => '有风险';
-
-  @override
-  String get familyAppsAtRiskDetail => '此个人资料下次启动时，Google TV 会移除这里未受保护的应用。请再次使用“添加”来保护它们。';
-
-  @override
   String get profilePinRow => '个人资料 PIN';
 
   @override
@@ -1973,6 +1928,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profilePinSaveFailed => '无法保存 PIN。';
+
+  @override
+  String get streamingPinsTitle => '流媒体应用 PIN';
+
+  @override
+  String get streamingPinsFooter => '当这些应用要求输入某个个人资料的 PIN 时，Hearth 会替你输入。设置 PIN 后，该 Google TV 个人资料会与该应用个人资料长期配对。';
+
+  @override
+  String get streamingPinsNone => '未安装任何 Hearth 能输入 PIN 的应用。';
 
   @override
   String get profileLockNow => '锁定个人资料';

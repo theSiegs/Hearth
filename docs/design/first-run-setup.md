@@ -17,7 +17,7 @@ Hearth already had the parts of a setup flow, but they were scattered:
 - adb fallback dialogs (`adb_command_dialog.dart`);
 - the shuffled row-pad **parent PIN** (`parent_pin_dialog.dart`);
 - the **phone QR** for Home Assistant (`ha_phone_setup_dialog.dart`);
-- self-adb **Hearth on other profiles** (`family_apps_page.dart`);
+- self-adb **Kids' profiles** (`kids_profiles_page.dart`);
 - separate permission flows in Continue Watching, Notifications and Updates.
 
 The setup flow is one full-screen flow that runs those same pieces in order:
@@ -52,7 +52,7 @@ Key:
 | 9 | **Continue Watching** (Watch Next permission) | A row of what you were watching | **In-app** runtime permission dialog (`requestWatchNextPermission`) | `checkWatchNextPermission()` + `showContinueWatching` | Optional | `pm grant <pkg> com.android.providers.tv.permission.READ_WRITE_WATCH_NEXT_PROGRAMS` | The profile's own list |
 | 10 | **Search** | Films and shows, "Watch on…" from TMDB | Nothing: the TMDB key is built into releases | – | Works already. Explained only | – | Adult titles already filtered |
 | 11 | **Parent PIN** | Locks Hearth's Settings and app menus in kids' profiles; needed for saving streaming-app PINs | In-app: `ParentPinDialog` row pad, entered twice | `SettingsService.hasParentPin` | Optional, strongly suggested with kids' profiles | – | Kids see the pad when they open Parent settings |
-| 12 | **Hearth on other profiles** (self-adb) | Hearth and HearthTube stay installed in kids' profiles, where Google TV would otherwise uninstall them at each profile start | In-app *Add* (`addHearthToProfiles`). Needs ADB debugging on, Hearth reaching `127.0.0.1:5555`, and the one-time **"Allow debugging?" → Always allow** | `getHearthProfilesState()` (throws until approved) | Optional, **only with kids' profiles** | `pm install-existing` + block-uninstall per profile | Kids' copy runs as the agent |
+| 12 | **Hearth on the kids' profiles** (self-adb) | Hearth and HearthTube (when the owner has it) stay installed in kids' profiles, where Google TV would otherwise uninstall them at each profile start. Grown-ups' profiles are accounts in the owner's user and need nothing | F1.4's one button, or *Fix* in Settings › Profiles › Kids' profiles (`fixKidsProfiles`). Needs ADB debugging on, Hearth reaching `127.0.0.1:5555`, and the one-time **"Allow debugging?" → Always allow**. After that, Hearth adds itself to a new kids' profile (KidsProfiles.autoFixSoon) | `getKidsProfilesState()`: installed from LauncherApps (no adb); kept only over a key the TV trusts | Optional, **only with kids' profiles** | `pm install-existing` + block-uninstall per profile | Kids' copy runs as the agent |
 | 13 | **Look** | Card style, accent colour, wallpaper, dock | In-app (`LookSettingsPage` and its pages) | Settings values | Optional (defaults are good) | – | Kids change their own look in Settings. First visit gets Bing wallpaper |
 | 14 | **Weather** | Weather in the top bar | In-app `WeatherLocationDialog` (Open-Meteo, no account) | Location set | Optional | – | – |
 | 15 | **Home Assistant**: pop-ups | Doorbell, laundry etc. over any app | In-app toggle; in HA, "Notifications for Android TV / Fire TV" with the TV's address (port 7676) | `getHaNotificationsEnabled()` | Optional | – | Parent only |
@@ -205,12 +205,15 @@ switches, typing or a phone, about how long), and **Not now** / **Turn on** (foc
   `ProfilePairingService` connects; E2R if blocked. On success, a line on name matching ("Alex" goes with "Alex
   Morgan") and **Check pairings ›** (`ProfilePairingPage`).
 - **F1.3 Hearth voice.** Only if Netflix is installed and F1.2 is on. Opens `openTextToSpeechSettings()`.
-- **F1.4 Kids' profiles.** Only when Android lists a Family Link-supervised profile. Explains what is installed and
-  that each kid gets a Family Link "app added" notice.
+- **F1.4 Kids' profiles.** Only when Android lists a Family Link-supervised profile. On by default with the card:
+  the screen explains what is installed and that each kid gets a Family Link "app added" notice, and its one button
+  does it (no second question).
   - Debugging off (`Settings.Global.ADB_ENABLED` = 0) → **F1.4a "Turn on debugging"**: About → *Android TV OS build*
     7 times → Developer options → *USB debugging*. Detected on return.
-  - Then **Add** runs `addHearthToProfiles`, which raises **"Allow debugging?"** (tick *Always allow*, then *Allow*).
-    The result shows `FamilyAppsPage`'s per-profile rows.
+  - Then **Add to their profiles** runs `fixKidsProfiles`, which raises **"Allow debugging?"** the first time (tick
+    *Always allow*, then *Allow*). The result shows each kids' profile as Settings › Profiles › Kids' profiles does.
+  - From then on Hearth adds itself to a kids' profile added later, while that profile isn't running, once per app
+    and profile; one that doesn't stay shows as needing a fix in Settings instead.
   - Debugging stays on: the copy says Hearth needs it again for a new kids' profile and for Remove / Uninstall.
 
 **F2 Watching**
@@ -271,7 +274,7 @@ switches, typing or a phone, about how long), and **Not now** / **Turn on** (foc
 | E2R | `homeButtonFixRestricted` text, `showAdbCommandDialog`, `SelfAdb` |
 | Lost after an update | Replaces the `HomeButtonFixCheck` dialog (§3.4) |
 | F1.1 | `ParentPinDialog`, `_editParentPin` |
-| F1.4 | `FamilyAppsPage` actions + status rows, `ProfileAppAccess` / `SelfAdb` |
+| F1.4 | `KidsProfilesPage.describe` rows, `fixKidsProfiles` (`KidsProfiles` / `ProfileAppAccess` / `SelfAdb`) |
 | F2.1 | `requestWatchNextPermission`, the Continue Watching adb guide |
 | F2.2 | `NotificationsService`, the notification access adb guide |
 | F3 | `SettingsService` setters, `LookSettingsPage`, `WeatherLocationDialog` |
@@ -325,7 +328,7 @@ doesn't have.
 | `device_setup_chip_hidden` | bool | Chip dismissed |
 | `device_setup_look` | string | The look chosen in F3, the starting look for new adult profiles |
 | `device_setup_look_preview` | JSON `{previewing, before}` | While F3 previews a look: which, and the look before it (a restart mid-preview puts it back) |
-| `device_setup_kids_profiles` | int | How many kids' profiles Android listed when Hearth was last put on them (F1.4 or Settings › Family apps) |
+| `device_setup_kids_profiles` | int | How many kids' profiles Android listed when Hearth was last put on them (F1.4 or Settings › Kids' profiles) |
 
 **Android side**, in its own prefs file (`hearth_setup`), read by the services: `waiting_for` (`home_button_fix` /
 `profile_pairing` / `notification_access`) and `waiting_since` (ignored after 15 minutes).
@@ -584,9 +587,9 @@ where it differs from the screens above:
 - **Keep** on a card that's on goes through whatever of it isn't on yet (a skipped step, a kids' profile added since);
   Keep on a skipped card passes it.
 - **F1.4** counts as done for as many kids' profiles as Android listed when Hearth was last put on them (from the flow
-  or from Settings › Family apps), kept in `device_setup_kids_profiles`: what's on each profile can't be read without
-  self-adb, and connecting just to check would raise "Allow debugging?". A kids' profile added later brings the
-  family card back into the chip. F1.4a opens Android's About screen directly. The step is done only when every
+  or from Settings › Kids' profiles), kept in `device_setup_kids_profiles`, or for as many as Android lists with
+  Hearth (and HearthTube when the owner has it) installed (`kidsReady`, read without self-adb). A kids' profile added
+  later that Hearth isn't on brings the family card back into the chip. F1.4a opens Android's About screen directly. The step is done only when every
   kids' profile keeps Hearth (otherwise it shows the profiles' rows with Try again), and Hearth's own adb gives up
   after two minutes when "Allow debugging?" is declined (the connection would otherwise wait for good).
 - **F3:** the home behind the card is barely dimmed and not blurred on the look screen, so the preview shows. A picture

@@ -40,6 +40,75 @@ class PairingChoice {
       };
 }
 
+/// A saved streaming-app profile PIN's state in words ([FLauncherChannel.getProfilePinStatus]): none, saved, not
+/// accepted last time, or paused.
+String profilePinStatus(AppLocalizations l, Map<dynamic, dynamic>? pin) {
+  final status = pin?["status"] as String? ?? "none";
+  if (status != "none" && pin?["paused"] == true) return l.profilePinPaused;
+  return switch (status) {
+    "none" => l.profilePinNone,
+    "rejected" => l.profilePinRejected,
+    _ => l.profilePinSaved,
+  };
+}
+
+/// An app profile's PIN: the parent PIN first, then the PIN on the row pad, twice; for a saved one, Change or Remove
+/// first. [beforeSave] runs just before a new PIN is saved (Streaming app PINs pairs the profiles for good then, so
+/// nothing changes when the parent backs out). Returns whether anything changed.
+Future<bool> editProfilePin(
+  BuildContext context, {
+  required String packageName,
+  required String appLabel,
+  required String appProfile,
+  required bool saved,
+  Future<void> Function()? beforeSave,
+}) async {
+  final l = AppLocalizations.of(context)!;
+  final channel = context.read<FLauncherChannel>();
+  if (!await requireParentPin(context)) return false;
+  if (!context.mounted) return false;
+  if (saved) {
+    final remove = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l.profilePinEnterTitle(appProfile, appLabel)),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l.parentPinRemove)),
+          TextButton(
+              autofocus: true, onPressed: () => Navigator.of(context).pop(false), child: Text(l.parentPinChange)),
+        ],
+      ),
+    );
+    if (remove == null || !context.mounted) return false;
+    if (remove) {
+      await channel.removeProfilePin(packageName, appProfile);
+      return true;
+    }
+  }
+  final first = await showDialog<String>(
+    context: context,
+    builder: (_) => ParentPinDialog(
+      title: l.profilePinEnterTitle(appProfile, appLabel),
+      subtitle: l.profilePinEnterSubtitle(appLabel),
+      length: ProfilePairingAppPage.pinLength,
+    ),
+  );
+  if (first == null || !context.mounted) return false;
+  final second = await showDialog<String>(
+    context: context,
+    builder: (_) => ParentPinDialog(
+      title: l.parentPinConfirm,
+      verify: (pin) => pin == first,
+      length: ProfilePairingAppPage.pinLength,
+    ),
+  );
+  if (second == null || !context.mounted) return false;
+  await beforeSave?.call();
+  final ok = await channel.saveProfilePin(packageName, appProfile, first);
+  if (!ok && context.mounted) await showMessageDialog(context, title: l.profilePinRow, message: l.profilePinSaveFailed);
+  return true;
+}
+
 /// Profile Pairing (under Profiles): which profile each streaming app opens for each Google TV profile.
 class ProfilePairingPage extends StatefulWidget {
   static const String routeName = "profile_pairing";
@@ -214,69 +283,24 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
   }
 
   /// Only grown-up profiles paired with an app profile by an explicit choice get a PIN (never a name match, never kids).
+  /// Settings' Streaming app PINs pairs a name match for good when its PIN is set.
   static bool _hasPin(PairingChoice choice) => choice.mode == "profile" && !choice.kids && choice.chosenProfile != null;
 
   String _pinStatus(AppLocalizations l, String appProfile) {
-    final pin = _pins[appProfile] ?? const {};
-    final status = pin["status"] as String? ?? "none";
-    String text = switch (status) {
-      "none" => l.profilePinNone,
-      "rejected" => l.profilePinRejected,
-      _ => l.profilePinSaved,
-    };
-    if (status != "none" && pin["paused"] == true) text = l.profilePinPaused;
+    String text = profilePinStatus(l, _pins[appProfile]);
     if (!_pinsSupported) text = "$text · ${l.profilePinUnsupported(widget.app["label"] as String)}";
     return text;
   }
 
-  /// The parent PIN first, then the app profile's PIN on the row pad, twice; or Change / Remove for a saved one.
   Future<void> _editPin(String appProfile) async {
-    final l = AppLocalizations.of(context)!;
-    if (!await requireParentPin(context)) return;
-    if (!mounted) return;
-    final saved = (_pins[appProfile]?["status"] as String? ?? "none") != "none";
-    if (saved) {
-      final remove = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(l.profilePinEnterTitle(appProfile, widget.app["label"] as String)),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l.parentPinRemove)),
-            TextButton(
-                autofocus: true, onPressed: () => Navigator.of(context).pop(false), child: Text(l.parentPinChange)),
-          ],
-        ),
-      );
-      if (remove == null) return;
-      if (!mounted) return;
-      if (remove) {
-        await _channel.removeProfilePin(_packageName, appProfile);
-        _load();
-        return;
-      }
-    }
-    final label = widget.app["label"] as String;
-    final first = await showDialog<String>(
-      context: context,
-      builder: (_) => ParentPinDialog(
-        title: l.profilePinEnterTitle(appProfile, label),
-        subtitle: l.profilePinEnterSubtitle(label),
-        length: ProfilePairingAppPage.pinLength,
-      ),
+    await editProfilePin(
+      context,
+      packageName: _packageName,
+      appLabel: widget.app["label"] as String,
+      appProfile: appProfile,
+      saved: (_pins[appProfile]?["status"] as String? ?? "none") != "none",
     );
-    if (first == null || !mounted) return;
-    final second = await showDialog<String>(
-      context: context,
-      builder: (_) => ParentPinDialog(
-        title: l.parentPinConfirm,
-        verify: (pin) => pin == first,
-        length: ProfilePairingAppPage.pinLength,
-      ),
-    );
-    if (second == null || !mounted) return;
-    final ok = await _channel.saveProfilePin(_packageName, appProfile, first);
-    if (!ok && mounted) await showMessageDialog(context, title: l.profilePinRow, message: l.profilePinSaveFailed);
-    _load();
+    if (mounted) _load();
   }
 
   Future<void> _change(PairingChoice choice) async {

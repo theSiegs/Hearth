@@ -54,7 +54,7 @@ shows what's off). Reinstalling or force-stopping Hearth switches its accessibil
 | `android/.../LauncherAccessibilityService.java` | Home Button Fix, profile tracking, screen time, remote remaps, idle sleep |
 | `android/.../ProfilePairing*.java`, `*PinRecipe.java` | Profile Pairing and PIN entry for streaming apps |
 | `android/.../Ha*.java` | Home Assistant notifications server, panel, status webhook, phone setup |
-| `android/.../ProfileUsers.java`, `GoogleTvAccount.java`, `AppWatchers.java`, `Agent*.java`, `ProfileAppAccess.java` | Google TV profiles: kids' as Android users, grown-ups' as accounts in the owner's user (whose is on, from Google TV's home); whose Continue Watching entry is; Hearth in other profiles |
+| `android/.../ProfileUsers.java`, `GoogleTvAccount.java`, `AppWatchers.java`, `Agent*.java`, `KidsProfiles.java`, `ProfileAppAccess.java` | Google TV profiles: kids' as Android users, grown-ups' as accounts in the owner's user (whose is on, from Google TV's home); whose Continue Watching entry is; Hearth on the kids' profiles |
 | `android/.../ProfileProvider.java` | The provider HearthTube reads ([contract](provider-contract.md)) |
 | `drift_schemas/` | Database schema history, for migration tests |
 | `tool/` | Developer tools (below) |
@@ -81,7 +81,7 @@ switches, bedtime and Hearth in other profiles can be tested without a real fami
 .\tool\profilesim\profiles.ps1 -Serial emulator-5554 bedtime 10 on
 ```
 
-Other tools: `tool/kids_provision/` and `tool/block_uninstall/` (manual versions of Hearth on other profiles, for
+Other tools: `tool/kids_provision/` and `tool/block_uninstall/` (manual versions of Hearth on the kids' profiles, for
 investigation), `tool/generate_icons.py` (app icon and TV banner).
 
 ## Releasing

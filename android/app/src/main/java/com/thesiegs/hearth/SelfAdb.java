@@ -11,9 +11,9 @@ import dadb.Dadb;
 
 /**
  * Hearth's own loopback adb connection: it lets Hearth run a few commands as the {@code shell} user on its OWN TV,
- * by being an adb client to the TV's own {@code adbd} on {@code 127.0.0.1:5555}. {@link KidsAppAccess} uses this to
- * add/remove its own apps in kids profiles. Nothing here is a general back door — it runs only the specific,
- * parent-initiated commands in {@link KidsAppAccess}.
+ * by being an adb client to the TV's own {@code adbd} on {@code 127.0.0.1:5555}. {@link ProfileAppAccess} uses this
+ * to add/remove its own apps in kids' profiles, and {@link SetupFixes} to turn on Hearth's own switches. Nothing here
+ * is a general back door: it runs only the specific commands those two build.
  *
  * <h3>The one-time consent</h3>
  * The first time Hearth connects with its key, the TV shows the system "Allow debugging?" prompt. The PARENT
@@ -32,11 +32,17 @@ public final class SelfAdb implements ProfileAppAccess.ShellRunner, AutoCloseabl
     private static final String TAG = "HearthSelfAdb";
     private static final String HOST = "127.0.0.1";
     private static final int PORT = 5555;
+    private static final String PREFS = "hearth_self_adb";
+    /** A command has run over Hearth's key: the TV trusts it (the parent chose Allow on "Allow debugging?"). */
+    private static final String TRUSTED = "trusted";
 
     private final Dadb dadb;
+    private final Context context;
+    private boolean ran;
 
-    private SelfAdb(Dadb dadb) {
+    private SelfAdb(Dadb dadb, Context context) {
         this.dadb = dadb;
+        this.context = context;
     }
 
     /**
@@ -44,6 +50,15 @@ public final class SelfAdb implements ProfileAppAccess.ShellRunner, AutoCloseabl
      * on-screen "Allow debugging?" prompt the parent approves). Call from a background thread.
      */
     public static SelfAdb open(Context context) throws Exception {
+        return open(context, 0);
+    }
+
+    /**
+     * {@link #open(Context)}, giving up on any one read after {@code timeoutMs} (0: never). A key the TV doesn't trust
+     * leaves the connection waiting on "Allow debugging?"; a read that times out ends that wait with a
+     * {@link java.net.SocketTimeoutException}.
+     */
+    public static SelfAdb open(Context context, int timeoutMs) throws Exception {
         File dir = new File(context.getFilesDir(), "selfadb");
         if (!dir.exists() && !dir.mkdirs()) {
             throw new IllegalStateException("couldn't create key dir " + dir);
@@ -59,7 +74,25 @@ public final class SelfAdb implements ProfileAppAccess.ShellRunner, AutoCloseabl
         }
         AdbKeyPair keyPair = AdbKeyPair.read(privateKey, publicKey);
         Log.i(TAG, "connecting to " + HOST + ":" + PORT + " (first time raises the Allow-debugging prompt)");
-        return new SelfAdb(Dadb.create(HOST, PORT, keyPair));
+        return new SelfAdb(Dadb.create(HOST, PORT, keyPair, timeoutMs, timeoutMs), context.getApplicationContext());
+    }
+
+    /**
+     * Whether a command has run over Hearth's key before, so the TV trusts it and connecting won't ask "Allow
+     * debugging?". It can be out of date: the parent chose Allow without Always allow and the TV restarted since, or
+     * took the approval back in Developer options.
+     */
+    static boolean isTrusted(Context context) {
+        return prefs(context).getBoolean(TRUSTED, false);
+    }
+
+    /** The TV didn't answer as one that trusts Hearth's key: no longer counted as trusted until a command runs again. */
+    static void forgetTrusted(Context context) {
+        prefs(context).edit().remove(TRUSTED).apply();
+    }
+
+    private static android.content.SharedPreferences prefs(Context context) {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
     /**
@@ -93,7 +126,11 @@ public final class SelfAdb implements ProfileAppAccess.ShellRunner, AutoCloseabl
     @Override
     public String run(String command) throws Exception {
         AdbShellResponse response = dadb.shell(command);
-        // Combined output; KidsAppAccess only parses the helper's fixed "blockUninstall=" line and ignores the rest.
+        if (!ran) {
+            ran = true;
+            prefs(context).edit().putBoolean(TRUSTED, true).apply();
+        }
+        // Combined output; ProfileAppAccess only parses the helper's fixed "blockUninstall=" line and ignores the rest.
         return response.getAllOutput();
     }
 

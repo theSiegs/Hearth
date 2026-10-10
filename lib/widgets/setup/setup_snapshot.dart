@@ -46,8 +46,9 @@ class SetupSnapshot {
   /// How many Family Link-supervised (kids') profiles Android lists.
   final int kidsProfiles;
 
-  /// How many of them have Hearth installed (put there by the flow or by Settings' Hearth on other profiles).
-  final int kidsWithHearth;
+  /// How many of them have all Hearth puts there, Hearth and HearthTube when the owner has it (put there by the flow,
+  /// by Settings' Kids' profiles, or by Hearth itself on a new one).
+  final int kidsReady;
 
   /// Netflix is installed: its profile screen needs Hearth voice.
   final bool netflix;
@@ -65,7 +66,7 @@ class SetupSnapshot {
     this.hearthTubeInstalled = false,
     this.googleTv = false,
     this.kidsProfiles = 0,
-    this.kidsWithHearth = 0,
+    this.kidsReady = 0,
     this.netflix = false,
     this.haAlerts = false,
     this.haPanel = false,
@@ -91,14 +92,14 @@ class SetupSnapshot {
         hasParentPin: hasParentPin,
         pairing: isDone(SetupStepId.profilePairing),
         voice: !netflix || isDone(SetupStepId.voice),
-        kids: kidsCovered(kidsProfiles, kidsProtected: kidsProtected, kidsWithHearth: kidsWithHearth),
+        kids: kidsCovered(kidsProfiles, kidsProtected: kidsProtected, kidsReady: kidsReady),
         homeAssistant: haAlerts && haPanel && haStatus,
       );
 
   /// Whether Hearth is on every kids' profile: the flow put it on that many ([kidsProtected]), or Android lists it
-  /// installed on that many ([kidsWithHearth], however it got there).
-  static bool kidsCovered(int kidsProfiles, {required int kidsProtected, required int kidsWithHearth}) =>
-      kidsProfiles <= kidsProtected || kidsProfiles <= kidsWithHearth;
+  /// installed on that many ([kidsReady], however it got there).
+  static bool kidsCovered(int kidsProfiles, {required int kidsProtected, required int kidsReady}) =>
+      kidsProfiles <= kidsProtected || kidsProfiles <= kidsReady;
 
   /// Each item a card lists, and whether it's on now; empty for the cards that are a choice in themselves (the look,
   /// TV & power). [voiceNeeded]: Netflix is installed, so the right-profile item also needs Hearth voice.
@@ -109,7 +110,7 @@ class SetupSnapshot {
             hasParentPin,
             isDone(SetupStepId.profilePairing) && (!netflix || isDone(SetupStepId.voice)),
             if (kidsProfiles > 0)
-              kidsCovered(kidsProfiles, kidsProtected: kidsProtected, kidsWithHearth: kidsWithHearth),
+              kidsCovered(kidsProfiles, kidsProtected: kidsProtected, kidsReady: kidsReady),
           ],
         SetupCard.watching => [watchNextAllowed && showContinueWatching, isDone(SetupStepId.notifications)],
         SetupCard.smartHome => [haAlerts, haPanel, haStatus],
@@ -167,7 +168,7 @@ class SetupSnapshot {
             pairing: pairing["enabled"] == true,
             voice: family["netflix"] != true || pairing["voiceDefault"] == true,
             kids: kidsCovered((family["kidsProfiles"] as int?) ?? 0,
-                kidsProtected: kidsProtected, kidsWithHearth: (family["kidsWithHearth"] as int?) ?? 0),
+                kidsProtected: kidsProtected, kidsReady: (family["kidsReady"] as int?) ?? 0),
             homeAssistant: ha.alerts && ha.panel && ha.status),
     };
   }
@@ -180,10 +181,12 @@ class SetupSnapshot {
     }
   }
 
-  /// How many Family Link-supervised (kids') profiles Android lists, read without Hearth's own adb.
-  static Future<int> loadKidsProfiles(FLauncherChannel channel) async {
+  /// Whether Android lists a kids' profile Hearth isn't on all the way, which the flow hasn't put it on either (one
+  /// added since), read without Hearth's own adb.
+  static Future<bool> loadNewKidsProfile(FLauncherChannel channel, {required int kidsProtected}) async {
     final family = await _safe(channel.getSetupFamilyState, <dynamic, dynamic>{});
-    return (family["kidsProfiles"] as int?) ?? 0;
+    return !kidsCovered((family["kidsProfiles"] as int?) ?? 0,
+        kidsProtected: kidsProtected, kidsReady: (family["kidsReady"] as int?) ?? 0);
   }
 
   static Future<({bool alerts, bool panel, bool status})> _loadHomeAssistant(FLauncherChannel channel) async {
@@ -216,7 +219,7 @@ class SetupSnapshot {
       hearthTubeInstalled: await _hearthTubeInstalled(channel),
       googleTv: family["googleTv"] == true,
       kidsProfiles: (family["kidsProfiles"] as int?) ?? 0,
-      kidsWithHearth: (family["kidsWithHearth"] as int?) ?? 0,
+      kidsReady: (family["kidsReady"] as int?) ?? 0,
       netflix: family["netflix"] == true,
       haAlerts: ha.alerts,
       haPanel: ha.panel,

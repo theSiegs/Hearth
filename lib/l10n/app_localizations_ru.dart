@@ -409,7 +409,92 @@ class AppLocalizationsRu extends AppLocalizations {
   String get updatesTitle => 'Обновления';
 
   @override
-  String get familyAppsTitle => 'Hearth в других профилях';
+  String get kidsProfilesTitle => 'Детские профили';
+
+  @override
+  String get kidsProfilesUnnamed => 'Детский профиль';
+
+  @override
+  String get kidsProfilesReady => 'Готово';
+
+  @override
+  String get kidsProfilesNeedsFix => 'Нужно исправить';
+
+  @override
+  String kidsProfilesNeedFixCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Исправить: $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get kidsProfilesHearthOn => 'Hearth установлен';
+
+  @override
+  String get kidsProfilesBothOn => 'Hearth и HearthTube установлены';
+
+  @override
+  String get kidsProfilesHearthMissing => 'Hearth не установлен';
+
+  @override
+  String get kidsProfilesHearthTubeMissing => 'HearthTube не установлен';
+
+  @override
+  String get kidsProfilesNotKept => 'Не защищено: Google TV удалит приложения Hearth при следующем запуске этого профиля';
+
+  @override
+  String get kidsProfilesFix => 'Исправить';
+
+  @override
+  String get kidsProfilesFixBody => 'Возвращает Hearth и HearthTube туда, где их нет. Для каждого ребёнка, которому они добавлены, придёт одно уведомление Family Link.';
+
+  @override
+  String get kidsProfilesNone => 'На этом телевизоре нет детских профилей.';
+
+  @override
+  String get kidsProfilesAutoOn => 'Hearth также сам добавляется в новые детские профили.';
+
+  @override
+  String get kidsProfilesApproval => 'В первый раз телевизор спросит «Разрешить отладку?» — выберите «Всегда разрешать»: так Hearth сможет выполнить настройку.';
+
+  @override
+  String get kidsProfilesRemoveTitle => 'Удалить Hearth из детских профилей';
+
+  @override
+  String get kidsProfilesRemoveBody => 'Hearth и HearthTube будут удалены из профилей детей, и Hearth перестанет добавляться в новые. Сделайте это перед удалением Hearth.';
+
+  @override
+  String get kidsProfilesUninstallTitle => 'Удалить Hearth';
+
+  @override
+  String get kidsProfilesUninstallBody => 'Сначала Hearth и HearthTube будут удалены из профилей детей, затем будет удалён Hearth.';
+
+  @override
+  String get kidsProfilesUninstallWhyHere => 'Удаление здесь, а не в настройках Android, гарантирует, что в детских профилях ничего не останется.';
+
+  @override
+  String get kidsProfilesApprovalFirstTitle => 'Сначала дайте одноразовое разрешение';
+
+  @override
+  String get kidsProfilesApprovalFirstBody => 'Hearth пока не смог удалить себя из детских профилей: нужно один раз подтвердить на телевизоре запрос «Разрешить отладку?».';
+
+  @override
+  String get kidsProfilesApprovalFirstRetry => 'Подтвердите его и снова попробуйте удалить, чтобы в детских профилях ничего не осталось.';
+
+  @override
+  String get kidsProfilesFailedTitle => 'Не удалось изменить детские профили';
+
+  @override
+  String get kidsProfilesFailedBody => 'Чтобы изменить детские профили, Hearth нужно один раз получить разрешение на телевизоре.';
+
+  @override
+  String get kidsProfilesFailedRetry => 'Когда телевизор спросит «Разрешить отладку?», выберите «Всегда разрешать» и попробуйте ещё раз.';
+
+  @override
+  String get kidProfileHint => 'Всё здесь относится только к этому ребёнку. Это можно изменить отсюда, не переключаясь на его профиль.';
 
   @override
   String get cardStyleTitle => 'Стиль карточек';
@@ -925,11 +1010,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String profilesAdultName(String name) {
-    return '$name (взрослый)';
-  }
-
-  @override
   String get pairingShowPicker => 'Показать выбор профиля';
 
   @override
@@ -998,116 +1078,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String pairingAppProfilesFooter(String profiles) {
     return 'Профили в этом приложении: $profiles. Профили Google TV появятся здесь, когда Hearth их увидит.';
   }
-
-  @override
-  String get familyAppsAddTitle => 'Добавить Hearth в другие профили';
-
-  @override
-  String get familyAppsAddKids => 'Hearth и HearthTube будут установлены в профили ваших детей: там заработает HearthTube, а Hearth сможет выбирать нужный профиль в стриминговых сервисах.';
-
-  @override
-  String get familyAppsAddAdults => 'Они также будут установлены в другие взрослые профили телевизора, чтобы другим взрослым не пришлось настраивать всё самим.';
-
-  @override
-  String get familyAppsAddOnlyOwnApps => 'Добавляются только два приложения Hearth, и это можно в любой момент отменить кнопкой «Удалить» ниже.';
-
-  @override
-  String get familyAppsAddFamilyLink => 'Каждый ребёнок получит одно уведомление Family Link «Приложение добавлено».';
-
-  @override
-  String get familyAppsAddApproval => 'В первый раз телевизор спросит «Разрешить отладку?» — выберите «Всегда разрешать»: так Hearth сможет выполнить настройку.';
-
-  @override
-  String get familyAppsAdd => 'Добавить';
-
-  @override
-  String get familyAppsRemoveTitle => 'Удалить Hearth из других профилей';
-
-  @override
-  String get familyAppsRemoveBody => 'Hearth и HearthTube будут удалены из других профилей.';
-
-  @override
-  String get familyAppsRemoveFirst => 'Если вы собираетесь удалить сам Hearth, сначала выполните это — иначе его копии в детских профилях могут остаться, и удалить их можно будет только с компьютера.';
-
-  @override
-  String get familyAppsUninstallTitle => 'Удалить Hearth';
-
-  @override
-  String get familyAppsUninstallBody => 'Сначала Hearth и HearthTube будут удалены из других профилей, затем Hearth будет удалён из этого.';
-
-  @override
-  String get familyAppsUninstallWhyHere => 'Удаление здесь, а не в настройках Android, гарантирует, что в детских профилях ничего не останется.';
-
-  @override
-  String get familyAppsApprovalFirstTitle => 'Сначала дайте одноразовое разрешение';
-
-  @override
-  String get familyAppsApprovalFirstBody => 'Hearth пока не смог очистить другие профили: нужно один раз подтвердить на телевизоре запрос «Разрешить отладку?».';
-
-  @override
-  String get familyAppsApprovalFirstRetry => 'Подтвердите его и снова попробуйте удалить, чтобы в детских профилях ничего не осталось.';
-
-  @override
-  String get familyAppsAddDone => 'Добавление завершено';
-
-  @override
-  String get familyAppsRemoveDone => 'Удаление завершено';
-
-  @override
-  String get familyAppsAdded => 'Готово. Hearth и HearthTube теперь есть в других профилях — см. список ниже.';
-
-  @override
-  String get familyAppsRemoved => 'Готово. Hearth и HearthTube удалены из других профилей.';
-
-  @override
-  String get familyAppsNothingToSetUp => 'Других профилей для настройки пока нет.';
-
-  @override
-  String get familyAppsFailedTitle => 'Не удалось настроить профили';
-
-  @override
-  String get familyAppsFailedBody => 'Чтобы настроить другие профили, Hearth нужно один раз получить разрешение на телевизоре.';
-
-  @override
-  String get familyAppsFailedRetry => 'Когда телевизор спросит «Разрешить отладку?», выберите «Всегда разрешать» и попробуйте ещё раз.';
-
-  @override
-  String get familyAppsAlsoAdults => 'Также настроить другие взрослые профили';
-
-  @override
-  String get familyAppsOn => 'Вкл.';
-
-  @override
-  String get familyAppsOff => 'Выкл.';
-
-  @override
-  String get familyAppsNoneYet => 'Другие профили пока не настроены.';
-
-  @override
-  String familyAppsAppInstalled(String app) {
-    return '$app: установлено';
-  }
-
-  @override
-  String familyAppsAppInstalledKept(String app) {
-    return '$app: установлено, защищено';
-  }
-
-  @override
-  String familyAppsAppNotInstalled(String app) {
-    return '$app: не установлено';
-  }
-
-  @override
-  String familyAppsAppNotInstalledKept(String app) {
-    return '$app: не установлено, защищено';
-  }
-
-  @override
-  String get familyAppsUnnamedKids => 'Детский профиль';
-
-  @override
-  String get familyAppsUnnamedAdult => 'Взрослый профиль';
 
   @override
   String setupAccessibilityInstructions(String service) {
@@ -1946,21 +1916,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aboutLicense => 'Свободное ПО под лицензией GNU GPL v3, как и проекты, на которых оно основано.';
 
   @override
-  String get familyAppsStatusInstalled => 'Установлено';
-
-  @override
-  String get familyAppsStatusPartial => 'Частично';
-
-  @override
-  String get familyAppsStatusNotInstalled => 'Не установлено';
-
-  @override
-  String get familyAppsStatusAtRisk => 'Под угрозой';
-
-  @override
-  String get familyAppsAtRiskDetail => 'Google TV удалит незащищённые приложения в этом профиле при его следующем запуске. Нажмите «Добавить» ещё раз, чтобы защитить их.';
-
-  @override
   String get profilePinRow => 'PIN-код профиля';
 
   @override
@@ -1997,6 +1952,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get profilePinSaveFailed => 'Не удалось сохранить PIN-код.';
+
+  @override
+  String get streamingPinsTitle => 'PIN-коды стриминговых приложений';
+
+  @override
+  String get streamingPinsFooter => 'Когда одно из этих приложений просит PIN-код профиля, Hearth вводит его за вас. Если задать PIN-код, этот профиль Google TV навсегда связывается с этим профилем приложения.';
+
+  @override
+  String get streamingPinsNone => 'Не установлено ни одного приложения, в котором Hearth умеет вводить PIN-коды.';
 
   @override
   String get profileLockNow => 'Заблокировать профиль';

@@ -1,5 +1,29 @@
 # Keeping Hearth and HearthTube in kids profiles
 
+## How Hearth does it now
+
+Only kids' profiles get Hearth: each is an Android profile user of its own, supervised by Family Link. A grown-up's
+profile is another Google account in the owner's user 0, which has Hearth already (Hearth keys those profiles
+`user:0:<account>`). Google TV's spare pre-created profile user is unsupervised, so it's never a kids' profile.
+
+- **Setup flow (F1.4)** and **Settings → Profiles → Kids' profiles → Fix** run `KidsProfiles.fix`: over Hearth's own
+  adb (`SelfAdb`, one-time "Allow debugging?"), `ProfileAppAccess.addToKids` puts Hearth, and HearthTube when the
+  owner has it, on every kids' profile, changing only what's out of place: a missing copy gets the block-uninstall
+  flag first (a running kids' profile's launcher checks its apps the moment one is added), then
+  `pm install-existing`, then the flag again if it didn't take. A copy that's there and kept is left alone, so no
+  extra Family Link notice.
+- **New kids' profiles.** Once a parent has run that and the TV has trusted Hearth's key (a command has run over
+  it), `KidsProfiles.autoFixSoon` (after a profile switch, Hearth's service start, or HearthTube installed) puts the
+  missing apps on any kids' profile that isn't running, once per app and profile. A connection that times out
+  (the key may no longer be trusted) stops these until a parent's action works again; a refused one (debugging off)
+  just waits for the next switch.
+- **Status** (`getKidsProfilesState`): installed per kid from LauncherApps, no adb; whether each copy is kept only
+  over an already-trusted key, so looking never raises "Allow debugging?".
+- **Remove / Uninstall Hearth** (`KidsProfiles.remove`) lift the flag, then uninstall, on every kids' profile and any
+  other profile user where Android lists one of Hearth's apps; it also stops the automatic adds.
+
+The notes below are the research behind it.
+
 Notes from 2026-10-07/08. Android 14 (SDK 34), patch 2026-06-01, onn 4K Pro; kids users 10, 11, 12 (plus a new kid
 user 13 being set up). Google TV launcher `com.google.android.apps.tv.launcherx` versionName 1.0.988926538
 (versionCode 828391). The removal mechanism below is verified from the launcher's own code (pulled from the device and

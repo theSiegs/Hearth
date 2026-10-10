@@ -45,7 +45,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
 import android.os.UserHandle;
-import android.os.UserManager;
 import android.provider.Settings;
 import android.speech.RecognizerIntent;
 import android.util.Log;
@@ -74,8 +73,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
@@ -173,16 +170,17 @@ public class MainActivity extends FlutterActivity {
                         this, LauncherAccessibilityService.getActiveProfileKey(this), kids);
                 result.success(kids);
             }
-            // Parent-controlled "Add / Remove Hearth from other profiles" (a Settings action) and a read-only
-            // state view. The work, and the one-time "Allow debugging?" consent, live in ProfileAppAccess /
-            // SelfAdb. Off the main thread (adb I/O); parent-confirmed because these fire only from the Settings
-            // row. addHearthToProfiles' argument is whether to include the other adult profiles too.
-            case "addHearthToProfiles" -> {
-                boolean includeAdults = Boolean.TRUE.equals(call.arguments());
-                sIoExecutor.execute(() -> runAddToProfiles(includeAdults, result));
+            // Hearth on the kids' profiles (Settings > Profiles > Kids' profiles, and the setup flow's kids' step):
+            // how each stands, a parent's Fix, and a parent's Remove before uninstalling. The work, and the one-time
+            // "Allow debugging?" consent, live in KidsProfiles / ProfileAppAccess / SelfAdb. Off the main thread:
+            // adb I/O. getKidsProfilesState's argument: also read whether the copies are kept (only over a key the TV
+            // trusts already, so looking never asks "Allow debugging?").
+            case "getKidsProfilesState" -> {
+                boolean checkProtection = Boolean.TRUE.equals(call.arguments());
+                answerFrom(sIoExecutor, result, () -> KidsProfiles.state(this, checkProtection));
             }
-            case "removeHearthFromProfiles" -> sIoExecutor.execute(() -> runRemoveFromProfiles(result));
-            case "getHearthProfilesState" -> sIoExecutor.execute(() -> runProfilesState(result));
+            case "fixKidsProfiles" -> runSelfAdb(result, () -> KidsProfiles.fix(this));
+            case "removeHearthFromKidsProfiles" -> runSelfAdb(result, () -> KidsProfiles.remove(this));
             case "uninstallHearth" -> result.success(uninstallSelf());
             case "openGoogleTvHome" -> result.success(openGoogleTvHome());
             case "getGoogleTvHome" -> result.success(LauncherAccessibilityService.isGoogleTvHome(this));
@@ -230,11 +228,17 @@ public class MainActivity extends FlutterActivity {
                 result.success(null);
             }
             // The active profile's daily YouTube limit in HearthTube, in minutes (0: none)
-            case "getYouTubeDailyMinutes" -> result.success(
-                    Allowance.dailyMinutes(this, LauncherAccessibilityService.getActiveProfileKey(this)));
+            // A profile's daily YouTube limit: the profile on now's, or a kids' profile's by its key (the parent
+            // sets each kid's from Settings > Profiles > Kids' profiles without switching to it)
+            case "getYouTubeDailyMinutes" -> {
+                String key = call.arguments();
+                result.success(Allowance.dailyMinutes(this,
+                        key != null ? key : LauncherAccessibilityService.getActiveProfileKey(this)));
+            }
             case "setYouTubeDailyMinutes" -> {
-                Integer minutes = call.arguments();
-                Allowance.setDailyMinutes(this, LauncherAccessibilityService.getActiveProfileKey(this),
+                Integer minutes = call.argument("minutes");
+                String key = call.argument("profileKey");
+                Allowance.setDailyMinutes(this, key != null ? key : LauncherAccessibilityService.getActiveProfileKey(this),
                         minutes != null ? minutes : 0);
                 ProfileProvider.notifyChanged(this);
                 result.success(null);
@@ -987,56 +991,16 @@ public class MainActivity extends FlutterActivity {
         return startFirst(LauncherAccessibilityService.profileChooserIntent(), new Intent(Settings.ACTION_SYNC_SETTINGS));
     }
 
-    /**
-     * Parent-initiated add of Hearth's apps to the other profiles, over Hearth's loopback adb ({@link SelfAdb}):
-     * always the supervised kids (kept installed so the launcher can't strip them), and — when {@code includeAdults}
-     * — the other adult profiles too (plain install). Reached only from the Settings action, so parent-confirmed.
-     */
-    private void runAddToProfiles(boolean includeAdults, MethodChannel.Result result) {
-        try (SelfAdb shell = SelfAdb.open(this)) {
-            List<String> log = new ArrayList<>(
-                    ProfileAppAccess.addToProfiles(this, shell, supervisedKidUserIds(), true, true));
-            if (includeAdults) {
-                log.addAll(ProfileAppAccess.addToProfiles(this, shell, adultProfileUserIds(), false, true));
+    /** Runs a self-adb job off the main thread and answers with its log, or SELF_ADB when it couldn't run. */
+    private void runSelfAdb(MethodChannel.Result result, Callable<List<String>> job) {
+        sIoExecutor.execute(() -> {
+            try {
+                List<String> log = job.call();
+                runOnUiThread(() -> result.success(log));
+            } catch (Exception e) {
+                runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
             }
-            runOnUiThread(() -> result.success(log));
-        } catch (Exception e) {
-            runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
-        }
-    }
-
-    /** Parent-initiated removal from every other profile (kids and adults): the clean undo of add. */
-    private void runRemoveFromProfiles(MethodChannel.Result result) {
-        try (SelfAdb shell = SelfAdb.open(this)) {
-            List<String> log = ProfileAppAccess.removeFromProfiles(this, shell, allOtherProfileUserIds(), true);
-            runOnUiThread(() -> result.success(log));
-        } catch (Exception e) {
-            runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
-        }
-    }
-
-    /** Read-only: Hearth/HearthTube state across the other profiles, each row tagged supervised (kid) or not. */
-    private void runProfilesState(MethodChannel.Result result) {
-        try (SelfAdb shell = SelfAdb.open(this)) {
-            List<Integer> kids = supervisedKidUserIds();
-            List<Integer> all = new ArrayList<>(kids);
-            all.addAll(adultProfileUserIds());
-            Map<Integer, String> names = profileDisplayNames();
-            List<Map<String, Object>> rows = new ArrayList<>();
-            for (ProfileAppAccess.AppStatus s : ProfileAppAccess.state(this, shell, all)) {
-                Map<String, Object> row = new HashMap<>();
-                row.put("userId", s.userId);
-                row.put("packageName", s.packageName);
-                row.put("installed", s.installed);
-                row.put("protected", s.protectedFromRemoval);
-                row.put("supervised", kids.contains(s.userId));
-                row.put("name", names.get(s.userId));
-                rows.add(row);
-            }
-            runOnUiThread(() -> result.success(rows));
-        } catch (Exception e) {
-            runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
-        }
+        });
     }
 
     /**
@@ -1059,93 +1023,10 @@ public class MainActivity extends FlutterActivity {
         return tryStartActivity(intent);
     }
 
-    /** Opens Android's uninstall screen for Hearth itself. The Settings flow runs the profile cleanup first. */
+    /** Opens Android's uninstall screen for Hearth itself. Settings takes Hearth off the kids' profiles first. */
     private boolean uninstallSelf() {
         return tryStartActivity(new Intent(Intent.ACTION_DELETE, Uri.parse("package:" + getPackageName()))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-    }
-
-    /** The SUPERVISED kid profiles' user ids — Family Link-supervised profiles of this user. */
-    private List<Integer> supervisedKidUserIds() {
-        return userIds(profileHandles(true));
-    }
-
-    /** The OTHER ADULT profiles' user ids — secondary profiles that are NOT supervised (grown-ups). */
-    private List<Integer> adultProfileUserIds() {
-        return userIds(profileHandles(false));
-    }
-
-    /** Every other profile user, Google TV's spare included: for taking Hearth off them all. */
-    private List<Integer> allOtherProfileUserIds() {
-        List<Integer> ids = new ArrayList<>(supervisedKidUserIds());
-        UserManager um = (UserManager) getSystemService(Context.USER_SERVICE);
-        if (um == null) return ids;
-        UserHandle me = Process.myUserHandle();
-        for (UserHandle profile : um.getUserProfiles()) {
-            int userId = userIdOf(profile);
-            if (!profile.equals(me) && userId >= 0 && !ids.contains(userId)) ids.add(userId);
-        }
-        return ids;
-    }
-
-    /**
-     * This user's other profiles, filtered by supervision: {@code wantSupervised} true returns the Family Link kids,
-     * false the non-supervised adult profiles. The owner is always excluded.
-     * NOTE: the adult branch is unverified on a real 2-adult TV (no test device yet); confirm getUserProfiles()
-     * returns adult Google TV profiles there.
-     */
-    private List<UserHandle> profileHandles(boolean wantSupervised) {
-        List<UserHandle> handles = new ArrayList<>();
-        UserManager um = (UserManager) getSystemService(Context.USER_SERVICE);
-        if (um == null) return handles;
-        UserHandle me = Process.myUserHandle();
-        for (UserHandle profile : um.getUserProfiles()) {
-            if (profile.equals(me)) continue;
-            long serial = um.getSerialNumberForUser(profile);
-            boolean supervised = Boolean.TRUE.equals(ProfileUsers.isSupervised(this, serial));
-            if (supervised != wantSupervised) continue;
-            // An unsupervised profile user that never ran (no name from the chooser) is Google TV's spare: it makes
-            // one ahead of time for the next profile added, and it isn't anybody's profile
-            if (!supervised && ProfileUsers.getName(this, serial) == null) continue;
-            handles.add(profile);
-        }
-        return handles;
-    }
-
-    private static List<Integer> userIds(List<UserHandle> handles) {
-        List<Integer> ids = new ArrayList<>();
-        for (UserHandle handle : handles) {
-            int userId = userIdOf(handle);
-            if (userId >= 0) ids.add(userId);
-        }
-        return ids;
-    }
-
-    /** The integer user id behind a {@link UserHandle} (needed for {@code pm --user}); -1 if unknown. */
-    private static int userIdOf(UserHandle handle) {
-        try {
-            // UserHandle.getIdentifier() is @hide, so reach it reflectively; fall back to parsing "UserHandle{N}".
-            return (int) UserHandle.class.getMethod("getIdentifier").invoke(handle);
-        } catch (Exception e) {
-            Matcher m = Pattern.compile("\\d+").matcher(String.valueOf(handle));
-            return m.find() ? Integer.parseInt(m.group()) : -1;
-        }
-    }
-
-    /** Best display name per profile user id (the name Hearth learned from Google TV's chooser), for the list. */
-    private Map<Integer, String> profileDisplayNames() {
-        Map<Integer, String> names = new HashMap<>();
-        UserManager um = (UserManager) getSystemService(Context.USER_SERVICE);
-        if (um == null) return names;
-        UserHandle me = Process.myUserHandle();
-        for (UserHandle profile : um.getUserProfiles()) {
-            if (profile.equals(me)) continue;
-            int userId = userIdOf(profile);
-            if (userId < 0) continue;
-            String name = ProfileUsers.getName(this, um.getSerialNumberForUser(profile));
-            if (name != null && !name.isEmpty()) names.put(userId, name);
-        }
-        return names;
     }
 
     private boolean openWifiSettings() {
@@ -1662,26 +1543,16 @@ public class MainActivity extends FlutterActivity {
     @SuppressWarnings("deprecation")
     /**
      * What the setup flow's family card needs to know, read without self-adb: whether this is Google TV (profiles,
-     * Profile Pairing), how many Family Link-supervised kids' profiles Android lists, and whether Netflix is
-     * installed (its profile screen needs Hearth voice).
+     * Profile Pairing), how many Family Link-supervised kids' profiles Android lists and how many have all Hearth
+     * puts there, and whether Netflix is installed (its profile screen needs Hearth voice).
      */
     private Map<String, Object> getSetupFamilyState() {
         Map<String, Object> state = new HashMap<>();
         state.put("googleTv", getPackageVersion(LauncherAccessibilityService.GOOGLE_TV_PACKAGE) != null);
-        int kids = 0;
-        int withHearth = 0;
-        try {
-            List<UserHandle> kidProfiles = profileHandles(true);
-            kids = kidProfiles.size();
-            // Installed there: Hearth's own adb isn't needed to see that, only to change it
-            for (UserHandle kid : kidProfiles) {
-                if (AgentHub.canHaveAgent(this, kid)) withHearth++;
-            }
-        } catch (RuntimeException e) {
-            Log.w(TAG, "Couldn't list the kids' profiles", e);
-        }
-        state.put("kidsProfiles", kids);
-        state.put("kidsWithHearth", withHearth);
+        // Installed there: Hearth's own adb isn't needed to see that, only to change it
+        List<KidsProfiles.Kid> kids = KidsProfiles.list(this);
+        state.put("kidsProfiles", kids.size());
+        state.put("kidsReady", KidsProfiles.countReady(this, kids));
         state.put("netflix", getPackageVersion(ProfilePairing.NETFLIX) != null);
         return state;
     }

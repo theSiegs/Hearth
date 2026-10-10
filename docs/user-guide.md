@@ -78,9 +78,13 @@ about 15 seconds on Google TV's home, in case it's a new kids profile Google TV 
 
 **Profile Pairing** (**Settings → Profiles → Profile Pairing**). When Hearth opens Netflix, Disney+, Apple TV,
 HBO Max or Paramount+, it picks the app profile that matches your Google TV profile: by name, or the one you pair it
-with. Open each app once from Hearth so it can learn the app's profiles. If an app profile has a PIN, you can save it
-in Hearth; Hearth types it behind a "logging in as" card and never shows it. Saved PINs are encrypted with a key
-that never leaves the TV.
+with. Open each app once from Hearth so it can learn the app's profiles.
+
+**Streaming app PINs** (**Settings → Profiles → Streaming app PINs**). If an app profile has a PIN, save it here:
+each grown-up's profile is listed under each app Hearth can type PINs in (Netflix, Disney+, Apple TV, HBO Max), with
+the app profile Hearth picks for it. Hearth types the PIN behind a "logging in as" card and never shows it. Saving a
+PIN for a profile matched by name pairs the two for good, so the PIN always goes with the right app profile. Saved
+PINs are encrypted with a key that never leaves the TV, and saving one needs the parent PIN.
 
 **Lock Profile** (**Settings → Profiles**). Uses Google TV's own profile lock, so Google TV asks for your
 profile's PIN to come back. Turn the PIN on for your account in Google TV first. You can also:
@@ -101,16 +105,21 @@ Hearth treats a profile as a kids profile when Family Link supervises it.
 - **YouTube only in HearthTube.** With HearthTube installed, a kids profile watches YouTube only there, where its
   YouTube time applies: YouTube's own app is hidden, and if it opens anyway (a voice search, a link) HearthTube opens
   over it. Grown-ups' profiles start with YouTube's app hidden too; show it again from its app options if you want it.
-- **YouTube time per day** (**Settings → Profiles**, in that profile, past the parent PIN). How long HearthTube may
-  play a day for this profile; Hearth counts it on the TV, and HearthTube stops when it's used up. With Home Assistant
-  set up (optional), a limit shared with the family's other devices can count too, and the stricter one wins (see
-  docs/home-assistant.md).
-- **Hearth on other profiles** (**Settings → Profiles**). Google TV removes apps that didn't come from the Play
-  Store from kids' profiles each time the profile starts. This puts Hearth and HearthTube on your kids' profiles and
-  keeps them installed. It can also set up the TV's other adult profiles. The first time, the TV asks "Allow
-  debugging?": choose **Always allow**. It only touches Hearth's own two apps, and you can undo it any time.
-- **Uninstalling.** Use **Settings → Profiles → Hearth on other profiles → Uninstall Hearth**, which removes Hearth
-  from the other profiles first. Uninstalling from Android's settings would leave copies behind in kids' profiles.
+- **Hearth on the kids' profiles.** Google TV removes apps that didn't come from the Play Store from kids'
+  profiles each time the profile starts. The first-run setup puts Hearth (and HearthTube, once you have it) on each
+  kids' profile and keeps them there. The first time, the TV asks "Allow debugging?": choose **Always allow**, and
+  leave debugging on. Each kid gets one Family Link "app added" notice. It only touches Hearth's own two apps. After
+  that, Hearth puts itself on a kids' profile you add later too, once you've switched away from it (once per
+  profile, so you aren't sent notice after notice).
+- **Kids' profiles** (**Settings → Profiles → Kids' profiles**). Shows each kids' profile as **Ready** or **Needs a
+  fix**, with one **Fix** for those that need it. Select a kid to manage what's theirs without switching to their
+  profile, like their **YouTube time per day** (how long HearthTube may play a day; Hearth counts it on the TV, and
+  HearthTube stops when it's used up). With Home Assistant set up (optional), a limit shared with the family's other
+  devices can count too, and the stricter one wins (see docs/home-assistant.md). A grown-up sets their own limit in
+  **Settings → Profiles**.
+- **Uninstalling.** Use **Settings → Profiles → Kids' profiles → Uninstall Hearth**, which takes Hearth off the
+  kids' profiles first. Uninstalling from Android's settings would leave copies behind there. **Remove Hearth from
+  kids' profiles** does only the first part, and Hearth stops adding itself to new ones.
 
 ## The remote
 

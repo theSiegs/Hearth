@@ -54,7 +54,8 @@ profiles, Family Link screen time, and the Google Assistant.
 
 **Families**
 - Works with Family Link: Hearth gets out of the way of Google TV's bedtime and screen time screens.
-- **Hearth on other profiles** puts Hearth (and HearthTube) on kids' profiles and keeps it there.
+- **Kids' profiles**: Hearth (and HearthTube) goes on each kids' profile and stays there, and each kid's own
+  settings, like their YouTube time per day, are in one place.
 - A parent PIN for the settings that matter in kids' profiles.
 
 **Home Assistant**

@@ -409,7 +409,92 @@ class AppLocalizationsJa extends AppLocalizations {
   String get updatesTitle => 'アップデート';
 
   @override
-  String get familyAppsTitle => '他のプロフィールの Hearth';
+  String get kidsProfilesTitle => '子どものプロフィール';
+
+  @override
+  String get kidsProfilesUnnamed => 'キッズプロフィール';
+
+  @override
+  String get kidsProfilesReady => '準備完了';
+
+  @override
+  String get kidsProfilesNeedsFix => '修正が必要';
+
+  @override
+  String kidsProfilesNeedFixCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件の修正が必要',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get kidsProfilesHearthOn => 'Hearth が入っています';
+
+  @override
+  String get kidsProfilesBothOn => 'Hearth と HearthTube が入っています';
+
+  @override
+  String get kidsProfilesHearthMissing => 'Hearth が入っていません';
+
+  @override
+  String get kidsProfilesHearthTubeMissing => 'HearthTube が入っていません';
+
+  @override
+  String get kidsProfilesNotKept => '保護されていません：このプロフィールを次に開いたとき、Hearth のアプリは Google TV に削除されます';
+
+  @override
+  String get kidsProfilesFix => '修正';
+
+  @override
+  String get kidsProfilesFixBody => '足りないところに Hearth と HearthTube を戻します。追加されたお子さまごとに Family Link の通知が 1 回届きます。';
+
+  @override
+  String get kidsProfilesNone => 'このテレビには子どものプロフィールがありません。';
+
+  @override
+  String get kidsProfilesAutoOn => '新しい子どものプロフィールにも、Hearth が自動で入ります。';
+
+  @override
+  String get kidsProfilesApproval => '初回はテレビに「デバッグを許可しますか？」と表示されます。「常に許可」を選んでください。これで Hearth が設定を行えます。';
+
+  @override
+  String get kidsProfilesRemoveTitle => '子どものプロフィールから Hearth を削除';
+
+  @override
+  String get kidsProfilesRemoveBody => '子どものプロフィールから Hearth と HearthTube を削除し、新しいプロフィールにも追加しなくなります。Hearth をアンインストールする前に行ってください。';
+
+  @override
+  String get kidsProfilesUninstallTitle => 'Hearth をアンインストール';
+
+  @override
+  String get kidsProfilesUninstallBody => 'まず子どものプロフィールから Hearth と HearthTube を削除し、そのあと Hearth をアンインストールします。';
+
+  @override
+  String get kidsProfilesUninstallWhyHere => 'Android の設定ではなくここからアンインストールすると、キッズプロフィールに何も残りません。';
+
+  @override
+  String get kidsProfilesApprovalFirstTitle => '先に 1 回限りの許可を済ませてください';
+
+  @override
+  String get kidsProfilesApprovalFirstBody => 'Hearth はまだ子どものプロフィールから自分を削除できませんでした。テレビで「デバッグを許可しますか？」を 1 回許可する必要があります。';
+
+  @override
+  String get kidsProfilesApprovalFirstRetry => '許可してから、もう一度アンインストールをお試しください。キッズプロフィールに何も残りません。';
+
+  @override
+  String get kidsProfilesFailedTitle => '子どものプロフィールを変更できませんでした';
+
+  @override
+  String get kidsProfilesFailedBody => '子どものプロフィールを変更するには、テレビで Hearth を 1 回だけ許可する必要があります。';
+
+  @override
+  String get kidsProfilesFailedRetry => 'テレビに「デバッグを許可しますか？」と表示されたら「常に許可」を選んで、もう一度お試しください。';
+
+  @override
+  String get kidProfileHint => 'ここにある設定はすべてこのお子さま専用です。お子さまのプロフィールに切り替えなくても、ここから変更できます。';
 
   @override
   String get cardStyleTitle => 'カードのスタイル';
@@ -919,11 +1004,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String profilesAdultName(String name) {
-    return '$name（大人）';
-  }
-
-  @override
   String get pairingShowPicker => '選択画面を表示';
 
   @override
@@ -989,116 +1069,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String pairingAppProfilesFooter(String profiles) {
     return 'このアプリのプロフィール：$profiles。Google TV のプロフィールは、Hearth が読み取るとここに表示されます。';
   }
-
-  @override
-  String get familyAppsAddTitle => '他のプロフィールに Hearth を追加';
-
-  @override
-  String get familyAppsAddKids => 'Hearth と HearthTube をお子様のプロフィールに入れます。これで HearthTube がそこで動作し、Hearth がストリーミング サービスで正しいプロフィールを選べるようになります。';
-
-  @override
-  String get familyAppsAddAdults => 'テレビの他の大人のプロフィールにもインストールするので、他の大人が自分で設定する必要はありません。';
-
-  @override
-  String get familyAppsAddOnlyOwnApps => '追加するのは Hearth 自身の 2 つのアプリだけです。下の「削除」でいつでも元に戻せます。';
-
-  @override
-  String get familyAppsAddFamilyLink => 'お子さんごとに Family Link の「アプリが追加されました」という通知が 1 件届きます。';
-
-  @override
-  String get familyAppsAddApproval => '初回はテレビに「デバッグを許可しますか？」と表示されます。「常に許可」を選んでください。これで Hearth が設定を行えます。';
-
-  @override
-  String get familyAppsAdd => '追加';
-
-  @override
-  String get familyAppsRemoveTitle => '他のプロフィールから Hearth を削除';
-
-  @override
-  String get familyAppsRemoveBody => '他のプロフィールから Hearth と HearthTube を削除します。';
-
-  @override
-  String get familyAppsRemoveFirst => 'Hearth 自体をアンインストールする予定なら、先にこれを実行してください。そうしないと、キッズプロフィールに残ったコピーを消すのにパソコンが必要になることがあります。';
-
-  @override
-  String get familyAppsUninstallTitle => 'Hearth をアンインストール';
-
-  @override
-  String get familyAppsUninstallBody => 'まず他のプロフィールから Hearth と HearthTube を削除し、そのあとこのプロフィールから Hearth をアンインストールします。';
-
-  @override
-  String get familyAppsUninstallWhyHere => 'Android の設定ではなくここからアンインストールすると、キッズプロフィールに何も残りません。';
-
-  @override
-  String get familyAppsApprovalFirstTitle => '先に 1 回限りの許可を済ませてください';
-
-  @override
-  String get familyAppsApprovalFirstBody => 'Hearth はまだ他のプロフィールを整理できませんでした。テレビで「デバッグを許可しますか？」を 1 回許可する必要があります。';
-
-  @override
-  String get familyAppsApprovalFirstRetry => '許可してから、もう一度アンインストールをお試しください。キッズプロフィールに何も残りません。';
-
-  @override
-  String get familyAppsAddDone => '追加が完了しました';
-
-  @override
-  String get familyAppsRemoveDone => '削除が完了しました';
-
-  @override
-  String get familyAppsAdded => '完了しました。Hearth と HearthTube が他のプロフィールに追加されました。下の一覧をご覧ください。';
-
-  @override
-  String get familyAppsRemoved => '完了しました。他のプロフィールから Hearth と HearthTube を削除しました。';
-
-  @override
-  String get familyAppsNothingToSetUp => '設定できる他のプロフィールはまだありません。';
-
-  @override
-  String get familyAppsFailedTitle => 'プロフィールを設定できませんでした';
-
-  @override
-  String get familyAppsFailedBody => '他のプロフィールを設定するには、テレビで Hearth を 1 回だけ許可する必要があります。';
-
-  @override
-  String get familyAppsFailedRetry => 'テレビに「デバッグを許可しますか？」と表示されたら「常に許可」を選んで、もう一度お試しください。';
-
-  @override
-  String get familyAppsAlsoAdults => '他の大人のプロフィールも設定';
-
-  @override
-  String get familyAppsOn => 'オン';
-
-  @override
-  String get familyAppsOff => 'オフ';
-
-  @override
-  String get familyAppsNoneYet => 'まだ他のプロフィールは設定されていません。';
-
-  @override
-  String familyAppsAppInstalled(String app) {
-    return '$app：インストール済み';
-  }
-
-  @override
-  String familyAppsAppInstalledKept(String app) {
-    return '$app：インストール済み、保持';
-  }
-
-  @override
-  String familyAppsAppNotInstalled(String app) {
-    return '$app：未インストール';
-  }
-
-  @override
-  String familyAppsAppNotInstalledKept(String app) {
-    return '$app：未インストール、保持';
-  }
-
-  @override
-  String get familyAppsUnnamedKids => 'キッズプロフィール';
-
-  @override
-  String get familyAppsUnnamedAdult => '大人のプロフィール';
 
   @override
   String setupAccessibilityInstructions(String service) {
@@ -1922,21 +1892,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get aboutLicense => '元になったプロジェクトと同じく、GNU GPL v3 のフリーソフトウェアです。';
 
   @override
-  String get familyAppsStatusInstalled => 'インストール済み';
-
-  @override
-  String get familyAppsStatusPartial => '一部のみ';
-
-  @override
-  String get familyAppsStatusNotInstalled => '未インストール';
-
-  @override
-  String get familyAppsStatusAtRisk => '削除の恐れ';
-
-  @override
-  String get familyAppsAtRiskDetail => 'このプロフィールを次に開いたとき、保護されていないアプリは Google TV に削除されます。もう一度「追加」を使って保護してください。';
-
-  @override
   String get profilePinRow => 'プロフィールのPIN';
 
   @override
@@ -1973,6 +1928,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get profilePinSaveFailed => 'PINを保存できませんでした。';
+
+  @override
+  String get streamingPinsTitle => 'ストリーミングアプリの PIN';
+
+  @override
+  String get streamingPinsFooter => 'これらのアプリがプロフィールの PIN を求めると、Hearth が代わりに入力します。PIN を設定すると、その Google TV プロフィールとアプリのプロフィールが固定で連携されます。';
+
+  @override
+  String get streamingPinsNone => 'Hearth が PIN を入力できるアプリはインストールされていません。';
 
   @override
   String get profileLockNow => 'プロフィールをロック';

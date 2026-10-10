@@ -409,7 +409,96 @@ class AppLocalizationsAr extends AppLocalizations {
   String get updatesTitle => 'التحديثات';
 
   @override
-  String get familyAppsTitle => 'Hearth على الملفات الشخصية الأخرى';
+  String get kidsProfilesTitle => 'ملفات الأطفال';
+
+  @override
+  String get kidsProfilesUnnamed => 'ملف شخصي للأطفال';
+
+  @override
+  String get kidsProfilesReady => 'جاهز';
+
+  @override
+  String get kidsProfilesNeedsFix => 'يحتاج إلى إصلاح';
+
+  @override
+  String kidsProfilesNeedFixCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ملف يحتاج إلى إصلاح',
+      many: '$count ملفًا يحتاج إلى إصلاح',
+      few: '$count ملفات تحتاج إلى إصلاح',
+      two: 'ملفان يحتاجان إلى إصلاح',
+      one: 'ملف واحد يحتاج إلى إصلاح',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get kidsProfilesHearthOn => 'Hearth موجود عليه';
+
+  @override
+  String get kidsProfilesBothOn => 'Hearth وHearthTube موجودان عليه';
+
+  @override
+  String get kidsProfilesHearthMissing => 'Hearth غير موجود عليه';
+
+  @override
+  String get kidsProfilesHearthTubeMissing => 'HearthTube غير موجود عليه';
+
+  @override
+  String get kidsProfilesNotKept => 'غير محمي: سيزيل Google TV تطبيقات Hearth عند بدء هذا الملف الشخصي في المرة القادمة';
+
+  @override
+  String get kidsProfilesFix => 'إصلاح';
+
+  @override
+  String get kidsProfilesFixBody => 'يعيد Hearth وHearthTube إلى حيث ينقصان. يتلقى كل طفل يُضافان إلى ملفه إشعارًا واحدًا من Family Link.';
+
+  @override
+  String get kidsProfilesNone => 'لا توجد ملفات أطفال على هذا التلفزيون.';
+
+  @override
+  String get kidsProfilesAutoOn => 'يضيف Hearth نفسه أيضًا إلى ملفات الأطفال الجديدة.';
+
+  @override
+  String get kidsProfilesApproval => 'في المرة الأولى، يسأل التلفزيون \"هل تريد السماح بتصحيح الأخطاء؟\" — اختر \"السماح دائمًا\"؛ فهذا ما يتيح لـ Hearth إجراء الإعداد.';
+
+  @override
+  String get kidsProfilesRemoveTitle => 'إزالة Hearth من ملفات الأطفال';
+
+  @override
+  String get kidsProfilesRemoveBody => 'يزيل هذا Hearth وHearthTube من ملفات أطفالك، ويتوقف Hearth عن إضافة نفسه إلى الملفات الجديدة. افعل ذلك قبل إلغاء تثبيت Hearth.';
+
+  @override
+  String get kidsProfilesUninstallTitle => 'إلغاء تثبيت Hearth';
+
+  @override
+  String get kidsProfilesUninstallBody => 'يزيل هذا أولًا Hearth وHearthTube من ملفات أطفالك، ثم يلغي تثبيت Hearth.';
+
+  @override
+  String get kidsProfilesUninstallWhyHere => 'إلغاء التثبيت من هنا — بدلًا من إعدادات Android — يضمن عدم بقاء أي شيء على ملفات الأطفال.';
+
+  @override
+  String get kidsProfilesApprovalFirstTitle => 'أكمل الموافقة لمرة واحدة أولًا';
+
+  @override
+  String get kidsProfilesApprovalFirstBody => 'تعذّر على Hearth إزالة نفسه من ملفات الأطفال بعد — فهو يحتاج إلى الموافقة لمرة واحدة على \"هل تريد السماح بتصحيح الأخطاء؟\" على التلفزيون.';
+
+  @override
+  String get kidsProfilesApprovalFirstRetry => 'وافق عليها، ثم جرّب إلغاء التثبيت مرة أخرى، حتى لا يبقى شيء على ملفات الأطفال.';
+
+  @override
+  String get kidsProfilesFailedTitle => 'تعذّر تغيير ملفات الأطفال';
+
+  @override
+  String get kidsProfilesFailedBody => 'يحتاج Hearth إلى موافقة لمرة واحدة على التلفزيون قبل أن يتمكن من تغيير ملفات الأطفال.';
+
+  @override
+  String get kidsProfilesFailedRetry => 'على التلفزيون، اختر \"السماح دائمًا\" عندما يسأل \"هل تريد السماح بتصحيح الأخطاء؟\"، ثم حاول مرة أخرى.';
+
+  @override
+  String get kidProfileHint => 'كل ما هنا خاص بهذا الطفل. يمكنك تغييره من هنا دون التبديل إلى ملفه الشخصي.';
 
   @override
   String get cardStyleTitle => 'نمط البطاقات';
@@ -929,11 +1018,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String profilesAdultName(String name) {
-    return '$name (بالغ)';
-  }
-
-  @override
   String get pairingShowPicker => 'عرض أداة الاختيار';
 
   @override
@@ -1003,116 +1087,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String pairingAppProfilesFooter(String profiles) {
     return 'الملفات الشخصية في هذا التطبيق: $profiles. تظهر ملفات Google TV الشخصية هنا بعد أن يتعرّف عليها Hearth.';
   }
-
-  @override
-  String get familyAppsAddTitle => 'إضافة Hearth إلى الملفات الشخصية الأخرى';
-
-  @override
-  String get familyAppsAddKids => 'يثبّت هذا Hearth وHearthTube على ملفات أطفالك الشخصية، ليعمل HearthTube هناك ويتمكن Hearth من اختيار الملف الشخصي الصحيح في خدمات البث.';
-
-  @override
-  String get familyAppsAddAdults => 'ويثبّتهما أيضًا على ملفات البالغين الأخرى على التلفزيون، كي لا يضطر أي بالغ آخر إلى إعداده بنفسه.';
-
-  @override
-  String get familyAppsAddOnlyOwnApps => 'يضيف فقط تطبيقَي Hearth، ويمكنك التراجع عن ذلك في أي وقت عبر \"إزالة\" أدناه.';
-
-  @override
-  String get familyAppsAddFamilyLink => 'سيتلقى كل طفل إشعارًا واحدًا من Family Link بأنه \"تمت إضافة تطبيق\".';
-
-  @override
-  String get familyAppsAddApproval => 'في المرة الأولى، يسأل التلفزيون \"هل تريد السماح بتصحيح الأخطاء؟\" — اختر \"السماح دائمًا\"؛ فهذا ما يتيح لـ Hearth إجراء الإعداد.';
-
-  @override
-  String get familyAppsAdd => 'إضافة';
-
-  @override
-  String get familyAppsRemoveTitle => 'إزالة Hearth من الملفات الشخصية الأخرى';
-
-  @override
-  String get familyAppsRemoveBody => 'يزيل هذا Hearth وHearthTube من ملفاتك الشخصية الأخرى.';
-
-  @override
-  String get familyAppsRemoveFirst => 'إذا كنت تنوي إلغاء تثبيت Hearth نفسه، فنفّذ هذا أولًا — وإلا فقد تبقى نسخه على ملفات الأطفال عالقة وتحتاج إلى كمبيوتر لإزالتها.';
-
-  @override
-  String get familyAppsUninstallTitle => 'إلغاء تثبيت Hearth';
-
-  @override
-  String get familyAppsUninstallBody => 'يزيل هذا أولًا Hearth وHearthTube من ملفاتك الشخصية الأخرى، ثم يلغي تثبيت Hearth من هذا الملف.';
-
-  @override
-  String get familyAppsUninstallWhyHere => 'إلغاء التثبيت من هنا — بدلًا من إعدادات Android — يضمن عدم بقاء أي شيء على ملفات الأطفال.';
-
-  @override
-  String get familyAppsApprovalFirstTitle => 'أكمل الموافقة لمرة واحدة أولًا';
-
-  @override
-  String get familyAppsApprovalFirstBody => 'تعذّر على Hearth تنظيف الملفات الشخصية الأخرى بعد — فهو يحتاج إلى الموافقة لمرة واحدة على \"هل تريد السماح بتصحيح الأخطاء؟\" على التلفزيون.';
-
-  @override
-  String get familyAppsApprovalFirstRetry => 'وافق عليها، ثم جرّب إلغاء التثبيت مرة أخرى، حتى لا يبقى شيء على ملفات الأطفال.';
-
-  @override
-  String get familyAppsAddDone => 'اكتملت الإضافة';
-
-  @override
-  String get familyAppsRemoveDone => 'اكتملت الإزالة';
-
-  @override
-  String get familyAppsAdded => 'تم. أصبح Hearth وHearthTube الآن على ملفاتك الشخصية الأخرى — راجع القائمة أدناه.';
-
-  @override
-  String get familyAppsRemoved => 'تم. أُزيل Hearth وHearthTube من ملفاتك الشخصية الأخرى.';
-
-  @override
-  String get familyAppsNothingToSetUp => 'لا توجد ملفات شخصية أخرى لإعدادها بعد.';
-
-  @override
-  String get familyAppsFailedTitle => 'تعذّر إعداد الملفات الشخصية';
-
-  @override
-  String get familyAppsFailedBody => 'يحتاج Hearth إلى موافقة لمرة واحدة على التلفزيون قبل أن يتمكن من إعداد الملفات الشخصية الأخرى.';
-
-  @override
-  String get familyAppsFailedRetry => 'على التلفزيون، اختر \"السماح دائمًا\" عندما يسأل \"هل تريد السماح بتصحيح الأخطاء؟\"، ثم حاول مرة أخرى.';
-
-  @override
-  String get familyAppsAlsoAdults => 'إعداد ملفات البالغين الأخرى أيضًا';
-
-  @override
-  String get familyAppsOn => 'مفعّل';
-
-  @override
-  String get familyAppsOff => 'متوقف';
-
-  @override
-  String get familyAppsNoneYet => 'لم يتم إعداد ملفات شخصية أخرى بعد.';
-
-  @override
-  String familyAppsAppInstalled(String app) {
-    return '$app: مثبّت';
-  }
-
-  @override
-  String familyAppsAppInstalledKept(String app) {
-    return '$app: مثبّت، محمي';
-  }
-
-  @override
-  String familyAppsAppNotInstalled(String app) {
-    return '$app: غير مثبّت';
-  }
-
-  @override
-  String familyAppsAppNotInstalledKept(String app) {
-    return '$app: غير مثبّت، محمي';
-  }
-
-  @override
-  String get familyAppsUnnamedKids => 'ملف شخصي للأطفال';
-
-  @override
-  String get familyAppsUnnamedAdult => 'ملف شخصي لبالغ';
 
   @override
   String setupAccessibilityInstructions(String service) {
@@ -1965,21 +1939,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get aboutLicense => 'برنامج حر بموجب رخصة GNU GPL v3، مثل المشاريع التي يعتمد عليها.';
 
   @override
-  String get familyAppsStatusInstalled => 'مثبّت';
-
-  @override
-  String get familyAppsStatusPartial => 'جزئي';
-
-  @override
-  String get familyAppsStatusNotInstalled => 'غير مثبّت';
-
-  @override
-  String get familyAppsStatusAtRisk => 'معرّض للخطر';
-
-  @override
-  String get familyAppsAtRiskDetail => 'سيزيل Google TV التطبيقات غير المحمية هنا عند بدء هذا الملف الشخصي في المرة القادمة. استخدم \"إضافة\" مرة أخرى لحمايتها.';
-
-  @override
   String get profilePinRow => 'رمز PIN للملف الشخصي';
 
   @override
@@ -2016,6 +1975,15 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get profilePinSaveFailed => 'تعذّر حفظ الرمز.';
+
+  @override
+  String get streamingPinsTitle => 'رموز PIN لتطبيقات البث';
+
+  @override
+  String get streamingPinsFooter => 'عندما يطلب أحد هذه التطبيقات رمز PIN لملف شخصي، يكتبه Hearth نيابةً عنك. يؤدي تعيين رمز PIN إلى ربط ملف Google TV هذا بملف التطبيق هذا بشكل دائم.';
+
+  @override
+  String get streamingPinsNone => 'لا يوجد أي تطبيق مثبّت من التطبيقات التي يستطيع Hearth كتابة رموز PIN فيها.';
 
   @override
   String get profileLockNow => 'قفل الملف الشخصي';
