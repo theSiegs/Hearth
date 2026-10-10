@@ -63,7 +63,9 @@ class _SetupFlowLauncherState extends State<SetupFlowLauncher> with WidgetsBindi
   /// The lost Home button takes over at most once while Hearth runs.
   bool _lostShown = false;
 
-  /// The profile the last check was for: a switch to another one (from a kid's to a parent's) checks again.
+  /// Whether a check has run since the first profile check, and the profile it was for (null when Hearth can't
+  /// tell yet): a switch to another one (from a kid's to a parent's) checks again.
+  bool _checkedSettled = false;
   String? _checkedProfile;
 
   @override
@@ -93,7 +95,7 @@ class _SetupFlowLauncherState extends State<SetupFlowLauncher> with WidgetsBindi
 
   void _onProfile() {
     final profiles = _profiles!;
-    if (profiles.settledOnce && profiles.activeProfileKey != _checkedProfile) _check();
+    if (profiles.settledOnce && (!_checkedSettled || profiles.activeProfileKey != _checkedProfile)) _check();
   }
 
   Future<void> _check() async {
@@ -104,6 +106,7 @@ class _SetupFlowLauncherState extends State<SetupFlowLauncher> with WidgetsBindi
     if (profiles != null && !profiles.settledOnce) return;
     _checking = true;
     try {
+      _checkedSettled = true;
       _checkedProfile = profiles?.activeProfileKey;
       final status = await _channel.getHomeButtonFixStatus();
       if (!mounted || flow.showing) return;
