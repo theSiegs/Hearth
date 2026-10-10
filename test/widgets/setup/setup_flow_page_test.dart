@@ -68,6 +68,15 @@ void main() {
       expect(flow.resume?.screen, "homeButton");
     });
 
+    testWidgets("each screen starts on its main button, so OK alone goes through", (tester) async {
+      await open(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(channel.accessibilityOpened, 1);
+    });
+
     testWidgets("Set up later closes the flow and leaves it to the chip", (tester) async {
       await open(tester);
       await press(tester, "Set up later");
