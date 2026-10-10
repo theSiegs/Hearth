@@ -1,3 +1,4 @@
+import 'package:flauncher/providers/home_looks.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';
 import 'package:flauncher/widgets/setup/setup_flow_page.dart';
@@ -241,7 +242,7 @@ void main() {
       expect(find.text("Pick up where you left off, and see what's playing."), findsOneWidget);
       await press(tester, "Not now");
       expect(flow.cardChoice(SetupCard.watching), SetupChoice.notNow);
-      expect(find.text("Turn the TV off when nobody's watching?"), findsOneWidget);
+      expect(find.text("Pick a look"), findsOneWidget);
       expect(channel.watchNextAsked, 0);
     });
 
@@ -267,7 +268,7 @@ void main() {
       expect(find.text("Notifications are on"), findsOneWidget);
       await tester.pump(const Duration(seconds: 2));
       await tester.pumpAndSettle();
-      expect(find.text("Turn the TV off when nobody's watching?"), findsOneWidget);
+      expect(find.text("Pick a look"), findsOneWidget);
     });
 
     testWidgets("Continue Watching declined: where to find it, and Hearth's own fix with debugging on",
@@ -347,6 +348,66 @@ void main() {
     });
   });
 
+  group("your home", () {
+    testWidgets("the focused look shows on the home; Keep current puts the home back", (tester) async {
+      await SettingsService(prefs).setThemes("classic");
+      await open(tester, startAt: "look");
+      expect(find.text("Pick a look"), findsOneWidget);
+      // Focus starts on Hearth's own look (the home matches none), shown behind the card
+      expect(HomeLook.hearth.matches(SettingsService(prefs)), isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(HomeLook.photo.matches(SettingsService(prefs)), isTrue);
+
+      await press(tester, "Keep current");
+      final settings = SettingsService(prefs);
+      expect(settings.themes, "classic");
+      expect(settings.bingWallpaperEnabled, isFalse);
+      expect(flow.cardChoice(SetupCard.home), SetupChoice.on);
+      expect(flow.look, isNull);
+      // The weather needs nothing here (no weather service): on to TV & power
+      expect(find.text("Turn the TV off when nobody's watching?"), findsOneWidget);
+    });
+
+    testWidgets("a look picked is kept, and is where new grown-up profiles start", (tester) async {
+      await open(tester, startAt: "look");
+      await tester.tap(find.text("Bold"));
+      await tester.pumpAndSettle();
+      expect(HomeLook.bold.matches(SettingsService(prefs)), isTrue);
+      expect(flow.look, HomeLook.bold);
+      expect(flow.cardChoice(SetupCard.home), SetupChoice.on);
+    });
+
+    testWidgets("the look the home has now says so", (tester) async {
+      await HomeLook.calmDark.apply(SettingsService(prefs));
+      await open(tester, startAt: "look");
+      expect(find.text("Now"), findsOneWidget);
+      await press(tester, "Use this look");
+      expect(flow.look, HomeLook.calmDark);
+    });
+
+    testWidgets("another grown-up's first visit: only the look, and their pick is their own", (tester) async {
+      await open(tester, mode: SetupMode.look);
+      expect(find.text("Pick a look for your home"), findsOneWidget);
+      await tester.tap(find.text("Calm dark"));
+      await tester.pumpAndSettle();
+      expect(find.text("Pick a look for your home"), findsNothing);
+      expect(HomeLook.calmDark.matches(SettingsService(prefs)), isTrue);
+      expect(flow.look, isNull);
+      expect(flow.resume, isNull);
+    });
+
+    testWidgets("Back on another grown-up's look card leaves their home as it was", (tester) async {
+      await open(tester, mode: SetupMode.look);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text("Pick a look for your home"), findsNothing);
+      expect(SettingsService(prefs).bingWallpaperEnabled, isFalse);
+    });
+  });
+
   group("finish", () {
     testWidgets("everything on: Finish says so, and nothing is left to resume", (tester) async {
       channel.homeButtonOn = true;
@@ -361,6 +422,7 @@ void main() {
       // The cards say they're on already, with Keep
       expect(find.text("Watching"), findsWidgets);
       await press(tester, "Keep");
+      await press(tester, "Keep current");
       await press(tester, "Next");
       await press(tester, "Keep");
       expect(find.text("Hearth is ready"), findsOneWidget);

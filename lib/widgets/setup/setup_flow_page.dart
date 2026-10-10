@@ -20,15 +20,21 @@ import 'dart:async';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/companion_updater.dart';
+import 'package:flauncher/providers/home_looks.dart';
+import 'package:flauncher/providers/open_meteo_client.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';
+import 'package:flauncher/providers/wallpaper_service.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
+import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/widgets/settings/adb_command_dialog.dart';
 import 'package:flauncher/widgets/settings/app_language_page.dart';
 import 'package:flauncher/widgets/settings/backup_restore_page.dart';
+import 'package:flauncher/widgets/settings/look_settings_page.dart';
 import 'package:flauncher/widgets/settings/message_dialog.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
 import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
+import 'package:flauncher/widgets/settings/weather_location_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -47,6 +53,8 @@ enum SetupScreen {
   watching,
   watchingContinue,
   watchingNotifications,
+  look,
+  lookWeather,
   tv,
   updates,
   updatesInstall,
@@ -102,6 +110,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     SetupScreen.watching,
     SetupScreen.watchingContinue,
     SetupScreen.watchingNotifications,
+    SetupScreen.look,
+    SetupScreen.lookWeather,
     SetupScreen.tv,
     SetupScreen.updates,
     SetupScreen.updatesInstall,
@@ -112,6 +122,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   /// Each card's own screen, then its steps (shown only after Turn on).
   static const Map<SetupCard, List<SetupScreen>> _cardScreens = {
     SetupCard.watching: [SetupScreen.watching, SetupScreen.watchingContinue, SetupScreen.watchingNotifications],
+    SetupCard.home: [SetupScreen.look, SetupScreen.lookWeather],
     SetupCard.tv: [SetupScreen.tv],
     SetupCard.updates: [SetupScreen.updates, SetupScreen.updatesInstall, SetupScreen.updatesHearthTube],
   };
@@ -149,6 +160,15 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   /// TV & power's idle standby, in minutes (0: off), once read.
   int? _idleMinutes;
 
+  /// The look as it was when the look screen opened, and the one previewed on the home behind it (focused, not
+  /// chosen yet).
+  HomeLookSnapshot? _lookBefore;
+  HomeLook? _previewing;
+  SettingsService? _lookSettings;
+
+  /// A backup was restored from Welcome: its look came with it, so the look screen isn't shown.
+  bool _restored = false;
+
   /// HearthTube's download, as a fraction, while it downloads; and why it couldn't be installed.
   double? _tubeProgress;
   String? _tubeError;
@@ -160,6 +180,12 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   Timer? _autoNext;
 
   bool get _lostFix => widget.mode == SetupMode.lostFix;
+
+  /// A grown-up's first visit to their profile: only the look screen.
+  bool get _lookOnly => widget.mode == SetupMode.look;
+
+  /// One screen by itself, with no strip, no Finish later and nothing to resume.
+  bool get _single => _lostFix || _lookOnly;
 
   @override
   void initState() {
@@ -175,6 +201,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     _poll?.cancel();
     _autoNext?.cancel();
     _primary.dispose();
+    // Closed while a look was only being previewed: the home goes back to how it was
+    _endPreview();
     // Closed while the owner was away in Android's settings: nothing to come back to
     _waitFor(null);
     _flow.showing = false;
@@ -199,6 +227,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       _show(startAt);
     } else if (_lostFix) {
       _show(SetupScreen.homeButton);
+    } else if (_lookOnly) {
+      _show(SetupScreen.look);
     } else if (widget.mode == SetupMode.rerun) {
       _show(_nextAfter(SetupScreen.welcome));
     } else {
@@ -217,6 +247,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   void _show(SetupScreen screen, {bool resumed = false, SetupStepState? state}) {
     _poll?.cancel();
     _autoNext?.cancel();
+    if (_screen == SetupScreen.look && screen != SetupScreen.look) _endPreview();
     setState(() {
       if (_history.isEmpty || _history.last != screen) _history.add(screen);
       _screen = screen;
@@ -225,7 +256,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       _tubeError = null;
     });
     if (screen == SetupScreen.tv) _readIdleMinutes();
-    if (!_lostFix && screen != SetupScreen.finish) unawaited(_flow.saveResume(screen.name, widget.mode));
+    if (screen == SetupScreen.look) _startPreview();
+    if (!_single && screen != SetupScreen.finish) unawaited(_flow.saveResume(screen.name, widget.mode));
     if (screen == SetupScreen.finish) unawaited(_flow.finish());
     if (screen == SetupScreen.homeButtonBlocked) _startPolling();
     if (resumed && state == null) _recheck(fromResume: true);
@@ -254,6 +286,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       SetupScreen.watchingNotifications => snap.isDone(SetupStepId.notifications),
       SetupScreen.updatesInstall => snap.isDone(SetupStepId.install),
       SetupScreen.updatesHearthTube => snap.hearthTubeInstalled,
+      SetupScreen.look => _restored,
+      SetupScreen.lookWeather => _weatherSet,
       _ => false,
     };
   }
@@ -284,7 +318,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   }
 
   void _next() {
-    if (_lostFix) {
+    if (_single) {
       _close();
       return;
     }
@@ -293,7 +327,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
 
   void _back() {
     if (_fixing) return;
-    if (_lostFix || _screen == SetupScreen.welcome) {
+    if (_single || _screen == SetupScreen.welcome) {
       _finishLater();
       return;
     }
@@ -309,6 +343,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   Future<void> _finishLater() async {
     if (_lostFix) {
       await _flow.decide(SetupFlowService.lostFixDecision, SetupChoice.notNow);
+    } else if (_lookOnly) {
+      // Nothing to carry on with: the profile keeps the look it started with
     } else {
       await _flow.close();
     }
@@ -524,9 +560,11 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
         if (!didPop) _back();
       },
       child: SetupFrame(
-        strip: _lostFix || _screen == SetupScreen.welcome ? null : _strip(l),
+        strip: _single || _screen == SetupScreen.welcome ? null : _strip(l),
         finishLaterLabel: l.setupFlowFinishLater,
-        onFinishLater: _lostFix || _screen == SetupScreen.welcome || _screen == SetupScreen.finish ? null : _finishLater,
+        onFinishLater: _single || _screen == SetupScreen.welcome || _screen == SetupScreen.finish ? null : _finishLater,
+        // The look screen shows the home behind it as it'll look
+        preview: _screen == SetupScreen.look,
         child: _snap == null
             ? const Padding(padding: EdgeInsets.all(48), child: Center(child: CircularProgressIndicator()))
             : _fixing
@@ -544,6 +582,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
         SetupScreen.watching => _cardScreen(l, SetupCard.watching),
         SetupScreen.watchingContinue => _continueWatching(l),
         SetupScreen.watchingNotifications => _notifications(l),
+        SetupScreen.look => _lookScreen(l),
+        SetupScreen.lookWeather => _weather(l),
         SetupScreen.tv => _tvAndPower(l),
         SetupScreen.updates => _cardScreen(l, SetupCard.updates),
         SetupScreen.updatesInstall => _installs(l),
@@ -622,10 +662,17 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     );
   }
 
-  /// One of Settings' pages over the flow (the language, a backup to restore); Back returns here.
+  /// One of Settings' pages over the flow (the language, a backup to restore, the look); Back returns here.
   Future<void> _openSettingsPage(String route) async {
+    final settings = context.read<SettingsService?>();
+    final before = settings == null ? null : HomeLookSnapshot.of(settings);
     await showDialog(
         context: context, barrierColor: Colors.transparent, builder: (_) => SettingsPanel(initialRoute: route));
+    // A restored backup brought its look along: the look card has nothing left to ask
+    if (route == BackupRestorePage.routeName && before != null && !HomeLookSnapshot.of(settings!).sameAs(before)) {
+      _restored = true;
+      await _flow.decide(SetupCard.home.name, SetupChoice.on);
+    }
     _focusPrimary();
   }
 

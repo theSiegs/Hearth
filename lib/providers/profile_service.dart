@@ -26,7 +26,9 @@ import '../flauncher_channel.dart';
 import '../models/app.dart';
 import 'apps_service.dart';
 import 'backup_service.dart';
+import 'home_looks.dart';
 import 'settings_service.dart';
+import 'setup_flow_service.dart';
 import 'wallpaper_service.dart';
 
 /// Follows the active Google TV profile (as seen by the accessibility service) and gives each profile its own
@@ -64,6 +66,14 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
   String? get activeProfileKey => _activeProfileKey;
 
   bool get isKidsProfile => _isKidsProfile;
+
+  String? _firstVisitKey;
+
+  /// A grown-up profile Hearth just saw for the first time (since it started), until [lookOffered]: the setup flow
+  /// offers it "Pick a look for your home".
+  String? get firstVisitKey => _firstVisitKey;
+
+  void lookOffered() => _firstVisitKey = null;
 
   Uint8List? _avatar;
   String? _avatarName;
@@ -273,6 +283,11 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
         // it was set up with.
         await _backupService.resetProfileSettings(_settingsService);
         await _appsService.resetToDefaultLayout();
+        if (!kids) {
+          // A grown-up's new home starts with the look chosen in the setup flow, and the flow offers to pick another
+          await HomeLook.byName(_sharedPreferences.getString(SetupFlowService.lookKey))?.apply(_settingsService);
+          _firstVisitKey = key;
+        }
       }
       await _sharedPreferences.setString(layoutOwnerKey, key);
       await _wallpaperService?.setProfile(key);

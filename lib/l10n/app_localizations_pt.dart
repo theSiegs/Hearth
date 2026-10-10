@@ -2320,4 +2320,57 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get setupFlowTubeInstalled => 'O HearthTube está instalado';
+
+  @override
+  String get setupCardHome => 'Sua tela inicial';
+
+  @override
+  String get setupFlowLookTitle => 'Escolha um visual';
+
+  @override
+  String setupFlowLookBody(String where) {
+    return 'Cada um aparece atrás deste cartão quando você passa por ele. Você pode mudar qualquer parte depois em $where.';
+  }
+
+  @override
+  String get setupFlowLookOtherTitle => 'Escolha um visual para sua tela inicial';
+
+  @override
+  String get setupFlowLookOtherBody => 'Cada perfil tem sua própria tela inicial. Escolha como a sua fica.';
+
+  @override
+  String get setupLookHearth => 'Hearth';
+
+  @override
+  String get setupLookPhoto => 'Foto do dia';
+
+  @override
+  String get setupLookCalmDark => 'Escuro calmo';
+
+  @override
+  String get setupLookBold => 'Vibrante';
+
+  @override
+  String get setupFlowLookNow => 'Atual';
+
+  @override
+  String get setupFlowLookUse => 'Usar este visual';
+
+  @override
+  String get setupFlowLookKeep => 'Manter o atual';
+
+  @override
+  String get setupFlowLookCustomize => 'Personalizar';
+
+  @override
+  String get setupFlowWeatherTitle => 'Mostrar o tempo?';
+
+  @override
+  String get setupFlowWeatherBody => 'Escolha sua cidade. Só a localização dela é enviada, ao Open-Meteo; sem conta.';
+
+  @override
+  String get setupFlowWeatherChoose => 'Escolher cidade';
+
+  @override
+  String get setupFlowWeatherDone => 'O tempo aparece na barra superior';
 }

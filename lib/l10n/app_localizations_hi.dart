@@ -2318,4 +2318,57 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get setupFlowTubeInstalled => 'HearthTube इंस्टॉल हो गया है';
+
+  @override
+  String get setupCardHome => 'आपकी होम स्क्रीन';
+
+  @override
+  String get setupFlowLookTitle => 'एक रूप चुनें';
+
+  @override
+  String setupFlowLookBody(String where) {
+    return 'हर रूप पर जाते ही वह इस कार्ड के पीछे दिखता है। आप बाद में $where में कोई भी हिस्सा बदल सकते हैं।';
+  }
+
+  @override
+  String get setupFlowLookOtherTitle => 'अपनी होम स्क्रीन के लिए रूप चुनें';
+
+  @override
+  String get setupFlowLookOtherBody => 'हर प्रोफ़ाइल की अपनी होम स्क्रीन होती है। चुनें कि आपकी कैसी दिखे।';
+
+  @override
+  String get setupLookHearth => 'Hearth';
+
+  @override
+  String get setupLookPhoto => 'आज की तस्वीर';
+
+  @override
+  String get setupLookCalmDark => 'शांत गहरा';
+
+  @override
+  String get setupLookBold => 'चटक';
+
+  @override
+  String get setupFlowLookNow => 'अभी';
+
+  @override
+  String get setupFlowLookUse => 'यह रूप इस्तेमाल करें';
+
+  @override
+  String get setupFlowLookKeep => 'मौजूदा रहने दें';
+
+  @override
+  String get setupFlowLookCustomize => 'अपने हिसाब से बदलें';
+
+  @override
+  String get setupFlowWeatherTitle => 'मौसम दिखाएँ?';
+
+  @override
+  String get setupFlowWeatherBody => 'अपना शहर चुनें। सिर्फ़ उसकी जगह Open-Meteo को भेजी जाती है; कोई खाता नहीं।';
+
+  @override
+  String get setupFlowWeatherChoose => 'शहर चुनें';
+
+  @override
+  String get setupFlowWeatherDone => 'मौसम ऊपर की पट्टी में दिखता है';
 }

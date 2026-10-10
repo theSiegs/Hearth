@@ -42,6 +42,8 @@ extension _CardScreens on _SetupFlowPageState {
             [l.setupFlowNeedsQuestion, l.setupFlowNeedsOneSwitch, l.setupFlowNeedsAboutAMinute],
             note: l.setupFlowSearchWorks,
           ),
+        SetupCard.home =>
+          _CardInfo(Icons.palette_outlined, l.setupCardHome, l.setupFlowLookTitle, const [], const []),
         SetupCard.tv => _CardInfo(Icons.bedtime_outlined, l.tvPowerTitle, l.setupFlowTvBody, const [], const []),
         SetupCard.updates => _CardInfo(
             Icons.system_update_outlined,
@@ -221,6 +223,154 @@ extension _CardScreens on _SetupFlowPageState {
         done: l.setupFlowNotificationsDone,
         fix: "notification_access",
       );
+
+  // --- Your home ---
+
+  String _lookName(AppLocalizations l, HomeLook look) => switch (look) {
+        HomeLook.hearth => l.setupLookHearth,
+        HomeLook.photo => l.setupLookPhoto,
+        HomeLook.calmDark => l.setupLookCalmDark,
+        HomeLook.bold => l.setupLookBold,
+      };
+
+  /// The look screen opened: notes the look as it is, to put back unless one is chosen.
+  void _startPreview() {
+    final settings = context.read<SettingsService?>();
+    if (settings == null) return;
+    _lookSettings = settings;
+    _lookBefore = HomeLookSnapshot.of(settings);
+    _previewing = null;
+  }
+
+  /// Shows [look] on the home behind the card, until another is focused or the screen is left.
+  void _preview(HomeLook look) {
+    final settings = _lookSettings;
+    if (settings == null || _previewing == look) return;
+    _previewing = look;
+    unawaited(look.apply(settings));
+  }
+
+  /// Leaves the look screen without choosing: the home goes back to how it was.
+  void _endPreview() {
+    final settings = _lookSettings;
+    final before = _lookBefore;
+    if (_previewing != null && settings != null && before != null) {
+      // From dispose too, when Hearth itself may be closing: nothing to put back then
+      unawaited(before.restore(settings).catchError((Object _) {}));
+    }
+    _previewing = null;
+  }
+
+  Future<void> _useLook(HomeLook look) async {
+    final settings = _lookSettings;
+    _previewing = null;
+    if (settings != null) {
+      await look.apply(settings);
+      // Chosen for good: a picture picked as the wallpaper makes way for the look's gradient
+      final gradient = look.gradient;
+      if (gradient != null && mounted) await context.read<WallpaperService?>()?.setGradient(gradient);
+    }
+    // Another grown-up's choice is their own; the owner's is where new profiles start
+    if (!_lookOnly) {
+      await _flow.setLook(look);
+      await _flow.decide(SetupCard.home.name, SetupChoice.on);
+    }
+    _next();
+  }
+
+  Future<void> _keepLook() async {
+    _endPreview();
+    if (!_lookOnly) await _flow.decide(SetupCard.home.name, SetupChoice.on);
+    _next();
+  }
+
+  /// Customize: Settings' Look page over the flow, starting from the look on show. What the owner makes there stays.
+  Future<void> _customizeLook() async {
+    await _openSettingsPage(LookSettingsPage.routeName);
+    final settings = _lookSettings;
+    if (settings != null) _lookBefore = HomeLookSnapshot.of(settings);
+    _previewing = null;
+    if (!_lookOnly) await _flow.decide(SetupCard.home.name, SetupChoice.on);
+  }
+
+  /// Your home: four looks, each previewed on the home behind the card as it's focused. The card is the choice.
+  Widget _lookScreen(AppLocalizations l) {
+    final settings = _lookSettings ?? context.read<SettingsService?>();
+    final current = settings == null ? null : HomeLook.current(settings);
+    // Focus starts on the look the home has now, or Hearth's own
+    final first = current ?? HomeLook.hearth;
+    final where = "${l.settingsTitle} > ${l.homeScreenTitle} > ${l.lookTitle}";
+    final kept = settings == null ? null : (_lookBefore ?? HomeLookSnapshot.of(settings));
+    return SetupScreenBody(
+      icon: Icons.palette_outlined,
+      title: _lookOnly ? l.setupFlowLookOtherTitle : l.setupFlowLookTitle,
+      body: _lookOnly ? l.setupFlowLookOtherBody : l.setupFlowLookBody(where),
+      content: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final look in HomeLook.values) ...[
+              Expanded(
+                child: SetupLookTile(
+                  key: ValueKey("look_${look.name}"),
+                  label: _lookName(l, look),
+                  gradient: look.gradient?.gradient,
+                  // The photo look keeps the accent the home has
+                  accent: accentColorFromHex(look.accent ?? kept?.accent ?? accentColorPurple),
+                  note: look == current ? l.setupFlowLookNow : null,
+                  focusNode: look == first ? _primary : null,
+                  autofocus: look == first,
+                  onFocused: () => _preview(look),
+                  onPressed: () => _useLook(look),
+                ),
+              ),
+              if (look != HomeLook.values.last) const SizedBox(width: 16),
+            ],
+          ],
+        ),
+      ],
+      buttons: [
+        SetupButton(label: l.setupFlowLookKeep, onPressed: _keepLook),
+        SetupButton(label: l.setupFlowLookCustomize, icon: Icons.tune, onPressed: _customizeLook),
+        SetupButton(label: l.setupFlowLookUse, onPressed: () => _useLook(_previewing ?? first)),
+      ],
+    );
+  }
+
+  bool get _weatherSet {
+    final weather = context.read<WeatherService?>();
+    // Without the weather (tests) there's nothing to set up
+    return weather == null || (weather.location != null && (_lookSettings?.showWeatherInStatusBar ?? true));
+  }
+
+  /// Show the weather? Typing a town is the one place the flow asks for text; the dialog searches Open-Meteo.
+  Widget _weather(AppLocalizations l) {
+    if (_state == SetupStepState.done) return _doneBody(l, l.setupFlowWeatherDone);
+    return SetupScreenBody(
+      icon: Icons.wb_sunny_outlined,
+      title: l.setupFlowWeatherTitle,
+      body: l.setupFlowWeatherBody,
+      buttons: [
+        SetupButton(label: l.setupFlowSkip, onPressed: _next),
+        SetupButton(label: l.setupFlowWeatherChoose, focusNode: _primary, autofocus: true, onPressed: _chooseTown),
+      ],
+    );
+  }
+
+  Future<void> _chooseTown() async {
+    final weather = context.read<WeatherService?>();
+    final settings = context.read<SettingsService?>();
+    if (weather == null) return;
+    final place = await showDialog<WeatherPlace>(
+        context: context, builder: (_) => WeatherLocationDialog(weatherService: weather));
+    if (place == null || !mounted) {
+      _focusPrimary();
+      return;
+    }
+    await weather.setLocation(place);
+    await settings?.setShowWeatherInStatusBar(true);
+    _showDone(SetupScreen.lookWeather, const Duration(seconds: 2));
+  }
 
   // --- TV & power ---
 

@@ -700,5 +700,22 @@
     "setupFlowInstallDone": "Hearth güncelleme yükleyebilir",
     "setupFlowTubeTitle": "HearthTube yüklensin mi?",
     "setupFlowTubeBody": "Hearth için yapılmış bir YouTube uygulaması: profillerinizi, saat stilini ve çocukların yatma saatini izler.",
-    "setupFlowTubeInstalled": "HearthTube yüklü"
+    "setupFlowTubeInstalled": "HearthTube yüklü",
+    "setupCardHome": "Ana ekranınız",
+    "setupFlowLookTitle": "Bir görünüm seçin",
+    "setupFlowLookBody": "Her biri, üzerine geldiğinizde bu kartın arkasında görünür. Herhangi bir parçasını daha sonra {where} bölümünden değiştirebilirsiniz.",
+    "setupFlowLookOtherTitle": "Ana ekranınız için bir görünüm seçin",
+    "setupFlowLookOtherBody": "Her profilin kendi ana ekranı vardır. Sizinkinin nasıl görüneceğini seçin.",
+    "setupLookHearth": "Hearth",
+    "setupLookPhoto": "Günün fotoğrafı",
+    "setupLookCalmDark": "Sakin koyu",
+    "setupLookBold": "Canlı",
+    "setupFlowLookNow": "Şu anki",
+    "setupFlowLookUse": "Bu görünümü kullan",
+    "setupFlowLookKeep": "Mevcut kalsın",
+    "setupFlowLookCustomize": "Özelleştir",
+    "setupFlowWeatherTitle": "Hava durumu gösterilsin mi?",
+    "setupFlowWeatherBody": "Şehrinizi seçin. Yalnızca konumu Open-Meteo'ya gönderilir; hesap gerekmez.",
+    "setupFlowWeatherChoose": "Şehir seç",
+    "setupFlowWeatherDone": "Hava durumu üst çubukta görünür"
 }

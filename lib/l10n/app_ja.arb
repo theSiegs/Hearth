@@ -700,5 +700,22 @@
     "setupFlowInstallDone": "Hearth がアップデートをインストールできます",
     "setupFlowTubeTitle": "HearthTube をインストールしますか？",
     "setupFlowTubeBody": "Hearth 用に作られた YouTube アプリ。プロフィール、時計のスタイル、子どもの就寝時間に従います。",
-    "setupFlowTubeInstalled": "HearthTube がインストールされました"
+    "setupFlowTubeInstalled": "HearthTube がインストールされました",
+    "setupCardHome": "ホーム画面",
+    "setupFlowLookTitle": "見た目を選ぶ",
+    "setupFlowLookBody": "選ぶと、このカードの後ろに表示されます。あとで {where} からどこでも変更できます。",
+    "setupFlowLookOtherTitle": "ホーム画面の見た目を選ぶ",
+    "setupFlowLookOtherBody": "プロフィールごとに自分のホーム画面があります。見た目を選んでください。",
+    "setupLookHearth": "Hearth",
+    "setupLookPhoto": "今日の写真",
+    "setupLookCalmDark": "落ち着いたダーク",
+    "setupLookBold": "大胆",
+    "setupFlowLookNow": "現在",
+    "setupFlowLookUse": "この見た目にする",
+    "setupFlowLookKeep": "今のままにする",
+    "setupFlowLookCustomize": "カスタマイズ",
+    "setupFlowWeatherTitle": "天気を表示しますか？",
+    "setupFlowWeatherBody": "お住まいの町を選んでください。送られるのはその位置だけで、送り先は Open-Meteo です。アカウントは不要です。",
+    "setupFlowWeatherChoose": "町を選ぶ",
+    "setupFlowWeatherDone": "天気は上部のバーに表示されます"
 }

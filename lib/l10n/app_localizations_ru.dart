@@ -2334,4 +2334,57 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get setupFlowTubeInstalled => 'HearthTube установлен';
+
+  @override
+  String get setupCardHome => 'Ваш главный экран';
+
+  @override
+  String get setupFlowLookTitle => 'Выберите оформление';
+
+  @override
+  String setupFlowLookBody(String where) {
+    return 'Каждое оформление видно за этой карточкой, когда вы на него переходите. Любую часть можно изменить позже: $where.';
+  }
+
+  @override
+  String get setupFlowLookOtherTitle => 'Выберите оформление главного экрана';
+
+  @override
+  String get setupFlowLookOtherBody => 'У каждого профиля свой главный экран. Выберите, как будет выглядеть ваш.';
+
+  @override
+  String get setupLookHearth => 'Hearth';
+
+  @override
+  String get setupLookPhoto => 'Фото дня';
+
+  @override
+  String get setupLookCalmDark => 'Спокойный тёмный';
+
+  @override
+  String get setupLookBold => 'Яркий';
+
+  @override
+  String get setupFlowLookNow => 'Сейчас';
+
+  @override
+  String get setupFlowLookUse => 'Выбрать это оформление';
+
+  @override
+  String get setupFlowLookKeep => 'Оставить как есть';
+
+  @override
+  String get setupFlowLookCustomize => 'Настроить';
+
+  @override
+  String get setupFlowWeatherTitle => 'Показывать погоду?';
+
+  @override
+  String get setupFlowWeatherBody => 'Выберите свой город. Отправляется только его местоположение, в Open-Meteo; без аккаунта.';
+
+  @override
+  String get setupFlowWeatherChoose => 'Выбрать город';
+
+  @override
+  String get setupFlowWeatherDone => 'Погода показывается в верхней панели';
 }

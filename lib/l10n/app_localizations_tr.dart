@@ -2310,4 +2310,57 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get setupFlowTubeInstalled => 'HearthTube yüklü';
+
+  @override
+  String get setupCardHome => 'Ana ekranınız';
+
+  @override
+  String get setupFlowLookTitle => 'Bir görünüm seçin';
+
+  @override
+  String setupFlowLookBody(String where) {
+    return 'Her biri, üzerine geldiğinizde bu kartın arkasında görünür. Herhangi bir parçasını daha sonra $where bölümünden değiştirebilirsiniz.';
+  }
+
+  @override
+  String get setupFlowLookOtherTitle => 'Ana ekranınız için bir görünüm seçin';
+
+  @override
+  String get setupFlowLookOtherBody => 'Her profilin kendi ana ekranı vardır. Sizinkinin nasıl görüneceğini seçin.';
+
+  @override
+  String get setupLookHearth => 'Hearth';
+
+  @override
+  String get setupLookPhoto => 'Günün fotoğrafı';
+
+  @override
+  String get setupLookCalmDark => 'Sakin koyu';
+
+  @override
+  String get setupLookBold => 'Canlı';
+
+  @override
+  String get setupFlowLookNow => 'Şu anki';
+
+  @override
+  String get setupFlowLookUse => 'Bu görünümü kullan';
+
+  @override
+  String get setupFlowLookKeep => 'Mevcut kalsın';
+
+  @override
+  String get setupFlowLookCustomize => 'Özelleştir';
+
+  @override
+  String get setupFlowWeatherTitle => 'Hava durumu gösterilsin mi?';
+
+  @override
+  String get setupFlowWeatherBody => 'Şehrinizi seçin. Yalnızca konumu Open-Meteo\'ya gönderilir; hesap gerekmez.';
+
+  @override
+  String get setupFlowWeatherChoose => 'Şehir seç';
+
+  @override
+  String get setupFlowWeatherDone => 'Hava durumu üst çubukta görünür';
 }

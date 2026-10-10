@@ -2310,4 +2310,57 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get setupFlowTubeInstalled => 'HearthTube がインストールされました';
+
+  @override
+  String get setupCardHome => 'ホーム画面';
+
+  @override
+  String get setupFlowLookTitle => '見た目を選ぶ';
+
+  @override
+  String setupFlowLookBody(String where) {
+    return '選ぶと、このカードの後ろに表示されます。あとで $where からどこでも変更できます。';
+  }
+
+  @override
+  String get setupFlowLookOtherTitle => 'ホーム画面の見た目を選ぶ';
+
+  @override
+  String get setupFlowLookOtherBody => 'プロフィールごとに自分のホーム画面があります。見た目を選んでください。';
+
+  @override
+  String get setupLookHearth => 'Hearth';
+
+  @override
+  String get setupLookPhoto => '今日の写真';
+
+  @override
+  String get setupLookCalmDark => '落ち着いたダーク';
+
+  @override
+  String get setupLookBold => '大胆';
+
+  @override
+  String get setupFlowLookNow => '現在';
+
+  @override
+  String get setupFlowLookUse => 'この見た目にする';
+
+  @override
+  String get setupFlowLookKeep => '今のままにする';
+
+  @override
+  String get setupFlowLookCustomize => 'カスタマイズ';
+
+  @override
+  String get setupFlowWeatherTitle => '天気を表示しますか？';
+
+  @override
+  String get setupFlowWeatherBody => 'お住まいの町を選んでください。送られるのはその位置だけで、送り先は Open-Meteo です。アカウントは不要です。';
+
+  @override
+  String get setupFlowWeatherChoose => '町を選ぶ';
+
+  @override
+  String get setupFlowWeatherDone => '天気は上部のバーに表示されます';
 }

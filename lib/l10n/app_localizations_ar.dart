@@ -2353,4 +2353,57 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get setupFlowTubeInstalled => 'تم تثبيت HearthTube';
+
+  @override
+  String get setupCardHome => 'شاشتك الرئيسية';
+
+  @override
+  String get setupFlowLookTitle => 'اختر مظهرًا';
+
+  @override
+  String setupFlowLookBody(String where) {
+    return 'يظهر كل مظهر خلف هذه البطاقة عند الانتقال إليه. يمكنك تغيير أي جزء لاحقًا من $where.';
+  }
+
+  @override
+  String get setupFlowLookOtherTitle => 'اختر مظهرًا لشاشتك الرئيسية';
+
+  @override
+  String get setupFlowLookOtherBody => 'لكل ملف شخصي شاشته الرئيسية. اختر مظهر شاشتك.';
+
+  @override
+  String get setupLookHearth => 'Hearth';
+
+  @override
+  String get setupLookPhoto => 'صورة اليوم';
+
+  @override
+  String get setupLookCalmDark => 'داكن هادئ';
+
+  @override
+  String get setupLookBold => 'جريء';
+
+  @override
+  String get setupFlowLookNow => 'الحالي';
+
+  @override
+  String get setupFlowLookUse => 'استخدام هذا المظهر';
+
+  @override
+  String get setupFlowLookKeep => 'إبقاء الحالي';
+
+  @override
+  String get setupFlowLookCustomize => 'تخصيص';
+
+  @override
+  String get setupFlowWeatherTitle => 'عرض الطقس؟';
+
+  @override
+  String get setupFlowWeatherBody => 'اختر مدينتك. يُرسل موقعها فقط إلى Open-Meteo، دون حساب.';
+
+  @override
+  String get setupFlowWeatherChoose => 'اختيار المدينة';
+
+  @override
+  String get setupFlowWeatherDone => 'يظهر الطقس في الشريط العلوي';
 }

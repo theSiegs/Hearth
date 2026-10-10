@@ -2320,4 +2320,57 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get setupFlowTubeInstalled => 'HearthTube è installato';
+
+  @override
+  String get setupCardHome => 'La tua Home';
+
+  @override
+  String get setupFlowLookTitle => 'Scegli uno stile';
+
+  @override
+  String setupFlowLookBody(String where) {
+    return 'Ogni stile appare dietro questa scheda quando lo selezioni. Puoi cambiare qualsiasi parte più tardi in $where.';
+  }
+
+  @override
+  String get setupFlowLookOtherTitle => 'Scegli uno stile per la tua Home';
+
+  @override
+  String get setupFlowLookOtherBody => 'Ogni profilo ha la sua Home. Scegli come appare la tua.';
+
+  @override
+  String get setupLookHearth => 'Hearth';
+
+  @override
+  String get setupLookPhoto => 'Foto del giorno';
+
+  @override
+  String get setupLookCalmDark => 'Scuro e calmo';
+
+  @override
+  String get setupLookBold => 'Audace';
+
+  @override
+  String get setupFlowLookNow => 'Attuale';
+
+  @override
+  String get setupFlowLookUse => 'Usa questo stile';
+
+  @override
+  String get setupFlowLookKeep => 'Mantieni l\'attuale';
+
+  @override
+  String get setupFlowLookCustomize => 'Personalizza';
+
+  @override
+  String get setupFlowWeatherTitle => 'Mostrare il meteo?';
+
+  @override
+  String get setupFlowWeatherBody => 'Scegli la tua città. Viene inviata solo la sua posizione, a Open-Meteo; nessun account.';
+
+  @override
+  String get setupFlowWeatherChoose => 'Scegli città';
+
+  @override
+  String get setupFlowWeatherDone => 'Il meteo appare nella barra in alto';
 }

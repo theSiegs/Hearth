@@ -96,7 +96,12 @@ class _SetupFlowLauncherState extends State<SetupFlowLauncher> with WidgetsBindi
 
   void _onProfile() {
     final profiles = _profiles!;
-    if (profiles.settledOnce && (!_checkedSettled || profiles.activeProfileKey != _checkedProfile)) _check();
+    if (profiles.settledOnce && (!_checkedSettled || profiles.activeProfileKey != _checkedProfile)) {
+      _check();
+    } else if (_lookDue(profiles)) {
+      // The "Hi Alex" card is down: the new profile's look can be offered now
+      _check();
+    }
   }
 
   Future<void> _check() async {
@@ -132,7 +137,10 @@ class _SetupFlowLauncherState extends State<SetupFlowLauncher> with WidgetsBindi
               showContinueWatching: context.read<SettingsService?>()?.showContinueWatching ?? false);
           await flow.markExistingInstall(cardsOn);
         case SetupLaunchNothing():
-          break;
+          if (profiles != null && _lookDue(profiles) && flow.flowVersion != null) {
+            profiles.lookOffered();
+            _open(SetupMode.look);
+          }
       }
     } catch (e) {
       // No Android side (tests), or it couldn't say: nothing to open
@@ -141,6 +149,14 @@ class _SetupFlowLauncherState extends State<SetupFlowLauncher> with WidgetsBindi
       _checking = false;
     }
   }
+
+  /// A grown-up's first visit to their profile, after the welcome card: one card offers a look for their home.
+  bool _lookDue(ProfileService profiles) =>
+      profiles.firstVisitKey != null &&
+      profiles.firstVisitKey == profiles.activeProfileKey &&
+      profiles.transition == null &&
+      profiles.incomingName == null &&
+      !profiles.isKidsProfile;
 
   /// A switch the flow sent the owner for came on and brought Hearth back: the flow shows again if it had closed (a
   /// restart in between); an open flow checks the switch by itself.

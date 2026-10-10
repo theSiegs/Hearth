@@ -2318,4 +2318,57 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get setupFlowTubeInstalled => 'HearthTube ist installiert';
+
+  @override
+  String get setupCardHome => 'Ihr Startbildschirm';
+
+  @override
+  String get setupFlowLookTitle => 'Wählen Sie einen Stil';
+
+  @override
+  String setupFlowLookBody(String where) {
+    return 'Jeder Stil erscheint hinter dieser Karte, sobald Sie ihn auswählen. Jeden Teil können Sie später unter $where ändern.';
+  }
+
+  @override
+  String get setupFlowLookOtherTitle => 'Wählen Sie einen Stil für Ihren Startbildschirm';
+
+  @override
+  String get setupFlowLookOtherBody => 'Jedes Profil hat seinen eigenen Startbildschirm. Wählen Sie, wie Ihrer aussieht.';
+
+  @override
+  String get setupLookHearth => 'Hearth';
+
+  @override
+  String get setupLookPhoto => 'Foto des Tages';
+
+  @override
+  String get setupLookCalmDark => 'Ruhig dunkel';
+
+  @override
+  String get setupLookBold => 'Kräftig';
+
+  @override
+  String get setupFlowLookNow => 'Aktuell';
+
+  @override
+  String get setupFlowLookUse => 'Diesen Stil verwenden';
+
+  @override
+  String get setupFlowLookKeep => 'Aktuellen behalten';
+
+  @override
+  String get setupFlowLookCustomize => 'Anpassen';
+
+  @override
+  String get setupFlowWeatherTitle => 'Wetter anzeigen?';
+
+  @override
+  String get setupFlowWeatherBody => 'Wählen Sie Ihren Ort. Nur seine Lage wird an Open-Meteo gesendet, ohne Konto.';
+
+  @override
+  String get setupFlowWeatherChoose => 'Ort wählen';
+
+  @override
+  String get setupFlowWeatherDone => 'Das Wetter erscheint in der oberen Leiste';
 }
