@@ -1,0 +1,3 @@
+- Early development pre-release.
+- Kids' profiles get Hearth (and HearthTube) by default; a page per kid with status, Fix and YouTube time.
+- Streaming app PINs: each profile sets its own, kids' profiles included.
