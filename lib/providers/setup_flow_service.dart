@@ -27,6 +27,18 @@ import 'settings_service.dart';
 /// only the Home button screen after an update switched Home Button Fix off.
 enum SetupMode { full, rerun, lostFix }
 
+/// The flow's optional cards, in the order they show (docs/design/first-run-setup.md). [introducedIn] is the flow
+/// version that added each, so a later update can offer only what's new.
+enum SetupCard {
+  watching(1),
+  tv(1),
+  updates(1);
+
+  final int introducedIn;
+
+  const SetupCard(this.introducedIn);
+}
+
 /// What the owner chose on a step or card. Grants (switches in Android) are never stored: they're read live.
 enum SetupChoice { on, notNow }
 
@@ -165,6 +177,8 @@ class SetupFlowService extends ChangeNotifier {
 
   SetupChoice? choiceFor(String id) => decisions[id]?.choice;
 
+  SetupChoice? cardChoice(SetupCard card) => choiceFor(card.name);
+
   Future<void> decide(String id, SetupChoice? choice) async {
     final current = {
       for (final entry in decisions.entries)
@@ -229,18 +243,30 @@ class SetupFlowService extends ChangeNotifier {
     return const SetupLaunchFirstRun();
   }
 
-  /// An install from before the flow: counts as through it, without showing it.
-  Future<void> markExistingInstall() => _markVersion();
+  /// An install from before the flow: counts as through it, without showing it. Each card is marked from the TV's
+  /// state ([cardOn]): on when it's all on already, otherwise Not now.
+  Future<void> markExistingInstall(Map<SetupCard, bool> cardOn) async {
+    for (final card in SetupCard.values) {
+      if (cardChoice(card) == null) {
+        await decide(card.name, cardOn[card] == true ? SetupChoice.on : SetupChoice.notNow);
+      }
+    }
+    await _markVersion();
+  }
 
   /// Whether the Home button needs a fix: it's off, and the owner skipped it or an update switched it off.
   bool homeButtonNeedsFix({required bool homeButtonOn, required bool homeButtonSeenBefore}) =>
       !homeButtonOn && (homeButtonSeenBefore || choiceFor(homeButtonDecision) == SetupChoice.notNow);
 
-  /// How many things the chip says are left: the essentials neither on nor skipped.
-  int remaining({required bool homeButtonOn, required bool homeAppOn}) {
+  /// How many things the chip says are left: the essentials neither on nor skipped, and the cards nobody decided on
+  /// that aren't all on anyway ([cardOn]).
+  int remaining({required bool homeButtonOn, required bool homeAppOn, Map<SetupCard, bool> cardOn = const {}}) {
     int left = 0;
     if (!homeButtonOn && choiceFor(homeButtonDecision) == null) left++;
     if (!homeAppOn && choiceFor(homeAppDecision) == null) left++;
+    for (final card in SetupCard.values) {
+      if (cardChoice(card) == null && cardOn[card] != true) left++;
+    }
     return left;
   }
 

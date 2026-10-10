@@ -19,8 +19,10 @@ import 'dart:async';
 
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';
+import 'package:flauncher/providers/watch_next_service.dart';
 import 'package:flauncher/widgets/settings/adb_command_dialog.dart';
 import 'package:flauncher/widgets/settings/app_language_page.dart';
 import 'package:flauncher/widgets/settings/backup_restore_page.dart';
@@ -34,8 +36,23 @@ import 'package:provider/provider.dart';
 import 'setup_frame.dart';
 import 'setup_snapshot.dart';
 
+part 'setup_flow_cards.dart';
+
 /// The flow's screens. Their names are what the resume point stores.
-enum SetupScreen { welcome, homeButton, homeButtonBlocked, homeApp, finish }
+enum SetupScreen {
+  welcome,
+  homeButton,
+  homeButtonBlocked,
+  homeApp,
+  watching,
+  watchingContinue,
+  watchingNotifications,
+  tv,
+  updates,
+  updatesInstall,
+  updatesHearthTube,
+  finish,
+}
 
 /// What a screen that sends the owner to Android's settings shows: its explanation, a wait for the owner to come
 /// back, or how it went.
@@ -46,7 +63,8 @@ enum SetupFlowResult { closed, openSettings }
 
 /// Hearth's first-run setup (docs/design/first-run-setup.md): one full-screen flow over the home that walks through
 /// what Hearth needs from Android, one decision per screen, and comes back to where it was after each trip to
-/// Android's settings. The order: Welcome, the Home button (Home Button Fix), the home app, then Finish.
+/// Android's settings. The order: Welcome, the essentials (the Home button, then the home app), the optional cards
+/// (each a Not now / Turn on choice, its steps only after Turn on), then Finish.
 class SetupFlowPage extends StatefulWidget {
   static const String routeName = "setup_flow";
 
@@ -81,8 +99,29 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     SetupScreen.welcome,
     SetupScreen.homeButton,
     SetupScreen.homeApp,
+    SetupScreen.watching,
+    SetupScreen.watchingContinue,
+    SetupScreen.watchingNotifications,
+    SetupScreen.tv,
+    SetupScreen.updates,
+    SetupScreen.updatesInstall,
+    SetupScreen.updatesHearthTube,
     SetupScreen.finish,
   ];
+
+  /// Each card's own screen, then its steps (shown only after Turn on).
+  static const Map<SetupCard, List<SetupScreen>> _cardScreens = {
+    SetupCard.watching: [SetupScreen.watching, SetupScreen.watchingContinue, SetupScreen.watchingNotifications],
+    SetupCard.tv: [SetupScreen.tv],
+    SetupCard.updates: [SetupScreen.updates, SetupScreen.updatesInstall, SetupScreen.updatesHearthTube],
+  };
+
+  /// The steps that send the owner to one Android screen and check the switch when Hearth is back.
+  static const Map<SetupScreen, SetupStepId> _bounceSteps = {
+    SetupScreen.homeApp: SetupStepId.homeApp,
+    SetupScreen.watchingNotifications: SetupStepId.notifications,
+    SetupScreen.updatesInstall: SetupStepId.install,
+  };
 
   /// How often the blocked-switch screen checks whether the switch was turned on from a computer.
   static const Duration _pollEvery = Duration(seconds: 2);
@@ -103,6 +142,16 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
 
   /// The TV's address, for `adb connect` on the blocked-switch screen.
   String? _ip;
+
+  /// A decided card shows Turn on / Not now again (after Change).
+  bool _changing = false;
+
+  /// TV & power's idle standby, in minutes (0: off), once read.
+  int? _idleMinutes;
+
+  /// HearthTube's download, as a fraction, while it downloads; and why it couldn't be installed.
+  double? _tubeProgress;
+  String? _tubeError;
 
   /// The button each screen starts on. A new node for each screen: the old screen's button lets go of its node only
   /// after the new one has taken it, which would leave the new button without it.
@@ -172,7 +221,10 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       if (_history.isEmpty || _history.last != screen) _history.add(screen);
       _screen = screen;
       _state = state ?? SetupStepState.intro;
+      _changing = false;
+      _tubeError = null;
     });
+    if (screen == SetupScreen.tv) _readIdleMinutes();
     if (!_lostFix && screen != SetupScreen.finish) unawaited(_flow.saveResume(screen.name, widget.mode));
     if (screen == SetupScreen.finish) unawaited(_flow.finish());
     if (screen == SetupScreen.homeButtonBlocked) _startPolling();
@@ -190,16 +242,42 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     });
   }
 
-  /// Whether a step's screen can be passed over going forward: what it asks for is on already.
-  bool _alreadyDone(SetupScreen screen) => switch (screen) {
-        SetupScreen.homeButton => _snap?.isDone(SetupStepId.homeButton) ?? false,
-        SetupScreen.homeApp => _snap?.isDone(SetupStepId.homeApp) ?? false,
-        _ => false,
-      };
+  /// Whether a step's screen can be passed over going forward: what it asks for is on already. A card's own screen
+  /// never is (it says it's on, with Keep).
+  bool _alreadyDone(SetupScreen screen) {
+    final snap = _snap;
+    if (snap == null) return false;
+    return switch (screen) {
+      SetupScreen.homeButton => snap.isDone(SetupStepId.homeButton),
+      SetupScreen.homeApp => snap.isDone(SetupStepId.homeApp),
+      SetupScreen.watchingContinue => snap.watchNextAllowed && _showContinueWatching,
+      SetupScreen.watchingNotifications => snap.isDone(SetupStepId.notifications),
+      SetupScreen.updatesInstall => snap.isDone(SetupStepId.install),
+      SetupScreen.updatesHearthTube => snap.hearthTubeInstalled,
+      _ => false,
+    };
+  }
 
-  SetupScreen _nextAfter(SetupScreen screen) {
+  bool get _showContinueWatching => context.read<SettingsService?>()?.showContinueWatching ?? false;
+
+  /// The card a screen belongs to, if any.
+  SetupCard? _cardOf(SetupScreen screen) {
+    for (final entry in _cardScreens.entries) {
+      if (entry.value.contains(screen)) return entry.key;
+    }
+    return null;
+  }
+
+  /// The next screen to show after [screen]: steps that are done are passed over, and so are a card's steps unless the
+  /// owner turned it on. [leaveCard]: past the rest of [screen]'s card too (Not now, Keep).
+  SetupScreen _nextAfter(SetupScreen screen, {bool leaveCard = false}) {
     final from = screen == SetupScreen.homeButtonBlocked ? SetupScreen.homeButton : screen;
+    final leaving = leaveCard ? _cardOf(from) : null;
     for (final candidate in _order.skip(_order.indexOf(from) + 1)) {
+      final card = _cardOf(candidate);
+      if (leaving != null && card == leaving) continue;
+      final isStep = card != null && _cardScreens[card]!.first != candidate;
+      if (isStep && _flow.cardChoice(card) != SetupChoice.on) continue;
       if (!_alreadyDone(candidate)) return candidate;
     }
     return SetupScreen.finish;
@@ -265,9 +343,21 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
           }
         }
       case SetupScreen.homeApp:
-        if (snap.isDone(SetupStepId.homeApp)) {
-          _showDone(SetupScreen.homeApp, const Duration(seconds: 1));
+      case SetupScreen.watchingNotifications:
+      case SetupScreen.updatesInstall:
+        if (snap.isDone(_bounceSteps[_screen]!)) {
+          _showDone(_screen, const Duration(seconds: 1));
         } else if (reporting) {
+          setState(() => _state = SetupStepState.notYet);
+          _focusPrimary();
+        }
+      case SetupScreen.watchingContinue:
+        // Allowed (the dialog, or Hearth's own fix): the row goes on, as the owner asked for it
+        if (snap.watchNextAllowed && reporting) {
+          await context.read<SettingsService?>()?.setShowContinueWatching(true);
+          if (mounted) context.read<WatchNextService?>()?.refresh();
+          _showDone(SetupScreen.watchingContinue, const Duration(seconds: 1));
+        } else if (reporting && _state != SetupStepState.done) {
           setState(() => _state = SetupStepState.notYet);
           _focusPrimary();
         }
@@ -329,7 +419,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       message: l.setupAdbFallback,
       command: fallback,
       actionLabel: fix != null && (_snap?.adbEnabled ?? false) ? l.setupFlowLetHearthFix : null,
-      onAction: fix == null ? null : () => _runFixes([fix], id),
+      onAction: fix == null ? null : () => _runFixes([fix], (snap) => snap.isDone(id)),
     );
     _focusPrimary();
   }
@@ -351,9 +441,9 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     }
   }
 
-  /// Shows exactly what Hearth will run, and runs it when the parent says so. Then waits a moment for [step]'s
-  /// service to start, as it does a second or two after its switch is set.
-  Future<void> _runFixes(List<String> fixes, SetupStepId step) async {
+  /// Shows exactly what Hearth will run, and runs it when the parent says so. Then waits a moment for what it turned
+  /// on to show as [done] (a service starts a second or two after its switch is set), and checks the screen again.
+  Future<void> _runFixes(List<String> fixes, bool Function(SetupSnapshot snap) done) async {
     final l = AppLocalizations.of(context)!;
     final commands = <String>[];
     for (final fix in fixes) {
@@ -410,7 +500,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     if (ran) {
       for (int i = 0; i < 5 && mounted; i++) {
         await _refresh();
-        if (_snap?.isDone(step) ?? false) break;
+        if (_snap != null && done(_snap!)) break;
         await Future<void>.delayed(const Duration(seconds: 1));
       }
     }
@@ -451,8 +541,18 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
         SetupScreen.homeButton => _homeButton(l),
         SetupScreen.homeButtonBlocked => _blocked(l),
         SetupScreen.homeApp => _homeApp(l),
+        SetupScreen.watching => _cardScreen(l, SetupCard.watching),
+        SetupScreen.watchingContinue => _continueWatching(l),
+        SetupScreen.watchingNotifications => _notifications(l),
+        SetupScreen.tv => _tvAndPower(l),
+        SetupScreen.updates => _cardScreen(l, SetupCard.updates),
+        SetupScreen.updatesInstall => _installs(l),
+        SetupScreen.updatesHearthTube => _hearthTube(l),
         SetupScreen.finish => _finish(l),
       };
+
+  /// For the card screens (in setup_flow_cards.dart): setState isn't theirs to call.
+  void _update(VoidCallback change) => setState(change);
 
   List<SetupStripGroup> _strip(AppLocalizations l) {
     SetupDot dot(SetupStepId id, Set<SetupScreen> screens, String decision) {
@@ -468,6 +568,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
             SetupFlowService.homeButtonDecision),
         dot(SetupStepId.homeApp, {SetupScreen.homeApp}, SetupFlowService.homeAppDecision),
       ]),
+      for (final card in SetupCard.values) _cardStrip(l, card),
     ];
   }
 
@@ -554,6 +655,13 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     );
     final tryAgain = SetupButton(
         label: l.tryAgain, focusNode: _primary, autofocus: true, onPressed: () => _openStep(SetupStepId.homeButton));
+    // With debugging on, Hearth can turn its switch on itself
+    final selfFix = (_snap?.adbEnabled ?? false)
+        ? SetupButton(
+            label: l.setupFlowLetHearthFix,
+            onPressed: () => _runFixes(const ["home_button_fix"], (snap) => snap.isDone(SetupStepId.homeButton)),
+          )
+        : null;
     return switch (_state) {
       SetupStepState.done => SetupScreenBody(
           icon: Icons.check_circle,
@@ -566,14 +674,14 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
           title: l.setupFlowNotOnYetTitle,
           body: l.setupFlowNotOnYetBody,
           content: [_homeButtonPicture(l)],
-          buttons: [skip, tryAgain],
+          buttons: [skip, if (selfFix != null) selfFix, tryAgain],
         ),
       SetupStepState.stuck => SetupScreenBody(
           icon: Icons.warning_amber_rounded,
           iconColor: Colors.amber,
           title: l.setupFlowStuckTitle,
           body: l.setupFlowStuckBody,
-          buttons: [skip, open],
+          buttons: [skip, if (selfFix != null) selfFix, open],
         ),
       SetupStepState.confirmSkip => SetupScreenBody(
           icon: Icons.help_outline,
@@ -643,7 +751,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
             label: l.setupFlowLetHearthFix,
             focusNode: _primary,
             autofocus: true,
-            onPressed: () => _runFixes(const ["restricted_settings", "home_button_fix"], SetupStepId.homeButton),
+            onPressed: () => _runFixes(
+                const ["restricted_settings", "home_button_fix"], (snap) => snap.isDone(SetupStepId.homeButton)),
           ),
       ],
       below: [Text(l.setupFlowBlockedSkipLine, style: const TextStyle(color: Colors.white54, fontSize: 13))],
@@ -695,13 +804,19 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   Widget _finish(AppLocalizations l) {
     final snap = _snap!;
     final where = SetupChecklistPage.breadcrumb(l);
+    // A card counts as on when it's all on, or the owner turned it on (some of its steps may have been skipped)
+    bool cardOn(SetupCard card) => _flow.cardChoice(card) == SetupChoice.on || _cardOn(card);
     final on = <String>[
       if (snap.isDone(SetupStepId.homeButton)) l.setupFlowHomeButtonDone,
       if (snap.isDone(SetupStepId.homeApp)) l.setupFlowHomeAppDone,
+      for (final card in SetupCard.values)
+        if (cardOn(card)) _cardInfo(l, card).title,
     ];
     final later = <String>[
       if (!snap.isDone(SetupStepId.homeButton)) snap.step(SetupStepId.homeButton).title,
       if (!snap.isDone(SetupStepId.homeApp)) snap.step(SetupStepId.homeApp).title,
+      for (final card in SetupCard.values)
+        if (!cardOn(card)) _cardInfo(l, card).title,
     ];
     const heading = TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600);
     return SetupScreenBody(

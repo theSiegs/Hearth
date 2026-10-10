@@ -2214,4 +2214,110 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setupChipHide => 'Hide';
+
+  @override
+  String get setupFlowCardIncluded => 'What\'s included';
+
+  @override
+  String get setupFlowCardNeeds => 'What it needs';
+
+  @override
+  String get setupFlowCardSkipped => 'Skipped';
+
+  @override
+  String get setupFlowChange => 'Change';
+
+  @override
+  String get setupFlowKeep => 'Keep';
+
+  @override
+  String get setupFlowTurnOn => 'Turn on';
+
+  @override
+  String get setupFlowNeedsQuestion => 'One question from Android';
+
+  @override
+  String get setupFlowNeedsOneSwitch => 'One switch in Android\'s settings';
+
+  @override
+  String get setupFlowNeedsAboutAMinute => 'About a minute';
+
+  @override
+  String get setupFlowWatchingBenefit => 'Pick up where you left off, and see what\'s playing.';
+
+  @override
+  String get setupFlowWatchingIncluded1 => 'Continue Watching on the home screen';
+
+  @override
+  String get setupFlowWatchingIncluded2 => 'Notifications and what\'s playing';
+
+  @override
+  String get setupFlowSearchWorks => 'Search already works: press Search on the home screen.';
+
+  @override
+  String get setupFlowContinueBody => 'Show what you were watching in your apps on the home screen. Android will ask once; choose Allow.';
+
+  @override
+  String get setupFlowContinueDone => 'Continue Watching is on';
+
+  @override
+  String get setupFlowContinueDeniedTitle => 'Android didn\'t allow it';
+
+  @override
+  String setupFlowContinueDeniedBody(String where) {
+    return 'You can turn it on later in $where.';
+  }
+
+  @override
+  String get setupFlowNotificationsTitle => 'What\'s playing and notifications';
+
+  @override
+  String setupFlowNotificationsBody(String name) {
+    return 'See your notifications and what\'s playing. On the next screen, select \"$name\" and allow it.';
+  }
+
+  @override
+  String get setupFlowNotificationsDone => 'Notifications are on';
+
+  @override
+  String get setupFlowTvTitle => 'Turn the TV off when nobody\'s watching?';
+
+  @override
+  String get setupFlowTvBody => 'After this long with no remote presses. Playing video or music counts as watching.';
+
+  @override
+  String get setupFlowTvNeedsHomeButton => 'This needs the Home button switch from the first steps: without it Hearth can\'t tell when the remote is used.';
+
+  @override
+  String get setupFlowStartOnBoot => 'Start Hearth when the TV starts';
+
+  @override
+  String get setupFlowScreensaver => 'Choose screensaver photos';
+
+  @override
+  String get setupFlowUpdatesBenefit => 'Hearth keeps itself and its companion apps up to date.';
+
+  @override
+  String get setupFlowUpdatesIncluded1 => 'Hearth updates itself';
+
+  @override
+  String get setupFlowUpdatesIncluded2 => 'HearthTube, a YouTube app made for Hearth';
+
+  @override
+  String get setupFlowInstallTitle => 'Allow Hearth to install updates';
+
+  @override
+  String get setupFlowInstallBody => 'On the next screen, find Hearth and turn it on, then press Back.';
+
+  @override
+  String get setupFlowInstallDone => 'Hearth can install updates';
+
+  @override
+  String get setupFlowTubeTitle => 'Install HearthTube?';
+
+  @override
+  String get setupFlowTubeBody => 'A YouTube app made for Hearth: it follows your profiles, the clock style and kids\' bedtime.';
+
+  @override
+  String get setupFlowTubeInstalled => 'HearthTube is installed';
 }

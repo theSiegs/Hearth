@@ -2247,4 +2247,110 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get setupChipHide => 'إخفاء';
+
+  @override
+  String get setupFlowCardIncluded => 'ما الذي يتضمنه';
+
+  @override
+  String get setupFlowCardNeeds => 'ما يحتاجه';
+
+  @override
+  String get setupFlowCardSkipped => 'تم التخطي';
+
+  @override
+  String get setupFlowChange => 'تغيير';
+
+  @override
+  String get setupFlowKeep => 'إبقاء';
+
+  @override
+  String get setupFlowTurnOn => 'تشغيل';
+
+  @override
+  String get setupFlowNeedsQuestion => 'سؤال واحد من Android';
+
+  @override
+  String get setupFlowNeedsOneSwitch => 'مفتاح واحد في إعدادات Android';
+
+  @override
+  String get setupFlowNeedsAboutAMinute => 'دقيقة تقريبًا';
+
+  @override
+  String get setupFlowWatchingBenefit => 'تابع من حيث توقفت، وشاهد ما يتم تشغيله.';
+
+  @override
+  String get setupFlowWatchingIncluded1 => 'متابعة المشاهدة على الشاشة الرئيسية';
+
+  @override
+  String get setupFlowWatchingIncluded2 => 'الإشعارات وما يتم تشغيله';
+
+  @override
+  String get setupFlowSearchWorks => 'البحث يعمل بالفعل: اضغط على البحث في الشاشة الرئيسية.';
+
+  @override
+  String get setupFlowContinueBody => 'اعرض ما كنت تشاهده في تطبيقاتك على الشاشة الرئيسية. سيسألك Android مرة واحدة؛ اختر السماح.';
+
+  @override
+  String get setupFlowContinueDone => 'تم تشغيل متابعة المشاهدة';
+
+  @override
+  String get setupFlowContinueDeniedTitle => 'لم يسمح Android بذلك';
+
+  @override
+  String setupFlowContinueDeniedBody(String where) {
+    return 'يمكنك تشغيله لاحقًا من $where.';
+  }
+
+  @override
+  String get setupFlowNotificationsTitle => 'ما يتم تشغيله والإشعارات';
+
+  @override
+  String setupFlowNotificationsBody(String name) {
+    return 'شاهد إشعاراتك وما يتم تشغيله. في الشاشة التالية، اختر \"$name\" واسمح به.';
+  }
+
+  @override
+  String get setupFlowNotificationsDone => 'تم تشغيل الإشعارات';
+
+  @override
+  String get setupFlowTvTitle => 'إيقاف التلفزيون عندما لا يشاهده أحد؟';
+
+  @override
+  String get setupFlowTvBody => 'بعد هذه المدة دون أي ضغطة على جهاز التحكم. تشغيل فيديو أو موسيقى يُحسب مشاهدة.';
+
+  @override
+  String get setupFlowTvNeedsHomeButton => 'يحتاج هذا إلى مفتاح زر الصفحة الرئيسية من الخطوات الأولى: بدونه لا يعرف Hearth متى يُستخدم جهاز التحكم.';
+
+  @override
+  String get setupFlowStartOnBoot => 'تشغيل Hearth عند تشغيل التلفزيون';
+
+  @override
+  String get setupFlowScreensaver => 'اختيار صور شاشة التوقف';
+
+  @override
+  String get setupFlowUpdatesBenefit => 'يحافظ Hearth على تحديث نفسه وتطبيقاته المرافقة.';
+
+  @override
+  String get setupFlowUpdatesIncluded1 => 'يحدّث Hearth نفسه';
+
+  @override
+  String get setupFlowUpdatesIncluded2 => 'HearthTube، تطبيق YouTube مصمم لـ Hearth';
+
+  @override
+  String get setupFlowInstallTitle => 'السماح لـ Hearth بتثبيت التحديثات';
+
+  @override
+  String get setupFlowInstallBody => 'في الشاشة التالية، ابحث عن Hearth وشغّله، ثم اضغط رجوع.';
+
+  @override
+  String get setupFlowInstallDone => 'يمكن لـ Hearth تثبيت التحديثات';
+
+  @override
+  String get setupFlowTubeTitle => 'تثبيت HearthTube؟';
+
+  @override
+  String get setupFlowTubeBody => 'تطبيق YouTube مصمم لـ Hearth: يتبع ملفاتك الشخصية ونمط الساعة ووقت نوم الأطفال.';
+
+  @override
+  String get setupFlowTubeInstalled => 'تم تثبيت HearthTube';
 }

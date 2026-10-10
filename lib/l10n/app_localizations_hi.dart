@@ -2212,4 +2212,110 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get setupChipHide => 'छिपाएं';
+
+  @override
+  String get setupFlowCardIncluded => 'इसमें क्या है';
+
+  @override
+  String get setupFlowCardNeeds => 'क्या चाहिए';
+
+  @override
+  String get setupFlowCardSkipped => 'छोड़ा गया';
+
+  @override
+  String get setupFlowChange => 'बदलें';
+
+  @override
+  String get setupFlowKeep => 'रहने दें';
+
+  @override
+  String get setupFlowTurnOn => 'चालू करें';
+
+  @override
+  String get setupFlowNeedsQuestion => 'Android से एक सवाल';
+
+  @override
+  String get setupFlowNeedsOneSwitch => 'Android की सेटिंग में एक स्विच';
+
+  @override
+  String get setupFlowNeedsAboutAMinute => 'लगभग एक मिनट';
+
+  @override
+  String get setupFlowWatchingBenefit => 'जहाँ छोड़ा था वहीं से देखें, और जानें कि क्या चल रहा है।';
+
+  @override
+  String get setupFlowWatchingIncluded1 => 'होम स्क्रीन पर देखना जारी रखें';
+
+  @override
+  String get setupFlowWatchingIncluded2 => 'सूचनाएँ और क्या चल रहा है';
+
+  @override
+  String get setupFlowSearchWorks => 'खोज पहले से काम करती है: होम स्क्रीन पर खोज दबाएँ।';
+
+  @override
+  String get setupFlowContinueBody => 'आप अपने ऐप्स में जो देख रहे थे, उसे होम स्क्रीन पर दिखाएँ। Android एक बार पूछेगा; अनुमति दें चुनें।';
+
+  @override
+  String get setupFlowContinueDone => 'देखना जारी रखें चालू है';
+
+  @override
+  String get setupFlowContinueDeniedTitle => 'Android ने इसकी अनुमति नहीं दी';
+
+  @override
+  String setupFlowContinueDeniedBody(String where) {
+    return 'आप इसे बाद में $where में चालू कर सकते हैं।';
+  }
+
+  @override
+  String get setupFlowNotificationsTitle => 'क्या चल रहा है और सूचनाएँ';
+
+  @override
+  String setupFlowNotificationsBody(String name) {
+    return 'अपनी सूचनाएँ और क्या चल रहा है, देखें। अगली स्क्रीन पर \"$name\" चुनें और उसे अनुमति दें।';
+  }
+
+  @override
+  String get setupFlowNotificationsDone => 'सूचनाएँ चालू हैं';
+
+  @override
+  String get setupFlowTvTitle => 'जब कोई न देख रहा हो तो टीवी बंद करें?';
+
+  @override
+  String get setupFlowTvBody => 'इतनी देर तक रिमोट का कोई बटन न दबाने के बाद। वीडियो या संगीत चलना देखना माना जाता है।';
+
+  @override
+  String get setupFlowTvNeedsHomeButton => 'इसके लिए पहले चरणों का होम बटन स्विच चाहिए: उसके बिना Hearth नहीं जान सकता कि रिमोट कब इस्तेमाल हुआ।';
+
+  @override
+  String get setupFlowStartOnBoot => 'टीवी चालू होने पर Hearth शुरू करें';
+
+  @override
+  String get setupFlowScreensaver => 'स्क्रीनसेवर की तस्वीरें चुनें';
+
+  @override
+  String get setupFlowUpdatesBenefit => 'Hearth खुद को और अपने साथी ऐप्स को अपडेट रखता है।';
+
+  @override
+  String get setupFlowUpdatesIncluded1 => 'Hearth खुद को अपडेट करता है';
+
+  @override
+  String get setupFlowUpdatesIncluded2 => 'HearthTube, Hearth के लिए बना YouTube ऐप';
+
+  @override
+  String get setupFlowInstallTitle => 'Hearth को अपडेट इंस्टॉल करने दें';
+
+  @override
+  String get setupFlowInstallBody => 'अगली स्क्रीन पर Hearth ढूँढें और उसे चालू करें, फिर वापस दबाएँ।';
+
+  @override
+  String get setupFlowInstallDone => 'Hearth अपडेट इंस्टॉल कर सकता है';
+
+  @override
+  String get setupFlowTubeTitle => 'HearthTube इंस्टॉल करें?';
+
+  @override
+  String get setupFlowTubeBody => 'Hearth के लिए बना YouTube ऐप: यह आपकी प्रोफ़ाइलों, घड़ी की शैली और बच्चों के सोने के समय को मानता है।';
+
+  @override
+  String get setupFlowTubeInstalled => 'HearthTube इंस्टॉल हो गया है';
 }

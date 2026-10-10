@@ -3916,6 +3916,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hide'**
   String get setupChipHide;
+
+  /// Setup flow: a feature card's heading over what the feature gives
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s included'**
+  String get setupFlowCardIncluded;
+
+  /// Setup flow: a feature card's heading over what turning it on takes (Android switches, time)
+  ///
+  /// In en, this message translates to:
+  /// **'What it needs'**
+  String get setupFlowCardNeeds;
+
+  /// Setup flow: status line on a feature card the owner chose Not now for earlier
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped'**
+  String get setupFlowCardSkipped;
+
+  /// Setup flow: button on a feature card decided earlier, to choose again
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get setupFlowChange;
+
+  /// Setup flow: button on a feature card decided earlier, to leave it as it is and go on
+  ///
+  /// In en, this message translates to:
+  /// **'Keep'**
+  String get setupFlowKeep;
+
+  /// Setup flow: main button of a feature card or step
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on'**
+  String get setupFlowTurnOn;
+
+  /// Setup flow: what a feature card needs: Android asks one question (a permission dialog)
+  ///
+  /// In en, this message translates to:
+  /// **'One question from Android'**
+  String get setupFlowNeedsQuestion;
+
+  /// Setup flow: what a feature card needs: one switch to turn on in Android's settings
+  ///
+  /// In en, this message translates to:
+  /// **'One switch in Android\'s settings'**
+  String get setupFlowNeedsOneSwitch;
+
+  /// Setup flow: what a feature card needs: about one minute of the owner's time
+  ///
+  /// In en, this message translates to:
+  /// **'About a minute'**
+  String get setupFlowNeedsAboutAMinute;
+
+  /// Setup flow: the Watching card's one-line benefit
+  ///
+  /// In en, this message translates to:
+  /// **'Pick up where you left off, and see what\'s playing.'**
+  String get setupFlowWatchingBenefit;
+
+  /// Setup flow: Watching card, first thing it includes
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Watching on the home screen'**
+  String get setupFlowWatchingIncluded1;
+
+  /// Setup flow: Watching card, second thing it includes
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications and what\'s playing'**
+  String get setupFlowWatchingIncluded2;
+
+  /// Setup flow: info line on the Watching card; search needs no setup
+  ///
+  /// In en, this message translates to:
+  /// **'Search already works: press Search on the home screen.'**
+  String get setupFlowSearchWorks;
+
+  /// Setup flow: Continue Watching step; Android then shows its permission dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Show what you were watching in your apps on the home screen. Android will ask once; choose Allow.'**
+  String get setupFlowContinueBody;
+
+  /// Setup flow: Continue Watching step, after Android allowed it
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Watching is on'**
+  String get setupFlowContinueDone;
+
+  /// Setup flow: Continue Watching step, after Android's dialog was declined
+  ///
+  /// In en, this message translates to:
+  /// **'Android didn\'t allow it'**
+  String get setupFlowContinueDeniedTitle;
+
+  /// Setup flow: Continue Watching step, declined; {where} is where it is in Settings ("Settings > Home screen > Continue Watching")
+  ///
+  /// In en, this message translates to:
+  /// **'You can turn it on later in {where}.'**
+  String setupFlowContinueDeniedBody(String where);
+
+  /// Setup flow: notification access step's title
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s playing and notifications'**
+  String get setupFlowNotificationsTitle;
+
+  /// Setup flow: notification access step; {name} is the service's name as Android shows it (in English)
+  ///
+  /// In en, this message translates to:
+  /// **'See your notifications and what\'s playing. On the next screen, select \"{name}\" and allow it.'**
+  String setupFlowNotificationsBody(String name);
+
+  /// Setup flow: notification access step, once it's on
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are on'**
+  String get setupFlowNotificationsDone;
+
+  /// Setup flow: TV & power screen's question (sleep when idle)
+  ///
+  /// In en, this message translates to:
+  /// **'Turn the TV off when nobody\'s watching?'**
+  String get setupFlowTvTitle;
+
+  /// Setup flow: TV & power screen, how sleep when idle works
+  ///
+  /// In en, this message translates to:
+  /// **'After this long with no remote presses. Playing video or music counts as watching.'**
+  String get setupFlowTvBody;
+
+  /// Setup flow: TV & power screen, shown when Home Button Fix is off (the sleep choices are greyed out)
+  ///
+  /// In en, this message translates to:
+  /// **'This needs the Home button switch from the first steps: without it Hearth can\'t tell when the remote is used.'**
+  String get setupFlowTvNeedsHomeButton;
+
+  /// Setup flow: TV & power screen, switch that starts Hearth after the TV restarts
+  ///
+  /// In en, this message translates to:
+  /// **'Start Hearth when the TV starts'**
+  String get setupFlowStartOnBoot;
+
+  /// Setup flow: TV & power screen, link to Google TV's screensaver settings
+  ///
+  /// In en, this message translates to:
+  /// **'Choose screensaver photos'**
+  String get setupFlowScreensaver;
+
+  /// Setup flow: the Updates card's one-line benefit
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth keeps itself and its companion apps up to date.'**
+  String get setupFlowUpdatesBenefit;
+
+  /// Setup flow: Updates card, first thing it includes
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth updates itself'**
+  String get setupFlowUpdatesIncluded1;
+
+  /// Setup flow: Updates card, second thing it includes
+  ///
+  /// In en, this message translates to:
+  /// **'HearthTube, a YouTube app made for Hearth'**
+  String get setupFlowUpdatesIncluded2;
+
+  /// Setup flow: Updates card, the step that opens Android's Install unknown apps screen
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Hearth to install updates'**
+  String get setupFlowInstallTitle;
+
+  /// Setup flow: Updates card, what to do on Android's Install unknown apps screen
+  ///
+  /// In en, this message translates to:
+  /// **'On the next screen, find Hearth and turn it on, then press Back.'**
+  String get setupFlowInstallBody;
+
+  /// Setup flow: Updates card, once Hearth may install apps
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth can install updates'**
+  String get setupFlowInstallDone;
+
+  /// Setup flow: Updates card, the step that offers HearthTube
+  ///
+  /// In en, this message translates to:
+  /// **'Install HearthTube?'**
+  String get setupFlowTubeTitle;
+
+  /// Setup flow: Updates card, what HearthTube is
+  ///
+  /// In en, this message translates to:
+  /// **'A YouTube app made for Hearth: it follows your profiles, the clock style and kids\' bedtime.'**
+  String get setupFlowTubeBody;
+
+  /// Setup flow: Updates card, once HearthTube is installed
+  ///
+  /// In en, this message translates to:
+  /// **'HearthTube is installed'**
+  String get setupFlowTubeInstalled;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

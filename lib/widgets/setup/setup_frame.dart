@@ -418,3 +418,77 @@ class SetupBullets extends StatelessWidget {
         ],
       );
 }
+
+/// An on/off row in the setup flow, made for the remote: OK flips it.
+class SetupSwitch extends StatefulWidget {
+  final String label;
+  final String? description;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final FocusNode? focusNode;
+  final bool autofocus;
+
+  const SetupSwitch({
+    super.key,
+    required this.label,
+    this.description,
+    required this.value,
+    required this.onChanged,
+    this.focusNode,
+    this.autofocus = false,
+  });
+
+  @override
+  State<SetupSwitch> createState() => _SetupSwitchState();
+}
+
+class _SetupSwitchState extends State<SetupSwitch> {
+  bool _focused = false;
+
+  void _flip() => widget.onChanged(!widget.value);
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Actions(
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => _flip()),
+        ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) => _flip()),
+      },
+      child: Focus(
+        focusNode: widget.focusNode,
+        autofocus: widget.autofocus,
+        onFocusChange: (focused) => setState(() => _focused = focused),
+        child: GestureDetector(
+          onTap: _flip,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: _focused ? Colors.white.withOpacity(0.08) : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _focused ? accent : Colors.transparent, width: 2),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 15)),
+                      if (widget.description != null)
+                        Text(widget.description!, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Shows the state only; the row takes the presses
+                ExcludeFocus(child: IgnorePointer(child: Switch(value: widget.value, onChanged: (_) {}))),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

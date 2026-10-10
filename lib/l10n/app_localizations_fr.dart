@@ -2214,4 +2214,110 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get setupChipHide => 'Masquer';
+
+  @override
+  String get setupFlowCardIncluded => 'Ce qui est inclus';
+
+  @override
+  String get setupFlowCardNeeds => 'Ce qu\'il faut';
+
+  @override
+  String get setupFlowCardSkipped => 'Ignoré';
+
+  @override
+  String get setupFlowChange => 'Modifier';
+
+  @override
+  String get setupFlowKeep => 'Conserver';
+
+  @override
+  String get setupFlowTurnOn => 'Activer';
+
+  @override
+  String get setupFlowNeedsQuestion => 'Une question d\'Android';
+
+  @override
+  String get setupFlowNeedsOneSwitch => 'Un interrupteur dans les paramètres d\'Android';
+
+  @override
+  String get setupFlowNeedsAboutAMinute => 'Environ une minute';
+
+  @override
+  String get setupFlowWatchingBenefit => 'Reprenez là où vous en étiez et voyez ce qui est en cours de lecture.';
+
+  @override
+  String get setupFlowWatchingIncluded1 => 'Reprendre la lecture sur l\'écran d\'accueil';
+
+  @override
+  String get setupFlowWatchingIncluded2 => 'Notifications et lecture en cours';
+
+  @override
+  String get setupFlowSearchWorks => 'La recherche fonctionne déjà : appuyez sur Rechercher sur l\'écran d\'accueil.';
+
+  @override
+  String get setupFlowContinueBody => 'Affichez sur l\'écran d\'accueil ce que vous regardiez dans vos applis. Android vous le demandera une fois ; choisissez Autoriser.';
+
+  @override
+  String get setupFlowContinueDone => 'Reprendre la lecture est activé';
+
+  @override
+  String get setupFlowContinueDeniedTitle => 'Android ne l\'a pas autorisé';
+
+  @override
+  String setupFlowContinueDeniedBody(String where) {
+    return 'Vous pourrez l\'activer plus tard dans $where.';
+  }
+
+  @override
+  String get setupFlowNotificationsTitle => 'Lecture en cours et notifications';
+
+  @override
+  String setupFlowNotificationsBody(String name) {
+    return 'Voyez vos notifications et ce qui est en cours de lecture. Sur l\'écran suivant, sélectionnez « $name » et autorisez-le.';
+  }
+
+  @override
+  String get setupFlowNotificationsDone => 'Les notifications sont activées';
+
+  @override
+  String get setupFlowTvTitle => 'Éteindre la TV quand personne ne regarde ?';
+
+  @override
+  String get setupFlowTvBody => 'Après ce délai sans appui sur la télécommande. La lecture de vidéo ou de musique compte comme regarder.';
+
+  @override
+  String get setupFlowTvNeedsHomeButton => 'Il faut l\'interrupteur du bouton Accueil des premières étapes : sans lui, Hearth ne sait pas quand la télécommande est utilisée.';
+
+  @override
+  String get setupFlowStartOnBoot => 'Lancer Hearth au démarrage de la TV';
+
+  @override
+  String get setupFlowScreensaver => 'Choisir les photos de l\'écran de veille';
+
+  @override
+  String get setupFlowUpdatesBenefit => 'Hearth se met à jour, ainsi que ses applis compagnons.';
+
+  @override
+  String get setupFlowUpdatesIncluded1 => 'Hearth se met à jour tout seul';
+
+  @override
+  String get setupFlowUpdatesIncluded2 => 'HearthTube, une appli YouTube conçue pour Hearth';
+
+  @override
+  String get setupFlowInstallTitle => 'Autoriser Hearth à installer les mises à jour';
+
+  @override
+  String get setupFlowInstallBody => 'Sur l\'écran suivant, trouvez Hearth, activez-le, puis appuyez sur Retour.';
+
+  @override
+  String get setupFlowInstallDone => 'Hearth peut installer les mises à jour';
+
+  @override
+  String get setupFlowTubeTitle => 'Installer HearthTube ?';
+
+  @override
+  String get setupFlowTubeBody => 'Une appli YouTube conçue pour Hearth : elle suit vos profils, le style d\'horloge et l\'heure du coucher des enfants.';
+
+  @override
+  String get setupFlowTubeInstalled => 'HearthTube est installé';
 }

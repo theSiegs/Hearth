@@ -18,6 +18,7 @@
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/profile_service.dart';
+import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';
 import 'package:flauncher/widgets/app_card_keys.dart';
 import 'package:flauncher/widgets/focus_keyboard_listener.dart';
@@ -28,6 +29,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'setup_flow_launcher.dart';
+import 'setup_snapshot.dart';
 
 /// The top bar's "Finish setting up · 3 left", or "Home button needs a fix": what the setup flow left undone, one
 /// press from carrying on. Not shown in kids' profiles, before the flow has ever run (it shows itself then), when
@@ -77,8 +79,11 @@ class _SetupChipState extends State<SetupChip> with WidgetsBindingObserver {
       final homeApp = await channel.isDefaultLauncher();
       final homeButtonOn = status["enabled"] == true;
       if (!mounted) return;
+      final cardsOn = await SetupSnapshot.loadCardsOn(channel,
+          showContinueWatching: context.read<SettingsService?>()?.showContinueWatching ?? false);
+      if (!mounted) return;
       setState(() {
-        _left = flow.remaining(homeButtonOn: homeButtonOn, homeAppOn: homeApp);
+        _left = flow.remaining(homeButtonOn: homeButtonOn, homeAppOn: homeApp, cardOn: cardsOn);
         _fix = flow.homeButtonNeedsFix(
             homeButtonOn: homeButtonOn, homeButtonSeenBefore: status["seenBefore"] == true);
       });

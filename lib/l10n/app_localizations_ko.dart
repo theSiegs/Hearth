@@ -2204,4 +2204,110 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get setupChipHide => '숨기기';
+
+  @override
+  String get setupFlowCardIncluded => '포함된 기능';
+
+  @override
+  String get setupFlowCardNeeds => '필요한 것';
+
+  @override
+  String get setupFlowCardSkipped => '건너뜀';
+
+  @override
+  String get setupFlowChange => '변경';
+
+  @override
+  String get setupFlowKeep => '유지';
+
+  @override
+  String get setupFlowTurnOn => '켜기';
+
+  @override
+  String get setupFlowNeedsQuestion => 'Android의 질문 한 번';
+
+  @override
+  String get setupFlowNeedsOneSwitch => 'Android 설정의 스위치 하나';
+
+  @override
+  String get setupFlowNeedsAboutAMinute => '약 1분';
+
+  @override
+  String get setupFlowWatchingBenefit => '보던 곳에서 이어 보고, 무엇이 재생 중인지 확인하세요.';
+
+  @override
+  String get setupFlowWatchingIncluded1 => '홈 화면의 이어 보기';
+
+  @override
+  String get setupFlowWatchingIncluded2 => '알림과 재생 중인 콘텐츠';
+
+  @override
+  String get setupFlowSearchWorks => '검색은 이미 작동합니다. 홈 화면에서 검색을 누르세요.';
+
+  @override
+  String get setupFlowContinueBody => '앱에서 보던 콘텐츠를 홈 화면에 표시합니다. Android가 한 번 물으면 허용을 선택하세요.';
+
+  @override
+  String get setupFlowContinueDone => '이어 보기가 켜졌습니다';
+
+  @override
+  String get setupFlowContinueDeniedTitle => 'Android에서 허용하지 않았습니다';
+
+  @override
+  String setupFlowContinueDeniedBody(String where) {
+    return '나중에 $where에서 켤 수 있습니다.';
+  }
+
+  @override
+  String get setupFlowNotificationsTitle => '재생 중인 콘텐츠와 알림';
+
+  @override
+  String setupFlowNotificationsBody(String name) {
+    return '알림과 재생 중인 콘텐츠를 볼 수 있습니다. 다음 화면에서 \"$name\"을(를) 선택하고 허용하세요.';
+  }
+
+  @override
+  String get setupFlowNotificationsDone => '알림이 켜졌습니다';
+
+  @override
+  String get setupFlowTvTitle => '아무도 보지 않을 때 TV를 끌까요?';
+
+  @override
+  String get setupFlowTvBody => '리모컨을 이 시간 동안 누르지 않으면 꺼집니다. 동영상이나 음악 재생은 시청으로 봅니다.';
+
+  @override
+  String get setupFlowTvNeedsHomeButton => '처음 단계의 홈 버튼 스위치가 필요합니다. 없으면 Hearth가 리모컨 사용 여부를 알 수 없습니다.';
+
+  @override
+  String get setupFlowStartOnBoot => 'TV가 시작될 때 Hearth 시작';
+
+  @override
+  String get setupFlowScreensaver => '화면 보호기 사진 선택';
+
+  @override
+  String get setupFlowUpdatesBenefit => 'Hearth가 자신과 함께 쓰는 앱을 최신 상태로 유지합니다.';
+
+  @override
+  String get setupFlowUpdatesIncluded1 => 'Hearth 자동 업데이트';
+
+  @override
+  String get setupFlowUpdatesIncluded2 => 'HearthTube, Hearth용 YouTube 앱';
+
+  @override
+  String get setupFlowInstallTitle => 'Hearth가 업데이트를 설치하도록 허용';
+
+  @override
+  String get setupFlowInstallBody => '다음 화면에서 Hearth를 찾아 켠 다음 뒤로를 누르세요.';
+
+  @override
+  String get setupFlowInstallDone => 'Hearth가 업데이트를 설치할 수 있습니다';
+
+  @override
+  String get setupFlowTubeTitle => 'HearthTube를 설치할까요?';
+
+  @override
+  String get setupFlowTubeBody => 'Hearth용으로 만든 YouTube 앱: 프로필, 시계 스타일, 아이들의 취침 시간을 따릅니다.';
+
+  @override
+  String get setupFlowTubeInstalled => 'HearthTube가 설치되었습니다';
 }

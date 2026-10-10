@@ -24,6 +24,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'setup_flow_page.dart';
+import 'setup_snapshot.dart';
 
 /// Opens the setup flow over the home when it should show by itself ([SetupFlowService.launch]): the first time
 /// Hearth starts on a TV, a step left for Android's settings a moment ago, or the Home button switched off by an
@@ -127,7 +128,9 @@ class _SetupFlowLauncherState extends State<SetupFlowLauncher> with WidgetsBindi
             _open(SetupMode.lostFix);
           }
         case SetupLaunchExistingInstall():
-          await flow.markExistingInstall();
+          final cardsOn = await SetupSnapshot.loadCardsOn(_channel,
+              showContinueWatching: context.read<SettingsService?>()?.showContinueWatching ?? false);
+          await flow.markExistingInstall(cardsOn);
         case SetupLaunchNothing():
           break;
       }

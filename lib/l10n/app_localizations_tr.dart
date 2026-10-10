@@ -2204,4 +2204,110 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get setupChipHide => 'Gizle';
+
+  @override
+  String get setupFlowCardIncluded => 'Neler var';
+
+  @override
+  String get setupFlowCardNeeds => 'Gerekenler';
+
+  @override
+  String get setupFlowCardSkipped => 'Atlandı';
+
+  @override
+  String get setupFlowChange => 'Değiştir';
+
+  @override
+  String get setupFlowKeep => 'Koru';
+
+  @override
+  String get setupFlowTurnOn => 'Aç';
+
+  @override
+  String get setupFlowNeedsQuestion => 'Android\'den bir soru';
+
+  @override
+  String get setupFlowNeedsOneSwitch => 'Android ayarlarında bir anahtar';
+
+  @override
+  String get setupFlowNeedsAboutAMinute => 'Yaklaşık bir dakika';
+
+  @override
+  String get setupFlowWatchingBenefit => 'Kaldığınız yerden devam edin ve neyin oynatıldığını görün.';
+
+  @override
+  String get setupFlowWatchingIncluded1 => 'Ana ekranda İzlemeye devam et';
+
+  @override
+  String get setupFlowWatchingIncluded2 => 'Bildirimler ve oynatılanlar';
+
+  @override
+  String get setupFlowSearchWorks => 'Arama zaten çalışıyor: ana ekranda Ara\'ya basın.';
+
+  @override
+  String get setupFlowContinueBody => 'Uygulamalarınızda izlediklerinizi ana ekranda gösterin. Android bir kez soracak; İzin ver\'i seçin.';
+
+  @override
+  String get setupFlowContinueDone => 'İzlemeye devam et açık';
+
+  @override
+  String get setupFlowContinueDeniedTitle => 'Android izin vermedi';
+
+  @override
+  String setupFlowContinueDeniedBody(String where) {
+    return 'Daha sonra $where bölümünden açabilirsiniz.';
+  }
+
+  @override
+  String get setupFlowNotificationsTitle => 'Oynatılanlar ve bildirimler';
+
+  @override
+  String setupFlowNotificationsBody(String name) {
+    return 'Bildirimlerinizi ve oynatılanları görün. Sonraki ekranda \"$name\" öğesini seçip izin verin.';
+  }
+
+  @override
+  String get setupFlowNotificationsDone => 'Bildirimler açık';
+
+  @override
+  String get setupFlowTvTitle => 'Kimse izlemediğinde TV kapatılsın mı?';
+
+  @override
+  String get setupFlowTvBody => 'Bu süre boyunca kumandaya basılmazsa. Video veya müzik çalması izleme sayılır.';
+
+  @override
+  String get setupFlowTvNeedsHomeButton => 'Bunun için ilk adımlardaki Ana Ekran düğmesi anahtarı gerekir: o olmadan Hearth kumandanın ne zaman kullanıldığını bilemez.';
+
+  @override
+  String get setupFlowStartOnBoot => 'TV açıldığında Hearth\'ü başlat';
+
+  @override
+  String get setupFlowScreensaver => 'Ekran koruyucu fotoğraflarını seç';
+
+  @override
+  String get setupFlowUpdatesBenefit => 'Hearth kendini ve yardımcı uygulamalarını güncel tutar.';
+
+  @override
+  String get setupFlowUpdatesIncluded1 => 'Hearth kendini günceller';
+
+  @override
+  String get setupFlowUpdatesIncluded2 => 'HearthTube, Hearth için yapılmış bir YouTube uygulaması';
+
+  @override
+  String get setupFlowInstallTitle => 'Hearth\'ün güncelleme yüklemesine izin ver';
+
+  @override
+  String get setupFlowInstallBody => 'Sonraki ekranda Hearth\'ü bulup açın, ardından Geri\'ye basın.';
+
+  @override
+  String get setupFlowInstallDone => 'Hearth güncelleme yükleyebilir';
+
+  @override
+  String get setupFlowTubeTitle => 'HearthTube yüklensin mi?';
+
+  @override
+  String get setupFlowTubeBody => 'Hearth için yapılmış bir YouTube uygulaması: profillerinizi, saat stilini ve çocukların yatma saatini izler.';
+
+  @override
+  String get setupFlowTubeInstalled => 'HearthTube yüklü';
 }

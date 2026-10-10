@@ -2821,5 +2821,151 @@
     "setupChipHide": "Hide",
     "@setupChipHide": {
         "description": "Home screen: button that hides the setup chip for good"
+    },
+    "setupFlowCardIncluded": "What's included",
+    "@setupFlowCardIncluded": {
+        "description": "Setup flow: a feature card's heading over what the feature gives"
+    },
+    "setupFlowCardNeeds": "What it needs",
+    "@setupFlowCardNeeds": {
+        "description": "Setup flow: a feature card's heading over what turning it on takes (Android switches, time)"
+    },
+    "setupFlowCardSkipped": "Skipped",
+    "@setupFlowCardSkipped": {
+        "description": "Setup flow: status line on a feature card the owner chose Not now for earlier"
+    },
+    "setupFlowChange": "Change",
+    "@setupFlowChange": {
+        "description": "Setup flow: button on a feature card decided earlier, to choose again"
+    },
+    "setupFlowKeep": "Keep",
+    "@setupFlowKeep": {
+        "description": "Setup flow: button on a feature card decided earlier, to leave it as it is and go on"
+    },
+    "setupFlowTurnOn": "Turn on",
+    "@setupFlowTurnOn": {
+        "description": "Setup flow: main button of a feature card or step"
+    },
+    "setupFlowNeedsQuestion": "One question from Android",
+    "@setupFlowNeedsQuestion": {
+        "description": "Setup flow: what a feature card needs: Android asks one question (a permission dialog)"
+    },
+    "setupFlowNeedsOneSwitch": "One switch in Android's settings",
+    "@setupFlowNeedsOneSwitch": {
+        "description": "Setup flow: what a feature card needs: one switch to turn on in Android's settings"
+    },
+    "setupFlowNeedsAboutAMinute": "About a minute",
+    "@setupFlowNeedsAboutAMinute": {
+        "description": "Setup flow: what a feature card needs: about one minute of the owner's time"
+    },
+    "setupFlowWatchingBenefit": "Pick up where you left off, and see what's playing.",
+    "@setupFlowWatchingBenefit": {
+        "description": "Setup flow: the Watching card's one-line benefit"
+    },
+    "setupFlowWatchingIncluded1": "Continue Watching on the home screen",
+    "@setupFlowWatchingIncluded1": {
+        "description": "Setup flow: Watching card, first thing it includes"
+    },
+    "setupFlowWatchingIncluded2": "Notifications and what's playing",
+    "@setupFlowWatchingIncluded2": {
+        "description": "Setup flow: Watching card, second thing it includes"
+    },
+    "setupFlowSearchWorks": "Search already works: press Search on the home screen.",
+    "@setupFlowSearchWorks": {
+        "description": "Setup flow: info line on the Watching card; search needs no setup"
+    },
+    "setupFlowContinueBody": "Show what you were watching in your apps on the home screen. Android will ask once; choose Allow.",
+    "@setupFlowContinueBody": {
+        "description": "Setup flow: Continue Watching step; Android then shows its permission dialog"
+    },
+    "setupFlowContinueDone": "Continue Watching is on",
+    "@setupFlowContinueDone": {
+        "description": "Setup flow: Continue Watching step, after Android allowed it"
+    },
+    "setupFlowContinueDeniedTitle": "Android didn't allow it",
+    "@setupFlowContinueDeniedTitle": {
+        "description": "Setup flow: Continue Watching step, after Android's dialog was declined"
+    },
+    "setupFlowContinueDeniedBody": "You can turn it on later in {where}.",
+    "@setupFlowContinueDeniedBody": {
+        "description": "Setup flow: Continue Watching step, declined; {where} is where it is in Settings (\"Settings > Home screen > Continue Watching\")",
+        "placeholders": {
+            "where": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowNotificationsTitle": "What's playing and notifications",
+    "@setupFlowNotificationsTitle": {
+        "description": "Setup flow: notification access step's title"
+    },
+    "setupFlowNotificationsBody": "See your notifications and what's playing. On the next screen, select \"{name}\" and allow it.",
+    "@setupFlowNotificationsBody": {
+        "description": "Setup flow: notification access step; {name} is the service's name as Android shows it (in English)",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "setupFlowNotificationsDone": "Notifications are on",
+    "@setupFlowNotificationsDone": {
+        "description": "Setup flow: notification access step, once it's on"
+    },
+    "setupFlowTvTitle": "Turn the TV off when nobody's watching?",
+    "@setupFlowTvTitle": {
+        "description": "Setup flow: TV & power screen's question (sleep when idle)"
+    },
+    "setupFlowTvBody": "After this long with no remote presses. Playing video or music counts as watching.",
+    "@setupFlowTvBody": {
+        "description": "Setup flow: TV & power screen, how sleep when idle works"
+    },
+    "setupFlowTvNeedsHomeButton": "This needs the Home button switch from the first steps: without it Hearth can't tell when the remote is used.",
+    "@setupFlowTvNeedsHomeButton": {
+        "description": "Setup flow: TV & power screen, shown when Home Button Fix is off (the sleep choices are greyed out)"
+    },
+    "setupFlowStartOnBoot": "Start Hearth when the TV starts",
+    "@setupFlowStartOnBoot": {
+        "description": "Setup flow: TV & power screen, switch that starts Hearth after the TV restarts"
+    },
+    "setupFlowScreensaver": "Choose screensaver photos",
+    "@setupFlowScreensaver": {
+        "description": "Setup flow: TV & power screen, link to Google TV's screensaver settings"
+    },
+    "setupFlowUpdatesBenefit": "Hearth keeps itself and its companion apps up to date.",
+    "@setupFlowUpdatesBenefit": {
+        "description": "Setup flow: the Updates card's one-line benefit"
+    },
+    "setupFlowUpdatesIncluded1": "Hearth updates itself",
+    "@setupFlowUpdatesIncluded1": {
+        "description": "Setup flow: Updates card, first thing it includes"
+    },
+    "setupFlowUpdatesIncluded2": "HearthTube, a YouTube app made for Hearth",
+    "@setupFlowUpdatesIncluded2": {
+        "description": "Setup flow: Updates card, second thing it includes"
+    },
+    "setupFlowInstallTitle": "Allow Hearth to install updates",
+    "@setupFlowInstallTitle": {
+        "description": "Setup flow: Updates card, the step that opens Android's Install unknown apps screen"
+    },
+    "setupFlowInstallBody": "On the next screen, find Hearth and turn it on, then press Back.",
+    "@setupFlowInstallBody": {
+        "description": "Setup flow: Updates card, what to do on Android's Install unknown apps screen"
+    },
+    "setupFlowInstallDone": "Hearth can install updates",
+    "@setupFlowInstallDone": {
+        "description": "Setup flow: Updates card, once Hearth may install apps"
+    },
+    "setupFlowTubeTitle": "Install HearthTube?",
+    "@setupFlowTubeTitle": {
+        "description": "Setup flow: Updates card, the step that offers HearthTube"
+    },
+    "setupFlowTubeBody": "A YouTube app made for Hearth: it follows your profiles, the clock style and kids' bedtime.",
+    "@setupFlowTubeBody": {
+        "description": "Setup flow: Updates card, what HearthTube is"
+    },
+    "setupFlowTubeInstalled": "HearthTube is installed",
+    "@setupFlowTubeInstalled": {
+        "description": "Setup flow: Updates card, once HearthTube is installed"
     }
 }
