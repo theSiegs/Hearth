@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Blocking an app with Family Link (and unblocking it) no longer removes it from a kids' profile's dock and sections.
