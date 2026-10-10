@@ -3,6 +3,11 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.22 (pre-release)
+
+- Holding the profile button locks the profile again: Google TV's Verify it's you screen stays up, instead of the chooser opening over it.
+- Letting go after holding OK no longer also counts as a press.
+
 ## 2026.10.21 (pre-release)
 
 - Setup cards show each item with a check or an open circle for how it stands, and say Next, Leave it as it is / Set up what's missing, or Not now / Turn on.
