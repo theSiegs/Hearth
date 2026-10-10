@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.17 (pre-release)
+
+- "Use Google TV's home" in TV & power: a switch that leaves Google TV's own home in front until it's turned off. It replaces "Use Google TV for now" in System.
+
 ## 2026.10.16 (pre-release)
 
 - A profile name Hearth got wrong after a failed switch corrects itself.

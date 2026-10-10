@@ -1,0 +1,2 @@
+- Early development pre-release.
+- "Use Google TV's home" in TV & power: a switch that leaves Google TV's own home in front until it's turned off.
