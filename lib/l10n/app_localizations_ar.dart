@@ -2491,4 +2491,60 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get setupFlowDebugOpen => 'فتح \"حول\"';
+
+  @override
+  String get setupCardSmartHome => 'المنزل الذكي';
+
+  @override
+  String get setupFlowHaBenefit => 'تنبيهات جرس الباب وغيرها على التلفزيون، ولوحة Home Assistant بضغطة واحدة.';
+
+  @override
+  String get setupFlowHaIncluded1 => 'تنبيهات جرس الباب وغيرها فوق أي تطبيق';
+
+  @override
+  String get setupFlowHaIncluded2 => 'لوحتك بضغطة واحدة';
+
+  @override
+  String get setupFlowHaIncluded3 => 'إرسال ما يُعرض إلى Home Assistant';
+
+  @override
+  String get setupFlowNeedsPhone => 'هاتف على شبكة Wi-Fi نفسها';
+
+  @override
+  String get setupFlowNeedsFewMinutes => 'بضع دقائق';
+
+  @override
+  String get setupFlowHaUse => 'أستخدم Home Assistant';
+
+  @override
+  String get setupFlowHaAlertsTitle => 'تنبيهات Home Assistant';
+
+  @override
+  String setupFlowHaAlertsBody(String ip) {
+    return 'في Home Assistant، أضف \"Notifications for Android TV / Fire TV\" بعنوان هذا التلفزيون: $ip. ثم أرسل اختبارًا.';
+  }
+
+  @override
+  String get setupFlowHaAlertsDone => 'تم تشغيل التنبيهات';
+
+  @override
+  String get setupFlowHaDashboardTitle => 'لوحتك على التلفزيون';
+
+  @override
+  String get setupFlowHaDashboardBody => 'امسح الرمز بهاتفك، والصق عنوان Home Assistant ورمزًا مميزًا، ثم أرسل. استخدم مستخدم Home Assistant مخصصًا للتلفزيون، وليس مسؤولًا.';
+
+  @override
+  String get setupFlowHaDashboardDone => 'تم إعداد لوحتك';
+
+  @override
+  String get setupFlowHaStatusTitle => 'أخبر Home Assistant بما يُعرض';
+
+  @override
+  String get setupFlowHaStatusBody => 'يمكن للتلفزيون إرسال ما يتم تشغيله والملف الشخصي النشط إلى Home Assistant. في صفحة الهاتف نفسها، أضف معرّف أتمتة Webhook من Home Assistant.';
+
+  @override
+  String get setupFlowHaStatusNoWebhook => 'لم يرسل الهاتف معرّف Webhook. املأ المربع الأخير في الصفحة.';
+
+  @override
+  String get setupFlowHaStatusDone => 'يُخبر التلفزيون Home Assistant بما يُعرض';
 }

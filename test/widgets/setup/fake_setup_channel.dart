@@ -21,6 +21,13 @@ class FakeSetupChannel extends FLauncherChannel {
   bool adb = false;
   bool watchNext = false;
   bool googleTv = false;
+  bool haAlerts = false;
+  bool haPanelToken = false;
+  String? haWebhook;
+
+  /// What the phone page has received (the dialog polls it), and whether a test pop-up can show.
+  bool haSetupReceived = false;
+  bool haTestShows = false;
   int kidsProfiles = 0;
   bool netflix = false;
   bool pairing = false;
@@ -79,6 +86,30 @@ class FakeSetupChannel extends FLauncherChannel {
   @override
   Future<Map<dynamic, dynamic>> getSetupFamilyState() async =>
       {"googleTv": googleTv, "kidsProfiles": kidsProfiles, "netflix": netflix};
+
+  @override
+  Future<bool> getHaNotificationsEnabled() async => haAlerts;
+
+  @override
+  Future<void> setHaNotificationsEnabled(bool enabled) async => haAlerts = enabled;
+
+  @override
+  Future<bool> sendHaTestNotification() async => haTestShows;
+
+  @override
+  Future<Map<dynamic, dynamic>> getHaPanelConfig() async => {"hasToken": haPanelToken, "dashboard": null};
+
+  @override
+  Future<Map<dynamic, dynamic>> getHaStatusConfig() async => {"url": null, "webhookId": haWebhook};
+
+  @override
+  Future<String?> startHaSetup() async => "http://192.0.2.10:8765/secret";
+
+  @override
+  Future<void> stopHaSetup() async {}
+
+  @override
+  Future<bool> getHaSetupReceived() async => haSetupReceived;
 
   @override
   Future<bool> openDeviceInfoSettings() async {

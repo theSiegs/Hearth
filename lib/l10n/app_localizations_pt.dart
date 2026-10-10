@@ -2458,4 +2458,60 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get setupFlowDebugOpen => 'Abrir Sobre';
+
+  @override
+  String get setupCardSmartHome => 'Casa inteligente';
+
+  @override
+  String get setupFlowHaBenefit => 'Campainha e outros alertas na TV, e seu painel do Home Assistant a um toque.';
+
+  @override
+  String get setupFlowHaIncluded1 => 'Campainha e outros alertas sobre qualquer app';
+
+  @override
+  String get setupFlowHaIncluded2 => 'Seu painel, a um toque';
+
+  @override
+  String get setupFlowHaIncluded3 => 'O que está passando, enviado ao Home Assistant';
+
+  @override
+  String get setupFlowNeedsPhone => 'Um celular na mesma rede Wi-Fi';
+
+  @override
+  String get setupFlowNeedsFewMinutes => 'Alguns minutos';
+
+  @override
+  String get setupFlowHaUse => 'Uso o Home Assistant';
+
+  @override
+  String get setupFlowHaAlertsTitle => 'Alertas do Home Assistant';
+
+  @override
+  String setupFlowHaAlertsBody(String ip) {
+    return 'No Home Assistant, adicione \"Notifications for Android TV / Fire TV\" com o endereço desta TV: $ip. Depois envie um teste.';
+  }
+
+  @override
+  String get setupFlowHaAlertsDone => 'Os alertas estão ativados';
+
+  @override
+  String get setupFlowHaDashboardTitle => 'Seu painel na TV';
+
+  @override
+  String get setupFlowHaDashboardBody => 'Escaneie com o celular, cole o endereço do Home Assistant e um token, e toque em Enviar. Use um usuário do Home Assistant criado para a TV, não um administrador.';
+
+  @override
+  String get setupFlowHaDashboardDone => 'Seu painel está configurado';
+
+  @override
+  String get setupFlowHaStatusTitle => 'Contar ao Home Assistant o que está passando';
+
+  @override
+  String get setupFlowHaStatusBody => 'A TV pode enviar ao Home Assistant o que está tocando e o perfil ativo. Na mesma página do celular, adicione o ID de uma automação com webhook do Home Assistant.';
+
+  @override
+  String get setupFlowHaStatusNoWebhook => 'O celular não enviou um ID de webhook. Preencha o último campo da página.';
+
+  @override
+  String get setupFlowHaStatusDone => 'A TV conta ao Home Assistant o que está passando';
 }

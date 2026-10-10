@@ -2456,4 +2456,60 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get setupFlowDebugOpen => 'Info öffnen';
+
+  @override
+  String get setupCardSmartHome => 'Smart Home';
+
+  @override
+  String get setupFlowHaBenefit => 'Türklingel und andere Hinweise auf dem Fernseher, und Ihr Home Assistant-Dashboard nur einen Tastendruck entfernt.';
+
+  @override
+  String get setupFlowHaIncluded1 => 'Türklingel und andere Hinweise über jeder App';
+
+  @override
+  String get setupFlowHaIncluded2 => 'Ihr Dashboard, einen Tastendruck entfernt';
+
+  @override
+  String get setupFlowHaIncluded3 => 'Was läuft, an Home Assistant gemeldet';
+
+  @override
+  String get setupFlowNeedsPhone => 'Ein Handy im selben WLAN';
+
+  @override
+  String get setupFlowNeedsFewMinutes => 'Ein paar Minuten';
+
+  @override
+  String get setupFlowHaUse => 'Ich nutze Home Assistant';
+
+  @override
+  String get setupFlowHaAlertsTitle => 'Home Assistant-Hinweise';
+
+  @override
+  String setupFlowHaAlertsBody(String ip) {
+    return 'Fügen Sie in Home Assistant „Notifications for Android TV / Fire TV“ mit der Adresse dieses Fernsehers hinzu: $ip. Senden Sie dann einen Test.';
+  }
+
+  @override
+  String get setupFlowHaAlertsDone => 'Hinweise sind eingeschaltet';
+
+  @override
+  String get setupFlowHaDashboardTitle => 'Ihr Dashboard auf dem Fernseher';
+
+  @override
+  String get setupFlowHaDashboardBody => 'Scannen Sie mit dem Handy, fügen Sie die Home Assistant-Adresse und ein Token ein und tippen Sie auf Senden. Nutzen Sie einen Home Assistant-Benutzer für den Fernseher, keinen Administrator.';
+
+  @override
+  String get setupFlowHaDashboardDone => 'Ihr Dashboard ist eingerichtet';
+
+  @override
+  String get setupFlowHaStatusTitle => 'Home Assistant melden, was läuft';
+
+  @override
+  String get setupFlowHaStatusBody => 'Der Fernseher kann Home Assistant melden, was läuft und welches Profil aktiv ist. Tragen Sie auf derselben Handy-Seite die ID einer Webhook-Automation aus Home Assistant ein.';
+
+  @override
+  String get setupFlowHaStatusNoWebhook => 'Das Handy hat keine Webhook-ID gesendet. Füllen Sie das letzte Feld der Seite aus.';
+
+  @override
+  String get setupFlowHaStatusDone => 'Der Fernseher meldet Home Assistant, was läuft';
 }

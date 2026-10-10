@@ -2458,4 +2458,60 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setupFlowDebugOpen => 'Open About';
+
+  @override
+  String get setupCardSmartHome => 'Smart home';
+
+  @override
+  String get setupFlowHaBenefit => 'Doorbell and other alerts on the TV, and your Home Assistant dashboard one press away.';
+
+  @override
+  String get setupFlowHaIncluded1 => 'Doorbell and other alerts over any app';
+
+  @override
+  String get setupFlowHaIncluded2 => 'Your dashboard, one press away';
+
+  @override
+  String get setupFlowHaIncluded3 => 'What\'s on, sent to Home Assistant';
+
+  @override
+  String get setupFlowNeedsPhone => 'A phone on the same Wi-Fi';
+
+  @override
+  String get setupFlowNeedsFewMinutes => 'A few minutes';
+
+  @override
+  String get setupFlowHaUse => 'I use Home Assistant';
+
+  @override
+  String get setupFlowHaAlertsTitle => 'Home Assistant alerts';
+
+  @override
+  String setupFlowHaAlertsBody(String ip) {
+    return 'In Home Assistant, add \"Notifications for Android TV / Fire TV\" with this TV\'s address: $ip. Then send a test.';
+  }
+
+  @override
+  String get setupFlowHaAlertsDone => 'Alerts are on';
+
+  @override
+  String get setupFlowHaDashboardTitle => 'Your dashboard on the TV';
+
+  @override
+  String get setupFlowHaDashboardBody => 'Scan with your phone, paste your Home Assistant address and a token, then Send. Use a Home Assistant user made for the TV, not an admin.';
+
+  @override
+  String get setupFlowHaDashboardDone => 'Your dashboard is set up';
+
+  @override
+  String get setupFlowHaStatusTitle => 'Tell Home Assistant what\'s on';
+
+  @override
+  String get setupFlowHaStatusBody => 'The TV can send what\'s playing and the active profile to Home Assistant. On the same phone page, add the ID of a webhook automation from Home Assistant.';
+
+  @override
+  String get setupFlowHaStatusNoWebhook => 'The phone didn\'t send a webhook ID. Fill in the last box on the page.';
+
+  @override
+  String get setupFlowHaStatusDone => 'The TV tells Home Assistant what\'s on';
 }

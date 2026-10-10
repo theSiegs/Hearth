@@ -19,6 +19,8 @@
     <string name="ha_setup_missing">Saisissez l\'adresse de Home Assistant et le jeton.</string>
     <string name="ha_setup_sent_title">Envoyé à la TV</string>
     <string name="ha_setup_sent_detail">Hearth a reçu l\'adresse et le jeton. Vous pouvez fermer cette page.</string>
+    <string name="ha_setup_webhook_label">ID du webhook pour l\'état de la TV (facultatif)</string>
+    <string name="ha_setup_webhook_help">Pour que la TV indique à Home Assistant ce qui passe (l\'appli, la lecture en cours, le profil), ajoutez dans Home Assistant une automatisation avec un déclencheur Webhook et mettez son ID ici. Pour cela seulement, le jeton peut rester vide.</string>
 
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">Ouverture de %1$s en tant que %2$s…</string>

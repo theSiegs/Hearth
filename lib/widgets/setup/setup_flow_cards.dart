@@ -26,7 +26,10 @@ class _CardInfo {
   final List<String> needs;
   final String? note;
 
-  const _CardInfo(this.icon, this.title, this.benefit, this.included, this.needs, {this.note});
+  /// The main button, when it isn't "Turn on".
+  final String? turnOn;
+
+  const _CardInfo(this.icon, this.title, this.benefit, this.included, this.needs, {this.note, this.turnOn});
 }
 
 /// The flow's optional cards (docs/design/first-run-setup.md, F2 Watching, F5 TV & power, F6 Updates): each is one
@@ -55,6 +58,14 @@ extension _CardScreens on _SetupFlowPageState {
           ),
         SetupCard.home =>
           _CardInfo(Icons.palette_outlined, l.setupCardHome, l.setupFlowLookTitle, const [], const []),
+        SetupCard.smartHome => _CardInfo(
+            Icons.cottage_outlined,
+            l.setupCardSmartHome,
+            l.setupFlowHaBenefit,
+            [l.setupFlowHaIncluded1, l.setupFlowHaIncluded2, l.setupFlowHaIncluded3],
+            [l.setupFlowNeedsPhone, l.setupFlowNeedsFewMinutes],
+            turnOn: l.setupFlowHaUse,
+          ),
         SetupCard.tv => _CardInfo(Icons.bedtime_outlined, l.tvPowerTitle, l.setupFlowTvBody, const [], const []),
         SetupCard.updates => _CardInfo(
             Icons.system_update_outlined,
@@ -160,7 +171,7 @@ extension _CardScreens on _SetupFlowPageState {
                 },
               ),
               SetupButton(
-                label: l.setupFlowTurnOn,
+                label: info.turnOn ?? l.setupFlowTurnOn,
                 focusNode: _primary,
                 autofocus: true,
                 onPressed: () async {
@@ -613,6 +624,135 @@ extension _CardScreens on _SetupFlowPageState {
     await weather.setLocation(place);
     await settings?.setShowWeatherInStatusBar(true);
     _showDone(SetupScreen.lookWeather, const Duration(seconds: 2));
+  }
+
+  // --- Smart home ---
+
+  /// Home Assistant's pop-ups: Hearth listens for its notifications integration on the home network.
+  Widget _haAlertsScreen(AppLocalizations l) {
+    final body = l.setupFlowHaAlertsBody(_ip ?? l.haNotificationsThisTvIp);
+    if (_state == SetupStepState.done) {
+      return SetupScreenBody(
+        icon: Icons.check_circle,
+        iconColor: Colors.green,
+        title: l.setupFlowHaAlertsDone,
+        body: body,
+        content: [
+          if (_haTestResult != null) Text(_haTestResult!, style: const TextStyle(color: Colors.amber, fontSize: 13)),
+        ],
+        buttons: [
+          SetupButton(label: l.haNotificationsSendTest, icon: Icons.notifications_outlined, onPressed: _sendHaTest),
+          SetupButton(label: l.setupFlowNext, focusNode: _primary, autofocus: true, onPressed: _next),
+        ],
+      );
+    }
+    return SetupScreenBody(
+      icon: Icons.notifications_active_outlined,
+      title: l.setupFlowHaAlertsTitle,
+      body: body,
+      buttons: [
+        SetupButton(label: l.setupFlowSkip, onPressed: _next),
+        SetupButton(
+          label: l.setupFlowTurnOn,
+          focusNode: _primary,
+          autofocus: true,
+          onPressed: () async {
+            try {
+              await _channel.setHaNotificationsEnabled(true);
+            } catch (_) {}
+            if (!mounted) return;
+            _update(() => _state = SetupStepState.done);
+            _focusPrimary();
+          },
+        ),
+      ],
+    );
+  }
+
+  /// The test pop-up shows over the flow; without Home Button Fix it can't, and that's what's said.
+  Future<void> _sendHaTest() async {
+    final l = AppLocalizations.of(context)!;
+    bool shown = false;
+    try {
+      shown = await _channel.sendHaTestNotification();
+    } catch (_) {}
+    if (mounted) _update(() => _haTestResult = shown ? null : l.haNotificationsNeedsFix(SetupChecklistPage.breadcrumb(l)));
+  }
+
+  /// The dashboard panel: the address and a token come from the phone, never typed with the remote.
+  Widget _haDashboard(AppLocalizations l) {
+    if (_state == SetupStepState.done) {
+      return SetupScreenBody(
+        icon: Icons.check_circle,
+        iconColor: Colors.green,
+        title: l.setupFlowHaDashboardDone,
+        body: l.haPanelRightEdge,
+        buttons: [SetupButton(label: l.setupFlowNext, focusNode: _primary, autofocus: true, onPressed: _next)],
+      );
+    }
+    return SetupScreenBody(
+      icon: Icons.dashboard_outlined,
+      title: l.setupFlowHaDashboardTitle,
+      body: l.setupFlowHaDashboardBody,
+      buttons: [
+        SetupButton(label: l.setupFlowSkip, onPressed: _next),
+        SetupButton(
+          label: l.haSetUpFromPhone,
+          icon: Icons.qr_code_2,
+          focusNode: _primary,
+          autofocus: true,
+          onPressed: () => _haFromPhone(SetupScreen.haDashboard),
+        ),
+      ],
+    );
+  }
+
+  /// TV status: the webhook id comes from the same phone page.
+  Widget _haStatusScreen(AppLocalizations l) {
+    if (_state == SetupStepState.done) return _doneBody(l, l.setupFlowHaStatusDone);
+    return SetupScreenBody(
+      icon: Icons.sensors,
+      title: l.setupFlowHaStatusTitle,
+      body: l.setupFlowHaStatusBody,
+      content: [
+        if (_state == SetupStepState.notYet)
+          Text(l.setupFlowHaStatusNoWebhook, style: const TextStyle(color: Colors.amber, fontSize: 13)),
+      ],
+      buttons: [
+        SetupButton(label: l.setupFlowSkip, onPressed: _next),
+        SetupButton(
+          label: l.haSetUpFromPhone,
+          icon: Icons.qr_code_2,
+          focusNode: _primary,
+          autofocus: true,
+          onPressed: () => _haFromPhone(SetupScreen.haStatus),
+        ),
+      ],
+    );
+  }
+
+  /// The phone page's QR code; once the phone has sent, what it set up shows as done.
+  Future<void> _haFromPhone(SetupScreen screen) async {
+    final settings = context.read<SettingsService?>();
+    final received = await showDialog<bool>(context: context, builder: (_) => HaPhoneSetupDialog(channel: _channel));
+    if (!mounted) return;
+    if (received != true) {
+      _focusPrimary();
+      return;
+    }
+    await _refresh();
+    if (!mounted) return;
+    final snap = _snap;
+    if (screen == SetupScreen.haDashboard && (snap?.haPanel ?? false)) {
+      // The panel is each profile's own: on for this one, as the owner just set it up
+      await settings?.setHaPanelEnabled(true);
+      _showDone(screen, null);
+    } else if (screen == SetupScreen.haStatus && (snap?.haStatus ?? false)) {
+      _showDone(screen, const Duration(seconds: 2));
+    } else {
+      _update(() => _state = SetupStepState.notYet);
+      _focusPrimary();
+    }
   }
 
   // --- TV & power ---

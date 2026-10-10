@@ -2458,4 +2458,60 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get setupFlowDebugOpen => 'Abrir Información';
+
+  @override
+  String get setupCardSmartHome => 'Hogar inteligente';
+
+  @override
+  String get setupFlowHaBenefit => 'El timbre y otros avisos en la tele, y tu panel de Home Assistant a un clic.';
+
+  @override
+  String get setupFlowHaIncluded1 => 'El timbre y otros avisos sobre cualquier app';
+
+  @override
+  String get setupFlowHaIncluded2 => 'Tu panel, a un clic';
+
+  @override
+  String get setupFlowHaIncluded3 => 'Lo que se ve, enviado a Home Assistant';
+
+  @override
+  String get setupFlowNeedsPhone => 'Un móvil en la misma red Wi-Fi';
+
+  @override
+  String get setupFlowNeedsFewMinutes => 'Unos minutos';
+
+  @override
+  String get setupFlowHaUse => 'Uso Home Assistant';
+
+  @override
+  String get setupFlowHaAlertsTitle => 'Avisos de Home Assistant';
+
+  @override
+  String setupFlowHaAlertsBody(String ip) {
+    return 'En Home Assistant, añade \"Notifications for Android TV / Fire TV\" con la dirección de esta tele: $ip. Luego envía una prueba.';
+  }
+
+  @override
+  String get setupFlowHaAlertsDone => 'Los avisos están activados';
+
+  @override
+  String get setupFlowHaDashboardTitle => 'Tu panel en la tele';
+
+  @override
+  String get setupFlowHaDashboardBody => 'Escanea con el móvil, pega la dirección de Home Assistant y un token, y pulsa Enviar. Usa un usuario de Home Assistant creado para la tele, no un administrador.';
+
+  @override
+  String get setupFlowHaDashboardDone => 'Tu panel está configurado';
+
+  @override
+  String get setupFlowHaStatusTitle => 'Decirle a Home Assistant qué se ve';
+
+  @override
+  String get setupFlowHaStatusBody => 'La tele puede enviar a Home Assistant lo que se reproduce y el perfil activo. En la misma página del móvil, añade el ID de una automatización con webhook de Home Assistant.';
+
+  @override
+  String get setupFlowHaStatusNoWebhook => 'El móvil no envió un ID de webhook. Rellena la última casilla de la página.';
+
+  @override
+  String get setupFlowHaStatusDone => 'La tele le dice a Home Assistant qué se ve';
 }

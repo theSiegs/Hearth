@@ -19,6 +19,8 @@
     <string name="ha_setup_missing">Introduzca la dirección de Home Assistant y el token.</string>
     <string name="ha_setup_sent_title">Enviado a la TV</string>
     <string name="ha_setup_sent_detail">Hearth ya tiene la dirección y el token. Puede cerrar esta página.</string>
+    <string name="ha_setup_webhook_label">ID del webhook del estado de la tele (opcional)</string>
+    <string name="ha_setup_webhook_help">Para que la tele le diga a Home Assistant qué hay (la app, lo que se reproduce, el perfil), añade en Home Assistant una automatización con un disparador Webhook y pon aquí su ID. Solo para esto, el token puede quedar vacío.</string>
 
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">Abriendo %1$s como %2$s…</string>

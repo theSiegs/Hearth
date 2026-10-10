@@ -49,6 +49,11 @@ class SetupSnapshot {
   /// Netflix is installed: its profile screen needs Hearth voice.
   final bool netflix;
 
+  /// Home Assistant: its pop-ups are on, the dashboard panel has a sign-in, and the TV reports its status.
+  final bool haAlerts;
+  final bool haPanel;
+  final bool haStatus;
+
   const SetupSnapshot({
     required this.steps,
     required this.packageName,
@@ -58,6 +63,9 @@ class SetupSnapshot {
     this.googleTv = false,
     this.kidsProfiles = 0,
     this.netflix = false,
+    this.haAlerts = false,
+    this.haPanel = false,
+    this.haStatus = false,
   });
 
   SetupStep step(SetupStepId id) => steps.firstWhere((step) => step.id == id);
@@ -80,6 +88,7 @@ class SetupSnapshot {
         pairing: isDone(SetupStepId.profilePairing),
         voice: !netflix || isDone(SetupStepId.voice),
         kids: kidsProfiles <= kidsProtected,
+        homeAssistant: haAlerts && haPanel && haStatus,
       );
 
   /// The rule behind [cardOn], for the home's checks that have no snapshot. A card that is a choice by itself (the
@@ -98,10 +107,12 @@ class SetupSnapshot {
     required bool pairing,
     required bool voice,
     required bool kids,
+    required bool homeAssistant,
   }) =>
       switch (card) {
         SetupCard.family => !googleTv || (hasParentPin && pairing && voice && kids),
         SetupCard.watching => watchNextAllowed && showContinueWatching && notifications,
+        SetupCard.smartHome => homeAssistant,
         SetupCard.home || SetupCard.tv => false,
         SetupCard.updates => install && hearthTubeInstalled,
       };
@@ -116,6 +127,7 @@ class SetupSnapshot {
     final tube = await _hearthTubeInstalled(channel);
     final family = await _safe(channel.getSetupFamilyState, <dynamic, dynamic>{});
     final pairing = await _safe(channel.getProfilePairingStatus, <dynamic, dynamic>{});
+    final ha = await _loadHomeAssistant(channel);
     return {
       for (final card in SetupCard.values)
         card: cardOnFrom(card,
@@ -128,7 +140,8 @@ class SetupSnapshot {
             hasParentPin: hasParentPin,
             pairing: pairing["enabled"] == true,
             voice: family["netflix"] != true || pairing["voiceDefault"] == true,
-            kids: ((family["kidsProfiles"] as int?) ?? 0) <= kidsProtected),
+            kids: ((family["kidsProfiles"] as int?) ?? 0) <= kidsProtected,
+            homeAssistant: ha.alerts && ha.panel && ha.status),
     };
   }
 
@@ -138,6 +151,17 @@ class SetupSnapshot {
     } catch (_) {
       return fallback;
     }
+  }
+
+  static Future<({bool alerts, bool panel, bool status})> _loadHomeAssistant(FLauncherChannel channel) async {
+    final panel = await _safe(channel.getHaPanelConfig, <dynamic, dynamic>{});
+    final status = await _safe(channel.getHaStatusConfig, <dynamic, dynamic>{});
+    final webhook = status["webhookId"] as String?;
+    return (
+      alerts: await _safe(channel.getHaNotificationsEnabled, false),
+      panel: panel["hasToken"] == true,
+      status: webhook != null && webhook.trim().isNotEmpty,
+    );
   }
 
   static Future<bool> _hearthTubeInstalled(FLauncherChannel channel) =>
@@ -150,6 +174,7 @@ class SetupSnapshot {
     } catch (_) {}
     final steps = await loadSetupSteps(channel, packageName, l);
     final family = await _safe(channel.getSetupFamilyState, <dynamic, dynamic>{});
+    final ha = await _loadHomeAssistant(channel);
     return SetupSnapshot(
       steps: steps,
       packageName: packageName,
@@ -159,6 +184,9 @@ class SetupSnapshot {
       googleTv: family["googleTv"] == true,
       kidsProfiles: (family["kidsProfiles"] as int?) ?? 0,
       netflix: family["netflix"] == true,
+      haAlerts: ha.alerts,
+      haPanel: ha.panel,
+      haStatus: ha.status,
     );
   }
 }

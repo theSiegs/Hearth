@@ -2458,4 +2458,60 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get setupFlowDebugOpen => 'Apri Info';
+
+  @override
+  String get setupCardSmartHome => 'Casa intelligente';
+
+  @override
+  String get setupFlowHaBenefit => 'Il campanello e altri avvisi sulla TV, e la tua dashboard di Home Assistant a un tasto di distanza.';
+
+  @override
+  String get setupFlowHaIncluded1 => 'Campanello e altri avvisi sopra qualsiasi app';
+
+  @override
+  String get setupFlowHaIncluded2 => 'La tua dashboard, a un tasto di distanza';
+
+  @override
+  String get setupFlowHaIncluded3 => 'Cosa c\'è in onda, inviato a Home Assistant';
+
+  @override
+  String get setupFlowNeedsPhone => 'Un telefono sulla stessa rete Wi-Fi';
+
+  @override
+  String get setupFlowNeedsFewMinutes => 'Qualche minuto';
+
+  @override
+  String get setupFlowHaUse => 'Uso Home Assistant';
+
+  @override
+  String get setupFlowHaAlertsTitle => 'Avvisi di Home Assistant';
+
+  @override
+  String setupFlowHaAlertsBody(String ip) {
+    return 'In Home Assistant, aggiungi \"Notifications for Android TV / Fire TV\" con l\'indirizzo di questa TV: $ip. Poi invia una prova.';
+  }
+
+  @override
+  String get setupFlowHaAlertsDone => 'Gli avvisi sono attivi';
+
+  @override
+  String get setupFlowHaDashboardTitle => 'La tua dashboard sulla TV';
+
+  @override
+  String get setupFlowHaDashboardBody => 'Scansiona con il telefono, incolla l\'indirizzo di Home Assistant e un token, poi Invia. Usa un utente di Home Assistant creato per la TV, non un amministratore.';
+
+  @override
+  String get setupFlowHaDashboardDone => 'La tua dashboard è configurata';
+
+  @override
+  String get setupFlowHaStatusTitle => 'Dire a Home Assistant cosa c\'è';
+
+  @override
+  String get setupFlowHaStatusBody => 'La TV può inviare a Home Assistant cosa è in riproduzione e il profilo attivo. Nella stessa pagina sul telefono, aggiungi l\'ID di un\'automazione webhook di Home Assistant.';
+
+  @override
+  String get setupFlowHaStatusNoWebhook => 'Il telefono non ha inviato un ID webhook. Compila l\'ultima casella della pagina.';
+
+  @override
+  String get setupFlowHaStatusDone => 'La TV dice a Home Assistant cosa c\'è';
 }

@@ -32,6 +32,7 @@ import 'package:flauncher/widgets/settings/app_language_page.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/settings/backup_restore_page.dart';
 import 'package:flauncher/widgets/settings/family_apps_page.dart';
+import 'package:flauncher/widgets/settings/ha_phone_setup_dialog.dart';
 import 'package:flauncher/widgets/settings/look_settings_page.dart';
 import 'package:flauncher/widgets/settings/message_dialog.dart';
 import 'package:flauncher/widgets/settings/profile_pairing_page.dart';
@@ -64,6 +65,10 @@ enum SetupScreen {
   watchingNotifications,
   look,
   lookWeather,
+  smartHome,
+  haAlerts,
+  haDashboard,
+  haStatus,
   tv,
   updates,
   updatesInstall,
@@ -126,6 +131,10 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     SetupScreen.watchingNotifications,
     SetupScreen.look,
     SetupScreen.lookWeather,
+    SetupScreen.smartHome,
+    SetupScreen.haAlerts,
+    SetupScreen.haDashboard,
+    SetupScreen.haStatus,
     SetupScreen.tv,
     SetupScreen.updates,
     SetupScreen.updatesInstall,
@@ -144,6 +153,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     ],
     SetupCard.watching: [SetupScreen.watching, SetupScreen.watchingContinue, SetupScreen.watchingNotifications],
     SetupCard.home: [SetupScreen.look, SetupScreen.lookWeather],
+    SetupCard.smartHome: [SetupScreen.smartHome, SetupScreen.haAlerts, SetupScreen.haDashboard, SetupScreen.haStatus],
     SetupCard.tv: [SetupScreen.tv],
     SetupCard.updates: [SetupScreen.updates, SetupScreen.updatesInstall, SetupScreen.updatesHearthTube],
   };
@@ -199,6 +209,9 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
 
   /// What the kids' step left on each profile, once Hearth was put on them.
   List<Map<dynamic, dynamic>>? _kidsRows;
+
+  /// How the Home Assistant test pop-up went: null when it showed (or none was sent).
+  String? _haTestResult;
 
   /// A backup was restored from Welcome: its look came with it, so the look screen isn't shown.
   bool _restored = false;
@@ -288,9 +301,11 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       _state = state ?? SetupStepState.intro;
       _changing = false;
       _tubeError = null;
+      _haTestResult = null;
     });
     if (screen == SetupScreen.tv) _readIdleMinutes();
     if (screen == SetupScreen.look) _startPreview();
+    if (screen == SetupScreen.haAlerts) _readIp();
     if (!_single && screen != SetupScreen.finish) unawaited(_flow.saveResume(screen.name, widget.mode));
     if (screen == SetupScreen.finish) unawaited(_flow.finish());
     if (_blockedFrom.containsKey(screen)) _startPolling();
@@ -327,6 +342,9 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
         !snap.netflix || !snap.isDone(SetupStepId.profilePairing) || snap.isDone(SetupStepId.voice),
       SetupScreen.familyKids => snap.kidsProfiles == 0 || snap.kidsProfiles <= _flow.kidsProtected,
       SetupScreen.look => _restored,
+      SetupScreen.haAlerts => snap.haAlerts,
+      SetupScreen.haDashboard => snap.haPanel && (context.read<SettingsService?>()?.haPanelEnabled ?? false),
+      SetupScreen.haStatus => snap.haStatus,
       SetupScreen.lookWeather => _weatherSet,
       _ => false,
     };
@@ -491,6 +509,11 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     _poll = Timer.periodic(_pollEvery, (_) {
       if (mounted && _blockedFrom.containsKey(_screen)) _recheck();
     });
+    _readIp();
+  }
+
+  /// The TV's address, for `adb connect` and for Home Assistant's notifications integration.
+  void _readIp() {
     _channel.getLocalIpAddress().then((ip) {
       if (mounted) setState(() => _ip = ip);
     }).catchError((_) => null);
@@ -657,6 +680,10 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
         SetupScreen.watchingNotifications => _notifications(l),
         SetupScreen.look => _lookScreen(l),
         SetupScreen.lookWeather => _weather(l),
+        SetupScreen.smartHome => _cardScreen(l, SetupCard.smartHome),
+        SetupScreen.haAlerts => _haAlertsScreen(l),
+        SetupScreen.haDashboard => _haDashboard(l),
+        SetupScreen.haStatus => _haStatusScreen(l),
         SetupScreen.tv => _tvAndPower(l),
         SetupScreen.updates => _cardScreen(l, SetupCard.updates),
         SetupScreen.updatesInstall => _installs(l),

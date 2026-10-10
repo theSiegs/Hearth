@@ -2456,4 +2456,60 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get setupFlowDebugOpen => 'जानकारी खोलें';
+
+  @override
+  String get setupCardSmartHome => 'स्मार्ट होम';
+
+  @override
+  String get setupFlowHaBenefit => 'दरवाज़े की घंटी और दूसरी सूचनाएँ टीवी पर, और आपका Home Assistant डैशबोर्ड एक बटन दूर।';
+
+  @override
+  String get setupFlowHaIncluded1 => 'किसी भी ऐप के ऊपर दरवाज़े की घंटी और दूसरी सूचनाएँ';
+
+  @override
+  String get setupFlowHaIncluded2 => 'आपका डैशबोर्ड, एक बटन दूर';
+
+  @override
+  String get setupFlowHaIncluded3 => 'क्या चल रहा है, Home Assistant को भेजा जाता है';
+
+  @override
+  String get setupFlowNeedsPhone => 'उसी वाई-फ़ाई पर एक फ़ोन';
+
+  @override
+  String get setupFlowNeedsFewMinutes => 'कुछ मिनट';
+
+  @override
+  String get setupFlowHaUse => 'मैं Home Assistant इस्तेमाल करता/करती हूँ';
+
+  @override
+  String get setupFlowHaAlertsTitle => 'Home Assistant सूचनाएँ';
+
+  @override
+  String setupFlowHaAlertsBody(String ip) {
+    return 'Home Assistant में इस टीवी के पते के साथ \"Notifications for Android TV / Fire TV\" जोड़ें: $ip। फिर एक टेस्ट भेजें।';
+  }
+
+  @override
+  String get setupFlowHaAlertsDone => 'सूचनाएँ चालू हैं';
+
+  @override
+  String get setupFlowHaDashboardTitle => 'टीवी पर आपका डैशबोर्ड';
+
+  @override
+  String get setupFlowHaDashboardBody => 'फ़ोन से स्कैन करें, Home Assistant का पता और एक टोकन पेस्ट करें, फिर भेजें। टीवी के लिए बनाए गए Home Assistant उपयोगकर्ता का इस्तेमाल करें, एडमिन का नहीं।';
+
+  @override
+  String get setupFlowHaDashboardDone => 'आपका डैशबोर्ड सेट हो गया';
+
+  @override
+  String get setupFlowHaStatusTitle => 'Home Assistant को बताएँ कि क्या चल रहा है';
+
+  @override
+  String get setupFlowHaStatusBody => 'टीवी Home Assistant को भेज सकता है कि क्या चल रहा है और कौन सी प्रोफ़ाइल चालू है। उसी फ़ोन पेज पर Home Assistant के webhook ऑटोमेशन का ID जोड़ें।';
+
+  @override
+  String get setupFlowHaStatusNoWebhook => 'फ़ोन ने webhook ID नहीं भेजा। पेज का आख़िरी बॉक्स भरें।';
+
+  @override
+  String get setupFlowHaStatusDone => 'टीवी Home Assistant को बताता है कि क्या चल रहा है';
 }

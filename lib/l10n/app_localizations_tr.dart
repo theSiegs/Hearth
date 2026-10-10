@@ -2448,4 +2448,60 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get setupFlowDebugOpen => 'Hakkında\'yı aç';
+
+  @override
+  String get setupCardSmartHome => 'Akıllı ev';
+
+  @override
+  String get setupFlowHaBenefit => 'Kapı zili ve diğer uyarılar TV\'de, Home Assistant panonuz tek tuş uzağınızda.';
+
+  @override
+  String get setupFlowHaIncluded1 => 'Her uygulamanın üstünde kapı zili ve diğer uyarılar';
+
+  @override
+  String get setupFlowHaIncluded2 => 'Panonuz tek tuş uzağınızda';
+
+  @override
+  String get setupFlowHaIncluded3 => 'Açık olan şey Home Assistant\'a gönderilir';
+
+  @override
+  String get setupFlowNeedsPhone => 'Aynı Wi-Fi\'de bir telefon';
+
+  @override
+  String get setupFlowNeedsFewMinutes => 'Birkaç dakika';
+
+  @override
+  String get setupFlowHaUse => 'Home Assistant kullanıyorum';
+
+  @override
+  String get setupFlowHaAlertsTitle => 'Home Assistant uyarıları';
+
+  @override
+  String setupFlowHaAlertsBody(String ip) {
+    return 'Home Assistant\'ta bu TV\'nin adresiyle \"Notifications for Android TV / Fire TV\" ekleyin: $ip. Ardından bir test gönderin.';
+  }
+
+  @override
+  String get setupFlowHaAlertsDone => 'Uyarılar açık';
+
+  @override
+  String get setupFlowHaDashboardTitle => 'Panonuz TV\'de';
+
+  @override
+  String get setupFlowHaDashboardBody => 'Telefonunuzla tarayın, Home Assistant adresini ve bir belirteci yapıştırıp Gönder\'e dokunun. Yönetici değil, TV için oluşturulmuş bir Home Assistant kullanıcısı kullanın.';
+
+  @override
+  String get setupFlowHaDashboardDone => 'Panonuz kuruldu';
+
+  @override
+  String get setupFlowHaStatusTitle => 'Home Assistant\'a neyin açık olduğunu bildir';
+
+  @override
+  String get setupFlowHaStatusBody => 'TV, oynatılanı ve etkin profili Home Assistant\'a gönderebilir. Aynı telefon sayfasında Home Assistant\'taki bir webhook otomasyonunun kimliğini ekleyin.';
+
+  @override
+  String get setupFlowHaStatusNoWebhook => 'Telefon bir webhook kimliği göndermedi. Sayfadaki son kutuyu doldurun.';
+
+  @override
+  String get setupFlowHaStatusDone => 'TV, Home Assistant\'a neyin açık olduğunu bildiriyor';
 }

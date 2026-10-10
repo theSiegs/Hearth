@@ -4384,6 +4384,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open About'**
   String get setupFlowDebugOpen;
+
+  /// Setup flow: the Home Assistant card's name
+  ///
+  /// In en, this message translates to:
+  /// **'Smart home'**
+  String get setupCardSmartHome;
+
+  /// Setup flow: the Smart home card's one-line benefit
+  ///
+  /// In en, this message translates to:
+  /// **'Doorbell and other alerts on the TV, and your Home Assistant dashboard one press away.'**
+  String get setupFlowHaBenefit;
+
+  /// Setup flow: Smart home card, first thing it includes
+  ///
+  /// In en, this message translates to:
+  /// **'Doorbell and other alerts over any app'**
+  String get setupFlowHaIncluded1;
+
+  /// Setup flow: Smart home card, second thing it includes
+  ///
+  /// In en, this message translates to:
+  /// **'Your dashboard, one press away'**
+  String get setupFlowHaIncluded2;
+
+  /// Setup flow: Smart home card, third thing it includes (TV status reporting)
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s on, sent to Home Assistant'**
+  String get setupFlowHaIncluded3;
+
+  /// Setup flow: what the Smart home card needs: a phone on the home Wi-Fi
+  ///
+  /// In en, this message translates to:
+  /// **'A phone on the same Wi-Fi'**
+  String get setupFlowNeedsPhone;
+
+  /// Setup flow: what a feature card needs: a few minutes
+  ///
+  /// In en, this message translates to:
+  /// **'A few minutes'**
+  String get setupFlowNeedsFewMinutes;
+
+  /// Setup flow: Smart home card's main button
+  ///
+  /// In en, this message translates to:
+  /// **'I use Home Assistant'**
+  String get setupFlowHaUse;
+
+  /// Setup flow: Home Assistant pop-ups step's title
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant alerts'**
+  String get setupFlowHaAlertsTitle;
+
+  /// Setup flow: Home Assistant pop-ups step; the integration's name stays in English as Home Assistant shows it; {ip} is this TV's address
+  ///
+  /// In en, this message translates to:
+  /// **'In Home Assistant, add \"Notifications for Android TV / Fire TV\" with this TV\'s address: {ip}. Then send a test.'**
+  String setupFlowHaAlertsBody(String ip);
+
+  /// Setup flow: Home Assistant pop-ups step, once on
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts are on'**
+  String get setupFlowHaAlertsDone;
+
+  /// Setup flow: Home Assistant dashboard step's title
+  ///
+  /// In en, this message translates to:
+  /// **'Your dashboard on the TV'**
+  String get setupFlowHaDashboardTitle;
+
+  /// Setup flow: Home Assistant dashboard step
+  ///
+  /// In en, this message translates to:
+  /// **'Scan with your phone, paste your Home Assistant address and a token, then Send. Use a Home Assistant user made for the TV, not an admin.'**
+  String get setupFlowHaDashboardBody;
+
+  /// Setup flow: Home Assistant dashboard step, once the phone sent the sign-in
+  ///
+  /// In en, this message translates to:
+  /// **'Your dashboard is set up'**
+  String get setupFlowHaDashboardDone;
+
+  /// Setup flow: Home Assistant TV status step's title
+  ///
+  /// In en, this message translates to:
+  /// **'Tell Home Assistant what\'s on'**
+  String get setupFlowHaStatusTitle;
+
+  /// Setup flow: Home Assistant TV status step
+  ///
+  /// In en, this message translates to:
+  /// **'The TV can send what\'s playing and the active profile to Home Assistant. On the same phone page, add the ID of a webhook automation from Home Assistant.'**
+  String get setupFlowHaStatusBody;
+
+  /// Setup flow: Home Assistant TV status step, when the phone sent no webhook ID
+  ///
+  /// In en, this message translates to:
+  /// **'The phone didn\'t send a webhook ID. Fill in the last box on the page.'**
+  String get setupFlowHaStatusNoWebhook;
+
+  /// Setup flow: Home Assistant TV status step, once set up
+  ///
+  /// In en, this message translates to:
+  /// **'The TV tells Home Assistant what\'s on'**
+  String get setupFlowHaStatusDone;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

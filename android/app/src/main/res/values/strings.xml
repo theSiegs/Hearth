@@ -20,6 +20,8 @@
     <string name="ha_setup_missing">Enter the Home Assistant address and the token.</string>
     <string name="ha_setup_sent_title">Sent to the TV</string>
     <string name="ha_setup_sent_detail">Hearth has the address and token. You can close this page.</string>
+    <string name="ha_setup_webhook_label">TV status webhook ID (optional)</string>
+    <string name="ha_setup_webhook_help">To have the TV tell Home Assistant what\'s on (the app, what\'s playing, the profile), add an automation with a Webhook trigger in Home Assistant and put its ID here. For only this, the token can stay empty.</string>
 
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">Opening %1$s as %2$s…</string>

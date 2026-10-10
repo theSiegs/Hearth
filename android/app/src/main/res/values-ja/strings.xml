@@ -19,6 +19,8 @@
     <string name="ha_setup_missing">Home Assistant のアドレスとトークンを入力してください。</string>
     <string name="ha_setup_sent_title">テレビに送信しました</string>
     <string name="ha_setup_sent_detail">Hearth がアドレスとトークンを受け取りました。このページは閉じてかまいません。</string>
+    <string name="ha_setup_webhook_label">テレビの状態用 Webhook ID（任意）</string>
+    <string name="ha_setup_webhook_help">テレビから Home Assistant に表示中の内容（アプリ、再生中の内容、プロフィール）を伝えるには、Home Assistant で Webhook トリガーのオートメーションを追加し、その ID をここに入力してください。これだけならトークンは空のままで構いません。</string>
 
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">%1$s を %2$s として開いています…</string>
