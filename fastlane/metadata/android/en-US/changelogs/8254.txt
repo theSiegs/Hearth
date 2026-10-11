@@ -1,0 +1,5 @@
+- Early development pre-release.
+- Calendar from the TV's own Google calendars.
+- Data usage by app; No internet warning.
+- Kids' profile photos picked up reliably.
+- Continue Watching opens again if the app bounces back.

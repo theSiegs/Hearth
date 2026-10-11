@@ -3,6 +3,13 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.43 (pre-release)
+
+- Calendar: the date and time now show the TV's own Google calendars (each profile its own account's, kids' profiles included), with no Home Assistant needed. Choose calendars in Settings > Home screen > Status bar > Calendars. Needs calendar access (read only, stays on the TV).
+- Data usage: select the data pill to see which apps used the TV's data (today, this week or this month with OK), the connection, and VPN; the pill says "No internet" when the TV is offline. On Ethernet, Android doesn't count data per app.
+- Kids' profile photos are picked up on any visit to Google TV's profile chooser, not only a slow one.
+- Continue Watching: an app that bounces straight back to Hearth (Paramount+ when already running) is opened again, unless a button was pressed.
+
 ## 2026.10.42 (pre-release)
 
 - The selection lands where it should with the dock on or off: on the first app at the top (not an empty section) without the dock; after removing or hiding the selected app; after closing search results; when switching the dock in Settings (the selection stays in Settings); and moving the first app keeps the page at the top.
