@@ -35,7 +35,6 @@ import android.widget.Toast;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -782,9 +781,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
             return;
         }
         List<String> names = new ArrayList<>();
-        List<Rect> photos = new ArrayList<>();
         Map<String, String> emails = new LinkedHashMap<>();
-        String current = collectChooserTiles(root, names, photos, emails, 0);
+        String current = collectChooserTiles(root, names, new ArrayList<>(), emails, 0);
         if (current != null) mChooserCurrent = current;
         // Each profile's Google account address, which the TV's calendars are filed by (TvCalendars)
         for (Map.Entry<String, String> email : emails.entrySet()) {
@@ -807,43 +805,115 @@ public class LauncherAccessibilityService extends AccessibilityService {
                         + ") is running: not renaming");
             }
         }
-        // Only the current account's tile, and only while it's the selected one: Google TV draws its PIN lock (and
-        // dimming) on a PIN-protected profile's tile whenever another tile has focus, the current one included
-        if (current != null && !current.equals(focusedTileName(root))) {
-            Log.i(TAG, "Chooser shows " + names + "; photo waits until the current account's tile is selected");
-            return;
+        List<String> due = new ArrayList<>();
+        for (String name : names) {
+            if (ProfileAvatars.isDue(this, name)) due.add(name);
         }
-        // Nor mid-switch: picking a PIN-protected profile from another one shows its tile locked until the switch
-        // is done, so only a profile that's already running (settled, no switch under way) is photographed
-        boolean settled = mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN;
-        if (current != null && (!settled || !current.equals(ProfileUsers.profileName(this, mActiveSerial)))) {
-            Log.i(TAG, "Chooser shows " + names + "; photo waits until " + current + " is the running profile");
-            return;
-        }
-        Map<String, Rect> due = new LinkedHashMap<>();
-        for (int i = 0; i < names.size(); i++) {
-            if (names.get(i).equals(current) && ProfileAvatars.isDue(this, names.get(i))) {
-                due.put(names.get(i), photos.get(i));
+        Log.i(TAG, "Chooser shows " + names + "; photos due: " + due);
+        photographChooserTile();
+    }
+
+    // Profile photos, taken from whichever tile has focus once it's settled (ChooserPhotos says which tiles may be).
+    // The chooser opens on the current account's tile, so the first try is early, before the remote moves focus.
+    private static final long CHOOSER_FIRST_PHOTO_MS = 700;
+    /** After focus lands on a tile: its zoom animation is done. */
+    private static final long PHOTO_FOCUS_SETTLE_MS = 450;
+    /** While a tile still shows Google's placeholder: the real photo may be loading. */
+    private static final long PHOTO_PLACEHOLDER_RETRY_MS = 700;
+    private static final int PHOTO_MAX_SHOTS_PER_VISIT = 10;
+    private final Runnable mChooserPhoto = this::photographChooserTile;
+    private int mChooserPhotoShots;
+    private boolean mChooserPhotoBusy;
+    /** When the chooser came up (elapsed realtime). */
+    private long mChooserVisitAt;
+
+    /** The focused chooser tile, if it's a profile tile. */
+    private static final class FocusedTile {
+        String name;
+        String description;
+        final Rect photo = new Rect();
+    }
+
+    private static FocusedTile focusedTile(AccessibilityNodeInfo root) {
+        AccessibilityNodeInfo focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+        if (focused == null || !TextUtils.equals(LINEAR_LAYOUT, focused.getClassName())) return null;
+        FocusedTile tile = new FocusedTile();
+        boolean image = false;
+        for (int i = 0; i < focused.getChildCount(); i++) {
+            AccessibilityNodeInfo child = focused.getChild(i);
+            if (child == null || child.getClassName() == null) continue;
+            if (TextUtils.equals(TEXT_VIEW, child.getClassName()) && child.getText() != null) {
+                tile.name = child.getText().toString().trim();
+            } else if (!image) {
+                AccessibilityNodeInfo photo = findImage(child, 0);
+                if (photo != null) {
+                    photo.getBoundsInScreen(tile.photo);
+                    image = true;
+                }
             }
         }
-        Log.i(TAG, "Chooser shows " + names + "; photos due: " + due.keySet());
-        PowerManager power = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        if (due.isEmpty() || Build.VERSION.SDK_INT < Build.VERSION_CODES.R
-                || power == null || !power.isInteractive()) {
+        if (tile.name == null || tile.name.isEmpty() || !image
+                || tile.name.toLowerCase(Locale.ROOT).contains("account")) {
+            return null;
+        }
+        CharSequence desc = focused.getContentDescription();
+        tile.description = desc == null ? null : desc.toString();
+        return tile;
+    }
+
+    /** The name on the chooser tile that has focus (null if none): the selected tile. */
+    private static String focusedTileName(AccessibilityNodeInfo root) {
+        FocusedTile tile = focusedTile(root);
+        return tile == null ? null : tile.name;
+    }
+
+    /**
+     * Photographs the focused chooser tile for its profile's photo, when that profile is due one and the tile can't
+     * be showing Google TV's PIN lock (ChooserPhotos). Runs when the chooser opens, when it's read, and whenever
+     * focus settles on a tile, so a quick pass through the chooser still catches the tiles it lingers on.
+     */
+    private void photographChooserTile() {
+        mHandler.removeCallbacks(mChooserPhoto);
+        // Nor once a tile was picked in this visit: the picked tile shows the lock while the switch is under way
+        if (!mChooserOnScreen || mChooserPhotoBusy || mChooserPhotoShots >= PHOTO_MAX_SHOTS_PER_VISIT
+                || mPendingProfileAt >= mChooserVisitAt || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             return;
         }
-        // A moment more first: on a slow TV the chooser draws Google's placeholder initial before the real photo
-        mHandler.postDelayed(() -> {
-        if (!mChooserOnScreen) return;
+        PowerManager power = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        if (power == null || !power.isInteractive()) return;
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null || !TextUtils.equals(GOOGLE_TV_PACKAGE, root.getPackageName())) return;
+        FocusedTile tile = focusedTile(root);
+        if (tile == null || !ProfileAvatars.isDue(this, tile.name)) return;
+        List<String> names = new ArrayList<>();
+        List<String> descriptions = new ArrayList<>();
+        String current = collectChooserTiles(root, names, descriptions, new LinkedHashMap<>(), 0);
+        String currentDesc = current == null ? null : descriptions.get(names.indexOf(current));
+        // Not mid-switch: picking a PIN-protected profile shows its tile locked until the switch is done
+        boolean currentIsOn = current != null && mActiveSerial != ProfileUsers.UNKNOWN
+                && mCandidateSerial == ProfileUsers.UNKNOWN
+                && current.equals(ProfileUsers.profileName(this, mActiveSerial));
+        String whyNot = ChooserPhotos.whyNot(tile.name, tile.description, current, currentDesc, currentIsOn);
+        if (whyNot != null) {
+            Log.i(TAG, "No photo of " + tile.name + " now: " + whyNot);
+            return;
+        }
+        final String name = tile.name;
+        final Rect bounds = new Rect(tile.photo);
+        final long pickedBefore = mPendingProfileAt;
+        mChooserPhotoBusy = true;
+        mChooserPhotoShots++;
         takeScreenshot(Display.DEFAULT_DISPLAY, getMainExecutor(), new TakeScreenshotCallback() {
             @Override
             public void onSuccess(ScreenshotResult result) {
+                mChooserPhotoBusy = false;
                 final HardwareBuffer buffer = result.getHardwareBuffer();
-                // Focus can move while the screenshot is taken: then the tile may already show the lock
+                // Focus can move (or the tile be picked) while the screenshot is taken: then it may show the lock
                 AccessibilityNodeInfo now = getRootInActiveWindow();
-                if (now == null || !TextUtils.equals(current, focusedTileName(now))) {
+                if (!mChooserOnScreen || mPendingProfileAt != pickedBefore || now == null
+                        || !TextUtils.equals(name, focusedTileName(now))) {
                     buffer.close();
-                    Log.i(TAG, "Photo dropped: the selection moved off the current account's tile");
+                    Log.i(TAG, "Photo of " + name + " dropped: the selection moved off its tile");
                     return;
                 }
                 // Cropping and saving off the main thread; the full screenshot is never kept.
@@ -853,43 +923,31 @@ public class LauncherAccessibilityService extends AccessibilityService {
                     if (hardware != null) hardware.recycle();
                     buffer.close();
                     if (screen == null) return;
-                    boolean saved = false;
-                    for (Map.Entry<String, Rect> photo : due.entrySet()) {
-                        int outcome = ProfileAvatars.save(LauncherAccessibilityService.this, photo.getKey(), screen,
-                                photo.getValue());
-                        if (outcome == ProfileAvatars.SAVED) {
-                            Log.i(TAG, "New photo for " + photo.getKey());
-                            saved = true;
-                        } else if (outcome == ProfileAvatars.FAILED) {
-                            Log.i(TAG, "No usable photo for " + photo.getKey());
-                        }
-                    }
+                    int outcome = ProfileAvatars.save(LauncherAccessibilityService.this, name, screen, bounds);
                     screen.recycle();
-                    if (saved) MainActivity.notifyProfileChanged();
+                    if (outcome == ProfileAvatars.SAVED) {
+                        Log.i(TAG, "New photo for " + name);
+                    } else if (outcome == ProfileAvatars.FAILED) {
+                        Log.i(TAG, "No usable photo for " + name);
+                    } else if (outcome == ProfileAvatars.PLACEHOLDER
+                            || outcome == ProfileAvatars.PLACEHOLDER_SAVED) {
+                        Log.i(TAG, "Placeholder on " + name + "'s tile"
+                                + (outcome == ProfileAvatars.PLACEHOLDER_SAVED ? " (kept for now)" : "")
+                                + "; trying again");
+                        mHandler.postDelayed(mChooserPhoto, PHOTO_PLACEHOLDER_RETRY_MS);
+                    }
+                    if (outcome == ProfileAvatars.SAVED || outcome == ProfileAvatars.PLACEHOLDER_SAVED) {
+                        MainActivity.notifyProfileChanged();
+                    }
                 }, "ProfilePhotos").start();
             }
 
             @Override
             public void onFailure(int errorCode) {
+                mChooserPhotoBusy = false;
                 Log.i(TAG, "Profile photo screenshot failed: " + errorCode);
             }
         });
-        }, PHOTO_DELAY_MS);
-    }
-
-    private static final long PHOTO_DELAY_MS = 2_000;
-
-    /** The name on the chooser tile that has focus (null if none): the selected tile. */
-    private static String focusedTileName(AccessibilityNodeInfo node) {
-        AccessibilityNodeInfo focused = node.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
-        if (focused == null) return null;
-        for (int i = 0; i < focused.getChildCount(); i++) {
-            AccessibilityNodeInfo child = focused.getChild(i);
-            if (child != null && TextUtils.equals(TEXT_VIEW, child.getClassName()) && child.getText() != null) {
-                return child.getText().toString().trim();
-            }
-        }
-        return null;
     }
 
     /** The first ImageView in a node's subtree. */
@@ -904,35 +962,31 @@ public class LauncherAccessibilityService extends AccessibilityService {
     }
 
     /**
-     * Adds the chooser's profile tiles to names and photos, and returns the one marked current account (null if
+     * Adds the chooser's profile tiles' names and descriptions, and returns the one marked current account (null if
      * none). A tile is a focusable LinearLayout holding the photo (an ImageView, a few frames down) and the name
      * (TextView), "Add account" aside. The current account's tile says so in its description ("... select to
      * continue with current account"), which names the running profile user without relying on focus.
      */
-    private static String collectChooserTiles(AccessibilityNodeInfo node, List<String> names, List<Rect> photos,
-            Map<String, String> emails, int depth) {
+    private static String collectChooserTiles(AccessibilityNodeInfo node, List<String> names,
+            List<String> descriptions, Map<String, String> emails, int depth) {
         if (node == null || depth > 20) return null;
         if (TextUtils.equals(LINEAR_LAYOUT, node.getClassName()) && node.isFocusable()) {
             String name = null;
-            Rect photo = null;
+            boolean photo = false;
             for (int i = 0; i < node.getChildCount(); i++) {
                 AccessibilityNodeInfo child = node.getChild(i);
                 if (child == null || child.getClassName() == null) continue;
                 if (TextUtils.equals(TEXT_VIEW, child.getClassName()) && child.getText() != null) {
                     name = child.getText().toString().trim();
-                } else if (photo == null) {
-                    AccessibilityNodeInfo image = findImage(child, 0);
-                    if (image != null) {
-                        photo = new Rect();
-                        image.getBoundsInScreen(photo);
-                    }
+                } else if (!photo) {
+                    photo = findImage(child, 0) != null;
                 }
             }
-            if (name != null && !name.isEmpty() && photo != null
+            if (name != null && !name.isEmpty() && photo
                     && !name.toLowerCase(Locale.ROOT).contains("account")) {
-                names.add(name);
-                photos.add(photo);
                 CharSequence desc = node.getContentDescription();
+                names.add(name);
+                descriptions.add(desc == null ? null : desc.toString());
                 String email = GoogleTvAccount.emailIn(desc);
                 if (email != null) emails.put(name, email);
                 if (desc != null && desc.toString().toLowerCase(Locale.ROOT).contains("current account")) return name;
@@ -941,7 +995,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         String current = null;
         for (int i = 0; i < node.getChildCount(); i++) {
-            String found = collectChooserTiles(node.getChild(i), names, photos, emails, depth + 1);
+            String found = collectChooserTiles(node.getChild(i), names, descriptions, emails, depth + 1);
             if (found != null) current = found;
         }
         return current;
@@ -1076,7 +1130,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (wasOnScreen != mChooserOnScreen) {
             Log.i(TAG, "chooser " + (mChooserOnScreen ? "open" : "closed") + " (" + packageName
                     + "/" + className + ")");
-            if (!mChooserOnScreen) checkProfileUser("chooser closed");
+            if (mChooserOnScreen) {
+                mChooserPhotoShots = 0;
+                mChooserVisitAt = SystemClock.elapsedRealtime();
+            } else {
+                mHandler.removeCallbacks(mChooserPhoto);
+                checkProfileUser("chooser closed");
+            }
         }
 
         if (isGoogleTv) {
@@ -1212,6 +1272,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (isChooser(className)) {
             mHandler.removeCallbacks(mReadChooser);
             mHandler.postDelayed(mReadChooser, CHOOSER_READ_DELAY_MS);
+            mHandler.removeCallbacks(mChooserPhoto);
+            mHandler.postDelayed(mChooserPhoto, CHOOSER_FIRST_PHOTO_MS);
             checkProfileUser("chooser opened");
             mChooserGoneChecks = 0;
             mHandler.removeCallbacks(mChooserGoneCheck);
@@ -1369,9 +1431,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
             if (mChooserOnScreen) {
                 mLastChooserFocus = label;
                 mLastChooserFocusAt = now;
+                // Its photo, if it's due one, once the tile has finished growing
+                mHandler.removeCallbacks(mChooserPhoto);
+                mHandler.postDelayed(mChooserPhoto, PHOTO_FOCUS_SETTLE_MS);
             }
         } else if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED && mChooserOnScreen) {
             // Only clicks in the chooser: Google TV's other screens (its keyboard, menus) click LinearLayouts too.
+            mHandler.removeCallbacks(mChooserPhoto);
             Log.i(TAG, "Picked " + label);
             mPendingProfile = label;
             mPendingProfileAt = now;
