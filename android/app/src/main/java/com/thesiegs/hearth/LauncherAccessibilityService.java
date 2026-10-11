@@ -1115,6 +1115,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
         String className = cls.toString();
         boolean isGoogleTv = GOOGLE_TV_PACKAGE.equals(packageName);
         boolean isHearth = packageName.equals(getPackageName());
+        // Hearth's own welcome card over Google TV's kids home (an overlay, not an activity): Google's home is still
+        // what's in front under it, and the takeover after the grace must still see that
+        if (isHearth && KidsHomeCover.isShowing() && !className.endsWith("Activity")) return;
         boolean isApp = !isHearth && isLaunchableApp(packageName);
         mLastWindowPackage = packageName;
         // Not the keyboard, a system pop-up or the assistant's bar: those come up over the app that's still in use
