@@ -67,22 +67,51 @@ class HaMdSpan {
   final bool italic;
   final String? icon;
 
-  const HaMdSpan(this.text, {this.bold = false, this.italic = false}) : icon = null;
+  /// An image's address (https only), and the size its tag asks for, if any.
+  final String? image;
+  final double? width;
+  final double? height;
+
+  const HaMdSpan(this.text, {this.bold = false, this.italic = false})
+      : icon = null,
+        image = null,
+        width = null,
+        height = null;
 
   const HaMdSpan.icon(String this.icon)
       : text = "",
         bold = false,
-        italic = false;
+        italic = false,
+        image = null,
+        width = null,
+        height = null;
+
+  const HaMdSpan.image(String this.image, {this.width, this.height})
+      : text = "",
+        bold = false,
+        italic = false,
+        icon = null;
 
   @override
   bool operator ==(Object other) =>
-      other is HaMdSpan && other.text == text && other.bold == bold && other.italic == italic && other.icon == icon;
+      other is HaMdSpan &&
+      other.text == text &&
+      other.bold == bold &&
+      other.italic == italic &&
+      other.icon == icon &&
+      other.image == image &&
+      other.width == width &&
+      other.height == height;
 
   @override
-  int get hashCode => Object.hash(text, bold, italic, icon);
+  int get hashCode => Object.hash(text, bold, italic, icon, image, width, height);
 
   @override
-  String toString() => icon != null ? "[$icon]" : "${bold ? "**" : ""}${italic ? "_" : ""}$text";
+  String toString() => icon != null
+      ? "[$icon]"
+      : image != null
+          ? "<$image ${width}x$height>"
+          : "${bold ? "**" : ""}${italic ? "_" : ""}$text";
 }
 
 /// The markdown Home Assistant's cards use most, read simply: headings, bullets, tables, **bold** and *italic*.
@@ -173,22 +202,46 @@ class HaMarkdown {
   /// Marks an icon in a line between parsing and drawing: [_iconStart] name [_iconEnd].
   static const String _iconStart = "", _iconEnd = "";
 
-  /// HTML tags go, their text stays; `<ha-icon icon="...">` becomes an icon mark.
+  /// In an icon mark, an image: "img:" address, width and height, apart.
+  static const String _imagePrefix = "img:", _imageApart = "";
+
+  /// HTML tags go, their text stays; `<ha-icon icon="...">` becomes an icon mark and `<img src="https://...">` an
+  /// image mark (an image from anywhere but https is left out).
   static String _stripHtml(String line) => line
       .replaceAllMapped(
           RegExp(r"""<ha-icon\b[^>]*\bicon\s*=\s*["']([^"']+)["'][^>]*>(\s*</ha-icon>)?""", caseSensitive: false),
           (m) => "$_iconStart${m.group(1)}$_iconEnd")
+      .replaceAllMapped(RegExp(r"<img\b([^>]*)/?>", caseSensitive: false), (m) {
+        final attributes = _attributes(m.group(1)!);
+        final src = attributes["src"]?.trim() ?? "";
+        if (!src.toLowerCase().startsWith("https://")) return "";
+        return "$_iconStart$_imagePrefix$src$_imageApart${attributes["width"] ?? ""}$_imageApart"
+            "${attributes["height"] ?? ""}$_iconEnd";
+      })
       .replaceAll(RegExp(r"<br\s*/?>", caseSensitive: false), " ")
       .replaceAll(RegExp(r"</?[a-zA-Z][^>]*>"), "");
 
-  /// A line's pieces: icons, **bold** and *italic* (or _italic_) text.
+  /// A tag's attributes: name="value", name='value' or name=value, by lower-case name.
+  static Map<String, String> _attributes(String tag) => {
+        for (final m in RegExp(r"""([A-Za-z_:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))""").allMatches(tag))
+          m.group(1)!.toLowerCase(): m.group(2) ?? m.group(3) ?? m.group(4)?.replaceFirst(RegExp(r"/$"), "") ?? ""
+      };
+
+  /// A line's pieces: icons, images, **bold** and *italic* (or _italic_) text.
   static List<HaMdSpan> inline(String text) {
     final out = <HaMdSpan>[];
     final icons = RegExp("$_iconStart([^$_iconEnd]*)$_iconEnd");
     var from = 0;
     for (final m in icons.allMatches(text)) {
       if (m.start > from) out.addAll(_styled(text.substring(from, m.start)));
-      out.add(HaMdSpan.icon(m.group(1)!));
+      final mark = m.group(1)!;
+      if (mark.startsWith(_imagePrefix)) {
+        final parts = mark.substring(_imagePrefix.length).split(_imageApart);
+        double? size(int i) => i < parts.length ? double.tryParse(parts[i].replaceAll("px", "").trim()) : null;
+        out.add(HaMdSpan.image(parts[0], width: size(1), height: size(2)));
+      } else {
+        out.add(HaMdSpan.icon(mark));
+      }
       from = m.end;
     }
     if (from < text.length) out.addAll(_styled(text.substring(from)));
@@ -255,7 +308,12 @@ class HaMarkdownView extends StatelessWidget {
   /// [text]'s pieces drawn: styled text, and icons the size of the text.
   static List<InlineSpan> spans(String text, TextStyle style) => [
         for (final s in HaMarkdown.inline(text))
-          if (s.icon != null)
+          if (s.image != null)
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Padding(padding: const EdgeInsets.only(right: 2), child: HaInlineImage(s, style)),
+            )
+          else if (s.icon != null)
             WidgetSpan(
               alignment: PlaceholderAlignment.middle,
               child: Padding(
@@ -295,4 +353,42 @@ class HaMarkdownView extends StatelessWidget {
 
   static Widget _cellText(String text, TextStyle style, TextAlign align) =>
       Text.rich(TextSpan(children: spans(text, style)), textAlign: align);
+}
+
+/// An image in a line of text (an app's icon): as tall as the line at most, its own size if smaller, from the
+/// network (kept in Flutter's image cache); the generic app icon when it can't be had.
+class HaInlineImage extends StatelessWidget {
+  final HaMdSpan span;
+  final TextStyle style;
+
+  const HaInlineImage(this.span, this.style, {super.key});
+
+  /// The size it's drawn at: its tag's size, made smaller to fit the line's height (keeping its shape).
+  static Size sizeFor(HaMdSpan span, double lineHeight) {
+    final w = span.width, h = span.height;
+    if (w != null && h != null && w > 0 && h > 0) {
+      final scale = h > lineHeight ? lineHeight / h : 1.0;
+      return Size(w * scale, h * scale);
+    }
+    final side = (w ?? h ?? lineHeight).clamp(1.0, lineHeight).toDouble();
+    return Size(side, side);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final line = (style.fontSize ?? 14) * 1.3;
+    final size = sizeFor(span, line);
+    return SizedBox(
+      width: size.width,
+      height: size.height,
+      child: Image.network(
+        span.image!,
+        width: size.width,
+        height: size.height,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (_, __, ___) => Icon(Icons.apps, size: size.height, color: style.color),
+      ),
+    );
+  }
 }

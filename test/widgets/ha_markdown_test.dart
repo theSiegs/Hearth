@@ -87,6 +87,50 @@ Second line<br>
     expect(HaMarkdown.inline(lines[2]), const [HaMdSpan.icon("mdi:something-new"), HaMdSpan(" Other — 5 min")]);
   });
 
+  test("Images: https only, with the size their tag gives", () {
+    final line = (HaMarkdown.parse(
+                "<img src=\"https://lh3.googleusercontent.com/app=s64\" width=\"20\" height='20'> YouTube — 1 h  \n"
+                "<img width=32px src=https://example.com/a.png> A  \n"
+                "<img src=\"http://example.com/b.png\"> B  \n"
+                "<img src=\"/local/c.png\"><ha-icon icon=\"mdi:youtube\"></ha-icon> C")
+            .single as HaMdParagraph)
+        .text
+        .split("\n");
+    expect(HaMarkdown.inline(line[0]), const [
+      HaMdSpan.image("https://lh3.googleusercontent.com/app=s64", width: 20, height: 20),
+      HaMdSpan(" YouTube — 1 h"),
+    ]);
+    expect(HaMarkdown.inline(line[1]), const [HaMdSpan.image("https://example.com/a.png", width: 32), HaMdSpan(" A")]);
+    // Not https: left out, quietly
+    expect(HaMarkdown.inline(line[2]), const [HaMdSpan("B")]);
+    expect(HaMarkdown.inline(line[3]), const [HaMdSpan.icon("mdi:youtube"), HaMdSpan(" C")]);
+  });
+
+  test("An image is as tall as the line at most, keeping its shape", () {
+    expect(HaInlineImage.sizeFor(const HaMdSpan.image("https://x", width: 64, height: 64), 20), const Size(20, 20));
+    expect(HaInlineImage.sizeFor(const HaMdSpan.image("https://x", width: 40, height: 20), 10), const Size(20, 10));
+    expect(HaInlineImage.sizeFor(const HaMdSpan.image("https://x", width: 12, height: 12), 20), const Size(12, 12));
+    expect(HaInlineImage.sizeFor(const HaMdSpan.image("https://x", width: 64), 20), const Size(20, 20));
+    expect(HaInlineImage.sizeFor(const HaMdSpan.image("https://x"), 20), const Size(20, 20));
+  });
+
+  testWidgets("An image that can't be had: the app icon in its place", (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: SizedBox(
+          width: 320,
+          child: HaMarkdownView("<img src=\"https://example.invalid/icon.png\" width=\"64\" height=\"64\"> YouTube  "),
+        ),
+      ),
+    ));
+    final image = tester.widget<Image>(find.byType(Image));
+    expect((image.image as NetworkImage).url, "https://example.invalid/icon.png");
+    expect(image.height, lessThanOrEqualTo(14 * 1.3 + 0.01));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+    expect(find.byIcon(Icons.apps), findsOneWidget);
+  });
+
   test("An empty day, and every heading level", () {
     final blocks = HaMarkdown.parse("# Sam · 0 min\n### Today\nNo app use yet today.");
     expect((blocks[0] as HaMdHeading).level, 1);
