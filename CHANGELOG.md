@@ -3,6 +3,11 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.41 (pre-release)
+
+- The top bar's pills (profile name, data, weather, date and time) share one look: the same height and darkness. The weather pill shows just the current conditions (warnings like "Rain tomorrow" are off by default, under Status bar settings).
+- Settings: Applications is now under Home screen.
+
 ## 2026.10.40 (pre-release)
 
 - Fixed: switching to a grown-up's profile could leave Google TV's home up (after an account check, Hearth took a tab on Google TV's home for a new profile).
