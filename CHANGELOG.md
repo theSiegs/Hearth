@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.40 (pre-release)
+
+- Fixed: switching to a grown-up's profile could leave Google TV's home up (after an account check, Hearth took a tab on Google TV's home for a new profile).
+
 ## 2026.10.39 (pre-release)
 
 - Home Assistant settings: a text field only becomes editable after pressing OK on it, so moving through the page never opens the keyboard.
