@@ -2717,4 +2717,94 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get dataUsageEthernetNotCounted => 'Android no cuenta los datos por Ethernet';
+
+  @override
+  String get haNativeNotSetUp => 'El panel de Home Assistant no está configurado';
+
+  @override
+  String haNativeNotSetUpDetail(String place) {
+    return 'Añada la dirección de Home Assistant y un token de acceso en $place.';
+  }
+
+  @override
+  String get haNativeUnreachable => 'No se puede conectar con Home Assistant';
+
+  @override
+  String get haNativeLoading => 'Cargando el panel…';
+
+  @override
+  String get haNativeEmpty => 'No hay nada en este panel que se pueda mostrar aquí';
+
+  @override
+  String get haTimeNow => 'ahora';
+
+  @override
+  String haTimeIn(String span) {
+    return 'en $span';
+  }
+
+  @override
+  String haTimeAgo(String span) {
+    return 'hace $span';
+  }
+
+  @override
+  String haSpanMinutes(int count) {
+    return '$count min';
+  }
+
+  @override
+  String haSpanHours(int count) {
+    return '$count h';
+  }
+
+  @override
+  String haSpanDays(int count) {
+    return '$count d';
+  }
+
+  @override
+  String get haControlLower => 'Bajar';
+
+  @override
+  String get haControlRaise => 'Subir';
+
+  @override
+  String get haControlLow => 'Mínima';
+
+  @override
+  String get haControlHigh => 'Máxima';
+
+  @override
+  String get haControlVolume => 'Volumen';
+
+  @override
+  String get haControlBrightness => 'Brillo';
+
+  @override
+  String get haControlPrevious => 'Anterior';
+
+  @override
+  String get haControlPlay => 'Reproducir';
+
+  @override
+  String get haControlPause => 'Pausa';
+
+  @override
+  String get haControlStop => 'Detener';
+
+  @override
+  String get haControlNext => 'Siguiente';
+
+  @override
+  String get haControlTurnOn => 'Encender';
+
+  @override
+  String get haNativeOpenFullDashboard => 'Abrir el panel completo';
+
+  @override
+  String get haPanelFullDashboard => 'Mostrar el panel completo en su lugar';
+
+  @override
+  String get haPanelFullDashboardDetail => 'La propia página de Home Assistant. El mando no llega a sus controles.';
 }

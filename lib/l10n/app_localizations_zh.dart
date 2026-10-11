@@ -2705,4 +2705,94 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dataUsageEthernetNotCounted => 'Android 不统计以太网流量';
+
+  @override
+  String get haNativeNotSetUp => '尚未设置 Home Assistant 面板';
+
+  @override
+  String haNativeNotSetUpDetail(String place) {
+    return '请在“$place”中添加 Home Assistant 地址和访问令牌。';
+  }
+
+  @override
+  String get haNativeUnreachable => '无法连接 Home Assistant';
+
+  @override
+  String get haNativeLoading => '正在加载仪表板…';
+
+  @override
+  String get haNativeEmpty => '此仪表板中没有可在此显示的内容';
+
+  @override
+  String get haTimeNow => '现在';
+
+  @override
+  String haTimeIn(String span) {
+    return '$span后';
+  }
+
+  @override
+  String haTimeAgo(String span) {
+    return '$span前';
+  }
+
+  @override
+  String haSpanMinutes(int count) {
+    return '$count分钟';
+  }
+
+  @override
+  String haSpanHours(int count) {
+    return '$count小时';
+  }
+
+  @override
+  String haSpanDays(int count) {
+    return '$count天';
+  }
+
+  @override
+  String get haControlLower => '调低';
+
+  @override
+  String get haControlRaise => '调高';
+
+  @override
+  String get haControlLow => '下限';
+
+  @override
+  String get haControlHigh => '上限';
+
+  @override
+  String get haControlVolume => '音量';
+
+  @override
+  String get haControlBrightness => '亮度';
+
+  @override
+  String get haControlPrevious => '上一首';
+
+  @override
+  String get haControlPlay => '播放';
+
+  @override
+  String get haControlPause => '暂停';
+
+  @override
+  String get haControlStop => '停止';
+
+  @override
+  String get haControlNext => '下一首';
+
+  @override
+  String get haControlTurnOn => '打开';
+
+  @override
+  String get haNativeOpenFullDashboard => '打开完整仪表板';
+
+  @override
+  String get haPanelFullDashboard => '改为显示完整仪表板';
+
+  @override
+  String get haPanelFullDashboardDetail => 'Home Assistant 自己的页面。遥控器无法操作其中的控件。';
 }

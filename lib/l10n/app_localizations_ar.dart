@@ -2753,4 +2753,94 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get dataUsageEthernetNotCounted => 'لا يحسب Android البيانات عبر الإيثرنت';
+
+  @override
+  String get haNativeNotSetUp => 'لم يتم إعداد لوحة Home Assistant';
+
+  @override
+  String haNativeNotSetUpDetail(String place) {
+    return 'أضِف عنوان Home Assistant ورمز وصول في $place.';
+  }
+
+  @override
+  String get haNativeUnreachable => 'تعذّر الوصول إلى Home Assistant';
+
+  @override
+  String get haNativeLoading => 'جارٍ تحميل لوحة المعلومات…';
+
+  @override
+  String get haNativeEmpty => 'لا يوجد في لوحة المعلومات هذه ما يمكن عرضه هنا';
+
+  @override
+  String get haTimeNow => 'الآن';
+
+  @override
+  String haTimeIn(String span) {
+    return 'خلال $span';
+  }
+
+  @override
+  String haTimeAgo(String span) {
+    return 'منذ $span';
+  }
+
+  @override
+  String haSpanMinutes(int count) {
+    return '$count د';
+  }
+
+  @override
+  String haSpanHours(int count) {
+    return '$count س';
+  }
+
+  @override
+  String haSpanDays(int count) {
+    return '$count ي';
+  }
+
+  @override
+  String get haControlLower => 'خفض';
+
+  @override
+  String get haControlRaise => 'رفع';
+
+  @override
+  String get haControlLow => 'الأدنى';
+
+  @override
+  String get haControlHigh => 'الأعلى';
+
+  @override
+  String get haControlVolume => 'مستوى الصوت';
+
+  @override
+  String get haControlBrightness => 'السطوع';
+
+  @override
+  String get haControlPrevious => 'السابق';
+
+  @override
+  String get haControlPlay => 'تشغيل';
+
+  @override
+  String get haControlPause => 'إيقاف مؤقت';
+
+  @override
+  String get haControlStop => 'إيقاف';
+
+  @override
+  String get haControlNext => 'التالي';
+
+  @override
+  String get haControlTurnOn => 'تشغيل الجهاز';
+
+  @override
+  String get haNativeOpenFullDashboard => 'فتح لوحة المعلومات الكاملة';
+
+  @override
+  String get haPanelFullDashboard => 'عرض لوحة المعلومات الكاملة بدلاً من ذلك';
+
+  @override
+  String get haPanelFullDashboardDetail => 'صفحة Home Assistant نفسها. لا يمكن لجهاز التحكم الوصول إلى عناصر التحكم فيها.';
 }

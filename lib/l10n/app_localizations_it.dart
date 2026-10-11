@@ -2717,4 +2717,94 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get dataUsageEthernetNotCounted => 'Android non conta i dati via Ethernet';
+
+  @override
+  String get haNativeNotSetUp => 'Il pannello di Home Assistant non è configurato';
+
+  @override
+  String haNativeNotSetUpDetail(String place) {
+    return 'Aggiungi l\'indirizzo di Home Assistant e un token di accesso in $place.';
+  }
+
+  @override
+  String get haNativeUnreachable => 'Impossibile raggiungere Home Assistant';
+
+  @override
+  String get haNativeLoading => 'Caricamento della dashboard…';
+
+  @override
+  String get haNativeEmpty => 'Niente di questa dashboard può essere mostrato qui';
+
+  @override
+  String get haTimeNow => 'ora';
+
+  @override
+  String haTimeIn(String span) {
+    return 'tra $span';
+  }
+
+  @override
+  String haTimeAgo(String span) {
+    return '$span fa';
+  }
+
+  @override
+  String haSpanMinutes(int count) {
+    return '$count min';
+  }
+
+  @override
+  String haSpanHours(int count) {
+    return '$count h';
+  }
+
+  @override
+  String haSpanDays(int count) {
+    return '$count g';
+  }
+
+  @override
+  String get haControlLower => 'Abbassa';
+
+  @override
+  String get haControlRaise => 'Alza';
+
+  @override
+  String get haControlLow => 'Minima';
+
+  @override
+  String get haControlHigh => 'Massima';
+
+  @override
+  String get haControlVolume => 'Volume';
+
+  @override
+  String get haControlBrightness => 'Luminosità';
+
+  @override
+  String get haControlPrevious => 'Precedente';
+
+  @override
+  String get haControlPlay => 'Riproduci';
+
+  @override
+  String get haControlPause => 'Pausa';
+
+  @override
+  String get haControlStop => 'Stop';
+
+  @override
+  String get haControlNext => 'Successivo';
+
+  @override
+  String get haControlTurnOn => 'Accendi';
+
+  @override
+  String get haNativeOpenFullDashboard => 'Apri la dashboard completa';
+
+  @override
+  String get haPanelFullDashboard => 'Mostra invece la dashboard completa';
+
+  @override
+  String get haPanelFullDashboardDetail => 'La pagina di Home Assistant. Il telecomando non raggiunge i suoi controlli.';
 }

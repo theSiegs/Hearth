@@ -2732,4 +2732,94 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get dataUsageEthernetNotCounted => 'Android не враховує трафік через Ethernet';
+
+  @override
+  String get haNativeNotSetUp => 'Панель Home Assistant не налаштована';
+
+  @override
+  String haNativeNotSetUpDetail(String place) {
+    return 'Додайте адресу Home Assistant і токен доступу в розділі $place.';
+  }
+
+  @override
+  String get haNativeUnreachable => 'Не вдається під\'єднатися до Home Assistant';
+
+  @override
+  String get haNativeLoading => 'Завантаження панелі…';
+
+  @override
+  String get haNativeEmpty => 'На цій панелі немає нічого, що можна показати тут';
+
+  @override
+  String get haTimeNow => 'зараз';
+
+  @override
+  String haTimeIn(String span) {
+    return 'через $span';
+  }
+
+  @override
+  String haTimeAgo(String span) {
+    return '$span тому';
+  }
+
+  @override
+  String haSpanMinutes(int count) {
+    return '$count хв';
+  }
+
+  @override
+  String haSpanHours(int count) {
+    return '$count год';
+  }
+
+  @override
+  String haSpanDays(int count) {
+    return '$count д';
+  }
+
+  @override
+  String get haControlLower => 'Знизити';
+
+  @override
+  String get haControlRaise => 'Підвищити';
+
+  @override
+  String get haControlLow => 'Нижня';
+
+  @override
+  String get haControlHigh => 'Верхня';
+
+  @override
+  String get haControlVolume => 'Гучність';
+
+  @override
+  String get haControlBrightness => 'Яскравість';
+
+  @override
+  String get haControlPrevious => 'Назад';
+
+  @override
+  String get haControlPlay => 'Відтворити';
+
+  @override
+  String get haControlPause => 'Пауза';
+
+  @override
+  String get haControlStop => 'Зупинити';
+
+  @override
+  String get haControlNext => 'Далі';
+
+  @override
+  String get haControlTurnOn => 'Увімкнути';
+
+  @override
+  String get haNativeOpenFullDashboard => 'Відкрити всю панель';
+
+  @override
+  String get haPanelFullDashboard => 'Показувати всю панель натомість';
+
+  @override
+  String get haPanelFullDashboardDetail => 'Власна сторінка Home Assistant. Пульт не може дістатися її елементів керування.';
 }

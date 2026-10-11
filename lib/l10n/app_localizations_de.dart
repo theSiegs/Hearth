@@ -2715,4 +2715,94 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get dataUsageEthernetNotCounted => 'Android zählt keine Daten über Ethernet';
+
+  @override
+  String get haNativeNotSetUp => 'Home Assistant-Bereich ist nicht eingerichtet';
+
+  @override
+  String haNativeNotSetUpDetail(String place) {
+    return 'Fügen Sie die Home Assistant-Adresse und ein Zugriffstoken unter $place hinzu.';
+  }
+
+  @override
+  String get haNativeUnreachable => 'Home Assistant ist nicht erreichbar';
+
+  @override
+  String get haNativeLoading => 'Dashboard wird geladen…';
+
+  @override
+  String get haNativeEmpty => 'Auf diesem Dashboard gibt es nichts, das hier angezeigt werden kann';
+
+  @override
+  String get haTimeNow => 'jetzt';
+
+  @override
+  String haTimeIn(String span) {
+    return 'in $span';
+  }
+
+  @override
+  String haTimeAgo(String span) {
+    return 'vor $span';
+  }
+
+  @override
+  String haSpanMinutes(int count) {
+    return '$count Min.';
+  }
+
+  @override
+  String haSpanHours(int count) {
+    return '$count Std.';
+  }
+
+  @override
+  String haSpanDays(int count) {
+    return '$count T.';
+  }
+
+  @override
+  String get haControlLower => 'Senken';
+
+  @override
+  String get haControlRaise => 'Erhöhen';
+
+  @override
+  String get haControlLow => 'Unten';
+
+  @override
+  String get haControlHigh => 'Oben';
+
+  @override
+  String get haControlVolume => 'Lautstärke';
+
+  @override
+  String get haControlBrightness => 'Helligkeit';
+
+  @override
+  String get haControlPrevious => 'Zurück';
+
+  @override
+  String get haControlPlay => 'Wiedergabe';
+
+  @override
+  String get haControlPause => 'Pause';
+
+  @override
+  String get haControlStop => 'Stopp';
+
+  @override
+  String get haControlNext => 'Weiter';
+
+  @override
+  String get haControlTurnOn => 'Einschalten';
+
+  @override
+  String get haNativeOpenFullDashboard => 'Vollständiges Dashboard öffnen';
+
+  @override
+  String get haPanelFullDashboard => 'Stattdessen das vollständige Dashboard zeigen';
+
+  @override
+  String get haPanelFullDashboardDetail => 'Die Seite von Home Assistant selbst. Ihre Bedienelemente sind mit der Fernbedienung nicht erreichbar.';
 }

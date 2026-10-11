@@ -2705,4 +2705,94 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get dataUsageEthernetNotCounted => 'Android はイーサネットのデータ量を数えません';
+
+  @override
+  String get haNativeNotSetUp => 'Home Assistant パネルが設定されていません';
+
+  @override
+  String haNativeNotSetUpDetail(String place) {
+    return '$place で、Home Assistant のアドレスとアクセストークンを追加してください。';
+  }
+
+  @override
+  String get haNativeUnreachable => 'Home Assistant に接続できません';
+
+  @override
+  String get haNativeLoading => 'ダッシュボードを読み込んでいます…';
+
+  @override
+  String get haNativeEmpty => 'このダッシュボードにはここに表示できるものがありません';
+
+  @override
+  String get haTimeNow => '今';
+
+  @override
+  String haTimeIn(String span) {
+    return '$span後';
+  }
+
+  @override
+  String haTimeAgo(String span) {
+    return '$span前';
+  }
+
+  @override
+  String haSpanMinutes(int count) {
+    return '$count分';
+  }
+
+  @override
+  String haSpanHours(int count) {
+    return '$count時間';
+  }
+
+  @override
+  String haSpanDays(int count) {
+    return '$count日';
+  }
+
+  @override
+  String get haControlLower => '下げる';
+
+  @override
+  String get haControlRaise => '上げる';
+
+  @override
+  String get haControlLow => '下限';
+
+  @override
+  String get haControlHigh => '上限';
+
+  @override
+  String get haControlVolume => '音量';
+
+  @override
+  String get haControlBrightness => '明るさ';
+
+  @override
+  String get haControlPrevious => '前へ';
+
+  @override
+  String get haControlPlay => '再生';
+
+  @override
+  String get haControlPause => '一時停止';
+
+  @override
+  String get haControlStop => '停止';
+
+  @override
+  String get haControlNext => '次へ';
+
+  @override
+  String get haControlTurnOn => '電源を入れる';
+
+  @override
+  String get haNativeOpenFullDashboard => 'ダッシュボード全体を開く';
+
+  @override
+  String get haPanelFullDashboard => '代わりにダッシュボード全体を表示';
+
+  @override
+  String get haPanelFullDashboardDetail => 'Home Assistant 本来のページです。リモコンではその操作部分を選べません。';
 }

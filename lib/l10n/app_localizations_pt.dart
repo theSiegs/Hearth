@@ -2717,4 +2717,94 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get dataUsageEthernetNotCounted => 'O Android não conta dados por Ethernet';
+
+  @override
+  String get haNativeNotSetUp => 'O painel do Home Assistant não está configurado';
+
+  @override
+  String haNativeNotSetUpDetail(String place) {
+    return 'Adicione o endereço do Home Assistant e um token de acesso em $place.';
+  }
+
+  @override
+  String get haNativeUnreachable => 'Não foi possível acessar o Home Assistant';
+
+  @override
+  String get haNativeLoading => 'Carregando o painel…';
+
+  @override
+  String get haNativeEmpty => 'Nada neste painel pode ser mostrado aqui';
+
+  @override
+  String get haTimeNow => 'agora';
+
+  @override
+  String haTimeIn(String span) {
+    return 'em $span';
+  }
+
+  @override
+  String haTimeAgo(String span) {
+    return 'há $span';
+  }
+
+  @override
+  String haSpanMinutes(int count) {
+    return '$count min';
+  }
+
+  @override
+  String haSpanHours(int count) {
+    return '$count h';
+  }
+
+  @override
+  String haSpanDays(int count) {
+    return '$count d';
+  }
+
+  @override
+  String get haControlLower => 'Diminuir';
+
+  @override
+  String get haControlRaise => 'Aumentar';
+
+  @override
+  String get haControlLow => 'Mínima';
+
+  @override
+  String get haControlHigh => 'Máxima';
+
+  @override
+  String get haControlVolume => 'Volume';
+
+  @override
+  String get haControlBrightness => 'Brilho';
+
+  @override
+  String get haControlPrevious => 'Anterior';
+
+  @override
+  String get haControlPlay => 'Reproduzir';
+
+  @override
+  String get haControlPause => 'Pausar';
+
+  @override
+  String get haControlStop => 'Parar';
+
+  @override
+  String get haControlNext => 'Próxima';
+
+  @override
+  String get haControlTurnOn => 'Ligar';
+
+  @override
+  String get haNativeOpenFullDashboard => 'Abrir o painel completo';
+
+  @override
+  String get haPanelFullDashboard => 'Mostrar o painel completo';
+
+  @override
+  String get haPanelFullDashboardDetail => 'A própria página do Home Assistant. O controle remoto não alcança seus controles.';
 }

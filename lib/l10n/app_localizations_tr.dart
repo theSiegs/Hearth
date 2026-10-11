@@ -2706,4 +2706,94 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get dataUsageEthernetNotCounted => 'Android, Ethernet üzerinden kullanılan veriyi saymaz';
+
+  @override
+  String get haNativeNotSetUp => 'Home Assistant paneli kurulmadı';
+
+  @override
+  String haNativeNotSetUpDetail(String place) {
+    return '$place bölümünden Home Assistant adresini ve bir erişim jetonunu ekleyin.';
+  }
+
+  @override
+  String get haNativeUnreachable => 'Home Assistant\'a ulaşılamıyor';
+
+  @override
+  String get haNativeLoading => 'Pano yükleniyor…';
+
+  @override
+  String get haNativeEmpty => 'Bu panoda burada gösterilebilecek bir şey yok';
+
+  @override
+  String get haTimeNow => 'şimdi';
+
+  @override
+  String haTimeIn(String span) {
+    return '$span içinde';
+  }
+
+  @override
+  String haTimeAgo(String span) {
+    return '$span önce';
+  }
+
+  @override
+  String haSpanMinutes(int count) {
+    return '$count dk';
+  }
+
+  @override
+  String haSpanHours(int count) {
+    return '$count sa';
+  }
+
+  @override
+  String haSpanDays(int count) {
+    return '$count g';
+  }
+
+  @override
+  String get haControlLower => 'Düşür';
+
+  @override
+  String get haControlRaise => 'Yükselt';
+
+  @override
+  String get haControlLow => 'Alt';
+
+  @override
+  String get haControlHigh => 'Üst';
+
+  @override
+  String get haControlVolume => 'Ses düzeyi';
+
+  @override
+  String get haControlBrightness => 'Parlaklık';
+
+  @override
+  String get haControlPrevious => 'Önceki';
+
+  @override
+  String get haControlPlay => 'Oynat';
+
+  @override
+  String get haControlPause => 'Duraklat';
+
+  @override
+  String get haControlStop => 'Durdur';
+
+  @override
+  String get haControlNext => 'Sonraki';
+
+  @override
+  String get haControlTurnOn => 'Aç';
+
+  @override
+  String get haNativeOpenFullDashboard => 'Panonun tamamını aç';
+
+  @override
+  String get haPanelFullDashboard => 'Bunun yerine panonun tamamını göster';
+
+  @override
+  String get haPanelFullDashboardDetail => 'Home Assistant\'ın kendi sayfası. Kumanda denetimlerine ulaşamaz.';
 }

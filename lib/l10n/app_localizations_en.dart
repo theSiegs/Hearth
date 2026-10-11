@@ -2717,4 +2717,94 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dataUsageEthernetNotCounted => 'Android doesn\'t count data over Ethernet';
+
+  @override
+  String get haNativeNotSetUp => 'Home Assistant panel isn\'t set up';
+
+  @override
+  String haNativeNotSetUpDetail(String place) {
+    return 'Add the Home Assistant address and an access token in $place.';
+  }
+
+  @override
+  String get haNativeUnreachable => 'Can\'t reach Home Assistant';
+
+  @override
+  String get haNativeLoading => 'Loading the dashboard…';
+
+  @override
+  String get haNativeEmpty => 'Nothing on this dashboard can be shown here';
+
+  @override
+  String get haTimeNow => 'now';
+
+  @override
+  String haTimeIn(String span) {
+    return 'in $span';
+  }
+
+  @override
+  String haTimeAgo(String span) {
+    return '$span ago';
+  }
+
+  @override
+  String haSpanMinutes(int count) {
+    return '$count min';
+  }
+
+  @override
+  String haSpanHours(int count) {
+    return '$count h';
+  }
+
+  @override
+  String haSpanDays(int count) {
+    return '$count d';
+  }
+
+  @override
+  String get haControlLower => 'Lower';
+
+  @override
+  String get haControlRaise => 'Raise';
+
+  @override
+  String get haControlLow => 'Low';
+
+  @override
+  String get haControlHigh => 'High';
+
+  @override
+  String get haControlVolume => 'Volume';
+
+  @override
+  String get haControlBrightness => 'Brightness';
+
+  @override
+  String get haControlPrevious => 'Previous';
+
+  @override
+  String get haControlPlay => 'Play';
+
+  @override
+  String get haControlPause => 'Pause';
+
+  @override
+  String get haControlStop => 'Stop';
+
+  @override
+  String get haControlNext => 'Next';
+
+  @override
+  String get haControlTurnOn => 'Turn on';
+
+  @override
+  String get haNativeOpenFullDashboard => 'Open the full dashboard';
+
+  @override
+  String get haPanelFullDashboard => 'Show the full dashboard instead';
+
+  @override
+  String get haPanelFullDashboardDetail => 'Home Assistant\'s own page. The remote can\'t reach its controls.';
 }

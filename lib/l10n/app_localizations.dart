@@ -4846,6 +4846,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Android doesn\'t count data over Ethernet'**
   String get dataUsageEthernetNotCounted;
+
+  /// Home Assistant panel (Hearth's own): Home Assistant isn't set up on this TV
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant panel isn\'t set up'**
+  String get haNativeNotSetUp;
+
+  /// Home Assistant panel: how to set it up; {place} is where (a settings breadcrumb)
+  ///
+  /// In en, this message translates to:
+  /// **'Add the Home Assistant address and an access token in {place}.'**
+  String haNativeNotSetUpDetail(String place);
+
+  /// Home Assistant panel: a quiet row when Home Assistant can't be reached (it's tried again on its own)
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t reach Home Assistant'**
+  String get haNativeUnreachable;
+
+  /// Home Assistant panel: while the dashboard is read
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the dashboard…'**
+  String get haNativeLoading;
+
+  /// Home Assistant panel: the dashboard has nothing the panel can draw
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing on this dashboard can be shown here'**
+  String get haNativeEmpty;
+
+  /// Home Assistant panel: a time that is now (a sensor's timestamp)
+  ///
+  /// In en, this message translates to:
+  /// **'now'**
+  String get haTimeNow;
+
+  /// Home Assistant panel: a time to come; {span} is how long until then ("40 min", "2 h 5 min")
+  ///
+  /// In en, this message translates to:
+  /// **'in {span}'**
+  String haTimeIn(String span);
+
+  /// Home Assistant panel: a time gone by; {span} is how long ago ("40 min")
+  ///
+  /// In en, this message translates to:
+  /// **'{span} ago'**
+  String haTimeAgo(String span);
+
+  /// Home Assistant panel: a number of minutes, short
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min'**
+  String haSpanMinutes(int count);
+
+  /// Home Assistant panel: a number of hours, short
+  ///
+  /// In en, this message translates to:
+  /// **'{count} h'**
+  String haSpanHours(int count);
+
+  /// Home Assistant panel: a number of days, short
+  ///
+  /// In en, this message translates to:
+  /// **'{count} d'**
+  String haSpanDays(int count);
+
+  /// Home Assistant panel: the − button that lowers a thermostat's target (read out by the screen reader)
+  ///
+  /// In en, this message translates to:
+  /// **'Lower'**
+  String get haControlLower;
+
+  /// Home Assistant panel: the + button that raises a thermostat's target (read out by the screen reader)
+  ///
+  /// In en, this message translates to:
+  /// **'Raise'**
+  String get haControlRaise;
+
+  /// Home Assistant panel: over a thermostat range's lower target
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get haControlLow;
+
+  /// Home Assistant panel: over a thermostat range's upper target
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get haControlHigh;
+
+  /// Home Assistant panel: a player's volume slider (read out by the screen reader)
+  ///
+  /// In en, this message translates to:
+  /// **'Volume'**
+  String get haControlVolume;
+
+  /// Home Assistant panel: a light's brightness slider (read out by the screen reader)
+  ///
+  /// In en, this message translates to:
+  /// **'Brightness'**
+  String get haControlBrightness;
+
+  /// Home Assistant panel: a player's previous-track button
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get haControlPrevious;
+
+  /// Home Assistant panel: a player's play button
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get haControlPlay;
+
+  /// Home Assistant panel: a player's pause button
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get haControlPause;
+
+  /// Home Assistant panel: a player's stop button
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get haControlStop;
+
+  /// Home Assistant panel: a player's next-track button
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get haControlNext;
+
+  /// Home Assistant panel: the button that turns a player on
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on'**
+  String get haControlTurnOn;
+
+  /// Home Assistant panel: the last row, which opens Home Assistant's own dashboard page (for cards the panel doesn't draw)
+  ///
+  /// In en, this message translates to:
+  /// **'Open the full dashboard'**
+  String get haNativeOpenFullDashboard;
+
+  /// Dashboard panel settings: switch; the panel shows Home Assistant's own web page instead of Hearth's remote-friendly drawing of it
+  ///
+  /// In en, this message translates to:
+  /// **'Show the full dashboard instead'**
+  String get haPanelFullDashboard;
+
+  /// Dashboard panel settings: under the full-dashboard switch
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant\'s own page. The remote can\'t reach its controls.'**
+  String get haPanelFullDashboardDetail;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

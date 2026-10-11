@@ -2705,4 +2705,94 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dataUsageEthernetNotCounted => 'Android는 이더넷 데이터를 집계하지 않습니다';
+
+  @override
+  String get haNativeNotSetUp => 'Home Assistant 패널이 설정되지 않음';
+
+  @override
+  String haNativeNotSetUpDetail(String place) {
+    return '$place에서 Home Assistant 주소와 액세스 토큰을 추가하세요.';
+  }
+
+  @override
+  String get haNativeUnreachable => 'Home Assistant에 연결할 수 없음';
+
+  @override
+  String get haNativeLoading => '대시보드를 불러오는 중…';
+
+  @override
+  String get haNativeEmpty => '이 대시보드에는 여기에 표시할 수 있는 항목이 없습니다';
+
+  @override
+  String get haTimeNow => '지금';
+
+  @override
+  String haTimeIn(String span) {
+    return '$span 후';
+  }
+
+  @override
+  String haTimeAgo(String span) {
+    return '$span 전';
+  }
+
+  @override
+  String haSpanMinutes(int count) {
+    return '$count분';
+  }
+
+  @override
+  String haSpanHours(int count) {
+    return '$count시간';
+  }
+
+  @override
+  String haSpanDays(int count) {
+    return '$count일';
+  }
+
+  @override
+  String get haControlLower => '낮추기';
+
+  @override
+  String get haControlRaise => '높이기';
+
+  @override
+  String get haControlLow => '최저';
+
+  @override
+  String get haControlHigh => '최고';
+
+  @override
+  String get haControlVolume => '볼륨';
+
+  @override
+  String get haControlBrightness => '밝기';
+
+  @override
+  String get haControlPrevious => '이전';
+
+  @override
+  String get haControlPlay => '재생';
+
+  @override
+  String get haControlPause => '일시정지';
+
+  @override
+  String get haControlStop => '정지';
+
+  @override
+  String get haControlNext => '다음';
+
+  @override
+  String get haControlTurnOn => '켜기';
+
+  @override
+  String get haNativeOpenFullDashboard => '전체 대시보드 열기';
+
+  @override
+  String get haPanelFullDashboard => '대신 전체 대시보드 표시';
+
+  @override
+  String get haPanelFullDashboardDetail => 'Home Assistant 자체 페이지입니다. 리모컨으로는 컨트롤을 선택할 수 없습니다.';
 }

@@ -2732,4 +2732,94 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get dataUsageEthernetNotCounted => 'Android не учитывает трафик по Ethernet';
+
+  @override
+  String get haNativeNotSetUp => 'Панель Home Assistant не настроена';
+
+  @override
+  String haNativeNotSetUpDetail(String place) {
+    return 'Добавьте адрес Home Assistant и токен доступа в разделе $place.';
+  }
+
+  @override
+  String get haNativeUnreachable => 'Не удаётся подключиться к Home Assistant';
+
+  @override
+  String get haNativeLoading => 'Загрузка панели…';
+
+  @override
+  String get haNativeEmpty => 'На этой панели нет ничего, что можно показать здесь';
+
+  @override
+  String get haTimeNow => 'сейчас';
+
+  @override
+  String haTimeIn(String span) {
+    return 'через $span';
+  }
+
+  @override
+  String haTimeAgo(String span) {
+    return '$span назад';
+  }
+
+  @override
+  String haSpanMinutes(int count) {
+    return '$count мин';
+  }
+
+  @override
+  String haSpanHours(int count) {
+    return '$count ч';
+  }
+
+  @override
+  String haSpanDays(int count) {
+    return '$count д';
+  }
+
+  @override
+  String get haControlLower => 'Понизить';
+
+  @override
+  String get haControlRaise => 'Повысить';
+
+  @override
+  String get haControlLow => 'Нижняя';
+
+  @override
+  String get haControlHigh => 'Верхняя';
+
+  @override
+  String get haControlVolume => 'Громкость';
+
+  @override
+  String get haControlBrightness => 'Яркость';
+
+  @override
+  String get haControlPrevious => 'Назад';
+
+  @override
+  String get haControlPlay => 'Воспроизвести';
+
+  @override
+  String get haControlPause => 'Пауза';
+
+  @override
+  String get haControlStop => 'Стоп';
+
+  @override
+  String get haControlNext => 'Далее';
+
+  @override
+  String get haControlTurnOn => 'Включить';
+
+  @override
+  String get haNativeOpenFullDashboard => 'Открыть всю панель';
+
+  @override
+  String get haPanelFullDashboard => 'Показывать всю панель целиком';
+
+  @override
+  String get haPanelFullDashboardDetail => 'Собственная страница Home Assistant. Пульт не может управлять её элементами.';
 }

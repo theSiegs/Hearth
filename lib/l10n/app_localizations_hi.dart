@@ -2715,4 +2715,94 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get dataUsageEthernetNotCounted => 'Android ईथरनेट पर डेटा नहीं गिनता';
+
+  @override
+  String get haNativeNotSetUp => 'Home Assistant पैनल सेट अप नहीं है';
+
+  @override
+  String haNativeNotSetUpDetail(String place) {
+    return '$place में Home Assistant का पता और एक्सेस टोकन जोड़ें।';
+  }
+
+  @override
+  String get haNativeUnreachable => 'Home Assistant से कनेक्ट नहीं हो पा रहा';
+
+  @override
+  String get haNativeLoading => 'डैशबोर्ड लोड हो रहा है…';
+
+  @override
+  String get haNativeEmpty => 'इस डैशबोर्ड में यहाँ दिखाने लायक कुछ नहीं है';
+
+  @override
+  String get haTimeNow => 'अभी';
+
+  @override
+  String haTimeIn(String span) {
+    return '$span में';
+  }
+
+  @override
+  String haTimeAgo(String span) {
+    return '$span पहले';
+  }
+
+  @override
+  String haSpanMinutes(int count) {
+    return '$count मिनट';
+  }
+
+  @override
+  String haSpanHours(int count) {
+    return '$count घंटे';
+  }
+
+  @override
+  String haSpanDays(int count) {
+    return '$count दिन';
+  }
+
+  @override
+  String get haControlLower => 'कम करें';
+
+  @override
+  String get haControlRaise => 'बढ़ाएँ';
+
+  @override
+  String get haControlLow => 'न्यूनतम';
+
+  @override
+  String get haControlHigh => 'अधिकतम';
+
+  @override
+  String get haControlVolume => 'वॉल्यूम';
+
+  @override
+  String get haControlBrightness => 'चमक';
+
+  @override
+  String get haControlPrevious => 'पिछला';
+
+  @override
+  String get haControlPlay => 'चलाएँ';
+
+  @override
+  String get haControlPause => 'रोकें';
+
+  @override
+  String get haControlStop => 'बंद करें';
+
+  @override
+  String get haControlNext => 'अगला';
+
+  @override
+  String get haControlTurnOn => 'चालू करें';
+
+  @override
+  String get haNativeOpenFullDashboard => 'पूरा डैशबोर्ड खोलें';
+
+  @override
+  String get haPanelFullDashboard => 'इसके बजाय पूरा डैशबोर्ड दिखाएँ';
+
+  @override
+  String get haPanelFullDashboardDetail => 'Home Assistant का अपना पेज। रिमोट इसके नियंत्रणों तक नहीं पहुँच सकता।';
 }
