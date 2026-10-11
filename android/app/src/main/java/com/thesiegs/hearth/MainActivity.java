@@ -1347,7 +1347,12 @@ public class MainActivity extends FlutterActivity {
             Intent intent = Intent.parseUri(intentUri, Intent.URI_INTENT_SCHEME);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             intent.setSelector(null);
-            return openInApp(intent, packageOf(intent));
+            boolean opened = openInApp(new Intent(intent), packageOf(intent));
+            if (opened) {
+                mProgramRetry = intent;
+                mProgramRetryAt = SystemClock.elapsedRealtime();
+            }
+            return opened;
         } catch (Exception e) {
             Log.w(TAG, "Couldn't open Watch Next program " + intentUri, e);
         }
@@ -1402,10 +1407,29 @@ public class MainActivity extends FlutterActivity {
         return sInFront;
     }
 
+    /**
+     * A Continue Watching program just opened, for one more try: an app that's already running can take the link in
+     * a splash screen and hand it to its old screen without bringing that to the front (Paramount+ did, 2026-10-10:
+     * back on Hearth two seconds later; the second press worked). Back on Hearth that soon, Hearth opens it again.
+     */
+    private Intent mProgramRetry;
+    private long mProgramRetryAt;
+    private static final long PROGRAM_BOUNCE_MS = 5_000;
+
+    private void retryBouncedProgram() {
+        Intent retry = mProgramRetry;
+        long at = mProgramRetryAt;
+        mProgramRetry = null;
+        if (retry == null || SystemClock.elapsedRealtime() - at > PROGRAM_BOUNCE_MS) return;
+        Log.i(TAG, "Back from " + packageOf(retry) + " right away: opening the program again");
+        openInApp(retry, packageOf(retry));
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
         sInFront = true;
+        retryBouncedProgram();
         // Another profile on: make sure its agent runs (starting it needs Hearth's window visible, as now)
         UserHandle profileUser = ProfileApps.activeProfileUser(this);
         if (profileUser != null) AgentHub.ensureAgent(this, ProfileUsers.settledSerial(this), profileUser);
