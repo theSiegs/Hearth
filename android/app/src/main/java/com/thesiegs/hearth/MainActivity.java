@@ -1292,9 +1292,11 @@ public class MainActivity extends FlutterActivity {
 
     private List<Map<String, Object>> getWatchNextPrograms() {
         // Another profile on: its user's Continue Watching, as its Hearth agent reported it (Android doesn't let
-        // Hearth read another user's list); empty until the agent has reported
-        if (ProfileApps.activeProfileUser(this) != null) {
-            return AgentHub.watchNext(ProfileUsers.settledSerial(this));
+        // Hearth read another user's list); empty until the agent has reported. Even while that user isn't running
+        // (it's starting, or stopping as the TV switches away): the owner's list is never another profile's
+        long serial = ProfileUsers.settledSerial(this);
+        if (ProfileUsers.otherUser(this, serial) != null) {
+            return AgentHub.watchNext(serial);
         }
         // This user's list is all its grown-ups' profiles' (one per account): Hearth's own watch history says whose
         // each entry is, keeps the ones an app dropped for another profile, and adds what was played without one

@@ -394,6 +394,25 @@ void main() {
 
       expect(service.programs.single.posterBytes, isNull);
     });
+
+    test("loads posters only for what the row shows, not another profile's or finished entries", () async {
+      when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => [
+            program(1, 'https://img.example/mine.jpg'),
+            program(2, 'https://img.example/theirs.jpg')..['watchedBy'] = 'user:0:sam',
+            program(3, 'https://img.example/done.jpg')
+              ..['watchNextType'] = 0
+              ..['playbackPosition'] = 100
+              ..['duration'] = 100,
+          ]);
+      when(mockChannel.getWatchNextPoster(any)).thenAnswer((_) async => Uint8List.fromList([1]));
+
+      final service = await ready();
+
+      expect(service.programs.map((p) => p.id), [1]);
+      verify(mockChannel.getWatchNextPoster('https://img.example/mine.jpg')).called(1);
+      verifyNever(mockChannel.getWatchNextPoster('https://img.example/theirs.jpg'));
+      verifyNever(mockChannel.getWatchNextPoster('https://img.example/done.jpg'));
+    });
   });
 
   group('WatchNextService ownership', () {

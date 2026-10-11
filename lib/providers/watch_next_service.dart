@@ -88,8 +88,8 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
   // Each kids profile is its own Android user with its own Watch Next list, which comes from that profile's agent
   // (marked profileOwned). Hearth reads the owner's (user 0) itself, and that list is all the grown-ups' profiles'
   // (each a Google account in user 0): an entry is the profile's that had its app open when it was last watched
-  // (watchedBy), else the owner's first profile's. So it never shows while another profile is on (Hearth falls back
-  // to its own list when a kids profile has no agent).
+  // (watchedBy), else the owner's first profile's. So it never shows while another profile is on (for a kids
+  // profile Hearth reads only its agent's list, but the list may still be the owner's for a moment around a switch).
   static const String _ownerProfile = "user:0";
   // The active profile's key, read with each refresh; null while Hearth can't tell.
   String? _activeProfile;
@@ -210,7 +210,8 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
       _refreshedFor = refreshedFor;
       _logWhatShows();
       notifyListeners();
-      unawaited(_loadPosters(newPrograms, callSnapshot));
+      // Only for what Continue Watching shows: the list holds every profile's entries, finished and old ones too
+      unawaited(_loadPosters(programs, callSnapshot));
     } catch (e) {
       log('Failed to refresh watch next programs', name: 'WatchNextService', error: e);
     } finally {

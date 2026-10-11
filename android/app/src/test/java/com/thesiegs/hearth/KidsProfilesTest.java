@@ -29,6 +29,8 @@ public class KidsProfilesTest {
     private static final class FakeShell implements ProfileAppAccess.ShellRunner {
         final Map<Integer, Set<String>> installed = new HashMap<>();
         final Set<String> kept = new HashSet<>();
+        /** "user/package/permission" granted. */
+        final Set<String> granted = new HashSet<>();
         final List<String> commands = new ArrayList<>();
 
         FakeShell has(int user, String... packages) {
@@ -62,6 +64,15 @@ public class KidsProfilesTest {
                 if (kept.contains(user + "/" + words[4])) return "Failure [DELETE_FAILED_OWNER_BLOCKED]";
                 installed.getOrDefault(user, new HashSet<>()).remove(words[4]);
                 return "Success";
+            }
+            if (command.startsWith("pm grant --user ")) {
+                // pm grant --user <user> <package> <permission>
+                int user = Integer.parseInt(words[3]);
+                if (!installed.getOrDefault(user, Collections.emptySet()).contains(words[4])) {
+                    return "Exception occurred while executing 'grant': Unknown package: " + words[4];
+                }
+                granted.add(user + "/" + words[4] + "/" + words[5]);
+                return "";
             }
             if (command.contains(" app_process ")) {
                 // CLASSPATH=<apk> app_process /system/bin <class> <package> <user> [true|false]
@@ -179,6 +190,59 @@ public class KidsProfilesTest {
         assertTrue(shell.indexOf(keepCommand(HEARTH, 10, false)) < shell.indexOf("pm uninstall --user 10 " + HEARTH));
         // The owner's copies stay
         assertTrue(shell.installed.get(0).containsAll(Arrays.asList(HEARTH, TUBE)));
+    }
+
+    @Test
+    public void hearthMayReadWatchNextOnEachKidsProfile() throws Exception {
+        // Without READ_TV_LISTINGS in that user, Android shows Hearth's copy only the Watch Next entries it wrote
+        FakeShell shell = new FakeShell().has(0, HEARTH, TUBE);
+        List<String> log = ProfileAppAccess.addToKids(APK, shell, Collections.singletonList(10));
+        assertTrue(shell.granted.contains("10/" + HEARTH + "/android.permission.READ_TV_LISTINGS"));
+        // After the copy is there
+        assertTrue(shell.indexOf("pm install-existing --user 10 " + HEARTH)
+                < shell.indexOf("pm grant --user 10 " + HEARTH + " android.permission.READ_TV_LISTINGS"));
+        // Only Hearth's
+        assertEquals(0, shell.count("pm grant --user 10 " + TUBE));
+        assertEquals(Arrays.asList("user 10: added and kept " + HEARTH, "user 10: added and kept " + TUBE), log);
+    }
+
+    @Test
+    public void aCopyPutThereEarlierGetsTheGrantToo() throws Exception {
+        // Copies added before Hearth granted it: a Fix grants it without adding anything (no Family Link notice)
+        FakeShell shell = new FakeShell().has(0, HEARTH, TUBE).has(11, HEARTH, TUBE).keeps(11, HEARTH).keeps(11, TUBE);
+        List<String> log = ProfileAppAccess.addToKids(APK, shell, Collections.singletonList(11));
+        assertEquals(0, shell.count("pm install-existing"));
+        assertTrue(shell.granted.contains("11/" + HEARTH + "/android.permission.READ_TV_LISTINGS"));
+        assertTrue(log.isEmpty());
+    }
+
+    @Test
+    public void noGrantWhereHearthIsntPut() throws Exception {
+        // The owner has no Hearth to copy: nothing to grant to
+        FakeShell shell = new FakeShell().has(0, TUBE);
+        Map<Integer, List<String>> packages = new LinkedHashMap<>();
+        packages.put(10, Collections.singletonList(HEARTH));
+        List<String> log = ProfileAppAccess.addToKids(APK, shell, packages);
+        assertEquals(0, shell.count("pm grant"));
+        assertTrue(log.contains("user 10: skipped " + HEARTH + " (not installed for the owner)"));
+    }
+
+    @Test
+    public void theGrantIsOnlyEverHearthsOnAnotherProfile() {
+        assertEquals("pm grant --user 12 " + HEARTH + " android.permission.READ_TV_LISTINGS",
+                ProfileAppAccess.grantWatchNextCommand(HEARTH, 12));
+        try {
+            ProfileAppAccess.grantWatchNextCommand(HEARTH, 0);
+            fail("granted in the owner's user");
+        } catch (IllegalArgumentException expected) {
+            // refused
+        }
+        try {
+            ProfileAppAccess.grantWatchNextCommand(TUBE, 12);
+            fail("granted to another app");
+        } catch (IllegalArgumentException expected) {
+            // refused
+        }
     }
 
     @Test
