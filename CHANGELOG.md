@@ -3,6 +3,13 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.36 (pre-release)
+
+- Kids' bedtime and time-up screens show again: Hearth gives Google TV's kids home a moment before covering it every time (it had stopped once the kid's apps looked unblocked, which kept Google from ever blocking them).
+- Continue Watching in kids' profiles shows what the kid watched (Hearth's copy there couldn't read the list). Grown-ups' entries are no longer cut to the newest 20 before Hearth knows whose they are.
+- An episode no longer shows twice in Continue Watching when the app names show and episode together.
+- Home Assistant panel: each profile can pick its own dashboard and view from Home Assistant's list.
+
 ## 2026.10.35 (pre-release)
 
 - Home while browsing the apps goes back to the dock, or to the first app at the top when the dock is off (it also ends a search). With the dock off, a profile switch now lands on the first app too.
