@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.38 (pre-release)
+
+- Calendar: with Home Assistant set up, the date and time in the top bar show the rest of today's events when selected, and OK shows the next 7 days. Settings > Home Assistant > Calendars picks which calendars each profile shows. Without Home Assistant nothing changes.
+
 ## 2026.10.37 (pre-release)
 
 - After switching to a grown-up's profile with its PIN, Hearth comes back instead of leaving Google TV's home up.
