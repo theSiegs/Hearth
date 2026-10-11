@@ -22,6 +22,7 @@ import 'package:flauncher/flauncher.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/gradients.dart';
 import 'package:flauncher/providers/apps_service.dart';
+import 'package:flauncher/providers/home_search.dart';
 import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:flauncher/models/watch_next_program.dart';
@@ -41,6 +42,8 @@ import 'package:flauncher/widgets/app_card.dart';
 import 'package:flauncher/widgets/focus_aware_app_bar.dart';
 import 'package:flauncher/widgets/home_dock.dart';
 import 'package:flauncher/widgets/continue_watching_row.dart';
+import 'package:flauncher/widgets/search/search_entry.dart';
+import 'package:flauncher/widgets/search/search_grid_page.dart';
 import 'package:flauncher/widgets/settings/settings_panel_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -589,6 +592,36 @@ void main() {
     getProfileFocusNode(tester)!.requestFocus();
     await tester.pumpAndSettle();
     await pressHome(tester);
+    expect(isAppCardFocused(tester, "com.example.tv0"), isTrue);
+  });
+
+  testWidgets("Without the dock, Back from the search's results ends the search and lands on the first app",
+      (tester) async {
+    final appsService = mkAppService();
+    final tvCategory = fakeCategory(name: "TV Apps", order: 0, type: CategoryType.row);
+    tvCategory.applications.addAll(List.generate(3, (i) => fakeApp(packageName: "com.example.tv$i", name: "TV $i")));
+    when(appsService.launcherSections).thenReturn([tvCategory]);
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(false);
+    final homeSearch = HomeSearch(installed: (_) => false);
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService,
+        homeSearch: homeSearch);
+
+    // The remote's search button, and a search
+    const channel = MethodChannel('me.efesser.flauncher/method');
+    await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+        channel.name, channel.codec.encodeMethodCall(const MethodCall("openSearch", "text")), (_) {});
+    await tester.pumpAndSettle();
+    tester.widget<SearchEntry>(find.byType(SearchEntry)).onSubmit("x");
+    await tester.pumpAndSettle();
+    expect(find.byType(SearchGridPage), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SearchGridPage), findsNothing);
+    expect(homeSearch.active, isFalse);
+    expect(isProfileButtonFocused(tester), isFalse);
     expect(isAppCardFocused(tester, "com.example.tv0"), isTrue);
   });
 
@@ -1295,6 +1328,7 @@ Future<void> _pumpWidgetWithProviders(
   SettingsService settingsService, {
   WatchNextService? watchNextService,
   ProfileService? profileService,
+  HomeSearch? homeSearch,
 }) async {
   tester.view.physicalSize = const Size(1920, 1080);
   tester.view.devicePixelRatio = 1.0;
@@ -1314,6 +1348,7 @@ Future<void> _pumpWidgetWithProviders(
         ChangeNotifierProvider(create: (_) => LauncherState()),
         ChangeNotifierProvider(create: (_) => NetworkService(channel)),
         if (profileService != null) ChangeNotifierProvider<ProfileService>.value(value: profileService),
+        if (homeSearch != null) ChangeNotifierProvider<HomeSearch>.value(value: homeSearch),
       ],
       builder: (_, __) => MaterialApp(
         localizationsDelegates: const [
