@@ -167,6 +167,7 @@ final class PlaybackRecorder {
             if (eq(title, mTitle) && eq(subtitle, mSubtitle)) return;
             // Something else now: what played before is saved as it stood
             check();
+            noteIfUncounted();
             boolean playing = mPlayingSince != 0;
             mTitle = title;
             mSubtitle = subtitle;
@@ -219,8 +220,19 @@ final class PlaybackRecorder {
             }
         }
 
+        /** In the log (no title): something played, but not long enough to count, or with no profile to count for. */
+        private void noteIfUncounted() {
+            if (mTitle == null || mProfile != null) return;
+            long played = mPlayedMs + (mPlayingSince != 0 ? SystemClock.elapsedRealtime() - mPlayingSince : 0);
+            if (played <= 0) return;
+            Log.i(TAG, "Not counted in " + mController.getPackageName() + ": played " + played / 1000 + " s"
+                    + (played < COUNTS_AFTER_MS ? " (counts after " + COUNTS_AFTER_MS / 1000 + " s)"
+                    : ", no grown-up's profile on"));
+        }
+
         void close() {
             check();
+            noteIfUncounted();
             mHandler.removeCallbacks(mSave);
             try {
                 mController.unregisterCallback(this);

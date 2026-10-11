@@ -16,6 +16,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * What each grown-up profile watched on this TV, kept by Hearth itself. Android's Watch Next list is per Android
@@ -195,13 +196,20 @@ final class WatchHistory extends SQLiteOpenHelper {
                 if (PLAYED.equals(e.kind) && ProfileUsers.serialOfKey(e.profile) == serial) played.add(e);
             }
             // Whose each listed entry is: the profile that played it, else the one that had the app then
+            Map<String, Map<String, Integer>> owners = new TreeMap<>();
             for (Map<String, Object> row : out) {
                 String pkg = (String) row.get("packageName");
-                long time = longOf(row.get("lastEngagementTime"));
-                String owner = playedOwner(played, pkg, (String) row.get("title"), time);
-                if (owner == null) owner = AppWatchers.watcherAt(context, pkg, time, serial);
+                String owner = ownerOf(played, AppWatchers.history(context, pkg), pkg, (String) row.get("title"),
+                        longOf(row.get("lastEngagementTime")), serial);
                 if (owner != null) row.put("watchedBy", owner);
+                Map<String, Integer> counts = owners.get(String.valueOf(pkg));
+                if (counts == null) owners.put(String.valueOf(pkg), counts = new TreeMap<>());
+                String who = owner != null ? owner : "none";
+                Integer count = counts.get(who);
+                counts.put(who, count != null ? count + 1 : 1);
             }
+            // Counts only, no titles: whose each app's entries are
+            Log.i(TAG, "Owners of the listed entries: " + owners);
             db.beginTransaction();
             try {
                 keep(context, db, entries, out, serial, now);
@@ -356,20 +364,46 @@ final class WatchHistory extends SQLiteOpenHelper {
     /** Letters and digits a played title needs before a row containing it counts as the same (see sameTitle). */
     private static final int MIN_CONTAINED_TITLE = 6;
 
+    /**
+     * Whose a Watch Next entry is (a profile key of this user), or null when Hearth can't tell: the profile that played
+     * it, unless another profile opened its app after that play and before the entry's time (it watched it since, too
+     * briefly for Hearth to count, or picked it up where the other left off; the app's entry is one per show or video,
+     * moved to the newest watch); else the profile that had the app at the entry's time.
+     *
+     * @param watchers the app's AppWatchers record
+     */
+    static String ownerOf(List<Entry> played, String watchers, String packageName, String title, long time,
+            long serial) {
+        Entry play = playedBy(played, packageName, title, time);
+        String watcher = AppWatchers.watcherAt(watchers, time, serial);
+        if (play == null) return watcher;
+        if (watcher != null && !watcher.equals(play.profile)
+                && AppWatchers.changedHands(watchers, play.lastAt, time, serial)) {
+            return watcher;
+        }
+        return play.profile;
+    }
+
     /** The profile that played this entry closest to its time, or null when none did. */
     static String playedOwner(List<Entry> played, String packageName, String title, long time) {
-        String owner = null;
-        long best = Long.MAX_VALUE;
+        Entry play = playedBy(played, packageName, title, time);
+        return play != null ? play.profile : null;
+    }
+
+    /** The play of this entry closest to its time, or null when none was near it. */
+    private static Entry playedBy(List<Entry> played, String packageName, String title, long time) {
+        Entry best = null;
+        long bestGap = Long.MAX_VALUE;
         for (Entry e : played) {
             if (!e.packageName.equals(packageName) || !sameTitle(e.title, e.subtitle, title)) continue;
             long gap = time > 0 ? Math.abs(e.lastAt - time) : 0;
             if (time > 0 && gap > OWNER_MATCH_WINDOW_MS) continue;
-            if (owner == null || gap < best) {
-                owner = e.profile;
-                best = gap;
+            if (best == null || gap < bestGap) {
+                best = e;
+                bestGap = gap;
             }
         }
-        return owner;
+        return best;
     }
 
     /**

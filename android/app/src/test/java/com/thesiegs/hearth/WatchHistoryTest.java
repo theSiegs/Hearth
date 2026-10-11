@@ -63,6 +63,43 @@ public class WatchHistoryTest {
     }
 
     @Test
+    public void anotherProfilePickingTheAppUpAfterThePlayOwnsTheEntry() {
+        String tube = "com.thesiegs.hearthtube";
+        // The owner watched a video this afternoon; Sam opened the app tonight and watched it again, too briefly for
+        // Hearth to count, and the app moved its one entry for the video to then
+        List<WatchHistory.Entry> history = Arrays.asList(
+                played("user:0", tube, "Cats Being Cats", "Alex's channel", 0, 0, NOW - 5 * HOUR));
+        String watchers = "1000 user:0\n" + (NOW - 10 * 60_000) + " user:0:sam";
+        assertEquals("user:0:sam", WatchHistory.ownerOf(history, watchers, tube, "Cats Being Cats", NOW, 0));
+        // Nobody else opened the app since the play: still the owner's
+        String ownerOnly = "1000 user:0";
+        assertEquals("user:0", WatchHistory.ownerOf(history, ownerOnly, tube, "Cats Being Cats", NOW, 0));
+        // Sam had the app before the owner's play: the play says whose it is
+        String samBefore = "1000 user:0:sam\n" + (NOW - 6 * HOUR) + " user:0";
+        assertEquals("user:0", WatchHistory.ownerOf(history, samBefore, tube, "Cats Being Cats", NOW - 5 * HOUR, 0));
+        // Sam came and went, and the owner opened the app again before the entry's time: the owner's
+        String backAgain = "1000 user:0\n" + (NOW - 2 * HOUR) + " user:0:sam\n" + (NOW - HOUR) + " user:0";
+        assertEquals("user:0", WatchHistory.ownerOf(history, backAgain, tube, "Cats Being Cats", NOW, 0));
+        // Nothing played: whoever had the app; nothing known at all: null
+        assertEquals("user:0:sam", WatchHistory.ownerOf(history, watchers, tube, "Another Video", NOW, 0));
+        assertNull(WatchHistory.ownerOf(history, null, tube, "Another Video", NOW, 0));
+        // A kids profile's record (another user) doesn't take it
+        String kid = "1000 user:0\n" + (NOW - 10 * 60_000) + " user:10";
+        assertEquals("user:0", WatchHistory.ownerOf(history, kid, tube, "Cats Being Cats", NOW, 0));
+    }
+
+    @Test
+    public void changedHandsLooksBetweenTheTwoTimes() {
+        String history = "100 user:0\n300 user:0:sam\n500 user:10";
+        assertTrue(AppWatchers.changedHands(history, 200, 300, 0));
+        assertFalse(AppWatchers.changedHands(history, 300, 400, 0));
+        // Another user's profile
+        assertFalse(AppWatchers.changedHands(history, 400, 600, 0));
+        assertFalse(AppWatchers.changedHands(history, 400, 200, 0));
+        assertFalse(AppWatchers.changedHands(null, 0, 600, 0));
+    }
+
+    @Test
     public void onlyAShowOrFilmPartWayThroughShowsOnItsOwn() {
         long minute = 60_000;
         assertTrue(WatchHistory.showsOnItsOwn(played("user:0", "p", "Film", null, 100 * minute, 30 * minute, NOW), NOW));
