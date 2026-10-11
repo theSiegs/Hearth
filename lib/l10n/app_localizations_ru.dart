@@ -2659,6 +2659,25 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get calendarsNone => 'У этого профиля нет календарей Google, синхронизированных с телевизором.';
+
+  @override
+  String get haCalendarsTitle => 'Календари';
+
+  @override
+  String get haCalendarsLoading => 'Запрашиваем календари у Home Assistant…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'Home Assistant ещё не настроен на этом телевизоре. Укажите адрес и токен в разделе $place.';
+  }
+
+  @override
+  String get haCalendarsError => 'Не удалось получить календари из Home Assistant. Проверьте адрес и токен.';
+
+  @override
+  String get haCalendarsNone => 'В Home Assistant нет календарей.';
+
+  @override
   String get haCalendarsHelp => 'Включённые здесь календари показываются, когда в фокусе дата и время справа вверху: остаток дня, а по OK — следующие 7 дней. Каждый профиль выбирает свои.';
 
   @override

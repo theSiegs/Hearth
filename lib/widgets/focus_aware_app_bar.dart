@@ -226,7 +226,6 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
               Selector<SettingsService, bool>(
                 selector: (_, settings) => settings.showDataWidgetInStatusBar,
                 builder: (context, showData, _) => showData
-                  ? const StatusPill(child: DailyDataUsageWidget())
                   ? DailyDataUsageWidget(focusNode: _dataUsageFocusNode)
                   : const SizedBox.shrink(),
               ),

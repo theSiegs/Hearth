@@ -2644,6 +2644,25 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get calendarsNone => 'Ce profil n\'a aucun agenda Google synchronisé avec le téléviseur.';
+
+  @override
+  String get haCalendarsTitle => 'Agendas';
+
+  @override
+  String get haCalendarsLoading => 'Demande des agendas à Home Assistant…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'Home Assistant n\'est pas encore configuré sur ce téléviseur. Ajoutez son adresse et son jeton dans $place.';
+  }
+
+  @override
+  String get haCalendarsError => 'Impossible d\'obtenir les agendas de Home Assistant. Vérifiez l\'adresse et le jeton.';
+
+  @override
+  String get haCalendarsNone => 'Home Assistant n\'a aucun agenda.';
+
+  @override
   String get haCalendarsHelp => 'Les agendas activés ici s\'affichent quand la date et l\'heure en haut à droite ont le focus : le reste de la journée, et OK pour les 7 prochains jours. Chaque profil choisit les siens.';
 
   @override

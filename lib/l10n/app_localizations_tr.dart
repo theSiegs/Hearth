@@ -2633,6 +2633,25 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get calendarsNone => 'Bu profilin TV ile senkronize edilmiş Google takvimi yok.';
+
+  @override
+  String get haCalendarsTitle => 'Takvimler';
+
+  @override
+  String get haCalendarsLoading => 'Takvimler Home Assistant\'tan isteniyor…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'Home Assistant bu TV\'de henüz kurulmadı. Adresini ve belirtecini $place bölümüne ekleyin.';
+  }
+
+  @override
+  String get haCalendarsError => 'Takvimler Home Assistant\'tan alınamadı. Adresi ve belirteci kontrol edin.';
+
+  @override
+  String get haCalendarsNone => 'Home Assistant\'ta takvim yok.';
+
+  @override
   String get haCalendarsHelp => 'Burada açılan takvimler, sağ üstteki tarih ve saat odaktayken görünür: günün geri kalanı, Tamam ile sonraki 7 gün. Her profil kendi takvimlerini seçer.';
 
   @override

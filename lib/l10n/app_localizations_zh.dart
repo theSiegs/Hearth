@@ -2632,6 +2632,25 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get calendarsNone => '此个人资料没有同步到电视的 Google 日历。';
+
+  @override
+  String get haCalendarsTitle => '日历';
+
+  @override
+  String get haCalendarsLoading => '正在向 Home Assistant 获取日历…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return '这台电视尚未设置 Home Assistant。请在 $place 中添加地址和令牌。';
+  }
+
+  @override
+  String get haCalendarsError => '无法从 Home Assistant 获取日历。请检查地址和令牌。';
+
+  @override
+  String get haCalendarsNone => 'Home Assistant 中没有日历。';
+
+  @override
   String get haCalendarsHelp => '这里打开的日历会在右上角的日期和时间获得焦点时显示：今天剩余的安排，按确定查看未来 7 天。每个配置文件各自选择。';
 
   @override

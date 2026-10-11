@@ -2632,6 +2632,25 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get calendarsNone => '이 프로필에는 TV에 동기화된 Google 캘린더가 없습니다.';
+
+  @override
+  String get haCalendarsTitle => '캘린더';
+
+  @override
+  String get haCalendarsLoading => 'Home Assistant에 캘린더를 요청하는 중…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return '이 TV에는 아직 Home Assistant가 설정되지 않았습니다. $place에서 주소와 토큰을 추가하세요.';
+  }
+
+  @override
+  String get haCalendarsError => 'Home Assistant에서 캘린더를 가져오지 못했습니다. 주소와 토큰을 확인하세요.';
+
+  @override
+  String get haCalendarsNone => 'Home Assistant에 캘린더가 없습니다.';
+
+  @override
   String get haCalendarsHelp => '여기서 켠 캘린더는 오른쪽 위의 날짜와 시간에 포커스가 있을 때 표시됩니다: 오늘 남은 일정, 확인을 누르면 앞으로 7일. 프로필마다 따로 고릅니다.';
 
   @override

@@ -65,19 +65,8 @@ class _DailyDataUsageWidgetState extends State<DailyDataUsageWidget> {
             }
           },
           splashShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          builder: (context, focused) => AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            decoration: BoxDecoration(
-              // Darker on a light wallpaper, like the row titles' pills
-              color: Colors.black.withOpacity(TitlePill.opacityOf(context)),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: focused ? Theme.of(context).colorScheme.primary : Colors.white.withOpacity(0.12),
-                width: 1,
-              ),
-              boxShadow: focused ? const [BoxShadow(color: Colors.black54, blurRadius: 8, spreadRadius: 1)] : null,
-            ),
+          builder: (context, focused) => StatusPill(
+            focused: focused,
             child: _content(context, localizations, networkService, period),
           ),
         );

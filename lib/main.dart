@@ -25,7 +25,6 @@ import 'package:flauncher/providers/home_forecast.dart';
 import 'package:flauncher/providers/home_agenda.dart';
 import 'package:flauncher/providers/calendars.dart';
 import 'package:flauncher/providers/home_data_usage.dart';
-import 'package:flauncher/providers/ha_calendars.dart';
 import 'package:flauncher/providers/home_search.dart';
 import 'package:flauncher/providers/search_service.dart';
 import 'package:flauncher/providers/apps_service.dart';

@@ -2644,6 +2644,25 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get calendarsNone => 'Este perfil no tiene calendarios de Google sincronizados con la TV.';
+
+  @override
+  String get haCalendarsTitle => 'Calendarios';
+
+  @override
+  String get haCalendarsLoading => 'Pidiendo los calendarios a Home Assistant…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'Home Assistant aún no está configurado en esta TV. Añade su dirección y token en $place.';
+  }
+
+  @override
+  String get haCalendarsError => 'No se pudieron obtener los calendarios de Home Assistant. Revisa la dirección y el token.';
+
+  @override
+  String get haCalendarsNone => 'Home Assistant no tiene calendarios.';
+
+  @override
   String get haCalendarsHelp => 'Los calendarios activados aquí aparecen cuando la fecha y la hora de arriba a la derecha tienen el foco: lo que queda de hoy, y con OK los próximos 7 días. Cada perfil elige los suyos.';
 
   @override

@@ -2642,6 +2642,25 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get calendarsNone => 'Für dieses Profil sind keine Google-Kalender mit dem Fernseher synchronisiert.';
+
+  @override
+  String get haCalendarsTitle => 'Kalender';
+
+  @override
+  String get haCalendarsLoading => 'Kalender werden von Home Assistant abgerufen …';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'Home Assistant ist auf diesem Fernseher noch nicht eingerichtet. Adresse und Token unter $place eintragen.';
+  }
+
+  @override
+  String get haCalendarsError => 'Die Kalender konnten nicht von Home Assistant abgerufen werden. Prüfe Adresse und Token.';
+
+  @override
+  String get haCalendarsNone => 'Home Assistant hat keine Kalender.';
+
+  @override
   String get haCalendarsHelp => 'Die hier eingeschalteten Kalender erscheinen, wenn Datum und Uhrzeit oben rechts im Fokus sind: der Rest des Tages, mit OK die nächsten 7 Tage. Jedes Profil wählt eigene.';
 
   @override

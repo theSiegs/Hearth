@@ -2680,6 +2680,25 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get calendarsNone => 'لا توجد لهذا الملف الشخصي تقاويم Google متزامنة مع التلفزيون.';
+
+  @override
+  String get haCalendarsTitle => 'التقاويم';
+
+  @override
+  String get haCalendarsLoading => 'جارٍ طلب التقاويم من Home Assistant…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'لم يتم إعداد Home Assistant على هذا التلفاز بعد. أضف عنوانه والرمز في $place.';
+  }
+
+  @override
+  String get haCalendarsError => 'تعذّر جلب التقاويم من Home Assistant. تحقق من العنوان والرمز.';
+
+  @override
+  String get haCalendarsNone => 'لا توجد تقاويم في Home Assistant.';
+
+  @override
   String get haCalendarsHelp => 'تظهر التقاويم المفعّلة هنا عندما يكون التاريخ والوقت في أعلى اليمين محددين: بقية اليوم، ومع موافق الأيام السبعة القادمة. يختار كل ملف شخصي تقاويمه.';
 
   @override

@@ -2632,6 +2632,25 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get calendarsNone => 'このプロフィールにはテレビに同期された Google カレンダーがありません。';
+
+  @override
+  String get haCalendarsTitle => 'カレンダー';
+
+  @override
+  String get haCalendarsLoading => 'Home Assistant にカレンダーを問い合わせています…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'このテレビではまだ Home Assistant が設定されていません。$place でアドレスとトークンを追加してください。';
+  }
+
+  @override
+  String get haCalendarsError => 'Home Assistant からカレンダーを取得できませんでした。アドレスとトークンを確認してください。';
+
+  @override
+  String get haCalendarsNone => 'Home Assistant にカレンダーがありません。';
+
+  @override
   String get haCalendarsHelp => 'ここでオンにしたカレンダーは、右上の日付と時刻にフォーカスがあるときに表示されます: 今日の残りの予定、OK で今後7日間。プロファイルごとに選べます。';
 
   @override

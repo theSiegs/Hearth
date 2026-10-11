@@ -2659,6 +2659,25 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get calendarsNone => 'Цей профіль не має календарів Google, синхронізованих із телевізором.';
+
+  @override
+  String get haCalendarsTitle => 'Календарі';
+
+  @override
+  String get haCalendarsLoading => 'Запитуємо календарі в Home Assistant…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'Home Assistant ще не налаштовано на цьому телевізорі. Додайте адресу й токен у розділі $place.';
+  }
+
+  @override
+  String get haCalendarsError => 'Не вдалося отримати календарі з Home Assistant. Перевірте адресу й токен.';
+
+  @override
+  String get haCalendarsNone => 'У Home Assistant немає календарів.';
+
+  @override
   String get haCalendarsHelp => 'Увімкнені тут календарі показуються, коли у фокусі дата й час праворуч угорі: решта дня, а за OK — наступні 7 днів. Кожен профіль вибирає свої.';
 
   @override

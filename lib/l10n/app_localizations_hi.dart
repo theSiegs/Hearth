@@ -2642,6 +2642,25 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get calendarsNone => 'इस प्रोफ़ाइल का कोई Google कैलेंडर टीवी से सिंक नहीं है।';
+
+  @override
+  String get haCalendarsTitle => 'कैलेंडर';
+
+  @override
+  String get haCalendarsLoading => 'Home Assistant से कैलेंडर माँगे जा रहे हैं…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'इस TV पर Home Assistant अभी सेट नहीं है। उसका पता और टोकन $place में जोड़ें।';
+  }
+
+  @override
+  String get haCalendarsError => 'Home Assistant से कैलेंडर नहीं मिल सके। पता और टोकन जाँचें।';
+
+  @override
+  String get haCalendarsNone => 'Home Assistant में कोई कैलेंडर नहीं है।';
+
+  @override
   String get haCalendarsHelp => 'यहाँ चालू किए गए कैलेंडर तब दिखते हैं जब ऊपर दाईं ओर की तारीख और समय पर फ़ोकस हो: आज का बाकी दिन, और OK से अगले 7 दिन। हर प्रोफ़ाइल अपने चुनती है।';
 
   @override

@@ -2644,6 +2644,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get calendarsNone => 'This profile has no Google calendars synced to the TV.';
+
+  @override
+  String get haCalendarsTitle => 'Calendars';
+
+  @override
+  String get haCalendarsLoading => 'Asking Home Assistant for its calendars…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'Home Assistant isn\'t set up on this TV yet. Add its address and token in $place.';
+  }
+
+  @override
+  String get haCalendarsError => 'Couldn\'t get the calendars from Home Assistant. Check its address and token.';
+
+  @override
+  String get haCalendarsNone => 'Home Assistant has no calendars.';
+
+  @override
   String get haCalendarsHelp => 'The calendars turned on here show when the date and time at the top right have focus: what\'s left of today, and OK for the next 7 days. Each profile chooses its own.';
 
   @override
