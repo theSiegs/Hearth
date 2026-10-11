@@ -2549,4 +2549,24 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get youTubeLimitHint => 'इस प्रोफ़ाइल के लिए, HearthTube में। Home Assistant सेट होने पर, आपके अन्य डिवाइस के साथ साझा की गई सीमा भी गिनी जाती है।';
+
+  @override
+  String get haPanelProfileDashboard => 'इस प्रोफ़ाइल का डैशबोर्ड';
+
+  @override
+  String get haPanelProfileDashboardTv => 'टीवी वाला ही';
+
+  @override
+  String get haPanelChooseDashboard => 'डैशबोर्ड चुनें';
+
+  @override
+  String haPanelChooseView(String dashboard) {
+    return '$dashboard का कौन-सा व्यू?';
+  }
+
+  @override
+  String get haPanelFirstView => 'इसका पहला व्यू';
+
+  @override
+  String get haPanelDashboardsError => 'Home Assistant से डैशबोर्ड नहीं मिल सके। नीचे पता और टोकन जाँचें।';
 }

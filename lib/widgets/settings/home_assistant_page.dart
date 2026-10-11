@@ -20,10 +20,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../flauncher_channel.dart';
+import '../../providers/ha_dashboards.dart';
 import '../../providers/settings_service.dart';
 import '../rounded_switch_list_tile.dart';
 import 'focusable_settings_tile.dart';
 import 'remote_text_field.dart';
+import 'ha_dashboard_dialog.dart';
 import 'ha_phone_setup_dialog.dart';
 import 'settings_page.dart';
 import 'setup_checklist_page.dart';
@@ -245,6 +247,22 @@ class _HaPanelPageState extends State<HaPanelPage> {
     }
   }
 
+  /// This profile's own dashboard, picked from Home Assistant's list (or back to the TV's).
+  Future<void> _chooseProfileDashboard() async {
+    final settings = context.read<SettingsService>();
+    ({String url, String token})? connection;
+    try {
+      connection = await _channel.getHaConnection();
+    } catch (_) {}
+    if (!mounted) return;
+    final path = await showDialog<String>(
+      context: context,
+      builder: (_) => HaDashboardDialog(
+          dashboards: connection == null ? null : HaDashboards(connection.url, connection.token)),
+    );
+    if (path != null) await settings.setHaPanelDashboard(path);
+  }
+
   Future<void> _setUpFromPhone() async {
     final received = await showDialog<bool>(context: context, builder: (_) => HaPhoneSetupDialog(channel: _channel));
     if (received == true) {
@@ -274,6 +292,16 @@ class _HaPanelPageState extends State<HaPanelPage> {
           leading: const Icon(Icons.qr_code_2),
           title: Text(l.haSetUpFromPhone, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: _setUpFromPhone,
+        ),
+        Selector<SettingsService, String>(
+          selector: (_, settings) => settings.haPanelDashboard,
+          builder: (context, own, _) => FocusableSettingsTile(
+            leading: const Icon(Icons.person_outline),
+            title: Text(l.haPanelProfileDashboard, style: Theme.of(context).textTheme.bodyMedium),
+            trailing: Text(own.isEmpty ? l.haPanelProfileDashboardTv : own,
+                style: Theme.of(context).textTheme.bodySmall),
+            onPressed: _chooseProfileDashboard,
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),

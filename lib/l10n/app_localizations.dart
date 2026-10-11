@@ -4546,6 +4546,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'For this profile, in HearthTube. With Home Assistant set up, a limit it shares with your other devices counts too.'**
   String get youTubeLimitHint;
+
+  /// Dashboard panel page: button that picks this profile's own Home Assistant dashboard
+  ///
+  /// In en, this message translates to:
+  /// **'Dashboard for this profile'**
+  String get haPanelProfileDashboard;
+
+  /// Dashboard panel page: this profile uses the TV's dashboard (the one typed below), not one of its own
+  ///
+  /// In en, this message translates to:
+  /// **'Same as the TV\'s'**
+  String get haPanelProfileDashboardTv;
+
+  /// Dashboard picker: title while listing Home Assistant's dashboards
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a dashboard'**
+  String get haPanelChooseDashboard;
+
+  /// Dashboard picker: title while listing the chosen dashboard's views; {dashboard} is its title
+  ///
+  /// In en, this message translates to:
+  /// **'Which view of {dashboard}?'**
+  String haPanelChooseView(String dashboard);
+
+  /// Dashboard picker: the dashboard without picking a view (it opens on its first)
+  ///
+  /// In en, this message translates to:
+  /// **'Its first view'**
+  String get haPanelFirstView;
+
+  /// Dashboard picker: Home Assistant couldn't be asked for its dashboards
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t get the dashboards from Home Assistant. Check the address and token below.'**
+  String get haPanelDashboardsError;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

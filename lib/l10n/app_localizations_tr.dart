@@ -2540,4 +2540,24 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get youTubeLimitHint => 'Bu profil için, HearthTube\'da. Home Assistant kuruluysa, diğer cihazlarınızla paylaştığı bir sınır da geçerli olur.';
+
+  @override
+  String get haPanelProfileDashboard => 'Bu profilin panosu';
+
+  @override
+  String get haPanelProfileDashboardTv => 'TV’deki ile aynı';
+
+  @override
+  String get haPanelChooseDashboard => 'Bir pano seçin';
+
+  @override
+  String haPanelChooseView(String dashboard) {
+    return '$dashboard panosunun hangi görünümü?';
+  }
+
+  @override
+  String get haPanelFirstView => 'İlk görünümü';
+
+  @override
+  String get haPanelDashboardsError => 'Panolar Home Assistant’tan alınamadı. Aşağıdaki adresi ve belirteci kontrol edin.';
 }

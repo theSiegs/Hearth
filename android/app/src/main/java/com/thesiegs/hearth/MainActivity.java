@@ -307,6 +307,17 @@ public class MainActivity extends FlutterActivity {
                 result.success(null);
             }
             case "getHaSetupReceived" -> result.success(HaSetupServer.received());
+            case "getHaConnection" -> {
+                // For Settings' dashboard picker, which asks Home Assistant for its dashboards with the panel's token
+                if (!HaConfig.isConfigured(this)) {
+                    result.success(null);
+                } else {
+                    Map<String, Object> connection = new HashMap<>();
+                    connection.put("url", HaConfig.baseUrl(this));
+                    connection.put("token", HaConfig.token(this));
+                    result.success(connection);
+                }
+            }
             case "openHaPanel" -> {
                 startActivity(new Intent(this, HaPanelActivity.class));
                 result.success(null);

@@ -54,6 +54,8 @@ const String _dockDarkBackgroundKey = "dock_dark_background";
 const String _dockShadowEnabledKey = "dock_shadow_enabled";
 const String _blurWallpaperBelowDockKey = "blur_wallpaper_below_dock";
 const String _haPanelEnabledKey = "ha_panel_enabled";
+// HaPanelPage.java reads it too
+const String _haPanelDashboardKey = "ha_panel_profile_dashboard";
 const String _showInputsWidgetInStatusBarKey = "show_inputs_widget_in_status_bar";
 const String _showContinueWatchingKey = "show_continue_watching";
 const String _continueWatchingCardSizeKey = "continue_watching_card_size";
@@ -166,6 +168,7 @@ class SettingsService extends ChangeNotifier {
     _dockShadowEnabledKey,
     _blurWallpaperBelowDockKey,
     _haPanelEnabledKey,
+    _haPanelDashboardKey,
     _showInputsWidgetInStatusBarKey,
     _showContinueWatchingKey,
     _continueWatchingCardSizeKey,
@@ -473,6 +476,11 @@ class SettingsService extends ChangeNotifier {
   bool get haPanelEnabled => _bool(_haPanelEnabledKey, false);
 
   Future<void> setHaPanelEnabled(bool enabled) => _setBool(_haPanelEnabledKey, enabled);
+
+  /// This profile's dashboard for the panel ("hearth-tv/home"); empty for the TV's own (Settings > Home Assistant).
+  String get haPanelDashboard => _string(_haPanelDashboardKey, "");
+
+  Future<void> setHaPanelDashboard(String path) => _setString(_haPanelDashboardKey, path);
 
   Future<void> setShowInputsWidgetInStatusBar(bool show) => _setBool(_showInputsWidgetInStatusBarKey, show);
 

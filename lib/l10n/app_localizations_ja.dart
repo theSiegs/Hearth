@@ -2539,4 +2539,24 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get youTubeLimitHint => 'このプロフィールのHearthTubeでの時間です。Home Assistantを設定している場合、ほかのデバイスと共有する制限も適用されます。';
+
+  @override
+  String get haPanelProfileDashboard => 'このプロフィールのダッシュボード';
+
+  @override
+  String get haPanelProfileDashboardTv => 'テレビと同じ';
+
+  @override
+  String get haPanelChooseDashboard => 'ダッシュボードを選択';
+
+  @override
+  String haPanelChooseView(String dashboard) {
+    return '$dashboard のどのビュー？';
+  }
+
+  @override
+  String get haPanelFirstView => '最初のビュー';
+
+  @override
+  String get haPanelDashboardsError => 'Home Assistant からダッシュボードを取得できませんでした。下のアドレスとトークンを確認してください。';
 }

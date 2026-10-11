@@ -2549,4 +2549,24 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get youTubeLimitHint => 'Für dieses Profil, in HearthTube. Mit Home Assistant zählt auch ein Limit, das es mit deinen anderen Geräten teilt.';
+
+  @override
+  String get haPanelProfileDashboard => 'Dashboard für dieses Profil';
+
+  @override
+  String get haPanelProfileDashboardTv => 'Wie beim Fernseher';
+
+  @override
+  String get haPanelChooseDashboard => 'Dashboard auswählen';
+
+  @override
+  String haPanelChooseView(String dashboard) {
+    return 'Welche Ansicht von $dashboard?';
+  }
+
+  @override
+  String get haPanelFirstView => 'Seine erste Ansicht';
+
+  @override
+  String get haPanelDashboardsError => 'Die Dashboards konnten nicht von Home Assistant abgerufen werden. Prüfe Adresse und Token unten.';
 }

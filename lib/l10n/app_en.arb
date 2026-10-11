@@ -3266,5 +3266,34 @@
     "youTubeLimitHint": "For this profile, in HearthTube. With Home Assistant set up, a limit it shares with your other devices counts too.",
     "@youTubeLimitHint": {
         "description": "YouTube time per day: what it applies to, under the choices"
+    },
+    "haPanelProfileDashboard": "Dashboard for this profile",
+    "@haPanelProfileDashboard": {
+        "description": "Dashboard panel page: button that picks this profile's own Home Assistant dashboard"
+    },
+    "haPanelProfileDashboardTv": "Same as the TV's",
+    "@haPanelProfileDashboardTv": {
+        "description": "Dashboard panel page: this profile uses the TV's dashboard (the one typed below), not one of its own"
+    },
+    "haPanelChooseDashboard": "Choose a dashboard",
+    "@haPanelChooseDashboard": {
+        "description": "Dashboard picker: title while listing Home Assistant's dashboards"
+    },
+    "haPanelChooseView": "Which view of {dashboard}?",
+    "@haPanelChooseView": {
+        "description": "Dashboard picker: title while listing the chosen dashboard's views; {dashboard} is its title",
+        "placeholders": {
+            "dashboard": {
+                "type": "String"
+            }
+        }
+    },
+    "haPanelFirstView": "Its first view",
+    "@haPanelFirstView": {
+        "description": "Dashboard picker: the dashboard without picking a view (it opens on its first)"
+    },
+    "haPanelDashboardsError": "Couldn't get the dashboards from Home Assistant. Check the address and token below.",
+    "@haPanelDashboardsError": {
+        "description": "Dashboard picker: Home Assistant couldn't be asked for its dashboards"
     }
 }

@@ -771,5 +771,11 @@
     "youTubeLimitTitle": "Час YouTube на день",
     "youTubeLimitNone": "Без обмежень",
     "youTubeLimitMinutes": "{minutes, plural, =1{1 хвилина} few{{minutes} хвилини} many{{minutes} хвилин} other{{minutes} хвилини}}",
-    "youTubeLimitHint": "Для цього профілю, у HearthTube. Якщо налаштовано Home Assistant, враховується й спільний ліміт з іншими пристроями."
+    "youTubeLimitHint": "Для цього профілю, у HearthTube. Якщо налаштовано Home Assistant, враховується й спільний ліміт з іншими пристроями.",
+    "haPanelProfileDashboard": "Панель для цього профілю",
+    "haPanelProfileDashboardTv": "Як на телевізорі",
+    "haPanelChooseDashboard": "Виберіть панель",
+    "haPanelChooseView": "Який вигляд панелі {dashboard}?",
+    "haPanelFirstView": "Її перший вигляд",
+    "haPanelDashboardsError": "Не вдалося отримати панелі з Home Assistant. Перевірте адресу й токен нижче."
 }
