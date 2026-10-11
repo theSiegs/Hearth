@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../flauncher_channel.dart';
 import '../providers/profile_service.dart';
 import '../providers/settings_service.dart';
 import 'settings/message_dialog.dart';
@@ -59,10 +60,16 @@ Future<bool> requireParent(BuildContext context) async {
 }
 
 /// The parent PIN in any profile, for what only a parent may do anywhere (saving a streaming app's profile PIN).
-/// Without a parent PIN set, says to set one first. Returns true when the caller may go ahead.
+/// In a grown-up's profile it isn't asked while they're at the remote: since their profile came on (or they entered
+/// the PIN), the remote hasn't gone untouched for five minutes. Without a parent PIN set, says to set one first.
+/// Returns true when the caller may go ahead.
 Future<bool> requireParentPin(BuildContext context) async {
   final settings = context.read<SettingsService>();
+  final channel = context.read<FLauncherChannel?>();
+  final bool kids = context.read<ProfileService?>()?.isKidsProfile ?? false;
   final l = AppLocalizations.of(context)!;
+  if (!kids && channel != null && await _parentPresent(channel)) return true;
+  if (!context.mounted) return false;
   if (!settings.hasParentPin) {
     await showMessageDialog(context,
         title: l.parentPinTitle,
@@ -73,7 +80,21 @@ Future<bool> requireParentPin(BuildContext context) async {
     context: context,
     builder: (_) => ParentPinDialog(title: l.parentPinTitle, verify: settings.verifyParentPin),
   );
+  if (pin != null && !kids && channel != null) {
+    try {
+      await channel.parentConfirmed();
+    } catch (_) {}
+  }
   return pin != null;
+}
+
+/// Whether a grown-up is at the remote (see [requireParentPin]); not when Hearth can't tell.
+Future<bool> _parentPresent(FLauncherChannel channel) async {
+  try {
+    return await channel.isParentPresent();
+  } catch (_) {
+    return false;
+  }
 }
 
 /// Asks for a new parent PIN twice (the second time must match) and saves it: from Settings, and from the setup

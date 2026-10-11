@@ -34,6 +34,14 @@ const _pkg = "com.example.tv";
 
 /// Profile Pairing's apps, pairings and saved PINs as Hearth's native side has them.
 class _PinsChannel extends FLauncherChannel {
+  bool parentPresent = false;
+
+  @override
+  Future<bool> isParentPresent() async => parentPresent;
+
+  @override
+  Future<void> parentConfirmed() async {}
+
   final List<Map<dynamic, dynamic>> choices = [
     {"hearthProfile": "user:0", "displayName": "Alex", "kids": false, "mode": "profile", "chosenProfile": "Alex M"},
     {"hearthProfile": "user:0:sam", "displayName": "Sam", "kids": false, "mode": "auto", "autoMatch": "Sam M"},
@@ -105,6 +113,7 @@ void main() {
   void on(String key, String name) {
     when(profiles.activeProfileKey).thenReturn(key);
     when(profiles.activeProfileName).thenReturn(name);
+    when(profiles.isKidsProfile).thenReturn(!key.startsWith("user:0"));
   }
 
   setUp(() async {
@@ -184,6 +193,28 @@ void main() {
     await type(tester, "1357");
     expect(channel.events, ["pair user:0:sam profile Sam M", "save Sam M 1357"]);
     expect(find.text("Sam M · Profile PIN: Saved"), findsOneWidget);
+  });
+
+  testWidgets("a grown-up still at the remote isn't asked for the parent PIN again", (tester) async {
+    await SettingsService(prefs).setParentPin("2468");
+    channel.parentPresent = true;
+    await pump(tester);
+    await tap(tester, "Example TV");
+    // Straight to the app profile's PIN
+    expect(find.text("Parent PIN"), findsNothing);
+    expect(find.text("Sam M’s PIN in Example TV"), findsOneWidget);
+    await type(tester, "1357");
+    await type(tester, "1357");
+    expect(channel.events, ["pair user:0:sam profile Sam M", "save Sam M 1357"]);
+  });
+
+  testWidgets("a kids' profile asks for the parent PIN even with a grown-up around", (tester) async {
+    on("user:10", "Riley");
+    await SettingsService(prefs).setParentPin("2468");
+    channel.parentPresent = true;
+    await pump(tester);
+    await tap(tester, "Example TV");
+    expect(find.text("Parent PIN"), findsOneWidget);
   });
 
   testWidgets("backing out of the PIN changes no pairing", (tester) async {

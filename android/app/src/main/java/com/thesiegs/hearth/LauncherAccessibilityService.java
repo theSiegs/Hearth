@@ -266,6 +266,51 @@ public class LauncherAccessibilityService extends AccessibilityService {
         readHomeAccount(false, mUnstartedPick);
     };
     private final Runnable mReadHomeAccount = this::readHomeAccountOnce;
+    /**
+     * While the chooser is "open": whether Google TV's home is in fact up. Its profile PIN, entered over the chooser,
+     * can close onto the home without a window change Hearth hears (2026-10-10: Hearth stayed out, Google TV's home
+     * stayed up). The home names who's logged in; the chooser and its PIN pad don't.
+     */
+    private final Runnable mChooserGoneCheck = this::checkChooserGone;
+    private static final long CHOOSER_GONE_CHECK_MS = 1_000;
+    private static final int CHOOSER_GONE_MAX_CHECKS = 180;
+    private int mChooserGoneChecks;
+
+    private void checkChooserGone() {
+        if (!mChooserOnScreen) return;
+        final AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null || !GOOGLE_TV_PACKAGE.equals(String.valueOf(root.getPackageName()))) {
+            nextChooserGoneCheck();
+            return;
+        }
+        try {
+            mAccountReader.execute(() -> {
+                String account = GoogleTvAccount.loggedIn(root);
+                mHandler.post(() -> onChooserGoneChecked(account));
+            });
+        } catch (RejectedExecutionException e) {
+            // The service is stopping
+        }
+    }
+
+    private void onChooserGoneChecked(String account) {
+        if (!mChooserOnScreen) return;
+        if (account == null) {
+            nextChooserGoneCheck();
+            return;
+        }
+        Log.i(TAG, "chooser closed (Google TV's home is up, naming " + account + ")");
+        mChooserOnScreen = false;
+        mLastWindowPackage = GOOGLE_TV_PACKAGE;
+        checkProfileUser("chooser closed");
+        onGoogleTvWindow(GOOGLE_TV_HOME_ACTIVITY, null, true);
+    }
+
+    private void nextChooserGoneCheck() {
+        if (++mChooserGoneChecks < CHOOSER_GONE_MAX_CHECKS) {
+            mHandler.postDelayed(mChooserGoneCheck, CHOOSER_GONE_CHECK_MS);
+        }
+    }
     private final Runnable mPeriodicCheck = new Runnable() {
         @Override
         public void run() {
@@ -588,6 +633,14 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mHandler.removeCallbacks(mReadyFallback);
         mHandler.postDelayed(mReadyFallback, PROFILE_READY_FALLBACK_MS);
         Log.i(TAG, "Profile is now " + key + " (" + ProfileUsers.profileName(this, serial) + ", " + why + ")");
+        // A grown-up switching to their own profile is at the remote; a kids' profile always asks for the parent PIN
+        if (keyChanged) {
+            if (ProfileUsers.isGrownUps(this, serial)) {
+                ParentPresence.confirmed(SystemClock.elapsedRealtime());
+            } else {
+                ParentPresence.ended();
+            }
+        }
         restartFront();
         // The new profile's allowance, fresh
         HaAllowance.readSoon();
@@ -1142,12 +1195,15 @@ public class LauncherAccessibilityService extends AccessibilityService {
             mKidsLockHold = true;
             setScreenTimeLock();
         }
-        reportScreenTimeText(className, event, wellbeing);
+        if (event != null) reportScreenTimeText(className, event, wellbeing);
         if (isProfileLock(className)) mProfileLockSeenAt = SystemClock.elapsedRealtime();
         if (isChooser(className)) {
             mHandler.removeCallbacks(mReadChooser);
             mHandler.postDelayed(mReadChooser, CHOOSER_READ_DELAY_MS);
             checkProfileUser("chooser opened");
+            mChooserGoneChecks = 0;
+            mHandler.removeCallbacks(mChooserGoneCheck);
+            mHandler.postDelayed(mChooserGoneCheck, CHOOSER_GONE_CHECK_MS);
         }
 
         // Google's own setup flows (a new kids profile's onboarding, sign-in, PIN creation) open Google TV's
@@ -1675,6 +1731,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
     @Override
     protected boolean onKeyEvent(KeyEvent event) {
         onUserInput();
+        if (event.getAction() == KeyEvent.ACTION_DOWN && event.getDeviceId() != KeyCharacterMap.VIRTUAL_KEYBOARD) {
+            ParentPresence.onKey(SystemClock.elapsedRealtime());
+        }
         // Hearth is typing a saved profile PIN behind the cover: keys would land on the app's keypad. Back and Home
         // stop it (Home still goes on to do its usual job), everything else waits.
         // Keys Hearth injects itself (Profile Pairing moving a keypad's focus) come from no real device and pass.
