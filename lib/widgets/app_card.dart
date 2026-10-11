@@ -477,8 +477,10 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
             alignment: 0.1, duration: const Duration(milliseconds: 100), curve: Curves.easeInOut);
         return;
       }
+      // Centred, as when the card is selected: near the top instead, the top row would scroll its title under the
+      // top bar
       Scrollable.ensureVisible(context,
-          alignment: 0.1, duration: const Duration(milliseconds: 100), curve: Curves.easeInOut);
+          alignment: 0.5, duration: const Duration(milliseconds: 100), curve: Curves.easeInOut);
     });
     if (key == LogicalKeyboardKey.arrowLeft) {
       widget.onMove(AxisDirection.left);
