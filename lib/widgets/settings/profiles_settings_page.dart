@@ -79,9 +79,7 @@ class ProfilesSettingsPage extends StatelessWidget {
             onPressed: () => Navigator.of(context).pushNamed(StreamingPinsPage.routeName),
           ),
         if (!locked) const _KidsProfilesTile(),
-        // A grown-up may set their own limit here; each kid's is set in Kids' profiles, without switching to them
-        if (!locked && !(context.select<ProfileService?, bool>((p) => p?.isKidsProfile ?? false)))
-          const YouTubeLimitTile(),
+        // YouTube time is a kid's only: each kid's is set in Kids' profiles, without switching to them
         if (!locked)
           FocusableSettingsTile(
             leading: const Icon(Icons.lock_outline),
