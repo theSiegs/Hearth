@@ -2788,9 +2788,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get haControlTurnOn => '켜기';
 
   @override
-  String get haNativeOpenFullDashboard => '전체 대시보드 열기';
-
-  @override
   String get haPanelFullDashboard => '대신 전체 대시보드 표시';
 
   @override

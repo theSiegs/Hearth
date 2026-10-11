@@ -44,16 +44,15 @@ class HaPanel extends StatefulWidget {
   final DateTime Function() now;
 
   /// Opens Home Assistant's own dashboard (the web page) in the panel's place; null when there's none to open.
-  final VoidCallback? onOpenFullDashboard;
 
-  const HaPanel({super.key, required this.service, this.now = DateTime.now, this.onOpenFullDashboard});
+  const HaPanel({super.key, required this.service, this.now = DateTime.now});
 
   /// Slides the panel in over [context]'s home.
-  static Future<void> open(BuildContext context, HaPanelService service, {VoidCallback? onOpenFullDashboard}) =>
+  static Future<void> open(BuildContext context, HaPanelService service) =>
       showDialog(
         context: context,
         barrierColor: Colors.transparent,
-        builder: (_) => HaPanel(service: service, onOpenFullDashboard: onOpenFullDashboard),
+        builder: (_) => HaPanel(service: service),
       );
 
   @override
@@ -281,7 +280,6 @@ class _HaPanelState extends State<HaPanel> {
           if (service.status == HaPanelStatus.unreachable) _quietRow(context, Icons.cloud_off, l.haNativeUnreachable),
           if (rows.isEmpty) _quietRow(context, Icons.dashboard_outlined, l.haNativeEmpty),
           for (final row in rows) _row(context, row, format),
-          if (widget.onOpenFullDashboard != null) _fullDashboardRow(context, l),
         ],
       ),
     );
@@ -394,33 +392,6 @@ class _HaPanelState extends State<HaPanel> {
       ),
     );
   }
-
-  /// The last row: Home Assistant's own dashboard, for what the panel doesn't draw.
-  Widget _fullDashboardRow(BuildContext context, AppLocalizations l) => Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: FocusableTap(
-          onPressed: () {
-            final open = widget.onOpenFullDashboard!;
-            Navigator.of(context).maybePop();
-            open();
-          },
-          builder: (context, focused) => AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: haFocusDecoration(context, focused, filled: false),
-            child: Row(
-              children: [
-                const Icon(Icons.open_in_new, size: 18, color: Colors.white60),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(l.haNativeOpenFullDashboard,
-                      style: Theme.of(context).textTheme.bodySmall!.copyWith(color: Colors.white70)),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
 
   Widget _heading(BuildContext context, HaHeadingCard card) {
     final text = Theme.of(context).textTheme;

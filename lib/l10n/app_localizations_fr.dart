@@ -2800,9 +2800,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get haControlTurnOn => 'Allumer';
 
   @override
-  String get haNativeOpenFullDashboard => 'Ouvrir le tableau de bord complet';
-
-  @override
   String get haPanelFullDashboard => 'Afficher plutôt le tableau de bord complet';
 
   @override

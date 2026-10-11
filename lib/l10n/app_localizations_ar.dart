@@ -2836,9 +2836,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get haControlTurnOn => 'تشغيل الجهاز';
 
   @override
-  String get haNativeOpenFullDashboard => 'فتح لوحة المعلومات الكاملة';
-
-  @override
   String get haPanelFullDashboard => 'عرض لوحة المعلومات الكاملة بدلاً من ذلك';
 
   @override

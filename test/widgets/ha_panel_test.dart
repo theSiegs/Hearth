@@ -210,8 +210,7 @@ void main() {
     expect(find.byType(HaPanel), findsNothing);
   });
 
-  testWidgets("Markdown (rendered by Home Assistant), a map as a list, and the full dashboard row", (tester) async {
-    var opened = 0;
+  testWidgets("Markdown (rendered by Home Assistant) and a map as a list", (tester) async {
     const template = "{% if true %}| Kid | Today |\n|---|---:|\n| Alex | 25 min |{% endif %}";
     final service = FakeHaPanelService(
         fakeLayout: layoutOf([
@@ -231,7 +230,7 @@ void main() {
         builder: (context) => Scaffold(
           body: TextButton(
             autofocus: true,
-            onPressed: () => HaPanel.open(context, service, onOpenFullDashboard: () => opened++),
+            onPressed: () => HaPanel.open(context, service),
             child: const Text("Home"),
           ),
         ),
@@ -243,12 +242,8 @@ void main() {
     expect(find.text("25 min", findRichText: true), findsOneWidget);
     expect(find.text("person.alex"), findsOneWidget);
     expect(find.text("School"), findsOneWidget);
-    await press(tester, LogicalKeyboardKey.arrowDown);
-    await press(tester, LogicalKeyboardKey.arrowDown);
-    expect(focused(tester, "Open the full dashboard"), isTrue);
-    await press(tester, LogicalKeyboardKey.select);
-    expect(opened, 1);
-    expect(find.byType(HaPanel), findsNothing);
+    // No row for Home Assistant's own dashboard: the panel is the dashboard
+    expect(find.text("Open the full dashboard"), findsNothing);
   });
 
   testWidgets("Unreachable: a quiet row over what was read", (tester) async {

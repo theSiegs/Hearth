@@ -2788,9 +2788,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get haControlTurnOn => '電源を入れる';
 
   @override
-  String get haNativeOpenFullDashboard => 'ダッシュボード全体を開く';
-
-  @override
   String get haPanelFullDashboard => '代わりにダッシュボード全体を表示';
 
   @override

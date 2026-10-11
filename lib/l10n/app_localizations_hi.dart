@@ -2798,9 +2798,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get haControlTurnOn => 'चालू करें';
 
   @override
-  String get haNativeOpenFullDashboard => 'पूरा डैशबोर्ड खोलें';
-
-  @override
   String get haPanelFullDashboard => 'इसके बजाय पूरा डैशबोर्ड दिखाएँ';
 
   @override

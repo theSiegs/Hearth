@@ -845,7 +845,6 @@
     "haControlStop": "停止",
     "haControlNext": "次へ",
     "haControlTurnOn": "電源を入れる",
-    "haNativeOpenFullDashboard": "ダッシュボード全体を開く",
     "haPanelFullDashboard": "代わりにダッシュボード全体を表示",
     "haPanelFullDashboardDetail": "Home Assistant 本来のページです。リモコンではその操作部分を選べません。"
 }

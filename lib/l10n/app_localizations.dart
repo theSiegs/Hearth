@@ -4985,12 +4985,6 @@ abstract class AppLocalizations {
   /// **'Turn on'**
   String get haControlTurnOn;
 
-  /// Home Assistant panel: the last row, which opens Home Assistant's own dashboard page (for cards the panel doesn't draw)
-  ///
-  /// In en, this message translates to:
-  /// **'Open the full dashboard'**
-  String get haNativeOpenFullDashboard;
-
   /// Dashboard panel settings: switch; the panel shows Home Assistant's own web page instead of Hearth's remote-friendly drawing of it
   ///
   /// In en, this message translates to:

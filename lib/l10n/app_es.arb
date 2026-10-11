@@ -845,7 +845,6 @@
     "haControlStop": "Detener",
     "haControlNext": "Siguiente",
     "haControlTurnOn": "Encender",
-    "haNativeOpenFullDashboard": "Abrir el panel completo",
     "haPanelFullDashboard": "Mostrar el panel completo en su lugar",
     "haPanelFullDashboardDetail": "La propia página de Home Assistant. El mando no llega a sus controles."
 }

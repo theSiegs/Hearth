@@ -2788,9 +2788,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get haControlTurnOn => '打开';
 
   @override
-  String get haNativeOpenFullDashboard => '打开完整仪表板';
-
-  @override
   String get haPanelFullDashboard => '改为显示完整仪表板';
 
   @override

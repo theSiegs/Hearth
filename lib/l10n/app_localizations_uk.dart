@@ -2815,9 +2815,6 @@ class AppLocalizationsUk extends AppLocalizations {
   String get haControlTurnOn => 'Увімкнути';
 
   @override
-  String get haNativeOpenFullDashboard => 'Відкрити всю панель';
-
-  @override
   String get haPanelFullDashboard => 'Показувати всю панель натомість';
 
   @override

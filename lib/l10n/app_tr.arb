@@ -845,7 +845,6 @@
     "haControlStop": "Durdur",
     "haControlNext": "Sonraki",
     "haControlTurnOn": "Aç",
-    "haNativeOpenFullDashboard": "Panonun tamamını aç",
     "haPanelFullDashboard": "Bunun yerine panonun tamamını göster",
     "haPanelFullDashboardDetail": "Home Assistant'ın kendi sayfası. Kumanda denetimlerine ulaşamaz."
 }

@@ -845,7 +845,6 @@
     "haControlStop": "Зупинити",
     "haControlNext": "Далі",
     "haControlTurnOn": "Увімкнути",
-    "haNativeOpenFullDashboard": "Відкрити всю панель",
     "haPanelFullDashboard": "Показувати всю панель натомість",
     "haPanelFullDashboardDetail": "Власна сторінка Home Assistant. Пульт не може дістатися її елементів керування."
 }

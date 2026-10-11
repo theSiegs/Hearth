@@ -2789,9 +2789,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get haControlTurnOn => 'Aç';
 
   @override
-  String get haNativeOpenFullDashboard => 'Panonun tamamını aç';
-
-  @override
   String get haPanelFullDashboard => 'Bunun yerine panonun tamamını göster';
 
   @override

@@ -845,7 +845,6 @@
     "haControlStop": "Стоп",
     "haControlNext": "Далее",
     "haControlTurnOn": "Включить",
-    "haNativeOpenFullDashboard": "Открыть всю панель",
     "haPanelFullDashboard": "Показывать всю панель целиком",
     "haPanelFullDashboardDetail": "Собственная страница Home Assistant. Пульт не может управлять её элементами."
 }

@@ -2800,9 +2800,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get haControlTurnOn => 'Ligar';
 
   @override
-  String get haNativeOpenFullDashboard => 'Abrir o painel completo';
-
-  @override
   String get haPanelFullDashboard => 'Mostrar o painel completo';
 
   @override

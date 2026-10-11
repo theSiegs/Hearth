@@ -845,7 +845,6 @@
     "haControlStop": "إيقاف",
     "haControlNext": "التالي",
     "haControlTurnOn": "تشغيل الجهاز",
-    "haNativeOpenFullDashboard": "فتح لوحة المعلومات الكاملة",
     "haPanelFullDashboard": "عرض لوحة المعلومات الكاملة بدلاً من ذلك",
     "haPanelFullDashboardDetail": "صفحة Home Assistant نفسها. لا يمكن لجهاز التحكم الوصول إلى عناصر التحكم فيها."
 }

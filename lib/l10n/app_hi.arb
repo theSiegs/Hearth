@@ -845,7 +845,6 @@
     "haControlStop": "बंद करें",
     "haControlNext": "अगला",
     "haControlTurnOn": "चालू करें",
-    "haNativeOpenFullDashboard": "पूरा डैशबोर्ड खोलें",
     "haPanelFullDashboard": "इसके बजाय पूरा डैशबोर्ड दिखाएँ",
     "haPanelFullDashboardDetail": "Home Assistant का अपना पेज। रिमोट इसके नियंत्रणों तक नहीं पहुँच सकता।"
 }

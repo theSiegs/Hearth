@@ -284,7 +284,7 @@ class _FLauncherState extends State<FLauncher> {
       },
       language: () => mounted ? Localizations.localeOf(context).languageCode : "en",
     );
-    HaPanel.open(context, service, onOpenFullDashboard: channel.openHaPanel);
+    HaPanel.open(context, service);
   }
 
   void _openSearch(String mode) {

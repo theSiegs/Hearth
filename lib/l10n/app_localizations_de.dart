@@ -2798,9 +2798,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get haControlTurnOn => 'Einschalten';
 
   @override
-  String get haNativeOpenFullDashboard => 'Vollständiges Dashboard öffnen';
-
-  @override
   String get haPanelFullDashboard => 'Stattdessen das vollständige Dashboard zeigen';
 
   @override

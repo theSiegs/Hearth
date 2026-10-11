@@ -2800,9 +2800,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get haControlTurnOn => 'Accendi';
 
   @override
-  String get haNativeOpenFullDashboard => 'Apri la dashboard completa';
-
-  @override
   String get haPanelFullDashboard => 'Mostra invece la dashboard completa';
 
   @override
