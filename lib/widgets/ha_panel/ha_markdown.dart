@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'ha_image_cache.dart';
 import 'package:flauncher/widgets/ha_panel/ha_icons.dart';
 import 'package:flutter/material.dart';
 
@@ -381,8 +382,9 @@ class HaInlineImage extends StatelessWidget {
     return SizedBox(
       width: size.width,
       height: size.height,
-      child: Image.network(
-        span.image!,
+      // App icons come round again on every refresh: kept on disk (HaImageCache), shown offline too
+      child: Image(
+        image: HaCachedImage(span.image!),
         width: size.width,
         height: size.height,
         fit: BoxFit.contain,

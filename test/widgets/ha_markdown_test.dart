@@ -15,6 +15,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:io';
+
+import 'package:flauncher/widgets/ha_panel/ha_image_cache.dart';
 import 'package:flauncher/widgets/ha_panel/ha_markdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -115,6 +118,9 @@ Second line<br>
   });
 
   testWidgets("An image that can't be had: the app icon in its place", (tester) async {
+    final dir = await tester.runAsync(() => Directory.systemTemp.createTemp("ha_images_md"));
+    HaImageCache.directory = () async => dir!;
+    HaImageCache.fetch = (uri, headers) async => throw const SocketException("offline");
     await tester.pumpWidget(const MaterialApp(
       home: Scaffold(
         body: SizedBox(
@@ -124,7 +130,7 @@ Second line<br>
       ),
     ));
     final image = tester.widget<Image>(find.byType(Image));
-    expect((image.image as NetworkImage).url, "https://example.invalid/icon.png");
+    expect((image.image as HaCachedImage).url, "https://example.invalid/icon.png");
     expect(image.height, lessThanOrEqualTo(14 * 1.3 + 0.01));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump();
