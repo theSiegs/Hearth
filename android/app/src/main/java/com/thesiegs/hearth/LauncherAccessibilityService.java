@@ -82,6 +82,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final long HOME_ACCOUNT_SETTLE_MS = 1_200;
     /** How long after a pick the home that comes up is the one it leads to. */
     private static final long HOME_PICK_FRESH_MS = 10_000;
+    /**
+     * In a kids profile Google TV's kids home decides bedtime / time up, and only while it is in front: it opens its
+     * time up screen once it has loaded (0.45 s after the home on the emulator), and blocks the kid's apps only after
+     * that screen has been up. Hearth leaves the home this long first (1.5 s worked on the TV, 2026-10-06).
+     */
     private static final long KIDS_HOME_GRACE_MS = 1_500;
     /**
      * Google TV's own home, not after its chooser: the remote's profile button opens the home and then the chooser
@@ -167,8 +172,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private int mStepBacks = 0;
     private static final long STEP_BACK_WINDOW_MS = 60_000;
     private static final int STEP_BACKS_PER_WINDOW = 3;
-    /** The apps' state settled screen time the last time it was checked (see ProfileUsers.isScreenTimeUp). */
-    private boolean mScreenTimeKnown = false;
     private String mScreenTimeClass;
     /** Whether Google TV is suspending apps (a kids profile), as last seen; null until first checked. */
     private Boolean mKidsState;
@@ -1181,23 +1184,17 @@ public class LauncherAccessibilityService extends AccessibilityService {
             String pick = mHomePick != null && now - mHomePickAt < HOME_PICK_FRESH_MS ? mHomePick : null;
             // Google TV opens its own home by component after a profile switch, on Back from apps, etc.,
             // ignoring the default home app. Bring the launcher back whenever that's allowed.
+            boolean afterProfileLock = now - mProfileLockSeenAt < PROFILE_LOCK_HOLD_MS;
+            long grace = homeGraceMs(ProfileUsers.isKids(this) || mKidsLockHold, afterProfileLock);
             if (now < mGoogleSetupUntil || mNewProfileHold) {
                 Log.i(TAG, "Not taking over: Google TV setup in progress");
-            } else if (autoTakeOverAllowed() && now - mProfileLockSeenAt < PROFILE_LOCK_HOLD_MS) {
-                // Just after Google TV's profile lock: a right PIN leaves its home up (take over then), a cancelled
-                // one brings its chooser up over the home a moment later, which keeps Hearth out (the profile
-                // stays locked until someone picks a profile or enters the PIN)
+            } else if (autoTakeOverAllowed() && grace > 0) {
+                // Take over only if the home is still in front once the grace is over (see homeGraceMs)
                 mHandler.removeCallbacks(mKidsHomeTakeOver);
-                mHandler.postDelayed(mKidsHomeTakeOver, PROFILE_LOCK_GRACE_MS);
+                mHandler.postDelayed(mKidsHomeTakeOver, grace);
                 // Only a pick in the chooser changes whose profile is on (a right PIN doesn't): only then is the home
                 // read first, which the takeover waits for
-                if (readAccount && pick != null) readHomeAccount(false, pick);
-            } else if (autoTakeOverAllowed() && ProfileUsers.isKids(this) && !mScreenTimeKnown) {
-                // A kids profile whose screen time the apps can't tell: Google TV opens its time up / bedtime
-                // screen from its home a moment after the home itself, and covering the home first would hide
-                // it (Hearth, the home app, can't be suspended). Take over only if the home is still in front.
-                mHandler.removeCallbacks(mKidsHomeTakeOver);
-                mHandler.postDelayed(mKidsHomeTakeOver, KIDS_HOME_GRACE_MS);
+                if (afterProfileLock && readAccount && pick != null) readHomeAccount(false, pick);
             } else if (autoTakeOverAllowed()) {
                 if (readAccount && chooserClosed) {
                     readHomeAccount(true, pick);
@@ -1333,7 +1330,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private void updateScreenTimeLock(String why) {
         if (mActiveSerial == ProfileUsers.UNKNOWN || mCandidateSerial != ProfileUsers.UNKNOWN) return;
         Boolean up = ProfileUsers.isScreenTimeUp(this, mActiveSerial);
-        mScreenTimeKnown = up != null;
         if (up == null || up == mScreenTimeLock) return;
         if (up) {
             Log.i(TAG, "Screen time is up: the approved apps are blocked (" + why + ")");
@@ -1353,6 +1349,19 @@ public class LauncherAccessibilityService extends AccessibilityService {
     static boolean mayLiftLock(boolean kidsLockHold, boolean picked, boolean flipped, boolean kids) {
         if (picked) return true;
         return !kidsLockHold && (flipped || !kids);
+    }
+
+    /**
+     * How long Google TV's home stays up before Hearth covers it (0: at once).
+     * - A kids profile (or one Google TV's screen time screen locked): always the kids grace. Google TV checks bedtime
+     *   and time up only from its kids home while that's in front, and blocks the kid's apps only after its time up
+     *   screen has been up, so unblocked apps don't mean there's time left. Covering the home at once (as Hearth did
+     *   whenever the apps looked unblocked) meant the screen never came and the apps never got blocked: no bedtime.
+     * - Just after Google TV's profile lock: a short wait for the chooser a cancelled PIN brings up.
+     */
+    static long homeGraceMs(boolean kids, boolean afterProfileLock) {
+        if (kids) return KIDS_HOME_GRACE_MS;
+        return afterProfileLock ? PROFILE_LOCK_GRACE_MS : 0;
     }
 
     /**

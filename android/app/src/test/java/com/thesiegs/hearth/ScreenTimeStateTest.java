@@ -43,6 +43,20 @@ public class ScreenTimeStateTest {
     }
 
     @Test
+    public void kidsHomeAlwaysGetsItsGrace() {
+        // Google TV opens its bedtime / time up screen from its kids home, and blocks the apps only afterwards, so a
+        // kids profile always leaves the home up for a moment, whatever the apps say
+        long kids = LauncherAccessibilityService.homeGraceMs(true, false);
+        assertTrue(kids >= 1_000);
+        // Just after a profile lock too: the kids grace is the longer wait
+        assertEquals(kids, LauncherAccessibilityService.homeGraceMs(true, true));
+        // A grown-up's home is covered at once, or after the short wait for a cancelled PIN's chooser
+        assertEquals(0, LauncherAccessibilityService.homeGraceMs(false, false));
+        long afterLock = LauncherAccessibilityService.homeGraceMs(false, true);
+        assertTrue(afterLock > 0 && afterLock < kids);
+    }
+
+    @Test
     public void readsGoogleTvsBedtimeScreen() {
         ScreenTimeScreen screen = ScreenTimeScreen.parse(WELLBEING,
                 Arrays.asList("Time for bed", "This device unlocks at 7:00 AM"));
