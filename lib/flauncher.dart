@@ -97,7 +97,7 @@ class _FLauncherState extends State<FLauncher> {
   HomeSearch? _homeSearch;
   bool _awaitingResults = false;
 
-  /// Wraps the single apps grid shown when there's no dock.
+  /// Wraps the home's apps when there's no dock: the single grid, or the sections with the dock switched off.
   final FocusNode _appsGridFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
 
   ProfileService? _profileService;
@@ -252,11 +252,27 @@ class _FLauncherState extends State<FLauncher> {
     _homeSearch?.search(text);
   }
 
-  /// The Home button, pressed while Hearth is up: Settings, a panel, a dialog or the search box over the home close.
+  /// The Home button, pressed while Hearth is up: Settings, a panel, a dialog or the search box over the home close,
+  /// a search ends, and the home goes back to its start: the dock (Continue Watching put away), or the first app at
+  /// the top of the page without one.
   void _onHomePressed() {
     if (!mounted) return;
     Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
-    if (_searchTyping) _cancelSearchEntry();
+    if (_searchTyping) setState(() => _searchTyping = false);
+    if (_homeSearch?.active ?? false) _endSearch(focusDock: false);
+    if (_showingRecents) setState(() => _showingRecents = false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_firstFocusable(_dockFocusNode) != null) {
+        _focusDock();
+      } else {
+        _landOnHome();
+      }
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(0, duration: const Duration(milliseconds: 150), curve: Curves.easeInOut);
+      }
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   void _cancelSearchEntry() {
@@ -640,8 +656,12 @@ class _FLauncherState extends State<FLauncher> {
         : (dockEnabled ? _HomeLayout.grid : _HomeLayout.sections));
     if (favorites == null) _showDetailsScrim(false);
     if (favorites == null && !dockEnabled) {
-      return _sections(sections,
-          continueWatchingActive: continueWatchingActive, continueWatchingOrder: continueWatchingOrder);
+      // Marked like the grid below, so a profile landing or Home finds the top row
+      return Focus(
+        focusNode: _appsGridFocusNode,
+        child: _sections(sections,
+            continueWatchingActive: continueWatchingActive, continueWatchingOrder: continueWatchingOrder),
+      );
     }
     if (favorites == null) {
       // No dock (nothing in Favorites this profile can open): one untitled grid of the apps it can open, never the
