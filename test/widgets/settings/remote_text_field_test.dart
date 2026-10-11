@@ -32,4 +32,30 @@ void main() {
     await tester.pump();
     expect(tester.widget<TextField>(find.byType(TextField).last).focusNode!.hasFocus, isTrue);
   });
+
+  testWidgets("Moving onto a field only selects it: OK starts editing, leaving ends it", (tester) async {
+    final first = TextEditingController(text: "lovelace");
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Column(children: [
+          RemoteTextField(controller: first, decoration: const InputDecoration(labelText: "Dashboard")),
+          RemoteTextField(controller: TextEditingController(), decoration: const InputDecoration(labelText: "Token")),
+        ]),
+      ),
+    ));
+    TextField field() => tester.widget<TextField>(find.byType(TextField).first);
+    field().focusNode!.requestFocus();
+    await tester.pump();
+    expect(field().readOnly, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pump();
+    expect(field().readOnly, isFalse);
+    await tester.enterText(find.byType(TextField).first, "tv");
+    expect(first.text, "tv");
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(field().readOnly, isTrue);
+  });
 }
