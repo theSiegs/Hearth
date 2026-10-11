@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.42 (pre-release)
+
+- The selection lands where it should with the dock on or off: on the first app at the top (not an empty section) without the dock; after removing or hiding the selected app; after closing search results; when switching the dock in Settings (the selection stays in Settings); and moving the first app keeps the page at the top.
+
 ## 2026.10.41 (pre-release)
 
 - The top bar's pills (profile name, data, weather, date and time) share one look: the same height and darkness. The weather pill shows just the current conditions (warnings like "Rain tomorrow" are off by default, under Status bar settings).

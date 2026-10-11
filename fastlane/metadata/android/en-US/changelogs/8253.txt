@@ -1,0 +1,2 @@
+- Early development pre-release.
+- The selection lands on the dock or the first app consistently, with the dock on or off.
