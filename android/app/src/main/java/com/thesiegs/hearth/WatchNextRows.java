@@ -14,9 +14,13 @@ import java.util.Map;
 /** Reads Android TV's Watch Next list of the calling user (Hearth's own, or an agent's in a profile user). */
 final class WatchNextRows {
     private static final String TAG = "HearthWatchNext";
-    /** Rows read from the provider, newest first, before sorting and trimming. */
-    private static final int MAX_SCANNED = 100;
-    private static final int MAX_ROWS = 20;
+    /**
+     * Rows read from the provider, newest first. All of them go to Continue Watching, which picks what it shows only
+     * after it has worked out whose each one is (grown-ups share this list) and dropped the finished and old ones: a
+     * shorter list here would leave one profile's entries out behind another's newer ones, and Hearth's own history
+     * would take an entry past the cut for one the app took out (WatchHistory.keep).
+     */
+    static final int MAX_ROWS = 100;
     /** An engagement time below this is in seconds: as milliseconds it would fall in early 1970. */
     private static final long SECONDS_CUTOFF = 10_000_000_000L;
 
@@ -28,7 +32,7 @@ final class WatchNextRows {
         return val != null ? val : "";
     }
 
-    /** This user's Watch Next programs, most recently engaged first (at most MAX_ROWS), as maps for Flutter. */
+    /** This user's Watch Next programs, most recently engaged first (the newest MAX_ROWS), as maps for Flutter. */
     static List<Map<String, Object>> read(Context context) {
         List<Map<String, Object>> list = new ArrayList<>();
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
@@ -64,7 +68,7 @@ final class WatchNextRows {
             }
 
             int row = 0;
-            while (row < MAX_SCANNED && cursor.moveToNext()) {
+            while (row < MAX_ROWS && cursor.moveToNext()) {
                 row++;
 
                 long time = 0;
@@ -126,10 +130,6 @@ final class WatchNextRows {
                 long idB = (Long) b.get("id");
                 return Long.compare(idB, idA);
             });
-
-            if (list.size() > MAX_ROWS) {
-                list = new ArrayList<>(list.subList(0, MAX_ROWS));
-            }
         } catch (Exception e) {
             Log.w(TAG, "Couldn't read Watch Next", e);
         }

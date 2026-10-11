@@ -342,6 +342,7 @@ public class AgentService extends Service {
             mOut = out;
             connected = true;
             onConnectionChanged(true);
+            mHandler.post(this::grantWatchNextAccess);
             mHandler.post(mSendWatchNext);
             mHandler.post(this::retireOldAdmin);
             mHandler.postDelayed(mPing, PING_MS);
@@ -392,6 +393,7 @@ public class AgentService extends Service {
             }
             case "adbKey":
                 storeSharedKey(message.optString("priv"), message.optString("pub"));
+                mHandler.post(this::grantWatchNextAccess);
                 mHandler.post(this::retireOldAdmin);
                 break;
             default:
@@ -416,11 +418,49 @@ public class AgentService extends Service {
         });
     }
 
+    /** How many entries the agent last sent (for its log); -1 before the first. */
+    private int mWatchNextSent = -1;
+    /** The agent has tried to let itself read Watch Next, since it started. */
+    private boolean mTriedWatchNextGrant;
+
     private final Runnable mSendWatchNext = () -> {
         JSONArray rows = new JSONArray();
         for (Map<String, Object> row : WatchNextRows.read(this)) rows.put(new JSONObject(row));
+        if (rows.length() != mWatchNextSent) {
+            Log.i(TAG, "Watch Next here: " + rows.length() + " entries" + (canReadWatchNext() ? ""
+                    : " (only Hearth's own: it may not read the other apps' entries here yet)"));
+            mWatchNextSent = rows.length();
+        }
         send(json("type", "watchNext", "rows", rows));
     };
+
+    private boolean canReadWatchNext() {
+        return checkSelfPermission(ProfileAppAccess.READ_TV_LISTINGS) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * Lets this copy read its profile's Watch Next, if it can't: Android's TV provider shows an app without
+     * READ_TV_LISTINGS only the entries it wrote itself, so this profile's Continue Watching would stay empty. A copy
+     * put on a kids' profile before Hearth granted it there gets it here, through the shell, with the key
+     * owner-Hearth shared (a runtime permission, for this user only). Once per start: a parent's Fix grants it too.
+     */
+    private void grantWatchNextAccess() {
+        if (mTriedWatchNextGrant || canReadWatchNext()) return;
+        if (!new File(new File(getFilesDir(), "selfadb"), "adbkey").exists()) return; // no shell yet: next connect
+        int me = userIdSelf();
+        if (me <= 0) return;
+        mTriedWatchNextGrant = true;
+        try (SelfAdb shell = SelfAdb.open(this)) {
+            String out = shell.run(ProfileAppAccess.grantWatchNextCommand(getPackageName(), me));
+            if (out != null && !out.trim().isEmpty()) Log.i(TAG, "Watch Next grant said: " + out.trim());
+        } catch (Exception e) {
+            Log.i(TAG, "Couldn't let Hearth read Watch Next here: " + e.getMessage());
+        }
+        if (canReadWatchNext()) {
+            Log.i(TAG, "Hearth may read Watch Next in user " + me + " now");
+            mHandler.post(mSendWatchNext);
+        }
+    }
 
     private PlayingClock mPlaying;
     /** Starts counting once notification access is there, and hands over what's played so far. */

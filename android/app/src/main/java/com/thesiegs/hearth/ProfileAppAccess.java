@@ -32,6 +32,7 @@ import java.util.Set;
  *   <li>Only what the owner has: install-existing copies the owner's app, so one the owner doesn't have is skipped.</li>
  *   <li>Adding changes only what's out of place: a copy that's there and kept is left alone, so Family Link's "app
  *       added" notice goes out only for a copy that's actually added.</li>
+ *   <li>The one permission granted is Hearth's {@link #READ_TV_LISTINGS} ({@link #grantWatchNextCommand}).</li>
  * </ul>
  *
  * <h3>The one safety rule</h3>
@@ -128,9 +129,33 @@ public final class ProfileAppAccess {
                 } else if (!kept) {
                     log.add(String.format(Locale.US, "user %d: kept %s", user, pkg));
                 }
+                if (HEARTH.equals(pkg)) {
+                    // Every time (granting twice changes nothing, and sends no notice): copies put there before
+                    // Hearth did this, or whose grant was taken back, get it too
+                    String out = shell.run(grantWatchNextCommand(pkg, user));
+                    if (out != null && !out.trim().isEmpty()) {
+                        log.add(String.format(Locale.US, "user %d: couldn't let %s read Watch Next: %s", user, pkg,
+                                out.trim()));
+                    }
+                }
             }
         }
         return log;
+    }
+
+    /** The permission that lets an app read every app's Watch Next entries; without it, only its own. */
+    static final String READ_TV_LISTINGS = "android.permission.READ_TV_LISTINGS";
+
+    /**
+     * Lets Hearth's copy in a kids' profile read that profile's Watch Next, for its Continue Watching: Android's TV
+     * provider shows an app without {@link #READ_TV_LISTINGS} only the entries it wrote itself (none), and an
+     * install-existing copy doesn't get the owner's grant. A runtime permission, granted per user. Only Hearth, and
+     * only another profile's user.
+     */
+    static String grantWatchNextCommand(String pkg, int user) {
+        requireOtherUser(user);
+        if (!HEARTH.equals(pkg)) throw new IllegalArgumentException("Only Hearth reads Watch Next: " + pkg);
+        return "pm grant --user " + user + " " + pkg + " " + READ_TV_LISTINGS;
     }
 
     /**
