@@ -321,6 +321,45 @@ void main() {
     expect(isDockAppFocused(tester, "com.example.dock0"), isTrue);
   });
 
+  testWidgets("Without the dock, moving the first app along the top row keeps the page at the top", (tester) async {
+    final appsService = mkAppService(LiveAppsService()) as LiveAppsService;
+    final tvCategory = fakeCategory(name: "TV Apps", order: 0, type: CategoryType.row);
+    tvCategory.applications.addAll(List.generate(4, (i) => fakeApp(packageName: "com.example.tv$i", name: "TV $i")));
+    final otherCategory = fakeCategory(name: "Other", order: 1);
+    otherCategory.applications
+        .addAll(List.generate(30, (i) => fakeApp(packageName: "com.example.app$i", name: "App $i")));
+    // A spacer over the top row (on the TV the row's title is taller): far enough down that scrolling the card to
+    // near the top of the page would move the page
+    when(appsService.launcherSections).thenReturn([LauncherSpacer(id: 1, height: 100), tvCategory, otherCategory]);
+    when(appsService.reorderApplication(any, any, any)).thenAnswer((invocation) {
+      final apps = (invocation.positionalArguments[0] as Category).applications;
+      apps.insert(invocation.positionalArguments[2] as int, apps.removeAt(invocation.positionalArguments[1] as int));
+      appsService.changed();
+    });
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(false);
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+    await tester.pumpAndSettle();
+    expect(isAppCardFocused(tester, "com.example.tv0"), isTrue);
+    expect(homeScrollOffset(tester), 0);
+
+    await tester.longPress(find.byKey(const Key("com.example.tv0")));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text("Reorder"));
+    await tester.pumpAndSettle();
+    for (final key in [
+      LogicalKeyboardKey.arrowRight,
+      LogicalKeyboardKey.arrowRight,
+      LogicalKeyboardKey.arrowLeft,
+      LogicalKeyboardKey.select,
+    ]) {
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+      expect(homeScrollOffset(tester), 0);
+    }
+    expect(tvCategory.applications[1].packageName, "com.example.tv0");
+  });
+
   group("Removing from Continue Watching", () {
     WatchNextProgram program(int id, String packageName) => WatchNextProgram(
           id: id, packageName: packageName, title: "Program $id", description: "", watchNextType: 0,
