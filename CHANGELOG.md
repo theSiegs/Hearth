@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.47 (pre-release)
+
+- Fixed: after Hearth's "Hi, <name>" card on a switch to a kid's profile, Hearth now takes over instead of leaving Google TV's kids home up.
+
 ## 2026.10.46 (pre-release)
 
 - Kids' bedtime and time-up screens show again when switching to a kid's profile: Hearth gives Google TV's kids home the 3 seconds it needs (measured on the TV) and shows its own "Hi, <name>" card over it meanwhile.

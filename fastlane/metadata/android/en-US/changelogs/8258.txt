@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Fixed: Hearth takes over after its welcome card on a switch to a kid's profile.
