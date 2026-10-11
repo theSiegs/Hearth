@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Fixed: a grown-up's profile switch could leave Google TV's home up.
