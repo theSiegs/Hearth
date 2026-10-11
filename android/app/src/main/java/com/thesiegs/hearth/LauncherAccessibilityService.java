@@ -929,6 +929,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         ProfileUsers.setLoggedIn(this, serial, account);
         mUnstartedPick = null;
         boolean keyChanged = startProfile(how);
+        // The streaming apps another grown-up had open would come up as theirs: they start again, at their picker
+        if (keyChanged) GrownUpsApps.onProfileChanged(this, ProfileUsers.profileKey(this, serial));
         announceProfile(keyChanged, false);
         ProfilePairing.rememberHearthProfile(this, ProfileUsers.profileKey(this, serial), false);
     }
