@@ -348,7 +348,8 @@ void main() async {
       final sp = await SharedPreferences.getInstance();
       final service = SettingsService(sp, region: () => const Locale("en", "GB"));
       expect(service.showWeatherInStatusBar, isTrue);
-      expect(service.showWeatherWarnings, isTrue);
+      // The pill shows just the current conditions unless warnings are turned on
+      expect(service.showWeatherWarnings, isFalse);
       expect(service.temperatureUnit, temperatureUnitCelsius);
       expect(service.useFahrenheit, isFalse);
     });

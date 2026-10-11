@@ -46,7 +46,6 @@ import '../../mocks.mocks.dart';
 /// The top level's rows and the pages they open.
 const _rows = {
   "Profiles": ProfilesSettingsPage.routeName,
-  "Applications": ApplicationsPanelPage.routeName,
   "Home screen": HomeScreenSettingsPage.routeName,
   "Notifications": NotificationsSettingsPage.routeName,
   "Home Assistant": HomeAssistantPage.routeName,
@@ -76,7 +75,7 @@ void main() {
     expect(find.text("Settings"), findsNothing);
   });
 
-  testWidgets("the top level is the eight groups, in order", (tester) async {
+  testWidgets("the top level is the six groups, in order", (tester) async {
     await _pumpWidgetWithProviders(tester, _settings(), _apps());
 
     final titles = tester
@@ -97,6 +96,25 @@ void main() {
       expect(find.byKey(Key(route)), findsOneWidget);
     });
   }
+
+  testWidgets("Applications is under Home screen", (tester) async {
+    await tester.pumpWidget(MultiProvider(
+      providers: [Provider<ProfileService?>.value(value: null)],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale("en"),
+        routes: {
+          "/": (_) => const Scaffold(body: HomeScreenSettingsPage()),
+          ApplicationsPanelPage.routeName: (_) => Container(key: const Key(ApplicationsPanelPage.routeName)),
+        },
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text("Applications"));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key(ApplicationsPanelPage.routeName)), findsOneWidget);
+  });
 
   testWidgets("in a kids profile, Settings shows the kid's own groups and Parent settings", (tester) async {
     final profiles = MockProfileService();

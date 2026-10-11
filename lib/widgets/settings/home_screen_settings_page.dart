@@ -18,6 +18,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'applications_panel_page.dart';
 import 'focusable_settings_tile.dart';
 import 'settings_lock.dart';
 import 'settings_page.dart';
@@ -40,10 +41,16 @@ class HomeScreenSettingsPage extends StatelessWidget {
     return SettingsPage(
       title: localizations.homeScreenTitle,
       children: [
-        // Sections are a parent's to change (as on the home screen itself): hidden in a locked kids profile
+        // Apps and sections are a parent's to change (as on the home screen itself): hidden in a locked kids profile
         if (!locked)
           FocusableSettingsTile(
             autofocus: true,
+            leading: const Icon(Icons.apps),
+            title: Text(localizations.applications, style: Theme.of(context).textTheme.bodyMedium),
+            onPressed: () => Navigator.of(context).pushNamed(ApplicationsPanelPage.routeName),
+          ),
+        if (!locked)
+          FocusableSettingsTile(
             leading: const Icon(Icons.category),
             title: Text(localizations.launcherSections, style: Theme.of(context).textTheme.bodyMedium),
             onPressed: () => Navigator.of(context).pushNamed(LauncherSectionsPanelPage.routeName),

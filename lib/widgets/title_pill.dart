@@ -37,6 +37,37 @@ class TitlePill extends StatelessWidget {
   }
 }
 
+/// The top bar's pills (the profile's name, data used, the weather, the date and time): one height and one look,
+/// darker on a light wallpaper like the row titles' pills ([TitlePill.opacityOf]). Focused, the accent rings it.
+class StatusPill extends StatelessWidget {
+  static const double height = 44;
+
+  final Widget child;
+  final bool focused;
+
+  const StatusPill({super.key, required this.child, this.focused = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      height: height,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(TitlePill.opacityOf(context)),
+        borderRadius: BorderRadius.circular(height / 2),
+        border: Border.all(
+          color: focused ? Theme.of(context).colorScheme.primary : Colors.white.withOpacity(0.12),
+          width: 1,
+        ),
+        boxShadow: focused ? const [BoxShadow(color: Colors.black54, blurRadius: 8, spreadRadius: 1)] : null,
+      ),
+      child: child,
+    );
+  }
+}
+
 /// A dark fade rising from the bottom of the screen behind Continue Watching's and search's title and details (as
 /// HearthTube's details scrim), so they read on any wallpaper. Like [TitlePill] it follows the wallpaper: lighter on
 /// a dark picture, up to HearthTube's strength on a light one.
