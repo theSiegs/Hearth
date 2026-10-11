@@ -1,0 +1,4 @@
+- Early development pre-release.
+- Kids' bedtime screens show again.
+- Continue Watching works in kids' profiles; no duplicate episodes.
+- Each profile can pick its own Home Assistant dashboard.
