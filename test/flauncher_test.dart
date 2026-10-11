@@ -360,6 +360,80 @@ void main() {
     expect(tvCategory.applications[1].packageName, "com.example.tv0");
   });
 
+  testWidgets("Removing the selected app from the dock lands on the dock, not where the selection was before",
+      (tester) async {
+    final appsService = mkAppService(LiveAppsService()) as LiveAppsService;
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    favoritesCategory.applications
+        .addAll(List.generate(3, (i) => fakeApp(packageName: "com.example.dock$i", name: "Dock $i")));
+    final applicationsCategory = fakeCategory(name: "Applications", order: 1);
+    applicationsCategory.applications
+        .addAll(List.generate(12, (i) => fakeApp(packageName: "com.example.app$i", name: "App $i")));
+    when(appsService.launcherSections).thenReturn([favoritesCategory, applicationsCategory]);
+    when(appsService.isAppInFavorites(any)).thenAnswer(
+        (invocation) => favoritesCategory.applications.contains(invocation.positionalArguments[0] as App));
+    when(appsService.toggleFavorite(any)).thenAnswer((invocation) async {
+      favoritesCategory.applications.remove(invocation.positionalArguments[0] as App);
+      appsService.changed();
+    });
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+    await tester.pumpAndSettle();
+
+    // Somewhere below the dock, the top bar, then the dock's first app
+    getFocusNodeForApp(tester, "com.example.app7")!.requestFocus();
+    await tester.pumpAndSettle();
+    getProfileFocusNode(tester)!.requestFocus();
+    await tester.pumpAndSettle();
+    getFocusNodeForApp(tester, "com.example.dock0")!.requestFocus();
+    await tester.pumpAndSettle();
+    expect(isDockAppFocused(tester, "com.example.dock0"), isTrue);
+
+    await tester.longPress(find.byKey(const Key("com.example.dock0")).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text("Remove from Favorites"));
+    await tester.pumpAndSettle();
+
+    expect(isProfileButtonFocused(tester), isFalse);
+    expect(isDockAppFocused(tester, "com.example.dock1"), isTrue);
+    expect(homeScrollOffset(tester), 0);
+  });
+
+  testWidgets("Without the dock, hiding the selected app lands on the first app at the top", (tester) async {
+    final appsService = mkAppService(LiveAppsService()) as LiveAppsService;
+    final tvCategory = fakeCategory(name: "TV Apps", order: 0, type: CategoryType.row);
+    tvCategory.applications.addAll(List.generate(4, (i) => fakeApp(packageName: "com.example.tv$i", name: "TV $i")));
+    final otherCategory = fakeCategory(name: "Other", order: 1, type: CategoryType.row);
+    otherCategory.applications
+        .addAll(List.generate(4, (i) => fakeApp(packageName: "com.example.other$i", name: "Other $i")));
+    when(appsService.launcherSections).thenReturn([tvCategory, otherCategory]);
+    when(appsService.hideApplication(any)).thenAnswer((invocation) async {
+      otherCategory.applications.remove(invocation.positionalArguments[0] as App);
+      appsService.changed();
+    });
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(false);
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+    await tester.pumpAndSettle();
+
+    // The top bar, then an app in the second row
+    getProfileFocusNode(tester)!.requestFocus();
+    await tester.pumpAndSettle();
+    getFocusNodeForApp(tester, "com.example.other2")!.requestFocus();
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key("com.example.other2")));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text("Hide"));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key("com.example.other2")), findsNothing);
+    expect(isProfileButtonFocused(tester), isFalse);
+    expect(isAppCardFocused(tester, "com.example.tv0"), isTrue);
+    expect(homeScrollOffset(tester), 0);
+  });
+
   group("Removing from Continue Watching", () {
     WatchNextProgram program(int id, String packageName) => WatchNextProgram(
           id: id, packageName: packageName, title: "Program $id", description: "", watchNextType: 0,
