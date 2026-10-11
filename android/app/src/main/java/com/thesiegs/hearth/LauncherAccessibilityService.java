@@ -302,8 +302,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
         Log.i(TAG, "chooser closed (Google TV's home is up, naming " + account + ")");
         mChooserOnScreen = false;
         mLastWindowPackage = GOOGLE_TV_PACKAGE;
+        // Focus Hearth heard since the home came up was on the home's own tabs ("Home"), not on a profile tile: no
+        // pick to settle. The home has said who's on; Hearth goes by that and takes the home over.
+        mPendingProfile = null;
+        mLastChooserFocus = null;
         checkProfileUser("chooser closed");
-        onGoogleTvWindow(GOOGLE_TV_HOME_ACTIVITY, null, true);
+        onAccountLoggedIn(account, "Google TV's home");
+        onGoogleTvWindow(GOOGLE_TV_HOME_ACTIVITY, null, false);
     }
 
     private void nextChooserGoneCheck() {
