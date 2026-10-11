@@ -224,19 +224,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
               Selector<SettingsService, bool>(
                 selector: (_, settings) => settings.showDataWidgetInStatusBar,
                 builder: (context, showData, _) => showData
-                  ? Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        // Darker on a light wallpaper, like the row titles' pills
-                        color: Colors.black.withOpacity(TitlePill.opacityOf(context)),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.12),
-                          width: 1,
-                        ),
-                      ),
-                      child: const DailyDataUsageWidget(),
-                    )
+                  ? const StatusPill(child: DailyDataUsageWidget())
                   : const SizedBox.shrink(),
               ),
             ],
@@ -297,21 +285,8 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                       // the home, and OK opens the coming week. Without them it's no focus stop, as before.
                       return _CalendarPill(
                         focusNode: _dateTimeFocusNode,
-                        builder: (context, focused) => AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                        decoration: BoxDecoration(
-                          // Darker on a light wallpaper, like the row titles' pills
-                          color: Colors.black.withOpacity(TitlePill.opacityOf(context)),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: focused ? Theme.of(context).colorScheme.primary : Colors.white.withOpacity(0.12),
-                            width: 1,
-                          ),
-                          boxShadow: focused
-                              ? const [BoxShadow(color: Colors.black54, blurRadius: 8, spreadRadius: 1)]
-                              : null,
-                        ),
+                        builder: (context, focused) => StatusPill(
+                        focused: focused,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -462,7 +437,7 @@ class _FocusableIconButton extends StatelessWidget {
           if (label != null) ...[
             const SizedBox(width: 8),
             // On a pill like the row titles, so the name reads on a light wallpaper
-            TitlePill(
+            StatusPill(
               child: Text(
                 label!,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(

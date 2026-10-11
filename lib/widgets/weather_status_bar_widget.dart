@@ -4,6 +4,7 @@ import 'package:flauncher/providers/home_forecast.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/widgets/focusable_tap.dart';
+import 'package:flauncher/widgets/title_pill.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -67,7 +68,6 @@ class WeatherStatusBarWidget extends StatelessWidget {
                 ? localizations.weatherWidgetTemperatureWithWarning(tempText, warning)
                 : tempText;
 
-            final theme = Theme.of(context);
 
             // Focused, the forecast shows over the home; OK swaps the next hours and the next days. Without a
             // forecast to show, OK opens Breezy Weather (when it's the source), as before.
@@ -78,28 +78,8 @@ class WeatherStatusBarWidget extends StatelessWidget {
               onFocusChange: (focused) => forecast?.setShowing(focused && hasForecast),
               onPressed: () => forecast != null && hasForecast ? forecast.swap() : weatherService.openBreezyWeather(),
               splashShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              builder: (context, focused) => AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: focused
-                        ? theme.colorScheme.primary
-                        : Colors.white.withOpacity(0.12),
-                    width: 1,
-                  ),
-                  boxShadow: focused
-                      ? const [
-                          BoxShadow(
-                            color: Colors.black54,
-                            blurRadius: 8,
-                            spreadRadius: 1,
-                          )
-                        ]
-                      : null,
-                ),
+              builder: (context, focused) => StatusPill(
+                focused: focused,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

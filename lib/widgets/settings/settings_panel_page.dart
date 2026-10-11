@@ -16,7 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import 'package:flauncher/widgets/settings/applications_panel_page.dart';
 import 'package:flauncher/widgets/settings/tv_power_settings_page.dart';
 import 'package:flauncher/widgets/settings/system_settings_page.dart';
 import 'package:flauncher/widgets/settings/home_assistant_page.dart';
@@ -67,13 +66,6 @@ class SettingsPanelPage extends StatelessWidget {
                   trailing: Text(ProfilesSettingsPage.activeProfileLabel(context) ?? "", style: Theme.of(context).textTheme.bodySmall),
                   onPressed: () => Navigator.of(context).pushNamed(ProfilesSettingsPage.routeName),
                 ),
-                if (!locked)
-                  FocusableSettingsTile(
-                    autofocus: justUnlocked,
-                    leading: const Icon(Icons.apps),
-                    title: Text(localizations.applications, style: Theme.of(context).textTheme.bodyMedium),
-                    onPressed: () => Navigator.of(context).pushNamed(ApplicationsPanelPage.routeName),
-                  ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.auto_awesome_mosaic_outlined),
                   title: Text(localizations.homeScreenTitle, style: Theme.of(context).textTheme.bodyMedium),
@@ -81,6 +73,7 @@ class SettingsPanelPage extends StatelessWidget {
                 ),
                 if (!locked) ...[
                   FocusableSettingsTile(
+                    autofocus: justUnlocked,
                     leading: const Icon(Icons.notifications_active_outlined),
                     title: Text(localizations.notifications, style: Theme.of(context).textTheme.bodyMedium),
                     onPressed: () => Navigator.of(context).pushNamed(NotificationsSettingsPage.routeName),

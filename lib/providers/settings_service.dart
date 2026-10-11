@@ -358,7 +358,7 @@ class SettingsService extends ChangeNotifier {
 
   bool get showWeatherInStatusBar => _bool(_showWeatherInStatusBarKey, true);
 
-  bool get showWeatherWarnings => _bool(_showWeatherWarningsKey, true);
+  bool get showWeatherWarnings => _bool(_showWeatherWarningsKey, false);
 
   /// Celsius or Fahrenheit: until someone picks one, whichever the TV's region uses ([defaultTemperatureUnit]).
   String get temperatureUnit =>
