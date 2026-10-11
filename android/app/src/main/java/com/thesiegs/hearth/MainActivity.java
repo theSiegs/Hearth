@@ -1390,6 +1390,20 @@ public class MainActivity extends FlutterActivity {
         // Another profile on: make sure its agent runs (starting it needs Hearth's window visible, as now)
         UserHandle profileUser = ProfileApps.activeProfileUser(this);
         if (profileUser != null) AgentHub.ensureAgent(this, ProfileUsers.settledSerial(this), profileUser);
+        // The Home Assistant panel's dashboard loads in the background once the home is drawn, so the panel opens at
+        // once (or goes, if the panel was switched off)
+        mHandler.removeCallbacks(mPreloadHaPanel);
+        mHandler.postDelayed(mPreloadHaPanel, HA_PANEL_PRELOAD_DELAY_MS);
+    }
+
+    private static final long HA_PANEL_PRELOAD_DELAY_MS = 3_000;
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
+    private final Runnable mPreloadHaPanel = () -> HaPanelPage.preload(this);
+
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        HaPanelPage.onTrimMemory(level);
     }
 
     @Override

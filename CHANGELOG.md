@@ -3,6 +3,11 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.35 (pre-release)
+
+- Home while browsing the apps goes back to the dock, or to the first app at the top when the dock is off (it also ends a search). With the dock off, a profile switch now lands on the first app too.
+- The Home Assistant panel opens at once: its dashboard loads in the background when the panel is on and stays loaded while it's closed (it's let go if Android runs short of memory).
+
 ## 2026.10.34 (pre-release)
 
 - The remote's profile button opens Google TV's profile chooser again (Hearth was covering it with its home).
