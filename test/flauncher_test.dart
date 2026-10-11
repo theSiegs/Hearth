@@ -531,6 +531,39 @@ void main() {
     expect(isAppCardFocused(tester, "me.efesser.flauncher.1"), isTrue);
   });
 
+  Future<void> pressHome(WidgetTester tester) async {
+    const channel = MethodChannel('me.efesser.flauncher/method');
+    await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+        channel.name, channel.codec.encodeMethodCall(const MethodCall("homePressed")), (_) {});
+    await tester.pumpAndSettle();
+  }
+
+  for (final dock in [true, false]) {
+    testWidgets("Home while browsing the apps goes back to the ${dock ? "dock" : "first app"}", (tester) async {
+      final appsService = mkAppService();
+      final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+      final applicationsCategory = fakeCategory(name: "Applications", order: 1);
+      favoritesCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.1", name: "FLauncher 1"));
+      applicationsCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.2", name: "FLauncher 2"));
+      applicationsCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.3", name: "FLauncher 3"));
+      when(appsService.launcherSections).thenReturn([favoritesCategory, applicationsCategory]);
+      final settingsService = mkSettingsService();
+      when(settingsService.dockEnabled).thenReturn(dock);
+      await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+
+      // Browsing further down
+      getFocusNodeForApp(tester, "me.efesser.flauncher.3")!.requestFocus();
+      await tester.pumpAndSettle();
+      expect(isAppCardFocused(tester, "me.efesser.flauncher.3"), isTrue);
+
+      await pressHome(tester);
+
+      expect(isAppCardFocused(tester, "me.efesser.flauncher.1"), isTrue);
+      final scrollable = tester.state<ScrollableState>(find.byType(Scrollable).first);
+      expect(scrollable.position.pixels, 0);
+    });
+  }
+
   testWidgets("With nothing usable in Favorites, the dock layout shows one untitled grid", (tester) async {
     final appsService = mkAppService();
     final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
