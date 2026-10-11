@@ -48,4 +48,7 @@
     <string name="pin_change">تغيير PIN</string>
     <string name="pin_close">إغلاق</string>
     <string name="youtube_in_hearthtube">YouTube متاح هنا في HearthTube</string>
+    <!-- Over Google TV’s kids home while it checks bedtime (KidsHomeCover) -->
+    <string name="kids_home_cover">مرحبًا، %1$s</string>
+    <string name="kids_home_cover_unnamed">مرحبًا</string>
 </resources>

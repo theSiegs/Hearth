@@ -87,7 +87,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
      * time up screen once it has loaded (0.45 s after the home on the emulator), and blocks the kid's apps only after
      * that screen has been up. Hearth leaves the home this long first (1.5 s worked on the TV, 2026-10-06).
      */
-    private static final long KIDS_HOME_GRACE_MS = 1_500;
+    /**
+     * Google TV's kids home put up a kid's bedtime screen 2.7 s after it came up on a switch between kids (the TV,
+     * 2026-10-11); Hearth's welcome card covers the home meanwhile (KidsHomeCover).
+     */
+    private static final long KIDS_HOME_GRACE_MS = 3_500;
     private static final String KIDS_HOME_GRACE_SETTING = "hearth_kids_home_grace_ms";
     /**
      * Google TV's own home, not after its chooser: the remote's profile button opens the home and then the chooser
@@ -241,6 +245,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (autoTakeOverAllowed() && !mGoogleTvScreenInFront && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage)) {
             mProfileLockSeenAt = 0; // a profile lock that led here was passed
             takeOverHome();
+            // Hearth comes up under the card: it goes once Hearth is drawn, so Google's home never shows
+            KidsHomeCover.hideSoon(800);
+        } else {
+            KidsHomeCover.hideNow();
         }
     };
     private final Runnable mHomeTakeOver = () -> {
@@ -1264,6 +1272,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private void onGoogleTvWindow(String className, AccessibilityEvent event, boolean chooserClosed) {
         boolean wellbeing = className.startsWith(GOOGLE_TV_WELLBEING_PREFIX);
         if (wellbeing) {
+            // Google's bedtime / time up screen: the kid sees it, not Hearth's card
+            KidsHomeCover.hideNow();
             mWellbeingSeenAt = SystemClock.elapsedRealtime();
             // A kids profile's screen, whatever user Android reports (see mKidsLockHold)
             mKidsLockHold = true;
@@ -1334,6 +1344,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 // Take over only if the home is still in front once the grace is over (see homeGraceMs)
                 mHandler.removeCallbacks(mKidsHomeTakeOver);
                 mHandler.postDelayed(mKidsHomeTakeOver, grace);
+                // A kids profile: Hearth's card over Google's home while it decides on bedtime (it keeps running)
+                if (kidsHome) KidsHomeCover.show(this, pick != null ? pick : ProfileUsers.profileName(this, mActiveSerial));
                 // Only a pick in the chooser changes whose profile is on (a right PIN doesn't): only then is the home
                 // read first, which the takeover waits for
                 if (afterProfileLock && readAccount && pick != null) readHomeAccount(false, pick);
@@ -1358,6 +1370,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     /** Any other window: Hearth, an app, or something that comes up over one (the keyboard, a system pop-up). */
     private void onOtherWindow(String packageName, boolean isHearth, boolean isApp) {
+        if (isApp) KidsHomeCover.hideNow();
         if (isHearth) {
             // Back in the launcher without Google TV's home in between: the switch was cancelled (its early
             // welcome card goes now, not after its time limit)
