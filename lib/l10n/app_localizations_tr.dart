@@ -2633,4 +2633,58 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get calendarsNone => 'Bu profilin TV ile senkronize edilmiş Google takvimi yok.';
+  String get haCalendarsHelp => 'Burada açılan takvimler, sağ üstteki tarih ve saat odaktayken görünür: günün geri kalanı, Tamam ile sonraki 7 gün. Her profil kendi takvimlerini seçer.';
+
+  @override
+  String get dataUsageToday => 'Bugün';
+
+  @override
+  String get dataUsageThisWeek => 'Bu hafta';
+
+  @override
+  String get dataUsageThisMonth => 'Bu ay';
+
+  @override
+  String get dataUsageShowToday => 'OK: bugün';
+
+  @override
+  String get dataUsageShowWeek => 'OK: bu hafta';
+
+  @override
+  String get dataUsageShowMonth => 'OK: bu ay';
+
+  @override
+  String dataUsageOnThisTv(String amount) {
+    return 'Bu TV\'de $amount';
+  }
+
+  @override
+  String get dataUsageAndroid => 'Android sistemi';
+
+  @override
+  String get dataUsageEverythingElse => 'Diğer her şey';
+
+  @override
+  String get dataUsageNone => 'Henüz veri kullanılmadı';
+
+  @override
+  String get dataUsageNoInternet => 'İnternet yok';
+
+  @override
+  String get dataUsageWifi => 'Wi-Fi';
+
+  @override
+  String get dataUsageEthernet => 'Ethernet';
+
+  @override
+  String get dataUsageMobile => 'Mobil veri';
+
+  @override
+  String get dataUsageNotConnected => 'Bağlı değil';
+
+  @override
+  String get dataUsageVpnOn => 'VPN açık';
+
+  @override
+  String get dataUsageEthernetNotCounted => 'Android, Ethernet üzerinden kullanılan veriyi saymaz';
 }

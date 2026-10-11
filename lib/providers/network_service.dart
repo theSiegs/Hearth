@@ -20,6 +20,7 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/models/data_usage.dart';
 import 'package:flutter/material.dart';
 
 enum NetworkType
@@ -72,6 +73,14 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver
   StreamSubscription? _networkChangedSubscription;
   int                 _callCount = 0;
   int                 _usageCallCount = 0;
+  // Whether Android has said what the network is yet (until then "no internet" means nothing)
+  bool                _networkKnown = false;
+  bool                _offline = false;
+  Timer?              _offlineTimer;
+
+  /// How long the TV has to be without internet before [offline] says so: not for a blip, or while Wi-Fi comes up
+  /// after the TV wakes.
+  static const Duration offlineGrace = Duration(seconds: 10);
 
 
   NetworkService(this._channel) :
@@ -90,6 +99,7 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver
         .then((map) {
           if (map.isNotEmpty) {
             _getNetworkInformation(map.cast<String, dynamic>());
+            _updateOffline();
             notifyListeners();
           }
         }).catchError((e) {
@@ -176,9 +186,31 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver
     }
   }
 
+  /// The TV's data this period, app by app (for the data usage over the home); null without usage access.
+  Future<DataUsageBreakdown?> getDataUsageByApp(String period) => _channel.getDataUsageByApp(period);
+
+  /// Starts the wait before [offline] turns on when the internet is gone, and turns it off when it's back.
+  void _updateOffline() {
+    _networkKnown = true;
+    if (_hasInternetAccess) {
+      _offlineTimer?.cancel();
+      _offlineTimer = null;
+      _offline = false;
+    } else if (!_offline && _offlineTimer == null) {
+      _offlineTimer = Timer(offlineGrace, () {
+        _offlineTimer = null;
+        if (_networkKnown && !_hasInternetAccess) {
+          _offline = true;
+          notifyListeners();
+        }
+      });
+    }
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _offlineTimer?.cancel();
     _usageTimer?.cancel();
     _networkChangedSubscription?.cancel();
     super.dispose();
@@ -191,6 +223,9 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver
   int                 get   dailyDataUsage                => _dailyDataUsage;
   bool                get   hasUsageStatsPermission       => _hasUsageStatsPermission;
   bool                get   vpnActive                     => _vpnActive;
+
+  /// The TV has had no internet for [offlineGrace] or longer (not connected, or connected but nothing gets through).
+  bool                get   offline                       => _offline;
 
   CellularNetworkType _getCellularNetworkType(int index) {
     if (index < 0 || index >= CellularNetworkType.values.length) {
@@ -249,6 +284,7 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver
         break;
     }
 
+    _updateOffline();
     notifyListeners();
   }
 }

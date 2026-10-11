@@ -4708,6 +4708,109 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This profile has no Google calendars synced to the TV.'**
   String get calendarsNone;
+  String get haCalendarsHelp;
+
+  /// Data usage over the home: its period, today
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get dataUsageToday;
+
+  /// Data usage over the home: its period, this week so far
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get dataUsageThisWeek;
+
+  /// Data usage over the home: its period, this month so far
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get dataUsageThisMonth;
+
+  /// Data usage over the home: what OK on the top bar's data usage does next (show today)
+  ///
+  /// In en, this message translates to:
+  /// **'OK: today'**
+  String get dataUsageShowToday;
+
+  /// Data usage over the home: what OK on the top bar's data usage does next (show this week)
+  ///
+  /// In en, this message translates to:
+  /// **'OK: this week'**
+  String get dataUsageShowWeek;
+
+  /// Data usage over the home: what OK on the top bar's data usage does next (show this month)
+  ///
+  /// In en, this message translates to:
+  /// **'OK: this month'**
+  String get dataUsageShowMonth;
+
+  /// Data usage over the home: the heading; amount is like 4.2 GB
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} on this TV'**
+  String dataUsageOnThisTv(String amount);
+
+  /// Data usage over the home: the tile for Android's own data (system services, updates)
+  ///
+  /// In en, this message translates to:
+  /// **'Android system'**
+  String get dataUsageAndroid;
+
+  /// Data usage over the home: the last tile, smaller apps and other profiles together
+  ///
+  /// In en, this message translates to:
+  /// **'Everything else'**
+  String get dataUsageEverythingElse;
+
+  /// Data usage over the home: nothing used yet this period
+  ///
+  /// In en, this message translates to:
+  /// **'No data used yet'**
+  String get dataUsageNone;
+
+  /// Top bar data usage and data usage over the home: the TV has had no internet for a while
+  ///
+  /// In en, this message translates to:
+  /// **'No internet'**
+  String get dataUsageNoInternet;
+
+  /// Data usage over the home: the TV is on Wi-Fi
+  ///
+  /// In en, this message translates to:
+  /// **'Wi-Fi'**
+  String get dataUsageWifi;
+
+  /// Data usage over the home: the TV is on a network cable
+  ///
+  /// In en, this message translates to:
+  /// **'Ethernet'**
+  String get dataUsageEthernet;
+
+  /// Data usage over the home: the TV is on mobile data
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile data'**
+  String get dataUsageMobile;
+
+  /// Data usage over the home: the TV is on no network
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected'**
+  String get dataUsageNotConnected;
+
+  /// Data usage over the home: a VPN app is on
+  ///
+  /// In en, this message translates to:
+  /// **'VPN on'**
+  String get dataUsageVpnOn;
+
+  /// Data usage over the home: on a network cable, the amounts stay near zero
+  ///
+  /// In en, this message translates to:
+  /// **'Android doesn\'t count data over Ethernet'**
+  String get dataUsageEthernetNotCounted;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

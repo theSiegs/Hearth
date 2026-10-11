@@ -3406,5 +3406,108 @@
     "calendarsNone": "This profile has no Google calendars synced to the TV.",
     "@calendarsNone": {
         "description": "Calendars settings page: the profile has no Google calendars on the TV"
+    },
+    "haCalendarsTitle": "Calendars",
+    "@haCalendarsTitle": {
+        "description": "Settings > Home Assistant: the page that picks which Home Assistant calendars show by the date and time"
+    },
+    "haCalendarsLoading": "Asking Home Assistant for its calendars…",
+    "@haCalendarsLoading": {
+        "description": "Calendars settings page: while Home Assistant is being asked"
+    },
+    "haCalendarsNotSetUp": "Home Assistant isn't set up on this TV yet. Add its address and token in {place}.",
+    "@haCalendarsNotSetUp": {
+        "description": "Calendars settings page: Home Assistant isn't set up; {place} is where to set it up (a settings breadcrumb)",
+        "placeholders": {
+            "place": {
+                "type": "String",
+                "example": "Settings > Home Assistant > Dashboard panel"
+            }
+        }
+    },
+    "haCalendarsError": "Couldn't get the calendars from Home Assistant. Check its address and token.",
+    "@haCalendarsError": {
+        "description": "Calendars settings page: Home Assistant couldn't be reached"
+    },
+    "haCalendarsNone": "Home Assistant has no calendars.",
+    "@haCalendarsNone": {
+        "description": "Calendars settings page: Home Assistant answered but has no calendars"
+    },
+    "haCalendarsHelp": "The calendars turned on here show when the date and time at the top right have focus: what's left of today, and OK for the next 7 days. Each profile chooses its own.",
+    "@haCalendarsHelp": {
+        "description": "Calendars settings page: what the switches do"
+    },
+    "dataUsageToday": "Today",
+    "@dataUsageToday": {
+        "description": "Data usage over the home: its period, today"
+    },
+    "dataUsageThisWeek": "This week",
+    "@dataUsageThisWeek": {
+        "description": "Data usage over the home: its period, this week so far"
+    },
+    "dataUsageThisMonth": "This month",
+    "@dataUsageThisMonth": {
+        "description": "Data usage over the home: its period, this month so far"
+    },
+    "dataUsageShowToday": "OK: today",
+    "@dataUsageShowToday": {
+        "description": "Data usage over the home: what OK on the top bar's data usage does next (show today)"
+    },
+    "dataUsageShowWeek": "OK: this week",
+    "@dataUsageShowWeek": {
+        "description": "Data usage over the home: what OK on the top bar's data usage does next (show this week)"
+    },
+    "dataUsageShowMonth": "OK: this month",
+    "@dataUsageShowMonth": {
+        "description": "Data usage over the home: what OK on the top bar's data usage does next (show this month)"
+    },
+    "dataUsageOnThisTv": "{amount} on this TV",
+    "@dataUsageOnThisTv": {
+        "description": "Data usage over the home: the heading; amount is like 4.2 GB",
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "dataUsageAndroid": "Android system",
+    "@dataUsageAndroid": {
+        "description": "Data usage over the home: the tile for Android's own data (system services, updates)"
+    },
+    "dataUsageEverythingElse": "Everything else",
+    "@dataUsageEverythingElse": {
+        "description": "Data usage over the home: the last tile, smaller apps and other profiles together"
+    },
+    "dataUsageNone": "No data used yet",
+    "@dataUsageNone": {
+        "description": "Data usage over the home: nothing used yet this period"
+    },
+    "dataUsageNoInternet": "No internet",
+    "@dataUsageNoInternet": {
+        "description": "Top bar data usage and data usage over the home: the TV has had no internet for a while"
+    },
+    "dataUsageWifi": "Wi-Fi",
+    "@dataUsageWifi": {
+        "description": "Data usage over the home: the TV is on Wi-Fi"
+    },
+    "dataUsageEthernet": "Ethernet",
+    "@dataUsageEthernet": {
+        "description": "Data usage over the home: the TV is on a network cable"
+    },
+    "dataUsageMobile": "Mobile data",
+    "@dataUsageMobile": {
+        "description": "Data usage over the home: the TV is on mobile data"
+    },
+    "dataUsageNotConnected": "Not connected",
+    "@dataUsageNotConnected": {
+        "description": "Data usage over the home: the TV is on no network"
+    },
+    "dataUsageVpnOn": "VPN on",
+    "@dataUsageVpnOn": {
+        "description": "Data usage over the home: a VPN app is on"
+    },
+    "dataUsageEthernetNotCounted": "Android doesn't count data over Ethernet",
+    "@dataUsageEthernetNotCounted": {
+        "description": "Data usage over the home: on a network cable, the amounts stay near zero"
     }
 }

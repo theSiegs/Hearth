@@ -286,4 +286,34 @@ void main() {
 
     expect(called, isTrue);
   });
+
+  test("getDataUsageByApp passes the period and reads the apps", () async {
+    final channel = MethodChannel('me.efesser.flauncher/method');
+    _messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == "getDataUsageByApp") {
+        expect(call.arguments, "weekly");
+        return {
+          "total": 3000,
+          "apps": [
+            {"packageName": "com.example.tv", "label": "TV", "kind": "app", "bytes": 2000},
+          ],
+        };
+      }
+      fail("Unhandled method name");
+    });
+
+    final breakdown = await FLauncherChannel().getDataUsageByApp("weekly");
+
+    expect(breakdown!.total, 3000);
+    expect(breakdown.apps.single.label, "TV");
+  });
+
+  test("getDataUsageByApp is null without usage access or on an error", () async {
+    final channel = MethodChannel('me.efesser.flauncher/method');
+    _messenger.setMockMethodCallHandler(channel, (call) async => null);
+    expect(await FLauncherChannel().getDataUsageByApp("daily"), isNull);
+
+    _messenger.setMockMethodCallHandler(channel, (call) async => throw PlatformException(code: "ERROR"));
+    expect(await FLauncherChannel().getDataUsageByApp("daily"), isNull);
+  });
 }

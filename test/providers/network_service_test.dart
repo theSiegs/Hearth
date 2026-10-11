@@ -1,3 +1,4 @@
+import 'package:flauncher/models/data_usage.dart';
 import 'package:flauncher/providers/network_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
@@ -178,5 +179,56 @@ void main() {
       expect(() => networkListener!({'name': 'CELLULAR_STATE_CHANGED', 'arguments': -5}), returnsNormally);
       expect(networkService.cellularNetworkType, CellularNetworkType.unknown);
     });
+  });
+
+  group('offline', () {
+    Map<String, dynamic> wifi({required bool internet}) => {
+          'name': 'CAPABILITIES_CHANGED',
+          'arguments': {'networkType': NetworkType.wifi.index, 'internetAccess': internet, 'vpnActive': false},
+        };
+
+    test('says so only once the internet has been gone for the grace period', () {
+      fakeAsync((async) {
+        // Before Android says anything, no internet means nothing
+        async.elapse(NetworkService.offlineGrace * 2);
+        expect(networkService.offline, isFalse);
+
+        networkListener!(wifi(internet: false));
+        async.elapse(NetworkService.offlineGrace - const Duration(seconds: 1));
+        expect(networkService.offline, isFalse);
+        async.elapse(const Duration(seconds: 1));
+        expect(networkService.offline, isTrue);
+
+        networkListener!(wifi(internet: true));
+        expect(networkService.offline, isFalse);
+      });
+    });
+
+    test('a blip shorter than the grace period never shows', () {
+      fakeAsync((async) {
+        networkListener!({'name': 'NETWORK_UNAVAILABLE'});
+        async.elapse(const Duration(seconds: 3));
+        networkListener!(wifi(internet: true));
+        async.elapse(NetworkService.offlineGrace * 2);
+        expect(networkService.offline, isFalse);
+      });
+    });
+
+    test('more events while offline do not restart the wait', () {
+      fakeAsync((async) {
+        networkListener!(wifi(internet: false));
+        async.elapse(const Duration(seconds: 6));
+        networkListener!(wifi(internet: false));
+        async.elapse(NetworkService.offlineGrace - const Duration(seconds: 6));
+        expect(networkService.offline, isTrue);
+      });
+    });
+  });
+
+  test('getDataUsageByApp asks the platform for the period', () async {
+    const breakdown = DataUsageBreakdown(total: 5, apps: []);
+    when(mockChannel.getDataUsageByApp('monthly')).thenAnswer((_) async => breakdown);
+
+    expect(await networkService.getDataUsageByApp('monthly'), same(breakdown));
   });
 }

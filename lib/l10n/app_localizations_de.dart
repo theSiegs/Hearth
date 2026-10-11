@@ -2642,4 +2642,58 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get calendarsNone => 'Für dieses Profil sind keine Google-Kalender mit dem Fernseher synchronisiert.';
+  String get haCalendarsHelp => 'Die hier eingeschalteten Kalender erscheinen, wenn Datum und Uhrzeit oben rechts im Fokus sind: der Rest des Tages, mit OK die nächsten 7 Tage. Jedes Profil wählt eigene.';
+
+  @override
+  String get dataUsageToday => 'Heute';
+
+  @override
+  String get dataUsageThisWeek => 'Diese Woche';
+
+  @override
+  String get dataUsageThisMonth => 'Diesen Monat';
+
+  @override
+  String get dataUsageShowToday => 'OK: heute';
+
+  @override
+  String get dataUsageShowWeek => 'OK: diese Woche';
+
+  @override
+  String get dataUsageShowMonth => 'OK: diesen Monat';
+
+  @override
+  String dataUsageOnThisTv(String amount) {
+    return '$amount auf diesem Fernseher';
+  }
+
+  @override
+  String get dataUsageAndroid => 'Android-System';
+
+  @override
+  String get dataUsageEverythingElse => 'Alles andere';
+
+  @override
+  String get dataUsageNone => 'Noch keine Daten verbraucht';
+
+  @override
+  String get dataUsageNoInternet => 'Kein Internet';
+
+  @override
+  String get dataUsageWifi => 'WLAN';
+
+  @override
+  String get dataUsageEthernet => 'Ethernet';
+
+  @override
+  String get dataUsageMobile => 'Mobile Daten';
+
+  @override
+  String get dataUsageNotConnected => 'Nicht verbunden';
+
+  @override
+  String get dataUsageVpnOn => 'VPN an';
+
+  @override
+  String get dataUsageEthernetNotCounted => 'Android zählt keine Daten über Ethernet';
 }

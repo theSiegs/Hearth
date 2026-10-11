@@ -40,7 +40,7 @@ as Wikidata asks.
 | Accessibility (Profile Pairing) | Reads the profile screen of a streaming app that Hearth opened, picks your profile, and types its PIN if you saved one. It acts only when Hearth itself opened the app. |
 | Text-to-speech engine (Hearth voice) | Some apps only announce their profile screen out loud; Hearth voice lets Profile Pairing hear it, and passes all speech on to the TV's usual voice, so apps sound the same. Nothing is recorded or sent. |
 | Notification access | Shows notifications in Hearth; sees what's playing for Continue Watching, each profile's watch history and usage today, and TV status. In a kids profile (granted there over adb), only lets Hearth's agent count what plays and for how long, for that profile's usage today. |
-| Usage access | Knows which app is in front, for TV status and idle sleep. |
+| Usage access | Knows which app is in front, for TV status and idle sleep; reads how much data the TV and each app used, for the data usage in the top bar (kept on the TV). |
 | Install apps / delete apps | Updates Hearth and HearthTube; puts them on other profiles. |
 | Display over other apps | Home Assistant pop-ups. |
 | TV listings and Watch Next | Continue Watching and TV inputs. |

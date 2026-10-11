@@ -2632,4 +2632,58 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get calendarsNone => '이 프로필에는 TV에 동기화된 Google 캘린더가 없습니다.';
+  String get haCalendarsHelp => '여기서 켠 캘린더는 오른쪽 위의 날짜와 시간에 포커스가 있을 때 표시됩니다: 오늘 남은 일정, 확인을 누르면 앞으로 7일. 프로필마다 따로 고릅니다.';
+
+  @override
+  String get dataUsageToday => '오늘';
+
+  @override
+  String get dataUsageThisWeek => '이번 주';
+
+  @override
+  String get dataUsageThisMonth => '이번 달';
+
+  @override
+  String get dataUsageShowToday => 'OK: 오늘';
+
+  @override
+  String get dataUsageShowWeek => 'OK: 이번 주';
+
+  @override
+  String get dataUsageShowMonth => 'OK: 이번 달';
+
+  @override
+  String dataUsageOnThisTv(String amount) {
+    return '이 TV에서 $amount';
+  }
+
+  @override
+  String get dataUsageAndroid => 'Android 시스템';
+
+  @override
+  String get dataUsageEverythingElse => '그 밖의 모든 항목';
+
+  @override
+  String get dataUsageNone => '아직 사용한 데이터가 없습니다';
+
+  @override
+  String get dataUsageNoInternet => '인터넷 없음';
+
+  @override
+  String get dataUsageWifi => 'Wi-Fi';
+
+  @override
+  String get dataUsageEthernet => '이더넷';
+
+  @override
+  String get dataUsageMobile => '모바일 데이터';
+
+  @override
+  String get dataUsageNotConnected => '연결되지 않음';
+
+  @override
+  String get dataUsageVpnOn => 'VPN 켜짐';
+
+  @override
+  String get dataUsageEthernetNotCounted => 'Android는 이더넷 데이터를 집계하지 않습니다';
 }

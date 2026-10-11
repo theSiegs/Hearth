@@ -1397,6 +1397,7 @@ SettingsService mkSettingsService([MockSettingsService? mock]) {
   when(settingsService.showInputsWidgetInStatusBar).thenReturn(true);
   when(settingsService.showNetworkIndicatorInStatusBar).thenReturn(true);
   when(settingsService.showDataWidgetInStatusBar).thenReturn(true);
+  when(settingsService.dataUsagePeriod).thenReturn("daily");
   when(settingsService.showDateInStatusBar).thenReturn(true);
   when(settingsService.showTimeInStatusBar).thenReturn(true);
   when(settingsService.accentColorHex).thenReturn('00ff00');

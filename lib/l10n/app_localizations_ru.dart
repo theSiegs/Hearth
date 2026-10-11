@@ -2659,4 +2659,58 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get calendarsNone => 'У этого профиля нет календарей Google, синхронизированных с телевизором.';
+  String get haCalendarsHelp => 'Включённые здесь календари показываются, когда в фокусе дата и время справа вверху: остаток дня, а по OK — следующие 7 дней. Каждый профиль выбирает свои.';
+
+  @override
+  String get dataUsageToday => 'Сегодня';
+
+  @override
+  String get dataUsageThisWeek => 'На этой неделе';
+
+  @override
+  String get dataUsageThisMonth => 'В этом месяце';
+
+  @override
+  String get dataUsageShowToday => 'OK: сегодня';
+
+  @override
+  String get dataUsageShowWeek => 'OK: эта неделя';
+
+  @override
+  String get dataUsageShowMonth => 'OK: этот месяц';
+
+  @override
+  String dataUsageOnThisTv(String amount) {
+    return '$amount на этом телевизоре';
+  }
+
+  @override
+  String get dataUsageAndroid => 'Система Android';
+
+  @override
+  String get dataUsageEverythingElse => 'Всё остальное';
+
+  @override
+  String get dataUsageNone => 'Данные ещё не использовались';
+
+  @override
+  String get dataUsageNoInternet => 'Нет интернета';
+
+  @override
+  String get dataUsageWifi => 'Wi-Fi';
+
+  @override
+  String get dataUsageEthernet => 'Ethernet';
+
+  @override
+  String get dataUsageMobile => 'Мобильные данные';
+
+  @override
+  String get dataUsageNotConnected => 'Нет подключения';
+
+  @override
+  String get dataUsageVpnOn => 'VPN включён';
+
+  @override
+  String get dataUsageEthernetNotCounted => 'Android не учитывает трафик по Ethernet';
 }

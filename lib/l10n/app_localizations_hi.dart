@@ -2642,4 +2642,58 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get calendarsNone => 'इस प्रोफ़ाइल का कोई Google कैलेंडर टीवी से सिंक नहीं है।';
+  String get haCalendarsHelp => 'यहाँ चालू किए गए कैलेंडर तब दिखते हैं जब ऊपर दाईं ओर की तारीख और समय पर फ़ोकस हो: आज का बाकी दिन, और OK से अगले 7 दिन। हर प्रोफ़ाइल अपने चुनती है।';
+
+  @override
+  String get dataUsageToday => 'आज';
+
+  @override
+  String get dataUsageThisWeek => 'इस सप्ताह';
+
+  @override
+  String get dataUsageThisMonth => 'इस महीने';
+
+  @override
+  String get dataUsageShowToday => 'OK: आज';
+
+  @override
+  String get dataUsageShowWeek => 'OK: इस सप्ताह';
+
+  @override
+  String get dataUsageShowMonth => 'OK: इस महीने';
+
+  @override
+  String dataUsageOnThisTv(String amount) {
+    return 'इस टीवी पर $amount';
+  }
+
+  @override
+  String get dataUsageAndroid => 'Android सिस्टम';
+
+  @override
+  String get dataUsageEverythingElse => 'बाकी सब';
+
+  @override
+  String get dataUsageNone => 'अभी तक कोई डेटा इस्तेमाल नहीं हुआ';
+
+  @override
+  String get dataUsageNoInternet => 'इंटरनेट नहीं है';
+
+  @override
+  String get dataUsageWifi => 'वाई-फ़ाई';
+
+  @override
+  String get dataUsageEthernet => 'ईथरनेट';
+
+  @override
+  String get dataUsageMobile => 'मोबाइल डेटा';
+
+  @override
+  String get dataUsageNotConnected => 'कनेक्ट नहीं है';
+
+  @override
+  String get dataUsageVpnOn => 'VPN चालू है';
+
+  @override
+  String get dataUsageEthernetNotCounted => 'Android ईथरनेट पर डेटा नहीं गिनता';
 }

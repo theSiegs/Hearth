@@ -2632,4 +2632,58 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get calendarsNone => '此个人资料没有同步到电视的 Google 日历。';
+  String get haCalendarsHelp => '这里打开的日历会在右上角的日期和时间获得焦点时显示：今天剩余的安排，按确定查看未来 7 天。每个配置文件各自选择。';
+
+  @override
+  String get dataUsageToday => '今天';
+
+  @override
+  String get dataUsageThisWeek => '本周';
+
+  @override
+  String get dataUsageThisMonth => '本月';
+
+  @override
+  String get dataUsageShowToday => 'OK：今天';
+
+  @override
+  String get dataUsageShowWeek => 'OK：本周';
+
+  @override
+  String get dataUsageShowMonth => 'OK：本月';
+
+  @override
+  String dataUsageOnThisTv(String amount) {
+    return '此电视上 $amount';
+  }
+
+  @override
+  String get dataUsageAndroid => 'Android 系统';
+
+  @override
+  String get dataUsageEverythingElse => '其他所有';
+
+  @override
+  String get dataUsageNone => '尚未使用数据';
+
+  @override
+  String get dataUsageNoInternet => '无法连接互联网';
+
+  @override
+  String get dataUsageWifi => 'Wi-Fi';
+
+  @override
+  String get dataUsageEthernet => '以太网';
+
+  @override
+  String get dataUsageMobile => '移动数据';
+
+  @override
+  String get dataUsageNotConnected => '未连接';
+
+  @override
+  String get dataUsageVpnOn => 'VPN 已开启';
+
+  @override
+  String get dataUsageEthernetNotCounted => 'Android 不统计以太网流量';
 }

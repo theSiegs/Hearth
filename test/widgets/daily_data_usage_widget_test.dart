@@ -1,8 +1,10 @@
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/providers/home_data_usage.dart';
 import 'package:flauncher/providers/network_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/daily_data_usage_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:provider/provider.dart';
@@ -12,12 +14,17 @@ import '../mocks.mocks.dart';
 void main() {
   late MockNetworkService mockNetworkService;
   late MockSettingsService mockSettingsService;
+  late HomeDataUsage homeDataUsage;
 
   setUp(() {
     mockNetworkService = MockNetworkService();
     mockSettingsService = MockSettingsService();
     // Default fallback mock
     when(mockNetworkService.dailyDataUsage).thenReturn(0);
+    when(mockNetworkService.offline).thenReturn(false);
+    when(mockNetworkService.vpnActive).thenReturn(false);
+    when(mockSettingsService.dataUsagePeriod).thenReturn('daily');
+    homeDataUsage = HomeDataUsage();
   });
 
   Widget createWidgetUnderTest({Locale? locale}) {
@@ -25,6 +32,7 @@ void main() {
       providers: [
         ChangeNotifierProvider<NetworkService>.value(value: mockNetworkService),
         ChangeNotifierProvider<SettingsService>.value(value: mockSettingsService),
+        ChangeNotifierProvider<HomeDataUsage>.value(value: homeDataUsage),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -33,7 +41,7 @@ void main() {
         home: const Directionality(
           textDirection: TextDirection.ltr,
           child: Scaffold(
-            body: DailyDataUsageWidget(),
+            body: Center(child: DailyDataUsageWidget()),
           ),
         ),
       ),
@@ -46,7 +54,6 @@ void main() {
     await tester.pumpWidget(createWidgetUnderTest());
 
     expect(find.text('Grant Usage Permission'), findsOneWidget);
-    expect(find.byWidgetPredicate((w) => w is TextButton), findsOneWidget);
     expect(find.byIcon(Icons.data_usage), findsOneWidget);
   });
 
@@ -74,7 +81,7 @@ void main() {
     final richText = tester.widget<RichText>(find.byType(RichText));
     final span = richText.text as TextSpan;
     expect((span.children![0] as TextSpan).text, 'Daily: ');
-    expect((span.children![1] as TextSpan).text, '5.00 MB');
+    expect((span.children![1] as TextSpan).text, '5.2 MB');
   });
 
   testWidgets('displays weekly usage when permission granted and period is weekly', (WidgetTester tester) async {
@@ -89,7 +96,7 @@ void main() {
     final richText = tester.widget<RichText>(find.byType(RichText));
     final span = richText.text as TextSpan;
     expect((span.children![0] as TextSpan).text, 'Weekly: ');
-    expect((span.children![1] as TextSpan).text, '2.00 GB');
+    expect((span.children![1] as TextSpan).text, '2.1 GB');
   });
 
   testWidgets('displays monthly usage when permission granted and period is monthly', (WidgetTester tester) async {
@@ -104,7 +111,7 @@ void main() {
     final richText = tester.widget<RichText>(find.byType(RichText));
     final span = richText.text as TextSpan;
     expect((span.children![0] as TextSpan).text, 'Monthly: ');
-    expect((span.children![1] as TextSpan).text, '500.00 KB');
+    expect((span.children![1] as TextSpan).text, '512 KB');
   });
 
   testWidgets('falls back to networkService.dailyDataUsage if future data is null', (WidgetTester tester) async {
@@ -122,7 +129,7 @@ void main() {
     expect(find.byType(RichText), findsOneWidget);
     final richText = tester.widget<RichText>(find.byType(RichText));
     final span = richText.text as TextSpan;
-    expect((span.children![1] as TextSpan).text, '1.00 KB');
+    expect((span.children![1] as TextSpan).text, '1 KB');
   });
 
   testWidgets('asks again only when the period or the polled usage changes', (WidgetTester tester) async {
@@ -173,7 +180,7 @@ void main() {
     final span = tester.widget<RichText>(find.byType(RichText)).text as TextSpan;
     expect(span.children!.length, 2);
     expect((span.children![0] as TextSpan).text, 'Täglich: ');
-    expect((span.children![1] as TextSpan).text, '5.00 MB');
+    expect((span.children![1] as TextSpan).text, '5,2 MB');
     expect((span.children![1] as TextSpan).style?.fontWeight, FontWeight.bold);
   });
 
@@ -184,5 +191,92 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text("Autoriser l'accès à l'utilisation"), findsOneWidget);
+  });
+
+  Widget focusableUnderTest(FocusNode focusNode) => MultiProvider(
+        providers: [
+          ChangeNotifierProvider<NetworkService>.value(value: mockNetworkService),
+          ChangeNotifierProvider<SettingsService>.value(value: mockSettingsService),
+          ChangeNotifierProvider<HomeDataUsage>.value(value: homeDataUsage),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: Center(child: DailyDataUsageWidget(focusNode: focusNode))),
+        ),
+      );
+
+  testWidgets('says "No internet" once the TV has been offline a while', (WidgetTester tester) async {
+    when(mockNetworkService.hasUsageStatsPermission).thenReturn(true);
+    when(mockNetworkService.offline).thenReturn(true);
+    when(mockNetworkService.getDataUsageForPeriod('daily')).thenAnswer((_) async => 1000);
+
+    await tester.pumpWidget(createWidgetUnderTest());
+    await tester.pumpAndSettle();
+
+    expect(find.text('No internet'), findsOneWidget);
+    expect(find.byKey(const Key('data_usage_offline')), findsOneWidget);
+    expect(find.textContaining('Daily'), findsNothing);
+  });
+
+  testWidgets('shows no key without a VPN', (WidgetTester tester) async {
+    when(mockNetworkService.hasUsageStatsPermission).thenReturn(true);
+    when(mockNetworkService.getDataUsageForPeriod('daily')).thenAnswer((_) async => 1000);
+
+    await tester.pumpWidget(createWidgetUnderTest());
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('data_usage_vpn')), findsNothing);
+  });
+
+  testWidgets('shows a key while a VPN is on', (WidgetTester tester) async {
+    when(mockNetworkService.hasUsageStatsPermission).thenReturn(true);
+    when(mockNetworkService.vpnActive).thenReturn(true);
+    when(mockNetworkService.getDataUsageForPeriod('daily')).thenAnswer((_) async => 1000);
+
+    await tester.pumpWidget(createWidgetUnderTest());
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('data_usage_vpn')), findsOneWidget);
+  });
+
+  testWidgets("focused, it shows the data over the home on the top bar's period; OK goes on to the next",
+      (WidgetTester tester) async {
+    when(mockNetworkService.hasUsageStatsPermission).thenReturn(true);
+    when(mockSettingsService.dataUsagePeriod).thenReturn('weekly');
+    when(mockNetworkService.getDataUsageForPeriod('weekly')).thenAnswer((_) async => 1000);
+    final focusNode = FocusNode();
+    addTearDown(focusNode.dispose);
+
+    await tester.pumpWidget(focusableUnderTest(focusNode));
+    await tester.pumpAndSettle();
+    expect(homeDataUsage.showing, isFalse);
+
+    focusNode.requestFocus();
+    await tester.pumpAndSettle();
+    expect(homeDataUsage.showing, isTrue);
+    expect(homeDataUsage.period, 'weekly');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(homeDataUsage.period, 'monthly');
+
+    focusNode.unfocus();
+    await tester.pumpAndSettle();
+    expect(homeDataUsage.showing, isFalse);
+  });
+
+  testWidgets('without usage access, focus shows nothing over the home and OK asks for it', (WidgetTester tester) async {
+    when(mockNetworkService.hasUsageStatsPermission).thenReturn(false);
+    when(mockNetworkService.requestPermission()).thenAnswer((_) async {});
+    final focusNode = FocusNode();
+    addTearDown(focusNode.dispose);
+
+    await tester.pumpWidget(focusableUnderTest(focusNode));
+    focusNode.requestFocus();
+    await tester.pumpAndSettle();
+    expect(homeDataUsage.showing, isFalse);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    verify(mockNetworkService.requestPermission()).called(1);
   });
 }

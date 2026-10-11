@@ -18,7 +18,9 @@
 
 import 'package:flauncher/providers/home_forecast.dart';
 import 'package:flauncher/providers/home_agenda.dart';
+import 'package:flauncher/providers/home_data_usage.dart';
 import 'package:flauncher/widgets/calendar_agenda.dart';
+import 'package:flauncher/widgets/data_usage_row.dart';
 import 'package:flauncher/widgets/weather_forecast_row.dart';
 import 'package:flauncher/widgets/profile_transition_overlay.dart';
 import 'dart:math' as math;
@@ -764,7 +766,9 @@ class _FLauncherState extends State<FLauncher> {
     final bool showForecast = context.watch<HomeForecast?>()?.showing ?? false;
     // Today's events, while the top bar's date and time have focus (with the profile's calendars on the TV)
     final bool showAgenda = (context.watch<HomeAgenda?>()?.showing ?? false) && !showForecast;
-    final bool showOverlay = showForecast || showAgenda;
+    // The TV's data app by app, while the top bar's data usage has focus
+    final bool showDataUsage = (context.watch<HomeDataUsage?>()?.showing ?? false) && !showForecast && !showAgenda;
+    final bool showOverlay = showForecast || showAgenda || showDataUsage;
     _showDetailsScrim(showRecents || showSearch || showOverlay);
     _recentsAvailable = continueWatchingActive;
     final List<LauncherSection> belowDock =
@@ -838,6 +842,17 @@ class _FLauncherState extends State<FLauncher> {
                     child: const Padding(
                       padding: EdgeInsets.only(bottom: 32),
                       child: CalendarTodayRow(key: Key("home_agenda")),
+                    ),
+                  ),
+                ),
+                // The TV's data app by app (nothing in it takes focus: the data usage keeps it)
+                ExcludeFocus(
+                  child: _swapAnimation(
+                    visible: showDataUsage,
+                    hiddenOffset: const Offset(0, 0.25),
+                    child: const Padding(
+                      padding: EdgeInsets.only(bottom: 32),
+                      child: DataUsageRow(key: Key("home_data_usage")),
                     ),
                   ),
                 ),

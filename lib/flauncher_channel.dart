@@ -18,6 +18,7 @@
 
 import 'dart:async';
 
+import 'package:flauncher/models/data_usage.dart';
 import 'package:flutter/services.dart';
 
 class FLauncherChannel {
@@ -108,6 +109,16 @@ class FLauncherChannel {
       return usage;
     } on PlatformException catch (_) {
       return -1;
+    }
+  }
+
+  /// The TV's data this period ("daily", "weekly" or "monthly"), app by app; null without usage access.
+  Future<DataUsageBreakdown?> getDataUsageByApp(String period) async {
+    try {
+      final Map<dynamic, dynamic>? map = await _methodChannel.invokeMethod("getDataUsageByApp", period);
+      return map == null ? null : DataUsageBreakdown.fromMap(map);
+    } on PlatformException catch (_) {
+      return null;
     }
   }
 

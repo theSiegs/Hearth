@@ -2644,4 +2644,58 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get calendarsNone => 'This profile has no Google calendars synced to the TV.';
+  String get haCalendarsHelp => 'The calendars turned on here show when the date and time at the top right have focus: what\'s left of today, and OK for the next 7 days. Each profile chooses its own.';
+
+  @override
+  String get dataUsageToday => 'Today';
+
+  @override
+  String get dataUsageThisWeek => 'This week';
+
+  @override
+  String get dataUsageThisMonth => 'This month';
+
+  @override
+  String get dataUsageShowToday => 'OK: today';
+
+  @override
+  String get dataUsageShowWeek => 'OK: this week';
+
+  @override
+  String get dataUsageShowMonth => 'OK: this month';
+
+  @override
+  String dataUsageOnThisTv(String amount) {
+    return '$amount on this TV';
+  }
+
+  @override
+  String get dataUsageAndroid => 'Android system';
+
+  @override
+  String get dataUsageEverythingElse => 'Everything else';
+
+  @override
+  String get dataUsageNone => 'No data used yet';
+
+  @override
+  String get dataUsageNoInternet => 'No internet';
+
+  @override
+  String get dataUsageWifi => 'Wi-Fi';
+
+  @override
+  String get dataUsageEthernet => 'Ethernet';
+
+  @override
+  String get dataUsageMobile => 'Mobile data';
+
+  @override
+  String get dataUsageNotConnected => 'Not connected';
+
+  @override
+  String get dataUsageVpnOn => 'VPN on';
+
+  @override
+  String get dataUsageEthernetNotCounted => 'Android doesn\'t count data over Ethernet';
 }

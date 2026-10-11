@@ -23,8 +23,6 @@ import android.app.AppOpsManager;
 import android.app.NotificationManager;
 import android.app.SearchManager;
 import android.app.role.RoleManager;
-import android.app.usage.NetworkStats;
-import android.app.usage.NetworkStatsManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -99,8 +97,6 @@ public class MainActivity extends FlutterActivity {
     private static final int CALENDAR_PERMISSION_REQUEST = 1003;
     // Drawn app images are capped at this many pixels a side.
     private static final int MAX_ICON_PX = 512;
-    private static final int[] DATA_USAGE_NETWORKS = {
-            ConnectivityManager.TYPE_WIFI, ConnectivityManager.TYPE_MOBILE, ConnectivityManager.TYPE_ETHERNET};
     private static final ExecutorService sIoExecutor = Executors.newFixedThreadPool(4);
     // Builds one app list at a time, so overlapping requests are answered in the order they came.
     private static final ExecutorService sAppsLoader = Executors.newSingleThreadExecutor();
@@ -158,6 +154,13 @@ public class MainActivity extends FlutterActivity {
             case "startAmbientMode" -> result.success(startAmbientMode());
             case "getActiveNetworkInformation" -> result.success(getActiveNetworkInformation());
             case "getDailyDataUsage", "getWeeklyDataUsage", "getMonthlyDataUsage" -> answerDataUsage(call.method, result);
+            case "getDataUsageByApp" -> {
+                String period = call.arguments();
+                answerFrom(sIoExecutor, result, () -> checkUsageStatsPermission()
+                        ? DataUsage.byApp(this, DataUsage.periodStart(period, Calendar.getInstance()),
+                                System.currentTimeMillis())
+                        : null);
+            }
             case "checkUsageStatsPermission" -> result.success(checkUsageStatsPermission());
             case "requestUsageStatsPermission" -> {
                 requestUsageStatsPermission();
@@ -461,13 +464,18 @@ public class MainActivity extends FlutterActivity {
         });
     }
 
+    /** The data used this period, worked out off the main thread (NetworkStatsManager can take a while). */
     private void answerDataUsage(String method, MethodChannel.Result result) {
-        long usage = dataUsageSince(periodStart(method));
-        if (usage == -1) {
-            result.error("PERMISSION_DENIED", "Usage stats permission not granted", null);
-        } else {
-            result.success(usage);
-        }
+        sIoExecutor.execute(() -> {
+            long usage = dataUsageSince(DataUsage.periodStart(DataUsage.periodOfMethod(method), Calendar.getInstance()));
+            runOnUiThread(() -> {
+                if (usage == -1) {
+                    result.error("PERMISSION_DENIED", "Usage stats permission not granted", null);
+                } else {
+                    result.success(usage);
+                }
+            });
+        });
     }
 
     /** A search result: the app's own link for the title, opened in that app (Profile Pairing first). */
@@ -981,44 +989,12 @@ public class MainActivity extends FlutterActivity {
         return bitmap;
     }
 
-    /** Midnight at the start of today, of this week (the locale's first day) or of this month. */
-    private static long periodStart(String method) {
-        Calendar calendar = Calendar.getInstance();
-        switch (method) {
-            case "getWeeklyDataUsage" -> calendar.set(Calendar.DAY_OF_WEEK, calendar.getFirstDayOfWeek());
-            case "getMonthlyDataUsage" -> calendar.set(Calendar.DAY_OF_MONTH, 1);
-            default -> {
-            }
-        }
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-        return calendar.getTimeInMillis();
-    }
-
-    /** Bytes sent and received over Wi-Fi, mobile and Ethernet since startTime; -1 without usage access. */
+    /** Bytes sent and received over Wi-Fi and mobile since startTime; -1 without usage access. */
     private long dataUsageSince(long startTime) {
         if (!checkUsageStatsPermission()) {
             return -1;
         }
-        NetworkStatsManager networkStatsManager = (NetworkStatsManager) getSystemService(Context.NETWORK_STATS_SERVICE);
-        if (networkStatsManager == null) {
-            return 0;
-        }
-        long endTime = System.currentTimeMillis();
-        long totalBytes = 0;
-        for (int type : DATA_USAGE_NETWORKS) {
-            try {
-                NetworkStats.Bucket bucket = networkStatsManager.querySummaryForDevice(type, null, startTime, endTime);
-                if (bucket != null) {
-                    totalBytes += bucket.getRxBytes() + bucket.getTxBytes();
-                }
-            } catch (Exception e) {
-                Log.w(TAG, "No data usage for network type " + type, e);
-            }
-        }
-        return totalBytes;
+        return DataUsage.deviceTotal(this, startTime, System.currentTimeMillis());
     }
 
     private boolean checkUsageStatsPermission() {

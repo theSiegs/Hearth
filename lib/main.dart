@@ -24,6 +24,8 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/home_forecast.dart';
 import 'package:flauncher/providers/home_agenda.dart';
 import 'package:flauncher/providers/calendars.dart';
+import 'package:flauncher/providers/home_data_usage.dart';
+import 'package:flauncher/providers/ha_calendars.dart';
 import 'package:flauncher/providers/home_search.dart';
 import 'package:flauncher/providers/search_service.dart';
 import 'package:flauncher/providers/apps_service.dart';
@@ -141,6 +143,8 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => HomeForecast()),
         // The active profile's Google calendars on the TV, by the top bar's date and time
         ChangeNotifierProvider(create: (_) => HomeAgenda()),
+        // The TV's data app by app over the home (the top bar's data usage shows it)
+        ChangeNotifierProvider(create: (_) => HomeDataUsage()),
         ChangeNotifierProvider(
             create: (context) {
               final settings = context.read<SettingsService>();

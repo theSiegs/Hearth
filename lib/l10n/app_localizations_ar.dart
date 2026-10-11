@@ -2680,4 +2680,58 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get calendarsNone => 'لا توجد لهذا الملف الشخصي تقاويم Google متزامنة مع التلفزيون.';
+  String get haCalendarsHelp => 'تظهر التقاويم المفعّلة هنا عندما يكون التاريخ والوقت في أعلى اليمين محددين: بقية اليوم، ومع موافق الأيام السبعة القادمة. يختار كل ملف شخصي تقاويمه.';
+
+  @override
+  String get dataUsageToday => 'اليوم';
+
+  @override
+  String get dataUsageThisWeek => 'هذا الأسبوع';
+
+  @override
+  String get dataUsageThisMonth => 'هذا الشهر';
+
+  @override
+  String get dataUsageShowToday => 'OK: اليوم';
+
+  @override
+  String get dataUsageShowWeek => 'OK: هذا الأسبوع';
+
+  @override
+  String get dataUsageShowMonth => 'OK: هذا الشهر';
+
+  @override
+  String dataUsageOnThisTv(String amount) {
+    return '$amount على هذا التلفاز';
+  }
+
+  @override
+  String get dataUsageAndroid => 'نظام Android';
+
+  @override
+  String get dataUsageEverythingElse => 'كل ما عدا ذلك';
+
+  @override
+  String get dataUsageNone => 'لم تُستخدم أي بيانات بعد';
+
+  @override
+  String get dataUsageNoInternet => 'لا يوجد اتصال بالإنترنت';
+
+  @override
+  String get dataUsageWifi => 'Wi-Fi';
+
+  @override
+  String get dataUsageEthernet => 'إيثرنت';
+
+  @override
+  String get dataUsageMobile => 'بيانات الجوال';
+
+  @override
+  String get dataUsageNotConnected => 'غير متصل';
+
+  @override
+  String get dataUsageVpnOn => 'VPN قيد التشغيل';
+
+  @override
+  String get dataUsageEthernetNotCounted => 'لا يحسب Android البيانات عبر الإيثرنت';
 }

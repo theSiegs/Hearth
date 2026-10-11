@@ -59,7 +59,9 @@ dropped when someone else used it (Netflix lists only its current profile's), un
 photo's title and credit are in **About Hearth**.
 
 **Status bar.** Clock and date (choose the format), weather, data usage (per day, week or
-month), TV inputs and the notification bell.
+month), TV inputs and the notification bell. Select the data usage to see which apps used the TV's data (OK goes
+from today to this week and this month), whether the TV is on Wi-Fi and if a VPN is on; it says "No internet" when
+the TV has been offline for a few seconds. Android counts Wi-Fi and mobile data only, not Ethernet.
 
 **Calendar.** With calendar access allowed (**Settings → Home screen → Status bar → Calendars**), the date and time
 in the top bar can be selected: they show the rest of today's events, and OK shows the next 7 days. The events come

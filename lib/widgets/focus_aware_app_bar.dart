@@ -45,6 +45,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
   final FocusNode _weatherFocusNode = FocusNode();
   final FocusNode _searchFocusNode = FocusNode();
   final FocusNode _dateTimeFocusNode = FocusNode();
+  final FocusNode _dataUsageFocusNode = FocusNode();
 
   @visibleForTesting
   FocusNode get profileFocusNode => _profileFocusNode;
@@ -57,6 +58,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
     _weatherFocusNode.dispose();
     _searchFocusNode.dispose();
     _dateTimeFocusNode.dispose();
+    _dataUsageFocusNode.dispose();
     super.dispose();
   }
 
@@ -225,6 +227,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                 selector: (_, settings) => settings.showDataWidgetInStatusBar,
                 builder: (context, showData, _) => showData
                   ? const StatusPill(child: DailyDataUsageWidget())
+                  ? DailyDataUsageWidget(focusNode: _dataUsageFocusNode)
                   : const SizedBox.shrink(),
               ),
             ],

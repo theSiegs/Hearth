@@ -2659,4 +2659,58 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get calendarsNone => 'Цей профіль не має календарів Google, синхронізованих із телевізором.';
+  String get haCalendarsHelp => 'Увімкнені тут календарі показуються, коли у фокусі дата й час праворуч угорі: решта дня, а за OK — наступні 7 днів. Кожен профіль вибирає свої.';
+
+  @override
+  String get dataUsageToday => 'Сьогодні';
+
+  @override
+  String get dataUsageThisWeek => 'Цього тижня';
+
+  @override
+  String get dataUsageThisMonth => 'Цього місяця';
+
+  @override
+  String get dataUsageShowToday => 'OK: сьогодні';
+
+  @override
+  String get dataUsageShowWeek => 'OK: цей тиждень';
+
+  @override
+  String get dataUsageShowMonth => 'OK: цей місяць';
+
+  @override
+  String dataUsageOnThisTv(String amount) {
+    return '$amount на цьому телевізорі';
+  }
+
+  @override
+  String get dataUsageAndroid => 'Система Android';
+
+  @override
+  String get dataUsageEverythingElse => 'Усе інше';
+
+  @override
+  String get dataUsageNone => 'Дані ще не використовувалися';
+
+  @override
+  String get dataUsageNoInternet => 'Немає інтернету';
+
+  @override
+  String get dataUsageWifi => 'Wi-Fi';
+
+  @override
+  String get dataUsageEthernet => 'Ethernet';
+
+  @override
+  String get dataUsageMobile => 'Мобільні дані';
+
+  @override
+  String get dataUsageNotConnected => 'Немає підключення';
+
+  @override
+  String get dataUsageVpnOn => 'VPN увімкнено';
+
+  @override
+  String get dataUsageEthernetNotCounted => 'Android не враховує трафік через Ethernet';
 }

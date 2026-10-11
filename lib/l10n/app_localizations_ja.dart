@@ -2632,4 +2632,58 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get calendarsNone => 'このプロフィールにはテレビに同期された Google カレンダーがありません。';
+  String get haCalendarsHelp => 'ここでオンにしたカレンダーは、右上の日付と時刻にフォーカスがあるときに表示されます: 今日の残りの予定、OK で今後7日間。プロファイルごとに選べます。';
+
+  @override
+  String get dataUsageToday => '今日';
+
+  @override
+  String get dataUsageThisWeek => '今週';
+
+  @override
+  String get dataUsageThisMonth => '今月';
+
+  @override
+  String get dataUsageShowToday => 'OK: 今日';
+
+  @override
+  String get dataUsageShowWeek => 'OK: 今週';
+
+  @override
+  String get dataUsageShowMonth => 'OK: 今月';
+
+  @override
+  String dataUsageOnThisTv(String amount) {
+    return 'このテレビで $amount';
+  }
+
+  @override
+  String get dataUsageAndroid => 'Android システム';
+
+  @override
+  String get dataUsageEverythingElse => 'その他すべて';
+
+  @override
+  String get dataUsageNone => 'まだデータは使われていません';
+
+  @override
+  String get dataUsageNoInternet => 'インターネットに接続されていません';
+
+  @override
+  String get dataUsageWifi => 'Wi-Fi';
+
+  @override
+  String get dataUsageEthernet => 'イーサネット';
+
+  @override
+  String get dataUsageMobile => 'モバイルデータ';
+
+  @override
+  String get dataUsageNotConnected => '未接続';
+
+  @override
+  String get dataUsageVpnOn => 'VPN オン';
+
+  @override
+  String get dataUsageEthernetNotCounted => 'Android はイーサネットのデータ量を数えません';
 }
