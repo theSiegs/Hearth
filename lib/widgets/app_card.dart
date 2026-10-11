@@ -261,7 +261,9 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
         },
         child: InkWell(
           focusNode: _focusNode,
-          autofocus: widget.autofocus,
+          // Not while Settings or a panel is open over the home: a card built then (the home's layout changed under
+          // it) would take the selection from it. The home lands on its own once it's back on top.
+          autofocus: widget.autofocus && (ModalRoute.isCurrentOf(context) ?? true),
           focusColor: Colors.transparent,
           onTap: () => _onPressed(context, LogicalKeyboardKey.enter),
           onLongPress: () => _onLongPress(context, LogicalKeyboardKey.enter),
