@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.44 (pre-release)
+
+- The Home Assistant panel is now drawn by Hearth from your dashboard, so everything in it works with the remote: thermostats (− / + and modes), players (play/pause, skip, volume), lights (on/off, brightness), scenes, sensors, cards that show only when something is on, text cards with headings and icons, and where everyone is. Cards Hearth can't draw are left out; "Open the full dashboard" at the bottom shows Home Assistant's own page, and a setting can make that the default.
+
 ## 2026.10.43 (pre-release)
 
 - Calendar: the date and time now show the TV's own Google calendars (each profile its own account's, kids' profiles included), with no Home Assistant needed. Choose calendars in Settings > Home screen > Status bar > Calendars. Needs calendar access (read only, stays on the TV).

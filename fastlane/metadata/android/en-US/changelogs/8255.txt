@@ -1,0 +1,2 @@
+- Early development pre-release.
+- The Home Assistant panel works with the remote: Hearth draws your dashboard's cards itself.
