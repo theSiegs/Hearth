@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.49 (pre-release)
+
+- YouTube time per day applies to kids' profiles only: a grown-up's profile is never limited or locked (a limit set on a grown-up's profile by an older Hearth is ignored). Each kid's is set on their page in Settings > Profiles > Kids' profiles.
+
 ## 2026.10.48 (pre-release)
 
 - Home Assistant panel: no "Open the full dashboard" row (the setting to show Home Assistant's own page instead stays). App icons in the screen time cards are kept on the TV for 30 days and show offline too.
