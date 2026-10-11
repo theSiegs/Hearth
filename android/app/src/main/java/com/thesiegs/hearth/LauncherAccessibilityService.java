@@ -88,6 +88,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
      * that screen has been up. Hearth leaves the home this long first (1.5 s worked on the TV, 2026-10-06).
      */
     private static final long KIDS_HOME_GRACE_MS = 1_500;
+    private static final String KIDS_HOME_GRACE_SETTING = "hearth_kids_home_grace_ms";
     /**
      * Google TV's own home, not after its chooser: the remote's profile button opens the home and then the chooser
      * over it, 0.07 s later on the TV (2026-10-10). Hearth waits this long before covering the home, so it doesn't
@@ -1318,7 +1319,15 @@ public class LauncherAccessibilityService extends AccessibilityService {
             // Google TV opens its own home by component after a profile switch, on Back from apps, etc.,
             // ignoring the default home app. Bring the launcher back whenever that's allowed.
             boolean afterProfileLock = now - mProfileLockSeenAt < PROFILE_LOCK_HOLD_MS;
-            long grace = homeGraceMs(ProfileUsers.isKids(this) || mKidsLockHold, afterProfileLock);
+            boolean kidsHome = ProfileUsers.isKids(this) || mKidsLockHold;
+            long grace = homeGraceMs(kidsHome, afterProfileLock);
+            // For measuring how long Google TV's kids home takes to put up its bedtime / time up screen (adb only):
+            // `settings put global hearth_kids_home_grace_ms 15000`, `settings delete global ...` to end it
+            long graceOverride = android.provider.Settings.Global.getLong(getContentResolver(), KIDS_HOME_GRACE_SETTING, 0);
+            if (kidsHome && graceOverride > 0) {
+                grace = graceOverride;
+                Log.i(TAG, "Kids' home grace set by adb: " + grace + " ms");
+            }
             if (now < mGoogleSetupUntil || mNewProfileHold) {
                 Log.i(TAG, "Not taking over: Google TV setup in progress");
             } else if (autoTakeOverAllowed() && grace > 0) {
