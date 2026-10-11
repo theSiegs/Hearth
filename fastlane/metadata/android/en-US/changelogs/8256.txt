@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Profile photos for profiles without a PIN fill in from Google TV's chooser.
