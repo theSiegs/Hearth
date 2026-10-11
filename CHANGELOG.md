@@ -3,6 +3,11 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.46 (pre-release)
+
+- Kids' bedtime and time-up screens show again when switching to a kid's profile: Hearth gives Google TV's kids home the 3 seconds it needs (measured on the TV) and shows its own "Hi, <name>" card over it meanwhile.
+- Home Assistant panel: app icons (pictures) in text cards and entity pictures on tiles; when a card the selection is on goes away (a player stops), the selection moves to the next one down.
+
 ## 2026.10.45 (pre-release)
 
 - Profile photos: any profile without a PIN is photographed from Google TV's chooser when its tile is selected for a moment (the kids' photos fill in).

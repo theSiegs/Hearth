@@ -1,0 +1,3 @@
+- Early development pre-release.
+- Kids' bedtime screens show again; Hearth's card covers Google TV's home meanwhile.
+- Home Assistant panel: pictures in cards and tiles.
