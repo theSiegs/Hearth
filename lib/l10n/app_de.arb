@@ -821,5 +821,16 @@
     "dataUsageMobile": "Mobile Daten",
     "dataUsageNotConnected": "Nicht verbunden",
     "dataUsageVpnOn": "VPN an",
-    "dataUsageEthernetNotCounted": "Android zählt keine Daten über Ethernet"
+    "dataUsageEthernetNotCounted": "Android zählt keine Daten über Ethernet",
+    "haNativeNotSetUp": "Home Assistant-Bereich ist nicht eingerichtet",
+    "haNativeNotSetUpDetail": "Fügen Sie die Home Assistant-Adresse und ein Zugriffstoken unter {place} hinzu.",
+    "haNativeUnreachable": "Home Assistant ist nicht erreichbar",
+    "haNativeLoading": "Dashboard wird geladen…",
+    "haNativeEmpty": "Auf diesem Dashboard gibt es nichts, das hier angezeigt werden kann",
+    "haTimeNow": "jetzt",
+    "haTimeIn": "in {span}",
+    "haTimeAgo": "vor {span}",
+    "haSpanMinutes": "{count} Min.",
+    "haSpanHours": "{count} Std.",
+    "haSpanDays": "{count} T."
 }

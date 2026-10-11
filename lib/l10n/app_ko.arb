@@ -821,5 +821,16 @@
     "dataUsageMobile": "모바일 데이터",
     "dataUsageNotConnected": "연결되지 않음",
     "dataUsageVpnOn": "VPN 켜짐",
-    "dataUsageEthernetNotCounted": "Android는 이더넷 데이터를 집계하지 않습니다"
+    "dataUsageEthernetNotCounted": "Android는 이더넷 데이터를 집계하지 않습니다",
+    "haNativeNotSetUp": "Home Assistant 패널이 설정되지 않음",
+    "haNativeNotSetUpDetail": "{place}에서 Home Assistant 주소와 액세스 토큰을 추가하세요.",
+    "haNativeUnreachable": "Home Assistant에 연결할 수 없음",
+    "haNativeLoading": "대시보드를 불러오는 중…",
+    "haNativeEmpty": "이 대시보드에는 여기에 표시할 수 있는 항목이 없습니다",
+    "haTimeNow": "지금",
+    "haTimeIn": "{span} 후",
+    "haTimeAgo": "{span} 전",
+    "haSpanMinutes": "{count}분",
+    "haSpanHours": "{count}시간",
+    "haSpanDays": "{count}일"
 }

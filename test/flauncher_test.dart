@@ -19,6 +19,7 @@
 import 'dart:io';
 
 import 'package:flauncher/flauncher.dart';
+import 'package:flauncher/widgets/ha_panel/ha_panel.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/gradients.dart';
 import 'package:flauncher/providers/apps_service.dart';
@@ -935,9 +936,19 @@ void main() {
     expect(calls, isNot(contains("openHaPanel")));
 
     when(settingsService.haPanelEnabled).thenReturn(true);
+    when(settingsService.haPanelDashboard).thenReturn("");
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pumpAndSettle();
-    expect(calls, contains("openHaPanel"));
+    // Hearth's own panel, asking for Home Assistant's address and token (not set up here: it says so)
+    expect(find.byType(HaPanel), findsOneWidget);
+    expect(calls, contains("getHaConnection"));
+    expect(calls, isNot(contains("openHaPanel")));
+    expect(find.text("Home Assistant panel isn't set up"), findsOneWidget);
+
+    // Left with nothing further left closes it
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(find.byType(HaPanel), findsNothing);
   });
 
   testWidgets("Pressing select on app opens ApplicationInfoPanel", (tester) async {

@@ -821,5 +821,16 @@
     "dataUsageMobile": "Мобільні дані",
     "dataUsageNotConnected": "Немає підключення",
     "dataUsageVpnOn": "VPN увімкнено",
-    "dataUsageEthernetNotCounted": "Android не враховує трафік через Ethernet"
+    "dataUsageEthernetNotCounted": "Android не враховує трафік через Ethernet",
+    "haNativeNotSetUp": "Панель Home Assistant не налаштована",
+    "haNativeNotSetUpDetail": "Додайте адресу Home Assistant і токен доступу в розділі {place}.",
+    "haNativeUnreachable": "Не вдається під'єднатися до Home Assistant",
+    "haNativeLoading": "Завантаження панелі…",
+    "haNativeEmpty": "На цій панелі немає нічого, що можна показати тут",
+    "haTimeNow": "зараз",
+    "haTimeIn": "через {span}",
+    "haTimeAgo": "{span} тому",
+    "haSpanMinutes": "{count} хв",
+    "haSpanHours": "{count} год",
+    "haSpanDays": "{count} д"
 }

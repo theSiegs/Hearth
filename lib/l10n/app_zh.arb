@@ -821,5 +821,16 @@
     "dataUsageMobile": "移动数据",
     "dataUsageNotConnected": "未连接",
     "dataUsageVpnOn": "VPN 已开启",
-    "dataUsageEthernetNotCounted": "Android 不统计以太网流量"
+    "dataUsageEthernetNotCounted": "Android 不统计以太网流量",
+    "haNativeNotSetUp": "尚未设置 Home Assistant 面板",
+    "haNativeNotSetUpDetail": "请在“{place}”中添加 Home Assistant 地址和访问令牌。",
+    "haNativeUnreachable": "无法连接 Home Assistant",
+    "haNativeLoading": "正在加载仪表板…",
+    "haNativeEmpty": "此仪表板中没有可在此显示的内容",
+    "haTimeNow": "现在",
+    "haTimeIn": "{span}后",
+    "haTimeAgo": "{span}前",
+    "haSpanMinutes": "{count}分钟",
+    "haSpanHours": "{count}小时",
+    "haSpanDays": "{count}天"
 }

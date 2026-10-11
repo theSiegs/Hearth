@@ -3509,5 +3509,82 @@
     "dataUsageEthernetNotCounted": "Android doesn't count data over Ethernet",
     "@dataUsageEthernetNotCounted": {
         "description": "Data usage over the home: on a network cable, the amounts stay near zero"
+    },
+    "haNativeNotSetUp": "Home Assistant panel isn't set up",
+    "@haNativeNotSetUp": {
+        "description": "Home Assistant panel (Hearth's own): Home Assistant isn't set up on this TV"
+    },
+    "haNativeNotSetUpDetail": "Add the Home Assistant address and an access token in {place}.",
+    "@haNativeNotSetUpDetail": {
+        "description": "Home Assistant panel: how to set it up; {place} is where (a settings breadcrumb)",
+        "placeholders": {
+            "place": {
+                "type": "String",
+                "example": "Settings > Home Assistant > Dashboard panel"
+            }
+        }
+    },
+    "haNativeUnreachable": "Can't reach Home Assistant",
+    "@haNativeUnreachable": {
+        "description": "Home Assistant panel: a quiet row when Home Assistant can't be reached (it's tried again on its own)"
+    },
+    "haNativeLoading": "Loading the dashboard…",
+    "@haNativeLoading": {
+        "description": "Home Assistant panel: while the dashboard is read"
+    },
+    "haNativeEmpty": "Nothing on this dashboard can be shown here",
+    "@haNativeEmpty": {
+        "description": "Home Assistant panel: the dashboard has nothing the panel can draw"
+    },
+    "haTimeNow": "now",
+    "@haTimeNow": {
+        "description": "Home Assistant panel: a time that is now (a sensor's timestamp)"
+    },
+    "haTimeIn": "in {span}",
+    "@haTimeIn": {
+        "description": "Home Assistant panel: a time to come; {span} is how long until then (\"40 min\", \"2 h 5 min\")",
+        "placeholders": {
+            "span": {
+                "type": "String",
+                "example": "40 min"
+            }
+        }
+    },
+    "haTimeAgo": "{span} ago",
+    "@haTimeAgo": {
+        "description": "Home Assistant panel: a time gone by; {span} is how long ago (\"40 min\")",
+        "placeholders": {
+            "span": {
+                "type": "String",
+                "example": "40 min"
+            }
+        }
+    },
+    "haSpanMinutes": "{count} min",
+    "@haSpanMinutes": {
+        "description": "Home Assistant panel: a number of minutes, short",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "haSpanHours": "{count} h",
+    "@haSpanHours": {
+        "description": "Home Assistant panel: a number of hours, short",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "haSpanDays": "{count} d",
+    "@haSpanDays": {
+        "description": "Home Assistant panel: a number of days, short",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
     }
 }

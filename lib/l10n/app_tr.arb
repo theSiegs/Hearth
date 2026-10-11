@@ -821,5 +821,16 @@
     "dataUsageMobile": "Mobil veri",
     "dataUsageNotConnected": "Bağlı değil",
     "dataUsageVpnOn": "VPN açık",
-    "dataUsageEthernetNotCounted": "Android, Ethernet üzerinden kullanılan veriyi saymaz"
+    "dataUsageEthernetNotCounted": "Android, Ethernet üzerinden kullanılan veriyi saymaz",
+    "haNativeNotSetUp": "Home Assistant paneli kurulmadı",
+    "haNativeNotSetUpDetail": "{place} bölümünden Home Assistant adresini ve bir erişim jetonunu ekleyin.",
+    "haNativeUnreachable": "Home Assistant'a ulaşılamıyor",
+    "haNativeLoading": "Pano yükleniyor…",
+    "haNativeEmpty": "Bu panoda burada gösterilebilecek bir şey yok",
+    "haTimeNow": "şimdi",
+    "haTimeIn": "{span} içinde",
+    "haTimeAgo": "{span} önce",
+    "haSpanMinutes": "{count} dk",
+    "haSpanHours": "{count} sa",
+    "haSpanDays": "{count} g"
 }

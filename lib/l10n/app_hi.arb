@@ -821,5 +821,16 @@
     "dataUsageMobile": "मोबाइल डेटा",
     "dataUsageNotConnected": "कनेक्ट नहीं है",
     "dataUsageVpnOn": "VPN चालू है",
-    "dataUsageEthernetNotCounted": "Android ईथरनेट पर डेटा नहीं गिनता"
+    "dataUsageEthernetNotCounted": "Android ईथरनेट पर डेटा नहीं गिनता",
+    "haNativeNotSetUp": "Home Assistant पैनल सेट अप नहीं है",
+    "haNativeNotSetUpDetail": "{place} में Home Assistant का पता और एक्सेस टोकन जोड़ें।",
+    "haNativeUnreachable": "Home Assistant से कनेक्ट नहीं हो पा रहा",
+    "haNativeLoading": "डैशबोर्ड लोड हो रहा है…",
+    "haNativeEmpty": "इस डैशबोर्ड में यहाँ दिखाने लायक कुछ नहीं है",
+    "haTimeNow": "अभी",
+    "haTimeIn": "{span} में",
+    "haTimeAgo": "{span} पहले",
+    "haSpanMinutes": "{count} मिनट",
+    "haSpanHours": "{count} घंटे",
+    "haSpanDays": "{count} दिन"
 }

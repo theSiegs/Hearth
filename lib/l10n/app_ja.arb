@@ -821,5 +821,16 @@
     "dataUsageMobile": "モバイルデータ",
     "dataUsageNotConnected": "未接続",
     "dataUsageVpnOn": "VPN オン",
-    "dataUsageEthernetNotCounted": "Android はイーサネットのデータ量を数えません"
+    "dataUsageEthernetNotCounted": "Android はイーサネットのデータ量を数えません",
+    "haNativeNotSetUp": "Home Assistant パネルが設定されていません",
+    "haNativeNotSetUpDetail": "{place} で、Home Assistant のアドレスとアクセストークンを追加してください。",
+    "haNativeUnreachable": "Home Assistant に接続できません",
+    "haNativeLoading": "ダッシュボードを読み込んでいます…",
+    "haNativeEmpty": "このダッシュボードにはここに表示できるものがありません",
+    "haTimeNow": "今",
+    "haTimeIn": "{span}後",
+    "haTimeAgo": "{span}前",
+    "haSpanMinutes": "{count}分",
+    "haSpanHours": "{count}時間",
+    "haSpanDays": "{count}日"
 }

@@ -821,5 +821,16 @@
     "dataUsageMobile": "بيانات الجوال",
     "dataUsageNotConnected": "غير متصل",
     "dataUsageVpnOn": "VPN قيد التشغيل",
-    "dataUsageEthernetNotCounted": "لا يحسب Android البيانات عبر الإيثرنت"
+    "dataUsageEthernetNotCounted": "لا يحسب Android البيانات عبر الإيثرنت",
+    "haNativeNotSetUp": "لم يتم إعداد لوحة Home Assistant",
+    "haNativeNotSetUpDetail": "أضِف عنوان Home Assistant ورمز وصول في {place}.",
+    "haNativeUnreachable": "تعذّر الوصول إلى Home Assistant",
+    "haNativeLoading": "جارٍ تحميل لوحة المعلومات…",
+    "haNativeEmpty": "لا يوجد في لوحة المعلومات هذه ما يمكن عرضه هنا",
+    "haTimeNow": "الآن",
+    "haTimeIn": "خلال {span}",
+    "haTimeAgo": "منذ {span}",
+    "haSpanMinutes": "{count} د",
+    "haSpanHours": "{count} س",
+    "haSpanDays": "{count} ي"
 }

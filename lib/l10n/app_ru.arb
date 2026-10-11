@@ -821,5 +821,16 @@
     "dataUsageMobile": "Мобильные данные",
     "dataUsageNotConnected": "Нет подключения",
     "dataUsageVpnOn": "VPN включён",
-    "dataUsageEthernetNotCounted": "Android не учитывает трафик по Ethernet"
+    "dataUsageEthernetNotCounted": "Android не учитывает трафик по Ethernet",
+    "haNativeNotSetUp": "Панель Home Assistant не настроена",
+    "haNativeNotSetUpDetail": "Добавьте адрес Home Assistant и токен доступа в разделе {place}.",
+    "haNativeUnreachable": "Не удаётся подключиться к Home Assistant",
+    "haNativeLoading": "Загрузка панели…",
+    "haNativeEmpty": "На этой панели нет ничего, что можно показать здесь",
+    "haTimeNow": "сейчас",
+    "haTimeIn": "через {span}",
+    "haTimeAgo": "{span} назад",
+    "haSpanMinutes": "{count} мин",
+    "haSpanHours": "{count} ч",
+    "haSpanDays": "{count} д"
 }

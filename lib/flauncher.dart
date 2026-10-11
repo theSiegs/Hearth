@@ -46,6 +46,8 @@ import 'package:flauncher/widgets/search/search_entry.dart';
 import 'package:flauncher/widgets/search/search_grid_page.dart';
 import 'package:flauncher/widgets/search/search_results_row.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
+import 'package:flauncher/providers/ha_panel_service.dart';
+import 'package:flauncher/widgets/ha_panel/ha_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -121,6 +123,9 @@ class _FLauncherState extends State<FLauncher> {
   /// removed takes it away): the card that had focus went with the old layout, so the selection lands on the home
   /// again once nothing is open over it. Otherwise it would fall back to the top bar.
   bool _relandOnHome = false;
+
+  /// Hearth's own Home Assistant panel's connection, made the first time it opens and kept with the home.
+  HaPanelService? _haPanel;
 
   @override
   void initState() {
@@ -259,6 +264,24 @@ class _FLauncherState extends State<FLauncher> {
     showDialog(context: context, barrierColor: Colors.transparent, builder: (_) => SettingsPanel(openProfilePinsFor: packageName));
   }
 
+  /// The Home Assistant panel along the right edge: Hearth's own, drawn from the profile's dashboard.
+  void _openHaPanel() {
+    final channel = context.read<FLauncherChannel>();
+    final settings = context.read<SettingsService>();
+    final service = _haPanel ??= HaPanelService(
+      connection: channel.getHaConnection,
+      // The profile's own dashboard, else the TV's
+      dashboard: () async {
+        final own = settings.haPanelDashboard.trim();
+        if (own.isNotEmpty) return own;
+        final dashboard = (await channel.getHaPanelConfig())["dashboard"];
+        return dashboard is String && dashboard.isNotEmpty ? dashboard : "lovelace";
+      },
+      language: () => mounted ? Localizations.localeOf(context).languageCode : "en",
+    );
+    HaPanel.open(context, service);
+  }
+
   void _openSearch(String mode) {
     if (!mounted) return;
     setState(() {
@@ -390,6 +413,7 @@ class _FLauncherState extends State<FLauncher> {
   @override
   void dispose() {
     FocusManager.instance.removeListener(_onFocusMoved);
+    _haPanel?.dispose();
     _profileService?.removeListener(_onProfileChanged);
     _appsService?.removeListener(_onAppsChanged);
     _homeSearch?.removeListener(_onSearchChanged);
@@ -602,7 +626,7 @@ class _FLauncherState extends State<FLauncher> {
           LeaveContinueWatchingIntent:
               CallbackAction<LeaveContinueWatchingIntent>(onInvoke: (_) => _leaveRecents()),
           OpenHaPanelIntent: CallbackAction<OpenHaPanelIntent>(
-            onInvoke: (_) => context.read<FLauncherChannel>().openHaPanel(),
+            onInvoke: (_) => _openHaPanel(),
           ),
         },
         child: FocusTraversalGroup(
