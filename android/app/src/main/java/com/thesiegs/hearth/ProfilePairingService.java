@@ -74,7 +74,7 @@ public class ProfilePairingService extends AccessibilityService {
 
     private static final Pattern NETFLIX_COUNT = Pattern.compile("(?i)^(.*?)[,.]?\\s*(\\d+) of (\\d+) profiles?");
     private static final Pattern MAX_ITEM = Pattern.compile("(?i)^\\s*(.+?)\\s+Button\\b[,.]?\\s*(\\d+)\\s+of\\s+(\\d+)");
-    private static final Pattern DISNEY_TILE = Pattern.compile("(?i)^Access (.+)'s profile$");
+    static final Pattern DISNEY_TILE = Pattern.compile("(?i)^Access (.+?)['’]s profile\\b.*$");
 
     private static volatile ProfilePairingService sInstance;
     /** The app whose launch Profile Pairing is handling right now, or null. Read from Hearth voice's thread. */
