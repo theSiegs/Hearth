@@ -25,6 +25,7 @@ void main() {
     // Alex's profile is on: only its own PIN shows
     profiles = MockProfileService();
     when(profiles.activeProfileKey).thenReturn("user:0");
+    when(profiles.isKidsProfile).thenReturn(false);
     when(channel.getProfilePairingChoices("com.example.tv")).thenAnswer((_) async => [
           {"hearthProfile": "user:0", "displayName": "Alex", "kids": false, "mode": "profile", "chosenProfile": "Alex M"},
           {"hearthProfile": "user:11", "displayName": "Sam", "kids": false, "mode": "auto", "autoMatch": "Sam"},

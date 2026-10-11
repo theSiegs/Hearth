@@ -439,6 +439,23 @@ class FLauncherChannel {
 
   Future<void> openHaPanel() async => await _methodChannel.invokeMethod("openHaPanel");
 
+  /// A grown-up is at the remote: their profile came on (or they entered the parent PIN) and the remote hasn't gone
+  /// untouched for five minutes since. False when Hearth can't tell.
+  Future<bool> isParentPresent() async {
+    try {
+      return await _methodChannel.invokeMethod<bool>("isParentPresent") ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// The parent PIN was just entered in a grown-up's profile.
+  Future<void> parentConfirmed() async {
+    try {
+      await _methodChannel.invokeMethod("parentConfirmed");
+    } catch (_) {}
+  }
+
   /// Home Assistant's address and the panel's token ({url, token}), for asking it which dashboards it has; null when
   /// it isn't set up.
   Future<({String url, String token})?> getHaConnection() async {

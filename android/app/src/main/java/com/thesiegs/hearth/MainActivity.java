@@ -44,6 +44,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
+import android.os.SystemClock;
 import android.os.UserHandle;
 import android.provider.Settings;
 import android.speech.RecognizerIntent;
@@ -307,6 +308,11 @@ public class MainActivity extends FlutterActivity {
                 result.success(null);
             }
             case "getHaSetupReceived" -> result.success(HaSetupServer.received());
+            case "isParentPresent" -> result.success(ParentPresence.isPresent(SystemClock.elapsedRealtime()));
+            case "parentConfirmed" -> {
+                ParentPresence.confirmed(SystemClock.elapsedRealtime());
+                result.success(null);
+            }
             case "getHaConnection" -> {
                 // For Settings' dashboard picker, which asks Home Assistant for its dashboards with the panel's token
                 if (!HaConfig.isConfigured(this)) {
