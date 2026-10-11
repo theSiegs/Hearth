@@ -844,5 +844,8 @@
     "haControlPause": "暂停",
     "haControlStop": "停止",
     "haControlNext": "下一首",
-    "haControlTurnOn": "打开"
+    "haControlTurnOn": "打开",
+    "haNativeOpenFullDashboard": "打开完整仪表板",
+    "haPanelFullDashboard": "改为显示完整仪表板",
+    "haPanelFullDashboardDetail": "Home Assistant 自己的页面。遥控器无法操作其中的控件。"
 }

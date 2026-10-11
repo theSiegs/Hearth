@@ -21,7 +21,9 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/ha_lovelace.dart';
 import 'package:flauncher/providers/ha_panel_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/widgets/focusable_tap.dart';
 import 'package:flauncher/widgets/ha_panel/ha_format.dart';
+import 'package:flauncher/widgets/ha_panel/ha_markdown.dart';
 import 'package:flauncher/widgets/ha_panel/ha_icons.dart';
 import 'package:flauncher/widgets/ha_panel/ha_tile.dart';
 import 'package:flauncher/widgets/settings/home_assistant_page.dart';
@@ -41,13 +43,17 @@ class HaPanel extends StatefulWidget {
   final HaPanelService service;
   final DateTime Function() now;
 
-  const HaPanel({super.key, required this.service, this.now = DateTime.now});
+  /// Opens Home Assistant's own dashboard (the web page) in the panel's place; null when there's none to open.
+  final VoidCallback? onOpenFullDashboard;
+
+  const HaPanel({super.key, required this.service, this.now = DateTime.now, this.onOpenFullDashboard});
 
   /// Slides the panel in over [context]'s home.
-  static Future<void> open(BuildContext context, HaPanelService service) => showDialog(
+  static Future<void> open(BuildContext context, HaPanelService service, {VoidCallback? onOpenFullDashboard}) =>
+      showDialog(
         context: context,
         barrierColor: Colors.transparent,
-        builder: (_) => HaPanel(service: service),
+        builder: (_) => HaPanel(service: service, onOpenFullDashboard: onOpenFullDashboard),
       );
 
   @override
@@ -259,6 +265,7 @@ class _HaPanelState extends State<HaPanel> {
           if (service.status == HaPanelStatus.unreachable) _quietRow(context, Icons.cloud_off, l.haNativeUnreachable),
           if (rows.isEmpty) _quietRow(context, Icons.dashboard_outlined, l.haNativeEmpty),
           for (final row in rows) _row(context, row, format),
+          if (widget.onOpenFullDashboard != null) _fullDashboardRow(context, l),
         ],
       ),
     );
@@ -293,8 +300,111 @@ class _HaPanelState extends State<HaPanel> {
   Widget _card(BuildContext context, HaCard card, HaFormat format) => switch (card) {
         HaHeadingCard() => _heading(context, card),
         HaTileCard() => HaTile(card: card, service: widget.service, format: format),
+        HaMarkdownCard() => _markdown(context, card),
+        HaMapCard() => _map(context, card, format),
         HaUnsupportedCard() => const SizedBox.shrink(),
       };
+
+  /// A markdown card: one stop, so the list scrolls through it.
+  Widget _markdown(BuildContext context, HaMarkdownCard card) {
+    final text = card.templated ? widget.service.rendered(card.content) : card.content;
+    if (text == null || text.trim().isEmpty) return const SizedBox.shrink();
+    return FocusableTap(
+      onPressed: () {},
+      builder: (context, focused) => AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: const EdgeInsets.all(12),
+        decoration: haFocusDecoration(context, focused),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (card.title != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(card.title!,
+                    style: Theme.of(context).textTheme.titleSmall!.copyWith(fontWeight: FontWeight.w700)),
+              ),
+            HaMarkdownView(text),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// A map card as a list: who (or what) is where.
+  Widget _map(BuildContext context, HaMapCard card, HaFormat format) {
+    final text = Theme.of(context).textTheme;
+    return FocusableTap(
+      onPressed: () {},
+      builder: (context, focused) => AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: haFocusDecoration(context, focused),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (card.title != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(card.title!, style: text.titleSmall!.copyWith(fontWeight: FontWeight.w700)),
+              ),
+            for (final id in card.mapEntities)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.place_outlined,
+                        size: 18, color: HaTileColors.active(widget.service.entity(id)) ?? Colors.white60),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(widget.service.entity(id)?.name ?? id,
+                          style: text.bodyMedium!.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(format.tileState(widget.service.entity(id), const []),
+                          style: text.bodyMedium!.copyWith(color: Colors.white70),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.end),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// The last row: Home Assistant's own dashboard, for what the panel doesn't draw.
+  Widget _fullDashboardRow(BuildContext context, AppLocalizations l) => Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: FocusableTap(
+          onPressed: () {
+            final open = widget.onOpenFullDashboard!;
+            Navigator.of(context).maybePop();
+            open();
+          },
+          builder: (context, focused) => AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: haFocusDecoration(context, focused, filled: false),
+            child: Row(
+              children: [
+                const Icon(Icons.open_in_new, size: 18, color: Colors.white60),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(l.haNativeOpenFullDashboard,
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(color: Colors.white70)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
 
   Widget _heading(BuildContext context, HaHeadingCard card) {
     final text = Theme.of(context).textTheme;

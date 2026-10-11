@@ -264,10 +264,15 @@ class _FLauncherState extends State<FLauncher> {
     showDialog(context: context, barrierColor: Colors.transparent, builder: (_) => SettingsPanel(openProfilePinsFor: packageName));
   }
 
-  /// The Home Assistant panel along the right edge: Hearth's own, drawn from the profile's dashboard.
+  /// The Home Assistant panel along the right edge: Hearth's own, drawn from the profile's dashboard (or Home
+  /// Assistant's web page, if the profile chose that).
   void _openHaPanel() {
     final channel = context.read<FLauncherChannel>();
     final settings = context.read<SettingsService>();
+    if (settings.haPanelFullDashboard) {
+      channel.openHaPanel();
+      return;
+    }
     final service = _haPanel ??= HaPanelService(
       connection: channel.getHaConnection,
       // The profile's own dashboard, else the TV's
@@ -279,7 +284,7 @@ class _FLauncherState extends State<FLauncher> {
       },
       language: () => mounted ? Localizations.localeOf(context).languageCode : "en",
     );
-    HaPanel.open(context, service);
+    HaPanel.open(context, service, onOpenFullDashboard: channel.openHaPanel);
   }
 
   void _openSearch(String mode) {

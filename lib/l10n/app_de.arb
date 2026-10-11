@@ -844,5 +844,8 @@
     "haControlPause": "Pause",
     "haControlStop": "Stopp",
     "haControlNext": "Weiter",
-    "haControlTurnOn": "Einschalten"
+    "haControlTurnOn": "Einschalten",
+    "haNativeOpenFullDashboard": "Vollständiges Dashboard öffnen",
+    "haPanelFullDashboard": "Stattdessen das vollständige Dashboard zeigen",
+    "haPanelFullDashboardDetail": "Die Seite von Home Assistant selbst. Ihre Bedienelemente sind mit der Fernbedienung nicht erreichbar."
 }

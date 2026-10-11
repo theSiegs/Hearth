@@ -844,5 +844,8 @@
     "haControlPause": "Pausar",
     "haControlStop": "Parar",
     "haControlNext": "Próxima",
-    "haControlTurnOn": "Ligar"
+    "haControlTurnOn": "Ligar",
+    "haNativeOpenFullDashboard": "Abrir o painel completo",
+    "haPanelFullDashboard": "Mostrar o painel completo",
+    "haPanelFullDashboardDetail": "A própria página do Home Assistant. O controle remoto não alcança seus controles."
 }

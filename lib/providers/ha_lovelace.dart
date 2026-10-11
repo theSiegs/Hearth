@@ -341,6 +341,28 @@ class HaTileCard extends HaCard {
   }
 }
 
+/// Text from Home Assistant: markdown, with Jinja templates Home Assistant renders ([content] as written).
+class HaMarkdownCard extends HaCard {
+  final String content;
+  final String? title;
+
+  const HaMarkdownCard(this.content, {this.title, super.visibility, super.columns});
+
+  /// It has templates for Home Assistant to render.
+  bool get templated => content.contains("{{") || content.contains("{%");
+}
+
+/// A map: the panel lists its entities and where they are instead.
+class HaMapCard extends HaCard {
+  final List<String> mapEntities;
+  final String? title;
+
+  const HaMapCard(this.mapEntities, {this.title, super.visibility, super.columns});
+
+  @override
+  Iterable<String> get entities => [...mapEntities, ...super.entities];
+}
+
 /// A card the panel can't draw (the full dashboard shows it).
 class HaUnsupportedCard extends HaCard {
   final String type;
@@ -378,7 +400,7 @@ class HaPanelLayout {
 
 /// Reading a dashboard's config (lovelace/config's result) into what the panel draws.
 class HaLovelace {
-  /// "hearth-tv/home" → ("hearth-tv", "home"); "lovelace" → ("lovelace", null). Empty → the default dashboard.
+  /// "tv-room/home" → ("tv-room", "home"); "lovelace" → ("lovelace", null). Empty → the default dashboard.
   static (String, String?) splitPath(String path) {
     final clean = path.trim().replaceAll(RegExp(r"^/+|/+$"), "");
     if (clean.isEmpty) return ("lovelace", null);
@@ -464,6 +486,21 @@ class HaLovelace {
         final heading = c["heading"];
         return HaHeadingCard(heading is String ? heading : "",
             icon: c["icon"] is String ? c["icon"] as String : null, visibility: visibility, columns: columns);
+      case "markdown":
+        final content = c["content"];
+        if (content is! String) return HaUnsupportedCard("markdown", visibility: visibility);
+        return HaMarkdownCard(content,
+            title: c["title"] is String ? c["title"] as String : null, visibility: visibility, columns: columns);
+      case "map":
+        final listed = c["entities"];
+        final ids = [
+          if (listed is List)
+            for (final e in listed)
+              if (e is String) e else if (e is Map && e["entity"] is String) e["entity"] as String
+        ];
+        if (ids.isEmpty) return HaUnsupportedCard("map", visibility: visibility);
+        return HaMapCard(ids,
+            title: c["title"] is String ? c["title"] as String : null, visibility: visibility, columns: columns);
       case "tile":
         final entity = c["entity"];
         if (entity is! String || entity.isEmpty) return HaUnsupportedCard("tile", visibility: visibility);

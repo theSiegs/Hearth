@@ -31,6 +31,11 @@ final class HaPanelPage {
     private static final String TAG = "HearthHaPanel";
     /** The Dart setting (SettingsService.haPanelEnabled) that turns the panel on. */
     private static final String PANEL_ENABLED_KEY = "ha_panel_enabled";
+    /**
+     * The Dart setting (SettingsService.haPanelFullDashboard): the panel shows this page instead of Hearth's own
+     * drawing of the dashboard. Only then is it kept loaded; otherwise it loads when "Open the full dashboard" asks.
+     */
+    private static final String FULL_DASHBOARD_KEY = "ha_panel_full_dashboard";
     /** Long-lived tokens don't expire; tell the frontend so, so it never asks to refresh. */
     private static final long TOKEN_LIFETIME_SECONDS = 10L * 365 * 24 * 3600;
 
@@ -88,7 +93,8 @@ final class HaPanelPage {
 
     /** Loads the dashboard in the background if the panel is on and it isn't loaded yet; lets it go if it's off. */
     static void preload(Context context) {
-        if (!FlutterPrefs.getBoolean(context, PANEL_ENABLED_KEY, false) || url(context) == null) {
+        if (!FlutterPrefs.getBoolean(context, PANEL_ENABLED_KEY, false)
+                || !FlutterPrefs.getBoolean(context, FULL_DASHBOARD_KEY, false) || url(context) == null) {
             if (sHost == null) release();
             return;
         }

@@ -194,6 +194,39 @@ void main() {
     });
   });
 
+  test("Markdown and map cards", () {
+    final layout = HaLovelace.parse({
+      "views": [
+        {
+          "cards": [
+            {"type": "markdown", "content": "Plain", "title": "Note"},
+            {"type": "markdown", "text_only": true, "content": "{{ states('sensor.a') }} left"},
+            {
+              "type": "map",
+              "entities": [
+                "person.alex",
+                {"entity": "device_tracker.phone"}
+              ]
+            },
+            {"type": "map"},
+            {
+              "type": "calendar",
+              "entities": ["calendar.family"]
+            },
+          ]
+        }
+      ]
+    }, null);
+    final cards = layout.cards.toList();
+    expect((cards[0] as HaMarkdownCard).templated, isFalse);
+    expect((cards[0] as HaMarkdownCard).title, "Note");
+    expect((cards[1] as HaMarkdownCard).templated, isTrue);
+    expect((cards[2] as HaMapCard).mapEntities, ["person.alex", "device_tracker.phone"]);
+    expect(layout.entities, containsAll(["person.alex", "device_tracker.phone"]));
+    expect(cards[3], isA<HaUnsupportedCard>());
+    expect((cards[4] as HaUnsupportedCard).type, "calendar");
+  });
+
   group("Visibility", () {
     HaCondition parse(Object json) => HaCondition.parse(json)!;
 

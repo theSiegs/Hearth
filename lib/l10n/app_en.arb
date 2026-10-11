@@ -3634,5 +3634,17 @@
     "haControlTurnOn": "Turn on",
     "@haControlTurnOn": {
         "description": "Home Assistant panel: the button that turns a player on"
+    },
+    "haNativeOpenFullDashboard": "Open the full dashboard",
+    "@haNativeOpenFullDashboard": {
+        "description": "Home Assistant panel: the last row, which opens Home Assistant's own dashboard page (for cards the panel doesn't draw)"
+    },
+    "haPanelFullDashboard": "Show the full dashboard instead",
+    "@haPanelFullDashboard": {
+        "description": "Dashboard panel settings: switch; the panel shows Home Assistant's own web page instead of Hearth's remote-friendly drawing of it"
+    },
+    "haPanelFullDashboardDetail": "Home Assistant's own page. The remote can't reach its controls.",
+    "@haPanelFullDashboardDetail": {
+        "description": "Dashboard panel settings: under the full-dashboard switch"
     }
 }

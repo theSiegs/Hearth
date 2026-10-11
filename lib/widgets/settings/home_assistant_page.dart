@@ -290,6 +290,16 @@ class _HaPanelPageState extends State<HaPanelPage> {
             secondary: const Icon(Icons.dashboard_outlined),
           ),
         ),
+        Selector<SettingsService, bool>(
+          selector: (_, settings) => settings.haPanelFullDashboard,
+          builder: (context, full, _) => RoundedSwitchListTile(
+            value: full,
+            onChanged: (enabled) => context.read<SettingsService>().setHaPanelFullDashboard(enabled),
+            title: Text(l.haPanelFullDashboard),
+            subtitle: Text(l.haPanelFullDashboardDetail),
+            secondary: const Icon(Icons.web_outlined),
+          ),
+        ),
         FocusableSettingsTile(
           leading: const Icon(Icons.qr_code_2),
           title: Text(l.haSetUpFromPhone, style: Theme.of(context).textTheme.bodyMedium),

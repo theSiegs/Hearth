@@ -35,6 +35,7 @@ class FakeHaPanelService extends HaPanelService {
   Map<String, HaEntity> states;
   final List<HaCall> calls = [];
   int attached = 0;
+  Map<String, String> renderedTemplates = {};
 
   FakeHaPanelService(
       {this.fakeStatus = HaPanelStatus.ready, this.fakeLayout = HaPanelLayout.empty, Map<String, String>? states})
@@ -66,6 +67,9 @@ class FakeHaPanelService extends HaPanelService {
 
   @override
   HaConditionContext get conditionContext => HaConditionContext(entity);
+
+  @override
+  String? rendered(String template) => renderedTemplates[template];
 
   @override
   void attach() => attached++;

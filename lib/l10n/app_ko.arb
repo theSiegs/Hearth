@@ -844,5 +844,8 @@
     "haControlPause": "일시정지",
     "haControlStop": "정지",
     "haControlNext": "다음",
-    "haControlTurnOn": "켜기"
+    "haControlTurnOn": "켜기",
+    "haNativeOpenFullDashboard": "전체 대시보드 열기",
+    "haPanelFullDashboard": "대신 전체 대시보드 표시",
+    "haPanelFullDashboardDetail": "Home Assistant 자체 페이지입니다. 리모컨으로는 컨트롤을 선택할 수 없습니다."
 }

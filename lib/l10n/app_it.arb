@@ -844,5 +844,8 @@
     "haControlPause": "Pausa",
     "haControlStop": "Stop",
     "haControlNext": "Successivo",
-    "haControlTurnOn": "Accendi"
+    "haControlTurnOn": "Accendi",
+    "haNativeOpenFullDashboard": "Apri la dashboard completa",
+    "haPanelFullDashboard": "Mostra invece la dashboard completa",
+    "haPanelFullDashboardDetail": "La pagina di Home Assistant. Il telecomando non raggiunge i suoi controlli."
 }

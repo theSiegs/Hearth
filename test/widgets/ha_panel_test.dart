@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/ha_panel_service.dart';
 import 'package:flauncher/widgets/ha_panel/ha_panel.dart';
 import 'package:flutter/material.dart';
@@ -139,6 +140,47 @@ void main() {
     expect(find.text("Home Assistant panel isn't set up"), findsOneWidget);
     expect(find.textContaining("access token"), findsOneWidget);
     await press(tester, LogicalKeyboardKey.arrowLeft);
+    expect(find.byType(HaPanel), findsNothing);
+  });
+
+  testWidgets("Markdown (rendered by Home Assistant), a map as a list, and the full dashboard row", (tester) async {
+    var opened = 0;
+    const template = "{% if true %}| Kid | Today |\n|---|---:|\n| Alex | 25 min |{% endif %}";
+    final service = FakeHaPanelService(
+        fakeLayout: layoutOf([
+          {"type": "markdown", "content": template},
+          {
+            "type": "map",
+            "entities": ["person.alex"]
+          },
+          {"type": "picture-glance", "entity": "camera.door"},
+        ]),
+        states: {"person.alex": "School"})
+      ..renderedTemplates = {template: "| Kid | Today |\n|---|---:|\n| Alex | 25 min |"};
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Builder(
+        builder: (context) => Scaffold(
+          body: TextButton(
+            autofocus: true,
+            onPressed: () => HaPanel.open(context, service, onOpenFullDashboard: () => opened++),
+            child: const Text("Home"),
+          ),
+        ),
+      ),
+    ));
+    await tester.pump();
+    await press(tester, LogicalKeyboardKey.select);
+    expect(find.byType(Table), findsOneWidget);
+    expect(find.text("25 min", findRichText: true), findsOneWidget);
+    expect(find.text("person.alex"), findsOneWidget);
+    expect(find.text("School"), findsOneWidget);
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    expect(focused(tester, "Open the full dashboard"), isTrue);
+    await press(tester, LogicalKeyboardKey.select);
+    expect(opened, 1);
     expect(find.byType(HaPanel), findsNothing);
   });
 

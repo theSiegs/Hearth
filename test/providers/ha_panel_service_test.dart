@@ -170,6 +170,28 @@ void main() {
     expect(s.layoutLoaded, isFalse);
   });
 
+  test("Markdown templates: Home Assistant renders them, and they're read again on a new layout", () async {
+    server.dashboards["md"] = {
+      "views": [
+        {
+          "cards": [
+            {"type": "markdown", "content": "{{ 1 + 1 }} playing"},
+            {"type": "markdown", "content": "Plain"},
+          ]
+        }
+      ]
+    };
+    server.renderTemplate = (t) => t == "{{ 1 + 1 }} playing" ? "2 playing" : "?";
+    final s = service(path: "md");
+    addTearDown(s.dispose);
+    s.attach();
+    await until(() => s.rendered("{{ 1 + 1 }} playing") != null);
+    expect(s.rendered("{{ 1 + 1 }} playing"), "2 playing");
+    final asked = server.commands("render_template").single;
+    expect(asked["template"], "{{ 1 + 1 }} playing");
+    expect(asked["report_errors"], isFalse);
+  });
+
   test("Not set up: says so, without connecting", () async {
     final s = HaPanelService(connection: () async => null, dashboard: () async => "lovelace");
     addTearDown(s.dispose);

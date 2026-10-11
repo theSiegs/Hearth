@@ -102,16 +102,42 @@ class HaIcons {
     "weather-sunny": Icons.wb_sunny,
     "wifi": Icons.wifi,
     "youtube": Icons.smart_display,
+    "youtube-tv": Icons.live_tv,
+    "netflix": Icons.movie,
+    "video": Icons.videocam,
+    "play-box": Icons.smart_display,
+    "play-circle": Icons.play_circle,
+    "gamepad-variant": Icons.sports_esports,
+    "controller": Icons.sports_esports,
+    "minecraft": Icons.sports_esports,
+    "google-chrome": Icons.public,
+    "web": Icons.public,
+    "book-open-variant": Icons.menu_book,
+    "book": Icons.menu_book,
+    "message": Icons.message,
+    "chat": Icons.chat,
+    "camera": Icons.photo_camera,
+    "image": Icons.image,
+    "apps": Icons.apps,
+    "application": Icons.apps,
+    "android": Icons.android,
+    "spotify": Icons.music_note,
+    "podcast": Icons.podcasts,
+    "draw": Icons.draw,
+    "calculator": Icons.calculate,
+    "phone": Icons.phone,
+    "email": Icons.email,
+    "map-marker-radius": Icons.place,
   };
 
   /// [icon] ("mdi:lightbulb") as a Material icon; without one it knows, the entity's usual icon.
-  static IconData of(String? icon, {HaEntity? entity, String? entityId}) {
-    if (icon != null) {
-      final name = icon.startsWith("mdi:") ? icon.substring(4) : icon;
-      final known = _mdi[name] ?? _mdi[name.replaceAll(RegExp(r"-(outline|variant)$"), "")];
-      if (known != null) return known;
-    }
-    return forEntity(entity, entityId: entityId);
+  static IconData of(String? icon, {HaEntity? entity, String? entityId}) =>
+      (icon == null ? null : named(icon)) ?? forEntity(entity, entityId: entityId);
+
+  /// [icon] ("mdi:youtube") as a Material icon, or null when there's none near it.
+  static IconData? named(String icon) {
+    final name = icon.startsWith("mdi:") ? icon.substring(4) : icon;
+    return _mdi[name] ?? _mdi[name.replaceAll(RegExp(r"-(outline|variant|box|circle)$"), "")];
   }
 
   /// An entity's usual icon, by its domain, device class and state.

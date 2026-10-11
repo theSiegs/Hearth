@@ -53,7 +53,7 @@ class HaPanelService extends ChangeNotifier {
 
   final Future<({String url, String token})?> Function() _connection;
 
-  /// The dashboard (and view) to draw: "hearth-tv/home", "lovelace".
+  /// The dashboard (and view) to draw: "tv-room/home", "lovelace".
   final Future<String> Function() _dashboard;
 
   /// The TV's language ("en"), for Home Assistant's names of states.
@@ -83,6 +83,8 @@ class HaPanelService extends ChangeNotifier {
   String? _loadedPath;
   Future<void> Function()? _unsubscribeEntities;
   final List<Future<void> Function()> _unsubscribeOthers = [];
+  final Map<String, Future<void> Function()> _templates = {};
+  Map<String, String> _rendered = const {};
   int _attached = 0;
   Timer? _idleTimer;
   Timer? _retryTimer;
@@ -231,8 +233,42 @@ class HaPanelService extends ChangeNotifier {
     if (_unsubscribeEntities == null || !setEquals(oldEntities, layout.entities)) {
       await _subscribeEntities(s, layout.entities);
     }
+    await _subscribeTemplates(s, layout);
     _set(HaPanelStatus.ready);
   }
+
+  /// Markdown cards' templates, rendered by Home Assistant and kept up to date (render_template). One that can't be
+  /// rendered stays blank.
+  Future<void> _subscribeTemplates(HaSocket s, HaPanelLayout layout) async {
+    final templates = {
+      for (final c in layout.cards)
+        if (c is HaMarkdownCard && c.templated) c.content
+    };
+    if (setEquals(templates, _templates.keys.toSet()) && _templates.isNotEmpty) return;
+    final previous = _templates.values.toList();
+    _templates.clear();
+    for (final p in previous) {
+      unawaited(p());
+    }
+    _rendered = {
+      for (final e in _rendered.entries)
+        if (templates.contains(e.key)) e.key: e.value
+    };
+    for (final template in templates) {
+      try {
+        _templates[template] = await s.subscribe(
+            {"type": "render_template", "template": template, "strict": false, "report_errors": false}, (event) {
+          final result = event is Map ? event["result"] : null;
+          if (result == null || _socket != s || _disposed) return;
+          _rendered = {..._rendered, template: "$result"};
+          notifyListeners();
+        });
+      } catch (_) {}
+    }
+  }
+
+  /// A markdown card's [template] as Home Assistant rendered it; null until it has.
+  String? rendered(String template) => _rendered[template];
 
   Future<void> _subscribeEntities(HaSocket s, Set<String> ids) async {
     final previous = _unsubscribeEntities;
@@ -259,6 +295,7 @@ class HaPanelService extends ChangeNotifier {
     _connectedTo = null;
     _unsubscribeEntities = null;
     _unsubscribeOthers.clear();
+    _templates.clear();
     _failed();
   }
 
@@ -305,6 +342,7 @@ class HaPanelService extends ChangeNotifier {
     _connectedTo = null;
     _unsubscribeEntities = null;
     _unsubscribeOthers.clear();
+    _templates.clear();
     if (s != null) await s.close();
   }
 

@@ -58,17 +58,28 @@ class HaFormat {
           final at = DateTime.tryParse(entity.state);
           if (at != null) return relative(at.toLocal());
         }
+        if (entity.deviceClass == "duration") {
+          final d = duration(entity.state, entity.unit);
+          if (d != null) return d;
+        }
         return number(entity.state, entity.unit);
+      case "scene":
+      case "button":
+      case "input_button":
+      case "event":
+        // Their state is when they last ran
+        final at = DateTime.tryParse(entity.state);
+        if (at != null) return relative(at.toLocal());
       case "input_number":
       case "number":
         return number(entity.state, entity.unit);
       case "climate":
         final current = entity.number("current_temperature");
-        final mode = stateName(entity) ?? entity.state;
+        final mode = stateName(entity) ?? _humanize(entity.state);
         return current == null ? mode : "$mode · ${number("$current", _temperatureUnit(entity))}";
       case "light":
         final brightness = entity.number("brightness");
-        final name = stateName(entity) ?? entity.state;
+        final name = stateName(entity) ?? _humanize(entity.state);
         return entity.state == "on" && brightness != null ? "$name · ${(brightness / 2.55).round()}%" : name;
       case "weather":
         final temperature = entity.number("temperature");
@@ -127,6 +138,26 @@ class HaFormat {
     if (minutes < 1) return l.haTimeNow;
     final span = this.span(Duration(minutes: minutes));
     return diff.isNegative ? l.haTimeAgo(span) : l.haTimeIn(span);
+  }
+
+  /// A duration sensor's [value] in its [unit] (s, min, h or d) as "45 min" or "3 h 16 min" (no seconds); null when
+  /// it isn't a number in one of those units.
+  String? duration(String value, String? unit) {
+    final n = num.tryParse(value);
+    if (n == null) return null;
+    final double minutes = switch (unit) {
+      "ms" => n / 60000,
+      "s" => n / 60,
+      "min" => n.toDouble(),
+      "h" => n * 60.0,
+      "d" => n * 1440.0,
+      _ => double.nan,
+    };
+    if (minutes.isNaN) return null;
+    final total = minutes.round().abs();
+    if (total < 60) return l.haSpanMinutes(total);
+    final rest = total % 60;
+    return rest == 0 ? l.haSpanHours(total ~/ 60) : "${l.haSpanHours(total ~/ 60)} ${l.haSpanMinutes(rest)}";
   }
 
   /// "40 min", "2 h 5 min", "3 d".

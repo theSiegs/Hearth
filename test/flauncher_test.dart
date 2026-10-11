@@ -949,6 +949,13 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pumpAndSettle();
     expect(find.byType(HaPanel), findsNothing);
+
+    // A profile that chose the full dashboard gets Home Assistant's own page instead
+    when(settingsService.haPanelFullDashboard).thenReturn(true);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(find.byType(HaPanel), findsNothing);
+    expect(calls, contains("openHaPanel"));
   });
 
   testWidgets("Pressing select on app opens ApplicationInfoPanel", (tester) async {
@@ -1426,6 +1433,7 @@ SettingsService mkSettingsService([MockSettingsService? mock]) {
   when(settingsService.dockShadowEnabled).thenReturn(true);
   when(settingsService.blurWallpaperBelowDock).thenReturn(true);
   when(settingsService.haPanelEnabled).thenReturn(false);
+  when(settingsService.haPanelFullDashboard).thenReturn(false);
   when(settingsService.showNotificationsWidgetInStatusBar).thenReturn(true);
   when(settingsService.autoHideNotificationsWidget).thenReturn(false);
   when(settingsService.showWeatherInStatusBar).thenReturn(false);

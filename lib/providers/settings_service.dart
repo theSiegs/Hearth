@@ -58,6 +58,8 @@ const String _haPanelEnabledKey = "ha_panel_enabled";
 const String _haPanelDashboardKey = "ha_panel_profile_dashboard";
 // The TV's calendars this profile doesn't show by the date and time (new calendars show)
 const String _hiddenCalendarsKey = "hidden_calendars";
+// HaPanelPage.java reads it too
+const String _haPanelFullDashboardKey = "ha_panel_full_dashboard";
 const String _showInputsWidgetInStatusBarKey = "show_inputs_widget_in_status_bar";
 const String _showContinueWatchingKey = "show_continue_watching";
 const String _continueWatchingCardSizeKey = "continue_watching_card_size";
@@ -173,6 +175,7 @@ class SettingsService extends ChangeNotifier {
     _haPanelEnabledKey,
     _haPanelDashboardKey,
     _hiddenCalendarsKey,
+    _haPanelFullDashboardKey,
     _showInputsWidgetInStatusBarKey,
     _showContinueWatchingKey,
     _continueWatchingCardSizeKey,
@@ -489,6 +492,12 @@ class SettingsService extends ChangeNotifier {
   /// The calendars on the TV ("tv:12") this profile doesn't show by the top bar's date and time; every other one
   /// shows, so a new calendar shows until it's turned off.
   List<String> get hiddenCalendars => _list(_hiddenCalendarsKey);
+
+  /// The panel shows Home Assistant's own dashboard (the web page) instead of Hearth's drawing of it. Per profile, off
+  /// by default: the web page's controls can't be reached with the remote.
+  bool get haPanelFullDashboard => _bool(_haPanelFullDashboardKey, false);
+
+  Future<void> setHaPanelFullDashboard(bool enabled) => _setBool(_haPanelFullDashboardKey, enabled);
 
   Future<void> setCalendarShown(String id, bool shown) async {
     final hidden = hiddenCalendars;
