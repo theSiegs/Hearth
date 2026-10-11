@@ -790,10 +790,13 @@
     "calendarMore": "+{count} tane daha",
     "calendarNextDays": "Sonraki {days} gün",
     "calendarNothingWeek": "Sonraki {days} günde bir şey yok",
-    "haCalendarsTitle": "Takvimler",
-    "haCalendarsLoading": "Takvimler Home Assistant'tan isteniyor…",
-    "haCalendarsNotSetUp": "Home Assistant bu TV'de henüz kurulmadı. Adresini ve belirtecini {place} bölümüne ekleyin.",
-    "haCalendarsError": "Takvimler Home Assistant'tan alınamadı. Adresi ve belirteci kontrol edin.",
-    "haCalendarsNone": "Home Assistant'ta takvim yok.",
-    "haCalendarsHelp": "Burada açılan takvimler, sağ üstteki tarih ve saat odaktayken görünür: günün geri kalanı, Tamam ile sonraki 7 gün. Her profil kendi takvimlerini seçer."
+    "calendarsTitle": "Takvimler",
+    "calendarsHelp": "Burada açılan takvimler, sağ üstteki tarih ve saat odaktayken görünür: günün geri kalanı, Tamam ile sonraki 7 gün. Her profil kendi takvimlerini seçer.",
+    "calendarsLoading": "Takvimler okunuyor…",
+    "calendarsAllow": "Takvim erişimine izin ver",
+    "calendarsAccessHelp": "Hearth, bu profilin TV ile senkronize edilen Google takvimlerini gösterebilir. Yalnızca okur ve hiçbir şey TV'den çıkmaz.",
+    "calendarsKidsAccess": "Hearth bu profilin takvimlerini henüz okuyamıyor. Bir ebeveyn {place} içinde Düzelt ile izin verebilir.",
+    "calendarsDenied": "Takvim erişimi kapalı. Android ayarlarından izin verin: Uygulamalar > Hearth > İzinler.",
+    "calendarsWaiting": "Bu profilin takvimleri bekleniyor…",
+    "calendarsNone": "Bu profilin TV ile senkronize edilmiş Google takvimi yok."
 }

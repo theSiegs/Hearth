@@ -56,8 +56,8 @@ const String _blurWallpaperBelowDockKey = "blur_wallpaper_below_dock";
 const String _haPanelEnabledKey = "ha_panel_enabled";
 // HaPanelPage.java reads it too
 const String _haPanelDashboardKey = "ha_panel_profile_dashboard";
-// The Home Assistant calendars this profile doesn't show by the date and time (new calendars show)
-const String _haHiddenCalendarsKey = "ha_hidden_calendars";
+// The TV's calendars this profile doesn't show by the date and time (new calendars show)
+const String _hiddenCalendarsKey = "hidden_calendars";
 const String _showInputsWidgetInStatusBarKey = "show_inputs_widget_in_status_bar";
 const String _showContinueWatchingKey = "show_continue_watching";
 const String _continueWatchingCardSizeKey = "continue_watching_card_size";
@@ -74,8 +74,9 @@ const String _parentPinHashKey = "device_parent_pin_hash";
 const String _updatesIncludePrereleasesKey = "device_updates_include_prereleases";
 // Settings that are gone: a TMDB key users could once type in (search now uses the one built into the release
 // only), and whether setting up the kids' profiles also put Hearth on other grown-ups' (they're accounts in the
-// owner's user, which has Hearth already)
-const Set<String> _retiredKeys = {"tmdb_api_key", "push_to_adult_profiles"};
+// owner's user, which has Hearth already), and the Home Assistant calendars a profile turned off (the calendars are
+// the TV's own now)
+const Set<String> _retiredKeys = {"tmdb_api_key", "push_to_adult_profiles", "ha_hidden_calendars"};
 const String _oldDateTimeDefaultsClearedKey = "device_old_date_time_defaults_cleared";
 const String _showNotificationsWidgetInStatusBarKey = "show_notifications_widget_in_status_bar";
 const String _autoHideNotificationsWidgetKey = "auto_hide_notifications_widget";
@@ -171,7 +172,7 @@ class SettingsService extends ChangeNotifier {
     _blurWallpaperBelowDockKey,
     _haPanelEnabledKey,
     _haPanelDashboardKey,
-    _haHiddenCalendarsKey,
+    _hiddenCalendarsKey,
     _showInputsWidgetInStatusBarKey,
     _showContinueWatchingKey,
     _continueWatchingCardSizeKey,
@@ -485,14 +486,14 @@ class SettingsService extends ChangeNotifier {
 
   Future<void> setHaPanelDashboard(String path) => _setString(_haPanelDashboardKey, path);
 
-  /// The Home Assistant calendars ("calendar.family") this profile doesn't show by the top bar's date and time; every
-  /// other one shows, so a new calendar shows until it's turned off.
-  List<String> get hiddenHaCalendars => _list(_haHiddenCalendarsKey);
+  /// The calendars on the TV ("tv:12") this profile doesn't show by the top bar's date and time; every other one
+  /// shows, so a new calendar shows until it's turned off.
+  List<String> get hiddenCalendars => _list(_hiddenCalendarsKey);
 
-  Future<void> setHaCalendarShown(String entityId, bool shown) async {
-    final hidden = hiddenHaCalendars;
-    if (shown == !hidden.contains(entityId)) return;
-    await _saveList(_haHiddenCalendarsKey, shown ? ([...hidden]..remove(entityId)) : [...hidden, entityId]);
+  Future<void> setCalendarShown(String id, bool shown) async {
+    final hidden = hiddenCalendars;
+    if (shown == !hidden.contains(id)) return;
+    await _saveList(_hiddenCalendarsKey, shown ? ([...hidden]..remove(id)) : [...hidden, id]);
   }
 
   Future<void> setShowInputsWidgetInStatusBar(bool show) => _setBool(_showInputsWidgetInStatusBarKey, show);

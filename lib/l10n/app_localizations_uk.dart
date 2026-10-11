@@ -2632,22 +2632,31 @@ class AppLocalizationsUk extends AppLocalizations {
   }
 
   @override
-  String get haCalendarsTitle => 'Календарі';
+  String get calendarsTitle => 'Календарі';
 
   @override
-  String get haCalendarsLoading => 'Запитуємо календарі в Home Assistant…';
+  String get calendarsHelp => 'Увімкнені тут календарі показуються, коли у фокусі дата й час праворуч угорі: решта дня, а за OK — наступні 7 днів. Кожен профіль вибирає свої.';
 
   @override
-  String haCalendarsNotSetUp(String place) {
-    return 'Home Assistant ще не налаштовано на цьому телевізорі. Додайте адресу й токен у розділі $place.';
+  String get calendarsLoading => 'Читання календарів…';
+
+  @override
+  String get calendarsAllow => 'Дозволити доступ до календаря';
+
+  @override
+  String get calendarsAccessHelp => 'Hearth може показувати календарі Google цього профілю, синхронізовані з телевізором. Він лише читає їх, і ніщо не залишає телевізор.';
+
+  @override
+  String calendarsKidsAccess(String place) {
+    return 'Hearth поки не може читати календарі цього профілю. Батьки можуть дозволити це кнопкою «Виправити» в $place.';
   }
 
   @override
-  String get haCalendarsError => 'Не вдалося отримати календарі з Home Assistant. Перевірте адресу й токен.';
+  String get calendarsDenied => 'Доступ до календаря вимкнено. Дозвольте його в налаштуваннях Android: Додатки > Hearth > Дозволи.';
 
   @override
-  String get haCalendarsNone => 'У Home Assistant немає календарів.';
+  String get calendarsWaiting => 'Очікування календарів цього профілю…';
 
   @override
-  String get haCalendarsHelp => 'Увімкнені тут календарі показуються, коли у фокусі дата й час праворуч угорі: решта дня, а за OK — наступні 7 днів. Кожен профіль вибирає свої.';
+  String get calendarsNone => 'Цей профіль не має календарів Google, синхронізованих із телевізором.';
 }

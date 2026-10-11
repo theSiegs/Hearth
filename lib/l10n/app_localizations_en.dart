@@ -2617,22 +2617,31 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get haCalendarsTitle => 'Calendars';
+  String get calendarsTitle => 'Calendars';
 
   @override
-  String get haCalendarsLoading => 'Asking Home Assistant for its calendars…';
+  String get calendarsHelp => 'The calendars turned on here show when the date and time at the top right have focus: what\'s left of today, and OK for the next 7 days. Each profile chooses its own.';
 
   @override
-  String haCalendarsNotSetUp(String place) {
-    return 'Home Assistant isn\'t set up on this TV yet. Add its address and token in $place.';
+  String get calendarsLoading => 'Reading the calendars…';
+
+  @override
+  String get calendarsAllow => 'Allow calendar access';
+
+  @override
+  String get calendarsAccessHelp => 'Hearth can show this profile\'s Google calendars that are synced to the TV. It only reads them, and nothing leaves the TV.';
+
+  @override
+  String calendarsKidsAccess(String place) {
+    return 'Hearth can\'t read this profile\'s calendars yet. A parent can allow it with Fix in $place.';
   }
 
   @override
-  String get haCalendarsError => 'Couldn\'t get the calendars from Home Assistant. Check its address and token.';
+  String get calendarsDenied => 'Calendar access is turned off. Allow it in Android\'s settings: Apps > Hearth > Permissions.';
 
   @override
-  String get haCalendarsNone => 'Home Assistant has no calendars.';
+  String get calendarsWaiting => 'Waiting for this profile\'s calendars…';
 
   @override
-  String get haCalendarsHelp => 'The calendars turned on here show when the date and time at the top right have focus: what\'s left of today, and OK for the next 7 days. Each profile chooses its own.';
+  String get calendarsNone => 'This profile has no Google calendars synced to the TV.';
 }

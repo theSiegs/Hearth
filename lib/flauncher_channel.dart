@@ -637,6 +637,29 @@ class FLauncherChannel {
     }
   }
 
+  /// Whether Hearth may read the active profile's calendars on the TV: "granted", "denied", or "waiting" (a kids'
+  /// profile whose Hearth hasn't reported yet).
+  Future<String> getCalendarAccess() async =>
+      await _methodChannel.invokeMethod<String>("getCalendarAccess") ?? "denied";
+
+  /// Asks to read the active profile's calendars: Android's permission dialog for a grown-up; for a kids' profile,
+  /// Hearth grants it there over its own adb when the TV trusts it already. Whether it may.
+  Future<bool> requestCalendarPermission() async =>
+      await _methodChannel.invokeMethod<bool>("requestCalendarPermission") ?? false;
+
+  /// The active profile's Google calendars on the TV: [{id, name, color, account, primary}].
+  Future<List<dynamic>> getCalendars() async =>
+      await _methodChannel.invokeMethod<List<dynamic>>("getCalendars") ?? const [];
+
+  /// The active profile's calendar events between [start] and [end]: [{calendarId, calendarName, color, title,
+  /// location, start, end, allDay}], times in milliseconds (an all-day event's are midnights in UTC).
+  Future<List<dynamic>> getCalendarEvents(DateTime start, DateTime end) async =>
+      await _methodChannel.invokeMethod<List<dynamic>>("getCalendarEvents", {
+        "start": start.millisecondsSinceEpoch,
+        "end": end.millisecondsSinceEpoch,
+      }) ??
+      const [];
+
   Future<bool> checkWatchNextPermission() async {
     try {
       final bool? allowed = await _methodChannel.invokeMethod<bool>("checkWatchNextPermission");

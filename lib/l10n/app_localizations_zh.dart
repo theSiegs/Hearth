@@ -2605,22 +2605,31 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get haCalendarsTitle => '日历';
+  String get calendarsTitle => '日历';
 
   @override
-  String get haCalendarsLoading => '正在向 Home Assistant 获取日历…';
+  String get calendarsHelp => '这里打开的日历会在右上角的日期和时间获得焦点时显示：今天剩余的安排，按确定查看未来 7 天。每个配置文件各自选择。';
 
   @override
-  String haCalendarsNotSetUp(String place) {
-    return '这台电视尚未设置 Home Assistant。请在 $place 中添加地址和令牌。';
+  String get calendarsLoading => '正在读取日历…';
+
+  @override
+  String get calendarsAllow => '允许访问日历';
+
+  @override
+  String get calendarsAccessHelp => 'Hearth 可以显示此个人资料同步到电视的 Google 日历。它只读取日历，任何内容都不会离开电视。';
+
+  @override
+  String calendarsKidsAccess(String place) {
+    return 'Hearth 还不能读取此个人资料的日历。家长可以在 $place 中用“修复”来允许。';
   }
 
   @override
-  String get haCalendarsError => '无法从 Home Assistant 获取日历。请检查地址和令牌。';
+  String get calendarsDenied => '日历访问已关闭。请在 Android 设置中允许：应用 > Hearth > 权限。';
 
   @override
-  String get haCalendarsNone => 'Home Assistant 中没有日历。';
+  String get calendarsWaiting => '正在等待此个人资料的日历…';
 
   @override
-  String get haCalendarsHelp => '这里打开的日历会在右上角的日期和时间获得焦点时显示：今天剩余的安排，按确定查看未来 7 天。每个配置文件各自选择。';
+  String get calendarsNone => '此个人资料没有同步到电视的 Google 日历。';
 }

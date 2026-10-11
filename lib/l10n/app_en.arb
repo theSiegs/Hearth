@@ -3365,34 +3365,46 @@
             }
         }
     },
-    "haCalendarsTitle": "Calendars",
-    "@haCalendarsTitle": {
-        "description": "Settings > Home Assistant: the page that picks which Home Assistant calendars show by the date and time"
+    "calendarsTitle": "Calendars",
+    "@calendarsTitle": {
+        "description": "Settings > Home screen > Status bar: the page that picks which of the profile's Google calendars on the TV show by the date and time"
     },
-    "haCalendarsLoading": "Asking Home Assistant for its calendars…",
-    "@haCalendarsLoading": {
-        "description": "Calendars settings page: while Home Assistant is being asked"
+    "calendarsHelp": "The calendars turned on here show when the date and time at the top right have focus: what's left of today, and OK for the next 7 days. Each profile chooses its own.",
+    "@calendarsHelp": {
+        "description": "Calendars settings page: what the switches do"
     },
-    "haCalendarsNotSetUp": "Home Assistant isn't set up on this TV yet. Add its address and token in {place}.",
-    "@haCalendarsNotSetUp": {
-        "description": "Calendars settings page: Home Assistant isn't set up; {place} is where to set it up (a settings breadcrumb)",
+    "calendarsLoading": "Reading the calendars…",
+    "@calendarsLoading": {
+        "description": "Calendars settings page: while the TV's calendars are being read"
+    },
+    "calendarsAllow": "Allow calendar access",
+    "@calendarsAllow": {
+        "description": "Calendars settings page: button that asks to read the profile's calendars on the TV (Android's permission dialog)"
+    },
+    "calendarsAccessHelp": "Hearth can show this profile's Google calendars that are synced to the TV. It only reads them, and nothing leaves the TV.",
+    "@calendarsAccessHelp": {
+        "description": "Calendars settings page: why Hearth asks for calendar access, before it has it"
+    },
+    "calendarsKidsAccess": "Hearth can't read this profile's calendars yet. A parent can allow it with Fix in {place}.",
+    "@calendarsKidsAccess": {
+        "description": "Calendars settings page, on a kids' profile whose Hearth may not read its calendars; {place} is the settings breadcrumb to the kids' profiles page",
         "placeholders": {
             "place": {
                 "type": "String",
-                "example": "Settings > Home Assistant > Dashboard panel"
+                "example": "Settings > Profiles > Kids' profiles"
             }
         }
     },
-    "haCalendarsError": "Couldn't get the calendars from Home Assistant. Check its address and token.",
-    "@haCalendarsError": {
-        "description": "Calendars settings page: Home Assistant couldn't be reached"
+    "calendarsDenied": "Calendar access is turned off. Allow it in Android's settings: Apps > Hearth > Permissions.",
+    "@calendarsDenied": {
+        "description": "Calendars settings page: calendar access was turned down"
     },
-    "haCalendarsNone": "Home Assistant has no calendars.",
-    "@haCalendarsNone": {
-        "description": "Calendars settings page: Home Assistant answered but has no calendars"
+    "calendarsWaiting": "Waiting for this profile's calendars…",
+    "@calendarsWaiting": {
+        "description": "Calendars settings page, on a kids' profile: its Hearth hasn't reported its calendars yet"
     },
-    "haCalendarsHelp": "The calendars turned on here show when the date and time at the top right have focus: what's left of today, and OK for the next 7 days. Each profile chooses its own.",
-    "@haCalendarsHelp": {
-        "description": "Calendars settings page: what the switches do"
+    "calendarsNone": "This profile has no Google calendars synced to the TV.",
+    "@calendarsNone": {
+        "description": "Calendars settings page: the profile has no Google calendars on the TV"
     }
 }

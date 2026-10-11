@@ -2606,22 +2606,31 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get haCalendarsTitle => 'Takvimler';
+  String get calendarsTitle => 'Takvimler';
 
   @override
-  String get haCalendarsLoading => 'Takvimler Home Assistant\'tan isteniyor…';
+  String get calendarsHelp => 'Burada açılan takvimler, sağ üstteki tarih ve saat odaktayken görünür: günün geri kalanı, Tamam ile sonraki 7 gün. Her profil kendi takvimlerini seçer.';
 
   @override
-  String haCalendarsNotSetUp(String place) {
-    return 'Home Assistant bu TV\'de henüz kurulmadı. Adresini ve belirtecini $place bölümüne ekleyin.';
+  String get calendarsLoading => 'Takvimler okunuyor…';
+
+  @override
+  String get calendarsAllow => 'Takvim erişimine izin ver';
+
+  @override
+  String get calendarsAccessHelp => 'Hearth, bu profilin TV ile senkronize edilen Google takvimlerini gösterebilir. Yalnızca okur ve hiçbir şey TV\'den çıkmaz.';
+
+  @override
+  String calendarsKidsAccess(String place) {
+    return 'Hearth bu profilin takvimlerini henüz okuyamıyor. Bir ebeveyn $place içinde Düzelt ile izin verebilir.';
   }
 
   @override
-  String get haCalendarsError => 'Takvimler Home Assistant\'tan alınamadı. Adresi ve belirteci kontrol edin.';
+  String get calendarsDenied => 'Takvim erişimi kapalı. Android ayarlarından izin verin: Uygulamalar > Hearth > İzinler.';
 
   @override
-  String get haCalendarsNone => 'Home Assistant\'ta takvim yok.';
+  String get calendarsWaiting => 'Bu profilin takvimleri bekleniyor…';
 
   @override
-  String get haCalendarsHelp => 'Burada açılan takvimler, sağ üstteki tarih ve saat odaktayken görünür: günün geri kalanı, Tamam ile sonraki 7 gün. Her profil kendi takvimlerini seçer.';
+  String get calendarsNone => 'Bu profilin TV ile senkronize edilmiş Google takvimi yok.';
 }

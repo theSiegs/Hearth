@@ -96,6 +96,7 @@ public class MainActivity extends FlutterActivity {
     private static final String WATCH_NEXT_EVENT_CHANNEL = "me.efesser.flauncher/event_watch_next";
     private static final int VOICE_REQUEST = 4242;
     private static final int WATCH_NEXT_PERMISSION_REQUEST = 1002;
+    private static final int CALENDAR_PERMISSION_REQUEST = 1003;
     // Drawn app images are capped at this many pixels a side.
     private static final int MAX_ICON_PX = 512;
     private static final int[] DATA_USAGE_NETWORKS = {
@@ -401,6 +402,20 @@ public class MainActivity extends FlutterActivity {
             case "checkWatchNextPermission" -> result.success(checkWatchNextPermission());
             case "requestWatchNextPermission" -> requestWatchNextPermission(result);
             case "getWatchNextPrograms" -> result.success(getWatchNextPrograms());
+            // The Google calendars synced to the TV, the active profile's only (TvCalendars), for the date and time
+            case "getCalendarAccess" -> result.success(TvCalendars.access(this));
+            case "requestCalendarPermission" -> requestCalendarPermission(result);
+            case "getCalendars" -> answerFrom(sIoExecutor, result, () -> TvCalendars.activeCalendars(this));
+            case "getCalendarEvents" -> {
+                Number start = call.argument("start");
+                Number end = call.argument("end");
+                if (start == null || end == null) {
+                    result.error("INVALID_ARGUMENT", "start and end are needed", null);
+                } else {
+                    answerFrom(sIoExecutor, result,
+                            () -> TvCalendars.activeEvents(this, start.longValue(), end.longValue()));
+                }
+            }
             case "getWatchNextPoster" -> {
                 String posterArtUri = call.argument("posterArtUri");
                 answerFrom(sIoExecutor, result, () -> WatchNextPosters.load(getApplicationContext(), posterArtUri));
@@ -591,6 +606,41 @@ public class MainActivity extends FlutterActivity {
     private boolean openTextToSpeechSettings() {
         return tryStartActivity(new Intent("android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 || openAccessibilitySettings();
+    }
+
+    /**
+     * Lets Hearth read the active profile's calendars. A grown-up's (the owner's user): Android's permission dialog,
+     * answered once the user has picked. A kids' profile: its copy of Hearth can't show a dialog, so the parent's
+     * Hearth grants it there over its own adb, only when the TV trusts Hearth's key already (this never brings up
+     * "Allow debugging?"); then the agent reads them again. False when it couldn't.
+     */
+    private void requestCalendarPermission(MethodChannel.Result result) {
+        long serial = ProfileUsers.settledSerial(this);
+        UserHandle kid = ProfileUsers.otherUser(this, serial);
+        if (kid != null) {
+            if (!SelfAdb.isTrusted(this) || !SetupFixes.isAdbEnabled(this)) {
+                result.success(false);
+                return;
+            }
+            int userId = KidsProfiles.userIdOf(kid);
+            answerFrom(sIoExecutor, result, () -> {
+                try (SelfAdb shell = SelfAdb.open(this)) {
+                    String out = shell.run(ProfileAppAccess.grantCalendarCommand(getPackageName(), userId));
+                    if (out != null && !out.trim().isEmpty()) Log.i(TAG, "Calendar grant said: " + out.trim());
+                    return AgentHub.refreshCalendars(serial);
+                } catch (Exception e) {
+                    Log.i(TAG, "Couldn't let Hearth read the calendars in user " + userId + ": " + e);
+                    return false;
+                }
+            });
+        } else if (TvCalendars.canRead(this)) {
+            result.success(true);
+        } else if (mPendingPermissionResult != null) {
+            result.error("ALREADY_REQUESTING", "A permission request is already in progress", null);
+        } else {
+            mPendingPermissionResult = result;
+            requestPermissions(new String[]{TvCalendars.READ_CALENDAR}, CALENDAR_PERMISSION_REQUEST);
+        }
     }
 
     /** Answers once the user has picked, in onRequestPermissionsResult, unless it's already granted. */
@@ -1660,7 +1710,7 @@ public class MainActivity extends FlutterActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == WATCH_NEXT_PERMISSION_REQUEST) {
+        if (requestCode == WATCH_NEXT_PERMISSION_REQUEST || requestCode == CALENDAR_PERMISSION_REQUEST) {
             if (mPendingPermissionResult != null) {
                 boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
                 mPendingPermissionResult.success(granted);

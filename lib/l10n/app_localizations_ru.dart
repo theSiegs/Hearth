@@ -2632,22 +2632,31 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get haCalendarsTitle => 'Календари';
+  String get calendarsTitle => 'Календари';
 
   @override
-  String get haCalendarsLoading => 'Запрашиваем календари у Home Assistant…';
+  String get calendarsHelp => 'Включённые здесь календари показываются, когда в фокусе дата и время справа вверху: остаток дня, а по OK — следующие 7 дней. Каждый профиль выбирает свои.';
 
   @override
-  String haCalendarsNotSetUp(String place) {
-    return 'Home Assistant ещё не настроен на этом телевизоре. Укажите адрес и токен в разделе $place.';
+  String get calendarsLoading => 'Чтение календарей…';
+
+  @override
+  String get calendarsAllow => 'Разрешить доступ к календарю';
+
+  @override
+  String get calendarsAccessHelp => 'Hearth может показывать календари Google этого профиля, синхронизированные с телевизором. Он только читает их, и ничего не покидает телевизор.';
+
+  @override
+  String calendarsKidsAccess(String place) {
+    return 'Hearth пока не может читать календари этого профиля. Родитель может разрешить это кнопкой «Исправить» в $place.';
   }
 
   @override
-  String get haCalendarsError => 'Не удалось получить календари из Home Assistant. Проверьте адрес и токен.';
+  String get calendarsDenied => 'Доступ к календарю выключен. Разрешите его в настройках Android: Приложения > Hearth > Разрешения.';
 
   @override
-  String get haCalendarsNone => 'В Home Assistant нет календарей.';
+  String get calendarsWaiting => 'Ожидание календарей этого профиля…';
 
   @override
-  String get haCalendarsHelp => 'Включённые здесь календари показываются, когда в фокусе дата и время справа вверху: остаток дня, а по OK — следующие 7 дней. Каждый профиль выбирает свои.';
+  String get calendarsNone => 'У этого профиля нет календарей Google, синхронизированных с телевизором.';
 }

@@ -790,10 +790,13 @@
     "calendarMore": "{count} más",
     "calendarNextDays": "Próximos {days} días",
     "calendarNothingWeek": "Nada en los próximos {days} días",
-    "haCalendarsTitle": "Calendarios",
-    "haCalendarsLoading": "Pidiendo los calendarios a Home Assistant…",
-    "haCalendarsNotSetUp": "Home Assistant aún no está configurado en esta TV. Añade su dirección y token en {place}.",
-    "haCalendarsError": "No se pudieron obtener los calendarios de Home Assistant. Revisa la dirección y el token.",
-    "haCalendarsNone": "Home Assistant no tiene calendarios.",
-    "haCalendarsHelp": "Los calendarios activados aquí aparecen cuando la fecha y la hora de arriba a la derecha tienen el foco: lo que queda de hoy, y con OK los próximos 7 días. Cada perfil elige los suyos."
+    "calendarsTitle": "Calendarios",
+    "calendarsHelp": "Los calendarios activados aquí aparecen cuando la fecha y la hora de arriba a la derecha tienen el foco: lo que queda de hoy, y con OK los próximos 7 días. Cada perfil elige los suyos.",
+    "calendarsLoading": "Leyendo los calendarios…",
+    "calendarsAllow": "Permitir acceso al calendario",
+    "calendarsAccessHelp": "Hearth puede mostrar los calendarios de Google de este perfil que están sincronizados con la TV. Solo los lee y nada sale de la TV.",
+    "calendarsKidsAccess": "Hearth aún no puede leer los calendarios de este perfil. Un padre o una madre puede permitirlo con Arreglar en {place}.",
+    "calendarsDenied": "El acceso al calendario está desactivado. Permítelo en los ajustes de Android: Aplicaciones > Hearth > Permisos.",
+    "calendarsWaiting": "Esperando los calendarios de este perfil…",
+    "calendarsNone": "Este perfil no tiene calendarios de Google sincronizados con la TV."
 }

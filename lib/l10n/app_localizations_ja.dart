@@ -2605,22 +2605,31 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get haCalendarsTitle => 'カレンダー';
+  String get calendarsTitle => 'カレンダー';
 
   @override
-  String get haCalendarsLoading => 'Home Assistant にカレンダーを問い合わせています…';
+  String get calendarsHelp => 'ここでオンにしたカレンダーは、右上の日付と時刻にフォーカスがあるときに表示されます: 今日の残りの予定、OK で今後7日間。プロファイルごとに選べます。';
 
   @override
-  String haCalendarsNotSetUp(String place) {
-    return 'このテレビではまだ Home Assistant が設定されていません。$place でアドレスとトークンを追加してください。';
+  String get calendarsLoading => 'カレンダーを読み込んでいます…';
+
+  @override
+  String get calendarsAllow => 'カレンダーへのアクセスを許可';
+
+  @override
+  String get calendarsAccessHelp => 'Hearth は、このプロフィールのテレビに同期された Google カレンダーを表示できます。読み取るだけで、テレビの外には何も送られません。';
+
+  @override
+  String calendarsKidsAccess(String place) {
+    return 'Hearth はまだこのプロフィールのカレンダーを読み取れません。保護者が $place の「修正」で許可できます。';
   }
 
   @override
-  String get haCalendarsError => 'Home Assistant からカレンダーを取得できませんでした。アドレスとトークンを確認してください。';
+  String get calendarsDenied => 'カレンダーへのアクセスがオフです。Android の設定で許可してください: アプリ > Hearth > 権限。';
 
   @override
-  String get haCalendarsNone => 'Home Assistant にカレンダーがありません。';
+  String get calendarsWaiting => 'このプロフィールのカレンダーを待っています…';
 
   @override
-  String get haCalendarsHelp => 'ここでオンにしたカレンダーは、右上の日付と時刻にフォーカスがあるときに表示されます: 今日の残りの予定、OK で今後7日間。プロファイルごとに選べます。';
+  String get calendarsNone => 'このプロフィールにはテレビに同期された Google カレンダーがありません。';
 }

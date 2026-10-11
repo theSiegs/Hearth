@@ -32,7 +32,8 @@ import java.util.Set;
  *   <li>Only what the owner has: install-existing copies the owner's app, so one the owner doesn't have is skipped.</li>
  *   <li>Adding changes only what's out of place: a copy that's there and kept is left alone, so Family Link's "app
  *       added" notice goes out only for a copy that's actually added.</li>
- *   <li>The one permission granted is Hearth's {@link #READ_TV_LISTINGS} ({@link #grantWatchNextCommand}).</li>
+ *   <li>The only permissions granted are Hearth's {@link #READ_TV_LISTINGS} ({@link #grantWatchNextCommand}) and
+ *       {@link #READ_CALENDAR} ({@link #grantCalendarCommand}).</li>
  * </ul>
  *
  * <h3>The one safety rule</h3>
@@ -137,10 +138,29 @@ public final class ProfileAppAccess {
                         log.add(String.format(Locale.US, "user %d: couldn't let %s read Watch Next: %s", user, pkg,
                                 out.trim()));
                     }
+                    out = shell.run(grantCalendarCommand(pkg, user));
+                    if (out != null && !out.trim().isEmpty()) {
+                        log.add(String.format(Locale.US, "user %d: couldn't let %s read the calendars: %s", user, pkg,
+                                out.trim()));
+                    }
                 }
             }
         }
         return log;
+    }
+
+    /** The permission that lets an app read the calendars synced to its user. */
+    static final String READ_CALENDAR = "android.permission.READ_CALENDAR";
+
+    /**
+     * Lets Hearth's copy in a kids' profile read that profile's own Google calendars (read only), for the top bar's
+     * date and time there: a runtime permission, granted per user, which an install-existing copy doesn't get and
+     * can't ask for (nobody sees its screens). Only Hearth, and only another profile's user.
+     */
+    static String grantCalendarCommand(String pkg, int user) {
+        requireOtherUser(user);
+        if (!HEARTH.equals(pkg)) throw new IllegalArgumentException("Only Hearth reads the calendars: " + pkg);
+        return "pm grant --user " + user + " " + pkg + " " + READ_CALENDAR;
     }
 
     /** The permission that lets an app read every app's Watch Next entries; without it, only its own. */

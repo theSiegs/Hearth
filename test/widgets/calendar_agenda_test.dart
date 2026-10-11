@@ -1,5 +1,5 @@
 import 'package:flauncher/l10n/app_localizations.dart';
-import 'package:flauncher/providers/ha_calendars.dart';
+import 'package:flauncher/providers/calendars.dart';
 import 'package:flauncher/providers/home_agenda.dart';
 import 'package:flauncher/providers/notifications_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
@@ -18,32 +18,40 @@ import '../mocks.mocks.dart';
 
 final DateTime now = DateTime(2026, 10, 10, 14, 0); // a Saturday afternoon
 
-Map<String, Object?> timed(String summary, DateTime start, DateTime end) => {
-      "summary": summary,
-      "start": {"dateTime": start.toIso8601String()},
-      "end": {"dateTime": end.toIso8601String()},
+/// A timed event as Hearth's Android side reads it from the TV's calendar store.
+Map<String, Object?> timed(String title, DateTime start, DateTime end) => {
+      "calendarId": 1,
+      "calendarName": "Family",
+      "title": title,
+      "start": start.millisecondsSinceEpoch,
+      "end": end.millisecondsSinceEpoch,
+      "allDay": false,
     };
 
-Map<String, Object?> allDay(String summary, DateTime day) => {
-      "summary": summary,
-      "start": {"date": day.toIso8601String().substring(0, 10)},
-      "end": {"date": day.add(const Duration(days: 1)).toIso8601String().substring(0, 10)},
+/// An all-day event: the store keeps its days as midnights in UTC.
+Map<String, Object?> allDay(String title, DateTime day) => {
+      "calendarId": 1,
+      "calendarName": "Family",
+      "title": title,
+      "start": DateTime.utc(day.year, day.month, day.day).millisecondsSinceEpoch,
+      "end": DateTime.utc(day.year, day.month, day.day + 1).millisecondsSinceEpoch,
+      "allDay": true,
     };
 
-/// A service that has read [events] from one "Family" calendar (or found no Home Assistant).
-Future<HaCalendarService> calendarService(List<Map<String, Object?>> events, {bool setUp = true}) async {
-  final service = HaCalendarService(
-    connection: () async => setUp ? (url: "http://192.0.2.10:8123", token: "secret") : null,
+/// A service that has read [events] from one "Family" calendar on the TV (or may not read the calendars).
+Future<CalendarService> calendarService(List<Map<String, Object?>> events, {bool allowed = true}) async {
+  final service = CalendarService(
+    read: (from, to) async => allowed
+        ? (
+            access: TvCalendarAccess.granted,
+            calendars: CalendarParser.parseCalendars([
+              {"id": 1, "name": "Family", "account": "alex@example.com"}
+            ]),
+            events: CalendarParser.parseEvents(events),
+          )
+        : (access: TvCalendarAccess.denied, calendars: const <TvCalendar>[], events: const <CalendarEvent>[]),
     hiddenCalendars: () => const [],
     now: () => now,
-    client: (url, token) => HaCalendarClient(url, token, getJson: (uri, _) async {
-      if (uri.path == "/api/calendars") {
-        return [
-          {"entity_id": "calendar.family", "name": "Family"}
-        ];
-      }
-      return events;
-    }),
   );
   await service.refresh();
   return service;
@@ -57,11 +65,11 @@ void main() {
     when(settings.timeFormat).thenReturn("h:mm a");
   });
 
-  Widget app(Widget child, {HaCalendarService? service, HomeAgenda? agenda, List<SingleChildWidget> more = const []}) =>
+  Widget app(Widget child, {CalendarService? service, HomeAgenda? agenda, List<SingleChildWidget> more = const []}) =>
       MultiProvider(
         providers: [
           ChangeNotifierProvider<SettingsService>.value(value: settings),
-          if (service != null) ChangeNotifierProvider<HaCalendarService>.value(value: service),
+          if (service != null) ChangeNotifierProvider<CalendarService>.value(value: service),
           if (agenda != null) ChangeNotifierProvider<HomeAgenda>.value(value: agenda),
           ...more,
         ],
@@ -111,8 +119,8 @@ void main() {
       expect(find.text("Nothing else today"), findsOneWidget);
     });
 
-    testWidgets("is nothing without Home Assistant", (tester) async {
-      final service = await calendarService(const [], setUp: false);
+    testWidgets("is nothing without calendar access", (tester) async {
+      final service = await calendarService(const [], allowed: false);
       await tester.pumpWidget(app(CalendarTodayRow(now: () => now), service: service));
       expect(find.text("CALENDAR"), findsNothing);
       await tester.pumpWidget(app(CalendarTodayRow(now: () => now)));
@@ -187,7 +195,7 @@ void main() {
       when(weather.hasWeather).thenReturn(false);
     });
 
-    Widget topBar({HaCalendarService? service, HomeAgenda? agenda}) => app(
+    Widget topBar({CalendarService? service, HomeAgenda? agenda}) => app(
           const Column(children: [SizedBox(height: kToolbarHeight, child: FocusAwareAppBar())]),
           service: service,
           agenda: agenda,
@@ -198,12 +206,12 @@ void main() {
           ],
         );
 
-    testWidgets("take no focus without Home Assistant's calendars", (tester) async {
+    testWidgets("take no focus without calendars to show", (tester) async {
       await tester.pumpWidget(topBar());
       expect(find.byKey(const Key("statusbar_date")), findsOneWidget);
       expect(find.byKey(const Key("statusbar_calendar")), findsNothing);
 
-      final notSetUp = await calendarService(const [], setUp: false);
+      final notSetUp = await calendarService(const [], allowed: false);
       await tester.pumpWidget(topBar(service: notSetUp, agenda: HomeAgenda()));
       expect(find.byKey(const Key("statusbar_calendar")), findsNothing);
     });

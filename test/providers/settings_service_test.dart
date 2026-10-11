@@ -36,17 +36,24 @@ void main() async {
   });
 
 
-  test("Home Assistant calendars all show until one is turned off, per profile", () async {
+  test("the TV's calendars all show until one is turned off, per profile", () async {
     final service = SettingsService(sharedPreferences);
-    expect(service.hiddenHaCalendars, isEmpty);
-    expect(service.settingKeys, contains("ha_hidden_calendars"));
-    await service.setHaCalendarShown("calendar.family", false);
-    await service.setHaCalendarShown("calendar.family", false);
-    await service.setHaCalendarShown("calendar.school", false);
-    expect(service.hiddenHaCalendars, ["calendar.family", "calendar.school"]);
-    await service.setHaCalendarShown("calendar.family", true);
-    expect(service.hiddenHaCalendars, ["calendar.school"]);
-    await service.setHaCalendarShown("calendar.school", true);
+    expect(service.hiddenCalendars, isEmpty);
+    expect(service.settingKeys, contains("hidden_calendars"));
+    await service.setCalendarShown("tv:3", false);
+    await service.setCalendarShown("tv:3", false);
+    await service.setCalendarShown("tv:7", false);
+    expect(service.hiddenCalendars, ["tv:3", "tv:7"]);
+    await service.setCalendarShown("tv:3", true);
+    expect(service.hiddenCalendars, ["tv:7"]);
+    await service.setCalendarShown("tv:7", true);
+    expect(sharedPreferences.containsKey("hidden_calendars"), isFalse);
+  });
+
+  test("the Home Assistant calendars a profile turned off are forgotten", () async {
+    await sharedPreferences.setStringList("ha_hidden_calendars", ["calendar.family"]);
+    SettingsService(sharedPreferences);
+    await Future<void>.delayed(Duration.zero);
     expect(sharedPreferences.containsKey("ha_hidden_calendars"), isFalse);
   });
 

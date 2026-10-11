@@ -2605,22 +2605,31 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get haCalendarsTitle => '캘린더';
+  String get calendarsTitle => '캘린더';
 
   @override
-  String get haCalendarsLoading => 'Home Assistant에 캘린더를 요청하는 중…';
+  String get calendarsHelp => '여기서 켠 캘린더는 오른쪽 위의 날짜와 시간에 포커스가 있을 때 표시됩니다: 오늘 남은 일정, 확인을 누르면 앞으로 7일. 프로필마다 따로 고릅니다.';
 
   @override
-  String haCalendarsNotSetUp(String place) {
-    return '이 TV에는 아직 Home Assistant가 설정되지 않았습니다. $place에서 주소와 토큰을 추가하세요.';
+  String get calendarsLoading => '캘린더를 읽는 중…';
+
+  @override
+  String get calendarsAllow => '캘린더 액세스 허용';
+
+  @override
+  String get calendarsAccessHelp => 'Hearth는 TV에 동기화된 이 프로필의 Google 캘린더를 표시할 수 있습니다. 읽기만 하며 TV 밖으로 나가는 것은 없습니다.';
+
+  @override
+  String calendarsKidsAccess(String place) {
+    return 'Hearth가 아직 이 프로필의 캘린더를 읽을 수 없습니다. 부모가 $place에서 수정으로 허용할 수 있습니다.';
   }
 
   @override
-  String get haCalendarsError => 'Home Assistant에서 캘린더를 가져오지 못했습니다. 주소와 토큰을 확인하세요.';
+  String get calendarsDenied => '캘린더 액세스가 꺼져 있습니다. Android 설정에서 허용하세요: 앱 > Hearth > 권한.';
 
   @override
-  String get haCalendarsNone => 'Home Assistant에 캘린더가 없습니다.';
+  String get calendarsWaiting => '이 프로필의 캘린더를 기다리는 중…';
 
   @override
-  String get haCalendarsHelp => '여기서 켠 캘린더는 오른쪽 위의 날짜와 시간에 포커스가 있을 때 표시됩니다: 오늘 남은 일정, 확인을 누르면 앞으로 7일. 프로필마다 따로 고릅니다.';
+  String get calendarsNone => '이 프로필에는 TV에 동기화된 Google 캘린더가 없습니다.';
 }

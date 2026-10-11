@@ -790,10 +790,13 @@
     "calendarMore": "+{count} weitere",
     "calendarNextDays": "Nächste {days} Tage",
     "calendarNothingWeek": "In den nächsten {days} Tagen steht nichts an",
-    "haCalendarsTitle": "Kalender",
-    "haCalendarsLoading": "Kalender werden von Home Assistant abgerufen …",
-    "haCalendarsNotSetUp": "Home Assistant ist auf diesem Fernseher noch nicht eingerichtet. Adresse und Token unter {place} eintragen.",
-    "haCalendarsError": "Die Kalender konnten nicht von Home Assistant abgerufen werden. Prüfe Adresse und Token.",
-    "haCalendarsNone": "Home Assistant hat keine Kalender.",
-    "haCalendarsHelp": "Die hier eingeschalteten Kalender erscheinen, wenn Datum und Uhrzeit oben rechts im Fokus sind: der Rest des Tages, mit OK die nächsten 7 Tage. Jedes Profil wählt eigene."
+    "calendarsTitle": "Kalender",
+    "calendarsHelp": "Die hier eingeschalteten Kalender erscheinen, wenn Datum und Uhrzeit oben rechts im Fokus sind: der Rest des Tages, mit OK die nächsten 7 Tage. Jedes Profil wählt eigene.",
+    "calendarsLoading": "Kalender werden gelesen …",
+    "calendarsAllow": "Kalenderzugriff erlauben",
+    "calendarsAccessHelp": "Hearth kann die Google-Kalender dieses Profils anzeigen, die mit dem Fernseher synchronisiert sind. Sie werden nur gelesen, und nichts verlässt den Fernseher.",
+    "calendarsKidsAccess": "Hearth kann die Kalender dieses Profils noch nicht lesen. Ein Elternteil kann es mit „Reparieren“ unter {place} erlauben.",
+    "calendarsDenied": "Der Kalenderzugriff ist aus. Erlaube ihn in den Android-Einstellungen: Apps > Hearth > Berechtigungen.",
+    "calendarsWaiting": "Warte auf die Kalender dieses Profils …",
+    "calendarsNone": "Für dieses Profil sind keine Google-Kalender mit dem Fernseher synchronisiert."
 }

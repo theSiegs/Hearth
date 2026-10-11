@@ -762,7 +762,7 @@ class _FLauncherState extends State<FLauncher> {
     final bool showRecents = continueWatchingActive && _showingRecents && !showSearch;
     // The weather forecast, while the top bar's weather has focus: over whatever the spot showed
     final bool showForecast = context.watch<HomeForecast?>()?.showing ?? false;
-    // Today's events, while the top bar's date and time have focus (with Home Assistant's calendars)
+    // Today's events, while the top bar's date and time have focus (with the profile's calendars on the TV)
     final bool showAgenda = (context.watch<HomeAgenda?>()?.showing ?? false) && !showForecast;
     final bool showOverlay = showForecast || showAgenda;
     _showDetailsScrim(showRecents || showSearch || showOverlay);

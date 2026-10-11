@@ -8,7 +8,7 @@ import 'package:flauncher/providers/notifications_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
-import 'package:flauncher/providers/ha_calendars.dart';
+import 'package:flauncher/providers/calendars.dart';
 import 'package:flauncher/providers/home_agenda.dart';
 import 'package:flauncher/widgets/calendar_agenda.dart';
 import 'package:flutter/material.dart';
@@ -281,7 +281,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                         return const SizedBox.shrink();
                       }
 
-                      // With Home Assistant's calendars, the date and time take focus: today's events show over
+                      // With calendars on the TV to show, the date and time take focus: today's events show over
                       // the home, and OK opens the coming week. Without them it's no focus stop, as before.
                       return _CalendarPill(
                         focusNode: _dateTimeFocusNode,
@@ -321,7 +321,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
   }
 }
 
-/// The date and time: a focus stop only while Home Assistant has calendars to show. Focused, what's left of today
+/// The date and time: a focus stop only while the profile has calendars on the TV to show. Focused, what's left of today
 /// shows over the home ([CalendarTodayRow]); OK opens the coming week ([CalendarAgendaPage]).
 class _CalendarPill extends StatelessWidget {
   final FocusNode focusNode;
@@ -331,7 +331,7 @@ class _CalendarPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final calendars = context.watch<HaCalendarService?>();
+    final calendars = context.watch<CalendarService?>();
     if (calendars == null || !calendars.available) {
       // Gone while it had focus (the calendars turned off): today's events go too
       if (context.read<HomeAgenda?>()?.showing ?? false) {

@@ -790,10 +790,13 @@
     "calendarMore": "+{count} altri",
     "calendarNextDays": "Prossimi {days} giorni",
     "calendarNothingWeek": "Niente nei prossimi {days} giorni",
-    "haCalendarsTitle": "Calendari",
-    "haCalendarsLoading": "Richiesta dei calendari a Home Assistant…",
-    "haCalendarsNotSetUp": "Home Assistant non è ancora configurato su questa TV. Aggiungi indirizzo e token in {place}.",
-    "haCalendarsError": "Impossibile ottenere i calendari da Home Assistant. Controlla indirizzo e token.",
-    "haCalendarsNone": "Home Assistant non ha calendari.",
-    "haCalendarsHelp": "I calendari attivati qui compaiono quando data e ora in alto a destra hanno il focus: il resto della giornata, e con OK i prossimi 7 giorni. Ogni profilo sceglie i propri."
+    "calendarsTitle": "Calendari",
+    "calendarsHelp": "I calendari attivati qui compaiono quando data e ora in alto a destra hanno il focus: il resto della giornata, e con OK i prossimi 7 giorni. Ogni profilo sceglie i propri.",
+    "calendarsLoading": "Lettura dei calendari…",
+    "calendarsAllow": "Consenti l'accesso al calendario",
+    "calendarsAccessHelp": "Hearth può mostrare i calendari Google di questo profilo sincronizzati con la TV. Li legge soltanto e nulla lascia la TV.",
+    "calendarsKidsAccess": "Hearth non può ancora leggere i calendari di questo profilo. Un genitore può consentirlo con Sistema in {place}.",
+    "calendarsDenied": "L'accesso al calendario è disattivato. Consentilo nelle impostazioni di Android: App > Hearth > Autorizzazioni.",
+    "calendarsWaiting": "In attesa dei calendari di questo profilo…",
+    "calendarsNone": "Questo profilo non ha calendari Google sincronizzati con la TV."
 }

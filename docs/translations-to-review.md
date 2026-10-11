@@ -4,7 +4,7 @@ Machine-translated strings that a native speaker should check: every key below, 
 
 Proper nouns (Hearth, HearthTube, Home Assistant, Google TV, Netflix, Watch Next, Android) stay untranslated on purpose. Android-side strings (popup, Home Assistant panel and phone page, Profile Pairing card) are in `android/app/src/main/res/values-*/strings*.xml` and are machine-translated too.
 
-585 keys, grouped by prefix:
+594 keys, grouped by prefix:
 
 - **watch** (6): `watchNextAccess`, `watchNextInfoRemove`, `watchNextInfoHideAllFrom`, `watchNextInfoPlayResume`, `watchNextInfoOpenApp`, `watchNextInfoAppInfo`
 - **settings** (1): `settingsTitle`
@@ -28,6 +28,7 @@ Proper nouns (Hearth, HearthTube, Home Assistant, Google TV, Netflix, Watch Next
 - **continue** (1): `continueWatchingAppsTitle`
 - **max** (1): `maxItemsTitle`
 - **ok** (1): `ok`
+- **calendars** (9): `calendarsTitle`, `calendarsHelp`, `calendarsLoading`, `calendarsAllow`, `calendarsAccessHelp`, `calendarsKidsAccess`, `calendarsDenied`, `calendarsWaiting`, `calendarsNone`
 - **cancel** (1): `cancel`
 - **close** (1): `close`
 - **try** (1): `tryAgain`

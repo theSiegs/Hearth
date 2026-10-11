@@ -22,6 +22,7 @@ import android.os.IBinder;
 import android.os.Process;
 import android.os.UserHandle;
 import android.os.UserManager;
+import android.provider.CalendarContract;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -36,6 +37,8 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.Calendar;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -60,6 +63,11 @@ public class AgentService extends Service {
     private static final long RETRY_MS = 5_000;
     private static final long PING_MS = 30_000;
     private static final long WATCH_NEXT_DEBOUNCE_MS = 1_000;
+    private static final long CALENDAR_DEBOUNCE_MS = 3_000;
+    /** How often the calendars are read again anyway (a new day, an event that started). */
+    private static final long CALENDAR_EVERY_MS = 15 * 60_000;
+    /** The days of events the agent reports: from yesterday, so the home's week has all it needs. */
+    private static final int CALENDAR_DAYS = 9;
     private static final long PIN_REPLY_SECONDS = 3;
     // About a minute of owner-Hearth being unreachable before the agent checks whether it was actually uninstalled.
     private static final int SELF_CLEAN_AFTER_FAILURES = 12;
@@ -80,6 +88,7 @@ public class AgentService extends Service {
     private volatile Socket mSocket;
     private volatile long mSerial = ProfileUsers.UNKNOWN;
     private ContentObserver mWatchNextObserver;
+    private ContentObserver mCalendarObserver;
 
     /** Whether Hearth is running in a profile user other than the owner's (the system user), as an agent. */
     static boolean isAgent(Context context) {
@@ -266,7 +275,28 @@ public class AgentService extends Service {
         } catch (RuntimeException e) {
             Log.w(TAG, "Can't watch Watch Next here: " + e);
         }
+        mCalendarObserver = new ContentObserver(mHandler) {
+            @Override
+            public void onChange(boolean selfChange) {
+                mHandler.removeCallbacks(mSendCalendar);
+                mHandler.postDelayed(mSendCalendar, CALENDAR_DEBOUNCE_MS);
+            }
+        };
+        watchCalendars();
         new Thread(this::connectLoop, "HearthAgent-socket").start();
+    }
+
+    /** Hears changes to this user's calendars (once it may read them: before, Android may refuse). */
+    private boolean mWatchingCalendars;
+
+    private void watchCalendars() {
+        if (mWatchingCalendars || !TvCalendars.canRead(this)) return;
+        try {
+            getContentResolver().registerContentObserver(CalendarContract.CONTENT_URI, true, mCalendarObserver);
+            mWatchingCalendars = true;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Can't watch the calendars here: " + e);
+        }
     }
 
     @Override
@@ -343,7 +373,12 @@ public class AgentService extends Service {
             connected = true;
             onConnectionChanged(true);
             mHandler.post(this::grantWatchNextAccess);
+            mHandler.post(this::grantCalendarAccess);
             mHandler.post(mSendWatchNext);
+            mHandler.post(() -> {
+                mLastCalendar = null;
+                mSendCalendar.run();
+            });
             mHandler.post(this::retireOldAdmin);
             mHandler.postDelayed(mPing, PING_MS);
             String line;
@@ -391,9 +426,16 @@ public class AgentService extends Service {
                 if (reply != null) reply.offer(message);
                 break;
             }
+            case "calendarRefresh":
+                mHandler.post(() -> {
+                    mLastCalendar = null;
+                    mSendCalendar.run();
+                });
+                break;
             case "adbKey":
                 storeSharedKey(message.optString("priv"), message.optString("pub"));
                 mHandler.post(this::grantWatchNextAccess);
+                mHandler.post(this::grantCalendarAccess);
                 mHandler.post(this::retireOldAdmin);
                 break;
             default:
@@ -459,6 +501,84 @@ public class AgentService extends Service {
         if (canReadWatchNext()) {
             Log.i(TAG, "Hearth may read Watch Next in user " + me + " now");
             mHandler.post(mSendWatchNext);
+        }
+    }
+
+    /** What the agent last sent about the calendars (null: send the next reading whatever it is). */
+    private String mLastCalendar;
+    /** The agent has tried to let itself read the calendars, since it started. */
+    private boolean mTriedCalendarGrant;
+
+    /**
+     * Sends Hearth this user's Google calendars and their events from yesterday on (TvCalendars' maps), when they
+     * changed; and reads them again every {@link #CALENDAR_EVERY_MS}. Every calendar here that syncs and shows: a
+     * kids' profile's user has its one account.
+     */
+    private final Runnable mSendCalendar = new Runnable() {
+        @Override
+        public void run() {
+            mHandler.removeCallbacks(this);
+            mHandler.postDelayed(this, CALENDAR_EVERY_MS);
+            if (mOut == null) return;
+            try {
+                JSONObject message = new JSONObject().put("type", "calendar");
+                boolean access = TvCalendars.canRead(AgentService.this);
+                message.put("access", access);
+                JSONArray calendars = new JSONArray();
+                JSONArray events = new JSONArray();
+                if (access) {
+                    watchCalendars();
+                    List<TvCalendars.Cal> shown = TvCalendars.shown(TvCalendars.readAll(AgentService.this), null);
+                    for (Map<String, Object> calendar : TvCalendars.toMaps(shown)) {
+                        calendars.put(new JSONObject(calendar));
+                    }
+                    Calendar from = Calendar.getInstance();
+                    from.set(Calendar.HOUR_OF_DAY, 0);
+                    from.set(Calendar.MINUTE, 0);
+                    from.set(Calendar.SECOND, 0);
+                    from.set(Calendar.MILLISECOND, 0);
+                    from.add(Calendar.DAY_OF_MONTH, -1);
+                    Calendar to = (Calendar) from.clone();
+                    to.add(Calendar.DAY_OF_MONTH, CALENDAR_DAYS);
+                    for (Map<String, Object> event : TvCalendars.events(AgentService.this, shown,
+                            from.getTimeInMillis(), to.getTimeInMillis())) {
+                        events.put(new JSONObject(event));
+                    }
+                }
+                message.put("calendars", calendars).put("events", events);
+                String line = message.toString();
+                if (line.equals(mLastCalendar)) return;
+                mLastCalendar = line;
+                Log.i(TAG, "Calendars here: " + (access ? calendars.length() + " calendars, " + events.length()
+                        + " events" : "not allowed to read them"));
+                send(message);
+            } catch (Exception e) {
+                Log.w(TAG, "Couldn't read the calendars here: " + e);
+            }
+        }
+    };
+
+    /**
+     * Lets this copy read its profile's calendars, if it can't (a runtime permission, for this user only, which a
+     * copy put here by install-existing doesn't get): through the shell, with the key owner-Hearth shared, as for
+     * Watch Next. Once per start: a parent's Fix grants it too.
+     */
+    private void grantCalendarAccess() {
+        if (mTriedCalendarGrant || TvCalendars.canRead(this)) return;
+        if (!new File(new File(getFilesDir(), "selfadb"), "adbkey").exists()) return; // no shell yet: next connect
+        int me = userIdSelf();
+        if (me <= 0) return;
+        mTriedCalendarGrant = true;
+        try (SelfAdb shell = SelfAdb.open(this)) {
+            String out = shell.run(ProfileAppAccess.grantCalendarCommand(getPackageName(), me));
+            if (out != null && !out.trim().isEmpty()) Log.i(TAG, "Calendar grant said: " + out.trim());
+        } catch (Exception e) {
+            Log.i(TAG, "Couldn't let Hearth read the calendars here: " + e.getMessage());
+        }
+        if (TvCalendars.canRead(this)) {
+            Log.i(TAG, "Hearth may read the calendars in user " + me + " now");
+            mLastCalendar = null;
+            mHandler.post(mSendCalendar);
         }
     }
 
@@ -586,6 +706,10 @@ public class AgentService extends Service {
         }
         reconnect();
         if (mWatchNextObserver != null) getContentResolver().unregisterContentObserver(mWatchNextObserver);
+        if (mCalendarObserver != null && mWatchingCalendars) {
+            getContentResolver().unregisterContentObserver(mCalendarObserver);
+        }
+        if (mHandler != null) mHandler.removeCallbacks(mSendCalendar);
         if (mThread != null) mThread.quitSafely();
         if (sInstance == this) sInstance = null;
         super.onDestroy();

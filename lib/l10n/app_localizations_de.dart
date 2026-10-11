@@ -2615,22 +2615,31 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get haCalendarsTitle => 'Kalender';
+  String get calendarsTitle => 'Kalender';
 
   @override
-  String get haCalendarsLoading => 'Kalender werden von Home Assistant abgerufen …';
+  String get calendarsHelp => 'Die hier eingeschalteten Kalender erscheinen, wenn Datum und Uhrzeit oben rechts im Fokus sind: der Rest des Tages, mit OK die nächsten 7 Tage. Jedes Profil wählt eigene.';
 
   @override
-  String haCalendarsNotSetUp(String place) {
-    return 'Home Assistant ist auf diesem Fernseher noch nicht eingerichtet. Adresse und Token unter $place eintragen.';
+  String get calendarsLoading => 'Kalender werden gelesen …';
+
+  @override
+  String get calendarsAllow => 'Kalenderzugriff erlauben';
+
+  @override
+  String get calendarsAccessHelp => 'Hearth kann die Google-Kalender dieses Profils anzeigen, die mit dem Fernseher synchronisiert sind. Sie werden nur gelesen, und nichts verlässt den Fernseher.';
+
+  @override
+  String calendarsKidsAccess(String place) {
+    return 'Hearth kann die Kalender dieses Profils noch nicht lesen. Ein Elternteil kann es mit „Reparieren“ unter $place erlauben.';
   }
 
   @override
-  String get haCalendarsError => 'Die Kalender konnten nicht von Home Assistant abgerufen werden. Prüfe Adresse und Token.';
+  String get calendarsDenied => 'Der Kalenderzugriff ist aus. Erlaube ihn in den Android-Einstellungen: Apps > Hearth > Berechtigungen.';
 
   @override
-  String get haCalendarsNone => 'Home Assistant hat keine Kalender.';
+  String get calendarsWaiting => 'Warte auf die Kalender dieses Profils …';
 
   @override
-  String get haCalendarsHelp => 'Die hier eingeschalteten Kalender erscheinen, wenn Datum und Uhrzeit oben rechts im Fokus sind: der Rest des Tages, mit OK die nächsten 7 Tage. Jedes Profil wählt eigene.';
+  String get calendarsNone => 'Für dieses Profil sind keine Google-Kalender mit dem Fernseher synchronisiert.';
 }

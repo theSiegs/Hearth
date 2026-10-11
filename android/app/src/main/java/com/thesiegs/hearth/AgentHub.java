@@ -46,11 +46,13 @@ import java.util.concurrent.Executors;
  * {"type":"watchNext","rows":[…]},
  * {"type":"ping"}, {"type":"playing","package":"…","ms":n} (an app played that long in the profile's user),
  * {"type":"opened","ok":bool}, {"type":"speech","package":"…","text":"…"} (what an app said through
- * Hearth's voice there, for Profile Pairing). Hearth to agent: {"type":"welcome"}, {"type":"open","intent":"intent:…"},
+ * Hearth's voice there, for Profile Pairing), {"type":"calendar","access":bool,"calendars":[…],"events":[…]} (the
+ * Google calendars synced to that profile's user and their coming days' events, TvCalendars' maps). Hearth to agent: {"type":"welcome"}, {"type":"open","intent":"intent:…"},
  * {"type":"listen","package":"…" or null} (the app Profile Pairing is handling, whose speech to relay),
  * {"type":"hearth","row":{column: value}} (Hearth's provider row, mirrored by the agent's provider there),
  * {"type":"wallpaper",…} (that profile's own wallpaper, picture included, only to its own agent: AgentWallpaper) and
- * {"type":"pinResult","id":n,"ok":bool,"wait":s} answering an agent's {"type":"verifyPin","id":n,"pin":"…"}.
+ * {"type":"pinResult","id":n,"ok":bool,"wait":s} answering an agent's {"type":"verifyPin","id":n,"pin":"…"}, and
+ * {"type":"calendarRefresh"} (read the calendars again now: Hearth was just let read them there).
  */
 final class AgentHub {
     static final int PORT = 47474;
@@ -65,6 +67,7 @@ final class AgentHub {
     private static final Map<Long, Connection> sConnections = new ConcurrentHashMap<>();
     private static final Map<Long, List<Map<String, Object>>> sWatchNext = new ConcurrentHashMap<>();
     private static final Map<Long, Boolean> sVoiceDefault = new ConcurrentHashMap<>();
+    private static final Map<Long, CalendarReport> sCalendars = new ConcurrentHashMap<>();
     private static volatile String sListening;
     private static final ExecutorService SENDER = Executors.newSingleThreadExecutor();
 
@@ -186,6 +189,10 @@ final class AgentHub {
                         sWatchNext.put(serial, rows(serial, message.optJSONArray("rows")));
                         notifyWatchNextChanged();
                         break;
+                    case "calendar":
+                        sCalendars.put(serial, new CalendarReport(message.optBoolean("access"),
+                                maps(message.optJSONArray("calendars")), maps(message.optJSONArray("events"))));
+                        break;
                     case "playing":
                         // An app played in this profile's user (its agent counts what Hearth can't see)
                         String played = message.optString("package", null);
@@ -247,6 +254,69 @@ final class AgentHub {
             rows.add(map);
         }
         return rows;
+    }
+
+    /** JSON objects as maps for Flutter (JSON's null as null). */
+    static List<Map<String, Object>> maps(JSONArray array) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        if (array == null) return out;
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject object = array.optJSONObject(i);
+            if (object == null) continue;
+            Map<String, Object> map = new HashMap<>();
+            for (Iterator<String> it = object.keys(); it.hasNext(); ) {
+                String name = it.next();
+                map.put(name, object.isNull(name) ? null : object.opt(name));
+            }
+            out.add(map);
+        }
+        return out;
+    }
+
+    /** What a profile's agent last said about its user's calendars. */
+    private static final class CalendarReport {
+        final boolean access;
+        final List<Map<String, Object>> calendars;
+        final List<Map<String, Object>> events;
+
+        CalendarReport(boolean access, List<Map<String, Object>> calendars, List<Map<String, Object>> events) {
+            this.access = access;
+            this.calendars = calendars;
+            this.events = events;
+        }
+    }
+
+    /** Whether the profile's agent may read its calendars; null before it has said. */
+    static Boolean calendarAccess(long serial) {
+        CalendarReport report = sCalendars.get(serial);
+        return report == null ? null : report.access;
+    }
+
+    /** The calendars the profile's agent last reported (empty before it has). */
+    static List<Map<String, Object>> calendars(long serial) {
+        CalendarReport report = sCalendars.get(serial);
+        return report == null ? Collections.emptyList() : new ArrayList<>(report.calendars);
+    }
+
+    /** Of the events the profile's agent last reported (its coming days), those between start and end. */
+    static List<Map<String, Object>> calendarEvents(long serial, long start, long end) {
+        CalendarReport report = sCalendars.get(serial);
+        List<Map<String, Object>> out = new ArrayList<>();
+        if (report == null) return out;
+        for (Map<String, Object> event : report.events) {
+            long from = event.get("start") instanceof Number ? ((Number) event.get("start")).longValue() : 0;
+            long to = event.get("end") instanceof Number ? ((Number) event.get("end")).longValue() : from;
+            if (TvCalendars.overlaps(from, to, start, end)) out.add(event);
+        }
+        return out;
+    }
+
+    /** Asks the profile's agent to read its calendars again (it was just let read them); false when not connected. */
+    static boolean refreshCalendars(long serial) {
+        Connection connection = sConnections.get(serial);
+        if (connection == null) return false;
+        connection.send(json("type", "calendarRefresh"));
+        return true;
     }
 
     /** Tells Hearth's Continue Watching to re-read (MainActivity listens on this address too). */

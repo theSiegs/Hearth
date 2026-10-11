@@ -790,10 +790,13 @@
     "calendarMore": "+{count} mais",
     "calendarNextDays": "Próximos {days} dias",
     "calendarNothingWeek": "Nada nos próximos {days} dias",
-    "haCalendarsTitle": "Agendas",
-    "haCalendarsLoading": "Pedindo as agendas ao Home Assistant…",
-    "haCalendarsNotSetUp": "O Home Assistant ainda não está configurado nesta TV. Adicione o endereço e o token em {place}.",
-    "haCalendarsError": "Não foi possível obter as agendas do Home Assistant. Verifique o endereço e o token.",
-    "haCalendarsNone": "O Home Assistant não tem agendas.",
-    "haCalendarsHelp": "As agendas ativadas aqui aparecem quando a data e a hora no canto superior direito estão em foco: o resto do dia, e com OK os próximos 7 dias. Cada perfil escolhe as suas."
+    "calendarsTitle": "Agendas",
+    "calendarsHelp": "As agendas ativadas aqui aparecem quando a data e a hora no canto superior direito estão em foco: o resto do dia, e com OK os próximos 7 dias. Cada perfil escolhe as suas.",
+    "calendarsLoading": "Lendo as agendas…",
+    "calendarsAllow": "Permitir acesso à agenda",
+    "calendarsAccessHelp": "O Hearth pode mostrar as agendas do Google deste perfil sincronizadas com a TV. Ele apenas as lê, e nada sai da TV.",
+    "calendarsKidsAccess": "O Hearth ainda não pode ler as agendas deste perfil. Um responsável pode permitir com Corrigir em {place}.",
+    "calendarsDenied": "O acesso à agenda está desativado. Permita nas configurações do Android: Apps > Hearth > Permissões.",
+    "calendarsWaiting": "Aguardando as agendas deste perfil…",
+    "calendarsNone": "Este perfil não tem agendas do Google sincronizadas com a TV."
 }

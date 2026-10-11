@@ -21,6 +21,7 @@ import 'package:flauncher/providers/open_meteo_client.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
+import 'package:flauncher/widgets/settings/calendars_page.dart';
 import 'package:flauncher/widgets/settings/date_time_format_page.dart';
 import 'package:flauncher/widgets/settings/data_usage_period_page.dart';
 import 'package:flutter/material.dart';
@@ -66,6 +67,13 @@ class StatusBarPanelPage extends StatelessWidget {
           leading: const Icon(Icons.date_range),
           title: Text(localizations.dateAndTimeFormat, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: () => Navigator.of(context).pushNamed(DateTimeFormatPage.routeName),
+        ),
+        // The Google calendars on the TV that show when the date and time have focus
+        FocusableSettingsTile(
+          key: const Key("settings_calendars"),
+          leading: const Icon(Icons.event_outlined),
+          title: Text(localizations.calendarsTitle, style: Theme.of(context).textTheme.bodyMedium),
+          onPressed: () => Navigator.of(context).pushNamed(CalendarsPage.routeName),
         ),
         RoundedSwitchListTile(
             value: settingsService.showDataWidgetInStatusBar,

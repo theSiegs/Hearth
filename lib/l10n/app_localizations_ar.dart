@@ -2653,22 +2653,31 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get haCalendarsTitle => 'التقاويم';
+  String get calendarsTitle => 'التقاويم';
 
   @override
-  String get haCalendarsLoading => 'جارٍ طلب التقاويم من Home Assistant…';
+  String get calendarsHelp => 'تظهر التقاويم المفعّلة هنا عندما يكون التاريخ والوقت في أعلى اليمين محددين: بقية اليوم، ومع موافق الأيام السبعة القادمة. يختار كل ملف شخصي تقاويمه.';
 
   @override
-  String haCalendarsNotSetUp(String place) {
-    return 'لم يتم إعداد Home Assistant على هذا التلفاز بعد. أضف عنوانه والرمز في $place.';
+  String get calendarsLoading => 'جارٍ قراءة التقاويم…';
+
+  @override
+  String get calendarsAllow => 'السماح بالوصول إلى التقويم';
+
+  @override
+  String get calendarsAccessHelp => 'يمكن لـ Hearth عرض تقاويم Google لهذا الملف الشخصي المتزامنة مع التلفزيون. يقرؤها فقط، ولا يغادر أي شيء التلفزيون.';
+
+  @override
+  String calendarsKidsAccess(String place) {
+    return 'لا يستطيع Hearth قراءة تقاويم هذا الملف الشخصي بعد. يمكن لأحد الوالدين السماح بذلك عبر «إصلاح» في $place.';
   }
 
   @override
-  String get haCalendarsError => 'تعذّر جلب التقاويم من Home Assistant. تحقق من العنوان والرمز.';
+  String get calendarsDenied => 'الوصول إلى التقويم متوقف. اسمح به في إعدادات Android: التطبيقات > Hearth > الأذونات.';
 
   @override
-  String get haCalendarsNone => 'لا توجد تقاويم في Home Assistant.';
+  String get calendarsWaiting => 'في انتظار تقاويم هذا الملف الشخصي…';
 
   @override
-  String get haCalendarsHelp => 'تظهر التقاويم المفعّلة هنا عندما يكون التاريخ والوقت في أعلى اليمين محددين: بقية اليوم، ومع موافق الأيام السبعة القادمة. يختار كل ملف شخصي تقاويمه.';
+  String get calendarsNone => 'لا توجد لهذا الملف الشخصي تقاويم Google متزامنة مع التلفزيون.';
 }

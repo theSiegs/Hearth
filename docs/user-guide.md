@@ -61,6 +61,11 @@ photo's title and credit are in **About Hearth**.
 **Status bar.** Clock and date (choose the format), weather, data usage (per day, week or
 month), TV inputs and the notification bell.
 
+**Calendar.** With calendar access allowed (**Settings → Home screen → Status bar → Calendars**), the date and time
+in the top bar can be selected: they show the rest of today's events, and OK shows the next 7 days. The events come
+from the profile's own Google calendars synced to the TV; each profile turns its calendars on or off there. In a kids
+profile, a parent's **Fix** (Settings → Profiles → Kids' profiles) lets Hearth read that profile's calendars.
+
 **Search.** Type or speak a title. Results show where you can watch it now (titles in services you have come first)
 and open straight in that app. Adult titles never appear. The voice button hands the search to Google's assistant;
 "Ask Google" does the same for typed searches.

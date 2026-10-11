@@ -790,10 +790,13 @@
     "calendarMore": "ほか{count}件",
     "calendarNextDays": "今後{days}日間",
     "calendarNothingWeek": "今後{days}日間は予定がありません",
-    "haCalendarsTitle": "カレンダー",
-    "haCalendarsLoading": "Home Assistant にカレンダーを問い合わせています…",
-    "haCalendarsNotSetUp": "このテレビではまだ Home Assistant が設定されていません。{place} でアドレスとトークンを追加してください。",
-    "haCalendarsError": "Home Assistant からカレンダーを取得できませんでした。アドレスとトークンを確認してください。",
-    "haCalendarsNone": "Home Assistant にカレンダーがありません。",
-    "haCalendarsHelp": "ここでオンにしたカレンダーは、右上の日付と時刻にフォーカスがあるときに表示されます: 今日の残りの予定、OK で今後7日間。プロファイルごとに選べます。"
+    "calendarsTitle": "カレンダー",
+    "calendarsHelp": "ここでオンにしたカレンダーは、右上の日付と時刻にフォーカスがあるときに表示されます: 今日の残りの予定、OK で今後7日間。プロファイルごとに選べます。",
+    "calendarsLoading": "カレンダーを読み込んでいます…",
+    "calendarsAllow": "カレンダーへのアクセスを許可",
+    "calendarsAccessHelp": "Hearth は、このプロフィールのテレビに同期された Google カレンダーを表示できます。読み取るだけで、テレビの外には何も送られません。",
+    "calendarsKidsAccess": "Hearth はまだこのプロフィールのカレンダーを読み取れません。保護者が {place} の「修正」で許可できます。",
+    "calendarsDenied": "カレンダーへのアクセスがオフです。Android の設定で許可してください: アプリ > Hearth > 権限。",
+    "calendarsWaiting": "このプロフィールのカレンダーを待っています…",
+    "calendarsNone": "このプロフィールにはテレビに同期された Google カレンダーがありません。"
 }

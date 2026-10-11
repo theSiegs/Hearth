@@ -2615,22 +2615,31 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get haCalendarsTitle => 'कैलेंडर';
+  String get calendarsTitle => 'कैलेंडर';
 
   @override
-  String get haCalendarsLoading => 'Home Assistant से कैलेंडर माँगे जा रहे हैं…';
+  String get calendarsHelp => 'यहाँ चालू किए गए कैलेंडर तब दिखते हैं जब ऊपर दाईं ओर की तारीख और समय पर फ़ोकस हो: आज का बाकी दिन, और OK से अगले 7 दिन। हर प्रोफ़ाइल अपने चुनती है।';
 
   @override
-  String haCalendarsNotSetUp(String place) {
-    return 'इस TV पर Home Assistant अभी सेट नहीं है। उसका पता और टोकन $place में जोड़ें।';
+  String get calendarsLoading => 'कैलेंडर पढ़े जा रहे हैं…';
+
+  @override
+  String get calendarsAllow => 'कैलेंडर एक्सेस की अनुमति दें';
+
+  @override
+  String get calendarsAccessHelp => 'Hearth इस प्रोफ़ाइल के वे Google कैलेंडर दिखा सकता है जो टीवी से सिंक हैं। वह उन्हें सिर्फ़ पढ़ता है, और कुछ भी टीवी से बाहर नहीं जाता।';
+
+  @override
+  String calendarsKidsAccess(String place) {
+    return 'Hearth अभी इस प्रोफ़ाइल के कैलेंडर नहीं पढ़ सकता। माता-पिता $place में ठीक करें से इसकी अनुमति दे सकते हैं।';
   }
 
   @override
-  String get haCalendarsError => 'Home Assistant से कैलेंडर नहीं मिल सके। पता और टोकन जाँचें।';
+  String get calendarsDenied => 'कैलेंडर एक्सेस बंद है। इसे Android सेटिंग में अनुमति दें: ऐप्स > Hearth > अनुमतियां।';
 
   @override
-  String get haCalendarsNone => 'Home Assistant में कोई कैलेंडर नहीं है।';
+  String get calendarsWaiting => 'इस प्रोफ़ाइल के कैलेंडर का इंतज़ार है…';
 
   @override
-  String get haCalendarsHelp => 'यहाँ चालू किए गए कैलेंडर तब दिखते हैं जब ऊपर दाईं ओर की तारीख और समय पर फ़ोकस हो: आज का बाकी दिन, और OK से अगले 7 दिन। हर प्रोफ़ाइल अपने चुनती है।';
+  String get calendarsNone => 'इस प्रोफ़ाइल का कोई Google कैलेंडर टीवी से सिंक नहीं है।';
 }

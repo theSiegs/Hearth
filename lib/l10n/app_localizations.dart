@@ -4655,41 +4655,59 @@ abstract class AppLocalizations {
   /// **'Nothing on in the next {days} days'**
   String calendarNothingWeek(int days);
 
-  /// Settings > Home Assistant: the page that picks which Home Assistant calendars show by the date and time
+  /// Settings > Home screen > Status bar: the page that picks which of the profile's Google calendars on the TV show by the date and time
   ///
   /// In en, this message translates to:
   /// **'Calendars'**
-  String get haCalendarsTitle;
-
-  /// Calendars settings page: while Home Assistant is being asked
-  ///
-  /// In en, this message translates to:
-  /// **'Asking Home Assistant for its calendars…'**
-  String get haCalendarsLoading;
-
-  /// Calendars settings page: Home Assistant isn't set up; {place} is where to set it up (a settings breadcrumb)
-  ///
-  /// In en, this message translates to:
-  /// **'Home Assistant isn\'t set up on this TV yet. Add its address and token in {place}.'**
-  String haCalendarsNotSetUp(String place);
-
-  /// Calendars settings page: Home Assistant couldn't be reached
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t get the calendars from Home Assistant. Check its address and token.'**
-  String get haCalendarsError;
-
-  /// Calendars settings page: Home Assistant answered but has no calendars
-  ///
-  /// In en, this message translates to:
-  /// **'Home Assistant has no calendars.'**
-  String get haCalendarsNone;
+  String get calendarsTitle;
 
   /// Calendars settings page: what the switches do
   ///
   /// In en, this message translates to:
   /// **'The calendars turned on here show when the date and time at the top right have focus: what\'s left of today, and OK for the next 7 days. Each profile chooses its own.'**
-  String get haCalendarsHelp;
+  String get calendarsHelp;
+
+  /// Calendars settings page: while the TV's calendars are being read
+  ///
+  /// In en, this message translates to:
+  /// **'Reading the calendars…'**
+  String get calendarsLoading;
+
+  /// Calendars settings page: button that asks to read the profile's calendars on the TV (Android's permission dialog)
+  ///
+  /// In en, this message translates to:
+  /// **'Allow calendar access'**
+  String get calendarsAllow;
+
+  /// Calendars settings page: why Hearth asks for calendar access, before it has it
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth can show this profile\'s Google calendars that are synced to the TV. It only reads them, and nothing leaves the TV.'**
+  String get calendarsAccessHelp;
+
+  /// Calendars settings page, on a kids' profile whose Hearth may not read its calendars; {place} is the settings breadcrumb to the kids' profiles page
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth can\'t read this profile\'s calendars yet. A parent can allow it with Fix in {place}.'**
+  String calendarsKidsAccess(String place);
+
+  /// Calendars settings page: calendar access was turned down
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar access is turned off. Allow it in Android\'s settings: Apps > Hearth > Permissions.'**
+  String get calendarsDenied;
+
+  /// Calendars settings page, on a kids' profile: its Hearth hasn't reported its calendars yet
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for this profile\'s calendars…'**
+  String get calendarsWaiting;
+
+  /// Calendars settings page: the profile has no Google calendars on the TV
+  ///
+  /// In en, this message translates to:
+  /// **'This profile has no Google calendars synced to the TV.'**
+  String get calendarsNone;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

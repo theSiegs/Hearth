@@ -17,7 +17,7 @@
 
 import 'package:flauncher/actions.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
-import 'package:flauncher/providers/ha_calendars.dart';
+import 'package:flauncher/providers/calendars.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/focusable_tap.dart';
 import 'package:flauncher/widgets/title_pill.dart';
@@ -27,7 +27,7 @@ import 'package:provider/provider.dart';
 
 const List<Shadow> _shadow = [Shadow(color: Colors.black54, offset: Offset(1, 1), blurRadius: 8)];
 
-/// The calendars' colors, by their place in Home Assistant's list.
+/// Colors for calendars without one of their own, by their place in the list.
 const List<Color> _calendarColors = [
   Color(0xFF64B5F6),
   Color(0xFFFFB74D),
@@ -39,8 +39,12 @@ const List<Color> _calendarColors = [
   Color(0xFFA1887F),
 ];
 
-Color _colorOf(HaCalendarService? service, String calendarId) {
-  final i = service?.calendars.indexWhere((c) => c.entityId == calendarId) ?? -1;
+/// The event's own color, else its calendar's, else one by the calendar's place in the list.
+Color _colorOf(CalendarService? service, CalendarEvent event) {
+  if (event.color != null) return Color(event.color!);
+  final calendars = service?.calendars ?? const <TvCalendar>[];
+  final i = calendars.indexWhere((c) => c.id == event.calendarId);
+  if (i >= 0 && calendars[i].color != null) return Color(calendars[i].color!);
   return _calendarColors[(i < 0 ? 0 : i) % _calendarColors.length];
 }
 
@@ -117,11 +121,11 @@ class CalendarTodayRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final service = context.watch<HaCalendarService?>();
+    final service = context.watch<CalendarService?>();
     if (service == null || !service.available) return const SizedBox.shrink();
     final times = CalendarTimes.of(context);
     final at = now();
-    final events = HaCalendarParser.eventsOn(service.events, at, at);
+    final events = CalendarParser.eventsOn(service.events, at, at);
     final text = Theme.of(context).textTheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -153,7 +157,7 @@ class CalendarTodayRow extends StatelessWidget {
                       when: times.label(l, event, at, at),
                       title: event.summary.isEmpty ? l.calendarNoTitle : event.summary,
                       calendar: event.calendarName,
-                      color: _colorOf(service, event.calendarId),
+                      color: _colorOf(service, event),
                       now: event.isOn(at),
                     ),
                   ),
@@ -253,10 +257,10 @@ class CalendarAgendaPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final service = context.watch<HaCalendarService?>();
+    final service = context.watch<CalendarService?>();
     final times = CalendarTimes.of(context);
     final at = now();
-    final week = service == null ? const <(DateTime, List<CalendarEvent>)>[] : HaCalendarParser.agenda(service.events, at, days: HaCalendarService.days);
+    final week = service == null ? const <(DateTime, List<CalendarEvent>)>[] : CalendarParser.agenda(service.events, at, days: CalendarService.days);
     final text = Theme.of(context).textTheme;
     return Actions(
       actions: {BackIntent: BackAction(context)},
@@ -275,14 +279,14 @@ class CalendarAgendaPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(l.calendarNextDays(HaCalendarService.days),
+                Text(l.calendarNextDays(CalendarService.days),
                     style: text.headlineSmall!.copyWith(fontWeight: FontWeight.w700, shadows: _shadow)),
                 const SizedBox(height: 16),
                 Expanded(
                   child: week.isEmpty
                       ? Focus(
                           autofocus: true,
-                          child: Text(l.calendarNothingWeek(HaCalendarService.days),
+                          child: Text(l.calendarNothingWeek(CalendarService.days),
                               style: text.bodyLarge!.copyWith(color: Colors.white70)),
                         )
                       : ListView(
@@ -300,7 +304,7 @@ class CalendarAgendaPage extends StatelessWidget {
                                   when: times.label(l, event, day, at),
                                   title: event.summary.isEmpty ? l.calendarNoTitle : event.summary,
                                   detail: [event.calendarName, if (event.location != null) event.location!].join(" · "),
-                                  color: _colorOf(service, event.calendarId),
+                                  color: _colorOf(service, event),
                                   now: event.isOn(at),
                                 ),
                             ],

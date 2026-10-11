@@ -2617,22 +2617,31 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get haCalendarsTitle => 'Agendas';
+  String get calendarsTitle => 'Agendas';
 
   @override
-  String get haCalendarsLoading => 'Demande des agendas à Home Assistant…';
+  String get calendarsHelp => 'Les agendas activés ici s\'affichent quand la date et l\'heure en haut à droite ont le focus : le reste de la journée, et OK pour les 7 prochains jours. Chaque profil choisit les siens.';
 
   @override
-  String haCalendarsNotSetUp(String place) {
-    return 'Home Assistant n\'est pas encore configuré sur ce téléviseur. Ajoutez son adresse et son jeton dans $place.';
+  String get calendarsLoading => 'Lecture des agendas…';
+
+  @override
+  String get calendarsAllow => 'Autoriser l\'accès à l\'agenda';
+
+  @override
+  String get calendarsAccessHelp => 'Hearth peut afficher les agendas Google de ce profil synchronisés avec le téléviseur. Il ne fait que les lire, et rien ne quitte le téléviseur.';
+
+  @override
+  String calendarsKidsAccess(String place) {
+    return 'Hearth ne peut pas encore lire les agendas de ce profil. Un parent peut l\'autoriser avec Réparer dans $place.';
   }
 
   @override
-  String get haCalendarsError => 'Impossible d\'obtenir les agendas de Home Assistant. Vérifiez l\'adresse et le jeton.';
+  String get calendarsDenied => 'L\'accès à l\'agenda est désactivé. Autorisez-le dans les paramètres Android : Applications > Hearth > Autorisations.';
 
   @override
-  String get haCalendarsNone => 'Home Assistant n\'a aucun agenda.';
+  String get calendarsWaiting => 'En attente des agendas de ce profil…';
 
   @override
-  String get haCalendarsHelp => 'Les agendas activés ici s\'affichent quand la date et l\'heure en haut à droite ont le focus : le reste de la journée, et OK pour les 7 prochains jours. Chaque profil choisit les siens.';
+  String get calendarsNone => 'Ce profil n\'a aucun agenda Google synchronisé avec le téléviseur.';
 }

@@ -790,10 +790,13 @@
     "calendarMore": "+{count} autres",
     "calendarNextDays": "{days} prochains jours",
     "calendarNothingWeek": "Rien dans les {days} prochains jours",
-    "haCalendarsTitle": "Agendas",
-    "haCalendarsLoading": "Demande des agendas à Home Assistant…",
-    "haCalendarsNotSetUp": "Home Assistant n'est pas encore configuré sur ce téléviseur. Ajoutez son adresse et son jeton dans {place}.",
-    "haCalendarsError": "Impossible d'obtenir les agendas de Home Assistant. Vérifiez l'adresse et le jeton.",
-    "haCalendarsNone": "Home Assistant n'a aucun agenda.",
-    "haCalendarsHelp": "Les agendas activés ici s'affichent quand la date et l'heure en haut à droite ont le focus : le reste de la journée, et OK pour les 7 prochains jours. Chaque profil choisit les siens."
+    "calendarsTitle": "Agendas",
+    "calendarsHelp": "Les agendas activés ici s'affichent quand la date et l'heure en haut à droite ont le focus : le reste de la journée, et OK pour les 7 prochains jours. Chaque profil choisit les siens.",
+    "calendarsLoading": "Lecture des agendas…",
+    "calendarsAllow": "Autoriser l'accès à l'agenda",
+    "calendarsAccessHelp": "Hearth peut afficher les agendas Google de ce profil synchronisés avec le téléviseur. Il ne fait que les lire, et rien ne quitte le téléviseur.",
+    "calendarsKidsAccess": "Hearth ne peut pas encore lire les agendas de ce profil. Un parent peut l'autoriser avec Réparer dans {place}.",
+    "calendarsDenied": "L'accès à l'agenda est désactivé. Autorisez-le dans les paramètres Android : Applications > Hearth > Autorisations.",
+    "calendarsWaiting": "En attente des agendas de ce profil…",
+    "calendarsNone": "Ce profil n'a aucun agenda Google synchronisé avec le téléviseur."
 }

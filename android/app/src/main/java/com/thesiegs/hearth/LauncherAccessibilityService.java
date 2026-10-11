@@ -783,8 +783,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         List<String> names = new ArrayList<>();
         List<Rect> photos = new ArrayList<>();
-        String current = collectChooserTiles(root, names, photos, 0);
+        Map<String, String> emails = new LinkedHashMap<>();
+        String current = collectChooserTiles(root, names, photos, emails, 0);
         if (current != null) mChooserCurrent = current;
+        // Each profile's Google account address, which the TV's calendars are filed by (TvCalendars)
+        for (Map.Entry<String, String> email : emails.entrySet()) {
+            ProfileUsers.setEmail(this, email.getKey(), email.getValue());
+        }
         // The current account's tile names the running profile user, unless a switch is still settling. Not when
         // it's a just-added profile that was picked but never started: Google TV can mark that one current while
         // the last profile still runs, and it mustn't rename the profile that's actually running.
@@ -905,7 +910,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
      * continue with current account"), which names the running profile user without relying on focus.
      */
     private static String collectChooserTiles(AccessibilityNodeInfo node, List<String> names, List<Rect> photos,
-            int depth) {
+            Map<String, String> emails, int depth) {
         if (node == null || depth > 20) return null;
         if (TextUtils.equals(LINEAR_LAYOUT, node.getClassName()) && node.isFocusable()) {
             String name = null;
@@ -928,13 +933,15 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 names.add(name);
                 photos.add(photo);
                 CharSequence desc = node.getContentDescription();
+                String email = GoogleTvAccount.emailIn(desc);
+                if (email != null) emails.put(name, email);
                 if (desc != null && desc.toString().toLowerCase(Locale.ROOT).contains("current account")) return name;
             }
             return null;
         }
         String current = null;
         for (int i = 0; i < node.getChildCount(); i++) {
-            String found = collectChooserTiles(node.getChild(i), names, photos, depth + 1);
+            String found = collectChooserTiles(node.getChild(i), names, photos, emails, depth + 1);
             if (found != null) current = found;
         }
         return current;

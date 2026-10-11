@@ -198,6 +198,8 @@ public class KidsProfilesTest {
         FakeShell shell = new FakeShell().has(0, HEARTH, TUBE);
         List<String> log = ProfileAppAccess.addToKids(APK, shell, Collections.singletonList(10));
         assertTrue(shell.granted.contains("10/" + HEARTH + "/android.permission.READ_TV_LISTINGS"));
+        // And that profile's own calendars, for the date and time there
+        assertTrue(shell.granted.contains("10/" + HEARTH + "/android.permission.READ_CALENDAR"));
         // After the copy is there
         assertTrue(shell.indexOf("pm install-existing --user 10 " + HEARTH)
                 < shell.indexOf("pm grant --user 10 " + HEARTH + " android.permission.READ_TV_LISTINGS"));
@@ -225,6 +227,24 @@ public class KidsProfilesTest {
         List<String> log = ProfileAppAccess.addToKids(APK, shell, packages);
         assertEquals(0, shell.count("pm grant"));
         assertTrue(log.contains("user 10: skipped " + HEARTH + " (not installed for the owner)"));
+    }
+
+    @Test
+    public void theCalendarGrantIsOnlyEverHearthsOnAnotherProfile() {
+        assertEquals("pm grant --user 12 " + HEARTH + " android.permission.READ_CALENDAR",
+                ProfileAppAccess.grantCalendarCommand(HEARTH, 12));
+        try {
+            ProfileAppAccess.grantCalendarCommand(HEARTH, 0);
+            fail("granted in the owner's user");
+        } catch (IllegalArgumentException expected) {
+            // refused
+        }
+        try {
+            ProfileAppAccess.grantCalendarCommand(TUBE, 12);
+            fail("granted to another app");
+        } catch (IllegalArgumentException expected) {
+            // refused
+        }
     }
 
     @Test

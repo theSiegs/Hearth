@@ -35,6 +35,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <uses-permission android:name="android.permission.READ_TV_LISTINGS" />
+    <!-- The Google calendars synced to the TV, read only: the active profile's events by the top bar's date and
+         time (TvCalendars). Nothing is written or sent anywhere. -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="com.android.providers.tv.permission.READ_EPG_DATA" />
     <uses-permission android:name="com.android.providers.tv.permission.READ_WRITE_WATCH_NEXT_PROGRAMS" />
 

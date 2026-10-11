@@ -32,6 +32,7 @@ import 'package:flauncher/widgets/settings/gradient_panel_page.dart';
 import 'package:flauncher/widgets/settings/launcher_section_panel_page.dart';
 import 'package:flauncher/widgets/settings/settings_panel_page.dart';
 import 'package:flauncher/widgets/settings/status_bar_panel_page.dart';
+import 'package:flauncher/widgets/settings/calendars_page.dart';
 import 'package:flauncher/widgets/settings/wallpaper_panel_page.dart';
 import 'package:flauncher/widgets/settings/data_usage_period_page.dart';
 import 'package:flauncher/widgets/settings/back_button_action_page.dart';
@@ -201,8 +202,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     return _FastPageRoute(builder: (_) => const HaPanelPage());
                   case HaStatusPage.routeName:
                     return _FastPageRoute(builder: (_) => const HaStatusPage());
-                  case HaCalendarsPage.routeName:
-                    return _FastPageRoute(builder: (_) => const HaCalendarsPage());
+                  case CalendarsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const CalendarsPage());
                   case BackupRestorePage.routeName:
                     return _FastPageRoute(builder: (_) => const BackupRestorePage());
                   case AppLanguagePage.routeName:

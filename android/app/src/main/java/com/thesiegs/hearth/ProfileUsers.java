@@ -43,6 +43,8 @@ final class ProfileUsers {
     private static final String ACCOUNT_PREFIX = "account|";
     /** "logged_in|serial": the other account Google TV has logged in in that user (none: its first account). */
     private static final String LOGGED_IN_PREFIX = "logged_in|";
+    /** "email|name": the Google account address Google TV's chooser shows for that profile name. */
+    private static final String EMAIL_PREFIX = "email|";
     private static final String KEY_PREFIX = "user:";
     private static final String SCREEN_TIME_SERIAL = "screen_time_up_serial";
 
@@ -349,6 +351,27 @@ final class ProfileUsers {
             if (name.equals(entry.getValue())) editor.remove(entry.getKey());
         }
         editor.putString(NAME_PREFIX + serial, name).apply();
+    }
+
+    /**
+     * Remembers a profile's Google account address, as Google TV's profile chooser names it on the profile's tile
+     * (the calendars on the TV are filed by it: TvCalendars).
+     */
+    static void setEmail(Context context, String name, String email) {
+        if (name == null || name.isEmpty() || email == null || email.isEmpty()) return;
+        SharedPreferences prefs = prefs(context);
+        if (email.equals(prefs.getString(EMAIL_PREFIX + name, null))) return;
+        prefs.edit().putString(EMAIL_PREFIX + name, email).apply();
+    }
+
+    /** The Google account address of the profile with this key, as the chooser named it; null when not seen yet. */
+    static String emailOf(Context context, String key) {
+        long serial = serialOfKey(key);
+        if (serial == UNKNOWN) return null;
+        String account = accountOfKey(key);
+        String name = account != null ? prefs(context).getString(ACCOUNT_PREFIX + serial + "|" + account, null)
+                : getName(context, serial);
+        return name == null ? null : prefs(context).getString(EMAIL_PREFIX + name, null);
     }
 
     /** The account Google TV has logged in in this user, when it isn't the user's first one; else null. */

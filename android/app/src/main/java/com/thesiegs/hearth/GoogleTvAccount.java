@@ -54,6 +54,18 @@ final class GoogleTvAccount {
         return null;
     }
 
+    private static final Pattern EMAIL = Pattern.compile("[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)+");
+
+    /**
+     * The Google account address in a profile chooser tile's description ("Alex Rivera, alex@example.com, : select
+     * to continue with current account": alex@example.com), or null.
+     */
+    static String emailIn(CharSequence description) {
+        if (description == null) return null;
+        Matcher m = EMAIL.matcher(description);
+        return m.find() ? m.group() : null;
+    }
+
     /** The account a label names ("Logged in as Alex, click to choose an account": Alex), or null. */
     static String accountIn(CharSequence label) {
         if (label == null) return null;

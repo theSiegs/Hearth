@@ -6,6 +6,7 @@
 Hearth has no ads, analytics, crash reporting or trackers, and no Hearth account or server. Your settings, layouts,
 profile pairings and backups stay on the TV. So does each profile's watch history: the titles apps say are playing,
 and the Continue Watching entries Hearth keeps for each profile (forgotten after 90 days, or when you remove a card).
+Calendar events are read from the TV when they show and aren't stored or sent anywhere.
 
 ## What Hearth connects to
 
@@ -43,6 +44,7 @@ as Wikidata asks.
 | Install apps / delete apps | Updates Hearth and HearthTube; puts them on other profiles. |
 | Display over other apps | Home Assistant pop-ups. |
 | TV listings and Watch Next | Continue Watching and TV inputs. |
+| Calendars (read only) | The date and time in the top bar show the active profile's Google calendars that are synced to the TV: only that profile's own account's calendars, read on the TV and sent nowhere. Hearth never adds or changes events. Asked for in Settings → Home screen → Status bar → Calendars; in a kids profile (whose Hearth can't show the request) a parent's Fix grants it there over adb, and only for Hearth. |
 | Network and Wi-Fi state | The data usage and network shortcuts. |
 | Start at boot | Brings Hearth and its services back after a restart. |
 
