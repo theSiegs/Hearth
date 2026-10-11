@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.34 (pre-release)
+
+- The remote's profile button opens Google TV's profile chooser again (Hearth was covering it with its home).
+- Switching between grown-ups' profiles no longer falls back to the last profile when Google TV's home is slow to say who's logged in.
+- After a profile switch that Google TV cancels, the selection goes back to the dock (or the first row without a dock), not the top bar.
+
 ## 2026.10.33 (pre-release)
 
 - Kids' profiles: Hearth (and HearthTube, when it's installed) goes on every kids' profile from the setup flow, and new kids' profiles get it automatically. Settings → Profiles shows each kid as Ready or Needs a fix with one Fix button, and a page per kid with how Hearth stands there, HearthTube, and its YouTube time per day, set without switching profiles. HearthTube can be added to a kid from that page, even from inside the kid's profile.

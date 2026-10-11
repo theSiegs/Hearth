@@ -105,6 +105,8 @@ class _FLauncherState extends State<FLauncher> {
 
   /// A profile just switched to, until the selection has landed on its home.
   String? _landingProfile;
+  // Whether the welcome card was up (a profile picked or switching) at the last profile change
+  bool _cardWasUp = false;
 
   /// The home's layout as last built: the dock, one grid without it, or the plain list of sections.
   _HomeLayout? _layout;
@@ -173,6 +175,15 @@ class _FLauncherState extends State<FLauncher> {
       context.read<WatchNextService?>()?.profileChanged(key);
       // Another profile, another person: their search isn't this one's
       if (_homeSearch?.active ?? false) _endSearch(focusDock: false);
+    }
+    // The welcome card held focus and went without a new profile landing (a switch Google TV cancelled, or one to
+    // the profile already on): the selection goes back to the dock, not wherever Flutter would put it (the top bar)
+    final cardUp = profiles.incomingName != null || profiles.transition != null;
+    final cardWent = _cardWasUp && !cardUp;
+    _cardWasUp = cardUp;
+    if (cardWent && _landingProfile == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _landOnHome());
+      WidgetsBinding.instance.ensureVisualUpdate();
     }
     // Once, when the welcome card is gone and the profile's layout (its own dock) is in; the card holds focus till then.
     final landing = _landingProfile;

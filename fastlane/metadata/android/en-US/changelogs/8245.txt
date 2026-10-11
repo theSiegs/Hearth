@@ -1,0 +1,3 @@
+- Early development pre-release.
+- The remote's profile button opens the profile chooser again.
+- Grown-ups' profile switches no longer fall back to the last profile; the selection lands on the dock.

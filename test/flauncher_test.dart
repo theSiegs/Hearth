@@ -497,6 +497,40 @@ void main() {
     expect(isAppCardFocused(tester, "me.efesser.flauncher.1"), isTrue);
   });
 
+  testWidgets("A pick that doesn't switch the profile gives the selection back to the dock, not the top bar",
+      (tester) async {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('me.efesser.flauncher/method'), (call) async {
+      if (call.method == "isProfileDataReady") return true;
+      return call.method.startsWith("check") ? false : null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('me.efesser.flauncher/method'), null));
+    final appsService = mkAppService();
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    favoritesCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.1", name: "FLauncher 1"));
+    when(appsService.launcherSections).thenReturn([favoritesCategory]);
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+    final watchNextService = mkWatchNextService();
+    when(watchNextService.postersSettled).thenReturn(true);
+    final profiles = FakeProfileService(activeKey: "user:0", activeName: "Alex");
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService,
+        watchNextService: watchNextService, profileService: profiles);
+
+    getProfileFocusNode(tester)!.requestFocus();
+    await tester.pump();
+
+    // Picked in Google TV's chooser; its card takes the selection, then Google TV keeps the profile that was on
+    profiles.pick("Sam");
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    profiles.pick(null);
+    await tester.pumpAndSettle();
+
+    expect(isAppCardFocused(tester, "me.efesser.flauncher.1"), isTrue);
+  });
+
   testWidgets("With nothing usable in Favorites, the dock layout shows one untitled grid", (tester) async {
     final appsService = mkAppService();
     final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);

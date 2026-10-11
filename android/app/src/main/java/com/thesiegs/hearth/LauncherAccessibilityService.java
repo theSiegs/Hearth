@@ -84,6 +84,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final long HOME_PICK_FRESH_MS = 10_000;
     private static final long KIDS_HOME_GRACE_MS = 1_500;
     /**
+     * Google TV's own home, not after its chooser: the remote's profile button opens the home and then the chooser
+     * over it, 0.07 s later on the TV (2026-10-10). Hearth waits this long before covering the home, so it doesn't
+     * cover the chooser instead.
+     */
+    private static final long HOME_GRACE_MS = 300;
+    /**
      * After Google TV's profile lock: a cancelled PIN opens its home and then its chooser, which on the TV showed
      * 0.27 s after the home (2026-10-10); a right PIN leaves the home up. Long enough for the chooser to show, with
      * margin, before Hearth covers the home.
@@ -230,6 +236,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // Not if Google TV put a screen of its own up (time up, PIN...) or the kid opened an app meanwhile
         if (autoTakeOverAllowed() && !mGoogleTvScreenInFront && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage)) {
             mProfileLockSeenAt = 0; // a profile lock that led here was passed
+            takeOverHome();
+        }
+    };
+    private final Runnable mHomeTakeOver = () -> {
+        // Not if Google TV put a screen of its own up (the chooser) or an app came up meanwhile
+        if (autoTakeOverAllowed() && !mGoogleTvScreenInFront && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage)) {
             takeOverHome();
         }
     };
@@ -1082,6 +1094,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mTakeOverIfConfirmed = false;
         if (mHomeAccountRead != null) {
             onAccountLoggedIn(mHomeAccountRead, "Google TV's home");
+        } else if (expected != null && mLastPickClicked && ProfileUsers.serialOf(this, expected) == mActiveSerial) {
+            // Gone before it said (another window came up): a clicked tile is the best word there is. A cancelled
+            // PIN leaves the home up, which says who's on; the chooser's current account corrects it next time.
+            Log.i(TAG, "Google TV's home didn't say who's logged in; going by the pick");
+            onAccountLoggedIn(expected, "the pick");
         } else {
             Log.i(TAG, "Google TV's home didn't say who's logged in");
         }
@@ -1185,7 +1202,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 if (readAccount && chooserClosed) {
                     readHomeAccount(true, pick);
                 } else {
-                    openLauncher();
+                    // Its chooser may be coming over it (the profile button); a home read under way goes first
+                    mHandler.removeCallbacks(mHomeTakeOver);
+                    mHandler.postDelayed(mHomeTakeOver, HOME_GRACE_MS);
                 }
             } else {
                 mPendingBounceAt = now;
