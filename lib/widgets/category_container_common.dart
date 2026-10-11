@@ -23,26 +23,28 @@ Widget categoryContainerEmptyState(BuildContext context) {
           alignment: Alignment.centerLeft,
           child: AspectRatio(
             aspectRatio: 16 / 9,
-            child: Card(
-              clipBehavior: Clip.antiAlias,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              child: InkWell(
-                // Settings take the parent PIN in kids profiles, from here too
-                onTap: () async {
-                  final bool allowed = await requireParent(context);
-                  if (!allowed || !context.mounted) return;
-                  showDialog(
-                    context: context,
-                    barrierColor: Colors.transparent,
-                    builder: (_) => const SettingsPanel(initialRoute: LauncherSectionsPanelPage.routeName),
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Center(
-                    child: Text(
-                      localizations.textEmptyCategory,
-                      textAlign: TextAlign.center,
+            child: EmptyCategoryCard(
+              child: Card(
+                clipBehavior: Clip.antiAlias,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                child: InkWell(
+                  // Settings take the parent PIN in kids profiles, from here too
+                  onTap: () async {
+                    final bool allowed = await requireParent(context);
+                    if (!allowed || !context.mounted) return;
+                    showDialog(
+                      context: context,
+                      barrierColor: Colors.transparent,
+                      builder: (_) => const SettingsPanel(initialRoute: LauncherSectionsPanelPage.routeName),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Center(
+                      child: Text(
+                        localizations.textEmptyCategory,
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
                 ),
@@ -53,6 +55,16 @@ Widget categoryContainerEmptyState(BuildContext context) {
       ),
     ),
   );
+}
+
+/// Marks an empty section's "This category is empty" card: the home lands on an app rather than on it.
+class EmptyCategoryCard extends StatelessWidget {
+  final Widget child;
+
+  const EmptyCategoryCard({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) => child;
 }
 
 /// A section's title, and its number of items when that setting is on. Shows nothing while

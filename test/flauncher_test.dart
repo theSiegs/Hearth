@@ -564,6 +564,34 @@ void main() {
     });
   }
 
+  testWidgets("Without the dock, Home lands on the first app at the top, not on an empty section", (tester) async {
+    final appsService = mkAppService();
+    final tvCategory = fakeCategory(name: "TV Apps", order: 0, type: CategoryType.row);
+    final emptyCategory = fakeCategory(name: "Non-TV Apps", order: 1, type: CategoryType.row);
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 2, type: CategoryType.row);
+    tvCategory.applications.addAll(List.generate(3, (i) => fakeApp(packageName: "com.example.tv$i", name: "TV $i")));
+    favoritesCategory.applications
+        .addAll(List.generate(3, (i) => fakeApp(packageName: "com.example.fav$i", name: "Fav $i")));
+    when(appsService.launcherSections).thenReturn([tvCategory, emptyCategory, favoritesCategory]);
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(false);
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+
+    getFocusNodeForApp(tester, "com.example.fav2")!.requestFocus();
+    await tester.pumpAndSettle();
+
+    await pressHome(tester);
+
+    expect(isAppCardFocused(tester, "com.example.tv0"), isTrue);
+    expect(homeScrollOffset(tester), 0);
+
+    // From the top bar too
+    getProfileFocusNode(tester)!.requestFocus();
+    await tester.pumpAndSettle();
+    await pressHome(tester);
+    expect(isAppCardFocused(tester, "com.example.tv0"), isTrue);
+  });
+
   testWidgets("With nothing usable in Favorites, the dock layout shows one untitled grid", (tester) async {
     final appsService = mkAppService();
     final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);

@@ -21,6 +21,7 @@ import 'package:flauncher/providers/home_agenda.dart';
 import 'package:flauncher/widgets/calendar_agenda.dart';
 import 'package:flauncher/widgets/weather_forecast_row.dart';
 import 'package:flauncher/widgets/profile_transition_overlay.dart';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:collection/collection.dart';
@@ -33,6 +34,7 @@ import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flauncher/providers/wallpaper_service.dart';
 import 'package:flauncher/widgets/apps_grid.dart';
 import 'package:flauncher/widgets/cached_blur_backdrop.dart';
+import 'package:flauncher/widgets/category_container_common.dart';
 import 'package:flauncher/widgets/category_row.dart';
 import 'package:flauncher/widgets/home_dock.dart';
 import 'package:flauncher/widgets/launcher_alternative_view.dart';
@@ -199,8 +201,32 @@ class _FLauncherState extends State<FLauncher> {
   void _landOnHome() {
     // Not while another page is open over the home (search, settings): it keeps its focus
     if (!mounted || _searchTyping || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
-    (_firstFocusable(_dockFocusNode) ?? _firstFocusable(_appsGridFocusNode) ?? _firstFocusable(_belowDockFocusNode))
+    (_firstFocusable(_dockFocusNode) ?? _topLeftFocusable(_appsGridFocusNode) ?? _topLeftFocusable(_belowDockFocusNode))
         ?.requestFocus();
+  }
+
+  /// The card at the top left of [parent] on screen: the first app of the top row. Focus order isn't screen order (a
+  /// row's cards are built as it lays out, after an empty section's card below it), and an empty section's "This
+  /// category is empty" card only counts when there's nothing else.
+  static FocusNode? _topLeftFocusable(FocusNode parent) {
+    FocusNode? best;
+    bool bestEmpty = true;
+    for (final node in parent.descendants) {
+      if (!node.canRequestFocus || node.skipTraversal || node.context == null) continue;
+      final bool empty = node.context!.findAncestorWidgetOfExactType<EmptyCategoryCard>() != null;
+      if (best == null || (bestEmpty && !empty) || (empty == bestEmpty && _isBefore(node.rect, best.rect))) {
+        best = node;
+        bestEmpty = empty;
+      }
+    }
+    return best;
+  }
+
+  /// Reading order: [a] is on a row above [b], or on the same row (centres level: a selected card is zoomed) and left.
+  static bool _isBefore(Rect a, Rect b) {
+    final double rowTolerance = math.min(a.height, b.height) / 2;
+    if ((a.center.dy - b.center.dy).abs() > rowTolerance) return a.center.dy < b.center.dy;
+    return a.left < b.left;
   }
 
   /// Notes the layout the home is built with; see [_relandOnHome].
