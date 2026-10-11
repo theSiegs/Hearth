@@ -12,54 +12,48 @@ import org.junit.Test;
 
 /** Profile photos from Google TV's chooser: which tile may be photographed, and placeholders never win. */
 public class ProfilePhotosTest {
-    private static final String GROWN_UP_CURRENT = "Alex Rivera, alex@example.com, : select to continue with current account";
-    private static final String GROWN_UP = "Alex Rivera, alex@example.com, : select to log in";
-    private static final String KID_CURRENT = "Sam Rivera, Google kids profile, : select to continue with current account";
-    private static final String KID = "Sam Rivera, Google kids profile, : select to log in";
-    private static final String OTHER_KID = "Jo Rivera, Google kids profile, : select to log in";
+    // As Google TV's chooser describes its tiles: a PIN-protected profile says "Profile locked"
+    private static final String LOCKED_CURRENT =
+            "Alex Rivera, alex@example.com, Profile locked: select to continue with current account";
+    private static final String LOCKED = "Robin Rivera, robin@example.com, Profile locked: select to log in";
+    private static final String UNLOCKED_CURRENT = "Sam Rivera, sam@example.com, : select to continue with current account";
+    private static final String UNLOCKED = "Jo Rivera, jo@example.com, : select to log in";
 
     @Test
     public void currentAccountTileOnlyWhileItsProfileRuns() {
-        assertNull(ChooserPhotos.whyNot("Alex", GROWN_UP_CURRENT, "Alex", GROWN_UP_CURRENT, true));
-        assertNull(ChooserPhotos.whyNot("Sam", KID_CURRENT, "Sam", KID_CURRENT, true));
-        // Mid-switch, or the running profile isn't the one marked current: the tile may be drawn locked
-        assertNotNull(ChooserPhotos.whyNot("Alex", GROWN_UP_CURRENT, "Alex", GROWN_UP_CURRENT, false));
-        assertNotNull(ChooserPhotos.whyNot("Sam", KID_CURRENT, "Sam", KID_CURRENT, false));
+        // Focused, the current account's tile shows its photo, PIN or not
+        assertNull(ChooserPhotos.whyNot("Alex", LOCKED_CURRENT, "Alex", LOCKED_CURRENT, true));
+        assertNull(ChooserPhotos.whyNot("Sam", UNLOCKED_CURRENT, "Sam", UNLOCKED_CURRENT, true));
+        // Mid-switch it may still be drawn locked
+        assertNotNull(ChooserPhotos.whyNot("Alex", LOCKED_CURRENT, "Alex", LOCKED_CURRENT, false));
     }
 
     @Test
-    public void kidsTileWhileAGrownUpIsOn() {
-        // From a grown-up's profile, a kids profile opens without a PIN: its tile is never locked
-        assertNull(ChooserPhotos.whyNot("Sam", KID, "Alex", GROWN_UP_CURRENT, true));
-        assertNotNull(ChooserPhotos.whyNot("Sam", KID, "Alex", GROWN_UP_CURRENT, false));
+    public void anyTileWithoutAPinLock() {
+        assertNull(ChooserPhotos.whyNot("Jo", UNLOCKED, "Alex", LOCKED_CURRENT, true));
+        // Whoever is on, and even mid-switch: an unlocked tile never shows a lock
+        assertNull(ChooserPhotos.whyNot("Jo", UNLOCKED, "Sam", UNLOCKED_CURRENT, false));
+        assertNull(ChooserPhotos.whyNot("Jo", UNLOCKED, null, null, true));
     }
 
     @Test
-    public void noOtherTileWhileAKidIsOn() {
-        // Leaving a kids profile can take the parent's PIN: the other tiles may be locked
-        assertNotNull(ChooserPhotos.whyNot("Jo", OTHER_KID, "Sam", KID_CURRENT, true));
-        assertNotNull(ChooserPhotos.whyNot("Alex", GROWN_UP, "Sam", KID_CURRENT, true));
+    public void neverALockedTileThatIsntTheRunningOne() {
+        assertNotNull(ChooserPhotos.whyNot("Robin", LOCKED, "Alex", LOCKED_CURRENT, true));
+        assertNotNull(ChooserPhotos.whyNot("Robin", LOCKED, "Sam", UNLOCKED_CURRENT, true));
     }
 
     @Test
-    public void noOtherGrownUpsTile() {
-        assertNotNull(ChooserPhotos.whyNot("Robin", "Robin Lee, robin@example.com, : select to log in",
-                "Alex", GROWN_UP_CURRENT, true));
+    public void nothingWithoutAFocusedTile() {
+        assertNotNull(ChooserPhotos.whyNot(null, null, "Alex", LOCKED_CURRENT, true));
+        assertNotNull(ChooserPhotos.whyNot("", null, "Alex", LOCKED_CURRENT, true));
     }
 
     @Test
-    public void nothingWithoutAFocusedTileOrACurrentOne() {
-        assertNotNull(ChooserPhotos.whyNot(null, null, "Alex", GROWN_UP_CURRENT, true));
-        assertNotNull(ChooserPhotos.whyNot("", null, "Alex", GROWN_UP_CURRENT, true));
-        assertNotNull(ChooserPhotos.whyNot("Sam", KID, null, null, true));
-    }
-
-    @Test
-    public void kidsTilesAreToldByTheirDescription() {
-        assertTrue(ChooserPhotos.isKidsTile(KID));
-        assertTrue(ChooserPhotos.isKidsTile("SAM, GOOGLE KIDS PROFILE"));
-        assertFalse(ChooserPhotos.isKidsTile(GROWN_UP));
-        assertFalse(ChooserPhotos.isKidsTile(null));
+    public void lockedTilesAreToldByTheirDescription() {
+        assertTrue(ChooserPhotos.isLockedTile(LOCKED));
+        assertTrue(ChooserPhotos.isLockedTile("ALEX, PROFILE LOCKED: SELECT"));
+        assertFalse(ChooserPhotos.isLockedTile(UNLOCKED));
+        assertFalse(ChooserPhotos.isLockedTile(null));
     }
 
     @Test
