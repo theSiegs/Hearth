@@ -1,0 +1,4 @@
+- Early development pre-release.
+- Hearth comes back after a profile PIN.
+- No parent PIN for a grown-up at the remote.
+- Shared streaming apps ask who's watching after a switch; Disney+ PIN profiles match.

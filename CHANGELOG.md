@@ -3,6 +3,14 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.37 (pre-release)
+
+- After switching to a grown-up's profile with its PIN, Hearth comes back instead of leaving Google TV's home up.
+- Grown-ups aren't asked for the parent PIN while they're using the remote; it's asked again after five minutes without a button press. Kids' profiles always ask.
+- Streaming apps shared by the grown-ups ask who's watching after a profile switch, so Profile Pairing picks the right app profile (Netflix opened in the last person's profile).
+- Disney+ profiles with a PIN are recognized, so they can be matched and chosen in Profile Pairing.
+- Continue Watching: an entry belongs to the profile that last had the app, even if another profile played it earlier.
+
 ## 2026.10.36 (pre-release)
 
 - Kids' bedtime and time-up screens show again: Hearth gives Google TV's kids home a moment before covering it every time (it had stopped once the kid's apps looked unblocked, which kept Google from ever blocking them).
