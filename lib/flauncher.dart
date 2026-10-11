@@ -291,11 +291,7 @@ class _FLauncherState extends State<FLauncher> {
     if (_showingRecents) setState(() => _showingRecents = false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (_firstFocusable(_dockFocusNode) != null) {
-        _focusDock();
-      } else {
-        _landOnHome();
-      }
+      _focusHome();
       if (_scrollController.hasClients) {
         _scrollController.animateTo(0, duration: const Duration(milliseconds: 150), curve: Curves.easeInOut);
       }
@@ -319,7 +315,16 @@ class _FLauncherState extends State<FLauncher> {
     // No dock on this layout: no row to show them in, so the grid. (While the row or Continue Watching shows, the
     // dock is out of the focus tree, so it only counts when neither is up.)
     if (!_showingSearch && !_showingRecents && _firstFocusable(_dockFocusNode) == null) {
-      SearchGridPage.open(context);
+      SearchGridPage.open(context).then((openedTitle) {
+        if (!mounted) return;
+        // Back from the results ends the search, as it does on the row; either way the selection goes back to the
+        // home, not to the search button it left from
+        if (openedTitle == true) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => _landOnHome());
+        } else {
+          _endSearch();
+        }
+      });
       return;
     }
     _setShowingSearch(true);
@@ -359,7 +364,17 @@ class _FLauncherState extends State<FLauncher> {
     _awaitingResults = false;
     _homeSearch?.clear();
     setState(() => _showingSearch = false);
-    if (focusDock) WidgetsBinding.instance.addPostFrameCallback((_) => _focusDock());
+    if (focusDock) WidgetsBinding.instance.addPostFrameCallback((_) => _focusHome());
+  }
+
+  /// The home's start: the dock where it was last, or the first app at the top without one.
+  void _focusHome() {
+    if (!mounted) return;
+    if (_firstFocusable(_dockFocusNode) != null) {
+      _focusDock();
+    } else {
+      _landOnHome();
+    }
   }
 
   /// Keys on the results row besides Back and Up: Down brings the dock back (the search stays, a press of Up away).

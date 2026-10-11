@@ -33,7 +33,8 @@ enum _Tab { watchNow, rentOrBuy, otherApps }
 class SearchGridPage extends StatefulWidget {
   const SearchGridPage({super.key});
 
-  static Future<void> open(BuildContext context) => Navigator.of(context).push(PageRouteBuilder(
+  /// Opens the page; true when it closed because a title opened (not Back).
+  static Future<bool?> open(BuildContext context) => Navigator.of(context).push<bool>(PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 150),
         pageBuilder: (_, __, ___) => const SearchGridPage(),
         transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
@@ -71,7 +72,7 @@ class _SearchGridPageState extends State<SearchGridPage> {
       _Tab.rentOrBuy => openTitle(context, m, rentOrBuy: true),
       _Tab.otherApps => openOnGoogleTv(m, context.read<FLauncherChannel>()),
     };
-    if (await opening && mounted) Navigator.of(context).pop();
+    if (await opening && mounted) Navigator.of(context).pop(true);
   }
 
   @override
