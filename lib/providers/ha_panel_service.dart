@@ -17,6 +17,7 @@
 
 import 'dart:async';
 
+import 'package:flauncher/providers/ha_calls.dart';
 import 'package:flauncher/providers/ha_entities.dart';
 import 'package:flauncher/providers/ha_lovelace.dart';
 import 'package:flauncher/providers/ha_socket.dart';
@@ -291,6 +292,9 @@ class HaPanelService extends ChangeNotifier {
     if (dot <= 0) return Future.value(false);
     return callService(action.substring(0, dot), action.substring(dot + 1), target: target, data: data);
   }
+
+  /// Makes a control's service call.
+  Future<bool> run(HaCall call) => perform(call.action, target: call.target, data: call.data);
 
   /// A connected socket for the panel's parts that subscribe on their own (templates, forecasts).
   HaSocket? get socket => _socket != null && !_socket!.isClosed ? _socket : null;

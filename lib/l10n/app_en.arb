@@ -3586,5 +3586,53 @@
                 "type": "int"
             }
         }
+    },
+    "haControlLower": "Lower",
+    "@haControlLower": {
+        "description": "Home Assistant panel: the − button that lowers a thermostat's target (read out by the screen reader)"
+    },
+    "haControlRaise": "Raise",
+    "@haControlRaise": {
+        "description": "Home Assistant panel: the + button that raises a thermostat's target (read out by the screen reader)"
+    },
+    "haControlLow": "Low",
+    "@haControlLow": {
+        "description": "Home Assistant panel: over a thermostat range's lower target"
+    },
+    "haControlHigh": "High",
+    "@haControlHigh": {
+        "description": "Home Assistant panel: over a thermostat range's upper target"
+    },
+    "haControlVolume": "Volume",
+    "@haControlVolume": {
+        "description": "Home Assistant panel: a player's volume slider (read out by the screen reader)"
+    },
+    "haControlBrightness": "Brightness",
+    "@haControlBrightness": {
+        "description": "Home Assistant panel: a light's brightness slider (read out by the screen reader)"
+    },
+    "haControlPrevious": "Previous",
+    "@haControlPrevious": {
+        "description": "Home Assistant panel: a player's previous-track button"
+    },
+    "haControlPlay": "Play",
+    "@haControlPlay": {
+        "description": "Home Assistant panel: a player's play button"
+    },
+    "haControlPause": "Pause",
+    "@haControlPause": {
+        "description": "Home Assistant panel: a player's pause button"
+    },
+    "haControlStop": "Stop",
+    "@haControlStop": {
+        "description": "Home Assistant panel: a player's stop button"
+    },
+    "haControlNext": "Next",
+    "@haControlNext": {
+        "description": "Home Assistant panel: a player's next-track button"
+    },
+    "haControlTurnOn": "Turn on",
+    "@haControlTurnOn": {
+        "description": "Home Assistant panel: the button that turns a player on"
     }
 }

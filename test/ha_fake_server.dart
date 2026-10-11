@@ -38,6 +38,9 @@ class HaFakeServer {
   /// weather/subscribe_forecast's forecast for an entity.
   List<Map<String, Object?>> Function(String entityId, String type) forecast = (_, __) => const [];
 
+  /// The REST API's answer for a request (as JSON), or null for {}.
+  Object? Function(String method, Uri uri)? rest;
+
   /// Every command received (after sign-in).
   final List<Map<String, dynamic>> received = [];
   final List<WebSocket> _sockets = [];
@@ -49,7 +52,17 @@ class HaFakeServer {
   bool failServices = false;
 
   HaFakeServer._(this._server, this.token, this.dashboards, this.states) {
-    _server.transform(WebSocketTransformer()).listen(_onSocket);
+    _server.listen((request) async {
+      if (WebSocketTransformer.isUpgradeRequest(request)) {
+        _onSocket(await WebSocketTransformer.upgrade(request));
+        return;
+      }
+      // Anything else (a webhook post from the TV's status): taken and forgotten
+      final rest = this.rest?.call(request.method, request.uri);
+      request.response.headers.contentType = ContentType.json;
+      request.response.write(jsonEncode(rest ?? {}));
+      await request.response.close();
+    });
   }
 
   static Future<HaFakeServer> start({
@@ -137,6 +150,11 @@ class HaFakeServer {
         } else {
           _result(socket, id, dashboards[path]);
         }
+      case "lovelace/dashboards/list":
+        _result(socket, id, [
+          for (final path in dashboards.keys)
+            if (path != null) {"url_path": path, "title": path, "mode": "storage"}
+        ]);
       case "subscribe_events":
       case "unsubscribe_events":
         _result(socket, id, null);

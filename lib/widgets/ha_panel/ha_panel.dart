@@ -133,7 +133,8 @@ class _HaPanelState extends State<HaPanel> {
     ];
     // Back closes the panel, whatever has the focus in it
     if (key == LogicalKeyboardKey.escape || key == LogicalKeyboardKey.goBack || key == LogicalKeyboardKey.browserBack) {
-      if (event is KeyDownEvent) Navigator.of(context).maybePop();
+      // On its release, as the system closes things: the press it ends started here
+      if (event is KeyUpEvent) Navigator.of(context).maybePop();
       return KeyEventResult.handled;
     }
     if (!arrows.contains(key)) return KeyEventResult.ignored;
@@ -241,7 +242,7 @@ class _HaPanelState extends State<HaPanel> {
       case HaPanelStatus.ready:
         break;
     }
-    final format = HaFormat(l, service.translate, widget.now());
+    final format = HaFormat(l, service.translate, widget.now(), temperatureUnit: service.temperatureUnit);
     final rows = HaPanelRows.build(service.layout, service.conditionContext);
     return SingleChildScrollView(
       controller: _scroll,

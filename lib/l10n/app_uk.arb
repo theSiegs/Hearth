@@ -832,5 +832,17 @@
     "haTimeAgo": "{span} тому",
     "haSpanMinutes": "{count} хв",
     "haSpanHours": "{count} год",
-    "haSpanDays": "{count} д"
+    "haSpanDays": "{count} д",
+    "haControlLower": "Знизити",
+    "haControlRaise": "Підвищити",
+    "haControlLow": "Нижня",
+    "haControlHigh": "Верхня",
+    "haControlVolume": "Гучність",
+    "haControlBrightness": "Яскравість",
+    "haControlPrevious": "Назад",
+    "haControlPlay": "Відтворити",
+    "haControlPause": "Пауза",
+    "haControlStop": "Зупинити",
+    "haControlNext": "Далі",
+    "haControlTurnOn": "Увімкнути"
 }

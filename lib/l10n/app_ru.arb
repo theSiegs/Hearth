@@ -832,5 +832,17 @@
     "haTimeAgo": "{span} назад",
     "haSpanMinutes": "{count} мин",
     "haSpanHours": "{count} ч",
-    "haSpanDays": "{count} д"
+    "haSpanDays": "{count} д",
+    "haControlLower": "Понизить",
+    "haControlRaise": "Повысить",
+    "haControlLow": "Нижняя",
+    "haControlHigh": "Верхняя",
+    "haControlVolume": "Громкость",
+    "haControlBrightness": "Яркость",
+    "haControlPrevious": "Назад",
+    "haControlPlay": "Воспроизвести",
+    "haControlPause": "Пауза",
+    "haControlStop": "Стоп",
+    "haControlNext": "Далее",
+    "haControlTurnOn": "Включить"
 }

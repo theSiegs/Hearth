@@ -832,5 +832,17 @@
     "haTimeAgo": "{span} önce",
     "haSpanMinutes": "{count} dk",
     "haSpanHours": "{count} sa",
-    "haSpanDays": "{count} g"
+    "haSpanDays": "{count} g",
+    "haControlLower": "Düşür",
+    "haControlRaise": "Yükselt",
+    "haControlLow": "Alt",
+    "haControlHigh": "Üst",
+    "haControlVolume": "Ses düzeyi",
+    "haControlBrightness": "Parlaklık",
+    "haControlPrevious": "Önceki",
+    "haControlPlay": "Oynat",
+    "haControlPause": "Duraklat",
+    "haControlStop": "Durdur",
+    "haControlNext": "Sonraki",
+    "haControlTurnOn": "Aç"
 }

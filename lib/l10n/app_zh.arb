@@ -832,5 +832,17 @@
     "haTimeAgo": "{span}前",
     "haSpanMinutes": "{count}分钟",
     "haSpanHours": "{count}小时",
-    "haSpanDays": "{count}天"
+    "haSpanDays": "{count}天",
+    "haControlLower": "调低",
+    "haControlRaise": "调高",
+    "haControlLow": "下限",
+    "haControlHigh": "上限",
+    "haControlVolume": "音量",
+    "haControlBrightness": "亮度",
+    "haControlPrevious": "上一首",
+    "haControlPlay": "播放",
+    "haControlPause": "暂停",
+    "haControlStop": "停止",
+    "haControlNext": "下一首",
+    "haControlTurnOn": "打开"
 }

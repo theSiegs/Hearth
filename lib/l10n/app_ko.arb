@@ -832,5 +832,17 @@
     "haTimeAgo": "{span} 전",
     "haSpanMinutes": "{count}분",
     "haSpanHours": "{count}시간",
-    "haSpanDays": "{count}일"
+    "haSpanDays": "{count}일",
+    "haControlLower": "낮추기",
+    "haControlRaise": "높이기",
+    "haControlLow": "최저",
+    "haControlHigh": "최고",
+    "haControlVolume": "볼륨",
+    "haControlBrightness": "밝기",
+    "haControlPrevious": "이전",
+    "haControlPlay": "재생",
+    "haControlPause": "일시정지",
+    "haControlStop": "정지",
+    "haControlNext": "다음",
+    "haControlTurnOn": "켜기"
 }

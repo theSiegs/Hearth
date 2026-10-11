@@ -832,5 +832,17 @@
     "haTimeAgo": "há {span}",
     "haSpanMinutes": "{count} min",
     "haSpanHours": "{count} h",
-    "haSpanDays": "{count} d"
+    "haSpanDays": "{count} d",
+    "haControlLower": "Diminuir",
+    "haControlRaise": "Aumentar",
+    "haControlLow": "Mínima",
+    "haControlHigh": "Máxima",
+    "haControlVolume": "Volume",
+    "haControlBrightness": "Brilho",
+    "haControlPrevious": "Anterior",
+    "haControlPlay": "Reproduzir",
+    "haControlPause": "Pausar",
+    "haControlStop": "Parar",
+    "haControlNext": "Próxima",
+    "haControlTurnOn": "Ligar"
 }

@@ -27,7 +27,10 @@ class HaFormat {
   final String? Function(String key) translate;
   final DateTime now;
 
-  const HaFormat(this.l, this.translate, this.now);
+  /// Home Assistant's temperature unit ("°F"), for thermostats, which don't say theirs.
+  final String? temperatureUnit;
+
+  const HaFormat(this.l, this.translate, this.now, {this.temperatureUnit});
 
   /// The tile's state line: [stateContent]'s parts ("media_title", "state", ...) joined, or the state alone.
   String tileState(HaEntity? entity, List<String> stateContent) {
@@ -114,7 +117,7 @@ class HaFormat {
 
   String? _temperatureUnit(HaEntity entity) {
     final unit = entity.attributes["temperature_unit"];
-    return unit is String ? unit : null;
+    return unit is String ? unit : temperatureUnit;
   }
 
   /// How far [at] is from now: "in 40 min", "2 h 5 min ago", "now".

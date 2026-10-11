@@ -832,5 +832,17 @@
     "haTimeAgo": "{span} पहले",
     "haSpanMinutes": "{count} मिनट",
     "haSpanHours": "{count} घंटे",
-    "haSpanDays": "{count} दिन"
+    "haSpanDays": "{count} दिन",
+    "haControlLower": "कम करें",
+    "haControlRaise": "बढ़ाएँ",
+    "haControlLow": "न्यूनतम",
+    "haControlHigh": "अधिकतम",
+    "haControlVolume": "वॉल्यूम",
+    "haControlBrightness": "चमक",
+    "haControlPrevious": "पिछला",
+    "haControlPlay": "चलाएँ",
+    "haControlPause": "रोकें",
+    "haControlStop": "बंद करें",
+    "haControlNext": "अगला",
+    "haControlTurnOn": "चालू करें"
 }

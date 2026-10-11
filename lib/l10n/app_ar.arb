@@ -832,5 +832,17 @@
     "haTimeAgo": "منذ {span}",
     "haSpanMinutes": "{count} د",
     "haSpanHours": "{count} س",
-    "haSpanDays": "{count} ي"
+    "haSpanDays": "{count} ي",
+    "haControlLower": "خفض",
+    "haControlRaise": "رفع",
+    "haControlLow": "الأدنى",
+    "haControlHigh": "الأعلى",
+    "haControlVolume": "مستوى الصوت",
+    "haControlBrightness": "السطوع",
+    "haControlPrevious": "السابق",
+    "haControlPlay": "تشغيل",
+    "haControlPause": "إيقاف مؤقت",
+    "haControlStop": "إيقاف",
+    "haControlNext": "التالي",
+    "haControlTurnOn": "تشغيل الجهاز"
 }

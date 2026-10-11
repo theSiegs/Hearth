@@ -832,5 +832,17 @@
     "haTimeAgo": "{span}前",
     "haSpanMinutes": "{count}分",
     "haSpanHours": "{count}時間",
-    "haSpanDays": "{count}日"
+    "haSpanDays": "{count}日",
+    "haControlLower": "下げる",
+    "haControlRaise": "上げる",
+    "haControlLow": "下限",
+    "haControlHigh": "上限",
+    "haControlVolume": "音量",
+    "haControlBrightness": "明るさ",
+    "haControlPrevious": "前へ",
+    "haControlPlay": "再生",
+    "haControlPause": "一時停止",
+    "haControlStop": "停止",
+    "haControlNext": "次へ",
+    "haControlTurnOn": "電源を入れる"
 }

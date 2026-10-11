@@ -169,6 +169,18 @@ class HaIcons {
     }
   }
 
+  /// A thermostat's mode ("heat_cool").
+  static IconData hvacMode(String mode) => switch (mode) {
+        "heat" => Icons.local_fire_department,
+        "cool" => Icons.ac_unit,
+        "heat_cool" => Icons.thermostat_auto,
+        "auto" => Icons.autorenew,
+        "dry" => Icons.water_drop,
+        "fan_only" => Icons.mode_fan_off,
+        "off" => Icons.power_settings_new,
+        _ => Icons.thermostat,
+      };
+
   /// A weather condition ("partlycloudy").
   static IconData weather(String? condition) => switch (condition) {
         "sunny" => Icons.wb_sunny,
