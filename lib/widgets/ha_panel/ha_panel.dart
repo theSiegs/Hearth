@@ -64,8 +64,10 @@ class _HaPanelState extends State<HaPanel> {
   final FocusNode _root = FocusNode(debugLabel: "HaPanel");
   final ScrollController _scroll = ScrollController();
 
-  /// Where the focus last was, to land near it again when what had it goes (a card hidden by its visibility).
-  Rect? _lastRect;
+  /// The stop that last had the focus, and the stops as they were then, in order: when it goes (a card hidden by its
+  /// visibility), the focus moves to the next one that's still there (or the one before, if it was the last).
+  FocusNode? _lastFocused;
+  List<FocusNode> _lastStops = const [];
 
   @override
   void initState() {
@@ -86,42 +88,56 @@ class _HaPanelState extends State<HaPanel> {
   }
 
   void _onChanged() {
-    // After the rebuild: a focus stop that went (or the first ones that came) leave the focus on the panel itself
+    // After the rebuild: the focused stop may have gone (or the first stops come)
     WidgetsBinding.instance.addPostFrameCallback((_) => _landFocus());
   }
 
   void _onFocusMoved() {
     final focused = FocusManager.instance.primaryFocus;
-    if (focused == null || !mounted) return;
-    if (focused == _root) {
+    if (!mounted) return;
+    if (focused == null || focused == _root || !focused.ancestors.contains(_root)) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _landFocus());
       return;
     }
-    if (!focused.ancestors.contains(_root)) return;
-    _lastRect = focused.rect;
+    final previous = _lastFocused, before = _lastStops;
+    _lastFocused = focused;
+    _lastStops = _stops();
+    if (previous != null && previous != focused) {
+      // The stop that had the focus went and Flutter handed the focus to one it had before (the top, often): the
+      // next one down takes it instead
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || FocusManager.instance.primaryFocus != focused) return;
+        final stops = _stops();
+        if (stops.contains(previous)) return;
+        final next = HaPanelNavigation.successor(previous, before, stops);
+        if (next != null && next != focused) {
+          _lastFocused = previous;
+          _lastStops = before;
+          next.requestFocus();
+        }
+      });
+    }
     final context = focused.context;
     if (context != null && context.mounted) {
       Scrollable.ensureVisible(context, alignment: 0.4, duration: const Duration(milliseconds: 150));
     }
   }
 
-  /// With the panel itself focused (nothing in it had focus yet, or what had it went), the nearest stop takes it.
+  /// With no stop in the panel focused (none had the focus yet, or the one that had it went), a stop takes it: the one
+  /// after the stop that went, else the one before it, else the first. Not while something is open over the panel,
+  /// or it's closing.
   void _landFocus() {
-    if (!mounted || !_root.hasPrimaryFocus) return;
+    if (!mounted) return;
     final stops = _stops();
-    if (stops.isEmpty) return;
-    var target = stops.first;
-    final last = _lastRect;
-    if (last != null) {
-      var best = double.infinity;
-      for (final s in stops) {
-        final d = (s.rect.center.dy - last.center.dy).abs() + (s.rect.center.dx - last.center.dx).abs() / 4;
-        if (d < best) {
-          best = d;
-          target = s;
-        }
-      }
+    final primary = FocusManager.instance.primaryFocus;
+    if (primary != null && stops.contains(primary)) {
+      // Stops came or went elsewhere: the order to go by is the new one
+      _lastStops = stops;
+      return;
     }
+    final route = ModalRoute.of(context);
+    if (stops.isEmpty || (route != null && !route.isCurrent)) return;
+    final target = HaPanelNavigation.successor(_lastFocused, _lastStops, stops) ?? stops.first;
     target.requestFocus();
   }
 
@@ -497,6 +513,20 @@ class HaPanelRows {
 
 /// Where the D-pad goes from a focused rect, among the panel's stops and their rects.
 class HaPanelNavigation {
+  /// [gone] was one of [before] (in order) and isn't in [now]: the first stop after it that's still there, else the
+  /// last one before it; null when [gone] isn't known.
+  static T? successor<T>(T? gone, List<T> before, List<T> now) {
+    final i = gone == null ? -1 : before.indexOf(gone);
+    if (i < 0) return null;
+    for (var j = i + 1; j < before.length; j++) {
+      if (now.contains(before[j])) return before[j];
+    }
+    for (var j = i - 1; j >= 0; j--) {
+      if (now.contains(before[j])) return before[j];
+    }
+    return null;
+  }
+
   /// Left or right within the same row (stops that overlap it top to bottom); null when there's none.
   static T? sideways<T>(Rect from, Map<T, Rect> stops, {required bool left}) {
     T? best;

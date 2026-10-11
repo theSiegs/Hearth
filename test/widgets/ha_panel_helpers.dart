@@ -71,6 +71,11 @@ class FakeHaPanelService extends HaPanelService {
   @override
   String? rendered(String template) => renderedTemplates[template];
 
+  ({String url, String token})? fakeConnection;
+
+  @override
+  ({String url, String token})? get connection => fakeConnection;
+
   @override
   void attach() => attached++;
 

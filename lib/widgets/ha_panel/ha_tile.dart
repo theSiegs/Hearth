@@ -236,18 +236,35 @@ class HaTile extends StatelessWidget {
   Widget _header(BuildContext context, HaEntity? entity) {
     final text = Theme.of(context).textTheme;
     final active = HaTileColors.active(entity);
+    final icon = Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: (active ?? Colors.white).withOpacity(active == null ? 0.08 : 0.22),
+        shape: BoxShape.circle,
+      ),
+      child:
+          Icon(HaIcons.of(card.icon, entity: entity, entityId: card.entity), size: 20, color: active ?? Colors.white70),
+    );
+    // Its own picture (a person's photo, a player's cover), round, in the icon's place; the icon if it can't be had
+    final picture = entity?.attributes["entity_picture"];
+    final request = picture is String ? HaPanelService.pictureRequest(picture, service.connection) : null;
     return Row(
       children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: (active ?? Colors.white).withOpacity(active == null ? 0.08 : 0.22),
-            shape: BoxShape.circle,
+        if (request == null)
+          icon
+        else
+          ClipOval(
+            child: Image.network(
+              request.uri.toString(),
+              headers: request.headers.isEmpty ? null : request.headers,
+              width: 36,
+              height: 36,
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.medium,
+              errorBuilder: (_, __, ___) => icon,
+            ),
           ),
-          child: Icon(HaIcons.of(card.icon, entity: entity, entityId: card.entity),
-              size: 20, color: active ?? Colors.white70),
-        ),
         const SizedBox(width: 10),
         Expanded(
           child: Column(

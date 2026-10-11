@@ -394,6 +394,14 @@ void main() {
       expect(HaPanelNavigation.sideways(full, without("full"), left: false), isNull);
     });
 
+    test("A focused stop that goes: the next one still there, else the one before", () {
+      expect(HaPanelNavigation.successor("b", ["a", "b", "c", "d"], ["a", "c", "d"]), "c");
+      expect(HaPanelNavigation.successor("b", ["a", "b", "c", "d"], ["a", "d"]), "d");
+      expect(HaPanelNavigation.successor("d", ["a", "b", "c", "d"], ["a", "b", "c"]), "c");
+      expect(HaPanelNavigation.successor("x", ["a"], ["a"]), isNull);
+      expect(HaPanelNavigation.successor<String>(null, ["a"], ["a"]), isNull);
+    });
+
     test("Up and Down go row by row, to the nearest stop across", () {
       expect(HaPanelNavigation.vertical(right, without("right"), up: false), "full");
       expect(HaPanelNavigation.vertical(full, without("full"), up: true), "left");

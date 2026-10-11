@@ -330,6 +330,30 @@ class HaPanelService extends ChangeNotifier {
     return callService(action.substring(0, dot), action.substring(dot + 1), target: target, data: data);
   }
 
+  /// Home Assistant's address and token while connected.
+  ({String url, String token})? get connection => _connectedTo;
+
+  /// Where to get an entity's picture (its entity_picture) and how: one of Home Assistant's own ("/api/...", or an
+  /// address under its own) with the token, another https one as it is; null for any other (or not connected, for
+  /// Home Assistant's own).
+  static ({Uri uri, Map<String, String> headers})? pictureRequest(
+      String picture, ({String url, String token})? connection) {
+    final p = picture.trim();
+    if (p.isEmpty) return null;
+    final base = connection?.url.trim().replaceAll(RegExp(r"/+$"), "");
+    final auth = connection == null ? const <String, String>{} : {"Authorization": "Bearer ${connection.token}"};
+    if (p.startsWith("/") && !p.startsWith("//")) {
+      if (base == null || base.isEmpty) return null;
+      final uri = Uri.tryParse("$base$p");
+      return uri == null ? null : (uri: uri, headers: auth);
+    }
+    final uri = Uri.tryParse(p);
+    if (uri == null || !uri.hasScheme) return null;
+    if (base != null && base.isNotEmpty && p.startsWith("$base/")) return (uri: uri, headers: auth);
+    if (uri.scheme == "https") return (uri: uri, headers: const <String, String>{});
+    return null;
+  }
+
   /// Makes a control's service call.
   Future<bool> run(HaCall call) => perform(call.action, target: call.target, data: call.data);
 

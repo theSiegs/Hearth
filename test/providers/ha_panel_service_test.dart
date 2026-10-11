@@ -132,6 +132,21 @@ void main() {
     expect(await s.callService("light", "toggle"), isFalse);
   });
 
+  test("Entity pictures: Home Assistant's own with the token, other https ones as they are", () {
+    const ha = (url: "http://192.0.2.10:8123/", token: "t0ken");
+    final own = HaPanelService.pictureRequest("/api/image/serve/abc/512x512", ha)!;
+    expect(own.uri.toString(), "http://192.0.2.10:8123/api/image/serve/abc/512x512");
+    expect(own.headers, {"Authorization": "Bearer t0ken"});
+    final full = HaPanelService.pictureRequest("http://192.0.2.10:8123/api/media_player_proxy/media_player.a", ha)!;
+    expect(full.headers, {"Authorization": "Bearer t0ken"});
+    final other = HaPanelService.pictureRequest("https://images.example.com/cover.jpg", ha)!;
+    expect(other.uri.toString(), "https://images.example.com/cover.jpg");
+    expect(other.headers, isEmpty);
+    expect(HaPanelService.pictureRequest("http://images.example.com/cover.jpg", ha), isNull);
+    expect(HaPanelService.pictureRequest("/api/image/serve/abc", null), isNull);
+    expect(HaPanelService.pictureRequest("", ha), isNull);
+  });
+
   test("The service call payload leaves out what isn't given", () {
     expect(HaSocket.serviceCall("scene", "turn_on"), {"type": "call_service", "domain": "scene", "service": "turn_on"});
     expect(

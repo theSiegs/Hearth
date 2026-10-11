@@ -128,10 +128,77 @@ void main() {
     service.setState("media_player.kitchen", "off");
     await tester.pumpAndSettle();
     expect(find.text("Kitchen"), findsNothing);
-    expect(focused(tester, "Robin") || focused(tester, "Outside"), isTrue);
+    // The next one down takes the focus, not the top
+    expect(focused(tester, "Robin"), isTrue);
     // Keys still work
     await press(tester, LogicalKeyboardKey.arrowUp);
-    expect(FocusManager.instance.primaryFocus, isNotNull);
+    expect(focused(tester, "Outside"), isTrue);
+  });
+
+  testWidgets("A tile with its own picture shows it, round, fetched with the token from Home Assistant",
+      (tester) async {
+    final service = FakeHaPanelService(
+        fakeLayout: layoutOf([
+      {
+        "type": "tile",
+        "entity": "person.alex",
+        "name": "Alex",
+        "grid_options": {"columns": 12}
+      },
+      {
+        "type": "tile",
+        "entity": "person.sam",
+        "name": "Sam",
+        "grid_options": {"columns": 12}
+      },
+    ]))
+      ..fakeConnection = (url: "http://192.0.2.10:8123", token: "t0ken");
+    service.setState("person.alex", "home", {"entity_picture": "/api/image/serve/abc/512x512"});
+    service.setState("person.sam", "home");
+    await openPanel(tester, service);
+    final image = tester.widget<Image>(find.byType(Image));
+    final provider = image.image as NetworkImage;
+    expect(provider.url, "http://192.0.2.10:8123/api/image/serve/abc/512x512");
+    expect(provider.headers, {"Authorization": "Bearer t0ken"});
+    expect(find.ancestor(of: find.byType(Image), matching: find.byType(ClipOval)), findsOneWidget);
+    // Sam has none, and when a picture can't be had the icon takes its place
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+    expect(find.byIcon(Icons.person), findsNWidgets(2));
+  });
+
+  testWidgets("The last card going: the focus moves to the one before", (tester) async {
+    final last = layoutOf([
+      {
+        "type": "tile",
+        "entity": "person.alex",
+        "name": "Alex",
+        "grid_options": {"columns": 12}
+      },
+      {
+        "type": "tile",
+        "entity": "person.sam",
+        "name": "Sam",
+        "grid_options": {"columns": 12}
+      },
+      {
+        "type": "tile",
+        "entity": "media_player.den",
+        "name": "Den",
+        "grid_options": {"columns": 12},
+        "visibility": [
+          {"condition": "state", "entity": "media_player.den", "state": "playing"}
+        ]
+      },
+    ]);
+    final service = FakeHaPanelService(fakeLayout: last, states: {"media_player.den": "playing"});
+    await openPanel(tester, service);
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    await press(tester, LogicalKeyboardKey.arrowDown);
+    expect(focused(tester, "Den"), isTrue);
+    service.setState("media_player.den", "idle");
+    await tester.pumpAndSettle();
+    expect(focused(tester, "Sam"), isTrue);
   });
 
   testWidgets("Without Home Assistant it says how to set it up, and Left closes it", (tester) async {
