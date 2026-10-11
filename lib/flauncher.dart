@@ -245,7 +245,7 @@ class _FLauncherState extends State<FLauncher> {
     if (!mounted || !_relandOnHome || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
     _relandOnHome = false;
     if (_showingRecents) setState(() => _showingRecents = false);
-    _landOnHome();
+    _focusHome();
   }
 
   /// Opens the search box over the home: the keyboard, or listening right away for [mode] "voice" (the remote's
@@ -369,7 +369,8 @@ class _FLauncherState extends State<FLauncher> {
 
   /// The home's start: the dock where it was last, or the first app at the top without one.
   void _focusHome() {
-    if (!mounted) return;
+    // Not while the search box is open: it keeps the selection
+    if (!mounted || _searchTyping) return;
     if (_firstFocusable(_dockFocusNode) != null) {
       _focusDock();
     } else {
@@ -406,9 +407,39 @@ class _FLauncherState extends State<FLauncher> {
     if (_dockFocusNode.hasFocus) {
       _lastDockFocus = FocusManager.instance.primaryFocus;
     }
+    _noticeSelectionGone();
     _followTopBarFocus();
     _followBelowDockFocus();
     _keepFirstScreenAtTop();
+  }
+
+  /// What had the selection on the home last (Settings or a panel over it leave it as it was), and whether it was one
+  /// of the home's apps or programs rather than the top bar.
+  FocusNode? _lastHomeFocus;
+  bool _lastHomeFocusOnApps = false;
+
+  /// The app that had the selection went (removed from Favorites or a section, hidden, uninstalled): Flutter would
+  /// hand it to whatever had it before, anywhere on the home or the top bar. It lands on the home's start instead:
+  /// the dock, or the first app at the top without one (once nothing is open over the home).
+  void _noticeSelectionGone() {
+    final FocusNode? focus = FocusManager.instance.primaryFocus;
+    final FocusNode? previous = _lastHomeFocus;
+    final bool gone = previous != null && previous != focus && _lastHomeFocusOnApps && !(previous.context?.mounted ?? false);
+    final focusContext = focus?.context;
+    if (focus != null && focusContext != null && focusContext.mounted &&
+        focusContext.findAncestorStateOfType<_FLauncherState>() == this) {
+      _lastHomeFocus = focus;
+      _lastHomeFocusOnApps = focus.ancestors
+          .any((n) => n == _appsGridFocusNode || n == _firstScreenFocusNode || n == _belowDockFocusNode);
+    } else if (gone) {
+      _lastHomeFocus = null;
+    }
+    // Not while a profile's welcome card has the selection: the profile lands on its own
+    final profiles = _profileService;
+    if (!gone || _landingProfile != null || profiles?.transition != null || profiles?.incomingName != null) return;
+    _relandOnHome = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _relandIfOnTop());
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   /// With the top bar focused, the first screen is just the wallpaper: dock and Continue Watching slide away and
