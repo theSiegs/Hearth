@@ -98,7 +98,23 @@ final class AppWatchers {
         return false;
     }
 
-    private static String history(Context context, String packageName) {
+    /** Whether one of this user's profiles opened the app (it changed hands) after one time and up to another. */
+    static boolean changedHands(String history, long after, long until, long serial) {
+        if (history == null || history.isEmpty() || until <= after) return false;
+        for (String line : history.split("\n")) {
+            int space = line.indexOf(' ');
+            if (space <= 0 || ProfileUsers.serialOfKey(line.substring(space + 1)) != serial) continue;
+            try {
+                long at = Long.parseLong(line.substring(0, space));
+                if (at > after && at <= until) return true;
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return false;
+    }
+
+    /** The app's record (see record), or null when no profile has opened it as far as Hearth knows. */
+    static String history(Context context, String packageName) {
         if (packageName == null) return null;
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(packageName, null);
     }
