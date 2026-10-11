@@ -1410,7 +1410,8 @@ public class MainActivity extends FlutterActivity {
     /**
      * A Continue Watching program just opened, for one more try: an app that's already running can take the link in
      * a splash screen and hand it to its old screen without bringing that to the front (Paramount+ did, 2026-10-10:
-     * back on Hearth two seconds later; the second press worked). Back on Hearth that soon, Hearth opens it again.
+     * back on Hearth two seconds later; the second press worked). Back on Hearth that soon with no button pressed
+     * since (a person backing out presses Back), Hearth opens it again.
      */
     private Intent mProgramRetry;
     private long mProgramRetryAt;
@@ -1421,6 +1422,7 @@ public class MainActivity extends FlutterActivity {
         long at = mProgramRetryAt;
         mProgramRetry = null;
         if (retry == null || SystemClock.elapsedRealtime() - at > PROGRAM_BOUNCE_MS) return;
+        if (ParentPresence.lastKeyAt() > at) return;
         Log.i(TAG, "Back from " + packageOf(retry) + " right away: opening the program again");
         openInApp(retry, packageOf(retry));
     }

@@ -32,6 +32,11 @@ final class ParentPresence {
         sPresent = false;
     }
 
+    /** When the remote was last pressed (elapsed realtime), 0 when not since Hearth started. */
+    static synchronized long lastKeyAt() {
+        return sLastKeyAt;
+    }
+
     static synchronized boolean isPresent(long now) {
         return sPresent && now - sLastKeyAt < GAP_MS;
     }
