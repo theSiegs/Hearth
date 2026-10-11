@@ -2607,4 +2607,68 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get haPanelDashboardsError => 'تعذّر جلب لوحات التحكم من Home Assistant. تحقق من العنوان والرمز أدناه.';
+
+  @override
+  String get calendar => 'التقويم';
+
+  @override
+  String get calendarRestOfToday => 'بقية اليوم';
+
+  @override
+  String get calendarShowWeek => 'موافق: الأيام السبعة القادمة';
+
+  @override
+  String get calendarNothingToday => 'لا شيء آخر اليوم';
+
+  @override
+  String get calendarNoTitle => '(بلا عنوان)';
+
+  @override
+  String get calendarAllDay => 'طوال اليوم';
+
+  @override
+  String get calendarNow => 'الآن';
+
+  @override
+  String calendarUntil(String time) {
+    return 'حتى $time';
+  }
+
+  @override
+  String get calendarTomorrow => 'غدًا';
+
+  @override
+  String calendarMore(int count) {
+    return '+$count أخرى';
+  }
+
+  @override
+  String calendarNextDays(int days) {
+    return 'الأيام الـ$days القادمة';
+  }
+
+  @override
+  String calendarNothingWeek(int days) {
+    return 'لا شيء في الأيام الـ$days القادمة';
+  }
+
+  @override
+  String get haCalendarsTitle => 'التقاويم';
+
+  @override
+  String get haCalendarsLoading => 'جارٍ طلب التقاويم من Home Assistant…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'لم يتم إعداد Home Assistant على هذا التلفاز بعد. أضف عنوانه والرمز في $place.';
+  }
+
+  @override
+  String get haCalendarsError => 'تعذّر جلب التقاويم من Home Assistant. تحقق من العنوان والرمز.';
+
+  @override
+  String get haCalendarsNone => 'لا توجد تقاويم في Home Assistant.';
+
+  @override
+  String get haCalendarsHelp => 'تظهر التقاويم المفعّلة هنا عندما يكون التاريخ والوقت في أعلى اليمين محددين: بقية اليوم، ومع موافق الأيام السبعة القادمة. يختار كل ملف شخصي تقاويمه.';
 }

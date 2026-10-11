@@ -3295,5 +3295,104 @@
     "haPanelDashboardsError": "Couldn't get the dashboards from Home Assistant. Check the address and token below.",
     "@haPanelDashboardsError": {
         "description": "Dashboard picker: Home Assistant couldn't be asked for its dashboards"
+    },
+    "calendar": "Calendar",
+    "@calendar": {
+        "description": "Calendar over the home (by the top bar's date and time): its title pill and the full week's title"
+    },
+    "calendarRestOfToday": "Rest of today",
+    "@calendarRestOfToday": {
+        "description": "Calendar over the home: heading while the date and time have focus (today's events that haven't ended)"
+    },
+    "calendarShowWeek": "OK: next 7 days",
+    "@calendarShowWeek": {
+        "description": "Calendar over the home: what OK on the date and time does (opens the next 7 days)"
+    },
+    "calendarNothingToday": "Nothing else today",
+    "@calendarNothingToday": {
+        "description": "Calendar over the home: shown when today has no more events"
+    },
+    "calendarNoTitle": "(No title)",
+    "@calendarNoTitle": {
+        "description": "Calendar: an event without a title"
+    },
+    "calendarAllDay": "All day",
+    "@calendarAllDay": {
+        "description": "Calendar: an all-day event's time"
+    },
+    "calendarNow": "Now",
+    "@calendarNow": {
+        "description": "Calendar: an event that's on right now"
+    },
+    "calendarUntil": "until {time}",
+    "@calendarUntil": {
+        "description": "Calendar: when an event ends ('until 8:00 PM')",
+        "placeholders": {
+            "time": {
+                "type": "String",
+                "example": "8:00 PM"
+            }
+        }
+    },
+    "calendarTomorrow": "Tomorrow",
+    "@calendarTomorrow": {
+        "description": "Calendar week: tomorrow's heading"
+    },
+    "calendarMore": "+{count} more",
+    "@calendarMore": {
+        "description": "Calendar over the home: last tile, how many more events today than shown",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "calendarNextDays": "Next {days} days",
+    "@calendarNextDays": {
+        "description": "Calendar week (opened with OK on the date and time): its heading",
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "calendarNothingWeek": "Nothing on in the next {days} days",
+    "@calendarNothingWeek": {
+        "description": "Calendar week: shown when no calendar has anything in the coming days",
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "haCalendarsTitle": "Calendars",
+    "@haCalendarsTitle": {
+        "description": "Settings > Home Assistant: the page that picks which Home Assistant calendars show by the date and time"
+    },
+    "haCalendarsLoading": "Asking Home Assistant for its calendars…",
+    "@haCalendarsLoading": {
+        "description": "Calendars settings page: while Home Assistant is being asked"
+    },
+    "haCalendarsNotSetUp": "Home Assistant isn't set up on this TV yet. Add its address and token in {place}.",
+    "@haCalendarsNotSetUp": {
+        "description": "Calendars settings page: Home Assistant isn't set up; {place} is where to set it up (a settings breadcrumb)",
+        "placeholders": {
+            "place": {
+                "type": "String",
+                "example": "Settings > Home Assistant > Dashboard panel"
+            }
+        }
+    },
+    "haCalendarsError": "Couldn't get the calendars from Home Assistant. Check its address and token.",
+    "@haCalendarsError": {
+        "description": "Calendars settings page: Home Assistant couldn't be reached"
+    },
+    "haCalendarsNone": "Home Assistant has no calendars.",
+    "@haCalendarsNone": {
+        "description": "Calendars settings page: Home Assistant answered but has no calendars"
+    },
+    "haCalendarsHelp": "The calendars turned on here show when the date and time at the top right have focus: what's left of today, and OK for the next 7 days. Each profile chooses its own.",
+    "@haCalendarsHelp": {
+        "description": "Calendars settings page: what the switches do"
     }
 }

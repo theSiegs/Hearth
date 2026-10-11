@@ -2571,4 +2571,68 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get haPanelDashboardsError => 'Couldn\'t get the dashboards from Home Assistant. Check the address and token below.';
+
+  @override
+  String get calendar => 'Calendar';
+
+  @override
+  String get calendarRestOfToday => 'Rest of today';
+
+  @override
+  String get calendarShowWeek => 'OK: next 7 days';
+
+  @override
+  String get calendarNothingToday => 'Nothing else today';
+
+  @override
+  String get calendarNoTitle => '(No title)';
+
+  @override
+  String get calendarAllDay => 'All day';
+
+  @override
+  String get calendarNow => 'Now';
+
+  @override
+  String calendarUntil(String time) {
+    return 'until $time';
+  }
+
+  @override
+  String get calendarTomorrow => 'Tomorrow';
+
+  @override
+  String calendarMore(int count) {
+    return '+$count more';
+  }
+
+  @override
+  String calendarNextDays(int days) {
+    return 'Next $days days';
+  }
+
+  @override
+  String calendarNothingWeek(int days) {
+    return 'Nothing on in the next $days days';
+  }
+
+  @override
+  String get haCalendarsTitle => 'Calendars';
+
+  @override
+  String get haCalendarsLoading => 'Asking Home Assistant for its calendars…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'Home Assistant isn\'t set up on this TV yet. Add its address and token in $place.';
+  }
+
+  @override
+  String get haCalendarsError => 'Couldn\'t get the calendars from Home Assistant. Check its address and token.';
+
+  @override
+  String get haCalendarsNone => 'Home Assistant has no calendars.';
+
+  @override
+  String get haCalendarsHelp => 'The calendars turned on here show when the date and time at the top right have focus: what\'s left of today, and OK for the next 7 days. Each profile chooses its own.';
 }

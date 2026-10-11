@@ -2586,4 +2586,68 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get haPanelDashboardsError => 'Не вдалося отримати панелі з Home Assistant. Перевірте адресу й токен нижче.';
+
+  @override
+  String get calendar => 'Календар';
+
+  @override
+  String get calendarRestOfToday => 'До кінця дня';
+
+  @override
+  String get calendarShowWeek => 'OK: наступні 7 днів';
+
+  @override
+  String get calendarNothingToday => 'Сьогодні більше нічого';
+
+  @override
+  String get calendarNoTitle => '(Без назви)';
+
+  @override
+  String get calendarAllDay => 'Увесь день';
+
+  @override
+  String get calendarNow => 'Зараз';
+
+  @override
+  String calendarUntil(String time) {
+    return 'до $time';
+  }
+
+  @override
+  String get calendarTomorrow => 'Завтра';
+
+  @override
+  String calendarMore(int count) {
+    return 'Ще $count';
+  }
+
+  @override
+  String calendarNextDays(int days) {
+    return 'Наступні $days дн.';
+  }
+
+  @override
+  String calendarNothingWeek(int days) {
+    return 'У найближчі $days дн. нічого немає';
+  }
+
+  @override
+  String get haCalendarsTitle => 'Календарі';
+
+  @override
+  String get haCalendarsLoading => 'Запитуємо календарі в Home Assistant…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'Home Assistant ще не налаштовано на цьому телевізорі. Додайте адресу й токен у розділі $place.';
+  }
+
+  @override
+  String get haCalendarsError => 'Не вдалося отримати календарі з Home Assistant. Перевірте адресу й токен.';
+
+  @override
+  String get haCalendarsNone => 'У Home Assistant немає календарів.';
+
+  @override
+  String get haCalendarsHelp => 'Увімкнені тут календарі показуються, коли у фокусі дата й час праворуч угорі: решта дня, а за OK — наступні 7 днів. Кожен профіль вибирає свої.';
 }
