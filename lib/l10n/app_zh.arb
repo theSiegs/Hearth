@@ -771,5 +771,11 @@
     "youTubeLimitTitle": "每天的 YouTube 时间",
     "youTubeLimitNone": "不限",
     "youTubeLimitMinutes": "{minutes, plural, other{{minutes} 分钟}}",
-    "youTubeLimitHint": "适用于此个人资料的 HearthTube。设置 Home Assistant 后，与其他设备共享的限制也会生效。"
+    "youTubeLimitHint": "适用于此个人资料的 HearthTube。设置 Home Assistant 后，与其他设备共享的限制也会生效。",
+    "haPanelProfileDashboard": "此个人资料的仪表板",
+    "haPanelProfileDashboardTv": "与电视相同",
+    "haPanelChooseDashboard": "选择仪表板",
+    "haPanelChooseView": "{dashboard} 的哪个视图？",
+    "haPanelFirstView": "它的第一个视图",
+    "haPanelDashboardsError": "无法从 Home Assistant 获取仪表板。请检查下方的地址和令牌。"
 }

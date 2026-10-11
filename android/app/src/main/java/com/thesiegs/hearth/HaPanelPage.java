@@ -66,10 +66,19 @@ final class HaPanelPage {
     private HaPanelPage() {
     }
 
+    /** The Dart setting (SettingsService.haPanelDashboard): the profile's own dashboard, if it chose one. */
+    private static final String PROFILE_DASHBOARD_KEY = "ha_panel_profile_dashboard";
+
     /** The dashboard's address, or null when Home Assistant isn't set up. */
     private static String url(Context context) {
         if (!HaConfig.isConfigured(context)) return null;
-        return HaConfig.baseUrl(context) + "/" + HaPanelActivity.getDashboard(context);
+        return HaConfig.baseUrl(context) + "/" + dashboard(context);
+    }
+
+    /** The profile on now's dashboard (and view), else the TV's. */
+    static String dashboard(Context context) {
+        String own = FlutterPrefs.getString(context, PROFILE_DASHBOARD_KEY, "").trim().replaceAll("^/+|/+$", "");
+        return own.isEmpty() ? HaPanelActivity.getDashboard(context) : own;
     }
 
     private static boolean upToDate(Context context) {

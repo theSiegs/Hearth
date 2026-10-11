@@ -2587,4 +2587,24 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get youTubeLimitHint => 'لهذا الملف الشخصي، في HearthTube. عند إعداد Home Assistant، يُحتسب أيضًا حد يشاركه مع أجهزتك الأخرى.';
+
+  @override
+  String get haPanelProfileDashboard => 'لوحة التحكم لهذا الملف الشخصي';
+
+  @override
+  String get haPanelProfileDashboardTv => 'نفس لوحة التلفزيون';
+
+  @override
+  String get haPanelChooseDashboard => 'اختر لوحة تحكم';
+
+  @override
+  String haPanelChooseView(String dashboard) {
+    return 'أي عرض من $dashboard؟';
+  }
+
+  @override
+  String get haPanelFirstView => 'العرض الأول';
+
+  @override
+  String get haPanelDashboardsError => 'تعذّر جلب لوحات التحكم من Home Assistant. تحقق من العنوان والرمز أدناه.';
 }

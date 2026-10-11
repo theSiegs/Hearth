@@ -439,6 +439,14 @@ class FLauncherChannel {
 
   Future<void> openHaPanel() async => await _methodChannel.invokeMethod("openHaPanel");
 
+  /// Home Assistant's address and the panel's token ({url, token}), for asking it which dashboards it has; null when
+  /// it isn't set up.
+  Future<({String url, String token})?> getHaConnection() async {
+    final map = await _methodChannel.invokeMapMethod<String, dynamic>("getHaConnection");
+    final url = map?["url"], token = map?["token"];
+    return url is String && token is String ? (url: url, token: token) : null;
+  }
+
   /// JSON list of {entity_id, name, domain} a remote button can run; empty without a Home Assistant sign-in.
   Future<String> getHaEntities() async => await _methodChannel.invokeMethod<String>("getHaEntities") ?? "[]";
 

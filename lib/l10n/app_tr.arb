@@ -771,5 +771,11 @@
     "youTubeLimitTitle": "Günlük YouTube süresi",
     "youTubeLimitNone": "Sınır yok",
     "youTubeLimitMinutes": "{minutes, plural, =1{1 dakika} other{{minutes} dakika}}",
-    "youTubeLimitHint": "Bu profil için, HearthTube'da. Home Assistant kuruluysa, diğer cihazlarınızla paylaştığı bir sınır da geçerli olur."
+    "youTubeLimitHint": "Bu profil için, HearthTube'da. Home Assistant kuruluysa, diğer cihazlarınızla paylaştığı bir sınır da geçerli olur.",
+    "haPanelProfileDashboard": "Bu profilin panosu",
+    "haPanelProfileDashboardTv": "TV’deki ile aynı",
+    "haPanelChooseDashboard": "Bir pano seçin",
+    "haPanelChooseView": "{dashboard} panosunun hangi görünümü?",
+    "haPanelFirstView": "İlk görünümü",
+    "haPanelDashboardsError": "Panolar Home Assistant’tan alınamadı. Aşağıdaki adresi ve belirteci kontrol edin."
 }

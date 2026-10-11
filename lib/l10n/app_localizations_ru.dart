@@ -2566,4 +2566,24 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get youTubeLimitHint => 'Для этого профиля, в HearthTube. Если настроен Home Assistant, учитывается и общий лимит с другими устройствами.';
+
+  @override
+  String get haPanelProfileDashboard => 'Панель для этого профиля';
+
+  @override
+  String get haPanelProfileDashboardTv => 'Как на телевизоре';
+
+  @override
+  String get haPanelChooseDashboard => 'Выберите панель';
+
+  @override
+  String haPanelChooseView(String dashboard) {
+    return 'Какой вид панели $dashboard?';
+  }
+
+  @override
+  String get haPanelFirstView => 'Её первый вид';
+
+  @override
+  String get haPanelDashboardsError => 'Не удалось получить панели из Home Assistant. Проверьте адрес и токен ниже.';
 }

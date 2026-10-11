@@ -2539,4 +2539,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get youTubeLimitHint => '适用于此个人资料的 HearthTube。设置 Home Assistant 后，与其他设备共享的限制也会生效。';
+
+  @override
+  String get haPanelProfileDashboard => '此个人资料的仪表板';
+
+  @override
+  String get haPanelProfileDashboardTv => '与电视相同';
+
+  @override
+  String get haPanelChooseDashboard => '选择仪表板';
+
+  @override
+  String haPanelChooseView(String dashboard) {
+    return '$dashboard 的哪个视图？';
+  }
+
+  @override
+  String get haPanelFirstView => '它的第一个视图';
+
+  @override
+  String get haPanelDashboardsError => '无法从 Home Assistant 获取仪表板。请检查下方的地址和令牌。';
 }

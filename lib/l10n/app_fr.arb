@@ -771,5 +771,11 @@
     "youTubeLimitTitle": "Temps YouTube par jour",
     "youTubeLimitNone": "Aucune limite",
     "youTubeLimitMinutes": "{minutes, plural, =1{1 minute} other{{minutes} minutes}}",
-    "youTubeLimitHint": "Pour ce profil, dans HearthTube. Avec Home Assistant configuré, une limite partagée avec vos autres appareils compte aussi."
+    "youTubeLimitHint": "Pour ce profil, dans HearthTube. Avec Home Assistant configuré, une limite partagée avec vos autres appareils compte aussi.",
+    "haPanelProfileDashboard": "Tableau de bord de ce profil",
+    "haPanelProfileDashboardTv": "Le même que celui du téléviseur",
+    "haPanelChooseDashboard": "Choisir un tableau de bord",
+    "haPanelChooseView": "Quelle vue de {dashboard} ?",
+    "haPanelFirstView": "Sa première vue",
+    "haPanelDashboardsError": "Impossible d’obtenir les tableaux de bord de Home Assistant. Vérifiez l’adresse et le jeton ci-dessous."
 }

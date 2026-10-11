@@ -771,5 +771,11 @@
     "youTubeLimitTitle": "Tempo de YouTube por dia",
     "youTubeLimitNone": "Sem limite",
     "youTubeLimitMinutes": "{minutes, plural, =1{1 minuto} other{{minutes} minutos}}",
-    "youTubeLimitHint": "Para este perfil, no HearthTube. Com o Home Assistant configurado, também conta um limite partilhado com os seus outros dispositivos."
+    "youTubeLimitHint": "Para este perfil, no HearthTube. Com o Home Assistant configurado, também conta um limite partilhado com os seus outros dispositivos.",
+    "haPanelProfileDashboard": "Painel para este perfil",
+    "haPanelProfileDashboardTv": "O mesmo da TV",
+    "haPanelChooseDashboard": "Escolha um painel",
+    "haPanelChooseView": "Qual vista de {dashboard}?",
+    "haPanelFirstView": "A primeira vista",
+    "haPanelDashboardsError": "Não foi possível obter os painéis do Home Assistant. Verifique o endereço e o token abaixo."
 }

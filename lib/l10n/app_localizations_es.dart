@@ -2551,4 +2551,24 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get youTubeLimitHint => 'Para este perfil, en HearthTube. Con Home Assistant configurado, también cuenta un límite que comparte con tus otros dispositivos.';
+
+  @override
+  String get haPanelProfileDashboard => 'Panel para este perfil';
+
+  @override
+  String get haPanelProfileDashboardTv => 'El mismo que el de la TV';
+
+  @override
+  String get haPanelChooseDashboard => 'Elige un panel';
+
+  @override
+  String haPanelChooseView(String dashboard) {
+    return '¿Qué vista de $dashboard?';
+  }
+
+  @override
+  String get haPanelFirstView => 'Su primera vista';
+
+  @override
+  String get haPanelDashboardsError => 'No se pudieron obtener los paneles de Home Assistant. Revisa la dirección y el token de abajo.';
 }

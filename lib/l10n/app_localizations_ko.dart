@@ -2539,4 +2539,24 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get youTubeLimitHint => '이 프로필의 HearthTube 시간입니다. Home Assistant를 설정하면 다른 기기와 공유하는 제한도 적용됩니다.';
+
+  @override
+  String get haPanelProfileDashboard => '이 프로필의 대시보드';
+
+  @override
+  String get haPanelProfileDashboardTv => 'TV와 동일';
+
+  @override
+  String get haPanelChooseDashboard => '대시보드 선택';
+
+  @override
+  String haPanelChooseView(String dashboard) {
+    return '$dashboard의 어떤 보기?';
+  }
+
+  @override
+  String get haPanelFirstView => '첫 번째 보기';
+
+  @override
+  String get haPanelDashboardsError => 'Home Assistant에서 대시보드를 가져오지 못했습니다. 아래 주소와 토큰을 확인하세요.';
 }

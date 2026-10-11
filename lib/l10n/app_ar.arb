@@ -771,5 +771,11 @@
     "youTubeLimitTitle": "وقت YouTube في اليوم",
     "youTubeLimitNone": "بلا حد",
     "youTubeLimitMinutes": "{minutes, plural, =1{دقيقة واحدة} other{{minutes} دقيقة}}",
-    "youTubeLimitHint": "لهذا الملف الشخصي، في HearthTube. عند إعداد Home Assistant، يُحتسب أيضًا حد يشاركه مع أجهزتك الأخرى."
+    "youTubeLimitHint": "لهذا الملف الشخصي، في HearthTube. عند إعداد Home Assistant، يُحتسب أيضًا حد يشاركه مع أجهزتك الأخرى.",
+    "haPanelProfileDashboard": "لوحة التحكم لهذا الملف الشخصي",
+    "haPanelProfileDashboardTv": "نفس لوحة التلفزيون",
+    "haPanelChooseDashboard": "اختر لوحة تحكم",
+    "haPanelChooseView": "أي عرض من {dashboard}؟",
+    "haPanelFirstView": "العرض الأول",
+    "haPanelDashboardsError": "تعذّر جلب لوحات التحكم من Home Assistant. تحقق من العنوان والرمز أدناه."
 }

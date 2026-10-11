@@ -771,5 +771,11 @@
     "youTubeLimitTitle": "प्रतिदिन YouTube समय",
     "youTubeLimitNone": "कोई सीमा नहीं",
     "youTubeLimitMinutes": "{minutes, plural, =1{1 मिनट} other{{minutes} मिनट}}",
-    "youTubeLimitHint": "इस प्रोफ़ाइल के लिए, HearthTube में। Home Assistant सेट होने पर, आपके अन्य डिवाइस के साथ साझा की गई सीमा भी गिनी जाती है।"
+    "youTubeLimitHint": "इस प्रोफ़ाइल के लिए, HearthTube में। Home Assistant सेट होने पर, आपके अन्य डिवाइस के साथ साझा की गई सीमा भी गिनी जाती है।",
+    "haPanelProfileDashboard": "इस प्रोफ़ाइल का डैशबोर्ड",
+    "haPanelProfileDashboardTv": "टीवी वाला ही",
+    "haPanelChooseDashboard": "डैशबोर्ड चुनें",
+    "haPanelChooseView": "{dashboard} का कौन-सा व्यू?",
+    "haPanelFirstView": "इसका पहला व्यू",
+    "haPanelDashboardsError": "Home Assistant से डैशबोर्ड नहीं मिल सके। नीचे पता और टोकन जाँचें।"
 }

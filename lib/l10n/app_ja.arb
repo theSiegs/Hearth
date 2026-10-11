@@ -771,5 +771,11 @@
     "youTubeLimitTitle": "1日のYouTube時間",
     "youTubeLimitNone": "制限なし",
     "youTubeLimitMinutes": "{minutes, plural, other{{minutes}分}}",
-    "youTubeLimitHint": "このプロフィールのHearthTubeでの時間です。Home Assistantを設定している場合、ほかのデバイスと共有する制限も適用されます。"
+    "youTubeLimitHint": "このプロフィールのHearthTubeでの時間です。Home Assistantを設定している場合、ほかのデバイスと共有する制限も適用されます。",
+    "haPanelProfileDashboard": "このプロフィールのダッシュボード",
+    "haPanelProfileDashboardTv": "テレビと同じ",
+    "haPanelChooseDashboard": "ダッシュボードを選択",
+    "haPanelChooseView": "{dashboard} のどのビュー？",
+    "haPanelFirstView": "最初のビュー",
+    "haPanelDashboardsError": "Home Assistant からダッシュボードを取得できませんでした。下のアドレスとトークンを確認してください。"
 }
