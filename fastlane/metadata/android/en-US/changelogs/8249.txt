@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Calendar: select the date and time to see today's Home Assistant events; OK for the next 7 days.
