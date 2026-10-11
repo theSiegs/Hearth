@@ -24,6 +24,7 @@ import 'package:flauncher/widgets/focusable_tap.dart';
 import 'package:flauncher/widgets/ha_panel/ha_controls.dart';
 import 'package:flauncher/widgets/ha_panel/ha_format.dart';
 import 'package:flauncher/widgets/ha_panel/ha_icons.dart';
+import 'package:flauncher/widgets/ha_panel/ha_person_map.dart';
 import 'package:flutter/material.dart';
 
 /// How the panel's focus stops look: a big outline in the accent colour while focused.
@@ -59,7 +60,7 @@ class HaTile extends StatelessWidget {
           duration: const Duration(milliseconds: 120),
           padding: const EdgeInsets.all(10),
           decoration: haFocusDecoration(context, focused, filled: controls.isEmpty),
-          child: header,
+          child: _withMap(header, entity, focused),
         ),
       );
       if (controls.isEmpty) return tapHeader;
@@ -72,6 +73,27 @@ class HaTile extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [Padding(padding: const EdgeInsets.all(7), child: header), ..._spaced(controls)],
     ));
+  }
+
+  /// A person's (or tracker's) tile shows where they are under its header while it has the focus.
+  Widget _withMap(Widget header, HaEntity? entity, bool focused) {
+    if (entity == null || !HaMapTiles.locates(entity)) return header;
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 150),
+      alignment: Alignment.topCenter,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          header,
+          if (focused)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: HaPersonMap(person: entity, home: service.entity(HaMapTiles.homeZone)),
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _frame(Widget child) => Container(

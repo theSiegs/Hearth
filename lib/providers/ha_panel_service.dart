@@ -220,18 +220,25 @@ class HaPanelService extends ChangeNotifier {
     } catch (_) {}
   }
 
+  /// The entities to follow for [layout]: those on it, and home's zone when someone on it can be shown on a map.
+  static Set<String> followed(HaPanelLayout layout) {
+    final ids = layout.entities;
+    final locates = ids.any((id) => id.startsWith("person.") || id.startsWith("device_tracker."));
+    return locates ? {...ids, "zone.home"} : ids;
+  }
+
   /// Reads the dashboard's layout and subscribes to the entities on it.
   Future<void> _loadLayout(HaSocket s, String path) async {
     final (dashboard, view) = HaLovelace.splitPath(path);
     final config = await s.command({"type": "lovelace/config", if (dashboard != "lovelace") "url_path": dashboard});
     if (_disposed || _socket != s) return;
     final layout = HaLovelace.parse(config, view);
-    final oldEntities = _layout.entities;
+    final oldEntities = followed(_layout);
     _layout = layout;
     _layoutLoaded = true;
     _loadedPath = path;
-    if (_unsubscribeEntities == null || !setEquals(oldEntities, layout.entities)) {
-      await _subscribeEntities(s, layout.entities);
+    if (_unsubscribeEntities == null || !setEquals(oldEntities, followed(layout))) {
+      await _subscribeEntities(s, followed(layout));
     }
     await _subscribeTemplates(s, layout);
     _set(HaPanelStatus.ready);
