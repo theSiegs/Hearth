@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Home Assistant panel: a selected person's tile shows where they are on a map.

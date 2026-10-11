@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.50 (pre-release)
+
+- Home Assistant panel: selecting a person shows where they are on a small map, with home marked. The map is drawn from map pieces of the area around home, fetched once and kept on the TV, so the map service never learns where anyone is; someone farther away (or without a position) shows their status as before.
+
 ## 2026.10.49 (pre-release)
 
 - YouTube time per day applies to kids' profiles only: a grown-up's profile is never limited or locked (a limit set on a grown-up's profile by an older Hearth is ignored). Each kid's is set on their page in Settings > Profiles > Kids' profiles.
