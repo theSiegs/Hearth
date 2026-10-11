@@ -345,8 +345,16 @@ final class WatchHistory extends SQLiteOpenHelper {
     static boolean sameTitle(String playedTitle, String playedSubtitle, String rowTitle) {
         String row = norm(rowTitle);
         if (row.isEmpty()) return false;
-        return row.equals(norm(playedTitle)) || row.equals(norm(playedSubtitle));
+        String title = norm(playedTitle), subtitle = norm(playedSubtitle);
+        if (row.equals(title) || row.equals(subtitle)) return true;
+        // An app's own list often names the show and the episode together ("South Park - Pilot", while it plays
+        // "Pilot" with "South Park" under it): a row holding all of what played, if that's not too short to tell
+        return title.length() >= MIN_CONTAINED_TITLE && row.contains(title)
+                && (subtitle.isEmpty() || row.contains(subtitle));
     }
+
+    /** Letters and digits a played title needs before a row containing it counts as the same (see sameTitle). */
+    private static final int MIN_CONTAINED_TITLE = 6;
 
     /** The profile that played this entry closest to its time, or null when none did. */
     static String playedOwner(List<Entry> played, String packageName, String title, long time) {

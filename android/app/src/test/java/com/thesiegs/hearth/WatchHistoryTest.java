@@ -32,6 +32,11 @@ public class WatchHistoryTest {
         assertTrue(WatchHistory.sameTitle("Normal People", "Episode 9", "Episode 9"));
         assertFalse(WatchHistory.sameTitle("Normal People", null, "Normal Heart"));
         assertFalse(WatchHistory.sameTitle("Normal People", null, ""));
+        // The app's list names show and episode together; what played names them apart
+        assertTrue(WatchHistory.sameTitle("The Long Road", "Normal People", "Normal People - The Long Road"));
+        assertTrue(WatchHistory.sameTitle("Normal People", null, "Normal People: Episode 9"));
+        assertFalse(WatchHistory.sameTitle("The Long Road", "Other Show", "Normal People - The Long Road"));
+        assertFalse(WatchHistory.sameTitle("Up", null, "Updates"));
     }
 
     @Test
