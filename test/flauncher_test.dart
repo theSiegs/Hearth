@@ -664,6 +664,52 @@ void main() {
     expect(isAppCardFocused(tester, "com.example.tv0"), isTrue);
   });
 
+  for (final dockOn in [true, false]) {
+    testWidgets("Switching the dock ${dockOn ? "on" : "off"} in Settings leaves the selection in Settings, then lands "
+        "on the ${dockOn ? "dock" : "first app"}", (tester) async {
+      final appsService = mkAppService();
+      final tvCategory = fakeCategory(name: "TV Apps", order: 0, type: CategoryType.row);
+      final emptyCategory = fakeCategory(name: "Non-TV Apps", order: 1, type: CategoryType.row);
+      final favoritesCategory = fakeCategory(name: "Favorites", order: 2, type: CategoryType.row);
+      tvCategory.applications
+          .addAll(List.generate(3, (i) => fakeApp(packageName: "com.example.tv$i", name: "TV $i")));
+      favoritesCategory.applications
+          .addAll(List.generate(3, (i) => fakeApp(packageName: "com.example.fav$i", name: "Fav $i")));
+      when(appsService.launcherSections).thenReturn([tvCategory, emptyCategory, favoritesCategory]);
+      final settingsService = mkSettingsService(LiveSettingsService()) as LiveSettingsService;
+      bool dock = !dockOn;
+      when(settingsService.dockEnabled).thenAnswer((_) => dock);
+      await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+      await tester.pumpAndSettle();
+
+      // A panel over the home, with the selection in it
+      final panelButton = FocusNode();
+      addTearDown(panelButton.dispose);
+      final homeContext = tester.element(find.byType(FLauncher));
+      showDialog(
+          context: homeContext,
+          builder: (_) => Dialog(
+              child: TextButton(focusNode: panelButton, autofocus: true, onPressed: () {}, child: const Text("Dock"))));
+      await tester.pumpAndSettle();
+      expect(panelButton.hasFocus, isTrue);
+
+      dock = dockOn;
+      settingsService.changed();
+      await tester.pumpAndSettle();
+      expect(find.byType(HomeDock), dockOn ? findsOneWidget : findsNothing);
+      expect(panelButton.hasFocus, isTrue);
+
+      Navigator.of(homeContext).pop();
+      await tester.pumpAndSettle();
+      if (dockOn) {
+        expect(isDockAppFocused(tester, "com.example.fav0"), isTrue);
+      } else {
+        expect(isAppCardFocused(tester, "com.example.tv0"), isTrue);
+      }
+      expect(homeScrollOffset(tester), 0);
+    });
+  }
+
   testWidgets("With nothing usable in Favorites, the dock layout shows one untitled grid", (tester) async {
     final appsService = mkAppService();
     final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);

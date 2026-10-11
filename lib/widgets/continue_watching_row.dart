@@ -407,7 +407,8 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
       onLongPress: _onLongPress,
       builder: (context) => bumpable(InkWell(
         focusNode: _focusNode,
-        autofocus: widget.autofocus,
+        // Not under Settings or a panel: a card built then would take the selection from it (see AppCard)
+        autofocus: widget.autofocus && (ModalRoute.isCurrentOf(context) ?? true),
         focusColor: Colors.transparent,
         hoverColor: Colors.transparent,
         splashColor: Colors.transparent,
