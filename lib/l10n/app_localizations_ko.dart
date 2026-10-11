@@ -2559,4 +2559,68 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get haPanelDashboardsError => 'Home Assistant에서 대시보드를 가져오지 못했습니다. 아래 주소와 토큰을 확인하세요.';
+
+  @override
+  String get calendar => '캘린더';
+
+  @override
+  String get calendarRestOfToday => '오늘 남은 일정';
+
+  @override
+  String get calendarShowWeek => '확인: 앞으로 7일';
+
+  @override
+  String get calendarNothingToday => '오늘은 더 이상 일정이 없습니다';
+
+  @override
+  String get calendarNoTitle => '(제목 없음)';
+
+  @override
+  String get calendarAllDay => '종일';
+
+  @override
+  String get calendarNow => '지금';
+
+  @override
+  String calendarUntil(String time) {
+    return '$time까지';
+  }
+
+  @override
+  String get calendarTomorrow => '내일';
+
+  @override
+  String calendarMore(int count) {
+    return '+$count개 더';
+  }
+
+  @override
+  String calendarNextDays(int days) {
+    return '앞으로 $days일';
+  }
+
+  @override
+  String calendarNothingWeek(int days) {
+    return '앞으로 $days일 동안 일정이 없습니다';
+  }
+
+  @override
+  String get haCalendarsTitle => '캘린더';
+
+  @override
+  String get haCalendarsLoading => 'Home Assistant에 캘린더를 요청하는 중…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return '이 TV에는 아직 Home Assistant가 설정되지 않았습니다. $place에서 주소와 토큰을 추가하세요.';
+  }
+
+  @override
+  String get haCalendarsError => 'Home Assistant에서 캘린더를 가져오지 못했습니다. 주소와 토큰을 확인하세요.';
+
+  @override
+  String get haCalendarsNone => 'Home Assistant에 캘린더가 없습니다.';
+
+  @override
+  String get haCalendarsHelp => '여기서 켠 캘린더는 오른쪽 위의 날짜와 시간에 포커스가 있을 때 표시됩니다: 오늘 남은 일정, 확인을 누르면 앞으로 7일. 프로필마다 따로 고릅니다.';
 }

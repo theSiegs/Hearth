@@ -2560,4 +2560,68 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get haPanelDashboardsError => 'Panolar Home Assistant’tan alınamadı. Aşağıdaki adresi ve belirteci kontrol edin.';
+
+  @override
+  String get calendar => 'Takvim';
+
+  @override
+  String get calendarRestOfToday => 'Günün geri kalanı';
+
+  @override
+  String get calendarShowWeek => 'Tamam: sonraki 7 gün';
+
+  @override
+  String get calendarNothingToday => 'Bugün başka bir şey yok';
+
+  @override
+  String get calendarNoTitle => '(Başlıksız)';
+
+  @override
+  String get calendarAllDay => 'Tüm gün';
+
+  @override
+  String get calendarNow => 'Şimdi';
+
+  @override
+  String calendarUntil(String time) {
+    return '$time saatine kadar';
+  }
+
+  @override
+  String get calendarTomorrow => 'Yarın';
+
+  @override
+  String calendarMore(int count) {
+    return '+$count tane daha';
+  }
+
+  @override
+  String calendarNextDays(int days) {
+    return 'Sonraki $days gün';
+  }
+
+  @override
+  String calendarNothingWeek(int days) {
+    return 'Sonraki $days günde bir şey yok';
+  }
+
+  @override
+  String get haCalendarsTitle => 'Takvimler';
+
+  @override
+  String get haCalendarsLoading => 'Takvimler Home Assistant\'tan isteniyor…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'Home Assistant bu TV\'de henüz kurulmadı. Adresini ve belirtecini $place bölümüne ekleyin.';
+  }
+
+  @override
+  String get haCalendarsError => 'Takvimler Home Assistant\'tan alınamadı. Adresi ve belirteci kontrol edin.';
+
+  @override
+  String get haCalendarsNone => 'Home Assistant\'ta takvim yok.';
+
+  @override
+  String get haCalendarsHelp => 'Burada açılan takvimler, sağ üstteki tarih ve saat odaktayken görünür: günün geri kalanı, Tamam ile sonraki 7 gün. Her profil kendi takvimlerini seçer.';
 }

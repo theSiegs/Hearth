@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../flauncher_channel.dart';
+import '../../providers/ha_calendars.dart';
 import '../../providers/ha_dashboards.dart';
 import '../../providers/settings_service.dart';
 import '../rounded_switch_list_tile.dart';
@@ -100,6 +101,75 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
               style: textTheme.bodySmall),
           onPressed: () => _open(HaStatusPage.routeName),
         ),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.event_outlined),
+          title: Text(l.haCalendarsTitle, style: textTheme.bodyMedium),
+          onPressed: () => _open(HaCalendarsPage.routeName),
+        ),
+      ],
+    );
+  }
+}
+
+/// The Home Assistant calendars that show by the top bar's date and time, for this profile: all of them unless some
+/// are turned off here.
+class HaCalendarsPage extends StatefulWidget {
+  static const String routeName = "home_assistant_calendars";
+
+  const HaCalendarsPage({super.key});
+
+  @override
+  State<HaCalendarsPage> createState() => _HaCalendarsPageState();
+}
+
+class _HaCalendarsPageState extends State<HaCalendarsPage> {
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  /// Asks Home Assistant again, so a calendar added there (or a token just set up) shows here.
+  Future<void> _load() async {
+    await context.read<HaCalendarService?>()?.refresh(force: true);
+    if (mounted) setState(() => _loading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final service = context.watch<HaCalendarService?>();
+    final hidden = context.select<SettingsService, String>((s) => s.hiddenHaCalendars.join("\n")).split("\n").toSet();
+    final calendars = service?.calendars ?? const <HaCalendar>[];
+    final status = service?.status ?? HaCalendarStatus.notSetUp;
+    String? note;
+    if (_loading && calendars.isEmpty) {
+      note = l.haCalendarsLoading;
+    } else if (status == HaCalendarStatus.notSetUp) {
+      note = l.haCalendarsNotSetUp(HaPanelPage.breadcrumb(l));
+    } else if (status == HaCalendarStatus.unreachable && calendars.isEmpty) {
+      note = l.haCalendarsError;
+    } else if (calendars.isEmpty) {
+      note = l.haCalendarsNone;
+    }
+    return SettingsPage(
+      title: l.haCalendarsTitle,
+      children: [
+        for (final (i, calendar) in calendars.indexed)
+          RoundedSwitchListTile(
+            autofocus: i == 0,
+            value: !hidden.contains(calendar.entityId),
+            onChanged: (shown) => context.read<SettingsService>().setHaCalendarShown(calendar.entityId, shown),
+            title: Text(calendar.name),
+            subtitle: Text(calendar.entityId),
+            secondary: const Icon(Icons.event_outlined),
+          ),
+        if (note != null)
+          Focus(autofocus: calendars.isEmpty, child: _note(context, note)),
+        const SizedBox(height: 8),
+        _note(context, l.haCalendarsHelp),
       ],
     );
   }
@@ -244,6 +314,8 @@ class _HaPanelPageState extends State<HaPanelPage> {
         _panelDashboard.text = panel["dashboard"] as String? ?? "";
         _panelSaved = _panelHasToken ? l.haPanelSaved : l.haPanelSavedNoToken;
       });
+      // A new sign-in can read the calendars
+      context.read<HaCalendarService?>()?.refresh(force: true);
     }
   }
 
@@ -267,7 +339,10 @@ class _HaPanelPageState extends State<HaPanelPage> {
     final received = await showDialog<bool>(context: context, builder: (_) => HaPhoneSetupDialog(channel: _channel));
     if (received == true) {
       await _load();
-      if (mounted) setState(() => _panelSaved = AppLocalizations.of(context)!.haPanelReceived);
+      if (mounted) {
+        setState(() => _panelSaved = AppLocalizations.of(context)!.haPanelReceived);
+        context.read<HaCalendarService?>()?.refresh(force: true);
+      }
     }
   }
 

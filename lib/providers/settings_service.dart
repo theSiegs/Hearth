@@ -56,6 +56,8 @@ const String _blurWallpaperBelowDockKey = "blur_wallpaper_below_dock";
 const String _haPanelEnabledKey = "ha_panel_enabled";
 // HaPanelPage.java reads it too
 const String _haPanelDashboardKey = "ha_panel_profile_dashboard";
+// The Home Assistant calendars this profile doesn't show by the date and time (new calendars show)
+const String _haHiddenCalendarsKey = "ha_hidden_calendars";
 const String _showInputsWidgetInStatusBarKey = "show_inputs_widget_in_status_bar";
 const String _showContinueWatchingKey = "show_continue_watching";
 const String _continueWatchingCardSizeKey = "continue_watching_card_size";
@@ -169,6 +171,7 @@ class SettingsService extends ChangeNotifier {
     _blurWallpaperBelowDockKey,
     _haPanelEnabledKey,
     _haPanelDashboardKey,
+    _haHiddenCalendarsKey,
     _showInputsWidgetInStatusBarKey,
     _showContinueWatchingKey,
     _continueWatchingCardSizeKey,
@@ -481,6 +484,16 @@ class SettingsService extends ChangeNotifier {
   String get haPanelDashboard => _string(_haPanelDashboardKey, "");
 
   Future<void> setHaPanelDashboard(String path) => _setString(_haPanelDashboardKey, path);
+
+  /// The Home Assistant calendars ("calendar.family") this profile doesn't show by the top bar's date and time; every
+  /// other one shows, so a new calendar shows until it's turned off.
+  List<String> get hiddenHaCalendars => _list(_haHiddenCalendarsKey);
+
+  Future<void> setHaCalendarShown(String entityId, bool shown) async {
+    final hidden = hiddenHaCalendars;
+    if (shown == !hidden.contains(entityId)) return;
+    await _saveList(_haHiddenCalendarsKey, shown ? ([...hidden]..remove(entityId)) : [...hidden, entityId]);
+  }
 
   Future<void> setShowInputsWidgetInStatusBar(bool show) => _setBool(_showInputsWidgetInStatusBarKey, show);
 

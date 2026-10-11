@@ -8,6 +8,9 @@ import 'package:flauncher/providers/notifications_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
+import 'package:flauncher/providers/ha_calendars.dart';
+import 'package:flauncher/providers/home_agenda.dart';
+import 'package:flauncher/widgets/calendar_agenda.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -41,6 +44,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
   final FocusNode _notificationsFocusNode = FocusNode();
   final FocusNode _weatherFocusNode = FocusNode();
   final FocusNode _searchFocusNode = FocusNode();
+  final FocusNode _dateTimeFocusNode = FocusNode();
 
   @visibleForTesting
   FocusNode get profileFocusNode => _profileFocusNode;
@@ -52,6 +56,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
     _notificationsFocusNode.dispose();
     _weatherFocusNode.dispose();
     _searchFocusNode.dispose();
+    _dateTimeFocusNode.dispose();
     super.dispose();
   }
 
@@ -288,16 +293,24 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                         return const SizedBox.shrink();
                       }
 
-                      return Container(
+                      // With Home Assistant's calendars, the date and time take focus: today's events show over
+                      // the home, and OK opens the coming week. Without them it's no focus stop, as before.
+                      return _CalendarPill(
+                        focusNode: _dateTimeFocusNode,
+                        builder: (context, focused) => AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                         decoration: BoxDecoration(
                           // Darker on a light wallpaper, like the row titles' pills
                           color: Colors.black.withOpacity(TitlePill.opacityOf(context)),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.12),
+                            color: focused ? Theme.of(context).colorScheme.primary : Colors.white.withOpacity(0.12),
                             width: 1,
                           ),
+                          boxShadow: focused
+                              ? const [BoxShadow(color: Colors.black54, blurRadius: 8, spreadRadius: 1)]
+                              : null,
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -318,6 +331,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                               ),
                           ],
                         ),
+                      ),
                       );
                     },
                   ),
@@ -328,6 +342,40 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
         ),
       ),
       ),
+    );
+  }
+}
+
+/// The date and time: a focus stop only while Home Assistant has calendars to show. Focused, what's left of today
+/// shows over the home ([CalendarTodayRow]); OK opens the coming week ([CalendarAgendaPage]).
+class _CalendarPill extends StatelessWidget {
+  final FocusNode focusNode;
+  final Widget Function(BuildContext context, bool focused) builder;
+
+  const _CalendarPill({required this.focusNode, required this.builder});
+
+  @override
+  Widget build(BuildContext context) {
+    final calendars = context.watch<HaCalendarService?>();
+    if (calendars == null || !calendars.available) {
+      // Gone while it had focus (the calendars turned off): today's events go too
+      if (context.read<HomeAgenda?>()?.showing ?? false) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) context.read<HomeAgenda?>()?.setShowing(false);
+        });
+      }
+      return builder(context, false);
+    }
+    return FocusableTap(
+      key: const Key("statusbar_calendar"),
+      focusNode: focusNode,
+      onFocusChange: (focused) {
+        context.read<HomeAgenda?>()?.setShowing(focused);
+        if (focused) calendars.refresh();
+      },
+      onPressed: () => CalendarAgendaPage.open(context),
+      splashShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      builder: builder,
     );
   }
 }

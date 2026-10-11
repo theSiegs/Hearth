@@ -22,6 +22,8 @@ import 'package:flauncher/database.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/home_forecast.dart';
+import 'package:flauncher/providers/home_agenda.dart';
+import 'package:flauncher/providers/ha_calendars.dart';
 import 'package:flauncher/providers/home_search.dart';
 import 'package:flauncher/providers/search_service.dart';
 import 'package:flauncher/providers/apps_service.dart';
@@ -137,6 +139,18 @@ Future<void> main() async {
         }),
         // The weather forecast over the home (the top bar's weather shows it)
         ChangeNotifierProvider(create: (_) => HomeForecast()),
+        // Home Assistant's calendars by the top bar's date and time (nothing without Home Assistant, which is optional)
+        ChangeNotifierProvider(create: (_) => HomeAgenda()),
+        ChangeNotifierProvider(
+            create: (context) {
+              final settings = context.read<SettingsService>();
+              return HaCalendarService(
+                connection: fLauncherChannel.getHaConnection,
+                hiddenCalendars: () => settings.hiddenHaCalendars,
+                settings: settings,
+              )..start();
+            },
+            lazy: false),
         // The home's search (top bar, results row, results grid)
         ChangeNotifierProvider(create: (context) {
           final apps = Provider.of<AppsService>(context, listen: false);

@@ -2571,4 +2571,68 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get haPanelDashboardsError => 'Não foi possível obter os painéis do Home Assistant. Verifique o endereço e o token abaixo.';
+
+  @override
+  String get calendar => 'Agenda';
+
+  @override
+  String get calendarRestOfToday => 'Resto do dia';
+
+  @override
+  String get calendarShowWeek => 'OK: próximos 7 dias';
+
+  @override
+  String get calendarNothingToday => 'Nada mais hoje';
+
+  @override
+  String get calendarNoTitle => '(Sem título)';
+
+  @override
+  String get calendarAllDay => 'O dia todo';
+
+  @override
+  String get calendarNow => 'Agora';
+
+  @override
+  String calendarUntil(String time) {
+    return 'até $time';
+  }
+
+  @override
+  String get calendarTomorrow => 'Amanhã';
+
+  @override
+  String calendarMore(int count) {
+    return '+$count mais';
+  }
+
+  @override
+  String calendarNextDays(int days) {
+    return 'Próximos $days dias';
+  }
+
+  @override
+  String calendarNothingWeek(int days) {
+    return 'Nada nos próximos $days dias';
+  }
+
+  @override
+  String get haCalendarsTitle => 'Agendas';
+
+  @override
+  String get haCalendarsLoading => 'Pedindo as agendas ao Home Assistant…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'O Home Assistant ainda não está configurado nesta TV. Adicione o endereço e o token em $place.';
+  }
+
+  @override
+  String get haCalendarsError => 'Não foi possível obter as agendas do Home Assistant. Verifique o endereço e o token.';
+
+  @override
+  String get haCalendarsNone => 'O Home Assistant não tem agendas.';
+
+  @override
+  String get haCalendarsHelp => 'As agendas ativadas aqui aparecem quando a data e a hora no canto superior direito estão em foco: o resto do dia, e com OK os próximos 7 dias. Cada perfil escolhe as suas.';
 }

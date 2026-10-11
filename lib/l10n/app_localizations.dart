@@ -4582,6 +4582,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t get the dashboards from Home Assistant. Check the address and token below.'**
   String get haPanelDashboardsError;
+
+  /// Calendar over the home (by the top bar's date and time): its title pill and the full week's title
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar'**
+  String get calendar;
+
+  /// Calendar over the home: heading while the date and time have focus (today's events that haven't ended)
+  ///
+  /// In en, this message translates to:
+  /// **'Rest of today'**
+  String get calendarRestOfToday;
+
+  /// Calendar over the home: what OK on the date and time does (opens the next 7 days)
+  ///
+  /// In en, this message translates to:
+  /// **'OK: next 7 days'**
+  String get calendarShowWeek;
+
+  /// Calendar over the home: shown when today has no more events
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing else today'**
+  String get calendarNothingToday;
+
+  /// Calendar: an event without a title
+  ///
+  /// In en, this message translates to:
+  /// **'(No title)'**
+  String get calendarNoTitle;
+
+  /// Calendar: an all-day event's time
+  ///
+  /// In en, this message translates to:
+  /// **'All day'**
+  String get calendarAllDay;
+
+  /// Calendar: an event that's on right now
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get calendarNow;
+
+  /// Calendar: when an event ends ('until 8:00 PM')
+  ///
+  /// In en, this message translates to:
+  /// **'until {time}'**
+  String calendarUntil(String time);
+
+  /// Calendar week: tomorrow's heading
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow'**
+  String get calendarTomorrow;
+
+  /// Calendar over the home: last tile, how many more events today than shown
+  ///
+  /// In en, this message translates to:
+  /// **'+{count} more'**
+  String calendarMore(int count);
+
+  /// Calendar week (opened with OK on the date and time): its heading
+  ///
+  /// In en, this message translates to:
+  /// **'Next {days} days'**
+  String calendarNextDays(int days);
+
+  /// Calendar week: shown when no calendar has anything in the coming days
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing on in the next {days} days'**
+  String calendarNothingWeek(int days);
+
+  /// Settings > Home Assistant: the page that picks which Home Assistant calendars show by the date and time
+  ///
+  /// In en, this message translates to:
+  /// **'Calendars'**
+  String get haCalendarsTitle;
+
+  /// Calendars settings page: while Home Assistant is being asked
+  ///
+  /// In en, this message translates to:
+  /// **'Asking Home Assistant for its calendars…'**
+  String get haCalendarsLoading;
+
+  /// Calendars settings page: Home Assistant isn't set up; {place} is where to set it up (a settings breadcrumb)
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant isn\'t set up on this TV yet. Add its address and token in {place}.'**
+  String haCalendarsNotSetUp(String place);
+
+  /// Calendars settings page: Home Assistant couldn't be reached
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t get the calendars from Home Assistant. Check its address and token.'**
+  String get haCalendarsError;
+
+  /// Calendars settings page: Home Assistant answered but has no calendars
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant has no calendars.'**
+  String get haCalendarsNone;
+
+  /// Calendars settings page: what the switches do
+  ///
+  /// In en, this message translates to:
+  /// **'The calendars turned on here show when the date and time at the top right have focus: what\'s left of today, and OK for the next 7 days. Each profile chooses its own.'**
+  String get haCalendarsHelp;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

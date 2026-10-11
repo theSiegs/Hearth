@@ -90,7 +90,7 @@ void main() {
     );
 
     // Initial state: app bar height should be 0 because auto-hide is true and focused is false
-    final animatedContainer = tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
+    final animatedContainer = tester.widget<AnimatedContainer>(find.byType(AnimatedContainer).first);
     expect(animatedContainer.constraints?.maxHeight, 0);
 
     // Trigger focus to show app bar
@@ -100,7 +100,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // After focus: app bar height should be kToolbarHeight
-    final animatedContainerFocused = tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
+    final animatedContainerFocused = tester.widget<AnimatedContainer>(find.byType(AnimatedContainer).first);
     expect(animatedContainerFocused.constraints?.maxHeight, kToolbarHeight);
   });
 

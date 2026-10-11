@@ -2569,4 +2569,68 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get haPanelDashboardsError => 'Home Assistant से डैशबोर्ड नहीं मिल सके। नीचे पता और टोकन जाँचें।';
+
+  @override
+  String get calendar => 'कैलेंडर';
+
+  @override
+  String get calendarRestOfToday => 'आज का बाकी दिन';
+
+  @override
+  String get calendarShowWeek => 'OK: अगले 7 दिन';
+
+  @override
+  String get calendarNothingToday => 'आज और कुछ नहीं';
+
+  @override
+  String get calendarNoTitle => '(कोई शीर्षक नहीं)';
+
+  @override
+  String get calendarAllDay => 'पूरे दिन';
+
+  @override
+  String get calendarNow => 'अभी';
+
+  @override
+  String calendarUntil(String time) {
+    return '$time तक';
+  }
+
+  @override
+  String get calendarTomorrow => 'कल';
+
+  @override
+  String calendarMore(int count) {
+    return '+$count और';
+  }
+
+  @override
+  String calendarNextDays(int days) {
+    return 'अगले $days दिन';
+  }
+
+  @override
+  String calendarNothingWeek(int days) {
+    return 'अगले $days दिनों में कुछ नहीं';
+  }
+
+  @override
+  String get haCalendarsTitle => 'कैलेंडर';
+
+  @override
+  String get haCalendarsLoading => 'Home Assistant से कैलेंडर माँगे जा रहे हैं…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'इस TV पर Home Assistant अभी सेट नहीं है। उसका पता और टोकन $place में जोड़ें।';
+  }
+
+  @override
+  String get haCalendarsError => 'Home Assistant से कैलेंडर नहीं मिल सके। पता और टोकन जाँचें।';
+
+  @override
+  String get haCalendarsNone => 'Home Assistant में कोई कैलेंडर नहीं है।';
+
+  @override
+  String get haCalendarsHelp => 'यहाँ चालू किए गए कैलेंडर तब दिखते हैं जब ऊपर दाईं ओर की तारीख और समय पर फ़ोकस हो: आज का बाकी दिन, और OK से अगले 7 दिन। हर प्रोफ़ाइल अपने चुनती है।';
 }

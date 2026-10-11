@@ -36,6 +36,20 @@ void main() async {
   });
 
 
+  test("Home Assistant calendars all show until one is turned off, per profile", () async {
+    final service = SettingsService(sharedPreferences);
+    expect(service.hiddenHaCalendars, isEmpty);
+    expect(service.settingKeys, contains("ha_hidden_calendars"));
+    await service.setHaCalendarShown("calendar.family", false);
+    await service.setHaCalendarShown("calendar.family", false);
+    await service.setHaCalendarShown("calendar.school", false);
+    expect(service.hiddenHaCalendars, ["calendar.family", "calendar.school"]);
+    await service.setHaCalendarShown("calendar.family", true);
+    expect(service.hiddenHaCalendars, ["calendar.school"]);
+    await service.setHaCalendarShown("calendar.school", true);
+    expect(sharedPreferences.containsKey("ha_hidden_calendars"), isFalse);
+  });
+
   test("setUse24HourTimeFormat", () async {
     final sharedPreferences = await SharedPreferences.getInstance();
     final settingsService = SettingsService(sharedPreferences);

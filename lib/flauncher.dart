@@ -17,6 +17,8 @@
  */
 
 import 'package:flauncher/providers/home_forecast.dart';
+import 'package:flauncher/providers/home_agenda.dart';
+import 'package:flauncher/widgets/calendar_agenda.dart';
 import 'package:flauncher/widgets/weather_forecast_row.dart';
 import 'package:flauncher/widgets/profile_transition_overlay.dart';
 import 'dart:ui' as ui;
@@ -688,7 +690,10 @@ class _FLauncherState extends State<FLauncher> {
     final bool showRecents = continueWatchingActive && _showingRecents && !showSearch;
     // The weather forecast, while the top bar's weather has focus: over whatever the spot showed
     final bool showForecast = context.watch<HomeForecast?>()?.showing ?? false;
-    _showDetailsScrim(showRecents || showSearch || showForecast);
+    // Today's events, while the top bar's date and time have focus (with Home Assistant's calendars)
+    final bool showAgenda = (context.watch<HomeAgenda?>()?.showing ?? false) && !showForecast;
+    final bool showOverlay = showForecast || showAgenda;
+    _showDetailsScrim(showRecents || showSearch || showOverlay);
     _recentsAvailable = continueWatchingActive;
     final List<LauncherSection> belowDock =
         sections.where((s) => s != favorites && !(s is Category && s.applications.isEmpty)).toList();
@@ -714,7 +719,7 @@ class _FLauncherState extends State<FLauncher> {
                       focusNode: _recentsFocusNode,
                       onKeyEvent: _recentsKey,
                       child: _swapAnimation(
-                        visible: showRecents && !showForecast,
+                        visible: showRecents && !showOverlay,
                         hiddenOffset: const Offset(0, 0.25),
                         child: const Padding(
                           padding: EdgeInsets.only(bottom: 24),
@@ -731,7 +736,7 @@ class _FLauncherState extends State<FLauncher> {
                       focusNode: _searchRowFocusNode,
                       onKeyEvent: _searchRowKey,
                       child: _swapAnimation(
-                        visible: showSearch && !showForecast,
+                        visible: showSearch && !showOverlay,
                         hiddenOffset: const Offset(0, 0.25),
                         child: Padding(
                           padding: const EdgeInsets.only(bottom: 24),
@@ -750,6 +755,17 @@ class _FLauncherState extends State<FLauncher> {
                     child: const Padding(
                       padding: EdgeInsets.only(bottom: 32),
                       child: WeatherForecastRow(key: Key("home_forecast")),
+                    ),
+                  ),
+                ),
+                // What's left of today on the calendars (nothing in it takes focus: the date and time keep it)
+                ExcludeFocus(
+                  child: _swapAnimation(
+                    visible: showAgenda,
+                    hiddenOffset: const Offset(0, 0.25),
+                    child: const Padding(
+                      padding: EdgeInsets.only(bottom: 32),
+                      child: CalendarTodayRow(key: Key("home_agenda")),
                     ),
                   ),
                 ),

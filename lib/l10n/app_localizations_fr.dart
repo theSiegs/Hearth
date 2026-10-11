@@ -2571,4 +2571,68 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get haPanelDashboardsError => 'Impossible d’obtenir les tableaux de bord de Home Assistant. Vérifiez l’adresse et le jeton ci-dessous.';
+
+  @override
+  String get calendar => 'Agenda';
+
+  @override
+  String get calendarRestOfToday => 'Reste de la journée';
+
+  @override
+  String get calendarShowWeek => 'OK : 7 prochains jours';
+
+  @override
+  String get calendarNothingToday => 'Plus rien aujourd\'hui';
+
+  @override
+  String get calendarNoTitle => '(Sans titre)';
+
+  @override
+  String get calendarAllDay => 'Toute la journée';
+
+  @override
+  String get calendarNow => 'Maintenant';
+
+  @override
+  String calendarUntil(String time) {
+    return 'jusqu\'à $time';
+  }
+
+  @override
+  String get calendarTomorrow => 'Demain';
+
+  @override
+  String calendarMore(int count) {
+    return '+$count autres';
+  }
+
+  @override
+  String calendarNextDays(int days) {
+    return '$days prochains jours';
+  }
+
+  @override
+  String calendarNothingWeek(int days) {
+    return 'Rien dans les $days prochains jours';
+  }
+
+  @override
+  String get haCalendarsTitle => 'Agendas';
+
+  @override
+  String get haCalendarsLoading => 'Demande des agendas à Home Assistant…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'Home Assistant n\'est pas encore configuré sur ce téléviseur. Ajoutez son adresse et son jeton dans $place.';
+  }
+
+  @override
+  String get haCalendarsError => 'Impossible d\'obtenir les agendas de Home Assistant. Vérifiez l\'adresse et le jeton.';
+
+  @override
+  String get haCalendarsNone => 'Home Assistant n\'a aucun agenda.';
+
+  @override
+  String get haCalendarsHelp => 'Les agendas activés ici s\'affichent quand la date et l\'heure en haut à droite ont le focus : le reste de la journée, et OK pour les 7 prochains jours. Chaque profil choisit les siens.';
 }

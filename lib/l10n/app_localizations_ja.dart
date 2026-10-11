@@ -2559,4 +2559,68 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get haPanelDashboardsError => 'Home Assistant からダッシュボードを取得できませんでした。下のアドレスとトークンを確認してください。';
+
+  @override
+  String get calendar => 'カレンダー';
+
+  @override
+  String get calendarRestOfToday => '今日の残り';
+
+  @override
+  String get calendarShowWeek => 'OK: 今後7日間';
+
+  @override
+  String get calendarNothingToday => '今日はもう予定がありません';
+
+  @override
+  String get calendarNoTitle => '(タイトルなし)';
+
+  @override
+  String get calendarAllDay => '終日';
+
+  @override
+  String get calendarNow => '現在';
+
+  @override
+  String calendarUntil(String time) {
+    return '$timeまで';
+  }
+
+  @override
+  String get calendarTomorrow => '明日';
+
+  @override
+  String calendarMore(int count) {
+    return 'ほか$count件';
+  }
+
+  @override
+  String calendarNextDays(int days) {
+    return '今後$days日間';
+  }
+
+  @override
+  String calendarNothingWeek(int days) {
+    return '今後$days日間は予定がありません';
+  }
+
+  @override
+  String get haCalendarsTitle => 'カレンダー';
+
+  @override
+  String get haCalendarsLoading => 'Home Assistant にカレンダーを問い合わせています…';
+
+  @override
+  String haCalendarsNotSetUp(String place) {
+    return 'このテレビではまだ Home Assistant が設定されていません。$place でアドレスとトークンを追加してください。';
+  }
+
+  @override
+  String get haCalendarsError => 'Home Assistant からカレンダーを取得できませんでした。アドレスとトークンを確認してください。';
+
+  @override
+  String get haCalendarsNone => 'Home Assistant にカレンダーがありません。';
+
+  @override
+  String get haCalendarsHelp => 'ここでオンにしたカレンダーは、右上の日付と時刻にフォーカスがあるときに表示されます: 今日の残りの予定、OK で今後7日間。プロファイルごとに選べます。';
 }
