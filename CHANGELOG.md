@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.48 (pre-release)
+
+- Home Assistant panel: no "Open the full dashboard" row (the setting to show Home Assistant's own page instead stays). App icons in the screen time cards are kept on the TV for 30 days and show offline too.
+
 ## 2026.10.47 (pre-release)
 
 - Fixed: after Hearth's "Hi, <name>" card on a switch to a kid's profile, Hearth now takes over instead of leaving Google TV's kids home up.

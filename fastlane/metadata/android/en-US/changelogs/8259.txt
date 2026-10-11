@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Home Assistant panel: no full-dashboard row; app icons cached on the TV.
