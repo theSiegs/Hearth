@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.52 (pre-release)
+
+- Paramount+ content PIN: save it once in Settings > Profiles > Streaming app PINs, and Hearth types it (behind its cover card) when a title asks for it, only in a grown-up's profile that has its own Google TV profile PIN. Kids' profiles and unlocked profiles keep Paramount+'s own prompt. A wrong PIN is reported, not retried.
+
 ## 2026.10.51 (pre-release)
 
 - Weather: the forecast opens on a summary, today's in the day and tonight's from 5 PM (the sky, the high and low or tonight's low, the chance of rain or snow, now or tomorrow's high). OK goes on to the next hours, the next days and back.
