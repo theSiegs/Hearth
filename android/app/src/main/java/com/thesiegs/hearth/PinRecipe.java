@@ -53,4 +53,8 @@ interface PinRecipe {
     default long outcomeTimeoutMs() {
         return 6_000;
     }
+
+    /** The entry is over: wipe anything of the PIN the recipe kept, and stop its checks. */
+    default void close() {
+    }
 }

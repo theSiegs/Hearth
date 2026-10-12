@@ -2874,4 +2874,17 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get weatherConditionWind => 'Ветрено';
+
+  @override
+  String contentPinRow(String app) {
+    return 'PIN-код контента $app';
+  }
+
+  @override
+  String get contentPinRowHint => 'Вводится только в профилях взрослых с PIN-блокировкой Google TV';
+
+  @override
+  String contentPinEnterSubtitle(String app) {
+    return 'PIN-код, который $app запрашивает при запуске фильма или серии. Hearth вводит его только в профиле взрослого с собственной PIN-блокировкой Google TV и никогда в детском профиле. Он хранится на этом телевизоре в зашифрованном виде и никогда не показывается.';
+  }
 }

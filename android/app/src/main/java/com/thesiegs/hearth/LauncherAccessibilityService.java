@@ -239,6 +239,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     };
     private final Runnable mReadyFallback = () -> setProfileReady(this, getActiveProfileKey(this));
     private final Runnable mReadChooser = this::readChooser;
+    private static final ContentPin.Trigger CONTENT_PIN_TRIGGER = new ContentPin.Trigger();
     private final Runnable mReadScreenTime = this::readScreenTime;
     private final Runnable mKidsHomeTakeOver = () -> {
         // Not if Google TV put a screen of its own up (time up, PIN...) or the kid opened an app meanwhile
@@ -791,12 +792,18 @@ public class LauncherAccessibilityService extends AccessibilityService {
             return;
         }
         List<String> names = new ArrayList<>();
+        List<String> descriptions = new ArrayList<>();
         Map<String, String> emails = new LinkedHashMap<>();
-        String current = collectChooserTiles(root, names, new ArrayList<>(), emails, 0);
+        String current = collectChooserTiles(root, names, descriptions, emails, 0);
         if (current != null) mChooserCurrent = current;
         // Each profile's Google account address, which the TV's calendars are filed by (TvCalendars)
         for (Map.Entry<String, String> email : emails.entrySet()) {
             ProfileUsers.setEmail(this, email.getKey(), email.getValue());
+        }
+        // Each profile's Google TV PIN lock: the content PIN is typed only in a grown-up's locked profile
+        for (int i = 0; i < names.size(); i++) {
+            Boolean locked = ContentPin.lockedFromTile(descriptions.get(i), names.get(i).equals(current));
+            if (locked != null) ProfileUsers.setLocked(this, names.get(i), locked);
         }
         // The current account's tile names the running profile user, unless a switch is still settling. Not when
         // it's a just-added profile that was picked but never started: Google TV can mark that one current while
@@ -1115,6 +1122,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
         String className = cls.toString();
         boolean isGoogleTv = GOOGLE_TV_PACKAGE.equals(packageName);
         boolean isHearth = packageName.equals(getPackageName());
+        // Paramount+'s content PIN dialog (a title starting): Profile Pairing may type the saved PIN, once per dialog
+        boolean contentPinDialog = ContentPin.PACKAGE.equals(packageName) && ContentPin.isDialogText(event.getText());
+        if ((contentPinDialog || (!isHearth && !"com.android.systemui".equals(packageName)))
+                && CONTENT_PIN_TRIGGER.onWindow(contentPinDialog)) {
+            ProfilePairingService.onContentPinDialog();
+        }
         // Hearth's own welcome card over Google TV's kids home (an overlay, not an activity): Google's home is still
         // what's in front under it, and the takeover after the grace must still see that
         if (isHearth && KidsHomeCover.isShowing() && !className.endsWith("Activity")) return;

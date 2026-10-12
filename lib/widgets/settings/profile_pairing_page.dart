@@ -110,6 +110,61 @@ Future<bool> editProfilePin(
   return true;
 }
 
+/// An app's account-wide content PIN (Paramount+'s, asked for when a title starts): the parent PIN first, then the
+/// PIN on the row pad, twice; for a saved one, Change or Remove first. Saved once for the whole TV, it's typed only in
+/// a grown-up's profile that has its own Google TV PIN lock. Returns whether anything changed.
+Future<bool> editContentPin(
+  BuildContext context, {
+  required String packageName,
+  required String appLabel,
+  required bool saved,
+}) async {
+  final l = AppLocalizations.of(context)!;
+  final channel = context.read<FLauncherChannel>();
+  if (!await requireParentPin(context)) return false;
+  if (!context.mounted) return false;
+  final title = l.contentPinRow(appLabel);
+  if (saved) {
+    final remove = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l.parentPinRemove)),
+          TextButton(
+              autofocus: true, onPressed: () => Navigator.of(context).pop(false), child: Text(l.parentPinChange)),
+        ],
+      ),
+    );
+    if (remove == null || !context.mounted) return false;
+    if (remove) {
+      await channel.removeContentPin(packageName);
+      return true;
+    }
+  }
+  final first = await showDialog<String>(
+    context: context,
+    builder: (_) => ParentPinDialog(
+      title: title,
+      subtitle: l.contentPinEnterSubtitle(appLabel),
+      length: ProfilePairingAppPage.pinLength,
+    ),
+  );
+  if (first == null || !context.mounted) return false;
+  final second = await showDialog<String>(
+    context: context,
+    builder: (_) => ParentPinDialog(
+      title: l.parentPinConfirm,
+      verify: (pin) => pin == first,
+      length: ProfilePairingAppPage.pinLength,
+    ),
+  );
+  if (second == null || !context.mounted) return false;
+  final ok = await channel.saveContentPin(packageName, first);
+  if (!ok && context.mounted) await showMessageDialog(context, title: title, message: l.profilePinSaveFailed);
+  return true;
+}
+
 /// Profile Pairing (under Profiles): which profile each streaming app opens for each Google TV profile.
 class ProfilePairingPage extends StatefulWidget {
   static const String routeName = "profile_pairing";

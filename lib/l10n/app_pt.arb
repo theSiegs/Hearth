@@ -861,5 +861,8 @@
     "weatherConditionSnow": "Neve",
     "weatherConditionStorm": "Trovoadas",
     "weatherConditionFog": "Nevoeiro",
-    "weatherConditionWind": "Ventoso"
+    "weatherConditionWind": "Ventoso",
+    "contentPinRow": "PIN de conteúdo do {app}",
+    "contentPinRowHint": "Inserido só em perfis de adultos com bloqueio por PIN do Google TV",
+    "contentPinEnterSubtitle": "O PIN que o {app} pede ao iniciar um título. O Hearth só o insere no perfil de um adulto que tenha seu próprio bloqueio por PIN do Google TV, nunca em um perfil infantil. Ele fica nesta TV, criptografado, e nunca é mostrado."
 }

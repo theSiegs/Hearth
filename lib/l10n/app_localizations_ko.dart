@@ -2847,4 +2847,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get weatherConditionWind => '바람';
+
+  @override
+  String contentPinRow(String app) {
+    return '$app 콘텐츠 PIN';
+  }
+
+  @override
+  String get contentPinRowHint => 'Google TV PIN 잠금이 있는 성인 프로필에서만 입력됩니다';
+
+  @override
+  String contentPinEnterSubtitle(String app) {
+    return '$app에서 콘텐츠 재생을 시작할 때 묻는 PIN입니다. Hearth는 자체 Google TV PIN 잠금이 있는 성인 프로필에서만 입력하며, 어린이 프로필에서는 절대 입력하지 않습니다. 이 TV에 암호화되어 저장되며 표시되지 않습니다.';
+  }
 }

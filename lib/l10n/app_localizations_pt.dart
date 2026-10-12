@@ -2859,4 +2859,17 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get weatherConditionWind => 'Ventoso';
+
+  @override
+  String contentPinRow(String app) {
+    return 'PIN de conteúdo do $app';
+  }
+
+  @override
+  String get contentPinRowHint => 'Inserido só em perfis de adultos com bloqueio por PIN do Google TV';
+
+  @override
+  String contentPinEnterSubtitle(String app) {
+    return 'O PIN que o $app pede ao iniciar um título. O Hearth só o insere no perfil de um adulto que tenha seu próprio bloqueio por PIN do Google TV, nunca em um perfil infantil. Ele fica nesta TV, criptografado, e nunca é mostrado.';
+  }
 }

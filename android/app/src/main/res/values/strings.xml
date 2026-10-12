@@ -40,6 +40,8 @@
     <string name="search_voice_prompt">Search films and shows</string>
     <string name="pin_unlocking">Entering the profile PIN…</string>
     <string name="pin_rejected_title">%1$s didn’t accept the saved PIN for “%2$s”</string>
+    <string name="pin_content_entering">Entering the %1$s PIN…</string>
+    <string name="content_pin_rejected_title">%1$s didn’t accept the saved PIN</string>
     <string name="pin_rejected_body">Change PIN to update it in Hearth’s Settings, or Close to type it here yourself.</string>
     <string name="pin_locked_title">%1$s locked “%2$s”</string>
     <string name="pin_locked_body">Too many wrong PINs. Unlock the profile in the app, then update the PIN in Hearth’s Settings.</string>

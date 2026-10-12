@@ -861,5 +861,8 @@
     "weatherConditionSnow": "Снег",
     "weatherConditionStorm": "Гроза",
     "weatherConditionFog": "Туман",
-    "weatherConditionWind": "Ветрено"
+    "weatherConditionWind": "Ветрено",
+    "contentPinRow": "PIN-код контента {app}",
+    "contentPinRowHint": "Вводится только в профилях взрослых с PIN-блокировкой Google TV",
+    "contentPinEnterSubtitle": "PIN-код, который {app} запрашивает при запуске фильма или серии. Hearth вводит его только в профиле взрослого с собственной PIN-блокировкой Google TV и никогда в детском профиле. Он хранится на этом телевизоре в зашифрованном виде и никогда не показывается."
 }

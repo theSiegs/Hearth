@@ -69,10 +69,40 @@ class _PinsChannel extends FLauncherChannel {
         },
         {"packageName": "com.example.other", "label": "Other TV", "installed": true, "enabled": true},
         {"packageName": "com.example.gone", "label": "Gone TV", "installed": false},
+        if (contentAppInstalled)
+          {
+            "packageName": StreamingPinsPage.contentPinPackage,
+            "label": "Mountain+",
+            "installed": true,
+            "enabled": true,
+          },
       ];
 
+  bool contentAppInstalled = false;
+
+  /// The saved content PIN, if any.
+  String? contentPin;
+
   @override
-  Future<bool> profilePinEntrySupported(String packageName) async => packageName != "com.example.other";
+  Future<Map<dynamic, dynamic>> getContentPinStatus(String packageName) async =>
+      {"status": contentPin != null ? "saved" : "none", "paused": false};
+
+  @override
+  Future<bool> saveContentPin(String packageName, String pin) async {
+    events.add("save content $pin");
+    contentPin = pin;
+    return true;
+  }
+
+  @override
+  Future<void> removeContentPin(String packageName) async {
+    events.add("remove content");
+    contentPin = null;
+  }
+
+  @override
+  Future<bool> profilePinEntrySupported(String packageName) async =>
+      packageName != "com.example.other" && packageName != StreamingPinsPage.contentPinPackage;
 
   @override
   Future<List<Map<dynamic, dynamic>>> getProfilePairingChoices(String packageName) async =>
@@ -257,5 +287,86 @@ void main() {
     await tap(tester, "Remove PIN");
     expect(channel.events, ["remove Alex M"]);
     expect(find.text("Alex M · Profile PIN: None"), findsOneWidget);
+  });
+
+  group("content PIN", () {
+    const hint = "Typed only in grown-ups’ profiles that have a Google TV PIN lock";
+
+    testWidgets("a grown-up's profile has the row, once the app is installed", (tester) async {
+      channel.contentAppInstalled = true;
+      await pump(tester);
+      expect(find.text("Mountain+ content PIN"), findsOneWidget);
+      expect(find.text("None · $hint"), findsOneWidget);
+      // Not a profile PIN row of its own
+      expect(find.text("Mountain+"), findsNothing);
+    });
+
+    testWidgets("no row without the app", (tester) async {
+      await pump(tester);
+      expect(find.textContaining("content PIN"), findsNothing);
+    });
+
+    testWidgets("never in a kids' profile", (tester) async {
+      on("user:10", "Riley");
+      channel.contentAppInstalled = true;
+      channel.contentPin = "4321";
+      await pump(tester);
+      expect(find.textContaining("content PIN"), findsNothing);
+    });
+
+    testWidgets("set past the parent PIN, typed twice", (tester) async {
+      channel.contentAppInstalled = true;
+      await SettingsService(prefs).setParentPin("2468");
+      await pump(tester);
+      await tap(tester, "Mountain+ content PIN");
+      expect(find.text("Parent PIN"), findsOneWidget);
+      await type(tester, "2468");
+      expect(find.text("Mountain+ content PIN"), findsWidgets);
+      expect(find.textContaining("when a title starts"), findsOneWidget);
+      await type(tester, "1357");
+      await type(tester, "1357");
+      // Nothing paired: the content PIN is the whole TV's
+      expect(channel.events, ["save content 1357"]);
+      expect(find.text("Saved · $hint"), findsOneWidget);
+    });
+
+    testWidgets("a grown-up still at the remote goes straight to the PIN", (tester) async {
+      channel.contentAppInstalled = true;
+      channel.parentPresent = true;
+      await SettingsService(prefs).setParentPin("2468");
+      await pump(tester);
+      await tap(tester, "Mountain+ content PIN");
+      expect(find.text("Parent PIN"), findsNothing);
+      await type(tester, "1357");
+      await type(tester, "1357");
+      expect(channel.events, ["save content 1357"]);
+    });
+
+    testWidgets("a saved one can be changed or removed", (tester) async {
+      channel.contentAppInstalled = true;
+      channel.contentPin = "1111";
+      await SettingsService(prefs).setParentPin("2468");
+      await pump(tester);
+      expect(find.text("Saved · $hint"), findsOneWidget);
+      await tap(tester, "Mountain+ content PIN");
+      await type(tester, "2468");
+      await tap(tester, "Change PIN");
+      await type(tester, "2222");
+      await type(tester, "2222");
+      expect(channel.events, ["save content 2222"]);
+      await tap(tester, "Mountain+ content PIN");
+      await type(tester, "2468");
+      await tap(tester, "Remove PIN");
+      expect(channel.events, ["save content 2222", "remove content"]);
+      expect(find.text("None · $hint"), findsOneWidget);
+    });
+
+    testWidgets("without a parent PIN, says to set one first", (tester) async {
+      channel.contentAppInstalled = true;
+      await pump(tester);
+      await tap(tester, "Mountain+ content PIN");
+      expect(find.textContaining("Set a parent PIN first"), findsOneWidget);
+      expect(channel.events, isEmpty);
+    });
   });
 }

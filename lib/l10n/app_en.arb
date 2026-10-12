@@ -3730,5 +3730,27 @@
     "weatherConditionWind": "Windy",
     "@weatherConditionWind": {
         "description": "Weather condition name in the weather summary"
+    },
+    "contentPinRow": "{app} content PIN",
+    "@contentPinRow": {
+        "description": "Streaming app PINs: the row (and the pad's title) for an app's account-wide content PIN (Paramount+), asked for when a title starts",
+        "placeholders": {
+            "app": {
+                "type": "String"
+            }
+        }
+    },
+    "contentPinRowHint": "Typed only in grown-ups’ profiles that have a Google TV PIN lock",
+    "@contentPinRowHint": {
+        "description": "Streaming app PINs: under the content PIN row, which profiles it's typed in"
+    },
+    "contentPinEnterSubtitle": "The PIN {app} asks for when a title starts. Hearth types it only in a grown-up’s profile that has its own Google TV PIN lock, never in a kids’ profile. It stays on this TV, encrypted, and is never shown.",
+    "@contentPinEnterSubtitle": {
+        "description": "Streaming app PINs: under the pad for the content PIN",
+        "placeholders": {
+            "app": {
+                "type": "String"
+            }
+        }
     }
 }

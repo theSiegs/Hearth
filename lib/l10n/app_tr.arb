@@ -861,5 +861,8 @@
     "weatherConditionSnow": "Kar",
     "weatherConditionStorm": "Fırtına",
     "weatherConditionFog": "Sis",
-    "weatherConditionWind": "Rüzgârlı"
+    "weatherConditionWind": "Rüzgârlı",
+    "contentPinRow": "{app} içerik PIN’i",
+    "contentPinRowHint": "Yalnızca Google TV PIN kilidi olan yetişkin profillerinde girilir",
+    "contentPinEnterSubtitle": "{app} bir içerik başlarken sorduğu PIN. Hearth bunu yalnızca kendi Google TV PIN kilidi olan bir yetişkin profilinde girer, çocuk profilinde asla girmez. Bu TV’de şifrelenmiş olarak kalır ve hiç gösterilmez."
 }

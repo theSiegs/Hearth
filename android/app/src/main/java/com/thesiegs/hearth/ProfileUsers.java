@@ -374,6 +374,26 @@ final class ProfileUsers {
         return name == null ? null : prefs(context).getString(EMAIL_PREFIX + name, null);
     }
 
+    /** "locked|name": whether Google TV's chooser last showed that profile's tile PIN-locked. */
+    private static final String LOCKED_PREFIX = "locked|";
+
+    /** Remembers whether the chooser shows this profile PIN-locked ({@link ContentPin#lockedFromTile}). */
+    static void setLocked(Context context, String name, boolean locked) {
+        if (name == null || name.isEmpty()) return;
+        SharedPreferences prefs = prefs(context);
+        String key = LOCKED_PREFIX + name;
+        if (prefs.contains(key) && prefs.getBoolean(key, false) == locked) return;
+        prefs.edit().putBoolean(key, locked).apply();
+    }
+
+    /** Whether this profile is PIN-locked in Google TV, as its chooser tile last said; null when not seen yet. */
+    static Boolean isLocked(Context context, String name) {
+        if (name == null || name.isEmpty()) return null;
+        SharedPreferences prefs = prefs(context);
+        String key = LOCKED_PREFIX + name;
+        return prefs.contains(key) ? prefs.getBoolean(key, false) : null;
+    }
+
     /** The account Google TV has logged in in this user, when it isn't the user's first one; else null. */
     static String loggedIn(Context context, long serial) {
         return serial == UNKNOWN ? null : prefs(context).getString(LOGGED_IN_PREFIX + serial, null);

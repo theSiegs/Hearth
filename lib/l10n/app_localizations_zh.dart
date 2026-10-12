@@ -2847,4 +2847,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get weatherConditionWind => '有风';
+
+  @override
+  String contentPinRow(String app) {
+    return '$app 内容 PIN';
+  }
+
+  @override
+  String get contentPinRowHint => '仅在设有 Google TV PIN 锁的成人个人资料中输入';
+
+  @override
+  String contentPinEnterSubtitle(String app) {
+    return '$app 在开始播放时要求输入的 PIN。Hearth 仅在设有自己 Google TV PIN 锁的成人个人资料中输入，绝不在儿童个人资料中输入。它加密保存在这台电视上，且从不显示。';
+  }
 }

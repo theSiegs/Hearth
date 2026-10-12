@@ -130,9 +130,13 @@ class _SettingsPanelState extends State<SettingsPanel> {
             notifier: _unlocked,
             child: Navigator(
               key: _navigatorKey,
-              initialRoute: widget.openProfilePinsFor != null
-                  ? ProfilePairingPage.routeName
-                  : widget.initialRoute ?? SettingsPanelPage.routeName,
+              // Profile Pairing's "Change PIN": the app's page in Profile Pairing, or for a content PIN, Streaming
+              // app PINs
+              initialRoute: widget.openProfilePinsFor == StreamingPinsPage.contentPinTarget
+                  ? StreamingPinsPage.routeName
+                  : widget.openProfilePinsFor != null
+                      ? ProfilePairingPage.routeName
+                      : widget.initialRoute ?? SettingsPanelPage.routeName,
               onGenerateRoute: (settings) {
                 switch (settings.name) {
                   case SettingsPanelPage.routeName:

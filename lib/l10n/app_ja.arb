@@ -861,5 +861,8 @@
     "weatherConditionSnow": "雪",
     "weatherConditionStorm": "雷雨",
     "weatherConditionFog": "霧",
-    "weatherConditionWind": "強風"
+    "weatherConditionWind": "強風",
+    "contentPinRow": "{app}のコンテンツPIN",
+    "contentPinRowHint": "Google TVのPINロックがある大人のプロフィールでのみ入力します",
+    "contentPinEnterSubtitle": "{app}がタイトルの再生開始時に求めるPINです。Hearthは、Google TVのPINロックが設定された大人のプロフィールでのみ入力し、子どものプロフィールでは入力しません。このテレビに暗号化して保存され、表示されることはありません。"
 }

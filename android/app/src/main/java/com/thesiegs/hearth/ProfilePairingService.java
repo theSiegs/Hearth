@@ -281,7 +281,10 @@ public class ProfilePairingService extends AccessibilityService {
         hideCover();
         hideBanner();
         hidePinPopup();
-        if (mPin != null) java.util.Arrays.fill(mPin.pin, '\0');
+        if (mPin != null) {
+            java.util.Arrays.fill(mPin.pin, '\0');
+            mPin.recipe.close();
+        }
         mPin = null;
         super.onDestroy();
     }
@@ -906,7 +909,7 @@ public class ProfilePairingService extends AccessibilityService {
             Log.i(TAG, "PIN for " + s.pkg + " skipped: its length doesn't fit the app");
             return false;
         }
-        mPin = new PinRun(s, appProfile, recipe, pin);
+        mPin = new PinRun(s, appProfile, recipe, pin, false);
         long now = SystemClock.elapsedRealtime();
         for (Object[] said : mRecentSpeech) {
             if (s.pkg.equals(said[1]) && now - (long) said[0] <= RECENT_SPEECH_MS) recipe.onSpeech((String) said[2]);
@@ -917,6 +920,59 @@ public class ProfilePairingService extends AccessibilityService {
         Log.i(TAG, "Waiting for " + s.pkg + "'s PIN screen");
         checkPinScreen();
         return true;
+    }
+
+    // ---- Paramount+'s content PIN (ContentPin): asked for when a title starts, typed in a grown-up's locked profile ----
+
+    /** After an entry that didn't go through, the dialog is left to the parent this long (it may come up again). */
+    private static final long CONTENT_PIN_HOLD_MS = 30_000;
+    private long mContentPinHoldUntil;
+
+    /**
+     * Hearth's accessibility service saw Paramount+'s content PIN dialog come up. Profile Pairing listens only for
+     * the entry (not in screen-reader mode), then goes idle again.
+     */
+    static void onContentPinDialog() {
+        ProfilePairingService service = sInstance;
+        if (service == null) {
+            Log.i(TAG, "Content PIN not typed: Profile Pairing isn't running");
+            return;
+        }
+        service.mHandler.post(service::startContentPin);
+    }
+
+    private void startContentPin() {
+        if (mPin != null || SystemClock.elapsedRealtime() < mContentPinHoldUntil) return;
+        String pkg = ContentPin.PACKAGE;
+        long serial = ProfileUsers.settledSerial(this);
+        String name = LauncherAccessibilityService.getActiveProfileName(this);
+        String why = ContentPin.whyNot(ProfileUsers.isKids(this), ProfileUsers.isGrownUps(this, serial),
+                ProfileUsers.isLocked(this, name), PinVault.statusOf(this, pkg, ContentPin.VAULT_PROFILE),
+                PinVault.isPaused(this, pkg));
+        if (why != null) {
+            Log.i(TAG, "Content PIN not typed: " + why);
+            return;
+        }
+        PinRecipe recipe = new ParamountContentPinRecipe();
+        char[] pin = PinVault.open(this, pkg, ContentPin.VAULT_PROFILE);
+        if (pin == null) return;
+        if (pin.length != recipe.pinLength()) {
+            java.util.Arrays.fill(pin, '\0');
+            Log.i(TAG, "Content PIN skipped: its length doesn't fit the app");
+            return;
+        }
+        // A launch still waiting for a picker that never came (the app kept its profile): the dialog is what's up
+        if (mSession != null) finish(QUIET, "content PIN dialog");
+        mHandler.removeCallbacks(mGoIdle);
+        hidePinPopup();
+        setMode(true, false);
+        Session s = new Session(pkg, LauncherAccessibilityService.getActiveProfileKey(this), name);
+        showCover(getString(R.string.pin_content_entering, appLabel(pkg)));
+        mPin = new PinRun(s, ContentPin.VAULT_PROFILE, recipe, pin, true);
+        mHandler.postDelayed(mPinNoScreen, PIN_SCREEN_WAIT_MS);
+        mHandler.postDelayed(mPinBroken, PIN_OVERALL_MS);
+        Log.i(TAG, "Typing the content PIN in " + pkg);
+        checkPinScreen();
     }
 
     private final Runnable mPinNoScreen = () -> {
@@ -968,15 +1024,18 @@ public class ProfilePairingService extends AccessibilityService {
         final PinRecipe recipe;
         final PinEntryMachine machine;
         char[] pin;
+        /** Paramount+'s content PIN (ContentPin), not a profile's. */
+        final boolean content;
         /** Every digit went in: the app's answer is awaited. */
         boolean outcomeDue;
         private final Runnable stepTimeout = () -> machineBroken();
 
-        PinRun(Session session, String appProfile, PinRecipe recipe, char[] pin) {
+        PinRun(Session session, String appProfile, PinRecipe recipe, char[] pin, boolean content) {
             this.session = session;
             this.appProfile = appProfile;
             this.recipe = recipe;
             this.pin = pin;
+            this.content = content;
             this.machine = new PinEntryMachine(this, pin.length);
         }
 
@@ -1017,13 +1076,20 @@ public class ProfilePairingService extends AccessibilityService {
         if (mPin != run) return;
         mPin = null;
         java.util.Arrays.fill(run.pin, '\0');
+        run.recipe.close();
         mHandler.removeCallbacks(mPinNoScreen);
         mHandler.removeCallbacks(mPinBroken);
         mHandler.removeCallbacks(mPinOutcomePoll);
         mRecentSpeech.clear();
         String pkg = run.session.pkg;
         String app = appLabel(pkg);
-        Log.i(TAG, "PIN entry in " + pkg + ": " + result);
+        Log.i(TAG, (run.content ? "Content PIN entry in " : "PIN entry in ") + pkg + ": " + result);
+        // The content PIN's dialog stays up after anything but success: it's the parent's to type now
+        if (run.content && result != PinEntryMachine.Result.ACCEPTED) {
+            mContentPinHoldUntil = SystemClock.elapsedRealtime() + CONTENT_PIN_HOLD_MS;
+        }
+        // Change PIN opens Settings on the app's profile PINs, or on Streaming app PINs for the content PIN
+        String settings = run.content ? ContentPin.SETTINGS_TARGET : pkg;
         switch (result) {
             case ACCEPTED:
                 PinVault.markAccepted(this, pkg, run.appProfile);
@@ -1031,14 +1097,17 @@ public class ProfilePairingService extends AccessibilityService {
                 hideCover();
                 break;
             case REJECTED:
+                // A rejected content PIN isn't typed again until a new one is saved (ContentPin.whyNot)
                 PinVault.markRejected(this, pkg, run.appProfile);
-                showPinPopup(getString(R.string.pin_rejected_title, app, run.appProfile),
-                        getString(R.string.pin_rejected_body), pkg);
+                showPinPopup(run.content ? getString(R.string.content_pin_rejected_title, app)
+                                : getString(R.string.pin_rejected_title, app, run.appProfile),
+                        getString(R.string.pin_rejected_body), settings);
                 break;
             case LOCKED_OUT:
                 PinVault.markRejected(this, pkg, run.appProfile);
-                showPinPopup(getString(R.string.pin_locked_title, app, run.appProfile),
-                        getString(R.string.pin_locked_body), pkg);
+                showPinPopup(run.content ? getString(R.string.content_pin_rejected_title, app)
+                                : getString(R.string.pin_locked_title, app, run.appProfile),
+                        getString(R.string.pin_locked_body), settings);
                 break;
             case SCREEN_CHANGED:
                 PinVault.setPaused(this, pkg, true);
@@ -1068,7 +1137,7 @@ public class ProfilePairingService extends AccessibilityService {
      * Over the cover: the saved PIN wasn't taken. Change PIN opens Hearth's Settings on the app's PINs; Close (and
      * Back) drop the pop-up and the cover, leaving the app's own PIN entry for the parent to type by hand.
      */
-    private void showPinPopup(String titleText, String bodyText, String pkg) {
+    private void showPinPopup(String titleText, String bodyText, String settingsTarget) {
         hidePinPopup();
         try {
             Context c = this;
@@ -1116,7 +1185,7 @@ public class ProfilePairingService extends AccessibilityService {
                 hideCover();
                 Intent open = new Intent(this, MainActivity.class)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                        .putExtra(MainActivity.EXTRA_OPEN_PROFILE_PINS, pkg);
+                        .putExtra(MainActivity.EXTRA_OPEN_PROFILE_PINS, settingsTarget);
                 try {
                     startActivity(open);
                 } catch (Exception e) {
@@ -1186,7 +1255,14 @@ public class ProfilePairingService extends AccessibilityService {
     // ---- Cover card ----
 
     private void showCover(Session s) {
-        if (mCover != null) return;
+        showCover(getString(R.string.profile_pairing_opening, appLabel(s.pkg), s.hearthProfile));
+    }
+
+    private void showCover(String titleText) {
+        if (mCover != null) {
+            if (mCoverTitle != null) mCoverTitle.setText(titleText);
+            return;
+        }
         try {
             Context c = this;
             LinearLayout box = new LinearLayout(c);
@@ -1198,7 +1274,7 @@ public class ProfilePairingService extends AccessibilityService {
             box.addView(spinner, new LinearLayout.LayoutParams(dp(48), dp(48)));
 
             TextView title = new TextView(c);
-            title.setText(getString(R.string.profile_pairing_opening, appLabel(s.pkg), s.hearthProfile));
+            title.setText(titleText);
             title.setTextColor(Color.WHITE);
             title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);
             title.setGravity(Gravity.CENTER);

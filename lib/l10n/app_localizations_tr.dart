@@ -2848,4 +2848,17 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get weatherConditionWind => 'Rüzgârlı';
+
+  @override
+  String contentPinRow(String app) {
+    return '$app içerik PIN’i';
+  }
+
+  @override
+  String get contentPinRowHint => 'Yalnızca Google TV PIN kilidi olan yetişkin profillerinde girilir';
+
+  @override
+  String contentPinEnterSubtitle(String app) {
+    return '$app bir içerik başlarken sorduğu PIN. Hearth bunu yalnızca kendi Google TV PIN kilidi olan bir yetişkin profilinde girer, çocuk profilinde asla girmez. Bu TV’de şifrelenmiş olarak kalır ve hiç gösterilmez.';
+  }
 }

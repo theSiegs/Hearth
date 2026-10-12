@@ -2,7 +2,9 @@
 <!-- Which screen is in front and focus/click/scroll events (for idle standby, today's usage and Google TV's profile
      chooser). Window content is read only from Google TV's own screens: its screen time screens (why and until when),
      its profile chooser (names, and a screenshot cropped to the profile photos, when one is missing or not checked
-     today) and its home's profile picture label ("Logged in as …": whose grown-up profile is on). -->
+     today) and its home's profile picture label ("Logged in as …": whose grown-up profile is on). The only other
+     app text looked at is the window event text of Paramount+'s windows, to notice its content PIN dialog, which
+     Profile Pairing then types the saved PIN into. -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged|typeViewFocused|typeViewClicked|typeViewScrolled"
     android:accessibilityFeedbackType="feedbackGeneric"

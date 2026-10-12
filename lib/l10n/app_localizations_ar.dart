@@ -2895,4 +2895,17 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get weatherConditionWind => 'عاصف';
+
+  @override
+  String contentPinRow(String app) {
+    return 'رمز PIN للمحتوى في $app';
+  }
+
+  @override
+  String get contentPinRowHint => 'يُدخَل فقط في ملفات البالغين الشخصية المقفلة برمز PIN في Google TV';
+
+  @override
+  String contentPinEnterSubtitle(String app) {
+    return 'رمز PIN الذي يطلبه $app عند بدء أي عنوان. يُدخله Hearth فقط في الملف الشخصي لشخص بالغ له قفل PIN خاص به في Google TV، ولا يُدخله أبدًا في ملف شخصي للأطفال. يبقى على هذا التلفزيون مشفّرًا ولا يُعرض أبدًا.';
+  }
 }

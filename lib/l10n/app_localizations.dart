@@ -5086,6 +5086,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Windy'**
   String get weatherConditionWind;
+
+  /// Streaming app PINs: the row (and the pad's title) for an app's account-wide content PIN (Paramount+), asked for when a title starts
+  ///
+  /// In en, this message translates to:
+  /// **'{app} content PIN'**
+  String contentPinRow(String app);
+
+  /// Streaming app PINs: under the content PIN row, which profiles it's typed in
+  ///
+  /// In en, this message translates to:
+  /// **'Typed only in grown-ups’ profiles that have a Google TV PIN lock'**
+  String get contentPinRowHint;
+
+  /// Streaming app PINs: under the pad for the content PIN
+  ///
+  /// In en, this message translates to:
+  /// **'The PIN {app} asks for when a title starts. Hearth types it only in a grown-up’s profile that has its own Google TV PIN lock, never in a kids’ profile. It stays on this TV, encrypted, and is never shown.'**
+  String contentPinEnterSubtitle(String app);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

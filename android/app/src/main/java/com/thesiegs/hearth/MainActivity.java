@@ -252,6 +252,29 @@ public class MainActivity extends FlutterActivity {
                 ProfileProvider.notifyChanged(this);
                 result.success(null);
             }
+            // Paramount+'s account-wide content PIN (ContentPin): its state, never the PIN; saved once, for every
+            // grown-up's locked profile
+            case "getContentPinStatus" -> result.success(ContentPin.PACKAGE.equals(call.argument("packageName"))
+                    ? PinVault.status(this, ContentPin.PACKAGE, ContentPin.VAULT_PROFILE) : null);
+            case "saveContentPin" -> {
+                String pin = call.argument("pin");
+                char[] digits = pin != null ? pin.toCharArray() : new char[0];
+                boolean saved = ContentPin.PACKAGE.equals(call.argument("packageName"))
+                        && digits.length == ContentPin.LENGTH
+                        && PinVault.save(this, ContentPin.PACKAGE, ContentPin.VAULT_PROFILE, digits);
+                java.util.Arrays.fill(digits, ' ');
+                if (saved) {
+                    PinVault.setPaused(this, ContentPin.PACKAGE, false);
+                    PinVault.resetBreaks(this, ContentPin.PACKAGE);
+                }
+                result.success(saved);
+            }
+            case "removeContentPin" -> {
+                if (ContentPin.PACKAGE.equals(call.argument("packageName"))) {
+                    PinVault.remove(this, ContentPin.PACKAGE, ContentPin.VAULT_PROFILE);
+                }
+                result.success(null);
+            }
             case "removeProfilePin" -> {
                 PinVault.remove(this, call.argument("packageName"), call.argument("appProfile"));
                 result.success(null);

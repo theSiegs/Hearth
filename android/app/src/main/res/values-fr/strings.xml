@@ -39,6 +39,8 @@
     <string name="search_voice_prompt">Rechercher des films et des séries</string>
     <string name="pin_unlocking">Saisie du code PIN du profil…</string>
     <string name="pin_rejected_title">%1$s n’a pas accepté le code PIN enregistré pour « %2$s »</string>
+    <string name="pin_content_entering">Saisie du code PIN %1$s…</string>
+    <string name="content_pin_rejected_title">%1$s n’a pas accepté le code PIN enregistré</string>
     <string name="pin_rejected_body">Modifier le PIN pour le mettre à jour dans les paramètres de Hearth, ou Fermer pour le saisir vous-même.</string>
     <string name="pin_locked_title">%1$s a bloqué « %2$s »</string>
     <string name="pin_locked_body">Trop de codes erronés. Débloquez le profil dans l’app, puis mettez à jour le code dans les paramètres de Hearth.</string>

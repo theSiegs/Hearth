@@ -2847,4 +2847,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get weatherConditionWind => '強風';
+
+  @override
+  String contentPinRow(String app) {
+    return '$appのコンテンツPIN';
+  }
+
+  @override
+  String get contentPinRowHint => 'Google TVのPINロックがある大人のプロフィールでのみ入力します';
+
+  @override
+  String contentPinEnterSubtitle(String app) {
+    return '$appがタイトルの再生開始時に求めるPINです。Hearthは、Google TVのPINロックが設定された大人のプロフィールでのみ入力し、子どものプロフィールでは入力しません。このテレビに暗号化して保存され、表示されることはありません。';
+  }
 }

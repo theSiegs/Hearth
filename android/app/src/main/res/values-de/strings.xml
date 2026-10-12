@@ -39,6 +39,8 @@
     <string name="search_voice_prompt">Filme und Serien suchen</string>
     <string name="pin_unlocking">Profil-PIN wird eingegeben…</string>
     <string name="pin_rejected_title">%1$s hat die gespeicherte PIN für „%2$s“ nicht akzeptiert</string>
+    <string name="pin_content_entering">%1$s-PIN wird eingegeben…</string>
+    <string name="content_pin_rejected_title">%1$s hat die gespeicherte PIN nicht akzeptiert</string>
     <string name="pin_rejected_body">„PIN ändern“ öffnet Hearths Einstellungen, „Schließen“ lässt dich die PIN hier selbst eingeben.</string>
     <string name="pin_locked_title">%1$s hat „%2$s“ gesperrt</string>
     <string name="pin_locked_body">Zu viele falsche PINs. Entsperre das Profil in der App und aktualisiere dann die PIN in Hearths Einstellungen.</string>

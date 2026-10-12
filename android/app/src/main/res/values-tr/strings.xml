@@ -39,6 +39,8 @@
     <string name="search_voice_prompt">Film ve dizi ara</string>
     <string name="pin_unlocking">Profil PIN’i giriliyor…</string>
     <string name="pin_rejected_title">%1$s, “%2$s” için kayıtlı PIN’i kabul etmedi</string>
+    <string name="pin_content_entering">%1$s PIN’i giriliyor…</string>
+    <string name="content_pin_rejected_title">%1$s kayıtlı PIN’i kabul etmedi</string>
     <string name="pin_rejected_body">PIN’i Değiştir ile Hearth Ayarlarında güncelleyin ya da Kapat ile kendiniz yazın.</string>
     <string name="pin_locked_title">%1$s, “%2$s” profilini kilitledi</string>
     <string name="pin_locked_body">Çok fazla yanlış PIN. Profilin kilidini uygulamada açın, sonra PIN’i Hearth Ayarlarında güncelleyin.</string>

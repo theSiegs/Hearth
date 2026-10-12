@@ -2859,4 +2859,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get weatherConditionWind => 'Windy';
+
+  @override
+  String contentPinRow(String app) {
+    return '$app content PIN';
+  }
+
+  @override
+  String get contentPinRowHint => 'Typed only in grown-ups’ profiles that have a Google TV PIN lock';
+
+  @override
+  String contentPinEnterSubtitle(String app) {
+    return 'The PIN $app asks for when a title starts. Hearth types it only in a grown-up’s profile that has its own Google TV PIN lock, never in a kids’ profile. It stays on this TV, encrypted, and is never shown.';
+  }
 }

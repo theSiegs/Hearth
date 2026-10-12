@@ -265,6 +265,19 @@ class FLauncherChannel {
   Future<void> removeProfilePin(String packageName, String appProfile) async =>
       await _methodChannel.invokeMethod("removeProfilePin", {"packageName": packageName, "appProfile": appProfile});
 
+  /// The account-wide content PIN an app asks for when a title starts (Paramount+), never the PIN: as
+  /// [getProfilePinStatus]. Empty for an app without one.
+  Future<Map<dynamic, dynamic>> getContentPinStatus(String packageName) async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getContentPinStatus", {"packageName": packageName}) ??
+      {};
+
+  /// Hands the content PIN to the Android side, which encrypts it at once; false when it couldn't be saved.
+  Future<bool> saveContentPin(String packageName, String pin) async =>
+      await _methodChannel.invokeMethod<bool>("saveContentPin", {"packageName": packageName, "pin": pin}) ?? false;
+
+  Future<void> removeContentPin(String packageName) async =>
+      await _methodChannel.invokeMethod("removeContentPin", {"packageName": packageName});
+
   /// Locks the current grown-up profile with Google TV's own profile lock (its PIN screen). False in a kids profile
   /// or when it couldn't be opened.
   Future<bool> lockProfile() async => await _methodChannel.invokeMethod<bool>("lockProfile") ?? false;

@@ -10,7 +10,8 @@ import java.util.function.Supplier;
  *
  * Each recipe comes from research on the app's real PIN screen (a wrong and then the right PIN typed by a parent with
  * research mode on, digits masked): how the screen is recognised, how the keypad is typed and confirmed, what a wrong
- * PIN and success look like. Not here: Paramount+ (keeps the profile without a PIN at launch) and, until its PIN
+ * PIN and success look like. Not here: Paramount+ (keeps the profile without a PIN at launch; its account-wide
+ * content PIN, asked for when a title starts, is {@link ContentPin}'s) and, until its PIN
  * screen is recorded, Hulu (speech only; see the design doc, §9).
  */
 final class PinRecipes {

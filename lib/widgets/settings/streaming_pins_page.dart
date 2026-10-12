@@ -41,9 +41,17 @@ class _PinRow {
 /// Settings > Profiles > Streaming app PINs: the PINs of the Google TV profile on now (each profile sees and sets
 /// only its own), one row per installed app Hearth can type PINs in, with the app profile Hearth picks for it. A
 /// kids' profile has them too, set past the parent PIN like every profile PIN. Setting a PIN on a profile Hearth
-/// matched by name pairs the two for good, so the PIN always goes with the right app profile.
+/// matched by name pairs the two for good, so the PIN always goes with the right app profile. In a grown-up's profile
+/// it also has Paramount+'s content PIN, one for the whole TV ([editContentPin]).
 class StreamingPinsPage extends StatefulWidget {
   static const String routeName = "streaming_pins";
+
+  /// The app with an account-wide content PIN (Paramount+): one PIN for the TV, typed when a title starts, in
+  /// grown-ups' profiles with a Google TV PIN lock only. Its row is a grown-up's to see.
+  static const String contentPinPackage = "com.cbs.ott";
+
+  /// What Profile Pairing's "Change PIN" sends for the content PIN: Settings opens here (ContentPin.SETTINGS_TARGET).
+  static const String contentPinTarget = "content_pin";
 
   const StreamingPinsPage({super.key});
 
@@ -58,6 +66,9 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
   List<(Map<dynamic, dynamic>, List<_PinRow>)>? _apps;
   bool _serviceOn = true;
 
+  /// The content PIN's app and its state, in a grown-up's profile with the app installed; else null.
+  (Map<dynamic, dynamic>, Map<dynamic, dynamic>)? _contentPin;
+
   @override
   void initState() {
     super.initState();
@@ -67,11 +78,17 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
   Future<void> _load() async {
     final apps = <(Map<dynamic, dynamic>, List<_PinRow>)>[];
     bool serviceOn = true;
+    (Map<dynamic, dynamic>, Map<dynamic, dynamic>)? contentPin;
     final active = context.read<ProfileService?>()?.activeProfileKey;
+    // Not known to be a grown-up's profile: no content PIN row
+    final grownUp = !(context.read<ProfileService?>()?.isKidsProfile ?? true);
     try {
       serviceOn = (await _channel.getProfilePairingStatus())["enabled"] == true;
       for (final app in await _channel.getProfilePairingApps()) {
         final pkg = app["packageName"] as String;
+        if (grownUp && pkg == StreamingPinsPage.contentPinPackage && app["installed"] == true) {
+          contentPin = (app, await _channel.getContentPinStatus(pkg));
+        }
         if (app["installed"] != true || !await _channel.profilePinEntrySupported(pkg)) continue;
         final rows = <_PinRow>[];
         for (final map in await _channel.getProfilePairingChoices(pkg)) {
@@ -98,6 +115,7 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
       setState(() {
         _apps = apps;
         _serviceOn = serviceOn;
+        _contentPin = contentPin;
       });
     }
   }
@@ -181,7 +199,7 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
               _load();
             },
           ),
-        if (apps.isEmpty)
+        if (apps.isEmpty && _contentPin == null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: Text(l.streamingPinsNone, style: small),
@@ -226,6 +244,28 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
                 onPressed: () => _edit(app, row),
               ),
         ],
+        if (_contentPin case (final app, final pin))
+          FocusableSettingsTile(
+            autofocus: takeFirst(),
+            leading: const Icon(Icons.pin_outlined),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l.contentPinRow(app["label"] as String), style: textTheme.bodyMedium),
+                Text("${profilePinStatus(l, pin)} · ${l.contentPinRowHint}", style: small),
+              ],
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onPressed: () async {
+              await editContentPin(
+                context,
+                packageName: app["packageName"] as String,
+                appLabel: app["label"] as String,
+                saved: (pin["status"] as String? ?? "none") != "none",
+              );
+              if (mounted) _load();
+            },
+          ),
         const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
