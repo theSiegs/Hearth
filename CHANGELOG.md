@@ -3,6 +3,11 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.51 (pre-release)
+
+- Weather: the forecast opens on a summary, today's in the day and tonight's from 5 PM (the sky, the high and low or tonight's low, the chance of rain or snow, now or tomorrow's high). OK goes on to the next hours, the next days and back.
+- Calendar: without calendar access the date and time can still be selected, and OK asks for access.
+
 ## 2026.10.50 (pre-release)
 
 - Home Assistant panel: selecting a person shows where they are on a small map, with home marked. The map is drawn from map pieces of the area around home, fetched once and kept on the TV, so the map service never learns where anyone is; someone farther away (or without a position) shows their status as before.

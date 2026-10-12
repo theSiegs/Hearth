@@ -1,0 +1,3 @@
+- Early development pre-release.
+- Weather opens on a summary of today or tonight.
+- The date asks for calendar access when it's not allowed yet.
