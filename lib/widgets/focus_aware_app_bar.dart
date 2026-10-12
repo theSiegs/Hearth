@@ -334,6 +334,17 @@ class _CalendarPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final calendars = context.watch<CalendarService?>();
+    // Not allowed to read the TV's calendars yet: still a stop, and OK asks (Android's dialog), so the calendar is
+    // found where it's shown instead of only in Settings
+    if (calendars != null && calendars.access == TvCalendarAccess.denied) {
+      return FocusableTap(
+        key: const Key("statusbar_calendar_allow"),
+        focusNode: focusNode,
+        onPressed: () => calendars.requestAccess(),
+        splashShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        builder: builder,
+      );
+    }
     if (calendars == null || !calendars.available) {
       // Gone while it had focus (the calendars turned off): today's events go too
       if (context.read<HomeAgenda?>()?.showing ?? false) {

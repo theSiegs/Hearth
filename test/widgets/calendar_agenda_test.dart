@@ -210,10 +210,44 @@ void main() {
       await tester.pumpWidget(topBar());
       expect(find.byKey(const Key("statusbar_date")), findsOneWidget);
       expect(find.byKey(const Key("statusbar_calendar")), findsNothing);
+      expect(find.byKey(const Key("statusbar_calendar_allow")), findsNothing);
+    });
 
-      final notSetUp = await calendarService(const [], allowed: false);
-      await tester.pumpWidget(topBar(service: notSetUp, agenda: HomeAgenda()));
+    testWidgets("without calendar access, the date is a stop whose OK asks for it", (tester) async {
+      var allowed = false;
+      var asked = 0;
+      final service = CalendarService(
+        read: (from, to) async => allowed
+            ? (
+                access: TvCalendarAccess.granted,
+                calendars: CalendarParser.parseCalendars([
+                  {"id": 1, "name": "Family", "account": "alex@example.com"}
+                ]),
+                events: CalendarParser.parseEvents(
+                    [timed("Movie night", DateTime(2026, 10, 10, 19), DateTime(2026, 10, 10, 21))]),
+              )
+            : (access: TvCalendarAccess.denied, calendars: const <TvCalendar>[], events: const <CalendarEvent>[]),
+        hiddenCalendars: () => const [],
+        requestAccess: () async {
+          asked++;
+          allowed = true;
+          return true;
+        },
+        now: () => now,
+      );
+      await service.refresh();
+      await tester.pumpWidget(topBar(service: service, agenda: HomeAgenda()));
+      final allow = find.byKey(const Key("statusbar_calendar_allow"));
+      expect(allow, findsOneWidget);
       expect(find.byKey(const Key("statusbar_calendar")), findsNothing);
+
+      tester.widget<Focus>(find.descendant(of: allow, matching: find.byType(Focus)).first).focusNode!.requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(asked, 1);
+      // Allowed: the date is the calendar now
+      expect(find.byKey(const Key("statusbar_calendar")), findsOneWidget);
     });
 
     testWidgets("focused, show today's events; OK opens the week and Back closes it", (tester) async {
