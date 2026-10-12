@@ -3,16 +3,22 @@ import 'package:flauncher/providers/home_forecast.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test("the forecast opens on the next hours each time, and OK swaps hours and days", () {
+  test("the forecast opens on the summary each time, and OK goes on to hours, days and back", () {
     final forecast = HomeForecast();
     forecast.setShowing(true);
     expect(forecast.showing, isTrue);
-    expect(forecast.days, isFalse);
+    expect(forecast.view, ForecastView.summary);
     forecast.swap();
+    expect(forecast.view, ForecastView.hourly);
+    forecast.swap();
+    expect(forecast.view, ForecastView.daily);
     expect(forecast.days, isTrue);
+    forecast.swap();
+    expect(forecast.view, ForecastView.summary);
+    forecast.swap();
     forecast.setShowing(false);
     forecast.setShowing(true);
-    expect(forecast.days, isFalse);
+    expect(forecast.view, ForecastView.summary);
   });
 
   test("temperatures show in the TV's unit, with or without it", () {

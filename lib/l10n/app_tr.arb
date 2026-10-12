@@ -846,5 +846,20 @@
     "haControlNext": "Sonraki",
     "haControlTurnOn": "Aç",
     "haPanelFullDashboard": "Bunun yerine panonun tamamını göster",
-    "haPanelFullDashboardDetail": "Home Assistant'ın kendi sayfası. Kumanda denetimlerine ulaşamaz."
+    "haPanelFullDashboardDetail": "Home Assistant'ın kendi sayfası. Kumanda denetimlerine ulaşamaz.",
+    "weatherSummaryTonight": "Bu gece",
+    "weatherForecastShowSummary": "OK: özet",
+    "weatherSummaryHighLow": "En yüksek {high} · En düşük {low}",
+    "weatherSummaryLow": "En düşük {low}",
+    "weatherSummaryPrecip": "%{percent} yağmur veya kar ihtimali",
+    "weatherSummaryNow": "Şimdi {temp}",
+    "weatherSummaryTomorrowHigh": "Yarın: en yüksek {high}",
+    "weatherConditionClear": "Açık",
+    "weatherConditionPartlyCloudy": "Parçalı bulutlu",
+    "weatherConditionCloudy": "Bulutlu",
+    "weatherConditionRain": "Yağmur",
+    "weatherConditionSnow": "Kar",
+    "weatherConditionStorm": "Fırtına",
+    "weatherConditionFog": "Sis",
+    "weatherConditionWind": "Rüzgârlı"
 }

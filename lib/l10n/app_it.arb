@@ -846,5 +846,20 @@
     "haControlNext": "Successivo",
     "haControlTurnOn": "Accendi",
     "haPanelFullDashboard": "Mostra invece la dashboard completa",
-    "haPanelFullDashboardDetail": "La pagina di Home Assistant. Il telecomando non raggiunge i suoi controlli."
+    "haPanelFullDashboardDetail": "La pagina di Home Assistant. Il telecomando non raggiunge i suoi controlli.",
+    "weatherSummaryTonight": "Stanotte",
+    "weatherForecastShowSummary": "OK: riepilogo",
+    "weatherSummaryHighLow": "Max {high} · Min {low}",
+    "weatherSummaryLow": "Min {low}",
+    "weatherSummaryPrecip": "{percent}% di probabilità di pioggia o neve",
+    "weatherSummaryNow": "Ora {temp}",
+    "weatherSummaryTomorrowHigh": "Domani: max {high}",
+    "weatherConditionClear": "Sereno",
+    "weatherConditionPartlyCloudy": "Parzialmente nuvoloso",
+    "weatherConditionCloudy": "Nuvoloso",
+    "weatherConditionRain": "Pioggia",
+    "weatherConditionSnow": "Neve",
+    "weatherConditionStorm": "Temporali",
+    "weatherConditionFog": "Nebbia",
+    "weatherConditionWind": "Ventoso"
 }

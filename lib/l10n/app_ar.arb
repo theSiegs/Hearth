@@ -846,5 +846,20 @@
     "haControlNext": "التالي",
     "haControlTurnOn": "تشغيل الجهاز",
     "haPanelFullDashboard": "عرض لوحة المعلومات الكاملة بدلاً من ذلك",
-    "haPanelFullDashboardDetail": "صفحة Home Assistant نفسها. لا يمكن لجهاز التحكم الوصول إلى عناصر التحكم فيها."
+    "haPanelFullDashboardDetail": "صفحة Home Assistant نفسها. لا يمكن لجهاز التحكم الوصول إلى عناصر التحكم فيها.",
+    "weatherSummaryTonight": "الليلة",
+    "weatherForecastShowSummary": "موافق: ملخص",
+    "weatherSummaryHighLow": "العظمى {high} · الصغرى {low}",
+    "weatherSummaryLow": "الصغرى {low}",
+    "weatherSummaryPrecip": "احتمال مطر أو ثلج {percent}%",
+    "weatherSummaryNow": "الآن {temp}",
+    "weatherSummaryTomorrowHigh": "غدًا: العظمى {high}",
+    "weatherConditionClear": "صافٍ",
+    "weatherConditionPartlyCloudy": "غائم جزئيًا",
+    "weatherConditionCloudy": "غائم",
+    "weatherConditionRain": "مطر",
+    "weatherConditionSnow": "ثلج",
+    "weatherConditionStorm": "عواصف رعدية",
+    "weatherConditionFog": "ضباب",
+    "weatherConditionWind": "عاصف"
 }

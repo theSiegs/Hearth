@@ -17,29 +17,35 @@
 
 import 'package:flutter/foundation.dart';
 
-/// The weather forecast over the home, in Continue Watching's spot: up while the top bar's weather has focus, and
-/// either the next hours or the next days (OK on the weather swaps them).
+/// Which forecast shows: a summary of today (or tonight), the next hours, or the next days.
+enum ForecastView { summary, hourly, daily }
+
+/// The weather forecast over the home, in Continue Watching's spot: up while the top bar's weather has focus. It
+/// opens on a summary of today, or tonight in the evening; OK on the weather goes on to the next hours, the next
+/// days, and back to the summary.
 class HomeForecast extends ChangeNotifier {
   bool _showing = false;
-  bool _days = false;
+  ForecastView _view = ForecastView.summary;
 
   /// The forecast is up.
   bool get showing => _showing;
 
-  /// It shows the next days rather than the next hours.
-  bool get days => _days;
+  ForecastView get view => _view;
 
-  /// Up while the weather has focus; it opens on the next hours each time.
+  /// It shows the next days.
+  bool get days => _view == ForecastView.daily;
+
+  /// Up while the weather has focus; it opens on the summary each time.
   void setShowing(bool showing) {
     if (showing == _showing) return;
     _showing = showing;
-    if (showing) _days = false;
+    if (showing) _view = ForecastView.summary;
     notifyListeners();
   }
 
-  /// The next hours ⇄ the next days.
+  /// Summary → next hours → next days → summary.
   void swap() {
-    _days = !_days;
+    _view = ForecastView.values[(_view.index + 1) % ForecastView.values.length];
     notifyListeners();
   }
 }

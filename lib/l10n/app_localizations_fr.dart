@@ -2804,4 +2804,59 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get haPanelFullDashboardDetail => 'La page de Home Assistant elle-même. La télécommande ne peut pas atteindre ses commandes.';
+
+  @override
+  String get weatherSummaryTonight => 'Ce soir';
+
+  @override
+  String get weatherForecastShowSummary => 'OK : résumé';
+
+  @override
+  String weatherSummaryHighLow(String high, String low) {
+    return 'Max $high · Min $low';
+  }
+
+  @override
+  String weatherSummaryLow(String low) {
+    return 'Min $low';
+  }
+
+  @override
+  String weatherSummaryPrecip(String percent) {
+    return '$percent % de risque de pluie ou de neige';
+  }
+
+  @override
+  String weatherSummaryNow(String temp) {
+    return 'Maintenant $temp';
+  }
+
+  @override
+  String weatherSummaryTomorrowHigh(String high) {
+    return 'Demain : max $high';
+  }
+
+  @override
+  String get weatherConditionClear => 'Dégagé';
+
+  @override
+  String get weatherConditionPartlyCloudy => 'Partiellement nuageux';
+
+  @override
+  String get weatherConditionCloudy => 'Nuageux';
+
+  @override
+  String get weatherConditionRain => 'Pluie';
+
+  @override
+  String get weatherConditionSnow => 'Neige';
+
+  @override
+  String get weatherConditionStorm => 'Orages';
+
+  @override
+  String get weatherConditionFog => 'Brouillard';
+
+  @override
+  String get weatherConditionWind => 'Venteux';
 }

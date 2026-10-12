@@ -2840,4 +2840,59 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get haPanelFullDashboardDetail => 'صفحة Home Assistant نفسها. لا يمكن لجهاز التحكم الوصول إلى عناصر التحكم فيها.';
+
+  @override
+  String get weatherSummaryTonight => 'الليلة';
+
+  @override
+  String get weatherForecastShowSummary => 'موافق: ملخص';
+
+  @override
+  String weatherSummaryHighLow(String high, String low) {
+    return 'العظمى $high · الصغرى $low';
+  }
+
+  @override
+  String weatherSummaryLow(String low) {
+    return 'الصغرى $low';
+  }
+
+  @override
+  String weatherSummaryPrecip(String percent) {
+    return 'احتمال مطر أو ثلج $percent%';
+  }
+
+  @override
+  String weatherSummaryNow(String temp) {
+    return 'الآن $temp';
+  }
+
+  @override
+  String weatherSummaryTomorrowHigh(String high) {
+    return 'غدًا: العظمى $high';
+  }
+
+  @override
+  String get weatherConditionClear => 'صافٍ';
+
+  @override
+  String get weatherConditionPartlyCloudy => 'غائم جزئيًا';
+
+  @override
+  String get weatherConditionCloudy => 'غائم';
+
+  @override
+  String get weatherConditionRain => 'مطر';
+
+  @override
+  String get weatherConditionSnow => 'ثلج';
+
+  @override
+  String get weatherConditionStorm => 'عواصف رعدية';
+
+  @override
+  String get weatherConditionFog => 'ضباب';
+
+  @override
+  String get weatherConditionWind => 'عاصف';
 }

@@ -846,5 +846,20 @@
     "haControlNext": "अगला",
     "haControlTurnOn": "चालू करें",
     "haPanelFullDashboard": "इसके बजाय पूरा डैशबोर्ड दिखाएँ",
-    "haPanelFullDashboardDetail": "Home Assistant का अपना पेज। रिमोट इसके नियंत्रणों तक नहीं पहुँच सकता।"
+    "haPanelFullDashboardDetail": "Home Assistant का अपना पेज। रिमोट इसके नियंत्रणों तक नहीं पहुँच सकता।",
+    "weatherSummaryTonight": "आज रात",
+    "weatherForecastShowSummary": "OK: सारांश",
+    "weatherSummaryHighLow": "अधिकतम {high} · न्यूनतम {low}",
+    "weatherSummaryLow": "न्यूनतम {low}",
+    "weatherSummaryPrecip": "बारिश या बर्फ़ की {percent}% संभावना",
+    "weatherSummaryNow": "अभी {temp}",
+    "weatherSummaryTomorrowHigh": "कल: अधिकतम {high}",
+    "weatherConditionClear": "साफ़",
+    "weatherConditionPartlyCloudy": "आंशिक रूप से बादल",
+    "weatherConditionCloudy": "बादल",
+    "weatherConditionRain": "बारिश",
+    "weatherConditionSnow": "बर्फ़",
+    "weatherConditionStorm": "आंधी-तूफ़ान",
+    "weatherConditionFog": "कोहरा",
+    "weatherConditionWind": "तेज़ हवा"
 }

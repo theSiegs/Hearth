@@ -2792,4 +2792,59 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get haPanelFullDashboardDetail => 'Home Assistant 자체 페이지입니다. 리모컨으로는 컨트롤을 선택할 수 없습니다.';
+
+  @override
+  String get weatherSummaryTonight => '오늘 밤';
+
+  @override
+  String get weatherForecastShowSummary => 'OK: 요약';
+
+  @override
+  String weatherSummaryHighLow(String high, String low) {
+    return '최고 $high · 최저 $low';
+  }
+
+  @override
+  String weatherSummaryLow(String low) {
+    return '최저 $low';
+  }
+
+  @override
+  String weatherSummaryPrecip(String percent) {
+    return '비 또는 눈 확률 $percent%';
+  }
+
+  @override
+  String weatherSummaryNow(String temp) {
+    return '현재 $temp';
+  }
+
+  @override
+  String weatherSummaryTomorrowHigh(String high) {
+    return '내일: 최고 $high';
+  }
+
+  @override
+  String get weatherConditionClear => '맑음';
+
+  @override
+  String get weatherConditionPartlyCloudy => '구름 조금';
+
+  @override
+  String get weatherConditionCloudy => '흐림';
+
+  @override
+  String get weatherConditionRain => '비';
+
+  @override
+  String get weatherConditionSnow => '눈';
+
+  @override
+  String get weatherConditionStorm => '뇌우';
+
+  @override
+  String get weatherConditionFog => '안개';
+
+  @override
+  String get weatherConditionWind => '바람';
 }

@@ -846,5 +846,20 @@
     "haControlNext": "Weiter",
     "haControlTurnOn": "Einschalten",
     "haPanelFullDashboard": "Stattdessen das vollständige Dashboard zeigen",
-    "haPanelFullDashboardDetail": "Die Seite von Home Assistant selbst. Ihre Bedienelemente sind mit der Fernbedienung nicht erreichbar."
+    "haPanelFullDashboardDetail": "Die Seite von Home Assistant selbst. Ihre Bedienelemente sind mit der Fernbedienung nicht erreichbar.",
+    "weatherSummaryTonight": "Heute Nacht",
+    "weatherForecastShowSummary": "OK: Übersicht",
+    "weatherSummaryHighLow": "Hoch {high} · Tief {low}",
+    "weatherSummaryLow": "Tief {low}",
+    "weatherSummaryPrecip": "{percent}% Regen- oder Schneewahrscheinlichkeit",
+    "weatherSummaryNow": "Jetzt {temp}",
+    "weatherSummaryTomorrowHigh": "Morgen: Hoch {high}",
+    "weatherConditionClear": "Klar",
+    "weatherConditionPartlyCloudy": "Teilweise bewölkt",
+    "weatherConditionCloudy": "Bewölkt",
+    "weatherConditionRain": "Regen",
+    "weatherConditionSnow": "Schnee",
+    "weatherConditionStorm": "Gewitter",
+    "weatherConditionFog": "Nebel",
+    "weatherConditionWind": "Windig"
 }

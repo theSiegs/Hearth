@@ -846,5 +846,20 @@
     "haControlNext": "Далее",
     "haControlTurnOn": "Включить",
     "haPanelFullDashboard": "Показывать всю панель целиком",
-    "haPanelFullDashboardDetail": "Собственная страница Home Assistant. Пульт не может управлять её элементами."
+    "haPanelFullDashboardDetail": "Собственная страница Home Assistant. Пульт не может управлять её элементами.",
+    "weatherSummaryTonight": "Сегодня ночью",
+    "weatherForecastShowSummary": "OK: сводка",
+    "weatherSummaryHighLow": "Макс. {high} · Мин. {low}",
+    "weatherSummaryLow": "Мин. {low}",
+    "weatherSummaryPrecip": "Вероятность дождя или снега {percent}%",
+    "weatherSummaryNow": "Сейчас {temp}",
+    "weatherSummaryTomorrowHigh": "Завтра: макс. {high}",
+    "weatherConditionClear": "Ясно",
+    "weatherConditionPartlyCloudy": "Переменная облачность",
+    "weatherConditionCloudy": "Облачно",
+    "weatherConditionRain": "Дождь",
+    "weatherConditionSnow": "Снег",
+    "weatherConditionStorm": "Гроза",
+    "weatherConditionFog": "Туман",
+    "weatherConditionWind": "Ветрено"
 }

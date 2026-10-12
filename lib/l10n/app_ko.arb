@@ -846,5 +846,20 @@
     "haControlNext": "다음",
     "haControlTurnOn": "켜기",
     "haPanelFullDashboard": "대신 전체 대시보드 표시",
-    "haPanelFullDashboardDetail": "Home Assistant 자체 페이지입니다. 리모컨으로는 컨트롤을 선택할 수 없습니다."
+    "haPanelFullDashboardDetail": "Home Assistant 자체 페이지입니다. 리모컨으로는 컨트롤을 선택할 수 없습니다.",
+    "weatherSummaryTonight": "오늘 밤",
+    "weatherForecastShowSummary": "OK: 요약",
+    "weatherSummaryHighLow": "최고 {high} · 최저 {low}",
+    "weatherSummaryLow": "최저 {low}",
+    "weatherSummaryPrecip": "비 또는 눈 확률 {percent}%",
+    "weatherSummaryNow": "현재 {temp}",
+    "weatherSummaryTomorrowHigh": "내일: 최고 {high}",
+    "weatherConditionClear": "맑음",
+    "weatherConditionPartlyCloudy": "구름 조금",
+    "weatherConditionCloudy": "흐림",
+    "weatherConditionRain": "비",
+    "weatherConditionSnow": "눈",
+    "weatherConditionStorm": "뇌우",
+    "weatherConditionFog": "안개",
+    "weatherConditionWind": "바람"
 }

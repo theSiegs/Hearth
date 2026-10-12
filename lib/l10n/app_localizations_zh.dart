@@ -2792,4 +2792,59 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get haPanelFullDashboardDetail => 'Home Assistant 自己的页面。遥控器无法操作其中的控件。';
+
+  @override
+  String get weatherSummaryTonight => '今晚';
+
+  @override
+  String get weatherForecastShowSummary => 'OK：概况';
+
+  @override
+  String weatherSummaryHighLow(String high, String low) {
+    return '最高 $high · 最低 $low';
+  }
+
+  @override
+  String weatherSummaryLow(String low) {
+    return '最低 $low';
+  }
+
+  @override
+  String weatherSummaryPrecip(String percent) {
+    return '降雨或降雪概率 $percent%';
+  }
+
+  @override
+  String weatherSummaryNow(String temp) {
+    return '现在 $temp';
+  }
+
+  @override
+  String weatherSummaryTomorrowHigh(String high) {
+    return '明天：最高 $high';
+  }
+
+  @override
+  String get weatherConditionClear => '晴';
+
+  @override
+  String get weatherConditionPartlyCloudy => '局部多云';
+
+  @override
+  String get weatherConditionCloudy => '多云';
+
+  @override
+  String get weatherConditionRain => '雨';
+
+  @override
+  String get weatherConditionSnow => '雪';
+
+  @override
+  String get weatherConditionStorm => '雷雨';
+
+  @override
+  String get weatherConditionFog => '雾';
+
+  @override
+  String get weatherConditionWind => '有风';
 }

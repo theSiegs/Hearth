@@ -846,5 +846,20 @@
     "haControlNext": "下一首",
     "haControlTurnOn": "打开",
     "haPanelFullDashboard": "改为显示完整仪表板",
-    "haPanelFullDashboardDetail": "Home Assistant 自己的页面。遥控器无法操作其中的控件。"
+    "haPanelFullDashboardDetail": "Home Assistant 自己的页面。遥控器无法操作其中的控件。",
+    "weatherSummaryTonight": "今晚",
+    "weatherForecastShowSummary": "OK：概况",
+    "weatherSummaryHighLow": "最高 {high} · 最低 {low}",
+    "weatherSummaryLow": "最低 {low}",
+    "weatherSummaryPrecip": "降雨或降雪概率 {percent}%",
+    "weatherSummaryNow": "现在 {temp}",
+    "weatherSummaryTomorrowHigh": "明天：最高 {high}",
+    "weatherConditionClear": "晴",
+    "weatherConditionPartlyCloudy": "局部多云",
+    "weatherConditionCloudy": "多云",
+    "weatherConditionRain": "雨",
+    "weatherConditionSnow": "雪",
+    "weatherConditionStorm": "雷雨",
+    "weatherConditionFog": "雾",
+    "weatherConditionWind": "有风"
 }

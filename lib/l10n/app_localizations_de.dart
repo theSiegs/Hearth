@@ -2802,4 +2802,59 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get haPanelFullDashboardDetail => 'Die Seite von Home Assistant selbst. Ihre Bedienelemente sind mit der Fernbedienung nicht erreichbar.';
+
+  @override
+  String get weatherSummaryTonight => 'Heute Nacht';
+
+  @override
+  String get weatherForecastShowSummary => 'OK: Übersicht';
+
+  @override
+  String weatherSummaryHighLow(String high, String low) {
+    return 'Hoch $high · Tief $low';
+  }
+
+  @override
+  String weatherSummaryLow(String low) {
+    return 'Tief $low';
+  }
+
+  @override
+  String weatherSummaryPrecip(String percent) {
+    return '$percent% Regen- oder Schneewahrscheinlichkeit';
+  }
+
+  @override
+  String weatherSummaryNow(String temp) {
+    return 'Jetzt $temp';
+  }
+
+  @override
+  String weatherSummaryTomorrowHigh(String high) {
+    return 'Morgen: Hoch $high';
+  }
+
+  @override
+  String get weatherConditionClear => 'Klar';
+
+  @override
+  String get weatherConditionPartlyCloudy => 'Teilweise bewölkt';
+
+  @override
+  String get weatherConditionCloudy => 'Bewölkt';
+
+  @override
+  String get weatherConditionRain => 'Regen';
+
+  @override
+  String get weatherConditionSnow => 'Schnee';
+
+  @override
+  String get weatherConditionStorm => 'Gewitter';
+
+  @override
+  String get weatherConditionFog => 'Nebel';
+
+  @override
+  String get weatherConditionWind => 'Windig';
 }

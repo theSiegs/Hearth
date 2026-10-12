@@ -2804,4 +2804,59 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get haPanelFullDashboardDetail => 'La pagina di Home Assistant. Il telecomando non raggiunge i suoi controlli.';
+
+  @override
+  String get weatherSummaryTonight => 'Stanotte';
+
+  @override
+  String get weatherForecastShowSummary => 'OK: riepilogo';
+
+  @override
+  String weatherSummaryHighLow(String high, String low) {
+    return 'Max $high · Min $low';
+  }
+
+  @override
+  String weatherSummaryLow(String low) {
+    return 'Min $low';
+  }
+
+  @override
+  String weatherSummaryPrecip(String percent) {
+    return '$percent% di probabilità di pioggia o neve';
+  }
+
+  @override
+  String weatherSummaryNow(String temp) {
+    return 'Ora $temp';
+  }
+
+  @override
+  String weatherSummaryTomorrowHigh(String high) {
+    return 'Domani: max $high';
+  }
+
+  @override
+  String get weatherConditionClear => 'Sereno';
+
+  @override
+  String get weatherConditionPartlyCloudy => 'Parzialmente nuvoloso';
+
+  @override
+  String get weatherConditionCloudy => 'Nuvoloso';
+
+  @override
+  String get weatherConditionRain => 'Pioggia';
+
+  @override
+  String get weatherConditionSnow => 'Neve';
+
+  @override
+  String get weatherConditionStorm => 'Temporali';
+
+  @override
+  String get weatherConditionFog => 'Nebbia';
+
+  @override
+  String get weatherConditionWind => 'Ventoso';
 }

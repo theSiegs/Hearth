@@ -846,5 +846,20 @@
     "haControlNext": "Próxima",
     "haControlTurnOn": "Ligar",
     "haPanelFullDashboard": "Mostrar o painel completo",
-    "haPanelFullDashboardDetail": "A própria página do Home Assistant. O controle remoto não alcança seus controles."
+    "haPanelFullDashboardDetail": "A própria página do Home Assistant. O controle remoto não alcança seus controles.",
+    "weatherSummaryTonight": "Esta noite",
+    "weatherForecastShowSummary": "OK: resumo",
+    "weatherSummaryHighLow": "Máx. {high} · Mín. {low}",
+    "weatherSummaryLow": "Mín. {low}",
+    "weatherSummaryPrecip": "{percent}% de chance de chuva ou neve",
+    "weatherSummaryNow": "Agora {temp}",
+    "weatherSummaryTomorrowHigh": "Amanhã: máx. {high}",
+    "weatherConditionClear": "Céu limpo",
+    "weatherConditionPartlyCloudy": "Parcialmente nublado",
+    "weatherConditionCloudy": "Nublado",
+    "weatherConditionRain": "Chuva",
+    "weatherConditionSnow": "Neve",
+    "weatherConditionStorm": "Trovoadas",
+    "weatherConditionFog": "Nevoeiro",
+    "weatherConditionWind": "Ventoso"
 }

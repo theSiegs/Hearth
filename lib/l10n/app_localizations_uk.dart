@@ -2819,4 +2819,59 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get haPanelFullDashboardDetail => 'Власна сторінка Home Assistant. Пульт не може дістатися її елементів керування.';
+
+  @override
+  String get weatherSummaryTonight => 'Сьогодні вночі';
+
+  @override
+  String get weatherForecastShowSummary => 'OK: зведення';
+
+  @override
+  String weatherSummaryHighLow(String high, String low) {
+    return 'Макс. $high · Мін. $low';
+  }
+
+  @override
+  String weatherSummaryLow(String low) {
+    return 'Мін. $low';
+  }
+
+  @override
+  String weatherSummaryPrecip(String percent) {
+    return 'Імовірність дощу або снігу $percent%';
+  }
+
+  @override
+  String weatherSummaryNow(String temp) {
+    return 'Зараз $temp';
+  }
+
+  @override
+  String weatherSummaryTomorrowHigh(String high) {
+    return 'Завтра: макс. $high';
+  }
+
+  @override
+  String get weatherConditionClear => 'Ясно';
+
+  @override
+  String get weatherConditionPartlyCloudy => 'Мінлива хмарність';
+
+  @override
+  String get weatherConditionCloudy => 'Хмарно';
+
+  @override
+  String get weatherConditionRain => 'Дощ';
+
+  @override
+  String get weatherConditionSnow => 'Сніг';
+
+  @override
+  String get weatherConditionStorm => 'Гроза';
+
+  @override
+  String get weatherConditionFog => 'Туман';
+
+  @override
+  String get weatherConditionWind => 'Вітряно';
 }

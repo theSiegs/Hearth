@@ -3642,5 +3642,93 @@
     "haPanelFullDashboardDetail": "Home Assistant's own page. The remote can't reach its controls.",
     "@haPanelFullDashboardDetail": {
         "description": "Dashboard panel settings: under the full-dashboard switch"
+    },
+    "weatherSummaryTonight": "Tonight",
+    "@weatherSummaryTonight": {
+        "description": "Weather summary heading in the evening and night"
+    },
+    "weatherForecastShowSummary": "OK: summary",
+    "@weatherForecastShowSummary": {
+        "description": "Weather forecast: hint that OK goes back to the summary"
+    },
+    "weatherSummaryHighLow": "High {high} · Low {low}",
+    "@weatherSummaryHighLow": {
+        "description": "Weather summary: today's high and low, already formatted with degrees",
+        "placeholders": {
+            "high": {
+                "type": "String"
+            },
+            "low": {
+                "type": "String"
+            }
+        }
+    },
+    "weatherSummaryLow": "Low {low}",
+    "@weatherSummaryLow": {
+        "description": "Weather summary: tonight's low, already formatted with degrees",
+        "placeholders": {
+            "low": {
+                "type": "String"
+            }
+        }
+    },
+    "weatherSummaryPrecip": "{percent}% chance of rain or snow",
+    "@weatherSummaryPrecip": {
+        "description": "Weather summary: highest chance of rain or snow, in percent",
+        "placeholders": {
+            "percent": {
+                "type": "String"
+            }
+        }
+    },
+    "weatherSummaryNow": "Now {temp}",
+    "@weatherSummaryNow": {
+        "description": "Weather summary: the temperature now, already formatted",
+        "placeholders": {
+            "temp": {
+                "type": "String"
+            }
+        }
+    },
+    "weatherSummaryTomorrowHigh": "Tomorrow: high {high}",
+    "@weatherSummaryTomorrowHigh": {
+        "description": "Weather summary tonight: tomorrow's high, already formatted",
+        "placeholders": {
+            "high": {
+                "type": "String"
+            }
+        }
+    },
+    "weatherConditionClear": "Clear",
+    "@weatherConditionClear": {
+        "description": "Weather condition name in the weather summary"
+    },
+    "weatherConditionPartlyCloudy": "Partly cloudy",
+    "@weatherConditionPartlyCloudy": {
+        "description": "Weather condition name in the weather summary"
+    },
+    "weatherConditionCloudy": "Cloudy",
+    "@weatherConditionCloudy": {
+        "description": "Weather condition name in the weather summary"
+    },
+    "weatherConditionRain": "Rain",
+    "@weatherConditionRain": {
+        "description": "Weather condition name in the weather summary"
+    },
+    "weatherConditionSnow": "Snow",
+    "@weatherConditionSnow": {
+        "description": "Weather condition name in the weather summary"
+    },
+    "weatherConditionStorm": "Thunderstorms",
+    "@weatherConditionStorm": {
+        "description": "Weather condition name in the weather summary"
+    },
+    "weatherConditionFog": "Fog",
+    "@weatherConditionFog": {
+        "description": "Weather condition name in the weather summary"
+    },
+    "weatherConditionWind": "Windy",
+    "@weatherConditionWind": {
+        "description": "Weather condition name in the weather summary"
     }
 }

@@ -17,6 +17,7 @@
 
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/models/weather_data.dart';
+import 'package:flauncher/models/weather_summary.dart';
 import 'package:flauncher/providers/home_forecast.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
@@ -25,8 +26,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-/// The weather over the home, in Continue Watching's spot while the top bar's weather has focus: the next hours, or
-/// (after OK on the weather) the next five days. Nothing in it takes focus: the weather keeps it.
+/// The weather over the home, in Continue Watching's spot while the top bar's weather has focus: a summary of today
+/// (tonight in the evening), then with OK on the weather the next hours, the next five days, and the summary again.
+/// Nothing in it takes focus: the weather keeps it.
 class WeatherForecastRow extends StatelessWidget {
   /// How many hours and days it shows.
   static const int hours = 10;
@@ -38,11 +40,16 @@ class WeatherForecastRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final weather = context.watch<WeatherService?>()?.weatherData;
-    final showDays = context.watch<HomeForecast?>()?.days ?? false;
+    final view = context.watch<HomeForecast?>()?.view ?? ForecastView.summary;
     final fahrenheit = context.select<SettingsService, bool>((s) => s.useFahrenheit);
     if (weather == null) return const SizedBox.shrink();
     final now = DateTime.now();
-    final tiles = showDays ? _dayTiles(l, weather, now, fahrenheit) : _hourTiles(l, weather, now, fahrenheit);
+    final summary = view == ForecastView.summary ? WeatherSummary.of(weather, now) : null;
+    final tiles = switch (view) {
+      ForecastView.summary => [_SummaryCard(summary: summary!, fahrenheit: fahrenheit)],
+      ForecastView.hourly => _hourTiles(l, weather, now, fahrenheit),
+      ForecastView.daily => _dayTiles(l, weather, now, fahrenheit),
+    };
     const shadow = [Shadow(color: Colors.black54, offset: Offset(1, 1), blurRadius: 8)];
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -63,12 +70,20 @@ class WeatherForecastRow extends StatelessWidget {
           Text(
             [
               if (weather.location != null && weather.location!.isNotEmpty) weather.location!,
-              showDays ? l.weatherForecastDaily : l.weatherForecastHourly,
+              switch (view) {
+                ForecastView.summary => summary!.tonight ? l.weatherSummaryTonight : l.weatherForecastToday,
+                ForecastView.hourly => l.weatherForecastHourly,
+                ForecastView.daily => l.weatherForecastDaily,
+              },
             ].join(" · "),
             style: Theme.of(context).textTheme.headlineSmall!.copyWith(fontWeight: FontWeight.w700, shadows: shadow),
           ),
           Text(
-            showDays ? l.weatherForecastShowHourly : l.weatherForecastShowDaily,
+            switch (view) {
+              ForecastView.summary => l.weatherForecastShowHourly,
+              ForecastView.hourly => l.weatherForecastShowDaily,
+              ForecastView.daily => l.weatherForecastShowSummary,
+            },
             style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Colors.white70, shadows: shadow),
           ),
           const SizedBox(height: 12),
@@ -168,6 +183,71 @@ class _ForecastTile extends StatelessWidget {
               Text("${precip ?? 0}%",
                   style: text.bodySmall!.copyWith(color: (precip ?? 0) > 0 ? Colors.lightBlueAccent : Colors.white38)),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Today, or tonight: the sky and the temperatures that matter then, the chance of rain or snow, and now (or, tonight,
+/// tomorrow's high).
+class _SummaryCard extends StatelessWidget {
+  final WeatherSummary summary;
+  final bool fahrenheit;
+
+  const _SummaryCard({required this.summary, required this.fahrenheit});
+
+  static String conditionName(AppLocalizations l, int? code) {
+    if (code == null) return l.weatherConditionCloudy;
+    if (code == 800) return l.weatherConditionClear;
+    if (code == 801 || code == 802) return l.weatherConditionPartlyCloudy;
+    if (WeatherData.rainCodes.contains(code)) return l.weatherConditionRain;
+    if (WeatherData.snowCodes.contains(code)) return l.weatherConditionSnow;
+    if (WeatherData.stormCodes.contains(code)) return l.weatherConditionStorm;
+    if (code == 701 || code == 711 || code == 721 || code == 741 || code == 751) return l.weatherConditionFog;
+    if (code == 771) return l.weatherConditionWind;
+    return l.weatherConditionCloudy;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final text = Theme.of(context).textTheme;
+    String deg(int? c) => WeatherData.formatDegrees(c, useFahrenheit: fahrenheit, withUnit: false);
+    final temps = summary.tonight ? l.weatherSummaryLow(deg(summary.low)) : l.weatherSummaryHighLow(deg(summary.high), deg(summary.low));
+    final lines = [
+      if ((summary.precipProbability ?? 0) > 0) l.weatherSummaryPrecip("${summary.precipProbability}"),
+      if (summary.tonight && summary.tomorrowHigh != null) l.weatherSummaryTomorrowHigh(deg(summary.tomorrowHigh)),
+      if (summary.current != null) l.weatherSummaryNow(deg(summary.current)),
+    ];
+    return Container(
+      key: const Key("weather_summary"),
+      constraints: const BoxConstraints(minWidth: 420, maxWidth: 640),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.35),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(WeatherData.iconFor(summary.conditionCode), size: 64, color: Colors.white),
+          const SizedBox(width: 20),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(conditionName(l, summary.conditionCode),
+                    style: text.headlineSmall!.copyWith(fontWeight: FontWeight.w700)),
+                Text(temps, style: text.titleLarge!.copyWith(color: Colors.white)),
+                const SizedBox(height: 6),
+                for (final line in lines)
+                  Text(line, style: text.bodyLarge!.copyWith(color: Colors.white70)),
+              ],
+            ),
           ),
         ],
       ),

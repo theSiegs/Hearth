@@ -2793,4 +2793,59 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get haPanelFullDashboardDetail => 'Home Assistant\'ın kendi sayfası. Kumanda denetimlerine ulaşamaz.';
+
+  @override
+  String get weatherSummaryTonight => 'Bu gece';
+
+  @override
+  String get weatherForecastShowSummary => 'OK: özet';
+
+  @override
+  String weatherSummaryHighLow(String high, String low) {
+    return 'En yüksek $high · En düşük $low';
+  }
+
+  @override
+  String weatherSummaryLow(String low) {
+    return 'En düşük $low';
+  }
+
+  @override
+  String weatherSummaryPrecip(String percent) {
+    return '%$percent yağmur veya kar ihtimali';
+  }
+
+  @override
+  String weatherSummaryNow(String temp) {
+    return 'Şimdi $temp';
+  }
+
+  @override
+  String weatherSummaryTomorrowHigh(String high) {
+    return 'Yarın: en yüksek $high';
+  }
+
+  @override
+  String get weatherConditionClear => 'Açık';
+
+  @override
+  String get weatherConditionPartlyCloudy => 'Parçalı bulutlu';
+
+  @override
+  String get weatherConditionCloudy => 'Bulutlu';
+
+  @override
+  String get weatherConditionRain => 'Yağmur';
+
+  @override
+  String get weatherConditionSnow => 'Kar';
+
+  @override
+  String get weatherConditionStorm => 'Fırtına';
+
+  @override
+  String get weatherConditionFog => 'Sis';
+
+  @override
+  String get weatherConditionWind => 'Rüzgârlı';
 }

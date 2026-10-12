@@ -2792,4 +2792,59 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get haPanelFullDashboardDetail => 'Home Assistant 本来のページです。リモコンではその操作部分を選べません。';
+
+  @override
+  String get weatherSummaryTonight => '今夜';
+
+  @override
+  String get weatherForecastShowSummary => 'OK: 概要';
+
+  @override
+  String weatherSummaryHighLow(String high, String low) {
+    return '最高 $high · 最低 $low';
+  }
+
+  @override
+  String weatherSummaryLow(String low) {
+    return '最低 $low';
+  }
+
+  @override
+  String weatherSummaryPrecip(String percent) {
+    return '雨または雪の確率 $percent%';
+  }
+
+  @override
+  String weatherSummaryNow(String temp) {
+    return '現在 $temp';
+  }
+
+  @override
+  String weatherSummaryTomorrowHigh(String high) {
+    return '明日: 最高 $high';
+  }
+
+  @override
+  String get weatherConditionClear => '晴れ';
+
+  @override
+  String get weatherConditionPartlyCloudy => '晴れ時々曇り';
+
+  @override
+  String get weatherConditionCloudy => '曇り';
+
+  @override
+  String get weatherConditionRain => '雨';
+
+  @override
+  String get weatherConditionSnow => '雪';
+
+  @override
+  String get weatherConditionStorm => '雷雨';
+
+  @override
+  String get weatherConditionFog => '霧';
+
+  @override
+  String get weatherConditionWind => '強風';
 }

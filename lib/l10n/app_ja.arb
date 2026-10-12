@@ -846,5 +846,20 @@
     "haControlNext": "次へ",
     "haControlTurnOn": "電源を入れる",
     "haPanelFullDashboard": "代わりにダッシュボード全体を表示",
-    "haPanelFullDashboardDetail": "Home Assistant 本来のページです。リモコンではその操作部分を選べません。"
+    "haPanelFullDashboardDetail": "Home Assistant 本来のページです。リモコンではその操作部分を選べません。",
+    "weatherSummaryTonight": "今夜",
+    "weatherForecastShowSummary": "OK: 概要",
+    "weatherSummaryHighLow": "最高 {high} · 最低 {low}",
+    "weatherSummaryLow": "最低 {low}",
+    "weatherSummaryPrecip": "雨または雪の確率 {percent}%",
+    "weatherSummaryNow": "現在 {temp}",
+    "weatherSummaryTomorrowHigh": "明日: 最高 {high}",
+    "weatherConditionClear": "晴れ",
+    "weatherConditionPartlyCloudy": "晴れ時々曇り",
+    "weatherConditionCloudy": "曇り",
+    "weatherConditionRain": "雨",
+    "weatherConditionSnow": "雪",
+    "weatherConditionStorm": "雷雨",
+    "weatherConditionFog": "霧",
+    "weatherConditionWind": "強風"
 }

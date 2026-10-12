@@ -846,5 +846,20 @@
     "haControlNext": "Далі",
     "haControlTurnOn": "Увімкнути",
     "haPanelFullDashboard": "Показувати всю панель натомість",
-    "haPanelFullDashboardDetail": "Власна сторінка Home Assistant. Пульт не може дістатися її елементів керування."
+    "haPanelFullDashboardDetail": "Власна сторінка Home Assistant. Пульт не може дістатися її елементів керування.",
+    "weatherSummaryTonight": "Сьогодні вночі",
+    "weatherForecastShowSummary": "OK: зведення",
+    "weatherSummaryHighLow": "Макс. {high} · Мін. {low}",
+    "weatherSummaryLow": "Мін. {low}",
+    "weatherSummaryPrecip": "Імовірність дощу або снігу {percent}%",
+    "weatherSummaryNow": "Зараз {temp}",
+    "weatherSummaryTomorrowHigh": "Завтра: макс. {high}",
+    "weatherConditionClear": "Ясно",
+    "weatherConditionPartlyCloudy": "Мінлива хмарність",
+    "weatherConditionCloudy": "Хмарно",
+    "weatherConditionRain": "Дощ",
+    "weatherConditionSnow": "Сніг",
+    "weatherConditionStorm": "Гроза",
+    "weatherConditionFog": "Туман",
+    "weatherConditionWind": "Вітряно"
 }

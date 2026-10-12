@@ -2804,4 +2804,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get haPanelFullDashboardDetail => 'Home Assistant\'s own page. The remote can\'t reach its controls.';
+
+  @override
+  String get weatherSummaryTonight => 'Tonight';
+
+  @override
+  String get weatherForecastShowSummary => 'OK: summary';
+
+  @override
+  String weatherSummaryHighLow(String high, String low) {
+    return 'High $high · Low $low';
+  }
+
+  @override
+  String weatherSummaryLow(String low) {
+    return 'Low $low';
+  }
+
+  @override
+  String weatherSummaryPrecip(String percent) {
+    return '$percent% chance of rain or snow';
+  }
+
+  @override
+  String weatherSummaryNow(String temp) {
+    return 'Now $temp';
+  }
+
+  @override
+  String weatherSummaryTomorrowHigh(String high) {
+    return 'Tomorrow: high $high';
+  }
+
+  @override
+  String get weatherConditionClear => 'Clear';
+
+  @override
+  String get weatherConditionPartlyCloudy => 'Partly cloudy';
+
+  @override
+  String get weatherConditionCloudy => 'Cloudy';
+
+  @override
+  String get weatherConditionRain => 'Rain';
+
+  @override
+  String get weatherConditionSnow => 'Snow';
+
+  @override
+  String get weatherConditionStorm => 'Thunderstorms';
+
+  @override
+  String get weatherConditionFog => 'Fog';
+
+  @override
+  String get weatherConditionWind => 'Windy';
 }

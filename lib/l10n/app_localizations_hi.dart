@@ -2802,4 +2802,59 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get haPanelFullDashboardDetail => 'Home Assistant का अपना पेज। रिमोट इसके नियंत्रणों तक नहीं पहुँच सकता।';
+
+  @override
+  String get weatherSummaryTonight => 'आज रात';
+
+  @override
+  String get weatherForecastShowSummary => 'OK: सारांश';
+
+  @override
+  String weatherSummaryHighLow(String high, String low) {
+    return 'अधिकतम $high · न्यूनतम $low';
+  }
+
+  @override
+  String weatherSummaryLow(String low) {
+    return 'न्यूनतम $low';
+  }
+
+  @override
+  String weatherSummaryPrecip(String percent) {
+    return 'बारिश या बर्फ़ की $percent% संभावना';
+  }
+
+  @override
+  String weatherSummaryNow(String temp) {
+    return 'अभी $temp';
+  }
+
+  @override
+  String weatherSummaryTomorrowHigh(String high) {
+    return 'कल: अधिकतम $high';
+  }
+
+  @override
+  String get weatherConditionClear => 'साफ़';
+
+  @override
+  String get weatherConditionPartlyCloudy => 'आंशिक रूप से बादल';
+
+  @override
+  String get weatherConditionCloudy => 'बादल';
+
+  @override
+  String get weatherConditionRain => 'बारिश';
+
+  @override
+  String get weatherConditionSnow => 'बर्फ़';
+
+  @override
+  String get weatherConditionStorm => 'आंधी-तूफ़ान';
+
+  @override
+  String get weatherConditionFog => 'कोहरा';
+
+  @override
+  String get weatherConditionWind => 'तेज़ हवा';
 }

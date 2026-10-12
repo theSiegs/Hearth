@@ -846,5 +846,20 @@
     "haControlNext": "Siguiente",
     "haControlTurnOn": "Encender",
     "haPanelFullDashboard": "Mostrar el panel completo en su lugar",
-    "haPanelFullDashboardDetail": "La propia página de Home Assistant. El mando no llega a sus controles."
+    "haPanelFullDashboardDetail": "La propia página de Home Assistant. El mando no llega a sus controles.",
+    "weatherSummaryTonight": "Esta noche",
+    "weatherForecastShowSummary": "OK: resumen",
+    "weatherSummaryHighLow": "Máx. {high} · Mín. {low}",
+    "weatherSummaryLow": "Mín. {low}",
+    "weatherSummaryPrecip": "{percent}% de probabilidad de lluvia o nieve",
+    "weatherSummaryNow": "Ahora {temp}",
+    "weatherSummaryTomorrowHigh": "Mañana: máx. {high}",
+    "weatherConditionClear": "Despejado",
+    "weatherConditionPartlyCloudy": "Parcialmente nublado",
+    "weatherConditionCloudy": "Nublado",
+    "weatherConditionRain": "Lluvia",
+    "weatherConditionSnow": "Nieve",
+    "weatherConditionStorm": "Tormentas",
+    "weatherConditionFog": "Niebla",
+    "weatherConditionWind": "Viento"
 }

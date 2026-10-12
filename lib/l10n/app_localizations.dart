@@ -4996,6 +4996,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Home Assistant\'s own page. The remote can\'t reach its controls.'**
   String get haPanelFullDashboardDetail;
+
+  /// Weather summary heading in the evening and night
+  ///
+  /// In en, this message translates to:
+  /// **'Tonight'**
+  String get weatherSummaryTonight;
+
+  /// Weather forecast: hint that OK goes back to the summary
+  ///
+  /// In en, this message translates to:
+  /// **'OK: summary'**
+  String get weatherForecastShowSummary;
+
+  /// Weather summary: today's high and low, already formatted with degrees
+  ///
+  /// In en, this message translates to:
+  /// **'High {high} · Low {low}'**
+  String weatherSummaryHighLow(String high, String low);
+
+  /// Weather summary: tonight's low, already formatted with degrees
+  ///
+  /// In en, this message translates to:
+  /// **'Low {low}'**
+  String weatherSummaryLow(String low);
+
+  /// Weather summary: highest chance of rain or snow, in percent
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% chance of rain or snow'**
+  String weatherSummaryPrecip(String percent);
+
+  /// Weather summary: the temperature now, already formatted
+  ///
+  /// In en, this message translates to:
+  /// **'Now {temp}'**
+  String weatherSummaryNow(String temp);
+
+  /// Weather summary tonight: tomorrow's high, already formatted
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow: high {high}'**
+  String weatherSummaryTomorrowHigh(String high);
+
+  /// Weather condition name in the weather summary
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get weatherConditionClear;
+
+  /// Weather condition name in the weather summary
+  ///
+  /// In en, this message translates to:
+  /// **'Partly cloudy'**
+  String get weatherConditionPartlyCloudy;
+
+  /// Weather condition name in the weather summary
+  ///
+  /// In en, this message translates to:
+  /// **'Cloudy'**
+  String get weatherConditionCloudy;
+
+  /// Weather condition name in the weather summary
+  ///
+  /// In en, this message translates to:
+  /// **'Rain'**
+  String get weatherConditionRain;
+
+  /// Weather condition name in the weather summary
+  ///
+  /// In en, this message translates to:
+  /// **'Snow'**
+  String get weatherConditionSnow;
+
+  /// Weather condition name in the weather summary
+  ///
+  /// In en, this message translates to:
+  /// **'Thunderstorms'**
+  String get weatherConditionStorm;
+
+  /// Weather condition name in the weather summary
+  ///
+  /// In en, this message translates to:
+  /// **'Fog'**
+  String get weatherConditionFog;
+
+  /// Weather condition name in the weather summary
+  ///
+  /// In en, this message translates to:
+  /// **'Windy'**
+  String get weatherConditionWind;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -2819,4 +2819,59 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get haPanelFullDashboardDetail => 'Собственная страница Home Assistant. Пульт не может управлять её элементами.';
+
+  @override
+  String get weatherSummaryTonight => 'Сегодня ночью';
+
+  @override
+  String get weatherForecastShowSummary => 'OK: сводка';
+
+  @override
+  String weatherSummaryHighLow(String high, String low) {
+    return 'Макс. $high · Мин. $low';
+  }
+
+  @override
+  String weatherSummaryLow(String low) {
+    return 'Мин. $low';
+  }
+
+  @override
+  String weatherSummaryPrecip(String percent) {
+    return 'Вероятность дождя или снега $percent%';
+  }
+
+  @override
+  String weatherSummaryNow(String temp) {
+    return 'Сейчас $temp';
+  }
+
+  @override
+  String weatherSummaryTomorrowHigh(String high) {
+    return 'Завтра: макс. $high';
+  }
+
+  @override
+  String get weatherConditionClear => 'Ясно';
+
+  @override
+  String get weatherConditionPartlyCloudy => 'Переменная облачность';
+
+  @override
+  String get weatherConditionCloudy => 'Облачно';
+
+  @override
+  String get weatherConditionRain => 'Дождь';
+
+  @override
+  String get weatherConditionSnow => 'Снег';
+
+  @override
+  String get weatherConditionStorm => 'Гроза';
+
+  @override
+  String get weatherConditionFog => 'Туман';
+
+  @override
+  String get weatherConditionWind => 'Ветрено';
 }
