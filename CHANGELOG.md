@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.53 (pre-release)
+
+- Security: Hearth's helper in a profile only opens other apps' public screens, never Hearth's own, and passes on no access to Hearth's files. Reading Netflix's and Apple TV's profile and PIN screens and tidying the Home Assistant address can no longer be slowed down by unusual text. The CI workflow only reads the repository.
+
 ## 2026.10.52 (pre-release)
 
 - Paramount+ content PIN: save it once in Settings > Profiles > Streaming app PINs, and Hearth types it (behind its cover card) when a title asks for it, only in a grown-up's profile that has its own Google TV profile PIN. Kids' profiles and unlocked profiles keep Paramount+'s own prompt. A wrong PIN is reported, not retried.
