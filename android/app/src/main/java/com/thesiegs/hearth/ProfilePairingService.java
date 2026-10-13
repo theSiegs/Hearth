@@ -72,7 +72,8 @@ public class ProfilePairingService extends AccessibilityService {
     private static final int NO_MATCH = 1;
     private static final int QUIET = 2;
 
-    private static final Pattern NETFLIX_COUNT = Pattern.compile("(?i)^(.*?)[,.]?\\s*(\\d+) of (\\d+) profiles?");
+    // Only the count: the name is what comes before it (netflixName), so the match runs in one pass
+    static final Pattern NETFLIX_COUNT = Pattern.compile("(?i)(?<!\\d)(\\d{1,3}) of (\\d{1,3}) profiles?");
     private static final Pattern MAX_ITEM = Pattern.compile("(?i)^\\s*(.+?)\\s+Button\\b[,.]?\\s*(\\d+)\\s+of\\s+(\\d+)");
     static final Pattern DISNEY_TILE = Pattern.compile("(?i)^Access (.+?)['’]s profile\\b.*$");
 
@@ -472,12 +473,12 @@ public class ProfilePairingService extends AccessibilityService {
         if (lower.startsWith("press ") || lower.startsWith("audio description")) return;
         Matcher count = NETFLIX_COUNT.matcher(t);
         if (count.find()) {
-            String name = count.group(1).trim();
+            String name = netflixName(t.substring(0, count.start()));
             if (name.isEmpty()) name = s.pendingName;
             mHandler.removeCallbacks(mDeliverPending);
             s.pendingName = null;
             if (name != null) {
-                onFocusedName(name, Integer.parseInt(count.group(2)), Integer.parseInt(count.group(3)));
+                onFocusedName(name, Integer.parseInt(count.group(1)), Integer.parseInt(count.group(2)));
             }
             return;
         }
@@ -1382,4 +1383,12 @@ public class ProfilePairingService extends AccessibilityService {
     private int dp(int value) {
         return Dp.px(this, value);
     }
+
+    /** The profile name before Netflix's "N of M profiles": without the comma or full stop that ends it. */
+    static String netflixName(String before) {
+        String name = before.trim();
+        if (name.endsWith(",") || name.endsWith(".")) name = name.substring(0, name.length() - 1).trim();
+        return name;
+    }
+
 }

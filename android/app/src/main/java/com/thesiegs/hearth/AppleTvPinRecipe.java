@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
  * PIN leaves the PIN screen up and starts the count again; the right one leaves for "Loading" and the home screen.
  */
 final class AppleTvPinRecipe extends NavigatedKeypadRecipe {
-    private static final Pattern ENTERED = Pattern.compile("(\\d+) of (\\d+) values entered");
+    private static final Pattern ENTERED = Pattern.compile("(\\d{1,3}) of (\\d{1,3}) values entered");
     private static final long PRESS_WAIT_MS = 1_500;
     /** After the last digit, a PIN screen still up this long means the PIN wasn't taken. */
     private static final long REJECTED_AFTER_MS = 3_000;

@@ -8,7 +8,7 @@ import java.util.regex.Matcher;
 
 import org.junit.Test;
 
-/** Reading Disney+'s profile tiles, and which grown-ups' apps start again on a profile switch. */
+/** Reading Disney+'s and Netflix's profile tiles, what the agent may open, and which grown-ups' apps start again on a profile switch. */
 public class ProfilePairingTilesTest {
     private static String disneyName(String label) {
         Matcher m = ProfilePairingService.DISNEY_TILE.matcher(label);
@@ -35,4 +35,37 @@ public class ProfilePairingTilesTest {
         assertFalse(GrownUpsApps.stops(null, "user:0", 0));
         assertFalse(GrownUpsApps.stops("user:11", "user:0", 0));
     }
+
+    private static String netflix(String text) {
+        Matcher m = ProfilePairingService.NETFLIX_COUNT.matcher(text);
+        if (!m.find()) return null;
+        return ProfilePairingService.netflixName(text.substring(0, m.start())) + "|" + m.group(1) + "|" + m.group(2);
+    }
+
+    @Test
+    public void netflixTilesGiveTheNameAndCount() {
+        assertEquals("Sam|2|5", netflix("Sam, 2 of 5 profiles"));
+        assertEquals("Alex Rivera|1|1", netflix("Alex Rivera. 1 of 1 profile"));
+        assertEquals("|3|4", netflix("3 of 4 profiles"));
+        assertEquals(null, netflix("Add profile"));
+        // Long runs of digits and commas come back at once (no backtracking)
+        StringBuilder junk = new StringBuilder();
+        for (int i = 0; i < 20_000; i++) junk.append(",1 ");
+        assertEquals(null, netflix(junk.toString()));
+    }
+
+    @Test
+    public void agentOpensOnlyOtherApps() {
+        assertTrue(AgentActivity.isOtherApp("com.example.hearth", "com.example.tv"));
+        assertFalse(AgentActivity.isOtherApp("com.example.hearth", "com.example.hearth"));
+        assertFalse(AgentActivity.isOtherApp("com.example.hearth", null));
+        assertFalse(AgentActivity.isOtherApp("com.example.hearth", ""));
+        int grants = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                | android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                | android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                | android.content.Intent.FLAG_GRANT_PREFIX_URI_PERMISSION;
+        int newTask = android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
+        assertEquals(newTask, AgentActivity.withoutGrants(grants | newTask));
+    }
+
 }

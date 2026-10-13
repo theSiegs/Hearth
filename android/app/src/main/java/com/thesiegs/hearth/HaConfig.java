@@ -17,7 +17,10 @@ final class HaConfig {
     /** Adds http:// when the scheme is missing and drops trailing slashes; null when there's nothing usable. */
     static String normalizeUrl(String raw) {
         if (raw == null) return null;
-        String url = raw.trim().replaceAll("/+$", "");
+        String url = raw.trim();
+        int end = url.length();
+        while (end > 0 && url.charAt(end - 1) == '/') end--;
+        url = url.substring(0, end);
         if (url.isEmpty()) return null;
         if (!url.matches("(?i)^https?://.*")) url = "http://" + url;
         return url;
