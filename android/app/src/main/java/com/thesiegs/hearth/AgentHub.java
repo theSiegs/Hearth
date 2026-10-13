@@ -39,10 +39,16 @@ import java.util.concurrent.Executors;
  * Hearth's side (the owner's user) of its agents: Hearth itself, running in each other Google TV profile's user
  * (see {@link AgentService}), reports that user's Watch Next and opens things there for Hearth, since Android lets
  * nothing else cross users. They talk over the TV's own loopback address, the one channel users share, one JSON
- * object per line. Each profile's agent proves itself with a key Hearth hands it when it starts it (in the launch's
- * source bounds, the only thing a launch into another user carries), so another app on the TV can't pose as one.
+ * object per line. Each profile's agent has a key Hearth hands it when it starts it (in the launch's source bounds,
+ * the only thing a launch into another user carries). Neither side ever sends it: Hearth proves it has the key first,
+ * then the agent does (AgentAuth), so another app on the TV can't pose as either.
  *
- * Agent to Hearth: {"type":"hello","serial":n,"key":"…","voiceDefault":bool,"wallpaperVersion":n},
+ * Handshake: agent {"type":"hello","serial":n,"nonce":"…","hasAdbKey":bool,"voiceDefault":bool,
+ * "wallpaperVersion":n}; Hearth {"type":"challenge","nonce":"…","proof":"…"} (or {"type":"denied"}); agent
+ * {"type":"auth","proof":"…"}; Hearth {"type":"welcome"} (or {"type":"denied"}), then, to an agent without it,
+ * {"type":"adbKey","sealed":"…"} (owner-Hearth's adb key, sealed for this connection).
+ *
+ * Agent to Hearth:
  * {"type":"watchNext","rows":[…]},
  * {"type":"ping"}, {"type":"playing","package":"…","ms":n} (an app played that long in the profile's user),
  * {"type":"opened","ok":bool}, {"type":"speech","package":"…","text":"…"} (what an app said through
@@ -163,8 +169,22 @@ final class AgentHub {
             JSONObject hello = new JSONObject(in.readLine());
             long serial = hello.optLong("serial", -1);
             String key = keyFor(sContext, serial, false);
-            if (!"hello".equals(hello.optString("type")) || key == null || !key.equals(hello.optString("key"))) {
-                Log.i(TAG, "Agent for serial " + serial + " refused: no or wrong key");
+            String agentNonce = hello.optString("nonce");
+            if (!"hello".equals(hello.optString("type")) || key == null || agentNonce.isEmpty()) {
+                Log.i(TAG, "Agent for serial " + serial + " refused: no key for it");
+                out.println(new JSONObject().put("type", "denied").toString());
+                socket.close();
+                return;
+            }
+            // Each side proves it has the agent's key without sending it (AgentAuth)
+            String hubNonce = AgentAuth.nonce();
+            out.println(new JSONObject().put("type", "challenge").put("nonce", hubNonce)
+                    .put("proof", AgentAuth.proof(key, AgentAuth.HUB, agentNonce, hubNonce)).toString());
+            String answer = in.readLine();
+            JSONObject auth = answer != null ? new JSONObject(answer) : new JSONObject();
+            if (!"auth".equals(auth.optString("type")) || !AgentAuth.verify(
+                    AgentAuth.proof(key, AgentAuth.AGENT, agentNonce, hubNonce), auth.optString("proof", null))) {
+                Log.i(TAG, "Agent for serial " + serial + " refused: wrong key");
                 out.println(new JSONObject().put("type", "denied").toString());
                 socket.close();
                 return;
@@ -177,11 +197,14 @@ final class AgentHub {
             connection.send(listenMessage(sListening));
             connection.send(hearthState(sContext));
             connection.sendWallpaper(sContext);
-            // Share owner-Hearth's already-authorized adb key over this loopback channel, so if Hearth is ever
-            // uninstalled from the owner the agent can still clean up its own profile (see AgentService). Local only.
-            String[] adbKey = SelfAdb.keyMaterial(sContext);
+            // Owner-Hearth's adb key, once, to an agent that proved its key: if Hearth is ever uninstalled from the
+            // owner's profile with Android's own uninstall, the agent can still remove Hearth's copies from its profile
+            // (AgentService.maybeSelfClean), and meanwhile grant its own copy what it reads. Sealed for this connection.
+            String[] adbKey = hello.optBoolean("hasAdbKey") ? null : SelfAdb.keyMaterial(sContext);
             if (adbKey != null) {
-                connection.send(new JSONObject().put("type", "adbKey").put("priv", adbKey[0]).put("pub", adbKey[1]));
+                String material = new JSONObject().put("priv", adbKey[0]).put("pub", adbKey[1]).toString();
+                connection.send(new JSONObject().put("type", "adbKey")
+                        .put("sealed", AgentAuth.seal(key, agentNonce, hubNonce, material)));
             }
             Log.i(TAG, "Agent for serial " + serial + " connected (Hearth voice there: " + hello.optBoolean("voiceDefault") + ")");
             String line;

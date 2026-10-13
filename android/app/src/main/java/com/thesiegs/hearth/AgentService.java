@@ -369,10 +369,26 @@ public class AgentService extends Service {
             if (!mRunning) return false;
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-            out.println(new JSONObject().put("type", "hello").put("serial", serial).put("key", key)
+            String agentNonce = AgentAuth.nonce();
+            out.println(new JSONObject().put("type", "hello").put("serial", serial).put("nonce", agentNonce)
+                    .put("hasAdbKey", hasSharedKey())
                     .put("voiceDefault", ProfilePairingService.isVoiceDefault(this))
                     .put("wallpaperVersion", AgentWallpaper.versionHere(this)));
-            JSONObject reply = new JSONObject(in.readLine());
+            // Hearth proves it has this agent's key before the agent proves it (AgentAuth): something else on the
+            // port while Hearth isn't running learns nothing from the agent
+            String line = in.readLine();
+            JSONObject challenge = line != null ? new JSONObject(line) : new JSONObject();
+            String hubNonce = challenge.optString("nonce");
+            if (!"challenge".equals(challenge.optString("type")) || hubNonce.isEmpty() || !AgentAuth.verify(
+                    AgentAuth.proof(key, AgentAuth.HUB, agentNonce, hubNonce), challenge.optString("proof", null))) {
+                Log.i(TAG, "Not Hearth on its port, or Hearth refused this agent's key");
+                return false;
+            }
+            out.println(new JSONObject().put("type", "auth")
+                    .put("proof", AgentAuth.proof(key, AgentAuth.AGENT, agentNonce, hubNonce)).toString());
+            mSessionNonces = new String[]{key, agentNonce, hubNonce};
+            line = in.readLine();
+            JSONObject reply = line != null ? new JSONObject(line) : new JSONObject();
             if (!"welcome".equals(reply.optString("type"))) {
                 Log.i(TAG, "Hearth refused this agent's key");
                 return false;
@@ -391,7 +407,6 @@ public class AgentService extends Service {
             });
             mHandler.post(this::retireOldAdmin);
             mHandler.postDelayed(mPing, PING_MS);
-            String line;
             while ((line = in.readLine()) != null) onMessage(new JSONObject(line));
         } catch (Exception e) {
             Log.i(TAG, "Hearth unreachable: " + e.getMessage());
@@ -443,7 +458,7 @@ public class AgentService extends Service {
                 });
                 break;
             case "adbKey":
-                storeSharedKey(message.optString("priv"), message.optString("pub"));
+                openSharedKey(message.optString("sealed"));
                 mHandler.post(this::grantWatchNextAccess);
                 mHandler.post(this::grantCalendarAccess);
                 mHandler.post(this::retireOldAdmin);
@@ -609,6 +624,24 @@ public class AgentService extends Service {
             mHandler.postDelayed(this, PING_MS);
         }
     };
+
+    /** The agent's key and this connection's nonces, for opening what Hearth seals for it (AgentAuth.seal). */
+    private volatile String[] mSessionNonces;
+
+    private boolean hasSharedKey() {
+        return new File(new File(getFilesDir(), "selfadb"), "adbkey").exists();
+    }
+
+    private void openSharedKey(String sealed) {
+        String[] session = mSessionNonces;
+        if (session == null || sealed == null || sealed.isEmpty()) return;
+        try {
+            JSONObject material = new JSONObject(AgentAuth.open(session[0], session[1], session[2], sealed));
+            storeSharedKey(material.optString("priv"), material.optString("pub"));
+        } catch (Exception e) {
+            Log.w(TAG, "Couldn't open the shared key: " + e.getClass().getSimpleName());
+        }
+    }
 
     /** Stores owner-Hearth's shared adb key (received over the channel) so the agent can self-adb if Hearth is gone. */
     private void storeSharedKey(String priv, String pub) {
