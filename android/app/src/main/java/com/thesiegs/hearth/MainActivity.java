@@ -1481,9 +1481,10 @@ public class MainActivity extends FlutterActivity {
         super.onResume();
         sInFront = true;
         retryBouncedProgram();
-        // Another profile on: make sure its agent runs (starting it needs Hearth's window visible, as now)
-        UserHandle profileUser = ProfileApps.activeProfileUser(this);
-        if (profileUser != null) AgentHub.ensureAgent(this, ProfileUsers.settledSerial(this), profileUser);
+        // Another profile on: make sure its agent runs (starting it needs Hearth's window visible). Not at once: right
+        // after a switch the agent connects by itself within seconds, and its screen would pop up over Hearth
+        mHandler.removeCallbacks(mEnsureAgent);
+        mHandler.postDelayed(mEnsureAgent, ENSURE_AGENT_DELAY_MS);
         // The Home Assistant panel's dashboard loads in the background once the home is drawn, so the panel opens at
         // once (or goes, if the panel was switched off)
         mHandler.removeCallbacks(mPreloadHaPanel);
@@ -1493,6 +1494,12 @@ public class MainActivity extends FlutterActivity {
     private static final long HA_PANEL_PRELOAD_DELAY_MS = 3_000;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final Runnable mPreloadHaPanel = () -> HaPanelPage.preload(this);
+    private static final long ENSURE_AGENT_DELAY_MS = 8_000;
+    private final Runnable mEnsureAgent = () -> {
+        if (!sInFront) return;
+        UserHandle profileUser = ProfileApps.activeProfileUser(this);
+        if (profileUser != null) AgentHub.ensureAgent(this, ProfileUsers.settledSerial(this), profileUser);
+    };
 
     @Override
     public void onTrimMemory(int level) {

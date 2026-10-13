@@ -33,6 +33,9 @@ final class ProfileLock {
     /** Brings up Google TV's PIN screen for the current profile. Not in a kids profile (it has its own lock). */
     static boolean lockNow(Context context) {
         if (ProfileUsers.isKids(context)) return false;
+        // The chooser said this profile has no PIN: Google TV's lock would have nothing to ask
+        String name = ProfileUsers.profileName(context, ProfileUsers.settledSerial(context));
+        if (name != null && Boolean.FALSE.equals(ProfileUsers.isLocked(context, name))) return false;
         try {
             context.startActivity(new Intent(ACTION)
                     .setPackage(LauncherAccessibilityService.GOOGLE_TV_PACKAGE)

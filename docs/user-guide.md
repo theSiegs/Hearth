@@ -97,10 +97,13 @@ PINs are encrypted with a key that never leaves the TV, and saving one needs the
 **Lock Profile** (**Settings → Profiles**). Uses Google TV's own profile lock, so Google TV asks for your
 profile's PIN to come back. Turn the PIN on for your account in Google TV first. You can also:
 - hold the profile button in the top bar;
-- map a remote button to "Lock Profile";
+- hold the remote's profile button (a press opens the profile chooser straight away). Hearth sets this button up
+  once in **Settings → Remote buttons**, where you can change it, or restore it to Google TV's own (the chooser only);
+- map another remote button to "Lock Profile";
 - set **Lock when the TV sleeps** (every time, or after some minutes asleep).
 
-In a kids profile, holding the profile button opens the profile chooser instead.
+In a kids profile, or a profile without a Google TV PIN, holding the profile button opens the profile chooser
+instead. In a kids profile the remote's profile button always does Google TV's own job.
 
 ## Kids profiles
 

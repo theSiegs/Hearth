@@ -369,8 +369,8 @@ class _CalendarPill extends StatelessWidget {
 }
 
 /// Opens Google TV's profile chooser and shows the active profile's name. Held, it leaves the profile: a grown-up
-/// profile is locked with Google TV's own profile lock (its PIN screen, whose Back goes to the chooser), a kids
-/// profile goes to the chooser (leaving a kids profile takes the parent PIN there). Either opens once OK is let go:
+/// profile with a PIN is locked with Google TV's own profile lock (its PIN screen, whose Back goes to the chooser), a
+/// kids profile or one without a PIN goes to the chooser (leaving a kids profile takes the parent PIN there). Either opens once OK is let go:
 /// released over Google's screen, it would press what has focus there (Continue on the PIN screen, a profile).
 class _ProfileButton extends StatelessWidget {
   final FocusNode? focusNode;
@@ -385,12 +385,11 @@ class _ProfileButton extends StatelessWidget {
           return KeyEventResult.handled;
         },
         onLongPress: (key) => KeyEventResult.handled,
-        onLongPressReleased: (key) {
+        onLongPressReleased: (key) async {
           final channel = context.read<FLauncherChannel>();
-          if (context.read<ProfileService?>()?.isKidsProfile ?? false) {
+          // Nothing to lock (a kids profile, or a profile without a Google TV PIN): the chooser
+          if ((context.read<ProfileService?>()?.isKidsProfile ?? false) || !await channel.lockProfile()) {
             channel.openProfileChooser();
-          } else {
-            channel.lockProfile();
           }
         },
         builder: (context) => _FocusableIconButton(

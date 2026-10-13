@@ -226,6 +226,16 @@ public class AgentService extends Service {
         getContentResolver().notifyChange(ProfileProvider.activeUri(this), null);
     }
 
+    /** Whether this agent is connected to Hearth now. */
+    static boolean isConnected() {
+        return sConnected;
+    }
+
+    /** Whether Hearth has asked to open something that hasn't been taken yet. */
+    static boolean hasPendingOpen() {
+        return sPendingOpen != null;
+    }
+
     /** What Hearth asked to open, once (AgentActivity polls for it). */
     static String takePendingOpen() {
         String pending = sPendingOpen;

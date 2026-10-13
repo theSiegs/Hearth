@@ -27,6 +27,12 @@ public class AgentActivity extends Activity {
         super.onCreate(savedInstanceState);
         AgentService.rememberKey(this, getIntent().getSourceBounds());
         AgentService.start(this);
+        // Hearth asks to open something only over a connected agent: not connected, this start was only to get the
+        // agent going, and the screen goes at once rather than sit over Hearth (taking the remote's first presses)
+        if (!AgentService.isConnected() && !AgentService.hasPendingOpen()) {
+            finish();
+            return;
+        }
         mStartedAt = System.currentTimeMillis();
         mHandler.post(mCheck);
     }

@@ -2,6 +2,7 @@ package com.thesiegs.hearth;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.media.tv.TvContract;
 import android.net.Uri;
@@ -26,6 +27,8 @@ import java.util.Map;
 final class ButtonMapper {
     private static final String TAG = "HearthButtons";
     private static final String MAPPINGS_KEY = "button_mappings";
+    /** The profile button's own mapping was added once (removing it on the Remote buttons page is then kept). */
+    private static final String PROFILE_BUTTON_SEEDED_KEY = "profile_button_seeded";
     static final String PRESS_SHORT = "short";
     static final String PRESS_LONG = "long";
 
@@ -66,7 +69,37 @@ final class ButtonMapper {
         } catch (JSONException e) {
             sMappings = new JSONObject();
         }
+        seedProfileButton(context, sMappings);
         return sMappings;
+    }
+
+    /**
+     * Google TV's profile button only opens its chooser, by way of its own home (it has no hold to lock). Hearth
+     * maps it once, as a button anyone can change or restore on the Remote buttons page: a press opens the chooser
+     * straight away, a hold locks the profile (see "lock").
+     */
+    private static void seedProfileButton(Context context, JSONObject mappings) {
+        SharedPreferences prefs = context.getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS,
+                Context.MODE_PRIVATE);
+        if (prefs.getBoolean(PROFILE_BUTTON_SEEDED_KEY, false)) return;
+        SharedPreferences.Editor edit = prefs.edit().putBoolean(PROFILE_BUTTON_SEEDED_KEY, true);
+        String key = String.valueOf(KeyEvent.KEYCODE_PROFILE_SWITCH);
+        if (!mappings.has(key)) {
+            try {
+                mappings.put(key, profileButtonDefault());
+                edit.putString(MAPPINGS_KEY, mappings.toString());
+            } catch (JSONException e) {
+                // Never for these values
+            }
+        }
+        edit.apply();
+    }
+
+    static JSONObject profileButtonDefault() throws JSONException {
+        return new JSONObject()
+                .put(PRESS_SHORT, new JSONObject().put("type", "profiles").put("label", "Switch profile"))
+                .put(PRESS_LONG, new JSONObject().put("type", "lock").put("label", "Lock my profile"))
+                .put("name", KeyEvent.keyCodeToString(KeyEvent.KEYCODE_PROFILE_SWITCH));
     }
 
     static String getJson(Context context) {
@@ -147,8 +180,10 @@ final class ButtonMapper {
                 service.sleepNow();
                 return;
             case "lock":
-                ProfileLock.lockNow(service);
-                return;
+                // Nothing to lock (a kids profile, or one without a Google TV PIN): the chooser, to leave it
+                if (ProfileLock.lockNow(service)) return;
+                intent = LauncherAccessibilityService.profileChooserIntent();
+                break;
             case "assistant": {
                 // Google's assistant (Gemini on Google TV): what the mic button does when Hearth doesn't take it
                 PackageManager pm = service.getPackageManager();

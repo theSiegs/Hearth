@@ -65,6 +65,9 @@ final class AgentHub {
     private static Context sContext;
     private static boolean sStarted;
     private static final Map<Long, Connection> sConnections = new ConcurrentHashMap<>();
+    /** When ensureAgent last started each profile's agent (elapsed realtime). */
+    private static final Map<Long, Long> sEnsuredAt = new ConcurrentHashMap<>();
+    private static final long ENSURE_AGAIN_MS = 15_000;
     private static final Map<Long, List<Map<String, Object>>> sWatchNext = new ConcurrentHashMap<>();
     private static final Map<Long, Boolean> sVoiceDefault = new ConcurrentHashMap<>();
     private static final Map<Long, CalendarReport> sCalendars = new ConcurrentHashMap<>();
@@ -422,6 +425,11 @@ final class AgentHub {
      */
     static boolean ensureAgent(Context context, long serial, UserHandle user) {
         if (isConnected(serial)) return true;
+        // Not over and over while one is starting (its screen comes up over Hearth each time)
+        long now = android.os.SystemClock.elapsedRealtime();
+        Long last = sEnsuredAt.get(serial);
+        if (last != null && now - last < ENSURE_AGAIN_MS) return false;
+        sEnsuredAt.put(serial, now);
         return launchAgent(context, serial, user);
     }
 

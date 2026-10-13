@@ -80,6 +80,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final long HOME_ACCOUNT_WAIT_MS = 2_500;
     /** A home naming someone other than the pick is taken at its word once it has had this long to catch up. */
     private static final long HOME_ACCOUNT_SETTLE_MS = 1_200;
+    /** How long a home naming someone other than a clicked pick has to catch up (see homeAccountDone). */
+    private static final long HOME_ACCOUNT_CONTRADICT_MS = 4_000;
     /** How long after a pick the home that comes up is the one it leads to. */
     private static final long HOME_PICK_FRESH_MS = 10_000;
     /**
@@ -284,10 +286,15 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private final Runnable mChooserGoneCheck = this::checkChooserGone;
     private static final long CHOOSER_GONE_CHECK_MS = 1_000;
     private static final int CHOOSER_GONE_MAX_CHECKS = 180;
+    /** After Home with one of Google TV's screens in front: when to look whether its home is what's up. */
+    private static final long HOME_SCREEN_GONE_CHECK_MS = 700;
     private int mChooserGoneChecks;
 
     private void checkChooserGone() {
-        if (!mChooserOnScreen) return;
+        if (!mChooserOnScreen) {
+            checkGoogleTvScreenGone();
+            return;
+        }
         final AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null || !GOOGLE_TV_PACKAGE.equals(String.valueOf(root.getPackageName()))) {
             nextChooserGoneCheck();
@@ -319,6 +326,48 @@ public class LauncherAccessibilityService extends AccessibilityService {
         checkProfileUser("chooser closed");
         onAccountLoggedIn(account, "Google TV's home");
         onGoogleTvWindow(GOOGLE_TV_HOME_ACTIVITY, null, false);
+    }
+
+    /**
+     * Another of Google TV's screens is "in front" (its profile lock's PIN pad, an account check): whether its home
+     * is in fact up. Those screens are see-through and can close onto the home without a window change Hearth hears;
+     * Hearth then left the home up and didn't take Home either, as if the screen were still there.
+     */
+    private void checkGoogleTvScreenGone() {
+        if (!mGoogleTvScreenInFront || mWellbeingInFront) return;
+        final AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null || !GOOGLE_TV_PACKAGE.equals(String.valueOf(root.getPackageName()))) {
+            nextChooserGoneCheck();
+            return;
+        }
+        try {
+            mAccountReader.execute(() -> {
+                String account = GoogleTvAccount.loggedIn(root);
+                mHandler.post(() -> onGoogleTvScreenGoneChecked(account));
+            });
+        } catch (RejectedExecutionException e) {
+            // The service is stopping
+        }
+    }
+
+    private void onGoogleTvScreenGoneChecked(String account) {
+        if (!mGoogleTvScreenInFront || mChooserOnScreen || mWellbeingInFront) return;
+        if (account == null) {
+            nextChooserGoneCheck();
+            return;
+        }
+        Log.i(TAG, "Google TV's screen closed (its home is up, naming " + account + ")");
+        mGoogleTvScreenInFront = false;
+        mLastWindowPackage = GOOGLE_TV_PACKAGE;
+        onAccountLoggedIn(account, "Google TV's home");
+        onGoogleTvWindow(GOOGLE_TV_HOME_ACTIVITY, null, false);
+    }
+
+    /** Starts checking whether Google TV's chooser or other screen has closed onto its home (see above). */
+    private void startScreenGoneChecks(long delay) {
+        mChooserGoneChecks = 0;
+        mHandler.removeCallbacks(mChooserGoneCheck);
+        mHandler.postDelayed(mChooserGoneCheck, delay);
     }
 
     private void nextChooserGoneCheck() {
@@ -1128,11 +1177,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 && CONTENT_PIN_TRIGGER.onWindow(contentPinDialog)) {
             ProfilePairingService.onContentPinDialog();
         }
-        // Hearth's own welcome card over Google TV's kids home (an overlay, not an activity): Google's home is still
-        // what's in front under it, and the takeover after the grace must still see that
-        if (isHearth && KidsHomeCover.isShowing() && !className.endsWith("Activity")) return;
+        // Hearth's own overlays (the welcome card over Google TV's kids home, toasts, the Home Assistant
+        // notification, Profile Pairing's cover) and its agent's invisible screen in a profile's user: whatever was
+        // in front is still in front under them, and a takeover waiting for Google TV's home must still see that
+        if (isHearth && isHearthOverlay(className)) return;
         boolean isApp = !isHearth && isLaunchableApp(packageName);
-        mLastWindowPackage = packageName;
+        // Nor do the keyboard or a system pop-up (volume, a toast) replace what's in front
+        if (!isOverlayPackage(packageName)) mLastWindowPackage = packageName;
         // Not the keyboard, a system pop-up or the assistant's bar: those come up over the app that's still in use
         if (isHearth || isApp) mLastAppPackage = packageName;
         if (isApp && YOUTUBE.equals(packageName)) steerKidsToHearthTube();
@@ -1170,6 +1221,19 @@ public class LauncherAccessibilityService extends AccessibilityService {
         } else {
             onOtherWindow(packageName, isHearth, isApp);
         }
+    }
+
+    /** Hearth's windows that aren't its screens: overlays, and the agent's invisible screen (AgentActivity). */
+    static boolean isHearthOverlay(String className) {
+        return !className.endsWith("Activity") || className.equals(AgentActivity.class.getName());
+    }
+
+    /** A window that comes up over whatever is in front without replacing it: a system pop-up or the keyboard. */
+    private boolean isOverlayPackage(String packageName) {
+        if ("com.android.systemui".equals(packageName) || "android".equals(packageName)) return true;
+        String ime = android.provider.Settings.Secure.getString(getContentResolver(),
+                android.provider.Settings.Secure.DEFAULT_INPUT_METHOD);
+        return ime != null && ime.startsWith(packageName + "/");
     }
 
     /**
@@ -1232,11 +1296,24 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (account != null) mHomeAccountRead = account;
         long waited = SystemClock.elapsedRealtime() - mHomeAccountStartedAt;
         boolean agrees = account != null && (mHomeAccountExpected == null || account.equals(mHomeAccountExpected));
-        if (agrees || waited >= HOME_ACCOUNT_WAIT_MS || mHomeAccountRead != null && waited >= HOME_ACCOUNT_SETTLE_MS) {
+        if (homeAccountDone(agrees, mHomeAccountRead != null, mHomeAccountExpected != null && mLastPickClicked,
+                waited)) {
             finishHomeAccount();
         } else {
             mHandler.postDelayed(mReadHomeAccount, HOME_ACCOUNT_POLL_MS);
         }
+    }
+
+    /**
+     * Whether the read of who Google TV's home names is over: it named the pick (or there was none to name), or it
+     * has had its time. A clicked pick the home doesn't name yet gets longer: on a busy TV Google's home still named
+     * the last account 1.2 s in and the pick 0.85 s later (2026-10-10), and taking the first at its word showed the
+     * last profile, so the switch had to be made again.
+     */
+    static boolean homeAccountDone(boolean agrees, boolean anyRead, boolean clickedPick, long waited) {
+        if (agrees) return true;
+        if (anyRead && clickedPick) return waited >= HOME_ACCOUNT_CONTRADICT_MS;
+        return waited >= HOME_ACCOUNT_WAIT_MS || anyRead && waited >= HOME_ACCOUNT_SETTLE_MS;
     }
 
     /** The home has said who's logged in (or won't): act on it, then take over if that was waiting. */
@@ -1303,9 +1380,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             mHandler.removeCallbacks(mChooserPhoto);
             mHandler.postDelayed(mChooserPhoto, CHOOSER_FIRST_PHOTO_MS);
             checkProfileUser("chooser opened");
-            mChooserGoneChecks = 0;
-            mHandler.removeCallbacks(mChooserGoneCheck);
-            mHandler.postDelayed(mChooserGoneCheck, CHOOSER_GONE_CHECK_MS);
+            startScreenGoneChecks(CHOOSER_GONE_CHECK_MS);
         }
 
         // Google's own setup flows (a new kids profile's onboarding, sign-in, PIN creation) open Google TV's
@@ -1339,13 +1414,20 @@ public class LauncherAccessibilityService extends AccessibilityService {
             // In a grown-ups' user (a profile per account), whose profile is on is whoever the home says is logged
             // in: after the chooser Hearth reads that before it covers the home
             long now = SystemClock.elapsedRealtime();
-            boolean readAccount = mCandidateSerial == ProfileUsers.UNKNOWN
-                    && ProfileUsers.isGrownUps(this, mActiveSerial);
             String pick = mHomePick != null && now - mHomePickAt < HOME_PICK_FRESH_MS ? mHomePick : null;
+            // The home comes up before a picked kid's user has started, so the user Hearth last settled on is still
+            // the last profile's: a fresh pick says which kind of profile this home is for
+            long pickSerial = pick != null ? ProfileUsers.serialOf(this, pick) : ProfileUsers.UNKNOWN;
+            Boolean pickSupervised = pickSerial != ProfileUsers.UNKNOWN
+                    ? ProfileUsers.isSupervised(this, pickSerial) : null;
+            // Only a grown-ups' user has an account label worth waiting for
+            boolean readAccount = mCandidateSerial == ProfileUsers.UNKNOWN && (pickSupervised != null
+                    ? !pickSupervised && pickSerial == mActiveSerial
+                    : ProfileUsers.isGrownUps(this, mActiveSerial));
             // Google TV opens its own home by component after a profile switch, on Back from apps, etc.,
             // ignoring the default home app. Bring the launcher back whenever that's allowed.
             boolean afterProfileLock = now - mProfileLockSeenAt < PROFILE_LOCK_HOLD_MS;
-            boolean kidsHome = ProfileUsers.isKids(this) || mKidsLockHold;
+            boolean kidsHome = kidsHome(pickSupervised, ProfileUsers.isKids(this), mKidsLockHold);
             long grace = homeGraceMs(kidsHome, afterProfileLock);
             // For measuring how long Google TV's kids home takes to put up its bedtime / time up screen (adb only):
             // `settings put global hearth_kids_home_grace_ms 15000`, `settings delete global ...` to end it
@@ -1381,6 +1463,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         } else if (className.startsWith(GOOGLE_TV_PACKAGE + ".") || className.startsWith("com.google.android.libraries.tv.")) {
             // Its own screens (chooser, PIN, time up); plain view classes are overlays on its home.
             mGoogleTvScreenInFront = true;
+            if (!mChooserOnScreen) startScreenGoneChecks(CHOOSER_GONE_CHECK_MS);
         }
     }
 
@@ -1534,6 +1617,14 @@ public class LauncherAccessibilityService extends AccessibilityService {
      *   whenever the apps looked unblocked) meant the screen never came and the apps never got blocked: no bedtime.
      * - Just after Google TV's profile lock: a short wait for the chooser a cancelled PIN brings up.
      */
+    /**
+     * Whether Google TV's home that just came up is a kids home: what the fresh pick that led to it is, when Hearth
+     * knows (null otherwise: the profile on now), and always while a kids screen time screen holds the lock.
+     */
+    static boolean kidsHome(Boolean pickSupervised, boolean activeIsKids, boolean kidsLockHold) {
+        return kidsLockHold || (pickSupervised != null ? pickSupervised : activeIsKids);
+    }
+
     static long homeGraceMs(boolean kids, boolean afterProfileLock) {
         if (kids) return KIDS_HOME_GRACE_MS;
         return afterProfileLock ? PROFILE_LOCK_GRACE_MS : 0;
@@ -1827,6 +1918,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (mScreenTimeLock || !ButtonMapper.isRemappable(keyCode)) return false;
         Map<String, JSONObject> mapping = ButtonMapper.forKey(this, keyCode);
         if (mapping == null) return false;
+        // In a kids profile the profile button does Google TV's own job: its way out of the kids profile
+        if (keyCode == KeyEvent.KEYCODE_PROFILE_SWITCH && mHeldKey != keyCode
+                && (mKidsLockHold || ProfileUsers.isKids(this))) {
+            return false;
+        }
         // "Only on Hearth's home screen": in an app the button does its normal job. The press that started on
         // Hearth finishes there (its release follows its press even if Hearth just left the front).
         if (ButtonMapper.homeOnly(this, keyCode) && !MainActivity.isInFront() && mHeldKey != keyCode) return false;
@@ -1870,6 +1966,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (event.getKeyCode() == KeyEvent.KEYCODE_HOME && event.getAction() == KeyEvent.ACTION_DOWN) {
             Log.i(TAG, "Home: screenTimeLock=" + mScreenTimeLock + " suspended=" + isSuspended(this)
                     + " googleTvInFront=" + mGoogleTvScreenInFront + " hearthInFront=" + MainActivity.isInFront());
+        }
+        if (event.getKeyCode() == KeyEvent.KEYCODE_HOME && event.getAction() == KeyEvent.ACTION_DOWN
+                && canTakeOver() && mGoogleTvScreenInFront && !mChooserOnScreen) {
+            // Home goes to Google TV as before, which may close its screen onto its home (or find the home already
+            // up, with no window change to hear): look a moment later, and take the home over if it's what's up
+            startScreenGoneChecks(HOME_SCREEN_GONE_CHECK_MS);
         }
         if (event.getKeyCode() == KeyEvent.KEYCODE_HOME && canTakeOver() && !mGoogleTvScreenInFront) {
             if (event.getAction() == KeyEvent.ACTION_DOWN) {

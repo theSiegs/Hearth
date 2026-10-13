@@ -57,6 +57,42 @@ public class ScreenTimeStateTest {
     }
 
     @Test
+    public void aPickedKidsHomeIsAKidsHomeBeforeTheKidsUserStarts() {
+        // Picked a kid from a grown-up's profile: the grown-up is still the settled profile
+        assertTrue(LauncherAccessibilityService.kidsHome(true, false, false));
+        // Picked a grown-up from a kid's profile
+        assertFalse(LauncherAccessibilityService.kidsHome(false, true, false));
+        // No fresh pick (Back from an app): the profile on now
+        assertTrue(LauncherAccessibilityService.kidsHome(null, true, false));
+        assertFalse(LauncherAccessibilityService.kidsHome(null, false, false));
+        // A kids screen time screen holds it whatever was picked
+        assertTrue(LauncherAccessibilityService.kidsHome(false, false, true));
+    }
+
+    @Test
+    public void aClickedPickGetsLongerToShowOnGoogleTvsHome() {
+        // The home names the pick: done at once
+        assertTrue(LauncherAccessibilityService.homeAccountDone(true, true, true, 100));
+        // It names the last account after a click: not taken at its word at 1.2 s, nor at 2.5 s
+        assertFalse(LauncherAccessibilityService.homeAccountDone(false, true, true, 1_300));
+        assertFalse(LauncherAccessibilityService.homeAccountDone(false, true, true, 2_600));
+        assertTrue(LauncherAccessibilityService.homeAccountDone(false, true, true, 4_000));
+        // Without a click (the last focused tile) it's taken at its word after 1.2 s, as before
+        assertFalse(LauncherAccessibilityService.homeAccountDone(false, true, false, 1_000));
+        assertTrue(LauncherAccessibilityService.homeAccountDone(false, true, false, 1_300));
+        // Nothing read yet: up to 2.5 s
+        assertFalse(LauncherAccessibilityService.homeAccountDone(false, false, true, 2_000));
+        assertTrue(LauncherAccessibilityService.homeAccountDone(false, false, true, 2_500));
+    }
+
+    @Test
+    public void hearthsOverlaysAndAgentScreenDontReplaceWhatsInFront() {
+        assertTrue(LauncherAccessibilityService.isHearthOverlay("android.widget.FrameLayout"));
+        assertTrue(LauncherAccessibilityService.isHearthOverlay(AgentActivity.class.getName()));
+        assertFalse(LauncherAccessibilityService.isHearthOverlay(MainActivity.class.getName()));
+    }
+
+    @Test
     public void readsGoogleTvsBedtimeScreen() {
         ScreenTimeScreen screen = ScreenTimeScreen.parse(WELLBEING,
                 Arrays.asList("Time for bed", "This device unlocks at 7:00 AM"));
