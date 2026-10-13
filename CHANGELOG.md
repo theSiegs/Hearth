@@ -3,6 +3,11 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.54 (pre-release)
+
+- Profile button: the remote's profile button opens the profile chooser straight away, and holding it locks your profile (Google TV's PIN screen). Where there's nothing to lock (no Google TV PIN), a hold opens the chooser. It's set up once in Settings > Remote buttons, where it can be changed or restored to Google TV's own. Kids' profiles keep Google TV's own handling.
+- Profile switches: switching to a kid's profile shows the welcome card and gives Google TV its moment for bedtime, also when coming from a grown-up's profile. A switch between grown-ups isn't taken as cancelled while Google TV is still catching up. Hearth comes back when one of Google TV's screens (such as its PIN screen) closes onto Google's home, and when Home is pressed there. The volume bar, the keyboard and other pop-ups no longer stop Hearth from coming back. Fewer lost remote presses right after switching to a kid's profile.
+
 ## 2026.10.53 (pre-release)
 
 - Security: Hearth's helper in a profile only opens other apps' public screens, never Hearth's own, and passes on no access to Hearth's files. Reading Netflix's and Apple TV's profile and PIN screens and tidying the Home Assistant address can no longer be slowed down by unusual text. The CI workflow only reads the repository.
