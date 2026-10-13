@@ -31,13 +31,16 @@ as Wikidata asks.
 
 - **Port 7676**, for Home Assistant notifications, only when they're on, and only from local network addresses.
 - **The phone setup page**, only while its QR code is on screen, at a one-time secret link.
+- **Port 47474 on the TV's own loopback address** (not the network), for Hearth's helpers in your kids' profiles.
+  Each helper and Hearth prove to each other that they share that helper's key without sending it, so no other app
+  can pose as either.
 
 ## Permissions
 
 | Permission | Why |
 |---|---|
 | Accessibility (Home Button Fix) | Opens Hearth when you press Home; follows Google TV profile switches and its screen time screens; remote button remaps; idle sleep; pop-ups. It reads Google TV's own screens, not your apps' content. |
-| Accessibility (Profile Pairing) | Reads the profile screen of a streaming app that Hearth opened, picks your profile, and types its PIN if you saved one. It acts only when Hearth itself opened the app. |
+| Accessibility (Profile Pairing) | Reads the profile screen of a streaming app that Hearth opened, picks your profile, and types its PIN if you saved one. It acts on a profile screen only when Hearth itself opened the app. The one exception is Paramount+'s content PIN, asked for when a title starts: if you saved it, Hearth types it then, in a grown-up's profile that has its own Google TV PIN. |
 | Text-to-speech engine (Hearth voice) | Some apps only announce their profile screen out loud; Hearth voice lets Profile Pairing hear it, and passes all speech on to the TV's usual voice, so apps sound the same. Nothing is recorded or sent. |
 | Notification access | Shows notifications in Hearth; sees what's playing for Continue Watching, each profile's watch history and usage today, and TV status. In a kids profile (granted there over adb), only lets Hearth's agent count what plays and for how long, for that profile's usage today. |
 | Usage access | Knows which app is in front, for TV status and idle sleep; reads how much data the TV and each app used, for the data usage in the top bar (kept on the TV). |
@@ -50,6 +53,15 @@ as Wikidata asks.
 
 **Hearth on the kids' profiles** uses the TV's own debugging connection (Android asks you to allow it once) to install
 Hearth's two apps in your kids' profiles and keep them there, including a kids' profile added later. It connects
-only to the TV itself and only touches Hearth and HearthTube.
+only to the TV itself and only touches Hearth and HearthTube. Hearth's helper in each kids' profile keeps a copy of
+the key for that connection in its own private storage. It uses it to let itself read that profile's Watch Next and
+calendars, and, if Hearth is ever uninstalled with Android's own uninstall, to remove Hearth's copies from its
+profile. The key goes to a helper only after the helper has proven itself (above), sealed for that one connection.
+On a switch between grown-ups' profiles, Hearth also closes streaming apps both profiles share, so each opens on its
+own profile screen.
 
-**Saved streaming PINs** are encrypted with a key kept in the TV's secure key store, which never leaves the TV.
+**Saved streaming PINs** are encrypted with a key kept in the TV's secure key store, which never leaves the TV. Each
+belongs to the Google TV profile that saved it: no other profile gets it typed, even one paired with the same app
+profile. In a grown-up's profile Hearth types it only when that profile has its own Google TV PIN, so nobody can
+just switch to it and be let in. After two PINs in a row that the app doesn't take, Hearth stops until a new one is
+saved, before the app would lock the profile.

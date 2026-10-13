@@ -109,7 +109,8 @@ class _PinsChannel extends FLauncherChannel {
       packageName == _pkg ? choices : [];
 
   @override
-  Future<Map<dynamic, dynamic>> getProfilePinStatus(String packageName, String appProfile) async =>
+  Future<Map<dynamic, dynamic>> getProfilePinStatus(String packageName, String appProfile,
+          {String? profileKey}) async =>
       {"status": pins.containsKey(appProfile) ? "saved" : "none", "paused": false};
 
   @override
@@ -120,7 +121,7 @@ class _PinsChannel extends FLauncherChannel {
   }
 
   @override
-  Future<void> removeProfilePin(String packageName, String appProfile) async {
+  Future<void> removeProfilePin(String packageName, String appProfile, {String? profileKey}) async {
     events.add("remove $appProfile");
     pins.remove(appProfile);
   }

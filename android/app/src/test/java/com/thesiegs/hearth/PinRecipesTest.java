@@ -1,6 +1,8 @@
 package com.thesiegs.hearth;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -108,5 +110,29 @@ public class PinRecipesTest {
                 + " Keyboard, 1"));
         assertEquals("7", AppleTvPinRecipe.label("7"));
         assertEquals("Delete", AppleTvPinRecipe.label("Delete"));
+    }
+
+    @Test
+    public void aProfilePinIsTypedOnlyForItsOwnerWhenTheirProfileIsLocked() {
+        // A grown-up's profile needs its own Google TV PIN lock (unknown counts as not)
+        assertNull(ProfilePairingService.whyNotProfilePin(false, true, true, 0, false));
+        assertNotNull(ProfilePairingService.whyNotProfilePin(false, false, true, 0, false));
+        assertNotNull(ProfilePairingService.whyNotProfilePin(false, null, true, 0, false));
+        // A kid's PIN is the parent's, saved for that kid
+        assertNull(ProfilePairingService.whyNotProfilePin(true, null, true, 0, false));
+        // Nothing saved by this profile, paused, or rejected twice: not typed
+        assertNotNull(ProfilePairingService.whyNotProfilePin(false, true, false, 0, false));
+        assertNotNull(ProfilePairingService.whyNotProfilePin(false, true, true, 0, true));
+        assertNull(ProfilePairingService.whyNotProfilePin(false, true, true, 1, false));
+        assertNotNull(ProfilePairingService.whyNotProfilePin(false, true, true, 2, false));
+    }
+
+    @Test
+    public void eachProfilesPinsAreItsOwn() {
+        String alex = PinVault.id("user:0:alex", "com.example.tv", "Alex  M");
+        assertEquals("of|user:0:alex|com.example.tv|alex m", alex);
+        assertNotEquals(alex, PinVault.id("user:0:sam", "com.example.tv", "Alex M"));
+        // The whole TV's (the content PIN) keeps its old form
+        assertEquals("com.example.tv|#content-pin", PinVault.id(PinVault.SHARED, "com.example.tv", "#content-pin"));
     }
 }

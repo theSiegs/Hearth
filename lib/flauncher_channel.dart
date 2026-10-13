@@ -251,9 +251,11 @@ class FLauncherChannel {
 
   /// A saved streaming-app profile PIN's state, never the PIN: {status ("none", "saved", "rejected"),
   /// length, savedAt, rejections, paused}.
-  Future<Map<dynamic, dynamic>> getProfilePinStatus(String packageName, String appProfile) async =>
-      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>(
-          "getProfilePinStatus", {"packageName": packageName, "appProfile": appProfile}) ??
+  /// A PIN belongs to the Google TV profile that saved it: [profileKey]'s, or the profile on now's.
+  Future<Map<dynamic, dynamic>> getProfilePinStatus(String packageName, String appProfile,
+          {String? profileKey}) async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getProfilePinStatus",
+          {"packageName": packageName, "appProfile": appProfile, "profileKey": profileKey}) ??
       {};
 
   /// Hands the PIN to the Android side, which encrypts it at once (Keystore); false when it couldn't be saved.
@@ -262,8 +264,9 @@ class FLauncherChannel {
           "saveProfilePin", {"packageName": packageName, "appProfile": appProfile, "pin": pin}) ??
       false;
 
-  Future<void> removeProfilePin(String packageName, String appProfile) async =>
-      await _methodChannel.invokeMethod("removeProfilePin", {"packageName": packageName, "appProfile": appProfile});
+  Future<void> removeProfilePin(String packageName, String appProfile, {String? profileKey}) async =>
+      await _methodChannel.invokeMethod(
+          "removeProfilePin", {"packageName": packageName, "appProfile": appProfile, "profileKey": profileKey});
 
   /// The account-wide content PIN an app asks for when a title starts (Paramount+), never the PIN: as
   /// [getProfilePinStatus]. Empty for an app without one.

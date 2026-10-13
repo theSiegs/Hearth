@@ -902,8 +902,14 @@ public class ProfilePairingService extends AccessibilityService {
         // Kids' profiles too: a kid's app profile can have a PIN, which their parent saved for that profile only
         if (recipe == null || appProfile == null || mCover == null) return false;
         if (!appProfile.equals(ProfilePairing.getChosenProfile(this, s.pkg, s.key))) return false;
-        if (!PinVault.has(this, s.pkg, appProfile) || PinVault.isPaused(this, s.pkg)) return false;
-        char[] pin = PinVault.open(this, s.pkg, appProfile);
+        String why = whyNotProfilePin(s.kids, ProfileUsers.isLocked(this, s.hearthProfile),
+                PinVault.has(this, s.key, s.pkg, appProfile), PinVault.rejections(this, s.key, s.pkg, appProfile),
+                PinVault.isPaused(this, s.pkg));
+        if (why != null) {
+            Log.i(TAG, "PIN for " + s.pkg + " not typed: " + why);
+            return false;
+        }
+        char[] pin = PinVault.open(this, s.key, s.pkg, appProfile);
         if (pin == null) return false;
         if (pin.length != recipe.pinLength()) {
             java.util.Arrays.fill(pin, '\0');
@@ -921,6 +927,24 @@ public class ProfilePairingService extends AccessibilityService {
         Log.i(TAG, "Waiting for " + s.pkg + "'s PIN screen");
         checkPinScreen();
         return true;
+    }
+
+    /** Rejections in a row after which a saved profile PIN isn't tried again until it's saved anew. */
+    static final int PIN_GIVE_UP_REJECTIONS = 2;
+
+    /**
+     * Why Hearth mustn't type this Google TV profile's saved PIN for its paired app profile, or null when it may.
+     * A grown-up's profile must have its own Google TV PIN lock (unknown counts as not): otherwise anyone at the TV
+     * could open it and have the app profile's PIN typed. A kids' profile's PIN is the parent's, saved for that kid.
+     * After {@link #PIN_GIVE_UP_REJECTIONS} rejections in a row it waits for a new PIN, short of the app's lockout.
+     */
+    static String whyNotProfilePin(boolean kids, Boolean profileLocked, boolean saved, int rejections,
+            boolean paused) {
+        if (!saved) return "no PIN saved for this profile";
+        if (!kids && !Boolean.TRUE.equals(profileLocked)) return "the profile has no Google TV PIN lock";
+        if (rejections >= PIN_GIVE_UP_REJECTIONS) return "rejected " + rejections + " times; waiting for a new PIN";
+        if (paused) return "PIN entry is paused for the app";
+        return null;
     }
 
     // ---- Paramount+'s content PIN (ContentPin): asked for when a title starts, typed in a grown-up's locked profile ----
@@ -948,14 +972,14 @@ public class ProfilePairingService extends AccessibilityService {
         long serial = ProfileUsers.settledSerial(this);
         String name = LauncherAccessibilityService.getActiveProfileName(this);
         String why = ContentPin.whyNot(ProfileUsers.isKids(this), ProfileUsers.isGrownUps(this, serial),
-                ProfileUsers.isLocked(this, name), PinVault.statusOf(this, pkg, ContentPin.VAULT_PROFILE),
+                ProfileUsers.isLocked(this, name), PinVault.statusOf(this, PinVault.SHARED, pkg, ContentPin.VAULT_PROFILE),
                 PinVault.isPaused(this, pkg));
         if (why != null) {
             Log.i(TAG, "Content PIN not typed: " + why);
             return;
         }
         PinRecipe recipe = new ParamountContentPinRecipe();
-        char[] pin = PinVault.open(this, pkg, ContentPin.VAULT_PROFILE);
+        char[] pin = PinVault.open(this, PinVault.SHARED, pkg, ContentPin.VAULT_PROFILE);
         if (pin == null) return;
         if (pin.length != recipe.pinLength()) {
             java.util.Arrays.fill(pin, '\0');
@@ -1040,6 +1064,11 @@ public class ProfilePairingService extends AccessibilityService {
             this.machine = new PinEntryMachine(this, pin.length);
         }
 
+        /** Whose PIN this is in the vault: the Google TV profile's, or the whole TV's for the content PIN. */
+        String owner() {
+            return content ? PinVault.SHARED : session.key;
+        }
+
         private void machineBroken() {
             machine.onBroken();
         }
@@ -1093,19 +1122,19 @@ public class ProfilePairingService extends AccessibilityService {
         String settings = run.content ? ContentPin.SETTINGS_TARGET : pkg;
         switch (result) {
             case ACCEPTED:
-                PinVault.markAccepted(this, pkg, run.appProfile);
+                PinVault.markAccepted(this, run.owner(), pkg, run.appProfile);
                 PinVault.resetBreaks(this, pkg);
                 hideCover();
                 break;
             case REJECTED:
                 // A rejected content PIN isn't typed again until a new one is saved (ContentPin.whyNot)
-                PinVault.markRejected(this, pkg, run.appProfile);
+                PinVault.markRejected(this, run.owner(), pkg, run.appProfile);
                 showPinPopup(run.content ? getString(R.string.content_pin_rejected_title, app)
                                 : getString(R.string.pin_rejected_title, app, run.appProfile),
                         getString(R.string.pin_rejected_body), settings);
                 break;
             case LOCKED_OUT:
-                PinVault.markRejected(this, pkg, run.appProfile);
+                PinVault.markRejected(this, run.owner(), pkg, run.appProfile);
                 showPinPopup(run.content ? getString(R.string.content_pin_rejected_title, app)
                                 : getString(R.string.pin_locked_title, app, run.appProfile),
                         getString(R.string.pin_locked_body), settings);

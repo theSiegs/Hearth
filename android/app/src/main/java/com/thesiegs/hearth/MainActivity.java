@@ -137,6 +137,12 @@ public class MainActivity extends FlutterActivity {
         new EventChannel(messenger, WATCH_NEXT_EVENT_CHANNEL).setStreamHandler(new WatchNextEventStreamHandler(this));
     }
 
+    /** Whose streaming-app PIN a call is about: the Google TV profile it names, else the one on now (PinVault.id). */
+    private String pinOwner(MethodCall call) {
+        String key = call.argument("profileKey");
+        return key != null ? key : LauncherAccessibilityService.getActiveProfileKey(this);
+    }
+
     private void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
         switch (call.method) {
             case "getApplications" -> answerFrom(sAppsLoader, result, this::getApplications);
@@ -210,13 +216,15 @@ public class MainActivity extends FlutterActivity {
                 result.success(pending);
             }
             case "profilePinEntrySupported" -> result.success(PinRecipes.supports(call.arguments()));
-            case "getProfilePinStatus" -> result.success(
-                    PinVault.status(this, call.argument("packageName"), call.argument("appProfile")));
+            // A profile PIN is the Google TV profile's that saved it: the one on now, unless Settings names another
+            case "getProfilePinStatus" -> result.success(PinVault.status(this, pinOwner(call),
+                    call.argument("packageName"), call.argument("appProfile")));
             case "saveProfilePin" -> {
                 String pkg = call.argument("packageName");
                 String pin = call.argument("pin");
                 char[] digits = pin != null ? pin.toCharArray() : new char[0];
-                boolean saved = digits.length > 0 && PinVault.save(this, pkg, call.argument("appProfile"), digits);
+                boolean saved = digits.length > 0
+                        && PinVault.save(this, pinOwner(call), pkg, call.argument("appProfile"), digits);
                 java.util.Arrays.fill(digits, ' ');
                 if (saved) {
                     // A new PIN gets a fresh start: entry resumes if it was paused for the app
@@ -255,13 +263,13 @@ public class MainActivity extends FlutterActivity {
             // Paramount+'s account-wide content PIN (ContentPin): its state, never the PIN; saved once, for every
             // grown-up's locked profile
             case "getContentPinStatus" -> result.success(ContentPin.PACKAGE.equals(call.argument("packageName"))
-                    ? PinVault.status(this, ContentPin.PACKAGE, ContentPin.VAULT_PROFILE) : null);
+                    ? PinVault.status(this, PinVault.SHARED, ContentPin.PACKAGE, ContentPin.VAULT_PROFILE) : null);
             case "saveContentPin" -> {
                 String pin = call.argument("pin");
                 char[] digits = pin != null ? pin.toCharArray() : new char[0];
                 boolean saved = ContentPin.PACKAGE.equals(call.argument("packageName"))
                         && digits.length == ContentPin.LENGTH
-                        && PinVault.save(this, ContentPin.PACKAGE, ContentPin.VAULT_PROFILE, digits);
+                        && PinVault.save(this, PinVault.SHARED, ContentPin.PACKAGE, ContentPin.VAULT_PROFILE, digits);
                 java.util.Arrays.fill(digits, ' ');
                 if (saved) {
                     PinVault.setPaused(this, ContentPin.PACKAGE, false);
@@ -271,12 +279,12 @@ public class MainActivity extends FlutterActivity {
             }
             case "removeContentPin" -> {
                 if (ContentPin.PACKAGE.equals(call.argument("packageName"))) {
-                    PinVault.remove(this, ContentPin.PACKAGE, ContentPin.VAULT_PROFILE);
+                    PinVault.remove(this, PinVault.SHARED, ContentPin.PACKAGE, ContentPin.VAULT_PROFILE);
                 }
                 result.success(null);
             }
             case "removeProfilePin" -> {
-                PinVault.remove(this, call.argument("packageName"), call.argument("appProfile"));
+                PinVault.remove(this, pinOwner(call), call.argument("packageName"), call.argument("appProfile"));
                 result.success(null);
             }
             case "takePendingSearch" -> {

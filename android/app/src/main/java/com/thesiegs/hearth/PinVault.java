@@ -37,6 +37,10 @@ final class PinVault {
     private static final String KEY_ALIAS = "hearth_pin_vault_v1";
     private static final String KEYSTORE = "AndroidKeyStore";
     private static final String PAUSED_PREFIX = "paused|";
+    private static final String OWNER_PREFIX = "of|";
+    /** The owner of a PIN for the whole TV (Paramount+'s content PIN), not one Google TV profile's. */
+    static final String SHARED = null;
+    private static final String MIGRATED_KEY = "owners_migrated";
 
     static final String STATUS_NONE = "none";
     static final String STATUS_SAVED = "saved";
@@ -48,12 +52,48 @@ final class PinVault {
     }
 
     private static SharedPreferences prefs(Context context) {
-        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        if (!prefs.getBoolean(MIGRATED_KEY, false)) migrateOwners(context, prefs);
+        return prefs;
     }
 
-    /** The entry's id: the app, and the app profile's name as the app shows it (case and spacing aside). */
-    static String id(String pkg, String appProfile) {
-        return pkg + "|" + appProfile.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+    /**
+     * PINs saved before they belonged to a person were kept by app profile alone. Each goes to the Google TV profiles
+     * explicitly paired with that app profile (the only ones it was ever typed for); one nobody is paired with goes.
+     */
+    private static synchronized void migrateOwners(Context context, SharedPreferences prefs) {
+        if (prefs.getBoolean(MIGRATED_KEY, false)) return;
+        SharedPreferences.Editor editor = prefs.edit();
+        for (Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
+            String k = entry.getKey();
+            if (!(entry.getValue() instanceof String) || k.startsWith(OWNER_PREFIX) || k.startsWith(PAUSED_PREFIX)
+                    || k.startsWith(BREAKS_PREFIX)) {
+                continue;
+            }
+            int bar = k.indexOf('|');
+            if (bar < 0) continue;
+            String pkg = k.substring(0, bar);
+            // The content PIN stays the whole TV's
+            if (k.equals(id(SHARED, pkg, ContentPin.VAULT_PROFILE))) continue;
+            for (String owner : ProfilePairing.getHearthProfiles(context)) {
+                String chosen = ProfilePairing.getChosenProfile(context, pkg, owner);
+                if (chosen != null && id(SHARED, pkg, chosen).equals(k)) {
+                    editor.putString(id(owner, pkg, chosen), (String) entry.getValue());
+                }
+            }
+            editor.remove(k);
+        }
+        editor.putBoolean(MIGRATED_KEY, true).apply();
+    }
+
+    /**
+     * The entry's id: whose it is (the Google TV profile that saved it, or {@link #SHARED}), the app, and the app
+     * profile's name as the app shows it (case and spacing aside). A profile PIN belongs to the person who saved it,
+     * not to the app profile: another Google TV profile paired with the same app profile doesn't get it typed.
+     */
+    static String id(String owner, String pkg, String appProfile) {
+        String name = appProfile.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+        return owner == null ? pkg + "|" + name : OWNER_PREFIX + owner + "|" + pkg + "|" + name;
     }
 
     private static SecretKey key() throws Exception {
@@ -71,7 +111,7 @@ final class PinVault {
     }
 
     /** Saves (or replaces) a PIN of digits only; wipes {@code pin}. A saved PIN starts as accepted. */
-    static boolean save(Context context, String pkg, String appProfile, char[] pin) {
+    static boolean save(Context context, String owner, String pkg, String appProfile, char[] pin) {
         byte[] plain = null;
         try {
             for (char c : pin) {
@@ -89,7 +129,7 @@ final class PinVault {
                     .put("savedAt", System.currentTimeMillis())
                     .put("status", STATUS_SAVED)
                     .put("rejections", 0);
-            prefs(context).edit().putString(id(pkg, appProfile), entry.toString()).apply();
+            prefs(context).edit().putString(id(owner, pkg, appProfile), entry.toString()).apply();
             return true;
         } catch (Exception e) {
             Log.w(TAG, "Couldn't save a PIN for " + pkg + ": " + e.getClass().getSimpleName());
@@ -100,15 +140,16 @@ final class PinVault {
         }
     }
 
-    static void remove(Context context, String pkg, String appProfile) {
-        prefs(context).edit().remove(id(pkg, appProfile)).apply();
+    static void remove(Context context, String owner, String pkg, String appProfile) {
+        prefs(context).edit().remove(id(owner, pkg, appProfile)).apply();
     }
 
     /** Every PIN of an app (its pairings removed, the app uninstalled). */
     static void removeApp(Context context, String pkg) {
         SharedPreferences.Editor editor = prefs(context).edit();
         for (String k : prefs(context).getAll().keySet()) {
-            if (k.startsWith(pkg + "|") || k.equals(PAUSED_PREFIX + pkg) || k.equals(BREAKS_PREFIX + pkg)) {
+            if (k.startsWith(pkg + "|") || (k.startsWith(OWNER_PREFIX) && k.contains("|" + pkg + "|"))
+                    || k.equals(PAUSED_PREFIX + pkg) || k.equals(BREAKS_PREFIX + pkg)) {
                 editor.remove(k);
             }
         }
@@ -120,8 +161,8 @@ final class PinVault {
         prefs(context).edit().clear().apply();
     }
 
-    private static JSONObject entry(Context context, String pkg, String appProfile) {
-        String raw = prefs(context).getString(id(pkg, appProfile), null);
+    private static JSONObject entry(Context context, String owner, String pkg, String appProfile) {
+        String raw = prefs(context).getString(id(owner, pkg, appProfile), null);
         if (raw == null) return null;
         try {
             return new JSONObject(raw);
@@ -131,9 +172,9 @@ final class PinVault {
     }
 
     /** For Settings: {status, length, savedAt, rejections}. Never the PIN. */
-    static Map<String, Object> status(Context context, String pkg, String appProfile) {
+    static Map<String, Object> status(Context context, String owner, String pkg, String appProfile) {
         Map<String, Object> out = new HashMap<>();
-        JSONObject e = entry(context, pkg, appProfile);
+        JSONObject e = entry(context, owner, pkg, appProfile);
         out.put("status", e == null ? STATUS_NONE : e.optString("status", STATUS_SAVED));
         out.put("length", e == null ? 0 : e.optInt("len"));
         out.put("savedAt", e == null ? 0L : e.optLong("savedAt"));
@@ -142,23 +183,23 @@ final class PinVault {
         return out;
     }
 
-    static boolean has(Context context, String pkg, String appProfile) {
-        return entry(context, pkg, appProfile) != null;
+    static boolean has(Context context, String owner, String pkg, String appProfile) {
+        return entry(context, owner, pkg, appProfile) != null;
     }
 
-    static String statusOf(Context context, String pkg, String appProfile) {
-        JSONObject e = entry(context, pkg, appProfile);
+    static String statusOf(Context context, String owner, String pkg, String appProfile) {
+        JSONObject e = entry(context, owner, pkg, appProfile);
         return e == null ? STATUS_NONE : e.optString("status", STATUS_SAVED);
     }
 
-    static int rejections(Context context, String pkg, String appProfile) {
-        JSONObject e = entry(context, pkg, appProfile);
+    static int rejections(Context context, String owner, String pkg, String appProfile) {
+        JSONObject e = entry(context, owner, pkg, appProfile);
         return e == null ? 0 : e.optInt("rejections");
     }
 
     /** The PIN, for one entry only; the caller wipes it. Null when there's none or it can't be opened. */
-    static char[] open(Context context, String pkg, String appProfile) {
-        JSONObject e = entry(context, pkg, appProfile);
+    static char[] open(Context context, String owner, String pkg, String appProfile) {
+        JSONObject e = entry(context, owner, pkg, appProfile);
         if (e == null) return null;
         byte[] plain = null;
         try {
@@ -178,24 +219,24 @@ final class PinVault {
         }
     }
 
-    private static void update(Context context, String pkg, String appProfile, String status, int rejections) {
-        JSONObject e = entry(context, pkg, appProfile);
+    private static void update(Context context, String owner, String pkg, String appProfile, String status, int rejections) {
+        JSONObject e = entry(context, owner, pkg, appProfile);
         if (e == null) return;
         try {
             e.put("status", status).put("rejections", rejections);
-            prefs(context).edit().putString(id(pkg, appProfile), e.toString()).apply();
+            prefs(context).edit().putString(id(owner, pkg, appProfile), e.toString()).apply();
         } catch (Exception ignored) {
         }
     }
 
-    static void markAccepted(Context context, String pkg, String appProfile) {
-        update(context, pkg, appProfile, STATUS_SAVED, 0);
+    static void markAccepted(Context context, String owner, String pkg, String appProfile) {
+        update(context, owner, pkg, appProfile, STATUS_SAVED, 0);
     }
 
     /** One more rejection: still tried on the next launch, and Settings says it wasn't accepted. */
-    static void markRejected(Context context, String pkg, String appProfile) {
-        update(context, pkg, appProfile, STATUS_REJECTED,
-                rejections(context, pkg, appProfile) + 1);
+    static void markRejected(Context context, String owner, String pkg, String appProfile) {
+        update(context, owner, pkg, appProfile, STATUS_REJECTED,
+                rejections(context, owner, pkg, appProfile) + 1);
     }
 
     /**

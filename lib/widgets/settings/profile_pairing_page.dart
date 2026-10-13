@@ -365,6 +365,14 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
 
   Future<void> _change(PairingChoice choice) async {
     final l = AppLocalizations.of(context)!;
+    // A pairing with a saved PIN changes only with the parent PIN: the PIN goes with it (see below)
+    final old = choice.chosenProfile;
+    if (_paired(choice)) {
+      final pin = await _channel.getProfilePinStatus(_packageName, old!, profileKey: choice.hearthProfile);
+      if ((pin["status"] as String? ?? "none") != "none") {
+        if (!mounted || !await requireParentPin(context) || !mounted) return;
+      }
+    }
     final label = widget.app["label"] as String;
     // Each option: (mode, app profile, text).
     final options = <(String, String?, String)>[
@@ -375,6 +383,7 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
     bool isCurrent((String, String?, String) option) =>
         option.$1 == choice.mode && (option.$1 != "profile" || option.$2 == choice.chosenProfile);
 
+    if (!mounted) return;
     final picked = await showDialog<(String, String?, String)>(
       context: context,
       builder: (context) => SimpleDialog(
@@ -399,11 +408,9 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
     );
     if (picked == null) return;
     await _channel.setProfilePairingChoice(_packageName, choice.hearthProfile, picked.$1, picked.$2);
-    // A PIN saved for the app profile this pairing leaves goes, unless another Google TV profile still uses it
-    final old = choice.chosenProfile;
+    // The PIN this Google TV profile saved for the app profile it leaves goes (each profile's PINs are its own)
     if (_paired(choice) && !(picked.$1 == "profile" && picked.$2 == old)) {
-      final stillUsed = (_choices ?? []).any((c) => c != choice && _paired(c) && c.chosenProfile == old);
-      if (!stillUsed) await _channel.removeProfilePin(_packageName, old!);
+      await _channel.removeProfilePin(_packageName, old!, profileKey: choice.hearthProfile);
     }
     _load();
   }

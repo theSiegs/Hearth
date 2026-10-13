@@ -59,7 +59,8 @@ Future<bool> requireParent(BuildContext context) async {
   return pin != null;
 }
 
-/// The parent PIN in any profile, for what only a parent may do anywhere (saving a streaming app's profile PIN).
+/// The parent PIN in any profile, for what only a parent may do anywhere (saving a streaming app's profile PIN, or
+/// changing a pairing that has one).
 /// In a grown-up's profile it isn't asked while they're at the remote: since their profile came on (or they entered
 /// the PIN), the remote hasn't gone untouched for five minutes. Without a parent PIN set, says to set one first.
 /// Returns true when the caller may go ahead.
