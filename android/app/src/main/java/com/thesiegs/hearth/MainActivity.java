@@ -146,8 +146,8 @@ public class MainActivity extends FlutterActivity {
     private void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
         switch (call.method) {
             case "getApplications" -> answerFrom(sAppsLoader, result, this::getApplications);
-            case "getApplicationBanner" -> result.success(appImage(call.arguments(), true));
-            case "getApplicationIcon" -> result.success(appImage(call.arguments(), false));
+            case "getApplicationBanner" -> answerFrom(sAppsExecutor, result, () -> appImage(call.arguments(), true));
+            case "getApplicationIcon" -> answerFrom(sAppsExecutor, result, () -> appImage(call.arguments(), false));
             case "launchActivityFromAction" -> result.success(launchActivityFromAction(call.arguments()));
             case "launchApp" -> result.success(launchApp(call.arguments()));
             case "openUrl" -> result.success(openUrl(call.arguments()));
@@ -402,15 +402,15 @@ public class MainActivity extends FlutterActivity {
             }
             case "getActiveProfileName" -> result.success(LauncherAccessibilityService.getActiveProfileName(this));
             case "getActiveProfileKey" -> result.success(LauncherAccessibilityService.getActiveProfileKey(this));
-            case "isProfileDataReady" -> result.success(isProfileDataReady());
+            case "isProfileDataReady" -> answerFrom(sAppsExecutor, result, this::isProfileDataReady);
             case "setProfileReady" -> {
                 LauncherAccessibilityService.setProfileReady(this, call.arguments());
                 result.success(null);
             }
-            case "getProfileAvatar" -> result.success(getProfileAvatar(call.arguments()));
+            case "getProfileAvatar" -> answerFrom(sAppsExecutor, result, () -> getProfileAvatar(call.arguments()));
             case "openWifiSettings" -> result.success(openWifiSettings());
             case "openVpnSettings" -> result.success(openVpnSettings());
-            case "getTvInputs" -> result.success(getTvInputs());
+            case "getTvInputs" -> answerFrom(sAppsExecutor, result, this::getTvInputs);
             case "launchTvInput" -> result.success(launchTvInput(call.arguments()));
             case "checkNotificationListenerPermission" -> result.success(checkNotificationListenerPermission());
             case "requestNotificationListenerPermission" -> result.success(requestNotificationListenerPermission());
@@ -450,7 +450,7 @@ public class MainActivity extends FlutterActivity {
             case "openTextToSpeechSettings" -> result.success(openTextToSpeechSettings());
             case "checkWatchNextPermission" -> result.success(checkWatchNextPermission());
             case "requestWatchNextPermission" -> requestWatchNextPermission(result);
-            case "getWatchNextPrograms" -> result.success(getWatchNextPrograms());
+            case "getWatchNextPrograms" -> answerFrom(sAppsExecutor, result, this::getWatchNextPrograms);
             // The Google calendars synced to the TV, the active profile's only (TvCalendars), for the date and time
             case "getCalendarAccess" -> result.success(TvCalendars.access(this));
             case "requestCalendarPermission" -> requestCalendarPermission(result);
@@ -502,7 +502,11 @@ public class MainActivity extends FlutterActivity {
         Object get();
     }
 
-    /** Works the answer out on the executor and sends it from the main thread, where results must go. */
+    /**
+     * Works the answer out on the executor and sends it from the main thread, where results must go. Anything that
+     * reads a provider, decodes or encodes an image, or calls another process belongs here: Hearth's main thread is
+     * also where its accessibility service sees every remote key on the TV, which waits for it.
+     */
     private void answerFrom(Executor executor, MethodChannel.Result result, Answer answer) {
         executor.execute(() -> {
             Object value = answer.get();

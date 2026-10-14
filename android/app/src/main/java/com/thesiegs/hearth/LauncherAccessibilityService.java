@@ -1,6 +1,7 @@
 package com.thesiegs.hearth;
 
 import android.accessibilityservice.AccessibilityService;
+import android.accessibilityservice.AccessibilityServiceInfo;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -429,11 +430,15 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
     };
     private final LauncherApps.Callback mSuspensionCallback = new LauncherApps.Callback() {
-        @Override public void onPackageRemoved(String packageName, UserHandle user) {}
+        @Override public void onPackageRemoved(String packageName, UserHandle user) {
+            mLaunchable.remove(packageName);
+        }
         @Override public void onPackageAdded(String packageName, UserHandle user) {
+            mLaunchable.remove(packageName);
             onCompanionChanged(packageName);
         }
         @Override public void onPackageChanged(String packageName, UserHandle user) {
+            mLaunchable.remove(packageName);
             onCompanionChanged(packageName);
         }
         @Override public void onPackagesAvailable(String[] packageNames, UserHandle user, boolean replacing) {}
@@ -490,6 +495,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
         super.onServiceConnected();
         sInstance = this;
         LogNames.refresh(this);
+        // One of Google TV's screens may be up already (the service restarted over its chooser)
+        AccessibilityNodeInfo front = getRootInActiveWindow();
+        setGoogleTvEvents(front != null && GOOGLE_TV_PACKAGE.equals(String.valueOf(front.getPackageName())));
         mKidsState = ProfileUsers.isKids(this);
         IntentFilter userFilter = new IntentFilter(ProfileUsers.ACTION_PROFILE_ACCESSIBLE);
         userFilter.addAction(ProfileUsers.ACTION_PROFILE_INACCESSIBLE);
@@ -843,10 +851,24 @@ public class LauncherAccessibilityService extends AccessibilityService {
                     + ", on screen " + mChooserOnScreen + ")");
             return;
         }
-        List<String> names = new ArrayList<>();
-        List<String> descriptions = new ArrayList<>();
-        Map<String, String> emails = new LinkedHashMap<>();
-        String current = collectChooserTiles(root, names, descriptions, emails, 0);
+        // The walk is dozens of calls into Google TV: off the main thread, where remote keys wait
+        try {
+            mAccountReader.execute(() -> {
+                List<String> names = new ArrayList<>();
+                List<String> descriptions = new ArrayList<>();
+                Map<String, String> emails = new LinkedHashMap<>();
+                String current = collectChooserTiles(root, names, descriptions, emails, 0);
+                mHandler.post(() -> onChooserRead(current, names, descriptions, emails));
+            });
+        } catch (RejectedExecutionException e) {
+            // The service is stopping
+        }
+    }
+
+    /** What the chooser shows, read off the main thread (readChooser). */
+    private void onChooserRead(String current, List<String> names, List<String> descriptions,
+            Map<String, String> emails) {
+        if (!mChooserOnScreen) return;
         if (current != null) mChooserCurrent = current;
         // Each profile's Google account address, which the TV's calendars are filed by (TvCalendars)
         for (Map.Entry<String, String> email : emails.entrySet()) {
@@ -1194,6 +1216,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // Not the keyboard, a system pop-up or the assistant's bar: those come up over the app that's still in use
         if (isHearth || isApp) mLastAppPackage = packageName;
         if (isApp && YOUTUBE.equals(packageName)) steerKidsToHearthTube();
+        if (isGoogleTv) {
+            setGoogleTvEvents(true);
+        } else if (isHearth || isApp) {
+            setGoogleTvEvents(false);
+        }
         if (isApp && !isGoogleTv) {
             setFrontApp(packageName);
         } else if (isHearth || isGoogleTv || className.startsWith("android.service.dreams.")) {
@@ -1228,6 +1255,28 @@ public class LauncherAccessibilityService extends AccessibilityService {
         } else {
             onOtherWindow(packageName, isHearth, isApp);
         }
+    }
+
+    /** Whether focus, click and scroll events (and views not marked important) are asked for now. */
+    private boolean mGoogleTvEvents = false;
+
+    /**
+     * Focus, click and scroll events, and views not marked important, only while one of Google TV's own screens is in
+     * front: the chooser's picks need them, and nothing else does. Every app's focus moves and scrolls otherwise had
+     * an event built and sent here, on a main thread every remote key on the TV also waits for. Keys say the remote
+     * is in use (idle standby) without them.
+     */
+    private void setGoogleTvEvents(boolean on) {
+        if (on == mGoogleTvEvents) return;
+        AccessibilityServiceInfo info = getServiceInfo();
+        if (info == null) return;
+        int views = AccessibilityEvent.TYPE_VIEW_FOCUSED | AccessibilityEvent.TYPE_VIEW_CLICKED
+                | AccessibilityEvent.TYPE_VIEW_SCROLLED;
+        info.eventTypes = on ? info.eventTypes | views : info.eventTypes & ~views;
+        info.flags = on ? info.flags | AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
+                : info.flags & ~AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS;
+        setServiceInfo(info);
+        mGoogleTvEvents = on;
     }
 
     /** Hearth's windows that aren't its screens: overlays, and the agent's invisible screen (AgentActivity). */
@@ -1982,10 +2031,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         if (event.getKeyCode() == KeyEvent.KEYCODE_HOME && canTakeOver() && !mGoogleTvScreenInFront) {
             if (event.getAction() == KeyEvent.ACTION_DOWN) {
-                // Home means the home: Settings, a panel or the Home Assistant panel over it close too
-                HaPanelActivity.closeIfOpen();
-                MainActivity.notifyHomePressed();
-                openLauncher();
+                // Home means the home: Settings, a panel or the Home Assistant panel over it close too. After the
+                // key is answered: the TV's input waits for this method to return
+                mHandler.post(() -> {
+                    HaPanelActivity.closeIfOpen();
+                    MainActivity.notifyHomePressed();
+                    openLauncher();
+                });
             }
             return true;
         }
@@ -2016,10 +2068,19 @@ public class LauncherAccessibilityService extends AccessibilityService {
         Log.i(TAG, "Google TV's home " + (on ? "on" : "off"));
     }
 
+    /** Whether a package is an app with a launcher entry, asked once per package (two PackageManager calls). */
     private boolean isLaunchableApp(String packageName) {
+        Boolean known = mLaunchable.get(packageName);
+        if (known != null) return known;
         PackageManager pm = getPackageManager();
-        return pm.getLeanbackLaunchIntentForPackage(packageName) != null || pm.getLaunchIntentForPackage(packageName) != null;
+        boolean launchable = pm.getLeanbackLaunchIntentForPackage(packageName) != null
+                || pm.getLaunchIntentForPackage(packageName) != null;
+        mLaunchable.put(packageName, launchable);
+        return launchable;
     }
+
+    /** isLaunchableApp's answers; a package added, changed or removed is asked again. */
+    private final Map<String, Boolean> mLaunchable = new java.util.HashMap<>();
 
     private void openLauncher() {
         Intent intent = new Intent(this, MainActivity.class);
