@@ -19,16 +19,12 @@
 import 'dart:async';
 
 import 'package:flauncher/models/data_usage.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/services.dart';
 
 /// A channel call that failed and was answered with a default: its name and the error's type go to the log, so a
-/// feature that quietly stays off leaves a trace. Not the message, which can quote what was asked. Tests have no
-/// Android side, so a missing plugin isn't news.
-void _failed(String method, Object error) {
-  if (error is MissingPluginException) return;
-  debugPrint('Hearth channel $method failed: ${error.runtimeType}');
-}
+/// feature that quietly stays off leaves a trace.
+void _failed(String method, Object error) => noteFailure('channel $method', error);
 
 class FLauncherChannel {
   static const _methodChannel = MethodChannel('me.efesser.flauncher/method');

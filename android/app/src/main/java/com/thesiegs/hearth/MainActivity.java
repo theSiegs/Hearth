@@ -546,10 +546,21 @@ public class MainActivity extends FlutterActivity {
      * Works the answer out on the executor and sends it from the main thread, where results must go. Anything that
      * reads a provider, decodes or encodes an image, or calls another process belongs here: Hearth's main thread is
      * also where its accessibility service sees every remote key on the TV, which waits for it.
+     *
+     * A call must always be answered: one that throws is answered with an error instead of leaving Flutter waiting
+     * for good (the exception's class only; its message can quote what was asked).
      */
     private void answerFrom(Executor executor, MethodChannel.Result result, Answer answer) {
         executor.execute(() -> {
-            Object value = answer.get();
+            Object value;
+            try {
+                value = answer.get();
+            } catch (Throwable t) {
+                String kind = t.getClass().getSimpleName();
+                Log.w(TAG, "A channel call failed: " + kind);
+                runOnUiThread(() -> result.error("FAILED", kind, null));
+                return;
+            }
             runOnUiThread(() -> result.success(value));
         });
     }
@@ -557,7 +568,16 @@ public class MainActivity extends FlutterActivity {
     /** The data used this period, worked out off the main thread (NetworkStatsManager can take a while). */
     private void answerDataUsage(String method, MethodChannel.Result result) {
         sIoExecutor.execute(() -> {
-            long usage = dataUsageSince(DataUsage.periodStart(DataUsage.periodOfMethod(method), Calendar.getInstance()));
+            long usage;
+            try {
+                usage = dataUsageSince(DataUsage.periodStart(DataUsage.periodOfMethod(method), Calendar.getInstance()));
+            } catch (RuntimeException e) {
+                // Still an answer: Flutter shows the data usage as unavailable
+                String kind = e.getClass().getSimpleName();
+                Log.w(TAG, "The data usage couldn't be read: " + kind);
+                runOnUiThread(() -> result.error("FAILED", kind, null));
+                return;
+            }
             runOnUiThread(() -> {
                 if (usage == -1) {
                     result.error("PERMISSION_DENIED", "Usage stats permission not granted", null);
