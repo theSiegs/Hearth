@@ -122,7 +122,6 @@
     "disabled": "無効",
     "showAppNamesBelowIcons": "アイコンの下にアプリ名を表示",
     "dataUsage": "データ使用量",
-    "networkIndicator": "ネットワークインジケーター",
     "startOnBoot": "起動時に開始 (Google TV / Fire TV)",
     "appLanguage": "言語",
     "systemDefault": "システムのデフォルト",

@@ -122,7 +122,6 @@
     "disabled": "Отключено",
     "showAppNamesBelowIcons": "Показывать названия приложений под значками",
     "dataUsage": "Использование данных",
-    "networkIndicator": "Индикатор сети",
     "startOnBoot": "Запускать при включении (Google TV / Fire TV)",
     "appLanguage": "Язык",
     "systemDefault": "Системный по умолчанию",

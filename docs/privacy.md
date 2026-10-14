@@ -53,7 +53,7 @@ as Wikidata asks.
 | Display over other apps | Home Assistant pop-ups. |
 | TV listings and Watch Next | Continue Watching and TV inputs. |
 | Calendars (read only) | The date and time in the top bar show the active profile's Google calendars that are synced to the TV: only that profile's own account's calendars, read on the TV and sent nowhere. Hearth never adds or changes events. Asked for in Settings → Home screen → Status bar → Calendars; in a kids profile (whose Hearth can't show the request) a parent's Fix grants it there over adb, and only for Hearth. |
-| Network and Wi-Fi state | The data usage and network shortcuts. |
+| Network state | The data usage's connection line (Wi-Fi, Ethernet, VPN, no internet). |
 | Start at boot | Brings Hearth and its services back after a restart. |
 
 **Hearth on the kids profiles** uses the TV's own debugging connection (Android asks you to allow it once) to install

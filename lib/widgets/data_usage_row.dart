@@ -34,12 +34,11 @@ String dataUsageConnectionText(AppLocalizations l, NetworkService network) {
     NetworkType.wifi => l.dataUsageWifi,
     NetworkType.wired => l.dataUsageEthernet,
     NetworkType.cellular => l.dataUsageMobile,
-    NetworkType.vpn => null,
-    NetworkType.unknown => l.dataUsageNotConnected,
+    NetworkType.none => l.dataUsageNotConnected,
   };
   return [
-    if (link != null) link,
-    if (network.offline && network.networkType != NetworkType.unknown) l.dataUsageNoInternet,
+    link,
+    if (network.offline && network.networkType != NetworkType.none) l.dataUsageNoInternet,
     if (network.vpnActive) l.dataUsageVpnOn,
     if (network.networkType == NetworkType.wired) l.dataUsageEthernetNotCounted,
   ].join(" · ");

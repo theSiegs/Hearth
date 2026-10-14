@@ -283,9 +283,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get dataUsage => 'डेटा उपयोग';
 
   @override
-  String get networkIndicator => 'नेटवर्क संकेतक';
-
-  @override
   String get startOnBoot => 'बूट पर शुरू करें (Google TV / Fire TV)';
 
   @override

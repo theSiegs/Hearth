@@ -35,7 +35,6 @@ import android.graphics.drawable.Drawable;
 import android.media.tv.TvContract;
 import android.media.tv.TvInputInfo;
 import android.media.tv.TvInputManager;
-import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -88,7 +87,6 @@ public class MainActivity extends FlutterActivity {
     private static final String TAG = "HearthMain";
     private static final String METHOD_CHANNEL = "me.efesser.flauncher/method";
     private static final String APPS_EVENT_CHANNEL = "me.efesser.flauncher/event_apps";
-    private static final String NETWORK_EVENT_CHANNEL = "me.efesser.flauncher/event_network";
     private static final String NOTIFICATIONS_EVENT_CHANNEL = "me.efesser.flauncher/event_notifications";
     private static final String WEATHER_EVENT_CHANNEL = "me.efesser.flauncher/event_weather";
     private static final String WATCH_NEXT_EVENT_CHANNEL = "me.efesser.flauncher/event_watch_next";
@@ -130,7 +128,7 @@ public class MainActivity extends FlutterActivity {
         mMethodChannel.setMethodCallHandler(this::onMethodCall);
 
         new EventChannel(messenger, APPS_EVENT_CHANNEL).setStreamHandler(new LauncherAppsEventStreamHandler(this));
-        new EventChannel(messenger, NETWORK_EVENT_CHANNEL).setStreamHandler(new NetworkEventStreamHandler(this));
+        new EventChannel(messenger, NetworkStatus.CHANNEL).setStreamHandler(new NetworkStatus(this));
         new EventChannel(messenger, NOTIFICATIONS_EVENT_CHANNEL).setStreamHandler(
                 new NotificationsEventStreamHandler(this));
         new EventChannel(messenger, WEATHER_EVENT_CHANNEL).setStreamHandler(new WeatherEventStreamHandler(this));
@@ -158,7 +156,7 @@ public class MainActivity extends FlutterActivity {
             case "isDefaultLauncher" -> result.success(isDefaultLauncher());
             case "checkForGetContentAvailability" -> result.success(checkForGetContentAvailability());
             case "startAmbientMode" -> result.success(startAmbientMode());
-            case "getActiveNetworkInformation" -> result.success(getActiveNetworkInformation());
+            case "getNetworkStatus" -> answerFrom(sAppsExecutor, result, () -> NetworkStatus.read(this));
             case "getDailyDataUsage", "getWeeklyDataUsage", "getMonthlyDataUsage" -> answerDataUsage(call.method, result);
             case "getDataUsageByApp" -> {
                 String period = call.arguments();
@@ -446,8 +444,6 @@ public class MainActivity extends FlutterActivity {
                 result.success(null);
             }
             case "getProfileAvatar" -> answerFrom(sAppsExecutor, result, () -> getProfileAvatar(call.arguments()));
-            case "openWifiSettings" -> result.success(openWifiSettings());
-            case "openVpnSettings" -> result.success(openVpnSettings());
             case "getTvInputs" -> answerFrom(sAppsExecutor, result, this::getTvInputs);
             case "launchTvInput" -> result.success(launchTvInput(call.arguments()));
             case "checkNotificationListenerPermission" -> result.success(checkNotificationListenerPermission());
@@ -991,26 +987,6 @@ public class MainActivity extends FlutterActivity {
         return tryStartActivity(intent);
     }
 
-    private Map<String, Object> getActiveNetworkInformation() {
-        try {
-            ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                return NetworkUtils.getNetworkInformation(this, connectivityManager.getActiveNetwork());
-            } else {
-                // noinspection deprecation
-                return NetworkUtils.getNetworkInformation(this, connectivityManager.getActiveNetworkInfo());
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "Couldn't read the active network", e);
-            Map<String, Object> map = new java.util.HashMap<>();
-            map.put(NetworkUtils.KEY_NETWORK_TYPE, NetworkUtils.NETWORK_TYPE_UNKNOWN);
-            map.put(NetworkUtils.KEY_NETWORK_ACCESS, false);
-            map.put(NetworkUtils.KEY_INTERNET_ACCESS, false);
-            map.put(NetworkUtils.KEY_WIRELESS_SIGNAL_LEVEL, 0);
-            return map;
-        }
-    }
-
     private boolean tryStartActivity(Intent intent) {
         boolean success = true;
 
@@ -1162,48 +1138,6 @@ public class MainActivity extends FlutterActivity {
     private boolean uninstallSelf() {
         return tryStartActivity(new Intent(Intent.ACTION_DELETE, Uri.parse("package:" + getPackageName()))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-    }
-
-    private boolean openWifiSettings() {
-        // 1. Try Android Q+ WiFi panel
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            Intent panelIntent = new Intent(Settings.Panel.ACTION_WIFI);
-            if (tryStartActivity(panelIntent)) {
-                return true;
-            }
-        }
-
-        // 2. Try standard WiFi settings
-        Intent wifiIntent = new Intent(Settings.ACTION_WIFI_SETTINGS);
-        if (tryStartActivity(wifiIntent)) {
-            return true;
-        }
-
-        // 3. Fallback to general wireless settings
-        Intent wirelessIntent = new Intent(Settings.ACTION_WIRELESS_SETTINGS);
-        if (tryStartActivity(wirelessIntent)) {
-            return true;
-        }
-
-        // 4. Final fallback - open main settings
-        return launchActivityFromAction(Settings.ACTION_SETTINGS);
-    }
-
-    private boolean openVpnSettings() {
-        // 1. Try standard VPN settings
-        Intent vpnIntent = new Intent(Settings.ACTION_VPN_SETTINGS);
-        if (tryStartActivity(vpnIntent)) {
-            return true;
-        }
-
-        // 2. Fallback to general wireless settings
-        Intent wirelessIntent = new Intent(Settings.ACTION_WIRELESS_SETTINGS);
-        if (tryStartActivity(wirelessIntent)) {
-            return true;
-        }
-
-        // 3. Final fallback - open main settings
-        return launchActivityFromAction(Settings.ACTION_SETTINGS);
     }
 
     private boolean openScreensaverSettings() {

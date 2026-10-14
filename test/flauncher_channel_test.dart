@@ -270,21 +270,16 @@ void main() {
     expect(opened, isTrue);
   });
 
-  test("openVpnSettings", () async {
+  test("getNetworkStatus reads the connection", () async {
     final channel = MethodChannel('me.efesser.flauncher/method');
-    bool called = false;
     _messenger.setMockMethodCallHandler(channel, (call) async {
-      if (call.method == "openVpnSettings") {
-        called = true;
-        return;
-      }
+      if (call.method == "getNetworkStatus") return {"type": "wifi", "vpn": true, "internet": false};
       fail("Unhandled method name");
     });
-    final fLauncherChannel = FLauncherChannel();
 
-    await fLauncherChannel.openVpnSettings();
+    final status = await FLauncherChannel().getNetworkStatus();
 
-    expect(called, isTrue);
+    expect(status, {"type": "wifi", "vpn": true, "internet": false});
   });
 
   test("getDataUsageByApp passes the period and reads the apps", () async {

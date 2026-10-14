@@ -283,9 +283,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dataUsage => '데이터 사용량';
 
   @override
-  String get networkIndicator => '네트워크 표시기';
-
-  @override
   String get startOnBoot => '부팅 시 시작 (Google TV / Fire TV)';
 
   @override

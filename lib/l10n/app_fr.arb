@@ -122,7 +122,6 @@
     "disabled": "Désactivé",
     "showAppNamesBelowIcons": "Afficher les noms des applications sous les icônes",
     "dataUsage": "Utilisation des données",
-    "networkIndicator": "Indicateur réseau",
     "startOnBoot": "Lancer au démarrage (Google TV / Fire TV)",
     "appLanguage": "Langue",
     "systemDefault": "Système par défaut",

@@ -1,234 +1,96 @@
-import 'package:flauncher/models/data_usage.dart';
+import 'dart:async';
+
+import 'package:fake_async/fake_async.dart';
 import 'package:flauncher/providers/network_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:fake_async/fake_async.dart';
 
 import '../mocks.mocks.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  late MockFLauncherChannel mockChannel;
-  late NetworkService networkService;
-  void Function(Map<String, dynamic>)? networkListener;
+
+  late MockFLauncherChannel channel;
+  late StreamController<Map<String, dynamic>> changes;
 
   setUp(() {
-    mockChannel = MockFLauncherChannel();
-    when(mockChannel.getActiveNetworkInformation())
-        .thenAnswer((_) async => <String, dynamic>{});
-    when(mockChannel.checkUsageStatsPermission())
-        .thenAnswer((_) async => false);
-    when(mockChannel.addNetworkChangedListener(any)).thenAnswer((invocation) {
-      networkListener = invocation.positionalArguments[0] as void Function(Map<String, dynamic>);
-      return const Stream<void>.empty().listen(null);
-    });
-    networkService = NetworkService(mockChannel);
+    channel = MockFLauncherChannel();
+    changes = StreamController<Map<String, dynamic>>.broadcast();
+    when(channel.getNetworkStatus()).thenAnswer((_) async => {"type": "wifi", "vpn": false, "internet": true});
+    when(channel.networkStatusChanges()).thenAnswer((_) => changes.stream);
+    when(channel.checkUsageStatsPermission()).thenAnswer((_) async => true);
+    when(channel.getDailyDataUsage()).thenAnswer((_) async => 2048);
+    when(channel.getWeeklyDataUsage()).thenAnswer((_) async => 4096);
+    when(channel.getMonthlyDataUsage()).thenAnswer((_) async => 8192);
   });
 
-  tearDown(() {
-    networkService.dispose();
+  tearDown(() => changes.close());
+
+  test("reads the connection, and follows its changes", () async {
+    final service = NetworkService(channel);
+    await pumpEventQueue();
+    expect(service.networkType, NetworkType.wifi);
+    expect(service.hasInternetAccess, isTrue);
+    expect(service.vpnActive, isFalse);
+
+    changes.add({"type": "wired", "vpn": true, "internet": true});
+    await pumpEventQueue();
+    expect(service.networkType, NetworkType.wired);
+    expect(service.vpnActive, isTrue);
+
+    changes.add({"type": "something new", "vpn": false, "internet": false});
+    await pumpEventQueue();
+    expect(service.networkType, NetworkType.none);
+    service.dispose();
   });
 
-  group('getDataUsageForPeriod', () {
-    test('returns daily usage when period is "daily"', () async {
-      when(mockChannel.getDailyDataUsage()).thenAnswer((_) async => 100);
-
-      final result = await networkService.getDataUsageForPeriod('daily');
-
-      expect(result, 100);
-      verify(mockChannel.getDailyDataUsage()).called(1);
-      verifyNever(mockChannel.getWeeklyDataUsage());
-      verifyNever(mockChannel.getMonthlyDataUsage());
-    });
-
-    test('returns weekly usage when period is "weekly"', () async {
-      when(mockChannel.getWeeklyDataUsage()).thenAnswer((_) async => 500);
-
-      final result = await networkService.getDataUsageForPeriod('weekly');
-
-      expect(result, 500);
-      verify(mockChannel.getWeeklyDataUsage()).called(1);
-      verifyNever(mockChannel.getDailyDataUsage());
-      verifyNever(mockChannel.getMonthlyDataUsage());
-    });
-
-    test('returns monthly usage when period is "monthly"', () async {
-      when(mockChannel.getMonthlyDataUsage()).thenAnswer((_) async => 2000);
-
-      final result = await networkService.getDataUsageForPeriod('monthly');
-
-      expect(result, 2000);
-      verify(mockChannel.getMonthlyDataUsage()).called(1);
-      verifyNever(mockChannel.getDailyDataUsage());
-      verifyNever(mockChannel.getWeeklyDataUsage());
-    });
-
-    test('returns daily usage when period is unknown', () async {
-      when(mockChannel.getDailyDataUsage()).thenAnswer((_) async => 100);
-
-      final result = await networkService.getDataUsageForPeriod('unknown_period');
-
-      expect(result, 100);
-      verify(mockChannel.getDailyDataUsage()).called(1);
-      verifyNever(mockChannel.getWeeklyDataUsage());
-      verifyNever(mockChannel.getMonthlyDataUsage());
+  test("offline only after the internet has been gone a while", () {
+    fakeAsync((async) {
+      final service = NetworkService(channel);
+      async.flushMicrotasks();
+      service.applyStatus({"type": "wifi", "vpn": false, "internet": false});
+      async.elapse(NetworkService.offlineGrace - const Duration(seconds: 1));
+      expect(service.offline, isFalse);
+      async.elapse(const Duration(seconds: 2));
+      expect(service.offline, isTrue);
+      // Back: at once
+      service.applyStatus({"type": "wifi", "vpn": false, "internet": true});
+      expect(service.offline, isFalse);
+      // A blip shorter than the grace never shows
+      service.applyStatus({"type": "wifi", "vpn": false, "internet": false});
+      async.elapse(const Duration(seconds: 3));
+      service.applyStatus({"type": "wifi", "vpn": false, "internet": true});
+      async.elapse(NetworkService.offlineGrace);
+      expect(service.offline, isFalse);
+      service.dispose();
     });
   });
 
-  group('refreshPermissionAndUsage', () {
-    test('when permission granted, fetches usage and notifies listeners periodically', () {
-      fakeAsync((async) {
-        when(mockChannel.checkUsageStatsPermission()).thenAnswer((_) async => true);
-        when(mockChannel.getDailyDataUsage()).thenAnswer((_) async => 100);
-
-        int listenerCallCount = 0;
-        networkService.addListener(() {
-          listenerCallCount++;
-        });
-
-        // initial call starts timer
-        networkService.refreshPermissionAndUsage();
-
-        async.flushMicrotasks();
-
-        expect(networkService.hasUsageStatsPermission, isTrue);
-        expect(networkService.dailyDataUsage, 100);
-        expect(listenerCallCount, greaterThanOrEqualTo(2));
-        verify(mockChannel.getDailyDataUsage()).called(1);
-
-        // advance 5 minutes
-        async.elapse(const Duration(minutes: 5));
-
-        // Timer should have fired, calling _fetchUsage again
-        verify(mockChannel.getDailyDataUsage()).called(1);
-      });
-    });
-
-    test('when permission denied, cancels timer and notifies listeners', () {
-      fakeAsync((async) {
-        // First, simulate permission granted to start timer
-        when(mockChannel.checkUsageStatsPermission()).thenAnswer((_) async => true);
-        when(mockChannel.getDailyDataUsage()).thenAnswer((_) async => 100);
-        networkService.refreshPermissionAndUsage();
-        async.flushMicrotasks();
-        expect(networkService.hasUsageStatsPermission, isTrue);
-
-        // Advance 5 minutes to verify timer is active
-        async.elapse(const Duration(minutes: 5));
-        verify(mockChannel.getDailyDataUsage()).called(2);
-
-        // Now deny it
-        when(mockChannel.checkUsageStatsPermission()).thenAnswer((_) async => false);
-
-        int listenerCallCount = 0;
-        networkService.addListener(() {
-          listenerCallCount++;
-        });
-
-        networkService.refreshPermissionAndUsage();
-        async.flushMicrotasks();
-
-        expect(networkService.hasUsageStatsPermission, isFalse);
-        expect(listenerCallCount, 1);
-
-        // Advance 5 minutes, timer should NOT fire anymore
-        async.elapse(const Duration(minutes: 5));
-
-        // Shouldn't have any more calls to getDailyDataUsage since timer was cancelled
-        verifyNever(mockChannel.getDailyDataUsage());
-      });
-    });
-
-    test('when permission granted and timer is already active, does not start a new timer but fetches usage', () {
-      fakeAsync((async) {
-        when(mockChannel.checkUsageStatsPermission()).thenAnswer((_) async => true);
-        when(mockChannel.getDailyDataUsage()).thenAnswer((_) async => 100);
-
-        // First call starts the timer
-        networkService.refreshPermissionAndUsage();
-        async.flushMicrotasks();
-
-        // Advance 4 minutes, timer hasn't fired yet
-        async.elapse(const Duration(minutes: 4));
-
-        when(mockChannel.getDailyDataUsage()).thenAnswer((_) async => 200);
-
-        // Second call should fetch usage but reuse the timer
-        networkService.refreshPermissionAndUsage();
-        async.flushMicrotasks();
-
-        expect(networkService.dailyDataUsage, 200);
-        verify(mockChannel.getDailyDataUsage()).called(2);
-
-        // Advance another 1 minute (total 5 mins since first call)
-        // If a new timer was started, it would fire 5 mins from the second call.
-        // If the old timer was kept, it should fire now.
-        async.elapse(const Duration(minutes: 1));
-
-        // Timer fired!
-        verify(mockChannel.getDailyDataUsage()).called(1);
-      });
-    });
+  test("reads today's usage with usage access, and each period on request", () async {
+    final service = NetworkService(channel);
+    await pumpEventQueue();
+    expect(service.hasUsageStatsPermission, isTrue);
+    expect(service.dailyDataUsage, 2048);
+    expect(await service.getDataUsageForPeriod("weekly"), 4096);
+    expect(await service.getDataUsageForPeriod("monthly"), 8192);
+    expect(await service.getDataUsageForPeriod("daily"), 2048);
+    service.dispose();
   });
 
-  group('network events safety', () {
-    test('handles CELLULAR_STATE_CHANGED with out-of-bounds index without throwing', () {
-      expect(networkListener, isNotNull);
-      expect(() => networkListener!({'name': 'CELLULAR_STATE_CHANGED', 'arguments': 999}), returnsNormally);
-      expect(networkService.cellularNetworkType, CellularNetworkType.unknown);
-      expect(() => networkListener!({'name': 'CELLULAR_STATE_CHANGED', 'arguments': -5}), returnsNormally);
-      expect(networkService.cellularNetworkType, CellularNetworkType.unknown);
-    });
+  test("without usage access nothing is read", () async {
+    when(channel.checkUsageStatsPermission()).thenAnswer((_) async => false);
+    final service = NetworkService(channel);
+    await pumpEventQueue();
+    expect(service.hasUsageStatsPermission, isFalse);
+    verifyNever(channel.getDailyDataUsage());
+    service.dispose();
   });
 
-  group('offline', () {
-    Map<String, dynamic> wifi({required bool internet}) => {
-          'name': 'CAPABILITIES_CHANGED',
-          'arguments': {'networkType': NetworkType.wifi.index, 'internetAccess': internet, 'vpnActive': false},
-        };
-
-    test('says so only once the internet has been gone for the grace period', () {
-      fakeAsync((async) {
-        // Before Android says anything, no internet means nothing
-        async.elapse(NetworkService.offlineGrace * 2);
-        expect(networkService.offline, isFalse);
-
-        networkListener!(wifi(internet: false));
-        async.elapse(NetworkService.offlineGrace - const Duration(seconds: 1));
-        expect(networkService.offline, isFalse);
-        async.elapse(const Duration(seconds: 1));
-        expect(networkService.offline, isTrue);
-
-        networkListener!(wifi(internet: true));
-        expect(networkService.offline, isFalse);
-      });
-    });
-
-    test('a blip shorter than the grace period never shows', () {
-      fakeAsync((async) {
-        networkListener!({'name': 'NETWORK_UNAVAILABLE'});
-        async.elapse(const Duration(seconds: 3));
-        networkListener!(wifi(internet: true));
-        async.elapse(NetworkService.offlineGrace * 2);
-        expect(networkService.offline, isFalse);
-      });
-    });
-
-    test('more events while offline do not restart the wait', () {
-      fakeAsync((async) {
-        networkListener!(wifi(internet: false));
-        async.elapse(const Duration(seconds: 6));
-        networkListener!(wifi(internet: false));
-        async.elapse(NetworkService.offlineGrace - const Duration(seconds: 6));
-        expect(networkService.offline, isTrue);
-      });
-    });
-  });
-
-  test('getDataUsageByApp asks the platform for the period', () async {
-    const breakdown = DataUsageBreakdown(total: 5, apps: []);
-    when(mockChannel.getDataUsageByApp('monthly')).thenAnswer((_) async => breakdown);
-
-    expect(await networkService.getDataUsageByApp('monthly'), same(breakdown));
+  test("asks Android for usage access", () async {
+    when(channel.requestUsageStatsPermission()).thenAnswer((_) async {});
+    final service = NetworkService(channel);
+    await service.requestPermission();
+    verify(channel.requestUsageStatsPermission()).called(1);
+    service.dispose();
   });
 }

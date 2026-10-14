@@ -132,13 +132,14 @@ void main() {
     when(network.networkType).thenReturn(NetworkType.wired);
     expect(dataUsageConnectionText(l, network), "Ethernet · Android doesn't count data over Ethernet");
 
-    when(network.networkType).thenReturn(NetworkType.unknown);
+    when(network.networkType).thenReturn(NetworkType.none);
     when(network.offline).thenReturn(true);
     expect(dataUsageConnectionText(l, network), "Not connected");
 
-    when(network.networkType).thenReturn(NetworkType.vpn);
+    // A VPN names the link under it
+    when(network.networkType).thenReturn(NetworkType.wifi);
     when(network.offline).thenReturn(false);
     when(network.vpnActive).thenReturn(true);
-    expect(dataUsageConnectionText(l, network), "VPN on");
+    expect(dataUsageConnectionText(l, network), "Wi-Fi · VPN on");
   });
 }

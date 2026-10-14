@@ -283,9 +283,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dataUsage => '数据使用';
 
   @override
-  String get networkIndicator => '网络指示器';
-
-  @override
   String get startOnBoot => '开机时启动 (Google TV / Fire TV)';
 
   @override

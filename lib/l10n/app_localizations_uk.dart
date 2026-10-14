@@ -283,9 +283,6 @@ class AppLocalizationsUk extends AppLocalizations {
   String get dataUsage => 'Використання даних';
 
   @override
-  String get networkIndicator => 'Індикатор мережі';
-
-  @override
   String get startOnBoot => 'Запускати після завантаження (Google TV / Fire TV)';
 
   @override

@@ -283,9 +283,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get dataUsage => 'Veri Kullanımı';
 
   @override
-  String get networkIndicator => 'Ağ Göstergesi';
-
-  @override
   String get startOnBoot => 'Açılışta başlat (Google TV / Fire TV)';
 
   @override

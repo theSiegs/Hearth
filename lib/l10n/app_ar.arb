@@ -122,7 +122,6 @@
     "disabled": "معطّل",
     "showAppNamesBelowIcons": "إظهار أسماء التطبيقات أسفل الأيقونات",
     "dataUsage": "استخدام البيانات",
-    "networkIndicator": "مؤشر الشبكة",
     "startOnBoot": "التشغيل عند بدء الجهاز (Google TV / Fire TV)",
     "appLanguage": "اللغة",
     "systemDefault": "افتراضي النظام",

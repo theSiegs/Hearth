@@ -1413,7 +1413,6 @@ SettingsService mkSettingsService([MockSettingsService? mock]) {
   when(settingsService.showCategoryAppCount).thenReturn(false);
   when(settingsService.autoHideAppBarEnabled).thenReturn(false);
   when(settingsService.showInputsWidgetInStatusBar).thenReturn(true);
-  when(settingsService.showNetworkIndicatorInStatusBar).thenReturn(true);
   when(settingsService.showDataWidgetInStatusBar).thenReturn(true);
   when(settingsService.dataUsagePeriod).thenReturn("daily");
   when(settingsService.showDateInStatusBar).thenReturn(true);

@@ -122,7 +122,6 @@
     "disabled": "Devre Dışı",
     "showAppNamesBelowIcons": "Uygulama adlarını simgelerin altında göster",
     "dataUsage": "Veri Kullanımı",
-    "networkIndicator": "Ağ Göstergesi",
     "startOnBoot": "Açılışta başlat (Google TV / Fire TV)",
     "appLanguage": "Dil",
     "systemDefault": "Sistem Varsayılanı",

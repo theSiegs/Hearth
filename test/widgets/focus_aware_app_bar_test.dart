@@ -17,7 +17,6 @@ void main() {
 
   void setupSettingsDefaults(MockSettingsService service) {
     when(service.autoHideAppBarEnabled).thenReturn(false);
-    when(service.showNetworkIndicatorInStatusBar).thenReturn(false);
     when(service.showDataWidgetInStatusBar).thenReturn(false);
     when(service.showDateInStatusBar).thenReturn(true);
     when(service.showTimeInStatusBar).thenReturn(true);

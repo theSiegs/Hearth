@@ -122,7 +122,6 @@
     "disabled": "사용 중지됨",
     "showAppNamesBelowIcons": "아이콘 아래에 앱 이름 표시",
     "dataUsage": "데이터 사용량",
-    "networkIndicator": "네트워크 표시기",
     "startOnBoot": "부팅 시 시작 (Google TV / Fire TV)",
     "appLanguage": "언어",
     "systemDefault": "시스템 기본값",

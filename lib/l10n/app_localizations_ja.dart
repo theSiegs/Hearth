@@ -283,9 +283,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get dataUsage => 'データ使用量';
 
   @override
-  String get networkIndicator => 'ネットワークインジケーター';
-
-  @override
   String get startOnBoot => '起動時に開始 (Google TV / Fire TV)';
 
   @override

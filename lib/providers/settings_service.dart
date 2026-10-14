@@ -44,7 +44,6 @@ const _showTimeInStatusBarKey = "show_time_in_status_bar";
 const _timeFormatKey = "time_format";
 const _dataUsagePeriodKey = "wifi_usage_period";
 const _showDataWidgetInStatusBarKey = "show_wifi_widget_in_status_bar";
-const String _showNetworkIndicatorInStatusBarKey = "show_network_indicator_in_status_bar";
 const String _accentColorKey = "accent_color";
 const String _timeBasedWallpaperEnabledKey = "time_based_wallpaper_enabled";
 const String _bingWallpaperEnabledKey = "bing_wallpaper_enabled";
@@ -163,7 +162,6 @@ class SettingsService extends ChangeNotifier {
     _timeFormatKey,
     _dataUsagePeriodKey,
     _showDataWidgetInStatusBarKey,
-    _showNetworkIndicatorInStatusBarKey,
     _accentColorKey,
     _timeBasedWallpaperEnabledKey,
     _bingWallpaperEnabledKey,
@@ -307,7 +305,6 @@ class SettingsService extends ChangeNotifier {
 
   bool get showDataWidgetInStatusBar => _bool(_showDataWidgetInStatusBarKey, false);
 
-  bool get showNetworkIndicatorInStatusBar => _bool(_showNetworkIndicatorInStatusBarKey, true);
 
   bool get showInputsWidgetInStatusBar => _bool(_showInputsWidgetInStatusBarKey, true);
 
@@ -446,7 +443,6 @@ class SettingsService extends ChangeNotifier {
 
   Future<void> setShowDataWidgetInStatusBar(bool show) => _setBool(_showDataWidgetInStatusBarKey, show);
 
-  Future<void> setShowNetworkIndicatorInStatusBar(bool show) => _setBool(_showNetworkIndicatorInStatusBarKey, show);
 
   Future<void> setAccentColor(String colorHex) => _setString(_accentColorKey, colorHex);
 

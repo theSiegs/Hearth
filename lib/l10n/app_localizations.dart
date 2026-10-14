@@ -647,12 +647,6 @@ abstract class AppLocalizations {
   /// **'Data Usage'**
   String get dataUsage;
 
-  /// No description provided for @networkIndicator.
-  ///
-  /// In en, this message translates to:
-  /// **'Network Indicator'**
-  String get networkIndicator;
-
   /// No description provided for @startOnBoot.
   ///
   /// In en, this message translates to:

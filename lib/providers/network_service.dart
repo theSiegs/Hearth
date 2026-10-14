@@ -1,6 +1,5 @@
 /*
- * FLauncher
- * Copyright (C) 2021  Oscar Rojas
+ * Hearth
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,123 +16,120 @@
  */
 
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/models/data_usage.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
-enum NetworkType
-{
-  cellular,
-  wifi,
-  vpn,
-  wired,
-  unknown
-}
+/// How the TV is connected, as Android's default network says.
+enum NetworkType { wifi, wired, cellular, none }
 
-// https://developer.android.com/reference/android/telephony/TelephonyManager#NETWORK_TYPE_CDMA
-enum CellularNetworkType
-{
-  unknown,  // 0
-  gprs,     // 1
-  edge,     // 2
-  umts,     // 3
-  cdma,     // 4
-  evdoZero, // 5
-  evdoA,    // 6
-  unused1, // 7
-  hsdpa,    // 8
-  hsupa,    // 9
-  hspa,     // 10
-  iden,     // 11
-  evdoB,    // 12
-  lte,      // 13
-  ehrpd,    // 14
-  hspap,    // 15
-  gsm,      // 16
-  tdScdma,  // 17
-  iwlan,    // 18
-  unused2, // 19
-  nr,       // 20
-}
-
-class NetworkService extends ChangeNotifier with WidgetsBindingObserver
-{
-  final FLauncherChannel  _channel;
-
-  bool                _hasInternetAccess;
-  CellularNetworkType _cellularNetworkType;
-  NetworkType         _networkType;
-  int                 _wirelessNetworkSignalLevel;
-  int                 _dailyDataUsage; // In bytes
-  bool                _hasUsageStatsPermission;
-  bool                _vpnActive;
-  Timer?              _usageTimer;
-  StreamSubscription? _networkChangedSubscription;
-  int                 _callCount = 0;
-  int                 _usageCallCount = 0;
-  // Whether Android has said what the network is yet (until then "no internet" means nothing)
-  bool                _networkKnown = false;
-  bool                _offline = false;
-  Timer?              _offlineTimer;
-
-  /// How long the TV has to be without internet before [offline] says so: not for a blip, or while Wi-Fi comes up
-  /// after the TV wakes.
+/// The top bar's data usage: how the TV is connected (NetworkStatus on the Android side), whether it's offline, and
+/// the data it used, which needs usage access.
+class NetworkService extends ChangeNotifier with WidgetsBindingObserver {
+  /// Without internet this long before [offline] says so: not for a blip, nor while Wi-Fi comes back after a sleep.
   static const Duration offlineGrace = Duration(seconds: 10);
 
+  /// How often today's data usage is read while usage access is allowed.
+  static const Duration usageEvery = Duration(minutes: 5);
 
-  NetworkService(this._channel) :
-        _hasInternetAccess = false,
-        _cellularNetworkType = CellularNetworkType.unknown,
-        _networkType = NetworkType.unknown,
-        _wirelessNetworkSignalLevel = 0,
-        _dailyDataUsage = 0,
-        _hasUsageStatsPermission = false,
-        _vpnActive = false
-  {
-    _networkChangedSubscription = _channel.addNetworkChangedListener(_onNetworkChanged);
+  final FLauncherChannel _channel;
+  StreamSubscription<Map<String, dynamic>>? _statusChanges;
+  Timer? _offlineTimer;
+  Timer? _usageTimer;
 
-    _channel
-        .getActiveNetworkInformation()
-        .then((map) {
-          if (map.isNotEmpty) {
-            _getNetworkInformation(map.cast<String, dynamic>());
-            _updateOffline();
-            notifyListeners();
-          }
-        }).catchError((e) {
-          log("Error getting active network info: $e");
-        });
+  NetworkType _networkType = NetworkType.none;
+  bool _vpnActive = false;
+  bool _internet = false;
+  bool _known = false;
+  bool _offline = false;
+  bool _hasUsageStatsPermission = false;
+  int _dailyDataUsage = 0;
+  // Only the latest of overlapping reads counts
+  int _permissionReads = 0;
+  int _usageReads = 0;
+  // Reads that answer after dispose are dropped
+  bool _disposed = false;
 
-    _checkPermissionAndStartPolling();
+  NetworkService(this._channel) {
+    _channel.getNetworkStatus().then(_apply).catchError((Object _) {});
+    try {
+      _statusChanges = _channel.networkStatusChanges().listen(_apply, onError: (Object _) {});
+    } catch (_) {
+      // No Android side (tests)
+    }
+    _readPermission();
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  NetworkType get networkType => _networkType;
+
+  bool get vpnActive => _vpnActive;
+
+  /// The connection reaches the internet (Android validated it).
+  bool get hasInternetAccess => _internet;
+
+  /// No internet for [offlineGrace] or longer: not connected, or connected and nothing gets through.
+  bool get offline => _offline;
+
+  bool get hasUsageStatsPermission => _hasUsageStatsPermission;
+
+  /// Today's data, in bytes, as last read.
+  int get dailyDataUsage => _dailyDataUsage;
+
+  @visibleForTesting
+  void applyStatus(Map<String, dynamic> status) => _apply(status);
+
+  void _apply(Map<String, dynamic> status) {
+    if (_disposed || status.isEmpty) return;
+    _networkType = switch (status["type"]) {
+      "wifi" => NetworkType.wifi,
+      "wired" => NetworkType.wired,
+      "cellular" => NetworkType.cellular,
+      _ => NetworkType.none,
+    };
+    _vpnActive = status["vpn"] == true;
+    _internet = status["internet"] == true;
+    _known = true;
+    if (_internet) {
+      _offlineTimer?.cancel();
+      _offlineTimer = null;
+      _offline = false;
+    } else if (!_offline) {
+      _offlineTimer ??= Timer(offlineGrace, () {
+        _offlineTimer = null;
+        if (!_disposed && _known && !_internet) {
+          _offline = true;
+          notifyListeners();
+        }
+      });
+    }
+    notifyListeners();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      refreshPermissionAndUsage();
-    }
+    // Usage access may have been allowed in Android's settings meanwhile
+    if (state == AppLifecycleState.resumed) refreshPermissionAndUsage();
   }
 
-  Future<void> _checkPermissionAndStartPolling() async {
-    final localCallCount = ++_callCount;
-    final bool allowed;
+  Future<void> refreshPermissionAndUsage() => _readPermission();
+
+  Future<void> requestPermission() => _channel.requestUsageStatsPermission();
+
+  Future<void> _readPermission() async {
+    final read = ++_permissionReads;
+    bool allowed;
     try {
       allowed = await _channel.checkUsageStatsPermission();
-    } catch (e) {
-      log("Failed to check the usage stats permission", name: "NetworkService", error: e);
+    } catch (_) {
       return;
     }
-    if (localCallCount != _callCount) return;
-
+    if (_disposed || read != _permissionReads) return;
     _hasUsageStatsPermission = allowed;
-    if (_hasUsageStatsPermission) {
-      _fetchUsage();
-      if (_usageTimer == null || !_usageTimer!.isActive) {
-        _usageTimer = Timer.periodic(const Duration(minutes: 5), (_) => _fetchUsage());
-      }
+    if (allowed) {
+      _readUsage();
+      _usageTimer ??= Timer.periodic(usageEvery, (_) => _readUsage());
     } else {
       _usageTimer?.cancel();
       _usageTimer = null;
@@ -141,150 +137,36 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver
     notifyListeners();
   }
 
-  Future<void> requestPermission() async {
-    await _channel.requestUsageStatsPermission();
-  }
-
-  // Call this when app resumes
-  Future<void> refreshPermissionAndUsage() => _checkPermissionAndStartPolling();
-
-  Future<void> openWifiSettings() async {
-    await _channel.openWifiSettings();
-  }
-
-  Future<void> openVpnSettings() async {
-    await _channel.openVpnSettings();
-  }
-
-  Future<void> _fetchUsage() async {
-     final localCallCount = ++_usageCallCount;
-     final int usage;
-     try {
-       usage = await _channel.getDailyDataUsage();
-     } catch (e) {
-       log("Failed to read the daily data usage", name: "NetworkService", error: e);
-       return;
-     }
-     if (localCallCount != _usageCallCount) return;
-
-     if (usage != -1) {
-       _dailyDataUsage = usage;
-       notifyListeners();
-     }
-  }
-
-  Future<int> getDataUsageForPeriod(String period) async {
-    switch (period) {
-      case 'daily':
-        return await _channel.getDailyDataUsage();
-      case 'weekly':
-        return await _channel.getWeeklyDataUsage();
-      case 'monthly':
-        return await _channel.getMonthlyDataUsage();
-      default:
-        return await _channel.getDailyDataUsage();
+  Future<void> _readUsage() async {
+    final read = ++_usageReads;
+    int bytes;
+    try {
+      bytes = await _channel.getDailyDataUsage();
+    } catch (_) {
+      return;
     }
+    if (_disposed || read != _usageReads || bytes < 0) return;
+    _dailyDataUsage = bytes;
+    notifyListeners();
   }
 
-  /// The TV's data this period, app by app (for the data usage over the home); null without usage access.
+  /// The data used in a period: "daily", "weekly" or "monthly"; -1 without usage access.
+  Future<int> getDataUsageForPeriod(String period) => switch (period) {
+        "weekly" => _channel.getWeeklyDataUsage(),
+        "monthly" => _channel.getMonthlyDataUsage(),
+        _ => _channel.getDailyDataUsage(),
+      };
+
+  /// The data used in a period, app by app; null without usage access.
   Future<DataUsageBreakdown?> getDataUsageByApp(String period) => _channel.getDataUsageByApp(period);
-
-  /// Starts the wait before [offline] turns on when the internet is gone, and turns it off when it's back.
-  void _updateOffline() {
-    _networkKnown = true;
-    if (_hasInternetAccess) {
-      _offlineTimer?.cancel();
-      _offlineTimer = null;
-      _offline = false;
-    } else if (!_offline && _offlineTimer == null) {
-      _offlineTimer = Timer(offlineGrace, () {
-        _offlineTimer = null;
-        if (_networkKnown && !_hasInternetAccess) {
-          _offline = true;
-          notifyListeners();
-        }
-      });
-    }
-  }
 
   @override
   void dispose() {
+    _disposed = true;
     WidgetsBinding.instance.removeObserver(this);
+    _statusChanges?.cancel();
     _offlineTimer?.cancel();
     _usageTimer?.cancel();
-    _networkChangedSubscription?.cancel();
     super.dispose();
-  }
-
-  bool                  get   hasInternetAccess             => _hasInternetAccess;
-  CellularNetworkType   get   cellularNetworkType           => _cellularNetworkType;
-  NetworkType           get   networkType                   => _networkType;
-  int                   get   wirelessNetworkSignalLevel    => _wirelessNetworkSignalLevel;
-  int                 get   dailyDataUsage                => _dailyDataUsage;
-  bool                get   hasUsageStatsPermission       => _hasUsageStatsPermission;
-  bool                get   vpnActive                     => _vpnActive;
-
-  /// The TV has had no internet for [offlineGrace] or longer (not connected, or connected but nothing gets through).
-  bool                get   offline                       => _offline;
-
-  CellularNetworkType _getCellularNetworkType(int index) {
-    if (index < 0 || index >= CellularNetworkType.values.length) {
-      return CellularNetworkType.unknown;
-    }
-    CellularNetworkType type = CellularNetworkType.values[index];
-    if (type == CellularNetworkType.unused1 || type == CellularNetworkType.unused2) {
-      type = CellularNetworkType.unknown;
-    }
-
-    return type;
-  }
-
-  void _getNetworkInformation(Map<String, dynamic> map) {
-    log("NetworkService: _getNetworkInformation: $map");
-    try {
-      int networkTypeInt = (map["networkType"] as num?)?.toInt() ?? 0;
-      _hasInternetAccess = map["internetAccess"] as bool? ?? false;
-      if (networkTypeInt >= 0 && networkTypeInt < NetworkType.values.length) {
-        _networkType = NetworkType.values[networkTypeInt];
-      } else {
-        _networkType = NetworkType.unknown;
-      }
-      _vpnActive = map["vpnActive"] as bool? ?? false;
-
-      if (_networkType == NetworkType.cellular || _networkType == NetworkType.wifi) {
-        _wirelessNetworkSignalLevel = (map["wirelessSignalLevel"] as num?)?.toInt() ?? 0;
-      }
-      log("NetworkService: parsed type $_networkType, signal $_wirelessNetworkSignalLevel, vpn $_vpnActive");
-    } catch (e) {
-      log("NetworkService error parsing: $e");
-    }
-  }
-
-  void _onNetworkChanged(Map<String, dynamic> event) {
-    switch (event["name"]) {
-      case "NETWORK_AVAILABLE":
-        Map<dynamic, dynamic> map = event["arguments"];
-        _getNetworkInformation(map.cast<String, dynamic>());
-        break;
-      case "NETWORK_UNAVAILABLE":
-        _hasInternetAccess = false;
-        _networkType = NetworkType.unknown;
-        _vpnActive = false;
-        break;
-      case "CAPABILITIES_CHANGED":
-        Map<dynamic, dynamic> map = event["arguments"];
-        _getNetworkInformation(map.cast<String, dynamic>());
-        break;
-      case "CELLULAR_STATE_CHANGED":
-        final int? typeIndex = (event["arguments"] as num?)?.toInt();
-        if (typeIndex != null) {
-          _cellularNetworkType = _getCellularNetworkType(typeIndex);
-        }
-        notifyListeners();
-        break;
-    }
-
-    _updateOffline();
-    notifyListeners();
   }
 }

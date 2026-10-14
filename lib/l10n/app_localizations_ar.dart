@@ -283,9 +283,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get dataUsage => 'استخدام البيانات';
 
   @override
-  String get networkIndicator => 'مؤشر الشبكة';
-
-  @override
   String get startOnBoot => 'التشغيل عند بدء الجهاز (Google TV / Fire TV)';
 
   @override

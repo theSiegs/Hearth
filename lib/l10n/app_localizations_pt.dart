@@ -283,9 +283,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get dataUsage => 'Uso de dados';
 
   @override
-  String get networkIndicator => 'Indicador de rede';
-
-  @override
   String get startOnBoot => 'Iniciar ao ligar (Google TV / Fire TV)';
 
   @override

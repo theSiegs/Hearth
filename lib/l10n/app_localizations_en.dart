@@ -283,9 +283,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dataUsage => 'Data Usage';
 
   @override
-  String get networkIndicator => 'Network Indicator';
-
-  @override
   String get startOnBoot => 'Start on boot (Google TV / Fire TV)';
 
   @override

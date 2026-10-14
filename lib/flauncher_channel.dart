@@ -24,7 +24,7 @@ import 'package:flutter/services.dart';
 class FLauncherChannel {
   static const _methodChannel = MethodChannel('me.efesser.flauncher/method');
   static const _appsEventChannel = EventChannel('me.efesser.flauncher/event_apps');
-  static const _networkEventChannel = EventChannel('me.efesser.flauncher/event_network');
+  static const _networkChannel = EventChannel('com.thesiegs.hearth/network');
   static const _notificationsEventChannel = EventChannel('me.efesser.flauncher/event_notifications');
   static const _weatherEventChannel = EventChannel('me.efesser.flauncher/event_weather');
   static const _watchNextEventChannel = EventChannel('me.efesser.flauncher/event_watch_next');
@@ -80,10 +80,9 @@ class FLauncherChannel {
   Future<bool> checkForGetContentAvailability() async =>
       await _methodChannel.invokeMethod("checkForGetContentAvailability");
 
-  Future<Map<String, dynamic>> getActiveNetworkInformation() async {
-    Map<dynamic, dynamic> map = await _methodChannel.invokeMethod("getActiveNetworkInformation");
-    return map.cast<String, dynamic>();
-  }
+  /// The TV's connection now: {type: "wifi" | "wired" | "cellular" | "none", vpn: bool, internet: bool}.
+  Future<Map<String, dynamic>> getNetworkStatus() async =>
+      ((await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getNetworkStatus")) ?? {}).cast<String, dynamic>();
 
   Future<int> getDailyDataUsage() async {
     try {
@@ -128,16 +127,6 @@ class FLauncherChannel {
   Future<void> requestUsageStatsPermission() async =>
       await _methodChannel.invokeMethod("requestUsageStatsPermission");
 
-  Future<void> openWifiSettings() async =>
-      await _methodChannel.invokeMethod("openWifiSettings");
-
-  Future<void> openVpnSettings() async {
-    try {
-      await _methodChannel.invokeMethod("openVpnSettings");
-    } catch (_) {
-      // Ignore error in non-Android or test environments
-    }
-  }
 
   Future<void> openDefaultLauncherSettings() async =>
       await _methodChannel.invokeMethod("openDefaultLauncherSettings");
@@ -569,11 +558,10 @@ class FLauncherChannel {
         listener(eventMap.cast<String, dynamic>());
       });
 
-  StreamSubscription addNetworkChangedListener(void Function(Map<String, dynamic>) listener) =>
-      _networkEventChannel.receiveBroadcastStream().listen((event) {
-        Map<dynamic, dynamic> eventMap = event;
-        listener(eventMap.cast<String, dynamic>());
-      });
+  /// The TV's connection as [getNetworkStatus] gives it, now and whenever it changes.
+  Stream<Map<String, dynamic>> networkStatusChanges() => _networkChannel
+      .receiveBroadcastStream()
+      .map((event) => (event as Map<dynamic, dynamic>).cast<String, dynamic>());
 
   Future<List<Map<dynamic, dynamic>>> getTvInputs() async {
     try {

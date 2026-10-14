@@ -283,9 +283,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get dataUsage => 'Использование данных';
 
   @override
-  String get networkIndicator => 'Индикатор сети';
-
-  @override
   String get startOnBoot => 'Запускать при включении (Google TV / Fire TV)';
 
   @override
