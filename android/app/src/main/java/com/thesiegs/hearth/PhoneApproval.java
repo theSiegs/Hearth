@@ -27,7 +27,7 @@ import java.util.concurrent.Executors;
  * GooglePinRecipe). Deny, or no answer: the PIN screen stays for whoever is at the TV. The PIN screen is never covered
  * while waiting, so typing the PIN still works.
  *
- * Settings are per profile (each grown-up sets their own, from their profile): on/off and the notify service; the PIN
+ * Settings are per profile (each adult sets their own, from their profile): on/off and the notify service; the PIN
  * is in PinVault under the profile's key.
  */
 final class PhoneApproval {
@@ -153,7 +153,7 @@ final class PhoneApproval {
         });
     }
 
-    /** The grown-up's profile whose Google account address a screen shows, or null. */
+    /** The adult's profile whose Google account address a screen shows, or null. */
     static String profileOnScreen(Context context, List<CharSequence> texts) {
         for (String key : ProfilePairing.getHearthProfiles(context)) {
             String email = ProfileUsers.emailOf(context, key);

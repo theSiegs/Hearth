@@ -271,7 +271,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets("follows the active profile: kids profiles lock, grown-up ones don't", (tester) async {
+    testWidgets("follows the active profile: kids profiles lock, adult ones don't", (tester) async {
       final native = FakeNativeProfiles.install(tester, key: "user:0", name: "Sam");
       final hearth = await _Hearth.start();
       await tester.pumpWidget(hearth.wrap(settingsPanel()));

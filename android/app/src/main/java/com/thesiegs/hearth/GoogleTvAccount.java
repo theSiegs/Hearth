@@ -9,7 +9,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Who Google TV's home says is logged in. A grown-up's profile is another Google account in the owner's user, and
+ * Who Google TV's home says is logged in. An adult's profile is another Google account in the owner's user, and
  * switching between those starts no user, so this is how Hearth tells them apart: the home names the active
  * account on its profile picture, for screen readers ("Logged in as Alex, click to choose an account", English
  * only). It appears once the picture has loaded, about half a second after the home comes up.

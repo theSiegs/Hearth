@@ -45,13 +45,13 @@ class _PinRow {
 /// Settings > Profiles > Streaming app PINs: the PINs of the Google TV profile on now (each profile sees and sets
 /// only its own), one row per installed app Hearth can type PINs in, with the app profile Hearth picks for it. A
 /// kids' profile has them too, set past the parent PIN like every profile PIN. Setting a PIN on a profile Hearth
-/// matched by name pairs the two for good, so the PIN always goes with the right app profile. In a grown-up's profile
+/// matched by name pairs the two for good, so the PIN always goes with the right app profile. In an adult's profile
 /// it also has Paramount+'s content PIN, one for the whole TV ([editContentPin]).
 class StreamingPinsPage extends StatefulWidget {
   static const String routeName = "streaming_pins";
 
   /// The app with an account-wide content PIN (Paramount+): one PIN for the TV, typed when a title starts, in
-  /// grown-ups' profiles with a Google TV PIN lock only. Its row is a grown-up's to see.
+  /// adults' profiles with a Google TV PIN lock only. Its row is an adult's to see.
   static const String contentPinPackage = "com.cbs.ott";
 
   /// What Profile Pairing's "Change PIN" sends for the content PIN: Settings opens here (ContentPin.SETTINGS_TARGET).
@@ -70,7 +70,7 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
   List<(Map<dynamic, dynamic>, List<_PinRow>)>? _apps;
   bool _serviceOn = true;
 
-  /// The content PIN's app and its state, in a grown-up's profile with the app installed; else null.
+  /// The content PIN's app and its state, in an adult's profile with the app installed; else null.
   (Map<dynamic, dynamic>, Map<dynamic, dynamic>)? _contentPin;
 
   /// Whether Hearth types saved PINs at all, and the last entries on this TV (newest first).
@@ -89,7 +89,7 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
     bool serviceOn = true;
     (Map<dynamic, dynamic>, Map<dynamic, dynamic>)? contentPin;
     final active = context.read<ProfileService?>()?.activeProfileKey;
-    // Not known to be a grown-up's profile: no content PIN row
+    // Not known to be an adult's profile: no content PIN row
     final grownUp = !(context.read<ProfileService?>()?.isKidsProfile ?? true);
     bool typingOn = true;
     List<Map<dynamic, dynamic>> log = const [];

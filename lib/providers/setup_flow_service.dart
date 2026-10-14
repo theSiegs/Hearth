@@ -26,7 +26,7 @@ import 'settings_service.dart';
 
 /// How the setup flow runs: the whole of it (first run, or picking up where it was left), again from Settings, or
 /// only the Home button screen after an update switched Home Button Fix off.
-/// [look]: only "Pick a look for your home", for a grown-up's first visit to a profile after the flow has run.
+/// [look]: only "Pick a look for your home", for an adult's first visit to a profile after the flow has run.
 enum SetupMode { full, rerun, lostFix, look }
 
 /// The flow's optional cards, in the order they show (docs/design/first-run-setup.md). [introducedIn] is the flow
@@ -106,7 +106,7 @@ class SetupFlowService extends ChangeNotifier {
   static const String _decisionsKey = "device_setup_decisions";
   static const String _chipHiddenKey = "device_setup_chip_hidden";
 
-  /// The look chosen in the flow (a [HomeLook]'s name): the starting look for new grown-up profiles.
+  /// The look chosen in the flow (a [HomeLook]'s name): the starting look for new adult profiles.
   static const String lookKey = "device_setup_look";
 
   /// A look being previewed, and the home's look before it: kept while the look screen previews, so a restart in

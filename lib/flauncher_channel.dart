@@ -311,7 +311,7 @@ class FLauncherChannel {
   Future<void> removeContentPin(String packageName) async =>
       await _methodChannel.invokeMethod("removeContentPin", {"packageName": packageName});
 
-  /// Locks the current grown-up profile with Google TV's own profile lock (its PIN screen). False in a kids profile
+  /// Locks the current adult profile with Google TV's own profile lock (its PIN screen). False in a kids profile
   /// or when it couldn't be opened.
   Future<bool> lockProfile() async => await _methodChannel.invokeMethod<bool>("lockProfile") ?? false;
 
@@ -496,7 +496,7 @@ class FLauncherChannel {
 
   Future<void> openHaPanel() async => await _methodChannel.invokeMethod("openHaPanel");
 
-  /// A grown-up is at the remote: their profile came on (or they entered the parent PIN) and the remote hasn't gone
+  /// An adult is at the remote: their profile came on (or they entered the parent PIN) and the remote hasn't gone
   /// untouched for five minutes since. False when Hearth can't tell.
   Future<bool> isParentPresent() async {
     try {
@@ -506,7 +506,7 @@ class FLauncherChannel {
     }
   }
 
-  /// The parent PIN was just entered in a grown-up's profile.
+  /// The parent PIN was just entered in an adult's profile.
   Future<void> parentConfirmed() async {
     try {
       await _methodChannel.invokeMethod("parentConfirmed");
@@ -708,7 +708,7 @@ class FLauncherChannel {
   Future<String> getCalendarAccess() async =>
       await _methodChannel.invokeMethod<String>("getCalendarAccess") ?? "denied";
 
-  /// Asks to read the active profile's calendars: Android's permission dialog for a grown-up; for a kids' profile,
+  /// Asks to read the active profile's calendars: Android's permission dialog for an adult; for a kids' profile,
   /// Hearth grants it there over its own adb when the TV trusts it already. Whether it may.
   Future<bool> requestCalendarPermission() async =>
       await _methodChannel.invokeMethod<bool>("requestCalendarPermission") ?? false;

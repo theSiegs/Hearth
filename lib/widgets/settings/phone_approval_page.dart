@@ -90,7 +90,7 @@ class _PhoneApprovalTileState extends State<PhoneApprovalTile> {
   }
 }
 
-/// A grown-up's own profile: when someone switches to it at Google TV's PIN screen, Hearth asks their phone (a Home
+/// An adult's own profile: when someone switches to it at Google TV's PIN screen, Hearth asks their phone (a Home
 /// Assistant notification with Allow and Deny) and, allowed, enters their Google TV PIN.
 class PhoneApprovalPage extends StatefulWidget {
   static const String routeName = "phone_approval";

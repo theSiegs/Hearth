@@ -213,7 +213,7 @@ final class ProfilePairing {
         if (hearthName == null) return null;
         String match = bestMatch(hearthName, names);
         // A kid only ever lands in a profile named for them: the same name or first name, never a near miss
-        // ("Jo" / "Joe") that could be a grown-up's
+        // ("Jo" / "Joe") that could be an adult's
         return match != null && kids && matchScore(hearthName, match) < KIDS_MIN_SCORE ? null : match;
     }
 

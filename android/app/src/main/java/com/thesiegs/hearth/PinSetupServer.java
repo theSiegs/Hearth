@@ -92,7 +92,7 @@ final class PinSetupServer {
     private void readRows() {
         PackageManager pm = mContext.getPackageManager();
         boolean grownUp = !ProfilePairing.isKids(mContext, mOwner) && mOwner.startsWith("user:0");
-        // A grown-up's own Google TV PIN, for approving switches from their phone
+        // An adult's own Google TV PIN, for approving switches from their phone
         if (grownUp) {
             mRows.add(new Row(LauncherAccessibilityService.GOOGLE_TV_PACKAGE, "Google TV", GooglePinRecipe.VAULT_NAME,
                     false, 4, PhoneApproval.hasPin(mContext, mOwner), false));

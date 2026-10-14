@@ -1926,7 +1926,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String pinConsentBody(String app) {
-    return 'Hearth will operate $app for you: it reads the app’s profile screen and types this PIN on its keypad, behind a card. The PIN stays on this TV, encrypted, and you can remove it here at any time; turning Profile Pairing off stops all of it. In a grown-up’s profile, Hearth types it only once that profile has its own Google TV PIN. Streaming services’ terms may not allow an app to do this for you.';
+    return 'Hearth will operate $app for you: it reads the app’s profile screen and types this PIN on its keypad, behind a card. The PIN stays on this TV, encrypted, and you can remove it here at any time; turning Profile Pairing off stops all of it. In an adult’s profile, Hearth types it only once that profile has its own Google TV PIN. Streaming services’ terms may not allow an app to do this for you.';
   }
 
   @override
@@ -2959,10 +2959,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get contentPinRowHint => 'Typed only in grown-ups’ profiles that have a Google TV PIN lock';
+  String get contentPinRowHint => 'Typed only in adults’ profiles that have a Google TV PIN lock';
 
   @override
   String contentPinEnterSubtitle(String app) {
-    return 'The PIN $app asks for when a title starts. Hearth types it only in a grown-up’s profile that has its own Google TV PIN lock, never in a kids’ profile. It stays on this TV, encrypted, and is never shown.';
+    return 'The PIN $app asks for when a title starts. Hearth types it only in an adult’s profile that has its own Google TV PIN lock, never in a kids’ profile. It stays on this TV, encrypted, and is never shown.';
   }
 }

@@ -82,7 +82,7 @@ have its own dashboard (**Dashboard for this profile**).
 
 ## Approve switches from a phone
 
-With the dashboard panel's address and token set, a grown-up can have their phone approve a switch into their
+With the dashboard panel's address and token set, an adult can have their phone approve a switch into their
 PIN-locked Google TV profile (**Settings → Profiles → Approve switches from my phone**, in their own profile; the row
 is greyed out until Home Assistant is set up). They choose their phone, one of Home Assistant's `notify.mobile_app_…`
 services, and save their Google TV PIN.
@@ -117,7 +117,7 @@ Hearth posts JSON to `<address>/api/webhook/<webhook ID>`:
 | `media_app`, `media_title`, `media_artist`, `media_album`, `media_duration_s` | now playing, from any app's media session (needs notification access) |
 | `now_playing_available` | whether Hearth can see what's playing |
 | `profile` | the Google TV profile's name |
-| `profile_id` | a stable key for the profile (`user:<serial>`, or `user:<serial>:<account>` for another grown-up's account in the same user), unchanged by renames |
+| `profile_id` | a stable key for the profile (`user:<serial>`, or `user:<serial>:<account>` for another adult's account in the same user), unchanged by renames |
 | `kids_profile` | `true` in a kids profile |
 | `screen_time_up` | `true` while Google TV's bedtime or time's-up screen is showing |
 | `screen_time_reason`, `screen_time_text`, `screen_time_minutes_left`, `screen_time_unlocks_at`, `screen_time_seen_at` | what that screen said |

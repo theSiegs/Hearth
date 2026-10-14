@@ -135,7 +135,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private long mGoogleSetupUntil = 0;
     /**
      * The setup hold is for a just-added profile: it ends as soon as that profile's user starts (a kids profile), or
-     * when it runs out with none started and Google TV's home names the pick (a grown-up's account, see
+     * when it runs out with none started and Google TV's home names the pick (an adult's account, see
      * mNewProfileHoldEnd).
      */
     private boolean mNewProfileHold = false;
@@ -209,7 +209,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private boolean mChooserOnScreen;
 
     private HaStatusReporter mHaStatus;
-    /** What plays, into each grown-up profile's watch history. */
+    /** What plays, into each adult profile's watch history. */
     private PlaybackRecorder mPlayback;
     /** How long apps play in this user, into today's usage (UsageToday). */
     private PlayingClock mPlaying;
@@ -263,7 +263,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     };
     /**
      * The hold for a just-added profile ran out and no profile user started: not a kids profile, then, but maybe a
-     * grown-up's account, which lives in the owner's user. Google TV's home says; Hearth takes over if it names the
+     * adult's account, which lives in the owner's user. Google TV's home says; Hearth takes over if it names the
      * pick (otherwise Google TV may still be busy, and the Home button gets back).
      */
     private final Runnable mNewProfileHoldEnd = () -> {
@@ -529,7 +529,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mPlayback = new PlaybackRecorder(this);
         mPlayback.ensureStarted();
         mPlaying = new PlayingClock(this, mHandler, (pkg, ms, now) -> {
-            // Hearth's own user's sessions: a grown-up's profile (a kid's apps play in its own user)
+            // Hearth's own user's sessions: an adult's profile (a kid's apps play in its own user)
             String profile = getActiveProfileKey(this);
             if (ProfileUsers.serialOfKey(profile) == ProfileUsers.ownerSerial(this)) {
                 UsageToday.addPlaying(this, profile, pkg, ms, now);
@@ -588,7 +588,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private void onSuspensionsChanged() {
         // Suspensions also change when apps are installed, updated or re-approved, and Google TV re-suspends apps
         // whenever its time up screen opens, so only a switch (a chooser pick, a new profile user, or a flip
-        // between a kids profile and a grown-up one) may lift the screen time lock.
+        // between a kids profile and an adult one) may lift the screen time lock.
         boolean picked = commitPendingProfile();
         checkProfileUser("apps suspended/unsuspended");
         boolean kids = ProfileUsers.isKids(this);
@@ -665,7 +665,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             mHandler.removeCallbacks(mKidsHomeTakeOver);
             mHandler.postDelayed(mKidsHomeTakeOver, KIDS_HOME_GRACE_MS);
         }
-        // Back to a grown-ups' user: the account picked to get there, if Hearth knows it as one of that user's
+        // Back to an adults' user: the account picked to get there, if Hearth knows it as one of that user's
         // (Google TV's home confirms it, see onAccountLoggedIn)
         String pick = previous != ProfileUsers.UNKNOWN ? recentPick() : null;
         if (pick != null && ProfileUsers.serialOf(this, pick) == serial && ProfileUsers.isGrownUps(this, serial)) {
@@ -711,7 +711,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mHandler.postDelayed(mReadyFallback, PROFILE_READY_FALLBACK_MS);
         Log.i(TAG, "Profile is now " + LogNames.key(key) + " (" + LogNames.of(ProfileUsers.profileName(this, serial)) + ", "
                 + why + ")");
-        // A grown-up switching to their own profile is at the remote; a kids' profile always asks for the parent PIN
+        // An adult switching to their own profile is at the remote; a kids' profile always asks for the parent PIN
         if (keyChanged) {
             if (ProfileUsers.isGrownUps(this, serial)) {
                 ParentPresence.confirmed(SystemClock.elapsedRealtime());
@@ -824,7 +824,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         String existing = ProfileUsers.getName(this, mSwitchedSerial);
         long owner = ProfileUsers.serialOf(this, mLastPick);
         if (existing != null && ProfileUsers.isGrownUps(this, mSwitchedSerial)) {
-            // A grown-ups' user holds a profile per account: the pick is one of them, not a new name for the user
+            // An adults' user holds a profile per account: the pick is one of them, not a new name for the user
             // (checkProfileUser took it if Hearth knows it; otherwise Google TV's home says, see onAccountLoggedIn)
         } else if (!mLastPickClicked && owner != ProfileUsers.UNKNOWN && owner != mSwitchedSerial) {
             // A guess naming a profile already known to be another serial
@@ -877,7 +877,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         for (Map.Entry<String, String> email : emails.entrySet()) {
             ProfileUsers.setEmail(this, email.getKey(), email.getValue());
         }
-        // Each profile's Google TV PIN lock: the content PIN is typed only in a grown-up's locked profile
+        // Each profile's Google TV PIN lock: the content PIN is typed only in an adult's locked profile
         for (int i = 0; i < names.size(); i++) {
             Boolean locked = ContentPin.lockedFromTile(descriptions.get(i), names.get(i).equals(current));
             if (locked != null) ProfileUsers.setLocked(this, names.get(i), locked);
@@ -888,7 +888,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         String known = mActiveSerial == ProfileUsers.UNKNOWN ? null : ProfileUsers.getName(this, mActiveSerial);
         if (current != null && mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN) {
             if (known != null && ProfileUsers.isGrownUps(this, mActiveSerial)) {
-                // A grown-ups' user holds a profile per account: the current one is the profile that's on
+                // An adults' user holds a profile per account: the current one is the profile that's on
                 onAccountLoggedIn(current, "chooser's current account");
             } else if (current.equals(known)) {
                 // Already known
@@ -1111,7 +1111,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     }
 
     /**
-     * Google TV says this account is logged in (its home, or the chooser's current account). In a grown-ups' user
+     * Google TV says this account is logged in (its home, or the chooser's current account). In an adults' user
      * that's whose profile is on: the user's first account keeps the user's key, and another account is a profile
      * of its own (ProfileUsers.profileKey), with its own home. A kids user has the one account.
      */
@@ -1143,7 +1143,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         ProfileUsers.setLoggedIn(this, serial, account);
         mUnstartedPick = null;
         boolean keyChanged = startProfile(how);
-        // The streaming apps another grown-up had open would come up as theirs: they start again, at their picker
+        // The streaming apps another adult had open would come up as theirs: they start again, at their picker
         if (keyChanged) GrownUpsApps.onProfileChanged(this, ProfileUsers.profileKey(this, serial));
         announceProfile(keyChanged, false);
         ProfilePairing.rememberHearthProfile(this, ProfileUsers.profileKey(this, serial), false);
@@ -1310,7 +1310,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         return !isHearthOrApp && before;
     }
 
-    // --- Whose profile is on in a grown-ups' user: Google TV's home names the account (GoogleTvAccount) ---
+    // --- Whose profile is on in an adults' user: Google TV's home names the account (GoogleTvAccount) ---
 
     /** Searches Google TV's window off the main thread: each search is a call into Google TV. */
     private final ExecutorService mAccountReader = Executors.newSingleThreadExecutor();
@@ -1472,7 +1472,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             checkProfileUser("Google TV home", true);
             updateScreenTimeLock("Google TV home");
             mGoogleTvScreenInFront = false;
-            // In a grown-ups' user (a profile per account), whose profile is on is whoever the home says is logged
+            // In an adults' user (a profile per account), whose profile is on is whoever the home says is logged
             // in: after the chooser Hearth reads that before it covers the home
             long now = SystemClock.elapsedRealtime();
             String pick = mHomePick != null && now - mHomePickAt < HOME_PICK_FRESH_MS ? mHomePick : null;
@@ -1481,7 +1481,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             long pickSerial = pick != null ? ProfileUsers.serialOf(this, pick) : ProfileUsers.UNKNOWN;
             Boolean pickSupervised = pickSerial != ProfileUsers.UNKNOWN
                     ? ProfileUsers.isSupervised(this, pickSerial) : null;
-            // Only a grown-ups' user has an account label worth waiting for
+            // Only an adults' user has an account label worth waiting for
             boolean readAccount = mCandidateSerial == ProfileUsers.UNKNOWN && (pickSupervised != null
                     ? !pickSupervised && pickSerial == mActiveSerial
                     : ProfileUsers.isGrownUps(this, mActiveSerial));
@@ -1668,7 +1668,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     /**
      * Whether a profile change may lift the screen time lock: a pick in the chooser always does; a flip between a
-     * kids profile and a grown-up one, or a grown-up profile reported, only when it wasn't Google TV's own screen
+     * kids profile and an adult one, or an adult profile reported, only when it wasn't Google TV's own screen
      * that set it (at bedtime the kid's user stops and the owner's is reported, but it's still the kid's bedtime).
      */
     static boolean mayLiftLock(boolean kidsLockHold, boolean picked, boolean flipped, boolean kids) {

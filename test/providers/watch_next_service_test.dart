@@ -476,7 +476,7 @@ void main() {
       expect(titles(service), ['Show 1']);
     });
 
-    test("the grown-ups sharing the owner's user each see what they watched", () async {
+    test("the adults sharing the owner's user each see what they watched", () async {
       when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => [
             entry(1, 'com.netflix.mediaclient')..['watchedBy'] = 'user:0',
             entry(2, 'com.disney.disneyplus')..['watchedBy'] = 'user:0:sam',

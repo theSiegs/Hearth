@@ -3386,7 +3386,7 @@ abstract class AppLocalizations {
   /// Profile Pairing: streaming app profile PIN
   ///
   /// In en, this message translates to:
-  /// **'Hearth will operate {app} for you: it reads the app’s profile screen and types this PIN on its keypad, behind a card. The PIN stays on this TV, encrypted, and you can remove it here at any time; turning Profile Pairing off stops all of it. In a grown-up’s profile, Hearth types it only once that profile has its own Google TV PIN. Streaming services’ terms may not allow an app to do this for you.'**
+  /// **'Hearth will operate {app} for you: it reads the app’s profile screen and types this PIN on its keypad, behind a card. The PIN stays on this TV, encrypted, and you can remove it here at any time; turning Profile Pairing off stops all of it. In an adult’s profile, Hearth types it only once that profile has its own Google TV PIN. Streaming services’ terms may not allow an app to do this for you.'**
   String pinConsentBody(String app);
 
   /// Profile Pairing: streaming app profile PIN
@@ -3617,31 +3617,31 @@ abstract class AppLocalizations {
   /// **'None of the apps Hearth can type PINs in is installed.'**
   String get streamingPinsNone;
 
-  /// Settings > Profiles: locking a grown-up profile with Google TV's profile lock
+  /// Settings > Profiles: locking an adult profile with Google TV's profile lock
   ///
   /// In en, this message translates to:
   /// **'Lock Profile'**
   String get profileLockNow;
 
-  /// Settings > Profiles: locking a grown-up profile with Google TV's profile lock
+  /// Settings > Profiles: locking an adult profile with Google TV's profile lock
   ///
   /// In en, this message translates to:
   /// **'Lock when the TV sleeps'**
   String get profileLockOnSleep;
 
-  /// Settings > Profiles: locking a grown-up profile with Google TV's profile lock
+  /// Settings > Profiles: locking an adult profile with Google TV's profile lock
   ///
   /// In en, this message translates to:
   /// **'Every time'**
   String get profileLockEveryTime;
 
-  /// Settings > Profiles: locking a grown-up profile with Google TV's profile lock
+  /// Settings > Profiles: locking an adult profile with Google TV's profile lock
   ///
   /// In en, this message translates to:
   /// **'After {minutes} min asleep'**
   String profileLockAfterMinutes(int minutes);
 
-  /// Settings > Profiles: locking a grown-up profile with Google TV's profile lock
+  /// Settings > Profiles: locking an adult profile with Google TV's profile lock
   ///
   /// In en, this message translates to:
   /// **'Uses Google TV\'s own profile lock: turn it on for your account in Google TV Settings → Accounts & Sign In → your account → Profile lock.'**
@@ -4277,13 +4277,13 @@ abstract class AppLocalizations {
   /// **'Each one shows behind this card as you move to it. You can change any part later in {where}.'**
   String setupFlowLookBody(String where);
 
-  /// Look screen shown on a grown-up's first visit to their own profile, after the setup flow ran
+  /// Look screen shown on an adult's first visit to their own profile, after the setup flow ran
   ///
   /// In en, this message translates to:
   /// **'Pick a look for your home'**
   String get setupFlowLookOtherTitle;
 
-  /// Look screen on a grown-up's first visit to their own profile
+  /// Look screen on an adult's first visit to their own profile
   ///
   /// In en, this message translates to:
   /// **'Each profile has its own home. Choose how yours looks.'**
@@ -5282,13 +5282,13 @@ abstract class AppLocalizations {
   /// Streaming app PINs: under the content PIN row, which profiles it's typed in
   ///
   /// In en, this message translates to:
-  /// **'Typed only in grown-ups’ profiles that have a Google TV PIN lock'**
+  /// **'Typed only in adults’ profiles that have a Google TV PIN lock'**
   String get contentPinRowHint;
 
   /// Streaming app PINs: under the pad for the content PIN
   ///
   /// In en, this message translates to:
-  /// **'The PIN {app} asks for when a title starts. Hearth types it only in a grown-up’s profile that has its own Google TV PIN lock, never in a kids’ profile. It stays on this TV, encrypted, and is never shown.'**
+  /// **'The PIN {app} asks for when a title starts. Hearth types it only in an adult’s profile that has its own Google TV PIN lock, never in a kids’ profile. It stays on this TV, encrypted, and is never shown.'**
   String contentPinEnterSubtitle(String app);
 }
 

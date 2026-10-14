@@ -7,7 +7,7 @@ import android.os.SystemClock;
 import android.util.Log;
 
 /**
- * Locking the current grown-up profile with Google TV's own profile lock: its "Verify your identity" PIN screen
+ * Locking the current adult profile with Google TV's own profile lock: its "Verify your identity" PIN screen
  * (launcherx ProfileLockWrapperActivity). The right PIN goes back to the profile; Back brings up Google TV's account
  * chooser, which stays until someone picks a profile or enters the PIN (LauncherAccessibilityService holds Hearth
  * back meanwhile). It needs Google TV's profile lock on for the profile (Settings > Accounts & Sign In > the account >

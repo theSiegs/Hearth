@@ -18,7 +18,7 @@ void main() {
   });
 
   group("YouTube with HearthTube installed", () {
-    test("a grown-up's profile hides it once, so showing it again sticks", () {
+    test("an adult's profile hides it once, so showing it again sticks", () {
       expect(AppsService.hidesYouTube(hearthTubeInstalled: true, kids: false, hiddenBefore: false), isTrue);
       expect(AppsService.hidesYouTube(hearthTubeInstalled: true, kids: false, hiddenBefore: true), isFalse);
     });

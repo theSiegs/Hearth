@@ -87,7 +87,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
       p.watchNextType == 0 && p.duration > 0 && p.playbackPosition >= p.duration * finishedFraction;
 
   // Each kids profile is its own Android user with its own Watch Next list, which comes from that profile's agent
-  // (marked profileOwned). Hearth reads the owner's (user 0) itself, and that list is all the grown-ups' profiles'
+  // (marked profileOwned). Hearth reads the owner's (user 0) itself, and that list is all the adults' profiles'
   // (each a Google account in user 0): an entry is the profile's that had its app open when it was last watched
   // (watchedBy), else the owner's first profile's. So it never shows while another profile is on (for a kids
   // profile Hearth reads only its agent's list, but the list may still be the owner's for a moment around a switch).

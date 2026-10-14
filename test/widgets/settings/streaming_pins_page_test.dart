@@ -293,7 +293,7 @@ void main() {
     expect(find.text("Sam M · Profile PIN: Saved"), findsOneWidget);
   });
 
-  testWidgets("a grown-up still at the remote isn't asked for the parent PIN again", (tester) async {
+  testWidgets("an adult still at the remote isn't asked for the parent PIN again", (tester) async {
     await SettingsService(prefs).setParentPin("2468");
     channel.parentPresent = true;
     await pump(tester);
@@ -306,7 +306,7 @@ void main() {
     expect(channel.events, ["pair user:0:sam profile Sam M", "save Sam M 1357"]);
   });
 
-  testWidgets("a kids' profile asks for the parent PIN even with a grown-up around", (tester) async {
+  testWidgets("a kids' profile asks for the parent PIN even with an adult around", (tester) async {
     on("user:10", "Riley");
     await SettingsService(prefs).setParentPin("2468");
     channel.parentPresent = true;
@@ -358,9 +358,9 @@ void main() {
   });
 
   group("content PIN", () {
-    const hint = "Typed only in grown-ups’ profiles that have a Google TV PIN lock";
+    const hint = "Typed only in adults’ profiles that have a Google TV PIN lock";
 
-    testWidgets("a grown-up's profile has the row, once the app is installed", (tester) async {
+    testWidgets("an adult's profile has the row, once the app is installed", (tester) async {
       channel.contentAppInstalled = true;
       await pump(tester);
       expect(find.text("Mountain+ content PIN"), findsOneWidget);
@@ -398,7 +398,7 @@ void main() {
       expect(find.text("Saved · $hint"), findsOneWidget);
     });
 
-    testWidgets("a grown-up still at the remote goes straight to the PIN", (tester) async {
+    testWidgets("an adult still at the remote goes straight to the PIN", (tester) async {
       channel.contentAppInstalled = true;
       channel.parentPresent = true;
       await SettingsService(prefs).setParentPin("2468");

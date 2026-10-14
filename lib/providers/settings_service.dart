@@ -76,7 +76,7 @@ const String _startOnBootKey = "start_on_boot";
 const String _parentPinHashKey = "device_parent_pin_hash";
 const String _updatesIncludePrereleasesKey = "device_updates_include_prereleases";
 // Settings that are gone: a TMDB key users could once type in (search now uses the one built into the release
-// only), and whether setting up the kids' profiles also put Hearth on other grown-ups' (they're accounts in the
+// only), and whether setting up the kids' profiles also put Hearth on other adults' (they're accounts in the
 // owner's user, which has Hearth already), and the Home Assistant calendars a profile turned off (the calendars are
 // the TV's own now)
 const Set<String> _retiredKeys = {"tmdb_api_key", "push_to_adult_profiles", "ha_hidden_calendars"};

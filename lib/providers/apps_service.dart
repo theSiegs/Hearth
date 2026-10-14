@@ -314,7 +314,7 @@ class AppsService extends ChangeNotifier {
   static const String hearthTube = "com.thesiegs.hearthtube";
 
   /// Hides [hiddenByDefault] once per [scope] ("device" on this TV, or a profile key for its layout), so a parent who
-  /// shows one again keeps it shown. With HearthTube installed, YouTube is hidden too: once per profile for a grown-up
+  /// shows one again keeps it shown. With HearthTube installed, YouTube is hidden too: once per profile for an adult
   /// (who may show it again), and every time in a kids profile, where YouTube is watched only in HearthTube.
   Future<void> hideDefaultHiddenApps(String scope, {bool kids = false}) async {
     final flag = "hidden_by_default_v1_$scope";
@@ -335,8 +335,8 @@ class AppsService extends ChangeNotifier {
     }
   }
 
-  /// Whether YouTube gets hidden now: only with HearthTube installed; in a kids profile every time, in a grown-up's
-  /// once (a grown-up who shows it again keeps it).
+  /// Whether YouTube gets hidden now: only with HearthTube installed; in a kids profile every time, in an adult's
+  /// once (an adult who shows it again keeps it).
   static bool hidesYouTube({required bool hearthTubeInstalled, required bool kids, required bool hiddenBefore}) =>
       hearthTubeInstalled && (kids || !hiddenBefore);
 

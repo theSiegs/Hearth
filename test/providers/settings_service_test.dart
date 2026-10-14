@@ -299,7 +299,7 @@ void main() async {
     });
   });
 
-  group("retired grown-ups' profiles setting", () {
+  group("retired adults' profiles setting", () {
     test("is removed at startup, and an old backup's is not imported", () async {
       await sharedPreferences.setBool("push_to_adult_profiles", false);
       final service = SettingsService(sharedPreferences);

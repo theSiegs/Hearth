@@ -6,7 +6,7 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
 
-/** A grown-up at the remote isn't asked for the parent PIN until the remote has gone untouched for five minutes. */
+/** An adult at the remote isn't asked for the parent PIN until the remote has gone untouched for five minutes. */
 public class ParentPresenceTest {
     private static final long MIN = 60_000;
 

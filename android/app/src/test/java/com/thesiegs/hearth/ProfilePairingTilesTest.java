@@ -8,7 +8,7 @@ import java.util.regex.Matcher;
 
 import org.junit.Test;
 
-/** Reading Disney+'s and Netflix's profile tiles, what the agent may open, and which grown-ups' apps start again on a profile switch. */
+/** Reading Disney+'s and Netflix's profile tiles, what the agent may open, and which adults' apps start again on a profile switch. */
 public class ProfilePairingTilesTest {
     private static String disneyName(String label) {
         Matcher m = ProfilePairingService.DISNEY_TILE.matcher(label);
@@ -28,7 +28,7 @@ public class ProfilePairingTilesTest {
 
     @Test
     public void onlyAnotherGrownUpsAppsStartAgain() {
-        // The other grown-up had it: it starts again at its picker
+        // The other adult had it: it starts again at its picker
         assertTrue(GrownUpsApps.stops("user:0", "user:0:sam", 0));
         assertTrue(GrownUpsApps.stops("user:0:sam", "user:0", 0));
         // This profile had it, nobody did, or a kids' profile (its own copy, in its own user)

@@ -10,9 +10,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * The grown-ups' profiles share one copy of each streaming app (they're accounts in the same Android user), and an
+ * The adults' profiles share one copy of each streaming app (they're accounts in the same Android user), and an
  * app that's still running opens straight into the app profile it last had, without its "Who's watching?" screen.
- * So when the grown-ups' profile changes, the paired apps another profile had are stopped (over Hearth's own adb, only
+ * So when the adults' profile changes, the paired apps another profile had are stopped (over Hearth's own adb, only
  * when the TV already trusts its key: never an "Allow debugging?" prompt), and the next opening shows the picker,
  * where Profile Pairing picks this profile's.
  */
@@ -49,7 +49,7 @@ final class GrownUpsApps {
                 && ProfileUsers.serialOfKey(holder) == serial;
     }
 
-    /** The grown-ups' profile is now {@code profileKey}: stops the apps another one had, in the background. */
+    /** The adults' profile is now {@code profileKey}: stops the apps another one had, in the background. */
     static void onProfileChanged(Context context, String profileKey) {
         Context app = context.getApplicationContext();
         EXECUTOR.execute(() -> {

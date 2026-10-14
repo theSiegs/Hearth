@@ -74,7 +74,7 @@ columns and `/wallpaper`, answering with that profile's own wallpaper (below). N
 
 ## Each profile's own wallpaper
 
-Every Google TV profile, kids' and grown-ups', has its own look in Hearth, and HearthTube in that profile shows it.
+Every Google TV profile, kids' and adults', has its own look in Hearth, and HearthTube in that profile shows it.
 
 - Hearth's settings (gradient, Bing on or off, day/night pictures on or off) are saved and restored per profile
   (ProfileService, BackupService profile layouts). The pictures a profile picks are its own too: they live in

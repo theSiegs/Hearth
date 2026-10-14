@@ -1,1 +1,1 @@
-A private, family-friendly home screen for Google TV, with Home Assistant
+An ad-free Google TV home that keeps profiles, kids' limits and Home Assistant

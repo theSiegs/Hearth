@@ -135,7 +135,7 @@ void main() {
     expect(find.text("Ask a parent"), findsOneWidget);
   });
 
-  testWidgets("in a grown-up profile nothing is locked", (tester) async {
+  testWidgets("in an adult profile nothing is locked", (tester) async {
     final profiles = MockProfileService();
     when(profiles.isKidsProfile).thenReturn(false);
     when(profiles.activeProfileKey).thenReturn("user:0");

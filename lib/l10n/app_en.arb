@@ -2373,7 +2373,7 @@
     "@pinConsentTitle": {
         "description": "Profile Pairing: streaming app profile PIN"
     },
-    "pinConsentBody": "Hearth will operate {app} for you: it reads the app’s profile screen and types this PIN on its keypad, behind a card. The PIN stays on this TV, encrypted, and you can remove it here at any time; turning Profile Pairing off stops all of it. In a grown-up’s profile, Hearth types it only once that profile has its own Google TV PIN. Streaming services’ terms may not allow an app to do this for you.",
+    "pinConsentBody": "Hearth will operate {app} for you: it reads the app’s profile screen and types this PIN on its keypad, behind a card. The PIN stays on this TV, encrypted, and you can remove it here at any time; turning Profile Pairing off stops all of it. In an adult’s profile, Hearth types it only once that profile has its own Google TV PIN. Streaming services’ terms may not allow an app to do this for you.",
     "@pinConsentBody": {
         "description": "Profile Pairing: streaming app profile PIN",
         "placeholders": {
@@ -2565,19 +2565,19 @@
     },
     "profileLockNow": "Lock Profile",
     "@profileLockNow": {
-        "description": "Settings > Profiles: locking a grown-up profile with Google TV's profile lock"
+        "description": "Settings > Profiles: locking an adult profile with Google TV's profile lock"
     },
     "profileLockOnSleep": "Lock when the TV sleeps",
     "@profileLockOnSleep": {
-        "description": "Settings > Profiles: locking a grown-up profile with Google TV's profile lock"
+        "description": "Settings > Profiles: locking an adult profile with Google TV's profile lock"
     },
     "profileLockEveryTime": "Every time",
     "@profileLockEveryTime": {
-        "description": "Settings > Profiles: locking a grown-up profile with Google TV's profile lock"
+        "description": "Settings > Profiles: locking an adult profile with Google TV's profile lock"
     },
     "profileLockAfterMinutes": "After {minutes} min asleep",
     "@profileLockAfterMinutes": {
-        "description": "Settings > Profiles: locking a grown-up profile with Google TV's profile lock",
+        "description": "Settings > Profiles: locking an adult profile with Google TV's profile lock",
         "placeholders": {
             "minutes": {
                 "type": "int"
@@ -2586,7 +2586,7 @@
     },
     "profileLockNeedsGoogleLock": "Uses Google TV's own profile lock: turn it on for your account in Google TV Settings → Accounts & Sign In → your account → Profile lock.",
     "@profileLockNeedsGoogleLock": {
-        "description": "Settings > Profiles: locking a grown-up profile with Google TV's profile lock"
+        "description": "Settings > Profiles: locking an adult profile with Google TV's profile lock"
     },
     "aboutWallpaperPhoto": "WALLPAPER PHOTO",
     "@aboutWallpaperPhoto": {
@@ -3050,11 +3050,11 @@
     },
     "setupFlowLookOtherTitle": "Pick a look for your home",
     "@setupFlowLookOtherTitle": {
-        "description": "Look screen shown on a grown-up's first visit to their own profile, after the setup flow ran"
+        "description": "Look screen shown on an adult's first visit to their own profile, after the setup flow ran"
     },
     "setupFlowLookOtherBody": "Each profile has its own home. Choose how yours looks.",
     "@setupFlowLookOtherBody": {
-        "description": "Look screen on a grown-up's first visit to their own profile"
+        "description": "Look screen on an adult's first visit to their own profile"
     },
     "setupLookHearth": "Hearth",
     "@setupLookHearth": {
@@ -3855,11 +3855,11 @@
             }
         }
     },
-    "contentPinRowHint": "Typed only in grown-ups’ profiles that have a Google TV PIN lock",
+    "contentPinRowHint": "Typed only in adults’ profiles that have a Google TV PIN lock",
     "@contentPinRowHint": {
         "description": "Streaming app PINs: under the content PIN row, which profiles it's typed in"
     },
-    "contentPinEnterSubtitle": "The PIN {app} asks for when a title starts. Hearth types it only in a grown-up’s profile that has its own Google TV PIN lock, never in a kids’ profile. It stays on this TV, encrypted, and is never shown.",
+    "contentPinEnterSubtitle": "The PIN {app} asks for when a title starts. Hearth types it only in an adult’s profile that has its own Google TV PIN lock, never in a kids’ profile. It stays on this TV, encrypted, and is never shown.",
     "@contentPinEnterSubtitle": {
         "description": "Streaming app PINs: under the pad for the content PIN",
         "placeholders": {

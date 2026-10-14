@@ -18,7 +18,7 @@ public class TvCalendarsTest {
         return new TvCalendars.Cal(id, account, "Calendar " + id, 0xFF3366CC, shown, shown, false);
     }
 
-    // The second grown-up's account synced first here, to show the first account goes by the store's order
+    // The second adult's account synced first here, to show the first account goes by the store's order
     private final List<TvCalendars.Cal> all = Arrays.asList(
             cal(3, "alex@example.com", true),
             cal(4, "alex@example.com", false),

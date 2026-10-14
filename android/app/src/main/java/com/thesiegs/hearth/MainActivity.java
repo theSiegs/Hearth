@@ -306,7 +306,7 @@ public class MainActivity extends FlutterActivity {
                 result.success(null);
             }
             // Paramount+'s account-wide content PIN (ContentPin): its state, never the PIN; saved once, for every
-            // grown-up's locked profile
+            // adult's locked profile
             case "getContentPinStatus" -> result.success(ContentPin.PACKAGE.equals(call.argument("packageName"))
                     ? PinVault.status(this, PinVault.SHARED, ContentPin.PACKAGE, ContentPin.VAULT_PROFILE) : null);
             case "saveContentPin" -> {
@@ -705,7 +705,7 @@ public class MainActivity extends FlutterActivity {
     }
 
     /**
-     * Lets Hearth read the active profile's calendars. A grown-up's (the owner's user): Android's permission dialog,
+     * Lets Hearth read the active profile's calendars. An adult's (the owner's user): Android's permission dialog,
      * answered once the user has picked. A kids' profile: its copy of Hearth can't show a dialog, so the parent's
      * Hearth grants it there over its own adb, only when the TV trusts Hearth's key already (this never brings up
      * "Allow debugging?"); then the agent reads them again. False when it couldn't.
@@ -1418,7 +1418,7 @@ public class MainActivity extends FlutterActivity {
         if (ProfileUsers.otherUser(this, serial) != null) {
             return AgentHub.watchNext(serial);
         }
-        // This user's list is all its grown-ups' profiles' (one per account): Hearth's own watch history says whose
+        // This user's list is all its adults' profiles' (one per account): Hearth's own watch history says whose
         // each entry is, keeps the ones an app dropped for another profile, and adds what was played without one
         return WatchHistory.get(this).continueWatching(this, WatchNextRows.read(this), ProfileUsers.ownerSerial(this),
                 System.currentTimeMillis());

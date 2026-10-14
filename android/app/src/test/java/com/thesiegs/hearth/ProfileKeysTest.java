@@ -8,7 +8,7 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 /**
- * Profile keys: a user's own ("user:0"), and in a grown-ups' user one per other Google account ("user:0:sam");
+ * Profile keys: a user's own ("user:0"), and in an adults' user one per other Google account ("user:0:sam");
  * and whose Continue Watching entry is, in a user several profiles share.
  */
 public class ProfileKeysTest {

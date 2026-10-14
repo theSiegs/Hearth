@@ -549,7 +549,7 @@ extension _CardScreens on _SetupFlowPageState {
       final gradient = look.gradient;
       if (gradient != null && mounted) await context.read<WallpaperService?>()?.setGradient(gradient);
     }
-    // Another grown-up's choice is their own; the owner's is where new profiles start
+    // Another adult's choice is their own; the owner's is where new profiles start
     if (!_lookOnly) {
       await _flow.setLook(look);
       await _flow.decide(SetupCard.home.name, SetupChoice.on);

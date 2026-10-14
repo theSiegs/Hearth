@@ -96,7 +96,7 @@ void main() {
     expect(flow.flowVersion, SetupFlowService.currentVersion);
   });
 
-  testWidgets("the Home button lost after an update: the lost screen, in a grown-up's profile", (tester) async {
+  testWidgets("the Home button lost after an update: the lost screen, in an adult's profile", (tester) async {
     channel.homeButtonSeen = true;
     await prefs.setInt("device_setup_flow_version", 1);
     await pumpHome(tester);
@@ -113,7 +113,7 @@ void main() {
     expect(find.byKey(const Key("setup_chip")), findsNothing);
   });
 
-  testWidgets("the lost Home button waits for a grown-up's profile", (tester) async {
+  testWidgets("the lost Home button waits for an adult's profile", (tester) async {
     when(profiles.isKidsProfile).thenReturn(true);
     when(profiles.activeProfileKey).thenReturn("user:10");
     channel.homeButtonSeen = true;
@@ -136,7 +136,7 @@ void main() {
     expect(find.text("Not chosen yet"), findsOneWidget);
   });
 
-  testWidgets("a grown-up's first visit to their profile: one card offers a look, once", (tester) async {
+  testWidgets("an adult's first visit to their profile: one card offers a look, once", (tester) async {
     await prefs.setInt("device_setup_flow_version", 1);
     channel.homeButtonOn = true;
     when(profiles.activeProfileKey).thenReturn("user:11");

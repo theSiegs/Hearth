@@ -152,7 +152,7 @@ class _SetupFlowLauncherState extends State<SetupFlowLauncher> with WidgetsBindi
     }
   }
 
-  /// A grown-up's first visit to their profile, after the welcome card: one card offers a look for their home.
+  /// An adult's first visit to their profile, after the welcome card: one card offers a look for their home.
   bool _lookDue(ProfileService profiles) =>
       profiles.firstVisitKey != null &&
       profiles.firstVisitKey == profiles.activeProfileKey &&

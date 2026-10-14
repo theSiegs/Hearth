@@ -56,7 +56,7 @@ shows what's off). Reinstalling or force-stopping Hearth switches its accessibil
 | `android/.../LauncherAccessibilityService.java` | Home Button Fix, profile tracking, screen time, remote remaps, idle sleep |
 | `android/.../ProfilePairing*.java`, `*PinRecipe.java` | Profile Pairing and PIN entry for streaming apps |
 | `android/.../Ha*.java` | Home Assistant notifications server, panel, status webhook, phone setup |
-| `android/.../ProfileUsers.java`, `GoogleTvAccount.java`, `AppWatchers.java`, `Agent*.java`, `KidsProfiles.java`, `ProfileAppAccess.java` | Google TV profiles: kids' as Android users, grown-ups' as accounts in the owner's user (whose is on, from Google TV's home); whose Continue Watching entry is; Hearth on the kids' profiles |
+| `android/.../ProfileUsers.java`, `GoogleTvAccount.java`, `AppWatchers.java`, `Agent*.java`, `KidsProfiles.java`, `ProfileAppAccess.java` | Google TV profiles: kids' as Android users, adults' as accounts in the owner's user (whose is on, from Google TV's home); whose Continue Watching entry is; Hearth on the kids' profiles |
 | `android/.../ProfileProvider.java` | The provider HearthTube reads ([contract](provider-contract.md)) |
 | `drift_schemas/` | Database schema history, for migration tests |
 | `tool/` | Developer tools (below) |

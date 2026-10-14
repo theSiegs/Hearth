@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
  * own adb ({@link SelfAdb}).
  *
  * <p>Google TV runs each kids' profile as an Android user of its own that Family Link supervises
- * ({@link ProfileUsers#isSupervised}). A grown-up's profile is another Google account in the owner's user, which has
+ * ({@link ProfileUsers#isSupervised}). An adult's profile is another Google account in the owner's user, which has
  * Hearth already, so there's nothing to put anywhere for them. Google TV also keeps a spare profile user, made ahead
  * of time for the next profile added: it isn't supervised, so it's never one of these.
  *

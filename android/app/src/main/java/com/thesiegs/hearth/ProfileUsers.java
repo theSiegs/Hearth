@@ -28,7 +28,7 @@ import java.util.TreeSet;
  * switches with PROFILE_ACCESSIBLE / PROFILE_INACCESSIBLE. The users' own names are all "configured_user", so each
  * serial's profile name is still learned from Google TV's chooser, once.
  *
- * <p>Only kids get users of their own, though: a grown-up's profile is another Google account in the owner's user,
+ * <p>Only kids get users of their own, though: an adult's profile is another Google account in the owner's user,
  * and switching between those starts no user. So the owner's user can hold several profiles, one per account, and
  * which one is on is whichever account Google TV says is logged in (see {@link #setLoggedIn}). The user's first
  * account (its learned name) keeps the user's own key; each other account gets a key of its own.
@@ -39,7 +39,7 @@ final class ProfileUsers {
     static final String ACTION_PROFILE_INACCESSIBLE = "android.intent.action.PROFILE_INACCESSIBLE";
     private static final String PREFS = "ltv_profile_users";
     private static final String NAME_PREFIX = "name|";
-    /** "account|serial|slug": another account in that serial's user (a grown-up's profile), by name. */
+    /** "account|serial|slug": another account in that serial's user (an adult's profile), by name. */
     private static final String ACCOUNT_PREFIX = "account|";
     /** "logged_in|serial": the other account Google TV has logged in in that user (none: its first account). */
     private static final String LOGGED_IN_PREFIX = "logged_in|";
@@ -186,7 +186,7 @@ final class ProfileUsers {
         return apps != null ? new TreeSet<>(apps.keySet()) : null;
     }
 
-    /** The active profile's approved apps ({@link #approvedApps}); null for a grown-up or when unreadable. */
+    /** The active profile's approved apps ({@link #approvedApps}); null for an adult or when unreadable. */
     static Set<String> activeApprovedApps(Context context) {
         long serial = settledSerial(context);
         return Boolean.TRUE.equals(isSupervised(context, serial)) ? approvedApps(context, serial) : null;
@@ -195,7 +195,7 @@ final class ProfileUsers {
     /**
      * Whether this kids profile's screen time is up (bedtime, daily limit): Google TV then blocks even the apps a
      * parent approved, in the kid's own profile user, where Google TV runs them. (In Hearth's user every app is
-     * blocked throughout a kids profile, so that says nothing.) False for a grown-up profile; null when it can't
+     * blocked throughout a kids profile, so that says nothing.) False for an adult profile; null when it can't
      * tell (no approved app to look at, or the apps can't be read), and only Google TV's own screens say.
      */
     static Boolean isScreenTimeUp(Context context, long serial) {
@@ -236,7 +236,7 @@ final class ProfileUsers {
         return serial != UNKNOWN ? serial : activeSerial(context);
     }
 
-    /** Whether this is a grown-up's user (not supervised by Family Link), which can hold several accounts' profiles. */
+    /** Whether this is an adult's user (not supervised by Family Link), which can hold several accounts' profiles. */
     static boolean isGrownUps(Context context, long serial) {
         return Boolean.FALSE.equals(isSupervised(context, serial));
     }
@@ -400,7 +400,7 @@ final class ProfileUsers {
     }
 
     /**
-     * Google TV has this account logged in in this (grown-ups') user: its profile is the one on there. Another
+     * Google TV has this account logged in in this (adults') user: its profile is the one on there. Another
      * account than the user's first is remembered as one of the user's; the name moves off any other serial.
      */
     static void setLoggedIn(Context context, long serial, String account) {

@@ -596,7 +596,7 @@ void main() {
       expect(flow.lookPreview, isNull);
     });
 
-    testWidgets("a look picked is kept, and is where new grown-up profiles start", (tester) async {
+    testWidgets("a look picked is kept, and is where new adult profiles start", (tester) async {
       await open(tester, startAt: "look");
       await tester.tap(find.text("Bold"));
       await tester.pumpAndSettle();
@@ -613,7 +613,7 @@ void main() {
       expect(flow.look, HomeLook.calmDark);
     });
 
-    testWidgets("another grown-up's first visit: only the look, and their pick is their own", (tester) async {
+    testWidgets("another adult's first visit: only the look, and their pick is their own", (tester) async {
       await open(tester, mode: SetupMode.look);
       expect(find.text("Pick a look for your home"), findsOneWidget);
       await tester.tap(find.text("Calm dark"));
@@ -624,7 +624,7 @@ void main() {
       expect(flow.resume, isNull);
     });
 
-    testWidgets("Back on another grown-up's look card leaves their home as it was", (tester) async {
+    testWidgets("Back on another adult's look card leaves their home as it was", (tester) async {
       await open(tester, mode: SetupMode.look);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await tester.pumpAndSettle();

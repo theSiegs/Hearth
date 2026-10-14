@@ -126,7 +126,7 @@ public class ContentPinTest {
     public void neverInAKidsProfile() {
         assertNotNull(ContentPin.whyNot(true, false, true, PinVault.STATUS_SAVED, false));
         assertNotNull(ContentPin.whyNot(true, true, true, PinVault.STATUS_SAVED, false));
-        // Supervision unreadable: not known to be a grown-up's
+        // Supervision unreadable: not known to be an adult's
         assertNotNull(ContentPin.whyNot(false, false, true, PinVault.STATUS_SAVED, false));
     }
 

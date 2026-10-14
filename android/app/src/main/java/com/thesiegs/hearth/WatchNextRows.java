@@ -16,7 +16,7 @@ final class WatchNextRows {
     private static final String TAG = "HearthWatchNext";
     /**
      * Rows read from the provider, newest first. All of them go to Continue Watching, which picks what it shows only
-     * after it has worked out whose each one is (grown-ups share this list) and dropped the finished and old ones: a
+     * after it has worked out whose each one is (adults share this list) and dropped the finished and old ones: a
      * shorter list here would leave one profile's entries out behind another's newer ones, and Hearth's own history
      * would take an entry past the cut for one the app took out (WatchHistory.keep).
      */

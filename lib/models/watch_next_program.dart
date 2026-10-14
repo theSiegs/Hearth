@@ -15,7 +15,7 @@ class WatchNextProgram {
   /// Reported by the active profile's Hearth agent from its own user: already this profile's, no owner to work out.
   final bool profileOwned;
 
-  /// From Hearth's own user, which all the grown-ups' profiles share (one per Google account): the profile (its key)
+  /// From Hearth's own user, which all the adults' profiles share (one per Google account): the profile (its key)
   /// that had the app open when this was last watched. Null when Hearth doesn't know: the user's first profile's.
   final String? watchedBy;
 

@@ -122,7 +122,7 @@ void main() {
     expect(settings.bingWallpaperEnabled, isFalse);
   });
 
-  test("a new grown-up profile starts with the look chosen in setup, and is offered its own", () async {
+  test("a new adult profile starts with the look chosen in setup, and is offered its own", () async {
     await prefs.setString(ProfileService.layoutOwnerKey, "user:0");
     await prefs.setString(SetupFlowService.lookKey, HomeLook.bold.name);
     when(channel.getActiveProfileName()).thenAnswer((_) async => "Sam");
@@ -155,7 +155,7 @@ void main() {
     expect(service.firstVisitKey, isNull);
   });
 
-  test("a grown-up profile's wallpaper is left alone", () async {
+  test("an adult profile's wallpaper is left alone", () async {
     when(channel.getActiveProfileName()).thenAnswer((_) async => "Alex");
     when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:0");
     final settings = SettingsService(prefs);

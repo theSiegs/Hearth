@@ -140,7 +140,7 @@ Future<bool> editProfilePin(
 
 /// An app's account-wide content PIN (Paramount+'s, asked for when a title starts): the parent PIN first, then the
 /// PIN on the row pad, twice; for a saved one, Change or Remove first. Saved once for the whole TV, it's typed only in
-/// a grown-up's profile that has its own Google TV PIN lock. Returns whether anything changed.
+/// an adult's profile that has its own Google TV PIN lock. Returns whether anything changed.
 Future<bool> editContentPin(
   BuildContext context, {
   required String packageName,

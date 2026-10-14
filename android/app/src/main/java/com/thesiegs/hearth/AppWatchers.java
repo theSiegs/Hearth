@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Grown-ups' profiles share the owner's user (each is a Google account in it), and with it the apps and their
+ * Adults' profiles share the owner's user (each is a Google account in it), and with it the apps and their
  * Continue Watching. Whose an entry is comes from who had its app open: each app keeps a short record of the
  * profiles that opened it (a line each time it changes hands), and an entry is the profile's that had its app when
  * the entry was last watched.

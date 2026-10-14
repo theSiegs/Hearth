@@ -50,7 +50,7 @@ public class ScreenTimeStateTest {
         assertTrue(kids >= 1_000);
         // Just after a profile lock too: the kids grace is the longer wait
         assertEquals(kids, LauncherAccessibilityService.homeGraceMs(true, true));
-        // A grown-up's home is covered at once, or after the short wait for a cancelled PIN's chooser
+        // An adult's home is covered at once, or after the short wait for a cancelled PIN's chooser
         assertEquals(0, LauncherAccessibilityService.homeGraceMs(false, false));
         long afterLock = LauncherAccessibilityService.homeGraceMs(false, true);
         assertTrue(afterLock > 0 && afterLock < kids);
@@ -58,9 +58,9 @@ public class ScreenTimeStateTest {
 
     @Test
     public void aPickedKidsHomeIsAKidsHomeBeforeTheKidsUserStarts() {
-        // Picked a kid from a grown-up's profile: the grown-up is still the settled profile
+        // Picked a kid from an adult's profile: the adult is still the settled profile
         assertTrue(LauncherAccessibilityService.kidsHome(true, false, false));
-        // Picked a grown-up from a kid's profile
+        // Picked an adult from a kid's profile
         assertFalse(LauncherAccessibilityService.kidsHome(false, true, false));
         // No fresh pick (Back from an app): the profile on now
         assertTrue(LauncherAccessibilityService.kidsHome(null, true, false));
@@ -117,7 +117,7 @@ public class ScreenTimeStateTest {
         assertFalse(LauncherAccessibilityService.mayLiftLock(true, false, false, false));
         // A pick in the chooser always lifts it
         assertTrue(LauncherAccessibilityService.mayLiftLock(true, true, false, false));
-        // Set from the apps alone (no screen seen): a grown-up profile or a flip lifts it, as before
+        // Set from the apps alone (no screen seen): an adult profile or a flip lifts it, as before
         assertTrue(LauncherAccessibilityService.mayLiftLock(false, false, true, true));
         assertTrue(LauncherAccessibilityService.mayLiftLock(false, false, false, false));
         assertFalse(LauncherAccessibilityService.mayLiftLock(false, false, false, true));

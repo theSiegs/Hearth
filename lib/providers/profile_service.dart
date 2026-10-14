@@ -70,7 +70,7 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
 
   String? _firstVisitKey;
 
-  /// A grown-up profile Hearth just saw for the first time (since it started), until [lookOffered]: the setup flow
+  /// An adult profile Hearth just saw for the first time (since it started), until [lookOffered]: the setup flow
   /// offers it "Pick a look for your home".
   String? get firstVisitKey => _firstVisitKey;
 
@@ -280,12 +280,12 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
         await _appsService.refreshState();
       } else if (owner != null) {
         // A profile seen for the first time starts from the defaults, not the last profile's look and dock (a new
-        // grown-up profile right after a kid's would get the kid's). Hearth's very first profile keeps the layout
+        // adult profile right after a kid's would get the kid's). Hearth's very first profile keeps the layout
         // it was set up with.
         await _backupService.resetProfileSettings(_settingsService);
         await _appsService.resetToDefaultLayout();
         if (!kids) {
-          // A grown-up's new home starts with the look chosen in the setup flow, and the flow offers to pick another
+          // An adult's new home starts with the look chosen in the setup flow, and the flow offers to pick another
           await HomeLook.byName(_sharedPreferences.getString(SetupFlowService.lookKey))?.apply(_settingsService);
           _firstVisitKey = key;
         }

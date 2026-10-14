@@ -973,7 +973,7 @@ public class ProfilePairingService extends AccessibilityService {
 
     /**
      * Why Hearth mustn't type this Google TV profile's saved PIN for its paired app profile, or null when it may.
-     * A grown-up's profile must have its own Google TV PIN lock (unknown counts as not): otherwise anyone at the TV
+     * An adult's profile must have its own Google TV PIN lock (unknown counts as not): otherwise anyone at the TV
      * could open it and have the app profile's PIN typed. A kids' profile's PIN is the parent's, saved for that kid.
      * After {@link #PIN_GIVE_UP_REJECTIONS} rejections in a row it waits for a new PIN, short of the app's lockout.
      */
@@ -986,7 +986,7 @@ public class ProfilePairingService extends AccessibilityService {
         return null;
     }
 
-    // ---- Paramount+'s content PIN (ContentPin): asked for when a title starts, typed in a grown-up's locked profile ----
+    // ---- Paramount+'s content PIN (ContentPin): asked for when a title starts, typed in an adult's locked profile ----
 
     /** After an entry that didn't go through, the dialog is left to the parent this long (it may come up again). */
     private static final long CONTENT_PIN_HOLD_MS = 30_000;

@@ -114,7 +114,7 @@ public class PinRecipesTest {
 
     @Test
     public void aProfilePinIsTypedOnlyForItsOwnerWhenTheirProfileIsLocked() {
-        // A grown-up's profile needs its own Google TV PIN lock (unknown counts as not)
+        // An adult's profile needs its own Google TV PIN lock (unknown counts as not)
         assertNull(ProfilePairingService.whyNotProfilePin(false, true, true, 0, false));
         assertNotNull(ProfilePairingService.whyNotProfilePin(false, false, true, 0, false));
         assertNotNull(ProfilePairingService.whyNotProfilePin(false, null, true, 0, false));

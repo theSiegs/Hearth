@@ -50,11 +50,11 @@ final class Allowance {
         }
     }
 
-    /** No limit or lock: a grown-up's profile (only kids' profiles have a YouTube allowance). */
+    /** No limit or lock: an adult's profile (only kids' profiles have a YouTube allowance). */
     static final Values NONE = new Values(null, false, null, null, null);
 
     static Values forProfile(Context context, String profileKey, long now) {
-        // A grown-up's profile has no allowance, whatever was stored for it (an older Hearth let a grown-up set one)
+        // An adult's profile has no allowance, whatever was stored for it (an older Hearth let an adult set one)
         if (profileKey == null || ProfileUsers.isGrownUps(context, ProfileUsers.serialOfKey(profileKey))) return NONE;
         int limit = dailyMinutes(context, profileKey);
         long playedMs = UsageToday.playingMs(context, profileKey, CompanionApps.HEARTHTUBE, now);

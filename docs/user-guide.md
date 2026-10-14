@@ -69,8 +69,9 @@ in the top bar can be selected: they show the rest of today's events, and OK sho
 from the profile's own Google calendars synced to the TV; each profile turns its calendars on or off there. In a kids
 profile, a parent's **Fix** (Settings → Profiles → Kids' profiles) lets Hearth read that profile's calendars.
 
-**Search.** Type or speak a title. Results show where you can watch it now (titles in services you have come first)
-and open straight in that app. Adult titles never appear. The voice button hands the search to Google's assistant;
+**Search.** Type or speak a title. Results show where you can watch it now, from US availability data (titles in
+services you have come first). Netflix, Apple TV, HBO Max and Paramount+ open straight on the title; other services
+open through Google TV's title page. Adult titles never appear. The voice button hands the search to Google's assistant;
 "Ask Google" does the same for typed searches.
 
 ## Profiles
@@ -78,10 +79,10 @@ and open straight in that app. Adult titles never appear. The voice button hands
 Hearth follows Google TV's own profiles; there's nothing extra to set up. Each profile has its own home layout,
 wallpaper and Continue Watching. The profile button in the top bar opens Google TV's profile chooser.
 
-Grown-ups' profiles (Google accounts added in Google TV's chooser) share the TV's main user and its apps. Hearth
+Adults' profiles (Google accounts added in Google TV's chooser) share the TV's main user and its apps. Hearth
 still gives each its own home: after a switch it reads who Google TV's home says is logged in (English only, for
 now), so Google TV's home shows for a moment first. Their Continue Watching comes from the same apps, and each
-profile sees what was watched while it was on. The first switch to a grown-up's profile Hearth hasn't seen waits
+profile sees what was watched while it was on. The first switch to an adult's profile Hearth hasn't seen waits
 about 15 seconds on Google TV's home, in case it's a new kids profile Google TV is still setting up.
 
 **Profile Pairing** (**Settings → Profiles → Profile Pairing**). When Hearth opens Netflix, Disney+, Apple TV,
@@ -92,9 +93,9 @@ with. Open each app once from Hearth so it can learn the app's profiles.
 Hearth types it behind a "logging in as" card when the app asks, never showing it.
 
 - Apps: Netflix, Disney+, Apple TV and HBO Max (a profile's PIN), and Paramount+'s content PIN (asked when a title
-  starts; saved once for the TV, typed only in a grown-up's profile that has a Google TV PIN).
+  starts; saved once for the TV, typed only in an adult's profile that has a Google TV PIN).
 - Each Google TV profile sees and saves only its own PINs, and a PIN is typed only for the profile that saved it.
-  In a grown-up's profile, only when that profile has its own Google TV PIN (otherwise anyone could switch to it and
+  In an adult's profile, only when that profile has its own Google TV PIN (otherwise anyone could switch to it and
   be let in): until then you'll see the app's own PIN screen. A kid's PIN is saved past the parent PIN.
 - Saving a PIN for a profile matched by name pairs the two for good. Changing a pairing that has a PIN needs the
   parent PIN and removes the PIN.
@@ -136,21 +137,21 @@ Hearth treats a profile as a kids profile when Family Link supervises it.
   anything that could undo your setup asks for the PIN.
 - **YouTube only in HearthTube.** With HearthTube installed, a kids profile watches YouTube only there, where its
   YouTube time applies: YouTube's own app is hidden, and if it opens anyway (a voice search, a link) HearthTube opens
-  over it. Grown-ups' profiles start with YouTube's app hidden too; show it again from its app options if you want it.
+  over it. Adults' profiles start with YouTube's app hidden too; show it again from its app options if you want it.
 - **Hearth on the kids' profiles.** Google TV removes apps that didn't come from the Play Store from kids'
   profiles each time the profile starts. The first-run setup puts Hearth (and HearthTube, once you have it) on each
   kids' profile and keeps them there. The first time, the TV asks "Allow debugging?": choose **Always allow**, and
   leave debugging on. Google TV turns the Developer options switch off by itself over time; to keep the TV trusting
   Hearth, also turn on **Disable adb authorization timeout** there. Hearth uses the same connection to close the
-  streaming apps grown-ups share when the profile changes, so they ask who's watching. Each kid gets one Family Link "app added" notice. It only touches Hearth's own two apps. After
+  streaming apps adults share when the profile changes, so they ask who's watching. Each kid gets one Family Link "app added" notice. It only touches Hearth's own two apps. After
   that, Hearth puts itself on a kids' profile you add later too, once you've switched away from it (once per
   profile, so you aren't sent notice after notice).
 - **Kids' profiles** (**Settings → Profiles → Kids' profiles**). Shows each kids' profile as **Ready** or **Needs a
   fix**, with one **Fix** for those that need it. Select a kid to manage what's theirs without switching to their
   profile, like their **YouTube time per day** (how long HearthTube may play a day; Hearth counts it on the TV, and
   HearthTube stops when it's used up). With Home Assistant set up (optional), a limit shared with the family's other
-  devices can count too, and the stricter one wins (see docs/home-assistant.md). A grown-up sets their own limit in
-  **Settings → Profiles**. The kid's page also shows HearthTube there: **Get HearthTube** installs it on the TV and
+  devices can count too, and the stricter one wins (see docs/home-assistant.md). Adults' profiles have no YouTube
+  limit. The kid's page also shows HearthTube there: **Get HearthTube** installs it on the TV and
   then on that kid's profile when the TV doesn't have it yet, missing HearthTube is put on that kid with one press,
   and while that kid's profile is on, **HearthTube settings** opens HearthTube's own settings for them (HearthTube
   asks for the parent PIN). When you install HearthTube later from **Updates**, Hearth puts it on the kids' profiles
@@ -215,7 +216,7 @@ are welcome ([list of strings to review](translations-to-review.md)).
 - **Profile Pairing stopped picking a profile.** The app may have changed its screens; you get the app's own picker
   instead. Open the app from Hearth again so it can relearn the profiles.
 - **A saved PIN isn't typed.** **Streaming app PINs** says why: "not accepted twice" (save it again), "paused" (the
-  app's PIN screen changed; an update will fix it), or nothing saved for this profile. In a grown-up's profile, the
+  app's PIN screen changed; an update will fix it), or nothing saved for this profile. In an adult's profile, the
   profile needs its own Google TV PIN. **Recent PIN entries** shows what happened each time.
 - **An app opens on someone else's profile after a switch.** The TV's debugging has stopped trusting Hearth, so it
   can't close the app on the switch: see Kids profiles above.

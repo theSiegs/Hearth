@@ -246,7 +246,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
 
   bool get _lostFix => widget.mode == SetupMode.lostFix;
 
-  /// A grown-up's first visit to their profile: only the look screen.
+  /// An adult's first visit to their profile: only the look screen.
   bool get _lookOnly => widget.mode == SetupMode.look;
 
   /// One screen by itself, with no strip, no Finish later and nothing to resume.

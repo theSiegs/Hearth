@@ -368,7 +368,7 @@ class _CalendarPill extends StatelessWidget {
   }
 }
 
-/// Opens Google TV's profile chooser and shows the active profile's name. Held, it leaves the profile: a grown-up
+/// Opens Google TV's profile chooser and shows the active profile's name. Held, it leaves the profile: an adult
 /// profile with a PIN is locked with Google TV's own profile lock (its PIN screen, whose Back goes to the chooser), a
 /// kids profile or one without a PIN goes to the chooser (leaving a kids profile takes the parent PIN there). Either opens once OK is let go:
 /// released over Google's screen, it would press what has focus there (Continue on the PIN screen, a profile).

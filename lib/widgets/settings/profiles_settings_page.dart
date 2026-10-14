@@ -54,7 +54,7 @@ class ProfilesSettingsPage extends StatelessWidget {
           trailing: Text(activeProfileLabel(context) ?? "", style: textTheme.bodySmall),
           onPressed: () => context.read<FLauncherChannel>().openProfileChooser(),
         ),
-        // Grown-up profiles: Google TV's own profile lock, now or whenever the TV wakes from a sleep
+        // Adult profiles: Google TV's own profile lock, now or whenever the TV wakes from a sleep
         if (!(context.select<ProfileService?, bool>((p) => p?.isKidsProfile ?? false))) ...[
           FocusableSettingsTile(
             leading: const Icon(Icons.lock_person_outlined),
@@ -66,7 +66,7 @@ class ProfilesSettingsPage extends StatelessWidget {
           const PhoneApprovalTile(),
         ],
         // No PIN of its own: in a kids profile, Settings already took the parent PIN to get here, and
-        // grown-up profiles are only reached past Google TV's PIN.
+        // adult profiles are only reached past Google TV's PIN.
         if (!locked)
           FocusableSettingsTile(
             leading: const Icon(Icons.switch_account),

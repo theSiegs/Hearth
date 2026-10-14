@@ -23,7 +23,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Records what plays on the TV into the active grown-up profile's watch history (WatchHistory), from the apps'
+ * Records what plays on the TV into the active adult profile's watch history (WatchHistory), from the apps'
  * media sessions: their title and episode, how long it is and how far it got. Only what plays for a while counts,
  * so trailers and previews that start by themselves mostly don't. Needs Hearth's notification access, as Android
  * only shows other apps' media sessions to a notification listener; a kids profile's apps play in its own user,
@@ -126,7 +126,7 @@ final class PlaybackRecorder {
         return true;
     }
 
-    /** The profile whose history this goes into: the active one, if it's a grown-up's in Hearth's own user. */
+    /** The profile whose history this goes into: the active one, if it's an adult's in Hearth's own user. */
     private String profile() {
         String key = LauncherAccessibilityService.getActiveProfileKey(mContext);
         if (key == null || ProfileUsers.serialOfKey(key) != ProfileUsers.ownerSerial(mContext)) return null;
@@ -227,7 +227,7 @@ final class PlaybackRecorder {
             if (played <= 0) return;
             Log.i(TAG, "Not counted in " + mController.getPackageName() + ": played " + played / 1000 + " s"
                     + (played < COUNTS_AFTER_MS ? " (counts after " + COUNTS_AFTER_MS / 1000 + " s)"
-                    : ", no grown-up's profile on"));
+                    : ", no adult's profile on"));
         }
 
         void close() {

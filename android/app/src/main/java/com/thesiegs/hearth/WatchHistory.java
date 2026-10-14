@@ -19,8 +19,8 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * What each grown-up profile watched on this TV, kept by Hearth itself. Android's Watch Next list is per Android
- * user, so the grown-ups (Google accounts in the owner's user) share one, and apps rewrite it as they please.
+ * What each adult profile watched on this TV, kept by Hearth itself. Android's Watch Next list is per Android
+ * user, so the adults (Google accounts in the owner's user) share one, and apps rewrite it as they please.
  * Hearth keeps two things, each under the profile (key) it belongs to:
  * <ul>
  * <li>played: what an app said was playing (its media session's title and episode), recorded while it played under

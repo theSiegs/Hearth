@@ -7,8 +7,8 @@ import java.util.Locale;
  * Paramount+'s content PIN: an account-wide PIN (not a profile's) the app asks for when a title starts, in a dialog
  * over its player ("Parental Controls", "Enter your PIN to watch.", a 4-digit field id/pinEdit and a keypad
  * id/tvPinKeyboard whose digit keys carry their digit as text). The parent saves it once in Hearth (PinVault, under
- * {@link #VAULT_PROFILE}), and Profile Pairing types it behind its cover card, but only in a grown-up's profile that
- * is itself PIN-locked in Google TV: otherwise a kid could switch to an unlocked grown-up's profile and have Hearth
+ * {@link #VAULT_PROFILE}), and Profile Pairing types it behind its cover card, but only in an adult's profile that
+ * is itself PIN-locked in Google TV: otherwise a kid could switch to an unlocked adult's profile and have Hearth
  * type the PIN for them. A kids' profile never gets it typed.
  *
  * Pure logic here (tested without a TV); {@link ParamountContentPinRecipe} reads the dialog and types, and
@@ -71,14 +71,14 @@ final class ContentPin {
     }
 
     /**
-     * Why Hearth mustn't type the content PIN now, or null when it may: only in a grown-up's profile (not a kids'
-     * one, and in a grown-ups' user) whose Google TV profile is known to be PIN-locked (unknown counts as not), with
+     * Why Hearth mustn't type the content PIN now, or null when it may: only in an adult's profile (not a kids'
+     * one, and in an adults' user) whose Google TV profile is known to be PIN-locked (unknown counts as not), with
      * a saved PIN that wasn't rejected (never retried on its own: a new one is saved in Settings) and entry not paused.
      */
     static String whyNot(boolean kids, boolean grownUpsUser, Boolean profileLocked, String pinStatus,
             boolean paused) {
         if (kids) return "a kids' profile";
-        if (!grownUpsUser) return "not a grown-up's profile";
+        if (!grownUpsUser) return "not an adult's profile";
         if (profileLocked == null) return "the profile's lock isn't known yet";
         if (!profileLocked) return "the profile has no Google TV PIN lock";
         if (pinStatus == null || PinVault.STATUS_NONE.equals(pinStatus)) return "no content PIN saved";

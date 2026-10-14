@@ -18,7 +18,7 @@ import java.util.Set;
  * only runs the commands, as the {@code shell} user over Hearth's own adb ({@link SelfAdb}).
  *
  * <p>Only kids' profiles get them: Google TV runs each one as an Android user of its own, supervised by Family Link.
- * A grown-up's profile is another Google account in the owner's user, which has Hearth already.
+ * An adult's profile is another Google account in the owner's user, which has Hearth already.
  *
  * <h3>Kept installed</h3>
  * Google TV's launcher uninstalls every app that didn't come from the Play Store from a kids' profile, at each
