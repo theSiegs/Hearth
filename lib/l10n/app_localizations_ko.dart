@@ -2950,4 +2950,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String contentPinEnterSubtitle(String app) {
     return '$app에서 콘텐츠 재생을 시작할 때 묻는 PIN입니다. Hearth는 자체 Google TV PIN 잠금이 있는 성인 프로필에서만 입력하며, 어린이 프로필에서는 절대 입력하지 않습니다. 이 TV에 암호화되어 저장되며 표시되지 않습니다.';
   }
+
+  @override
+  String get setupFlowHaNowPlayingTitle => 'HearthTube에서 재생 중인 내용을 공유할까요?';
+
+  @override
+  String get setupFlowHaNowPlayingBody => 'HearthTube는 자동화와 대시보드를 위해 재생 중인 동영상의 제목과 채널을 Home Assistant에 알릴 수 있습니다. 공유하지 않으면 Home Assistant는 YouTube가 재생 중이라는 것만 알고 무엇인지는 모릅니다.';
+
+  @override
+  String get setupFlowHaNowPlayingYes => '공유';
+
+  @override
+  String get setupFlowHaNowPlayingNo => '공유 안 함';
+
+  @override
+  String get haShareNowPlaying => 'HearthTube에서 재생 중인 내용 공유';
+
+  @override
+  String get haShareNowPlayingDetail => '동영상 제목과 채널을 Home Assistant로';
 }

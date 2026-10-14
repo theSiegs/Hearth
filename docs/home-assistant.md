@@ -137,9 +137,10 @@ front or playing, so the usage counts are never more than 2 minutes behind; othe
 Assistant can tell the TV is there. A status the same as the last one isn't sent again (the 10-minute one aside).
 Each post runs your webhook automation once.
 
-**HearthTube's titles.** HearthTube's **Tell Home Assistant what's playing** switch (on by default) puts the video's
-title, channel and ID in its media session, so they reach `media_title` and `media_artist` here. Turn it off in
-HearthTube to keep YouTube titles out of Home Assistant.
+**HearthTube's titles.** HearthTube can put the playing video's title, channel and ID in its media session, so they
+reach `media_title` and `media_artist` here. Hearth's Home Assistant setup asks whether to share them, and
+**Settings → Home Assistant → Share what's playing in HearthTube** changes the answer later; HearthTube follows it.
+Never asked, HearthTube shares (its own **Tell Home Assistant what's playing** switch, on by default).
 
 **Where the playing time comes from.** HearthTube reports its own playing time, in every profile. Other apps' comes
 from their media sessions, which Android only shows to a notification listener in the same Android user. In the TV's

@@ -759,6 +759,34 @@ extension _CardScreens on _SetupFlowPageState {
     );
   }
 
+  /// Whether HearthTube may tell Home Assistant what's playing: asked here so it's a choice, not a default (HearthTube
+  /// reads the answer from Hearth; never asked, it shares).
+  Widget _haNowPlayingScreen(AppLocalizations l) {
+    Future<void> answer(bool share) async {
+      try {
+        await _channel.setHaShareNowPlaying(share);
+      } catch (_) {}
+      if (!mounted) return;
+      _update(() => _haShareNowPlaying = share);
+      _next();
+    }
+
+    return SetupScreenBody(
+      icon: Icons.smart_display_outlined,
+      title: l.setupFlowHaNowPlayingTitle,
+      body: l.setupFlowHaNowPlayingBody,
+      buttons: [
+        SetupButton(label: l.setupFlowHaNowPlayingNo, onPressed: () => answer(false)),
+        SetupButton(
+          label: l.setupFlowHaNowPlayingYes,
+          focusNode: _primary,
+          autofocus: true,
+          onPressed: () => answer(true),
+        ),
+      ],
+    );
+  }
+
   /// The phone page's QR code; once the phone has sent, what it set up shows as done.
   Future<void> _haFromPhone(SetupScreen screen) async {
     final settings = context.read<SettingsService?>();

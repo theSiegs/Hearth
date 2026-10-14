@@ -894,5 +894,11 @@
     "weatherConditionWind": "Venteux",
     "contentPinRow": "Code PIN de contenu {app}",
     "contentPinRowHint": "Saisi uniquement dans les profils adultes verrouillés par un code PIN Google TV",
-    "contentPinEnterSubtitle": "Le code PIN que {app} demande au lancement d’un titre. Hearth le saisit uniquement dans le profil d’un adulte doté de son propre verrouillage par code PIN Google TV, jamais dans un profil enfant. Il reste chiffré sur ce téléviseur et n’est jamais affiché."
+    "contentPinEnterSubtitle": "Le code PIN que {app} demande au lancement d’un titre. Hearth le saisit uniquement dans le profil d’un adulte doté de son propre verrouillage par code PIN Google TV, jamais dans un profil enfant. Il reste chiffré sur ce téléviseur et n’est jamais affiché.",
+    "setupFlowHaNowPlayingTitle": "Partager ce qui passe dans HearthTube ?",
+    "setupFlowHaNowPlayingBody": "HearthTube peut indiquer à Home Assistant le titre et la chaîne de la vidéo en cours, pour vos automatisations et tableaux de bord. Sans cela, Home Assistant sait que YouTube joue, mais pas quoi.",
+    "setupFlowHaNowPlayingYes": "Partager",
+    "setupFlowHaNowPlayingNo": "Ne pas partager",
+    "haShareNowPlaying": "Partager ce qui passe dans HearthTube",
+    "haShareNowPlayingDetail": "Le titre et la chaîne de la vidéo, à Home Assistant"
 }

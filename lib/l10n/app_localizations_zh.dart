@@ -2950,4 +2950,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String contentPinEnterSubtitle(String app) {
     return '$app 在开始播放时要求输入的 PIN。Hearth 仅在设有自己 Google TV PIN 锁的成人个人资料中输入，绝不在儿童个人资料中输入。它加密保存在这台电视上，且从不显示。';
   }
+
+  @override
+  String get setupFlowHaNowPlayingTitle => '共享 HearthTube 中正在播放的内容？';
+
+  @override
+  String get setupFlowHaNowPlayingBody => 'HearthTube 可以把正在播放的视频标题和频道告诉 Home Assistant，供你的自动化和仪表板使用。关闭后，Home Assistant 只知道 YouTube 正在播放，不知道播放的内容。';
+
+  @override
+  String get setupFlowHaNowPlayingYes => '共享';
+
+  @override
+  String get setupFlowHaNowPlayingNo => '不共享';
+
+  @override
+  String get haShareNowPlaying => '共享 HearthTube 中正在播放的内容';
+
+  @override
+  String get haShareNowPlayingDetail => '视频标题和频道，发送给 Home Assistant';
 }

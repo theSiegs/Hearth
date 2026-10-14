@@ -894,5 +894,11 @@
     "weatherConditionWind": "عاصف",
     "contentPinRow": "رمز PIN للمحتوى في {app}",
     "contentPinRowHint": "يُدخَل فقط في ملفات البالغين الشخصية المقفلة برمز PIN في Google TV",
-    "contentPinEnterSubtitle": "رمز PIN الذي يطلبه {app} عند بدء أي عنوان. يُدخله Hearth فقط في الملف الشخصي لشخص بالغ له قفل PIN خاص به في Google TV، ولا يُدخله أبدًا في ملف شخصي للأطفال. يبقى على هذا التلفزيون مشفّرًا ولا يُعرض أبدًا."
+    "contentPinEnterSubtitle": "رمز PIN الذي يطلبه {app} عند بدء أي عنوان. يُدخله Hearth فقط في الملف الشخصي لشخص بالغ له قفل PIN خاص به في Google TV، ولا يُدخله أبدًا في ملف شخصي للأطفال. يبقى على هذا التلفزيون مشفّرًا ولا يُعرض أبدًا.",
+    "setupFlowHaNowPlayingTitle": "مشاركة ما يُعرض في HearthTube؟",
+    "setupFlowHaNowPlayingBody": "يمكن لـ HearthTube أن يخبر Home Assistant بعنوان الفيديو المعروض وقناته، لأتمتتك ولوحاتك. بدونه، يعرف Home Assistant أن YouTube يعمل، لا ما يُعرض.",
+    "setupFlowHaNowPlayingYes": "مشاركة",
+    "setupFlowHaNowPlayingNo": "عدم المشاركة",
+    "haShareNowPlaying": "مشاركة ما يُعرض في HearthTube",
+    "haShareNowPlayingDetail": "عنوان الفيديو وقناته، إلى Home Assistant"
 }

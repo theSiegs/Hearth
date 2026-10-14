@@ -35,9 +35,27 @@ public class ProfileProvider extends ContentProvider {
             "date_format", "kids_profile", "screen_time_up", "service_running", "profile_id", "contract_version",
             "profile_ready", "switch_generation", "updates_hearthtube", "wallpaper_kind", "wallpaper_version",
             "wallpaper_brightness", "wallpaper_gradient", "wallpaper_title", "wallpaper_credit",
-            "youtube_minutes_left", "schedule_locked", "allowance_message", "allowance_checked_at", "allowance_source"};
+            "youtube_minutes_left", "schedule_locked", "allowance_message", "allowance_checked_at", "allowance_source",
+            "ha_share_now_playing"};
     /** docs/provider-contract.md: bumped when a column's meaning changes or one is added or removed. */
-    static final int CONTRACT_VERSION = 6;
+    static final int CONTRACT_VERSION = 7;
+    private static final String SHARE_NOW_PLAYING_KEY = "ha_share_now_playing";
+
+    /**
+     * Whether HearthTube may tell Home Assistant what's playing (title and channel, through its media session): the
+     * answer to Home Assistant's setup question, or null when it was never asked.
+     */
+    static Boolean shareNowPlaying(Context context) {
+        android.content.SharedPreferences prefs =
+                context.getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, Context.MODE_PRIVATE);
+        return prefs.contains(SHARE_NOW_PLAYING_KEY) ? prefs.getBoolean(SHARE_NOW_PLAYING_KEY, true) : null;
+    }
+
+    static void setShareNowPlaying(Context context, boolean share) {
+        context.getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, Context.MODE_PRIVATE).edit()
+                .putBoolean(SHARE_NOW_PLAYING_KEY, share).apply();
+        notifyChanged(context);
+    }
     // SettingsService.defaultTimeFormat / defaultDateFormat
     private static final String DEFAULT_TIME_FORMAT = "h:mm a";
     private static final String DEFAULT_DATE_FORMAT = "EEE, MMM d";
@@ -114,7 +132,8 @@ public class ProfileProvider extends ContentProvider {
                 allowance.scheduleLocked ? 1 : 0,
                 allowance.message,
                 allowance.checkedAt,
-                allowance.source};
+                allowance.source,
+                shareNowPlaying(context) == null ? null : shareNowPlaying(context) ? 1 : 0};
     }
 
     static String[] columns() {

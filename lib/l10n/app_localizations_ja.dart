@@ -2950,4 +2950,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String contentPinEnterSubtitle(String app) {
     return '$appがタイトルの再生開始時に求めるPINです。Hearthは、Google TVのPINロックが設定された大人のプロフィールでのみ入力し、子どものプロフィールでは入力しません。このテレビに暗号化して保存され、表示されることはありません。';
   }
+
+  @override
+  String get setupFlowHaNowPlayingTitle => 'HearthTube で再生中の内容を共有しますか？';
+
+  @override
+  String get setupFlowHaNowPlayingBody => 'HearthTube は、オートメーションやダッシュボードのために、再生中の動画のタイトルとチャンネルを Home Assistant に伝えられます。オフにすると、Home Assistant には YouTube が再生中であることだけが伝わり、内容は伝わりません。';
+
+  @override
+  String get setupFlowHaNowPlayingYes => '共有する';
+
+  @override
+  String get setupFlowHaNowPlayingNo => '共有しない';
+
+  @override
+  String get haShareNowPlaying => 'HearthTube で再生中の内容を共有';
+
+  @override
+  String get haShareNowPlayingDetail => '動画のタイトルとチャンネルを Home Assistant へ';
 }

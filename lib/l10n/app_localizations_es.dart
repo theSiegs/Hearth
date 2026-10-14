@@ -2962,4 +2962,22 @@ class AppLocalizationsEs extends AppLocalizations {
   String contentPinEnterSubtitle(String app) {
     return 'El PIN que $app pide al empezar un título. Hearth solo lo introduce en el perfil de un adulto que tenga su propio bloqueo por PIN de Google TV, nunca en un perfil infantil. Se queda en esta TV, cifrado, y nunca se muestra.';
   }
+
+  @override
+  String get setupFlowHaNowPlayingTitle => '¿Compartir lo que se reproduce en HearthTube?';
+
+  @override
+  String get setupFlowHaNowPlayingBody => 'HearthTube puede decirle a Home Assistant el título y el canal del vídeo que se reproduce, para tus automatizaciones y paneles. Sin esto, Home Assistant sabe que YouTube se reproduce, pero no qué.';
+
+  @override
+  String get setupFlowHaNowPlayingYes => 'Compartir';
+
+  @override
+  String get setupFlowHaNowPlayingNo => 'No compartir';
+
+  @override
+  String get haShareNowPlaying => 'Compartir lo que se reproduce en HearthTube';
+
+  @override
+  String get haShareNowPlayingDetail => 'El título y el canal del vídeo, a Home Assistant';
 }

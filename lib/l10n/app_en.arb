@@ -3866,5 +3866,29 @@
                 "type": "String"
             }
         }
+    },
+    "setupFlowHaNowPlayingTitle": "Share what's playing in HearthTube?",
+    "@setupFlowHaNowPlayingTitle": {
+        "description": "Home Assistant: whether HearthTube shares what's playing"
+    },
+    "setupFlowHaNowPlayingBody": "HearthTube can tell Home Assistant the title and channel of the video playing, for your automations and dashboards. Without it, Home Assistant still knows that YouTube is playing, not what.",
+    "@setupFlowHaNowPlayingBody": {
+        "description": "Home Assistant: whether HearthTube shares what's playing"
+    },
+    "setupFlowHaNowPlayingYes": "Share",
+    "@setupFlowHaNowPlayingYes": {
+        "description": "Home Assistant: whether HearthTube shares what's playing"
+    },
+    "setupFlowHaNowPlayingNo": "Don't share",
+    "@setupFlowHaNowPlayingNo": {
+        "description": "Home Assistant: whether HearthTube shares what's playing"
+    },
+    "haShareNowPlaying": "Share what's playing in HearthTube",
+    "@haShareNowPlaying": {
+        "description": "Home Assistant: whether HearthTube shares what's playing"
+    },
+    "haShareNowPlayingDetail": "The video's title and channel, to Home Assistant",
+    "@haShareNowPlayingDetail": {
+        "description": "Home Assistant: whether HearthTube shares what's playing"
     }
 }

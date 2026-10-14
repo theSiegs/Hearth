@@ -70,6 +70,7 @@ enum SetupScreen {
   haAlerts,
   haDashboard,
   haStatus,
+  haNowPlaying,
   tv,
   updates,
   updatesInstall,
@@ -149,6 +150,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     SetupScreen.haAlerts,
     SetupScreen.haDashboard,
     SetupScreen.haStatus,
+    SetupScreen.haNowPlaying,
     SetupScreen.tv,
     SetupScreen.updates,
     SetupScreen.updatesInstall,
@@ -167,7 +169,13 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     ],
     SetupCard.watching: [SetupScreen.watching, SetupScreen.watchingContinue, SetupScreen.watchingNotifications],
     SetupCard.home: [SetupScreen.look, SetupScreen.lookWeather],
-    SetupCard.smartHome: [SetupScreen.smartHome, SetupScreen.haAlerts, SetupScreen.haDashboard, SetupScreen.haStatus],
+    SetupCard.smartHome: [
+      SetupScreen.smartHome,
+      SetupScreen.haAlerts,
+      SetupScreen.haDashboard,
+      SetupScreen.haStatus,
+      SetupScreen.haNowPlaying,
+    ],
     SetupCard.tv: [SetupScreen.tv],
     SetupCard.updates: [SetupScreen.updates, SetupScreen.updatesInstall, SetupScreen.updatesHearthTube],
   };
@@ -303,9 +311,16 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
 
   Future<void> _refresh() async {
     final l = AppLocalizations.of(context)!;
+    // Read on its own: the snapshot mustn't wait on it
+    _channel.getHaShareNowPlaying().then((share) {
+      if (mounted && share != null) setState(() => _haShareNowPlaying = share);
+    }).catchError((Object _) {});
     final snap = await SetupSnapshot.load(_channel, l);
     if (mounted) setState(() => _snap = snap);
   }
+
+  /// The answer to Home Assistant's question about HearthTube's now playing; null while never asked.
+  bool? _haShareNowPlaying;
 
   /// Shows [screen]. [resumed]: picking up where the flow was left, so a step that's done by now says so (and moves
   /// on) rather than being skipped without a word.
@@ -364,6 +379,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       SetupScreen.haAlerts => snap.haAlerts,
       SetupScreen.haDashboard => snap.haPanel && (context.read<SettingsService?>()?.haPanelEnabled ?? false),
       SetupScreen.haStatus => snap.haStatus,
+      SetupScreen.haNowPlaying => _haShareNowPlaying != null,
       SetupScreen.lookWeather => _weatherSet,
       _ => false,
     };
@@ -703,6 +719,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
         SetupScreen.haAlerts => _haAlertsScreen(l),
         SetupScreen.haDashboard => _haDashboard(l),
         SetupScreen.haStatus => _haStatusScreen(l),
+        SetupScreen.haNowPlaying => _haNowPlayingScreen(l),
         SetupScreen.tv => _tvAndPower(l),
         SetupScreen.updates => _cardScreen(l, SetupCard.updates),
         SetupScreen.updatesInstall => _installs(l),

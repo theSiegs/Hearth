@@ -2977,4 +2977,22 @@ class AppLocalizationsRu extends AppLocalizations {
   String contentPinEnterSubtitle(String app) {
     return 'PIN-код, который $app запрашивает при запуске фильма или серии. Hearth вводит его только в профиле взрослого с собственной PIN-блокировкой Google TV и никогда в детском профиле. Он хранится на этом телевизоре в зашифрованном виде и никогда не показывается.';
   }
+
+  @override
+  String get setupFlowHaNowPlayingTitle => 'Сообщать, что играет в HearthTube?';
+
+  @override
+  String get setupFlowHaNowPlayingBody => 'HearthTube может сообщать Home Assistant название и канал воспроизводимого видео — для ваших автоматизаций и панелей. Без этого Home Assistant знает только, что играет YouTube, но не что именно.';
+
+  @override
+  String get setupFlowHaNowPlayingYes => 'Сообщать';
+
+  @override
+  String get setupFlowHaNowPlayingNo => 'Не сообщать';
+
+  @override
+  String get haShareNowPlaying => 'Сообщать, что играет в HearthTube';
+
+  @override
+  String get haShareNowPlayingDetail => 'Название и канал видео — в Home Assistant';
 }

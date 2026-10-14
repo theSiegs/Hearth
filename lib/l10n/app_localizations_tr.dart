@@ -2951,4 +2951,22 @@ class AppLocalizationsTr extends AppLocalizations {
   String contentPinEnterSubtitle(String app) {
     return '$app bir içerik başlarken sorduğu PIN. Hearth bunu yalnızca kendi Google TV PIN kilidi olan bir yetişkin profilinde girer, çocuk profilinde asla girmez. Bu TV’de şifrelenmiş olarak kalır ve hiç gösterilmez.';
   }
+
+  @override
+  String get setupFlowHaNowPlayingTitle => 'HearthTube’da oynatılanı paylaşalım mı?';
+
+  @override
+  String get setupFlowHaNowPlayingBody => 'HearthTube, otomasyonlarınız ve panolarınız için oynatılan videonun başlığını ve kanalını Home Assistant’a bildirebilir. Bu olmadan Home Assistant yalnızca YouTube’un oynadığını bilir, neyin oynadığını değil.';
+
+  @override
+  String get setupFlowHaNowPlayingYes => 'Paylaş';
+
+  @override
+  String get setupFlowHaNowPlayingNo => 'Paylaşma';
+
+  @override
+  String get haShareNowPlaying => 'HearthTube’da oynatılanı paylaş';
+
+  @override
+  String get haShareNowPlayingDetail => 'Videonun başlığı ve kanalı, Home Assistant’a';
 }

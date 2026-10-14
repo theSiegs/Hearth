@@ -2960,4 +2960,22 @@ class AppLocalizationsHi extends AppLocalizations {
   String contentPinEnterSubtitle(String app) {
     return 'वह PIN जो $app कोई टाइटल शुरू होने पर मांगता है। Hearth इसे सिर्फ़ उस वयस्क की प्रोफ़ाइल में डालता है जिस पर उसका अपना Google TV PIN लॉक हो, बच्चों की प्रोफ़ाइल में कभी नहीं। यह इसी टीवी पर एन्क्रिप्ट करके रखा जाता है और कभी दिखाया नहीं जाता।';
   }
+
+  @override
+  String get setupFlowHaNowPlayingTitle => 'HearthTube में क्या चल रहा है, साझा करें?';
+
+  @override
+  String get setupFlowHaNowPlayingBody => 'HearthTube आपके ऑटोमेशन और डैशबोर्ड के लिए Home Assistant को चल रहे वीडियो का शीर्षक और चैनल बता सकता है। इसके बिना, Home Assistant को बस पता होता है कि YouTube चल रहा है, क्या चल रहा है यह नहीं।';
+
+  @override
+  String get setupFlowHaNowPlayingYes => 'साझा करें';
+
+  @override
+  String get setupFlowHaNowPlayingNo => 'साझा न करें';
+
+  @override
+  String get haShareNowPlaying => 'HearthTube में क्या चल रहा है, साझा करें';
+
+  @override
+  String get haShareNowPlayingDetail => 'वीडियो का शीर्षक और चैनल, Home Assistant को';
 }

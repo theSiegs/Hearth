@@ -894,5 +894,11 @@
     "weatherConditionWind": "Rüzgârlı",
     "contentPinRow": "{app} içerik PIN’i",
     "contentPinRowHint": "Yalnızca Google TV PIN kilidi olan yetişkin profillerinde girilir",
-    "contentPinEnterSubtitle": "{app} bir içerik başlarken sorduğu PIN. Hearth bunu yalnızca kendi Google TV PIN kilidi olan bir yetişkin profilinde girer, çocuk profilinde asla girmez. Bu TV’de şifrelenmiş olarak kalır ve hiç gösterilmez."
+    "contentPinEnterSubtitle": "{app} bir içerik başlarken sorduğu PIN. Hearth bunu yalnızca kendi Google TV PIN kilidi olan bir yetişkin profilinde girer, çocuk profilinde asla girmez. Bu TV’de şifrelenmiş olarak kalır ve hiç gösterilmez.",
+    "setupFlowHaNowPlayingTitle": "HearthTube’da oynatılanı paylaşalım mı?",
+    "setupFlowHaNowPlayingBody": "HearthTube, otomasyonlarınız ve panolarınız için oynatılan videonun başlığını ve kanalını Home Assistant’a bildirebilir. Bu olmadan Home Assistant yalnızca YouTube’un oynadığını bilir, neyin oynadığını değil.",
+    "setupFlowHaNowPlayingYes": "Paylaş",
+    "setupFlowHaNowPlayingNo": "Paylaşma",
+    "haShareNowPlaying": "HearthTube’da oynatılanı paylaş",
+    "haShareNowPlayingDetail": "Videonun başlığı ve kanalı, Home Assistant’a"
 }

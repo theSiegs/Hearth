@@ -45,6 +45,8 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
   late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   bool? _notifications;
   bool? _reporting;
+  // HearthTube's now playing for Home Assistant: null when never asked (HearthTube's own default then, on)
+  bool? _shareNowPlaying;
 
   @override
   void initState() {
@@ -56,8 +58,13 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
     try {
       final enabled = await _channel.getHaNotificationsEnabled();
       final config = await _channel.getHaStatusConfig();
+      bool? share;
+      try {
+        share = await _channel.getHaShareNowPlaying();
+      } catch (_) {}
       if (mounted) {
         setState(() {
+          _shareNowPlaying = share;
           _notifications = enabled;
           _reporting = (config["url"] as String? ?? "").isNotEmpty && (config["webhookId"] as String? ?? "").isNotEmpty;
         });
@@ -99,6 +106,16 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
           trailing: Text(_reporting == null ? "" : (_reporting! ? l.haSummaryReporting : l.haSummaryOff),
               style: textTheme.bodySmall),
           onPressed: () => _open(HaStatusPage.routeName),
+        ),
+        RoundedSwitchListTile(
+          value: _shareNowPlaying ?? true,
+          onChanged: (share) async {
+            await _channel.setHaShareNowPlaying(share);
+            if (mounted) setState(() => _shareNowPlaying = share);
+          },
+          title: Text(l.haShareNowPlaying, style: textTheme.bodyMedium),
+          subtitle: Text(l.haShareNowPlayingDetail, style: textTheme.bodySmall),
+          secondary: const Icon(Icons.smart_display_outlined),
         ),
       ],
     );

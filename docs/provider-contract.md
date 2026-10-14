@@ -4,7 +4,7 @@ Hearth shares its state with other apps (today: HearthTube) through one content 
 contract: what each column means, when it changes, and what callers may rely on. The provider's `contract_version`
 column says which version of this page it implements.
 
-**Current version: 6** (Hearth 2026.10, `ProfileProvider.CONTRACT_VERSION`).
+**Current version: 7** (Hearth 2026.10, `ProfileProvider.CONTRACT_VERSION`).
 
 Change rules: adding, removing or changing the meaning of a column or call bumps the version and gets a line in
 the history below. A reader that sees a newer version than it knows keeps using the columns it understands; columns
@@ -76,7 +76,8 @@ answer within a few seconds. Without an agent, a Hearth installed there answers 
 | `allowance_message` | text or null | What to tell the viewer when it stops, if Home Assistant gives one (`message` in the same entry): set when Home Assistant's minutes are the ones that count, or it locks. |
 | `allowance_checked_at` | integer or null | When Hearth last read the allowance from Home Assistant (epoch ms), today; null when it hasn't today (not set up, unreachable, or a new day). Hearth reads it every minute or so and at each profile change; after a failed read it tries again within 10 minutes. How old a value may be before it no longer counts is the caller's choice. |
 | `allowance_source` | text or null | Whose minutes `youtube_minutes_left` are: "hearth" (the limit set in Hearth) or "home_assistant"; "home_assistant" too when there are no minutes but Home Assistant locks; null when there's neither. A lock is always Home Assistant's. |
-| `contract_version` | integer | This page's version (6). Missing on Hearth builds from before version 2. |
+| `ha_share_now_playing` | 0/1 or null | Whether HearthTube may tell Home Assistant what's playing (the video's title and channel, through its media session): Hearth asks it in Home Assistant's setup and in Settings → Home Assistant. Null when it was never asked; HearthTube then keeps its own default (on). A change in HearthTube's own settings stands until this value changes. |
+| `contract_version` | integer | This page's version (7). Missing on Hearth builds from before version 2. |
 
 None of these are secret: everything is on screen in Hearth.
 
@@ -95,6 +96,8 @@ later. Observers on `/active` are told when a report changes `youtube_minutes_le
 
 ## History
 
+- **7** (2026-10-14): added `ha_share_now_playing` (Home Assistant's setup question for HearthTube's now playing).
+  Also in a profile's agent, as Hearth sends it.
 - **6** (2026-10-10): added `youtube_minutes_left`, `schedule_locked`, `allowance_message`, `allowance_checked_at`,
   `allowance_source` (the active profile's YouTube allowance: Hearth's own limit, and Home Assistant's if set up), and
   the `report_playing` call. Also in a profile's agent, as Hearth sends it.

@@ -894,5 +894,11 @@
     "weatherConditionWind": "Ventoso",
     "contentPinRow": "PIN de conteúdo do {app}",
     "contentPinRowHint": "Inserido só em perfis de adultos com bloqueio por PIN do Google TV",
-    "contentPinEnterSubtitle": "O PIN que o {app} pede ao iniciar um título. O Hearth só o insere no perfil de um adulto que tenha seu próprio bloqueio por PIN do Google TV, nunca em um perfil infantil. Ele fica nesta TV, criptografado, e nunca é mostrado."
+    "contentPinEnterSubtitle": "O PIN que o {app} pede ao iniciar um título. O Hearth só o insere no perfil de um adulto que tenha seu próprio bloqueio por PIN do Google TV, nunca em um perfil infantil. Ele fica nesta TV, criptografado, e nunca é mostrado.",
+    "setupFlowHaNowPlayingTitle": "Compartilhar o que está passando no HearthTube?",
+    "setupFlowHaNowPlayingBody": "O HearthTube pode informar ao Home Assistant o título e o canal do vídeo em reprodução, para suas automações e painéis. Sem isso, o Home Assistant sabe que o YouTube está tocando, mas não o quê.",
+    "setupFlowHaNowPlayingYes": "Compartilhar",
+    "setupFlowHaNowPlayingNo": "Não compartilhar",
+    "haShareNowPlaying": "Compartilhar o que está passando no HearthTube",
+    "haShareNowPlayingDetail": "O título e o canal do vídeo, para o Home Assistant"
 }

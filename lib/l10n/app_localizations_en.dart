@@ -2962,4 +2962,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String contentPinEnterSubtitle(String app) {
     return 'The PIN $app asks for when a title starts. Hearth types it only in an adult’s profile that has its own Google TV PIN lock, never in a kids profile. It stays on this TV, encrypted, and is never shown.';
   }
+
+  @override
+  String get setupFlowHaNowPlayingTitle => 'Share what\'s playing in HearthTube?';
+
+  @override
+  String get setupFlowHaNowPlayingBody => 'HearthTube can tell Home Assistant the title and channel of the video playing, for your automations and dashboards. Without it, Home Assistant still knows that YouTube is playing, not what.';
+
+  @override
+  String get setupFlowHaNowPlayingYes => 'Share';
+
+  @override
+  String get setupFlowHaNowPlayingNo => 'Don\'t share';
+
+  @override
+  String get haShareNowPlaying => 'Share what\'s playing in HearthTube';
+
+  @override
+  String get haShareNowPlayingDetail => 'The video\'s title and channel, to Home Assistant';
 }

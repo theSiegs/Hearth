@@ -381,6 +381,12 @@ public class MainActivity extends FlutterActivity {
             }
             case "getHaEntities" -> answerFrom(HaApi.EXECUTOR, result, () -> HaApi.actionableEntities(this).toString());
             case "startHaSetup" -> result.success(HaSetupServer.start(this));
+            // Home Assistant's setup question for HearthTube (ProfileProvider ha_share_now_playing); null: never asked
+            case "getHaShareNowPlaying" -> result.success(ProfileProvider.shareNowPlaying(this));
+            case "setHaShareNowPlaying" -> {
+                ProfileProvider.setShareNowPlaying(this, Boolean.TRUE.equals(call.arguments()));
+                result.success(null);
+            }
             // The phone page for the streaming PINs of the profile on now (PinSetupServer)
             case "startPinSetup" -> result.success(
                     PinSetupServer.start(this, LauncherAccessibilityService.getActiveProfileKey(this)));

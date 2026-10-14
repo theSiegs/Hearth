@@ -518,6 +518,12 @@ class FLauncherChannel {
 
   Future<void> stopHaSetup() async => await _methodChannel.invokeMethod("stopHaSetup");
 
+  /// Whether HearthTube may tell Home Assistant what's playing (video title and channel); null when never asked.
+  Future<bool?> getHaShareNowPlaying() async => await _methodChannel.invokeMethod<bool>("getHaShareNowPlaying");
+
+  Future<void> setHaShareNowPlaying(bool share) async =>
+      await _methodChannel.invokeMethod("setHaShareNowPlaying", share);
+
   /// Starts the phone page for the streaming PINs of the profile on now and returns its one-time link (with the key
   /// in its #fragment, for the QR code); null without a network.
   Future<String?> startPinSetup() async => await _methodChannel.invokeMethod<String>("startPinSetup");

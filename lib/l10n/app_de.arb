@@ -894,5 +894,11 @@
     "weatherConditionWind": "Windig",
     "contentPinRow": "{app}-Inhalts-PIN",
     "contentPinRowHint": "Wird nur in Erwachsenenprofilen mit Google TV-PIN-Sperre eingegeben",
-    "contentPinEnterSubtitle": "Die PIN, nach der {app} beim Start eines Titels fragt. Hearth gibt sie nur in einem Erwachsenenprofil mit eigener Google TV-PIN-Sperre ein, nie in einem Kinderprofil. Sie bleibt verschlüsselt auf diesem Fernseher und wird nie angezeigt."
+    "contentPinEnterSubtitle": "Die PIN, nach der {app} beim Start eines Titels fragt. Hearth gibt sie nur in einem Erwachsenenprofil mit eigener Google TV-PIN-Sperre ein, nie in einem Kinderprofil. Sie bleibt verschlüsselt auf diesem Fernseher und wird nie angezeigt.",
+    "setupFlowHaNowPlayingTitle": "Teilen, was in HearthTube läuft?",
+    "setupFlowHaNowPlayingBody": "HearthTube kann Home Assistant Titel und Kanal des laufenden Videos mitteilen, für deine Automationen und Dashboards. Ohne das weiß Home Assistant nur, dass YouTube läuft, nicht was.",
+    "setupFlowHaNowPlayingYes": "Teilen",
+    "setupFlowHaNowPlayingNo": "Nicht teilen",
+    "haShareNowPlaying": "Teilen, was in HearthTube läuft",
+    "haShareNowPlayingDetail": "Titel und Kanal des Videos, an Home Assistant"
 }
