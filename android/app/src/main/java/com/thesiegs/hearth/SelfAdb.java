@@ -25,7 +25,7 @@ import dadb.Dadb;
  * the exact Kotlin/Java interop (static vs. {@code Companion}, {@code AdbKeyPair} factory names) must be confirmed
  * against the pinned dadb version when the app is first built, and the connection should target the persistent
  * wireless-debugging endpoint rather than cleartext 5555 if that is what survives a reboot (see
- * docs/kids-profile-installs.md). Kept isolated so finalizing it touches only this file.
+ * docs/design/kids-profile-installs.md). Kept isolated so finalizing it touches only this file.
  */
 public final class SelfAdb implements ProfileAppAccess.ShellRunner, AutoCloseable {
 

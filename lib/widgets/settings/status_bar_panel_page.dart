@@ -86,7 +86,7 @@ class StatusBarPanelPage extends StatelessWidget {
             title: Text(localizations.dataUsagePeriod, style: Theme.of(context).textTheme.bodyMedium),
             onPressed: () => Navigator.of(context).pushNamed(DataUsagePeriodPage.routeName),
           ),
-        // No "Network indicator" switch: the top bar has no network icon (docs/future-features.md)
+        // No "Network indicator" switch: the top bar has no network icon (docs/design/ideas.md)
         RoundedSwitchListTile(
           value: settingsService.showInputsWidgetInStatusBar,
           onChanged: (value) => settingsService.setShowInputsWidgetInStatusBar(value),
