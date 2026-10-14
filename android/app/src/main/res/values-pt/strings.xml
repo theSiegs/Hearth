@@ -36,6 +36,8 @@
     <string name="idle_sleep_warning">Sem atividade: a TV vai entrar em modo de espera em 1 minuto. Pressione qualquer botão para mantê-la ligada.</string>
     <string name="agent_channel_name">Hearth para este perfil</string>
     <string name="agent_notification_text">Mantém a tela inicial do Hearth sincronizada com este perfil</string>
+    <string name="ha_bridge_channel_name">Ligação com o Home Assistant</string>
+    <string name="ha_bridge_notification_text">Mantém o Home Assistant atualizado sobre esta TV</string>
     <string name="search_voice_prompt">Pesquisar filmes e séries</string>
     <string name="pin_unlocking">Inserindo o PIN do perfil…</string>
     <string name="pin_rejected_title">%1$s não aceitou o PIN salvo de “%2$s”</string>

@@ -47,7 +47,8 @@ final class HaNotificationServer {
     }
 
     interface Listener {
-        void onNotification(Notification notification);
+        /** False when the notification can't be shown now (the accessibility service that draws it is off). */
+        boolean onNotification(Notification notification);
     }
 
     private final Listener mListener;
@@ -120,8 +121,12 @@ final class HaNotificationServer {
             MiniHttp.respond(out, 400, "Missing msg");
             return;
         }
+        if (!mListener.onNotification(notification)) {
+            // Home Assistant is told, as it was when nothing listened at all
+            MiniHttp.respond(out, 503, "Hearth can't show pop-ups now");
+            return;
+        }
         MiniHttp.respond(out, 200, "OK");
-        mListener.onNotification(notification);
     }
 
     static Notification parse(String contentType, byte[] body) {

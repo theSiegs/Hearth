@@ -36,6 +36,8 @@
     <string name="idle_sleep_warning">Keine Aktivität: Der Fernseher wechselt in 1 Minute in den Ruhemodus. Drücken Sie eine Taste, damit er an bleibt.</string>
     <string name="agent_channel_name">Hearth für dieses Profil</string>
     <string name="agent_notification_text">Hält den Hearth-Startbildschirm mit diesem Profil synchron</string>
+    <string name="ha_bridge_channel_name">Home-Assistant-Verbindung</string>
+    <string name="ha_bridge_notification_text">Hält Home Assistant mit diesem Fernseher auf dem Laufenden</string>
     <string name="search_voice_prompt">Filme und Serien suchen</string>
     <string name="pin_unlocking">Profil-PIN wird eingegeben…</string>
     <string name="pin_rejected_title">%1$s hat die gespeicherte PIN für „%2$s“ nicht akzeptiert</string>

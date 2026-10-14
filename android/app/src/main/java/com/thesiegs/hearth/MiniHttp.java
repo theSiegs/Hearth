@@ -109,6 +109,7 @@ final class MiniHttp {
             case 200: return "OK";
             case 403: return "Forbidden";
             case 404: return "Not Found";
+            case 503: return "Service Unavailable";
             default: return "Bad Request";
         }
     }

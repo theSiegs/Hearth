@@ -37,6 +37,8 @@
     <string name="idle_sleep_warning">No activity: going to sleep in 1 minute. Press any button to stay on.</string>
     <string name="agent_channel_name">Hearth for this profile</string>
     <string name="agent_notification_text">Keeps Hearth\'s home in step with this profile</string>
+    <string name="ha_bridge_channel_name">Home Assistant link</string>
+    <string name="ha_bridge_notification_text">Keeps Home Assistant in step with this TV</string>
     <string name="search_voice_prompt">Search films and shows</string>
     <string name="pin_unlocking">Entering the profile PIN…</string>
     <string name="pin_rejected_title">%1$s didn’t accept the saved PIN for “%2$s”</string>

@@ -153,6 +153,14 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Keeps the home screen (Hearth, in the TV owner's user) in step with this Google TV profile's user: reports its Continue Watching and opens what Hearth asks for there" />
         </service>
+        <service
+            android:name=".HaBridgeService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps this TV's link to the family's Home Assistant running: it receives Home Assistant's notifications and reports what the TV is doing, which must go on when Hearth's accessibility service is switched off" />
+        </service>
         <!-- Keeps Google TV from uninstalling the agent from kids profiles (see AgentAdminReceiver) -->
         <receiver
             android:name=".AgentAdminReceiver"

@@ -209,7 +209,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
     /** Google TV's profile chooser is the window in front. */
     private boolean mChooserOnScreen;
 
-    private HaStatusReporter mHaStatus;
     /** What plays, into each adult profile's watch history. */
     private PlaybackRecorder mPlayback;
     /** How long apps play in this user, into today's usage (UsageToday). */
@@ -221,7 +220,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private long mFrontSince;
     private boolean mInteractive = true;
     private boolean mDreaming;
-    private HaNotificationServer mHaServer;
     private HaNotificationOverlay mHaOverlay;
 
     // Idle standby
@@ -421,7 +419,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             addFrontSoFar();
             mInteractive = on;
             restartFront();
-            if (mHaStatus != null) mHaStatus.setScreenOn(on);
+            HaBridgeService.setScreenOn(on);
             // "Lock when the TV sleeps": Google TV's profile lock on waking after long enough asleep
             if (on) {
                 ProfileLock.onScreenOn(context);
@@ -524,9 +522,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).edit().putBoolean(HOME_FIX_SEEN_KEY, true).apply();
         mHandler.postDelayed(mPeriodicCheck, IDLE_CHECK_MS);
         mHaOverlay = new HaNotificationOverlay(this);
-        updateHaServer();
-        mHaStatus = new HaStatusReporter(this);
-        mHaStatus.start();
+        // The Home Assistant link (server and status reports) runs on its own, so it outlives this service
+        HaBridgeService.sync(this);
         mPlayback = new PlaybackRecorder(this);
         mPlayback.ensureStarted();
         mPlaying = new PlayingClock(this, mHandler, (pkg, ms, now) -> {
@@ -537,7 +534,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             }
         });
         mPlaying.ensureStarted();
-        if (mScreenTimeLock) mHaStatus.setScreenTimeLock(true);
+        if (mScreenTimeLock) HaBridgeService.setScreenTimeLock(true);
         ProfileProvider.notifyChanged(this);  // service_running
         IntentFilter screenFilter = new IntentFilter(Intent.ACTION_SCREEN_ON);
         screenFilter.addAction(Intent.ACTION_SCREEN_OFF);
@@ -561,8 +558,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mAccountReader.shutdownNow();
         ProfileProvider.notifyChanged(this);  // service_running
         mHandler.removeCallbacksAndMessages(null);
-        if (mHaServer != null) mHaServer.stop();
-        if (mHaStatus != null) mHaStatus.stop();
         if (mPlayback != null) mPlayback.stop();
         if (mPlaying != null) mPlaying.stop();
         addFrontSoFar();
@@ -602,8 +597,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         if (mayLiftLock(mKidsLockHold, picked, flipped, kids)) {
             clearScreenTimeLock();
-        } else if (mHaStatus != null) {
-            mHaStatus.onAppsChanged();
+        } else {
+            HaBridgeService.onAppsChanged();
         }
         updateScreenTimeLock("apps blocked/unblocked");
         retryPendingBounce();
@@ -1548,7 +1543,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // Hearth or an app is in front: Google TV's own screens are gone.
         if (isHearth || isApp) {
             mGoogleTvScreenInFront = false;
-            if (mHaStatus != null) mHaStatus.setForegroundPackage(packageName);
+            HaBridgeService.setForegroundPackage(packageName);
         }
     }
 
@@ -1557,10 +1552,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
      * running out (those aren't in the wellbeing classes). Other Google TV text is ignored.
      */
     private void reportScreenTimeText(String className, AccessibilityEvent event, boolean wellbeing) {
-        if (mHaStatus == null) return;
+        if (!HaBridgeService.isRunning()) return;
         ScreenTimeScreen screen = ScreenTimeScreen.parse(className, event.getText());
         if (wellbeing || screen.isScreenTimeText() && screen.minutesLeft != null) {
-            mHaStatus.setScreenTime(screen);
+            HaBridgeService.setScreenTime(screen);
         }
         if (wellbeing) {
             // The window event carries no text ("Time for bed" etc. are in its views), and the views are only
@@ -1590,14 +1585,14 @@ public class LauncherAccessibilityService extends AccessibilityService {
     }
 
     private void readScreenTime() {
-        if (mHaStatus == null) return;
+        if (!HaBridgeService.isRunning()) return;
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null || !TextUtils.equals(GOOGLE_TV_PACKAGE, root.getPackageName())) {
             return;
         }
         List<CharSequence> texts = new ArrayList<>();
         collectTexts(root, texts, 0);
-        if (!texts.isEmpty()) mHaStatus.setScreenTime(ScreenTimeScreen.parse(mScreenTimeClass, texts));
+        if (!texts.isEmpty()) HaBridgeService.setScreenTime(ScreenTimeScreen.parse(mScreenTimeClass, texts));
     }
 
     /** The visible text views of a window, in screen order (button labels are content descriptions, so left out). */
@@ -1647,7 +1642,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         boolean changed = !mScreenTimeLock;
         mScreenTimeLock = true;
         ProfileUsers.setScreenTimeUpSerial(this, mActiveSerial);
-        if (mHaStatus != null) mHaStatus.setScreenTimeLock(true);
+        HaBridgeService.setScreenTimeLock(true);
         if (changed) ProfileProvider.notifyChanged(this);
     }
 
@@ -1733,10 +1728,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mKidsLockHold = false;
         if (changed) ProfileUsers.setScreenTimeUpSerial(this, ProfileUsers.UNKNOWN);
         if (changed) ProfileProvider.notifyChanged(this);
-        if (mHaStatus != null) {
-            mHaStatus.setScreenTimeLock(false);
-            mHaStatus.onProfileChanged();
-        }
+        HaBridgeService.setScreenTimeLock(false);
+        HaBridgeService.onProfileChanged();
     }
 
     /** Settles a profile picked in the chooser, if any, to name the profile user it starts; whether one was. */
@@ -1775,7 +1768,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     private void setActiveProfileName(String name) {
         getSharedPreferences(PROFILE_PREFS, MODE_PRIVATE).edit().putString(PROFILE_NAME_KEY, name).apply();
-        if (mHaStatus != null) mHaStatus.onProfileChanged();
+        HaBridgeService.onProfileChanged();
         ProfileProvider.notifyChanged(this);
         MainActivity.notifyProfileChanged();
     }
@@ -1914,8 +1907,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 .putString(HaConfig.URL_KEY, baseUrl)
                 .putString(HaConfig.WEBHOOK_KEY, webhookId)
                 .apply();
-        LauncherAccessibilityService service = sInstance;
-        if (service != null && service.mHaStatus != null) service.mHaStatus.start();
+        HaBridgeService.sync(context);
     }
 
     static boolean isHaNotificationsEnabled(Context context) {
@@ -1924,8 +1916,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     static void setHaNotificationsEnabled(Context context, boolean enabled) {
         context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).edit().putBoolean(HA_ENABLED_KEY, enabled).apply();
-        LauncherAccessibilityService service = sInstance;
-        if (service != null) service.updateHaServer();
+        HaBridgeService.sync(context);
     }
 
     /** False when the service isn't running, so nothing can be shown. */
@@ -1934,17 +1925,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (service == null || service.mHaOverlay == null) return false;
         service.mHaOverlay.enqueue(notification);
         return true;
-    }
-
-    private void updateHaServer() {
-        boolean enabled = isHaNotificationsEnabled(this);
-        if (enabled && mHaServer == null) {
-            mHaServer = new HaNotificationServer(notification -> mHaOverlay.enqueue(notification));
-            mHaServer.start();
-        } else if (!enabled && mHaServer != null) {
-            mHaServer.stop();
-            mHaServer = null;
-        }
     }
 
     // --- Remote button remapping ---

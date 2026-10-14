@@ -1468,6 +1468,7 @@ public class MainActivity extends FlutterActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        HaBridgeService.sync(this);
         // In another Google TV profile's user Hearth is that profile's agent, not a home screen: the first time
         // it's started there it hides this screen from that profile's home and keeps a quiet connection instead.
         if (AgentService.isAgent(this)) {

@@ -24,6 +24,10 @@ the QR code is on screen.
 Pop-ups over any app: the doorbell, a finished wash, a reminder. Hearth speaks the protocol of the
 "Notifications for Android TV / Fire TV" integration (PiPup style) on port **7676**.
 
+Hearth's link to Home Assistant (this and the TV status below) keeps running even if Android switches Home Button Fix off,
+for instance after an update. The pop-up itself is drawn by Home Button Fix, so while it is off Hearth answers
+Home Assistant that it can't show one.
+
 1. In Home Assistant, add the **Notifications for Android TV / Fire TV** integration with the TV's IP address
    (Settings → Home Assistant → Notifications shows it).
 2. Send a notification from an automation:

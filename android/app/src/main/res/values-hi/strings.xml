@@ -36,6 +36,8 @@
     <string name="idle_sleep_warning">कोई गतिविधि नहीं: 1 मिनट में टीवी स्लीप मोड में चला जाएगा। चालू रखने के लिए कोई भी बटन दबाएँ।</string>
     <string name="agent_channel_name">इस प्रोफ़ाइल के लिए Hearth</string>
     <string name="agent_notification_text">Hearth की होम स्क्रीन को इस प्रोफ़ाइल के साथ अपडेट रखता है</string>
+    <string name="ha_bridge_channel_name">Home Assistant लिंक</string>
+    <string name="ha_bridge_notification_text">Home Assistant को इस टीवी के साथ तालमेल में रखता है</string>
     <string name="search_voice_prompt">फ़िल्में और शो खोजें</string>
     <string name="pin_unlocking">प्रोफ़ाइल PIN डाला जा रहा है…</string>
     <string name="pin_rejected_title">%1$s ने “%2$s” का सहेजा गया PIN स्वीकार नहीं किया</string>

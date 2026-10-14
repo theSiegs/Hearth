@@ -36,6 +36,8 @@
     <string name="idle_sleep_warning">Nessuna attività: la TV andrà in standby tra 1 minuto. Premi un tasto qualsiasi per tenerla accesa.</string>
     <string name="agent_channel_name">Hearth per questo profilo</string>
     <string name="agent_notification_text">Mantiene la schermata Home di Hearth allineata a questo profilo</string>
+    <string name="ha_bridge_channel_name">Collegamento a Home Assistant</string>
+    <string name="ha_bridge_notification_text">Tiene Home Assistant aggiornato su questo televisore</string>
     <string name="search_voice_prompt">Cerca film e serie</string>
     <string name="pin_unlocking">Inserimento del PIN del profilo…</string>
     <string name="pin_rejected_title">%1$s non ha accettato il PIN salvato per “%2$s”</string>

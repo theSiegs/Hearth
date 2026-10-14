@@ -36,6 +36,8 @@
     <string name="idle_sleep_warning">Немає активності: за 1 хвилину телевізор перейде в режим сну. Натисніть будь-яку кнопку, щоб він не вимикався.</string>
     <string name="agent_channel_name">Hearth для цього профілю</string>
     <string name="agent_notification_text">Синхронізує головний екран Hearth із цим профілем</string>
+    <string name="ha_bridge_channel_name">Зв\'язок із Home Assistant</string>
+    <string name="ha_bridge_notification_text">Тримає Home Assistant в курсі стану цього телевізора</string>
     <string name="search_voice_prompt">Пошук фільмів і серіалів</string>
     <string name="pin_unlocking">Введення PIN-коду профілю…</string>
     <string name="pin_rejected_title">%1$s не прийняв збережений PIN-код для «%2$s»</string>

@@ -36,6 +36,8 @@
     <string name="idle_sleep_warning">Aucune activité : mise en veille dans 1 minute. Appuyez sur un bouton pour garder la TV allumée.</string>
     <string name="agent_channel_name">Hearth pour ce profil</string>
     <string name="agent_notification_text">Synchronise l\'écran d\'accueil de Hearth avec ce profil</string>
+    <string name="ha_bridge_channel_name">Lien avec Home Assistant</string>
+    <string name="ha_bridge_notification_text">Tient Home Assistant au courant de ce téléviseur</string>
     <string name="search_voice_prompt">Rechercher des films et des séries</string>
     <string name="pin_unlocking">Saisie du code PIN du profil…</string>
     <string name="pin_rejected_title">%1$s n’a pas accepté le code PIN enregistré pour « %2$s »</string>

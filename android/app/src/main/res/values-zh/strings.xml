@@ -36,6 +36,8 @@
     <string name="idle_sleep_warning">无操作：电视将在 1 分钟后进入休眠。按任意按钮可保持开启。</string>
     <string name="agent_channel_name">此个人资料的 Hearth</string>
     <string name="agent_notification_text">让 Hearth 主屏幕与此个人资料保持同步</string>
+    <string name="ha_bridge_channel_name">Home Assistant 连接</string>
+    <string name="ha_bridge_notification_text">让 Home Assistant 随时了解这台电视的状态</string>
     <string name="search_voice_prompt">搜索电影和节目</string>
     <string name="pin_unlocking">正在输入个人资料 PIN…</string>
     <string name="pin_rejected_title">%1$s 未接受“%2$s”的已保存 PIN</string>
