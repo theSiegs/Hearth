@@ -18,6 +18,7 @@ import android.media.AudioManager;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
+import android.annotation.SuppressLint;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -966,6 +967,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
      * be showing Google TV's PIN lock (ChooserPhotos). Runs when the chooser opens, when it's read, and whenever
      * focus settles on a tile, so a quick pass through the chooser still catches the tiles it lingers on.
      */
+    // Returns at once below Android 11 (the check is in the first if); lint can't see through its "||"
+    @SuppressLint("NewApi")
     private void photographChooserTile() {
         mHandler.removeCallbacks(mChooserPhoto);
         // Nor once a tile was picked in this visit: the picked tile shows the lock while the switch is under way

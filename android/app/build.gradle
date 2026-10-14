@@ -77,7 +77,7 @@ android {
     defaultConfig {
         applicationId hearthAppId
         compileSdk 35
-        minSdkVersion flutter.minSdkVersion
+        minSdkVersion 28 // Google TV and Android TV 9+; the code uses API 28 calls (e.g. getLongVersionCode) unguarded
         targetSdk 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
