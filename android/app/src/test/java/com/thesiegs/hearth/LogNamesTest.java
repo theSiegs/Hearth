@@ -21,6 +21,8 @@ public class LogNamesTest {
         LogNames.setShowing(false);
         String alex = LogNames.of("Alex");
         assertTrue(alex.matches("#[0-9a-f]{4}"));
+        // The Flutter side (log_names.dart) makes the same stand-in
+        assertEquals("#ba1e", LogNames.standIn("alex"));
         // The same name (case and spacing aside) is the same stand-in, so a log can still be followed
         assertEquals(alex, LogNames.of(" alex "));
         assertFalse(LogNames.of(Arrays.asList("Alex", "Sam")).contains("Sam"));

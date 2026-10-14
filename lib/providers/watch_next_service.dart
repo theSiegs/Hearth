@@ -1,3 +1,4 @@
+import 'package:flauncher/log_names.dart';
 import 'dart:async';
 import 'dart:developer';
 import 'dart:typed_data';
@@ -112,7 +113,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
     final visible = _programs.where(_visibleToActiveProfile).toList();
     final shown = selectForRow(visible, _clock());
     final apps = {for (final p in _programs) p.packageName}.join(",");
-    debugPrint("HearthWatchNext: ${_programs.length} entries, ${shown.length} shown for $_activeProfile; hidden: "
+    debugPrint("HearthWatchNext: ${_programs.length} entries, ${shown.length} shown for ${logKey(_activeProfile)}; hidden: "
         "otherProfile=${_programs.length - visible.length} oldFinishedOrPerApp=${visible.length - shown.length}; "
         "apps=$apps");
   }

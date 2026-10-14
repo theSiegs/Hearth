@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/log_names.dart';
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:typed_data';
@@ -251,7 +252,7 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
     changed = await _loadAvatar(name) || changed;
     if (changed) {
       // In the TV's log (tag flutter): which profile Hearth shows, and whether it has that profile's photo
-      debugPrint("HearthProfileUi: key=$key kids=$kids name=${name == null ? "unknown" : "known"} "
+      debugPrint("HearthProfileUi: key=${logKey(key)} kids=$kids name=${name == null ? "unknown" : "known"} "
           "photo=${_avatar == null ? "none" : "yes (saved ${DateTime.fromMillisecondsSinceEpoch(_avatarModified)})"}");
       notifyListeners();
     }
