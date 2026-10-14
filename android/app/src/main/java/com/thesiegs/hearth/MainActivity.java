@@ -223,7 +223,7 @@ public class MainActivity extends FlutterActivity {
                 char[] digits = pin != null ? pin.toCharArray() : new char[0];
                 boolean saved = digits.length > 0
                         && PinVault.save(this, pinOwner(call), pkg, call.argument("appProfile"), digits);
-                java.util.Arrays.fill(digits, ' ');
+                java.util.Arrays.fill(digits, '\0');
                 if (saved) {
                     // A new PIN gets a fresh start: entry resumes if it was paused for the app
                     PinVault.setPaused(this, pkg, false);
