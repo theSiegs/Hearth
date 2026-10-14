@@ -1969,6 +1969,54 @@ class AppLocalizationsJa extends AppLocalizations {
   String get pinPhoneSetupScan => '同じ Wi-Fi のスマートフォンでスキャンし、そこで PIN を入力してください。PIN はスマートフォンで暗号化されます。ページはこの画面が開いている間だけ使えます。';
 
   @override
+  String get approvalTitle => 'スマートフォンで切り替えを許可';
+
+  @override
+  String get approvalOn => 'オン';
+
+  @override
+  String get approvalOff => 'オフ';
+
+  @override
+  String get approvalNeedsHa => 'Home Assistant が必要';
+
+  @override
+  String get approvalNeedsHaBody => 'Home Assistant のスマートフォン アプリから、あなたのプロフィールへの切り替えを許可するか確認します。まず設定で Home Assistant を設定し、スマートフォンにアプリを入れてください。';
+
+  @override
+  String get approvalSwitch => '誰かが自分のプロフィールに切り替えたらスマートフォンで確認';
+
+  @override
+  String get approvalPhone => 'スマートフォン';
+
+  @override
+  String get approvalPhoneNone => '未選択';
+
+  @override
+  String get approvalPhonePick => 'どのスマートフォンで確認しますか？';
+
+  @override
+  String get approvalNoPhones => 'Home Assistant にはまだアプリでサインインしたスマートフォンがありません。';
+
+  @override
+  String get approvalPin => '自分の Google TV PIN';
+
+  @override
+  String get approvalPinSubtitle => 'スマートフォンで許可すると、Hearth が Google TV の PIN 画面に入力します。暗号化されてこのテレビに保存されます。';
+
+  @override
+  String get approvalTest => 'テスト通知を送信';
+
+  @override
+  String get approvalTestSent => '送信しました。スマートフォンを確認してください。';
+
+  @override
+  String get approvalTestFailed => '送信できませんでした。Home Assistant に接続できるか確認してください。';
+
+  @override
+  String get approvalFooter => 'Google TV がプロフィールを開くために PIN を求めると、スマートフォンに「許可」と「拒否」が届きます。許可すると Hearth が PIN を入力します。リモコンでもいつでも入力できます。先にプロフィールの Google TV PIN をオンにしてください。';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearthはまだ$appでPINを入力できません';
   }

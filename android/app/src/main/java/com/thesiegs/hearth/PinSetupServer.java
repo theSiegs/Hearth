@@ -48,6 +48,11 @@ final class PinSetupServer {
         /** The app's account-wide content PIN (Paramount+), not a profile's. */
         final boolean content;
 
+        /** The profile's own Google TV PIN (PhoneApproval), not an app's. */
+        boolean googleTv() {
+            return GooglePinRecipe.VAULT_NAME.equals(appProfile);
+        }
+
         Row(String pkg, String label, String appProfile, boolean nameMatch, int length, boolean saved, boolean content) {
             this.pkg = pkg;
             this.label = label;
@@ -87,6 +92,11 @@ final class PinSetupServer {
     private void readRows() {
         PackageManager pm = mContext.getPackageManager();
         boolean grownUp = !ProfilePairing.isKids(mContext, mOwner) && mOwner.startsWith("user:0");
+        // A grown-up's own Google TV PIN, for approving switches from their phone
+        if (grownUp) {
+            mRows.add(new Row(LauncherAccessibilityService.GOOGLE_TV_PACKAGE, "Google TV", GooglePinRecipe.VAULT_NAME,
+                    false, 4, PhoneApproval.hasPin(mContext, mOwner), false));
+        }
         for (String pkg : ProfilePairing.APPS) {
             String label;
             try {
@@ -237,8 +247,10 @@ final class PinSetupServer {
                     }
                     if (!PinVault.save(mContext, mOwner, row.pkg, row.appProfile, digits)) continue;
                 }
-                PinVault.setPaused(mContext, row.pkg, false);
-                PinVault.resetBreaks(mContext, row.pkg);
+                if (!row.googleTv()) {
+                    PinVault.setPaused(mContext, row.pkg, false);
+                    PinVault.resetBreaks(mContext, row.pkg);
+                }
                 saved++;
             } finally {
                 Arrays.fill(digits, '\0');
@@ -269,7 +281,8 @@ final class PinSetupServer {
         body.append("<form id='f'>");
         for (int i = 0; i < mRows.size(); i++) {
             Row row = mRows.get(i);
-            String title = row.content ? text(R.string.pin_phone_content, row.label)
+            String title = row.googleTv() ? text(R.string.pin_phone_google)
+                    : row.content ? text(R.string.pin_phone_content, row.label)
                     : text(R.string.pin_phone_row, row.label, row.appProfile);
             body.append("<fieldset data-i='").append(i).append("' data-len='").append(row.length).append("'>")
                     .append("<legend>").append(title).append("</legend>")

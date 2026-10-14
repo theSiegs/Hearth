@@ -26,6 +26,7 @@ import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
 import 'kids_profiles_page.dart';
+import 'phone_approval_page.dart';
 import 'profile_pairing_page.dart';
 import 'settings_lock.dart';
 import 'settings_page.dart';
@@ -61,6 +62,8 @@ class ProfilesSettingsPage extends StatelessWidget {
             onPressed: () => context.read<FLauncherChannel?>()?.lockProfile(),
           ),
           const _LockOnSleepTile(),
+          // Its owner allows a switch into it from their phone (Home Assistant), and Hearth enters the PIN
+          const PhoneApprovalTile(),
         ],
         // No PIN of its own: in a kids profile, Settings already took the parent PIN to get here, and
         // grown-up profiles are only reached past Google TV's PIN.

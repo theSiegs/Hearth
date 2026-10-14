@@ -1980,6 +1980,54 @@ class AppLocalizationsIt extends AppLocalizations {
   String get pinPhoneSetupScan => 'Scansiona con un telefono sulla stessa Wi-Fi e digita lì i PIN. Vengono cifrati sul telefono; la pagina funziona solo finché questa finestra è aperta.';
 
   @override
+  String get approvalTitle => 'Approva i cambi dal mio telefono';
+
+  @override
+  String get approvalOn => 'Attivo';
+
+  @override
+  String get approvalOff => 'Disattivo';
+
+  @override
+  String get approvalNeedsHa => 'Richiede Home Assistant';
+
+  @override
+  String get approvalNeedsHaBody => 'Il telefono ti chiede di consentire il passaggio al tuo profilo tramite l’app di Home Assistant. Configura prima Home Assistant nelle Impostazioni, con la sua app sul telefono.';
+
+  @override
+  String get approvalSwitch => 'Chiedi sul mio telefono quando qualcuno passa al mio profilo';
+
+  @override
+  String get approvalPhone => 'Telefono';
+
+  @override
+  String get approvalPhoneNone => 'Non scelto';
+
+  @override
+  String get approvalPhonePick => 'Quale telefono chiede?';
+
+  @override
+  String get approvalNoPhones => 'Home Assistant non ha ancora telefoni con la sua app.';
+
+  @override
+  String get approvalPin => 'Il mio PIN di Google TV';
+
+  @override
+  String get approvalPinSubtitle => 'Hearth lo inserisce nella schermata PIN di Google TV quando lo consenti dal telefono. Resta su questa TV, cifrato.';
+
+  @override
+  String get approvalTest => 'Invia una notifica di prova';
+
+  @override
+  String get approvalTestSent => 'Inviata. Controlla il telefono.';
+
+  @override
+  String get approvalTestFailed => 'Invio non riuscito: controlla che Home Assistant sia raggiungibile.';
+
+  @override
+  String get approvalFooter => 'Quando Google TV chiede il PIN per aprire il tuo profilo, sul telefono arrivano Consenti e Rifiuta. Se consenti, Hearth inserisce il PIN; si può sempre digitare anche col telecomando. Attiva prima il PIN di Google TV per il tuo profilo.';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth non sa ancora digitare i PIN in $app';
   }

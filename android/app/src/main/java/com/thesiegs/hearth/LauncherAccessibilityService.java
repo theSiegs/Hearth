@@ -466,6 +466,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
         return className.startsWith(GOOGLE_TV_PACKAGE + ".profile.chooser.ProfileChooser");
     }
 
+    /** Google TV's PIN screen ("Verify your identity", "Enter Google PIN"). */
+    static final String GOOGLE_TV_REAUTH_ACTIVITY = "com.google.android.libraries.tv.reauth.ReauthActivity";
+
     /** Google TV's profile lock: its wrapper, or the PIN screen ("Verify your identity") it opens. */
     private static boolean isProfileLock(String className) {
         return className.startsWith(GOOGLE_TV_PACKAGE + ".profile.lock.")
@@ -1430,6 +1433,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         if (event != null) reportScreenTimeText(className, event, wellbeing);
         if (isProfileLock(className)) mProfileLockSeenAt = SystemClock.elapsedRealtime();
+        // Google TV's PIN screen: its owner may allow the switch from their phone instead (PhoneApproval)
+        if (GOOGLE_TV_REAUTH_ACTIVITY.equals(className)) mHandler.postDelayed(() -> PhoneApproval.onPinScreen(this), 500);
         if (isChooser(className)) {
             mHandler.removeCallbacks(mReadChooser);
             mHandler.postDelayed(mReadChooser, CHOOSER_READ_DELAY_MS);
@@ -1566,6 +1571,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
     static String appInFront() {
         LauncherAccessibilityService service = sInstance;
         return service != null ? service.mLastAppPackage : null;
+    }
+
+    /** The window in front, as the service sees it; null when the service isn't running. */
+    static AccessibilityNodeInfo activeRoot() {
+        LauncherAccessibilityService service = sInstance;
+        return service != null ? service.getRootInActiveWindow() : null;
     }
 
     /** The app whose window was last in front (null before the service has seen one). */
@@ -2002,6 +2013,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         onUserInput();
         if (event.getAction() == KeyEvent.ACTION_DOWN && event.getDeviceId() != KeyCharacterMap.VIRTUAL_KEYBOARD) {
             ParentPresence.onKey(SystemClock.elapsedRealtime());
+            // Typing the PIN with the remote instead of waiting for the phone (keys Hearth types come from no device)
+            if (!ProfilePairingService.isEnteringPin()) PhoneApproval.onRemoteKey(this);
         }
         // Hearth is typing a saved profile PIN behind the cover: keys would land on the app's keypad. Back and Home
         // stop it (Home still goes on to do its usual job), everything else waits.

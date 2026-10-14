@@ -1980,6 +1980,54 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pinPhoneSetupScan => 'Scan with a phone on the same Wi-Fi and type the PINs there. They’re encrypted on the phone; the page only works while this is open.';
 
   @override
+  String get approvalTitle => 'Approve switches from my phone';
+
+  @override
+  String get approvalOn => 'On';
+
+  @override
+  String get approvalOff => 'Off';
+
+  @override
+  String get approvalNeedsHa => 'Needs Home Assistant';
+
+  @override
+  String get approvalNeedsHaBody => 'Your phone asks you to allow a switch to your profile through Home Assistant’s phone app. Set up Home Assistant in Settings first, with its phone app on your phone.';
+
+  @override
+  String get approvalSwitch => 'Ask my phone when someone switches to my profile';
+
+  @override
+  String get approvalPhone => 'Phone';
+
+  @override
+  String get approvalPhoneNone => 'Not chosen';
+
+  @override
+  String get approvalPhonePick => 'Which phone asks?';
+
+  @override
+  String get approvalNoPhones => 'Home Assistant has no phone with its app signed in yet.';
+
+  @override
+  String get approvalPin => 'My Google TV PIN';
+
+  @override
+  String get approvalPinSubtitle => 'Hearth enters it on Google TV’s PIN screen once you allow it on your phone. It stays on this TV, encrypted.';
+
+  @override
+  String get approvalTest => 'Send a test notification';
+
+  @override
+  String get approvalTestSent => 'Sent. Check the phone.';
+
+  @override
+  String get approvalTestFailed => 'Couldn’t send it: check that Home Assistant is reachable.';
+
+  @override
+  String get approvalFooter => 'When Google TV asks for your PIN to open your profile, your phone gets Allow and Deny. Allow, and Hearth enters the PIN; the PIN can always be typed with the remote too. Turn the Google TV PIN on for your profile first.';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth can’t type PINs in $app yet';
   }

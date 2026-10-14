@@ -3485,6 +3485,102 @@ abstract class AppLocalizations {
   /// **'Scan with a phone on the same Wi-Fi and type the PINs there. They’re encrypted on the phone; the page only works while this is open.'**
   String get pinPhoneSetupScan;
 
+  /// Profiles: approving switches into a PIN-locked profile from a phone
+  ///
+  /// In en, this message translates to:
+  /// **'Approve switches from my phone'**
+  String get approvalTitle;
+
+  /// Profiles: approving switches into a PIN-locked profile from a phone
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get approvalOn;
+
+  /// Profiles: approving switches into a PIN-locked profile from a phone
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get approvalOff;
+
+  /// Profiles: approving switches into a PIN-locked profile from a phone
+  ///
+  /// In en, this message translates to:
+  /// **'Needs Home Assistant'**
+  String get approvalNeedsHa;
+
+  /// Profiles: approving switches into a PIN-locked profile from a phone
+  ///
+  /// In en, this message translates to:
+  /// **'Your phone asks you to allow a switch to your profile through Home Assistant’s phone app. Set up Home Assistant in Settings first, with its phone app on your phone.'**
+  String get approvalNeedsHaBody;
+
+  /// Profiles: approving switches into a PIN-locked profile from a phone
+  ///
+  /// In en, this message translates to:
+  /// **'Ask my phone when someone switches to my profile'**
+  String get approvalSwitch;
+
+  /// Profiles: approving switches into a PIN-locked profile from a phone
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get approvalPhone;
+
+  /// Profiles: approving switches into a PIN-locked profile from a phone
+  ///
+  /// In en, this message translates to:
+  /// **'Not chosen'**
+  String get approvalPhoneNone;
+
+  /// Profiles: approving switches into a PIN-locked profile from a phone
+  ///
+  /// In en, this message translates to:
+  /// **'Which phone asks?'**
+  String get approvalPhonePick;
+
+  /// Profiles: approving switches into a PIN-locked profile from a phone
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant has no phone with its app signed in yet.'**
+  String get approvalNoPhones;
+
+  /// Profiles: approving switches into a PIN-locked profile from a phone
+  ///
+  /// In en, this message translates to:
+  /// **'My Google TV PIN'**
+  String get approvalPin;
+
+  /// Profiles: approving switches into a PIN-locked profile from a phone
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth enters it on Google TV’s PIN screen once you allow it on your phone. It stays on this TV, encrypted.'**
+  String get approvalPinSubtitle;
+
+  /// Profiles: approving switches into a PIN-locked profile from a phone
+  ///
+  /// In en, this message translates to:
+  /// **'Send a test notification'**
+  String get approvalTest;
+
+  /// Profiles: approving switches into a PIN-locked profile from a phone
+  ///
+  /// In en, this message translates to:
+  /// **'Sent. Check the phone.'**
+  String get approvalTestSent;
+
+  /// Profiles: approving switches into a PIN-locked profile from a phone
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t send it: check that Home Assistant is reachable.'**
+  String get approvalTestFailed;
+
+  /// Profiles: approving switches into a PIN-locked profile from a phone
+  ///
+  /// In en, this message translates to:
+  /// **'When Google TV asks for your PIN to open your profile, your phone gets Allow and Deny. Allow, and Hearth enters the PIN; the PIN can always be typed with the remote too. Turn the Google TV PIN on for your profile first.'**
+  String get approvalFooter;
+
   /// Profile Pairing: streaming app profile PIN
   ///
   /// In en, this message translates to:

@@ -1978,6 +1978,54 @@ class AppLocalizationsDe extends AppLocalizations {
   String get pinPhoneSetupScan => 'Scanne mit einem Telefon im selben WLAN und gib die PINs dort ein. Sie werden auf dem Telefon verschlüsselt; die Seite funktioniert nur, solange dies geöffnet ist.';
 
   @override
+  String get approvalTitle => 'Wechsel auf meinem Telefon erlauben';
+
+  @override
+  String get approvalOn => 'An';
+
+  @override
+  String get approvalOff => 'Aus';
+
+  @override
+  String get approvalNeedsHa => 'Braucht Home Assistant';
+
+  @override
+  String get approvalNeedsHaBody => 'Dein Telefon fragt über die Home-Assistant-App, ob ein Wechsel zu deinem Profil erlaubt ist. Richte zuerst Home Assistant in den Einstellungen ein, mit der App auf deinem Telefon.';
+
+  @override
+  String get approvalSwitch => 'Mein Telefon fragen, wenn jemand zu meinem Profil wechselt';
+
+  @override
+  String get approvalPhone => 'Telefon';
+
+  @override
+  String get approvalPhoneNone => 'Nicht gewählt';
+
+  @override
+  String get approvalPhonePick => 'Welches Telefon fragt?';
+
+  @override
+  String get approvalNoPhones => 'Bei Home Assistant ist noch kein Telefon mit der App angemeldet.';
+
+  @override
+  String get approvalPin => 'Meine Google TV-PIN';
+
+  @override
+  String get approvalPinSubtitle => 'Hearth gibt sie auf dem PIN-Bildschirm von Google TV ein, sobald du es auf dem Telefon erlaubst. Sie bleibt verschlüsselt auf diesem Fernseher.';
+
+  @override
+  String get approvalTest => 'Testbenachrichtigung senden';
+
+  @override
+  String get approvalTestSent => 'Gesendet. Sieh auf dem Telefon nach.';
+
+  @override
+  String get approvalTestFailed => 'Senden fehlgeschlagen: Prüfe, ob Home Assistant erreichbar ist.';
+
+  @override
+  String get approvalFooter => 'Wenn Google TV zum Öffnen deines Profils nach der PIN fragt, bekommt dein Telefon „Erlauben“ und „Ablehnen“. Erlaubst du es, gibt Hearth die PIN ein; mit der Fernbedienung geht es immer auch. Schalte zuerst die Google TV-PIN für dein Profil ein.';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth kann in $app noch keine PINs eingeben';
   }

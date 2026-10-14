@@ -1969,6 +1969,54 @@ class AppLocalizationsTr extends AppLocalizations {
   String get pinPhoneSetupScan => 'Aynı Wi-Fi’deki bir telefonla tarayın ve PIN’leri orada yazın. Telefonda şifrelenirler; sayfa yalnızca bu açıkken çalışır.';
 
   @override
+  String get approvalTitle => 'Geçişleri telefonumdan onayla';
+
+  @override
+  String get approvalOn => 'Açık';
+
+  @override
+  String get approvalOff => 'Kapalı';
+
+  @override
+  String get approvalNeedsHa => 'Home Assistant gerekir';
+
+  @override
+  String get approvalNeedsHaBody => 'Telefonunuz, Home Assistant uygulaması üzerinden profilinize geçişe izin verip vermediğinizi sorar. Önce Ayarlar’da Home Assistant’ı kurun ve uygulamasını telefonunuza yükleyin.';
+
+  @override
+  String get approvalSwitch => 'Biri profilime geçtiğinde telefonuma sor';
+
+  @override
+  String get approvalPhone => 'Telefon';
+
+  @override
+  String get approvalPhoneNone => 'Seçilmedi';
+
+  @override
+  String get approvalPhonePick => 'Hangi telefon sorsun?';
+
+  @override
+  String get approvalNoPhones => 'Home Assistant’ta henüz uygulamasıyla oturum açmış telefon yok.';
+
+  @override
+  String get approvalPin => 'Google TV PIN’im';
+
+  @override
+  String get approvalPinSubtitle => 'Telefonunuzda izin verdiğinizde Hearth bunu Google TV’nin PIN ekranına girer. Bu TV’de şifreli olarak kalır.';
+
+  @override
+  String get approvalTest => 'Test bildirimi gönder';
+
+  @override
+  String get approvalTestSent => 'Gönderildi. Telefonu kontrol edin.';
+
+  @override
+  String get approvalTestFailed => 'Gönderilemedi: Home Assistant’a erişilebildiğini kontrol edin.';
+
+  @override
+  String get approvalFooter => 'Google TV profilinizi açmak için PIN istediğinde telefonunuza İzin ver ve Reddet gelir. İzin verin, Hearth PIN’i girsin; PIN her zaman kumandayla da girilebilir. Önce profiliniz için Google TV PIN’ini açın.';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth henüz $app içinde PIN yazamıyor';
   }

@@ -233,6 +233,44 @@ public class MainActivity extends FlutterActivity {
                 }
                 result.success(saved);
             }
+            // PhoneApproval, for the profile on now: its owner allows a switch into it from their phone
+            case "getPhoneApproval" -> {
+                String key = LauncherAccessibilityService.getActiveProfileKey(this);
+                Map<String, Object> state = new HashMap<>();
+                state.put("haConfigured", HaConfig.isConfigured(this));
+                state.put("on", PhoneApproval.isOn(this, key));
+                state.put("notify", PhoneApproval.notifyService(this, key));
+                state.put("pin", PinVault.status(this, key, LauncherAccessibilityService.GOOGLE_TV_PACKAGE,
+                        GooglePinRecipe.VAULT_NAME));
+                result.success(state);
+            }
+            case "setPhoneApprovalOn" -> {
+                PhoneApproval.setOn(this, LauncherAccessibilityService.getActiveProfileKey(this),
+                        Boolean.TRUE.equals(call.arguments()));
+                result.success(null);
+            }
+            case "setPhoneApprovalNotify" -> {
+                PhoneApproval.setNotifyService(this, LauncherAccessibilityService.getActiveProfileKey(this),
+                        call.arguments());
+                result.success(null);
+            }
+            case "getHaNotifyServices" -> answerFrom(sIoExecutor, result, () -> PhoneApproval.notifyServices(this));
+            case "testPhoneApproval" -> {
+                String key = LauncherAccessibilityService.getActiveProfileKey(this);
+                answerFrom(sIoExecutor, result, () -> PhoneApproval.sendTest(this, key));
+            }
+            case "saveGoogleTvPin" -> {
+                String pin = call.arguments();
+                char[] digits = pin != null ? pin.toCharArray() : new char[0];
+                result.success(digits.length == 4 && PinVault.save(this, LauncherAccessibilityService.getActiveProfileKey(this),
+                        LauncherAccessibilityService.GOOGLE_TV_PACKAGE, GooglePinRecipe.VAULT_NAME, digits));
+                java.util.Arrays.fill(digits, ' ');
+            }
+            case "removeGoogleTvPin" -> {
+                PinVault.remove(this, LauncherAccessibilityService.getActiveProfileKey(this),
+                        LauncherAccessibilityService.GOOGLE_TV_PACKAGE, GooglePinRecipe.VAULT_NAME);
+                result.success(null);
+            }
             // PinSafety: the switch for typing any streaming PIN on this TV, and the log of recent entries
             case "isPinTypingOn" -> result.success(PinSafety.isTypingOn(this));
             case "setPinTypingOn" -> {

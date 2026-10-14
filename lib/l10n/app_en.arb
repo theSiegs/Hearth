@@ -2460,6 +2460,70 @@
     "@pinPhoneSetupScan": {
         "description": "Streaming app PINs: set up from a phone (QR code)"
     },
+    "approvalTitle": "Approve switches from my phone",
+    "@approvalTitle": {
+        "description": "Profiles: approving switches into a PIN-locked profile from a phone"
+    },
+    "approvalOn": "On",
+    "@approvalOn": {
+        "description": "Profiles: approving switches into a PIN-locked profile from a phone"
+    },
+    "approvalOff": "Off",
+    "@approvalOff": {
+        "description": "Profiles: approving switches into a PIN-locked profile from a phone"
+    },
+    "approvalNeedsHa": "Needs Home Assistant",
+    "@approvalNeedsHa": {
+        "description": "Profiles: approving switches into a PIN-locked profile from a phone"
+    },
+    "approvalNeedsHaBody": "Your phone asks you to allow a switch to your profile through Home Assistant’s phone app. Set up Home Assistant in Settings first, with its phone app on your phone.",
+    "@approvalNeedsHaBody": {
+        "description": "Profiles: approving switches into a PIN-locked profile from a phone"
+    },
+    "approvalSwitch": "Ask my phone when someone switches to my profile",
+    "@approvalSwitch": {
+        "description": "Profiles: approving switches into a PIN-locked profile from a phone"
+    },
+    "approvalPhone": "Phone",
+    "@approvalPhone": {
+        "description": "Profiles: approving switches into a PIN-locked profile from a phone"
+    },
+    "approvalPhoneNone": "Not chosen",
+    "@approvalPhoneNone": {
+        "description": "Profiles: approving switches into a PIN-locked profile from a phone"
+    },
+    "approvalPhonePick": "Which phone asks?",
+    "@approvalPhonePick": {
+        "description": "Profiles: approving switches into a PIN-locked profile from a phone"
+    },
+    "approvalNoPhones": "Home Assistant has no phone with its app signed in yet.",
+    "@approvalNoPhones": {
+        "description": "Profiles: approving switches into a PIN-locked profile from a phone"
+    },
+    "approvalPin": "My Google TV PIN",
+    "@approvalPin": {
+        "description": "Profiles: approving switches into a PIN-locked profile from a phone"
+    },
+    "approvalPinSubtitle": "Hearth enters it on Google TV’s PIN screen once you allow it on your phone. It stays on this TV, encrypted.",
+    "@approvalPinSubtitle": {
+        "description": "Profiles: approving switches into a PIN-locked profile from a phone"
+    },
+    "approvalTest": "Send a test notification",
+    "@approvalTest": {
+        "description": "Profiles: approving switches into a PIN-locked profile from a phone"
+    },
+    "approvalTestSent": "Sent. Check the phone.",
+    "@approvalTestSent": {
+        "description": "Profiles: approving switches into a PIN-locked profile from a phone"
+    },
+    "approvalTestFailed": "Couldn’t send it: check that Home Assistant is reachable.",
+    "@approvalTestFailed": {
+        "description": "Profiles: approving switches into a PIN-locked profile from a phone"
+    },
+    "approvalFooter": "When Google TV asks for your PIN to open your profile, your phone gets Allow and Deny. Allow, and Hearth enters the PIN; the PIN can always be typed with the remote too. Turn the Google TV PIN on for your profile first.",
+    "@approvalFooter": {
+        "description": "Profiles: approving switches into a PIN-locked profile from a phone"
+    },
     "profilePinUnsupported": "Hearth can’t type PINs in {app} yet",
     "@profilePinUnsupported": {
         "description": "Profile Pairing: streaming app profile PIN",

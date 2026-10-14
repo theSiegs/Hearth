@@ -108,6 +108,13 @@ profile's PIN to come back. Turn the PIN on for your account in Google TV first.
 - map another remote button to "Lock Profile";
 - set **Lock when the TV sleeps** (every time, or after some minutes asleep).
 
+**Approve switches from my phone** (**Settings → Profiles**, in your own profile; needs Home Assistant and its phone
+app). When Google TV asks for your PIN to open your profile, your phone gets a notification with Allow and Deny.
+Allow, and Hearth enters your Google TV PIN; Deny, or no answer, leaves Google's PIN screen as it is. The PIN can always
+be typed with the remote instead: pressing a key on the PIN screen withdraws the phone's request. Choose your phone and
+save your Google TV PIN on that page (or on the phone page from Streaming app PINs). A PIN Google refuses isn't typed
+again until it's saved anew.
+
 In a kids profile, or a profile without a Google TV PIN, holding the profile button opens the profile chooser
 instead. In a kids profile the remote's profile button always does Google TV's own job.
 

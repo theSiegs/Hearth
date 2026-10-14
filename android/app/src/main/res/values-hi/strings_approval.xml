@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Allowing a switch into a PIN-locked profile from a phone (PhoneApproval), and typing Google TV's PIN -->
+<resources>
+    <string name="google_pin_entering">%1$s की प्रोफ़ाइल अनलॉक हो रही है…</string>
+    <string name="google_pin_rejected">Google TV ने सहेजा गया PIN स्वीकार नहीं किया। इसे कीपैड पर डालें; दोबारा सहेजे जाने तक Hearth इसे फिर नहीं डालेगा।</string>
+    <string name="google_pin_broken">Hearth PIN डालना पूरा नहीं कर सका। इसे कीपैड पर डालें।</string>
+    <string name="approval_title">TV: %1$s की प्रोफ़ाइल पर जाएँ?</string>
+    <string name="approval_message">TV पर कोई आपकी प्रोफ़ाइल खोलना चाहता है। अनुमति दें, और Hearth आपका Google TV PIN डाल देगा।</string>
+    <string name="approval_allow">अनुमति दें</string>
+    <string name="approval_deny">मना करें</string>
+    <string name="approval_asked">%1$s से उनके फ़ोन पर पूछा गया। PIN अब भी यहाँ डाला जा सकता है।</string>
+    <string name="approval_denied">%1$s ने अनुमति नहीं दी।</string>
+    <string name="approval_test_title">Hearth</string>
+    <string name="approval_test_message">आपकी Google TV प्रोफ़ाइल कोई खोले, उससे पहले इस फ़ोन पर पूछा जाएगा।</string>
+</resources>

@@ -1980,6 +1980,54 @@ class AppLocalizationsPt extends AppLocalizations {
   String get pinPhoneSetupScan => 'Escaneie com um celular na mesma Wi-Fi e digite os PINs lá. Eles são criptografados no celular; a página só funciona enquanto isto estiver aberto.';
 
   @override
+  String get approvalTitle => 'Aprovar trocas pelo meu celular';
+
+  @override
+  String get approvalOn => 'Ativado';
+
+  @override
+  String get approvalOff => 'Desativado';
+
+  @override
+  String get approvalNeedsHa => 'Requer o Home Assistant';
+
+  @override
+  String get approvalNeedsHaBody => 'Seu celular pede para permitir a troca para o seu perfil pelo app do Home Assistant. Configure primeiro o Home Assistant nas Configurações, com o app no seu celular.';
+
+  @override
+  String get approvalSwitch => 'Perguntar no meu celular quando alguém trocar para o meu perfil';
+
+  @override
+  String get approvalPhone => 'Celular';
+
+  @override
+  String get approvalPhoneNone => 'Não escolhido';
+
+  @override
+  String get approvalPhonePick => 'Qual celular pergunta?';
+
+  @override
+  String get approvalNoPhones => 'O Home Assistant ainda não tem nenhum celular com o app.';
+
+  @override
+  String get approvalPin => 'Meu PIN do Google TV';
+
+  @override
+  String get approvalPinSubtitle => 'O Hearth o digita na tela de PIN do Google TV quando você permite no celular. Ele fica nesta TV, criptografado.';
+
+  @override
+  String get approvalTest => 'Enviar uma notificação de teste';
+
+  @override
+  String get approvalTestSent => 'Enviada. Confira o celular.';
+
+  @override
+  String get approvalTestFailed => 'Não foi possível enviar: verifique se o Home Assistant está acessível.';
+
+  @override
+  String get approvalFooter => 'Quando o Google TV pedir seu PIN para abrir seu perfil, seu celular recebe Permitir e Recusar. Permita, e o Hearth digita o PIN; ele também sempre pode ser digitado com o controle. Ative primeiro o PIN do Google TV no seu perfil.';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'O Hearth ainda não digita PINs no $app';
   }

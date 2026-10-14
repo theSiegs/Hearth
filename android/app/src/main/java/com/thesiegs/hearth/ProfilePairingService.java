@@ -1040,6 +1040,48 @@ public class ProfilePairingService extends AccessibilityService {
         checkPinScreen();
     }
 
+    // ---- Google TV's own PIN for a locked profile, typed once its owner allowed it on their phone (PhoneApproval) ----
+
+    /** Types the saved Google TV PIN of the profile with this key into Google TV's PIN screen, behind the cover. */
+    static boolean typeGooglePin(String profileKey, String name) {
+        ProfilePairingService service = sInstance;
+        if (service == null) {
+            Log.i(TAG, "Google TV PIN not typed: Profile Pairing isn't running");
+            return false;
+        }
+        service.mHandler.post(() -> service.startGooglePin(profileKey, name));
+        return true;
+    }
+
+    private void startGooglePin(String profileKey, String name) {
+        if (mPin != null) return;
+        String pkg = LauncherAccessibilityService.GOOGLE_TV_PACKAGE;
+        String vault = GooglePinRecipe.VAULT_NAME;
+        // One try only: Google locks a profile after wrong PINs, and a rejected one waits for a new one in Settings
+        if (!PinVault.has(this, profileKey, pkg, vault) || PinVault.rejections(this, profileKey, pkg, vault) > 0) {
+            Log.i(TAG, "Google TV PIN not typed: none saved, or the saved one was refused");
+            return;
+        }
+        PinRecipe recipe = new GooglePinRecipe();
+        char[] pin = PinVault.open(this, profileKey, pkg, vault);
+        if (pin == null) return;
+        if (pin.length != recipe.pinLength()) {
+            java.util.Arrays.fill(pin, ' ');
+            return;
+        }
+        if (mSession != null) finish(QUIET, "Google TV PIN");
+        mHandler.removeCallbacks(mGoIdle);
+        hidePinPopup();
+        setMode(true, false, pkg);
+        Session s = new Session(pkg, profileKey, name);
+        showCover(getString(R.string.google_pin_entering, name));
+        mPin = new PinRun(s, vault, recipe, pin, false);
+        mHandler.postDelayed(mPinNoScreen, PIN_SCREEN_WAIT_MS);
+        mHandler.postDelayed(mPinBroken, PIN_OVERALL_MS);
+        Log.i(TAG, "Typing the Google TV PIN for " + LogNames.key(profileKey));
+        checkPinScreen();
+    }
+
     private final Runnable mPinNoScreen = () -> {
         if (mPin != null) mPin.machine.onNoScreen();
     };
@@ -1162,6 +1204,11 @@ public class ProfilePairingService extends AccessibilityService {
         }
         // Change PIN opens Settings on the app's profile PINs, or on Streaming app PINs for the content PIN
         String settings = run.content ? ContentPin.SETTINGS_TARGET : pkg;
+        if (GooglePinRecipe.VAULT_NAME.equals(run.appProfile)) {
+            endGooglePin(run, result);
+            mHandler.postDelayed(mGoIdle, IDLE_AFTER_MS);
+            return;
+        }
         switch (result) {
             case ACCEPTED:
                 PinVault.markAccepted(this, run.owner(), pkg, run.appProfile);
@@ -1196,6 +1243,28 @@ public class ProfilePairingService extends AccessibilityService {
                 hideCover();
         }
         mHandler.postDelayed(mGoIdle, IDLE_AFTER_MS);
+    }
+
+    /** Google TV's PIN: taken, or left to the person on Google's screen (a refused one isn't typed again). */
+    private void endGooglePin(PinRun run, PinEntryMachine.Result result) {
+        String pkg = run.session.pkg;
+        switch (result) {
+            case ACCEPTED:
+                PinVault.markAccepted(this, run.owner(), pkg, run.appProfile);
+                hideCover();
+                break;
+            case REJECTED:
+            case LOCKED_OUT:
+                PinVault.markRejected(this, run.owner(), pkg, run.appProfile);
+                coverMessage(getString(R.string.google_pin_rejected));
+                break;
+            case CANCELLED:
+            case NO_PIN_SCREEN:
+                hideCover();
+                break;
+            default:
+                coverMessage(getString(R.string.google_pin_broken));
+        }
     }
 
     /** Says why Hearth stopped, on the cover, then leaves the app's PIN screen to the parent. */

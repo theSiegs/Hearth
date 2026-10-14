@@ -2016,6 +2016,54 @@ class AppLocalizationsAr extends AppLocalizations {
   String get pinPhoneSetupScan => 'امسح الرمز بهاتف على شبكة Wi-Fi نفسها واكتب الرموز هناك. تُشفَّر على الهاتف، ولا تعمل الصفحة إلا ما دام هذا مفتوحًا.';
 
   @override
+  String get approvalTitle => 'الموافقة على التبديل من هاتفي';
+
+  @override
+  String get approvalOn => 'مفعّل';
+
+  @override
+  String get approvalOff => 'متوقف';
+
+  @override
+  String get approvalNeedsHa => 'يتطلب Home Assistant';
+
+  @override
+  String get approvalNeedsHaBody => 'يسألك هاتفك عن السماح بالتبديل إلى ملفك عبر تطبيق Home Assistant للهاتف. أعدّ Home Assistant في الإعدادات أولًا، مع تطبيقه على هاتفك.';
+
+  @override
+  String get approvalSwitch => 'اسأل هاتفي عندما يبدّل أحد إلى ملفي';
+
+  @override
+  String get approvalPhone => 'الهاتف';
+
+  @override
+  String get approvalPhoneNone => 'لم يُختر';
+
+  @override
+  String get approvalPhonePick => 'أي هاتف يسأل؟';
+
+  @override
+  String get approvalNoPhones => 'لا يوجد في Home Assistant أي هاتف مسجّل بتطبيقه بعد.';
+
+  @override
+  String get approvalPin => 'رمز Google TV الخاص بي';
+
+  @override
+  String get approvalPinSubtitle => 'يدخله Hearth على شاشة رمز Google TV بعد أن تسمح بذلك على هاتفك. يبقى على هذا التلفاز مشفّرًا.';
+
+  @override
+  String get approvalTest => 'إرسال إشعار تجريبي';
+
+  @override
+  String get approvalTestSent => 'أُرسل. تحقق من الهاتف.';
+
+  @override
+  String get approvalTestFailed => 'تعذّر الإرسال: تأكد من إمكانية الوصول إلى Home Assistant.';
+
+  @override
+  String get approvalFooter => 'عندما يطلب Google TV رمزك لفتح ملفك، يتلقى هاتفك زرَّي السماح والرفض. اسمح، وسيُدخل Hearth الرمز؛ ويمكن دائمًا كتابة الرمز بجهاز التحكم أيضًا. فعّل رمز Google TV لملفك أولًا.';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'لا يستطيع Hearth بعد كتابة رموز PIN في $app';
   }

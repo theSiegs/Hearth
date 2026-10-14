@@ -1993,6 +1993,54 @@ class AppLocalizationsRu extends AppLocalizations {
   String get pinPhoneSetupScan => 'Отсканируйте телефоном в той же сети Wi-Fi и введите PIN там. Они шифруются на телефоне; страница работает, только пока это окно открыто.';
 
   @override
+  String get approvalTitle => 'Подтверждать переключение с телефона';
+
+  @override
+  String get approvalOn => 'Вкл.';
+
+  @override
+  String get approvalOff => 'Выкл.';
+
+  @override
+  String get approvalNeedsHa => 'Нужен Home Assistant';
+
+  @override
+  String get approvalNeedsHaBody => 'Телефон спрашивает, разрешить ли переход в ваш профиль, через приложение Home Assistant. Сначала настройте Home Assistant в настройках и установите его приложение на телефон.';
+
+  @override
+  String get approvalSwitch => 'Спрашивать на телефоне, когда кто-то переключается в мой профиль';
+
+  @override
+  String get approvalPhone => 'Телефон';
+
+  @override
+  String get approvalPhoneNone => 'Не выбран';
+
+  @override
+  String get approvalPhonePick => 'Какой телефон спрашивает?';
+
+  @override
+  String get approvalNoPhones => 'В Home Assistant пока нет телефонов с его приложением.';
+
+  @override
+  String get approvalPin => 'Мой PIN Google TV';
+
+  @override
+  String get approvalPinSubtitle => 'Hearth вводит его на экране PIN Google TV, когда вы разрешаете на телефоне. Хранится на этом телевизоре в зашифрованном виде.';
+
+  @override
+  String get approvalTest => 'Отправить тестовое уведомление';
+
+  @override
+  String get approvalTestSent => 'Отправлено. Проверьте телефон.';
+
+  @override
+  String get approvalTestFailed => 'Не удалось отправить: проверьте доступность Home Assistant.';
+
+  @override
+  String get approvalFooter => 'Когда Google TV запрашивает PIN, чтобы открыть ваш профиль, на телефон приходят кнопки «Разрешить» и «Отклонить». Разрешите — и Hearth введёт PIN; его всегда можно ввести и пультом. Сначала включите PIN Google TV для своего профиля.';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth пока не умеет вводить PIN-коды в $app';
   }

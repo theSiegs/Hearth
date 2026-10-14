@@ -1980,6 +1980,54 @@ class AppLocalizationsEs extends AppLocalizations {
   String get pinPhoneSetupScan => 'Escanea con un teléfono en la misma Wi-Fi y escribe ahí los PIN. Se cifran en el teléfono; la página solo funciona mientras esto esté abierto.';
 
   @override
+  String get approvalTitle => 'Aprobar cambios desde mi teléfono';
+
+  @override
+  String get approvalOn => 'Activado';
+
+  @override
+  String get approvalOff => 'Desactivado';
+
+  @override
+  String get approvalNeedsHa => 'Requiere Home Assistant';
+
+  @override
+  String get approvalNeedsHaBody => 'Tu teléfono te pide permitir el cambio a tu perfil mediante la app de Home Assistant. Configura primero Home Assistant en Ajustes, con su app en tu teléfono.';
+
+  @override
+  String get approvalSwitch => 'Preguntar en mi teléfono cuando alguien cambie a mi perfil';
+
+  @override
+  String get approvalPhone => 'Teléfono';
+
+  @override
+  String get approvalPhoneNone => 'Sin elegir';
+
+  @override
+  String get approvalPhonePick => '¿Qué teléfono pregunta?';
+
+  @override
+  String get approvalNoPhones => 'Home Assistant aún no tiene ningún teléfono con su app.';
+
+  @override
+  String get approvalPin => 'Mi PIN de Google TV';
+
+  @override
+  String get approvalPinSubtitle => 'Hearth lo escribe en la pantalla de PIN de Google TV cuando lo permites en tu teléfono. Se queda en esta TV, cifrado.';
+
+  @override
+  String get approvalTest => 'Enviar una notificación de prueba';
+
+  @override
+  String get approvalTestSent => 'Enviada. Revisa el teléfono.';
+
+  @override
+  String get approvalTestFailed => 'No se pudo enviar: comprueba que Home Assistant esté accesible.';
+
+  @override
+  String get approvalFooter => 'Cuando Google TV pida tu PIN para abrir tu perfil, tu teléfono recibe Permitir y Rechazar. Si lo permites, Hearth escribe el PIN; también se puede escribir siempre con el mando. Activa primero el PIN de Google TV en tu perfil.';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth aún no puede escribir PIN en $app';
   }

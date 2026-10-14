@@ -1969,6 +1969,54 @@ class AppLocalizationsKo extends AppLocalizations {
   String get pinPhoneSetupScan => '같은 Wi-Fi의 휴대전화로 스캔하고 그곳에서 PIN을 입력하세요. PIN은 휴대전화에서 암호화되며, 이 창이 열려 있는 동안에만 페이지가 작동합니다.';
 
   @override
+  String get approvalTitle => '내 휴대전화로 전환 승인';
+
+  @override
+  String get approvalOn => '켜짐';
+
+  @override
+  String get approvalOff => '꺼짐';
+
+  @override
+  String get approvalNeedsHa => 'Home Assistant 필요';
+
+  @override
+  String get approvalNeedsHaBody => 'Home Assistant 휴대전화 앱을 통해 내 프로필로의 전환을 허용할지 묻습니다. 먼저 설정에서 Home Assistant를 설정하고 휴대전화에 앱을 설치하세요.';
+
+  @override
+  String get approvalSwitch => '누군가 내 프로필로 전환하면 휴대전화로 묻기';
+
+  @override
+  String get approvalPhone => '휴대전화';
+
+  @override
+  String get approvalPhoneNone => '선택 안 함';
+
+  @override
+  String get approvalPhonePick => '어느 휴대전화로 물을까요?';
+
+  @override
+  String get approvalNoPhones => 'Home Assistant에 앱으로 로그인한 휴대전화가 아직 없습니다.';
+
+  @override
+  String get approvalPin => '내 Google TV PIN';
+
+  @override
+  String get approvalPinSubtitle => '휴대전화에서 허용하면 Hearth가 Google TV PIN 화면에 입력합니다. 이 TV에 암호화되어 저장됩니다.';
+
+  @override
+  String get approvalTest => '테스트 알림 보내기';
+
+  @override
+  String get approvalTestSent => '보냈습니다. 휴대전화를 확인하세요.';
+
+  @override
+  String get approvalTestFailed => '보내지 못했습니다. Home Assistant에 연결되는지 확인하세요.';
+
+  @override
+  String get approvalFooter => 'Google TV가 프로필을 열기 위해 PIN을 요청하면 휴대전화에 허용과 거부가 표시됩니다. 허용하면 Hearth가 PIN을 입력하며, 리모컨으로도 언제든 입력할 수 있습니다. 먼저 내 프로필의 Google TV PIN을 켜세요.';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth는 아직 $app에서 PIN을 입력할 수 없습니다';
   }

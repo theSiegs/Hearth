@@ -20,6 +20,7 @@ Only for the features below, and only when they're on.
 | Continue Watching artwork | The image hosts the streaming apps name | Requests for those images, with no cookies or referrer, over https (http only on your home network); cached for 30 days |
 | Updates | `api.github.com`, GitHub release downloads | A check for new releases of Hearth and HearthTube |
 | Streaming app PINs | `raw.githubusercontent.com` (Hearth's repository) | A request for the list of app versions Hearth doesn't type PINs in, at most twice a day while a PIN is saved |
+| Approve switches from my phone | Your Home Assistant | While Google TV's PIN screen waits for an answer: a notification to the phone you chose (whose profile, Allow and Deny), and a listen for its answer |
 | Home Assistant | The address you enter | Notifications' button actions, the dashboard, and TV status (see [Home Assistant](home-assistant.md)) |
 
 Using the Breezy Weather app instead of Open-Meteo makes Hearth read weather from that app on the TV and connect to

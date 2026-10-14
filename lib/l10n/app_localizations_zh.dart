@@ -1969,6 +1969,54 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pinPhoneSetupScan => '用连接同一 Wi-Fi 的手机扫描，并在手机上输入 PIN。PIN 会在手机上加密；仅当此窗口打开时页面才可用。';
 
   @override
+  String get approvalTitle => '在我的手机上批准切换';
+
+  @override
+  String get approvalOn => '开';
+
+  @override
+  String get approvalOff => '关';
+
+  @override
+  String get approvalNeedsHa => '需要 Home Assistant';
+
+  @override
+  String get approvalNeedsHaBody => '手机会通过 Home Assistant 应用询问是否允许切换到你的个人资料。请先在设置中设置 Home Assistant，并在手机上安装其应用。';
+
+  @override
+  String get approvalSwitch => '有人切换到我的个人资料时在手机上询问';
+
+  @override
+  String get approvalPhone => '手机';
+
+  @override
+  String get approvalPhoneNone => '未选择';
+
+  @override
+  String get approvalPhonePick => '由哪部手机询问？';
+
+  @override
+  String get approvalNoPhones => 'Home Assistant 中还没有登录其应用的手机。';
+
+  @override
+  String get approvalPin => '我的 Google TV PIN';
+
+  @override
+  String get approvalPinSubtitle => '你在手机上允许后，Hearth 会在 Google TV 的 PIN 屏幕上输入它。它加密保存在这台电视上。';
+
+  @override
+  String get approvalTest => '发送测试通知';
+
+  @override
+  String get approvalTestSent => '已发送。请查看手机。';
+
+  @override
+  String get approvalTestFailed => '无法发送：请检查能否连接 Home Assistant。';
+
+  @override
+  String get approvalFooter => '当 Google TV 要求输入 PIN 以打开你的个人资料时，你的手机会收到“允许”和“拒绝”。允许后 Hearth 会输入 PIN；也始终可以用遥控器输入。请先为你的个人资料开启 Google TV PIN。';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth 暂时还无法在 $app 中输入 PIN';
   }

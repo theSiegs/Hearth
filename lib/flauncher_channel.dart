@@ -264,6 +264,27 @@ class FLauncherChannel {
           "saveProfilePin", {"packageName": packageName, "appProfile": appProfile, "pin": pin}) ??
       false;
 
+  /// Approving switches from a phone, for the profile on now: {haConfigured, on, notify, pin (as a PIN's status)}.
+  Future<Map<dynamic, dynamic>> getPhoneApproval() async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getPhoneApproval") ?? {};
+
+  Future<void> setPhoneApprovalOn(bool on) async => await _methodChannel.invokeMethod("setPhoneApprovalOn", on);
+
+  /// The Home Assistant companion app's notify service ("mobile_app_…") that reaches this profile's owner.
+  Future<void> setPhoneApprovalNotify(String? service) async =>
+      await _methodChannel.invokeMethod("setPhoneApprovalNotify", service);
+
+  Future<List<String>> getHaNotifyServices() async =>
+      (await _methodChannel.invokeListMethod<String>("getHaNotifyServices")) ?? [];
+
+  Future<bool> testPhoneApproval() async => await _methodChannel.invokeMethod<bool>("testPhoneApproval") ?? false;
+
+  /// The profile on now's Google TV PIN, typed into Google TV's PIN screen once its owner allowed a switch.
+  Future<bool> saveGoogleTvPin(String pin) async =>
+      await _methodChannel.invokeMethod<bool>("saveGoogleTvPin", pin) ?? false;
+
+  Future<void> removeGoogleTvPin() async => await _methodChannel.invokeMethod("removeGoogleTvPin");
+
   /// Whether Hearth types saved streaming PINs at all on this TV (one switch for every app and profile).
   Future<bool> isPinTypingOn() async => await _methodChannel.invokeMethod<bool>("isPinTypingOn") ?? true;
 

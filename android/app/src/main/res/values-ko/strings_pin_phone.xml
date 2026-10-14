@@ -17,4 +17,5 @@
     <string name="pin_phone_old_browser">이 페이지는 최신 브라우저에서 TV의 QR 코드로 열어야 합니다.</string>
     <string name="pin_phone_none">아직 설정할 항목이 없습니다. 각 스트리밍 앱을 Hearth에서 한 번 열어 프로필을 알게 하세요.</string>
     <string name="pin_phone_open_once">%1$s: 먼저 Hearth에서 한 번 여세요.</string>
+    <string name="pin_phone_google">내 Google TV PIN(휴대전화로 전환을 승인하기 위해)</string>
 </resources>

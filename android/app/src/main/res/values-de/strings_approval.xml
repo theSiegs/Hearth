@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Allowing a switch into a PIN-locked profile from a phone (PhoneApproval), and typing Google TV's PIN -->
+<resources>
+    <string name="google_pin_entering">Profil von %1$s wird entsperrt…</string>
+    <string name="google_pin_rejected">Google TV hat die gespeicherte PIN nicht angenommen. Gib sie auf dem Tastenfeld ein; Hearth gibt sie erst wieder ein, wenn sie neu gespeichert ist.</string>
+    <string name="google_pin_broken">Hearth konnte die PIN nicht fertig eingeben. Gib sie auf dem Tastenfeld ein.</string>
+    <string name="approval_title">TV: zum Profil von %1$s wechseln?</string>
+    <string name="approval_message">Jemand am Fernseher möchte dein Profil öffnen. Erlaubst du es, gibt Hearth deine Google TV-PIN ein.</string>
+    <string name="approval_allow">Erlauben</string>
+    <string name="approval_deny">Ablehnen</string>
+    <string name="approval_asked">%1$s wurde auf dem Telefon gefragt. Die PIN kann auch hier eingegeben werden.</string>
+    <string name="approval_denied">%1$s hat es nicht erlaubt.</string>
+    <string name="approval_test_title">Hearth</string>
+    <string name="approval_test_message">Dieses Telefon wird gefragt, bevor jemand dein Google TV-Profil öffnet.</string>
+</resources>

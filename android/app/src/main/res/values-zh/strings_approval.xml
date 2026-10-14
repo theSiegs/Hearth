@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Allowing a switch into a PIN-locked profile from a phone (PhoneApproval), and typing Google TV's PIN -->
+<resources>
+    <string name="google_pin_entering">正在解锁 %1$s 的个人资料…</string>
+    <string name="google_pin_rejected">Google TV 未接受已保存的 PIN。请在键盘上输入；重新保存之前 Hearth 不会再输入它。</string>
+    <string name="google_pin_broken">Hearth 未能完成 PIN 输入。请在键盘上输入。</string>
+    <string name="approval_title">电视：切换到 %1$s 的个人资料？</string>
+    <string name="approval_message">电视前有人想打开你的个人资料。允许后，Hearth 会输入你的 Google TV PIN。</string>
+    <string name="approval_allow">允许</string>
+    <string name="approval_deny">拒绝</string>
+    <string name="approval_asked">已在 %1$s 的手机上请求确认。仍可在此输入 PIN。</string>
+    <string name="approval_denied">%1$s 没有允许。</string>
+    <string name="approval_test_title">Hearth</string>
+    <string name="approval_test_message">有人打开你的 Google TV 个人资料前，会先在这部手机上询问。</string>
+</resources>

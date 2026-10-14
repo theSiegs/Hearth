@@ -1980,6 +1980,54 @@ class AppLocalizationsFr extends AppLocalizations {
   String get pinPhoneSetupScan => 'Scannez avec un téléphone sur le même Wi-Fi et saisissez-y les codes. Ils sont chiffrés sur le téléphone ; la page ne fonctionne que tant que ceci est ouvert.';
 
   @override
+  String get approvalTitle => 'Approuver les changements depuis mon téléphone';
+
+  @override
+  String get approvalOn => 'Activé';
+
+  @override
+  String get approvalOff => 'Désactivé';
+
+  @override
+  String get approvalNeedsHa => 'Nécessite Home Assistant';
+
+  @override
+  String get approvalNeedsHaBody => 'Votre téléphone vous demande d’autoriser le passage à votre profil via l’app Home Assistant. Configurez d’abord Home Assistant dans les paramètres, avec son app sur votre téléphone.';
+
+  @override
+  String get approvalSwitch => 'Demander sur mon téléphone quand quelqu’un passe à mon profil';
+
+  @override
+  String get approvalPhone => 'Téléphone';
+
+  @override
+  String get approvalPhoneNone => 'Non choisi';
+
+  @override
+  String get approvalPhonePick => 'Quel téléphone demande ?';
+
+  @override
+  String get approvalNoPhones => 'Home Assistant n’a encore aucun téléphone connecté avec son app.';
+
+  @override
+  String get approvalPin => 'Mon code Google TV';
+
+  @override
+  String get approvalPinSubtitle => 'Hearth le saisit sur l’écran de code de Google TV dès que vous l’autorisez sur votre téléphone. Il reste sur ce téléviseur, chiffré.';
+
+  @override
+  String get approvalTest => 'Envoyer une notification de test';
+
+  @override
+  String get approvalTestSent => 'Envoyée. Vérifiez le téléphone.';
+
+  @override
+  String get approvalTestFailed => 'Envoi impossible : vérifiez que Home Assistant est joignable.';
+
+  @override
+  String get approvalFooter => 'Quand Google TV demande votre code pour ouvrir votre profil, votre téléphone reçoit Autoriser et Refuser. Autorisez, et Hearth saisit le code ; il peut toujours aussi être saisi avec la télécommande. Activez d’abord le code Google TV pour votre profil.';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth ne sait pas encore saisir les codes dans $app';
   }

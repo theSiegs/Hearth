@@ -17,4 +17,5 @@
     <string name="pin_phone_old_browser">このページには新しいブラウザが必要です。テレビの QR コードから開いてください。</string>
     <string name="pin_phone_none">まだ設定するものはありません。各ストリーミング アプリを Hearth から一度開いて、プロフィールを覚えさせてください。</string>
     <string name="pin_phone_open_once">%1$s: まず Hearth から一度開いてください。</string>
+    <string name="pin_phone_google">あなたの Google TV PIN（スマートフォンで切り替えを許可するため）</string>
 </resources>

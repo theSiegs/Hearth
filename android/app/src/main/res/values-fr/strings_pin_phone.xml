@@ -17,4 +17,5 @@
     <string name="pin_phone_old_browser">Cette page nécessite un navigateur plus récent, ouvert depuis le code QR du téléviseur.</string>
     <string name="pin_phone_none">Rien à configurer pour l’instant : ouvrez chaque app de streaming une fois depuis Hearth pour qu’il apprenne ses profils.</string>
     <string name="pin_phone_open_once">%1$s : ouvrez-la d’abord une fois depuis Hearth.</string>
+    <string name="pin_phone_google">Votre code Google TV (pour approuver les changements depuis votre téléphone)</string>
 </resources>

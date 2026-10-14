@@ -17,4 +17,5 @@
     <string name="pin_phone_old_browser">Для этой страницы нужен более новый браузер, открытый по QR-коду с телевизора.</string>
     <string name="pin_phone_none">Пока нечего настраивать: откройте каждое стриминговое приложение один раз из Hearth, чтобы он узнал его профили.</string>
     <string name="pin_phone_open_once">%1$s: сначала откройте его один раз из Hearth.</string>
+    <string name="pin_phone_google">Ваш PIN Google TV (чтобы подтверждать переключение с телефона)</string>
 </resources>

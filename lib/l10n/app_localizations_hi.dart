@@ -1978,6 +1978,54 @@ class AppLocalizationsHi extends AppLocalizations {
   String get pinPhoneSetupScan => 'उसी Wi-Fi पर किसी फ़ोन से स्कैन करें और वहीं PIN लिखें। वे फ़ोन पर एन्क्रिप्ट होते हैं; पेज तभी तक काम करता है जब तक यह खुला है।';
 
   @override
+  String get approvalTitle => 'अपने फ़ोन से स्विच की अनुमति दें';
+
+  @override
+  String get approvalOn => 'चालू';
+
+  @override
+  String get approvalOff => 'बंद';
+
+  @override
+  String get approvalNeedsHa => 'Home Assistant ज़रूरी';
+
+  @override
+  String get approvalNeedsHaBody => 'आपका फ़ोन Home Assistant के फ़ोन ऐप से आपकी प्रोफ़ाइल पर स्विच की अनुमति माँगता है। पहले सेटिंग में Home Assistant सेट करें, और उसका ऐप अपने फ़ोन पर रखें।';
+
+  @override
+  String get approvalSwitch => 'कोई मेरी प्रोफ़ाइल पर स्विच करे तो मेरे फ़ोन पर पूछें';
+
+  @override
+  String get approvalPhone => 'फ़ोन';
+
+  @override
+  String get approvalPhoneNone => 'चुना नहीं गया';
+
+  @override
+  String get approvalPhonePick => 'कौन सा फ़ोन पूछे?';
+
+  @override
+  String get approvalNoPhones => 'Home Assistant में अभी उसके ऐप वाला कोई फ़ोन नहीं है।';
+
+  @override
+  String get approvalPin => 'मेरा Google TV PIN';
+
+  @override
+  String get approvalPinSubtitle => 'आप फ़ोन पर अनुमति दें तो Hearth इसे Google TV की PIN स्क्रीन पर डालता है। यह इसी TV पर एन्क्रिप्ट होकर रहता है।';
+
+  @override
+  String get approvalTest => 'परीक्षण सूचना भेजें';
+
+  @override
+  String get approvalTestSent => 'भेज दी गई। फ़ोन देखें।';
+
+  @override
+  String get approvalTestFailed => 'भेजी नहीं जा सकी: देखें कि Home Assistant तक पहुँच है।';
+
+  @override
+  String get approvalFooter => 'जब Google TV आपकी प्रोफ़ाइल खोलने के लिए PIN माँगे, तो आपके फ़ोन पर अनुमति दें और मना करें आते हैं। अनुमति दें, और Hearth PIN डाल देगा; रिमोट से PIN हमेशा डाला जा सकता है। पहले अपनी प्रोफ़ाइल के लिए Google TV PIN चालू करें।';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth अभी $app में PIN टाइप नहीं कर सकता';
   }

@@ -17,4 +17,5 @@
     <string name="pin_phone_old_browser">इस पेज के लिए नया ब्राउज़र चाहिए, जो TV के QR कोड से खोला गया हो।</string>
     <string name="pin_phone_none">अभी सेट करने को कुछ नहीं: हर स्ट्रीमिंग ऐप को Hearth से एक बार खोलें, ताकि वह उसकी प्रोफ़ाइलें जान ले।</string>
     <string name="pin_phone_open_once">%1$s: पहले इसे Hearth से एक बार खोलें।</string>
+    <string name="pin_phone_google">आपका Google TV PIN (फ़ोन से स्विच की अनुमति के लिए)</string>
 </resources>

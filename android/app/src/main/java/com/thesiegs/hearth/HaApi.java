@@ -47,6 +47,17 @@ final class HaApi {
         }
     }
 
+    /** Home Assistant's services, by domain ([{domain, services: {name: …}}]), or null when they can't be read. */
+    static JSONArray services(Context context) {
+        byte[] raw = request(context, "GET", "/api/services", null);
+        if (raw == null) return null;
+        try {
+            return new JSONArray(new String(raw, StandardCharsets.UTF_8));
+        } catch (JSONException e) {
+            return null;
+        }
+    }
+
     /** A still picture from a camera entity, or null. */
     static byte[] cameraImage(Context context, String entityId) {
         return request(context, "GET", "/api/camera_proxy/" + entityId, null);
