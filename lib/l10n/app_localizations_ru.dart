@@ -1940,6 +1940,20 @@ class AppLocalizationsRu extends AppLocalizations {
   String get profilePinPaused => 'Сохранён — приостановлен (приложение изменилось)';
 
   @override
+  String get profilePinGaveUp => 'Сохранён — дважды не принят; сохраните заново';
+
+  @override
+  String get pinConsentTitle => 'Прежде чем Hearth будет вводить PIN за вас';
+
+  @override
+  String pinConsentBody(String app) {
+    return 'Hearth будет управлять $app за вас: он читает экран профилей приложения и вводит этот PIN на его клавиатуре, за карточкой. PIN хранится на этом телевизоре в зашифрованном виде, и его можно удалить здесь в любой момент; если выключить привязку профилей, всё это прекратится. В профиле взрослого Hearth вводит его, только когда у этого профиля есть собственный PIN Google TV. Условия стриминговых сервисов могут не разрешать приложению делать это за вас.';
+  }
+
+  @override
+  String get pinConsentAgree => 'Продолжить';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth пока не умеет вводить PIN-коды в $app';
   }

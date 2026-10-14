@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="profile_pairing_description">当 Hearth 打开 Netflix、Disney+、Apple TV、HBO Max 或 Paramount+ 时，在应用的“谁在观看？”界面中选择与 Google TV 个人资料对应的个人资料。它只读取这些界面，且仅在 Hearth 刚打开应用之后读取。</string>
+    <string name="profile_pairing_description">Hearth 打开 Netflix、Disney+、Apple TV、HBO Max 或 Paramount+ 时，会在应用的“谁在观看？”屏幕上选择与 Google TV 个人资料对应的个人资料，如果家长保存了该个人资料的 PIN，还会输入它。它只读取 Hearth 打开应用后紧接着出现的这些屏幕，以及节目开始时 Paramount+ 的 PIN 请求。它读取的内容不会离开电视。</string>
 </resources>

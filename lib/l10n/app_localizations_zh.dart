@@ -1916,6 +1916,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profilePinPaused => '已保存 — 已暂停（应用已变化）';
 
   @override
+  String get profilePinGaveUp => '已保存 — 两次未被接受；请重新保存';
+
+  @override
+  String get pinConsentTitle => '在 Hearth 替你输入 PIN 之前';
+
+  @override
+  String pinConsentBody(String app) {
+    return 'Hearth 会替你操作 $app：它读取应用的个人资料屏幕，并在一张卡片后面于键盘上输入这个 PIN。PIN 加密保存在这台电视上，你可以随时在这里删除；关闭个人资料配对即可全部停止。在成人的个人资料中，只有该个人资料设置了自己的 Google TV PIN，Hearth 才会输入。流媒体服务的条款可能不允许应用替你这样做。';
+  }
+
+  @override
+  String get pinConsentAgree => '继续';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth 暂时还无法在 $app 中输入 PIN';
   }

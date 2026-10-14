@@ -1916,6 +1916,20 @@ class AppLocalizationsTr extends AppLocalizations {
   String get profilePinPaused => 'Kayıtlı — duraklatıldı (uygulama değişti)';
 
   @override
+  String get profilePinGaveUp => 'Kaydedildi — iki kez kabul edilmedi; yeniden kaydedin';
+
+  @override
+  String get pinConsentTitle => 'Hearth sizin yerinize PIN girmeden önce';
+
+  @override
+  String pinConsentBody(String app) {
+    return 'Hearth $app uygulamasını sizin yerinize kullanacak: uygulamanın profil ekranını okur ve bir kartın arkasında bu PIN’i tuş takımına girer. PIN bu TV’de şifreli olarak kalır ve buradan istediğiniz zaman kaldırabilirsiniz; Profil Eşleştirme’yi kapatmak hepsini durdurur. Bir yetişkinin profilinde Hearth, PIN’i yalnızca o profilin kendi Google TV PIN’i varsa girer. Yayın hizmetlerinin koşulları bir uygulamanın bunu sizin yerinize yapmasına izin vermeyebilir.';
+  }
+
+  @override
+  String get pinConsentAgree => 'Devam';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth henüz $app içinde PIN yazamıyor';
   }

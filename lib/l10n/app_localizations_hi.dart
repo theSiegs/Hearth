@@ -1925,6 +1925,20 @@ class AppLocalizationsHi extends AppLocalizations {
   String get profilePinPaused => 'सहेजा गया — रुका हुआ (ऐप बदल गया)';
 
   @override
+  String get profilePinGaveUp => 'सहेजा गया — दो बार स्वीकार नहीं हुआ; फिर से सहेजें';
+
+  @override
+  String get pinConsentTitle => 'Hearth आपके लिए PIN डाले, उससे पहले';
+
+  @override
+  String pinConsentBody(String app) {
+    return 'Hearth आपके लिए $app चलाएगा: यह ऐप की प्रोफ़ाइल स्क्रीन पढ़ता है और एक कार्ड के पीछे उसके कीपैड पर यह PIN डालता है। PIN इसी TV पर, एन्क्रिप्ट होकर रहता है, और आप इसे यहाँ से कभी भी हटा सकते हैं; प्रोफ़ाइल पेयरिंग बंद करने पर यह सब रुक जाता है। किसी वयस्क की प्रोफ़ाइल में, Hearth इसे तभी डालता है जब उस प्रोफ़ाइल का अपना Google TV PIN हो। हो सकता है स्ट्रीमिंग सेवाओं की शर्तें किसी ऐप को आपके लिए ऐसा करने की अनुमति न दें।';
+  }
+
+  @override
+  String get pinConsentAgree => 'जारी रखें';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth अभी $app में PIN टाइप नहीं कर सकता';
   }

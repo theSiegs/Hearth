@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="profile_pairing_description">जब Hearth Netflix, Disney+, Apple TV, HBO Max या Paramount+ खोलता है, तो ऐप की “कौन देख रहा है?” स्क्रीन पर Google TV प्रोफ़ाइल से मेल खाती प्रोफ़ाइल चुनता है। यह केवल उन्हीं स्क्रीन को पढ़ता है, और केवल Hearth के ऐप खोलने के तुरंत बाद।</string>
+    <string name="profile_pairing_description">जब Hearth Netflix, Disney+, Apple TV, HBO Max या Paramount+ खोलता है, तो वह ऐप की \"कौन देख रहा है?\" स्क्रीन पर Google TV प्रोफ़ाइल से जुड़ी प्रोफ़ाइल चुनता है, और अगर किसी अभिभावक ने उस प्रोफ़ाइल का PIN सहेजा है तो उसे डालता है। यह केवल वे स्क्रीनें पढ़ता है, Hearth के ऐप खोलने के ठीक बाद, और कोई शीर्षक शुरू होने पर Paramount+ का PIN अनुरोध। यह जो कुछ पढ़ता है, वह TV से बाहर नहीं जाता।</string>
 </resources>

@@ -56,12 +56,12 @@ final class GrownUpsApps {
             List<String> apps = toStop(app, profileKey);
             if (apps.isEmpty()) return;
             if (!SetupFixes.isAdbEnabled(app) || !SelfAdb.isTrusted(app)) {
-                Log.i(TAG, "Not stopping " + apps + " for " + profileKey + ": Hearth's adb isn't set up");
+                Log.i(TAG, "Not stopping " + apps + " for " + LogNames.key(profileKey) + ": Hearth's adb isn't set up");
                 return;
             }
             try (SelfAdb shell = SelfAdb.open(app, QUIET_TIMEOUT_MS)) {
                 for (String pkg : apps) shell.run("am force-stop " + pkg);
-                Log.i(TAG, "Stopped " + apps + " so they ask who's watching (" + profileKey + ")");
+                Log.i(TAG, "Stopped " + apps + " so they ask who's watching (" + LogNames.key(profileKey) + ")");
             } catch (Exception e) {
                 Log.i(TAG, "Couldn't stop " + apps + ": " + e);
             }

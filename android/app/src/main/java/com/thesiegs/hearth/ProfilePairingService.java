@@ -175,12 +175,12 @@ public class ProfilePairingService extends AccessibilityService {
         String mode = ProfilePairing.getMode(context, packageName, key);
         String name = LauncherAccessibilityService.getActiveProfileName(context);
         if (ProfilePairing.MODE_PICKER.equals(mode)) {
-            Log.i(TAG, packageName + " skipped: " + key + " always gets the picker");
+            Log.i(TAG, packageName + " skipped: " + LogNames.key(key) + " always gets the picker");
             return;
         }
         // Without a name only a chosen app profile can be picked (matching needs the name)
         if ((name == null || name.isEmpty()) && !ProfilePairing.MODE_PROFILE.equals(mode)) {
-            Log.i(TAG, packageName + " skipped: " + key + " isn't named yet");
+            Log.i(TAG, packageName + " skipped: " + LogNames.key(key) + " isn't named yet");
             return;
         }
         String hearthProfile = name != null && !name.isEmpty() ? name : ProfileUsers.displayName(context, key);
@@ -207,10 +207,13 @@ public class ProfilePairingService extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         sInstance = this;
-        setMode(false, false);
+        setMode(false, false, null);
         getContentResolver().registerContentObserver(Settings.Global.getUriFor(RESEARCH_SETTING), false,
                 mResearchObserver);
-        applyResearch();
+        // Not a setting left from before the service (re)started: research starts only when it's set
+        if (Settings.Global.getString(getContentResolver(), RESEARCH_SETTING) != null) {
+            Log.i(RESEARCH_TAG, "the setting was left on: set it again to go on");
+        }
         // Just turned on from the setup flow: back to it
         SetupReturn.onConnected(this, SetupReturn.PROFILE_PAIRING);
     }
@@ -219,10 +222,20 @@ public class ProfilePairingService extends AccessibilityService {
     // `adb shell settings put global hearth_pin_research <package>` makes the service listen to that app, in
     // screen-reader mode where the app needs it, and log what it announces and focuses (tag HearthResearch), so a
     // person driving the remote by adb can see where the focus is. `settings delete global hearth_pin_research` ends
-    // it. Off unless set; it logs keypad labels, so it's for test profiles and throwaway PINs only.
+    // it. Off unless set; it logs keypad labels, so it's for test profiles and throwaway PINs only. It ends itself
+    // after RESEARCH_MAX_MS even if the setting stays (left on, it kept an app in screen-reader mode and Hearth missed
+    // keys and windows); setting it again starts it again.
     private static final String RESEARCH_SETTING = "hearth_pin_research";
     private static final String RESEARCH_TAG = "HearthResearch";
     private String mResearch;
+    private static final long RESEARCH_MAX_MS = 30 * 60_000;
+    private final Runnable mResearchExpired = () -> {
+        if (mResearch == null) return;
+        Log.i(RESEARCH_TAG, "off after " + RESEARCH_MAX_MS / 60_000 + " minutes; `settings delete global "
+                + RESEARCH_SETTING + "`, or set it again to go on");
+        mResearch = null;
+        mHandler.post(() -> this.mGoIdle.run());
+    };
     private final android.database.ContentObserver mResearchObserver =
             new android.database.ContentObserver(new Handler(Looper.getMainLooper())) {
                 @Override
@@ -236,9 +249,11 @@ public class ProfilePairingService extends AccessibilityService {
         if (pkg != null && pkg.isEmpty()) pkg = null;
         mResearch = pkg;
         Log.i(RESEARCH_TAG, pkg == null ? "off" : "listening to " + pkg);
+        mHandler.removeCallbacks(mResearchExpired);
+        if (pkg != null) mHandler.postDelayed(mResearchExpired, RESEARCH_MAX_MS);
         if (pkg != null) {
             // Screen-reader mode for every app here: several (Netflix, Hulu) describe their screens only then
-            setMode(true, true);
+            setMode(true, true, pkg);
             setListeningTo(pkg);
         } else {
             mHandler.post(mGoIdle);
@@ -300,13 +315,15 @@ public class ProfilePairingService extends AccessibilityService {
     }
 
     /**
-     * Listens to the app only during a launch. Screen-reader mode (spoken feedback) makes Netflix, Apple TV and HBO
-     * Max describe their pickers; it's on only for those launches so apps aren't otherwise in screen-reader mode.
+     * Listens to the app only during a launch, and only to that app (whether it's left is Hearth's other service's
+     * to tell: onWindowOf). Screen-reader mode (spoken feedback) makes Netflix, Apple TV and HBO Max describe their
+     * pickers; it's on only for those launches so apps aren't otherwise in screen-reader mode.
      */
-    private void setMode(boolean listening, boolean screenReader) {
+    private void setMode(boolean listening, boolean screenReader, String pkg) {
         AccessibilityServiceInfo info = getServiceInfo();
         if (info == null) return;
         info.eventTypes = listening ? AccessibilityEvent.TYPES_ALL_MASK : 0;
+        info.packageNames = listening && pkg != null ? new String[]{pkg} : null;
         info.feedbackType = screenReader
                 ? AccessibilityServiceInfo.FEEDBACK_SPOKEN : AccessibilityServiceInfo.FEEDBACK_GENERIC;
         int readerFlags = AccessibilityServiceInfo.FLAG_REQUEST_TOUCH_EXPLORATION_MODE;
@@ -320,7 +337,7 @@ public class ProfilePairingService extends AccessibilityService {
 
     private final Runnable mGoIdle = () -> {
         if (mSession != null || mPin != null || mResearch != null) return;
-        setMode(false, false);
+        setMode(false, false, null);
         // The app stops speaking once screen-reader mode is off; until then Hearth voice keeps it quiet.
         setListeningTo(null);
     };
@@ -341,9 +358,9 @@ public class ProfilePairingService extends AccessibilityService {
         mRecentSpeech.clear();
         mSession.kids = ProfileUsers.isKids(this);
         setListeningTo(pkg);
-        setMode(true, needsScreenReaderMode(pkg));
+        setMode(true, needsScreenReaderMode(pkg), pkg);
         mHandler.postDelayed(mTimeout, WAIT_FOR_PICKER_MS);
-        Log.i(TAG, "Watching " + pkg + " for " + hearthProfile);
+        Log.i(TAG, "Watching " + pkg + " for " + LogNames.of(hearthProfile));
     }
 
     private void finish(int outcome, String why) {
@@ -385,6 +402,23 @@ public class ProfilePairingService extends AccessibilityService {
 
     // ---- Events ----
 
+    /**
+     * A window came up (from Hearth's other service, which sees them all: this one listens only to the app it's
+     * handling). Another app in front once the picker was up: the user went elsewhere.
+     */
+    static void onWindowOf(String packageName) {
+        ProfilePairingService service = sInstance;
+        if (service == null || packageName == null) return;
+        service.mHandler.post(() -> {
+            Session s = service.mSession;
+            if (s != null && s.pickerSeen && !s.pkg.equals(packageName)
+                    && !packageName.startsWith(service.getPackageName())
+                    && !"com.android.systemui".equals(packageName)) {
+                service.finish(QUIET, "left for " + packageName);
+            }
+        });
+    }
+
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event.getEventType() == AccessibilityEvent.TYPE_ANNOUNCEMENT && event.getPackageName() != null
@@ -399,15 +433,7 @@ public class ProfilePairingService extends AccessibilityService {
         if (s == null) return;
         CharSequence eventPkg = event.getPackageName();
         int type = event.getEventType();
-        if (eventPkg == null || !s.pkg.contentEquals(eventPkg)) {
-            // Another app came to the front once the picker was up: the user went elsewhere.
-            if (s.pickerSeen && type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && eventPkg != null
-                    && !eventPkg.toString().startsWith(getPackageName())
-                    && !"com.android.systemui".contentEquals(eventPkg)) {
-                finish(QUIET, "left for " + eventPkg);
-            }
-            return;
-        }
+        if (eventPkg == null || !s.pkg.contentEquals(eventPkg)) return;
         if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && !s.appShown) {
             s.appShown = true;
             if (ProfilePairing.MAX.equals(s.pkg)) scheduleMaxProbe(s);
@@ -421,7 +447,7 @@ public class ProfilePairingService extends AccessibilityService {
                     && source.getClassName().toString().endsWith("Button")) {
                 String[] parts = desc.toString().split(",\\s*");
                 s.highlighted = parts[parts.length - 1].trim();
-                Log.i(TAG, "Apple TV highlights " + s.highlighted);
+                Log.i(TAG, "Apple TV highlights " + LogNames.of(s.highlighted));
             }
         }
         switch (s.pkg) {
@@ -599,7 +625,7 @@ public class ProfilePairingService extends AccessibilityService {
         String target = ProfilePairing.choose(this, s.pkg, s.key, s.hearthProfile, known, s.kids);
         // Until Hearth has heard the whole list once (for the Profile Pairing menu and nickname matches), walk to
         // the end first, then come back to the right profile.
-        Log.i(TAG, "Focused " + name + " (" + index + " of " + count + ")");
+        Log.i(TAG, "Focused " + LogNames.of(name) + " (" + index + " of " + count + ")");
         if (count > 0 && index == count) s.reachedEnd = true;
         boolean learning = !complete && count > 0 && ProfilePairing.getSeenNames(this, s.pkg).size() < count
                 && !s.reachedEnd && s.reversals == 0;
@@ -611,11 +637,12 @@ public class ProfilePairingService extends AccessibilityService {
         if (target != null && ProfilePairing.normalize(target).equals(ProfilePairing.normalize(name))) {
             pressKey(0);
             s.pickedName = name;
-            finish(PICKED, "chose " + name);
+            finish(PICKED, "chose " + LogNames.of(name));
             return;
         }
         if (complete && target == null) {
-            finish(NO_MATCH, "no profile matches " + s.hearthProfile + " in " + s.names.keySet());
+            finish(NO_MATCH, "no profile matches " + LogNames.of(s.hearthProfile) + " in "
+                    + LogNames.of(s.names.keySet()));
             return;
         }
         // Steer only by positions heard this launch: Netflix's spoken "N of M" doesn't reliably match Up/Down order.
@@ -643,7 +670,7 @@ public class ProfilePairingService extends AccessibilityService {
 
     private void step(Session s) {
         if (s.reversals > 2 || ++s.steps > MAX_STEPS) {
-            finish(NO_MATCH, "couldn't find the profile for " + s.hearthProfile);
+            finish(NO_MATCH, "couldn't find the profile for " + LogNames.of(s.hearthProfile));
             return;
         }
         s.waitingForStep = true;
@@ -704,7 +731,7 @@ public class ProfilePairingService extends AccessibilityService {
         ProfilePairing.rememberNames(this, s.pkg, names, true);
         String target = ProfilePairing.choose(this, s.pkg, s.key, s.hearthProfile, names, s.kids);
         if (target == null) {
-            finish(NO_MATCH, "no profile matches " + s.hearthProfile + " in " + names);
+            finish(NO_MATCH, "no profile matches " + LogNames.of(s.hearthProfile) + " in " + LogNames.of(names));
             return;
         }
         int targetIndex = names.indexOf(target);
@@ -714,7 +741,7 @@ public class ProfilePairingService extends AccessibilityService {
             if (tiles.get(targetIndex).clickable != null
                     && tiles.get(targetIndex).clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
                 // Done if the picker goes away; otherwise fall back to the D-pad.
-                Log.i(TAG, "Clicked " + target + " of " + names);
+                Log.i(TAG, "Clicked " + LogNames.of(target) + " of " + LogNames.of(names));
                 s.pickedName = target;
                 s.checkingClick = true;
                 mHandler.postDelayed(() -> {
@@ -745,7 +772,7 @@ public class ProfilePairingService extends AccessibilityService {
         if (focused == targetIndex) {
             pressKey(0);
             s.pickedName = target;
-            finish(PICKED, "chose " + target);
+            finish(PICKED, "chose " + LogNames.of(target));
         } else if (focused >= 0 && ++s.steps <= MAX_STEPS) {
             pressKey(targetIndex > focused ? 1 : -1);
             if (ProfilePairing.APPLE_TV.equals(s.pkg)) {
@@ -755,7 +782,7 @@ public class ProfilePairingService extends AccessibilityService {
             s.scanScheduled = true;
             mHandler.postDelayed(mScan, SCAN_DELAY_MS * 2);
         } else {
-            finish(NO_MATCH, "couldn't move to " + target);
+            finish(NO_MATCH, "couldn't move to " + LogNames.of(target));
         }
     }
 
@@ -990,7 +1017,7 @@ public class ProfilePairingService extends AccessibilityService {
         if (mSession != null) finish(QUIET, "content PIN dialog");
         mHandler.removeCallbacks(mGoIdle);
         hidePinPopup();
-        setMode(true, false);
+        setMode(true, false, pkg);
         Session s = new Session(pkg, LauncherAccessibilityService.getActiveProfileKey(this), name);
         showCover(getString(R.string.pin_content_entering, appLabel(pkg)));
         mPin = new PinRun(s, ContentPin.VAULT_PROFILE, recipe, pin, true);

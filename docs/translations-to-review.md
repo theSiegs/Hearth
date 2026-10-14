@@ -58,3 +58,4 @@ Proper nouns (Hearth, HearthTube, Home Assistant, Google TV, Netflix, Watch Next
 - **tvPower** (2): `tvPowerGoogleTvHome`, `tvPowerGoogleTvHomeNote`
 - **backup** (14): `backupShareText`, `backupShareFailedTitle`, `backupShareFailed`, `backupExportSuccessTitle`, `backupExportFailedTitle`, `backupImportSuccessTitle`, `backupImportFailedTitle`, `backupImport`, `backupLoadError`, `backupNoFiles`, `backupFileDetails`, `backupSizeBytes`, `backupSizeKilobytes`, `backupSizeMegabytes`
 - **about** (6): `aboutBuiltOn`, `aboutDescription`, `aboutHearthOnGitHub`, `aboutCredits`, `aboutFlauncherForkCredit`, `aboutLicense`
+- **pin** (4, 2026.10.55): `profilePinGaveUp`, `pinConsentTitle`, `pinConsentBody`, `pinConsentAgree`; and the Android `profile_pairing_description`

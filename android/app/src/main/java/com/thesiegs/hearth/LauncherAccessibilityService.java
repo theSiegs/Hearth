@@ -270,10 +270,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mNewProfileHold = false;
         if (SystemClock.elapsedRealtime() < mGoogleSetupUntil) {
             // Google TV's own setup screens are up: it's still setting the profile up
-            Log.i(TAG, "No profile user started for " + mUnstartedPick + " yet; Google TV setup in progress");
+            Log.i(TAG, "No profile user started for " + LogNames.of(mUnstartedPick) + " yet; Google TV setup in progress");
             return;
         }
-        Log.i(TAG, "No profile user started for " + mUnstartedPick + ": asking Google TV's home");
+        Log.i(TAG, "No profile user started for " + LogNames.of(mUnstartedPick) + ": asking Google TV's home");
         mTakeOverIfConfirmed = true;
         readHomeAccount(false, mUnstartedPick);
     };
@@ -316,7 +316,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             nextChooserGoneCheck();
             return;
         }
-        Log.i(TAG, "chooser closed (Google TV's home is up, naming " + account + ")");
+        Log.i(TAG, "chooser closed (Google TV's home is up, naming " + LogNames.of(account) + ")");
         mChooserOnScreen = false;
         mLastWindowPackage = GOOGLE_TV_PACKAGE;
         // Focus Hearth heard since the home came up was on the home's own tabs ("Home"), not on a profile tile: no
@@ -356,7 +356,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             nextChooserGoneCheck();
             return;
         }
-        Log.i(TAG, "Google TV's screen closed (its home is up, naming " + account + ")");
+        Log.i(TAG, "Google TV's screen closed (its home is up, naming " + LogNames.of(account) + ")");
         mGoogleTvScreenInFront = false;
         mLastWindowPackage = GOOGLE_TV_PACKAGE;
         onAccountLoggedIn(account, "Google TV's home");
@@ -386,6 +386,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             readAllowance();
             // In case a switch broadcast was missed
             checkProfileUser("periodic check");
+            LogNames.refresh(LauncherAccessibilityService.this);
             updateScreenTimeLock("periodic check");
             mHandler.postDelayed(this, IDLE_CHECK_MS);
         }
@@ -488,6 +489,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         sInstance = this;
+        LogNames.refresh(this);
         mKidsState = ProfileUsers.isKids(this);
         IntentFilter userFilter = new IntentFilter(ProfileUsers.ACTION_PROFILE_ACCESSIBLE);
         userFilter.addAction(ProfileUsers.ACTION_PROFILE_INACCESSIBLE);
@@ -696,7 +698,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // restart) nothing would, so ready after the card's own limit regardless
         mHandler.removeCallbacks(mReadyFallback);
         mHandler.postDelayed(mReadyFallback, PROFILE_READY_FALLBACK_MS);
-        Log.i(TAG, "Profile is now " + key + " (" + ProfileUsers.profileName(this, serial) + ", " + why + ")");
+        Log.i(TAG, "Profile is now " + LogNames.key(key) + " (" + LogNames.of(ProfileUsers.profileName(this, serial)) + ", "
+                + why + ")");
         // A grown-up switching to their own profile is at the remote; a kids' profile always asks for the parent PIN
         if (keyChanged) {
             if (ProfileUsers.isGrownUps(this, serial)) {
@@ -814,14 +817,14 @@ public class LauncherAccessibilityService extends AccessibilityService {
             // (checkProfileUser took it if Hearth knows it; otherwise Google TV's home says, see onAccountLoggedIn)
         } else if (!mLastPickClicked && owner != ProfileUsers.UNKNOWN && owner != mSwitchedSerial) {
             // A guess naming a profile already known to be another serial
-            Log.i(TAG, "Not naming serial " + mSwitchedSerial + " " + mLastPick
+            Log.i(TAG, "Not naming serial " + mSwitchedSerial + " " + LogNames.of(mLastPick)
                     + ": that's serial " + owner);
         } else if (existing == null || mLastPickClicked && !existing.equals(mLastPick)) {
             nameSerial(mSwitchedSerial, mLastPick, "pick");
             named = true;
         } else if (!existing.equals(mLastPick)) {
             // Only a guess from the last focused tile: the name learned for this serial wins
-            Log.i(TAG, "Serial " + mSwitchedSerial + " stays " + existing);
+            Log.i(TAG, "Serial " + mSwitchedSerial + " stays " + LogNames.of(existing));
         }
         mLastPick = null;
         mSwitchedSerial = ProfileUsers.UNKNOWN;
@@ -867,7 +870,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             } else if (known == null || !names.contains(known) || !current.equals(mUnstartedPick)) {
                 nameSerial(mActiveSerial, current, "chooser's current account");
             } else {
-                Log.i(TAG, "Chooser marks " + current + " current, but serial " + mActiveSerial + " (" + known
+                Log.i(TAG, "Chooser marks " + LogNames.of(current) + " current, but serial " + mActiveSerial + " (" + LogNames.of(known)
                         + ") is running: not renaming");
             }
         }
@@ -875,7 +878,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         for (String name : names) {
             if (ProfileAvatars.isDue(this, name)) due.add(name);
         }
-        Log.i(TAG, "Chooser shows " + names + "; photos due: " + due);
+        Log.i(TAG, "Chooser shows " + LogNames.of(names) + "; photos due: " + LogNames.of(due));
         photographChooserTile();
     }
 
@@ -961,7 +964,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 && current.equals(ProfileUsers.profileName(this, mActiveSerial));
         String whyNot = ChooserPhotos.whyNot(tile.name, tile.description, current, currentDesc, currentIsOn);
         if (whyNot != null) {
-            Log.i(TAG, "No photo of " + tile.name + " now: " + whyNot);
+            Log.i(TAG, "No photo of " + LogNames.of(tile.name) + " now: " + whyNot);
             return;
         }
         final String name = tile.name;
@@ -979,7 +982,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 if (!mChooserOnScreen || mPendingProfileAt != pickedBefore || now == null
                         || !TextUtils.equals(name, focusedTileName(now))) {
                     buffer.close();
-                    Log.i(TAG, "Photo of " + name + " dropped: the selection moved off its tile");
+                    Log.i(TAG, "Photo of " + LogNames.of(name) + " dropped: the selection moved off its tile");
                     return;
                 }
                 // Cropping and saving off the main thread; the full screenshot is never kept.
@@ -992,12 +995,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
                     int outcome = ProfileAvatars.save(LauncherAccessibilityService.this, name, screen, bounds);
                     screen.recycle();
                     if (outcome == ProfileAvatars.SAVED) {
-                        Log.i(TAG, "New photo for " + name);
+                        Log.i(TAG, "New photo for " + LogNames.of(name));
                     } else if (outcome == ProfileAvatars.FAILED) {
-                        Log.i(TAG, "No usable photo for " + name);
+                        Log.i(TAG, "No usable photo for " + LogNames.of(name));
                     } else if (outcome == ProfileAvatars.PLACEHOLDER
                             || outcome == ProfileAvatars.PLACEHOLDER_SAVED) {
-                        Log.i(TAG, "Placeholder on " + name + "'s tile"
+                        Log.i(TAG, "Placeholder on " + LogNames.of(name) + "'s tile"
                                 + (outcome == ProfileAvatars.PLACEHOLDER_SAVED ? " (kept for now)" : "")
                                 + "; trying again");
                         mHandler.postDelayed(mChooserPhoto, PHOTO_PLACEHOLDER_RETRY_MS);
@@ -1069,7 +1072,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     /** Learns a serial's profile name; the active profile takes it on if that's the serial. */
     private void nameSerial(long serial, String name, String how) {
-        Log.i(TAG, "Serial " + serial + " is " + name + " (" + how + ")");
+        Log.i(TAG, "Serial " + serial + " is " + LogNames.of(name) + " (" + how + ")");
         ProfileUsers.setName(this, serial, name);
         // Migrate pairings saved under the profile's name to its key
         ProfilePairing.adoptNameChoices(this, ProfileUsers.key(serial), name);
@@ -1097,20 +1100,21 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (account.equals(ProfileUsers.profileName(this, serial))) return;
         long elsewhere = ProfileUsers.serialOf(this, account);
         if (elsewhere != ProfileUsers.UNKNOWN && elsewhere != serial && !ProfileUsers.isGrownUps(this, elsewhere)) {
-            Log.i(TAG, "Google TV names " + account + ", serial " + elsewhere + "'s profile: serial " + serial
-                    + " stays as it is (" + how + ")");
+            Log.i(TAG, "Google TV names " + LogNames.of(account) + ", serial " + elsewhere + "'s profile: serial "
+                    + serial + " stays as it is (" + how + ")");
             return;
         }
         if (elsewhere == ProfileUsers.UNKNOWN && mNewProfileHold) {
             // Maybe a kids profile Google TV is still setting up, whose own user starts next: the hold's end decides
-            Log.i(TAG, "Google TV names " + account + ", new: waiting to see if a profile user starts (" + how + ")");
+            Log.i(TAG, "Google TV names " + LogNames.of(account) + ", new: waiting to see if a profile user starts ("
+                    + how + ")");
             return;
         }
         if (ProfileUsers.getName(this, serial) == null) {
             nameSerial(serial, account, how);
             return;
         }
-        Log.i(TAG, "Serial " + serial + " is logged in as " + account + " (" + how + ")");
+        Log.i(TAG, "Serial " + serial + " is logged in as " + LogNames.of(account) + " (" + how + ")");
         ProfileUsers.setLoggedIn(this, serial, account);
         mUnstartedPick = null;
         boolean keyChanged = startProfile(how);
@@ -1183,7 +1187,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (isHearth && isHearthOverlay(className)) return;
         boolean isApp = !isHearth && isLaunchableApp(packageName);
         // Nor do the keyboard or a system pop-up (volume, a toast) replace what's in front
-        if (!isOverlayPackage(packageName)) mLastWindowPackage = packageName;
+        if (!isOverlayPackage(packageName)) {
+            mLastWindowPackage = packageName;
+            ProfilePairingService.onWindowOf(packageName);
+        }
         // Not the keyboard, a system pop-up or the assistant's bar: those come up over the app that's still in use
         if (isHearth || isApp) mLastAppPackage = packageName;
         if (isApp && YOUTUBE.equals(packageName)) steerKidsToHearthTube();
@@ -1339,7 +1346,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         boolean confirmed = expected != null && expected.equals(on);
         if (expected != null && !confirmed && ProfileUsers.serialOf(this, expected) == mActiveSerial) {
             // One of this user's profiles was picked, but Google TV kept the last: its welcome card goes
-            Log.i(TAG, "Picked " + expected + ", but " + on + " is on");
+            Log.i(TAG, "Picked " + LogNames.of(expected) + ", but " + LogNames.of(on) + " is on");
             MainActivity.notifyProfileSwitchCancelled();
         }
         if ((takeOver || ifConfirmed && confirmed) && autoTakeOverAllowed() && !mGoogleTvScreenInFront
@@ -1403,7 +1410,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
                     mUnstartedPick = mLastPick;
                     mHandler.removeCallbacks(mNewProfileHoldEnd);
                     mHandler.postDelayed(mNewProfileHoldEnd, NEW_PROFILE_HOLD_MS);
-                    Log.i(TAG, "New profile " + mLastPick + ": Google TV sets it up before Hearth takes over");
+                    Log.i(TAG, "New profile " + LogNames.of(mLastPick) + ": Google TV sets it up before Hearth takes over");
                 }
             }
             // Google TV only opens its home once a switch is done: take the new profile user now, before
@@ -1560,7 +1567,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         } else if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED && mChooserOnScreen) {
             // Only clicks in the chooser: Google TV's other screens (its keyboard, menus) click LinearLayouts too.
             mHandler.removeCallbacks(mChooserPhoto);
-            Log.i(TAG, "Picked " + label);
+            Log.i(TAG, "Picked " + LogNames.of(label));
             mPendingProfile = label;
             mPendingProfileAt = now;
         }
@@ -1678,10 +1685,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
             clicked = true;
         } else if (mLastChooserFocus != null && now - mLastChooserFocusAt < PROFILE_CLICK_WINDOW_MS) {
             chosen = mLastChooserFocus;
-            Log.i(TAG, "No click seen; using the last focused tile: " + chosen);
+            Log.i(TAG, "No click seen; using the last focused tile: " + LogNames.of(chosen));
         }
         if (chosen != null) {
-            Log.i(TAG, "Pick settled: " + chosen);
+            Log.i(TAG, "Pick settled: " + LogNames.of(chosen));
             mHomePick = chosen;
             mHomePickAt = now;
             // Picking the profile that's already on (or backing out of the chooser) starts no profile user

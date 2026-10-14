@@ -97,7 +97,7 @@ final class ProfileAvatars {
         try {
             return Files.readAllBytes(f.toPath());
         } catch (Exception e) {
-            Log.w(TAG, "Couldn't read the photo of " + name, e);
+            Log.w(TAG, "Couldn't read the photo of " + LogNames.of(name), e);
             return null;
         }
     }
@@ -147,7 +147,7 @@ final class ProfileAvatars {
         try (FileOutputStream stream = new FileOutputStream(tmp)) {
             out.compress(Bitmap.CompressFormat.PNG, 100, stream);
         } catch (Exception e) {
-            Log.w(TAG, "Couldn't save the photo of " + name, e);
+            Log.w(TAG, "Couldn't save the photo of " + LogNames.of(name), e);
             return FAILED;
         }
         try {
@@ -159,7 +159,7 @@ final class ProfileAvatars {
                 mark.delete();
             }
         } catch (Exception e) {
-            Log.w(TAG, "Couldn't mark the photo of " + name, e);
+            Log.w(TAG, "Couldn't mark the photo of " + LogNames.of(name), e);
         }
         if (!tmp.renameTo(f)) return FAILED;
         return placeholder ? PLACEHOLDER_SAVED : SAVED;

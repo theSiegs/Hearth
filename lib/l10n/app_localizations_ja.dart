@@ -1916,6 +1916,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profilePinPaused => '保存済み — 一時停止中（アプリが変わりました）';
 
   @override
+  String get profilePinGaveUp => '保存済み — 2回受け付けられませんでした。もう一度保存してください';
+
+  @override
+  String get pinConsentTitle => 'Hearth が PIN を入力する前に';
+
+  @override
+  String pinConsentBody(String app) {
+    return 'Hearth があなたの代わりに $app を操作します。アプリのプロフィール画面を読み取り、カードの裏でこの PIN をキーパッドに入力します。PIN は暗号化されてこのテレビにだけ保存され、ここからいつでも削除できます。プロフィールの連携をオフにすると、すべて止まります。大人のプロフィールでは、そのプロフィールに Google TV の PIN が設定されている場合にだけ入力します。ストリーミング サービスの規約では、アプリがこうした操作を代行することが認められていない場合があります。';
+  }
+
+  @override
+  String get pinConsentAgree => '続ける';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearthはまだ$appでPINを入力できません';
   }

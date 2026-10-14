@@ -29,6 +29,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _appHighlightAnimationEnabledKey = "app_highlight_animation_enabled";
 const _appKeyClickEnabledKey = "app_key_click_enabled";
 const _autoHideAppBarKey = "auto_hide_app_bar";
+const _pinConsentKey = "pin_consent_given";
 const _gradientUuidKey = "gradient_uuid";
 const _backButtonActionKey = "back_button_action";
 const _dateFormatKey = "date_format";
@@ -340,6 +341,11 @@ class SettingsService extends ChangeNotifier {
   bool get updatesIncludePrereleases => _bool(_updatesIncludePrereleasesKey, true);
 
   Future<void> setUpdatesIncludePrereleases(bool value) => _setBool(_updatesIncludePrereleasesKey, value);
+
+  /// Whether a parent has read what typing streaming PINs involves (shown before the first PIN is saved).
+  bool get pinConsentGiven => _bool(_pinConsentKey, false);
+
+  Future<void> setPinConsentGiven() => _setBool(_pinConsentKey, true);
 
   bool get hasParentPin => _sharedPreferences.getString(_parentPinHashKey) != null;
 

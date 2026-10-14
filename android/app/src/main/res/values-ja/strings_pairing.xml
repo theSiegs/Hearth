@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="profile_pairing_description">Hearth が Netflix、Disney+、Apple TV、HBO Max、Paramount+ を開いたとき、アプリの「視聴するのは誰？」画面で Google TV のプロフィールに対応するプロフィールを選びます。読み取るのはその画面だけで、Hearth がアプリを開いた直後に限られます。</string>
+    <string name="profile_pairing_description">Hearth が Netflix、Disney+、Apple TV、HBO Max、Paramount+ を開くと、アプリの「どなたが視聴しますか？」画面で Google TV のプロフィールに対応するプロフィールを選び、保護者が保存していればそのプロフィールの PIN を入力します。読み取るのは、Hearth がアプリを開いた直後のこれらの画面と、作品の再生開始時の Paramount+ の PIN 入力画面だけです。読み取った内容がテレビの外に出ることはありません。</string>
 </resources>

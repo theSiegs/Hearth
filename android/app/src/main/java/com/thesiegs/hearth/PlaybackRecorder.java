@@ -206,7 +206,7 @@ final class PlaybackRecorder {
                 if (played < COUNTS_AFTER_MS) return;
                 mProfile = profile();
                 if (mProfile == null) return;
-                Log.i(TAG, "Watching in " + mController.getPackageName() + " for " + mProfile + ": " + mTitle
+                Log.i(TAG, "Watching in " + mController.getPackageName() + " for " + LogNames.key(mProfile) + ": " + mTitle
                         + (mSubtitle != null ? " / " + mSubtitle : ""));
             }
             final String profile = mProfile, pkg = mController.getPackageName(), title = mTitle, subtitle = mSubtitle;

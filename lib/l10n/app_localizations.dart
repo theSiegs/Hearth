@@ -3386,6 +3386,30 @@ abstract class AppLocalizations {
   /// Profile Pairing: streaming app profile PIN
   ///
   /// In en, this message translates to:
+  /// **'Saved — not accepted twice; save it again'**
+  String get profilePinGaveUp;
+
+  /// Profile Pairing: streaming app profile PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Before Hearth types PINs for you'**
+  String get pinConsentTitle;
+
+  /// Profile Pairing: streaming app profile PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth will operate {app} for you: it reads the app’s profile screen and types this PIN on its keypad, behind a card. The PIN stays on this TV, encrypted, and you can remove it here at any time; turning Profile Pairing off stops all of it. In a grown-up’s profile, Hearth types it only once that profile has its own Google TV PIN. Streaming services’ terms may not allow an app to do this for you.'**
+  String pinConsentBody(String app);
+
+  /// Profile Pairing: streaming app profile PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get pinConsentAgree;
+
+  /// Profile Pairing: streaming app profile PIN
+  ///
+  /// In en, this message translates to:
   /// **'Hearth can’t type PINs in {app} yet'**
   String profilePinUnsupported(String app);
 

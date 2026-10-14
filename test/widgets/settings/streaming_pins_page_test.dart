@@ -151,6 +151,8 @@ void main() {
     SharedPreferencesStorePlatform.instance = InMemorySharedPreferencesStore.empty();
     prefs = await SharedPreferences.getInstance();
     await prefs.clear();
+    // What typing PINs involves was read before (see the consent test)
+    await prefs.setBool("pin_consent_given", true);
     channel = _PinsChannel();
     profiles = MockProfileService();
     on("user:0:sam", "Sam");
@@ -198,6 +200,21 @@ void main() {
     // Never an app Hearth can't type in, or one that isn't installed
     expect(find.text("Other TV"), findsNothing);
     expect(find.text("Gone TV"), findsNothing);
+  });
+
+  testWidgets("the first PIN saved shows what typing PINs involves, once", (tester) async {
+    await prefs.remove("pin_consent_given");
+    on("user:10", "Riley");
+    await SettingsService(prefs).setParentPin("2468");
+    await pump(tester);
+    await tap(tester, "Example TV");
+    await type(tester, "2468");
+    expect(find.text("Before Hearth types PINs for you"), findsOneWidget);
+    await tap(tester, "Continue");
+    await type(tester, "1357");
+    await type(tester, "1357");
+    expect(channel.events, ["save Kids 1357"]);
+    expect(SettingsService(prefs).pinConsentGiven, isTrue);
   });
 
   testWidgets("a kids' profile has its own PINs, set past the parent PIN", (tester) async {

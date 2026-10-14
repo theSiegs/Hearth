@@ -1927,6 +1927,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get profilePinPaused => 'Guardado: en pausa (la app cambió)';
 
   @override
+  String get profilePinGaveUp => 'Guardado — no aceptado dos veces; guárdalo de nuevo';
+
+  @override
+  String get pinConsentTitle => 'Antes de que Hearth escriba PIN por ti';
+
+  @override
+  String pinConsentBody(String app) {
+    return 'Hearth manejará $app por ti: lee la pantalla de perfiles de la app y escribe este PIN en su teclado, detrás de una tarjeta. El PIN se queda en esta TV, cifrado, y puedes quitarlo aquí cuando quieras; al desactivar el emparejamiento de perfiles se detiene todo. En el perfil de un adulto, Hearth solo lo escribe cuando ese perfil tiene su propio PIN de Google TV. Es posible que las condiciones de los servicios de streaming no permitan que una app haga esto por ti.';
+  }
+
+  @override
+  String get pinConsentAgree => 'Continuar';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth aún no puede escribir PIN en $app';
   }

@@ -1963,6 +1963,20 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profilePinPaused => 'محفوظ — متوقف مؤقتًا (تغيّر التطبيق)';
 
   @override
+  String get profilePinGaveUp => 'محفوظ — لم يُقبل مرتين؛ احفظه مرة أخرى';
+
+  @override
+  String get pinConsentTitle => 'قبل أن يكتب Hearth الرموز نيابةً عنك';
+
+  @override
+  String pinConsentBody(String app) {
+    return 'سيشغّل Hearth تطبيق $app نيابةً عنك: يقرأ شاشة الملفات الشخصية في التطبيق ويكتب هذا الرمز على لوحة أرقامه، خلف بطاقة. يبقى الرمز على هذا التلفاز مشفّرًا، ويمكنك حذفه من هنا في أي وقت؛ وإيقاف ربط الملفات الشخصية يوقف ذلك كله. في ملف شخص بالغ، لا يكتب Hearth الرمز إلا بعد أن يصبح لذلك الملف رمز Google TV خاص به. قد لا تسمح شروط خدمات البث لتطبيق بأن يفعل ذلك نيابةً عنك.';
+  }
+
+  @override
+  String get pinConsentAgree => 'متابعة';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'لا يستطيع Hearth بعد كتابة رموز PIN في $app';
   }

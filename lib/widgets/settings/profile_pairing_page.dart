@@ -1,6 +1,7 @@
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/profile_service.dart';
+import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
@@ -41,16 +42,41 @@ class PairingChoice {
       };
 }
 
+/// Rejections in a row after which Hearth waits for a new PIN (ProfilePairingService.PIN_GIVE_UP_REJECTIONS).
+const int profilePinGiveUpRejections = 2;
+
 /// A saved streaming-app profile PIN's state in words ([FLauncherChannel.getProfilePinStatus]): none, saved, not
-/// accepted last time, or paused.
+/// accepted last time, not accepted twice (not tried until saved again), or paused.
 String profilePinStatus(AppLocalizations l, Map<dynamic, dynamic>? pin) {
   final status = pin?["status"] as String? ?? "none";
   if (status != "none" && pin?["paused"] == true) return l.profilePinPaused;
   return switch (status) {
     "none" => l.profilePinNone,
+    "rejected" when (pin?["rejections"] as int? ?? 0) >= profilePinGiveUpRejections => l.profilePinGaveUp,
     "rejected" => l.profilePinRejected,
     _ => l.profilePinSaved,
   };
+}
+
+/// What typing streaming PINs involves, once per TV before the first PIN is saved; true when the parent goes on.
+Future<bool> confirmPinConsent(BuildContext context, String appLabel) async {
+  final settings = context.read<SettingsService>();
+  if (settings.pinConsentGiven) return true;
+  final l = AppLocalizations.of(context)!;
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(l.pinConsentTitle),
+      content: SingleChildScrollView(child: Text(l.pinConsentBody(appLabel))),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(l.cancel)),
+        TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(true), child: Text(l.pinConsentAgree)),
+      ],
+    ),
+  );
+  if (ok != true) return false;
+  await settings.setPinConsentGiven();
+  return true;
 }
 
 /// An app profile's PIN: the parent PIN first, then the PIN on the row pad, twice; for a saved one, Change or Remove
@@ -86,6 +112,8 @@ Future<bool> editProfilePin(
       return true;
     }
   }
+  if (!await confirmPinConsent(context, appLabel)) return false;
+  if (!context.mounted) return false;
   final first = await showDialog<String>(
     context: context,
     builder: (_) => ParentPinDialog(
@@ -142,6 +170,8 @@ Future<bool> editContentPin(
       return true;
     }
   }
+  if (!await confirmPinConsent(context, appLabel)) return false;
+  if (!context.mounted) return false;
   final first = await showDialog<String>(
     context: context,
     builder: (_) => ParentPinDialog(

@@ -2387,6 +2387,27 @@
     "@profilePinPaused": {
         "description": "Profile Pairing: streaming app profile PIN"
     },
+    "profilePinGaveUp": "Saved — not accepted twice; save it again",
+    "@profilePinGaveUp": {
+        "description": "Profile Pairing: streaming app profile PIN"
+    },
+    "pinConsentTitle": "Before Hearth types PINs for you",
+    "@pinConsentTitle": {
+        "description": "Profile Pairing: streaming app profile PIN"
+    },
+    "pinConsentBody": "Hearth will operate {app} for you: it reads the app’s profile screen and types this PIN on its keypad, behind a card. The PIN stays on this TV, encrypted, and you can remove it here at any time; turning Profile Pairing off stops all of it. In a grown-up’s profile, Hearth types it only once that profile has its own Google TV PIN. Streaming services’ terms may not allow an app to do this for you.",
+    "@pinConsentBody": {
+        "description": "Profile Pairing: streaming app profile PIN",
+        "placeholders": {
+            "app": {
+                "type": "String"
+            }
+        }
+    },
+    "pinConsentAgree": "Continue",
+    "@pinConsentAgree": {
+        "description": "Profile Pairing: streaming app profile PIN"
+    },
     "profilePinUnsupported": "Hearth can’t type PINs in {app} yet",
     "@profilePinUnsupported": {
         "description": "Profile Pairing: streaming app profile PIN",

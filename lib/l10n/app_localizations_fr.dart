@@ -1927,6 +1927,20 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profilePinPaused => 'Enregistré – en pause (l’app a changé)';
 
   @override
+  String get profilePinGaveUp => 'Enregistré — refusé deux fois ; enregistrez-le à nouveau';
+
+  @override
+  String get pinConsentTitle => 'Avant que Hearth saisisse des codes pour vous';
+
+  @override
+  String pinConsentBody(String app) {
+    return 'Hearth va utiliser $app pour vous : il lit l’écran des profils de l’app et saisit ce code sur son pavé, derrière une carte. Le code reste sur ce téléviseur, chiffré, et vous pouvez le supprimer ici à tout moment ; désactiver l’association des profils arrête tout. Dans le profil d’un adulte, Hearth ne le saisit que si ce profil a son propre code Google TV. Les conditions des services de streaming peuvent ne pas autoriser une app à faire cela pour vous.';
+  }
+
+  @override
+  String get pinConsentAgree => 'Continuer';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth ne sait pas encore saisir les codes dans $app';
   }
