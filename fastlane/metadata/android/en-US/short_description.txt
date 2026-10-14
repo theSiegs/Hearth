@@ -1,1 +1,1 @@
-An ad-free Google TV home that keeps profiles, kids' limits and Home Assistant
+An ad-free Google TV home that keeps everyone's profile and kids' limits

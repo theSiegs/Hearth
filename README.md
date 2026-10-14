@@ -5,7 +5,7 @@
 <h1 align="center">Hearth</h1>
 
 <p align="center">
-  An ad-free home screen for Google TV that keeps everyone's profile, kids' limits and Home Assistant working.
+  An ad-free home screen for Google TV that keeps everyone's profile and kids' limits working.
 </p>
 
 <p align="center">
@@ -62,20 +62,38 @@ It's free software (GPL-3.0).
 - **Search** for a film or show and see where it streams (US availability data); it opens in Netflix, Apple TV,
   HBO Max or Paramount+ directly, other services through Google TV's title page.
 
-**Home Assistant** (optional)
-- Pop-ups over any app, with a live camera and action buttons: doorbell, laundry, reminders.
-- A dashboard one press away, drawn by Hearth so every control works with the remote: lights, climate, media,
-  cameras, people on a map. Each profile can have its own, or none.
-- TV status to a webhook: app, what's playing, profile, kids' screen time and usage today, for your automations.
-
 **The remote**
-- Remap any spare button (press and hold) to an app, a TV input, a profile switch or lock, search, sleep, or a Home
-  Assistant scene or script.
+- Remap any spare button (press and hold) to an app, a TV input, a profile switch or lock, search or sleep.
 - The Home button opens Hearth, every time.
 
 **Also:** a notifications panel, sleep when idle, TV inputs (on TVs that have them), daily backups on the TV,
 updates from GitHub releases, and 14 languages (most machine-translated; corrections welcome). If you ever want
 Google TV's home back for a while, **Settings → TV & power → Use Google TV's home**.
+
+## With Home Assistant
+
+Hearth works fully without Home Assistant. If you have it, each side gets more from the other. Everything stays on
+your home network, and each part is set up separately in **Settings → Home Assistant**
+([details](docs/home-assistant.md)).
+
+**What Hearth gains**
+- **Pop-ups over any app**: the doorbell with a live camera view, the washer being done, a reminder, with buttons
+  that act (unlock the door, turn on the porch light).
+- **A dashboard one press away** (Right at the right edge of the home), drawn by Hearth so every control works with
+  the remote: lights, climate, covers, media, cameras, and people on a map. Each profile can have its own dashboard,
+  or none.
+- **Remote buttons that run Home Assistant**: a scene, a script, a button or a toggle, on a press or a hold.
+- **Approve from your phone**: a switch into your PIN-locked profile asks your phone first (see below).
+- **A YouTube allowance shared across devices**: Home Assistant can give each kid one daily pool for the TV, tablets
+  and phones, and Hearth applies the stricter of its own limit and that one.
+
+**What Home Assistant gains**
+- **The TV as a notification target**, through the standard *Notifications for Android TV / Fire TV* integration.
+- **The TV's status for automations**, posted to a webhook within seconds of a change: screen on or off, the app in
+  front, playing or paused and what's playing, whose profile is on, whether it's a kids profile, Google TV's
+  bedtime or time's-up screen and when it unlocks, and each profile's usage today per app. Dim the lights when a
+  film starts, pause it when the doorbell rings, or count a kid's screen time with their other devices.
+- **A say in kids' YouTube time**, through one sensor Hearth reads (`sensor.hearth_allowance`).
 
 ## Optional features that act on your behalf
 
