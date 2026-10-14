@@ -96,9 +96,10 @@ investigation), `tool/generate_icons.py` (app icon and TV banner).
 `.github/workflows/release.yml` builds and signs the APKs (`Hearth-universal`, `-arm64-v8a`, `-armeabi-v7a`) and
 publishes the GitHub release that the in-app updater reads. It needs the repository secrets `KEYSTORE_BASE64`,
 `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` and `TMDB_API_KEY`. For now every release is published as a
-pre-release, since Hearth is in early development; the in-app updater includes pre-releases by default (the
-**Include pre-releases** switch), for Hearth and HearthTube alike. Once Hearth leaves early development, the
-workflow can go back to making only tags with a `-` pre-releases. Every release must be signed with the same key, or installed copies can't update.
+pre-release, since Hearth is in early development (the workflow's `PRERELEASE`). The build is told which it is
+(`--dart-define=HEARTH_PRERELEASE`), and the in-app **Include pre-releases** switch, for Hearth and HearthTube alike,
+starts on in a pre-release and off in a release, and is set again when the installed kind changes. Once Hearth
+leaves early development, `PRERELEASE` can go back to "tags with a `-`". Every release must be signed with the same key, or installed copies can't update.
 
 `.github/workflows/ci.yml` analyzes, runs the Flutter, Java and phone-page tests and builds a debug APK on every
 push. CodeQL scans every push too.

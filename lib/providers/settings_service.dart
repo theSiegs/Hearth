@@ -74,6 +74,10 @@ const String _startOnBootKey = "start_on_boot";
 // device_ prefix: shared by all profiles, never part of a per-profile layout
 const String _parentPinHashKey = "device_parent_pin_hash";
 const String _updatesIncludePrereleasesKey = "device_updates_include_prereleases";
+const String _updatesBuildKindKey = "device_updates_build_kind";
+
+/// Whether this build of Hearth is a pre-release (the release workflow says; builds made elsewhere count as one).
+const bool kPrereleaseBuild = bool.fromEnvironment("HEARTH_PRERELEASE", defaultValue: true);
 // Settings that are gone: a TMDB key users could once type in (search now uses the one built into the release
 // only), and whether setting up the kids profiles also put Hearth on other adults' (they're accounts in the
 // owner's user, which has Hearth already), and the Home Assistant calendars a profile turned off (the calendars are
@@ -206,6 +210,20 @@ class SettingsService extends ChangeNotifier {
       if (_sharedPreferences.containsKey(key)) unawaited(_sharedPreferences.remove(key));
     }
     _clearOldDateTimeDefaults();
+    _followBuildKind(kPrereleaseBuild);
+  }
+
+  /// "Include pre-releases" follows the kind of build: on in a pre-release, off in a release. It's set when a build of
+  /// the other kind first starts (a pre-release after a release, or the other way), and left as chosen otherwise.
+  @visibleForTesting
+  void followBuildKind(bool prerelease) => _followBuildKind(prerelease);
+
+  void _followBuildKind(bool prerelease) {
+    final kind = prerelease ? "prerelease" : "release";
+    final last = _sharedPreferences.getString(_updatesBuildKindKey);
+    if (last == kind) return;
+    if (last != null) unawaited(_sharedPreferences.setBool(_updatesIncludePrereleasesKey, prerelease));
+    unawaited(_sharedPreferences.setString(_updatesBuildKindKey, kind));
   }
 
   /// Once per TV: the old default date and time, restored from a layout or backup that saved them as if chosen,
@@ -333,9 +351,10 @@ class SettingsService extends ChangeNotifier {
   /// On unless turned off: on Google TV, Hearth then comes up after a restart instead of Google TV's home.
   bool get startOnBoot => _bool(_startOnBootKey, true);
 
-  /// Whether Hearth's updater offers pre-releases too. On by default while Hearth is in early development: every
-  /// Hearth release is a pre-release for now, so with this off nobody would get updates. For the whole TV.
-  bool get updatesIncludePrereleases => _bool(_updatesIncludePrereleasesKey, true);
+  /// Whether Hearth's updater offers pre-releases too, for Hearth and HearthTube. For the whole TV. Unless chosen, on
+  /// in a pre-release build and off in a release (see [followBuildKind]): every Hearth release is a pre-release while
+  /// it's in early development, so its updates keep coming.
+  bool get updatesIncludePrereleases => _bool(_updatesIncludePrereleasesKey, kPrereleaseBuild);
 
   Future<void> setUpdatesIncludePrereleases(bool value) => _setBool(_updatesIncludePrereleasesKey, value);
 

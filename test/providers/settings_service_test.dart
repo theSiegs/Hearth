@@ -175,6 +175,24 @@ void main() async {
       expect(settingsService.updatesIncludePrereleases, isTrue);
     });
 
+    test("follows the kind of build once, when a build of the other kind first starts", () async {
+      final settingsService = SettingsService(await SharedPreferences.getInstance());
+      // Chosen off in a pre-release build: stays off while the builds stay pre-releases
+      await settingsService.setUpdatesIncludePrereleases(false);
+      settingsService.followBuildKind(true);
+      expect(settingsService.updatesIncludePrereleases, isFalse);
+      // A release build starts: off (it already is); chosen on there, it stays on
+      settingsService.followBuildKind(false);
+      expect(settingsService.updatesIncludePrereleases, isFalse);
+      await settingsService.setUpdatesIncludePrereleases(true);
+      settingsService.followBuildKind(false);
+      expect(settingsService.updatesIncludePrereleases, isTrue);
+      // A pre-release build starts again: on
+      await settingsService.setUpdatesIncludePrereleases(false);
+      settingsService.followBuildKind(true);
+      expect(settingsService.updatesIncludePrereleases, isTrue);
+    });
+
     test("sets the value for the whole TV, not a profile's layout", () async {
       final settingsService = SettingsService(await SharedPreferences.getInstance());
       var notified = false;

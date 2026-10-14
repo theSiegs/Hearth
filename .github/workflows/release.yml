@@ -17,6 +17,11 @@ permissions:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    env:
+      # Every release is a pre-release while Hearth is in early development (the updater includes pre-releases by
+      # default in them). Once Hearth leaves early development: only tags containing '-' are pre-releases, i.e.
+      # contains(github.event.inputs.tag_name || github.ref_name, '-') as an expression
+      PRERELEASE: 'true'
 
     steps:
       - name: Checkout Code
@@ -64,13 +69,15 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           # Optional: posters and "streaming on" in search (TMDB). Without it, search has no posters.
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          # Whether this build is a pre-release: Hearth's "Include pre-releases" starts on in one, off in a release
+          HEARTH_PRERELEASE: ${{ env.PRERELEASE }}
         run: |
           # Build universal APK first
-          flutter build apk --release --target-platform=android-arm,android-arm64 --dart-define=TMDB_API_KEY="$TMDB_API_KEY"
+          flutter build apk --release --target-platform=android-arm,android-arm64 --dart-define=TMDB_API_KEY="$TMDB_API_KEY" --dart-define=HEARTH_PRERELEASE="$HEARTH_PRERELEASE"
           # Rename/save it temporarily
           mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/app-release.apk.temp
           # Build split APKs
-          flutter build apk --release --split-per-abi --target-platform=android-arm,android-arm64 --dart-define=TMDB_API_KEY="$TMDB_API_KEY"
+          flutter build apk --release --split-per-abi --target-platform=android-arm,android-arm64 --dart-define=TMDB_API_KEY="$TMDB_API_KEY" --dart-define=HEARTH_PRERELEASE="$HEARTH_PRERELEASE"
           # Rename to final Hearth-* names
           mv build/app/outputs/flutter-apk/app-release.apk.temp build/app/outputs/flutter-apk/Hearth-universal-release.apk
           mv build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk build/app/outputs/flutter-apk/Hearth-armeabi-v7a-release.apk
@@ -89,9 +96,6 @@ jobs:
           files: |
             build/app/outputs/flutter-apk/Hearth-*.apk
           draft: false
-          # Every release is a pre-release while Hearth is in early development (the updater includes pre-releases
-          # by default). Once Hearth leaves early development, bring back the old rule: only tags containing '-'
-          # are pre-releases: contains(github.event.inputs.tag_name || github.ref_name, '-') in an expression.
-          prerelease: true
+          prerelease: ${{ env.PRERELEASE == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

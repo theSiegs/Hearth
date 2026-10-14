@@ -190,8 +190,9 @@ The same page installs HearthTube and keeps it up to date: with **Update automat
 updates HearthTube when it's not in use. The first install asks Android for permission to install apps; after that,
 updates go through without asking.
 
-**Include pre-releases** (on by default) also offers early test builds, of both Hearth and HearthTube. While Hearth is
-in early development every release is a pre-release, so leave it on to get updates. Turning it off never installs an
+**Include pre-releases** also offers early test builds, of both Hearth and HearthTube. It starts on in a pre-release
+of Hearth and off in a release, and is set that way again when Hearth moves from one kind to the other. While Hearth
+is in early development every release is a pre-release, so leave it on to get updates. Turning it off never installs an
 older version.
 
 ## Backup & restore
