@@ -3,13 +3,14 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
-Hearth talks to Home Assistant three ways, each set up in **Settings → Home Assistant** and each optional:
+Hearth talks to Home Assistant these ways, each optional:
 
 | | Direction | Needs |
 |---|---|---|
 | [Notifications](#notifications) | Home Assistant → TV | Home Button Fix on |
 | [Dashboard panel](#dashboard-panel) | TV shows Home Assistant | Address and an access token |
 | [TV status](#tv-status) | TV → Home Assistant | Address and a webhook ID |
+| [Approve switches from a phone](#approve-switches-from-a-phone) | TV → a phone → TV | Address, token, and the companion app on the phone |
 
 Everything stays on your home network: Hearth talks only to the address you give it, and accepts notifications
 only from local addresses.
@@ -67,10 +68,36 @@ A Home Assistant dashboard one press away: **Right** at the right edge of the ho
 
 1. In Home Assistant, make a **non-admin user** for the TV, and log in as that user.
 2. On its profile page, **Security** tab, create a **long-lived access token**.
-3. In Hearth, enter the Home Assistant address and the token (or use **Set up from your phone**), and optionally the
-   dashboard to show (its URL path, e.g. `dashboard-tv`; empty shows the default one).
+3. In Hearth, enter the Home Assistant address and the token (or use **Set up from your phone**), and choose the
+   dashboard (and which of its views) from the list Home Assistant gives.
 
-The panel is on for the current Google TV profile only, so kids' profiles don't get it unless you turn it on there.
+Hearth draws the dashboard's cards itself, so every control is reachable with the remote: lights, switches, scenes,
+covers, climate, media, cameras, and a person's whereabouts on a small map (drawn from map pieces fetched once and
+kept on the TV, so the map service never learns where anyone is). It loads in the background once the home is up, so
+the panel opens at once, and keeps app and entity pictures on the TV for 30 days. **Show the full dashboard instead**
+shows Home Assistant's own page (the remote can't reach all of its controls).
+
+The panel is on per Google TV profile, so kids' profiles don't get it unless you turn it on there, and each profile can
+have its own dashboard (**Dashboard for this profile**).
+
+## Approve switches from a phone
+
+With the dashboard panel's address and token set, a grown-up can have their phone approve a switch into their
+PIN-locked Google TV profile (**Settings → Profiles → Approve switches from my phone**, in their own profile; the row
+is greyed out until Home Assistant is set up). They choose their phone, one of Home Assistant's `notify.mobile_app_…`
+services, and save their Google TV PIN.
+
+When Google TV's PIN screen comes up for that profile, Hearth:
+
+1. listens on Home Assistant's WebSocket API for `mobile_app_notification_action` events, only while it waits (two
+   minutes at most);
+2. calls the phone's notify service with an actionable notification (Allow and Deny, a one-time action id, `tag`
+   `hearth-approval-…`, high priority);
+3. on Allow, enters the saved Google TV PIN on Google's keypad, if that profile's PIN screen is still up; on Deny or
+   no answer, leaves the PIN screen as it is, and clears the notification.
+
+Typing the PIN with the remote always works: a key pressed on the PIN screen withdraws the request. A PIN Google
+refuses isn't entered again until it's saved anew. **Send a test notification** checks the phone is reached.
 
 ## TV status
 

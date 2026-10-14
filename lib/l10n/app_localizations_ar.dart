@@ -1926,26 +1926,18 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String aboutBuiltOn(String launcher, String author, String original, String parts) {
-    return 'مبني على $launcher من $author و$original، مع أجزاء من $parts';
-  }
-
-  @override
   String get aboutDescription => 'مشغّل خاص ومناسب للعائلة لـ Google TV، مع ملفات Google TV الشخصية وHome Assistant مدمجة. بلا إعلانات وبلا تتبع.';
 
   @override
   String get aboutHearthOnGitHub => 'Hearth على GitHub';
 
   @override
-  String get aboutCredits => 'شكر وتقدير';
-
-  @override
-  String aboutFlauncherForkCredit(String author) {
-    return 'نسخة متفرعة من FLauncher · $author';
-  }
-
-  @override
   String get aboutLicense => 'برنامج حر بموجب رخصة GNU GPL v3، مثل المشاريع التي يعتمد عليها.';
+
+  @override
+  String aboutIncludesCode(String projects) {
+    return 'يتضمن شيفرة من $projects.';
+  }
 
   @override
   String get profilePinRow => 'رمز PIN للملف الشخصي';

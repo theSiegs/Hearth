@@ -1879,26 +1879,18 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String aboutBuiltOn(String launcher, String author, String original, String parts) {
-    return '$author による $launcher と $original をベースに、$parts の一部を含みます';
-  }
-
-  @override
   String get aboutDescription => 'Google TV 向けの、プライバシー重視で家族にやさしいランチャー。Google TV のプロフィールと Home Assistant を内蔵。広告なし、トラッカーなし。';
 
   @override
   String get aboutHearthOnGitHub => 'GitHub の Hearth';
 
   @override
-  String get aboutCredits => 'クレジット';
-
-  @override
-  String aboutFlauncherForkCredit(String author) {
-    return 'FLauncher のフォーク · $author';
-  }
-
-  @override
   String get aboutLicense => '元になったプロジェクトと同じく、GNU GPL v3 のフリーソフトウェアです。';
+
+  @override
+  String aboutIncludesCode(String projects) {
+    return '$projects のコードを含みます。';
+  }
 
   @override
   String get profilePinRow => 'プロフィールのPIN';

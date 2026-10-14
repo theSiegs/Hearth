@@ -2324,24 +2324,6 @@
             }
         }
     },
-    "aboutBuiltOn": "Built on {launcher} by {author} and {original}, with parts of {parts}",
-    "@aboutBuiltOn": {
-        "description": "Line under the version in the About dialog: the projects Hearth is built on. The placeholders are project and author names (launcher: the project Hearth started from, author: its author, original: the launcher that one came from, parts: a project Hearth took parts from)",
-        "placeholders": {
-            "launcher": {
-                "type": "String"
-            },
-            "author": {
-                "type": "String"
-            },
-            "original": {
-                "type": "String"
-            },
-            "parts": {
-                "type": "String"
-            }
-        }
-    },
     "aboutDescription": "A private, family-friendly launcher for Google TV, with Google TV profiles and Home Assistant built in. Ad-free and tracker-free.",
     "@aboutDescription": {
         "description": "Description card in the About dialog"
@@ -2350,22 +2332,18 @@
     "@aboutHearthOnGitHub": {
         "description": "Button in the About dialog that opens Hearth's GitHub page"
     },
-    "aboutCredits": "Credits",
-    "@aboutCredits": {
-        "description": "Heading above the projects Hearth builds on, in the About dialog"
-    },
-    "aboutFlauncherForkCredit": "FLauncher fork · {author}",
-    "@aboutFlauncherForkCredit": {
-        "description": "Credit button in the About dialog for a fork of FLauncher; {author} is its author's handle",
-        "placeholders": {
-            "author": {
-                "type": "String"
-            }
-        }
-    },
     "aboutLicense": "Free software under the GNU GPL v3, like the projects it builds on.",
     "@aboutLicense": {
         "description": "Small print at the bottom of the About dialog"
+    },
+    "aboutIncludesCode": "Includes code from {projects}.",
+    "@aboutIncludesCode": {
+        "description": "About: the GPL notice for the projects whose code Hearth includes",
+        "placeholders": {
+            "projects": {
+                "type": "String"
+            }
+        }
     },
     "profilePinRow": "Profile PIN",
     "@profilePinRow": {

@@ -1879,26 +1879,18 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String aboutBuiltOn(String launcher, String author, String original, String parts) {
-    return '$author의 $launcher 및 $original 기반이며, $parts의 일부를 포함합니다';
-  }
-
-  @override
   String get aboutDescription => 'Google TV용 비공개 가족 친화형 런처로, Google TV 프로필과 Home Assistant가 내장되어 있습니다. 광고 및 추적기가 없습니다.';
 
   @override
   String get aboutHearthOnGitHub => 'GitHub의 Hearth';
 
   @override
-  String get aboutCredits => '크레딧';
-
-  @override
-  String aboutFlauncherForkCredit(String author) {
-    return 'FLauncher 포크 · $author';
-  }
-
-  @override
   String get aboutLicense => '기반이 된 프로젝트와 마찬가지로 GNU GPL v3에 따른 자유 소프트웨어입니다.';
+
+  @override
+  String aboutIncludesCode(String projects) {
+    return '$projects의 코드를 포함합니다.';
+  }
 
   @override
   String get profilePinRow => '프로필 PIN';

@@ -72,16 +72,6 @@ class HearthAboutDialog extends StatelessWidget {
               fontSize: 12,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            localizations.aboutBuiltOn("LTvLauncher", "LeanBitLab", "FLauncher", "Arc Launcher"),
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -105,45 +95,6 @@ class HearthAboutDialog extends StatelessWidget {
             label: localizations.aboutHearthOnGitHub,
             autofocus: true,
             onPressed: () => context.read<FLauncherChannel>().openUrl("https://github.com/theSiegs/Hearth"),
-          ),
-          const SizedBox(height: 14),
-
-          // Hearth stands on these projects (all GPL-3.0).
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              localizations.aboutCredits,
-              style: const TextStyle(
-                color: Colors.white54,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          FocusableDialogButton(
-            icon: Icons.call_split,
-            label: "LTvLauncher · LeanBitLab",
-            onPressed: () => context.read<FLauncherChannel>().openUrl("https://github.com/leanbitlab-org/LtvLauncher"),
-          ),
-          const SizedBox(height: 6),
-          FocusableDialogButton(
-            icon: Icons.dock,
-            label: "Arc Launcher · Badis Meddouri",
-            onPressed: () => context.read<FLauncherChannel>().openUrl("https://github.com/meddouribadis/arclauncher"),
-          ),
-          const SizedBox(height: 6),
-          FocusableDialogButton(
-            icon: Icons.history,
-            label: "FLauncher · Étienne Fesser",
-            onPressed: () => context.read<FLauncherChannel>().openUrl("https://gitlab.com/flauncher/flauncher"),
-          ),
-          const SizedBox(height: 6),
-          FocusableDialogButton(
-            icon: Icons.history,
-            label: localizations.aboutFlauncherForkCredit("osrosal"),
-            onPressed: () => context.read<FLauncherChannel>().openUrl("https://github.com/osrosal/flauncher"),
           ),
           // TMDB's terms: its logo (less prominent than Hearth's) and this notice, word for word. It's a legal notice,
           // so it stays in English in every language.
@@ -185,6 +136,14 @@ class HearthAboutDialog extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 10),
+          // The GPL's notices for the code Hearth includes (its source files keep their own)
+          Text(
+            localizations.aboutIncludesCode("FLauncher (Étienne Fesser, Oscar Rojas), LTvLauncher (LeanBitLab), "
+                "Arc Launcher (Badis Meddouri)"),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white38, fontSize: 10),
+          ),
+          const SizedBox(height: 4),
           Text(
             localizations.aboutLicense,
             textAlign: TextAlign.center,

@@ -22,6 +22,8 @@ flutter pub run build_runner build --delete-conflicting-outputs     # mocks and 
 dart run drift_dev schema generate drift_schemas/ test/generated_migrations/
 flutter analyze
 flutter test
+node test/js/phone_seal_test.js                                     # the phone pages' encryption
+cd android && ./gradlew :app:testDebugUnitTest                      # the Java side's unit tests
 ```
 
 On Windows, the database tests need SQLite: run `tool/fetch_sqlite_windows.ps1` once (it downloads `sqlite3.dll`
@@ -98,7 +100,11 @@ pre-release, since Hearth is in early development; the in-app updater includes p
 **Include pre-releases** switch), for Hearth and HearthTube alike. Once Hearth leaves early development, the
 workflow can go back to making only tags with a `-` pre-releases. Every release must be signed with the same key, or installed copies can't update.
 
-`.github/workflows/ci.yml` analyzes, tests and builds a debug APK on every push.
+`.github/workflows/ci.yml` analyzes, runs the Flutter, Java and phone-page tests and builds a debug APK on every
+push. CodeQL scans every push too.
+
+**Turning a streaming app version's PIN entry off for everyone:** list it in `pin-entry/disabled.json` on `master`
+(see `pin-entry/README.md`). Installed copies read it at most every 12 hours while a PIN is saved.
 
 ## Conventions
 

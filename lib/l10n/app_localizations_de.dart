@@ -1888,26 +1888,18 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String aboutBuiltOn(String launcher, String author, String original, String parts) {
-    return 'Basiert auf $launcher von $author und $original, mit Teilen von $parts';
-  }
-
-  @override
   String get aboutDescription => 'Ein privater, familienfreundlicher Launcher für Google TV, mit integrierten Google-TV-Profilen und Home Assistant. Ohne Werbung und ohne Tracker.';
 
   @override
   String get aboutHearthOnGitHub => 'Hearth auf GitHub';
 
   @override
-  String get aboutCredits => 'Danksagungen';
-
-  @override
-  String aboutFlauncherForkCredit(String author) {
-    return 'FLauncher-Fork · $author';
-  }
-
-  @override
   String get aboutLicense => 'Freie Software unter der GNU GPL v3, wie die Projekte, auf denen sie aufbaut.';
+
+  @override
+  String aboutIncludesCode(String projects) {
+    return 'Enthält Code aus $projects.';
+  }
 
   @override
   String get profilePinRow => 'Profil-PIN';

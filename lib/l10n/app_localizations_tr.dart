@@ -1879,26 +1879,18 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String aboutBuiltOn(String launcher, String author, String original, String parts) {
-    return '$author tarafından geliştirilen $launcher ve $original temel alınarak, $parts parçalarıyla';
-  }
-
-  @override
   String get aboutDescription => 'Google TV için gizliliğe önem veren, aile dostu bir başlatıcı; Google TV profilleri ve Home Assistant yerleşik. Reklamsız ve izleyicisiz.';
 
   @override
   String get aboutHearthOnGitHub => 'GitHub\'da Hearth';
 
   @override
-  String get aboutCredits => 'Katkıda bulunanlar';
-
-  @override
-  String aboutFlauncherForkCredit(String author) {
-    return 'FLauncher çatalı · $author';
-  }
-
-  @override
   String get aboutLicense => 'Temel aldığı projeler gibi GNU GPL v3 kapsamında özgür yazılımdır.';
+
+  @override
+  String aboutIncludesCode(String projects) {
+    return '$projects projelerinden kod içerir.';
+  }
 
   @override
   String get profilePinRow => 'Profil PIN’i';

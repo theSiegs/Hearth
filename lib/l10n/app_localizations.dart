@@ -3317,12 +3317,6 @@ abstract class AppLocalizations {
   /// **'{description} · {version}'**
   String updatesDescriptionWithVersion(String description, String version);
 
-  /// Line under the version in the About dialog: the projects Hearth is built on. The placeholders are project and author names (launcher: the project Hearth started from, author: its author, original: the launcher that one came from, parts: a project Hearth took parts from)
-  ///
-  /// In en, this message translates to:
-  /// **'Built on {launcher} by {author} and {original}, with parts of {parts}'**
-  String aboutBuiltOn(String launcher, String author, String original, String parts);
-
   /// Description card in the About dialog
   ///
   /// In en, this message translates to:
@@ -3335,23 +3329,17 @@ abstract class AppLocalizations {
   /// **'Hearth on GitHub'**
   String get aboutHearthOnGitHub;
 
-  /// Heading above the projects Hearth builds on, in the About dialog
-  ///
-  /// In en, this message translates to:
-  /// **'Credits'**
-  String get aboutCredits;
-
-  /// Credit button in the About dialog for a fork of FLauncher; {author} is its author's handle
-  ///
-  /// In en, this message translates to:
-  /// **'FLauncher fork · {author}'**
-  String aboutFlauncherForkCredit(String author);
-
   /// Small print at the bottom of the About dialog
   ///
   /// In en, this message translates to:
   /// **'Free software under the GNU GPL v3, like the projects it builds on.'**
   String get aboutLicense;
+
+  /// About: the GPL notice for the projects whose code Hearth includes
+  ///
+  /// In en, this message translates to:
+  /// **'Includes code from {projects}.'**
+  String aboutIncludesCode(String projects);
 
   /// Profile Pairing: the row for a streaming app profile's saved PIN
   ///

@@ -33,7 +33,6 @@ profiles, Family Link screen time, and the Google Assistant.
 </p>
 <p align="center">
   <img src="docs/images/updates.png" width="49%" alt="Settings, System, Updates: Hearth, HearthTube and the Include pre-releases switch">
-  <img src="docs/images/about.png" width="49%" alt="About Hearth, with the credits for the projects it is built on">
 </p>
 
 ## Features
@@ -44,13 +43,19 @@ profiles, Family Link screen time, and the Google Assistant.
 - Wallpapers: Bing's photo of the day, your own pictures (per profile), gradients, or plain black.
 - Seven card styles, accent colours, and row titles that stay readable on any wallpaper.
 - **Search** across streaming services, opening titles straight in the app that has them.
+- A top bar with the date and your **Google calendars** (each profile's own, read on the TV), **weather** (today or
+  tonight at a glance, then the hours and days ahead) and data usage.
 
 **Google TV profiles**
 - Follows Google TV's own profiles: each profile gets its own home layout, wallpaper and Continue Watching.
 - **Profile Pairing**: opening Netflix, Disney+, Apple TV, HBO Max or Paramount+ from Hearth picks the matching
-  profile in that app, and can type that profile's PIN for you.
-- **Lock Profile** with Google TV's own profile lock, from Settings, the remote, or automatically when the TV
-  sleeps.
+  profile in that app, and can type that profile's PIN for you. PINs belong to the person who saved it, are typed
+  only in a profile that has its own Google TV PIN, can be set up from your phone (encrypted on the phone), and one
+  switch turns all of it off.
+- **Lock Profile** with Google TV's own profile lock: hold the remote's profile button, or from Settings, or
+  automatically when the TV sleeps.
+- **Approve from your phone** (with Home Assistant): when someone opens your PIN-locked profile, your phone asks you
+  to allow it, and Hearth enters your Google TV PIN.
 
 **Families**
 - Works with Family Link: Hearth gets out of the way of Google TV's bedtime and screen time screens.
@@ -60,7 +65,8 @@ profiles, Family Link screen time, and the Google Assistant.
 
 **Home Assistant**
 - Pop-up notifications over any app, with live camera views and action buttons (doorbell, laundry, …).
-- A dashboard panel one press away.
+- A dashboard panel one press away, drawn by Hearth for the remote (lights, switches, cameras, people on a map),
+  with a dashboard per profile.
 - Reports what the TV is doing (app, now playing, profile, kids screen time) to a webhook for automations.
 
 **The remote**
@@ -105,8 +111,8 @@ follows Hearth's profiles, kids settings and wallpaper. Hearth can install and u
 ## Privacy
 
 Hearth has no analytics, ads or trackers, and no account. It only connects to the internet for the things listed in
-[docs/privacy.md](docs/privacy.md) (wallpaper, weather, search artwork, updates, and your own Home Assistant), and
-it explains every Android permission it asks for.
+[docs/privacy.md](docs/privacy.md) (wallpaper, weather, search artwork, updates, a list of streaming app versions not
+to type PINs in, and your own Home Assistant), and it explains every Android permission it asks for.
 
 ## Documentation
 
@@ -119,13 +125,12 @@ it explains every Android permission it asks for.
 
 ## Credits
 
-Hearth is built on open-source work:
+Hearth includes code from these GPL-3.0 projects, whose copyright notices its source files keep:
 
-- [FLauncher](https://gitlab.com/flauncher/flauncher) by Étienne Fesser, the original Flutter launcher for
-  Android TV;
-- [FLauncher](https://github.com/osrosal/flauncher) as continued by Oscar Rojas;
-- [LTvLauncher](https://github.com/leanbitlab-org/LtvLauncher) by LeanBitLab, the project Hearth started from;
-- [Arc Launcher](https://github.com/meddouribadis/arclauncher), whose dock and performance work Hearth adapted.
+- [FLauncher](https://gitlab.com/flauncher/flauncher) by Étienne Fesser, and as
+  [continued](https://github.com/osrosal/flauncher) by Oscar Rojas;
+- [LTvLauncher](https://github.com/leanbitlab-org/LtvLauncher) by LeanBitLab;
+- [Arc Launcher](https://github.com/meddouribadis/arclauncher) by Badis Meddouri.
 
 Search artwork comes from [TMDB](https://www.themoviedb.org). Hearth uses the TMDB API but is not endorsed or
 certified by TMDB.

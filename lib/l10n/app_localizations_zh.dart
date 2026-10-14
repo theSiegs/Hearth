@@ -1879,26 +1879,18 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String aboutBuiltOn(String launcher, String author, String original, String parts) {
-    return '基于 $author 的 $launcher 和 $original，包含 $parts 的部分代码';
-  }
-
-  @override
   String get aboutDescription => '一款注重隐私、适合家庭的 Google TV 启动器，内置 Google TV 个人资料和 Home Assistant。无广告、无跟踪器。';
 
   @override
   String get aboutHearthOnGitHub => 'GitHub 上的 Hearth';
 
   @override
-  String get aboutCredits => '致谢';
-
-  @override
-  String aboutFlauncherForkCredit(String author) {
-    return 'FLauncher 分支 · $author';
-  }
-
-  @override
   String get aboutLicense => '与其所基于的项目一样，是遵循 GNU GPL v3 的自由软件。';
+
+  @override
+  String aboutIncludesCode(String projects) {
+    return '包含来自 $projects 的代码。';
+  }
 
   @override
   String get profilePinRow => '个人资料 PIN';

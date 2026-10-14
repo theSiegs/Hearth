@@ -56,7 +56,7 @@ secretProperties.setProperty("signing_keystore_password", "${System.getenv('FLAU
 secretProperties.setProperty("signing_key_password", "${System.getenv('FLAUNCHER_SIGNING_KEY_PASSWORD')}")
 secretProperties.setProperty("signing_key_alias", "${System.getenv('FLAUNCHER_SIGNING_KEY_ALIAS')}")
 
-// Hearth's app id. Up to v2026.10.x it was the fork's "com.leanbitlab.ltvL" (see docs/design/app-id-change.md).
+// Hearth's app id. Up to v2026.10.x it was LTvLauncher's "com.leanbitlab.ltvL" (see docs/design/app-id-change.md).
 def hearthAppId = "com.thesiegs.hearth"
 
 def keystoreFilePath = System.getenv("KEYSTORE_FILE") ?: localProperties['storeFile']

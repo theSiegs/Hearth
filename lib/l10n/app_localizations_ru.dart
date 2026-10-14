@@ -1903,26 +1903,18 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String aboutBuiltOn(String launcher, String author, String original, String parts) {
-    return 'Основано на $launcher от $author и $original, с частями $parts';
-  }
-
-  @override
   String get aboutDescription => 'Приватный семейный лаунчер для Google TV со встроенными профилями Google TV и Home Assistant. Без рекламы и трекеров.';
 
   @override
   String get aboutHearthOnGitHub => 'Hearth на GitHub';
 
   @override
-  String get aboutCredits => 'Благодарности';
-
-  @override
-  String aboutFlauncherForkCredit(String author) {
-    return 'Форк FLauncher · $author';
-  }
-
-  @override
   String get aboutLicense => 'Свободное ПО под лицензией GNU GPL v3, как и проекты, на которых оно основано.';
+
+  @override
+  String aboutIncludesCode(String projects) {
+    return 'Содержит код из $projects.';
+  }
 
   @override
   String get profilePinRow => 'PIN-код профиля';

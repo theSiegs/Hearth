@@ -57,7 +57,7 @@ Proper nouns (Hearth, HearthTube, Home Assistant, Google TV, Netflix, Watch Next
 - **blocked** (1): `blockedNotificationsHeading`
 - **tvPower** (2): `tvPowerGoogleTvHome`, `tvPowerGoogleTvHomeNote`
 - **backup** (14): `backupShareText`, `backupShareFailedTitle`, `backupShareFailed`, `backupExportSuccessTitle`, `backupExportFailedTitle`, `backupImportSuccessTitle`, `backupImportFailedTitle`, `backupImport`, `backupLoadError`, `backupNoFiles`, `backupFileDetails`, `backupSizeBytes`, `backupSizeKilobytes`, `backupSizeMegabytes`
-- **about** (6): `aboutBuiltOn`, `aboutDescription`, `aboutHearthOnGitHub`, `aboutCredits`, `aboutFlauncherForkCredit`, `aboutLicense`
+- **about** (4): `aboutDescription`, `aboutHearthOnGitHub`, `aboutIncludesCode`, `aboutLicense`
 - **pin** (4, 2026.10.55): `profilePinGaveUp`, `pinConsentTitle`, `pinConsentBody`, `pinConsentAgree`; and the Android `profile_pairing_description`
 - **pinLog / pinTyping** (11, 2026.10.55): `pinTypingSwitch`, `pinTypingSwitchOff`, `pinLogTitle`, `pinLogEmpty`, `pinLogAccepted`, `pinLogRejected`, `pinLogLockedOut`, `pinLogScreenChanged`, `pinLogBroken`, `pinLogNoScreen`, `pinLogCancelled`
 - **pinPhoneSetup** (2, 2026.10.56): `pinPhoneSetupRow`, `pinPhoneSetupScan`; and the Android phone page `strings_pin_phone.xml`

@@ -59,7 +59,8 @@ dropped when someone else used it (Netflix lists only its current profile's), un
 photo's title and credit are in **About Hearth**.
 
 **Status bar.** Clock and date (choose the format), weather, data usage (per day, week or
-month), TV inputs and the notification bell. Select the data usage to see which apps used the TV's data (OK goes
+month), TV inputs (only on TVs that have their own, not on a streaming stick) and the notification bell. Select the
+weather for today's (or, from 5 PM, tonight's) summary; OK goes on to the next hours and days. Select the data usage to see which apps used the TV's data (OK goes
 from today to this week and this month), whether the TV is on Wi-Fi and if a VPN is on; it says "No internet" when
 the TV has been offline for a few seconds. Android counts Wi-Fi and mobile data only, not Ethernet.
 
@@ -87,24 +88,31 @@ about 15 seconds on Google TV's home, in case it's a new kids profile Google TV 
 HBO Max or Paramount+, it picks the app profile that matches your Google TV profile: by name, or the one you pair it
 with. Open each app once from Hearth so it can learn the app's profiles.
 
-**Streaming app PINs** (**Settings → Profiles → Streaming app PINs**). If an app profile has a PIN, save it here.
-Each Google TV profile sees only its own: under each app Hearth can type PINs in (Netflix, Disney+, Apple TV, HBO Max),
-the app profile Hearth picks for this profile and its PIN. That works for a kids' profile too (a kid's Netflix profile
-with a PIN, say), past the parent PIN. Hearth types the PIN behind a "logging in as" card and never shows it. Saving a
-PIN for a profile matched by name pairs the two for good, so the PIN always goes with the right app profile. Saved
-PINs are encrypted with a key that never leaves the TV, and saving one needs the parent PIN. **Set up PINs on your
-phone** (same page) shows a QR code: the phone lists the profile's apps, and the PINs typed there are encrypted on the
-phone before they're sent to the TV. Each PIN is the
-profile's that saved it. In a grown-up's profile, Hearth types it only if that profile has its own Google TV PIN
-(otherwise anyone could switch to it and be let in); you'll see the app's own PIN screen until you turn the Google
-TV PIN on. Changing a pairing that has a PIN needs the parent PIN, and removes the PIN. After two PINs in a row the
-app doesn't take, Hearth stops typing it until you save it again.
+**Streaming app PINs** (**Settings → Profiles → Streaming app PINs**). If an app profile has a PIN, save it here, and
+Hearth types it behind a "logging in as" card when the app asks, never showing it.
+
+- Apps: Netflix, Disney+, Apple TV and HBO Max (a profile's PIN), and Paramount+'s content PIN (asked when a title
+  starts; saved once for the TV, typed only in a grown-up's profile that has a Google TV PIN).
+- Each Google TV profile sees and saves only its own PINs, and a PIN is typed only for the profile that saved it.
+  In a grown-up's profile, only when that profile has its own Google TV PIN (otherwise anyone could switch to it and
+  be let in): until then you'll see the app's own PIN screen. A kid's PIN is saved past the parent PIN.
+- Saving a PIN for a profile matched by name pairs the two for good. Changing a pairing that has a PIN needs the
+  parent PIN and removes the PIN.
+- **Set up PINs on your phone** shows a QR code: the phone lists this profile's apps, and the PINs typed there are
+  encrypted on the phone, with a one-time key from the QR code, before they reach the TV.
+- **Type saved PINs** turns all of it off for the TV; the apps then ask as usual.
+- **Recent PIN entries** lists the last 20 (app, time, outcome; never a name or a PIN).
+- After two PINs in a row the app doesn't take, Hearth stops typing it until you save it again. If an app's PIN screen
+  changes, Hearth pauses for that app until an update, and Hearth's repository can turn an app version off.
+- PINs are encrypted with a key that never leaves the TV. The first time, a screen explains what Hearth will do,
+  including that streaming services' terms may not allow an app to do this for you.
 
 **Lock Profile** (**Settings → Profiles**). Uses Google TV's own profile lock, so Google TV asks for your
 profile's PIN to come back. Turn the PIN on for your account in Google TV first. You can also:
 - hold the profile button in the top bar;
 - hold the remote's profile button (a press opens the profile chooser straight away). Hearth sets this button up
-  once in **Settings → Remote buttons**, where you can change it, or restore it to Google TV's own (the chooser only);
+  once in **Settings → TV & power → Remote → Remote buttons**, where you can change it, or restore it to Google TV's
+  own (the chooser only);
 - map another remote button to "Lock Profile";
 - set **Lock when the TV sleeps** (every time, or after some minutes asleep).
 
@@ -132,7 +140,9 @@ Hearth treats a profile as a kids profile when Family Link supervises it.
 - **Hearth on the kids' profiles.** Google TV removes apps that didn't come from the Play Store from kids'
   profiles each time the profile starts. The first-run setup puts Hearth (and HearthTube, once you have it) on each
   kids' profile and keeps them there. The first time, the TV asks "Allow debugging?": choose **Always allow**, and
-  leave debugging on. Each kid gets one Family Link "app added" notice. It only touches Hearth's own two apps. After
+  leave debugging on. Google TV turns the Developer options switch off by itself over time; to keep the TV trusting
+  Hearth, also turn on **Disable adb authorization timeout** there. Hearth uses the same connection to close the
+  streaming apps grown-ups share when the profile changes, so they ask who's watching. Each kid gets one Family Link "app added" notice. It only touches Hearth's own two apps. After
   that, Hearth puts itself on a kids' profile you add later too, once you've switched away from it (once per
   profile, so you aren't sent notice after notice).
 - **Kids' profiles** (**Settings → Profiles → Kids' profiles**). Shows each kids' profile as **Ready** or **Needs a
@@ -203,5 +213,9 @@ are welcome ([list of strings to review](translations-to-review.md)).
 - **Use Google TV's home** (**Settings → TV & power**) leaves Google TV's own home in front until you turn it off,
   without uninstalling Hearth. The Home button still opens Hearth.
 - **Profile Pairing stopped picking a profile.** The app may have changed its screens; you get the app's own picker
-  instead. Open the app from Hearth again so it can relearn the profiles. A saved PIN the app stops accepting shows
-  as "paused" in Profile Pairing until you enter it again.
+  instead. Open the app from Hearth again so it can relearn the profiles.
+- **A saved PIN isn't typed.** **Streaming app PINs** says why: "not accepted twice" (save it again), "paused" (the
+  app's PIN screen changed; an update will fix it), or nothing saved for this profile. In a grown-up's profile, the
+  profile needs its own Google TV PIN. **Recent PIN entries** shows what happened each time.
+- **An app opens on someone else's profile after a switch.** The TV's debugging has stopped trusting Hearth, so it
+  can't close the app on the switch: see Kids profiles above.

@@ -34,7 +34,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(HearthAboutDialog.tmdbNotice), findsOneWidget);
     expect(find.byType(SvgPicture), findsOneWidget);
-    // Hearth is its own project, built on the launchers it credits
-    expect(find.text("Built on LTvLauncher by LeanBitLab and FLauncher, with parts of Arc Launcher"), findsOneWidget);
+    // The GPL's notice for the code Hearth includes, without a "built on" or fork credit
+    expect(find.textContaining("Includes code from FLauncher"), findsOneWidget);
+    expect(find.textContaining("Built on"), findsNothing);
   });
 }
