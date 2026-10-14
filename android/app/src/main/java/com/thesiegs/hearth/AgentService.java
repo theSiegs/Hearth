@@ -145,7 +145,8 @@ public class AgentService extends Service {
         try {
             String saved = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(HEARTH_ROW, null);
             if (saved != null) row = new JSONObject(saved);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Log.w(TAG, "Hearth's saved row didn't read, starting without it: " + e.getClass().getSimpleName());
         }
         AgentWallpaper.Kept wallpaper = AgentWallpaper.kept(context);
         for (int i = 0; i < columns.length; i++) {

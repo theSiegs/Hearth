@@ -225,7 +225,8 @@ final class PinVault {
         try {
             e.put("status", status).put("rejections", rejections);
             prefs(context).edit().putString(id(owner, pkg, appProfile), e.toString()).apply();
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            Log.w(TAG, "A PIN's status wasn't saved: " + ex.getClass().getSimpleName());
         }
     }
 

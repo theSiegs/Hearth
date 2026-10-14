@@ -1181,6 +1181,7 @@ public class MainActivity extends FlutterActivity {
             }
         } catch (Exception e) {
             // TIF might not be supported or initialized on emulator
+            Log.i(TAG, "The TV inputs couldn't be listed: " + e.getClass().getSimpleName());
         }
         return result;
     }

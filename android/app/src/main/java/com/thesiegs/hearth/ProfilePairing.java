@@ -1,6 +1,7 @@
 package com.thesiegs.hearth;
 
 import android.content.Context;
+import android.util.Log;
 import android.content.SharedPreferences;
 
 import org.json.JSONArray;
@@ -23,6 +24,7 @@ import java.util.Set;
  * renamed profile keeps its choices; the name is only for matching app profiles and for showing.
  */
 final class ProfilePairing {
+    private static final String TAG = "HearthProfilePairing";
     static final String NETFLIX = "com.netflix.ninja";
     static final String DISNEY = "com.disney.disneyplus";
     static final String APPLE_TV = "com.apple.atve.androidtv.appletv";
@@ -189,7 +191,8 @@ final class ProfilePairing {
         try {
             JSONArray array = new JSONArray(json);
             for (int i = 0; i < array.length(); i++) names.add(array.getString(i));
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Log.w(TAG, "A saved list of names didn't read: " + e.getClass().getSimpleName());
         }
         return names;
     }

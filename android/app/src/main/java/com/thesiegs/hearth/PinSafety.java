@@ -152,6 +152,7 @@ final class PinSafety {
             for (int i = 0; i < old.length() && out.length() < LOG_SIZE; i++) out.put(old.get(i));
         } catch (Exception e) {
             // A damaged log starts again
+            Log.i(TAG, "The entry log was damaged and starts again: " + e.getClass().getSimpleName());
         }
         return out.toString();
     }
@@ -173,6 +174,7 @@ final class PinSafety {
             }
         } catch (Exception e) {
             // Nothing readable
+            Log.i(TAG, "The entry log couldn't be read: " + e.getClass().getSimpleName());
         }
         return out;
     }

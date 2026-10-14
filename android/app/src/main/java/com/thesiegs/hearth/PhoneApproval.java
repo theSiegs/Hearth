@@ -265,7 +265,8 @@ final class PhoneApproval {
             try {
                 HaApi.callService(context, "notify", service, new JSONObject().put("message", "clear_notification")
                         .put("data", new JSONObject().put("tag", TAG_PREFIX + request.nonce)));
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                Log.i(TAG, "The phone's notification wasn't cleared: " + e.getClass().getSimpleName());
             }
         });
     }

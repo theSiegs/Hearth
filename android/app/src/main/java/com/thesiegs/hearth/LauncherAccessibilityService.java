@@ -1175,7 +1175,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             try {
                 context.startActivity(home);
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                Log.w(TAG, "Google TV's home didn't start: " + e.getClass().getSimpleName());
             }
         }
     }
