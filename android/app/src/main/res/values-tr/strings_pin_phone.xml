@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The phone page for streaming app PINs (PinSetupServer) -->
+<resources>
+    <string name="pin_phone_title">Yayın uygulaması PIN’leri: %1$s</string>
+    <string name="pin_phone_intro">Her PIN’i iki kez yazın. Boş bırakılan satır olduğu gibi kalır. PIN’ler bu telefonda şifrelenir ve yalnızca TV okuyabilir.</string>
+    <string name="pin_phone_row">%1$s, profil %2$s</string>
+    <string name="pin_phone_content">%1$s içerik PIN’i (Google TV PIN’i olan her yetişkin profili)</string>
+    <string name="pin_phone_saved">Kayıtlı bir PIN var; değiştirmek için yenisini yazın.</string>
+    <string name="pin_phone_unsaved">Kayıtlı PIN yok.</string>
+    <string name="pin_phone_pin">PIN</string>
+    <string name="pin_phone_again">PIN tekrar</string>
+    <string name="pin_phone_mismatch">İki giriş eşleşmiyor.</string>
+    <string name="pin_phone_length">Buradaki PIN %1$d basamaklıdır.</string>
+    <string name="pin_phone_send">TV’ye kaydet</string>
+    <string name="pin_phone_sent">TV’ye kaydedildi. Bu sayfayı kapatabilirsiniz.</string>
+    <string name="pin_phone_failed">TV bunları kabul etmedi. QR kodunu TV’de yeniden gösterip tekrar deneyin.</string>
+    <string name="pin_phone_old_browser">Bu sayfa, TV’deki QR kodundan açılan daha yeni bir tarayıcı gerektirir.</string>
+    <string name="pin_phone_none">Henüz kurulacak bir şey yok: Hearth’ün profilleri öğrenmesi için her yayın uygulamasını bir kez Hearth’ten açın.</string>
+    <string name="pin_phone_open_once">%1$s: önce Hearth’ten bir kez açın.</string>
+</resources>

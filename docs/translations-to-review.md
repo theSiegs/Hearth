@@ -60,3 +60,4 @@ Proper nouns (Hearth, HearthTube, Home Assistant, Google TV, Netflix, Watch Next
 - **about** (6): `aboutBuiltOn`, `aboutDescription`, `aboutHearthOnGitHub`, `aboutCredits`, `aboutFlauncherForkCredit`, `aboutLicense`
 - **pin** (4, 2026.10.55): `profilePinGaveUp`, `pinConsentTitle`, `pinConsentBody`, `pinConsentAgree`; and the Android `profile_pairing_description`
 - **pinLog / pinTyping** (11, 2026.10.55): `pinTypingSwitch`, `pinTypingSwitchOff`, `pinLogTitle`, `pinLogEmpty`, `pinLogAccepted`, `pinLogRejected`, `pinLogLockedOut`, `pinLogScreenChanged`, `pinLogBroken`, `pinLogNoScreen`, `pinLogCancelled`
+- **pinPhoneSetup** (2, 2026.10.56): `pinPhoneSetupRow`, `pinPhoneSetupScan`; and the Android phone page `strings_pin_phone.xml`

@@ -1972,6 +1972,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get pinLogCancelled => 'रद्द किया गया';
 
   @override
+  String get pinPhoneSetupRow => 'अपने फ़ोन पर PIN सेट करें';
+
+  @override
+  String get pinPhoneSetupScan => 'उसी Wi-Fi पर किसी फ़ोन से स्कैन करें और वहीं PIN लिखें। वे फ़ोन पर एन्क्रिप्ट होते हैं; पेज तभी तक काम करता है जब तक यह खुला है।';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth अभी $app में PIN टाइप नहीं कर सकता';
   }

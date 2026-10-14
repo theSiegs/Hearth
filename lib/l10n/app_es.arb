@@ -593,6 +593,8 @@
     "pinLogBroken": "Se detuvo a medias",
     "pinLogNoScreen": "No pidió PIN",
     "pinLogCancelled": "Cancelado",
+    "pinPhoneSetupRow": "Configurar los PIN en tu teléfono",
+    "pinPhoneSetupScan": "Escanea con un teléfono en la misma Wi-Fi y escribe ahí los PIN. Se cifran en el teléfono; la página solo funciona mientras esto esté abierto.",
     "profilePinUnsupported": "Hearth aún no puede escribir PIN en {app}",
     "profilePinEnterTitle": "PIN de {profile} en {app}",
     "profilePinEnterSubtitle": "Hearth lo escribe detrás de la tarjeta «Iniciando sesión como» cuando {app} lo pide. Se queda cifrado en esta TV y nunca se muestra.",

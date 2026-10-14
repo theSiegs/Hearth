@@ -345,6 +345,14 @@ public class MainActivity extends FlutterActivity {
             }
             case "getHaEntities" -> answerFrom(HaApi.EXECUTOR, result, () -> HaApi.actionableEntities(this).toString());
             case "startHaSetup" -> result.success(HaSetupServer.start(this));
+            // The phone page for the streaming PINs of the profile on now (PinSetupServer)
+            case "startPinSetup" -> result.success(
+                    PinSetupServer.start(this, LauncherAccessibilityService.getActiveProfileKey(this)));
+            case "stopPinSetup" -> {
+                PinSetupServer.stop();
+                result.success(null);
+            }
+            case "getPinSetupSaved" -> result.success(PinSetupServer.saved());
             case "stopHaSetup" -> {
                 HaSetupServer.stop();
                 result.success(null);

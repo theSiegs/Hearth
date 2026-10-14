@@ -593,6 +593,8 @@
     "pinLogBroken": "Parou no meio",
     "pinLogNoScreen": "Nenhum PIN pedido",
     "pinLogCancelled": "Cancelado",
+    "pinPhoneSetupRow": "Configurar PINs no celular",
+    "pinPhoneSetupScan": "Escaneie com um celular na mesma Wi-Fi e digite os PINs lá. Eles são criptografados no celular; a página só funciona enquanto isto estiver aberto.",
     "profilePinUnsupported": "O Hearth ainda não digita PINs no {app}",
     "profilePinEnterTitle": "PIN de {profile} no {app}",
     "profilePinEnterSubtitle": "O Hearth o digita atrás do cartão “Entrando como” quando o {app} pede. Fica criptografado nesta TV e nunca é mostrado.",

@@ -593,6 +593,8 @@
     "pinLogBroken": "途中で止まりました",
     "pinLogNoScreen": "PIN は求められませんでした",
     "pinLogCancelled": "キャンセルしました",
+    "pinPhoneSetupRow": "スマートフォンで PIN を設定",
+    "pinPhoneSetupScan": "同じ Wi-Fi のスマートフォンでスキャンし、そこで PIN を入力してください。PIN はスマートフォンで暗号化されます。ページはこの画面が開いている間だけ使えます。",
     "profilePinUnsupported": "Hearthはまだ{app}でPINを入力できません",
     "profilePinEnterTitle": "{app}での{profile}のPIN",
     "profilePinEnterSubtitle": "{app}が求めると、Hearthが「ログイン中」カードの裏で入力します。このテレビに暗号化して保存され、表示されることはありません。",

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The phone page for streaming app PINs (PinSetupServer) -->
+<resources>
+    <string name="pin_phone_title">Streaming app PINs: %1$s</string>
+    <string name="pin_phone_intro">Type each PIN twice. A row left empty stays as it is. The PINs are encrypted on this phone, and only the TV can read them.</string>
+    <string name="pin_phone_row">%1$s, profile %2$s</string>
+    <string name="pin_phone_content">%1$s content PIN (every grown-up’s profile with a Google TV PIN)</string>
+    <string name="pin_phone_saved">A PIN is saved; type a new one to replace it.</string>
+    <string name="pin_phone_unsaved">No PIN saved.</string>
+    <string name="pin_phone_pin">PIN</string>
+    <string name="pin_phone_again">PIN again</string>
+    <string name="pin_phone_mismatch">The two entries don’t match.</string>
+    <string name="pin_phone_length">A PIN here has %1$d digits.</string>
+    <string name="pin_phone_send">Save on the TV</string>
+    <string name="pin_phone_sent">Saved on the TV. You can close this page.</string>
+    <string name="pin_phone_failed">The TV didn’t take them. Show the QR code on the TV again and retry.</string>
+    <string name="pin_phone_old_browser">This page needs a newer browser, opened from the QR code on the TV.</string>
+    <string name="pin_phone_none">Nothing to set up yet: open each streaming app once from Hearth, so it learns the app’s profiles.</string>
+    <string name="pin_phone_open_once">%1$s: open it once from Hearth first.</string>
+</resources>

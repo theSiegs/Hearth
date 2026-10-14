@@ -593,6 +593,8 @@
     "pinLogBroken": "توقف في المنتصف",
     "pinLogNoScreen": "لم يُطلب رمز",
     "pinLogCancelled": "أُلغي",
+    "pinPhoneSetupRow": "إعداد الرموز من هاتفك",
+    "pinPhoneSetupScan": "امسح الرمز بهاتف على شبكة Wi-Fi نفسها واكتب الرموز هناك. تُشفَّر على الهاتف، ولا تعمل الصفحة إلا ما دام هذا مفتوحًا.",
     "profilePinUnsupported": "لا يستطيع Hearth بعد كتابة رموز PIN في {app}",
     "profilePinEnterTitle": "رمز PIN لـ {profile} في {app}",
     "profilePinEnterSubtitle": "يكتبه Hearth خلف بطاقة \"تسجيل الدخول باسم\" عندما يطلبه {app}. يبقى مشفّرًا على هذا التلفزيون ولا يُعرض أبدًا.",

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The phone page for streaming app PINs (PinSetupServer) -->
+<resources>
+    <string name="pin_phone_title">رموز تطبيقات البث: %1$s</string>
+    <string name="pin_phone_intro">اكتب كل رمز مرتين. يبقى الصف الفارغ كما هو. تُشفَّر الرموز على هذا الهاتف، ولا يستطيع قراءتها إلا التلفاز.</string>
+    <string name="pin_phone_row">%1$s، الملف الشخصي %2$s</string>
+    <string name="pin_phone_content">رمز المحتوى في %1$s (كل ملف شخص بالغ له رمز Google TV)</string>
+    <string name="pin_phone_saved">هناك رمز محفوظ؛ اكتب رمزًا جديدًا لاستبداله.</string>
+    <string name="pin_phone_unsaved">لا يوجد رمز محفوظ.</string>
+    <string name="pin_phone_pin">الرمز</string>
+    <string name="pin_phone_again">الرمز مرة أخرى</string>
+    <string name="pin_phone_mismatch">الإدخالان غير متطابقين.</string>
+    <string name="pin_phone_length">الرمز هنا من %1$d أرقام.</string>
+    <string name="pin_phone_send">حفظ على التلفاز</string>
+    <string name="pin_phone_sent">حُفظ على التلفاز. يمكنك إغلاق هذه الصفحة.</string>
+    <string name="pin_phone_failed">لم يقبلها التلفاز. اعرض رمز QR على التلفاز مرة أخرى وأعد المحاولة.</string>
+    <string name="pin_phone_old_browser">تحتاج هذه الصفحة إلى متصفح أحدث، تفتحه من رمز QR على التلفاز.</string>
+    <string name="pin_phone_none">لا شيء لإعداده بعد: افتح كل تطبيق بث مرة واحدة من Hearth ليتعرّف على ملفاته الشخصية.</string>
+    <string name="pin_phone_open_once">%1$s: افتحه مرة واحدة من Hearth أولًا.</string>
+</resources>

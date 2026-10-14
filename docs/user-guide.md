@@ -92,7 +92,9 @@ Each Google TV profile sees only its own: under each app Hearth can type PINs in
 the app profile Hearth picks for this profile and its PIN. That works for a kids' profile too (a kid's Netflix profile
 with a PIN, say), past the parent PIN. Hearth types the PIN behind a "logging in as" card and never shows it. Saving a
 PIN for a profile matched by name pairs the two for good, so the PIN always goes with the right app profile. Saved
-PINs are encrypted with a key that never leaves the TV, and saving one needs the parent PIN. Each PIN is the
+PINs are encrypted with a key that never leaves the TV, and saving one needs the parent PIN. **Set up PINs on your
+phone** (same page) shows a QR code: the phone lists the profile's apps, and the PINs typed there are encrypted on the
+phone before they're sent to the TV. Each PIN is the
 profile's that saved it. In a grown-up's profile, Hearth types it only if that profile has its own Google TV PIN
 (otherwise anyone could switch to it and be let in); you'll see the app's own PIN screen until you turn the Google
 TV PIN on. Changing a pairing that has a PIN needs the parent PIN, and removes the PIN. After two PINs in a row the

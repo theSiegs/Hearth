@@ -593,6 +593,8 @@
     "pinLogBroken": "Unterwegs abgebrochen",
     "pinLogNoScreen": "Keine PIN verlangt",
     "pinLogCancelled": "Abgebrochen",
+    "pinPhoneSetupRow": "PINs auf dem Telefon einrichten",
+    "pinPhoneSetupScan": "Scanne mit einem Telefon im selben WLAN und gib die PINs dort ein. Sie werden auf dem Telefon verschlüsselt; die Seite funktioniert nur, solange dies geöffnet ist.",
     "profilePinUnsupported": "Hearth kann in {app} noch keine PINs eingeben",
     "profilePinEnterTitle": "PIN von {profile} in {app}",
     "profilePinEnterSubtitle": "Hearth gibt sie hinter der Karte „Anmelden als“ ein, wenn {app} danach fragt. Sie bleibt verschlüsselt auf diesem Fernseher und wird nie angezeigt.",

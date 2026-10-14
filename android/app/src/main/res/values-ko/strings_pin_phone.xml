@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The phone page for streaming app PINs (PinSetupServer) -->
+<resources>
+    <string name="pin_phone_title">스트리밍 앱 PIN: %1$s</string>
+    <string name="pin_phone_intro">각 PIN을 두 번 입력하세요. 비워 둔 줄은 그대로 유지됩니다. PIN은 이 휴대전화에서 암호화되며 TV만 읽을 수 있습니다.</string>
+    <string name="pin_phone_row">%1$s, 프로필 %2$s</string>
+    <string name="pin_phone_content">%1$s 콘텐츠 PIN(Google TV PIN이 있는 모든 성인 프로필)</string>
+    <string name="pin_phone_saved">저장된 PIN이 있습니다. 바꾸려면 새 PIN을 입력하세요.</string>
+    <string name="pin_phone_unsaved">저장된 PIN 없음</string>
+    <string name="pin_phone_pin">PIN</string>
+    <string name="pin_phone_again">PIN 다시 입력</string>
+    <string name="pin_phone_mismatch">두 입력이 일치하지 않습니다.</string>
+    <string name="pin_phone_length">여기 PIN은 %1$d자리입니다.</string>
+    <string name="pin_phone_send">TV에 저장</string>
+    <string name="pin_phone_sent">TV에 저장했습니다. 이 페이지를 닫아도 됩니다.</string>
+    <string name="pin_phone_failed">TV가 받지 못했습니다. TV에 QR 코드를 다시 표시하고 다시 시도하세요.</string>
+    <string name="pin_phone_old_browser">이 페이지는 최신 브라우저에서 TV의 QR 코드로 열어야 합니다.</string>
+    <string name="pin_phone_none">아직 설정할 항목이 없습니다. 각 스트리밍 앱을 Hearth에서 한 번 열어 프로필을 알게 하세요.</string>
+    <string name="pin_phone_open_once">%1$s: 먼저 Hearth에서 한 번 여세요.</string>
+</resources>

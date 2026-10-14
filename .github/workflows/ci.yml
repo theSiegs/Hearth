@@ -47,6 +47,14 @@ jobs:
       - name: Test
         run: flutter test
 
+      # The phone pages' encryption, against Node's own ChaCha20-Poly1305
+      - name: Test phone page encryption
+        run: node test/js/phone_seal_test.js
+
       # Compiles the Java side too, which nothing else checks before a release.
       - name: Build Debug APK
         run: flutter build apk --debug --target-platform=android-arm64
+
+      - name: Test Java
+        working-directory: android
+        run: ./gradlew :app:testDebugUnitTest

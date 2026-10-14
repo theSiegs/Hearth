@@ -1987,6 +1987,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get pinLogCancelled => 'Отменено';
 
   @override
+  String get pinPhoneSetupRow => 'Настроить PIN на телефоне';
+
+  @override
+  String get pinPhoneSetupScan => 'Отсканируйте телефоном в той же сети Wi-Fi и введите PIN там. Они шифруются на телефоне; страница работает, только пока это окно открыто.';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth пока не умеет вводить PIN-коды в $app';
   }

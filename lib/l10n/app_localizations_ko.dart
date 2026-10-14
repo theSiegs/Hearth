@@ -1963,6 +1963,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get pinLogCancelled => '취소됨';
 
   @override
+  String get pinPhoneSetupRow => '휴대전화에서 PIN 설정';
+
+  @override
+  String get pinPhoneSetupScan => '같은 Wi-Fi의 휴대전화로 스캔하고 그곳에서 PIN을 입력하세요. PIN은 휴대전화에서 암호화되며, 이 창이 열려 있는 동안에만 페이지가 작동합니다.';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth는 아직 $app에서 PIN을 입력할 수 없습니다';
   }

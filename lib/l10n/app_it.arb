@@ -593,6 +593,8 @@
     "pinLogBroken": "Interrotto a metà",
     "pinLogNoScreen": "Nessun PIN richiesto",
     "pinLogCancelled": "Annullato",
+    "pinPhoneSetupRow": "Configura i PIN sul telefono",
+    "pinPhoneSetupScan": "Scansiona con un telefono sulla stessa Wi-Fi e digita lì i PIN. Vengono cifrati sul telefono; la pagina funziona solo finché questa finestra è aperta.",
     "profilePinUnsupported": "Hearth non sa ancora digitare i PIN in {app}",
     "profilePinEnterTitle": "PIN di {profile} in {app}",
     "profilePinEnterSubtitle": "Hearth lo digita dietro la scheda “Accesso come” quando {app} lo chiede. Resta cifrato su questa TV e non viene mai mostrato.",

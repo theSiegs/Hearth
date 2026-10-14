@@ -1974,6 +1974,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get pinLogCancelled => 'Cancelado';
 
   @override
+  String get pinPhoneSetupRow => 'Configurar PINs no celular';
+
+  @override
+  String get pinPhoneSetupScan => 'Escaneie com um celular na mesma Wi-Fi e digite os PINs lá. Eles são criptografados no celular; a página só funciona enquanto isto estiver aberto.';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'O Hearth ainda não digita PINs no $app';
   }

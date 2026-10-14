@@ -2010,6 +2010,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get pinLogCancelled => 'أُلغي';
 
   @override
+  String get pinPhoneSetupRow => 'إعداد الرموز من هاتفك';
+
+  @override
+  String get pinPhoneSetupScan => 'امسح الرمز بهاتف على شبكة Wi-Fi نفسها واكتب الرموز هناك. تُشفَّر على الهاتف، ولا تعمل الصفحة إلا ما دام هذا مفتوحًا.';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'لا يستطيع Hearth بعد كتابة رموز PIN في $app';
   }

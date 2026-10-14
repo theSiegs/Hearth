@@ -593,6 +593,8 @@
     "pinLogBroken": "Зупинено на півдорозі",
     "pinLogNoScreen": "PIN не запитувався",
     "pinLogCancelled": "Скасовано",
+    "pinPhoneSetupRow": "Налаштувати PIN на телефоні",
+    "pinPhoneSetupScan": "Відскануйте телефоном у тій самій мережі Wi-Fi і введіть PIN там. Вони шифруються на телефоні; сторінка працює, лише поки це вікно відкрите.",
     "profilePinUnsupported": "Hearth поки не вміє вводити PIN-коди в {app}",
     "profilePinEnterTitle": "PIN-код {profile} у {app}",
     "profilePinEnterSubtitle": "Hearth вводить його за карткою «Вхід як», коли {app} просить. Код зберігається на цьому телевізорі в зашифрованому вигляді й ніколи не показується.",

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The phone page for streaming app PINs (PinSetupServer) -->
+<resources>
+    <string name="pin_phone_title">流媒体应用 PIN：%1$s</string>
+    <string name="pin_phone_intro">每个 PIN 输入两次。留空的行保持不变。PIN 会在这部手机上加密，只有电视能读取。</string>
+    <string name="pin_phone_row">%1$s，个人资料 %2$s</string>
+    <string name="pin_phone_content">%1$s 内容 PIN（所有设置了 Google TV PIN 的成人个人资料）</string>
+    <string name="pin_phone_saved">已保存 PIN；输入新的 PIN 即可替换。</string>
+    <string name="pin_phone_unsaved">未保存 PIN。</string>
+    <string name="pin_phone_pin">PIN</string>
+    <string name="pin_phone_again">再次输入 PIN</string>
+    <string name="pin_phone_mismatch">两次输入不一致。</string>
+    <string name="pin_phone_length">这里的 PIN 为 %1$d 位数字。</string>
+    <string name="pin_phone_send">保存到电视</string>
+    <string name="pin_phone_sent">已保存到电视。可以关闭此页面了。</string>
+    <string name="pin_phone_failed">电视未接收。请在电视上重新显示二维码后再试。</string>
+    <string name="pin_phone_old_browser">此页面需要较新的浏览器，并需通过电视上的二维码打开。</string>
+    <string name="pin_phone_none">暂时没有可设置的内容：先从 Hearth 打开每个流媒体应用一次，让它了解应用的个人资料。</string>
+    <string name="pin_phone_open_once">%1$s：请先从 Hearth 打开一次。</string>
+</resources>

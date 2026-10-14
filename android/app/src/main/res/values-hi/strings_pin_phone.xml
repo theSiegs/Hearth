@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The phone page for streaming app PINs (PinSetupServer) -->
+<resources>
+    <string name="pin_phone_title">स्ट्रीमिंग ऐप PIN: %1$s</string>
+    <string name="pin_phone_intro">हर PIN दो बार लिखें। खाली छोड़ी गई पंक्ति जैसी है वैसी रहती है। PIN इसी फ़ोन पर एन्क्रिप्ट होते हैं, और उन्हें सिर्फ़ TV पढ़ सकता है।</string>
+    <string name="pin_phone_row">%1$s, प्रोफ़ाइल %2$s</string>
+    <string name="pin_phone_content">%1$s कंटेंट PIN (Google TV PIN वाली हर वयस्क प्रोफ़ाइल)</string>
+    <string name="pin_phone_saved">एक PIN सहेजा हुआ है; बदलने के लिए नया लिखें।</string>
+    <string name="pin_phone_unsaved">कोई PIN सहेजा नहीं गया।</string>
+    <string name="pin_phone_pin">PIN</string>
+    <string name="pin_phone_again">PIN फिर से</string>
+    <string name="pin_phone_mismatch">दोनों प्रविष्टियाँ मेल नहीं खातीं।</string>
+    <string name="pin_phone_length">यहाँ PIN में %1$d अंक होते हैं।</string>
+    <string name="pin_phone_send">TV पर सहेजें</string>
+    <string name="pin_phone_sent">TV पर सहेजा गया। आप यह पेज बंद कर सकते हैं।</string>
+    <string name="pin_phone_failed">TV ने इन्हें स्वीकार नहीं किया। TV पर QR कोड फिर से दिखाएँ और दोबारा कोशिश करें।</string>
+    <string name="pin_phone_old_browser">इस पेज के लिए नया ब्राउज़र चाहिए, जो TV के QR कोड से खोला गया हो।</string>
+    <string name="pin_phone_none">अभी सेट करने को कुछ नहीं: हर स्ट्रीमिंग ऐप को Hearth से एक बार खोलें, ताकि वह उसकी प्रोफ़ाइलें जान ले।</string>
+    <string name="pin_phone_open_once">%1$s: पहले इसे Hearth से एक बार खोलें।</string>
+</resources>

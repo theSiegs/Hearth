@@ -3473,6 +3473,18 @@ abstract class AppLocalizations {
   /// **'Cancelled'**
   String get pinLogCancelled;
 
+  /// Streaming app PINs: set up from a phone (QR code)
+  ///
+  /// In en, this message translates to:
+  /// **'Set up PINs on your phone'**
+  String get pinPhoneSetupRow;
+
+  /// Streaming app PINs: set up from a phone (QR code)
+  ///
+  /// In en, this message translates to:
+  /// **'Scan with a phone on the same Wi-Fi and type the PINs there. They’re encrypted on the phone; the page only works while this is open.'**
+  String get pinPhoneSetupScan;
+
   /// Profile Pairing: streaming app profile PIN
   ///
   /// In en, this message translates to:

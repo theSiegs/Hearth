@@ -18,6 +18,7 @@
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/profile_service.dart';
+import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -25,6 +26,7 @@ import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
 import 'message_dialog.dart';
+import 'phone_setup_dialog.dart';
 import 'profile_pairing_page.dart';
 import 'settings_page.dart';
 import 'setup_checklist_page.dart';
@@ -136,6 +138,28 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
         _log = log;
       });
     }
+  }
+
+  /// The PINs of the profile on now, typed on a phone: the parent PIN and what typing PINs involves first, as for
+  /// one typed here.
+  Future<void> _setUpOnPhone() async {
+    final l = AppLocalizations.of(context)!;
+    final labels = [for (final (app, _) in _apps ?? const <(Map<dynamic, dynamic>, List<_PinRow>)>[]) app["label"]];
+    if (!await requireParentPin(context)) return;
+    if (!mounted) return;
+    if (!await confirmPinConsent(context, labels.join(", "))) return;
+    if (!mounted) return;
+    await showDialog<bool>(
+      context: context,
+      builder: (_) => PhoneSetupDialog(
+        title: l.pinPhoneSetupRow,
+        scanText: l.pinPhoneSetupScan,
+        start: _channel.startPinSetup,
+        stop: _channel.stopPinSetup,
+        done: () async => await _channel.getPinSetupSaved() >= 0,
+      ),
+    );
+    if (mounted) _load();
   }
 
   Future<void> _setTypingOn(bool on) async {
@@ -253,6 +277,13 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
           subtitle: _typingOn ? null : Text(l.pinTypingSwitchOff, style: small),
           secondary: Icon(Icons.pin_outlined, color: _typingOn ? Colors.green : Colors.white54),
         ),
+        if (_serviceOn && (apps.isNotEmpty || _contentPin != null))
+          FocusableSettingsTile(
+            leading: const Icon(Icons.qr_code_2),
+            title: Text(l.pinPhoneSetupRow, style: textTheme.bodyMedium),
+            trailing: const Icon(Icons.chevron_right),
+            onPressed: _setUpOnPhone,
+          ),
         const Divider(),
         if (apps.isEmpty && _contentPin == null)
           Padding(

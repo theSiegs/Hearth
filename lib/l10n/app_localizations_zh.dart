@@ -1963,6 +1963,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pinLogCancelled => '已取消';
 
   @override
+  String get pinPhoneSetupRow => '在手机上设置 PIN';
+
+  @override
+  String get pinPhoneSetupScan => '用连接同一 Wi-Fi 的手机扫描，并在手机上输入 PIN。PIN 会在手机上加密；仅当此窗口打开时页面才可用。';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth 暂时还无法在 $app 中输入 PIN';
   }

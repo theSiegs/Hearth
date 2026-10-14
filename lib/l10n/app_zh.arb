@@ -593,6 +593,8 @@
     "pinLogBroken": "中途停止",
     "pinLogNoScreen": "未要求 PIN",
     "pinLogCancelled": "已取消",
+    "pinPhoneSetupRow": "在手机上设置 PIN",
+    "pinPhoneSetupScan": "用连接同一 Wi-Fi 的手机扫描，并在手机上输入 PIN。PIN 会在手机上加密；仅当此窗口打开时页面才可用。",
     "profilePinUnsupported": "Hearth 暂时还无法在 {app} 中输入 PIN",
     "profilePinEnterTitle": "{profile} 在 {app} 中的 PIN",
     "profilePinEnterSubtitle": "当 {app} 要求时，Hearth 会在“正在登录”卡片后面输入。它加密保存在这台电视上，从不显示。",

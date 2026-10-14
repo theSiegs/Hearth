@@ -1963,6 +1963,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get pinLogCancelled => 'İptal edildi';
 
   @override
+  String get pinPhoneSetupRow => 'PIN’leri telefonunuzda ayarlayın';
+
+  @override
+  String get pinPhoneSetupScan => 'Aynı Wi-Fi’deki bir telefonla tarayın ve PIN’leri orada yazın. Telefonda şifrelenirler; sayfa yalnızca bu açıkken çalışır.';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth henüz $app içinde PIN yazamıyor';
   }

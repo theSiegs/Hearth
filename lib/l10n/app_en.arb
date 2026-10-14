@@ -2452,6 +2452,14 @@
     "@pinLogCancelled": {
         "description": "Streaming app PINs: typing switch and recent entries"
     },
+    "pinPhoneSetupRow": "Set up PINs on your phone",
+    "@pinPhoneSetupRow": {
+        "description": "Streaming app PINs: set up from a phone (QR code)"
+    },
+    "pinPhoneSetupScan": "Scan with a phone on the same Wi-Fi and type the PINs there. They’re encrypted on the phone; the page only works while this is open.",
+    "@pinPhoneSetupScan": {
+        "description": "Streaming app PINs: set up from a phone (QR code)"
+    },
     "profilePinUnsupported": "Hearth can’t type PINs in {app} yet",
     "@profilePinUnsupported": {
         "description": "Profile Pairing: streaming app profile PIN",

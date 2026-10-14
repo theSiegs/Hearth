@@ -31,7 +31,9 @@ as Wikidata asks.
 ## What listens on the TV
 
 - **Port 7676**, for Home Assistant notifications, only when they're on, and only from local network addresses.
-- **The phone setup page**, only while its QR code is on screen, at a one-time secret link.
+- **The phone setup pages** (Home Assistant, streaming app PINs), only while their QR code is on screen, at a
+  one-time secret link. The PIN page's QR code also carries a one-time key, after a `#` that browsers never send;
+  the phone encrypts the PINs with it, so nothing else on the network can read them.
 - **Port 47474 on the TV's own loopback address** (not the network), for Hearth's helpers in your kids' profiles.
   Each helper and Hearth prove to each other that they share that helper's key without sending it, so no other app
   can pose as either.

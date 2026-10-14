@@ -1972,6 +1972,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get pinLogCancelled => 'Abgebrochen';
 
   @override
+  String get pinPhoneSetupRow => 'PINs auf dem Telefon einrichten';
+
+  @override
+  String get pinPhoneSetupScan => 'Scanne mit einem Telefon im selben WLAN und gib die PINs dort ein. Sie werden auf dem Telefon verschlüsselt; die Seite funktioniert nur, solange dies geöffnet ist.';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth kann in $app noch keine PINs eingeben';
   }

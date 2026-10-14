@@ -508,6 +508,15 @@ class FLauncherChannel {
 
   Future<void> stopHaSetup() async => await _methodChannel.invokeMethod("stopHaSetup");
 
+  /// Starts the phone page for the streaming PINs of the profile on now and returns its one-time link (with the key
+  /// in its #fragment, for the QR code); null without a network.
+  Future<String?> startPinSetup() async => await _methodChannel.invokeMethod<String>("startPinSetup");
+
+  Future<void> stopPinSetup() async => await _methodChannel.invokeMethod("stopPinSetup");
+
+  /// How many PINs the phone saved through the page; -1 before it has.
+  Future<int> getPinSetupSaved() async => await _methodChannel.invokeMethod<int>("getPinSetupSaved") ?? -1;
+
   /// True once a phone has sent the address and token through the setup page.
   Future<bool> getHaSetupReceived() async => await _methodChannel.invokeMethod<bool>("getHaSetupReceived") ?? false;
 

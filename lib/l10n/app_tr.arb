@@ -593,6 +593,8 @@
     "pinLogBroken": "Yarıda kaldı",
     "pinLogNoScreen": "PIN istenmedi",
     "pinLogCancelled": "İptal edildi",
+    "pinPhoneSetupRow": "PIN’leri telefonunuzda ayarlayın",
+    "pinPhoneSetupScan": "Aynı Wi-Fi’deki bir telefonla tarayın ve PIN’leri orada yazın. Telefonda şifrelenirler; sayfa yalnızca bu açıkken çalışır.",
     "profilePinUnsupported": "Hearth henüz {app} içinde PIN yazamıyor",
     "profilePinEnterTitle": "{profile} için {app} PIN’i",
     "profilePinEnterSubtitle": "{app} sorduğunda Hearth onu “Giriş yapılıyor” kartının arkasında yazar. Bu TV’de şifreli kalır ve asla gösterilmez.",

@@ -593,6 +593,8 @@
     "pinLogBroken": "Arrêté en cours de route",
     "pinLogNoScreen": "Aucun code demandé",
     "pinLogCancelled": "Annulé",
+    "pinPhoneSetupRow": "Configurer les codes sur votre téléphone",
+    "pinPhoneSetupScan": "Scannez avec un téléphone sur le même Wi-Fi et saisissez-y les codes. Ils sont chiffrés sur le téléphone ; la page ne fonctionne que tant que ceci est ouvert.",
     "profilePinUnsupported": "Hearth ne sait pas encore saisir les codes dans {app}",
     "profilePinEnterTitle": "Code PIN de {profile} dans {app}",
     "profilePinEnterSubtitle": "Hearth le saisit derrière la carte « Connexion en tant que » quand {app} le demande. Il reste chiffré sur ce téléviseur et n’est jamais affiché.",

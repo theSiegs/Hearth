@@ -111,6 +111,17 @@ class _PinsChannel extends FLauncherChannel {
   bool typingOn = true;
   List<Map<dynamic, dynamic>> log = [];
 
+  int phoneSaved = -1;
+
+  @override
+  Future<String?> startPinSetup() async => "http://192.0.2.10:8765/secret#key";
+
+  @override
+  Future<void> stopPinSetup() async => events.add("phone page closed");
+
+  @override
+  Future<int> getPinSetupSaved() async => phoneSaved;
+
   @override
   Future<bool> isPinTypingOn() async => typingOn;
 
@@ -226,6 +237,19 @@ void main() {
     await tap(tester, "Type saved PINs");
     expect(channel.events, ["typing false"]);
     expect(find.text("Off: the apps ask for their PINs as usual"), findsOneWidget);
+  });
+
+  testWidgets("PINs can be set on a phone, past the parent PIN, from a QR code without its key shown", (tester) async {
+    await SettingsService(prefs).setParentPin("2468");
+    await pump(tester);
+    await tap(tester, "Set up PINs on your phone");
+    await type(tester, "2468");
+    expect(find.text("http://192.0.2.10:8765/secret"), findsOneWidget);
+    expect(find.textContaining("#key"), findsNothing);
+    channel.phoneSaved = 1;
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(channel.events, contains("phone page closed"));
   });
 
   testWidgets("the first PIN saved shows what typing PINs involves, once", (tester) async {

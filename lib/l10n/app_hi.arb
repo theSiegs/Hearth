@@ -593,6 +593,8 @@
     "pinLogBroken": "बीच में रुक गया",
     "pinLogNoScreen": "PIN नहीं माँगा गया",
     "pinLogCancelled": "रद्द किया गया",
+    "pinPhoneSetupRow": "अपने फ़ोन पर PIN सेट करें",
+    "pinPhoneSetupScan": "उसी Wi-Fi पर किसी फ़ोन से स्कैन करें और वहीं PIN लिखें। वे फ़ोन पर एन्क्रिप्ट होते हैं; पेज तभी तक काम करता है जब तक यह खुला है।",
     "profilePinUnsupported": "Hearth अभी {app} में PIN टाइप नहीं कर सकता",
     "profilePinEnterTitle": "{app} में {profile} का PIN",
     "profilePinEnterSubtitle": "जब {app} पूछता है, Hearth इसे “इस रूप में लॉग इन” कार्ड के पीछे टाइप करता है। यह इस टीवी पर एन्क्रिप्ट होकर रहता है और कभी दिखाया नहीं जाता।",

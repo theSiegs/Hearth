@@ -1963,6 +1963,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get pinLogCancelled => 'キャンセルしました';
 
   @override
+  String get pinPhoneSetupRow => 'スマートフォンで PIN を設定';
+
+  @override
+  String get pinPhoneSetupScan => '同じ Wi-Fi のスマートフォンでスキャンし、そこで PIN を入力してください。PIN はスマートフォンで暗号化されます。ページはこの画面が開いている間だけ使えます。';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearthはまだ$appでPINを入力できません';
   }

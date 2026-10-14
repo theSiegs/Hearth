@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The phone page for streaming app PINs (PinSetupServer) -->
+<resources>
+    <string name="pin_phone_title">PIN de las apps de streaming: %1$s</string>
+    <string name="pin_phone_intro">Escribe cada PIN dos veces. Una fila vacía se queda como está. Los PIN se cifran en este teléfono y solo la TV puede leerlos.</string>
+    <string name="pin_phone_row">%1$s, perfil %2$s</string>
+    <string name="pin_phone_content">PIN de contenido de %1$s (todos los perfiles de adultos con PIN de Google TV)</string>
+    <string name="pin_phone_saved">Hay un PIN guardado; escribe uno nuevo para cambiarlo.</string>
+    <string name="pin_phone_unsaved">No hay PIN guardado.</string>
+    <string name="pin_phone_pin">PIN</string>
+    <string name="pin_phone_again">PIN otra vez</string>
+    <string name="pin_phone_mismatch">Las dos entradas no coinciden.</string>
+    <string name="pin_phone_length">Aquí un PIN tiene %1$d dígitos.</string>
+    <string name="pin_phone_send">Guardar en la TV</string>
+    <string name="pin_phone_sent">Guardado en la TV. Ya puedes cerrar esta página.</string>
+    <string name="pin_phone_failed">La TV no los aceptó. Vuelve a mostrar el código QR en la TV e inténtalo de nuevo.</string>
+    <string name="pin_phone_old_browser">Esta página necesita un navegador más reciente, abierto desde el código QR de la TV.</string>
+    <string name="pin_phone_none">Aún no hay nada que configurar: abre cada app de streaming una vez desde Hearth para que conozca sus perfiles.</string>
+    <string name="pin_phone_open_once">%1$s: ábrela primero una vez desde Hearth.</string>
+</resources>
