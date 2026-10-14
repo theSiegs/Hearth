@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:clock/clock.dart';
 import 'package:flauncher/providers/wallpaper_service.dart';
 import 'dart:async';
 
@@ -461,7 +462,8 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
 
   KeyEventResult _onMovingKey(BuildContext context, LogicalKeyboardKey? key) {
     if (AppCardKeys.isArrowKey(key)) {
-      final now = DateTime.now();
+      // clock, not DateTime: widget tests' fake time reaches it (a fast test machine pressed keys within 50 ms)
+      final now = clock.now();
       if (_lastMoveTime != null && now.difference(_lastMoveTime!) < const Duration(milliseconds: 50)) {
         return KeyEventResult.handled;
       }
