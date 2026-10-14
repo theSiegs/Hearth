@@ -315,13 +315,13 @@ extension _CardScreens on _SetupFlowPageState {
         done: l.setupFlowVoiceDone,
       );
 
-  /// Hearth on the kids' profiles, where Google TV removes apps it didn't install at each profile start: on by
+  /// Hearth on the kids profiles, where Google TV removes apps it didn't install at each profile start: on by
   /// default once the family card is on. Needs the TV's debugging switch, then the one-time "Allow debugging?".
   Widget _kids(AppLocalizations l) {
     final snap = _snap!;
     final skip = SetupButton(label: l.setupFlowSkip, onPressed: _next);
     final kidsState = _kidsState;
-    // How each kids' profile stands now, one row each, as Settings' Kids' profiles page shows them
+    // How each kids profile stands now, one row each, as Settings' Kids profiles page shows them
     final profileRows = [
       if (kidsState != null)
         for (final kid in kidsState.kids)
@@ -348,7 +348,7 @@ extension _CardScreens on _SetupFlowPageState {
       );
     }
     if (_state == SetupStepState.notYet && kidsState != null) {
-      // It ran, but not every kids' profile has Hearth kept on it
+      // It ran, but not every kids profile has Hearth kept on it
       return SetupScreenBody(
         icon: Icons.warning_amber_rounded,
         iconColor: Colors.amber,
@@ -391,9 +391,9 @@ extension _CardScreens on _SetupFlowPageState {
     } catch (_) {}
   }
 
-  /// Puts Hearth (and HearthTube, when the owner has it) on the kids' profiles over Hearth's own adb, as Settings'
+  /// Puts Hearth (and HearthTube, when the owner has it) on the kids profiles over Hearth's own adb, as Settings'
   /// Fix does, and shows how each stands. The screen itself says what it does, so no question first: this is the
-  /// flow's default for kids' profiles.
+  /// flow's default for kids profiles.
   Future<void> _addToKids() async {
     final l = AppLocalizations.of(context)!;
     _update(() => _fixing = true);
@@ -414,7 +414,7 @@ extension _CardScreens on _SetupFlowPageState {
       _focusPrimary();
       return;
     }
-    // Done only when every kids' profile has it all, kept: Google TV removes it from the others at their next start
+    // Done only when every kids profile has it all, kept: Google TV removes it from the others at their next start
     final ready = kidsState.allReady;
     if (ready) await _flow.setKidsProtected(kidsState.kids.length);
     _update(() {

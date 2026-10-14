@@ -67,7 +67,7 @@ public class LauncherAppsEventStreamHandler implements EventChannel.StreamHandle
             _eventSink = eventSink;
         }
 
-        // Hearth lists this user's apps; a kids' profile shows the ones its own user has. A change in another
+        // Hearth lists this user's apps; a kids profile shows the ones its own user has. A change in another
         // profile's user (Family Link blocking or approving an app there) isn't an uninstall or a new app here: it
         // only changes which apps that profile may open, so the rows are rebuilt and every layout stays as it was.
         private boolean otherUser(UserHandle user) {

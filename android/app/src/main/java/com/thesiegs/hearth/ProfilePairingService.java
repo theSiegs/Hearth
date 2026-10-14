@@ -927,7 +927,7 @@ public class ProfilePairingService extends AccessibilityService {
     private boolean startPinEntry(Session s) {
         String appProfile = s.pickedName;
         PinRecipe recipe = PinRecipes.forPackage(s.pkg);
-        // Kids' profiles too: a kid's app profile can have a PIN, which their parent saved for that profile only
+        // Kids profiles too: a kid's app profile can have a PIN, which their parent saved for that profile only
         if (recipe == null || appProfile == null || mCover == null) return false;
         if (!appProfile.equals(ProfilePairing.getChosenProfile(this, s.pkg, s.key))) return false;
         String why = whyNotProfilePin(s.kids, ProfileUsers.isLocked(this, s.hearthProfile),
@@ -974,7 +974,7 @@ public class ProfilePairingService extends AccessibilityService {
     /**
      * Why Hearth mustn't type this Google TV profile's saved PIN for its paired app profile, or null when it may.
      * An adult's profile must have its own Google TV PIN lock (unknown counts as not): otherwise anyone at the TV
-     * could open it and have the app profile's PIN typed. A kids' profile's PIN is the parent's, saved for that kid.
+     * could open it and have the app profile's PIN typed. A kids profile's PIN is the parent's, saved for that kid.
      * After {@link #PIN_GIVE_UP_REJECTIONS} rejections in a row it waits for a new PIN, short of the app's lockout.
      */
     static String whyNotProfilePin(boolean kids, Boolean profileLocked, boolean saved, int rejections,

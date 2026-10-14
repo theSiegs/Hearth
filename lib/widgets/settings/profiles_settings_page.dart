@@ -82,7 +82,7 @@ class ProfilesSettingsPage extends StatelessWidget {
             onPressed: () => Navigator.of(context).pushNamed(StreamingPinsPage.routeName),
           ),
         if (!locked) const _KidsProfilesTile(),
-        // YouTube time is a kid's only: each kid's is set in Kids' profiles, without switching to them
+        // YouTube time is a kid's only: each kid's is set in Kids profiles, without switching to them
         if (!locked)
           FocusableSettingsTile(
             leading: const Icon(Icons.lock_outline),
@@ -130,7 +130,7 @@ class ProfilesSettingsPage extends StatelessWidget {
   }
 }
 
-/// Kids' profiles: how many need a fix, read as the page opens (what Android lists; no adb).
+/// Kids profiles: how many need a fix, read as the page opens (what Android lists; no adb).
 class _KidsProfilesTile extends StatefulWidget {
   const _KidsProfilesTile();
 
@@ -250,7 +250,7 @@ class _LockOnSleepTileState extends State<_LockOnSleepTile> {
   }
 }
 
-/// How long HearthTube may play a day for a profile: the one on now, or a kids' profile by its [profileKey]. Hearth
+/// How long HearthTube may play a day for a profile: the one on now, or a kids profile by its [profileKey]. Hearth
 /// counts it on its own; with Home Assistant set up, a limit shared with the family's other devices can count too
 /// (the stricter wins).
 class YouTubeLimitTile extends StatefulWidget {

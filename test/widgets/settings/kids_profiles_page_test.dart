@@ -33,9 +33,9 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
-/// The TV's kids' profiles as Hearth's native side reports them, and what Fix and Remove do to them.
+/// The TV's kids profiles as Hearth's native side reports them, and what Fix and Remove do to them.
 class _KidsChannel extends FLauncherChannel {
-  /// Each kids' profile: its name and whether Hearth and HearthTube are on it, and kept.
+  /// Each kids profile: its name and whether Hearth and HearthTube are on it, and kept.
   List<Map<String, dynamic>> kids = [];
   bool tubeOnOwner = false;
   bool keep = false;
@@ -112,7 +112,7 @@ class _KidsChannel extends FLauncherChannel {
   @override
   Future<void> uninstallHearth() async => uninstalls++;
 
-  /// Which kids' profiles each Fix was for (null: all of them).
+  /// Which kids profiles each Fix was for (null: all of them).
   final List<int?> fixedOnly = [];
 
   /// HearthTube on the TV (the owner's), and what Android's installer does with it.
@@ -217,7 +217,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets("each kids' profile says how it stands; Fix shows only when one needs it", (tester) async {
+  testWidgets("each kids profile says how it stands; Fix shows only when one needs it", (tester) async {
     channel.tubeOnOwner = true;
     channel.kids = [
       {"userId": 10, "name": "Sam", "hearth": true, "hearthTube": true},
@@ -228,7 +228,7 @@ void main() {
     expect(find.text("Sam"), findsOneWidget);
     expect(find.text("Hearth and HearthTube are on it"), findsOneWidget);
     expect(find.text("HearthTube isn't on it"), findsOneWidget);
-    expect(find.text("A kids' profile"), findsOneWidget);
+    expect(find.text("A kids profile"), findsOneWidget);
     expect(find.text("Hearth isn't on it"), findsOneWidget);
     expect(find.text("Ready"), findsOneWidget);
     expect(find.text("Needs a fix"), findsNWidgets(2));
@@ -246,7 +246,7 @@ void main() {
     await pump(tester, const KidsProfilesPage());
     expect(find.text("Ready"), findsOneWidget);
     expect(find.text("Fix"), findsNothing);
-    expect(find.text("Remove Hearth from kids' profiles"), findsOneWidget);
+    expect(find.text("Remove Hearth from kids profiles"), findsOneWidget);
   });
 
   testWidgets("with a trusted key, whether the copies are kept is read too, and an unkept one needs a fix",
@@ -260,8 +260,8 @@ void main() {
     expect(channel.reads, [false, true]);
     expect(find.textContaining("Not protected"), findsOneWidget);
     expect(find.text("Needs a fix"), findsOneWidget);
-    // New kids' profiles get Hearth by themselves from now on
-    expect(find.text("Hearth also puts itself on new kids' profiles."), findsOneWidget);
+    // New kids profiles get Hearth by themselves from now on
+    expect(find.text("Hearth also puts itself on new kids profiles."), findsOneWidget);
   });
 
   testWidgets("Fix puts Hearth back, and the setup flow counts the profiles", (tester) async {
@@ -297,7 +297,7 @@ void main() {
     ];
     await pump(tester, const KidsProfilesPage());
     await press(tester, "Fix");
-    expect(find.text("Couldn't change the kids' profiles"), findsOneWidget);
+    expect(find.text("Couldn't change the kids profiles"), findsOneWidget);
     expect(flow.kidsProtected, 0);
   });
 
@@ -306,14 +306,14 @@ void main() {
       {"userId": 10, "name": "Sam", "hearth": true},
     ];
     await pump(tester, const KidsProfilesPage());
-    await press(tester, "Remove Hearth from kids' profiles");
+    await press(tester, "Remove Hearth from kids profiles");
     expect(channel.removes, 0);
     await press(tester, "Remove");
     expect(channel.removes, 1);
     expect(find.text("Hearth isn't on it"), findsOneWidget);
   });
 
-  testWidgets("Uninstall takes Hearth off the kids' profiles first, and stops when it can't", (tester) async {
+  testWidgets("Uninstall takes Hearth off the kids profiles first, and stops when it can't", (tester) async {
     channel.kids = [
       {"userId": 10, "name": "Sam", "hearth": true},
     ];
@@ -419,20 +419,20 @@ void main() {
     expect(find.text("HearthTube settings"), findsNothing);
   });
 
-  testWidgets("no kids' profiles: says so, and Uninstall is still there", (tester) async {
+  testWidgets("no kids profiles: says so, and Uninstall is still there", (tester) async {
     await pump(tester, const KidsProfilesPage());
-    expect(find.text("There are no kids' profiles on this TV."), findsOneWidget);
+    expect(find.text("There are no kids profiles on this TV."), findsOneWidget);
     expect(find.text("Fix"), findsNothing);
     expect(find.text("Uninstall Hearth"), findsOneWidget);
   });
 
-  testWidgets("Profiles shows how many kids' profiles need a fix, and Streaming app PINs", (tester) async {
+  testWidgets("Profiles shows how many kids profiles need a fix, and Streaming app PINs", (tester) async {
     channel.kids = [
       {"userId": 10, "name": "Sam", "hearth": true},
       {"userId": 11, "name": "Alex", "hearth": false},
     ];
     await pump(tester, const ProfilesSettingsPage());
-    expect(find.text("Kids' profiles"), findsOneWidget);
+    expect(find.text("Kids profiles"), findsOneWidget);
     expect(find.text("1 needs a fix"), findsOneWidget);
     expect(find.text("Streaming app PINs"), findsOneWidget);
     expect(find.text("Hearth on other profiles"), findsNothing);

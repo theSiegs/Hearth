@@ -72,7 +72,7 @@ void main() {
       expect(launch(flow), isA<SetupLaunchFirstRun>());
     });
 
-    test("never in a kids' profile, whatever is pending", () async {
+    test("never in a kids profile, whatever is pending", () async {
       expect(launch(flow, kids: true), isA<SetupLaunchNothing>());
       expect(launch(flow, kids: true, seen: true), isA<SetupLaunchNothing>());
     });
@@ -163,7 +163,7 @@ void main() {
       expect(flow.homeButtonNeedsFix(homeButtonOn: true, homeButtonSeenBefore: true), isFalse);
     });
 
-    test("a new kids' profile counts once the family card is on", () async {
+    test("a new kids profile counts once the family card is on", () async {
       final allOn = {for (final card in SetupCard.values) card: true};
       expect(flow.remaining(homeButtonOn: true, homeAppOn: true, cardOn: allOn, newKidsProfile: true), 0);
       await flow.decide(SetupCard.family.name, SetupChoice.on);

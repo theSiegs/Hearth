@@ -50,7 +50,7 @@ final class Allowance {
         }
     }
 
-    /** No limit or lock: an adult's profile (only kids' profiles have a YouTube allowance). */
+    /** No limit or lock: an adult's profile (only kids profiles have a YouTube allowance). */
     static final Values NONE = new Values(null, false, null, null, null);
 
     static Values forProfile(Context context, String profileKey, long now) {

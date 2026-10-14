@@ -13,15 +13,15 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * The shell commands that put Hearth's OWN apps (Hearth, HearthTube) on the TV's kids' profiles, keep them there,
- * and take them back off. Which users are kids' profiles, and when to act, is {@link KidsProfiles}' call; this class
+ * The shell commands that put Hearth's OWN apps (Hearth, HearthTube) on the TV's kids profiles, keep them there,
+ * and take them back off. Which users are kids profiles, and when to act, is {@link KidsProfiles}' call; this class
  * only runs the commands, as the {@code shell} user over Hearth's own adb ({@link SelfAdb}).
  *
- * <p>Only kids' profiles get them: Google TV runs each one as an Android user of its own, supervised by Family Link.
+ * <p>Only kids profiles get them: Google TV runs each one as an Android user of its own, supervised by Family Link.
  * An adult's profile is another Google account in the owner's user, which has Hearth already.
  *
  * <h3>Kept installed</h3>
- * Google TV's launcher uninstalls every app that didn't come from the Play Store from a kids' profile, at each
+ * Google TV's launcher uninstalls every app that didn't come from the Play Store from a kids profile, at each
  * profile start and whenever an app there changes. So each copy gets Android's per-user "block uninstall" flag
  * ({@link KidsBlockUninstallMain}), which stops that.
  *
@@ -68,7 +68,7 @@ public final class ProfileAppAccess {
         String run(String command) throws Exception;
     }
 
-    /** One app's state in one profile, for Settings' kids' profiles page. */
+    /** One app's state in one profile, for Settings' kids profiles page. */
     public static final class AppStatus {
         public final int userId;
         public final String packageName;
@@ -84,9 +84,9 @@ public final class ProfileAppAccess {
     }
 
     /**
-     * Puts Hearth's apps on the given kids' profiles and keeps them there: for each app the owner has, adds the copy
+     * Puts Hearth's apps on the given kids profiles and keeps them there: for each app the owner has, adds the copy
      * where it's missing and sets the keep flag where it isn't set. Only for user ids {@link KidsProfiles} found to
-     * be kids' profiles.
+     * be kids profiles.
      *
      * @param apk Hearth's own APK, which the flag helper runs from.
      * @return a short log of what was done.
@@ -153,7 +153,7 @@ public final class ProfileAppAccess {
     static final String READ_CALENDAR = "android.permission.READ_CALENDAR";
 
     /**
-     * Lets Hearth's copy in a kids' profile read that profile's own Google calendars (read only), for the top bar's
+     * Lets Hearth's copy in a kids profile read that profile's own Google calendars (read only), for the top bar's
      * date and time there: a runtime permission, granted per user, which an install-existing copy doesn't get and
      * can't ask for (nobody sees its screens). Only Hearth, and only another profile's user.
      */
@@ -167,7 +167,7 @@ public final class ProfileAppAccess {
     static final String READ_TV_LISTINGS = "android.permission.READ_TV_LISTINGS";
 
     /**
-     * Lets Hearth's copy in a kids' profile read that profile's Watch Next, for its Continue Watching: Android's TV
+     * Lets Hearth's copy in a kids profile read that profile's Watch Next, for its Continue Watching: Android's TV
      * provider shows an app without {@link #READ_TV_LISTINGS} only the entries it wrote itself (none), and an
      * install-existing copy doesn't get the owner's grant. A runtime permission, granted per user. Only Hearth, and
      * only another profile's user.

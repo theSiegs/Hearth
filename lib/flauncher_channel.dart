@@ -175,31 +175,31 @@ class FLauncherChannel {
 
   Future<bool> isKidsProfile() async => await _methodChannel.invokeMethod<bool>("isKidsProfile") ?? false;
 
-  /// The TV's kids' profiles (Family Link-supervised profile users) and whether Hearth is on each, as Android lists
+  /// The TV's kids profiles (Family Link-supervised profile users) and whether Hearth is on each, as Android lists
   /// it: {kids: [{userId, profileKey, name, running, hearth, hearthKept, hearthTube, hearthTubeKept}], hearthTubeOnOwner, keep
-  /// (new kids' profiles get Hearth by themselves), trusted (the TV trusts Hearth's adb key), adbEnabled,
+  /// (new kids profiles get Hearth by themselves), trusted (the TV trusts Hearth's adb key), adbEnabled,
   /// protectionRead}. The *Kept columns are null unless [checkProtection] read them over Hearth's own adb, which
   /// happens only over a key the TV trusts already, so looking never asks "Allow debugging?". See
   /// [KidsProfilesState].
   Future<Map<dynamic, dynamic>> getKidsProfilesState({bool checkProtection = false}) async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getKidsProfilesState", checkProtection) ?? {};
 
-  /// A parent's Fix: puts Hearth, and HearthTube when the owner has it, on every kids' profile where one is missing
-  /// or Google TV could remove it, and from then on Hearth puts itself on new kids' profiles too. Only ever touches
-  /// Hearth's own two apps; each kids' profile an app is added to sends Family Link's "app added" notice. The first
+  /// A parent's Fix: puts Hearth, and HearthTube when the owner has it, on every kids profile where one is missing
+  /// or Google TV could remove it, and from then on Hearth puts itself on new kids profiles too. Only ever touches
+  /// Hearth's own two apps; each kids profile an app is added to sends Family Link's "app added" notice. The first
   /// time, the TV asks "Allow debugging?"; until the parent allows it this throws a PlatformException ("SELF_ADB").
-  /// Returns a short log of what was done. [userId]: only that kids' profile (one kid's page, once HearthTube is
+  /// Returns a short log of what was done. [userId]: only that kids profile (one kid's page, once HearthTube is
   /// on the TV).
   Future<List<String>> fixKidsProfiles({int? userId}) async =>
       await _methodChannel.invokeListMethod<String>("fixKidsProfiles", userId) ?? [];
 
-  /// Opens HearthTube's settings for the kids' profile on now, in that kid's own copy (at [section]: general, player,
+  /// Opens HearthTube's settings for the kids profile on now, in that kid's own copy (at [section]: general, player,
   /// accounts, blocked_words...), or HearthTube's main screen when its settings screen can't be opened directly.
-  /// False when no kids' profile is on, or it doesn't have HearthTube.
+  /// False when no kids profile is on, or it doesn't have HearthTube.
   Future<bool> openHearthTubeSettings({String? section}) async =>
       await _methodChannel.invokeMethod<bool>("openHearthTubeSettings", section) ?? false;
 
-  /// A parent's Remove: takes Hearth and HearthTube off the kids' profiles (and any other profile they're on), and
+  /// A parent's Remove: takes Hearth and HearthTube off the kids profiles (and any other profile they're on), and
   /// Hearth stops putting itself on new ones. What must run before Hearth itself is uninstalled.
   Future<List<String>> removeHearthFromKidsProfiles() async =>
       await _methodChannel.invokeListMethod<String>("removeHearthFromKidsProfiles") ?? [];
@@ -321,7 +321,7 @@ class FLauncherChannel {
   Future<void> setLockOnSleepMinutes(int minutes) async =>
       await _methodChannel.invokeMethod("setLockOnSleepMinutes", minutes);
 
-  /// A profile's daily YouTube limit in HearthTube, in minutes; 0 for none. [profileKey]: a kids' profile's
+  /// A profile's daily YouTube limit in HearthTube, in minutes; 0 for none. [profileKey]: a kids profile's
   /// ("user:11", from [getKidsProfilesState]); without it, the profile on now.
   Future<int> getYouTubeDailyMinutes({String? profileKey}) async =>
       await _methodChannel.invokeMethod<int>("getYouTubeDailyMinutes", profileKey) ?? 0;
@@ -708,7 +708,7 @@ class FLauncherChannel {
   Future<String> getCalendarAccess() async =>
       await _methodChannel.invokeMethod<String>("getCalendarAccess") ?? "denied";
 
-  /// Asks to read the active profile's calendars: Android's permission dialog for an adult; for a kids' profile,
+  /// Asks to read the active profile's calendars: Android's permission dialog for an adult; for a kids profile,
   /// Hearth grants it there over its own adb when the TV trusts it already. Whether it may.
   Future<bool> requestCalendarPermission() async =>
       await _methodChannel.invokeMethod<bool>("requestCalendarPermission") ?? false;

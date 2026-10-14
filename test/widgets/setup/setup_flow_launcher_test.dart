@@ -103,7 +103,7 @@ void main() {
     expect(find.text("The update turned the Home button off"), findsOneWidget);
   });
 
-  testWidgets("a kids' profile sees no flow, no lost screen and no chip", (tester) async {
+  testWidgets("a kids profile sees no flow, no lost screen and no chip", (tester) async {
     when(profiles.isKidsProfile).thenReturn(true);
     channel.homeButtonSeen = true;
     await prefs.setInt("device_setup_flow_version", 1);
@@ -148,7 +148,7 @@ void main() {
     verify(profiles.lookOffered()).called(1);
   });
 
-  testWidgets("no look card on a first visit before the flow has run, or in a kids' profile", (tester) async {
+  testWidgets("no look card on a first visit before the flow has run, or in a kids profile", (tester) async {
     when(profiles.activeProfileKey).thenReturn("user:11");
     when(profiles.firstVisitKey).thenReturn("user:11");
     when(profiles.isKidsProfile).thenReturn(true);

@@ -28,9 +28,9 @@ import 'focusable_settings_tile.dart';
 import 'kid_profile_page.dart';
 import 'settings_page.dart';
 
-/// Settings > Profiles > Kids' profiles: whether Hearth (and HearthTube, when the owner has it) is on each kids'
+/// Settings > Profiles > Kids profiles: whether Hearth (and HearthTube, when the owner has it) is on each kids'
 /// profile, one Fix for any that got out of step, and taking Hearth off them before uninstalling it. The setup flow
-/// puts Hearth there in the first place; after that Hearth puts itself on new kids' profiles too.
+/// puts Hearth there in the first place; after that Hearth puts itself on new kids profiles too.
 class KidsProfilesPage extends StatefulWidget {
   static const String routeName = "kids_profiles";
 
@@ -39,7 +39,7 @@ class KidsProfilesPage extends StatefulWidget {
 
   const KidsProfilesPage({super.key});
 
-  /// One kids' profile in words: its name, how it stands in a word (with that word's colour), and what's on it or
+  /// One kids profile in words: its name, how it stands in a word (with that word's colour), and what's on it or
   /// what's out of place.
   static ({String label, String status, String detail, Color? color}) describe(
       AppLocalizations l, KidsProfilesState state, KidProfile kid) {
@@ -125,7 +125,7 @@ class _KidsProfilesPageState extends State<KidsProfilesPage> with WidgetsBinding
       await _showMessage(l.kidsProfilesFailedTitle, [l.kidsProfilesFailedBody, l.kidsProfilesFailedRetry]);
       return;
     }
-    // The setup flow's kids' step and its chip count the kids' profiles Hearth was put on
+    // The setup flow's kids' step and its chip count the kids profiles Hearth was put on
     final state = _state;
     if (state != null && state.allReady) await flow?.setKidsProtected(state.kids.length);
   }
@@ -150,7 +150,7 @@ class _KidsProfilesPageState extends State<KidsProfilesPage> with WidgetsBinding
     }
   }
 
-  /// Uninstall Hearth the safe way: take it off the kids' profiles first (so nothing is left behind there), then open
+  /// Uninstall Hearth the safe way: take it off the kids profiles first (so nothing is left behind there), then open
   /// Android's uninstall screen for Hearth itself. If that can't run yet, stop and ask for the approval rather than
   /// uninstall with copies left behind.
   Future<void> _uninstallHearth() async {
@@ -281,7 +281,7 @@ class _KidsProfilesPageState extends State<KidsProfilesPage> with WidgetsBinding
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: Text(l.kidsProfilesNone, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
           ),
-        // One row per kids' profile: its name, what's on it, and how it stands in a word
+        // One row per kids profile: its name, what's on it, and how it stands in a word
         for (final (index, kid) in state.kids.indexed)
           Builder(builder: (context) {
             final (:label, :status, :detail, :color) = KidsProfilesPage.describe(l, state, kid);

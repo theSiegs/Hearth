@@ -12,7 +12,7 @@ package com.thesiegs.hearth;
  * <pre>CLASSPATH=&lt;Hearth's base.apk&gt; app_process /system/bin \
  *     com.thesiegs.hearth.KidsBlockUninstallMain &lt;package&gt; &lt;userId&gt; [true|false]</pre>
  *
- * <p>This is never invoked on its own. It runs only as one step of putting Hearth on the kids' profiles or taking
+ * <p>This is never invoked on its own. It runs only as one step of putting Hearth on the kids profiles or taking
  * it off them ({@link ProfileAppAccess}, for {@link KidsProfiles}), and only ever for Hearth's own two packages.
  * Setting {@code true} protects a copy; setting {@code false} releases it so it can be uninstalled again. Reading
  * (no third argument) changes nothing.

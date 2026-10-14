@@ -47,7 +47,7 @@ class SetupSnapshot {
   final int kidsProfiles;
 
   /// How many of them have all Hearth puts there, Hearth and HearthTube when the owner has it (put there by the flow,
-  /// by Settings' Kids' profiles, or by Hearth itself on a new one).
+  /// by Settings' Kids profiles, or by Hearth itself on a new one).
   final int kidsReady;
 
   /// Netflix is installed: its profile screen needs Hearth voice.
@@ -78,7 +78,7 @@ class SetupSnapshot {
   bool isDone(SetupStepId id) => step(id).done;
 
   /// Whether everything a card turns on is on already. [showContinueWatching]: the home shows the row;
-  /// [hasParentPin]: a parent PIN is set; [kidsProtected]: how many kids' profiles Hearth was put on.
+  /// [hasParentPin]: a parent PIN is set; [kidsProtected]: how many kids profiles Hearth was put on.
   bool cardOn(SetupCard card,
           {required bool showContinueWatching, required bool hasParentPin, required int kidsProtected}) =>
       cardOnFrom(
@@ -96,7 +96,7 @@ class SetupSnapshot {
         homeAssistant: haAlerts && haPanel && haStatus,
       );
 
-  /// Whether Hearth is on every kids' profile: the flow put it on that many ([kidsProtected]), or Android lists it
+  /// Whether Hearth is on every kids profile: the flow put it on that many ([kidsProtected]), or Android lists it
   /// installed on that many ([kidsReady], however it got there).
   static bool kidsCovered(int kidsProfiles, {required int kidsProtected, required int kidsReady}) =>
       kidsProfiles <= kidsProtected || kidsProfiles <= kidsReady;
@@ -121,7 +121,7 @@ class SetupSnapshot {
   /// The rule behind [cardOn], for the home's checks that have no snapshot. A card that is a choice by itself (the
   /// look, TV & power) is never on until chosen. The family card counts as on away from Google TV, where it isn't
   /// shown. [voice]: Hearth voice is the preferred engine, or there's no Netflix to need it. [kids]: Hearth was put
-  /// on every kids' profile from the flow (what's on them can't be read without Hearth's own adb), or there's none.
+  /// on every kids profile from the flow (what's on them can't be read without Hearth's own adb), or there's none.
   static bool cardOnFrom(
     SetupCard card, {
     required bool watchNextAllowed,
@@ -181,7 +181,7 @@ class SetupSnapshot {
     }
   }
 
-  /// Whether Android lists a kids' profile Hearth isn't on all the way, which the flow hasn't put it on either (one
+  /// Whether Android lists a kids profile Hearth isn't on all the way, which the flow hasn't put it on either (one
   /// added since), read without Hearth's own adb.
   static Future<bool> loadNewKidsProfile(FLauncherChannel channel, {required int kidsProtected}) async {
     final family = await _safe(channel.getSetupFamilyState, <dynamic, dynamic>{});

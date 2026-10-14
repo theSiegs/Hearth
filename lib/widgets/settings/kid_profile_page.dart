@@ -31,8 +31,8 @@ import 'profiles_settings_page.dart';
 import 'settings_page.dart';
 import 'updates_page.dart';
 
-/// One kid, from Settings > Profiles > Kids' profiles: everything that's that child's own in one place, set by the
-/// parent without switching to their profile (Settings is past the parent PIN to get here in a kids' profile). How
+/// One kid, from Settings > Profiles > Kids profiles: everything that's that child's own in one place, set by the
+/// parent without switching to their profile (Settings is past the parent PIN to get here in a kids profile). How
 /// Hearth stands on the profile (needing a fix: back to the list's Fix), their YouTube time per day, and HearthTube:
 /// getting it onto the TV and this profile, its version and updates, and its settings while this profile is on.
 class KidProfilePage extends StatefulWidget {

@@ -139,7 +139,7 @@ void main() {
     expect(service.firstVisitKey, isNull);
   });
 
-  test("a new kids' profile isn't given the setup look or offered one", () async {
+  test("a new kids profile isn't given the setup look or offered one", () async {
     await prefs.setString(ProfileService.layoutOwnerKey, "user:0");
     await prefs.setString(SetupFlowService.lookKey, HomeLook.bold.name);
     when(channel.getActiveProfileName()).thenAnswer((_) async => "Jordan");

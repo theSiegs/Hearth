@@ -24,7 +24,7 @@ void main() {
     expect(unkept.needingFix, 1);
   });
 
-  test("no Hearth at all, and no kids' profiles", () {
+  test("no Hearth at all, and no kids profiles", () {
     final missing = state([
       {"userId": 10, "profileKey": "user:10", "hearth": false}
     ]);

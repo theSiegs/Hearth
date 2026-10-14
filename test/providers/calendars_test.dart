@@ -253,7 +253,7 @@ void main() {
       expect(tv.reads, 2);
     });
 
-    test("a kids' profile whose Hearth hasn't reported is asked again a minute later", () async {
+    test("a kids profile whose Hearth hasn't reported is asked again a minute later", () async {
       tv.access = TvCalendarAccess.waiting;
       final s = service();
       await s.refresh();

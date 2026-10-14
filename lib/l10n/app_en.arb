@@ -188,25 +188,25 @@
     "@updatesTitle": {
         "description": "Settings page title, also its row in the page that opens it"
     },
-    "kidsProfilesTitle": "Kids' profiles",
+    "kidsProfilesTitle": "Kids profiles",
     "@kidsProfilesTitle": {
-        "description": "Settings > Profiles: the page (and its row) about Hearth on the TV's kids' profiles"
+        "description": "Settings > Profiles: the page (and its row) about Hearth on the TV's kids profiles"
     },
-    "kidsProfilesUnnamed": "A kids' profile",
+    "kidsProfilesUnnamed": "A kids profile",
     "@kidsProfilesUnnamed": {
-        "description": "Kids' profiles page: a kids' profile whose name Hearth doesn't know yet"
+        "description": "Kids profiles page: a kids profile whose name Hearth doesn't know yet"
     },
     "kidsProfilesReady": "Ready",
     "@kidsProfilesReady": {
-        "description": "Kids' profiles page: status word for a kids' profile that has all of Hearth's apps"
+        "description": "Kids profiles page: status word for a kids profile that has all of Hearth's apps"
     },
     "kidsProfilesNeedsFix": "Needs a fix",
     "@kidsProfilesNeedsFix": {
-        "description": "Kids' profiles page: status word for a kids' profile missing one of Hearth's apps"
+        "description": "Kids profiles page: status word for a kids profile missing one of Hearth's apps"
     },
     "kidsProfilesNeedFixCount": "{count, plural, =1{1 needs a fix} other{{count} need a fix}}",
     "@kidsProfilesNeedFixCount": {
-        "description": "Profiles page: beside Kids' profiles, how many need a fix (short)",
+        "description": "Profiles page: beside Kids profiles, how many need a fix (short)",
         "placeholders": {
             "count": {
                 "type": "int"
@@ -215,81 +215,81 @@
     },
     "kidsProfilesHearthOn": "Hearth is on it",
     "@kidsProfilesHearthOn": {
-        "description": "Kids' profiles page: under a profile's name when Hearth is on it"
+        "description": "Kids profiles page: under a profile's name when Hearth is on it"
     },
     "kidsProfilesBothOn": "Hearth and HearthTube are on it",
     "@kidsProfilesBothOn": {
-        "description": "Kids' profiles page: under a profile's name when Hearth and HearthTube are on it"
+        "description": "Kids profiles page: under a profile's name when Hearth and HearthTube are on it"
     },
     "kidsProfilesHearthMissing": "Hearth isn't on it",
     "@kidsProfilesHearthMissing": {
-        "description": "Kids' profiles page: under a profile's name when Hearth isn't on it"
+        "description": "Kids profiles page: under a profile's name when Hearth isn't on it"
     },
     "kidsProfilesHearthTubeMissing": "HearthTube isn't on it",
     "@kidsProfilesHearthTubeMissing": {
-        "description": "Kids' profiles page: under a profile's name when HearthTube isn't on it"
+        "description": "Kids profiles page: under a profile's name when HearthTube isn't on it"
     },
     "kidsProfilesNotKept": "Not protected: Google TV will remove Hearth's apps when this profile next starts",
     "@kidsProfilesNotKept": {
-        "description": "Kids' profiles page: under a profile's name when Google TV could remove Hearth's apps"
+        "description": "Kids profiles page: under a profile's name when Google TV could remove Hearth's apps"
     },
     "kidsProfilesFix": "Fix",
     "@kidsProfilesFix": {
-        "description": "Kids' profiles page: the button that puts Hearth back on the profiles that need it"
+        "description": "Kids profiles page: the button that puts Hearth back on the profiles that need it"
     },
     "kidsProfilesFixBody": "Puts Hearth and HearthTube back where they're missing. Each kid they're added for gets one Family Link notice.",
     "@kidsProfilesFixBody": {
-        "description": "Kids' profiles page: under the Fix button"
+        "description": "Kids profiles page: under the Fix button"
     },
-    "kidsProfilesNone": "There are no kids' profiles on this TV.",
+    "kidsProfilesNone": "There are no kids profiles on this TV.",
     "@kidsProfilesNone": {
-        "description": "Kids' profiles page: when the TV has no kids' profiles"
+        "description": "Kids profiles page: when the TV has no kids profiles"
     },
-    "kidsProfilesAutoOn": "Hearth also puts itself on new kids' profiles.",
+    "kidsProfilesAutoOn": "Hearth also puts itself on new kids profiles.",
     "@kidsProfilesAutoOn": {
-        "description": "Kids' profiles page: note that new kids' profiles get Hearth by themselves"
+        "description": "Kids profiles page: note that new kids profiles get Hearth by themselves"
     },
     "kidsProfilesApproval": "The first time, the TV asks \"Allow debugging?\" — choose Always allow; that's what lets Hearth do the setup.",
     "@kidsProfilesApproval": {
-        "description": "Kids' profiles page: note before the first Fix; quotes Android's debugging prompt and its Always allow button"
+        "description": "Kids profiles page: note before the first Fix; quotes Android's debugging prompt and its Always allow button"
     },
-    "kidsProfilesRemoveTitle": "Remove Hearth from kids' profiles",
+    "kidsProfilesRemoveTitle": "Remove Hearth from kids profiles",
     "@kidsProfilesRemoveTitle": {
-        "description": "Kids' profiles page: button and dialog title"
+        "description": "Kids profiles page: button and dialog title"
     },
-    "kidsProfilesRemoveBody": "This takes Hearth and HearthTube off your kids' profiles, and Hearth stops adding itself to new ones. Do this before you uninstall Hearth.",
+    "kidsProfilesRemoveBody": "This takes Hearth and HearthTube off your kids profiles, and Hearth stops adding itself to new ones. Do this before you uninstall Hearth.",
     "@kidsProfilesRemoveBody": {
-        "description": "Kids' profiles page: Remove dialog text"
+        "description": "Kids profiles page: Remove dialog text"
     },
     "kidsProfilesUninstallTitle": "Uninstall Hearth",
     "@kidsProfilesUninstallTitle": {
-        "description": "Kids' profiles page: button and dialog title"
+        "description": "Kids profiles page: button and dialog title"
     },
-    "kidsProfilesUninstallBody": "This first takes Hearth and HearthTube off your kids' profiles, then uninstalls Hearth.",
+    "kidsProfilesUninstallBody": "This first takes Hearth and HearthTube off your kids profiles, then uninstalls Hearth.",
     "@kidsProfilesUninstallBody": {
-        "description": "Kids' profiles page: Uninstall dialog, first paragraph"
+        "description": "Kids profiles page: Uninstall dialog, first paragraph"
     },
-    "kidsProfilesUninstallWhyHere": "Uninstalling here — rather than from Android's settings — makes sure nothing is left behind on the kids' profiles.",
+    "kidsProfilesUninstallWhyHere": "Uninstalling here — rather than from Android's settings — makes sure nothing is left behind on the kids profiles.",
     "@kidsProfilesUninstallWhyHere": {
-        "description": "Kids' profiles page: Uninstall dialog, second paragraph"
+        "description": "Kids profiles page: Uninstall dialog, second paragraph"
     },
     "kidsProfilesApprovalFirstTitle": "Finish the one-time approval first",
     "@kidsProfilesApprovalFirstTitle": {
-        "description": "Kids' profiles page: dialog title when Uninstall couldn't take Hearth off the kids' profiles"
+        "description": "Kids profiles page: dialog title when Uninstall couldn't take Hearth off the kids profiles"
     },
-    "kidsProfilesApprovalFirstBody": "Hearth couldn't take itself off the kids' profiles yet: it needs the one-time \"Allow debugging?\" approval on the TV.",
+    "kidsProfilesApprovalFirstBody": "Hearth couldn't take itself off the kids profiles yet: it needs the one-time \"Allow debugging?\" approval on the TV.",
     "@kidsProfilesApprovalFirstBody": {
-        "description": "Kids' profiles page: that dialog's first paragraph; quotes Android's debugging prompt"
+        "description": "Kids profiles page: that dialog's first paragraph; quotes Android's debugging prompt"
     },
-    "kidsProfilesApprovalFirstRetry": "Approve it, then try Uninstall again, so nothing is left on the kids' profiles.",
+    "kidsProfilesApprovalFirstRetry": "Approve it, then try Uninstall again, so nothing is left on the kids profiles.",
     "@kidsProfilesApprovalFirstRetry": {
-        "description": "Kids' profiles page: that dialog's second paragraph"
+        "description": "Kids profiles page: that dialog's second paragraph"
     },
-    "kidsProfilesFailedTitle": "Couldn't change the kids' profiles",
+    "kidsProfilesFailedTitle": "Couldn't change the kids profiles",
     "@kidsProfilesFailedTitle": {
-        "description": "Kids' profiles page and setup flow: dialog title when Fix or Remove couldn't run"
+        "description": "Kids profiles page and setup flow: dialog title when Fix or Remove couldn't run"
     },
-    "kidsProfilesFailedBody": "Hearth needs a one-time approval on the TV before it can change the kids' profiles.",
+    "kidsProfilesFailedBody": "Hearth needs a one-time approval on the TV before it can change the kids profiles.",
     "@kidsProfilesFailedBody": {
         "description": "That dialog's first paragraph"
     },
@@ -299,7 +299,7 @@
     },
     "kidProfileHint": "Everything here is this kid's own. You can change it from here without switching to their profile.",
     "@kidProfileHint": {
-        "description": "One kid's page (from Kids' profiles): footer"
+        "description": "One kid's page (from Kids profiles): footer"
     },
     "kidProfileGetHearthTube": "Get HearthTube",
     "@kidProfileGetHearthTube": {
@@ -2722,7 +2722,7 @@
     "@setupFlowSkipHomeButtonTitle": {
         "description": "Setup flow: asked once before skipping the Home Button Fix step"
     },
-    "setupFlowSkipHomeButtonBody": "Without it, the Home button opens Google TV, and Hearth can't tell when a kids' profile is in use.",
+    "setupFlowSkipHomeButtonBody": "Without it, the Home button opens Google TV, and Hearth can't tell when a kids profile is in use.",
     "@setupFlowSkipHomeButtonBody": {
         "description": "Setup flow: under \"Skip the Home button?\""
     },
@@ -2806,7 +2806,7 @@
     "@setupFlowHomeAppTitle": {
         "description": "Setup flow: the default home app step's title"
     },
-    "setupFlowHomeAppBody": "Android will show a list of home apps. Choose Hearth. It keeps kids' profiles from blocking Hearth.",
+    "setupFlowHomeAppBody": "Android will show a list of home apps. Choose Hearth. It keeps kids profiles from blocking Hearth.",
     "@setupFlowHomeAppBody": {
         "description": "Setup flow: the default home app step"
     },
@@ -2861,7 +2861,7 @@
     },
     "setupCardFamily": "Your family",
     "@setupCardFamily": {
-        "description": "Setup: the group for the parent PIN, Profile Pairing and kids' profiles (a card in the setup flow, a heading on the Set up Hearth page)"
+        "description": "Setup: the group for the parent PIN, Profile Pairing and kids profiles (a card in the setup flow, a heading on the Set up Hearth page)"
     },
     "setupCardWatching": "Watching",
     "@setupCardWatching": {
@@ -3116,9 +3116,9 @@
     "@setupFlowFamilyIncluded2": {
         "description": "Setup flow: Your family card, second thing it includes (Profile Pairing); app names stay as they are"
     },
-    "setupFlowFamilyIncluded3": "Hearth kept on your kids' profiles",
+    "setupFlowFamilyIncluded3": "Hearth kept on your kids profiles",
     "@setupFlowFamilyIncluded3": {
-        "description": "Setup flow: Your family card, third thing it includes (shown when the TV has kids' profiles)"
+        "description": "Setup flow: Your family card, third thing it includes (shown when the TV has kids profiles)"
     },
     "setupFlowNeedsPin": "Four digits you choose",
     "@setupFlowNeedsPin": {
@@ -3186,35 +3186,35 @@
     "@setupFlowVoiceDone": {
         "description": "Setup flow: Hearth voice step, once it's the preferred engine"
     },
-    "setupFlowKidsTitle": "Keep Hearth on your kids' profiles",
+    "setupFlowKidsTitle": "Keep Hearth on your kids profiles",
     "@setupFlowKidsTitle": {
-        "description": "Setup flow: kids' profiles step's title"
+        "description": "Setup flow: kids profiles step's title"
     },
-    "setupFlowKidsBody": "Google TV removes apps it didn't install from kids' profiles each time they start. Hearth can protect itself and HearthTube there. Each child gets one Family Link \"app added\" notice; undo anytime in Settings.",
+    "setupFlowKidsBody": "Google TV removes apps it didn't install from kids profiles each time they start. Hearth can protect itself and HearthTube there. Each child gets one Family Link \"app added\" notice; undo anytime in Settings.",
     "@setupFlowKidsBody": {
-        "description": "Setup flow: kids' profiles step; Family Link and its \"app added\" notice are Google's"
+        "description": "Setup flow: kids profiles step; Family Link and its \"app added\" notice are Google's"
     },
     "setupFlowKidsApprove": "The TV will ask \"Allow debugging?\". Tick Always allow, then Allow. You only do this once.",
     "@setupFlowKidsApprove": {
-        "description": "Setup flow: kids' profiles step, what the TV will ask; \"Allow debugging?\", Always allow and Allow are Android's labels"
+        "description": "Setup flow: kids profiles step, what the TV will ask; \"Allow debugging?\", Always allow and Allow are Android's labels"
     },
     "setupFlowKidsAdd": "Add to their profiles",
     "@setupFlowKidsAdd": {
-        "description": "Setup flow: kids' profiles step's main button"
+        "description": "Setup flow: kids profiles step's main button"
     },
-    "setupFlowKidsDone": "Hearth is on your kids' profiles",
+    "setupFlowKidsDone": "Hearth is on your kids profiles",
     "@setupFlowKidsDone": {
-        "description": "Setup flow: kids' profiles step, once Hearth was added"
+        "description": "Setup flow: kids profiles step, once Hearth was added"
     },
-    "setupFlowKidsKeepDebugging": "Leave debugging on: Hearth needs it again for a new kids' profile, and to remove or uninstall itself.",
+    "setupFlowKidsKeepDebugging": "Leave debugging on: Hearth needs it again for a new kids profile, and to remove or uninstall itself.",
     "@setupFlowKidsKeepDebugging": {
-        "description": "Setup flow: kids' profiles step, once done: debugging stays on"
+        "description": "Setup flow: kids profiles step, once done: debugging stays on"
     },
     "setupFlowDebugTitle": "Turn on debugging first",
     "@setupFlowDebugTitle": {
-        "description": "Setup flow: kids' profiles step when the TV's debugging switch is off"
+        "description": "Setup flow: kids profiles step when the TV's debugging switch is off"
     },
-    "setupFlowDebugBody": "Hearth needs the TV's debugging switch to set up the kids' profiles. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids' profile.",
+    "setupFlowDebugBody": "Hearth needs the TV's debugging switch to set up the kids profiles. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids profile.",
     "@setupFlowDebugBody": {
         "description": "Setup flow: how to turn on debugging; \"Android TV OS build\", Developer options and USB debugging are Android's labels"
     },
@@ -3317,9 +3317,9 @@
             }
         }
     },
-    "setupFlowKidsNotAll": "Hearth isn't on every kids' profile yet",
+    "setupFlowKidsNotAll": "Hearth isn't on every kids profile yet",
     "@setupFlowKidsNotAll": {
-        "description": "Setup flow: kids' profiles step, when Hearth couldn't be kept on every kids' profile; the rows below say which"
+        "description": "Setup flow: kids profiles step, when Hearth couldn't be kept on every kids profile; the rows below say which"
     },
     "setupFlowLeaveAsIs": "Leave it as it is",
     "@setupFlowLeaveAsIs": {
@@ -3502,11 +3502,11 @@
     },
     "calendarsKidsAccess": "Hearth can't read this profile's calendars yet. A parent can allow it with Fix in {place}.",
     "@calendarsKidsAccess": {
-        "description": "Calendars settings page, on a kids' profile whose Hearth may not read its calendars; {place} is the settings breadcrumb to the kids' profiles page",
+        "description": "Calendars settings page, on a kids profile whose Hearth may not read its calendars; {place} is the settings breadcrumb to the kids profiles page",
         "placeholders": {
             "place": {
                 "type": "String",
-                "example": "Settings > Profiles > Kids' profiles"
+                "example": "Settings > Profiles > Kids profiles"
             }
         }
     },
@@ -3516,7 +3516,7 @@
     },
     "calendarsWaiting": "Waiting for this profile's calendars…",
     "@calendarsWaiting": {
-        "description": "Calendars settings page, on a kids' profile: its Hearth hasn't reported its calendars yet"
+        "description": "Calendars settings page, on a kids profile: its Hearth hasn't reported its calendars yet"
     },
     "calendarsNone": "This profile has no Google calendars synced to the TV.",
     "@calendarsNone": {
@@ -3859,7 +3859,7 @@
     "@contentPinRowHint": {
         "description": "Streaming app PINs: under the content PIN row, which profiles it's typed in"
     },
-    "contentPinEnterSubtitle": "The PIN {app} asks for when a title starts. Hearth types it only in an adult’s profile that has its own Google TV PIN lock, never in a kids’ profile. It stays on this TV, encrypted, and is never shown.",
+    "contentPinEnterSubtitle": "The PIN {app} asks for when a title starts. Hearth types it only in an adult’s profile that has its own Google TV PIN lock, never in a kids profile. It stays on this TV, encrypted, and is never shown.",
     "@contentPinEnterSubtitle": {
         "description": "Streaming app PINs: under the pad for the content PIN",
         "placeholders": {

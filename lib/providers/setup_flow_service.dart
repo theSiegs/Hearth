@@ -113,7 +113,7 @@ class SetupFlowService extends ChangeNotifier {
   /// the middle (Hearth stopped, the TV rebooted) can still put the home back.
   static const String _lookPreviewKey = "device_setup_look_preview";
 
-  /// How many kids' profiles Android listed when Hearth was last put on them from the flow: a new one asks again.
+  /// How many kids profiles Android listed when Hearth was last put on them from the flow: a new one asks again.
   static const String _kidsProtectedKey = "device_setup_kids_profiles";
 
   /// Choices that aren't a card's.
@@ -267,7 +267,7 @@ class SetupFlowService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// What to open now. [kids]: nothing in a kids' profile (a child can't set Hearth up; it waits for an adult one).
+  /// What to open now. [kids]: nothing in a kids profile (a child can't set Hearth up; it waits for an adult one).
   /// [homeButtonSeenBefore]: Home Button Fix has been on on this TV; [homeButtonOn]: it's on now. Those, a parent
   /// PIN, or a layout from before this start mean Hearth was in use before the flow existed.
   SetupLaunch launch({
@@ -322,7 +322,7 @@ class SetupFlowService extends ChangeNotifier {
   }
 
   /// How many things the chip says are left: the essentials neither on nor skipped, and the cards nobody decided on
-  /// that aren't all on anyway ([cardOn]). [newKidsProfile]: Android lists a kids' profile Hearth wasn't put on, which
+  /// that aren't all on anyway ([cardOn]). [newKidsProfile]: Android lists a kids profile Hearth wasn't put on, which
   /// Google TV would strip Hearth from; with the family card on, that counts too.
   int remaining({
     required bool homeButtonOn,
@@ -341,7 +341,7 @@ class SetupFlowService extends ChangeNotifier {
   }
 
   /// Whether the home may show its "Finish setting up" chip: once the flow has run (before, the flow shows itself),
-  /// never in a kids' profile, and not once dismissed, unless there's something new ([news]).
+  /// never in a kids profile, and not once dismissed, unless there's something new ([news]).
   bool chipAllowed({required bool kids, bool news = false}) =>
       !kids && (!chipHidden || news) && (flowVersion != null || resume != null);
 }

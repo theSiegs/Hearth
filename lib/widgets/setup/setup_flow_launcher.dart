@@ -28,7 +28,7 @@ import 'setup_snapshot.dart';
 
 /// Opens the setup flow over the home when it should show by itself ([SetupFlowService.launch]): the first time
 /// Hearth starts on a TV, a step left for Android's settings a moment ago, or the Home button switched off by an
-/// update (the old "Home Button Fix is off" dialog). Checked once the first profile check is done (a kids' profile
+/// update (the old "Home Button Fix is off" dialog). Checked once the first profile check is done (a kids profile
 /// never sees it), on every switch to another profile, whenever Hearth comes back to the front, and when a switch
 /// the flow sent the owner for brings Hearth back.
 class SetupFlowLauncher extends StatefulWidget {

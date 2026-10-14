@@ -36,10 +36,10 @@ class FakeSetupChannel extends FLauncherChannel {
   bool pairing = false;
   bool voice = false;
 
-  /// Whether adding Hearth to the kids' profiles works (false: "Allow debugging?" wasn't approved).
+  /// Whether adding Hearth to the kids profiles works (false: "Allow debugging?" wasn't approved).
   bool profilesWork = true;
 
-  /// Whether Hearth ends up kept on the kids' profiles after adding.
+  /// Whether Hearth ends up kept on the kids profiles after adding.
   bool profilesKept = true;
   int profilesAdded = 0;
   int aboutOpened = 0;

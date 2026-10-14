@@ -31,7 +31,7 @@ adb shell appops set com.thesiegs.hearth ACCESS_RESTRICTED_SETTINGS allow
 ```
 
 **After an update** Android may switch the Home Button Fix off. Hearth notices and shows its Home button screen
-again (never in a kids' profile), or the **Home button needs a fix** chip if you chose Not now.
+again (never in a kids profile), or the **Home button needs a fix** chip if you chose Not now.
 
 ## Moving around
 
@@ -67,7 +67,7 @@ the TV has been offline for a few seconds. Android counts Wi-Fi and mobile data 
 **Calendar.** With calendar access allowed (**Settings → Home screen → Status bar → Calendars**), the date and time
 in the top bar can be selected: they show the rest of today's events, and OK shows the next 7 days. The events come
 from the profile's own Google calendars synced to the TV; each profile turns its calendars on or off there. In a kids
-profile, a parent's **Fix** (Settings → Profiles → Kids' profiles) lets Hearth read that profile's calendars.
+profile, a parent's **Fix** (Settings → Profiles → Kids profiles) lets Hearth read that profile's calendars.
 
 **Search.** Type or speak a title. Results show where you can watch it now, from US availability data (titles in
 services you have come first). Netflix, Apple TV, HBO Max and Paramount+ open straight on the title; other services
@@ -138,15 +138,15 @@ Hearth treats a profile as a kids profile when Family Link supervises it.
 - **YouTube only in HearthTube.** With HearthTube installed, a kids profile watches YouTube only there, where its
   YouTube time applies: YouTube's own app is hidden, and if it opens anyway (a voice search, a link) HearthTube opens
   over it. Adults' profiles start with YouTube's app hidden too; show it again from its app options if you want it.
-- **Hearth on the kids' profiles.** Google TV removes apps that didn't come from the Play Store from kids'
+- **Hearth on the kids profiles.** Google TV removes apps that didn't come from the Play Store from kids'
   profiles each time the profile starts. The first-run setup puts Hearth (and HearthTube, once you have it) on each
-  kids' profile and keeps them there. The first time, the TV asks "Allow debugging?": choose **Always allow**, and
+  kids profile and keeps them there. The first time, the TV asks "Allow debugging?": choose **Always allow**, and
   leave debugging on. Google TV turns the Developer options switch off by itself over time; to keep the TV trusting
   Hearth, also turn on **Disable adb authorization timeout** there. Hearth uses the same connection to close the
   streaming apps adults share when the profile changes, so they ask who's watching. Each kid gets one Family Link "app added" notice. It only touches Hearth's own two apps. After
-  that, Hearth puts itself on a kids' profile you add later too, once you've switched away from it (once per
+  that, Hearth puts itself on a kids profile you add later too, once you've switched away from it (once per
   profile, so you aren't sent notice after notice).
-- **Kids' profiles** (**Settings → Profiles → Kids' profiles**). Shows each kids' profile as **Ready** or **Needs a
+- **Kids profiles** (**Settings → Profiles → Kids profiles**). Shows each kids profile as **Ready** or **Needs a
   fix**, with one **Fix** for those that need it. Select a kid to manage what's theirs without switching to their
   profile, like their **YouTube time per day** (how long HearthTube may play a day; Hearth counts it on the TV, and
   HearthTube stops when it's used up). With Home Assistant set up (optional), a limit shared with the family's other
@@ -154,11 +154,11 @@ Hearth treats a profile as a kids profile when Family Link supervises it.
   limit. The kid's page also shows HearthTube there: **Get HearthTube** installs it on the TV and
   then on that kid's profile when the TV doesn't have it yet, missing HearthTube is put on that kid with one press,
   and while that kid's profile is on, **HearthTube settings** opens HearthTube's own settings for them (HearthTube
-  asks for the parent PIN). When you install HearthTube later from **Updates**, Hearth puts it on the kids' profiles
+  asks for the parent PIN). When you install HearthTube later from **Updates**, Hearth puts it on the kids profiles
   by itself once you switch away from them, or use **Fix**.
-- **Uninstalling.** Use **Settings → Profiles → Kids' profiles → Uninstall Hearth**, which takes Hearth off the
-  kids' profiles first. Uninstalling from Android's settings would leave copies behind there. **Remove Hearth from
-  kids' profiles** does only the first part, and Hearth stops adding itself to new ones.
+- **Uninstalling.** Use **Settings → Profiles → Kids profiles → Uninstall Hearth**, which takes Hearth off the
+  kids profiles first. Uninstalling from Android's settings would leave copies behind there. **Remove Hearth from
+  kids profiles** does only the first part, and Hearth stops adding itself to new ones.
 
 ## The remote
 

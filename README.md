@@ -25,7 +25,7 @@
 ## Why Hearth
 
 Google TV's home is mostly ads and "for you" rows. Other launchers remove them, but they also lose what makes
-Google TV work for a family: each person's profile, kids' profiles, and Family Link's bedtime and screen time.
+Google TV work for a family: each person's profile, kids profiles, and Family Link's bedtime and screen time.
 
 Hearth keeps all of that:
 
@@ -49,9 +49,9 @@ It's free software (GPL-3.0).
 
 **Kids & Family Link**
 - Works with Family Link: Hearth steps aside for Google TV's bedtime and time's-up screens, and comes back after.
-- Hearth (and HearthTube) goes on each kids' profile and stays there. **Settings → Profiles → Kids' profiles**
+- Hearth (and HearthTube) goes on each kids profile and stays there. **Settings → Profiles → Kids profiles**
   shows each kid as Ready or Needs a fix, and holds each kid's settings, like their YouTube time per day.
-- A parent PIN guards anything in a kids' profile that could undo your setup.
+- A parent PIN guards anything in a kids profile that could undo your setup.
 - With HearthTube, kids watch YouTube only there, where their daily time applies.
 
 **A calm home screen**
@@ -91,11 +91,11 @@ exactly what they do.
 - **Approve from your phone** (new, experimental; needs Home Assistant and its phone app). When someone opens your
   PIN-locked Google TV profile, your phone asks Allow or Deny; Allow has Hearth type your Google TV PIN, which you
   save on the TV for this (encrypted). The remote always works too.
-- **Hearth on kids' profiles.** Google TV removes apps that didn't come from the Play Store from kids' profiles each
+- **Hearth on kids profiles.** Google TV removes apps that didn't come from the Play Store from kids profiles each
   time the profile starts. Hearth puts itself (and HearthTube) back using the TV's own debugging connection. That
   means **debugging stays on**, with "Disable adb authorization timeout" set, so the TV keeps trusting Hearth. It
-  only installs, keeps and removes Hearth's own two apps. Uninstall from **Settings → Profiles → Kids' profiles →
-  Uninstall Hearth**, or copies stay behind on the kids' profiles.
+  only installs, keeps and removes Hearth's own two apps. Uninstall from **Settings → Profiles → Kids profiles →
+  Uninstall Hearth**, or copies stay behind on the kids profiles.
 
 ## What setup takes
 
@@ -104,7 +104,7 @@ exactly what they do.
   it, and Google TV has no button for that. With debugging on, Hearth can lift it itself (it shows you the command
   first); otherwise run once from a computer:
   `adb shell appops set com.thesiegs.hearth ACCESS_RESTRICTED_SETTINGS allow`
-- **Debugging on**, for the kids' profile features above.
+- **Debugging on**, for the kids profile features above.
 - **Google TV in English**, for now, to tell adults' profiles apart.
 
 Hearth's first-run setup walks through each step and opens the right Android screen; skip anything you don't want.
@@ -138,8 +138,8 @@ a pre-release, so keep **Include pre-releases** on.
 
 ## Companion app: HearthTube
 
-[HearthTube](https://github.com/theSiegs/HearthTube) is an ad-free YouTube app for TV, based on SmartTube, that
-follows Hearth's profiles, wallpaper and kids' settings, and enforces each kid's YouTube time. Hearth installs and
+[HearthTube](https://github.com/theSiegs/HearthTube) is an ad-free YouTube app for Google TV, made for families, based
+on SmartTube. It follows Hearth's profiles, wallpaper and kids settings, and enforces each kid's YouTube time. Hearth installs and
 updates it from **Settings → System → Updates**.
 
 ## Privacy
@@ -162,7 +162,7 @@ Details, and every Android permission Hearth asks for and why: [docs/privacy.md]
 - [User guide](docs/user-guide.md): setup and every feature
 - [Home Assistant](docs/home-assistant.md): notifications, dashboard, status webhook, phone approval
 - [Privacy](docs/privacy.md): what Hearth sends where, and its permissions
-- [Kids' profile installs](docs/kids-profile-installs.md): how Hearth stays on kids' profiles
+- [Kids profile installs](docs/kids-profile-installs.md): how Hearth stays on kids profiles
 - [Development](docs/development.md): building, testing and releasing
 - [Provider contract](docs/provider-contract.md): what HearthTube (or another app) can read from Hearth
 - Design notes in [docs/design](docs/design)

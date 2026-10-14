@@ -77,7 +77,7 @@ kept on the TV, so the map service never learns where anyone is). It loads in th
 the panel opens at once, and keeps app and entity pictures on the TV for 30 days. **Show the full dashboard instead**
 shows Home Assistant's own page (the remote can't reach all of its controls).
 
-The panel is on per Google TV profile, so kids' profiles don't get it unless you turn it on there, and each profile can
+The panel is on per Google TV profile, so kids profiles don't get it unless you turn it on there, and each profile can
 have its own dashboard (**Dashboard for this profile**).
 
 ## Approve switches from a phone
@@ -136,6 +136,10 @@ profile switch, the screen going on or off, screen time coming up or clearing); 
 front or playing, so the usage counts are never more than 2 minutes behind; otherwise every 10 minutes, so Home
 Assistant can tell the TV is there. A status the same as the last one isn't sent again (the 10-minute one aside).
 Each post runs your webhook automation once.
+
+**HearthTube's titles.** HearthTube's **Tell Home Assistant what's playing** switch (on by default) puts the video's
+title, channel and ID in its media session, so they reach `media_title` and `media_artist` here. Turn it off in
+HearthTube to keep YouTube titles out of Home Assistant.
 
 **Where the playing time comes from.** HearthTube reports its own playing time, in every profile. Other apps' comes
 from their media sessions, which Android only shows to a notification listener in the same Android user. In the TV's

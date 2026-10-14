@@ -9,7 +9,7 @@ import java.util.Locale;
  * id/tvPinKeyboard whose digit keys carry their digit as text). The parent saves it once in Hearth (PinVault, under
  * {@link #VAULT_PROFILE}), and Profile Pairing types it behind its cover card, but only in an adult's profile that
  * is itself PIN-locked in Google TV: otherwise a kid could switch to an unlocked adult's profile and have Hearth
- * type the PIN for them. A kids' profile never gets it typed.
+ * type the PIN for them. A kids profile never gets it typed.
  *
  * Pure logic here (tested without a TV); {@link ParamountContentPinRecipe} reads the dialog and types, and
  * ProfilePairingService runs the entry.
@@ -77,7 +77,7 @@ final class ContentPin {
      */
     static String whyNot(boolean kids, boolean grownUpsUser, Boolean profileLocked, String pinStatus,
             boolean paused) {
-        if (kids) return "a kids' profile";
+        if (kids) return "a kids profile";
         if (!grownUpsUser) return "not an adult's profile";
         if (profileLocked == null) return "the profile's lock isn't known yet";
         if (!profileLocked) return "the profile has no Google TV PIN lock";

@@ -36,7 +36,7 @@ as Wikidata asks.
 - **The phone setup pages** (Home Assistant, streaming app PINs), only while their QR code is on screen, at a
   one-time secret link. The PIN page's QR code also carries a one-time key, after a `#` that browsers never send;
   the phone encrypts the PINs with it, so nothing else on the network can read them.
-- **Port 47474 on the TV's own loopback address** (not the network), for Hearth's helpers in your kids' profiles.
+- **Port 47474 on the TV's own loopback address** (not the network), for Hearth's helpers in your kids profiles.
   Each helper and Hearth prove to each other that they share that helper's key without sending it, so no other app
   can pose as either.
 
@@ -56,9 +56,9 @@ as Wikidata asks.
 | Network and Wi-Fi state | The data usage and network shortcuts. |
 | Start at boot | Brings Hearth and its services back after a restart. |
 
-**Hearth on the kids' profiles** uses the TV's own debugging connection (Android asks you to allow it once) to install
-Hearth's two apps in your kids' profiles and keep them there, including a kids' profile added later. It connects
-only to the TV itself and only touches Hearth and HearthTube. Hearth's helper in each kids' profile keeps a copy of
+**Hearth on the kids profiles** uses the TV's own debugging connection (Android asks you to allow it once) to install
+Hearth's two apps in your kids profiles and keep them there, including a kids profile added later. It connects
+only to the TV itself and only touches Hearth and HearthTube. Hearth's helper in each kids profile keeps a copy of
 the key for that connection in its own private storage. It uses it to let itself read that profile's Watch Next and
 calendars, and, if Hearth is ever uninstalled with Android's own uninstall, to remove Hearth's copies from its
 profile. The key goes to a helper only after the helper has proven itself (above), sealed for that one connection.

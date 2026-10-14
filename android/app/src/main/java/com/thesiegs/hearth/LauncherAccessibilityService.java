@@ -485,7 +485,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     /**
      * HearthTube installed or updated: whether Hearth keeps it up to date may have changed (updates_hearthtube), and
-     * the kids' profiles get it too once the owner has it (KidsProfiles has the limits).
+     * the kids profiles get it too once the owner has it (KidsProfiles has the limits).
      */
     private void onCompanionChanged(String packageName) {
         if (!CompanionApps.HEARTHTUBE.equals(packageName)) return;
@@ -511,7 +511,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         checkProfileUser("service start");
         // Hearth's agents in the other profiles' users report and open things through this
         AgentHub.start(this);
-        // A kids' profile added while Hearth wasn't running gets Hearth (once a parent has set that up)
+        // A kids profile added while Hearth wasn't running gets Hearth (once a parent has set that up)
         KidsProfiles.autoFixSoon(this);
         // Restarted (Android killed the service, an update) while this profile's screen time was up: still up,
         // until Google TV says otherwise or the profile changes.
@@ -684,7 +684,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             clearScreenTimeLock();
             updateScreenTimeLock("profile switch");
             retryPendingBounce();
-            // A kids' profile just added gets Hearth once it's switched away from (KidsProfiles has the limits)
+            // A kids profile just added gets Hearth once it's switched away from (KidsProfiles has the limits)
             KidsProfiles.autoFixSoon(this);
         }
     }
@@ -711,7 +711,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mHandler.postDelayed(mReadyFallback, PROFILE_READY_FALLBACK_MS);
         Log.i(TAG, "Profile is now " + LogNames.key(key) + " (" + LogNames.of(ProfileUsers.profileName(this, serial)) + ", "
                 + why + ")");
-        // An adult switching to their own profile is at the remote; a kids' profile always asks for the parent PIN
+        // An adult switching to their own profile is at the remote; a kids profile always asks for the parent PIN
         if (keyChanged) {
             if (ProfileUsers.isGrownUps(this, serial)) {
                 ParentPresence.confirmed(SystemClock.elapsedRealtime());

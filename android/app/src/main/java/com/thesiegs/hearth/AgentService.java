@@ -508,7 +508,7 @@ public class AgentService extends Service {
     /**
      * Lets this copy read its profile's Watch Next, if it can't: Android's TV provider shows an app without
      * READ_TV_LISTINGS only the entries it wrote itself, so this profile's Continue Watching would stay empty. A copy
-     * put on a kids' profile before Hearth granted it there gets it here, through the shell, with the key
+     * put on a kids profile before Hearth granted it there gets it here, through the shell, with the key
      * owner-Hearth shared (a runtime permission, for this user only). Once per start: a parent's Fix grants it too.
      */
     private void grantWatchNextAccess() {
@@ -537,7 +537,7 @@ public class AgentService extends Service {
     /**
      * Sends Hearth this user's Google calendars and their events from yesterday on (TvCalendars' maps), when they
      * changed; and reads them again every {@link #CALENDAR_EVERY_MS}. Every calendar here that syncs and shows: a
-     * kids' profile's user has its one account.
+     * kids profile's user has its one account.
      */
     private final Runnable mSendCalendar = new Runnable() {
         @Override

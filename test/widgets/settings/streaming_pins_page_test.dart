@@ -267,7 +267,7 @@ void main() {
     expect(SettingsService(prefs).pinConsentGiven, isTrue);
   });
 
-  testWidgets("a kids' profile has its own PINs, set past the parent PIN", (tester) async {
+  testWidgets("a kids profile has its own PINs, set past the parent PIN", (tester) async {
     on("user:10", "Riley");
     await SettingsService(prefs).setParentPin("2468");
     await pump(tester);
@@ -306,7 +306,7 @@ void main() {
     expect(channel.events, ["pair user:0:sam profile Sam M", "save Sam M 1357"]);
   });
 
-  testWidgets("a kids' profile asks for the parent PIN even with an adult around", (tester) async {
+  testWidgets("a kids profile asks for the parent PIN even with an adult around", (tester) async {
     on("user:10", "Riley");
     await SettingsService(prefs).setParentPin("2468");
     channel.parentPresent = true;
@@ -374,7 +374,7 @@ void main() {
       expect(find.textContaining("content PIN"), findsNothing);
     });
 
-    testWidgets("never in a kids' profile", (tester) async {
+    testWidgets("never in a kids profile", (tester) async {
       on("user:10", "Riley");
       channel.contentAppInstalled = true;
       channel.contentPin = "4321";

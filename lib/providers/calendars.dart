@@ -30,7 +30,7 @@ enum TvCalendarAccess {
   /// Hearth may not read them (the calendar permission isn't granted in that profile).
   denied,
 
-  /// A kids' profile whose Hearth (its agent) hasn't said yet.
+  /// A kids profile whose Hearth (its agent) hasn't said yet.
   waiting,
 }
 
@@ -234,13 +234,13 @@ typedef CalendarReading = ({TvCalendarAccess access, List<TvCalendar> calendars,
 
 /// The coming week of the active profile's Google calendars on the TV (Android's calendar store, which Google's
 /// calendar sync fills), for the top bar's date and time. Only the profile's own: an adult's account's calendars,
-/// or a kids' profile's own (relayed by Hearth there). Without calendar access, or with no calendar, [available] stays
+/// or a kids profile's own (relayed by Hearth there). Without calendar access, or with no calendar, [available] stays
 /// false and nothing new shows. Readings are kept a few minutes.
 class CalendarService extends ChangeNotifier {
   /// How long a reading is kept before it's asked for again.
   static const Duration cacheFor = Duration(minutes: 5);
 
-  /// After a failed try (or a kids' profile whose Hearth hasn't reported yet), how long until the next.
+  /// After a failed try (or a kids profile whose Hearth hasn't reported yet), how long until the next.
   static const Duration retryAfter = Duration(minutes: 1);
 
   /// How often it reads them in the background.
@@ -333,7 +333,7 @@ class CalendarService extends ChangeNotifier {
   /// The coming [days], each with what's on (days with nothing are left out).
   List<(DateTime, List<CalendarEvent>)> week() => CalendarParser.agenda(events, _now(), days: days);
 
-  /// Asks to read this profile's calendars (Android's permission dialog for an adult; for a kids' profile, Hearth
+  /// Asks to read this profile's calendars (Android's permission dialog for an adult; for a kids profile, Hearth
   /// grants it there itself when the TV trusts it), then reads them. Whether it may now.
   Future<bool> requestAccess() async {
     var granted = false;

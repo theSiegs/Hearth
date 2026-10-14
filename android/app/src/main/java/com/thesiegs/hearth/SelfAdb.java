@@ -12,7 +12,7 @@ import dadb.Dadb;
 /**
  * Hearth's own loopback adb connection: it lets Hearth run a few commands as the {@code shell} user on its OWN TV,
  * by being an adb client to the TV's own {@code adbd} on {@code 127.0.0.1:5555}. {@link ProfileAppAccess} uses this
- * to add/remove its own apps in kids' profiles, and {@link SetupFixes} to turn on Hearth's own switches. Nothing here
+ * to add/remove its own apps in kids profiles, and {@link SetupFixes} to turn on Hearth's own switches. Nothing here
  * is a general back door: it runs only the specific commands those two build.
  *
  * <h3>The one-time consent</h3>

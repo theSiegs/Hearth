@@ -181,7 +181,7 @@ public class MainActivity extends FlutterActivity {
                         this, LauncherAccessibilityService.getActiveProfileKey(this), kids);
                 result.success(kids);
             }
-            // Hearth on the kids' profiles (Settings > Profiles > Kids' profiles, and the setup flow's kids' step):
+            // Hearth on the kids profiles (Settings > Profiles > Kids profiles, and the setup flow's kids' step):
             // how each stands, a parent's Fix, and a parent's Remove before uninstalling. The work, and the one-time
             // "Allow debugging?" consent, live in KidsProfiles / ProfileAppAccess / SelfAdb. Off the main thread:
             // adb I/O. getKidsProfilesState's argument: also read whether the copies are kept (only over a key the TV
@@ -290,8 +290,8 @@ public class MainActivity extends FlutterActivity {
                 result.success(null);
             }
             // The active profile's daily YouTube limit in HearthTube, in minutes (0: none)
-            // A profile's daily YouTube limit: the profile on now's, or a kids' profile's by its key (the parent
-            // sets each kid's from Settings > Profiles > Kids' profiles without switching to it)
+            // A profile's daily YouTube limit: the profile on now's, or a kids profile's by its key (the parent
+            // sets each kid's from Settings > Profiles > Kids profiles without switching to it)
             case "getYouTubeDailyMinutes" -> {
                 String key = call.arguments();
                 result.success(Allowance.dailyMinutes(this,
@@ -706,7 +706,7 @@ public class MainActivity extends FlutterActivity {
 
     /**
      * Lets Hearth read the active profile's calendars. An adult's (the owner's user): Android's permission dialog,
-     * answered once the user has picked. A kids' profile: its copy of Hearth can't show a dialog, so the parent's
+     * answered once the user has picked. A kids profile: its copy of Hearth can't show a dialog, so the parent's
      * Hearth grants it there over its own adb, only when the TV trusts Hearth's key already (this never brings up
      * "Allow debugging?"); then the agent reads them again. False when it couldn't.
      */
@@ -1158,7 +1158,7 @@ public class MainActivity extends FlutterActivity {
         return tryStartActivity(intent);
     }
 
-    /** Opens Android's uninstall screen for Hearth itself. Settings takes Hearth off the kids' profiles first. */
+    /** Opens Android's uninstall screen for Hearth itself. Settings takes Hearth off the kids profiles first. */
     private boolean uninstallSelf() {
         return tryStartActivity(new Intent(Intent.ACTION_DELETE, Uri.parse("package:" + getPackageName()))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
@@ -1727,7 +1727,7 @@ public class MainActivity extends FlutterActivity {
     @SuppressWarnings("deprecation")
     /**
      * What the setup flow's family card needs to know, read without self-adb: whether this is Google TV (profiles,
-     * Profile Pairing), how many Family Link-supervised kids' profiles Android lists and how many have all Hearth
+     * Profile Pairing), how many Family Link-supervised kids profiles Android lists and how many have all Hearth
      * puts there, and whether Netflix is installed (its profile screen needs Hearth voice).
      */
     private Map<String, Object> getSetupFamilyState() {

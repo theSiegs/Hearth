@@ -21,7 +21,7 @@ import java.util.Set;
  * The Google calendars synced to the TV, for the top bar's date and time: Android's own calendar store
  * (CalendarContract), which Google's calendar sync fills for every Google account on the TV. Read only, and only the
  * active profile's: in the owner's user every adult's account syncs into the one store, so only the calendars of
- * the account whose profile is on are used (see {@link #chooseAccount}); a kids' profile's own user has a store of its
+ * the account whose profile is on are used (see {@link #chooseAccount}); a kids profile's own user has a store of its
  * own, which Hearth's agent there reads and relays ({@link AgentService}, {@link AgentHub}). Needs READ_CALENDAR.
  *
  * <p>Only calendars that sync their events and that the account shows (Google Calendar's own on/off for each
@@ -36,7 +36,7 @@ final class TvCalendars {
     /** The answers to getCalendarAccess. */
     static final String GRANTED = "granted";
     static final String DENIED = "denied";
-    /** A kids' profile whose agent hasn't reported yet. */
+    /** A kids profile whose agent hasn't reported yet. */
     static final String WAITING = "waiting";
 
     private TvCalendars() {
@@ -233,7 +233,7 @@ final class TvCalendars {
 
     /**
      * Whether the active profile's calendars can be read: GRANTED, DENIED (Hearth there may not read them), or WAITING
-     * (a kids' profile whose agent hasn't said yet).
+     * (a kids profile whose agent hasn't said yet).
      */
     static String access(Context context) {
         long serial = ProfileUsers.settledSerial(context);

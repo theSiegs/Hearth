@@ -41,7 +41,7 @@ class _CalendarsPageState extends State<CalendarsPage> {
   bool _loading = true;
   bool _asking = false;
 
-  /// Asking didn't get access (turned down, or a kids' profile Hearth couldn't let read them by itself).
+  /// Asking didn't get access (turned down, or a kids profile Hearth couldn't let read them by itself).
   bool _refused = false;
 
   @override

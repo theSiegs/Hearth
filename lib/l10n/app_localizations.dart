@@ -899,154 +899,154 @@ abstract class AppLocalizations {
   /// **'Updates'**
   String get updatesTitle;
 
-  /// Settings > Profiles: the page (and its row) about Hearth on the TV's kids' profiles
+  /// Settings > Profiles: the page (and its row) about Hearth on the TV's kids profiles
   ///
   /// In en, this message translates to:
-  /// **'Kids\' profiles'**
+  /// **'Kids profiles'**
   String get kidsProfilesTitle;
 
-  /// Kids' profiles page: a kids' profile whose name Hearth doesn't know yet
+  /// Kids profiles page: a kids profile whose name Hearth doesn't know yet
   ///
   /// In en, this message translates to:
-  /// **'A kids\' profile'**
+  /// **'A kids profile'**
   String get kidsProfilesUnnamed;
 
-  /// Kids' profiles page: status word for a kids' profile that has all of Hearth's apps
+  /// Kids profiles page: status word for a kids profile that has all of Hearth's apps
   ///
   /// In en, this message translates to:
   /// **'Ready'**
   String get kidsProfilesReady;
 
-  /// Kids' profiles page: status word for a kids' profile missing one of Hearth's apps
+  /// Kids profiles page: status word for a kids profile missing one of Hearth's apps
   ///
   /// In en, this message translates to:
   /// **'Needs a fix'**
   String get kidsProfilesNeedsFix;
 
-  /// Profiles page: beside Kids' profiles, how many need a fix (short)
+  /// Profiles page: beside Kids profiles, how many need a fix (short)
   ///
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 needs a fix} other{{count} need a fix}}'**
   String kidsProfilesNeedFixCount(int count);
 
-  /// Kids' profiles page: under a profile's name when Hearth is on it
+  /// Kids profiles page: under a profile's name when Hearth is on it
   ///
   /// In en, this message translates to:
   /// **'Hearth is on it'**
   String get kidsProfilesHearthOn;
 
-  /// Kids' profiles page: under a profile's name when Hearth and HearthTube are on it
+  /// Kids profiles page: under a profile's name when Hearth and HearthTube are on it
   ///
   /// In en, this message translates to:
   /// **'Hearth and HearthTube are on it'**
   String get kidsProfilesBothOn;
 
-  /// Kids' profiles page: under a profile's name when Hearth isn't on it
+  /// Kids profiles page: under a profile's name when Hearth isn't on it
   ///
   /// In en, this message translates to:
   /// **'Hearth isn\'t on it'**
   String get kidsProfilesHearthMissing;
 
-  /// Kids' profiles page: under a profile's name when HearthTube isn't on it
+  /// Kids profiles page: under a profile's name when HearthTube isn't on it
   ///
   /// In en, this message translates to:
   /// **'HearthTube isn\'t on it'**
   String get kidsProfilesHearthTubeMissing;
 
-  /// Kids' profiles page: under a profile's name when Google TV could remove Hearth's apps
+  /// Kids profiles page: under a profile's name when Google TV could remove Hearth's apps
   ///
   /// In en, this message translates to:
   /// **'Not protected: Google TV will remove Hearth\'s apps when this profile next starts'**
   String get kidsProfilesNotKept;
 
-  /// Kids' profiles page: the button that puts Hearth back on the profiles that need it
+  /// Kids profiles page: the button that puts Hearth back on the profiles that need it
   ///
   /// In en, this message translates to:
   /// **'Fix'**
   String get kidsProfilesFix;
 
-  /// Kids' profiles page: under the Fix button
+  /// Kids profiles page: under the Fix button
   ///
   /// In en, this message translates to:
   /// **'Puts Hearth and HearthTube back where they\'re missing. Each kid they\'re added for gets one Family Link notice.'**
   String get kidsProfilesFixBody;
 
-  /// Kids' profiles page: when the TV has no kids' profiles
+  /// Kids profiles page: when the TV has no kids profiles
   ///
   /// In en, this message translates to:
-  /// **'There are no kids\' profiles on this TV.'**
+  /// **'There are no kids profiles on this TV.'**
   String get kidsProfilesNone;
 
-  /// Kids' profiles page: note that new kids' profiles get Hearth by themselves
+  /// Kids profiles page: note that new kids profiles get Hearth by themselves
   ///
   /// In en, this message translates to:
-  /// **'Hearth also puts itself on new kids\' profiles.'**
+  /// **'Hearth also puts itself on new kids profiles.'**
   String get kidsProfilesAutoOn;
 
-  /// Kids' profiles page: note before the first Fix; quotes Android's debugging prompt and its Always allow button
+  /// Kids profiles page: note before the first Fix; quotes Android's debugging prompt and its Always allow button
   ///
   /// In en, this message translates to:
   /// **'The first time, the TV asks \"Allow debugging?\" — choose Always allow; that\'s what lets Hearth do the setup.'**
   String get kidsProfilesApproval;
 
-  /// Kids' profiles page: button and dialog title
+  /// Kids profiles page: button and dialog title
   ///
   /// In en, this message translates to:
-  /// **'Remove Hearth from kids\' profiles'**
+  /// **'Remove Hearth from kids profiles'**
   String get kidsProfilesRemoveTitle;
 
-  /// Kids' profiles page: Remove dialog text
+  /// Kids profiles page: Remove dialog text
   ///
   /// In en, this message translates to:
-  /// **'This takes Hearth and HearthTube off your kids\' profiles, and Hearth stops adding itself to new ones. Do this before you uninstall Hearth.'**
+  /// **'This takes Hearth and HearthTube off your kids profiles, and Hearth stops adding itself to new ones. Do this before you uninstall Hearth.'**
   String get kidsProfilesRemoveBody;
 
-  /// Kids' profiles page: button and dialog title
+  /// Kids profiles page: button and dialog title
   ///
   /// In en, this message translates to:
   /// **'Uninstall Hearth'**
   String get kidsProfilesUninstallTitle;
 
-  /// Kids' profiles page: Uninstall dialog, first paragraph
+  /// Kids profiles page: Uninstall dialog, first paragraph
   ///
   /// In en, this message translates to:
-  /// **'This first takes Hearth and HearthTube off your kids\' profiles, then uninstalls Hearth.'**
+  /// **'This first takes Hearth and HearthTube off your kids profiles, then uninstalls Hearth.'**
   String get kidsProfilesUninstallBody;
 
-  /// Kids' profiles page: Uninstall dialog, second paragraph
+  /// Kids profiles page: Uninstall dialog, second paragraph
   ///
   /// In en, this message translates to:
-  /// **'Uninstalling here — rather than from Android\'s settings — makes sure nothing is left behind on the kids\' profiles.'**
+  /// **'Uninstalling here — rather than from Android\'s settings — makes sure nothing is left behind on the kids profiles.'**
   String get kidsProfilesUninstallWhyHere;
 
-  /// Kids' profiles page: dialog title when Uninstall couldn't take Hearth off the kids' profiles
+  /// Kids profiles page: dialog title when Uninstall couldn't take Hearth off the kids profiles
   ///
   /// In en, this message translates to:
   /// **'Finish the one-time approval first'**
   String get kidsProfilesApprovalFirstTitle;
 
-  /// Kids' profiles page: that dialog's first paragraph; quotes Android's debugging prompt
+  /// Kids profiles page: that dialog's first paragraph; quotes Android's debugging prompt
   ///
   /// In en, this message translates to:
-  /// **'Hearth couldn\'t take itself off the kids\' profiles yet: it needs the one-time \"Allow debugging?\" approval on the TV.'**
+  /// **'Hearth couldn\'t take itself off the kids profiles yet: it needs the one-time \"Allow debugging?\" approval on the TV.'**
   String get kidsProfilesApprovalFirstBody;
 
-  /// Kids' profiles page: that dialog's second paragraph
+  /// Kids profiles page: that dialog's second paragraph
   ///
   /// In en, this message translates to:
-  /// **'Approve it, then try Uninstall again, so nothing is left on the kids\' profiles.'**
+  /// **'Approve it, then try Uninstall again, so nothing is left on the kids profiles.'**
   String get kidsProfilesApprovalFirstRetry;
 
-  /// Kids' profiles page and setup flow: dialog title when Fix or Remove couldn't run
+  /// Kids profiles page and setup flow: dialog title when Fix or Remove couldn't run
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t change the kids\' profiles'**
+  /// **'Couldn\'t change the kids profiles'**
   String get kidsProfilesFailedTitle;
 
   /// That dialog's first paragraph
   ///
   /// In en, this message translates to:
-  /// **'Hearth needs a one-time approval on the TV before it can change the kids\' profiles.'**
+  /// **'Hearth needs a one-time approval on the TV before it can change the kids profiles.'**
   String get kidsProfilesFailedBody;
 
   /// That dialog's second paragraph; quotes Android's debugging prompt and its Always allow button
@@ -1055,7 +1055,7 @@ abstract class AppLocalizations {
   /// **'On the TV, choose Always allow when it asks to \"Allow debugging?\", then try again.'**
   String get kidsProfilesFailedRetry;
 
-  /// One kid's page (from Kids' profiles): footer
+  /// One kid's page (from Kids profiles): footer
   ///
   /// In en, this message translates to:
   /// **'Everything here is this kid\'s own. You can change it from here without switching to their profile.'**
@@ -3836,7 +3836,7 @@ abstract class AppLocalizations {
   /// Setup flow: under "Skip the Home button?"
   ///
   /// In en, this message translates to:
-  /// **'Without it, the Home button opens Google TV, and Hearth can\'t tell when a kids\' profile is in use.'**
+  /// **'Without it, the Home button opens Google TV, and Hearth can\'t tell when a kids profile is in use.'**
   String get setupFlowSkipHomeButtonBody;
 
   /// Setup flow: button under "Skip the Home button?"
@@ -3962,7 +3962,7 @@ abstract class AppLocalizations {
   /// Setup flow: the default home app step
   ///
   /// In en, this message translates to:
-  /// **'Android will show a list of home apps. Choose Hearth. It keeps kids\' profiles from blocking Hearth.'**
+  /// **'Android will show a list of home apps. Choose Hearth. It keeps kids profiles from blocking Hearth.'**
   String get setupFlowHomeAppBody;
 
   /// Setup flow: button that opens Android's home app choice
@@ -4031,7 +4031,7 @@ abstract class AppLocalizations {
   /// **'Run setup again'**
   String get setupRunAgain;
 
-  /// Setup: the group for the parent PIN, Profile Pairing and kids' profiles (a card in the setup flow, a heading on the Set up Hearth page)
+  /// Setup: the group for the parent PIN, Profile Pairing and kids profiles (a card in the setup flow, a heading on the Set up Hearth page)
   ///
   /// In en, this message translates to:
   /// **'Your family'**
@@ -4379,10 +4379,10 @@ abstract class AppLocalizations {
   /// **'The right profile in Netflix, Disney+, Apple TV, Max and Paramount+'**
   String get setupFlowFamilyIncluded2;
 
-  /// Setup flow: Your family card, third thing it includes (shown when the TV has kids' profiles)
+  /// Setup flow: Your family card, third thing it includes (shown when the TV has kids profiles)
   ///
   /// In en, this message translates to:
-  /// **'Hearth kept on your kids\' profiles'**
+  /// **'Hearth kept on your kids profiles'**
   String get setupFlowFamilyIncluded3;
 
   /// Setup flow: what the Your family card needs: a four-digit PIN the parent picks
@@ -4469,43 +4469,43 @@ abstract class AppLocalizations {
   /// **'Hearth voice is on'**
   String get setupFlowVoiceDone;
 
-  /// Setup flow: kids' profiles step's title
+  /// Setup flow: kids profiles step's title
   ///
   /// In en, this message translates to:
-  /// **'Keep Hearth on your kids\' profiles'**
+  /// **'Keep Hearth on your kids profiles'**
   String get setupFlowKidsTitle;
 
-  /// Setup flow: kids' profiles step; Family Link and its "app added" notice are Google's
+  /// Setup flow: kids profiles step; Family Link and its "app added" notice are Google's
   ///
   /// In en, this message translates to:
-  /// **'Google TV removes apps it didn\'t install from kids\' profiles each time they start. Hearth can protect itself and HearthTube there. Each child gets one Family Link \"app added\" notice; undo anytime in Settings.'**
+  /// **'Google TV removes apps it didn\'t install from kids profiles each time they start. Hearth can protect itself and HearthTube there. Each child gets one Family Link \"app added\" notice; undo anytime in Settings.'**
   String get setupFlowKidsBody;
 
-  /// Setup flow: kids' profiles step, what the TV will ask; "Allow debugging?", Always allow and Allow are Android's labels
+  /// Setup flow: kids profiles step, what the TV will ask; "Allow debugging?", Always allow and Allow are Android's labels
   ///
   /// In en, this message translates to:
   /// **'The TV will ask \"Allow debugging?\". Tick Always allow, then Allow. You only do this once.'**
   String get setupFlowKidsApprove;
 
-  /// Setup flow: kids' profiles step's main button
+  /// Setup flow: kids profiles step's main button
   ///
   /// In en, this message translates to:
   /// **'Add to their profiles'**
   String get setupFlowKidsAdd;
 
-  /// Setup flow: kids' profiles step, once Hearth was added
+  /// Setup flow: kids profiles step, once Hearth was added
   ///
   /// In en, this message translates to:
-  /// **'Hearth is on your kids\' profiles'**
+  /// **'Hearth is on your kids profiles'**
   String get setupFlowKidsDone;
 
-  /// Setup flow: kids' profiles step, once done: debugging stays on
+  /// Setup flow: kids profiles step, once done: debugging stays on
   ///
   /// In en, this message translates to:
-  /// **'Leave debugging on: Hearth needs it again for a new kids\' profile, and to remove or uninstall itself.'**
+  /// **'Leave debugging on: Hearth needs it again for a new kids profile, and to remove or uninstall itself.'**
   String get setupFlowKidsKeepDebugging;
 
-  /// Setup flow: kids' profiles step when the TV's debugging switch is off
+  /// Setup flow: kids profiles step when the TV's debugging switch is off
   ///
   /// In en, this message translates to:
   /// **'Turn on debugging first'**
@@ -4514,7 +4514,7 @@ abstract class AppLocalizations {
   /// Setup flow: how to turn on debugging; "Android TV OS build", Developer options and USB debugging are Android's labels
   ///
   /// In en, this message translates to:
-  /// **'Hearth needs the TV\'s debugging switch to set up the kids\' profiles. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids\' profile.'**
+  /// **'Hearth needs the TV\'s debugging switch to set up the kids profiles. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids profile.'**
   String get setupFlowDebugBody;
 
   /// Setup flow: button that opens Android's About screen
@@ -4643,10 +4643,10 @@ abstract class AppLocalizations {
   /// **'New in Hearth · {count}'**
   String setupChipNewMany(int count);
 
-  /// Setup flow: kids' profiles step, when Hearth couldn't be kept on every kids' profile; the rows below say which
+  /// Setup flow: kids profiles step, when Hearth couldn't be kept on every kids profile; the rows below say which
   ///
   /// In en, this message translates to:
-  /// **'Hearth isn\'t on every kids\' profile yet'**
+  /// **'Hearth isn\'t on every kids profile yet'**
   String get setupFlowKidsNotAll;
 
   /// Setup flow: a card button that goes on to the next card without changing anything
@@ -4871,7 +4871,7 @@ abstract class AppLocalizations {
   /// **'Hearth can show this profile\'s Google calendars that are synced to the TV. It only reads them, and nothing leaves the TV.'**
   String get calendarsAccessHelp;
 
-  /// Calendars settings page, on a kids' profile whose Hearth may not read its calendars; {place} is the settings breadcrumb to the kids' profiles page
+  /// Calendars settings page, on a kids profile whose Hearth may not read its calendars; {place} is the settings breadcrumb to the kids profiles page
   ///
   /// In en, this message translates to:
   /// **'Hearth can\'t read this profile\'s calendars yet. A parent can allow it with Fix in {place}.'**
@@ -4883,7 +4883,7 @@ abstract class AppLocalizations {
   /// **'Calendar access is turned off. Allow it in Android\'s settings: Apps > Hearth > Permissions.'**
   String get calendarsDenied;
 
-  /// Calendars settings page, on a kids' profile: its Hearth hasn't reported its calendars yet
+  /// Calendars settings page, on a kids profile: its Hearth hasn't reported its calendars yet
   ///
   /// In en, this message translates to:
   /// **'Waiting for this profile\'s calendars…'**
@@ -5288,7 +5288,7 @@ abstract class AppLocalizations {
   /// Streaming app PINs: under the pad for the content PIN
   ///
   /// In en, this message translates to:
-  /// **'The PIN {app} asks for when a title starts. Hearth types it only in an adult’s profile that has its own Google TV PIN lock, never in a kids’ profile. It stays on this TV, encrypted, and is never shown.'**
+  /// **'The PIN {app} asks for when a title starts. Hearth types it only in an adult’s profile that has its own Google TV PIN lock, never in a kids profile. It stays on this TV, encrypted, and is never shown.'**
   String contentPinEnterSubtitle(String app);
 }
 

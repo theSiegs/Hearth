@@ -25,18 +25,18 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Hearth on the TV's kids' profiles: which they are, whether Hearth (and HearthTube, when the owner has it) is on
+ * Hearth on the TV's kids profiles: which they are, whether Hearth (and HearthTube, when the owner has it) is on
  * each, and putting them there or taking them off. The commands are {@link ProfileAppAccess}'s, run over Hearth's
  * own adb ({@link SelfAdb}).
  *
- * <p>Google TV runs each kids' profile as an Android user of its own that Family Link supervises
+ * <p>Google TV runs each kids profile as an Android user of its own that Family Link supervises
  * ({@link ProfileUsers#isSupervised}). An adult's profile is another Google account in the owner's user, which has
  * Hearth already, so there's nothing to put anywhere for them. Google TV also keeps a spare profile user, made ahead
  * of time for the next profile added: it isn't supervised, so it's never one of these.
  *
- * <h3>New kids' profiles</h3>
- * Once a parent has put Hearth on the kids' profiles (the setup flow, or Fix in Settings) and the TV trusts Hearth's
- * adb key, Hearth puts itself on a kids' profile added later too ({@link #autoFixSoon}), within these limits:
+ * <h3>New kids profiles</h3>
+ * Once a parent has put Hearth on the kids profiles (the setup flow, or Fix in Settings) and the TV trusts Hearth's
+ * adb key, Hearth puts itself on a kids profile added later too ({@link #autoFixSoon}), within these limits:
  * <ul>
  *   <li>Only while that profile isn't running, as when the parent's Fix runs from their own profile: a running kids'
  *       profile's launcher checks its apps the moment one is added.</li>
@@ -45,14 +45,14 @@ import java.util.regex.Pattern;
  *   <li>Never where connecting could ask "Allow debugging?": the TV must have run a command for Hearth's key before.
  *       If it no longer answers like that, Hearth stops trying until a parent's own action works again.</li>
  * </ul>
- * Taking Hearth off the kids' profiles ({@link #remove}) stops all of it.
+ * Taking Hearth off the kids profiles ({@link #remove}) stops all of it.
  */
 final class KidsProfiles {
     private static final String TAG = "HearthKids";
     private static final String PREFS = "hearth_kids_profiles";
-    /** A parent put Hearth on the kids' profiles and hasn't taken it off since: new ones get it too. */
+    /** A parent put Hearth on the kids profiles and hasn't taken it off since: new ones get it too. */
     private static final String KEEP = "keep";
-    /** "auto|serial|package": Hearth put that app on that kids' profile by itself once already. */
+    /** "auto|serial|package": Hearth put that app on that kids profile by itself once already. */
     private static final String AUTO_PREFIX = "auto|";
     /** How long a parent's action may wait on adb, "Allow debugging?" included (the setup flow waits as long). */
     private static final int PARENT_TIMEOUT_MS = 120_000;
@@ -70,7 +70,7 @@ final class KidsProfiles {
     private KidsProfiles() {
     }
 
-    /** One kids' profile, and which of Hearth's apps Android lists there. */
+    /** One kids profile, and which of Hearth's apps Android lists there. */
     static final class Kid {
         final int userId;
         final long serial;
@@ -90,7 +90,7 @@ final class KidsProfiles {
     }
 
     /**
-     * The kids' profiles: the Family Link-supervised profiles of Hearth's user, with Hearth's apps as Android lists
+     * The kids profiles: the Family Link-supervised profiles of Hearth's user, with Hearth's apps as Android lists
      * them there (no adb needed to see what's installed, only to change it).
      */
     static List<Kid> list(Context context) {
@@ -110,12 +110,12 @@ final class KidsProfiles {
                         Boolean.TRUE.equals(hasApp(context, ProfileAppAccess.HEARTHTUBE, profile))));
             }
         } catch (RuntimeException e) {
-            Log.w(TAG, "Couldn't list the kids' profiles", e);
+            Log.w(TAG, "Couldn't list the kids profiles", e);
         }
         return kids;
     }
 
-    /** How many kids' profiles have everything Hearth puts there: Hearth, and HearthTube when the owner has it. */
+    /** How many kids profiles have everything Hearth puts there: Hearth, and HearthTube when the owner has it. */
     static int countReady(Context context, List<Kid> kids) {
         boolean tube = hearthTubeOnOwner(context);
         int ready = 0;
@@ -126,7 +126,7 @@ final class KidsProfiles {
     }
 
     /**
-     * For Settings and the setup flow: each kids' profile and what's on it, and how things stand. With
+     * For Settings and the setup flow: each kids profile and what's on it, and how things stand. With
      * {@code checkProtection}, also whether each copy is kept (Google TV can't remove it), read over Hearth's adb, but
      * only when the TV trusts Hearth's key already: looking never asks "Allow debugging?".
      */
@@ -177,9 +177,9 @@ final class KidsProfiles {
     }
 
     /**
-     * A parent's Fix (Settings, or the setup flow's kids' step): puts Hearth's apps on every kids' profile where one
-     * is missing or not kept, or only on the kids' profile with {@code onlyUser} (one kid's page, after it got
-     * HearthTube), and from now on on new kids' profiles too. The first time, the TV asks "Allow debugging?"; until
+     * A parent's Fix (Settings, or the setup flow's kids' step): puts Hearth's apps on every kids profile where one
+     * is missing or not kept, or only on the kids profile with {@code onlyUser} (one kid's page, after it got
+     * HearthTube), and from now on on new kids profiles too. The first time, the TV asks "Allow debugging?"; until
      * the parent allows it this throws. Call off the main thread.
      */
     static List<String> fix(Context context, Integer onlyUser) throws Exception {
@@ -191,7 +191,7 @@ final class KidsProfiles {
             if (kids.isEmpty()) return new ArrayList<>();
             try (SelfAdb shell = SelfAdb.open(context, PARENT_TIMEOUT_MS)) {
                 List<String> log = ProfileAppAccess.addToKids(context.getPackageCodePath(), shell, userIds(kids));
-                Log.i(TAG, "Fixed the kids' profiles: " + log);
+                Log.i(TAG, "Fixed the kids profiles: " + log);
                 return log;
             }
         }
@@ -199,7 +199,7 @@ final class KidsProfiles {
 
     /**
      * A parent's Remove (Settings, and Uninstall Hearth before it opens Android's uninstall): takes Hearth's apps off
-     * every kids' profile, and any other profile user they're on (left from older versions), and stops putting them on
+     * every kids profile, and any other profile user they're on (left from older versions), and stops putting them on
      * new ones. Needs no adb when there's nothing to take off. Call off the main thread.
      */
     static List<String> remove(Context context) throws Exception {
@@ -216,7 +216,7 @@ final class KidsProfiles {
         }
     }
 
-    /** Whether new kids' profiles get Hearth; either way Hearth's own tries so far are forgotten. */
+    /** Whether new kids profiles get Hearth; either way Hearth's own tries so far are forgotten. */
     private static void setKeep(Context context, boolean keep) {
         SharedPreferences prefs = prefs(context);
         SharedPreferences.Editor editor = prefs.edit().putBoolean(KEEP, keep);
@@ -227,7 +227,7 @@ final class KidsProfiles {
     }
 
     /**
-     * Every kids' profile, and every other profile user where Android lists one of Hearth's apps or can't say: what
+     * Every kids profile, and every other profile user where Android lists one of Hearth's apps or can't say: what
      * Remove takes Hearth off.
      */
     private static List<Integer> removalTargets(Context context) {
@@ -278,12 +278,12 @@ final class KidsProfiles {
         boolean tried = true;
         try (SelfAdb shell = SelfAdb.open(context, QUIET_TIMEOUT_MS)) {
             List<String> log = ProfileAppAccess.addToKids(context.getPackageCodePath(), shell, packages);
-            Log.i(TAG, "Put Hearth on kids' profiles by itself: " + log);
+            Log.i(TAG, "Put Hearth on kids profiles by itself: " + log);
         } catch (Exception e) {
             // Nobody listening (debugging off since, or after a restart): nothing ran, so the next switch tries again.
             // Anything else may have run, and may mean the TV no longer trusts Hearth's key: no more tries of its own
             tried = !refused(e);
-            Log.i(TAG, "Couldn't put Hearth on the kids' profiles by itself: " + e);
+            Log.i(TAG, "Couldn't put Hearth on the kids profiles by itself: " + e);
             if (tried) SelfAdb.forgetTrusted(context);
         }
         if (!tried) return;
@@ -295,8 +295,8 @@ final class KidsProfiles {
     }
 
     /**
-     * What Hearth may put on the kids' profiles by itself: nothing unless a parent has put Hearth on them
-     * ({@code keep}) and the TV trusts Hearth's key; then, for each kids' profile that isn't running, each of
+     * What Hearth may put on the kids profiles by itself: nothing unless a parent has put Hearth on them
+     * ({@code keep}) and the TV trusts Hearth's key; then, for each kids profile that isn't running, each of
      * Hearth's apps missing there that Hearth hasn't put there by itself before ({@code done}: the saved keys).
      * HearthTube only when the owner has it.
      */
@@ -342,13 +342,13 @@ final class KidsProfiles {
         return ids;
     }
 
-    /** HearthTube's screen for a profile's settings (HearthTube asks for the parent PIN in a kids' profile). */
+    /** HearthTube's screen for a profile's settings (HearthTube asks for the parent PIN in a kids profile). */
     static final String HEARTHTUBE_SETTINGS = "com.thesiegs.hearthtube.action.OPEN_SETTINGS";
 
     /**
-     * Opens HearthTube's settings in the active kids' profile's user (through its agent), at {@code section} when
+     * Opens HearthTube's settings in the active kids profile's user (through its agent), at {@code section} when
      * given; its main screen when this HearthTube has no settings screen to open yet. One APK serves every user, so
-     * what the owner's copy can open, the kid's copy can. False when no kids' profile is on, or it lacks HearthTube.
+     * what the owner's copy can open, the kid's copy can. False when no kids profile is on, or it lacks HearthTube.
      */
     static boolean openHearthTubeSettings(Context context, String section) {
         Intent intent = new Intent(HEARTHTUBE_SETTINGS).setPackage(ProfileAppAccess.HEARTHTUBE);
@@ -364,7 +364,7 @@ final class KidsProfiles {
         return Boolean.TRUE.equals(ProfileApps.open(context, intent));
     }
 
-    /** Whether the owner (Hearth's own user) has HearthTube: only then do the kids' profiles get it. */
+    /** Whether the owner (Hearth's own user) has HearthTube: only then do the kids profiles get it. */
     static boolean hearthTubeOnOwner(Context context) {
         try {
             context.getPackageManager().getPackageInfo(ProfileAppAccess.HEARTHTUBE, 0);

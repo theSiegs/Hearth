@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/// How Hearth stands on one kids' profile: everything it puts there is there (and kept, as far as Hearth could read),
+/// How Hearth stands on one kids profile: everything it puts there is there (and kept, as far as Hearth could read),
 /// or what's out of place.
 enum KidProfileStatus {
   ready,
@@ -30,7 +30,7 @@ enum KidProfileStatus {
   hearthTubeMissing,
 }
 
-/// One kids' profile, from [FLauncherChannel.getKidsProfilesState].
+/// One kids profile, from [FLauncherChannel.getKidsProfilesState].
 class KidProfile {
   final int userId;
 
@@ -71,7 +71,7 @@ class KidProfile {
         hearthKept = map["hearthKept"] as bool?,
         hearthTubeKept = map["hearthTubeKept"] as bool?;
 
-  /// HearthTube counts only when the owner has it ([hearthTubeOnOwner]): only then does a kids' profile get it.
+  /// HearthTube counts only when the owner has it ([hearthTubeOnOwner]): only then does a kids profile get it.
   KidProfileStatus status({required bool hearthTubeOnOwner}) {
     if (!hearth) return KidProfileStatus.hearthMissing;
     if (hearthKept == false || (hearthTubeOnOwner && hearthTube && hearthTubeKept == false)) {
@@ -82,14 +82,14 @@ class KidProfile {
   }
 }
 
-/// Hearth on the TV's kids' profiles, as [FLauncherChannel.getKidsProfilesState] reads it.
+/// Hearth on the TV's kids profiles, as [FLauncherChannel.getKidsProfilesState] reads it.
 class KidsProfilesState {
   final List<KidProfile> kids;
 
-  /// The owner has HearthTube, so the kids' profiles get it too.
+  /// The owner has HearthTube, so the kids profiles get it too.
   final bool hearthTubeOnOwner;
 
-  /// A parent put Hearth on the kids' profiles and hasn't taken it off since: new ones get it by themselves.
+  /// A parent put Hearth on the kids profiles and hasn't taken it off since: new ones get it by themselves.
   final bool keep;
 
   /// The TV trusts Hearth's adb key (a parent allowed "Allow debugging?"), so Fix won't ask.
@@ -118,9 +118,9 @@ class KidsProfilesState {
 
   KidProfileStatus statusOf(KidProfile kid) => kid.status(hearthTubeOnOwner: hearthTubeOnOwner);
 
-  /// How many kids' profiles have something out of place.
+  /// How many kids profiles have something out of place.
   int get needingFix => kids.where((kid) => statusOf(kid) != KidProfileStatus.ready).length;
 
-  /// There are kids' profiles, and Hearth is all there on each.
+  /// There are kids profiles, and Hearth is all there on each.
   bool get allReady => kids.isNotEmpty && needingFix == 0;
 }

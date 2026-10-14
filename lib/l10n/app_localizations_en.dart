@@ -409,10 +409,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updatesTitle => 'Updates';
 
   @override
-  String get kidsProfilesTitle => 'Kids\' profiles';
+  String get kidsProfilesTitle => 'Kids profiles';
 
   @override
-  String get kidsProfilesUnnamed => 'A kids\' profile';
+  String get kidsProfilesUnnamed => 'A kids profile';
 
   @override
   String get kidsProfilesReady => 'Ready';
@@ -453,43 +453,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kidsProfilesFixBody => 'Puts Hearth and HearthTube back where they\'re missing. Each kid they\'re added for gets one Family Link notice.';
 
   @override
-  String get kidsProfilesNone => 'There are no kids\' profiles on this TV.';
+  String get kidsProfilesNone => 'There are no kids profiles on this TV.';
 
   @override
-  String get kidsProfilesAutoOn => 'Hearth also puts itself on new kids\' profiles.';
+  String get kidsProfilesAutoOn => 'Hearth also puts itself on new kids profiles.';
 
   @override
   String get kidsProfilesApproval => 'The first time, the TV asks \"Allow debugging?\" — choose Always allow; that\'s what lets Hearth do the setup.';
 
   @override
-  String get kidsProfilesRemoveTitle => 'Remove Hearth from kids\' profiles';
+  String get kidsProfilesRemoveTitle => 'Remove Hearth from kids profiles';
 
   @override
-  String get kidsProfilesRemoveBody => 'This takes Hearth and HearthTube off your kids\' profiles, and Hearth stops adding itself to new ones. Do this before you uninstall Hearth.';
+  String get kidsProfilesRemoveBody => 'This takes Hearth and HearthTube off your kids profiles, and Hearth stops adding itself to new ones. Do this before you uninstall Hearth.';
 
   @override
   String get kidsProfilesUninstallTitle => 'Uninstall Hearth';
 
   @override
-  String get kidsProfilesUninstallBody => 'This first takes Hearth and HearthTube off your kids\' profiles, then uninstalls Hearth.';
+  String get kidsProfilesUninstallBody => 'This first takes Hearth and HearthTube off your kids profiles, then uninstalls Hearth.';
 
   @override
-  String get kidsProfilesUninstallWhyHere => 'Uninstalling here — rather than from Android\'s settings — makes sure nothing is left behind on the kids\' profiles.';
+  String get kidsProfilesUninstallWhyHere => 'Uninstalling here — rather than from Android\'s settings — makes sure nothing is left behind on the kids profiles.';
 
   @override
   String get kidsProfilesApprovalFirstTitle => 'Finish the one-time approval first';
 
   @override
-  String get kidsProfilesApprovalFirstBody => 'Hearth couldn\'t take itself off the kids\' profiles yet: it needs the one-time \"Allow debugging?\" approval on the TV.';
+  String get kidsProfilesApprovalFirstBody => 'Hearth couldn\'t take itself off the kids profiles yet: it needs the one-time \"Allow debugging?\" approval on the TV.';
 
   @override
-  String get kidsProfilesApprovalFirstRetry => 'Approve it, then try Uninstall again, so nothing is left on the kids\' profiles.';
+  String get kidsProfilesApprovalFirstRetry => 'Approve it, then try Uninstall again, so nothing is left on the kids profiles.';
 
   @override
-  String get kidsProfilesFailedTitle => 'Couldn\'t change the kids\' profiles';
+  String get kidsProfilesFailedTitle => 'Couldn\'t change the kids profiles';
 
   @override
-  String get kidsProfilesFailedBody => 'Hearth needs a one-time approval on the TV before it can change the kids\' profiles.';
+  String get kidsProfilesFailedBody => 'Hearth needs a one-time approval on the TV before it can change the kids profiles.';
 
   @override
   String get kidsProfilesFailedRetry => 'On the TV, choose Always allow when it asks to \"Allow debugging?\", then try again.';
@@ -2166,7 +2166,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowSkipHomeButtonTitle => 'Skip the Home button?';
 
   @override
-  String get setupFlowSkipHomeButtonBody => 'Without it, the Home button opens Google TV, and Hearth can\'t tell when a kids\' profile is in use.';
+  String get setupFlowSkipHomeButtonBody => 'Without it, the Home button opens Google TV, and Hearth can\'t tell when a kids profile is in use.';
 
   @override
   String get setupFlowSkipAnyway => 'Skip anyway';
@@ -2229,7 +2229,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowHomeAppTitle => 'Make Hearth your home app';
 
   @override
-  String get setupFlowHomeAppBody => 'Android will show a list of home apps. Choose Hearth. It keeps kids\' profiles from blocking Hearth.';
+  String get setupFlowHomeAppBody => 'Android will show a list of home apps. Choose Hearth. It keeps kids profiles from blocking Hearth.';
 
   @override
   String get setupFlowChooseHearth => 'Choose Hearth';
@@ -2451,7 +2451,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowFamilyIncluded2 => 'The right profile in Netflix, Disney+, Apple TV, Max and Paramount+';
 
   @override
-  String get setupFlowFamilyIncluded3 => 'Hearth kept on your kids\' profiles';
+  String get setupFlowFamilyIncluded3 => 'Hearth kept on your kids profiles';
 
   @override
   String get setupFlowNeedsPin => 'Four digits you choose';
@@ -2500,10 +2500,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowVoiceDone => 'Hearth voice is on';
 
   @override
-  String get setupFlowKidsTitle => 'Keep Hearth on your kids\' profiles';
+  String get setupFlowKidsTitle => 'Keep Hearth on your kids profiles';
 
   @override
-  String get setupFlowKidsBody => 'Google TV removes apps it didn\'t install from kids\' profiles each time they start. Hearth can protect itself and HearthTube there. Each child gets one Family Link \"app added\" notice; undo anytime in Settings.';
+  String get setupFlowKidsBody => 'Google TV removes apps it didn\'t install from kids profiles each time they start. Hearth can protect itself and HearthTube there. Each child gets one Family Link \"app added\" notice; undo anytime in Settings.';
 
   @override
   String get setupFlowKidsApprove => 'The TV will ask \"Allow debugging?\". Tick Always allow, then Allow. You only do this once.';
@@ -2512,16 +2512,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowKidsAdd => 'Add to their profiles';
 
   @override
-  String get setupFlowKidsDone => 'Hearth is on your kids\' profiles';
+  String get setupFlowKidsDone => 'Hearth is on your kids profiles';
 
   @override
-  String get setupFlowKidsKeepDebugging => 'Leave debugging on: Hearth needs it again for a new kids\' profile, and to remove or uninstall itself.';
+  String get setupFlowKidsKeepDebugging => 'Leave debugging on: Hearth needs it again for a new kids profile, and to remove or uninstall itself.';
 
   @override
   String get setupFlowDebugTitle => 'Turn on debugging first';
 
   @override
-  String get setupFlowDebugBody => 'Hearth needs the TV\'s debugging switch to set up the kids\' profiles. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids\' profile.';
+  String get setupFlowDebugBody => 'Hearth needs the TV\'s debugging switch to set up the kids profiles. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids profile.';
 
   @override
   String get setupFlowDebugOpen => 'Open About';
@@ -2593,7 +2593,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get setupFlowKidsNotAll => 'Hearth isn\'t on every kids\' profile yet';
+  String get setupFlowKidsNotAll => 'Hearth isn\'t on every kids profile yet';
 
   @override
   String get setupFlowLeaveAsIs => 'Leave it as it is';
@@ -2963,6 +2963,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String contentPinEnterSubtitle(String app) {
-    return 'The PIN $app asks for when a title starts. Hearth types it only in an adult’s profile that has its own Google TV PIN lock, never in a kids’ profile. It stays on this TV, encrypted, and is never shown.';
+    return 'The PIN $app asks for when a title starts. Hearth types it only in an adult’s profile that has its own Google TV PIN lock, never in a kids profile. It stays on this TV, encrypted, and is never shown.';
   }
 }

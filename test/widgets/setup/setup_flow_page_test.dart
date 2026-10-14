@@ -334,31 +334,31 @@ void main() {
       expect(find.text("Profile Pairing is on"), findsOneWidget);
     });
 
-    testWidgets("kids' profiles: turn on debugging, then Hearth goes on them from the screen that says what it does",
+    testWidgets("kids profiles: turn on debugging, then Hearth goes on them from the screen that says what it does",
         (tester) async {
       await SettingsService(prefs).setParentPin("1357");
       channel.pairing = true;
       channel.kidsProfiles = 2;
       await openAtFamily(tester);
-      expect(find.text("Hearth kept on your kids' profiles"), findsOneWidget);
+      expect(find.text("Hearth kept on your kids profiles"), findsOneWidget);
       await press(tester, "Turn on");
       expect(find.text("Turn on debugging first"), findsOneWidget);
       await press(tester, "Open About");
       expect(channel.aboutOpened, 1);
       channel.adb = true;
       await comeBack(tester);
-      expect(find.text("Keep Hearth on your kids' profiles"), findsOneWidget);
+      expect(find.text("Keep Hearth on your kids profiles"), findsOneWidget);
 
       // The screen says what it does: one press, no question after it
       expect(channel.profilesAdded, 0);
       await press(tester, "Add to their profiles");
       expect(channel.profilesAdded, 1);
-      expect(find.text("Hearth is on your kids' profiles"), findsOneWidget);
+      expect(find.text("Hearth is on your kids profiles"), findsOneWidget);
       expect(find.text("Ready"), findsNWidgets(2));
       expect(flow.kidsProtected, 2);
     });
 
-    testWidgets("kids' profiles where Hearth didn't stay: says so, with Try again", (tester) async {
+    testWidgets("kids profiles where Hearth didn't stay: says so, with Try again", (tester) async {
       await SettingsService(prefs).setParentPin("1357");
       channel.pairing = true;
       channel.kidsProfiles = 1;
@@ -367,16 +367,16 @@ void main() {
       await openAtFamily(tester);
       await press(tester, "Turn on");
       await press(tester, "Add to their profiles");
-      expect(find.text("Hearth isn't on every kids' profile yet"), findsOneWidget);
+      expect(find.text("Hearth isn't on every kids profile yet"), findsOneWidget);
       expect(find.text("Needs a fix"), findsOneWidget);
       expect(find.textContaining("Hearth isn't on it"), findsOneWidget);
       expect(flow.kidsProtected, 0);
       channel.profilesKept = true;
       await press(tester, "Try again");
-      expect(find.text("Hearth is on your kids' profiles"), findsOneWidget);
+      expect(find.text("Hearth is on your kids profiles"), findsOneWidget);
     });
 
-    testWidgets("kids' profiles without the debugging approval: says what to do", (tester) async {
+    testWidgets("kids profiles without the debugging approval: says what to do", (tester) async {
       await SettingsService(prefs).setParentPin("1357");
       channel.pairing = true;
       channel.kidsProfiles = 1;
@@ -385,12 +385,12 @@ void main() {
       await openAtFamily(tester);
       await press(tester, "Turn on");
       await press(tester, "Add to their profiles");
-      expect(find.text("Hearth is on your kids' profiles"), findsNothing);
-      expect(find.text("Couldn't change the kids' profiles"), findsOneWidget);
+      expect(find.text("Hearth is on your kids profiles"), findsNothing);
+      expect(find.text("Couldn't change the kids profiles"), findsOneWidget);
       expect(flow.kidsProtected, 0);
     });
 
-    testWidgets("on before, with a new kids' profile: Set up what's missing goes on to the kids' step", (tester) async {
+    testWidgets("on before, with a new kids profile: Set up what's missing goes on to the kids' step", (tester) async {
       await SettingsService(prefs).setParentPin("1357");
       await flow.decide(SetupCard.family.name, SetupChoice.on);
       channel.pairing = true;
@@ -401,10 +401,10 @@ void main() {
       expect(itemMarks(Icons.check_circle), findsNWidgets(2));
       expect(itemMarks(Icons.radio_button_unchecked), findsOneWidget);
       await press(tester, "Set up what's missing");
-      expect(find.text("Keep Hearth on your kids' profiles"), findsOneWidget);
+      expect(find.text("Keep Hearth on your kids profiles"), findsOneWidget);
     });
 
-    testWidgets("Hearth on the kids' profiles already (put there from Settings) counts as done", (tester) async {
+    testWidgets("Hearth on the kids profiles already (put there from Settings) counts as done", (tester) async {
       await SettingsService(prefs).setParentPin("1357");
       channel.pairing = true;
       channel.kidsProfiles = 2;

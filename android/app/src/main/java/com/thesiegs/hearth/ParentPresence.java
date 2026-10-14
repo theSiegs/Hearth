@@ -4,7 +4,7 @@ package com.thesiegs.hearth;
  * Whether an adult is at the remote: their profile came on (or they entered the parent PIN), and the remote hasn't
  * gone untouched for {@link #GAP_MS} since. While so, an adult's profile isn't asked for the parent PIN; after such
  * a gap someone else may have the remote, so it's asked again. Keys anywhere count (Hearth's accessibility service
- * sees them in every app). Kids' profiles always ask.
+ * sees them in every app). Kids profiles always ask.
  */
 final class ParentPresence {
     static final long GAP_MS = 5 * 60_000;
@@ -27,7 +27,7 @@ final class ParentPresence {
         sLastKeyAt = now;
     }
 
-    /** A kids' profile came on. */
+    /** A kids profile came on. */
     static synchronized void ended() {
         sPresent = false;
     }

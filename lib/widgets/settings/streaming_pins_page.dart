@@ -44,7 +44,7 @@ class _PinRow {
 
 /// Settings > Profiles > Streaming app PINs: the PINs of the Google TV profile on now (each profile sees and sets
 /// only its own), one row per installed app Hearth can type PINs in, with the app profile Hearth picks for it. A
-/// kids' profile has them too, set past the parent PIN like every profile PIN. Setting a PIN on a profile Hearth
+/// kids profile has them too, set past the parent PIN like every profile PIN. Setting a PIN on a profile Hearth
 /// matched by name pairs the two for good, so the PIN always goes with the right app profile. In an adult's profile
 /// it also has Paramount+'s content PIN, one for the whole TV ([editContentPin]).
 class StreamingPinsPage extends StatefulWidget {

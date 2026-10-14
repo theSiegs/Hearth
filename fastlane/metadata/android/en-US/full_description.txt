@@ -1,9 +1,9 @@
 Early development: expect rough edges and changes.
 
-Hearth is an ad-free home screen for Google TV that keeps what makes Google TV work for a family: each person's profile, kids' profiles, and Family Link's bedtime and screen time.
+Hearth is an ad-free home screen for Google TV that keeps what makes Google TV work for a family: each person's profile, kids profiles, and Family Link's bedtime and screen time.
 
 - Follows Google TV's profiles, kids' and adults': a home layout, wallpaper and Continue Watching per person.
-- Works with Family Link: steps aside for bedtime and time's-up screens; puts itself on kids' profiles and stays there; a parent PIN guards the settings.
+- Works with Family Link: steps aside for bedtime and time's-up screens; puts itself on kids profiles and stays there; a parent PIN guards the settings.
 - Profile Pairing picks your profile in Netflix, Disney+, Apple TV, HBO Max and Paramount+, and can type a saved PIN (optional).
 - A calm home: your wallpaper, a Favorites dock, Continue Watching with cover art, your calendars and the weather.
 - Home Assistant (optional): pop-ups with cameras and buttons, a dashboard drawn for the remote, and TV status for automations.

@@ -34,7 +34,7 @@ import 'setup_snapshot.dart';
 
 /// The top bar's "Finish setting up · 3 left", "Home button needs a fix", or after an update that added a card
 /// "New in Hearth: Smart home": what the setup flow left undone or has new, one press from carrying on. Not shown in
-/// kids' profiles, before the flow has ever run (it shows itself then), when nothing is left, or after holding OK
+/// kids profiles, before the flow has ever run (it shows itself then), when nothing is left, or after holding OK
 /// on it and choosing to hide it (until something new comes).
 class SetupChip extends StatefulWidget {
   final FocusNode? focusNode;

@@ -19,7 +19,7 @@ import java.util.Set;
 
 import org.junit.Test;
 
-/** Putting Hearth on the kids' profiles: the commands, and what Hearth may do by itself. */
+/** Putting Hearth on the kids profiles: the commands, and what Hearth may do by itself. */
 public class KidsProfilesTest {
     private static final String HEARTH = ProfileAppAccess.HEARTH;
     private static final String TUBE = ProfileAppAccess.HEARTHTUBE;
@@ -117,7 +117,7 @@ public class KidsProfilesTest {
         List<String> log = ProfileAppAccess.addToKids(APK, shell, Collections.singletonList(10));
         assertTrue(shell.installed.get(10).containsAll(Arrays.asList(HEARTH, TUBE)));
         assertTrue(shell.kept.containsAll(Arrays.asList("10/" + HEARTH, "10/" + TUBE)));
-        // A running kids' profile checks its apps as soon as one is added: the flag goes on first
+        // A running kids profile checks its apps as soon as one is added: the flag goes on first
         int keep = shell.indexOf(keepCommand(HEARTH, 10, true));
         int add = shell.indexOf("pm install-existing --user 10 " + HEARTH);
         assertTrue(keep >= 0 && keep < add);
