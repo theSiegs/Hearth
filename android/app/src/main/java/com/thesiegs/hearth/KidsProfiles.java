@@ -134,7 +134,9 @@ final class KidsProfiles {
         List<Kid> kids = list(context);
         Map<Integer, Map<String, ProfileAppAccess.AppStatus>> read = null;
         boolean adb = SetupFixes.isAdbEnabled(context);
-        if (checkProtection && !kids.isEmpty() && adb && SelfAdb.isTrusted(context)) {
+        // Only "trusted" is asked, not the Developer options switch: on Google TV the switch can read off (it turns
+        // itself off over time) while the TV's network debugging still answers. A refused connection costs nothing
+        if (checkProtection && !kids.isEmpty() && SelfAdb.isTrusted(context)) {
             try (SelfAdb shell = SelfAdb.open(context, QUIET_TIMEOUT_MS)) {
                 read = new HashMap<>();
                 for (ProfileAppAccess.AppStatus s : ProfileAppAccess.state(context.getPackageCodePath(), shell,
@@ -270,8 +272,10 @@ final class KidsProfiles {
     private static void autoFixNow(Context context) {
         SharedPreferences prefs = prefs(context);
         Map<Kid, List<String>> fixes = autoFixes(prefs.getBoolean(KEEP, false),
-                SelfAdb.isTrusted(context) && SetupFixes.isAdbEnabled(context), list(context),
+                SelfAdb.isTrusted(context), list(context),
                 hearthTubeOnOwner(context), prefs.getAll().keySet());
+        // Not the Developer options switch either (see state): a refused connection runs nothing, and the next switch
+        // tries again
         if (fixes.isEmpty()) return;
         Map<Integer, List<String>> packages = new LinkedHashMap<>();
         for (Map.Entry<Kid, List<String>> fix : fixes.entrySet()) packages.put(fix.getKey().userId, fix.getValue());
