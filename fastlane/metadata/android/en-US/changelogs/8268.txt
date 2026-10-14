@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Approve switches into your profile from your phone (Home Assistant).

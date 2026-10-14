@@ -3,6 +3,11 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.57 (pre-release)
+
+- Approve switches from your phone (Settings > Profiles, in your own profile; needs Home Assistant and its phone app): when Google TV asks for your PIN to open your profile, your phone gets Allow and Deny, and Allow has Hearth enter your Google TV PIN. Typing the PIN with the remote always works too; a key pressed on the PIN screen withdraws the phone's request. Your Google TV PIN can be saved there or on the phone page.
+- Shared streaming apps close on a switch between grown-ups even when the TV's USB debugging switch has turned itself off.
+
 ## 2026.10.56 (pre-release)
 
 - Disney+: profiles with a PIN are found and picked too (Disney+ labels them differently).
