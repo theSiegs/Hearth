@@ -55,7 +55,9 @@ final class GrownUpsApps {
         EXECUTOR.execute(() -> {
             List<String> apps = toStop(app, profileKey);
             if (apps.isEmpty()) return;
-            if (!SetupFixes.isAdbEnabled(app) || !SelfAdb.isTrusted(app)) {
+            // Only "trusted" is asked, not the Developer options switch: on Google TV the switch can read off (it turns
+            // itself off over time) while the TV's network debugging still answers. If it doesn't, nothing's lost.
+            if (!SelfAdb.isTrusted(app)) {
                 Log.i(TAG, "Not stopping " + apps + " for " + LogNames.key(profileKey) + ": Hearth's adb isn't set up");
                 return;
             }
