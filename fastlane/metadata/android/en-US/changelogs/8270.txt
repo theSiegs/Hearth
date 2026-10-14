@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Needs Android 9 or newer. Home Assistant keeps working when Home Button Fix is off.

@@ -3,6 +3,14 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.59 (pre-release)
+
+- **Hearth now needs Android 9 or newer.** A TV on an older Android won't be offered this update.
+- Hearth's link to Home Assistant (its notifications and the TV's status) keeps running when Android switches Home Button Fix off, for instance after an update. The pop-up itself still needs Home Button Fix: while it is off, Hearth tells Home Assistant it can't show one. Nothing new to set up.
+- Hearth puts itself back on a kids profile by itself even when the TV's USB debugging switch reads off, as long as the TV still trusts Hearth.
+- Failures that used to pass silently are now written to the log (never a name or a PIN), so a feature that quietly stays off can be traced.
+- A call between Hearth's screens and the TV that failed could leave a setting waiting for good; it now ends with an error instead.
+
 ## 2026.10.58 (pre-release)
 
 - Home Assistant's setup asks whether HearthTube may share the title and channel of what's playing (Settings > Home Assistant can change it later).
