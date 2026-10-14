@@ -138,8 +138,7 @@ class HearthAboutDialog extends StatelessWidget {
           const SizedBox(height: 10),
           // The GPL's notices for the code Hearth includes (its source files keep their own)
           Text(
-            localizations.aboutIncludesCode("FLauncher (Étienne Fesser, Oscar Rojas), LTvLauncher (LeanBitLab), "
-                "Arc Launcher (Badis Meddouri)"),
+            localizations.aboutIncludesCode("FLauncher (Étienne Fesser, Oscar Rojas) and LTvLauncher (LeanBitLab)"),
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white38, fontSize: 10),
           ),

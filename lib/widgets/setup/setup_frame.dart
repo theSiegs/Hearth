@@ -16,7 +16,7 @@
  */
 
 import 'package:flauncher/providers/wallpaper_service.dart';
-import 'package:flauncher/widgets/cached_blur_backdrop.dart';
+import 'package:flauncher/widgets/frosted_glass.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -63,7 +63,7 @@ class SetupFrame extends StatelessWidget {
             child: preview
                 ? const SizedBox.expand()
                 : hasWallpaper
-                    ? const CachedBlurBackdrop(sigma: 18, child: SizedBox.expand())
+                    ? const FrostedGlass(sigma: 18, child: SizedBox.expand())
                     : const ColoredBox(color: Color(0xFF0A0A0A)),
           ),
           Positioned.fill(

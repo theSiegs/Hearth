@@ -20,48 +20,54 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 
-const _abiPattern = r"(arm64-v8a|armeabi-v7a|armeabi|x86_64|x86)";
+/// The ABIs an APK's file name can be built for, longest first so "armeabi-v7a" isn't read as "armeabi".
+const _knownAbis = ["armeabi-v7a", "arm64-v8a", "x86_64", "armeabi", "x86"];
 
-/// Compares dotted versions numerically ("2026.10.05" > "2026.10.03+8112"); a leading "v" and any
-/// non-digits in a part are ignored, and missing parts count as 0.
-int compareVersions(String left, String right) {
-  List<int> parts(String version) {
-    var v = version.trim();
-    if (v.startsWith("v") || v.startsWith("V")) v = v.substring(1);
-    return v.split(RegExp(r"[.+]")).map((p) => int.tryParse(p.replaceAll(RegExp(r"[^0-9]"), "")) ?? 0).toList();
-  }
-
-  final l = parts(left), r = parts(right);
-  for (var i = 0; i < (l.length > r.length ? l.length : r.length); i++) {
-    final a = i < l.length ? l[i] : 0, b = i < r.length ? r[i] : 0;
-    if (a != b) return a.compareTo(b);
+/// Whether [version] is newer (> 0), older (< 0) or the same as [other], part by part as numbers: "2026.10.5" is newer
+/// than "2026.10.3+8112", and "v2026.10.3+8112" is the same as "2026.10.3+8112". A missing part counts as 0.
+int compareVersions(String version, String other) {
+  List<int> numbers(String v) => RegExp(r"\d+").allMatches(v).map((m) => int.parse(m.group(0)!)).toList();
+  final a = numbers(version);
+  final b = numbers(other);
+  final length = a.length > b.length ? a.length : b.length;
+  for (var i = 0; i < length; i++) {
+    final x = i < a.length ? a[i] : 0;
+    final y = i < b.length ? b[i] : 0;
+    if (x != y) return x < y ? -1 : 1;
   }
   return 0;
 }
 
-/// The ABI token may sit anywhere between separators: "LTvLauncher-armeabi-v7a-release.apk", "app-arm64-v8a.apk".
-/// Picks the release APK for this device: one built for its ABIs (in preference order), else a universal APK.
-/// Never returns an APK built for another ABI — it would fail to install (e.g. arm64 on a 32-bit stick).
-/// With [accept], only APKs whose file name it accepts are considered.
-Map<String, dynamic>? pickApkAsset(List<dynamic> assets, List<String> deviceAbis,
-    {bool Function(String name)? accept}) {
-  final apks = assets
-      .whereType<Map<String, dynamic>>()
-      .where((a) => (a['name'] as String? ?? "").toLowerCase().endsWith(".apk") && a['browser_download_url'] is String)
-      .where((a) => accept == null || accept(a['name'] as String))
-      .toList();
-  String? abiOf(Map<String, dynamic> asset) =>
-      RegExp(r"(?:^|[-_.])" "$_abiPattern" r"(?=[-_.])", caseSensitive: false).firstMatch(asset['name'] as String)?.group(1)?.toLowerCase();
-
-  for (final abi in deviceAbis) {
-    for (final apk in apks) {
-      if (abiOf(apk) == abi.toLowerCase()) return apk;
+/// The ABI an APK file name says it's built for ("Hearth-armeabi-v7a-release.apk"), or null for a universal one.
+/// The ABI must stand between separators (or at the start), so a word that merely contains one doesn't count.
+String? apkAbi(String fileName) {
+  final name = fileName.toLowerCase();
+  bool separator(int at) => at < 0 || at >= name.length || "-_.".contains(name[at]);
+  for (final abi in _knownAbis) {
+    for (var at = name.indexOf(abi); at >= 0; at = name.indexOf(abi, at + 1)) {
+      if (separator(at - 1) && at + abi.length < name.length && separator(at + abi.length)) return abi;
     }
   }
-  for (final apk in apks) {
-    if (abiOf(apk) == null) return apk;
-  }
   return null;
+}
+
+/// The release's APK for this device: the first of its ABIs ([deviceAbis], most preferred first) that an APK is built
+/// for, else a universal APK, and never one built for an ABI the device lacks (an arm64 APK won't install on a 32-bit
+/// stick). [accept], when given, limits which file names count.
+Map<String, dynamic>? pickApkAsset(List<dynamic> assets, List<String> deviceAbis,
+    {bool Function(String name)? accept}) {
+  final byAbi = <String?, Map<String, dynamic>>{};
+  for (final asset in assets.whereType<Map<String, dynamic>>()) {
+    final name = asset['name'];
+    if (name is! String || !name.toLowerCase().endsWith(".apk") || asset['browser_download_url'] is! String) continue;
+    if (accept != null && !accept(name)) continue;
+    byAbi.putIfAbsent(apkAbi(name), () => asset);
+  }
+  for (final abi in deviceAbis) {
+    final apk = byAbi[abi.toLowerCase()];
+    if (apk != null) return apk;
+  }
+  return byAbi[null];
 }
 
 /// A file in the folder downloaded APKs go to, in the app's external files.

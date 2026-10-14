@@ -17,79 +17,90 @@
 
 import 'package:flauncher/models/category.dart';
 import 'package:flauncher/providers/settings_service.dart';
-import 'package:flauncher/widgets/cached_blur_backdrop.dart';
 import 'package:flauncher/widgets/card_style.dart';
 import 'package:flauncher/widgets/category_row.dart';
+import 'package:flauncher/widgets/frosted_glass.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 /// Space between the dock's edge and the app cards inside it.
 const double kDockInnerPadding = 10;
 
-/// The dock's corner radius for a theme: the card radius plus the dock's padding,
-/// so the dock's corners run parallel to the cards' corners.
+/// The dock's corner radius for a card style: the cards' radius plus the dock's padding, so its corners follow the
+/// cards' (square cards, a square dock).
 double dockRadiusForTheme(String theme) {
   final double cardRadius = CardStyle.of(theme).radius;
   return cardRadius == 0 ? 0 : cardRadius + kDockInnerPadding;
 }
 
-/// Favorites shown as a frosted bar, adapted from arclauncher's dock.
+/// The Favorites section as a bar of glass over the wallpaper, centred on the home's first screen. Its look comes
+/// from Settings → Home screen → Look: frosted or clear, dark or light, with or without a shadow.
 class HomeDock extends StatelessWidget {
   final Category category;
   final bool isFirstSection;
 
-  const HomeDock({
-    super.key,
-    required this.category,
-    this.isFirstSection = false,
-  });
+  const HomeDock({super.key, required this.category, this.isFirstSection = false});
 
   @override
   Widget build(BuildContext context) {
-    final (theme, blur, dark, shadow) = context.select<SettingsService, (String, bool, bool, bool)>(
-      (s) => (s.themes, s.dockBlurEnabled, s.dockDarkBackground, s.dockShadowEnabled),
-    );
-    final borderRadius = BorderRadius.circular(dockRadiusForTheme(theme));
-
-    final Widget panel = DecoratedBox(
-      decoration: BoxDecoration(
-        color: dark ? Colors.black.withOpacity(0.35) : Colors.white.withOpacity(0.1),
-        borderRadius: borderRadius,
-        border: Border.all(color: Colors.white.withOpacity(dark ? 0.08 : 0.15), width: 1.5),
-      ),
-    );
-
-    // Only the panel is clipped to the dock's shape; the cards are drawn on top, unclipped,
-    // so a focused card's zoom and glow can spill past the dock's edge.
+    final look = context.select<SettingsService, _DockLook>((s) =>
+        _DockLook(theme: s.themes, frosted: s.dockBlurEnabled, dark: s.dockDarkBackground, shadow: s.dockShadowEnabled));
+    final shape = BorderRadius.circular(dockRadiusForTheme(look.theme));
     return Center(
       key: const Key("home_dock"),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: borderRadius,
-                boxShadow:
-                    shadow ? [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, spreadRadius: 2)] : null,
-              ),
-              child: ClipRRect(
-                borderRadius: borderRadius,
-                child: blur ? CachedBlurBackdrop(sigma: 12, child: panel) : panel,
-              ),
-            ),
-          ),
-          Padding(
-            // CategoryRow already pads its cards by 8.
-            padding: const EdgeInsets.all(kDockInnerPadding - 8),
-            child: CategoryRow(
-              category: category,
-              isFirstSection: isFirstSection,
-              showTitle: false,
-              shrinkWrap: true,
-            ),
-          ),
-        ],
+      // The glass sits behind the row and is the only part clipped to the dock's shape: a focused card grows and
+      // glows past the dock's edge, so the cards themselves aren't clipped
+      child: Stack(children: [
+        Positioned.fill(child: _DockGlass(look: look, shape: shape)),
+        Padding(
+          // The row pads each card by 8 already
+          padding: const EdgeInsets.all(kDockInnerPadding - 8),
+          child: CategoryRow(category: category, isFirstSection: isFirstSection, showTitle: false, shrinkWrap: true),
+        ),
+      ]),
+    );
+  }
+}
+
+/// The settings the dock is drawn with; equal looks don't rebuild it.
+@immutable
+class _DockLook {
+  final String theme;
+  final bool frosted;
+  final bool dark;
+  final bool shadow;
+
+  const _DockLook({required this.theme, required this.frosted, required this.dark, required this.shadow});
+
+  @override
+  bool operator ==(Object other) =>
+      other is _DockLook && other.theme == theme && other.frosted == frosted && other.dark == dark && other.shadow == shadow;
+
+  @override
+  int get hashCode => Object.hash(theme, frosted, dark, shadow);
+}
+
+class _DockGlass extends StatelessWidget {
+  final _DockLook look;
+  final BorderRadius shape;
+
+  const _DockGlass({required this.look, required this.shape});
+
+  @override
+  Widget build(BuildContext context) {
+    // A dark tint for light wallpapers, a faint light one otherwise, and an edge that catches the light
+    final tint = look.dark ? const Color(0x59000000) : const Color(0x1AFFFFFF);
+    final edge = look.dark ? const Color(0x14FFFFFF) : const Color(0x26FFFFFF);
+    Widget glass = DecoratedBox(
+      decoration: BoxDecoration(color: tint, borderRadius: shape, border: Border.all(color: edge, width: 1.5)),
+    );
+    if (look.frosted) glass = FrostedGlass(sigma: 12, child: glass);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: shape,
+        boxShadow: look.shadow ? const [BoxShadow(color: Color(0x4D000000), blurRadius: 20, spreadRadius: 2)] : null,
       ),
+      child: ClipRRect(borderRadius: shape, child: glass),
     );
   }
 }

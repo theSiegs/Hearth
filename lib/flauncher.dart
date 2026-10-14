@@ -24,7 +24,6 @@ import 'package:flauncher/widgets/data_usage_row.dart';
 import 'package:flauncher/widgets/weather_forecast_row.dart';
 import 'package:flauncher/widgets/profile_transition_overlay.dart';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:collection/collection.dart';
 import 'package:flauncher/actions.dart';
@@ -35,7 +34,8 @@ import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flauncher/providers/wallpaper_service.dart';
 import 'package:flauncher/widgets/apps_grid.dart';
-import 'package:flauncher/widgets/cached_blur_backdrop.dart';
+import 'package:flauncher/widgets/frosted_glass.dart';
+import 'package:flauncher/widgets/painted_once.dart';
 import 'package:flauncher/widgets/category_container_common.dart';
 import 'package:flauncher/widgets/category_row.dart';
 import 'package:flauncher/widgets/home_dock.dart';
@@ -641,7 +641,7 @@ class _FLauncherState extends State<FLauncher> {
                 child: Consumer<WallpaperService>(
                     builder: (_, wallpaperService, __) => _wallpaper(context, wallpaperService)),
               ),
-              // Below the dock, the wallpaper blurs so the rows of apps stand out (from arclauncher).
+              // Below the dock, the wallpaper blurs so the rows of apps stand out.
               Selector2<SettingsService, WallpaperService, bool>(
                 selector: (_, settings, wallpaper) =>
                     settings.blurWallpaperBelowDock && wallpaper.focusedAppColor == null,
@@ -652,7 +652,7 @@ class _FLauncherState extends State<FLauncher> {
                       opacity: blurEnabled && _browsingBelowDock ? 1 : 0,
                       duration: const Duration(milliseconds: 250),
                       curve: Curves.easeInOut,
-                      child: const CachedBlurBackdrop(sigma: 10, child: SizedBox.expand()),
+                      child: const FrostedGlass(sigma: 10, child: SizedBox.expand()),
                     ),
                   ),
                 ),
@@ -1038,7 +1038,7 @@ class _FLauncherState extends State<FLauncher> {
           width: physicalSize.width);
     } else {
       background =
-          _CachedGradientBackground(key: const Key("background"), gradient: wallpaperService.gradient.gradient);
+          PaintedOnce.gradient(wallpaperService.gradient.gradient, key: const Key("background"));
     }
 
     final Color? appColor = wallpaperService.focusedAppColor;
@@ -1110,74 +1110,3 @@ class _FLauncherState extends State<FLauncher> {
 /// or the plain list of sections (dock off).
 enum _HomeLayout { dock, grid, sections }
 
-/// Draws a [Gradient] once into an image and shows that, instead of evaluating the gradient
-/// shader on every frame; on TV sticks a full-screen live gradient costs noticeably more.
-/// Adapted from arclauncher.
-class _CachedGradientBackground extends StatefulWidget {
-  final Gradient gradient;
-
-  const _CachedGradientBackground({super.key, required this.gradient});
-
-  @override
-  State<_CachedGradientBackground> createState() => _CachedGradientBackgroundState();
-}
-
-class _CachedGradientBackgroundState extends State<_CachedGradientBackground> {
-  ui.Image? _image;
-  Size _renderedSize = Size.zero;
-  Gradient? _renderedGradient;
-  bool _rendering = false;
-
-  @override
-  void dispose() {
-    _image?.dispose();
-    super.dispose();
-  }
-
-  Future<void> _render(Size size) async {
-    if (_rendering) {
-      return;
-    }
-    _rendering = true;
-    final recorder = ui.PictureRecorder();
-    final rect = Offset.zero & size;
-    Canvas(recorder).drawRect(rect, Paint()..shader = widget.gradient.createShader(rect));
-    final picture = recorder.endRecording();
-    final image = await picture.toImage(size.width.round(), size.height.round());
-    picture.dispose();
-    _rendering = false;
-    if (!mounted) {
-      image.dispose();
-      return;
-    }
-    setState(() {
-      _image?.dispose();
-      _image = image;
-      _renderedSize = size;
-      _renderedGradient = widget.gradient;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final size = Size(constraints.maxWidth, constraints.maxHeight);
-        final needsRender = size != _renderedSize || widget.gradient != _renderedGradient;
-        if (needsRender && size.width > 0 && size.height > 0) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && (size != _renderedSize || widget.gradient != _renderedGradient)) {
-              _render(size);
-            }
-          });
-        }
-        final image = _image;
-        if (image != null && !needsRender) {
-          return RawImage(image: image, width: size.width, height: size.height, fit: BoxFit.fill);
-        }
-        // First frame, and while re-rendering: paint the gradient live so nothing flashes.
-        return DecoratedBox(decoration: BoxDecoration(gradient: widget.gradient));
-      },
-    );
-  }
-}

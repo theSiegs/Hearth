@@ -191,8 +191,7 @@ Hearth includes code from these GPL-3.0 projects, whose copyright notices its so
 
 - [FLauncher](https://gitlab.com/flauncher/flauncher) by Étienne Fesser, and as
   [continued](https://github.com/osrosal/flauncher) by Oscar Rojas;
-- [LTvLauncher](https://github.com/leanbitlab-org/LtvLauncher) by LeanBitLab;
-- [Arc Launcher](https://github.com/meddouribadis/arclauncher) by Badis Meddouri.
+- [LTvLauncher](https://github.com/leanbitlab-org/LtvLauncher) by LeanBitLab.
 
 Search artwork comes from [TMDB](https://www.themoviedb.org). Hearth uses the TMDB API but is not endorsed or
 certified by TMDB. Map tiles © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors.
