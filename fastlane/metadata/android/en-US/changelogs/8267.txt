@@ -1,0 +1,4 @@
+- Early development pre-release.
+- Disney+ profiles with a PIN are picked too.
+- Set streaming PINs from a phone.
+- Faster remote keys.

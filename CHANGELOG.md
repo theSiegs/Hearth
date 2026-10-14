@@ -3,6 +3,13 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.56 (pre-release)
+
+- Disney+: profiles with a PIN are found and picked too (Disney+ labels them differently).
+- Streaming app PINs can be set from a phone: Settings > Profiles > Streaming app PINs > Set up PINs on your phone shows a QR code; the PINs typed on the phone are encrypted there, with a one-time key from the QR code, before they reach the TV.
+- Remote keys respond faster: Hearth does less on the thread every remote key waits for (app images, Continue Watching, reading Google TV's profile chooser), and asks for focus and scroll events only while Google TV's own screens are up.
+- Logs name nobody in Hearth's Flutter part either.
+
 ## 2026.10.55 (pre-release)
 
 - Streaming app PINs belong to the Google TV profile that saved them: another profile paired with the same app profile no longer gets that PIN typed. In a grown-up's profile, Hearth types it only when that profile has its own Google TV PIN. Saved PINs move to the profiles paired with them; the app asks for its PIN until the Google TV PIN is on.
