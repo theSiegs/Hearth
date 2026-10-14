@@ -233,6 +233,13 @@ public class MainActivity extends FlutterActivity {
                 }
                 result.success(saved);
             }
+            // PinSafety: the switch for typing any streaming PIN on this TV, and the log of recent entries
+            case "isPinTypingOn" -> result.success(PinSafety.isTypingOn(this));
+            case "setPinTypingOn" -> {
+                PinSafety.setTypingOn(this, Boolean.TRUE.equals(call.arguments()));
+                result.success(null);
+            }
+            case "getPinEntryLog" -> result.success(PinSafety.entries(this));
             case "removeAllProfilePins" -> {
                 PinVault.removeAll(this);
                 result.success(null);

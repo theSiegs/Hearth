@@ -2408,6 +2408,50 @@
     "@pinConsentAgree": {
         "description": "Profile Pairing: streaming app profile PIN"
     },
+    "pinTypingSwitch": "Type saved PINs",
+    "@pinTypingSwitch": {
+        "description": "Streaming app PINs: typing switch and recent entries"
+    },
+    "pinTypingSwitchOff": "Off: the apps ask for their PINs as usual",
+    "@pinTypingSwitchOff": {
+        "description": "Streaming app PINs: typing switch and recent entries"
+    },
+    "pinLogTitle": "Recent PIN entries",
+    "@pinLogTitle": {
+        "description": "Streaming app PINs: typing switch and recent entries"
+    },
+    "pinLogEmpty": "None yet",
+    "@pinLogEmpty": {
+        "description": "Streaming app PINs: typing switch and recent entries"
+    },
+    "pinLogAccepted": "Accepted",
+    "@pinLogAccepted": {
+        "description": "Streaming app PINs: typing switch and recent entries"
+    },
+    "pinLogRejected": "Not accepted",
+    "@pinLogRejected": {
+        "description": "Streaming app PINs: typing switch and recent entries"
+    },
+    "pinLogLockedOut": "The app locked the profile",
+    "@pinLogLockedOut": {
+        "description": "Streaming app PINs: typing switch and recent entries"
+    },
+    "pinLogScreenChanged": "Its PIN screen changed: paused",
+    "@pinLogScreenChanged": {
+        "description": "Streaming app PINs: typing switch and recent entries"
+    },
+    "pinLogBroken": "Stopped partway",
+    "@pinLogBroken": {
+        "description": "Streaming app PINs: typing switch and recent entries"
+    },
+    "pinLogNoScreen": "No PIN asked",
+    "@pinLogNoScreen": {
+        "description": "Streaming app PINs: typing switch and recent entries"
+    },
+    "pinLogCancelled": "Cancelled",
+    "@pinLogCancelled": {
+        "description": "Streaming app PINs: typing switch and recent entries"
+    },
     "profilePinUnsupported": "Hearth can’t type PINs in {app} yet",
     "@profilePinUnsupported": {
         "description": "Profile Pairing: streaming app profile PIN",

@@ -932,6 +932,7 @@ public class ProfilePairingService extends AccessibilityService {
         String why = whyNotProfilePin(s.kids, ProfileUsers.isLocked(this, s.hearthProfile),
                 PinVault.has(this, s.key, s.pkg, appProfile), PinVault.rejections(this, s.key, s.pkg, appProfile),
                 PinVault.isPaused(this, s.pkg));
+        if (why == null) why = whyNoTyping(s.pkg);
         if (why != null) {
             Log.i(TAG, "PIN for " + s.pkg + " not typed: " + why);
             return false;
@@ -954,6 +955,16 @@ public class ProfilePairingService extends AccessibilityService {
         Log.i(TAG, "Waiting for " + s.pkg + "'s PIN screen");
         checkPinScreen();
         return true;
+    }
+
+    /**
+     * Why no PIN may be typed in this app at all now, or null: the switch for the whole TV is off, or this version of
+     * the app is on the list of those Hearth's recipe doesn't handle (PinSafety). The list is read again when due.
+     */
+    private String whyNoTyping(String pkg) {
+        PinSafety.refreshIfDue(this);
+        if (!PinSafety.isTypingOn(this)) return "PIN typing is turned off";
+        return PinSafety.disabledFor(this, pkg, PinSafety.versionCodeOf(this, pkg));
     }
 
     /** Rejections in a row after which a saved profile PIN isn't tried again until it's saved anew. */
@@ -1001,6 +1012,7 @@ public class ProfilePairingService extends AccessibilityService {
         String why = ContentPin.whyNot(ProfileUsers.isKids(this), ProfileUsers.isGrownUps(this, serial),
                 ProfileUsers.isLocked(this, name), PinVault.statusOf(this, PinVault.SHARED, pkg, ContentPin.VAULT_PROFILE),
                 PinVault.isPaused(this, pkg));
+        if (why == null) why = whyNoTyping(pkg);
         if (why != null) {
             Log.i(TAG, "Content PIN not typed: " + why);
             return;
@@ -1141,6 +1153,8 @@ public class ProfilePairingService extends AccessibilityService {
         String pkg = run.session.pkg;
         String app = appLabel(pkg);
         Log.i(TAG, (run.content ? "Content PIN entry in " : "PIN entry in ") + pkg + ": " + result);
+        PinSafety.log(this, pkg, PinSafety.versionCodeOf(this, pkg), run.content, result.name(),
+                System.currentTimeMillis());
         // The content PIN's dialog stays up after anything but success: it's the parent's to type now
         if (run.content && result != PinEntryMachine.Result.ACCEPTED) {
             mContentPinHoldUntil = SystemClock.elapsedRealtime() + CONTENT_PIN_HOLD_MS;

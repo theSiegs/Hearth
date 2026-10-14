@@ -1930,6 +1930,39 @@ class AppLocalizationsTr extends AppLocalizations {
   String get pinConsentAgree => 'Devam';
 
   @override
+  String get pinTypingSwitch => 'Kayıtlı PIN’leri gir';
+
+  @override
+  String get pinTypingSwitchOff => 'Kapalı: uygulamalar PIN’lerini her zamanki gibi ister';
+
+  @override
+  String get pinLogTitle => 'Son PIN girişleri';
+
+  @override
+  String get pinLogEmpty => 'Henüz yok';
+
+  @override
+  String get pinLogAccepted => 'Kabul edildi';
+
+  @override
+  String get pinLogRejected => 'Kabul edilmedi';
+
+  @override
+  String get pinLogLockedOut => 'Uygulama profili kilitledi';
+
+  @override
+  String get pinLogScreenChanged => 'PIN ekranı değişti: duraklatıldı';
+
+  @override
+  String get pinLogBroken => 'Yarıda kaldı';
+
+  @override
+  String get pinLogNoScreen => 'PIN istenmedi';
+
+  @override
+  String get pinLogCancelled => 'İptal edildi';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth henüz $app içinde PIN yazamıyor';
   }

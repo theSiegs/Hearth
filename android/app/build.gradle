@@ -167,4 +167,6 @@ dependencies {
     implementation "dev.mobile:dadb:1.2.10"
     // Plain-Java unit tests (src/test): the PIN entry state machine
     testImplementation "junit:junit:4.13.2"
+    // The real org.json for unit tests (android.jar's is a stub that returns defaults)
+    testImplementation "org.json:json:20231013"
 }

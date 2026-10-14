@@ -1930,6 +1930,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pinConsentAgree => '继续';
 
   @override
+  String get pinTypingSwitch => '输入已保存的 PIN';
+
+  @override
+  String get pinTypingSwitchOff => '关闭：应用会照常要求输入 PIN';
+
+  @override
+  String get pinLogTitle => '最近的 PIN 输入';
+
+  @override
+  String get pinLogEmpty => '暂无';
+
+  @override
+  String get pinLogAccepted => '已接受';
+
+  @override
+  String get pinLogRejected => '未被接受';
+
+  @override
+  String get pinLogLockedOut => '应用锁定了该个人资料';
+
+  @override
+  String get pinLogScreenChanged => 'PIN 屏幕已变化：已暂停';
+
+  @override
+  String get pinLogBroken => '中途停止';
+
+  @override
+  String get pinLogNoScreen => '未要求 PIN';
+
+  @override
+  String get pinLogCancelled => '已取消';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth 暂时还无法在 $app 中输入 PIN';
   }

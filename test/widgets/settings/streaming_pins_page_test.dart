@@ -108,6 +108,21 @@ class _PinsChannel extends FLauncherChannel {
   Future<List<Map<dynamic, dynamic>>> getProfilePairingChoices(String packageName) async =>
       packageName == _pkg ? choices : [];
 
+  bool typingOn = true;
+  List<Map<dynamic, dynamic>> log = [];
+
+  @override
+  Future<bool> isPinTypingOn() async => typingOn;
+
+  @override
+  Future<void> setPinTypingOn(bool on) async {
+    events.add("typing $on");
+    typingOn = on;
+  }
+
+  @override
+  Future<List<Map<dynamic, dynamic>>> getPinEntryLog() async => log;
+
   @override
   Future<Map<dynamic, dynamic>> getProfilePinStatus(String packageName, String appProfile,
           {String? profileKey}) async =>
@@ -200,6 +215,17 @@ void main() {
     // Never an app Hearth can't type in, or one that isn't installed
     expect(find.text("Other TV"), findsNothing);
     expect(find.text("Gone TV"), findsNothing);
+  });
+
+  testWidgets("one switch turns PIN typing off; recent entries are listed without names", (tester) async {
+    channel.log = [
+      {"package": _pkg, "versionCode": 7, "content": false, "result": "REJECTED", "at": 0},
+    ];
+    await pump(tester);
+    expect(find.textContaining("Not accepted"), findsOneWidget);
+    await tap(tester, "Type saved PINs");
+    expect(channel.events, ["typing false"]);
+    expect(find.text("Off: the apps ask for their PINs as usual"), findsOneWidget);
   });
 
   testWidgets("the first PIN saved shows what typing PINs involves, once", (tester) async {

@@ -1930,6 +1930,39 @@ class AppLocalizationsJa extends AppLocalizations {
   String get pinConsentAgree => '続ける';
 
   @override
+  String get pinTypingSwitch => '保存した PIN を入力';
+
+  @override
+  String get pinTypingSwitchOff => 'オフ: アプリはいつもどおり PIN を求めます';
+
+  @override
+  String get pinLogTitle => '最近の PIN 入力';
+
+  @override
+  String get pinLogEmpty => 'まだありません';
+
+  @override
+  String get pinLogAccepted => '受け付けられました';
+
+  @override
+  String get pinLogRejected => '受け付けられませんでした';
+
+  @override
+  String get pinLogLockedOut => 'アプリがプロフィールをロックしました';
+
+  @override
+  String get pinLogScreenChanged => 'PIN 画面が変わりました: 一時停止中';
+
+  @override
+  String get pinLogBroken => '途中で止まりました';
+
+  @override
+  String get pinLogNoScreen => 'PIN は求められませんでした';
+
+  @override
+  String get pinLogCancelled => 'キャンセルしました';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearthはまだ$appでPINを入力できません';
   }

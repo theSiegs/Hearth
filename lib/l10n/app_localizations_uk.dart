@@ -1954,6 +1954,39 @@ class AppLocalizationsUk extends AppLocalizations {
   String get pinConsentAgree => 'Продовжити';
 
   @override
+  String get pinTypingSwitch => 'Вводити збережені PIN';
+
+  @override
+  String get pinTypingSwitchOff => 'Вимкнено: застосунки запитують PIN як зазвичай';
+
+  @override
+  String get pinLogTitle => 'Останні введення PIN';
+
+  @override
+  String get pinLogEmpty => 'Поки немає';
+
+  @override
+  String get pinLogAccepted => 'Прийнято';
+
+  @override
+  String get pinLogRejected => 'Не прийнято';
+
+  @override
+  String get pinLogLockedOut => 'Застосунок заблокував профіль';
+
+  @override
+  String get pinLogScreenChanged => 'Екран PIN змінився: призупинено';
+
+  @override
+  String get pinLogBroken => 'Зупинено на півдорозі';
+
+  @override
+  String get pinLogNoScreen => 'PIN не запитувався';
+
+  @override
+  String get pinLogCancelled => 'Скасовано';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth поки не вміє вводити PIN-коди в $app';
   }

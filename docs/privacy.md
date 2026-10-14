@@ -19,6 +19,7 @@ Only for the features below, and only when they're on.
 | Search | `www.wikidata.org`, `api.themoviedb.org`, `image.tmdb.org` | What you search for; the titles found |
 | Continue Watching artwork | The image hosts the streaming apps name | Requests for those images, with no cookies or referrer, over https (http only on your home network); cached for 30 days |
 | Updates | `api.github.com`, GitHub release downloads | A check for new releases of Hearth and HearthTube |
+| Streaming app PINs | `raw.githubusercontent.com` (Hearth's repository) | A request for the list of app versions Hearth doesn't type PINs in, at most twice a day while a PIN is saved |
 | Home Assistant | The address you enter | Notifications' button actions, the dashboard, and TV status (see [Home Assistant](home-assistant.md)) |
 
 Using the Breezy Weather app instead of Open-Meteo makes Hearth read weather from that app on the TV and connect to
@@ -64,4 +65,5 @@ own profile screen.
 belongs to the Google TV profile that saved it: no other profile gets it typed, even one paired with the same app
 profile. In a grown-up's profile Hearth types it only when that profile has its own Google TV PIN, so nobody can
 just switch to it and be let in. After two PINs in a row that the app doesn't take, Hearth stops until a new one is
-saved, before the app would lock the profile.
+saved, before the app would lock the profile. One switch in **Settings → Profiles → Streaming app PINs** stops
+all typing, and the same page lists the last 20 entries (app, time and outcome, never a name or a PIN).

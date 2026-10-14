@@ -3407,6 +3407,72 @@ abstract class AppLocalizations {
   /// **'Continue'**
   String get pinConsentAgree;
 
+  /// Streaming app PINs: typing switch and recent entries
+  ///
+  /// In en, this message translates to:
+  /// **'Type saved PINs'**
+  String get pinTypingSwitch;
+
+  /// Streaming app PINs: typing switch and recent entries
+  ///
+  /// In en, this message translates to:
+  /// **'Off: the apps ask for their PINs as usual'**
+  String get pinTypingSwitchOff;
+
+  /// Streaming app PINs: typing switch and recent entries
+  ///
+  /// In en, this message translates to:
+  /// **'Recent PIN entries'**
+  String get pinLogTitle;
+
+  /// Streaming app PINs: typing switch and recent entries
+  ///
+  /// In en, this message translates to:
+  /// **'None yet'**
+  String get pinLogEmpty;
+
+  /// Streaming app PINs: typing switch and recent entries
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted'**
+  String get pinLogAccepted;
+
+  /// Streaming app PINs: typing switch and recent entries
+  ///
+  /// In en, this message translates to:
+  /// **'Not accepted'**
+  String get pinLogRejected;
+
+  /// Streaming app PINs: typing switch and recent entries
+  ///
+  /// In en, this message translates to:
+  /// **'The app locked the profile'**
+  String get pinLogLockedOut;
+
+  /// Streaming app PINs: typing switch and recent entries
+  ///
+  /// In en, this message translates to:
+  /// **'Its PIN screen changed: paused'**
+  String get pinLogScreenChanged;
+
+  /// Streaming app PINs: typing switch and recent entries
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped partway'**
+  String get pinLogBroken;
+
+  /// Streaming app PINs: typing switch and recent entries
+  ///
+  /// In en, this message translates to:
+  /// **'No PIN asked'**
+  String get pinLogNoScreen;
+
+  /// Streaming app PINs: typing switch and recent entries
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get pinLogCancelled;
+
   /// Profile Pairing: streaming app profile PIN
   ///
   /// In en, this message translates to:

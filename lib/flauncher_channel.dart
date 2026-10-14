@@ -264,6 +264,15 @@ class FLauncherChannel {
           "saveProfilePin", {"packageName": packageName, "appProfile": appProfile, "pin": pin}) ??
       false;
 
+  /// Whether Hearth types saved streaming PINs at all on this TV (one switch for every app and profile).
+  Future<bool> isPinTypingOn() async => await _methodChannel.invokeMethod<bool>("isPinTypingOn") ?? true;
+
+  Future<void> setPinTypingOn(bool on) async => await _methodChannel.invokeMethod("setPinTypingOn", on);
+
+  /// The last PIN entries on this TV, newest first: {package, versionCode, content, result, at}. No names or PINs.
+  Future<List<Map<dynamic, dynamic>>> getPinEntryLog() async =>
+      (await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getPinEntryLog")) ?? [];
+
   Future<void> removeProfilePin(String packageName, String appProfile, {String? profileKey}) async =>
       await _methodChannel.invokeMethod(
           "removeProfilePin", {"packageName": packageName, "appProfile": appProfile, "profileKey": profileKey});

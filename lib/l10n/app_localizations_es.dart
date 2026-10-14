@@ -1941,6 +1941,39 @@ class AppLocalizationsEs extends AppLocalizations {
   String get pinConsentAgree => 'Continuar';
 
   @override
+  String get pinTypingSwitch => 'Escribir los PIN guardados';
+
+  @override
+  String get pinTypingSwitchOff => 'Desactivado: las apps piden sus PIN como siempre';
+
+  @override
+  String get pinLogTitle => 'Entradas de PIN recientes';
+
+  @override
+  String get pinLogEmpty => 'Ninguna todavía';
+
+  @override
+  String get pinLogAccepted => 'Aceptado';
+
+  @override
+  String get pinLogRejected => 'No aceptado';
+
+  @override
+  String get pinLogLockedOut => 'La app bloqueó el perfil';
+
+  @override
+  String get pinLogScreenChanged => 'Su pantalla de PIN cambió: en pausa';
+
+  @override
+  String get pinLogBroken => 'Se detuvo a medias';
+
+  @override
+  String get pinLogNoScreen => 'No pidió PIN';
+
+  @override
+  String get pinLogCancelled => 'Cancelado';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth aún no puede escribir PIN en $app';
   }

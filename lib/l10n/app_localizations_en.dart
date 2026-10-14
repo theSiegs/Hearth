@@ -1941,6 +1941,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pinConsentAgree => 'Continue';
 
   @override
+  String get pinTypingSwitch => 'Type saved PINs';
+
+  @override
+  String get pinTypingSwitchOff => 'Off: the apps ask for their PINs as usual';
+
+  @override
+  String get pinLogTitle => 'Recent PIN entries';
+
+  @override
+  String get pinLogEmpty => 'None yet';
+
+  @override
+  String get pinLogAccepted => 'Accepted';
+
+  @override
+  String get pinLogRejected => 'Not accepted';
+
+  @override
+  String get pinLogLockedOut => 'The app locked the profile';
+
+  @override
+  String get pinLogScreenChanged => 'Its PIN screen changed: paused';
+
+  @override
+  String get pinLogBroken => 'Stopped partway';
+
+  @override
+  String get pinLogNoScreen => 'No PIN asked';
+
+  @override
+  String get pinLogCancelled => 'Cancelled';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth can’t type PINs in $app yet';
   }

@@ -1939,6 +1939,39 @@ class AppLocalizationsHi extends AppLocalizations {
   String get pinConsentAgree => 'जारी रखें';
 
   @override
+  String get pinTypingSwitch => 'सहेजे गए PIN डालें';
+
+  @override
+  String get pinTypingSwitchOff => 'बंद: ऐप हमेशा की तरह अपने PIN माँगते हैं';
+
+  @override
+  String get pinLogTitle => 'हाल में डाले गए PIN';
+
+  @override
+  String get pinLogEmpty => 'अभी तक कोई नहीं';
+
+  @override
+  String get pinLogAccepted => 'स्वीकार किया गया';
+
+  @override
+  String get pinLogRejected => 'स्वीकार नहीं हुआ';
+
+  @override
+  String get pinLogLockedOut => 'ऐप ने प्रोफ़ाइल लॉक कर दी';
+
+  @override
+  String get pinLogScreenChanged => 'इसकी PIN स्क्रीन बदल गई: रोका गया';
+
+  @override
+  String get pinLogBroken => 'बीच में रुक गया';
+
+  @override
+  String get pinLogNoScreen => 'PIN नहीं माँगा गया';
+
+  @override
+  String get pinLogCancelled => 'रद्द किया गया';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth अभी $app में PIN टाइप नहीं कर सकता';
   }

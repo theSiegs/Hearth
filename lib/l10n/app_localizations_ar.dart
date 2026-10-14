@@ -1977,6 +1977,39 @@ class AppLocalizationsAr extends AppLocalizations {
   String get pinConsentAgree => 'متابعة';
 
   @override
+  String get pinTypingSwitch => 'كتابة الرموز المحفوظة';
+
+  @override
+  String get pinTypingSwitchOff => 'متوقف: تطلب التطبيقات رموزها كالمعتاد';
+
+  @override
+  String get pinLogTitle => 'إدخالات الرموز الأخيرة';
+
+  @override
+  String get pinLogEmpty => 'لا شيء بعد';
+
+  @override
+  String get pinLogAccepted => 'مقبول';
+
+  @override
+  String get pinLogRejected => 'غير مقبول';
+
+  @override
+  String get pinLogLockedOut => 'قفل التطبيق الملف الشخصي';
+
+  @override
+  String get pinLogScreenChanged => 'تغيّرت شاشة الرمز: متوقف مؤقتًا';
+
+  @override
+  String get pinLogBroken => 'توقف في المنتصف';
+
+  @override
+  String get pinLogNoScreen => 'لم يُطلب رمز';
+
+  @override
+  String get pinLogCancelled => 'أُلغي';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'لا يستطيع Hearth بعد كتابة رموز PIN في $app';
   }

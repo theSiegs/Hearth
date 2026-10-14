@@ -1941,6 +1941,39 @@ class AppLocalizationsPt extends AppLocalizations {
   String get pinConsentAgree => 'Continuar';
 
   @override
+  String get pinTypingSwitch => 'Digitar os PINs salvos';
+
+  @override
+  String get pinTypingSwitchOff => 'Desativado: os apps pedem os PINs como sempre';
+
+  @override
+  String get pinLogTitle => 'Entradas de PIN recentes';
+
+  @override
+  String get pinLogEmpty => 'Nenhuma ainda';
+
+  @override
+  String get pinLogAccepted => 'Aceito';
+
+  @override
+  String get pinLogRejected => 'Não aceito';
+
+  @override
+  String get pinLogLockedOut => 'O app bloqueou o perfil';
+
+  @override
+  String get pinLogScreenChanged => 'A tela de PIN mudou: pausado';
+
+  @override
+  String get pinLogBroken => 'Parou no meio';
+
+  @override
+  String get pinLogNoScreen => 'Nenhum PIN pedido';
+
+  @override
+  String get pinLogCancelled => 'Cancelado';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'O Hearth ainda não digita PINs no $app';
   }

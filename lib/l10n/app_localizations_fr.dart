@@ -1941,6 +1941,39 @@ class AppLocalizationsFr extends AppLocalizations {
   String get pinConsentAgree => 'Continuer';
 
   @override
+  String get pinTypingSwitch => 'Saisir les codes enregistrés';
+
+  @override
+  String get pinTypingSwitchOff => 'Désactivé : les apps demandent leurs codes comme d’habitude';
+
+  @override
+  String get pinLogTitle => 'Saisies de code récentes';
+
+  @override
+  String get pinLogEmpty => 'Aucune pour l’instant';
+
+  @override
+  String get pinLogAccepted => 'Accepté';
+
+  @override
+  String get pinLogRejected => 'Refusé';
+
+  @override
+  String get pinLogLockedOut => 'L’app a verrouillé le profil';
+
+  @override
+  String get pinLogScreenChanged => 'Son écran de code a changé : en pause';
+
+  @override
+  String get pinLogBroken => 'Arrêté en cours de route';
+
+  @override
+  String get pinLogNoScreen => 'Aucun code demandé';
+
+  @override
+  String get pinLogCancelled => 'Annulé';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth ne sait pas encore saisir les codes dans $app';
   }

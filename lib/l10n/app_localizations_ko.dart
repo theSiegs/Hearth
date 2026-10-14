@@ -1930,6 +1930,39 @@ class AppLocalizationsKo extends AppLocalizations {
   String get pinConsentAgree => '계속';
 
   @override
+  String get pinTypingSwitch => '저장된 PIN 입력';
+
+  @override
+  String get pinTypingSwitchOff => '꺼짐: 앱이 평소처럼 PIN을 요청합니다';
+
+  @override
+  String get pinLogTitle => '최근 PIN 입력';
+
+  @override
+  String get pinLogEmpty => '아직 없음';
+
+  @override
+  String get pinLogAccepted => '수락됨';
+
+  @override
+  String get pinLogRejected => '거부됨';
+
+  @override
+  String get pinLogLockedOut => '앱이 프로필을 잠갔습니다';
+
+  @override
+  String get pinLogScreenChanged => 'PIN 화면이 바뀜: 일시 중지됨';
+
+  @override
+  String get pinLogBroken => '중간에 멈춤';
+
+  @override
+  String get pinLogNoScreen => 'PIN 요청 없음';
+
+  @override
+  String get pinLogCancelled => '취소됨';
+
+  @override
   String profilePinUnsupported(String app) {
     return 'Hearth는 아직 $app에서 PIN을 입력할 수 없습니다';
   }

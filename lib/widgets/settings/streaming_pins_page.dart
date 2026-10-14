@@ -18,7 +18,9 @@
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/profile_service.dart';
+import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
@@ -69,6 +71,11 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
   /// The content PIN's app and its state, in a grown-up's profile with the app installed; else null.
   (Map<dynamic, dynamic>, Map<dynamic, dynamic>)? _contentPin;
 
+  /// Whether Hearth types saved PINs at all, and the last entries on this TV (newest first).
+  bool _typingOn = true;
+  List<Map<dynamic, dynamic>> _log = const [];
+  final Map<String, String> _appLabels = {};
+
   @override
   void initState() {
     super.initState();
@@ -82,10 +89,19 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
     final active = context.read<ProfileService?>()?.activeProfileKey;
     // Not known to be a grown-up's profile: no content PIN row
     final grownUp = !(context.read<ProfileService?>()?.isKidsProfile ?? true);
+    bool typingOn = true;
+    List<Map<dynamic, dynamic>> log = const [];
+    try {
+      typingOn = await _channel.isPinTypingOn();
+      log = await _channel.getPinEntryLog();
+    } catch (_) {
+      // An older Android side: typing on, no log
+    }
     try {
       serviceOn = (await _channel.getProfilePairingStatus())["enabled"] == true;
       for (final app in await _channel.getProfilePairingApps()) {
         final pkg = app["packageName"] as String;
+        _appLabels[pkg] = app["label"] as String? ?? pkg;
         if (grownUp && pkg == StreamingPinsPage.contentPinPackage && app["installed"] == true) {
           contentPin = (app, await _channel.getContentPinStatus(pkg));
         }
@@ -116,8 +132,38 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
         _apps = apps;
         _serviceOn = serviceOn;
         _contentPin = contentPin;
+        _typingOn = typingOn;
+        _log = log;
       });
     }
+  }
+
+  Future<void> _setTypingOn(bool on) async {
+    await _channel.setPinTypingOn(on);
+    if (mounted) setState(() => _typingOn = on);
+  }
+
+  /// A log entry's outcome in words.
+  static String _result(AppLocalizations l, String? result) => switch (result) {
+        "ACCEPTED" => l.pinLogAccepted,
+        "REJECTED" => l.pinLogRejected,
+        "LOCKED_OUT" => l.pinLogLockedOut,
+        "SCREEN_CHANGED" => l.pinLogScreenChanged,
+        "BROKEN" => l.pinLogBroken,
+        "NO_PIN_SCREEN" => l.pinLogNoScreen,
+        "CANCELLED" => l.pinLogCancelled,
+        _ => result ?? "?",
+      };
+
+  /// "Netflix · Oct 13, 8:04 PM · Accepted" (the content PIN's row names it as such).
+  String _logLine(AppLocalizations l, Map<dynamic, dynamic> entry) {
+    final pkg = entry["package"] as String? ?? "?";
+    final label = _appLabels[pkg] ?? pkg;
+    final app = entry["content"] == true ? l.contentPinRow(label) : label;
+    final at = DateTime.fromMillisecondsSinceEpoch(entry["at"] as int? ?? 0);
+    final locale = Localizations.localeOf(context).toString();
+    final when = "${DateFormat.MMMd(locale).format(at)} ${DateFormat.jm(locale).format(at)}";
+    return "$app · $when · ${_result(l, entry["result"] as String?)}";
   }
 
   /// The row's PIN: a profile with no app profile yet gets one picked first. Setting the PIN of a name match pairs it
@@ -199,6 +245,15 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
               _load();
             },
           ),
+        RoundedSwitchListTile(
+          autofocus: takeFirst(),
+          value: _typingOn,
+          onChanged: _setTypingOn,
+          title: Text(l.pinTypingSwitch, style: textTheme.bodyMedium),
+          subtitle: _typingOn ? null : Text(l.pinTypingSwitchOff, style: small),
+          secondary: Icon(Icons.pin_outlined, color: _typingOn ? Colors.green : Colors.white54),
+        ),
+        const Divider(),
         if (apps.isEmpty && _contentPin == null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -271,6 +326,21 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(l.streamingPinsFooter, style: small, textAlign: TextAlign.center),
         ),
+        const Divider(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 4),
+          child: Text(l.pinLogTitle, style: textTheme.titleSmall),
+        ),
+        if (_log.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+            child: Text(l.pinLogEmpty, style: small),
+          ),
+        for (final entry in _log)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
+            child: Text(_logLine(l, entry), style: small),
+          ),
       ],
     );
   }
