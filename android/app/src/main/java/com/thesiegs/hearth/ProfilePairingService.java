@@ -75,7 +75,8 @@ public class ProfilePairingService extends AccessibilityService {
     // Only the count: the name is what comes before it (netflixName), so the match runs in one pass
     static final Pattern NETFLIX_COUNT = Pattern.compile("(?i)(?<!\\d)(\\d{1,3}) of (\\d{1,3}) profiles?");
     private static final Pattern MAX_ITEM = Pattern.compile("(?i)^\\s*(.+?)\\s+Button\\b[,.]?\\s*(\\d+)\\s+of\\s+(\\d+)");
-    static final Pattern DISNEY_TILE = Pattern.compile("(?i)^Access (.+?)['’]s profile\\b.*$");
+    // A profile with a PIN reads "Access Alex's pin protected profile" (the TV, 2026-10-13)
+    static final Pattern DISNEY_TILE = Pattern.compile("(?i)^Access (.+?)['’]s (?:pin[- ]protected )?profile\\b.*$");
 
     private static volatile ProfilePairingService sInstance;
     /** The app whose launch Profile Pairing is handling right now, or null. Read from Hearth voice's thread. */

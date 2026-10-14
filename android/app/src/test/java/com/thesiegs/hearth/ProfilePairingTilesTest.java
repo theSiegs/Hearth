@@ -21,6 +21,7 @@ public class ProfilePairingTilesTest {
         // A profile with a PIN says so after its name
         assertEquals("Alex", disneyName("Access Alex's profile. Profile PIN required"));
         assertEquals("Alex", disneyName("Access Alex’s profile, locked"));
+        assertEquals("Alex", disneyName("Access Alex's pin protected profile"));
         assertEquals(null, disneyName("Add profile"));
         assertEquals(null, disneyName("Access Alex's profiles"));
     }
