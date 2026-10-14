@@ -110,12 +110,11 @@ exactly what they do.
   PIN-locked Google TV profile, your phone asks Allow or Deny; Allow has Hearth type your Google TV PIN, which you
   save on the TV for this (encrypted). The remote always works too.
 - **Hearth on kids profiles.** Google TV removes apps that didn't come from the Play Store from kids profiles each
-  time the profile starts. When you press **Fix** (in setup or **Settings → Profiles → Kids profiles**), Hearth
-  adds itself and HearthTube to each kids profile and marks them so Google TV keeps them, using the TV's own
-  debugging connection. From then on it does the same by itself for kids profiles added later, and puts a missing
-  app back once per profile. That's why **debugging stays set up**, with "Disable adb authorization timeout" on,
-  so the TV keeps trusting Hearth. It only installs, keeps and removes Hearth's own two apps. Uninstall from
-  **Settings → Profiles → Kids profiles → Uninstall Hearth**, or copies stay behind on the kids profiles.
+  time the profile starts. Once you press **Fix**, Hearth puts itself (and HearthTube) on your kids profiles and
+  keeps them there, using the TV's own debugging connection. That means **debugging stays on**, with "Disable adb
+  authorization timeout" set, so the TV keeps trusting Hearth. It only installs, keeps and removes Hearth's own two
+  apps. Uninstall from **Settings → Profiles → Kids profiles → Uninstall Hearth**, or copies stay behind on the kids
+  profiles.
 
 ## What setup takes
 
