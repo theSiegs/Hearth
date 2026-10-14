@@ -58,6 +58,7 @@ import 'package:flauncher/providers/profile_service.dart';
 
 import 'models/category.dart';
 import 'package:flauncher/widgets/title_pill.dart';
+import 'package:flauncher/quiet_failure.dart';
 
 class FLauncher extends StatefulWidget {
   const FLauncher({super.key});
@@ -142,11 +143,11 @@ class _FLauncherState extends State<FLauncher> {
       try {
         final pending = await channel.takePendingSearch();
         if (pending != null) _openSearch(pending);
-      } catch (_) {}
+      } catch (err) { noteFailure('flauncher', err); }
       try {
         final pins = await channel.takePendingProfilePins();
         if (pins != null) _openProfilePins(pins);
-      } catch (_) {}
+      } catch (err) { noteFailure('flauncher', err); }
     });
     _homeSearch = context.read<HomeSearch?>();
     _homeSearch?.addListener(_onSearchChanged);

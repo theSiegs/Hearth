@@ -8,6 +8,7 @@ import '../flauncher_channel.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/profile_service.dart';
 import '../providers/watch_next_service.dart';
+import 'package:flauncher/quiet_failure.dart';
 
 /// The welcome card shown over the home while it catches up with a profile switch: the profile's photo and
 /// "Hi <name>" ("Setting up this profile…" before Hearth knows its name), with a line that fills as each step
@@ -125,7 +126,8 @@ class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
     bool ready;
     try {
       ready = await widget.channel.isProfileDataReady();
-    } catch (_) {
+    } catch (err) {
+        noteFailure('profile_transition_overlay', err);
       ready = true;
     }
     if (!mounted || _current != transition) return;

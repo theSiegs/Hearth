@@ -21,6 +21,7 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/models/kids_profiles.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -95,7 +96,8 @@ class _KidsProfilesPageState extends State<KidsProfilesPage> with WidgetsBinding
     KidsProfilesState state;
     try {
       state = KidsProfilesState.fromMap(await _channel.getKidsProfilesState());
-    } catch (_) {
+    } catch (err) {
+        noteFailure('kids_profiles_page', err);
       state = const KidsProfilesState();
     }
     if (!mounted) return;
@@ -104,7 +106,7 @@ class _KidsProfilesPageState extends State<KidsProfilesPage> with WidgetsBinding
     try {
       final checked = KidsProfilesState.fromMap(await _channel.getKidsProfilesState(checkProtection: true));
       if (mounted) setState(() => _state = checked);
-    } catch (_) {}
+    } catch (err) { noteFailure('kids_profiles_page', err); }
   }
 
   Future<void> _fix() async {
@@ -113,7 +115,7 @@ class _KidsProfilesPageState extends State<KidsProfilesPage> with WidgetsBinding
     bool adb = false;
     try {
       adb = await _channel.isAdbEnabled();
-    } catch (_) {}
+    } catch (err) { noteFailure('kids_profiles_page', err); }
     if (!mounted) return;
     if (!adb) {
       await _askForDebugging();
@@ -179,7 +181,8 @@ class _KidsProfilesPageState extends State<KidsProfilesPage> with WidgetsBinding
     try {
       await job().timeout(KidsProfilesPage.selfAdbLimit);
       ok = true;
-    } catch (_) {
+    } catch (err) {
+        noteFailure('kids_profiles_page', err);
       ok = false;
     }
     await _refresh();
@@ -194,7 +197,7 @@ class _KidsProfilesPageState extends State<KidsProfilesPage> with WidgetsBinding
     if (open != true) return;
     try {
       await _channel.openDeviceInfoSettings();
-    } catch (_) {}
+    } catch (err) { noteFailure('kids_profiles_page', err); }
   }
 
   Future<bool?> _confirm({required String title, required List<String> lines, required String action}) {

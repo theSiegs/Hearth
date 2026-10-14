@@ -23,6 +23,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
 import 'animated_character.dart';
+import 'package:flauncher/quiet_failure.dart';
 
 class DateTimeWidget extends StatefulWidget {
   final Duration? updateInterval;
@@ -73,10 +74,12 @@ class _DateTimeWidgetState extends State<DateTimeWidget> with WidgetsBindingObse
   void _initDateFormatAndRefresh() {
     try {
       _dateFormat = DateFormat(widget._dateTimeFormatString, _locale ?? Platform.localeName);
-    } catch (_) {
+    } catch (err) {
+        noteFailure('date_time_widget', err);
       try {
         _dateFormat = DateFormat(widget._dateTimeFormatString);
-      } catch (_) {
+      } catch (err) {
+          noteFailure('date_time_widget', err);
         _dateFormat = DateFormat("EEE, MMM d", "en_US");
       }
     }
@@ -86,7 +89,8 @@ class _DateTimeWidgetState extends State<DateTimeWidget> with WidgetsBindingObse
   String _format(DateTime time, {required String fallback}) {
     try {
       return _dateFormat.format(time);
-    } catch (_) {
+    } catch (err) {
+        noteFailure('date_time_widget', err);
       return fallback;
     }
   }

@@ -23,6 +23,7 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/wallpaper_service.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:provider/provider.dart';
 
 import 'hearth_dialog.dart';
@@ -168,7 +169,8 @@ class HearthAboutDialog extends StatelessWidget {
       if (!context.read<SettingsService>().bingWallpaperEnabled || wallpaper.wallpaper == null) return null;
       if (wallpaper.bingTitle == null && wallpaper.bingCredit == null) return null;
       return (title: wallpaper.bingTitle, credit: wallpaper.bingCredit);
-    } catch (_) {
+    } catch (err) {
+        noteFailure('hearth_about_dialog', err);
       return null;
     }
   }

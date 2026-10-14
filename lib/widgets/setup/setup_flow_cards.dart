@@ -388,7 +388,7 @@ extension _CardScreens on _SetupFlowPageState {
     _update(() => _state = SetupStepState.waiting);
     try {
       await _channel.openDeviceInfoSettings();
-    } catch (_) {}
+    } catch (err) { noteFailure('setup_flow_cards', err); }
   }
 
   /// Puts Hearth (and HearthTube, when the owner has it) on the kids profiles over Hearth's own adb, as Settings'
@@ -402,7 +402,8 @@ extension _CardScreens on _SetupFlowPageState {
       await _channel.fixKidsProfiles().timeout(_SetupFlowPageState._selfAdbLimit);
       kidsState = KidsProfilesState.fromMap(
           await _channel.getKidsProfilesState(checkProtection: true).timeout(_SetupFlowPageState._selfAdbLimit));
-    } catch (_) {
+    } catch (err) {
+      noteFailure('setup_flow_cards', err);
       kidsState = null;
     }
     if (!mounted) return;
@@ -471,7 +472,7 @@ extension _CardScreens on _SetupFlowPageState {
     bool granted = false;
     try {
       granted = await _channel.requestWatchNextPermission();
-    } catch (_) {}
+    } catch (err) { noteFailure('setup_flow_cards', err); }
     if (!mounted) return;
     if (granted) {
       await _recheck();
@@ -686,7 +687,7 @@ extension _CardScreens on _SetupFlowPageState {
           onPressed: () async {
             try {
               await _channel.setHaNotificationsEnabled(true);
-            } catch (_) {}
+            } catch (err) { noteFailure('setup_flow_cards', err); }
             if (!mounted) return;
             _update(() => _state = SetupStepState.done);
             _focusPrimary();
@@ -702,7 +703,7 @@ extension _CardScreens on _SetupFlowPageState {
     bool shown = false;
     try {
       shown = await _channel.sendHaTestNotification();
-    } catch (_) {}
+    } catch (err) { noteFailure('setup_flow_cards', err); }
     if (!mounted) return;
     _update(() => _haTestResult = shown ? null : l.haNotificationsNeedsFix(SetupChecklistPage.breadcrumb(l)));
   }
@@ -765,7 +766,7 @@ extension _CardScreens on _SetupFlowPageState {
     Future<void> answer(bool share) async {
       try {
         await _channel.setHaShareNowPlaying(share);
-      } catch (_) {}
+      } catch (err) { noteFailure('setup_flow_cards', err); }
       if (!mounted) return;
       _update(() => _haShareNowPlaying = share);
       _next();
@@ -817,7 +818,8 @@ extension _CardScreens on _SetupFlowPageState {
     try {
       final minutes = await _channel.getIdleStandbyMinutes();
       if (mounted) _update(() => _idleMinutes = minutes);
-    } catch (_) {
+    } catch (err) {
+      noteFailure('setup_flow_cards', err);
       if (mounted) _update(() => _idleMinutes = 0);
     }
   }
@@ -842,7 +844,7 @@ extension _CardScreens on _SetupFlowPageState {
             _update(() => _idleMinutes = minutes);
             try {
               await _channel.setIdleStandbyMinutes(minutes);
-            } catch (_) {}
+            } catch (err) { noteFailure('setup_flow_cards', err); }
           },
         ),
     ]);

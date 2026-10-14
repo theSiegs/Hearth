@@ -18,6 +18,7 @@
 import 'dart:async';
 
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -59,7 +60,7 @@ class _PhoneSetupDialogState extends State<PhoneSetupDialog> {
     String? link;
     try {
       link = await widget.start();
-    } catch (_) {}
+    } catch (err) { noteFailure('phone_setup_dialog', err); }
     if (!mounted) return;
     setState(() {
       _link = link;
@@ -70,7 +71,7 @@ class _PhoneSetupDialogState extends State<PhoneSetupDialog> {
       bool done = false;
       try {
         done = await widget.done();
-      } catch (_) {}
+      } catch (err) { noteFailure('phone_setup_dialog', err); }
       if (done && mounted) {
         _poll?.cancel();
         Navigator.of(context).pop(true);

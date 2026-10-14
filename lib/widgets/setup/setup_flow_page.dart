@@ -40,6 +40,7 @@ import 'package:flauncher/widgets/settings/profile_pairing_page.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
 import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
 import 'package:flauncher/widgets/settings/weather_location_dialog.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -565,7 +566,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     bool opened;
     try {
       opened = await step.open();
-    } catch (_) {
+    } catch (err) {
+        noteFailure('setup_flow_page', err);
       opened = false;
     }
     if (opened || !mounted) return;
@@ -597,7 +599,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   Future<void> _waitFor(String? what) async {
     try {
       await _channel.setSetupWaitingFor(what);
-    } catch (_) {
+    } catch (err) {
+        noteFailure('setup_flow_page', err);
       // No Android side: the step is checked when Hearth is back in front anyway
     }
   }
@@ -611,7 +614,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       final List<String>? fixCommands;
       try {
         fixCommands = await _channel.getSetupFixCommands(fix);
-      } catch (_) {
+      } catch (err) {
+          noteFailure('setup_flow_page', err);
         return;
       }
       if (fixCommands == null) {
@@ -655,7 +659,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       ran = true;
     } on PlatformException {
       ran = false;
-    } catch (_) {
+    } catch (err) {
+        noteFailure('setup_flow_page', err);
       ran = false;
     }
     if (ran) {

@@ -19,6 +19,7 @@ import 'dart:async';
 
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/models/data_usage.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/widgets.dart';
 
 /// How the TV is connected, as Android's default network says.
@@ -55,7 +56,8 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver {
     _channel.getNetworkStatus().then(_apply).catchError((Object _) {});
     try {
       _statusChanges = _channel.networkStatusChanges().listen(_apply, onError: (Object _) {});
-    } catch (_) {
+    } catch (err) {
+        noteFailure('network_service', err);
       // No Android side (tests)
     }
     _readPermission();
@@ -122,7 +124,8 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver {
     bool allowed;
     try {
       allowed = await _channel.checkUsageStatsPermission();
-    } catch (_) {
+    } catch (err) {
+        noteFailure('network_service', err);
       return;
     }
     if (_disposed || read != _permissionReads) return;
@@ -142,7 +145,8 @@ class NetworkService extends ChangeNotifier with WidgetsBindingObserver {
     int bytes;
     try {
       bytes = await _channel.getDailyDataUsage();
-    } catch (_) {
+    } catch (err) {
+        noteFailure('network_service', err);
       return;
     }
     if (_disposed || read != _usageReads || bytes < 0) return;

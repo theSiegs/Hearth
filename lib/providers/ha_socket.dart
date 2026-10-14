@@ -20,6 +20,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flauncher/providers/ha_dashboards.dart';
+import 'package:flauncher/quiet_failure.dart';
 
 /// One signed-in connection to Home Assistant's WebSocket API that stays open: commands with their replies, and
 /// subscriptions whose events keep coming. [done] completes when it closes (Home Assistant went away, or [close]).
@@ -52,7 +53,8 @@ class HaSocket {
         Map<String, dynamic> msg;
         try {
           msg = jsonDecode(message as String) as Map<String, dynamic>;
-        } catch (_) {
+        } catch (err) {
+            noteFailure('ha_socket', err);
           return;
         }
         if (!signedIn) {
@@ -116,7 +118,8 @@ class HaSocket {
     _subscriptions[id] = onEvent;
     try {
       await this.command(command);
-    } catch (_) {
+    } catch (err) {
+        noteFailure('ha_socket', err);
       _subscriptions.remove(id);
       rethrow;
     }
@@ -124,7 +127,7 @@ class HaSocket {
       if (_subscriptions.remove(id) == null || isClosed) return;
       try {
         await this.command({"type": "unsubscribe_events", "subscription": id});
-      } catch (_) {}
+      } catch (err) { noteFailure('ha_socket', err); }
     };
   }
 
@@ -175,7 +178,7 @@ class HaSocket {
   Future<void> close() async {
     try {
       await _socket.close();
-    } catch (_) {}
+    } catch (err) { noteFailure('ha_socket', err); }
     _closed();
   }
 }

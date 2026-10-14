@@ -21,6 +21,7 @@ import 'package:flauncher/providers/ha_calls.dart';
 import 'package:flauncher/providers/ha_entities.dart';
 import 'package:flauncher/providers/ha_lovelace.dart';
 import 'package:flauncher/providers/ha_socket.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/foundation.dart';
 
 enum HaPanelStatus {
@@ -138,7 +139,7 @@ class HaPanelService extends ChangeNotifier {
     ({String url, String token})? connection;
     try {
       connection = await _connection();
-    } catch (_) {}
+    } catch (err) { noteFailure('ha_panel_service', err); }
     if (_disposed) return;
     if (connection == null || connection.url.trim().isEmpty || connection.token.isEmpty) {
       await _drop();
@@ -151,7 +152,8 @@ class HaPanelService extends ChangeNotifier {
     String path;
     try {
       path = await _dashboard();
-    } catch (_) {
+    } catch (err) {
+        noteFailure('ha_panel_service', err);
       path = "lovelace";
     }
     final socket = _socket;
@@ -159,7 +161,8 @@ class HaPanelService extends ChangeNotifier {
       if (path != _loadedPath) {
         try {
           await _loadLayout(socket, path);
-        } catch (_) {
+        } catch (err) {
+            noteFailure('ha_panel_service', err);
           _failed();
         }
       }
@@ -179,7 +182,8 @@ class HaPanelService extends ChangeNotifier {
       await _loadSession(s);
       await _loadLayout(s, path);
       _failures = 0;
-    } catch (_) {
+    } catch (err) {
+        noteFailure('ha_panel_service', err);
       _failed();
     }
   }
@@ -190,12 +194,12 @@ class HaPanelService extends ChangeNotifier {
     try {
       final user = await s.command({"type": "auth/current_user"});
       if (user is Map && user["id"] is String) _userId = user["id"] as String;
-    } catch (_) {}
+    } catch (err) { noteFailure('ha_panel_service', err); }
     try {
       final config = await s.command({"type": "get_config"});
       final units = config is Map ? config["unit_system"] : null;
       if (units is Map && units["temperature"] is String) _temperatureUnit = units["temperature"] as String;
-    } catch (_) {}
+    } catch (err) { noteFailure('ha_panel_service', err); }
     try {
       final result = await s
           .command({"type": "frontend/get_translations", "language": _language(), "category": "entity_component"});
@@ -206,7 +210,7 @@ class HaPanelService extends ChangeNotifier {
             if (e.key is String && e.value is String) e.key as String: e.value as String
         };
       }
-    } catch (_) {}
+    } catch (err) { noteFailure('ha_panel_service', err); }
     try {
       _unsubscribeOthers.add(await s.subscribe({"type": "subscribe_events", "event_type": "lovelace_updated"}, (event) {
         final data = event is Map ? event["data"] : null;
@@ -217,7 +221,7 @@ class HaPanelService extends ChangeNotifier {
           if (path != null && _socket == s) unawaited(_loadLayout(s, path).catchError((_) {}));
         }
       }));
-    } catch (_) {}
+    } catch (err) { noteFailure('ha_panel_service', err); }
   }
 
   /// The entities to follow for [layout]: those on it, and home's zone when someone on it can be shown on a map.
@@ -270,7 +274,7 @@ class HaPanelService extends ChangeNotifier {
           _rendered = {..._rendered, template: "$result"};
           notifyListeners();
         });
-      } catch (_) {}
+      } catch (err) { noteFailure('ha_panel_service', err); }
     }
   }
 
@@ -325,7 +329,8 @@ class HaPanelService extends ChangeNotifier {
     try {
       await s.callService(domain, service, target: target, data: data);
       return true;
-    } catch (_) {
+    } catch (err) {
+        noteFailure('ha_panel_service', err);
       return false;
     }
   }

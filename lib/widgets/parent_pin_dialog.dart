@@ -18,6 +18,7 @@
 import 'dart:math';
 
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -84,7 +85,7 @@ Future<bool> requireParentPin(BuildContext context) async {
   if (pin != null && !kids && channel != null) {
     try {
       await channel.parentConfirmed();
-    } catch (_) {}
+    } catch (err) { noteFailure('parent_pin_dialog', err); }
   }
   return pin != null;
 }
@@ -93,7 +94,8 @@ Future<bool> requireParentPin(BuildContext context) async {
 Future<bool> _parentPresent(FLauncherChannel channel) async {
   try {
     return await channel.isParentPresent();
-  } catch (_) {
+  } catch (err) {
+      noteFailure('parent_pin_dialog', err);
     return false;
   }
 }

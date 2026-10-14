@@ -16,6 +16,7 @@
  */
 
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 
 import '../../providers/ha_dashboards.dart';
@@ -49,7 +50,8 @@ class _HaDashboardDialogState extends State<HaDashboardDialog> {
     List<HaDashboardChoice>? choices;
     try {
       choices = source == null ? null : await source.dashboards();
-    } catch (_) {
+    } catch (err) {
+        noteFailure('ha_dashboard_dialog', err);
       choices = null;
     }
     if (!mounted) return;
@@ -68,7 +70,8 @@ class _HaDashboardDialogState extends State<HaDashboardDialog> {
     List<HaDashboardChoice> views;
     try {
       views = await widget.dashboards!.views(dashboard.path);
-    } catch (_) {
+    } catch (err) {
+        noteFailure('ha_dashboard_dialog', err);
       views = const [];
     }
     if (!mounted) return;

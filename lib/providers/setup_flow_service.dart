@@ -23,6 +23,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'home_looks.dart';
 import 'settings_service.dart';
+import 'package:flauncher/quiet_failure.dart';
 
 /// How the setup flow runs: the whole of it (first run, or picking up where it was left), again from Settings, or
 /// only the Home button screen after an update switched Home Button Fix off.
@@ -165,7 +166,8 @@ class SetupFlowService extends ChangeNotifier {
       final previewing = HomeLook.byName(map["previewing"] as String?);
       if (previewing == null) return null;
       return (previewing: previewing, before: HomeLookSnapshot.fromJson(map["before"] as Map<String, dynamic>));
-    } catch (_) {
+    } catch (err) {
+        noteFailure('setup_flow_service', err);
       return null;
     }
   }
@@ -196,7 +198,8 @@ class SetupFlowService extends ChangeNotifier {
       final mode = SetupMode.values.asNameMap()[map["mode"]] ?? SetupMode.full;
       return SetupResume(map["screen"] as String, mode, DateTime.fromMillisecondsSinceEpoch(map["at"] as int),
           closed: map["closed"] == true);
-    } catch (_) {
+    } catch (err) {
+        noteFailure('setup_flow_service', err);
       return null;
     }
   }
@@ -218,7 +221,8 @@ class SetupFlowService extends ChangeNotifier {
               at: DateTime.fromMillisecondsSinceEpoch(((entry.value as Map)["at"] as int?) ?? 0),
             ),
       };
-    } catch (_) {
+    } catch (err) {
+        noteFailure('setup_flow_service', err);
       return const {};
     }
   }

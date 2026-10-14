@@ -17,6 +17,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/widgets/continue_watching_grid_page.dart';
 import 'package:flauncher/widgets/search/title_card.dart';
 import 'package:flauncher/widgets/title_pill.dart';
+import 'package:flauncher/quiet_failure.dart';
 
 /// The fewest cards Continue Watching shows before it ends with a "See all" card.
 const int _seeAllMinPrograms = 3;
@@ -281,7 +282,8 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
       if (mounted && bytes.isNotEmpty) {
         setState(() => _appIconBytes = bytes);
       }
-    } catch (_) {
+    } catch (err) {
+        noteFailure('continue_watching_row', err);
       // Without its icon the card still shows the program.
     }
   }

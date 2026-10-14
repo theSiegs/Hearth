@@ -5,6 +5,7 @@ import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';
 import 'package:flauncher/widgets/setup/setup_flow_launcher.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -63,7 +64,8 @@ Future<List<SetupStep>> loadSetupSteps(FLauncherChannel channel, String packageN
   Future<T> safe<T>(Future<T> Function() read, T fallback) async {
     try {
       return await read();
-    } catch (_) {
+    } catch (err) {
+        noteFailure('setup_checklist_page', err);
       return fallback;
     }
   }
@@ -206,7 +208,7 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
     String packageName = kHearthAppId;
     try {
       packageName = (await PackageInfo.fromPlatform()).packageName;
-    } catch (_) {}
+    } catch (err) { noteFailure('setup_checklist_page', err); }
     if (!mounted) return;
     final steps = await loadSetupSteps(_channel, packageName, AppLocalizations.of(context)!);
     if (mounted) setState(() => _steps = steps);

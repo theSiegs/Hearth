@@ -21,6 +21,7 @@ import 'package:provider/provider.dart';
 
 import '../../flauncher_channel.dart';
 import '../../l10n/app_localizations.dart';
+import 'package:flauncher/quiet_failure.dart';
 
 /// Where a search is typed or spoken, over the home: Google's own on-screen keyboard (also what a phone's Google
 /// TV app or a paired keyboard types into) and the mic for Google's speech recognizer. Submitting hands the text
@@ -82,7 +83,7 @@ class _SearchEntryState extends State<SearchEntry> {
     String? said;
     try {
       said = await _channel.voiceSearch();
-    } catch (_) {}
+    } catch (err) { noteFailure('search_entry', err); }
     if (!mounted) return;
     setState(() => _listening = false);
     if (said != null && said.trim().isNotEmpty) {

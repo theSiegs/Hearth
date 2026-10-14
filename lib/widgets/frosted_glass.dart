@@ -19,6 +19,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flauncher/providers/wallpaper_service.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
@@ -118,7 +119,8 @@ class _BlurredWallpaper {
         return;
       }
       image.value = made;
-    } catch (_) {
+    } catch (err) {
+        noteFailure('frosted_glass', err);
       // A wallpaper that won't decode keeps the live blur
     } finally {
       photo?.dispose();

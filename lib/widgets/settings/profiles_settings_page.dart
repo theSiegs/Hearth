@@ -21,6 +21,7 @@ import 'package:flauncher/models/kids_profiles.dart';
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -152,7 +153,7 @@ class _KidsProfilesTileState extends State<_KidsProfilesTile> {
     try {
       final map = await _channel?.getKidsProfilesState();
       if (mounted && map != null) setState(() => _state = KidsProfilesState.fromMap(map));
-    } catch (_) {}
+    } catch (err) { noteFailure('profiles_settings_page', err); }
   }
 
   @override

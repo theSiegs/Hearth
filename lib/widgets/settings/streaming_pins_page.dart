@@ -20,6 +20,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -96,7 +97,8 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
     try {
       typingOn = await _channel.isPinTypingOn();
       log = await _channel.getPinEntryLog();
-    } catch (_) {
+    } catch (err) {
+        noteFailure('streaming_pins_page', err);
       // An older Android side: typing on, no log
     }
     try {
@@ -126,7 +128,8 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
         }
         apps.add((app, rows));
       }
-    } catch (_) {
+    } catch (err) {
+        noteFailure('streaming_pins_page', err);
       // No Android side: nothing to list
     }
     if (mounted) {

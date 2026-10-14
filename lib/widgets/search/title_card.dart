@@ -21,6 +21,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/apps_service.dart';
 import '../focusable_tap.dart';
+import 'package:flauncher/quiet_failure.dart';
 
 /// A wide card in the house style shared with Continue Watching and HearthTube: the picture, the app's icon in the
 /// corner, the title and one line of detail over the bottom, an accent ring and a slight lift when focused.
@@ -80,7 +81,7 @@ class _TitleCardState extends State<TitleCard> {
     try {
       final bytes = await context.read<AppsService>().getAppIcon(pkg);
       if (mounted && pkg == widget.packageName) setState(() => _icon = bytes.isEmpty ? null : bytes);
-    } catch (_) {}
+    } catch (err) { noteFailure('title_card', err); }
   }
 
   @override

@@ -22,6 +22,7 @@ import 'package:flauncher/providers/home_forecast.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/widgets/title_pill.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -130,7 +131,8 @@ class WeatherForecastRow extends StatelessWidget {
   static String _hourLabel(String locale, DateTime time) {
     try {
       return DateFormat.j(locale).format(time);
-    } catch (_) {
+    } catch (err) {
+        noteFailure('weather_forecast_row', err);
       return DateFormat.j("en_US").format(time);
     }
   }
@@ -138,7 +140,8 @@ class WeatherForecastRow extends StatelessWidget {
   static String _dayLabel(String locale, DateTime date) {
     try {
       return DateFormat.E(locale).format(date);
-    } catch (_) {
+    } catch (err) {
+        noteFailure('weather_forecast_row', err);
       return DateFormat.E("en_US").format(date);
     }
   }

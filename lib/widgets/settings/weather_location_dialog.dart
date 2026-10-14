@@ -16,6 +16,7 @@
  */
 
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -65,7 +66,8 @@ class _WeatherLocationDialogState extends State<WeatherLocationDialog> {
         SystemChannels.textInput.invokeMethod('TextInput.hide');
         WidgetsBinding.instance.addPostFrameCallback((_) => _firstResultFocus.requestFocus());
       }
-    } catch (_) {
+    } catch (err) {
+        noteFailure('weather_location_dialog', err);
       if (!mounted) return;
       setState(() {
         _error = AppLocalizations.of(context)!.weatherLocationSearchError;

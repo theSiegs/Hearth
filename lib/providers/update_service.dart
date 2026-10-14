@@ -25,6 +25,7 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/github_releases.dart';
 import 'package:flauncher/hearth_ids.dart';
+import 'package:flauncher/quiet_failure.dart';
 
 enum UpdateStatus { idle, checking, upToDate, available, downloading, readyToInstall, error }
 
@@ -175,7 +176,7 @@ class UpdateService extends ChangeNotifier {
       if (apkPackage != expected) {
         try {
           await apkFile.delete();
-        } catch (_) {}
+        } catch (err) { noteFailure('update_service', err); }
         _status = UpdateStatus.error;
         _error = UpdateError.wrongApp;
         _errorMessage = "The download is $apkPackage, not $expected";

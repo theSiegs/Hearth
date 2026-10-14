@@ -21,6 +21,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';
 import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 /// What's on, as the TV says right now: the setup flow reads it when it opens and again whenever a step may have
@@ -176,7 +177,8 @@ class SetupSnapshot {
   static Future<T> _safe<T>(Future<T> Function() read, T fallback) async {
     try {
       return await read();
-    } catch (_) {
+    } catch (err) {
+        noteFailure('setup_snapshot', err);
       return fallback;
     }
   }
@@ -207,7 +209,7 @@ class SetupSnapshot {
     String packageName = kHearthAppId;
     try {
       packageName = (await PackageInfo.fromPlatform()).packageName;
-    } catch (_) {}
+    } catch (err) { noteFailure('setup_snapshot', err); }
     final steps = await loadSetupSteps(channel, packageName, l);
     final family = await _safe(channel.getSetupFamilyState, <dynamic, dynamic>{});
     final ha = await _loadHomeAssistant(channel);

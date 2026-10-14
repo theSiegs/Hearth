@@ -22,6 +22,7 @@ import 'dart:ui' as ui;
 
 import 'package:flauncher/providers/ha_entities.dart';
 import 'package:flauncher/widgets/ha_panel/ha_image_cache.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -105,7 +106,8 @@ class HaMapTiles {
         ]);
       }
       return true;
-    } catch (_) {
+    } catch (err) {
+        noteFailure('ha_person_map', err);
       return false;
     }
   }

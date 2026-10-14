@@ -16,6 +16,7 @@
  */
 
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -65,7 +66,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
     try {
       final decoded = json.decode(await _channel.getButtonMappings()) as Map<String, dynamic>;
       if (mounted) setState(() => _mappings = decoded);
-    } catch (_) {}
+    } catch (err) { noteFailure('remote_buttons_page', err); }
   }
 
   Future<void> _save() async {
@@ -265,7 +266,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
     List<dynamic> entities = const [];
     try {
       entities = json.decode(await _channel.getHaEntities()) as List<dynamic>;
-    } catch (_) {}
+    } catch (err) { noteFailure('remote_buttons_page', err); }
     if (!mounted) return null;
     final l = AppLocalizations.of(context)!;
     if (entities.isEmpty) {

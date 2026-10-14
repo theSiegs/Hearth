@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/models/weather_data.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -46,7 +47,8 @@ class WeatherService extends ChangeNotifier with WidgetsBindingObserver {
     if (raw == null) return null;
     try {
       return WeatherPlace.fromJson(jsonDecode(raw) as Map<String, dynamic>);
-    } catch (_) {
+    } catch (err) {
+        noteFailure('weather_service', err);
       // A saved place Hearth can't read counts as none (weather from Breezy, if installed)
       return null;
     }

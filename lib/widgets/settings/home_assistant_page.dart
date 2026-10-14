@@ -16,6 +16,7 @@
  */
 
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -61,7 +62,7 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
       bool? share;
       try {
         share = await _channel.getHaShareNowPlaying();
-      } catch (_) {}
+      } catch (err) { noteFailure('home_assistant_page', err); }
       if (mounted) {
         setState(() {
           _shareNowPlaying = share;
@@ -69,7 +70,7 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
           _reporting = (config["url"] as String? ?? "").isNotEmpty && (config["webhookId"] as String? ?? "").isNotEmpty;
         });
       }
-    } catch (_) {}
+    } catch (err) { noteFailure('home_assistant_page', err); }
   }
 
   Future<void> _open(String route) async {
@@ -162,7 +163,7 @@ class _HaNotificationsPageState extends State<HaNotificationsPage> {
           _ip = ip;
         });
       }
-    } catch (_) {}
+    } catch (err) { noteFailure('home_assistant_page', err); }
   }
 
   Future<void> _setEnabled(bool enabled) async {
@@ -245,7 +246,7 @@ class _HaPanelPageState extends State<HaPanelPage> {
           _panelDashboard.text = panel["dashboard"] as String? ?? "";
         });
       }
-    } catch (_) {}
+    } catch (err) { noteFailure('home_assistant_page', err); }
   }
 
   /// Saves the panel's dashboard path, and the token if one was typed (the saved token is never shown again).
@@ -270,7 +271,7 @@ class _HaPanelPageState extends State<HaPanelPage> {
     ({String url, String token})? connection;
     try {
       connection = await _channel.getHaConnection();
-    } catch (_) {}
+    } catch (err) { noteFailure('home_assistant_page', err); }
     if (!mounted) return;
     final path = await showDialog<String>(
       context: context,
@@ -412,7 +413,7 @@ class _HaStatusPageState extends State<HaStatusPage> with WidgetsBindingObserver
           _webhook.text = config["webhookId"] as String? ?? "";
         });
       }
-    } catch (_) {}
+    } catch (err) { noteFailure('home_assistant_page', err); }
     await _loadAccess();
   }
 
@@ -420,7 +421,7 @@ class _HaStatusPageState extends State<HaStatusPage> with WidgetsBindingObserver
     try {
       final access = await _channel.checkNotificationListenerPermission();
       if (mounted) setState(() => _notificationAccess = access);
-    } catch (_) {}
+    } catch (err) { noteFailure('home_assistant_page', err); }
   }
 
   Future<void> _saveStatus() async {

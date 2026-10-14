@@ -16,6 +16,7 @@
  */
 
 import 'package:intl/intl.dart';
+import 'package:flauncher/quiet_failure.dart';
 
 /// Whose data an [AppDataUsage] is.
 enum DataUsageKind {
@@ -103,7 +104,8 @@ String formatDataBytes(int bytes, [String? locale]) {
   NumberFormat format;
   try {
     format = NumberFormat(value < 100 && unit > 0 ? "0.#" : "0", locale);
-  } catch (_) {
+  } catch (err) {
+      noteFailure('data_usage', err);
     format = NumberFormat(value < 100 && unit > 0 ? "0.#" : "0", "en_US");
   }
   return "${format.format(value)} ${units[unit]}";

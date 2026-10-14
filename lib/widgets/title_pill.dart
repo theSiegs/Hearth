@@ -1,4 +1,5 @@
 import 'package:flauncher/providers/wallpaper_service.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -20,7 +21,8 @@ class TitlePill extends StatelessWidget {
   static double opacityOf(BuildContext context) {
     try {
       return opacityFor(context.select<WallpaperService?, double>((w) => w?.brightness ?? 0.5));
-    } catch (_) {
+    } catch (err) {
+        noteFailure('title_pill', err);
       return opacityFor(0.5);
     }
   }
@@ -85,7 +87,7 @@ class DetailsScrim extends StatelessWidget {
     double brightness = 0.5;
     try {
       brightness = context.select<WallpaperService?, double>((w) => w?.brightness ?? 0.5);
-    } catch (_) {}
+    } catch (err) { noteFailure('title_pill', err); }
     final double a = bottomOpacityFor(brightness);
     return IgnorePointer(
       child: AnimatedOpacity(

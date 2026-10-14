@@ -19,6 +19,7 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -64,7 +65,7 @@ class _PhoneApprovalTileState extends State<PhoneApprovalTile> {
           _on = state["on"] == true;
         });
       }
-    } catch (_) {}
+    } catch (err) { noteFailure('phone_approval_page', err); }
   }
 
   @override

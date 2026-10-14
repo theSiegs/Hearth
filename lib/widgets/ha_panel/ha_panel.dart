@@ -27,6 +27,7 @@ import 'package:flauncher/widgets/ha_panel/ha_markdown.dart';
 import 'package:flauncher/widgets/ha_panel/ha_icons.dart';
 import 'package:flauncher/widgets/ha_panel/ha_tile.dart';
 import 'package:flauncher/widgets/settings/home_assistant_page.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -199,7 +200,7 @@ class _HaPanelState extends State<HaPanel> {
     try {
       final settings = context.read<SettingsService?>();
       if (settings?.appKeyClickEnabled ?? false) context.read<FLauncherChannel>().playClickSound();
-    } catch (_) {}
+    } catch (err) { noteFailure('ha_panel', err); }
   }
 
   @override

@@ -21,6 +21,7 @@ import 'package:flauncher/providers/calendars.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/focusable_tap.dart';
 import 'package:flauncher/widgets/title_pill.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -61,7 +62,8 @@ class CalendarTimes {
     try {
       format = DateFormat(pattern.isEmpty ? SettingsService.defaultTimeFormat : pattern, locale);
       format.format(DateTime(2026));
-    } catch (_) {
+    } catch (err) {
+        noteFailure('calendar_agenda', err);
       format = DateFormat(SettingsService.defaultTimeFormat, "en_US");
     }
     return CalendarTimes._(format);
@@ -72,7 +74,7 @@ class CalendarTimes {
     String timeFormat = SettingsService.defaultTimeFormat;
     try {
       timeFormat = context.select<SettingsService, String>((s) => s.timeFormat);
-    } catch (_) {}
+    } catch (err) { noteFailure('calendar_agenda', err); }
     return CalendarTimes(timeFormat, AppLocalizations.of(context)!.localeName);
   }
 
@@ -102,7 +104,8 @@ String calendarDayName(AppLocalizations l, DateTime day, DateTime now) {
   if (d == DateTime(today.year, today.month, today.day + 1)) return l.calendarTomorrow;
   try {
     return DateFormat.MMMMEEEEd(l.localeName).format(d);
-  } catch (_) {
+  } catch (err) {
+      noteFailure('calendar_agenda', err);
     return DateFormat.MMMMEEEEd("en_US").format(d);
   }
 }

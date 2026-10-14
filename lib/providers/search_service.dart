@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:flauncher/quiet_failure.dart';
 
 /// A streaming service a search result can open in.
 class StreamingService {
@@ -372,7 +373,8 @@ class TmdbClient {
         "append_to_response": "watch/providers",
       }));
       return parseDetails(json as Map);
-    } catch (_) {
+    } catch (err) {
+        noteFailure('search_service', err);
       return null;
     }
   }

@@ -19,7 +19,16 @@
 import 'dart:async';
 
 import 'package:flauncher/models/data_usage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+
+/// A channel call that failed and was answered with a default: its name and the error's type go to the log, so a
+/// feature that quietly stays off leaves a trace. Not the message, which can quote what was asked. Tests have no
+/// Android side, so a missing plugin isn't news.
+void _failed(String method, Object error) {
+  if (error is MissingPluginException) return;
+  debugPrint('Hearth channel $method failed: ${error.runtimeType}');
+}
 
 class FLauncherChannel {
   static const _methodChannel = MethodChannel('me.efesser.flauncher/method');
@@ -33,7 +42,8 @@ class FLauncherChannel {
     try {
       List<Map<dynamic, dynamic>>? applications = await _methodChannel.invokeListMethod("getApplications");
       return applications ?? const [];
-    } catch (_) {
+    } catch (e) {
+      _failed("getApplications", e);
       return const [];
     }
   }
@@ -42,7 +52,8 @@ class FLauncherChannel {
     try {
       final Uint8List? bytes = await _methodChannel.invokeMethod("getApplicationBanner", packageName);
       return bytes ?? Uint8List(0);
-    } catch (_) {
+    } catch (e) {
+      _failed("getApplicationBanner", e);
       return Uint8List(0);
     }
   }
@@ -51,7 +62,8 @@ class FLauncherChannel {
     try {
       final Uint8List? bytes = await _methodChannel.invokeMethod("getApplicationIcon", packageName);
       return bytes ?? Uint8List(0);
-    } catch (_) {
+    } catch (e) {
+      _failed("getApplicationIcon", e);
       return Uint8List(0);
     }
   }
@@ -64,7 +76,8 @@ class FLauncherChannel {
     try {
       final bool? success = await _methodChannel.invokeMethod("openUrl", url);
       return success ?? false;
-    } catch (_) {
+    } catch (e) {
+      _failed("openUrl", e);
       return false;
     }
   }
@@ -88,7 +101,8 @@ class FLauncherChannel {
     try {
       final int usage = await _methodChannel.invokeMethod("getDailyDataUsage");
       return usage;
-    } on PlatformException catch (_) {
+    } on PlatformException catch (e) {
+      _failed("getDailyDataUsage", e);
       return -1;
     }
   }
@@ -97,7 +111,8 @@ class FLauncherChannel {
     try {
       final int usage = await _methodChannel.invokeMethod("getWeeklyDataUsage");
       return usage;
-    } on PlatformException catch (_) {
+    } on PlatformException catch (e) {
+      _failed("getWeeklyDataUsage", e);
       return -1;
     }
   }
@@ -106,7 +121,8 @@ class FLauncherChannel {
     try {
       final int usage = await _methodChannel.invokeMethod("getMonthlyDataUsage");
       return usage;
-    } on PlatformException catch (_) {
+    } on PlatformException catch (e) {
+      _failed("getMonthlyDataUsage", e);
       return -1;
     }
   }
@@ -116,7 +132,8 @@ class FLauncherChannel {
     try {
       final Map<dynamic, dynamic>? map = await _methodChannel.invokeMethod("getDataUsageByApp", period);
       return map == null ? null : DataUsageBreakdown.fromMap(map);
-    } on PlatformException catch (_) {
+    } on PlatformException catch (e) {
+      _failed("getDataUsageByApp", e);
       return null;
     }
   }
@@ -490,7 +507,8 @@ class FLauncherChannel {
   Future<bool> isParentPresent() async {
     try {
       return await _methodChannel.invokeMethod<bool>("isParentPresent") ?? false;
-    } catch (_) {
+    } catch (e) {
+      _failed("isParentPresent", e);
       return false;
     }
   }
@@ -499,7 +517,9 @@ class FLauncherChannel {
   Future<void> parentConfirmed() async {
     try {
       await _methodChannel.invokeMethod("parentConfirmed");
-    } catch (_) {}
+    } catch (e) {
+      _failed("parentConfirmed", e);
+    }
   }
 
   /// Home Assistant's address and the panel's token ({url, token}), for asking it which dashboards it has; null when
@@ -551,7 +571,8 @@ class FLauncherChannel {
   Future<void> playClickSound() async {
     try {
       await _methodChannel.invokeMethod("playClickSound");
-    } catch (_) {
+    } catch (e) {
+      _failed("playClickSound", e);
       // Ignore error in non-Android or test environments
     }
   }
@@ -573,7 +594,8 @@ class FLauncherChannel {
     try {
       final List<dynamic> inputs = await _methodChannel.invokeMethod("getTvInputs");
       return inputs.cast<Map<dynamic, dynamic>>();
-    } catch (_) {
+    } catch (e) {
+      _failed("getTvInputs", e);
       return [];
     }
   }
@@ -582,7 +604,8 @@ class FLauncherChannel {
     try {
       final bool success = await _methodChannel.invokeMethod("launchTvInput", inputId);
       return success;
-    } catch (_) {
+    } catch (e) {
+      _failed("launchTvInput", e);
       return false;
     }
   }
@@ -623,7 +646,8 @@ class FLauncherChannel {
     try {
       final List<dynamic> list = await _methodChannel.invokeMethod("getActiveNotifications");
       return list.cast<Map<dynamic, dynamic>>();
-    } catch (_) {
+    } catch (e) {
+      _failed("getActiveNotifications", e);
       return [];
     }
   }
@@ -638,7 +662,8 @@ class FLauncherChannel {
     try {
       final bool success = await _methodChannel.invokeMethod("dismissNotification", {"key": key});
       return success;
-    } catch (_) {
+    } catch (e) {
+      _failed("dismissNotification", e);
       return false;
     }
   }
@@ -647,7 +672,8 @@ class FLauncherChannel {
   Future<bool> openNotification(String key, {int action = -1}) async {
     try {
       return await _methodChannel.invokeMethod<bool>("openNotification", {"key": key, "action": action}) ?? false;
-    } catch (_) {
+    } catch (e) {
+      _failed("openNotification", e);
       return false;
     }
   }
@@ -656,7 +682,8 @@ class FLauncherChannel {
     try {
       final bool success = await _methodChannel.invokeMethod("dismissAllNotifications");
       return success;
-    } catch (_) {
+    } catch (e) {
+      _failed("dismissAllNotifications", e);
       return false;
     }
   }
@@ -665,7 +692,8 @@ class FLauncherChannel {
     try {
       final List<dynamic>? list = await _methodChannel.invokeMethod("getWatchNextPrograms");
       return list?.cast<Map<dynamic, dynamic>>() ?? [];
-    } catch (_) {
+    } catch (e) {
+      _failed("getWatchNextPrograms", e);
       return [];
     }
   }
@@ -674,7 +702,8 @@ class FLauncherChannel {
     try {
       final bool success = await _methodChannel.invokeMethod("launchWatchNextProgram", {"intentUri": intentUri});
       return success;
-    } catch (_) {
+    } catch (e) {
+      _failed("launchWatchNextProgram", e);
       return false;
     }
   }
@@ -683,7 +712,8 @@ class FLauncherChannel {
   Future<Uint8List?> getWatchNextPoster(String posterArtUri) async {
     try {
       return await _methodChannel.invokeMethod<Uint8List>("getWatchNextPoster", {"posterArtUri": posterArtUri});
-    } catch (_) {
+    } catch (e) {
+      _failed("getWatchNextPoster", e);
       return null;
     }
   }
@@ -692,7 +722,8 @@ class FLauncherChannel {
     try {
       final bool? success = await _methodChannel.invokeMethod<bool>("deleteWatchNextProgram", {"id": id});
       return success ?? false;
-    } catch (_) {
+    } catch (e) {
+      _failed("deleteWatchNextProgram", e);
       return false;
     }
   }
@@ -724,7 +755,8 @@ class FLauncherChannel {
     try {
       final bool? allowed = await _methodChannel.invokeMethod<bool>("checkWatchNextPermission");
       return allowed ?? false;
-    } catch (_) {
+    } catch (e) {
+      _failed("checkWatchNextPermission", e);
       return false;
     }
   }
@@ -733,7 +765,8 @@ class FLauncherChannel {
     try {
       final bool? allowed = await _methodChannel.invokeMethod<bool>("requestWatchNextPermission");
       return allowed ?? false;
-    } catch (_) {
+    } catch (e) {
+      _failed("requestWatchNextPermission", e);
       return false;
     }
   }
@@ -742,7 +775,8 @@ class FLauncherChannel {
     try {
       final String? json = await _methodChannel.invokeMethod("getLatestWeatherData");
       return json;
-    } catch (_) {
+    } catch (e) {
+      _failed("getLatestWeatherData", e);
       return null;
     }
   }
@@ -751,7 +785,8 @@ class FLauncherChannel {
     try {
       final bool? installed = await _methodChannel.invokeMethod<bool>("isBreezyWeatherInstalled");
       return installed ?? false;
-    } catch (_) {
+    } catch (e) {
+      _failed("isBreezyWeatherInstalled", e);
       return false;
     }
   }
@@ -760,7 +795,8 @@ class FLauncherChannel {
     try {
       final bool? opened = await _methodChannel.invokeMethod<bool>("openBreezyWeather");
       return opened ?? false;
-    } catch (_) {
+    } catch (e) {
+      _failed("openBreezyWeather", e);
       return false;
     }
   }
@@ -775,7 +811,8 @@ class FLauncherChannel {
     try {
       final bool? allowed = await _methodChannel.invokeMethod<bool>("checkInstallPermission");
       return allowed ?? false;
-    } catch (_) {
+    } catch (e) {
+      _failed("checkInstallPermission", e);
       return false;
     }
   }
@@ -784,7 +821,8 @@ class FLauncherChannel {
     try {
       final bool? success = await _methodChannel.invokeMethod<bool>("requestInstallPermission");
       return success ?? false;
-    } catch (_) {
+    } catch (e) {
+      _failed("requestInstallPermission", e);
       return false;
     }
   }
@@ -793,7 +831,8 @@ class FLauncherChannel {
     try {
       final bool? success = await _methodChannel.invokeMethod<bool>("installApk", {"path": path});
       return success ?? false;
-    } catch (_) {
+    } catch (e) {
+      _failed("installApk", e);
       return false;
     }
   }
@@ -810,7 +849,8 @@ class FLauncherChannel {
   Future<void> setWallpaperState(Map<String, Object?> state) async {
     try {
       await _methodChannel.invokeMethod("setWallpaperState", state);
-    } catch (_) {
+    } catch (e) {
+      _failed("setWallpaperState", e);
       // No Android side (tests): nobody to tell
     }
   }

@@ -5,6 +5,7 @@ import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/widgets/focusable_tap.dart';
 import 'package:flauncher/widgets/title_pill.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -31,7 +32,8 @@ String? weatherWarningText(AppLocalizations localizations, WeatherData weather) 
 String _weekday(String locale, DateTime date) {
   try {
     return DateFormat.E(locale).format(date);
-  } catch (_) {
+  } catch (err) {
+      noteFailure('weather_status_bar_widget', err);
     return DateFormat.E("en_US").format(date);
   }
 }

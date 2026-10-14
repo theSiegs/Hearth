@@ -25,6 +25,7 @@ import 'package:flauncher/widgets/focus_keyboard_listener.dart';
 import 'package:flauncher/widgets/focusable_tap.dart';
 import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
 import 'package:flauncher/widgets/title_pill.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -100,7 +101,8 @@ class _SetupChipState extends State<SetupChip> with WidgetsBindingObserver {
         _fix = flow.homeButtonNeedsFix(
             homeButtonOn: homeButtonOn, homeButtonSeenBefore: status["seenBefore"] == true);
       });
-    } catch (_) {
+    } catch (err) {
+        noteFailure('setup_chip', err);
       // No Android side (tests): nothing to say
     }
   }

@@ -21,6 +21,7 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/models/kids_profiles.dart';
 import 'package:flauncher/providers/companion_updater.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -82,7 +83,8 @@ class _KidProfilePageState extends State<KidProfilePage> {
       if (version == null) return;
       final latest = await _updater?.latestRelease(_tube);
       if (mounted) setState(() => _tubeLatest = latest);
-    } catch (_) {
+    } catch (err) {
+        noteFailure('kid_profile_page', err);
       // Offline, or no Android side: the version alone says enough
     }
   }
@@ -98,7 +100,7 @@ class _KidProfilePageState extends State<KidProfilePage> {
           _kid = kid;
         });
       }
-    } catch (_) {}
+    } catch (err) { noteFailure('kid_profile_page', err); }
   }
 
   /// Puts HearthTube on this profile (over Hearth's own adb, as Fix does, for this kid only).
@@ -110,7 +112,8 @@ class _KidProfilePageState extends State<KidProfilePage> {
     });
     try {
       await _channel.fixKidsProfiles(userId: _kid.userId).timeout(KidsProfilesPage.selfAdbLimit);
-    } catch (_) {
+    } catch (err) {
+        noteFailure('kid_profile_page', err);
       if (mounted) setState(() => _tubeError = "${l.kidsProfilesFailedBody} ${l.kidsProfilesFailedRetry}");
     }
     await _refresh();

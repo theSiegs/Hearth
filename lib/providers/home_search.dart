@@ -18,6 +18,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'search_service.dart';
+import 'package:flauncher/quiet_failure.dart';
 
 /// The home's search: what was asked, and the titles found, grouped by how they can be watched on this TV. The top
 /// bar, the results row (in Continue Watching's spot) and the "more results" grid all show it.
@@ -90,7 +91,8 @@ class HomeSearch extends ChangeNotifier {
         for (final (i, result) in results.indexed)
           if (details[i]?.adult != true) TitleMatch(result, details[i], Availability.of(result, details[i], _installed)),
       ];
-    } catch (_) {
+    } catch (err) {
+        noteFailure('home_search', err);
       if (generation != _generation) return;
       _failed = true;
     }

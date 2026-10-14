@@ -16,6 +16,7 @@
  */
 
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -77,7 +78,7 @@ class _CalendarsPageState extends State<CalendarsPage> {
     bool kids = false;
     try {
       kids = context.select<ProfileService, bool>((p) => p.isKidsProfile);
-    } catch (_) {}
+    } catch (err) { noteFailure('calendars_page', err); }
     final calendars = service?.calendars ?? const <TvCalendar>[];
     final access = service?.access ?? TvCalendarAccess.denied;
     final kidsFixPlace = "${l.settingsTitle} > ${l.profilesTitle} > ${l.kidsProfilesTitle}";

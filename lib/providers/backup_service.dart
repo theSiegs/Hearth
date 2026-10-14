@@ -8,6 +8,7 @@ import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -118,7 +119,8 @@ class BackupService {
   static Future<String> _realPath(File file) async {
     try {
       return await file.resolveSymbolicLinks();
-    } catch (_) {
+    } catch (err) {
+        noteFailure('backup_service', err);
       return file.path;
     }
   }

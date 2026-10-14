@@ -20,6 +20,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../flauncher_channel.dart';
+import 'package:flauncher/quiet_failure.dart';
 
 /// Whether Hearth may read the active profile's calendars on the TV.
 enum TvCalendarAccess {
@@ -339,7 +340,7 @@ class CalendarService extends ChangeNotifier {
     var granted = false;
     try {
       granted = await (_requestAccess?.call() ?? Future.value(false));
-    } catch (_) {}
+    } catch (err) { noteFailure('calendars', err); }
     await refresh(force: true);
     return granted || _access == TvCalendarAccess.granted;
   }
@@ -366,7 +367,8 @@ class CalendarService extends ChangeNotifier {
       _lastTryFailed = reading.access == TvCalendarAccess.waiting;
       if (reading.access == TvCalendarAccess.granted) _readAt = now;
       _set(reading.access, reading.calendars, reading.events);
-    } catch (_) {
+    } catch (err) {
+        noteFailure('calendars', err);
       _lastTryFailed = true;
       // Quietly: what was read last stays a while
       if (_readAt == null || now.difference(_readAt!) > keepStaleFor) {
