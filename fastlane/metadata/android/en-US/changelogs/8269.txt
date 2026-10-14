@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Home Assistant setup asks about sharing what HearthTube plays; lighter dock and glass.

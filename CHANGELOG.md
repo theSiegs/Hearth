@@ -3,6 +3,13 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.58 (pre-release)
+
+- Home Assistant's setup asks whether HearthTube may share the title and channel of what's playing (Settings > Home Assistant can change it later).
+- Include pre-releases (Settings > Check for Updates) starts on in a pre-release build and off in a release build.
+- The home's dock, frosted glass and background are Hearth's own and lighter on the TV; the connection indicator reads the network through a smaller, newer reader.
+- "Adult" instead of "grown-up" throughout; the docs are up to date and sorted by who reads them.
+
 ## 2026.10.57 (pre-release)
 
 - Approve switches from your phone (Settings > Profiles, in your own profile; needs Home Assistant and its phone app): when Google TV asks for your PIN to open your profile, your phone gets Allow and Deny, and Allow has Hearth enter your Google TV PIN. Typing the PIN with the remote always works too; a key pressed on the PIN screen withdraws the phone's request. Your Google TV PIN can be saved there or on the phone page.
