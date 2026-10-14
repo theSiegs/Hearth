@@ -60,7 +60,6 @@ shows what's off). Reinstalling or force-stopping Hearth switches its accessibil
 | `android/.../ProfileProvider.java` | The provider HearthTube reads ([contract](provider-contract.md)) |
 | `drift_schemas/` | Database schema history, for migration tests |
 | `tool/` | Developer tools (below) |
-| `docs/design/` | Design notes for the larger features |
 
 The Dart package is still called `flauncher`, after the project Hearth descends from.
 
@@ -83,8 +82,7 @@ switches, bedtime and Hearth in other profiles can be tested without a real fami
 .\tool\profilesim\profiles.ps1 -Serial emulator-5554 bedtime 10 on
 ```
 
-Other tools: `tool/kids_provision/` and `tool/block_uninstall/` (manual versions of Hearth on the kids profiles, for
-investigation), `tool/generate_icons.py` (app icon and TV banner).
+Other tools: `tool/generate_icons.py` (app icon and TV banner).
 
 ## Releasing
 

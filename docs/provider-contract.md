@@ -14,12 +14,12 @@ are never reused for a different meaning.
 
 - Authority: `com.thesiegs.hearth.profile` (debug builds: `com.thesiegs.hearth.debug.profile`). Hearth up to
   2026.10.x answered the same contract at `com.leanbitlab.ltvL.profile`; a client that still accepts it is harmless
-  (docs/design/app-id-change.md).
+.
 - `content://com.thesiegs.hearth.profile/active`: one row, the columns below.
 - `content://com.thesiegs.hearth.profile/wallpaper`: Hearth's current wallpaper picture, read-only
   (`FileNotFoundException` when Hearth shows a gradient instead). Since version 5 only for `com.thesiegs.hearthtube`
   signed with one of the certificates below (a picked wallpaper may be a family photo); anyone else gets
-  `FileNotFoundException`. How HearthTube shows Hearth's wallpaper: docs/design/wallpaper-sync.md.
+  `FileNotFoundException`. How HearthTube shows Hearth's wallpaper: docs/wallpaper-sync.md.
 - Observers registered on `/active` are notified whenever a column changes.
 
 **In the owner's user, and in profiles through Hearth's agent.** Android refuses provider access across users,

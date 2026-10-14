@@ -180,8 +180,8 @@ Details, and every Android permission Hearth asks for and why: [docs/privacy.md]
 - [User guide](docs/user-guide.md): setup and every feature
 - [Home Assistant](docs/home-assistant.md): notifications, dashboard, status webhook, phone approval
 - [Privacy](docs/privacy.md): what Hearth sends where, and its permissions
-- For contributors: [development](docs/development.md), the [provider contract](docs/provider-contract.md) HearthTube
-  reads, and [design notes](docs/README.md)
+- For contributors: [development](docs/development.md) and the [provider contract](docs/provider-contract.md)
+  HearthTube reads
 
 ## Credits
 

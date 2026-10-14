@@ -9,7 +9,7 @@ Hearth's side is done (provider contract version 5, docs/provider-contract.md). 
 ## What Hearth offers
 
 Authority `com.thesiegs.hearth.profile` (debug Hearth: `com.thesiegs.hearth.debug.profile`). Hearth up to 2026.10.x
-answered at `com.leanbitlab.ltvL.profile` (docs/design/app-id-change.md).
+answered at `com.leanbitlab.ltvL.profile`.
 
 - `content://<authority>/active`: the one-row cursor HearthTube already reads. New wallpaper columns:
 

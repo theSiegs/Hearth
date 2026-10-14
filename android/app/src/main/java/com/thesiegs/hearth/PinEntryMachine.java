@@ -1,8 +1,8 @@
 package com.thesiegs.hearth;
 
 /**
- * One attempt at typing a streaming app's profile PIN after Profile Pairing picked the profile (see
- * docs/design/streaming-pin-entry.md). Pure logic, fed by events from the app's {@link PinRecipe} and timers, so it's
+ * One attempt at typing a streaming app's profile PIN after Profile Pairing picked the profile.
+ * Pure logic, fed by events from the app's {@link PinRecipe} and timers, so it's
  * tested without a TV; the {@link Driver} does the typing and shows the outcome.
  *
  * The rules it keeps: never type on a PIN screen that doesn't match the recipe; confirm every digit before the next;

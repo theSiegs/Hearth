@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.function.Predicate;
 
 /**
- * Hearth's wallpaper as the provider shares it with HearthTube (docs/design/wallpaper-sync.md). Android picks the
+ * Hearth's wallpaper as the provider shares it with HearthTube (docs/wallpaper-sync.md). Android picks the
  * picture file itself, the way WallpaperService._updateWallpaper does, so it's right even when Flutter isn't running;
  * what only Flutter knows (how bright it is, the gradient's colors, the Bing photo's title and credit) comes from the
  * last state WallpaperService sent ({@link #save}).

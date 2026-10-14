@@ -29,7 +29,7 @@ import 'settings_service.dart';
 /// [look]: only "Pick a look for your home", for an adult's first visit to a profile after the flow has run.
 enum SetupMode { full, rerun, lostFix, look }
 
-/// The flow's optional cards, in the order they show (docs/design/first-run-setup.md). [introducedIn] is the flow
+/// The flow's optional cards, in the order they show. [introducedIn] is the flow
 /// version that added each, so a later update can offer only what's new: a card added later gets the next version
 /// here and in [SetupFlowService.currentVersion], and TVs that went through the flow before see it in the home's
 /// chip ("New in Hearth"), never as a takeover.

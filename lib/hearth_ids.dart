@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/// Hearth's app ids (see docs/design/app-id-change.md).
+/// Hearth's app ids.
 const String kHearthAppId = "com.thesiegs.hearth";
 
 /// The Java package of Hearth's services and receivers, in every build (release, debug).

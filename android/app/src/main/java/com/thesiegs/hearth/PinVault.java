@@ -24,8 +24,8 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 
 /**
- * The streaming apps' profile PINs the parent saved in Settings, so Profile Pairing can type them (see
- * docs/design/streaming-pin-entry.md). One per (app, app profile): each streaming service keeps its own.
+ * The streaming apps' profile PINs the parent saved in Settings, so Profile Pairing can type them.
+ * One per (app, app profile): each streaming service keeps its own.
  *
  * Encrypted with AES-256-GCM under a non-exportable Android Keystore key; stored in a prefs file of its own that no
  * backup, layout, provider or agent message includes. A PIN is never returned to Flutter (only its status), never

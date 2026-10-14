@@ -873,7 +873,7 @@ public class ProfilePairingService extends AccessibilityService {
         return false;
     }
 
-    // ---- Profile PIN entry (docs/design/streaming-pin-entry.md) ----
+    // ---- Profile PIN entry ----
 
     /** Hearth is typing a profile PIN: the remote's keys are held (Back and Home cancel). */
     static boolean isEnteringPin() {

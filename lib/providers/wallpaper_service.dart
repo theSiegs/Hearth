@@ -380,7 +380,7 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// What HearthTube gets of the wallpaper through Hearth's provider (ProfileProvider, HearthWallpaper.java;
-  /// docs/design/wallpaper-sync.md). Android picks the picture file itself; this adds what only Flutter knows.
+  /// docs/wallpaper-sync.md). Android picks the picture file itself; this adds what only Flutter knows.
   Map<String, Object?> get providerState {
     final gradient = this.gradient.gradient;
     final gradientBrightness = WallpaperService.gradientBrightness(gradient);

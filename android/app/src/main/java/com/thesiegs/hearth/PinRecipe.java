@@ -7,7 +7,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import java.util.function.Consumer;
 
 /**
- * How Hearth types the profile PIN in one streaming app (see docs/design/streaming-pin-entry.md): recognising the
+ * How Hearth types the profile PIN in one streaming app: recognising the
  * app's PIN screen and noticing when it changed, typing a digit and confirming it went in, and telling whether the
  * app took the PIN. Recipes come from research on the app's real PIN screen (research mode in ProfilePairingService,
  * digits masked), one per app, in {@link PinRecipes}; each entry gets a new instance, so a recipe may keep state.

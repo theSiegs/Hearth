@@ -315,7 +315,7 @@ class ProfilePairingAppPage extends StatefulWidget {
   /// In [app]: open with the selection on the first profile PIN (from Profile Pairing's "Change PIN").
   static const String focusPinsKey = "focusPins";
 
-  /// The PIN length every supported app uses so far (see docs/design/streaming-pin-entry.md).
+  /// The PIN length every supported app uses so far.
   static const int pinLength = 4;
 
   final Map<dynamic, dynamic> app;

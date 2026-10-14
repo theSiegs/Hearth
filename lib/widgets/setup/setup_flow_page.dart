@@ -85,7 +85,7 @@ enum SetupStepState { intro, waiting, done, notYet, stuck, confirmSkip }
 /// How the flow was closed: [openSettings] when the owner asked for Settings on the last screen.
 enum SetupFlowResult { closed, openSettings }
 
-/// Hearth's first-run setup (docs/design/first-run-setup.md): one full-screen flow over the home that walks through
+/// Hearth's first-run setup: one full-screen flow over the home that walks through
 /// what Hearth needs from Android, one decision per screen, and comes back to where it was after each trip to
 /// Android's settings. The order: Welcome, the essentials (the Home button, then the home app), the optional cards
 /// (each a Not now / Turn on choice, its steps only after Turn on), then Finish.

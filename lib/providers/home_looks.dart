@@ -19,7 +19,7 @@ import 'package:flauncher/gradients.dart';
 
 import 'settings_service.dart';
 
-/// The setup flow's ready-made looks for the home (docs/design/first-run-setup.md, F3): a card style, an accent, a
+/// The setup flow's ready-made looks for the home: a card style, an accent, a
 /// wallpaper and a dock in one choice. The one the owner picks is also the starting look for new adult profiles.
 enum HomeLook {
   /// Hearth's own: default cards, purple, the "Faraway River" gradient, a frosted dock.

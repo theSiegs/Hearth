@@ -17,7 +17,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 
 /**
- * A profile's own wallpaper for HearthTube in that profile's user (docs/design/wallpaper-sync.md). Hearth (owner's
+ * A profile's own wallpaper for HearthTube in that profile's user (docs/wallpaper-sync.md). Hearth (owner's
  * user) sends the wallpaper of the profile whose settings are in place to that profile's agent only, a picture as a
  * JPEG no bigger than the screen; the agent keeps it and its provider answers /active and /wallpaper with it, as
  * Hearth's own does.
