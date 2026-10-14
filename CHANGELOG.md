@@ -3,6 +3,15 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.55 (pre-release)
+
+- Streaming app PINs belong to the Google TV profile that saved them: another profile paired with the same app profile no longer gets that PIN typed. In a grown-up's profile, Hearth types it only when that profile has its own Google TV PIN. Saved PINs move to the profiles paired with them; the app asks for its PIN until the Google TV PIN is on.
+- After two PINs in a row that the app doesn't take, Hearth stops typing it until it's saved again. Changing a pairing that has a PIN needs the parent PIN and removes that PIN.
+- Settings > Profiles > Streaming app PINs has one switch that turns PIN typing off, and lists the last 20 entries (app, time, outcome; never a name or a PIN). Before the first PIN is saved, a parent reads what Hearth will do, including that the services' terms may not allow it.
+- Hearth doesn't type PINs in an app version listed in its repository as one its recipes don't handle (checked at most twice a day while a PIN is saved).
+- Hearth and its helpers in the kids' profiles prove to each other that they share a key, without sending it; no other app on the TV can pose as either.
+- Profile Pairing listens only to the app it's handling; its research mode ends by itself after 30 minutes. Logs show a stand-in instead of each person's name.
+
 ## 2026.10.54 (pre-release)
 
 - Profile button: the remote's profile button opens the profile chooser straight away, and holding it locks your profile (Google TV's PIN screen). Where there's nothing to lock (no Google TV PIN), a hold opens the chooser. It's set up once in Settings > Remote buttons, where it can be changed or restored to Google TV's own. Kids' profiles keep Google TV's own handling.
