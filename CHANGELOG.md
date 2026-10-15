@@ -3,6 +3,13 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.60 (pre-release)
+
+- Waking the TV can open Google TV's profile chooser instead of the PIN screen: Settings > Profiles > Choose a profile when the TV wakes (every time, or after some minutes asleep). A profile with a PIN asks for it before it opens. It is off until you turn it on, and kids profiles are left alone.
+- Disney+: a profile with a PIN is picked and its PIN screen is no longer taken for the profile picker, so the PIN can be typed.
+- The Home Assistant panel draws no list of who is where for a map card; a person's tile shows the map when it is focused.
+- The log says when Home Assistant took a phone-approval request.
+
 ## 2026.10.59 (pre-release)
 
 - **Hearth now needs Android 9 or newer.** A TV on an older Android won't be offered this update.

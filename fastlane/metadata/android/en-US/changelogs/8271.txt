@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Choose a profile when the TV wakes. Disney+ PIN profiles. No people list in the Home Assistant panel.
