@@ -27,6 +27,14 @@ public class ProfilePairingTilesTest {
     }
 
     @Test
+    public void disneysPinScreenAvatarIsNotATile() {
+        // The picker's tile label is a plain view; the PIN screen shows the same words on an image
+        assertEquals("Alex", ProfilePairingService.disneyTileName("android.view.View", "Access Alex's pin protected profile"));
+        assertEquals(null, ProfilePairingService.disneyTileName("android.widget.ImageView", "Access Alex's pin protected profile"));
+        assertEquals("Sam", ProfilePairingService.disneyTileName(null, "Access Sam's profile"));
+    }
+
+    @Test
     public void onlyAnotherGrownUpsAppsStartAgain() {
         // The other adult had it: it starts again at its picker
         assertTrue(GrownUpsApps.stops("user:0", "user:0:sam", 0));

@@ -811,8 +811,8 @@ public class ProfilePairingService extends AccessibilityService {
         switch (pkg) {
             case ProfilePairing.DISNEY:
                 if (desc != null) {
-                    Matcher m = DISNEY_TILE.matcher(desc.toString().trim());
-                    if (m.matches()) tiles.add(new Tile(m.group(1), node, clickableOf(node)));
+                    String name = disneyTileName(node.getClassName(), desc.toString().trim());
+                    if (name != null) tiles.add(new Tile(name, node, clickableOf(node)));
                 }
                 break;
             case ProfilePairing.PARAMOUNT:
@@ -839,6 +839,17 @@ public class ProfilePairingService extends AccessibilityService {
         for (int i = 0; i < node.getChildCount(); i++) {
             collect(pkg, node.getChild(i), tiles, pickerTitle, visited, depth + 1);
         }
+    }
+
+    /**
+     * The profile a Disney+ picker node names, or null. The picker's tiles are plain views; the PIN screen that follows
+     * a pick shows the profile's avatar as an image with the same label, which is not a tile (taken for one, the
+     * picker would seem to be still there and the pick would be given up on).
+     */
+    static String disneyTileName(CharSequence className, String label) {
+        if (className != null && className.toString().endsWith("ImageView")) return null;
+        Matcher m = DISNEY_TILE.matcher(label);
+        return m.matches() ? m.group(1) : null;
     }
 
     /** The first content description or text under a node. */
