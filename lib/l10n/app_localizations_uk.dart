@@ -2065,7 +2065,7 @@ class AppLocalizationsUk extends AppLocalizations {
   String get profileLockNow => 'Заблокувати профіль';
 
   @override
-  String get profileLockOnSleep => 'Блокувати, коли телевізор засинає';
+  String get profileLockOnSleep => 'Вибір профілю під час увімкнення ТВ';
 
   @override
   String get profileLockEveryTime => 'Щоразу';
@@ -2076,7 +2076,7 @@ class AppLocalizationsUk extends AppLocalizations {
   }
 
   @override
-  String get profileLockNeedsGoogleLock => 'Використовує блокування профілю Google TV: увімкніть його для свого облікового запису в Налаштуваннях Google TV → Облікові записи та вхід → ваш обліковий запис → Блокування профілю.';
+  String get profileLockNeedsGoogleLock => 'Відкриває вибір профілю Google TV під час увімкнення ТВ, тож профіль із PIN-кодом запитає його перед відкриттям. Дитячі профілі не зачіпаються.';
 
   @override
   String get aboutWallpaperPhoto => 'ФОТО НА ТЛІ';

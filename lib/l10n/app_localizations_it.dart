@@ -2052,7 +2052,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get profileLockNow => 'Blocca profilo';
 
   @override
-  String get profileLockOnSleep => 'Blocca quando la TV va in standby';
+  String get profileLockOnSleep => 'Scegli un profilo quando la TV si riaccende';
 
   @override
   String get profileLockEveryTime => 'Ogni volta';
@@ -2063,7 +2063,7 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get profileLockNeedsGoogleLock => 'Usa il blocco del profilo di Google TV: attivalo per il tuo account in Impostazioni di Google TV → Account e accesso → il tuo account → Blocco profilo.';
+  String get profileLockNeedsGoogleLock => 'Apre il selettore profili di Google TV quando la TV si riaccende, così un profilo con PIN lo chiede prima di aprirsi. I profili per bambini non sono interessati.';
 
   @override
   String get aboutWallpaperPhoto => 'FOTO DI SFONDO';

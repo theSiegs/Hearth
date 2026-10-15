@@ -2088,7 +2088,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileLockNow => 'قفل الملف الشخصي';
 
   @override
-  String get profileLockOnSleep => 'القفل عند سكون التلفزيون';
+  String get profileLockOnSleep => 'اختيار الملف الشخصي عند تشغيل التلفزيون';
 
   @override
   String get profileLockEveryTime => 'في كل مرة';
@@ -2099,7 +2099,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get profileLockNeedsGoogleLock => 'يستخدم قفل الملف الشخصي في Google TV: فعّله لحسابك من إعدادات Google TV ← الحسابات وتسجيل الدخول ← حسابك ← قفل الملف الشخصي.';
+  String get profileLockNeedsGoogleLock => 'يفتح محدد الملفات الشخصية في Google TV عند تشغيل التلفزيون، فيطلب الملف المحمي برمز PIN الرمز قبل أن يُفتح. لا تتأثر ملفات الأطفال.';
 
   @override
   String get aboutWallpaperPhoto => 'صورة الخلفية';

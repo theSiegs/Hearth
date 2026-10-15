@@ -2050,7 +2050,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get profileLockNow => 'Profil sperren';
 
   @override
-  String get profileLockOnSleep => 'Sperren, wenn der Fernseher schläft';
+  String get profileLockOnSleep => 'Profil beim Aufwecken des Fernsehers wählen';
 
   @override
   String get profileLockEveryTime => 'Jedes Mal';
@@ -2061,7 +2061,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get profileLockNeedsGoogleLock => 'Nutzt die Profilsperre von Google TV: Schalte sie für dein Konto ein unter Google TV-Einstellungen → Konten und Anmeldung → dein Konto → Profilsperre.';
+  String get profileLockNeedsGoogleLock => 'Öffnet beim Aufwecken die Profilauswahl von Google TV, sodass ein Profil mit PIN diese vor dem Öffnen abfragt. Kinderprofile bleiben unberührt.';
 
   @override
   String get aboutWallpaperPhoto => 'HINTERGRUNDFOTO';

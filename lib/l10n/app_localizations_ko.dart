@@ -2041,7 +2041,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get profileLockNow => '프로필 잠금';
 
   @override
-  String get profileLockOnSleep => 'TV가 절전 모드가 되면 잠그기';
+  String get profileLockOnSleep => 'TV가 켜질 때 프로필 선택';
 
   @override
   String get profileLockEveryTime => '매번';
@@ -2052,7 +2052,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get profileLockNeedsGoogleLock => 'Google TV 자체의 프로필 잠금을 사용합니다. Google TV 설정 → 계정 및 로그인 → 내 계정 → 프로필 잠금에서 켜세요.';
+  String get profileLockNeedsGoogleLock => 'TV가 켜질 때 Google TV의 프로필 선택 화면을 열어, PIN이 있는 프로필은 열리기 전에 PIN을 요구합니다. 어린이 프로필은 해당되지 않습니다.';
 
   @override
   String get aboutWallpaperPhoto => '배경화면 사진';

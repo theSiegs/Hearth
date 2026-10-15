@@ -13,8 +13,10 @@ import android.util.Log;
  * back meanwhile). It needs Google TV's profile lock on for the profile (Settings > Accounts & Sign In > the account >
  * Profile lock); without one there's nothing to ask.
  *
- * Asked for from a remote button (ButtonMapper "lock"), holding the profile button, Settings > Profiles, and on
- * waking after the TV slept a while ("lock when the TV sleeps").
+ * Asked for from a remote button (ButtonMapper "lock"), holding the profile button and Settings > Profiles.
+ *
+ * Waking after the TV slept a while (Settings > Profiles > the wake choice) opens Google TV's profile chooser
+ * instead: whoever turned the TV on picks who is watching, and a profile with a PIN asks for it before it opens.
  */
 final class ProfileLock {
     private static final String TAG = "HearthProfileLock";
@@ -65,16 +67,32 @@ final class ProfileLock {
         sScreenOffAt = SystemClock.elapsedRealtime();
     }
 
-    /** The TV woke: locks if it slept at least the chosen time. */
+    /** Whether a wake at {@code now} after the screen went off at {@code offAt} (0: unknown) is due, for {@code minutes}. */
+    static boolean due(int minutes, long offAt, long now) {
+        if (offAt == 0 || minutes == OFF) return false;
+        return now - offAt >= minutes * 60_000L;
+    }
+
+    /** The TV woke: opens the profile chooser if it slept at least the chosen time. */
     static void onScreenOn(Context context) {
         long offAt = sScreenOffAt;
         sScreenOffAt = 0;
-        int minutes = lockOnSleepMinutes(context);
-        if (offAt == 0 || minutes == OFF) return;
-        long slept = SystemClock.elapsedRealtime() - offAt;
-        if (slept >= minutes * 60_000L) {
-            Log.i(TAG, "Woke after " + slept / 1000 + " s asleep: locking");
-            lockNow(context);
+        long now = SystemClock.elapsedRealtime();
+        if (!due(lockOnSleepMinutes(context), offAt, now)) return;
+        Log.i(TAG, "Woke after " + (now - offAt) / 1000 + " s asleep: opening the profile chooser");
+        showChooser(context);
+    }
+
+    /** Google TV's profile chooser. Not in a kids profile, which has its own lock and bedtime. */
+    static boolean showChooser(Context context) {
+        if (ProfileUsers.isKids(context)) return false;
+        try {
+            context.startActivity(LauncherAccessibilityService.profileChooserIntent()
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "Couldn't open the profile chooser: " + e.getClass().getSimpleName());
+            return false;
         }
     }
 }

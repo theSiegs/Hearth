@@ -2052,7 +2052,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileLockNow => 'Verrouiller le profil';
 
   @override
-  String get profileLockOnSleep => 'Verrouiller quand le téléviseur se met en veille';
+  String get profileLockOnSleep => 'Choisir un profil au réveil du téléviseur';
 
   @override
   String get profileLockEveryTime => 'À chaque fois';
@@ -2063,7 +2063,7 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get profileLockNeedsGoogleLock => 'Utilise le verrouillage de profil de Google TV : activez-le pour votre compte dans Paramètres de Google TV → Comptes et connexion → votre compte → Verrouillage du profil.';
+  String get profileLockNeedsGoogleLock => 'Ouvre le sélecteur de profils de Google TV au réveil du téléviseur : un profil protégé par un code PIN le demande avant de s\'ouvrir. Les profils enfants ne sont pas concernés.';
 
   @override
   String get aboutWallpaperPhoto => 'PHOTO DU FOND D\'ÉCRAN';

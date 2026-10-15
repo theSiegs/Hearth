@@ -3620,7 +3620,7 @@ abstract class AppLocalizations {
   /// Settings > Profiles: locking an adult profile with Google TV's profile lock
   ///
   /// In en, this message translates to:
-  /// **'Lock when the TV sleeps'**
+  /// **'Choose a profile when the TV wakes'**
   String get profileLockOnSleep;
 
   /// Settings > Profiles: locking an adult profile with Google TV's profile lock
@@ -3638,7 +3638,7 @@ abstract class AppLocalizations {
   /// Settings > Profiles: locking an adult profile with Google TV's profile lock
   ///
   /// In en, this message translates to:
-  /// **'Uses Google TV\'s own profile lock: turn it on for your account in Google TV Settings → Accounts & Sign In → your account → Profile lock.'**
+  /// **'Opens Google TV\'s profile chooser when the TV wakes, so a profile with a PIN asks for it before it opens. Kids profiles are left alone.'**
   String get profileLockNeedsGoogleLock;
 
   /// About: heading over the Bing photo of the day's title and credit (shown only while it is the wallpaper)

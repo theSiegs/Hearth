@@ -2050,7 +2050,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get profileLockNow => 'प्रोफ़ाइल लॉक करें';
 
   @override
-  String get profileLockOnSleep => 'टीवी के स्लीप होने पर लॉक करें';
+  String get profileLockOnSleep => 'टीवी चालू होने पर प्रोफ़ाइल चुनें';
 
   @override
   String get profileLockEveryTime => 'हर बार';
@@ -2061,7 +2061,7 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get profileLockNeedsGoogleLock => 'Google TV का अपना प्रोफ़ाइल लॉक इस्तेमाल करता है: Google TV सेटिंग → खाते और साइन इन → आपका खाता → प्रोफ़ाइल लॉक में इसे अपने खाते के लिए चालू करें।';
+  String get profileLockNeedsGoogleLock => 'टीवी चालू होने पर Google TV का प्रोफ़ाइल चयनकर्ता खुलता है, ताकि PIN वाली प्रोफ़ाइल खुलने से पहले PIN माँगे। बच्चों की प्रोफ़ाइल पर इसका असर नहीं पड़ता।';
 
   @override
   String get aboutWallpaperPhoto => 'वॉलपेपर फ़ोटो';

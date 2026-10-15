@@ -115,7 +115,9 @@ profile's PIN to come back. Turn the PIN on for your account in Google TV first.
   once in **Settings → TV & power → Remote → Remote buttons**, where you can change it, or restore it to Google TV's
   own (the chooser only);
 - map another remote button to "Lock Profile";
-- set **Lock when the TV sleeps** (every time, or after some minutes asleep).
+- set **Choose a profile when the TV wakes** (every time, or after some minutes asleep): the TV opens Google TV's
+  profile chooser when it wakes, and a profile with a PIN asks for it before it opens. It is off until you turn it
+  on, and kids profiles are left alone.
 
 **Approve switches from my phone** (**Settings → Profiles**, in your own profile; needs Home Assistant and its phone
 app). When Google TV asks for your PIN to open your profile, your phone gets a notification with Allow and Deny.

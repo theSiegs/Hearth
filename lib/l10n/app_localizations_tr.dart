@@ -2041,7 +2041,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get profileLockNow => 'Profili kilitle';
 
   @override
-  String get profileLockOnSleep => 'TV uykuya geçtiğinde kilitle';
+  String get profileLockOnSleep => 'TV uyandığında profil seç';
 
   @override
   String get profileLockEveryTime => 'Her seferinde';
@@ -2052,7 +2052,7 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get profileLockNeedsGoogleLock => 'Google TV\'nin kendi profil kilidini kullanır: Google TV Ayarları → Hesaplar ve Oturum Açma → hesabınız → Profil kilidi\'nden hesabınız için açın.';
+  String get profileLockNeedsGoogleLock => 'TV uyandığında Google TV\'nin profil seçicisini açar; PIN\'li bir profil açılmadan önce PIN ister. Çocuk profillerine dokunulmaz.';
 
   @override
   String get aboutWallpaperPhoto => 'DUVAR KAĞIDI FOTOĞRAFI';

@@ -2041,7 +2041,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileLockNow => '锁定个人资料';
 
   @override
-  String get profileLockOnSleep => '电视休眠时锁定';
+  String get profileLockOnSleep => '电视唤醒时选择个人资料';
 
   @override
   String get profileLockEveryTime => '每次';
@@ -2052,7 +2052,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get profileLockNeedsGoogleLock => '使用 Google TV 自带的个人资料锁：在 Google TV 设置 → 账号与登录 → 你的账号 → 个人资料锁 中为你的账号开启。';
+  String get profileLockNeedsGoogleLock => '电视唤醒时打开 Google TV 的个人资料选择页，设有 PIN 的资料会在打开前要求输入 PIN。儿童资料不受影响。';
 
   @override
   String get aboutWallpaperPhoto => '壁纸照片';
