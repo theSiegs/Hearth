@@ -352,7 +352,8 @@ class HaMarkdownCard extends HaCard {
   bool get templated => content.contains("{{") || content.contains("{%");
 }
 
-/// A map: the panel lists its entities and where they are instead.
+/// A map: the panel draws nothing for it. A person's tile shows the map when it is focused, so a list of who is where
+/// would only repeat that.
 class HaMapCard extends HaCard {
   final List<String> mapEntities;
   final String? title;

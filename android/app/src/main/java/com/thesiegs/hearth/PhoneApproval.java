@@ -199,7 +199,9 @@ final class PhoneApproval {
                 }
             }, events -> {
                 request.events = events;
-                if (!sendRequest(context, service, request)) {
+                if (sendRequest(context, service, request)) {
+                    Log.i(TAG, "Home Assistant took the request for " + LogNames.of(service));
+                } else {
                     Log.i(TAG, "Couldn't send the request to the phone");
                     events.close();
                 }

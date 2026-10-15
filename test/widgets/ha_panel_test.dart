@@ -210,7 +210,7 @@ void main() {
     expect(find.byType(HaPanel), findsNothing);
   });
 
-  testWidgets("Markdown (rendered by Home Assistant) and a map as a list", (tester) async {
+  testWidgets("Markdown (rendered by Home Assistant); a map card draws no list of people", (tester) async {
     const template = "{% if true %}| Kid | Today |\n|---|---:|\n| Alex | 25 min |{% endif %}";
     final service = FakeHaPanelService(
         fakeLayout: layoutOf([
@@ -240,8 +240,9 @@ void main() {
     await press(tester, LogicalKeyboardKey.select);
     expect(find.byType(Table), findsOneWidget);
     expect(find.text("25 min", findRichText: true), findsOneWidget);
-    expect(find.text("person.alex"), findsOneWidget);
-    expect(find.text("School"), findsOneWidget);
+    // A person's tile shows the map when focused; a list of who is where would only repeat it
+    expect(find.text("person.alex"), findsNothing);
+    expect(find.text("School"), findsNothing);
     // No row for Home Assistant's own dashboard: the panel is the dashboard
     expect(find.text("Open the full dashboard"), findsNothing);
   });

@@ -316,8 +316,7 @@ class _HaPanelState extends State<HaPanel> {
         HaHeadingCard() => _heading(context, card),
         HaTileCard() => HaTile(card: card, service: widget.service, format: format),
         HaMarkdownCard() => _markdown(context, card),
-        HaMapCard() => _map(context, card, format),
-        HaUnsupportedCard() => const SizedBox.shrink(),
+        HaMapCard() || HaUnsupportedCard() => const SizedBox.shrink(),
       };
 
   /// A markdown card: one stop, so the list scrolls through it.
@@ -346,53 +345,6 @@ class _HaPanelState extends State<HaPanel> {
     );
   }
 
-  /// A map card as a list: who (or what) is where.
-  Widget _map(BuildContext context, HaMapCard card, HaFormat format) {
-    final text = Theme.of(context).textTheme;
-    return FocusableTap(
-      onPressed: () {},
-      builder: (context, focused) => AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: haFocusDecoration(context, focused),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (card.title != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(card.title!, style: text.titleSmall!.copyWith(fontWeight: FontWeight.w700)),
-              ),
-            for (final id in card.mapEntities)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Icon(Icons.place_outlined,
-                        size: 18, color: HaTileColors.active(widget.service.entity(id)) ?? Colors.white60),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(widget.service.entity(id)?.name ?? id,
-                          style: text.bodyMedium!.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(format.tileState(widget.service.entity(id), const []),
-                          style: text.bodyMedium!.copyWith(color: Colors.white70),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.end),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _heading(BuildContext context, HaHeadingCard card) {
     final text = Theme.of(context).textTheme;
@@ -464,7 +416,8 @@ class HaPanelRows {
       if (!HaCondition.all(section.visibility, context)) continue;
       HaPanelRow? open;
       for (final (ci, card) in section.cards.indexed) {
-        if (card is HaUnsupportedCard || !HaCondition.all(card.visibility, context)) continue;
+        // A map card draws nothing: a person's tile shows the map when it is focused
+        if (card is HaUnsupportedCard || card is HaMapCard || !HaCondition.all(card.visibility, context)) continue;
         if (card.half && card is! HaHeadingCard) {
           if (open != null) {
             rows[rows.length - 1] = HaPanelRow(open.key, [open.cards.single, card]);
