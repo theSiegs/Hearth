@@ -54,6 +54,10 @@ final class KidsProfiles {
     private static final String KEEP = "keep";
     /** "auto|serial|package": Hearth put that app on that kids profile by itself once already. */
     private static final String AUTO_PREFIX = "auto|";
+    /** "repair|serial": when Hearth last re-checked that kids profile's copies by itself (epoch milliseconds). */
+    private static final String REPAIR_PREFIX = "repair|";
+    /** How long Hearth leaves a kids profile's copies alone before it re-checks them by itself. */
+    static final long REPAIR_EVERY_MS = TimeUnit.HOURS.toMillis(24);
     /** How long a parent's action may wait on adb, "Allow debugging?" included (the setup flow waits as long). */
     private static final int PARENT_TIMEOUT_MS = 120_000;
     /** How long one read may take otherwise: the commands answer in a second or two. */
@@ -271,14 +275,26 @@ final class KidsProfiles {
 
     private static void autoFixNow(Context context) {
         SharedPreferences prefs = prefs(context);
-        Map<Kid, List<String>> fixes = autoFixes(prefs.getBoolean(KEEP, false),
-                SelfAdb.isTrusted(context), list(context),
-                hearthTubeOnOwner(context), prefs.getAll().keySet());
+        boolean keep = prefs.getBoolean(KEEP, false);
+        boolean trusted = SelfAdb.isTrusted(context);
+        List<Kid> kids = list(context);
+        boolean tubeOnOwner = hearthTubeOnOwner(context);
+        long now = System.currentTimeMillis();
+        Map<Kid, List<String>> fixes = autoFixes(keep, trusted, kids, tubeOnOwner, prefs.getAll().keySet());
+        Map<Kid, List<String>> repairs = autoRepairs(keep, trusted, kids, tubeOnOwner, now, repairedAt(prefs));
         // Not the Developer options switch either (see state): a refused connection runs nothing, and the next switch
         // tries again
-        if (fixes.isEmpty()) return;
+        if (fixes.isEmpty() && repairs.isEmpty()) return;
+        // The copies that are missing, and the ones that are there (addToKids only checks those: the keep flag, and
+        // what Hearth may read)
+        Map<Kid, List<String>> work = new LinkedHashMap<>(fixes);
+        for (Map.Entry<Kid, List<String>> repair : repairs.entrySet()) {
+            List<String> both = new ArrayList<>(work.getOrDefault(repair.getKey(), new ArrayList<>()));
+            both.addAll(repair.getValue());
+            work.put(repair.getKey(), both);
+        }
         Map<Integer, List<String>> packages = new LinkedHashMap<>();
-        for (Map.Entry<Kid, List<String>> fix : fixes.entrySet()) packages.put(fix.getKey().userId, fix.getValue());
+        for (Map.Entry<Kid, List<String>> job : work.entrySet()) packages.put(job.getKey().userId, job.getValue());
         boolean tried = true;
         try (SelfAdb shell = SelfAdb.open(context, QUIET_TIMEOUT_MS)) {
             List<String> log = ProfileAppAccess.addToKids(context.getPackageCodePath(), shell, packages);
@@ -295,7 +311,51 @@ final class KidsProfiles {
         for (Map.Entry<Kid, List<String>> fix : fixes.entrySet()) {
             for (String pkg : fix.getValue()) editor.putBoolean(autoKey(fix.getKey().serial, pkg), true);
         }
+        for (Kid kid : repairs.keySet()) editor.putLong(repairKey(kid.serial), now);
         editor.apply();
+    }
+
+    /**
+     * What Hearth re-checks by itself on kids profiles that already have its apps: the keep flag (set again where it
+     * went missing, so Google TV's launcher can't remove the copy) and, for Hearth, what it may read there (Watch
+     * Next, the calendars), which the copies can't grant themselves now that they hold no adb key. Only on the same
+     * terms as {@link #autoFixes} (a parent set Hearth up on the kids profiles, the TV trusts Hearth's key, the
+     * profile isn't running), and at most once every {@link #REPAIR_EVERY_MS} for each profile.
+     *
+     * @param repairedAt when each kids profile (by serial) was last re-checked, epoch milliseconds
+     */
+    static Map<Kid, List<String>> autoRepairs(boolean keep, boolean trusted, List<Kid> kids, boolean hearthTubeOnOwner,
+            long now, Map<Long, Long> repairedAt) {
+        Map<Kid, List<String>> repairs = new LinkedHashMap<>();
+        if (!keep || !trusted) return repairs;
+        for (Kid kid : kids) {
+            if (kid.running) continue;
+            Long last = repairedAt.get(kid.serial);
+            if (last != null && now - last < REPAIR_EVERY_MS) continue;
+            List<String> there = new ArrayList<>();
+            if (kid.hearth) there.add(ProfileAppAccess.HEARTH);
+            if (hearthTubeOnOwner && kid.hearthTube) there.add(ProfileAppAccess.HEARTHTUBE);
+            if (!there.isEmpty()) repairs.put(kid, there);
+        }
+        return repairs;
+    }
+
+    static String repairKey(long serial) {
+        return REPAIR_PREFIX + serial;
+    }
+
+    /** When each kids profile (by serial) was last re-checked, from the saved settings. */
+    private static Map<Long, Long> repairedAt(SharedPreferences prefs) {
+        Map<Long, Long> at = new HashMap<>();
+        for (Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
+            if (!entry.getKey().startsWith(REPAIR_PREFIX) || !(entry.getValue() instanceof Long)) continue;
+            try {
+                at.put(Long.parseLong(entry.getKey().substring(REPAIR_PREFIX.length())), (Long) entry.getValue());
+            } catch (NumberFormatException ignored) {
+                // Not one of ours
+            }
+        }
+        return at;
     }
 
     /**

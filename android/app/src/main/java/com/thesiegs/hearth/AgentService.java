@@ -4,7 +4,6 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
-import android.app.admin.DevicePolicyManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -20,7 +19,6 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Process;
-import android.os.UserHandle;
 import android.os.UserManager;
 import android.provider.CalendarContract;
 import android.util.Log;
@@ -30,7 +28,6 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -45,8 +42,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Hearth as an agent: when Hearth runs in another Google TV profile's user (one a parent approved Hearth for), it
@@ -69,8 +64,6 @@ public class AgentService extends Service {
     /** The days of events the agent reports: from yesterday, so the home's week has all it needs. */
     private static final int CALENDAR_DAYS = 9;
     private static final long PIN_REPLY_SECONDS = 3;
-    // About a minute of owner-Hearth being unreachable before the agent checks whether it was actually uninstalled.
-    private static final int SELF_CLEAN_AFTER_FAILURES = 12;
 
     private static final AtomicLong sPinIds = new AtomicLong();
     private static final Map<Long, BlockingQueue<JSONObject>> sPinReplies = new ConcurrentHashMap<>();
@@ -82,8 +75,6 @@ public class AgentService extends Service {
     private HandlerThread mThread;
     private Handler mHandler;
     private volatile boolean mRunning;
-    private int mFailedConnects = 0;
-    private volatile boolean mSelfCleaned = false;
     private volatile PrintWriter mOut;
     private volatile Socket mSocket;
     private volatile long mSerial = ProfileUsers.UNKNOWN;
@@ -342,14 +333,8 @@ public class AgentService extends Service {
         while (mRunning) {
             String key = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null);
             if (key != null) {
-                boolean connected = session(serial, key);
+                session(serial, key);
                 if (!mRunning) return;
-                if (connected) {
-                    mFailedConnects = 0;
-                } else {
-                    mFailedConnects++;
-                    maybeSelfClean();
-                }
             }
             synchronized (this) {
                 if (!mRunning) return;
@@ -387,7 +372,6 @@ public class AgentService extends Service {
             }
             out.println(new JSONObject().put("type", "auth")
                     .put("proof", AgentAuth.proof(key, AgentAuth.AGENT, agentNonce, hubNonce)).toString());
-            mSessionNonces = new String[]{key, agentNonce, hubNonce};
             line = in.readLine();
             JSONObject reply = line != null ? new JSONObject(line) : new JSONObject();
             if (!"welcome".equals(reply.optString("type"))) {
@@ -399,14 +383,11 @@ public class AgentService extends Service {
             mOut = out;
             connected = true;
             onConnectionChanged(true);
-            mHandler.post(this::grantWatchNextAccess);
-            mHandler.post(this::grantCalendarAccess);
             mHandler.post(mSendWatchNext);
             mHandler.post(() -> {
                 mLastCalendar = null;
                 mSendCalendar.run();
             });
-            mHandler.post(this::retireOldAdmin);
             mHandler.postDelayed(mPing, PING_MS);
             while ((line = in.readLine()) != null) onMessage(new JSONObject(line));
         } catch (Exception e) {
@@ -458,11 +439,9 @@ public class AgentService extends Service {
                     mSendCalendar.run();
                 });
                 break;
-            case "adbKey":
-                openSharedKey(message.optString("sealed"));
-                mHandler.post(this::grantWatchNextAccess);
-                mHandler.post(this::grantCalendarAccess);
-                mHandler.post(this::retireOldAdmin);
+            case "forgetAdbKey":
+                // Hearth no longer shares its adb key with the profiles' copies: delete the one an older version sent
+                forgetSharedKey();
                 break;
             default:
                 break;
@@ -488,8 +467,6 @@ public class AgentService extends Service {
 
     /** How many entries the agent last sent (for its log); -1 before the first. */
     private int mWatchNextSent = -1;
-    /** The agent has tried to let itself read Watch Next, since it started. */
-    private boolean mTriedWatchNextGrant;
 
     private final Runnable mSendWatchNext = () -> {
         JSONArray rows = new JSONArray();
@@ -506,34 +483,8 @@ public class AgentService extends Service {
         return checkSelfPermission(ProfileAppAccess.READ_TV_LISTINGS) == PackageManager.PERMISSION_GRANTED;
     }
 
-    /**
-     * Lets this copy read its profile's Watch Next, if it can't: Android's TV provider shows an app without
-     * READ_TV_LISTINGS only the entries it wrote itself, so this profile's Continue Watching would stay empty. A copy
-     * put on a kids profile before Hearth granted it there gets it here, through the shell, with the key
-     * owner-Hearth shared (a runtime permission, for this user only). Once per start: a parent's Fix grants it too.
-     */
-    private void grantWatchNextAccess() {
-        if (mTriedWatchNextGrant || canReadWatchNext()) return;
-        if (!new File(new File(getFilesDir(), "selfadb"), "adbkey").exists()) return; // no shell yet: next connect
-        int me = userIdSelf();
-        if (me <= 0) return;
-        mTriedWatchNextGrant = true;
-        try (SelfAdb shell = SelfAdb.open(this)) {
-            String out = shell.run(ProfileAppAccess.grantWatchNextCommand(getPackageName(), me));
-            if (out != null && !out.trim().isEmpty()) Log.i(TAG, "Watch Next grant said: " + out.trim());
-        } catch (Exception e) {
-            Log.i(TAG, "Couldn't let Hearth read Watch Next here: " + e.getMessage());
-        }
-        if (canReadWatchNext()) {
-            Log.i(TAG, "Hearth may read Watch Next in user " + me + " now");
-            mHandler.post(mSendWatchNext);
-        }
-    }
-
     /** What the agent last sent about the calendars (null: send the next reading whatever it is). */
     private String mLastCalendar;
-    /** The agent has tried to let itself read the calendars, since it started. */
-    private boolean mTriedCalendarGrant;
 
     /**
      * Sends Hearth this user's Google calendars and their events from yesterday on (TvCalendars' maps), when they
@@ -584,30 +535,6 @@ public class AgentService extends Service {
         }
     };
 
-    /**
-     * Lets this copy read its profile's calendars, if it can't (a runtime permission, for this user only, which a
-     * copy put here by install-existing doesn't get): through the shell, with the key owner-Hearth shared, as for
-     * Watch Next. Once per start: a parent's Fix grants it too.
-     */
-    private void grantCalendarAccess() {
-        if (mTriedCalendarGrant || TvCalendars.canRead(this)) return;
-        if (!new File(new File(getFilesDir(), "selfadb"), "adbkey").exists()) return; // no shell yet: next connect
-        int me = userIdSelf();
-        if (me <= 0) return;
-        mTriedCalendarGrant = true;
-        try (SelfAdb shell = SelfAdb.open(this)) {
-            String out = shell.run(ProfileAppAccess.grantCalendarCommand(getPackageName(), me));
-            if (out != null && !out.trim().isEmpty()) Log.i(TAG, "Calendar grant said: " + out.trim());
-        } catch (Exception e) {
-            Log.i(TAG, "Couldn't let Hearth read the calendars here: " + e.getMessage());
-        }
-        if (TvCalendars.canRead(this)) {
-            Log.i(TAG, "Hearth may read the calendars in user " + me + " now");
-            mLastCalendar = null;
-            mHandler.post(mSendCalendar);
-        }
-    }
-
     private PlayingClock mPlaying;
     /** Starts counting once notification access is there, and hands over what's played so far. */
     private final Runnable mPlayingTick = new Runnable() {
@@ -626,103 +553,25 @@ public class AgentService extends Service {
         }
     };
 
-    /** The agent's key and this connection's nonces, for opening what Hearth seals for it (AgentAuth.seal). */
-    private volatile String[] mSessionNonces;
-
+    /**
+     * Whether this copy still holds owner-Hearth's adb key, which Hearth up to 2026.10.60 handed to the profiles'
+     * copies. Hearth no longer does; it tells a copy that reports having it to forget it ({@link #forgetSharedKey}).
+     */
     private boolean hasSharedKey() {
         return new File(new File(getFilesDir(), "selfadb"), "adbkey").exists();
     }
 
-    private void openSharedKey(String sealed) {
-        String[] session = mSessionNonces;
-        if (session == null || sealed == null || sealed.isEmpty()) return;
-        try {
-            JSONObject material = new JSONObject(AgentAuth.open(session[0], session[1], session[2], sealed));
-            storeSharedKey(material.optString("priv"), material.optString("pub"));
-        } catch (Exception e) {
-            Log.w(TAG, "Couldn't open the shared key: " + e.getClass().getSimpleName());
+    /** Deletes the adb key an older Hearth shared with this copy. Nothing here uses it any more. */
+    private void forgetSharedKey() {
+        File dir = new File(getFilesDir(), "selfadb");
+        File[] files = dir.listFiles();
+        if (files == null) return;
+        boolean all = true;
+        for (File file : files) {
+            if (!file.delete()) all = false;
         }
-    }
-
-    /** Stores owner-Hearth's shared adb key (received over the channel) so the agent can self-adb if Hearth is gone. */
-    private void storeSharedKey(String priv, String pub) {
-        if (priv == null || priv.isEmpty() || pub == null || pub.isEmpty()) return;
-        try {
-            File dir = new File(getFilesDir(), "selfadb");
-            if (!dir.exists() && !dir.mkdirs()) return;
-            File pk = new File(dir, "adbkey");
-            if (pk.exists()) return; // write once
-            write(pk, priv);
-            write(new File(dir, "adbkey.pub"), pub);
-        } catch (Exception e) {
-            Log.w(TAG, "couldn't store the shared key: " + e);
-        }
-    }
-
-    private static void write(File f, String text) throws IOException {
-        try (FileOutputStream o = new FileOutputStream(f)) {
-            o.write(text.getBytes(StandardCharsets.UTF_8));
-        }
-    }
-
-    private void retireOldAdmin() {
-        // Kids profiles set up before the block-uninstall flag kept Hearth installed by making it a device admin
-        // (AgentAdminReceiver). Android won't uninstall an active admin, and only the app itself can give it up, so
-        // "remove from profiles" failed there. Swap it for the flag (through the shell, with the key owner-Hearth
-        // shared), then give the admin up: the profile stays protected, and the flag can be lifted for a removal.
-        DevicePolicyManager dpm = getSystemService(DevicePolicyManager.class);
-        ComponentName admin = new ComponentName(this, AgentAdminReceiver.class);
-        if (dpm == null || !dpm.isAdminActive(admin)) return;
-        if (!new File(new File(getFilesDir(), "selfadb"), "adbkey").exists()) return; // no shell yet: next connect
-        int me = userIdSelf();
-        if (me <= 0) return;
-        try (SelfAdb shell = SelfAdb.open(this)) {
-            if (!ProfileAppAccess.keepInstalled(this, shell, getPackageName(), me)) {
-                Log.w(TAG, "couldn't set the keep-installed flag; keeping the old device admin");
-                return;
-            }
-            dpm.removeActiveAdmin(admin);
-            Log.i(TAG, "replaced the old device admin with the keep-installed flag in user " + me);
-        } catch (Exception e) {
-            Log.i(TAG, "old device admin not retired yet (will retry on the next connect): " + e.getMessage());
-        }
-    }
-
-    /**
-     * When owner-Hearth has been unreachable for a while, check — as the shell user, via the shared key — whether it
-     * is really gone from the owner (user 0). If it was uninstalled, release THIS profile's Hearth/HearthTube so
-     * Google TV's launcher removes them at the next profile start; that way a plain Android uninstall of Hearth
-     * doesn't leave zombie copies behind. If owner-Hearth is still installed (just not running), do nothing.
-     */
-    private void maybeSelfClean() {
-        if (mSelfCleaned || mFailedConnects < SELF_CLEAN_AFTER_FAILURES) return;
-        File priv = new File(new File(getFilesDir(), "selfadb"), "adbkey");
-        if (!priv.exists()) return; // no shared key -> no shell; nothing we can do
-        try (SelfAdb shell = SelfAdb.open(this)) {
-            String owner = shell.run("pm list packages --user 0 " + ProfileAppAccess.HEARTH);
-            if (owner != null && owner.contains("package:" + ProfileAppAccess.HEARTH)) {
-                mFailedConnects = 0; // owner-Hearth is still installed, just down; leave everything alone
-                return;
-            }
-            int me = userIdSelf();
-            if (me > 0) {
-                ProfileAppAccess.cleanupUser(this, shell, me);
-                mSelfCleaned = true;
-                Log.i(TAG, "owner Hearth is gone; released this profile's copies for the launcher to remove");
-            }
-        } catch (Exception e) {
-            Log.i(TAG, "self-clean check failed (will retry later): " + e.getMessage());
-        }
-    }
-
-    /** This agent's own profile user id (for {@code pm --user}); -1 if unknown. */
-    private int userIdSelf() {
-        try {
-            return (int) UserHandle.class.getMethod("getIdentifier").invoke(Process.myUserHandle());
-        } catch (Exception e) {
-            Matcher m = Pattern.compile("\\d+").matcher(String.valueOf(Process.myUserHandle()));
-            return m.find() ? Integer.parseInt(m.group()) : -1;
-        }
+        if (all) dir.delete();
+        Log.i(TAG, all ? "Forgot the adb key an older Hearth shared" : "Couldn't delete all of the shared adb key");
     }
 
     private static JSONObject json(Object... pairs) {

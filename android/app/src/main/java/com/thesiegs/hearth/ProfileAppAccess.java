@@ -1,10 +1,7 @@
 package com.thesiegs.hearth;
 
-import android.content.Context;
-
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,8 +36,14 @@ import java.util.Set;
  * <h3>The one safety rule</h3>
  * A kept copy can't be uninstalled until its flag is lifted ({@code DELETE_FAILED_OWNER_BLOCKED}). So
  * {@link #remove} lifts the flag BEFORE it uninstalls, and Hearth's own uninstall flow runs it first: otherwise the
- * kids' copies would be left behind once Hearth (and its adb) is gone. Shell can always lift the flag, so nothing can
- * get stuck.
+ * kids' copies would be left behind once Hearth (and its adb) is gone.
+ *
+ * <p>Only owner-Hearth runs these commands: the kids' copies hold no adb key (Hearth up to 2026.10.60 shared its key
+ * with them, so a copy could remove itself after a plain Android uninstall of Hearth; it no longer does). If Hearth is
+ * uninstalled from the owner's user without that flow, the kids' copies stay kept. To release them: install Hearth
+ * again (same signing key) and run Remove from the kids profiles; or run {@link KidsBlockUninstallMain} as shell with
+ * {@code false} for each package and user, then {@code pm uninstall --user}; or delete the profile in Google TV.
+ * docs/development.md has the commands.
  */
 public final class ProfileAppAccess {
 
@@ -197,16 +200,6 @@ public final class ProfileAppAccess {
         return log;
     }
 
-    /**
-     * Automatic, safe self-cleanup used when Hearth is being removed (a profile's agent found owner-Hearth gone):
-     * releases any keep flag and uninstalls Hearth's own apps for that one profile, so Google TV's launcher drops
-     * them. Removal only (it never installs or protects): the undo that must be able to run on its own so nothing is
-     * left behind.
-     */
-    static List<String> cleanupUser(Context context, ShellRunner shell, int userId) throws Exception {
-        return remove(context.getPackageCodePath(), shell, Collections.singletonList(userId));
-    }
-
     /** Read-only: for the given profiles, which have Hearth / HearthTube and whether each is kept (flagged). */
     static List<AppStatus> state(String apk, ShellRunner shell, List<Integer> userIds) throws Exception {
         List<AppStatus> out = new ArrayList<>();
@@ -217,16 +210,6 @@ public final class ProfileAppAccess {
             }
         }
         return out;
-    }
-
-    /**
-     * Sets the keep-installed flag on one of Hearth's apps in one profile and reports whether it holds. Used by a
-     * profile's agent to replace the old device-admin protection with the flag (AgentService.retireOldAdmin).
-     */
-    static boolean keepInstalled(Context context, ShellRunner shell, String pkg, int userId) throws Exception {
-        String apk = context.getPackageCodePath();
-        setProtected(shell, apk, pkg, userId, true);
-        return isProtected(shell, apk, pkg, userId);
     }
 
     // --- internals ---

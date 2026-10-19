@@ -318,6 +318,60 @@ public class KidsProfilesTest {
                         .get(ready));
     }
 
+    private static final long DAY = KidsProfiles.REPAIR_EVERY_MS;
+
+    @Test
+    public void nothingIsRepairedUntilAParentHasSetItUpAndTheTvTrustsHearth() {
+        List<KidsProfiles.Kid> kids = Collections.singletonList(kid(10, false, true, true));
+        assertTrue(KidsProfiles.autoRepairs(false, true, kids, true, 5 * DAY, Collections.emptyMap()).isEmpty());
+        assertTrue(KidsProfiles.autoRepairs(true, false, kids, true, 5 * DAY, Collections.emptyMap()).isEmpty());
+        assertEquals(Arrays.asList(HEARTH, TUBE),
+                KidsProfiles.autoRepairs(true, true, kids, true, 5 * DAY, Collections.emptyMap()).get(kids.get(0)));
+    }
+
+    @Test
+    public void aRunningProfileIsNotRepaired() {
+        List<KidsProfiles.Kid> kids = Collections.singletonList(kid(10, true, true, true));
+        assertTrue(KidsProfiles.autoRepairs(true, true, kids, true, 5 * DAY, Collections.emptyMap()).isEmpty());
+    }
+
+    @Test
+    public void aProfileIsRepairedAtMostOnceADay() {
+        KidsProfiles.Kid sam = kid(10, false, true, true);
+        Map<Long, Long> repairedAt = new HashMap<>();
+        repairedAt.put(sam.serial, 5 * DAY);
+        assertTrue(KidsProfiles.autoRepairs(true, true, Collections.singletonList(sam), true, 5 * DAY + DAY - 1,
+                repairedAt).isEmpty());
+        assertEquals(Arrays.asList(HEARTH, TUBE), KidsProfiles.autoRepairs(true, true, Collections.singletonList(sam),
+                true, 5 * DAY + DAY, repairedAt).get(sam));
+    }
+
+    @Test
+    public void onlyTheAppsThatAreThereAreRepaired() {
+        // A missing copy is autoFixes' job (and adding one is limited to once, for Family Link's notice)
+        KidsProfiles.Kid onlyHearth = kid(10, false, true, false);
+        KidsProfiles.Kid onlyTube = kid(11, false, false, true);
+        List<KidsProfiles.Kid> kids = Arrays.asList(onlyHearth, onlyTube);
+        Map<KidsProfiles.Kid, List<String>> repairs =
+                KidsProfiles.autoRepairs(true, true, kids, true, 5 * DAY, Collections.emptyMap());
+        assertEquals(Collections.singletonList(HEARTH), repairs.get(onlyHearth));
+        assertEquals(Collections.singletonList(TUBE), repairs.get(onlyTube));
+        // HearthTube the owner doesn't have isn't touched
+        assertTrue(KidsProfiles.autoRepairs(true, true, Collections.singletonList(onlyTube), false, 5 * DAY,
+                Collections.emptyMap()).isEmpty());
+    }
+
+    @Test
+    public void repairingACopyThatIsThereSetsTheFlagAndTheGrantsWithoutAddingAnything() throws Exception {
+        // What the copies used to do for themselves with the shared adb key: owner-Hearth does it from its own
+        FakeShell shell = new FakeShell().has(0, HEARTH, TUBE).has(10, HEARTH, TUBE);
+        ProfileAppAccess.addToKids(APK, shell, Collections.singletonMap(10, Arrays.asList(HEARTH, TUBE)));
+        assertEquals(0, shell.count("pm install-existing"));
+        assertTrue(shell.kept.containsAll(Arrays.asList("10/" + HEARTH, "10/" + TUBE)));
+        assertTrue(shell.granted.contains("10/" + HEARTH + "/" + ProfileAppAccess.READ_TV_LISTINGS));
+        assertTrue(shell.granted.contains("10/" + HEARTH + "/" + ProfileAppAccess.READ_CALENDAR));
+    }
+
     @Test
     public void aRefusedConnectionRanNothing() {
         assertTrue(KidsProfiles.refused(new RuntimeException(new ConnectException("refused"))));

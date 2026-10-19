@@ -45,8 +45,8 @@ import java.util.concurrent.Executors;
  *
  * Handshake: agent {"type":"hello","serial":n,"nonce":"…","hasAdbKey":bool,"voiceDefault":bool,
  * "wallpaperVersion":n}; Hearth {"type":"challenge","nonce":"…","proof":"…"} (or {"type":"denied"}); agent
- * {"type":"auth","proof":"…"}; Hearth {"type":"welcome"} (or {"type":"denied"}), then, to an agent without it,
- * {"type":"adbKey","sealed":"…"} (owner-Hearth's adb key, sealed for this connection).
+ * {"type":"auth","proof":"…"}; Hearth {"type":"welcome"} (or {"type":"denied"}), then, to an agent whose hello says
+ * hasAdbKey (Hearth up to 2026.10.60 shared its adb key with the agents), {"type":"forgetAdbKey"}.
  *
  * Agent to Hearth:
  * {"type":"watchNext","rows":[…]},
@@ -197,14 +197,11 @@ final class AgentHub {
             connection.send(listenMessage(sListening));
             connection.send(hearthState(sContext));
             connection.sendWallpaper(sContext);
-            // Owner-Hearth's adb key, once, to an agent that proved its key: if Hearth is ever uninstalled from the
-            // owner's profile with Android's own uninstall, the agent can still remove Hearth's copies from its profile
-            // (AgentService.maybeSelfClean), and meanwhile grant its own copy what it reads. Sealed for this connection.
-            String[] adbKey = hello.optBoolean("hasAdbKey") ? null : SelfAdb.keyMaterial(sContext);
-            if (adbKey != null) {
-                String material = new JSONObject().put("priv", adbKey[0]).put("pub", adbKey[1]).toString();
-                connection.send(new JSONObject().put("type", "adbKey")
-                        .put("sealed", AgentAuth.seal(key, agentNonce, hubNonce, material)));
+            // Hearth up to 2026.10.60 shared its adb key with the agents. An agent that still holds it is told to
+            // delete it: only owner-Hearth runs shell commands now
+            if (hello.optBoolean("hasAdbKey")) {
+                connection.send(json("type", "forgetAdbKey"));
+                Log.i(TAG, "Agent for serial " + serial + " told to forget the adb key an older Hearth shared");
             }
             Log.i(TAG, "Agent for serial " + serial + " connected (Hearth voice there: " + hello.optBoolean("voiceDefault") + ")");
             String line;

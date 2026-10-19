@@ -84,6 +84,27 @@ switches, bedtime and Hearth in other profiles can be tested without a real fami
 
 Other tools: `tool/generate_icons.py` (app icon and TV banner).
 
+## A copy stuck on a kids profile
+
+Hearth and HearthTube on a kids profile carry Android's per-user "block uninstall" flag, so Google TV's launcher
+can't remove them at a profile start. Only Hearth in the owner's user sets and lifts the flag, over its own adb;
+Hearth's Remove (Settings > Profiles, and the step before Uninstall Hearth) lifts it first. The copies hold no adb key
+(Hearth up to 2026.10.60 shared its key with them so a copy could clean itself up; newer versions tell a copy that
+still has it to delete it). So if Hearth is uninstalled from the owner's user some other way, the kids' copies stay
+and can't be removed from the kids profile. To release them, any one of:
+
+- Install Hearth again (same signing key) and use Settings > Profiles > Remove from the kids profiles.
+- With adb to the TV, for each user `N` and package (`com.thesiegs.hearth`, `com.thesiegs.hearthtube`), run the flag
+  helper from Hearth's APK with `false`, then uninstall:
+  `CLASSPATH=$(pm path com.thesiegs.hearth | sed s/package://) app_process /system/bin
+  com.thesiegs.hearth.KidsBlockUninstallMain <package> N false` and `pm uninstall --user N <package>`. This needs
+  Hearth's APK still installed for some user; two arguments instead of three only read the flag.
+- Delete the profile in Google TV's settings (its apps and data go with it).
+
+Once a day, on the first profile switch of the day (or when Hearth starts), Hearth re-checks the copies on every kids
+profile that isn't running, if a parent has set Hearth up on them and the TV trusts Hearth's adb key: it sets the flag
+again where it went missing and grants Hearth its Watch Next and calendar access there.
+
 ## Releasing
 
 1. Bump `version:` in `pubspec.yaml`: a date-style name and a higher build number (`2026.10.20+8120`).
