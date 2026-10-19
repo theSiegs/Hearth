@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Hearth in kids profiles no longer holds Hearth's adb key; Hearth in your own profile looks after their copies.

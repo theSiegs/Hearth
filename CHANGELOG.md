@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.61 (pre-release)
+
+- Hearth on a kids profile no longer gets Hearth's adb key. Hearth in your own profile now re-checks the kids' copies once a day (keeps them from being removed, and lets them read Watch Next and the calendars), and tells a copy that still has the key to delete it; a copy does that the next time its profile starts. If Hearth is ever uninstalled without Settings > Profiles > Remove, the kids' copies stay: docs/development.md says how to release them.
+
 ## 2026.10.60 (pre-release)
 
 - Waking the TV can open Google TV's profile chooser instead of the PIN screen: Settings > Profiles > Choose a profile when the TV wakes (every time, or after some minutes asleep). A profile with a PIN asks for it before it opens. It is off until you turn it on, and kids profiles are left alone.
