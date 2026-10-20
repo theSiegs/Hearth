@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+- Approve switches from my phone: the request also shows as a Home Assistant notification, so someone who opens Home Assistant sees it, and tapping the push no longer opens Home Assistant and dismisses it (use Allow or Deny). A volume, power, media or held key no longer withdraws a request as if someone were typing the PIN.
+
 ## 2026.10.63 (pre-release)
 
 - Copy profiles between TVs works on a TV that has no parent PIN yet (a new TV has none): it asks for the PIN only where one is set. 2026.10.62 refused with "Set a parent PIN first".

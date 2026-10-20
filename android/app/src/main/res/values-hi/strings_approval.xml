@@ -6,6 +6,7 @@
     <string name="google_pin_broken">Hearth PIN डालना पूरा नहीं कर सका। इसे कीपैड पर डालें।</string>
     <string name="approval_title">TV: %1$s की प्रोफ़ाइल पर जाएँ?</string>
     <string name="approval_message">TV पर कोई आपकी प्रोफ़ाइल खोलना चाहता है। अनुमति दें, और Hearth आपका Google TV PIN डाल देगा।</string>
+    <string name="approval_ha_message">%1$s पर कोई इस प्रोफ़ाइल को खोलना चाहता है। अपने फ़ोन की सूचना से जवाब दें (अनुमति दें या अस्वीकार करें)। अनुरोध 2 मिनट बाद अपने आप समाप्त हो जाता है।</string>
     <string name="approval_allow">अनुमति दें</string>
     <string name="approval_deny">मना करें</string>
     <string name="approval_asked">%1$s से उनके फ़ोन पर पूछा गया। PIN अब भी यहाँ डाला जा सकता है।</string>

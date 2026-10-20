@@ -6,6 +6,7 @@
     <string name="google_pin_broken">Hearth non è riuscito a finire di inserire il PIN. Inseriscilo sul tastierino.</string>
     <string name="approval_title">TV: passare al profilo di %1$s?</string>
     <string name="approval_message">Qualcuno alla TV vuole aprire il tuo profilo. Se lo consenti, Hearth inserisce il tuo PIN di Google TV.</string>
+    <string name="approval_ha_message">Qualcuno su %1$s vuole aprire questo profilo. Rispondi dalla notifica sul tuo telefono (Consenti o Rifiuta). La richiesta termina da sola dopo 2 minuti.</string>
     <string name="approval_allow">Consenti</string>
     <string name="approval_deny">Rifiuta</string>
     <string name="approval_asked">Richiesta inviata al telefono di %1$s. Il PIN si può ancora inserire qui.</string>

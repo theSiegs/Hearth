@@ -6,6 +6,7 @@
     <string name="google_pin_broken">Hearth no pudo terminar de escribir el PIN. Escríbelo en el teclado.</string>
     <string name="approval_title">TV: ¿cambiar al perfil de %1$s?</string>
     <string name="approval_message">Alguien en la TV quiere abrir tu perfil. Si lo permites, Hearth escribirá tu PIN de Google TV.</string>
+    <string name="approval_ha_message">Alguien en %1$s quiere abrir este perfil. Responde desde la notificación de tu teléfono (Permitir o Denegar). La solicitud termina sola a los 2 minutos.</string>
     <string name="approval_allow">Permitir</string>
     <string name="approval_deny">Rechazar</string>
     <string name="approval_asked">Se lo pedimos a %1$s en su teléfono. También puedes escribir el PIN aquí.</string>

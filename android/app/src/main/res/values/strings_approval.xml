@@ -6,6 +6,7 @@
     <string name="google_pin_broken">Hearth couldn’t finish entering the PIN. Enter it on the keypad.</string>
     <string name="approval_title">TV: switch to %1$s’s profile?</string>
     <string name="approval_message">Someone at the TV wants to open your profile. Allow it, and Hearth enters your Google TV PIN.</string>
+    <string name="approval_ha_message">Someone at %1$s wants to open this profile. Answer from the notification on your phone (Allow or Deny). The request ends by itself after 2 minutes.</string>
     <string name="approval_allow">Allow</string>
     <string name="approval_deny">Deny</string>
     <string name="approval_asked">Asked %1$s on their phone. The PIN can still be entered here.</string>

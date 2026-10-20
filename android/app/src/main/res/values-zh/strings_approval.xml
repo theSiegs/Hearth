@@ -6,6 +6,7 @@
     <string name="google_pin_broken">Hearth 未能完成 PIN 输入。请在键盘上输入。</string>
     <string name="approval_title">电视：切换到 %1$s 的个人资料？</string>
     <string name="approval_message">电视前有人想打开你的个人资料。允许后，Hearth 会输入你的 Google TV PIN。</string>
+    <string name="approval_ha_message">%1$s 前有人想打开这个个人资料。请在手机通知中回答（允许或拒绝）。请求 2 分钟后会自动结束。</string>
     <string name="approval_allow">允许</string>
     <string name="approval_deny">拒绝</string>
     <string name="approval_asked">已在 %1$s 的手机上请求确认。仍可在此输入 PIN。</string>

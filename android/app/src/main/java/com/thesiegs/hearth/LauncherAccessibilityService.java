@@ -28,6 +28,7 @@ import android.os.UserHandle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Display;
+import android.view.InputDevice;
 import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
@@ -2017,7 +2018,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (event.getAction() == KeyEvent.ACTION_DOWN && event.getDeviceId() != KeyCharacterMap.VIRTUAL_KEYBOARD) {
             ParentPresence.onKey(SystemClock.elapsedRealtime());
             // Typing the PIN with the remote instead of waiting for the phone (keys Hearth types come from no device)
-            if (!ProfilePairingService.isEnteringPin()) PhoneApproval.onRemoteKey(this);
+            if (!ProfilePairingService.isEnteringPin()) {
+                InputDevice device = event.getDevice();
+                PhoneApproval.onRemoteKey(this, event.getKeyCode(), event.getRepeatCount(),
+                        device == null ? "no device" : device.getName());
+            }
         }
         // Hearth is typing a saved profile PIN behind the cover: keys would land on the app's keypad. Back and Home
         // stop it (Home still goes on to do its usual job), everything else waits.

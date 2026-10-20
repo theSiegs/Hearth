@@ -6,6 +6,7 @@
     <string name="google_pin_broken">Hearth n’a pas pu finir de saisir le code. Saisissez-le sur le pavé.</string>
     <string name="approval_title">TV : passer au profil de %1$s ?</string>
     <string name="approval_message">Quelqu’un devant le téléviseur veut ouvrir votre profil. Autorisez-le, et Hearth saisira votre code Google TV.</string>
+    <string name="approval_ha_message">Quelqu’un devant %1$s veut ouvrir ce profil. Réponds depuis la notification de ton téléphone (Autoriser ou Refuser). La demande se termine d’elle-même après 2 minutes.</string>
     <string name="approval_allow">Autoriser</string>
     <string name="approval_deny">Refuser</string>
     <string name="approval_asked">Demande envoyée sur le téléphone de %1$s. Le code peut toujours être saisi ici.</string>

@@ -6,6 +6,7 @@
     <string name="google_pin_broken">Hearth PIN’i girmeyi bitiremedi. Tuş takımından girin.</string>
     <string name="approval_title">TV: %1$s profiline geçilsin mi?</string>
     <string name="approval_message">TV’deki biri profilinizi açmak istiyor. İzin verirseniz Hearth Google TV PIN’inizi girer.</string>
+    <string name="approval_ha_message">%1$s başındaki biri bu profili açmak istiyor. Telefonundaki bildirimden yanıtla (İzin ver veya Reddet). İstek 2 dakika sonra kendiliğinden biter.</string>
     <string name="approval_allow">İzin ver</string>
     <string name="approval_deny">Reddet</string>
     <string name="approval_asked">%1$s telefonundan soruldu. PIN yine de buraya girilebilir.</string>

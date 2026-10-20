@@ -6,6 +6,7 @@
     <string name="google_pin_broken">Hearth は PIN を最後まで入力できませんでした。キーパッドで入力してください。</string>
     <string name="approval_title">テレビ: %1$s さんのプロフィールに切り替えますか？</string>
     <string name="approval_message">テレビの前の誰かがあなたのプロフィールを開こうとしています。許可すると、Hearth が Google TV の PIN を入力します。</string>
+    <string name="approval_ha_message">%1$s にいる誰かがこのプロフィールを開こうとしています。スマートフォンの通知から答えてください（許可または拒否）。リクエストは2分後に自動的に終了します。</string>
     <string name="approval_allow">許可</string>
     <string name="approval_deny">拒否</string>
     <string name="approval_asked">%1$s さんのスマートフォンに確認を送りました。ここで PIN を入力することもできます。</string>

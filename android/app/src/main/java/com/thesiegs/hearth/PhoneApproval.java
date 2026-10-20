@@ -45,7 +45,7 @@ final class PhoneApproval {
     /** The request waiting for an answer, if any (main thread). */
     private static Request sPending;
 
-    private static final class Request {
+    static final class Request {
         final String key;
         final String name;
         final String nonce;
@@ -218,21 +218,39 @@ final class PhoneApproval {
 
     private static boolean sendRequest(Context context, String service, Request request) {
         try {
-            JSONArray actions = new JSONArray()
-                    .put(new JSONObject().put("action", ACTION_PREFIX + "ALLOW_" + request.nonce)
-                            .put("title", context.getString(R.string.approval_allow)))
-                    .put(new JSONObject().put("action", ACTION_PREFIX + "DENY_" + request.nonce)
-                            .put("title", context.getString(R.string.approval_deny)));
-            JSONObject data = new JSONObject().put("actions", actions).put("tag", TAG_PREFIX + request.nonce)
-                    .put("priority", "high").put("ttl", 0).put("timeout", ANSWER_MS / 1000)
-                    .put("channel", "Hearth");
-            return HaApi.callService(context, "notify", service, new JSONObject()
+            boolean sent = HaApi.callService(context, "notify", service, new JSONObject()
                     .put("title", context.getString(R.string.approval_title, request.name))
                     .put("message", context.getString(R.string.approval_message))
-                    .put("data", data));
+                    .put("data", pushData(context.getString(R.string.approval_allow),
+                            context.getString(R.string.approval_deny), request.nonce)));
+            // Also inside Home Assistant, so someone who opens it (or a push that was dismissed) can see the request
+            if (sent) {
+                HaApi.callService(context, "persistent_notification", "create", persistentNotification(context, request));
+            }
+            return sent;
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * The companion app's extras for the request: Allow and Deny buttons, and a tap on the notification itself does
+     * nothing (not even open Home Assistant, which has nothing to answer) and doesn't dismiss it.
+     */
+    static JSONObject pushData(String allowTitle, String denyTitle, String nonce) throws Exception {
+        JSONArray actions = new JSONArray()
+                .put(new JSONObject().put("action", ACTION_PREFIX + "ALLOW_" + nonce).put("title", allowTitle))
+                .put(new JSONObject().put("action", ACTION_PREFIX + "DENY_" + nonce).put("title", denyTitle));
+        return new JSONObject().put("actions", actions).put("tag", TAG_PREFIX + nonce)
+                .put("priority", "high").put("ttl", 0).put("timeout", ANSWER_MS / 1000)
+                .put("channel", "Hearth").put("sticky", "true").put("clickAction", "noAction");
+    }
+
+    /** The same request as a notification in Home Assistant's own list, taken away when the request is over. */
+    static JSONObject persistentNotification(Context context, Request request) throws Exception {
+        return new JSONObject().put("notification_id", TAG_PREFIX + request.nonce)
+                .put("title", context.getString(R.string.approval_title, request.name))
+                .put("message", context.getString(R.string.approval_ha_message, ShareDiscovery.deviceName(context)));
     }
 
     /** Whether Google TV's PIN screen is what's in front, for this profile's account (main thread). */
@@ -251,24 +269,49 @@ final class PhoneApproval {
     /**
      * A remote key while a request waits (main thread): someone at the TV is using the PIN screen themselves, so the
      * phone's answer must not type over what they do. The request ends and its notification goes from the phone.
+     * Only a key someone presses on the PIN screen counts: a held key's repeats, and the keys a TV's own power and
+     * volume buttons or an HDMI-CEC device send, are not typing the PIN.
      */
-    static void onRemoteKey(Context context) {
+    static void onRemoteKey(Context context, int keyCode, int repeatCount, String device) {
         Request request = sPending;
-        if (request == null) return;
+        if (request == null || !isPinScreenKey(keyCode, repeatCount)) return;
         sPending = null;
         if (request.events != null) request.events.close();
-        Log.i(TAG, "The remote is in use on the PIN screen: no longer asking the phone");
+        Log.i(TAG, "The remote is in use on the PIN screen (key " + android.view.KeyEvent.keyCodeToString(keyCode)
+                + " from " + device + "): no longer asking the phone");
         clearOnPhone(context, notifyService(context, request.key), request);
     }
 
-    /** The notification goes from the phone once the request is over. */
+    /** A first press of a key the PIN screen takes: digits, the arrows, OK, Back, Delete. */
+    static boolean isPinScreenKey(int keyCode, int repeatCount) {
+        if (repeatCount != 0) return false;
+        if (keyCode >= android.view.KeyEvent.KEYCODE_0 && keyCode <= android.view.KeyEvent.KEYCODE_9) return true;
+        if (keyCode >= android.view.KeyEvent.KEYCODE_NUMPAD_0 && keyCode <= android.view.KeyEvent.KEYCODE_NUMPAD_9) return true;
+        switch (keyCode) {
+            case android.view.KeyEvent.KEYCODE_DPAD_UP:
+            case android.view.KeyEvent.KEYCODE_DPAD_DOWN:
+            case android.view.KeyEvent.KEYCODE_DPAD_LEFT:
+            case android.view.KeyEvent.KEYCODE_DPAD_RIGHT:
+            case android.view.KeyEvent.KEYCODE_DPAD_CENTER:
+            case android.view.KeyEvent.KEYCODE_ENTER:
+            case android.view.KeyEvent.KEYCODE_BACK:
+            case android.view.KeyEvent.KEYCODE_DEL:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /** The notification goes from the phone, and from Home Assistant's own list, once the request is over. */
     private static void clearOnPhone(Context context, String service, Request request) {
         HaApi.EXECUTOR.execute(() -> {
             try {
                 HaApi.callService(context, "notify", service, new JSONObject().put("message", "clear_notification")
                         .put("data", new JSONObject().put("tag", TAG_PREFIX + request.nonce)));
+                HaApi.callService(context, "persistent_notification", "dismiss",
+                        new JSONObject().put("notification_id", TAG_PREFIX + request.nonce));
             } catch (Exception e) {
-                Log.i(TAG, "The phone's notification wasn't cleared: " + e.getClass().getSimpleName());
+                Log.i(TAG, "The notification wasn't cleared: " + e.getClass().getSimpleName());
             }
         });
     }
@@ -277,6 +320,7 @@ final class PhoneApproval {
         if (sPending != request) return;
         sPending = null;
         if (request.events != null) request.events.close();
+        clearOnPhone(context, notifyService(context, request.key), request);
         if (!allowed) {
             Log.i(TAG, LogNames.key(request.key) + " didn't allow the switch");
             Toast.makeText(context, context.getString(R.string.approval_denied, request.name), Toast.LENGTH_LONG).show();

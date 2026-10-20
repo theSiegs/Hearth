@@ -6,6 +6,7 @@
     <string name="google_pin_broken">Hearth가 PIN 입력을 마치지 못했습니다. 키패드로 입력하세요.</string>
     <string name="approval_title">TV: %1$s님의 프로필로 전환할까요?</string>
     <string name="approval_message">TV 앞의 누군가가 내 프로필을 열려고 합니다. 허용하면 Hearth가 Google TV PIN을 입력합니다.</string>
+    <string name="approval_ha_message">%1$s 앞에 있는 누군가가 이 프로필을 열려고 합니다. 휴대전화 알림에서 답해 주세요(허용 또는 거부). 요청은 2분 뒤에 저절로 끝납니다.</string>
     <string name="approval_allow">허용</string>
     <string name="approval_deny">거부</string>
     <string name="approval_asked">%1$s님의 휴대전화로 요청했습니다. 여기서 PIN을 입력할 수도 있습니다.</string>

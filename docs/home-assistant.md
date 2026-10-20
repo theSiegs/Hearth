@@ -98,11 +98,14 @@ When Google TV's PIN screen comes up for that profile, Hearth:
 1. listens on Home Assistant's WebSocket API for `mobile_app_notification_action` events, only while it waits (two
    minutes at most);
 2. calls the phone's notify service with an actionable notification (Allow and Deny, a one-time action id, `tag`
-   `hearth-approval-…`, high priority);
+   `hearth-approval-…`, high priority; tapping the notification itself does nothing and leaves it up, so only the
+   buttons answer), and creates the same request as a Home Assistant notification (`persistent_notification.create`,
+   id `hearth-approval-…`) so someone who opens Home Assistant sees it too;
 3. on Allow, enters the saved Google TV PIN on Google's keypad, if that profile's PIN screen is still up; on Deny or
-   no answer, leaves the PIN screen as it is, and clears the notification.
+   no answer, leaves the PIN screen as it is. Either way both notifications are cleared when the request ends.
 
-Typing the PIN with the remote always works: a key pressed on the PIN screen withdraws the request. A PIN Google
+Typing the PIN with the remote always works: a digit, arrow, OK, Back or Delete pressed on the PIN screen withdraws the
+request (volume, power and media keys, and a key held down, don't; the log line names the key and where it came from). A PIN Google
 refuses isn't entered again until it's saved anew. **Send a test notification** checks the phone is reached.
 
 ## TV status
