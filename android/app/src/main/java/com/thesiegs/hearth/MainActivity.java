@@ -359,6 +359,44 @@ public class MainActivity extends FlutterActivity {
             // A copy of a profile to another TV (ShareData): this TV's profiles, and a profile's pairing choices
             case "getShareProfiles" -> result.success(ShareData.profiles(this));
             case "getSharePairings" -> result.success(ShareData.pairings(this, call.arguments()));
+            case "getShareDeviceName" -> result.success(ShareDiscovery.deviceName(this));
+            case "startShareSending" -> {
+                Map<String, Object> started = ShareService.startSending(call.arguments());
+                if (started == null) {
+                    result.success(null);
+                } else {
+                    started.put("host", LocalNet.ipv4Address());
+                    started.put("name", ShareDiscovery.deviceName(this));
+                    ShareDiscovery.advertise(this, (Integer) started.get("port"));
+                    result.success(started);
+                }
+            }
+            case "startShareReceiving" -> {
+                Map<String, Object> args = call.arguments();
+                ShareService.startReceiving((String) args.get("host"), (Integer) args.get("port"));
+                result.success(null);
+            }
+            case "getShareStatus" -> result.success(ShareService.status());
+            case "confirmShare" -> {
+                ShareService.confirm(Boolean.TRUE.equals(call.arguments()));
+                result.success(null);
+            }
+            case "takeShareBundle" -> result.success(ShareService.takeBundle());
+            case "sendShareReport" -> {
+                ShareService.sendReport(call.arguments());
+                result.success(null);
+            }
+            case "stopShare" -> {
+                ShareService.stop();
+                ShareDiscovery.stopAdvertising();
+                ShareDiscovery.stopFinding();
+                result.success(null);
+            }
+            case "startShareFinding" -> {
+                ShareDiscovery.startFinding(this);
+                result.success(null);
+            }
+            case "getShareFound" -> result.success(ShareDiscovery.found());
             case "applySharePairings" -> {
                 Map<String, Object> args = call.arguments();
                 result.success(ShareData.applyPairings(this, (String) args.get("profile"),

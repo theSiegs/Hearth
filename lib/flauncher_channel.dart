@@ -408,6 +408,42 @@ class FLauncherChannel {
   Future<List<Map<dynamic, dynamic>>> getSharePairings(String profileKey) async =>
       (await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getSharePairings", profileKey)) ?? [];
 
+  /// What this TV is called to its owner (its device name, else its model).
+  Future<String> getShareDeviceName() async => await _methodChannel.invokeMethod<String>("getShareDeviceName") ?? "";
+
+  /// Starts listening to send [bundleJson] to another TV: {host, port, name}, or null if nothing could listen.
+  /// The TV announces itself on the home network too.
+  Future<Map<dynamic, dynamic>?> startShareSending(String bundleJson) async =>
+      await _methodChannel.invokeMapMethod<dynamic, dynamic>("startShareSending", bundleJson);
+
+  /// Connects to the TV that is waiting to send, to receive its bundle.
+  Future<void> startShareReceiving(String host, int port) async =>
+      await _methodChannel.invokeMethod("startShareReceiving", {"host": host, "port": port});
+
+  /// Where the copy stands: {state: idle | waiting | connecting | digits | working | received | done | failed, role,
+  /// digits?, error?, report?, mismatches}.
+  Future<Map<dynamic, dynamic>> getShareStatus() async =>
+      (await _methodChannel.invokeMapMethod<dynamic, dynamic>("getShareStatus")) ?? {"state": "idle"};
+
+  /// The parent saw the same six digits on both TVs ([same]) or didn't.
+  Future<void> confirmShare(bool same) async => await _methodChannel.invokeMethod("confirmShare", same);
+
+  /// The bundle the receiving TV got, once; null if it hasn't one.
+  Future<String?> takeShareBundle() async => await _methodChannel.invokeMethod<String>("takeShareBundle");
+
+  /// The receiving TV has applied the bundle: sends its report back to the sender.
+  Future<void> sendShareReport(String report) async => await _methodChannel.invokeMethod("sendShareReport", report);
+
+  /// Ends the copy and the announcement; nothing is kept.
+  Future<void> stopShare() async => await _methodChannel.invokeMethod("stopShare");
+
+  /// Starts listening for TVs that are waiting to send; [getShareFound] lists them.
+  Future<void> startShareFinding() async => await _methodChannel.invokeMethod("startShareFinding");
+
+  /// The TVs heard so far on the home network: {name, host, port}.
+  Future<List<Map<dynamic, dynamic>>> getShareFound() async =>
+      (await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getShareFound")) ?? [];
+
   /// Saves another TV's pairing choices for [profileKey] where it has none of its own: {applied, kept, skipped}.
   Future<Map<dynamic, dynamic>> applySharePairings(String profileKey, List<Map<String, dynamic>> pairings) async =>
       (await _methodChannel.invokeMapMethod<dynamic, dynamic>(
