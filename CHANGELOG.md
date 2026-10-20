@@ -3,6 +3,15 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.62 (pre-release)
+
+- Copy profiles between TVs (Settings > Profiles): a parent at two TVs copies a profile's look, home layout and Profile Pairing choices from one to the other over the home network. Both TVs show the same six digits and a parent says on each that they match before anything is sent. The receiving TV chooses where each profile goes, fits the layout to the apps it has, keeps a backup first (in Backup & Restore) and keeps pairing choices it already has. Streaming PINs, Home Assistant settings, the parent PIN and wallpaper pictures are not copied. Needs trying on two TVs.
+- The Home button now turns off "Use Google TV's home" when it opens Hearth, so Hearth takes over after profile switches again.
+- Hearth takes over the home after a profile pick even within two minutes of another profile's Google setup screens, and logs why it leaves Google TV's home in front when it does.
+- The debugging prompt (to add Hearth to kids profiles) opens Developer options when they are on and only USB debugging is off, instead of telling you to unlock them again.
+- Setting up Home Assistant from a phone seals the address, token and webhook id on their way to the TV, as the PIN page does. It needs a recent phone browser, opened from the QR code.
+- Continue Watching is on by default (the row still waits for Watch Next access).
+
 ## 2026.10.61 (pre-release)
 
 - Hearth on a kids profile no longer gets Hearth's adb key. Hearth in your own profile now re-checks the kids' copies once a day (keeps them from being removed, and lets them read Watch Next and the calendars), and tells a copy that still has the key to delete it; a copy does that the next time its profile starts. If Hearth is ever uninstalled without Settings > Profiles > Remove, the kids' copies stay: docs/development.md says how to release them.
