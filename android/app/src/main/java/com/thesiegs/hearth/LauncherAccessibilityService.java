@@ -1627,6 +1627,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
             // Only clicks in the chooser: Google TV's other screens (its keyboard, menus) click LinearLayouts too.
             mHandler.removeCallbacks(mChooserPhoto);
             Log.i(TAG, "Picked " + LogNames.of(label));
+            // A hold left by the last profile's setup screens must not keep Hearth off this one's home: a setup
+            // screen after the pick starts its own (a profile Google TV is still setting up has mNewProfileHold)
+            mGoogleSetupUntil = 0;
             mPendingProfile = label;
             mPendingProfileAt = now;
         }
