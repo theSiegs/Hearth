@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Copy profiles between TVs works on a TV with no parent PIN yet.

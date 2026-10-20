@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.63 (pre-release)
+
+- Copy profiles between TVs works on a TV that has no parent PIN yet (a new TV has none): it asks for the PIN only where one is set. 2026.10.62 refused with "Set a parent PIN first".
+
 ## 2026.10.62 (pre-release)
 
 - Copy profiles between TVs (Settings > Profiles): a parent at two TVs copies a profile's look, home layout and Profile Pairing choices from one to the other over the home network. Both TVs show the same six digits and a parent says on each that they match before anything is sent. The receiving TV chooses where each profile goes, fits the layout to the apps it has, keeps a backup first (in Backup & Restore) and keeps pairing choices it already has. Streaming PINs, Home Assistant settings, the parent PIN and wallpaper pictures are not copied. Needs trying on two TVs.
