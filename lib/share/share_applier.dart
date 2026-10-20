@@ -31,6 +31,19 @@ LocalProfile? defaultTarget(ShareProfile source, List<LocalProfile> locals) {
   return null;
 }
 
+/// Where each copied profile goes by default ([ShareProfile.id] to a profile of this TV, or none): the one with the same
+/// name and kind; and, for a household of one grown-up on each TV (a new TV knows only its own), the one grown-up
+/// profile here even when the names differ. A kids profile is never matched by guesswork: it brings the streaming
+/// profile its child watches as, so only the same name will do.
+Map<String, LocalProfile?> defaultTargets(List<ShareProfile> sources, List<LocalProfile> locals) {
+  final targets = <String, LocalProfile?>{for (final source in sources) source.id: defaultTarget(source, locals)};
+  final claimed = {for (final target in targets.values) if (target != null) target.key};
+  final unmatched = [for (final source in sources) if (!source.kids && targets[source.id] == null) source];
+  final free = [for (final local in locals) if (!local.kids && !claimed.contains(local.key)) local];
+  if (unmatched.length == 1 && free.length == 1) targets[unmatched.single.id] = free.single;
+  return targets;
+}
+
 /// What a copy did on this TV, for the screen and for the sender's.
 class ShareApplyReport {
   /// Per profile: its name here, whether its layout and look went in, the apps this TV doesn't have, and how many of

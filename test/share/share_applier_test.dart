@@ -128,6 +128,45 @@ void main() {
     });
   });
 
+  group("where the copies go on a new TV", () {
+    const alex = ShareProfile(id: "p1", name: "Alex", kids: false);
+    const sam = ShareProfile(id: "p2", name: "Sam", kids: true);
+
+    test("a household of one grown-up goes to this TV's one grown-up, whatever the names", () {
+      const locals = [LocalProfile(key: "user:0:kev", name: "Kev", kids: false)];
+      expect(defaultTargets(const [alex], locals)["p1"]!.key, "user:0:kev");
+    });
+
+    test("the same name still wins, and nothing is guessed when there is more than one to pick from", () {
+      const two = [
+        LocalProfile(key: "user:0:kev", name: "Kev", kids: false),
+        LocalProfile(key: "user:0:alex", name: "Alex", kids: false),
+      ];
+      expect(defaultTargets(const [alex], two)["p1"]!.key, "user:0:alex");
+      const other = [
+        LocalProfile(key: "user:0:kev", name: "Kev", kids: false),
+        LocalProfile(key: "user:0:jo", name: "Jo", kids: false),
+      ];
+      expect(defaultTargets(const [alex], other)["p1"], isNull);
+      const manySources = [alex, ShareProfile(id: "p3", name: "Pat", kids: false)];
+      expect(defaultTargets(manySources, const [LocalProfile(key: "user:0:kev", name: "Kev", kids: false)])["p1"], isNull);
+    });
+
+    test("a profile here that already took another's place isn't offered twice", () {
+      const locals = [LocalProfile(key: "user:0:alex", name: "Alex", kids: false)];
+      const sources = [alex, ShareProfile(id: "p3", name: "Pat", kids: false)];
+      final targets = defaultTargets(sources, locals);
+      expect(targets["p1"]!.key, "user:0:alex");
+      expect(targets["p3"], isNull);
+    });
+
+    test("a kids profile is only ever matched by name", () {
+      const locals = [LocalProfile(key: "user:11", name: "Riley", kids: true)];
+      expect(defaultTargets(const [sam], locals)["p2"], isNull);
+      expect(defaultTargets(const [ShareProfile(id: "p2", name: "riley", kids: true)], locals)["p2"]!.key, "user:11");
+    });
+  });
+
   group("applying a copy", () {
     const alex = LocalProfile(key: "user:0:alex", name: "Alex", kids: false);
     const sam = LocalProfile(key: "user:11", name: "Sam", kids: true);

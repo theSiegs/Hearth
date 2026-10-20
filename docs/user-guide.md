@@ -151,6 +151,10 @@ and the copy goes. The receiving TV then shows where each profile goes (a profil
   sent. The TV status webhook id isn't sent either: it belongs to one TV's automation, so each TV needs its own.
 - A Home Assistant or parent PIN the receiving TV already has is replaced only if it is checked on that TV (it says
   "replaces this TV's").
+- It works the same with no kids profiles, no parent PIN or no Home Assistant: what a TV doesn't have shows as
+  "Nothing to send" there, and a copy is then just the look, layout, pictures and pairings. A new TV with no parent PIN
+  can take the sender's along with its PINs (a PIN is only saved where a parent PIN guards it), and a new TV with one
+  grown-up profile puts the copied grown-up's profile on it whatever the names; kids profiles go only to the same name.
 - Nothing is kept afterwards: no key, no list of TVs.
 - If the digits don't match, nothing is sent. Someone else on your network who connects can't get anything without a
   parent saying the digits match.

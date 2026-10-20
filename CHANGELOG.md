@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.10.65 (pre-release)
+
+- Copy profiles between TVs on a new TV: with one grown-up profile on each TV, the copy goes onto it whatever the names (kids profiles still need the same name), and streaming PINs are only saved where a parent PIN guards them, this TV's or the one coming with the copy.
+
 ## 2026.10.64 (pre-release)
 
 - Copy profiles between TVs can now also send wallpaper pictures (on by default), streaming app PINs, the Home Assistant settings and the parent PIN (each off until the sending parent chooses it, after the parent PIN; the receiving TV chooses again and asks for its own parent PIN). A PIN goes only to a profile paired with that streaming profile and never over one that works; Home Assistant gets a new token made by the sending TV for the other, not a copy of its own; the status webhook id isn't sent. Both TVs need this version.

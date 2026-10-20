@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
+import 'message_dialog.dart';
 import 'settings_page.dart';
 
 /// Copying profiles between TVs: the page that offers it (Settings > Profiles), and the two ends of a copy.
@@ -586,6 +587,19 @@ class _ShareReceivePageState extends State<ShareReceivePage> with _ShareStatusPo
   ShareApplyReport? _report;
 
   int get _pinsCame => (_secrets?["pins"] as num?)?.toInt() ?? 0;
+
+  /// PINs are saved only where a parent PIN guards them: this TV's, or the one coming with this copy.
+  bool _pinsAllowed(ShareBundle bundle) =>
+      context.read<SettingsService>().hasParentPin || (_parentPin && bundle.parentPinHash != null);
+
+  Future<void> _togglePins(AppLocalizations l, ShareBundle bundle) async {
+    if (!_pins && !_pinsAllowed(bundle)) {
+      await showMessageDialog(context,
+          title: l.parentPinTitle, message: l.profilePinNeedsParentPin(l.settingsTitle, l.profilesTitle, l.parentPinTitle));
+      return;
+    }
+    setState(() => _pins = !_pins);
+  }
   String get _haHost => (_secrets?["ha"] as String?) ?? "";
 
   @override
@@ -701,13 +715,13 @@ class _ShareReceivePageState extends State<ShareReceivePage> with _ShareStatusPo
         _haHere = haHere;
         // What would replace something on this TV waits to be chosen
         _pictures = bundle.pictureCount > 0;
-        _pins = ((secrets?["pins"] as num?)?.toInt() ?? 0) > 0;
+        _pins = ((secrets?["pins"] as num?)?.toInt() ?? 0) > 0 && (hasParentPin || bundle.parentPinHash != null);
         _ha = ((secrets?["ha"] as String?) ?? "").isNotEmpty && !haHere;
         _parentPin = bundle.parentPinHash != null && !hasParentPin;
         _locals = locals;
         _targets
           ..clear()
-          ..addEntries([for (final p in bundle.profiles) MapEntry(p.id, defaultTarget(p, locals))]);
+          ..addAll(defaultTargets(bundle.profiles, locals));
         _phase = _ReceivePhase.preview;
       });
     } on ShareFormatException catch (err) {
@@ -747,7 +761,7 @@ class _ShareReceivePageState extends State<ShareReceivePage> with _ShareStatusPo
     final apps = context.read<AppsService>();
     final backup = context.read<BackupService>();
     final wallpapers = context.read<ShareWallpapers?>() ?? ShareWallpapers(channel);
-    final takePins = _pins && _pinsCame > 0;
+    final takePins = _pins && _pinsCame > 0 && _pinsAllowed(bundle);
     final takeHa = _ha && _haHost.isNotEmpty;
     final takeParentPin = _parentPin && bundle.parentPinHash != null;
     // PINs, Home Assistant and the parent PIN are saved only with the parent PIN, where this TV has one
@@ -866,7 +880,7 @@ class _ShareReceivePageState extends State<ShareReceivePage> with _ShareStatusPo
     final hasTargets = _targets.values.any((t) => t != null);
     final hasParentPin = context.read<SettingsService>().hasParentPin;
     final any = (hasTargets &&
-            (_layouts || _pairings || (_pictures && bundle.pictureCount > 0) || (_pins && _pinsCame > 0))) ||
+            (_layouts || _pairings || (_pictures && bundle.pictureCount > 0) || (_pins && _pinsCame > 0 && _pinsAllowed(bundle)))) ||
         (_ha && _haHost.isNotEmpty) ||
         (_parentPin && bundle.parentPinHash != null);
     Widget choice(IconData icon, String title, bool on, bool replaces, VoidCallback onPressed) => FocusableSettingsTile(
@@ -904,7 +918,8 @@ class _ShareReceivePageState extends State<ShareReceivePage> with _ShareStatusPo
         choice(Icons.wallpaper, l.shareWhatPictures(bundle.pictureCount), _pictures, false,
             () => setState(() => _pictures = !_pictures)),
       if (_pinsCame > 0)
-        choice(Icons.pin_outlined, l.shareWhatPins(_pinsCame), _pins, false, () => setState(() => _pins = !_pins)),
+        choice(Icons.pin_outlined, l.shareWhatPins(_pinsCame), _pins && _pinsAllowed(bundle), false,
+            () => _togglePins(l, bundle)),
       if (_haHost.isNotEmpty)
         choice(Icons.home_outlined, l.shareWhatHa(_haHost), _ha, _haHere, () => setState(() => _ha = !_ha)),
       if (bundle.parentPinHash != null)

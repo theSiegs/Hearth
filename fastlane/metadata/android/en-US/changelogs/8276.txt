@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Copying profiles to a new TV puts a lone grown-up's profile on the new TV's one profile, and saves PINs only where a parent PIN guards them.

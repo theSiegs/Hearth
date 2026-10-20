@@ -544,7 +544,8 @@ void main() {
     testWidgets("offers what came besides the look, and saves the PINs and Home Assistant when chosen", (tester) async {
       await prefs.setString(SettingsService.layoutOwnerKey, "user:0:alex");
       channel.secretsIn = {"pins": 3, "ha": "192.0.2.9", "haFailed": false};
-      await arrive(tester, senderBundle());
+      // This TV has no parent PIN: the sender's comes along, so the PINs have one to guard them
+      await arrive(tester, senderBundle(parentPinHash: "e" * 64));
       expect(find.text("Streaming app PINs (3)"), findsOneWidget);
       expect(find.text("Home Assistant (192.0.2.9)"), findsOneWidget);
 
@@ -585,10 +586,54 @@ void main() {
       await leave(tester);
     });
 
+    testWidgets("PINs aren't taken on a TV with no parent PIN unless the sender's comes along", (tester) async {
+      await prefs.setString(SettingsService.layoutOwnerKey, "user:0:alex");
+      channel.secretsIn = {"pins": 3, "ha": "", "haFailed": false};
+      await arrive(tester, senderBundle());
+      // Unchecked, and checking it says why
+      await press(tester, "Streaming app PINs (3)");
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.textContaining("Set a parent PIN"), findsOneWidget);
+      await tester.tap(find.text("OK"));
+      await tester.pump(const Duration(milliseconds: 300));
+      await press(tester, "Copy");
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(channel.secretsPins, isNull);
+      await leave(tester);
+    });
+
+    testWidgets("a new TV with one profile of any name gets the one grown-up's copy", (tester) async {
+      channel.profiles = [
+        {"key": "user:0:kev", "name": "Kev", "kids": false},
+      ];
+      await arrive(tester, senderBundle());
+      await press(tester, "Copy");
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(channel.applied.single.$1, "user:0:kev");
+      await leave(tester);
+    });
+
+    testWidgets("with no kids, no parent PIN and no Home Assistant, it is only the look and the pictures", (tester) async {
+      channel.profiles = [
+        {"key": "user:0:alex", "name": "Alex", "kids": false},
+      ];
+      await prefs.setString(SettingsService.layoutOwnerKey, "user:0:alex");
+      await arrive(tester, senderBundle());
+      expect(find.text("Parent PIN"), findsNothing);
+      expect(find.textContaining("Home Assistant"), findsNothing);
+      expect(find.textContaining("Streaming app PINs"), findsNothing);
+      await press(tester, "Copy");
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text("Copied"), findsOneWidget);
+      expect(channel.secretsPins, isNull);
+      expect(channel.secretsHa, isNull);
+      await leave(tester);
+    });
+
     testWidgets("leaves out what the parent unchecks", (tester) async {
       await prefs.setString(SettingsService.layoutOwnerKey, "user:0:alex");
       channel.secretsIn = {"pins": 3, "ha": "192.0.2.9", "haFailed": false};
-      await arrive(tester, senderBundle());
+      await arrive(tester, senderBundle(parentPinHash: "e" * 64));
       await press(tester, "Streaming app PINs (3)");
       await press(tester, "Home Assistant (192.0.2.9)");
       await press(tester, "Copy");
