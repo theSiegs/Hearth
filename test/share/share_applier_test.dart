@@ -1,0 +1,202 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:flauncher/database.dart';
+import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/providers/backup_service.dart';
+import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/share/share_applier.dart';
+import 'package:flauncher/share/share_bundle.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Records the pairing choices a copy hands to the Java side.
+class _Channel extends FLauncherChannel {
+  final List<(String, List<Map<String, dynamic>>)> pairings = [];
+  int kept = 0;
+
+  @override
+  Future<Map<dynamic, dynamic>> applySharePairings(String profileKey, List<Map<String, dynamic>> choices) async {
+    pairings.add((profileKey, choices));
+    return {"applied": choices.length - kept, "kept": kept, "skipped": 0};
+  }
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late FLauncherDatabase database;
+  late SharedPreferences prefs;
+  late BackupService backup;
+  late SettingsService settings;
+  late Directory tempDir;
+  late _Channel channel;
+  late int liveChanges;
+  late ShareApplier applier;
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    prefs = await SharedPreferences.getInstance();
+    database = FLauncherDatabase.inMemory();
+    backup = BackupService(database, prefs);
+    settings = SettingsService(prefs);
+    channel = _Channel();
+    liveChanges = 0;
+    applier = ShareApplier(backup, settings, channel, () async => liveChanges++);
+    tempDir = await Directory.systemTemp.createTemp('ltv_share_test');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
+      (MethodCall call) async => tempDir.path,
+    );
+    await database.persistApps([
+      AppsCompanion.insert(packageName: "com.example.video", name: "Video HD", version: "9", hidden: const Value(false)),
+      AppsCompanion.insert(packageName: "com.example.news", name: "News", version: "1", hidden: const Value(false)),
+    ]);
+  });
+
+  tearDown(() async {
+    await database.close();
+    if (await tempDir.exists()) await tempDir.delete(recursive: true);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('plugins.flutter.io/path_provider'), null);
+  });
+
+  ShareBundle bundle() => ShareBundle.build(
+        hearth: "2026.10.62",
+        tv: "Den",
+        profiles: const [
+          ShareProfile(id: "p1", name: "Alex", kids: false),
+          ShareProfile(id: "p2", name: "Sam", kids: true),
+        ],
+        layouts: {
+          "p1": {
+            "settings": {"accent_color": "#ff00aa"},
+            "apps": [
+              {"packageName": "com.example.video", "name": "Video", "hidden": true},
+              {"packageName": "com.example.gone", "name": "Gone", "hidden": false},
+            ],
+            "categories": [
+              {"id": 1, "name": "Favorites", "sort": 0, "type": 0, "rowHeight": 110, "columnsCount": 6, "order": 0},
+            ],
+            "appsCategories": [
+              {"categoryId": 1, "appPackageName": "com.example.video", "order": 0},
+              {"categoryId": 1, "appPackageName": "com.example.gone", "order": 1},
+            ],
+            "spacers": [],
+          },
+          "p2": {
+            "settings": {"accent_color": "#0000ff"},
+            "apps": [],
+            "categories": [],
+            "appsCategories": [],
+            "spacers": [],
+          },
+        },
+        pairings: {
+          "p1": const [
+            SharedPairing(packageName: "com.netflix.ninja", picker: false, appProfile: "Alex"),
+            SharedPairing(packageName: "com.disney.disneyplus", picker: true),
+          ],
+        },
+        settingKeys: settings.settingKeys,
+      );
+
+  ShareBundle received() => ShareBundle.parse(bundle().encode(), settingKeys: settings.settingKeys);
+
+  group("the profile a copy lands on by default", () {
+    const locals = [
+      LocalProfile(key: "user:0:alex", name: "alex", kids: false),
+      LocalProfile(key: "user:11", name: "Sam", kids: true),
+      LocalProfile(key: "user:12", name: "Alex", kids: true),
+    ];
+
+    test("has the same name and the same kind, whatever the case", () {
+      expect(defaultTarget(const ShareProfile(id: "p1", name: "Alex", kids: false), locals)!.key, "user:0:alex");
+      expect(defaultTarget(const ShareProfile(id: "p2", name: "sam", kids: true), locals)!.key, "user:11");
+    });
+
+    test("is none when the kind differs or the name isn't here", () {
+      expect(defaultTarget(const ShareProfile(id: "p1", name: "Sam", kids: false), locals), isNull);
+      expect(defaultTarget(const ShareProfile(id: "p1", name: "Riley", kids: true), locals), isNull);
+    });
+  });
+
+  group("applying a copy", () {
+    const alex = LocalProfile(key: "user:0:alex", name: "Alex", kids: false);
+    const sam = LocalProfile(key: "user:11", name: "Sam", kids: true);
+
+    test("to the live profile changes it now, fitted to the apps installed here", () async {
+      await prefs.setString(SettingsService.layoutOwnerKey, alex.key);
+      final report = await applier.apply(received(), {"p1": alex});
+
+      expect(settings.accentColorHex, "#ff00aa");
+      expect((await database.getApplications()).firstWhere((a) => a.packageName == "com.example.video").hidden, isTrue);
+      expect((await database.getApplications()).firstWhere((a) => a.packageName == "com.example.video").name, "Video HD");
+      expect((await database.getAppsCategories()).map((ac) => ac.appPackageName), ["com.example.video"]);
+      expect(liveChanges, 1);
+      expect(report.profiles.single.name, "Alex");
+      expect(report.profiles.single.layout, isTrue);
+      expect(report.profiles.single.missingApps, ["Gone"]);
+      expect(report.missingApps, 1);
+      expect(report.backupName, startsWith("ltv_backup_before_copy_"));
+    });
+
+    test("to another profile waits in its saved layout, and changes nothing live", () async {
+      await prefs.setString(SettingsService.layoutOwnerKey, alex.key);
+      await settings.setAccentColor("#123456");
+      await applier.apply(received(), {"p2": sam});
+
+      expect(settings.accentColorHex, "#123456");
+      expect(liveChanges, 0);
+      expect(await backup.loadProfileLayout(sam.key, settings), isTrue);
+      expect(settings.accentColorHex, "#0000ff");
+    });
+
+    test("keeps a backup first that holds what was there before", () async {
+      await prefs.setString(SettingsService.layoutOwnerKey, alex.key);
+      await settings.setAccentColor("#123456");
+      final report = await applier.apply(received(), {"p1": alex});
+      final file = File("${tempDir.path}/${report.backupName}");
+      expect(await file.exists(), isTrue);
+      expect(((json.decode(await file.readAsString()) as Map)["settings"] as Map)["accent_color"], "#123456");
+    });
+
+    test("hands the pairing choices to this TV for the profile they go to, and counts what it kept", () async {
+      channel.kept = 1;
+      final report = await applier.apply(received(), {"p1": alex}, layouts: false);
+      expect(channel.pairings.single.$1, alex.key);
+      expect(channel.pairings.single.$2, [
+        {"pkg": "com.netflix.ninja", "mode": "profile", "appProfile": "Alex"},
+        {"pkg": "com.disney.disneyplus", "mode": "picker"},
+      ]);
+      expect(report.pairingsApplied, 1);
+      expect(report.pairingsKept, 1);
+      // Only the pairings were asked for: the layout is as it was
+      expect(settings.accentColorHex, isNot("#ff00aa"));
+      expect(report.profiles.single.layout, isFalse);
+    });
+
+    test("never puts a kids profile on a grown-up's or the other way round", () async {
+      final report = await applier.apply(received(), {
+        "p1": sam, // a grown-up's copy, aimed at a kid
+        "p2": alex, // a kid's copy, aimed at a grown-up
+      });
+      expect(report.profiles, isEmpty);
+      expect(channel.pairings, isEmpty);
+    });
+
+    test("skips the profiles with no target", () async {
+      final report = await applier.apply(received(), {"p2": sam});
+      expect(report.profiles.map((p) => p.name), ["Sam"]);
+    });
+
+    test("tells the sender counts only", () async {
+      await prefs.setString(SettingsService.layoutOwnerKey, alex.key);
+      final report = await applier.apply(received(), {"p1": alex});
+      final sent = json.decode(report.toReportJson()) as Map<String, dynamic>;
+      expect(sent, {"copied": 1, "missingApps": 1, "pairingsApplied": 2, "pairingsKept": 0});
+    });
+  });
+}

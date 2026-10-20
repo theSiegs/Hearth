@@ -196,6 +196,118 @@ class AppLocalizationsHi extends AppLocalizations {
   String get inputSources => 'इनपुट स्रोत';
 
   @override
+  String get shareTitle => 'टीवी के बीच प्रोफ़ाइल कॉपी करें';
+
+  @override
+  String get shareIntro => 'एक टीवी से दूसरे टीवी पर प्रोफ़ाइल का रूप, होम लेआउट और स्ट्रीमिंग प्रोफ़ाइल की पसंद कॉपी करता है। स्ट्रीमिंग PIN और Home Assistant की सेटिंग हर टीवी पर ही रहती हैं। आपको दोनों टीवी के पास होना होगा।';
+
+  @override
+  String get shareSendTitle => 'प्रोफ़ाइल दूसरे टीवी पर कॉपी करें';
+
+  @override
+  String get shareReceiveTitle => 'प्रोफ़ाइल दूसरे टीवी से कॉपी करें';
+
+  @override
+  String get shareSendPick => 'आप कौन-सी प्रोफ़ाइल कॉपी करना चाहते हैं?';
+
+  @override
+  String get shareNoProfiles => 'इस टीवी ने अभी अपनी प्रोफ़ाइलें अलग नहीं पहचानी हैं। हर प्रोफ़ाइल पर एक बार स्विच करें, फिर दोबारा कोशिश करें।';
+
+  @override
+  String get shareContinue => 'आगे बढ़ें';
+
+  @override
+  String shareSendWaiting(String name) {
+    return 'दूसरे टीवी पर सेटिंग > प्रोफ़ाइल > प्रोफ़ाइल दूसरे टीवी से कॉपी करें खोलें, फिर $name चुनें।';
+  }
+
+  @override
+  String shareSendAddress(String address) {
+    return 'या वहाँ यह पता डालें: $address';
+  }
+
+  @override
+  String get shareDigitsTitle => 'क्या अंक मेल खाते हैं?';
+
+  @override
+  String get shareDigitsBody => 'इन अंकों की तुलना दूसरे टीवी के अंकों से करें।';
+
+  @override
+  String get shareDigitsMatch => 'मेल खाते हैं';
+
+  @override
+  String get shareDigitsDiffer => 'मेल नहीं खाते';
+
+  @override
+  String get shareWorking => 'कॉपी हो रहा है…';
+
+  @override
+  String get shareFinding => 'भेजने के लिए तैयार टीवी खोजा जा रहा है। उस टीवी पर प्रोफ़ाइल दूसरे टीवी पर कॉपी करें खोलें।';
+
+  @override
+  String get shareEnterAddress => 'पता डालें';
+
+  @override
+  String get shareAddressPrompt => 'दूसरे टीवी का पता, जैसा उसकी स्क्रीन पर दिखता है (जैसे 192.168.1.20:8770)।';
+
+  @override
+  String get shareConnect => 'कनेक्ट करें';
+
+  @override
+  String get shareMapTitle => 'हर प्रोफ़ाइल कहाँ जाएगी?';
+
+  @override
+  String get shareMapSkip => 'कॉपी न करें';
+
+  @override
+  String get shareWhatLayout => 'रूप और होम लेआउट';
+
+  @override
+  String get shareWhatPairings => 'स्ट्रीमिंग प्रोफ़ाइल की पसंद';
+
+  @override
+  String get shareCopy => 'कॉपी करें';
+
+  @override
+  String get shareDoneTitle => 'कॉपी हो गया';
+
+  @override
+  String shareDoneBody(int count, String backup) {
+    return 'कॉपी की गई प्रोफ़ाइलें: $count। पहले एक बैकअप रखा गया: $backup (सेटिंग > सिस्टम > बैकअप और रीस्टोर)।';
+  }
+
+  @override
+  String shareSentBody(int count) {
+    return 'दूसरे टीवी पर कॉपी की गई प्रोफ़ाइलें: $count।';
+  }
+
+  @override
+  String shareMissingApps(int count) {
+    return 'छोड़े गए ऐप, क्योंकि पाने वाले टीवी में नहीं हैं: $count।';
+  }
+
+  @override
+  String get shareErrorTitle => 'कॉपी पूरी नहीं हुई';
+
+  @override
+  String get shareErrorNetwork => 'दूसरे टीवी तक नहीं पहुँच सके। दोनों टीवी एक ही घरेलू नेटवर्क पर होने चाहिए।';
+
+  @override
+  String get shareErrorMismatch => 'अंक मेल नहीं खाए, इसलिए कुछ भी कॉपी नहीं हुआ।';
+
+  @override
+  String get shareErrorStopped => 'दूसरे टीवी ने कॉपी रोक दी।';
+
+  @override
+  String get shareErrorTimeout => 'कॉपी का समय समाप्त हो गया। दोनों टीवी पर फिर से शुरू करें।';
+
+  @override
+  String get shareErrorNewer => 'उस टीवी पर Hearth का नया संस्करण है। इसे अपडेट करें और फिर कोशिश करें।';
+
+  @override
+  String get shareErrorGeneric => 'कॉपी पूरी नहीं हुई। इस टीवी पर कुछ नहीं बदला।';
+
+  @override
   String get backupAndRestore => 'बैकअप और पुनर्स्थापना';
 
   @override

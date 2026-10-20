@@ -196,6 +196,118 @@ class AppLocalizationsUk extends AppLocalizations {
   String get inputSources => 'Джерела сигналу';
 
   @override
+  String get shareTitle => 'Копіювання профілів між телевізорами';
+
+  @override
+  String get shareIntro => 'Копіює вигляд, розташування головного екрана та вибір профілів стримінгу з одного телевізора на інший. PIN-коди стримінгу та налаштування Home Assistant залишаються на кожному телевізорі. Потрібно бути біля обох телевізорів.';
+
+  @override
+  String get shareSendTitle => 'Скопіювати профілі на інший телевізор';
+
+  @override
+  String get shareReceiveTitle => 'Скопіювати профілі з іншого телевізора';
+
+  @override
+  String get shareSendPick => 'Які профілі скопіювати?';
+
+  @override
+  String get shareNoProfiles => 'Цей телевізор ще не розрізняє свої профілі. Перемкніться на кожен профіль один раз і повторіть.';
+
+  @override
+  String get shareContinue => 'Продовжити';
+
+  @override
+  String shareSendWaiting(String name) {
+    return 'На іншому телевізорі відкрийте «Налаштування» > «Профілі» > «Скопіювати профілі з іншого телевізора» й виберіть $name.';
+  }
+
+  @override
+  String shareSendAddress(String address) {
+    return 'Або введіть там цю адресу: $address';
+  }
+
+  @override
+  String get shareDigitsTitle => 'Цифри збігаються?';
+
+  @override
+  String get shareDigitsBody => 'Порівняйте ці цифри з цифрами на іншому телевізорі.';
+
+  @override
+  String get shareDigitsMatch => 'Збігаються';
+
+  @override
+  String get shareDigitsDiffer => 'Не збігаються';
+
+  @override
+  String get shareWorking => 'Копіювання…';
+
+  @override
+  String get shareFinding => 'Шукаємо телевізор, готовий надсилати. На ньому відкрийте «Скопіювати профілі на інший телевізор».';
+
+  @override
+  String get shareEnterAddress => 'Ввести адресу';
+
+  @override
+  String get shareAddressPrompt => 'Адреса іншого телевізора, як на його екрані (наприклад, 192.168.1.20:8770).';
+
+  @override
+  String get shareConnect => 'Підключитися';
+
+  @override
+  String get shareMapTitle => 'Куди піде кожен профіль?';
+
+  @override
+  String get shareMapSkip => 'Не копіювати';
+
+  @override
+  String get shareWhatLayout => 'Вигляд і розташування головного екрана';
+
+  @override
+  String get shareWhatPairings => 'Вибір профілів стримінгу';
+
+  @override
+  String get shareCopy => 'Копіювати';
+
+  @override
+  String get shareDoneTitle => 'Скопійовано';
+
+  @override
+  String shareDoneBody(int count, String backup) {
+    return 'Скопійовано профілів: $count. Спершу збережено резервну копію: $backup («Налаштування» > «Система» > «Резервне копіювання та відновлення»).';
+  }
+
+  @override
+  String shareSentBody(int count) {
+    return 'Профілів скопійовано на інший телевізор: $count.';
+  }
+
+  @override
+  String shareMissingApps(int count) {
+    return 'Застосунків пропущено, бо їх немає на телевізорі-одержувачі: $count.';
+  }
+
+  @override
+  String get shareErrorTitle => 'Копіювання не завершено';
+
+  @override
+  String get shareErrorNetwork => 'Не вдалося зв’язатися з іншим телевізором. Обидва мають бути в одній домашній мережі.';
+
+  @override
+  String get shareErrorMismatch => 'Цифри не збіглися, тому нічого не скопійовано.';
+
+  @override
+  String get shareErrorStopped => 'Інший телевізор зупинив копіювання.';
+
+  @override
+  String get shareErrorTimeout => 'Час копіювання вичерпано. Почніть спочатку на обох телевізорах.';
+
+  @override
+  String get shareErrorNewer => 'На тому телевізорі новіша версія Hearth. Оновіть цей і повторіть.';
+
+  @override
+  String get shareErrorGeneric => 'Копіювання не завершено. На цьому телевізорі нічого не змінено.';
+
+  @override
   String get backupAndRestore => 'Резервне копіювання та відновлення';
 
   @override

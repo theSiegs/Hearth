@@ -196,6 +196,118 @@ class AppLocalizationsAr extends AppLocalizations {
   String get inputSources => 'مصادر الإدخال';
 
   @override
+  String get shareTitle => 'نسخ الملفات الشخصية بين أجهزة التلفزيون';
+
+  @override
+  String get shareIntro => 'ينسخ مظهر الملف الشخصي وتخطيط الشاشة الرئيسية واختيارات ملف البث من تلفزيون إلى آخر. تبقى أرقام PIN الخاصة بالبث وإعدادات Home Assistant على كل تلفزيون. يجب أن تكون أمام التلفزيونين.';
+
+  @override
+  String get shareSendTitle => 'نسخ الملفات الشخصية إلى تلفزيون آخر';
+
+  @override
+  String get shareReceiveTitle => 'نسخ الملفات الشخصية من تلفزيون آخر';
+
+  @override
+  String get shareSendPick => 'ما الملفات الشخصية التي تريد نسخها؟';
+
+  @override
+  String get shareNoProfiles => 'لم يميّز هذا التلفزيون ملفاته الشخصية بعد. بدّل إلى كل ملف مرة واحدة ثم حاول مجددًا.';
+
+  @override
+  String get shareContinue => 'متابعة';
+
+  @override
+  String shareSendWaiting(String name) {
+    return 'على التلفزيون الآخر، افتح الإعدادات > الملفات الشخصية > نسخ الملفات الشخصية من تلفزيون آخر، ثم اختر $name.';
+  }
+
+  @override
+  String shareSendAddress(String address) {
+    return 'أو أدخل هذا العنوان هناك: $address';
+  }
+
+  @override
+  String get shareDigitsTitle => 'هل الأرقام متطابقة؟';
+
+  @override
+  String get shareDigitsBody => 'قارن هذه الأرقام بالتي على التلفزيون الآخر.';
+
+  @override
+  String get shareDigitsMatch => 'متطابقة';
+
+  @override
+  String get shareDigitsDiffer => 'غير متطابقة';
+
+  @override
+  String get shareWorking => 'جارٍ النسخ…';
+
+  @override
+  String get shareFinding => 'جارٍ البحث عن تلفزيون جاهز للإرسال. على ذلك التلفزيون، افتح نسخ الملفات الشخصية إلى تلفزيون آخر.';
+
+  @override
+  String get shareEnterAddress => 'إدخال عنوان';
+
+  @override
+  String get shareAddressPrompt => 'عنوان التلفزيون الآخر كما يظهر على شاشته (مثل 192.168.1.20:8770).';
+
+  @override
+  String get shareConnect => 'اتصال';
+
+  @override
+  String get shareMapTitle => 'إلى أين يذهب كل ملف؟';
+
+  @override
+  String get shareMapSkip => 'عدم النسخ';
+
+  @override
+  String get shareWhatLayout => 'المظهر وتخطيط الشاشة الرئيسية';
+
+  @override
+  String get shareWhatPairings => 'اختيارات ملف البث';
+
+  @override
+  String get shareCopy => 'نسخ';
+
+  @override
+  String get shareDoneTitle => 'تم النسخ';
+
+  @override
+  String shareDoneBody(int count, String backup) {
+    return 'عدد الملفات المنسوخة: $count. تم حفظ نسخة احتياطية أولًا: $backup (الإعدادات > النظام > النسخ الاحتياطي والاستعادة).';
+  }
+
+  @override
+  String shareSentBody(int count) {
+    return 'عدد الملفات المنسوخة إلى التلفزيون الآخر: $count.';
+  }
+
+  @override
+  String shareMissingApps(int count) {
+    return 'تطبيقات تم استبعادها لأن التلفزيون المستلم لا يملكها: $count.';
+  }
+
+  @override
+  String get shareErrorTitle => 'لم يكتمل النسخ';
+
+  @override
+  String get shareErrorNetwork => 'تعذّر الوصول إلى التلفزيون الآخر. يجب أن يكون التلفزيونان على الشبكة المنزلية نفسها.';
+
+  @override
+  String get shareErrorMismatch => 'الأرقام غير متطابقة، لذا لم يُنسخ شيء.';
+
+  @override
+  String get shareErrorStopped => 'أوقف التلفزيون الآخر النسخ.';
+
+  @override
+  String get shareErrorTimeout => 'انتهت مهلة النسخ. ابدأ من جديد على التلفزيونين.';
+
+  @override
+  String get shareErrorNewer => 'لدى ذلك التلفزيون إصدار أحدث من Hearth. حدّث هذا وحاول مجددًا.';
+
+  @override
+  String get shareErrorGeneric => 'لم يكتمل النسخ. لم يتغير شيء على هذا التلفزيون.';
+
+  @override
   String get backupAndRestore => 'النسخ الاحتياطي والاستعادة';
 
   @override

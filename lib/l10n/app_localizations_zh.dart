@@ -196,6 +196,118 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inputSources => '输入源';
 
   @override
+  String get shareTitle => '在电视之间复制个人资料';
+
+  @override
+  String get shareIntro => '把个人资料的外观、主屏幕布局和流媒体个人资料选择从一台电视复制到另一台。流媒体 PIN 码和 Home Assistant 设置会留在各自的电视上。您需要在两台电视旁。';
+
+  @override
+  String get shareSendTitle => '将个人资料复制到另一台电视';
+
+  @override
+  String get shareReceiveTitle => '从另一台电视复制个人资料';
+
+  @override
+  String get shareSendPick => '要复制哪些个人资料？';
+
+  @override
+  String get shareNoProfiles => '这台电视还没有识别出它的个人资料。请逐个切换到每个个人资料一次，然后重试。';
+
+  @override
+  String get shareContinue => '继续';
+
+  @override
+  String shareSendWaiting(String name) {
+    return '在另一台电视上，打开“设置”>“个人资料”>“从另一台电视复制个人资料”，然后选择 $name。';
+  }
+
+  @override
+  String shareSendAddress(String address) {
+    return '或者在那里输入这个地址：$address';
+  }
+
+  @override
+  String get shareDigitsTitle => '数字一致吗？';
+
+  @override
+  String get shareDigitsBody => '请把这些数字与另一台电视上的数字对比。';
+
+  @override
+  String get shareDigitsMatch => '一致';
+
+  @override
+  String get shareDigitsDiffer => '不一致';
+
+  @override
+  String get shareWorking => '正在复制…';
+
+  @override
+  String get shareFinding => '正在查找准备好发送的电视。请在那台电视上打开“将个人资料复制到另一台电视”。';
+
+  @override
+  String get shareEnterAddress => '输入地址';
+
+  @override
+  String get shareAddressPrompt => '另一台电视屏幕上显示的地址（例如 192.168.1.20:8770）。';
+
+  @override
+  String get shareConnect => '连接';
+
+  @override
+  String get shareMapTitle => '每个个人资料复制到哪里？';
+
+  @override
+  String get shareMapSkip => '不复制';
+
+  @override
+  String get shareWhatLayout => '外观和主屏幕布局';
+
+  @override
+  String get shareWhatPairings => '流媒体个人资料选择';
+
+  @override
+  String get shareCopy => '复制';
+
+  @override
+  String get shareDoneTitle => '已复制';
+
+  @override
+  String shareDoneBody(int count, String backup) {
+    return '已复制的个人资料：$count。已先保留一份备份：$backup（“设置”>“系统”>“备份与恢复”）。';
+  }
+
+  @override
+  String shareSentBody(int count) {
+    return '已复制到另一台电视的个人资料：$count。';
+  }
+
+  @override
+  String shareMissingApps(int count) {
+    return '因接收电视没有而略过的应用：$count。';
+  }
+
+  @override
+  String get shareErrorTitle => '复制未完成';
+
+  @override
+  String get shareErrorNetwork => '无法连接到另一台电视。两台电视必须在同一个家庭网络中。';
+
+  @override
+  String get shareErrorMismatch => '数字不一致，因此没有复制任何内容。';
+
+  @override
+  String get shareErrorStopped => '另一台电视停止了复制。';
+
+  @override
+  String get shareErrorTimeout => '复制超时。请在两台电视上重新开始。';
+
+  @override
+  String get shareErrorNewer => '那台电视上的 Hearth 版本更新。请更新这台后重试。';
+
+  @override
+  String get shareErrorGeneric => '复制未完成。这台电视上没有任何更改。';
+
+  @override
   String get backupAndRestore => '备份与恢复';
 
   @override

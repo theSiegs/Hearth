@@ -196,6 +196,118 @@ class AppLocalizationsIt extends AppLocalizations {
   String get inputSources => 'Sorgenti di ingresso';
 
   @override
+  String get shareTitle => 'Copia profili tra TV';
+
+  @override
+  String get shareIntro => 'Copia l’aspetto, la disposizione della schermata iniziale e le scelte del profilo streaming di un profilo da una TV all’altra. I PIN dello streaming e le impostazioni di Home Assistant restano su ogni TV. Devi essere davanti a entrambe le TV.';
+
+  @override
+  String get shareSendTitle => 'Copia profili su un’altra TV';
+
+  @override
+  String get shareReceiveTitle => 'Copia profili da un’altra TV';
+
+  @override
+  String get shareSendPick => 'Quali profili vuoi copiare?';
+
+  @override
+  String get shareNoProfiles => 'Questa TV non distingue ancora i suoi profili. Passa una volta a ogni profilo e riprova.';
+
+  @override
+  String get shareContinue => 'Continua';
+
+  @override
+  String shareSendWaiting(String name) {
+    return 'Sull’altra TV apri Impostazioni > Profili > Copia profili da un’altra TV, poi scegli $name.';
+  }
+
+  @override
+  String shareSendAddress(String address) {
+    return 'Oppure inserisci lì questo indirizzo: $address';
+  }
+
+  @override
+  String get shareDigitsTitle => 'Le cifre corrispondono?';
+
+  @override
+  String get shareDigitsBody => 'Confronta queste cifre con quelle dell’altra TV.';
+
+  @override
+  String get shareDigitsMatch => 'Corrispondono';
+
+  @override
+  String get shareDigitsDiffer => 'Non corrispondono';
+
+  @override
+  String get shareWorking => 'Copia in corso…';
+
+  @override
+  String get shareFinding => 'Ricerca di una TV pronta a inviare. Su quella TV apri Copia profili su un’altra TV.';
+
+  @override
+  String get shareEnterAddress => 'Inserisci un indirizzo';
+
+  @override
+  String get shareAddressPrompt => 'L’indirizzo dell’altra TV, come mostrato sul suo schermo (ad esempio 192.168.1.20:8770).';
+
+  @override
+  String get shareConnect => 'Connetti';
+
+  @override
+  String get shareMapTitle => 'Dove va ogni profilo?';
+
+  @override
+  String get shareMapSkip => 'Non copiare';
+
+  @override
+  String get shareWhatLayout => 'Aspetto e disposizione iniziale';
+
+  @override
+  String get shareWhatPairings => 'Scelte del profilo streaming';
+
+  @override
+  String get shareCopy => 'Copia';
+
+  @override
+  String get shareDoneTitle => 'Copiato';
+
+  @override
+  String shareDoneBody(int count, String backup) {
+    return 'Profili copiati: $count. Prima è stato salvato un backup: $backup (Impostazioni > Sistema > Backup e ripristino).';
+  }
+
+  @override
+  String shareSentBody(int count) {
+    return 'Profili copiati sull’altra TV: $count.';
+  }
+
+  @override
+  String shareMissingApps(int count) {
+    return 'App escluse perché la TV ricevente non le ha: $count.';
+  }
+
+  @override
+  String get shareErrorTitle => 'La copia non è terminata';
+
+  @override
+  String get shareErrorNetwork => 'Impossibile raggiungere l’altra TV. Entrambe devono essere sulla stessa rete domestica.';
+
+  @override
+  String get shareErrorMismatch => 'Le cifre non corrispondevano, quindi non è stato copiato nulla.';
+
+  @override
+  String get shareErrorStopped => 'L’altra TV ha interrotto la copia.';
+
+  @override
+  String get shareErrorTimeout => 'La copia è scaduta. Ricomincia su entrambe le TV.';
+
+  @override
+  String get shareErrorNewer => 'Quella TV ha una versione più recente di Hearth. Aggiorna questa e riprova.';
+
+  @override
+  String get shareErrorGeneric => 'La copia non è terminata. Su questa TV non è stato modificato nulla.';
+
+  @override
   String get backupAndRestore => 'Backup e Ripristino';
 
   @override

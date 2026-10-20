@@ -196,6 +196,118 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inputSources => 'Input Sources';
 
   @override
+  String get shareTitle => 'Copy profiles between TVs';
+
+  @override
+  String get shareIntro => 'Copies a profile\'s look, home layout and streaming profile choices from one TV to another. Streaming PINs and Home Assistant settings stay on each TV. You need to be at both TVs.';
+
+  @override
+  String get shareSendTitle => 'Copy profiles to another TV';
+
+  @override
+  String get shareReceiveTitle => 'Copy profiles from another TV';
+
+  @override
+  String get shareSendPick => 'Which profiles do you want to copy?';
+
+  @override
+  String get shareNoProfiles => 'This TV hasn\'t told its profiles apart yet. Switch to each profile once, then try again.';
+
+  @override
+  String get shareContinue => 'Continue';
+
+  @override
+  String shareSendWaiting(String name) {
+    return 'On the other TV, open Settings > Profiles > Copy profiles from another TV, then choose $name.';
+  }
+
+  @override
+  String shareSendAddress(String address) {
+    return 'Or enter this address there: $address';
+  }
+
+  @override
+  String get shareDigitsTitle => 'Do the digits match?';
+
+  @override
+  String get shareDigitsBody => 'Compare these digits with the ones on the other TV.';
+
+  @override
+  String get shareDigitsMatch => 'They match';
+
+  @override
+  String get shareDigitsDiffer => 'They don\'t match';
+
+  @override
+  String get shareWorking => 'Copying…';
+
+  @override
+  String get shareFinding => 'Looking for a TV that is ready to send. On that TV, open Copy profiles to another TV.';
+
+  @override
+  String get shareEnterAddress => 'Enter an address';
+
+  @override
+  String get shareAddressPrompt => 'The other TV\'s address, as shown on its screen (like 192.168.1.20:8770).';
+
+  @override
+  String get shareConnect => 'Connect';
+
+  @override
+  String get shareMapTitle => 'Where does each profile go?';
+
+  @override
+  String get shareMapSkip => 'Don\'t copy';
+
+  @override
+  String get shareWhatLayout => 'Look and home layout';
+
+  @override
+  String get shareWhatPairings => 'Streaming profile choices';
+
+  @override
+  String get shareCopy => 'Copy';
+
+  @override
+  String get shareDoneTitle => 'Copied';
+
+  @override
+  String shareDoneBody(int count, String backup) {
+    return 'Profiles copied: $count. A backup was kept first: $backup (Settings > System > Backup & Restore).';
+  }
+
+  @override
+  String shareSentBody(int count) {
+    return 'Profiles copied to the other TV: $count.';
+  }
+
+  @override
+  String shareMissingApps(int count) {
+    return 'Apps left out because the receiving TV doesn\'t have them: $count.';
+  }
+
+  @override
+  String get shareErrorTitle => 'The copy didn\'t finish';
+
+  @override
+  String get shareErrorNetwork => 'Couldn\'t reach the other TV. Both TVs must be on the same home network.';
+
+  @override
+  String get shareErrorMismatch => 'The digits didn\'t match, so nothing was copied.';
+
+  @override
+  String get shareErrorStopped => 'The other TV stopped the copy.';
+
+  @override
+  String get shareErrorTimeout => 'The copy timed out. Start again on both TVs.';
+
+  @override
+  String get shareErrorNewer => 'That TV has a newer Hearth. Update this one and try again.';
+
+  @override
+  String get shareErrorGeneric => 'The copy didn\'t finish. Nothing was changed on this TV.';
+
+  @override
   String get backupAndRestore => 'Backup & Restore';
 
   @override

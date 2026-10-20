@@ -196,6 +196,118 @@ class AppLocalizationsDe extends AppLocalizations {
   String get inputSources => 'Eingabequellen';
 
   @override
+  String get shareTitle => 'Profile zwischen Fernsehern kopieren';
+
+  @override
+  String get shareIntro => 'Kopiert Aussehen, Startbildschirm-Layout und Streaming-Profilauswahl eines Profils von einem Fernseher auf einen anderen. Streaming-PINs und Home-Assistant-Einstellungen bleiben auf jedem Fernseher. Du musst an beiden Fernsehern sein.';
+
+  @override
+  String get shareSendTitle => 'Profile auf einen anderen Fernseher kopieren';
+
+  @override
+  String get shareReceiveTitle => 'Profile von einem anderen Fernseher kopieren';
+
+  @override
+  String get shareSendPick => 'Welche Profile möchtest du kopieren?';
+
+  @override
+  String get shareNoProfiles => 'Dieser Fernseher kennt seine Profile noch nicht. Wechsle einmal zu jedem Profil und versuche es dann erneut.';
+
+  @override
+  String get shareContinue => 'Weiter';
+
+  @override
+  String shareSendWaiting(String name) {
+    return 'Öffne am anderen Fernseher Einstellungen > Profile > Profile von einem anderen Fernseher kopieren und wähle dann $name.';
+  }
+
+  @override
+  String shareSendAddress(String address) {
+    return 'Oder gib dort diese Adresse ein: $address';
+  }
+
+  @override
+  String get shareDigitsTitle => 'Stimmen die Ziffern überein?';
+
+  @override
+  String get shareDigitsBody => 'Vergleiche diese Ziffern mit denen auf dem anderen Fernseher.';
+
+  @override
+  String get shareDigitsMatch => 'Sie stimmen überein';
+
+  @override
+  String get shareDigitsDiffer => 'Sie stimmen nicht überein';
+
+  @override
+  String get shareWorking => 'Wird kopiert…';
+
+  @override
+  String get shareFinding => 'Suche nach einem Fernseher, der bereit zum Senden ist. Öffne dort „Profile auf einen anderen Fernseher kopieren“.';
+
+  @override
+  String get shareEnterAddress => 'Adresse eingeben';
+
+  @override
+  String get shareAddressPrompt => 'Die Adresse des anderen Fernsehers, wie auf seinem Bildschirm angezeigt (z. B. 192.168.1.20:8770).';
+
+  @override
+  String get shareConnect => 'Verbinden';
+
+  @override
+  String get shareMapTitle => 'Wohin kommt jedes Profil?';
+
+  @override
+  String get shareMapSkip => 'Nicht kopieren';
+
+  @override
+  String get shareWhatLayout => 'Aussehen und Startbildschirm-Layout';
+
+  @override
+  String get shareWhatPairings => 'Streaming-Profilauswahl';
+
+  @override
+  String get shareCopy => 'Kopieren';
+
+  @override
+  String get shareDoneTitle => 'Kopiert';
+
+  @override
+  String shareDoneBody(int count, String backup) {
+    return 'Kopierte Profile: $count. Zuvor wurde eine Sicherung angelegt: $backup (Einstellungen > System > Sichern & Wiederherstellen).';
+  }
+
+  @override
+  String shareSentBody(int count) {
+    return 'Auf den anderen Fernseher kopierte Profile: $count.';
+  }
+
+  @override
+  String shareMissingApps(int count) {
+    return 'Ausgelassene Apps, weil der empfangende Fernseher sie nicht hat: $count.';
+  }
+
+  @override
+  String get shareErrorTitle => 'Das Kopieren wurde nicht abgeschlossen';
+
+  @override
+  String get shareErrorNetwork => 'Der andere Fernseher ist nicht erreichbar. Beide Fernseher müssen im selben Heimnetzwerk sein.';
+
+  @override
+  String get shareErrorMismatch => 'Die Ziffern stimmten nicht überein, daher wurde nichts kopiert.';
+
+  @override
+  String get shareErrorStopped => 'Der andere Fernseher hat das Kopieren beendet.';
+
+  @override
+  String get shareErrorTimeout => 'Zeitüberschreitung beim Kopieren. Starte auf beiden Fernsehern neu.';
+
+  @override
+  String get shareErrorNewer => 'Dieser Fernseher hat ein neueres Hearth. Aktualisiere dieses und versuche es erneut.';
+
+  @override
+  String get shareErrorGeneric => 'Das Kopieren wurde nicht abgeschlossen. An diesem Fernseher wurde nichts geändert.';
+
+  @override
   String get backupAndRestore => 'Sichern & Wiederherstellen';
 
   @override

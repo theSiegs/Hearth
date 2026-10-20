@@ -196,6 +196,118 @@ class AppLocalizationsKo extends AppLocalizations {
   String get inputSources => '입력 소스';
 
   @override
+  String get shareTitle => 'TV 간 프로필 복사';
+
+  @override
+  String get shareIntro => '프로필의 모양, 홈 배치, 스트리밍 프로필 선택을 한 TV에서 다른 TV로 복사합니다. 스트리밍 PIN과 Home Assistant 설정은 각 TV에 그대로 남습니다. 두 TV 앞에 모두 있어야 합니다.';
+
+  @override
+  String get shareSendTitle => '다른 TV로 프로필 복사';
+
+  @override
+  String get shareReceiveTitle => '다른 TV에서 프로필 복사';
+
+  @override
+  String get shareSendPick => '복사할 프로필을 선택하세요';
+
+  @override
+  String get shareNoProfiles => '이 TV는 아직 프로필을 구분하지 못했습니다. 각 프로필로 한 번씩 전환한 뒤 다시 시도하세요.';
+
+  @override
+  String get shareContinue => '계속';
+
+  @override
+  String shareSendWaiting(String name) {
+    return '다른 TV에서 설정 > 프로필 > 다른 TV에서 프로필 복사를 열고 $name을(를) 선택하세요.';
+  }
+
+  @override
+  String shareSendAddress(String address) {
+    return '또는 그곳에서 이 주소를 입력하세요: $address';
+  }
+
+  @override
+  String get shareDigitsTitle => '숫자가 일치하나요?';
+
+  @override
+  String get shareDigitsBody => '이 숫자를 다른 TV의 숫자와 비교하세요.';
+
+  @override
+  String get shareDigitsMatch => '일치합니다';
+
+  @override
+  String get shareDigitsDiffer => '일치하지 않습니다';
+
+  @override
+  String get shareWorking => '복사 중…';
+
+  @override
+  String get shareFinding => '보낼 준비가 된 TV를 찾는 중입니다. 그 TV에서 다른 TV로 프로필 복사를 여세요.';
+
+  @override
+  String get shareEnterAddress => '주소 입력';
+
+  @override
+  String get shareAddressPrompt => '다른 TV 화면에 표시된 주소 (예: 192.168.1.20:8770).';
+
+  @override
+  String get shareConnect => '연결';
+
+  @override
+  String get shareMapTitle => '각 프로필은 어디로 가나요?';
+
+  @override
+  String get shareMapSkip => '복사 안 함';
+
+  @override
+  String get shareWhatLayout => '모양과 홈 배치';
+
+  @override
+  String get shareWhatPairings => '스트리밍 프로필 선택';
+
+  @override
+  String get shareCopy => '복사';
+
+  @override
+  String get shareDoneTitle => '복사됨';
+
+  @override
+  String shareDoneBody(int count, String backup) {
+    return '복사된 프로필: $count. 먼저 백업을 보관했습니다: $backup (설정 > 시스템 > 백업 및 복원).';
+  }
+
+  @override
+  String shareSentBody(int count) {
+    return '다른 TV로 복사된 프로필: $count.';
+  }
+
+  @override
+  String shareMissingApps(int count) {
+    return '받는 TV에 없어서 제외된 앱: $count.';
+  }
+
+  @override
+  String get shareErrorTitle => '복사가 끝나지 않았습니다';
+
+  @override
+  String get shareErrorNetwork => '다른 TV에 연결할 수 없습니다. 두 TV가 같은 홈 네트워크에 있어야 합니다.';
+
+  @override
+  String get shareErrorMismatch => '숫자가 일치하지 않아 아무것도 복사되지 않았습니다.';
+
+  @override
+  String get shareErrorStopped => '다른 TV가 복사를 중단했습니다.';
+
+  @override
+  String get shareErrorTimeout => '복사 시간이 초과되었습니다. 두 TV에서 처음부터 다시 시작하세요.';
+
+  @override
+  String get shareErrorNewer => '그 TV의 Hearth가 더 최신입니다. 이 TV를 업데이트한 뒤 다시 시도하세요.';
+
+  @override
+  String get shareErrorGeneric => '복사가 끝나지 않았습니다. 이 TV에서는 아무것도 바뀌지 않았습니다.';
+
+  @override
   String get backupAndRestore => '백업 및 복원';
 
   @override

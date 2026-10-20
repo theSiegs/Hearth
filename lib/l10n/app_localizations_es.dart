@@ -196,6 +196,118 @@ class AppLocalizationsEs extends AppLocalizations {
   String get inputSources => 'Fuentes de Entrada';
 
   @override
+  String get shareTitle => 'Copiar perfiles entre televisores';
+
+  @override
+  String get shareIntro => 'Copia el aspecto, la disposición de inicio y las opciones de perfil de streaming de un perfil de un televisor a otro. Los PIN de streaming y los ajustes de Home Assistant se quedan en cada televisor. Tienes que estar en los dos televisores.';
+
+  @override
+  String get shareSendTitle => 'Copiar perfiles a otro televisor';
+
+  @override
+  String get shareReceiveTitle => 'Copiar perfiles desde otro televisor';
+
+  @override
+  String get shareSendPick => '¿Qué perfiles quieres copiar?';
+
+  @override
+  String get shareNoProfiles => 'Este televisor aún no distingue sus perfiles. Cambia una vez a cada perfil y vuelve a intentarlo.';
+
+  @override
+  String get shareContinue => 'Continuar';
+
+  @override
+  String shareSendWaiting(String name) {
+    return 'En el otro televisor, abre Ajustes > Perfiles > Copiar perfiles desde otro televisor y elige $name.';
+  }
+
+  @override
+  String shareSendAddress(String address) {
+    return 'O introduce allí esta dirección: $address';
+  }
+
+  @override
+  String get shareDigitsTitle => '¿Coinciden los dígitos?';
+
+  @override
+  String get shareDigitsBody => 'Compara estos dígitos con los del otro televisor.';
+
+  @override
+  String get shareDigitsMatch => 'Coinciden';
+
+  @override
+  String get shareDigitsDiffer => 'No coinciden';
+
+  @override
+  String get shareWorking => 'Copiando…';
+
+  @override
+  String get shareFinding => 'Buscando un televisor listo para enviar. En ese televisor, abre Copiar perfiles a otro televisor.';
+
+  @override
+  String get shareEnterAddress => 'Introducir una dirección';
+
+  @override
+  String get shareAddressPrompt => 'La dirección del otro televisor, como aparece en su pantalla (por ejemplo 192.168.1.20:8770).';
+
+  @override
+  String get shareConnect => 'Conectar';
+
+  @override
+  String get shareMapTitle => '¿Dónde va cada perfil?';
+
+  @override
+  String get shareMapSkip => 'No copiar';
+
+  @override
+  String get shareWhatLayout => 'Aspecto y disposición de inicio';
+
+  @override
+  String get shareWhatPairings => 'Opciones de perfil de streaming';
+
+  @override
+  String get shareCopy => 'Copiar';
+
+  @override
+  String get shareDoneTitle => 'Copiado';
+
+  @override
+  String shareDoneBody(int count, String backup) {
+    return 'Perfiles copiados: $count. Antes se guardó una copia de seguridad: $backup (Ajustes > Sistema > Copia de seguridad y restauración).';
+  }
+
+  @override
+  String shareSentBody(int count) {
+    return 'Perfiles copiados al otro televisor: $count.';
+  }
+
+  @override
+  String shareMissingApps(int count) {
+    return 'Apps omitidas porque el televisor receptor no las tiene: $count.';
+  }
+
+  @override
+  String get shareErrorTitle => 'La copia no terminó';
+
+  @override
+  String get shareErrorNetwork => 'No se pudo contactar con el otro televisor. Los dos deben estar en la misma red doméstica.';
+
+  @override
+  String get shareErrorMismatch => 'Los dígitos no coincidían, así que no se copió nada.';
+
+  @override
+  String get shareErrorStopped => 'El otro televisor detuvo la copia.';
+
+  @override
+  String get shareErrorTimeout => 'La copia tardó demasiado. Empieza de nuevo en los dos televisores.';
+
+  @override
+  String get shareErrorNewer => 'Ese televisor tiene una versión más nueva de Hearth. Actualiza este y vuelve a intentarlo.';
+
+  @override
+  String get shareErrorGeneric => 'La copia no terminó. No se cambió nada en este televisor.';
+
+  @override
   String get backupAndRestore => 'Copia de seguridad y restauración';
 
   @override

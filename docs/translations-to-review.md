@@ -5,7 +5,7 @@ Machine-translated strings that a native speaker should check: every key below, 
 Proper nouns (Hearth, HearthTube, Home Assistant, Google TV, Netflix, Watch Next, Android) stay untranslated on purpose. Android-side strings (popup, Home Assistant panel and phone page, Profile Pairing card) are in `android/app/src/main/res/values-*/strings*.xml` and are machine-translated too.
 
 594 keys, grouped by prefix:
-604 keys, grouped by prefix:
+638 keys, grouped by prefix:
 
 - **watch** (6): `watchNextAccess`, `watchNextInfoRemove`, `watchNextInfoHideAllFrom`, `watchNextInfoPlayResume`, `watchNextInfoOpenApp`, `watchNextInfoAppInfo`
 - **settings** (1): `settingsTitle`
@@ -56,6 +56,7 @@ Proper nouns (Hearth, HearthTube, Home Assistant, Google TV, Netflix, Watch Next
 - **notif** (9): `notifClearAll`, `notifAllCaughtUp`, `notifBlockAppNotifications`, `notifOpenApp`, `notifAccessAdbTitle`, `notifAccessAdbMessage`, `notifOpenAppInfo`, `notifOverlayPermissionTitle`, `notifOverlayAdbMessage`
 - **blocked** (1): `blockedNotificationsHeading`
 - **tvPower** (2): `tvPowerGoogleTvHome`, `tvPowerGoogleTvHomeNote`
+- **share** (34): `shareTitle`, `shareIntro`, `shareSendTitle`, `shareReceiveTitle`, `shareSendPick`, `shareNoProfiles`, `shareContinue`, `shareSendWaiting`, `shareSendAddress`, `shareDigitsTitle`, `shareDigitsBody`, `shareDigitsMatch`, `shareDigitsDiffer`, `shareWorking`, `shareFinding`, `shareEnterAddress`, `shareAddressPrompt`, `shareConnect`, `shareMapTitle`, `shareMapSkip`, `shareWhatLayout`, `shareWhatPairings`, `shareCopy`, `shareDoneTitle`, `shareDoneBody`, `shareSentBody`, `shareMissingApps`, `shareErrorTitle`, `shareErrorNetwork`, `shareErrorMismatch`, `shareErrorStopped`, `shareErrorTimeout`, `shareErrorNewer`, `shareErrorGeneric`
 - **backup** (14): `backupShareText`, `backupShareFailedTitle`, `backupShareFailed`, `backupExportSuccessTitle`, `backupExportFailedTitle`, `backupImportSuccessTitle`, `backupImportFailedTitle`, `backupImport`, `backupLoadError`, `backupNoFiles`, `backupFileDetails`, `backupSizeBytes`, `backupSizeKilobytes`, `backupSizeMegabytes`
 - **about** (4): `aboutDescription`, `aboutHearthOnGitHub`, `aboutIncludesCode`, `aboutLicense`
 - **pin** (4, 2026.10.55): `profilePinGaveUp`, `pinConsentTitle`, `pinConsentBody`, `pinConsentAgree`; and the Android `profile_pairing_description`

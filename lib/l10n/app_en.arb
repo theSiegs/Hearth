@@ -74,6 +74,158 @@
     "pickNightWallpaper": "Pick night wallpaper",
     "inputs": "Inputs",
     "inputSources": "Input Sources",
+    "shareTitle": "Copy profiles between TVs",
+    "@shareTitle": {
+        "description": "Settings > Profiles: copying profiles between two TVs; also the page's title"
+    },
+    "shareIntro": "Copies a profile's look, home layout and streaming profile choices from one TV to another. Streaming PINs and Home Assistant settings stay on each TV. You need to be at both TVs.",
+    "@shareIntro": {
+        "description": "Copy profiles page: what a copy takes and what stays on each TV"
+    },
+    "shareSendTitle": "Copy profiles to another TV",
+    "@shareSendTitle": {
+        "description": "Copy profiles page: the TV that has the profiles sends them"
+    },
+    "shareReceiveTitle": "Copy profiles from another TV",
+    "@shareReceiveTitle": {
+        "description": "Copy profiles page: the TV that wants the profiles receives them"
+    },
+    "shareSendPick": "Which profiles do you want to copy?",
+    "@shareSendPick": {
+        "description": "Sending TV: heading over the list of profiles to copy"
+    },
+    "shareNoProfiles": "This TV hasn't told its profiles apart yet. Switch to each profile once, then try again.",
+    "@shareNoProfiles": {
+        "description": "Sending TV: no profiles known yet"
+    },
+    "shareContinue": "Continue",
+    "@shareContinue": {
+        "description": "Sending TV: after choosing profiles, start waiting for the other TV"
+    },
+    "shareSendWaiting": "On the other TV, open Settings > Profiles > Copy profiles from another TV, then choose {name}.",
+    "@shareSendWaiting": {
+        "description": "Sending TV: what to do on the other TV; {name} is this TV's name",
+        "placeholders": {
+            "name": {"type": "String"}
+        }
+    },
+    "shareSendAddress": "Or enter this address there: {address}",
+    "@shareSendAddress": {
+        "description": "Sending TV: the address to type on the other TV if it can't find this one; {address} is like 192.168.1.20:8770",
+        "placeholders": {
+            "address": {"type": "String"}
+        }
+    },
+    "shareDigitsTitle": "Do the digits match?",
+    "@shareDigitsTitle": {
+        "description": "Both TVs: heading over six digits the parent compares between the screens"
+    },
+    "shareDigitsBody": "Compare these digits with the ones on the other TV.",
+    "@shareDigitsBody": {
+        "description": "Both TVs: what to do with the digits"
+    },
+    "shareDigitsMatch": "They match",
+    "@shareDigitsMatch": {
+        "description": "Both TVs: the digits are the same on both screens"
+    },
+    "shareDigitsDiffer": "They don't match",
+    "@shareDigitsDiffer": {
+        "description": "Both TVs: the digits differ, so nothing is copied"
+    },
+    "shareWorking": "Copying…",
+    "@shareWorking": {
+        "description": "Both TVs: while the copy is moving"
+    },
+    "shareFinding": "Looking for a TV that is ready to send. On that TV, open Copy profiles to another TV.",
+    "@shareFinding": {
+        "description": "Receiving TV: looking for a TV that is waiting to send"
+    },
+    "shareEnterAddress": "Enter an address",
+    "@shareEnterAddress": {
+        "description": "Receiving TV: type the sending TV's address by hand"
+    },
+    "shareAddressPrompt": "The other TV's address, as shown on its screen (like 192.168.1.20:8770).",
+    "@shareAddressPrompt": {
+        "description": "Receiving TV: what address to type"
+    },
+    "shareConnect": "Connect",
+    "@shareConnect": {
+        "description": "Receiving TV: button in the address dialog"
+    },
+    "shareMapTitle": "Where does each profile go?",
+    "@shareMapTitle": {
+        "description": "Receiving TV: heading over the list of copied profiles and where each goes on this TV"
+    },
+    "shareMapSkip": "Don't copy",
+    "@shareMapSkip": {
+        "description": "Receiving TV: a copied profile that is not copied anywhere"
+    },
+    "shareWhatLayout": "Look and home layout",
+    "@shareWhatLayout": {
+        "description": "Receiving TV: switch for taking the profile's look and home layout"
+    },
+    "shareWhatPairings": "Streaming profile choices",
+    "@shareWhatPairings": {
+        "description": "Receiving TV: switch for taking the profile's Profile Pairing choices"
+    },
+    "shareCopy": "Copy",
+    "@shareCopy": {
+        "description": "Receiving TV: button that starts putting the copied profiles in place"
+    },
+    "shareDoneTitle": "Copied",
+    "@shareDoneTitle": {
+        "description": "Both TVs: the copy is done"
+    },
+    "shareDoneBody": "Profiles copied: {count}. A backup was kept first: {backup} (Settings > System > Backup & Restore).",
+    "@shareDoneBody": {
+        "description": "Receiving TV: {count} is how many profiles were copied, {backup} the backup file kept first",
+        "placeholders": {
+            "count": {"type": "int"},
+            "backup": {"type": "String"}
+        }
+    },
+    "shareSentBody": "Profiles copied to the other TV: {count}.",
+    "@shareSentBody": {
+        "description": "Sending TV: {count} is how many profiles the other TV took",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareMissingApps": "Apps left out because the receiving TV doesn't have them: {count}.",
+    "@shareMissingApps": {
+        "description": "Both TVs: {count} is how many apps the receiving TV doesn't have",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareErrorTitle": "The copy didn't finish",
+    "@shareErrorTitle": {
+        "description": "Both TVs: heading when the copy didn't finish"
+    },
+    "shareErrorNetwork": "Couldn't reach the other TV. Both TVs must be on the same home network.",
+    "@shareErrorNetwork": {
+        "description": "Both TVs: the other TV couldn't be reached"
+    },
+    "shareErrorMismatch": "The digits didn't match, so nothing was copied.",
+    "@shareErrorMismatch": {
+        "description": "Both TVs: a parent said the digits differ"
+    },
+    "shareErrorStopped": "The other TV stopped the copy.",
+    "@shareErrorStopped": {
+        "description": "Both TVs: the other TV ended the copy"
+    },
+    "shareErrorTimeout": "The copy timed out. Start again on both TVs.",
+    "@shareErrorTimeout": {
+        "description": "Both TVs: a step took too long"
+    },
+    "shareErrorNewer": "That TV has a newer Hearth. Update this one and try again.",
+    "@shareErrorNewer": {
+        "description": "Receiving TV: the sending TV's Hearth is newer than this one"
+    },
+    "shareErrorGeneric": "The copy didn't finish. Nothing was changed on this TV.",
+    "@shareErrorGeneric": {
+        "description": "Both TVs: any other failure"
+    },
     "backupAndRestore": "Backup & Restore",
     "exportBackup": "Export Backup",
     "importBackup": "Import Backup",

@@ -485,6 +485,210 @@ abstract class AppLocalizations {
   /// **'Input Sources'**
   String get inputSources;
 
+  /// Settings > Profiles: copying profiles between two TVs; also the page's title
+  ///
+  /// In en, this message translates to:
+  /// **'Copy profiles between TVs'**
+  String get shareTitle;
+
+  /// Copy profiles page: what a copy takes and what stays on each TV
+  ///
+  /// In en, this message translates to:
+  /// **'Copies a profile\'s look, home layout and streaming profile choices from one TV to another. Streaming PINs and Home Assistant settings stay on each TV. You need to be at both TVs.'**
+  String get shareIntro;
+
+  /// Copy profiles page: the TV that has the profiles sends them
+  ///
+  /// In en, this message translates to:
+  /// **'Copy profiles to another TV'**
+  String get shareSendTitle;
+
+  /// Copy profiles page: the TV that wants the profiles receives them
+  ///
+  /// In en, this message translates to:
+  /// **'Copy profiles from another TV'**
+  String get shareReceiveTitle;
+
+  /// Sending TV: heading over the list of profiles to copy
+  ///
+  /// In en, this message translates to:
+  /// **'Which profiles do you want to copy?'**
+  String get shareSendPick;
+
+  /// Sending TV: no profiles known yet
+  ///
+  /// In en, this message translates to:
+  /// **'This TV hasn\'t told its profiles apart yet. Switch to each profile once, then try again.'**
+  String get shareNoProfiles;
+
+  /// Sending TV: after choosing profiles, start waiting for the other TV
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get shareContinue;
+
+  /// Sending TV: what to do on the other TV; {name} is this TV's name
+  ///
+  /// In en, this message translates to:
+  /// **'On the other TV, open Settings > Profiles > Copy profiles from another TV, then choose {name}.'**
+  String shareSendWaiting(String name);
+
+  /// Sending TV: the address to type on the other TV if it can't find this one; {address} is like 192.168.1.20:8770
+  ///
+  /// In en, this message translates to:
+  /// **'Or enter this address there: {address}'**
+  String shareSendAddress(String address);
+
+  /// Both TVs: heading over six digits the parent compares between the screens
+  ///
+  /// In en, this message translates to:
+  /// **'Do the digits match?'**
+  String get shareDigitsTitle;
+
+  /// Both TVs: what to do with the digits
+  ///
+  /// In en, this message translates to:
+  /// **'Compare these digits with the ones on the other TV.'**
+  String get shareDigitsBody;
+
+  /// Both TVs: the digits are the same on both screens
+  ///
+  /// In en, this message translates to:
+  /// **'They match'**
+  String get shareDigitsMatch;
+
+  /// Both TVs: the digits differ, so nothing is copied
+  ///
+  /// In en, this message translates to:
+  /// **'They don\'t match'**
+  String get shareDigitsDiffer;
+
+  /// Both TVs: while the copy is moving
+  ///
+  /// In en, this message translates to:
+  /// **'Copying…'**
+  String get shareWorking;
+
+  /// Receiving TV: looking for a TV that is waiting to send
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for a TV that is ready to send. On that TV, open Copy profiles to another TV.'**
+  String get shareFinding;
+
+  /// Receiving TV: type the sending TV's address by hand
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an address'**
+  String get shareEnterAddress;
+
+  /// Receiving TV: what address to type
+  ///
+  /// In en, this message translates to:
+  /// **'The other TV\'s address, as shown on its screen (like 192.168.1.20:8770).'**
+  String get shareAddressPrompt;
+
+  /// Receiving TV: button in the address dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get shareConnect;
+
+  /// Receiving TV: heading over the list of copied profiles and where each goes on this TV
+  ///
+  /// In en, this message translates to:
+  /// **'Where does each profile go?'**
+  String get shareMapTitle;
+
+  /// Receiving TV: a copied profile that is not copied anywhere
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t copy'**
+  String get shareMapSkip;
+
+  /// Receiving TV: switch for taking the profile's look and home layout
+  ///
+  /// In en, this message translates to:
+  /// **'Look and home layout'**
+  String get shareWhatLayout;
+
+  /// Receiving TV: switch for taking the profile's Profile Pairing choices
+  ///
+  /// In en, this message translates to:
+  /// **'Streaming profile choices'**
+  String get shareWhatPairings;
+
+  /// Receiving TV: button that starts putting the copied profiles in place
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get shareCopy;
+
+  /// Both TVs: the copy is done
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get shareDoneTitle;
+
+  /// Receiving TV: {count} is how many profiles were copied, {backup} the backup file kept first
+  ///
+  /// In en, this message translates to:
+  /// **'Profiles copied: {count}. A backup was kept first: {backup} (Settings > System > Backup & Restore).'**
+  String shareDoneBody(int count, String backup);
+
+  /// Sending TV: {count} is how many profiles the other TV took
+  ///
+  /// In en, this message translates to:
+  /// **'Profiles copied to the other TV: {count}.'**
+  String shareSentBody(int count);
+
+  /// Both TVs: {count} is how many apps the receiving TV doesn't have
+  ///
+  /// In en, this message translates to:
+  /// **'Apps left out because the receiving TV doesn\'t have them: {count}.'**
+  String shareMissingApps(int count);
+
+  /// Both TVs: heading when the copy didn't finish
+  ///
+  /// In en, this message translates to:
+  /// **'The copy didn\'t finish'**
+  String get shareErrorTitle;
+
+  /// Both TVs: the other TV couldn't be reached
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the other TV. Both TVs must be on the same home network.'**
+  String get shareErrorNetwork;
+
+  /// Both TVs: a parent said the digits differ
+  ///
+  /// In en, this message translates to:
+  /// **'The digits didn\'t match, so nothing was copied.'**
+  String get shareErrorMismatch;
+
+  /// Both TVs: the other TV ended the copy
+  ///
+  /// In en, this message translates to:
+  /// **'The other TV stopped the copy.'**
+  String get shareErrorStopped;
+
+  /// Both TVs: a step took too long
+  ///
+  /// In en, this message translates to:
+  /// **'The copy timed out. Start again on both TVs.'**
+  String get shareErrorTimeout;
+
+  /// Receiving TV: the sending TV's Hearth is newer than this one
+  ///
+  /// In en, this message translates to:
+  /// **'That TV has a newer Hearth. Update this one and try again.'**
+  String get shareErrorNewer;
+
+  /// Both TVs: any other failure
+  ///
+  /// In en, this message translates to:
+  /// **'The copy didn\'t finish. Nothing was changed on this TV.'**
+  String get shareErrorGeneric;
+
   /// No description provided for @backupAndRestore.
   ///
   /// In en, this message translates to:

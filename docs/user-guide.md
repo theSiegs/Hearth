@@ -129,6 +129,22 @@ again until it's saved anew.
 In a kids profile, or a profile without a Google TV PIN, holding the profile button opens the profile chooser
 instead. In a kids profile the remote's profile button always does Google TV's own job.
 
+**Copy profiles between TVs** (**Settings → Profiles**, in your own profile). Sets a new TV up like another one: a
+profile's look, home layout (which apps, in what order, the dock) and Profile Pairing choices go from one TV to the
+other, over your home network. Be at both TVs. On the TV that has the profiles, open **Copy profiles to another TV**
+and choose which; on the other, open **Copy profiles from another TV** and choose the first (it is found by name, or
+type the address the first TV shows). Both TVs show the same six digits: if they match on both screens, say so on both,
+and the copy goes. The receiving TV then shows where each profile goes (a profile with the same name and kind here, or
+**Don't copy**; a kids profile never goes onto a grown-up's, nor the other way round) and what to take.
+
+- Only the apps installed on the receiving TV are placed; the others are left out and counted.
+- A streaming app profile choice the receiving TV already has is kept as it is.
+- A backup of the receiving TV is made first and listed in **Backup & Restore**, so a copy can be undone there.
+- Nothing is kept afterwards: no key, no list of TVs. Streaming PINs, Home Assistant settings, the parent PIN and
+  wallpaper pictures are not copied (set those up on each TV).
+- If the digits don't match, nothing is sent. Someone else on your network who connects can't get anything without a
+  parent saying the digits match.
+
 ## Kids profiles
 
 Hearth treats a profile as a kids profile when Family Link supervises it.

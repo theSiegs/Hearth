@@ -196,6 +196,118 @@ class AppLocalizationsJa extends AppLocalizations {
   String get inputSources => '入力ソース';
 
   @override
+  String get shareTitle => 'テレビ間でプロフィールをコピー';
+
+  @override
+  String get shareIntro => 'プロフィールの見た目、ホームの配置、ストリーミングのプロフィール選択を、別のテレビにコピーします。ストリーミングの PIN と Home Assistant の設定は各テレビに残ります。両方のテレビの前にいる必要があります。';
+
+  @override
+  String get shareSendTitle => '別のテレビにプロフィールをコピー';
+
+  @override
+  String get shareReceiveTitle => '別のテレビからプロフィールをコピー';
+
+  @override
+  String get shareSendPick => 'コピーするプロフィールを選んでください';
+
+  @override
+  String get shareNoProfiles => 'このテレビはまだプロフィールを区別できていません。各プロフィールに一度切り替えてから、もう一度お試しください。';
+
+  @override
+  String get shareContinue => '次へ';
+
+  @override
+  String shareSendWaiting(String name) {
+    return 'もう一方のテレビで「設定」>「プロフィール」>「別のテレビからプロフィールをコピー」を開き、$name を選んでください。';
+  }
+
+  @override
+  String shareSendAddress(String address) {
+    return 'または、そちらでこのアドレスを入力: $address';
+  }
+
+  @override
+  String get shareDigitsTitle => '数字は一致していますか？';
+
+  @override
+  String get shareDigitsBody => 'この数字をもう一方のテレビの数字と見比べてください。';
+
+  @override
+  String get shareDigitsMatch => '一致しています';
+
+  @override
+  String get shareDigitsDiffer => '一致しません';
+
+  @override
+  String get shareWorking => 'コピー中…';
+
+  @override
+  String get shareFinding => '送信できるテレビを探しています。そのテレビで「別のテレビにプロフィールをコピー」を開いてください。';
+
+  @override
+  String get shareEnterAddress => 'アドレスを入力';
+
+  @override
+  String get shareAddressPrompt => 'もう一方のテレビの画面に表示されているアドレス（例: 192.168.1.20:8770）。';
+
+  @override
+  String get shareConnect => '接続';
+
+  @override
+  String get shareMapTitle => '各プロフィールの行き先は？';
+
+  @override
+  String get shareMapSkip => 'コピーしない';
+
+  @override
+  String get shareWhatLayout => '見た目とホームの配置';
+
+  @override
+  String get shareWhatPairings => 'ストリーミングのプロフィール選択';
+
+  @override
+  String get shareCopy => 'コピー';
+
+  @override
+  String get shareDoneTitle => 'コピーしました';
+
+  @override
+  String shareDoneBody(int count, String backup) {
+    return 'コピーしたプロフィール: $count。先にバックアップを保存しました: $backup（「設定」>「システム」>「バックアップと復元」）。';
+  }
+
+  @override
+  String shareSentBody(int count) {
+    return 'もう一方のテレビにコピーしたプロフィール: $count。';
+  }
+
+  @override
+  String shareMissingApps(int count) {
+    return '受信側のテレビにないため除外したアプリ: $count。';
+  }
+
+  @override
+  String get shareErrorTitle => 'コピーが完了しませんでした';
+
+  @override
+  String get shareErrorNetwork => 'もう一方のテレビに接続できません。2 台とも同じ家庭内ネットワークにつないでください。';
+
+  @override
+  String get shareErrorMismatch => '数字が一致しなかったため、何もコピーされていません。';
+
+  @override
+  String get shareErrorStopped => 'もう一方のテレビがコピーを中止しました。';
+
+  @override
+  String get shareErrorTimeout => 'コピーがタイムアウトしました。両方のテレビで最初からやり直してください。';
+
+  @override
+  String get shareErrorNewer => 'そのテレビの Hearth の方が新しいバージョンです。こちらを更新してからもう一度お試しください。';
+
+  @override
+  String get shareErrorGeneric => 'コピーが完了しませんでした。このテレビでは何も変更されていません。';
+
+  @override
   String get backupAndRestore => 'バックアップと復元';
 
   @override

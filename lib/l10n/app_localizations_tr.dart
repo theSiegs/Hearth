@@ -196,6 +196,118 @@ class AppLocalizationsTr extends AppLocalizations {
   String get inputSources => 'Giriş Kaynakları';
 
   @override
+  String get shareTitle => 'TV\'ler arasında profil kopyala';
+
+  @override
+  String get shareIntro => 'Bir profilin görünümünü, ana ekran düzenini ve akış profili seçimlerini bir TV\'den diğerine kopyalar. Akış PIN\'leri ve Home Assistant ayarları her TV\'de kalır. İki TV\'nin de başında olmanız gerekir.';
+
+  @override
+  String get shareSendTitle => 'Profilleri başka bir TV\'ye kopyala';
+
+  @override
+  String get shareReceiveTitle => 'Profilleri başka bir TV\'den kopyala';
+
+  @override
+  String get shareSendPick => 'Hangi profilleri kopyalamak istiyorsunuz?';
+
+  @override
+  String get shareNoProfiles => 'Bu TV profillerini henüz ayırt etmedi. Her profile bir kez geçin, sonra tekrar deneyin.';
+
+  @override
+  String get shareContinue => 'Devam';
+
+  @override
+  String shareSendWaiting(String name) {
+    return 'Diğer TV\'de Ayarlar > Profiller > Profilleri başka bir TV\'den kopyala\'yı açın, sonra $name öğesini seçin.';
+  }
+
+  @override
+  String shareSendAddress(String address) {
+    return 'Ya da orada şu adresi girin: $address';
+  }
+
+  @override
+  String get shareDigitsTitle => 'Rakamlar eşleşiyor mu?';
+
+  @override
+  String get shareDigitsBody => 'Bu rakamları diğer TV\'dekilerle karşılaştırın.';
+
+  @override
+  String get shareDigitsMatch => 'Eşleşiyor';
+
+  @override
+  String get shareDigitsDiffer => 'Eşleşmiyor';
+
+  @override
+  String get shareWorking => 'Kopyalanıyor…';
+
+  @override
+  String get shareFinding => 'Göndermeye hazır bir TV aranıyor. O TV\'de Profilleri başka bir TV\'ye kopyala\'yı açın.';
+
+  @override
+  String get shareEnterAddress => 'Adres gir';
+
+  @override
+  String get shareAddressPrompt => 'Diğer TV\'nin ekranında görünen adresi (örneğin 192.168.1.20:8770).';
+
+  @override
+  String get shareConnect => 'Bağlan';
+
+  @override
+  String get shareMapTitle => 'Her profil nereye gidecek?';
+
+  @override
+  String get shareMapSkip => 'Kopyalama';
+
+  @override
+  String get shareWhatLayout => 'Görünüm ve ana ekran düzeni';
+
+  @override
+  String get shareWhatPairings => 'Akış profili seçimleri';
+
+  @override
+  String get shareCopy => 'Kopyala';
+
+  @override
+  String get shareDoneTitle => 'Kopyalandı';
+
+  @override
+  String shareDoneBody(int count, String backup) {
+    return 'Kopyalanan profil sayısı: $count. Önce bir yedek alındı: $backup (Ayarlar > Sistem > Yedekle ve Geri Yükle).';
+  }
+
+  @override
+  String shareSentBody(int count) {
+    return 'Diğer TV\'ye kopyalanan profil sayısı: $count.';
+  }
+
+  @override
+  String shareMissingApps(int count) {
+    return 'Alan TV\'de olmadığı için dışarıda bırakılan uygulamalar: $count.';
+  }
+
+  @override
+  String get shareErrorTitle => 'Kopyalama tamamlanmadı';
+
+  @override
+  String get shareErrorNetwork => 'Diğer TV\'ye ulaşılamadı. İki TV de aynı ev ağında olmalı.';
+
+  @override
+  String get shareErrorMismatch => 'Rakamlar eşleşmedi, bu yüzden hiçbir şey kopyalanmadı.';
+
+  @override
+  String get shareErrorStopped => 'Diğer TV kopyalamayı durdurdu.';
+
+  @override
+  String get shareErrorTimeout => 'Kopyalama zaman aşımına uğradı. İki TV\'de de yeniden başlayın.';
+
+  @override
+  String get shareErrorNewer => 'O TV\'de daha yeni bir Hearth var. Bunu güncelleyip tekrar deneyin.';
+
+  @override
+  String get shareErrorGeneric => 'Kopyalama tamamlanmadı. Bu TV\'de hiçbir şey değişmedi.';
+
+  @override
   String get backupAndRestore => 'Yedekleme ve Geri Yükleme';
 
   @override

@@ -412,6 +412,13 @@ class BackupService {
     await file.writeAsString(jsonEncode(data));
   }
 
+  /// A profile's saved layout (what its home was when another profile took over), or null when it has none yet.
+  Future<Map<String, dynamic>?> readProfileLayout(String profileKey) async {
+    final File file = await _profileLayoutFile(profileKey);
+    if (!await file.exists()) return null;
+    return json.decode(await file.readAsString()) as Map<String, dynamic>;
+  }
+
   /// The apps installed on this TV, as Hearth lists them: what another TV's layout is fitted to (ShareBundle).
   Future<List<InstalledApp>> installedApps() async {
     return [
