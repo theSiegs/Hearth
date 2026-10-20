@@ -356,6 +356,14 @@ public class MainActivity extends FlutterActivity {
             case "openGoogleTv" -> result.success(openGoogleTv(call.argument("link"), call.argument("query")));
             case "getProfilePairingApps" -> result.success(getProfilePairingApps());
             case "getProfilePairingChoices" -> result.success(getProfilePairingChoices(call.arguments()));
+            // A copy of a profile to another TV (ShareData): this TV's profiles, and a profile's pairing choices
+            case "getShareProfiles" -> result.success(ShareData.profiles(this));
+            case "getSharePairings" -> result.success(ShareData.pairings(this, call.arguments()));
+            case "applySharePairings" -> {
+                Map<String, Object> args = call.arguments();
+                result.success(ShareData.applyPairings(this, (String) args.get("profile"),
+                        (List<Map<String, Object>>) args.get("pairings")));
+            }
             case "setProfilePairingAppEnabled" -> {
                 Boolean enabled = call.argument("enabled");
                 ProfilePairing.setAppEnabled(this, call.argument("packageName"), enabled == null || enabled);

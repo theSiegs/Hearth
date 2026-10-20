@@ -6,6 +6,7 @@ import 'package:flauncher/database.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:flauncher/providers/backup_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/share/share_bundle.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -301,6 +302,82 @@ void main() {
       await backupService.restoreBackupData(data, settingsService);
       expect(settingsService.dateFormat, "EEEE d");
       expect(settingsService.timeFormat, "H:mm");
+    });
+  });
+
+  group("a layout copied from another TV", () {
+    SharedLayout layoutFromOtherTv(Set<String> keys) => SharedLayout.fromBackup({
+          "settings": {"accent_color": "#00ff00", "show_continue_watching": false},
+          "apps": [
+            {"packageName": "com.test.app1", "name": "Their name", "hidden": true},
+            {"packageName": "com.test.gone", "name": "Not here", "hidden": false},
+          ],
+          "categories": [
+            {"id": 3, "name": "Favorites", "sort": 0, "type": 0, "rowHeight": 110, "columnsCount": 6, "order": 0},
+          ],
+          "appsCategories": [
+            {"categoryId": 3, "appPackageName": "com.test.app1", "order": 0},
+            {"categoryId": 3, "appPackageName": "com.test.gone", "order": 1},
+          ],
+          "spacers": [],
+        }, settingKeys: keys);
+
+    Future<void> installApps() => database.persistApps([
+          AppsCompanion.insert(packageName: "com.test.app1", name: "Test App 1", version: "1.0.0", hidden: const Value(false)),
+          AppsCompanion.insert(packageName: "com.test.app2", name: "Test App 2", version: "2.0.0", hidden: const Value(false)),
+        ]);
+
+    test("lists what is installed here", () async {
+      await installApps();
+      final installed = await backupService.installedApps();
+      expect(installed.map((a) => a.packageName), unorderedEquals(["com.test.app1", "com.test.app2"]));
+      expect(installed.firstWhere((a) => a.packageName == "com.test.app1").name, "Test App 1");
+    });
+
+    test("takes effect at once for the profile that is live, with this TV's own apps", () async {
+      await installApps();
+      final settingsService = SettingsService(sharedPreferences);
+      final fitted = layoutFromOtherTv(settingsService.settingKeys).forInstalled(await backupService.installedApps());
+      expect(fitted.missing, ["Not here"]);
+
+      await backupService.applySharedLayout("user:11", fitted.backup, settingsService, live: true);
+
+      expect(settingsService.accentColorHex, "#00ff00");
+      expect(settingsService.showContinueWatching, isFalse);
+      final apps = await database.getApplications();
+      expect(apps.map((a) => a.packageName), unorderedEquals(["com.test.app1", "com.test.app2"]));
+      final app1 = apps.firstWhere((a) => a.packageName == "com.test.app1");
+      expect(app1.name, "Test App 1");
+      expect(app1.hidden, isTrue);
+      expect((await database.getCategories()).map((c) => c.name), ["Favorites"]);
+      expect((await database.getAppsCategories()).map((ac) => ac.appPackageName), ["com.test.app1"]);
+    });
+
+    test("waits in that profile's layout until it is switched to", () async {
+      await installApps();
+      final settingsService = SettingsService(sharedPreferences);
+      await settingsService.setAccentColor("#123456");
+      final fitted = layoutFromOtherTv(settingsService.settingKeys).forInstalled(await backupService.installedApps());
+
+      await backupService.applySharedLayout("user:12", fitted.backup, settingsService, live: false);
+
+      // Nothing live changed
+      expect(settingsService.accentColorHex, "#123456");
+      expect((await database.getCategories()), isEmpty);
+      // The switch finds it
+      expect(await backupService.loadProfileLayout("user:12", settingsService), isTrue);
+      expect(settingsService.accentColorHex, "#00ff00");
+      expect((await database.getCategories()).map((c) => c.name), ["Favorites"]);
+    });
+
+    test("is kept first as a backup that shows in Restore", () async {
+      final settingsService = SettingsService(sharedPreferences);
+      await settingsService.setAccentColor("#123456");
+      final file = await backupService.backupBeforeCopy(settingsService, now: DateTime(2026, 10, 19, 21, 0, 5));
+      expect(file.path, contains("ltv_backup_before_copy_20261019_210005.json"));
+      final saved = json.decode(await file.readAsString()) as Map<String, dynamic>;
+      expect((saved["settings"] as Map)["accent_color"], "#123456");
+      expect((await backupService.getBackupFiles()).map((e) => e.name), contains("ltv_backup_before_copy_20261019_210005.json"));
     });
   });
 }

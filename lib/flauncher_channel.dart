@@ -399,6 +399,21 @@ class FLauncherChannel {
 
   /// Each known Hearth profile's choice for one app: [{hearthProfile (its key), displayName, kids, mode, chosenProfile,
   /// autoMatch}], where mode is "auto", "profile" or "picker".
+  /// The profiles this TV has told apart: {key, name, kids}. What a copy to another TV offers.
+  Future<List<Map<dynamic, dynamic>>> getShareProfiles() async =>
+      (await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getShareProfiles")) ?? [];
+
+  /// A profile's Profile Pairing choices (an app profile or always ask), not the automatic matches:
+  /// {pkg, mode: "profile" | "picker", appProfile}.
+  Future<List<Map<dynamic, dynamic>>> getSharePairings(String profileKey) async =>
+      (await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getSharePairings", profileKey)) ?? [];
+
+  /// Saves another TV's pairing choices for [profileKey] where it has none of its own: {applied, kept, skipped}.
+  Future<Map<dynamic, dynamic>> applySharePairings(String profileKey, List<Map<String, dynamic>> pairings) async =>
+      (await _methodChannel.invokeMapMethod<dynamic, dynamic>(
+          "applySharePairings", {"profile": profileKey, "pairings": pairings})) ??
+      {};
+
   Future<List<Map<dynamic, dynamic>>> getProfilePairingChoices(String packageName) async =>
       await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getProfilePairingChoices", packageName) ?? [];
 

@@ -9,6 +9,7 @@ import 'package:flauncher/models/category.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';
 import 'package:flauncher/quiet_failure.dart';
+import 'package:flauncher/share/share_bundle.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -404,6 +405,47 @@ class BackupService {
   Future<void> saveProfileLayout(String profileName, SettingsService settingsService) async {
     final File file = await _profileLayoutFile(profileName);
     await file.writeAsString(jsonEncode(await buildBackupData(settingsService, true)));
+  }
+
+  Future<void> _writeProfileLayout(String profileName, Map<String, dynamic> data) async {
+    final File file = await _profileLayoutFile(profileName);
+    await file.writeAsString(jsonEncode(data));
+  }
+
+  /// The apps installed on this TV, as Hearth lists them: what another TV's layout is fitted to (ShareBundle).
+  Future<List<InstalledApp>> installedApps() async {
+    return [
+      for (final app in await _database.getApplications())
+        InstalledApp(
+          packageName: app.packageName,
+          name: app.name,
+          version: app.version,
+          lastLaunchedAt: app.lastLaunchedAt?.millisecondsSinceEpoch,
+        ),
+    ];
+  }
+
+  static const String _beforeCopyPrefix = "ltv_backup_before_copy_";
+
+  /// Everything as it is now, kept before a copy from another TV changes it. It shows in Backup & Restore, so a copy
+  /// can be undone there.
+  Future<File> backupBeforeCopy(SettingsService settingsService, {DateTime? now}) async {
+    final Directory dir = await getApplicationDocumentsDirectory();
+    final File file = File(path.join(dir.path, '$_beforeCopyPrefix${_timestamp(now ?? DateTime.now())}.json'));
+    await file.writeAsString(jsonEncode(await buildBackupData(settingsService)));
+    return file;
+  }
+
+  /// Puts a layout from another TV in place for the profile [profileKey]: restored now when it is the profile whose
+  /// layout is live ([live]), else saved as that profile's layout, which comes up the next time it is switched to.
+  /// [backup] is what SharedLayout.forInstalled made, so it only has apps installed here and settings a profile has.
+  Future<void> applySharedLayout(String profileKey, Map<String, dynamic> backup, SettingsService settingsService,
+      {required bool live}) async {
+    if (live) {
+      await restoreBackupData(backup, settingsService, true);
+    } else {
+      await _writeProfileLayout(profileKey, backup);
+    }
   }
 
   /// A profile's settings back to their defaults (device-level settings, like the TV's own, stay).
