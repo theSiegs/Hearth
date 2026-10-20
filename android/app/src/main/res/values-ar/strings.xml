@@ -17,6 +17,7 @@
     <string name="ha_setup_send">إرسال إلى التلفزيون</string>
     <string name="ha_setup_help">أنشئ الرمز في Home Assistant وأنت مسجّل الدخول بحساب المستخدم الخاص بهذا التلفزيون: الملف الشخصي، علامة التبويب «الأمان»، «رموز الوصول طويلة الأمد». يصل الرمز إلى التلفزيون مباشرةً عبر شبكتك المنزلية.</string>
     <string name="ha_setup_missing">أدخل عنوان Home Assistant والرمز.</string>
+    <string name="ha_setup_failed">لم يقبله التلفزيون. اعرض رمز QR على التلفزيون مرة أخرى وأعد المحاولة.</string>
     <string name="ha_setup_sent_title">تم الإرسال إلى التلفزيون</string>
     <string name="ha_setup_sent_detail">حصل Hearth على العنوان والرمز. يمكنك إغلاق هذه الصفحة.</string>
     <string name="ha_setup_webhook_label">معرّف Webhook لحالة التلفزيون (اختياري)</string>

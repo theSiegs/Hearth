@@ -17,6 +17,7 @@
     <string name="ha_setup_send">Envoyer à la TV</string>
     <string name="ha_setup_help">Créez le jeton dans Home Assistant en étant connecté avec l\'utilisateur de cette TV : profil, onglet Sécurité, Jetons d\'accès longue durée. Il est envoyé directement à la TV via votre réseau domestique.</string>
     <string name="ha_setup_missing">Saisissez l\'adresse de Home Assistant et le jeton.</string>
+    <string name="ha_setup_failed">La TV ne l’a pas accepté. Affichez de nouveau le code QR sur la TV et réessayez.</string>
     <string name="ha_setup_sent_title">Envoyé à la TV</string>
     <string name="ha_setup_sent_detail">Hearth a reçu l\'adresse et le jeton. Vous pouvez fermer cette page.</string>
     <string name="ha_setup_webhook_label">ID du webhook pour l\'état de la TV (facultatif)</string>

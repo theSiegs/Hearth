@@ -17,7 +17,9 @@ only from local addresses.
 
 **Set up from your phone.** Typing a long access token with a remote is no fun. **Set up from your phone** shows a
 QR code; it opens a one-time page served by the TV where you paste the address and token. The page only works while
-the QR code is on screen.
+the QR code is on screen. The page seals what it sends with a key that's only in the QR code's link (after the `#`,
+which a browser never sends over the network), so the token can't be read on your network; it needs a recent phone
+browser, opened from the QR code.
 
 ## Notifications
 

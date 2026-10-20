@@ -17,6 +17,7 @@
     <string name="ha_setup_send">TV로 보내기</string>
     <string name="ha_setup_help">이 TV용 사용자로 로그인한 상태에서 Home Assistant에서 토큰을 만드세요: 프로필, 보안 탭, 장기 액세스 토큰. 토큰은 홈 네트워크를 통해 TV로 바로 전송됩니다.</string>
     <string name="ha_setup_missing">Home Assistant 주소와 토큰을 입력하세요.</string>
+    <string name="ha_setup_failed">TV가 받지 못했습니다. TV에 QR 코드를 다시 표시하고 다시 시도하세요.</string>
     <string name="ha_setup_sent_title">TV로 전송됨</string>
     <string name="ha_setup_sent_detail">Hearth가 주소와 토큰을 받았습니다. 이 페이지를 닫아도 됩니다.</string>
     <string name="ha_setup_webhook_label">TV 상태 Webhook ID(선택)</string>

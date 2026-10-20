@@ -17,6 +17,7 @@
     <string name="ha_setup_send">テレビに送信</string>
     <string name="ha_setup_help">このテレビ用のユーザーで Home Assistant にログインした状態でトークンを作成します（プロフィール、「セキュリティ」タブ、「長期アクセストークン」）。トークンはホームネットワーク経由でテレビに直接送られます。</string>
     <string name="ha_setup_missing">Home Assistant のアドレスとトークンを入力してください。</string>
+    <string name="ha_setup_failed">テレビが受け付けませんでした。テレビにもう一度 QR コードを表示して、やり直してください。</string>
     <string name="ha_setup_sent_title">テレビに送信しました</string>
     <string name="ha_setup_sent_detail">Hearth がアドレスとトークンを受け取りました。このページは閉じてかまいません。</string>
     <string name="ha_setup_webhook_label">テレビの状態用 Webhook ID（任意）</string>

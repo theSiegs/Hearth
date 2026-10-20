@@ -17,6 +17,7 @@
     <string name="ha_setup_send">TV\'ye gönder</string>
     <string name="ha_setup_help">Bu TV\'nin kullanıcısıyla oturum açmışken jetonu Home Assistant\'ta oluşturun: profil, Güvenlik sekmesi, Uzun ömürlü erişim jetonları. Jeton, ev ağınız üzerinden doğrudan TV\'ye gider.</string>
     <string name="ha_setup_missing">Home Assistant adresini ve jetonu girin.</string>
+    <string name="ha_setup_failed">TV bunu kabul etmedi. QR kodunu TV’de yeniden gösterin ve tekrar deneyin.</string>
     <string name="ha_setup_sent_title">TV\'ye gönderildi</string>
     <string name="ha_setup_sent_detail">Hearth adresi ve jetonu aldı. Bu sayfayı kapatabilirsiniz.</string>
     <string name="ha_setup_webhook_label">TV durumu Webhook kimliği (isteğe bağlı)</string>

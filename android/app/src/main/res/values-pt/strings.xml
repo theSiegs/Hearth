@@ -17,6 +17,7 @@
     <string name="ha_setup_send">Enviar para a TV</string>
     <string name="ha_setup_help">Crie o token no Home Assistant conectado como o usuário desta TV: perfil, aba Segurança, Tokens de acesso de longa duração. Ele vai direto para a TV pela sua rede doméstica.</string>
     <string name="ha_setup_missing">Digite o endereço do Home Assistant e o token.</string>
+    <string name="ha_setup_failed">A TV não aceitou. Mostre o código QR na TV de novo e tente outra vez.</string>
     <string name="ha_setup_sent_title">Enviado para a TV</string>
     <string name="ha_setup_sent_detail">O Hearth recebeu o endereço e o token. Você já pode fechar esta página.</string>
     <string name="ha_setup_webhook_label">ID do webhook do status da TV (opcional)</string>

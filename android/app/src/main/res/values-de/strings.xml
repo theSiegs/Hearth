@@ -17,6 +17,7 @@
     <string name="ha_setup_send">An den Fernseher senden</string>
     <string name="ha_setup_help">Erstellen Sie das Token in Home Assistant, während Sie als Benutzer für diesen Fernseher angemeldet sind: Profil, Tab „Sicherheit“, „Langlebige Zugriffstokens“. Es geht über Ihr Heimnetz direkt an den Fernseher.</string>
     <string name="ha_setup_missing">Geben Sie die Home Assistant-Adresse und das Token ein.</string>
+    <string name="ha_setup_failed">Der Fernseher hat es nicht angenommen. Zeige den QR-Code erneut auf dem Fernseher an und versuche es noch einmal.</string>
     <string name="ha_setup_sent_title">An den Fernseher gesendet</string>
     <string name="ha_setup_sent_detail">Hearth hat die Adresse und das Token erhalten. Sie können diese Seite schließen.</string>
     <string name="ha_setup_webhook_label">Webhook-ID für den TV-Status (optional)</string>

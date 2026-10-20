@@ -17,6 +17,7 @@
     <string name="ha_setup_send">Отправить на телевизор</string>
     <string name="ha_setup_help">Создайте токен в Home Assistant, войдя под пользователем для этого телевизора: профиль, вкладка «Безопасность», «Долгосрочные токены доступа». Токен передаётся прямо на телевизор по вашей домашней сети.</string>
     <string name="ha_setup_missing">Введите адрес Home Assistant и токен.</string>
+    <string name="ha_setup_failed">Телевизор не принял это. Снова покажите QR-код на телевизоре и повторите.</string>
     <string name="ha_setup_sent_title">Отправлено на телевизор</string>
     <string name="ha_setup_sent_detail">Hearth получил адрес и токен. Эту страницу можно закрыть.</string>
     <string name="ha_setup_webhook_label">ID вебхука для состояния телевизора (необязательно)</string>

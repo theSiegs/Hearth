@@ -17,6 +17,7 @@
     <string name="ha_setup_send">发送到电视</string>
     <string name="ha_setup_help">请以这台电视对应的用户登录 Home Assistant 并创建令牌：个人资料、“安全”标签页、“长期访问令牌”。令牌会通过你的家庭网络直接发送到电视。</string>
     <string name="ha_setup_missing">请输入 Home Assistant 地址和令牌。</string>
+    <string name="ha_setup_failed">电视没有接收。请在电视上重新显示二维码，然后重试。</string>
     <string name="ha_setup_sent_title">已发送到电视</string>
     <string name="ha_setup_sent_detail">Hearth 已收到地址和令牌。你可以关闭此页面。</string>
     <string name="ha_setup_webhook_label">电视状态 Webhook ID（可选）</string>
