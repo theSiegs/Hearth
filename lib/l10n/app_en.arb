@@ -78,7 +78,7 @@
     "@shareTitle": {
         "description": "Settings > Profiles: copying profiles between two TVs; also the page's title"
     },
-    "shareIntro": "Copies a profile's look, home layout and streaming profile choices from one TV to another. Streaming PINs and Home Assistant settings stay on each TV. You need to be at both TVs.",
+    "shareIntro": "Copies a profile's look, home layout, wallpaper pictures and streaming profile choices from one TV to another. The sending parent can also send streaming app PINs, Home Assistant settings and the parent PIN. You need to be at both TVs.",
     "@shareIntro": {
         "description": "Copy profiles page: what a copy takes and what stays on each TV"
     },
@@ -225,6 +225,89 @@
     "shareErrorGeneric": "The copy didn't finish. Nothing was changed on this TV.",
     "@shareErrorGeneric": {
         "description": "Both TVs: any other failure"
+    },
+    "shareSendMore": "Also send",
+    "@shareSendMore": {
+        "description": "Sending TV: heading over what else can be sent (pictures, PINs, Home Assistant, parent PIN)"
+    },
+    "shareSendPictures": "Wallpaper pictures",
+    "@shareSendPictures": {
+        "description": "Sending TV: switch for sending the profiles' wallpaper pictures"
+    },
+    "shareSendPins": "Streaming app PINs ({count} saved)",
+    "@shareSendPins": {
+        "description": "Sending TV: switch for sending streaming app PINs; {count} is how many are saved here",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareSendHa": "Home Assistant settings",
+    "@shareSendHa": {
+        "description": "Sending TV: switch for sending the Home Assistant address and a new token for the other TV"
+    },
+    "shareNoneToSend": "Nothing to send",
+    "@shareNoneToSend": {
+        "description": "Sending TV: a switch that is off because this TV has nothing of it"
+    },
+    "shareSendSecretsNote": "PINs and Home Assistant settings are sent only after both TVs show the same digits, and nothing is kept on either TV afterwards. Home Assistant makes a new token for the other TV; you can see and remove it in your Home Assistant profile.",
+    "@shareSendSecretsNote": {
+        "description": "Sending TV: what happens to PINs and Home Assistant settings"
+    },
+    "shareSendHaFailed": "Home Assistant wouldn't make a token for the other TV, so its settings weren't sent.",
+    "@shareSendHaFailed": {
+        "description": "Sending TV: Home Assistant would not make a token, so its settings were not sent"
+    },
+    "shareWhatPictures": "Wallpaper pictures ({count})",
+    "@shareWhatPictures": {
+        "description": "Receiving TV: switch for taking the wallpaper pictures; {count} is how many came",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareWhatPins": "Streaming app PINs ({count})",
+    "@shareWhatPins": {
+        "description": "Receiving TV: switch for taking the streaming app PINs; {count} is how many came",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareWhatHa": "Home Assistant ({host})",
+    "@shareWhatHa": {
+        "description": "Receiving TV: switch for taking the Home Assistant settings; {host} is its address",
+        "placeholders": {
+            "host": {"type": "String"}
+        }
+    },
+    "shareReplacesHere": "replaces this TV's",
+    "@shareReplacesHere": {
+        "description": "Receiving TV: small text next to a switch whose copy replaces what this TV already has"
+    },
+    "shareDonePictures": "Wallpaper pictures copied: {count}.",
+    "@shareDonePictures": {
+        "description": "Both TVs: {count} is how many wallpaper pictures were copied",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareDonePins": "Streaming app PINs saved: {added}. Kept as they were: {kept}.",
+    "@shareDonePins": {
+        "description": "Both TVs: {added} PINs were saved, {kept} were already there and stayed",
+        "placeholders": {
+            "added": {"type": "int"},
+            "kept": {"type": "int"}
+        }
+    },
+    "shareDoneHa": "Home Assistant settings copied, with a new token made for the receiving TV.",
+    "@shareDoneHa": {
+        "description": "Both TVs: Home Assistant settings were copied with a new token for the receiving TV"
+    },
+    "shareDoneParentPin": "Parent PIN copied.",
+    "@shareDoneParentPin": {
+        "description": "Both TVs: the parent PIN was copied"
+    },
+    "shareHaMissing": "The other TV couldn't make a Home Assistant token, so no Home Assistant settings came.",
+    "@shareHaMissing": {
+        "description": "Receiving TV: the sending TV could not make a Home Assistant token"
     },
     "backupAndRestore": "Backup & Restore",
     "exportBackup": "Export Backup",

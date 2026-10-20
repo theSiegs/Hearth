@@ -75,7 +75,7 @@
     "inputs": "Входы",
     "inputSources": "Источники ввода",
     "shareTitle": "Копирование профилей между телевизорами",
-    "shareIntro": "Копирует оформление, расположение главного экрана и выбор профилей стриминга из одного телевизора в другой. PIN-коды стриминга и настройки Home Assistant остаются на каждом телевизоре. Нужно быть у обоих телевизоров.",
+    "shareIntro": "Копирует внешний вид профиля, раскладку главного экрана, обои и выбор профилей стриминга с одного телевизора на другой. Отправляющий родитель может также отправить PIN-коды стриминговых приложений, настройки Home Assistant и родительский PIN. Нужно находиться у обоих телевизоров.",
     "shareSendTitle": "Скопировать профили на другой телевизор",
     "shareReceiveTitle": "Скопировать профили с другого телевизора",
     "shareSendPick": "Какие профили скопировать?",
@@ -108,6 +108,89 @@
     "shareErrorTimeout": "Время копирования истекло. Начните заново на обоих телевизорах.",
     "shareErrorNewer": "На том телевизоре более новая версия Hearth. Обновите этот и повторите.",
     "shareErrorGeneric": "Копирование не завершено. На этом телевизоре ничего не изменено.",
+    "shareSendMore": "Отправить также",
+    "@shareSendMore": {
+        "description": "Sending TV: heading over what else can be sent (pictures, PINs, Home Assistant, parent PIN)"
+    },
+    "shareSendPictures": "Обои",
+    "@shareSendPictures": {
+        "description": "Sending TV: switch for sending the profiles' wallpaper pictures"
+    },
+    "shareSendPins": "PIN-коды стриминговых приложений (сохранено: {count})",
+    "@shareSendPins": {
+        "description": "Sending TV: switch for sending streaming app PINs; {count} is how many are saved here",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareSendHa": "Настройки Home Assistant",
+    "@shareSendHa": {
+        "description": "Sending TV: switch for sending the Home Assistant address and a new token for the other TV"
+    },
+    "shareNoneToSend": "Отправлять нечего",
+    "@shareNoneToSend": {
+        "description": "Sending TV: a switch that is off because this TV has nothing of it"
+    },
+    "shareSendSecretsNote": "PIN-коды и настройки Home Assistant отправляются только после того, как оба телевизора показали одни и те же цифры, и после этого ни на одном из них ничего не хранится. Home Assistant создаёт новый токен для другого телевизора; его можно увидеть и удалить в вашем профиле Home Assistant.",
+    "@shareSendSecretsNote": {
+        "description": "Sending TV: what happens to PINs and Home Assistant settings"
+    },
+    "shareSendHaFailed": "Home Assistant не создал токен для другого телевизора, поэтому настройки не отправлены.",
+    "@shareSendHaFailed": {
+        "description": "Sending TV: Home Assistant would not make a token, so its settings were not sent"
+    },
+    "shareWhatPictures": "Обои ({count})",
+    "@shareWhatPictures": {
+        "description": "Receiving TV: switch for taking the wallpaper pictures; {count} is how many came",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareWhatPins": "PIN-коды стриминговых приложений ({count})",
+    "@shareWhatPins": {
+        "description": "Receiving TV: switch for taking the streaming app PINs; {count} is how many came",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareWhatHa": "Home Assistant ({host})",
+    "@shareWhatHa": {
+        "description": "Receiving TV: switch for taking the Home Assistant settings; {host} is its address",
+        "placeholders": {
+            "host": {"type": "String"}
+        }
+    },
+    "shareReplacesHere": "заменит имеющиеся на этом телевизоре",
+    "@shareReplacesHere": {
+        "description": "Receiving TV: small text next to a switch whose copy replaces what this TV already has"
+    },
+    "shareDonePictures": "Скопировано обоев: {count}.",
+    "@shareDonePictures": {
+        "description": "Both TVs: {count} is how many wallpaper pictures were copied",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareDonePins": "Сохранено PIN-кодов стриминговых приложений: {added}. Оставлено без изменений: {kept}.",
+    "@shareDonePins": {
+        "description": "Both TVs: {added} PINs were saved, {kept} were already there and stayed",
+        "placeholders": {
+            "added": {"type": "int"},
+            "kept": {"type": "int"}
+        }
+    },
+    "shareDoneHa": "Настройки Home Assistant скопированы, для принимающего телевизора создан новый токен.",
+    "@shareDoneHa": {
+        "description": "Both TVs: Home Assistant settings were copied with a new token for the receiving TV"
+    },
+    "shareDoneParentPin": "Родительский PIN скопирован.",
+    "@shareDoneParentPin": {
+        "description": "Both TVs: the parent PIN was copied"
+    },
+    "shareHaMissing": "Другой телевизор не смог создать токен Home Assistant, поэтому настройки Home Assistant не пришли.",
+    "@shareHaMissing": {
+        "description": "Receiving TV: the sending TV could not make a Home Assistant token"
+    },
     "backupAndRestore": "Резервное копирование и восстановление",
     "exportBackup": "Экспорт резервной копии",
     "importBackup": "Импорт резервной копии",

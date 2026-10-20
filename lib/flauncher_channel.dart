@@ -413,8 +413,33 @@ class FLauncherChannel {
 
   /// Starts listening to send [bundleJson] to another TV: {host, port, name}, or null if nothing could listen.
   /// The TV announces itself on the home network too.
-  Future<Map<dynamic, dynamic>?> startShareSending(String bundleJson) async =>
-      await _methodChannel.invokeMapMethod<dynamic, dynamic>("startShareSending", bundleJson);
+  ///
+  /// [secretsRequest] (JSON: {"profiles": {id: profile key}, "pins": bool, "ha": bool}) asks for the PINs and the
+  /// Home Assistant settings to go along; the Java side makes them once both parents said the digits match, and they
+  /// never come to Flutter.
+  Future<Map<dynamic, dynamic>?> startShareSending(String bundleJson, {String? secretsRequest}) async =>
+      await _methodChannel.invokeMapMethod<dynamic, dynamic>(
+          "startShareSending", {"bundle": bundleJson, "secrets": secretsRequest});
+
+  /// What this TV could send besides the look, for these profiles: {pins: how many are saved, ha: set up}.
+  Future<Map<dynamic, dynamic>> getShareSecretsOffer(List<String> profileKeys) async =>
+      (await _methodChannel.invokeMapMethod<dynamic, dynamic>("getShareSecretsOffer", profileKeys)) ?? {};
+
+  /// What came with the bundle besides the look: {pins: how many, ha: the Home Assistant host or "", haFailed};
+  /// null when nothing came. Never the PINs or the token.
+  Future<Map<dynamic, dynamic>?> getShareSecretsSummary() async =>
+      await _methodChannel.invokeMapMethod<dynamic, dynamic>("getShareSecretsSummary");
+
+  /// Saves the PINs and/or Home Assistant settings that came (by this TV's own checks): [targets] is the copy's
+  /// profile id to this TV's profile key. Returns {pins: {added, kept, skipped}, ha: bool}.
+  Future<Map<dynamic, dynamic>> applyShareSecrets(Map<String, String> targets, {required bool pins, required bool ha}) async =>
+      (await _methodChannel.invokeMapMethod<dynamic, dynamic>(
+          "applyShareSecrets", {"targets": targets, "pins": pins, "ha": ha})) ??
+      {};
+
+  /// A wallpaper picture of this app as the screen shows it (a JPEG of at most 1920x1080); null when it can't be made.
+  Future<Uint8List?> getShareWallpaper(String path) async =>
+      await _methodChannel.invokeMethod<Uint8List>("getShareWallpaper", path);
 
   /// Connects to the TV that is waiting to send, to receive its bundle.
   Future<void> startShareReceiving(String host, int port) async =>

@@ -199,7 +199,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get shareTitle => 'टीवी के बीच प्रोफ़ाइल कॉपी करें';
 
   @override
-  String get shareIntro => 'एक टीवी से दूसरे टीवी पर प्रोफ़ाइल का रूप, होम लेआउट और स्ट्रीमिंग प्रोफ़ाइल की पसंद कॉपी करता है। स्ट्रीमिंग PIN और Home Assistant की सेटिंग हर टीवी पर ही रहती हैं। आपको दोनों टीवी के पास होना होगा।';
+  String get shareIntro => 'किसी प्रोफ़ाइल का लुक, होम लेआउट, वॉलपेपर तस्वीरें और स्ट्रीमिंग प्रोफ़ाइल की पसंद एक टीवी से दूसरे पर कॉपी करता है। भेजने वाले अभिभावक स्ट्रीमिंग ऐप के PIN, Home Assistant की सेटिंग और पैरेंट PIN भी भेज सकते हैं। आपको दोनों टीवी के पास होना होगा।';
 
   @override
   String get shareSendTitle => 'प्रोफ़ाइल दूसरे टीवी पर कॉपी करें';
@@ -306,6 +306,66 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get shareErrorGeneric => 'कॉपी पूरी नहीं हुई। इस टीवी पर कुछ नहीं बदला।';
+
+  @override
+  String get shareSendMore => 'ये भी भेजें';
+
+  @override
+  String get shareSendPictures => 'वॉलपेपर तस्वीरें';
+
+  @override
+  String shareSendPins(int count) {
+    return 'स्ट्रीमिंग ऐप के PIN ($count सहेजे हैं)';
+  }
+
+  @override
+  String get shareSendHa => 'Home Assistant की सेटिंग';
+
+  @override
+  String get shareNoneToSend => 'भेजने के लिए कुछ नहीं';
+
+  @override
+  String get shareSendSecretsNote => 'PIN और Home Assistant की सेटिंग तभी भेजी जाती हैं जब दोनों टीवी पर एक जैसे अंक दिखें, और उसके बाद किसी भी टीवी पर कुछ नहीं रखा जाता। Home Assistant दूसरे टीवी के लिए नया टोकन बनाता है; आप उसे अपनी Home Assistant प्रोफ़ाइल में देख और हटा सकते हैं।';
+
+  @override
+  String get shareSendHaFailed => 'Home Assistant ने दूसरे टीवी के लिए टोकन नहीं बनाया, इसलिए उसकी सेटिंग नहीं भेजी गईं।';
+
+  @override
+  String shareWhatPictures(int count) {
+    return 'वॉलपेपर तस्वीरें ($count)';
+  }
+
+  @override
+  String shareWhatPins(int count) {
+    return 'स्ट्रीमिंग ऐप के PIN ($count)';
+  }
+
+  @override
+  String shareWhatHa(String host) {
+    return 'Home Assistant ($host)';
+  }
+
+  @override
+  String get shareReplacesHere => 'इस टीवी वाले को बदलता है';
+
+  @override
+  String shareDonePictures(int count) {
+    return 'कॉपी की गई वॉलपेपर तस्वीरें: $count।';
+  }
+
+  @override
+  String shareDonePins(int added, int kept) {
+    return 'सहेजे गए स्ट्रीमिंग ऐप PIN: $added। जैसे थे वैसे रखे गए: $kept।';
+  }
+
+  @override
+  String get shareDoneHa => 'Home Assistant की सेटिंग कॉपी हुईं, प्राप्त करने वाले टीवी के लिए नए टोकन के साथ।';
+
+  @override
+  String get shareDoneParentPin => 'पैरेंट PIN कॉपी हुआ।';
+
+  @override
+  String get shareHaMissing => 'दूसरा टीवी Home Assistant टोकन नहीं बना सका, इसलिए Home Assistant की कोई सेटिंग नहीं आई।';
 
   @override
   String get backupAndRestore => 'बैकअप और पुनर्स्थापना';

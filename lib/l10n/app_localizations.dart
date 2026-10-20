@@ -494,7 +494,7 @@ abstract class AppLocalizations {
   /// Copy profiles page: what a copy takes and what stays on each TV
   ///
   /// In en, this message translates to:
-  /// **'Copies a profile\'s look, home layout and streaming profile choices from one TV to another. Streaming PINs and Home Assistant settings stay on each TV. You need to be at both TVs.'**
+  /// **'Copies a profile\'s look, home layout, wallpaper pictures and streaming profile choices from one TV to another. The sending parent can also send streaming app PINs, Home Assistant settings and the parent PIN. You need to be at both TVs.'**
   String get shareIntro;
 
   /// Copy profiles page: the TV that has the profiles sends them
@@ -688,6 +688,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The copy didn\'t finish. Nothing was changed on this TV.'**
   String get shareErrorGeneric;
+
+  /// Sending TV: heading over what else can be sent (pictures, PINs, Home Assistant, parent PIN)
+  ///
+  /// In en, this message translates to:
+  /// **'Also send'**
+  String get shareSendMore;
+
+  /// Sending TV: switch for sending the profiles' wallpaper pictures
+  ///
+  /// In en, this message translates to:
+  /// **'Wallpaper pictures'**
+  String get shareSendPictures;
+
+  /// Sending TV: switch for sending streaming app PINs; {count} is how many are saved here
+  ///
+  /// In en, this message translates to:
+  /// **'Streaming app PINs ({count} saved)'**
+  String shareSendPins(int count);
+
+  /// Sending TV: switch for sending the Home Assistant address and a new token for the other TV
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant settings'**
+  String get shareSendHa;
+
+  /// Sending TV: a switch that is off because this TV has nothing of it
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to send'**
+  String get shareNoneToSend;
+
+  /// Sending TV: what happens to PINs and Home Assistant settings
+  ///
+  /// In en, this message translates to:
+  /// **'PINs and Home Assistant settings are sent only after both TVs show the same digits, and nothing is kept on either TV afterwards. Home Assistant makes a new token for the other TV; you can see and remove it in your Home Assistant profile.'**
+  String get shareSendSecretsNote;
+
+  /// Sending TV: Home Assistant would not make a token, so its settings were not sent
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant wouldn\'t make a token for the other TV, so its settings weren\'t sent.'**
+  String get shareSendHaFailed;
+
+  /// Receiving TV: switch for taking the wallpaper pictures; {count} is how many came
+  ///
+  /// In en, this message translates to:
+  /// **'Wallpaper pictures ({count})'**
+  String shareWhatPictures(int count);
+
+  /// Receiving TV: switch for taking the streaming app PINs; {count} is how many came
+  ///
+  /// In en, this message translates to:
+  /// **'Streaming app PINs ({count})'**
+  String shareWhatPins(int count);
+
+  /// Receiving TV: switch for taking the Home Assistant settings; {host} is its address
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant ({host})'**
+  String shareWhatHa(String host);
+
+  /// Receiving TV: small text next to a switch whose copy replaces what this TV already has
+  ///
+  /// In en, this message translates to:
+  /// **'replaces this TV\'s'**
+  String get shareReplacesHere;
+
+  /// Both TVs: {count} is how many wallpaper pictures were copied
+  ///
+  /// In en, this message translates to:
+  /// **'Wallpaper pictures copied: {count}.'**
+  String shareDonePictures(int count);
+
+  /// Both TVs: {added} PINs were saved, {kept} were already there and stayed
+  ///
+  /// In en, this message translates to:
+  /// **'Streaming app PINs saved: {added}. Kept as they were: {kept}.'**
+  String shareDonePins(int added, int kept);
+
+  /// Both TVs: Home Assistant settings were copied with a new token for the receiving TV
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant settings copied, with a new token made for the receiving TV.'**
+  String get shareDoneHa;
+
+  /// Both TVs: the parent PIN was copied
+  ///
+  /// In en, this message translates to:
+  /// **'Parent PIN copied.'**
+  String get shareDoneParentPin;
+
+  /// Receiving TV: the sending TV could not make a Home Assistant token
+  ///
+  /// In en, this message translates to:
+  /// **'The other TV couldn\'t make a Home Assistant token, so no Home Assistant settings came.'**
+  String get shareHaMissing;
 
   /// No description provided for @backupAndRestore.
   ///

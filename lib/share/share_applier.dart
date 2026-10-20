@@ -4,6 +4,7 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/backup_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/share/share_bundle.dart';
+import 'package:flauncher/share/share_wallpapers.dart';
 
 /// A profile this TV has, as a copy can land on it.
 class LocalProfile {
@@ -39,9 +40,20 @@ class ShareApplyReport {
   /// The backup taken first (its name, to find it in Backup & Restore).
   final String backupName;
 
-  const ShareApplyReport(this.profiles, this.backupName);
+  /// Whether the sender's parent PIN became this TV's.
+  final bool parentPin;
 
-  int get copied => profiles.where((p) => p.layout || p.pairingsApplied > 0).length;
+  /// The streaming PINs and Home Assistant settings, once they were saved (they are the Java side's): null before.
+  final ShareSecretsReport? secrets;
+
+  const ShareApplyReport(this.profiles, this.backupName, {this.parentPin = false, this.secrets});
+
+  ShareApplyReport withSecrets(ShareSecretsReport report) =>
+      ShareApplyReport(profiles, backupName, parentPin: parentPin, secrets: report);
+
+  int get copied =>
+      profiles.where((p) => p.layout || p.pairingsApplied > 0 || p.pictures > 0).length;
+  int get pictures => profiles.fold(0, (sum, p) => sum + p.pictures);
   int get missingApps => profiles.fold(0, (sum, p) => sum + p.missingApps.length);
   int get pairingsApplied => profiles.fold(0, (sum, p) => sum + p.pairingsApplied);
   int get pairingsKept => profiles.fold(0, (sum, p) => sum + p.pairingsKept);
@@ -52,7 +64,40 @@ class ShareApplyReport {
         "missingApps": missingApps,
         "pairingsApplied": pairingsApplied,
         "pairingsKept": pairingsKept,
+        "pictures": pictures,
+        "parentPin": parentPin,
+        if (secrets != null) ...secrets!.toJson(),
       });
+}
+
+/// What saving the PINs and the Home Assistant settings that came did (counts, and whether Home Assistant went in).
+class ShareSecretsReport {
+  final int pinsAdded;
+  final int pinsKept;
+  final int pinsSkipped;
+
+  /// Whether Home Assistant's address and a token made for this TV were saved; null when they weren't asked for.
+  final bool? haSet;
+
+  const ShareSecretsReport({this.pinsAdded = 0, this.pinsKept = 0, this.pinsSkipped = 0, this.haSet});
+
+  static ShareSecretsReport fromChannel(Map<dynamic, dynamic> result) {
+    final pins = result["pins"] is Map ? result["pins"] as Map : const {};
+    int count(String key) => (pins[key] as num?)?.toInt() ?? 0;
+    return ShareSecretsReport(
+      pinsAdded: count("added"),
+      pinsKept: count("kept"),
+      pinsSkipped: count("skipped"),
+      haSet: result["ha"] as bool?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        "pinsAdded": pinsAdded,
+        "pinsKept": pinsKept,
+        "pinsSkipped": pinsSkipped,
+        if (haSet != null) "haSet": haSet,
+      };
 }
 
 class ShareProfileReport {
@@ -62,12 +107,16 @@ class ShareProfileReport {
   final int pairingsApplied;
   final int pairingsKept;
 
+  /// How many wallpaper pictures were put in.
+  final int pictures;
+
   const ShareProfileReport({
     required this.name,
     required this.layout,
     required this.missingApps,
     required this.pairingsApplied,
     required this.pairingsKept,
+    this.pictures = 0,
   });
 }
 
@@ -82,7 +131,14 @@ class ShareApplier {
   /// Called after the live profile's layout was replaced, so the home catches up with it.
   final Future<void> Function() _onLiveChanged;
 
-  ShareApplier(this._backup, this._settings, this._channel, this._onLiveChanged);
+  /// Where wallpaper pictures are written, and what's told when a profile's were (null: pictures aren't taken).
+  final ShareWallpapers? _pictures;
+  final Future<void> Function(String profileKey)? _onPicturesCopied;
+
+  ShareApplier(this._backup, this._settings, this._channel, this._onLiveChanged,
+      {ShareWallpapers? pictures, Future<void> Function(String profileKey)? onPicturesCopied})
+      : _pictures = pictures,
+        _onPicturesCopied = onPicturesCopied;
 
   /// Applies each profile of [bundle] that has a target in [targets] (source profile id to this TV's profile key).
   /// [layouts] and [pairings] choose what is taken. A backup is made first, to undo it in Backup & Restore.
@@ -91,6 +147,8 @@ class ShareApplier {
     Map<String, LocalProfile> targets, {
     bool layouts = true,
     bool pairings = true,
+    bool pictures = true,
+    bool parentPin = false,
   }) async {
     // A copy that can't keep a backup first doesn't go ahead: the layout it replaces would be gone for good
     final backupName = (await _backup.backupBeforeCopy(_settings)).uri.pathSegments.last;
@@ -120,15 +178,28 @@ class ShareApplier {
         applied = (result["applied"] as num?)?.toInt() ?? 0;
         kept = (result["kept"] as num?)?.toInt() ?? 0;
       }
+      var written = 0;
+      final copiedPictures = bundle.wallpapers[source.id];
+      if (pictures && _pictures != null && copiedPictures != null && copiedPictures.isNotEmpty) {
+        written = await _pictures.write(target.key, copiedPictures);
+        if (written > 0) await _onPicturesCopied?.call(target.key);
+      }
       reports.add(ShareProfileReport(
         name: target.name,
         layout: layoutDone,
         missingApps: missing,
         pairingsApplied: applied,
         pairingsKept: kept,
+        pictures: written,
       ));
     }
     if (liveChanged) await _onLiveChanged();
-    return ShareApplyReport(reports, backupName);
+    var pinTaken = false;
+    final hash = bundle.parentPinHash;
+    if (parentPin && hash != null) {
+      await _settings.setParentPinHash(hash);
+      pinTaken = true;
+    }
+    return ShareApplyReport(reports, backupName, parentPin: pinTaken);
   }
 }

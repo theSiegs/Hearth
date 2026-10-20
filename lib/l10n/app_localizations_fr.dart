@@ -199,7 +199,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get shareTitle => 'Copier des profils entre téléviseurs';
 
   @override
-  String get shareIntro => 'Copie l’aspect, la disposition de l’accueil et les choix de profil de streaming d’un profil d’un téléviseur à l’autre. Les codes PIN de streaming et les réglages Home Assistant restent sur chaque téléviseur. Vous devez être devant les deux téléviseurs.';
+  String get shareIntro => 'Copie l’aspect, la disposition de l’accueil, les images de fond et les choix de profil de streaming d’un profil d’un téléviseur à l’autre. Le parent qui envoie peut aussi envoyer les codes PIN des applications de streaming, les réglages Home Assistant et le code PIN parental. Vous devez être devant les deux téléviseurs.';
 
   @override
   String get shareSendTitle => 'Copier des profils vers un autre téléviseur';
@@ -306,6 +306,66 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get shareErrorGeneric => 'La copie n’est pas terminée. Rien n’a été modifié sur ce téléviseur.';
+
+  @override
+  String get shareSendMore => 'Envoyer aussi';
+
+  @override
+  String get shareSendPictures => 'Images de fond';
+
+  @override
+  String shareSendPins(int count) {
+    return 'Codes PIN des applications de streaming ($count enregistrés)';
+  }
+
+  @override
+  String get shareSendHa => 'Réglages Home Assistant';
+
+  @override
+  String get shareNoneToSend => 'Rien à envoyer';
+
+  @override
+  String get shareSendSecretsNote => 'Les codes PIN et les réglages Home Assistant ne sont envoyés qu’une fois que les deux téléviseurs affichent les mêmes chiffres, et rien n’est conservé ensuite sur l’un ou l’autre. Home Assistant crée un nouveau jeton pour l’autre téléviseur ; vous pouvez le voir et le supprimer dans votre profil Home Assistant.';
+
+  @override
+  String get shareSendHaFailed => 'Home Assistant n’a pas créé de jeton pour l’autre téléviseur, donc ses réglages n’ont pas été envoyés.';
+
+  @override
+  String shareWhatPictures(int count) {
+    return 'Images de fond ($count)';
+  }
+
+  @override
+  String shareWhatPins(int count) {
+    return 'Codes PIN des applications de streaming ($count)';
+  }
+
+  @override
+  String shareWhatHa(String host) {
+    return 'Home Assistant ($host)';
+  }
+
+  @override
+  String get shareReplacesHere => 'remplace ceux de ce téléviseur';
+
+  @override
+  String shareDonePictures(int count) {
+    return 'Images de fond copiées : $count.';
+  }
+
+  @override
+  String shareDonePins(int added, int kept) {
+    return 'Codes PIN de streaming enregistrés : $added. Laissés tels quels : $kept.';
+  }
+
+  @override
+  String get shareDoneHa => 'Réglages Home Assistant copiés, avec un nouveau jeton créé pour le téléviseur récepteur.';
+
+  @override
+  String get shareDoneParentPin => 'Code PIN parental copié.';
+
+  @override
+  String get shareHaMissing => 'L’autre téléviseur n’a pas pu créer de jeton Home Assistant, donc aucun réglage Home Assistant n’est arrivé.';
 
   @override
   String get backupAndRestore => 'Sauvegarde et restauration';

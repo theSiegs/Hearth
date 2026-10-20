@@ -199,7 +199,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get shareTitle => 'TV\'ler arasında profil kopyala';
 
   @override
-  String get shareIntro => 'Bir profilin görünümünü, ana ekran düzenini ve akış profili seçimlerini bir TV\'den diğerine kopyalar. Akış PIN\'leri ve Home Assistant ayarları her TV\'de kalır. İki TV\'nin de başında olmanız gerekir.';
+  String get shareIntro => 'Bir profilin görünümünü, ana ekran düzenini, duvar kağıdı resimlerini ve akış profili seçimlerini bir TV\'den diğerine kopyalar. Gönderen ebeveyn ayrıca akış uygulaması PIN\'lerini, Home Assistant ayarlarını ve ebeveyn PIN\'ini de gönderebilir. İki TV\'nin de başında olmalısınız.';
 
   @override
   String get shareSendTitle => 'Profilleri başka bir TV\'ye kopyala';
@@ -306,6 +306,66 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get shareErrorGeneric => 'Kopyalama tamamlanmadı. Bu TV\'de hiçbir şey değişmedi.';
+
+  @override
+  String get shareSendMore => 'Şunları da gönder';
+
+  @override
+  String get shareSendPictures => 'Duvar kağıdı resimleri';
+
+  @override
+  String shareSendPins(int count) {
+    return 'Akış uygulaması PIN\'leri ($count kayıtlı)';
+  }
+
+  @override
+  String get shareSendHa => 'Home Assistant ayarları';
+
+  @override
+  String get shareNoneToSend => 'Gönderilecek bir şey yok';
+
+  @override
+  String get shareSendSecretsNote => 'PIN\'ler ve Home Assistant ayarları yalnızca iki TV de aynı rakamları gösterdikten sonra gönderilir ve sonrasında hiçbir TV\'de bir şey saklanmaz. Home Assistant diğer TV için yeni bir belirteç oluşturur; bunu Home Assistant profilinizde görebilir ve kaldırabilirsiniz.';
+
+  @override
+  String get shareSendHaFailed => 'Home Assistant diğer TV için bir belirteç oluşturmadı, bu yüzden ayarları gönderilmedi.';
+
+  @override
+  String shareWhatPictures(int count) {
+    return 'Duvar kağıdı resimleri ($count)';
+  }
+
+  @override
+  String shareWhatPins(int count) {
+    return 'Akış uygulaması PIN\'leri ($count)';
+  }
+
+  @override
+  String shareWhatHa(String host) {
+    return 'Home Assistant ($host)';
+  }
+
+  @override
+  String get shareReplacesHere => 'bu TV\'dekinin yerine geçer';
+
+  @override
+  String shareDonePictures(int count) {
+    return 'Kopyalanan duvar kağıdı resimleri: $count.';
+  }
+
+  @override
+  String shareDonePins(int added, int kept) {
+    return 'Kaydedilen akış uygulaması PIN\'leri: $added. Olduğu gibi bırakılanlar: $kept.';
+  }
+
+  @override
+  String get shareDoneHa => 'Home Assistant ayarları, alıcı TV için oluşturulan yeni bir belirteçle kopyalandı.';
+
+  @override
+  String get shareDoneParentPin => 'Ebeveyn PIN\'i kopyalandı.';
+
+  @override
+  String get shareHaMissing => 'Diğer TV bir Home Assistant belirteci oluşturamadı, bu yüzden Home Assistant ayarları gelmedi.';
 
   @override
   String get backupAndRestore => 'Yedekleme ve Geri Yükleme';

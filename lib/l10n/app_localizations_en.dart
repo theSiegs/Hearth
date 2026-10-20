@@ -199,7 +199,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareTitle => 'Copy profiles between TVs';
 
   @override
-  String get shareIntro => 'Copies a profile\'s look, home layout and streaming profile choices from one TV to another. Streaming PINs and Home Assistant settings stay on each TV. You need to be at both TVs.';
+  String get shareIntro => 'Copies a profile\'s look, home layout, wallpaper pictures and streaming profile choices from one TV to another. The sending parent can also send streaming app PINs, Home Assistant settings and the parent PIN. You need to be at both TVs.';
 
   @override
   String get shareSendTitle => 'Copy profiles to another TV';
@@ -306,6 +306,66 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareErrorGeneric => 'The copy didn\'t finish. Nothing was changed on this TV.';
+
+  @override
+  String get shareSendMore => 'Also send';
+
+  @override
+  String get shareSendPictures => 'Wallpaper pictures';
+
+  @override
+  String shareSendPins(int count) {
+    return 'Streaming app PINs ($count saved)';
+  }
+
+  @override
+  String get shareSendHa => 'Home Assistant settings';
+
+  @override
+  String get shareNoneToSend => 'Nothing to send';
+
+  @override
+  String get shareSendSecretsNote => 'PINs and Home Assistant settings are sent only after both TVs show the same digits, and nothing is kept on either TV afterwards. Home Assistant makes a new token for the other TV; you can see and remove it in your Home Assistant profile.';
+
+  @override
+  String get shareSendHaFailed => 'Home Assistant wouldn\'t make a token for the other TV, so its settings weren\'t sent.';
+
+  @override
+  String shareWhatPictures(int count) {
+    return 'Wallpaper pictures ($count)';
+  }
+
+  @override
+  String shareWhatPins(int count) {
+    return 'Streaming app PINs ($count)';
+  }
+
+  @override
+  String shareWhatHa(String host) {
+    return 'Home Assistant ($host)';
+  }
+
+  @override
+  String get shareReplacesHere => 'replaces this TV\'s';
+
+  @override
+  String shareDonePictures(int count) {
+    return 'Wallpaper pictures copied: $count.';
+  }
+
+  @override
+  String shareDonePins(int added, int kept) {
+    return 'Streaming app PINs saved: $added. Kept as they were: $kept.';
+  }
+
+  @override
+  String get shareDoneHa => 'Home Assistant settings copied, with a new token made for the receiving TV.';
+
+  @override
+  String get shareDoneParentPin => 'Parent PIN copied.';
+
+  @override
+  String get shareHaMissing => 'The other TV couldn\'t make a Home Assistant token, so no Home Assistant settings came.';
 
   @override
   String get backupAndRestore => 'Backup & Restore';

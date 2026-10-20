@@ -199,7 +199,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shareTitle => 'Copiar perfiles entre televisores';
 
   @override
-  String get shareIntro => 'Copia el aspecto, la disposición de inicio y las opciones de perfil de streaming de un perfil de un televisor a otro. Los PIN de streaming y los ajustes de Home Assistant se quedan en cada televisor. Tienes que estar en los dos televisores.';
+  String get shareIntro => 'Copia el aspecto, la disposición de inicio, las imágenes de fondo y las opciones de perfil de streaming de un perfil de un televisor a otro. El padre o la madre que envía también puede enviar los PIN de las apps de streaming, los ajustes de Home Assistant y el PIN parental. Tienes que estar en los dos televisores.';
 
   @override
   String get shareSendTitle => 'Copiar perfiles a otro televisor';
@@ -306,6 +306,66 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get shareErrorGeneric => 'La copia no terminó. No se cambió nada en este televisor.';
+
+  @override
+  String get shareSendMore => 'Enviar también';
+
+  @override
+  String get shareSendPictures => 'Imágenes de fondo';
+
+  @override
+  String shareSendPins(int count) {
+    return 'PIN de apps de streaming ($count guardados)';
+  }
+
+  @override
+  String get shareSendHa => 'Ajustes de Home Assistant';
+
+  @override
+  String get shareNoneToSend => 'Nada que enviar';
+
+  @override
+  String get shareSendSecretsNote => 'Los PIN y los ajustes de Home Assistant solo se envían cuando los dos televisores muestran los mismos dígitos, y después no se guarda nada en ninguno. Home Assistant crea un token nuevo para el otro televisor; puedes verlo y eliminarlo en tu perfil de Home Assistant.';
+
+  @override
+  String get shareSendHaFailed => 'Home Assistant no creó un token para el otro televisor, así que no se enviaron sus ajustes.';
+
+  @override
+  String shareWhatPictures(int count) {
+    return 'Imágenes de fondo ($count)';
+  }
+
+  @override
+  String shareWhatPins(int count) {
+    return 'PIN de apps de streaming ($count)';
+  }
+
+  @override
+  String shareWhatHa(String host) {
+    return 'Home Assistant ($host)';
+  }
+
+  @override
+  String get shareReplacesHere => 'sustituye lo de este televisor';
+
+  @override
+  String shareDonePictures(int count) {
+    return 'Imágenes de fondo copiadas: $count.';
+  }
+
+  @override
+  String shareDonePins(int added, int kept) {
+    return 'PIN de apps de streaming guardados: $added. Se dejaron como estaban: $kept.';
+  }
+
+  @override
+  String get shareDoneHa => 'Ajustes de Home Assistant copiados, con un token nuevo creado para el televisor receptor.';
+
+  @override
+  String get shareDoneParentPin => 'PIN parental copiado.';
+
+  @override
+  String get shareHaMissing => 'El otro televisor no pudo crear un token de Home Assistant, así que no llegaron ajustes de Home Assistant.';
 
   @override
   String get backupAndRestore => 'Copia de seguridad y restauración';

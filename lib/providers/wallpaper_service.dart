@@ -235,7 +235,6 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
   static const String ownerProfileKey = "user:0";
 
   /// The documents subfolder holding a profile's own pictures (wallpaper, wallpaper_day, wallpaper_night).
-  @visibleForTesting
   static String profileFolder(String profileKey) =>
       "wallpapers/${profileKey.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_')}";
 
@@ -260,6 +259,18 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
     await _ready.future;
     if (profileKey == _profileKey) return;
     _usePictures(profileKey);
+    _version++;
+    await _updateWallpaper(force: true);
+  }
+
+  /// Pictures were put in a profile's folder from outside (a copy from another TV): they show now if that profile's
+  /// pictures are the ones in place.
+  Future<void> picturesCopied(String profileKey) async {
+    await _ready.future;
+    if (profileKey != _profileKey) return;
+    for (final file in [_wallpaperFile, _wallpaperDayFile, _wallpaperNightFile]) {
+      await FileImage(file).evict();
+    }
     _version++;
     await _updateWallpaper(force: true);
   }

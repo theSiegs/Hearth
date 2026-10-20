@@ -140,6 +140,55 @@ final class PinVault {
         }
     }
 
+    /** Where one saved PIN sits (not the PIN): whose it is, the app, the app profile's name as the vault keys it. */
+    static final class Slot {
+        final String owner;
+        final String pkg;
+        final String appProfile;
+        final String status;
+
+        Slot(String owner, String pkg, String appProfile, String status) {
+            this.owner = owner;
+            this.pkg = pkg;
+            this.appProfile = appProfile;
+            this.status = status;
+        }
+    }
+
+    /** The PINs saved for a Google TV profile, or for the whole TV when {@code owner} is {@link #SHARED}. */
+    static java.util.List<Slot> slots(Context context, String owner) {
+        java.util.List<Slot> out = new java.util.ArrayList<>();
+        for (Map.Entry<String, ?> entry : prefs(context).getAll().entrySet()) {
+            if (!(entry.getValue() instanceof String)) continue;
+            Slot slot = parseSlot(entry.getKey(), owner);
+            if (slot == null) continue;
+            JSONObject e = entry(context, slot.owner, slot.pkg, slot.appProfile);
+            out.add(new Slot(slot.owner, slot.pkg, slot.appProfile,
+                    e == null ? STATUS_SAVED : e.optString("status", STATUS_SAVED)));
+        }
+        return out;
+    }
+
+    /** The slot an entry's id stands for if it is {@code owner}'s ({@link #SHARED}: the whole TV's); else null. */
+    static Slot parseSlot(String id, String owner) {
+        String rest;
+        String slotOwner;
+        if (id.startsWith(OWNER_PREFIX)) {
+            if (owner == null) return null;
+            String prefix = OWNER_PREFIX + owner + "|";
+            if (!id.startsWith(prefix)) return null;
+            rest = id.substring(prefix.length());
+            slotOwner = owner;
+        } else {
+            if (owner != null || id.startsWith(PAUSED_PREFIX) || id.startsWith(BREAKS_PREFIX)) return null;
+            rest = id;
+            slotOwner = null;
+        }
+        int bar = rest.indexOf('|');
+        if (bar <= 0 || bar == rest.length() - 1) return null;
+        return new Slot(slotOwner, rest.substring(0, bar), rest.substring(bar + 1), STATUS_SAVED);
+    }
+
     static void remove(Context context, String owner, String pkg, String appProfile) {
         prefs(context).edit().remove(id(owner, pkg, appProfile)).apply();
     }

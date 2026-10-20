@@ -6,8 +6,10 @@ import 'package:flauncher/database.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/backup_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/providers/wallpaper_service.dart';
 import 'package:flauncher/share/share_applier.dart';
 import 'package:flauncher/share/share_bundle.dart';
+import 'package:flauncher/share/share_wallpapers.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -35,6 +37,7 @@ void main() {
   late _Channel channel;
   late int liveChanges;
   late ShareApplier applier;
+  late List<String> picturesCopied;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
@@ -44,7 +47,9 @@ void main() {
     settings = SettingsService(prefs);
     channel = _Channel();
     liveChanges = 0;
-    applier = ShareApplier(backup, settings, channel, () async => liveChanges++);
+    picturesCopied = [];
+    applier = ShareApplier(backup, settings, channel, () async => liveChanges++,
+        pictures: ShareWallpapers(channel), onPicturesCopied: (key) async => picturesCopied.add(key));
     tempDir = await Directory.systemTemp.createTemp('ltv_share_test');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
       const MethodChannel('plugins.flutter.io/path_provider'),
@@ -192,11 +197,78 @@ void main() {
       expect(report.profiles.map((p) => p.name), ["Sam"]);
     });
 
+    ShareBundle withExtras({String? hash}) => ShareBundle.build(
+          hearth: "2026.10.63",
+          tv: "Den",
+          profiles: const [ShareProfile(id: "p1", name: "Alex", kids: false)],
+          layouts: const {},
+          pairings: const {},
+          settingKeys: settings.settingKeys,
+          wallpapers: {
+            "p1": {
+              "any": Uint8List.fromList([0xFF, 0xD8, 0xFF, 1, 2]),
+              "night": Uint8List.fromList([0xFF, 0xD8, 0xFF, 3, 4]),
+            },
+          },
+          parentPinHash: hash,
+        );
+
+    test("puts the pictures in the profile's own folder, under the fixed names, and says so", () async {
+      final report = await applier.apply(
+          ShareBundle.parse(withExtras().encode(), settingKeys: settings.settingKeys), {"p1": alex});
+      final folder = "${tempDir.path}/${WallpaperService.profileFolder(alex.key)}";
+      expect(await File("$folder/wallpaper").readAsBytes(), [0xFF, 0xD8, 0xFF, 1, 2]);
+      expect(await File("$folder/wallpaper_night").readAsBytes(), [0xFF, 0xD8, 0xFF, 3, 4]);
+      expect(await File("$folder/wallpaper_day").exists(), isFalse);
+      expect(picturesCopied, [alex.key]);
+      expect(report.pictures, 2);
+      expect(report.copied, 1);
+    });
+
+    test("takes no pictures when told not to", () async {
+      await applier.apply(ShareBundle.parse(withExtras().encode(), settingKeys: settings.settingKeys), {"p1": alex},
+          pictures: false);
+      expect(Directory("${tempDir.path}/wallpapers").existsSync(), isFalse);
+      expect(picturesCopied, isEmpty);
+    });
+
+    test("takes the parent PIN only when told to, and says so", () async {
+      final bundle = ShareBundle.parse(withExtras(hash: "d" * 64).encode(), settingKeys: settings.settingKeys);
+      await applier.apply(bundle, {"p1": alex});
+      expect(settings.hasParentPin, isFalse);
+
+      final report = await applier.apply(bundle, {"p1": alex}, parentPin: true);
+      expect(settings.parentPinHash, "d" * 64);
+      expect(report.parentPin, isTrue);
+      expect((json.decode(report.toReportJson()) as Map)["parentPin"], isTrue);
+    });
+
+    test("counts what saving the PINs and Home Assistant did, nothing of them", () async {
+      final report = (await applier.apply(
+              ShareBundle.parse(withExtras().encode(), settingKeys: settings.settingKeys), {"p1": alex}))
+          .withSecrets(ShareSecretsReport.fromChannel({
+        "pins": {"added": 3, "kept": 1, "skipped": 2},
+        "ha": true,
+      }));
+      final sent = json.decode(report.toReportJson()) as Map<String, dynamic>;
+      expect(sent["pinsAdded"], 3);
+      expect(sent["pinsKept"], 1);
+      expect(sent["pinsSkipped"], 2);
+      expect(sent["haSet"], true);
+    });
+
     test("tells the sender counts only", () async {
       await prefs.setString(SettingsService.layoutOwnerKey, alex.key);
       final report = await applier.apply(received(), {"p1": alex});
       final sent = json.decode(report.toReportJson()) as Map<String, dynamic>;
-      expect(sent, {"copied": 1, "missingApps": 1, "pairingsApplied": 2, "pairingsKept": 0});
+      expect(sent, {
+        "copied": 1,
+        "missingApps": 1,
+        "pairingsApplied": 2,
+        "pairingsKept": 0,
+        "pictures": 0,
+        "parentPin": false,
+      });
     });
   });
 }

@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+- Copy profiles between TVs can now also send wallpaper pictures (on by default), streaming app PINs, the Home Assistant settings and the parent PIN (each off until the sending parent chooses it, after the parent PIN; the receiving TV chooses again and asks for its own parent PIN). A PIN goes only to a profile paired with that streaming profile and never over one that works; Home Assistant gets a new token made by the sending TV for the other, not a copy of its own; the status webhook id isn't sent. Both TVs need this version.
+
 - Approve switches from my phone: the request also shows as a Home Assistant notification, so someone who opens Home Assistant sees it, and tapping the push no longer opens Home Assistant and dismisses it (use Allow or Deny). A volume, power, media or held key no longer withdraws a request as if someone were typing the PIN.
 
 ## 2026.10.63 (pre-release)

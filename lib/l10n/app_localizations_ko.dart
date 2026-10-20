@@ -199,7 +199,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get shareTitle => 'TV 간 프로필 복사';
 
   @override
-  String get shareIntro => '프로필의 모양, 홈 배치, 스트리밍 프로필 선택을 한 TV에서 다른 TV로 복사합니다. 스트리밍 PIN과 Home Assistant 설정은 각 TV에 그대로 남습니다. 두 TV 앞에 모두 있어야 합니다.';
+  String get shareIntro => '한 TV의 프로필 모양, 홈 레이아웃, 배경화면 사진, 스트리밍 프로필 선택을 다른 TV로 복사합니다. 보내는 보호자는 스트리밍 앱 PIN, Home Assistant 설정, 보호자 PIN도 함께 보낼 수 있습니다. 두 TV 모두 앞에 있어야 합니다.';
 
   @override
   String get shareSendTitle => '다른 TV로 프로필 복사';
@@ -306,6 +306,66 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get shareErrorGeneric => '복사가 끝나지 않았습니다. 이 TV에서는 아무것도 바뀌지 않았습니다.';
+
+  @override
+  String get shareSendMore => '함께 보내기';
+
+  @override
+  String get shareSendPictures => '배경화면 사진';
+
+  @override
+  String shareSendPins(int count) {
+    return '스트리밍 앱 PIN (저장됨 $count개)';
+  }
+
+  @override
+  String get shareSendHa => 'Home Assistant 설정';
+
+  @override
+  String get shareNoneToSend => '보낼 것이 없습니다';
+
+  @override
+  String get shareSendSecretsNote => 'PIN과 Home Assistant 설정은 두 TV에 같은 숫자가 표시된 뒤에만 전송되며, 이후 어느 TV에도 아무것도 남지 않습니다. Home Assistant가 다른 TV용 새 토큰을 만듭니다. Home Assistant 프로필에서 확인하고 삭제할 수 있습니다.';
+
+  @override
+  String get shareSendHaFailed => 'Home Assistant가 다른 TV용 토큰을 만들지 못해 설정을 보내지 않았습니다.';
+
+  @override
+  String shareWhatPictures(int count) {
+    return '배경화면 사진 ($count)';
+  }
+
+  @override
+  String shareWhatPins(int count) {
+    return '스트리밍 앱 PIN ($count)';
+  }
+
+  @override
+  String shareWhatHa(String host) {
+    return 'Home Assistant ($host)';
+  }
+
+  @override
+  String get shareReplacesHere => '이 TV의 것을 대체합니다';
+
+  @override
+  String shareDonePictures(int count) {
+    return '복사된 배경화면 사진: $count장.';
+  }
+
+  @override
+  String shareDonePins(int added, int kept) {
+    return '저장된 스트리밍 앱 PIN: $added개. 그대로 둔 것: $kept개.';
+  }
+
+  @override
+  String get shareDoneHa => '받는 TV용 새 토큰과 함께 Home Assistant 설정을 복사했습니다.';
+
+  @override
+  String get shareDoneParentPin => '보호자 PIN을 복사했습니다.';
+
+  @override
+  String get shareHaMissing => '다른 TV가 Home Assistant 토큰을 만들지 못해 Home Assistant 설정이 오지 않았습니다.';
 
   @override
   String get backupAndRestore => '백업 및 복원';

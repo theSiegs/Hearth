@@ -1,20 +1,33 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flauncher/models/category.dart';
 
 /// The data of a copy of a profile from one TV to another: what the sending TV puts together, and what the receiving
 /// TV takes of it. The bytes come from another TV and are not trusted: everything is checked here, a setting only
-/// goes in if it is one a profile has, and nothing in it names a path or carries a secret.
+/// goes in if it is one a profile has, and nothing in it names a path. The only secret in it is the parent PIN's hash.
 ///
-/// A profile is a look (settings), a layout (apps, rows, the dock) and its Profile Pairing choices. Keys like
+/// A profile is a look (settings), a layout (apps, rows, the dock), its Profile Pairing choices and its wallpaper
+/// pictures; the TV's parent PIN may come along too. (The streaming PINs and the Home Assistant settings travel as a
+/// message of their own that only the Java side reads.) Keys like
 /// "user:11" differ from TV to TV, so profiles travel by a made-up id and a name; the receiving TV says which of its
 /// own profiles each one goes to.
 class ShareBundle {
   static const String formatName = "hearth-share";
   static const int version = 1;
 
-  /// What the whole bundle may weigh (as JSON), before pictures: a layout with hundreds of apps is some 100 KB.
-  static const int maxJsonBytes = 8 * 1024 * 1024;
+  /// What the whole bundle may weigh (as JSON): a layout with hundreds of apps is some 100 KB; the pictures are the rest.
+  static const int maxJsonBytes = 40 * 1024 * 1024;
+
+  /// A wallpaper picture (a JPEG of at most 1920x1080) and how many a copy may carry (three a profile, three profiles).
+  static const int maxPictureBytes = 3 * 1024 * 1024;
+  static const int maxPictures = 9;
+
+  /// What a wallpaper picture is called by where it shows: always, by day, by night.
+  static const List<String> wallpaperSlots = ["any", "day", "night"];
+
+  /// The parent PIN's hash as the TV keeps it: SHA-256, in hex.
+  static final RegExp parentPinHashPattern = RegExp(r'^[0-9a-f]{64}$');
   static const int maxProfiles = 16;
   static const int maxApps = 2000;
   static const int maxCategories = 200;
@@ -39,13 +52,23 @@ class ShareBundle {
   final Map<String, SharedLayout> layouts;
   final Map<String, List<SharedPairing>> pairings;
 
+  /// Each profile's wallpaper pictures by slot ([wallpaperSlots]), as JPEG bytes.
+  final Map<String, Map<String, Uint8List>> wallpapers;
+
+  /// The sender's parent PIN as its hash, when the sending parent chose to send it.
+  final String? parentPinHash;
+
   const ShareBundle({
     required this.hearth,
     required this.tv,
     required this.profiles,
     required this.layouts,
     required this.pairings,
+    this.wallpapers = const {},
+    this.parentPinHash,
   });
+
+  int get pictureCount => wallpapers.values.fold(0, (sum, slots) => sum + slots.length);
 
   /// The bundle as the sender puts it together. [layouts] are profile-only backups (BackupService.buildBackupData),
   /// by profile id: only what a profile may share is kept.
@@ -56,6 +79,8 @@ class ShareBundle {
     required Map<String, Map<String, dynamic>> layouts,
     required Map<String, List<SharedPairing>> pairings,
     required Set<String> settingKeys,
+    Map<String, Map<String, Uint8List>> wallpapers = const {},
+    String? parentPinHash,
   }) {
     return ShareBundle(
       hearth: hearth,
@@ -66,6 +91,8 @@ class ShareBundle {
           entry.key: SharedLayout.fromBackup(entry.value, settingKeys: settingKeys, lenient: true),
       },
       pairings: pairings,
+      wallpapers: wallpapers,
+      parentPinHash: parentPinHash,
     );
   }
 
@@ -75,6 +102,8 @@ class ShareBundle {
         if (layouts[profile.id] != null) {"type": "layout", "profile": profile.id, "data": layouts[profile.id]!.toJson()},
         if ((pairings[profile.id] ?? const []).isNotEmpty)
           {"type": "pairings", "profile": profile.id, "data": [for (final p in pairings[profile.id]!) p.toJson()]},
+        for (final picture in (wallpapers[profile.id] ?? const <String, Uint8List>{}).entries)
+          {"type": "wallpaper", "profile": profile.id, "slot": picture.key, "data": base64Encode(picture.value)},
       ],
     ];
     return jsonEncode({
@@ -83,6 +112,7 @@ class ShareBundle {
       "from": {"hearth": hearth, "tv": tv},
       "profiles": [for (final p in profiles) p.toJson()],
       "sections": sections,
+      if (parentPinHash != null) "parentPin": parentPinHash,
     });
   }
 
@@ -112,6 +142,8 @@ class ShareBundle {
     }
     final layouts = <String, SharedLayout>{};
     final pairings = <String, List<SharedPairing>>{};
+    final wallpapers = <String, Map<String, Uint8List>>{};
+    var pictures = 0;
     for (final raw in _list(root["sections"], "sections", maxProfiles * 8)) {
       final section = _map(raw, "section");
       final type = section["type"];
@@ -126,7 +158,18 @@ class ShareBundle {
           pairings[profile] = [
             for (final p in _list(section["data"], "pairings", maxPairings)) SharedPairing.parse(_map(p, "pairing")),
           ];
+        case "wallpaper":
+          final slot = section["slot"];
+          if (slot is! String || !wallpaperSlots.contains(slot)) throw const ShareFormatException("bad picture slot");
+          if (++pictures > maxPictures) throw const ShareFormatException("too many pictures");
+          final slots = wallpapers.putIfAbsent(profile, () => {});
+          if (slots.containsKey(slot)) throw const ShareFormatException("duplicate picture");
+          slots[slot] = _picture(section["data"]);
       }
+    }
+    final pin = root["parentPin"];
+    if (pin != null && (pin is! String || !parentPinHashPattern.hasMatch(pin))) {
+      throw const ShareFormatException("bad parent PIN");
     }
     return ShareBundle(
       hearth: _text(from["hearth"], 40),
@@ -134,7 +177,24 @@ class ShareBundle {
       profiles: profiles,
       layouts: layouts,
       pairings: pairings,
+      wallpapers: wallpapers,
+      parentPinHash: pin as String?,
     );
+  }
+
+  /// A picture's bytes if they are a JPEG of a size a wallpaper has; nothing else is ever written to a file.
+  static Uint8List _picture(Object? data) {
+    if (data is! String || data.length > (maxPictureBytes + 2) ~/ 3 * 4) throw const ShareFormatException("bad picture");
+    final Uint8List bytes;
+    try {
+      bytes = base64Decode(data);
+    } on FormatException {
+      throw const ShareFormatException("bad picture");
+    }
+    if (bytes.length < 4 || bytes.length > maxPictureBytes || bytes[0] != 0xFF || bytes[1] != 0xD8 || bytes[2] != 0xFF) {
+      throw const ShareFormatException("not a JPEG");
+    }
+    return bytes;
   }
 
   static Map<String, dynamic> _map(Object? value, String what) {

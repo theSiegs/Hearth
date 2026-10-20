@@ -89,6 +89,47 @@ public class ShareServiceTest {
     }
 
     @Test
+    public void theSecretsAreMadeOnlyAfterBothSayYesAndGoToTheReceiverAlone() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger made = new java.util.concurrent.atomic.AtomicInteger();
+        ShareService sending = ShareService.openSender("bundle", () -> {
+            made.incrementAndGet();
+            return "{\"v\":1,\"haFailed\":true}";
+        }, quick());
+        started.add(sending);
+        ShareService receiving = receiver(sending);
+        bothShowDigits(sending, receiving);
+        assertEquals("not before they said yes", 0, made.get());
+        assertNull(receiving.receivedSecrets());
+
+        sending.answer(true);
+        receiving.answer(true);
+        waitFor(receiving, ShareService.RECEIVED);
+        assertEquals("{\"v\":1,\"haFailed\":true}", receiving.receivedSecrets());
+        assertEquals(1, made.get());
+        assertEquals("ha_failed", sending.snapshot().get("note"));
+
+        receiving.reportBack("{}");
+        waitFor(receiving, ShareService.DONE);
+        assertNull("not kept afterwards", receiving.receivedSecrets());
+    }
+
+    @Test
+    public void aSenderThatIsToldNoMakesNoSecrets() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger made = new java.util.concurrent.atomic.AtomicInteger();
+        ShareService sending = ShareService.openSender("bundle", () -> {
+            made.incrementAndGet();
+            return "{}";
+        }, quick());
+        started.add(sending);
+        ShareService receiving = receiver(sending);
+        bothShowDigits(sending, receiving);
+        sending.answer(false);
+        receiving.answer(true);
+        waitFor(receiving, ShareService.FAILED);
+        assertEquals(0, made.get());
+    }
+
+    @Test
     public void theReceivingParentSayingNoStopsItAndTheSenderListensAgain() throws Exception {
         ShareService sending = sender("bundle-1");
         ShareService first = receiver(sending);

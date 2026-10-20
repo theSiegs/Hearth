@@ -41,7 +41,9 @@ final class ShareService {
     static final String FAILED = "failed";
 
     static final int[] PORTS = {8770, 8771, 8772, 8773, 8774};
-    static final int MAX_BUNDLE_BYTES = 24 * 1024 * 1024;
+    static final int MAX_BUNDLE_BYTES = 40 * 1024 * 1024;
+    /** The secrets (PINs, Home Assistant) are small. */
+    static final int MAX_SECRETS_BYTES = 256 * 1024;
     static final int MAX_REPORT_BYTES = 64 * 1024;
     static final int MAX_MISMATCHES = 3;
     private static final int MAX_STRAY = 8;
@@ -68,6 +70,12 @@ final class ShareService {
     private String mDigits;
     private String mError;
     private String mBundle;
+    /** The sender builds the secrets message when the transfer starts (not before both parents said yes). */
+    private java.util.function.Supplier<String> mSecretsSource;
+    /** What the receiver got; only Java reads it (ShareSecrets). */
+    private String mSecrets;
+    /** Something the sending screen should say about the secrets ("ha_failed"). */
+    private String mNote;
     private String mReport;
     private int mMismatches;
 
@@ -80,8 +88,13 @@ final class ShareService {
 
     /** Starts listening to send {@code bundleJson}; returns {port} or null if no port is free. */
     static synchronized Map<String, Object> startSending(String bundleJson) {
+        return startSending(bundleJson, null);
+    }
+
+    /** As above, with the secrets to send (made once both parents said the digits match) or null for none. */
+    static synchronized Map<String, Object> startSending(String bundleJson, java.util.function.Supplier<String> secrets) {
         stop();
-        ShareService service = openSender(bundleJson, new Timeouts());
+        ShareService service = openSender(bundleJson, secrets, new Timeouts());
         if (service == null) return null;
         sCurrent = service;
         Map<String, Object> started = new HashMap<>();
@@ -114,6 +127,11 @@ final class ShareService {
         return sCurrent == null ? null : sCurrent.takeReceived();
     }
 
+    /** The secrets the receiver got (for ShareSecrets on this side only); null if there are none. */
+    static synchronized String secrets() {
+        return sCurrent == null ? null : sCurrent.receivedSecrets();
+    }
+
     /** The receiver's screen has applied the bundle: sends its report back and finishes. */
     static synchronized void sendReport(String report) {
         if (sCurrent != null) sCurrent.reportBack(report);
@@ -129,8 +147,13 @@ final class ShareService {
 
     /** A sending copy, already listening; null if no port is free. For {@link #startSending} and tests. */
     static ShareService openSender(String bundleJson, Timeouts timeouts) {
+        return openSender(bundleJson, null, timeouts);
+    }
+
+    static ShareService openSender(String bundleJson, java.util.function.Supplier<String> secrets, Timeouts timeouts) {
         ShareService service = new ShareService(true, timeouts);
         service.mBundle = bundleJson;
+        service.mSecretsSource = secrets;
         for (int port : PORTS) {
             try {
                 service.mServer = new ServerSocket(port);
@@ -165,6 +188,7 @@ final class ShareService {
         if (DIGITS.equals(mState)) status.put("digits", mDigits);
         if (mError != null) status.put("error", mError);
         if (mReport != null) status.put("report", mReport);
+        if (mNote != null) status.put("note", mNote);
         status.put("mismatches", mMismatches);
         return status;
     }
@@ -180,12 +204,19 @@ final class ShareService {
         return bundle;
     }
 
+    synchronized String receivedSecrets() {
+        return RECEIVED.equals(mState) ? mSecrets : null;
+    }
+
     void reportBack(String report) {
         mReportOut.offer(report == null ? "" : report);
     }
 
     void close() {
         mStopped = true;
+        synchronized (this) {
+            mSecrets = null;
+        }
         try {
             if (mServer != null) mServer.close();
         } catch (IOException ignored) {
@@ -285,6 +316,13 @@ final class ShareService {
             bundle = mBundle;
         }
         session.send(bundle.getBytes(StandardCharsets.UTF_8));
+        String secrets = mSecretsSource == null ? "{\"v\":1}" : mSecretsSource.get();
+        if (secrets.contains("\"haFailed\":true")) {
+            synchronized (this) {
+                mNote = "ha_failed";
+            }
+        }
+        session.send(secrets.getBytes(StandardCharsets.UTF_8));
         socket.setSoTimeout(mTimeouts.applyMs);
         byte[] report = session.receive(MAX_REPORT_BYTES);
         synchronized (this) {
@@ -322,8 +360,10 @@ final class ShareService {
             session.confirm();
             socket.setSoTimeout(mTimeouts.transferMs);
             byte[] bundle = session.receive(MAX_BUNDLE_BYTES);
+            byte[] secrets = session.receive(MAX_SECRETS_BYTES);
             synchronized (this) {
                 mBundle = new String(bundle, StandardCharsets.UTF_8);
+                mSecrets = new String(secrets, StandardCharsets.UTF_8);
             }
             setState(RECEIVED, null);
             String report = mReportOut.poll(mTimeouts.applyMs, TimeUnit.MILLISECONDS);
@@ -334,6 +374,9 @@ final class ShareService {
             }
             socket.setSoTimeout(mTimeouts.transferMs);
             session.send(report.getBytes(StandardCharsets.UTF_8));
+            synchronized (this) {
+                mSecrets = null;
+            }
             setState(DONE, null);
         } catch (UnknownHostException e) {
             if (!mStopped) fail("network");
@@ -390,5 +433,6 @@ final class ShareService {
         mDigits = null;
         mError = error;
         mBundle = null;
+        mSecrets = null;
     }
 }

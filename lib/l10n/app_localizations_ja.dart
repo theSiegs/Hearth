@@ -199,7 +199,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get shareTitle => 'テレビ間でプロフィールをコピー';
 
   @override
-  String get shareIntro => 'プロフィールの見た目、ホームの配置、ストリーミングのプロフィール選択を、別のテレビにコピーします。ストリーミングの PIN と Home Assistant の設定は各テレビに残ります。両方のテレビの前にいる必要があります。';
+  String get shareIntro => 'プロフィールの見た目、ホームのレイアウト、壁紙の画像、ストリーミングのプロフィール選択を、別のテレビにコピーします。送る側の保護者は、ストリーミングアプリのPIN、Home Assistantの設定、保護者用PINも送れます。両方のテレビの前にいる必要があります。';
 
   @override
   String get shareSendTitle => '別のテレビにプロフィールをコピー';
@@ -306,6 +306,66 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get shareErrorGeneric => 'コピーが完了しませんでした。このテレビでは何も変更されていません。';
+
+  @override
+  String get shareSendMore => 'あわせて送る';
+
+  @override
+  String get shareSendPictures => '壁紙の画像';
+
+  @override
+  String shareSendPins(int count) {
+    return 'ストリーミングアプリのPIN（保存済み $count 件）';
+  }
+
+  @override
+  String get shareSendHa => 'Home Assistantの設定';
+
+  @override
+  String get shareNoneToSend => '送るものがありません';
+
+  @override
+  String get shareSendSecretsNote => 'PINとHome Assistantの設定は、両方のテレビに同じ数字が表示されてからだけ送られ、その後はどちらのテレビにも何も残りません。Home Assistantがもう一方のテレビ用に新しいトークンを作ります。Home Assistantのプロフィールで確認・削除できます。';
+
+  @override
+  String get shareSendHaFailed => 'Home Assistantがもう一方のテレビ用のトークンを作れなかったため、設定は送られませんでした。';
+
+  @override
+  String shareWhatPictures(int count) {
+    return '壁紙の画像（$count）';
+  }
+
+  @override
+  String shareWhatPins(int count) {
+    return 'ストリーミングアプリのPIN（$count）';
+  }
+
+  @override
+  String shareWhatHa(String host) {
+    return 'Home Assistant（$host）';
+  }
+
+  @override
+  String get shareReplacesHere => 'このテレビのものを置き換えます';
+
+  @override
+  String shareDonePictures(int count) {
+    return 'コピーした壁紙の画像: $count。';
+  }
+
+  @override
+  String shareDonePins(int added, int kept) {
+    return '保存したストリーミングアプリのPIN: $added。そのまま残したもの: $kept。';
+  }
+
+  @override
+  String get shareDoneHa => 'Home Assistantの設定をコピーしました。受け取るテレビ用に新しいトークンを作成済みです。';
+
+  @override
+  String get shareDoneParentPin => '保護者用PINをコピーしました。';
+
+  @override
+  String get shareHaMissing => 'もう一方のテレビがHome Assistantのトークンを作れなかったため、Home Assistantの設定は届きませんでした。';
 
   @override
   String get backupAndRestore => 'バックアップと復元';

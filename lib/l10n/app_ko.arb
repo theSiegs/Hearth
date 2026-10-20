@@ -75,7 +75,7 @@
     "inputs": "입력",
     "inputSources": "입력 소스",
     "shareTitle": "TV 간 프로필 복사",
-    "shareIntro": "프로필의 모양, 홈 배치, 스트리밍 프로필 선택을 한 TV에서 다른 TV로 복사합니다. 스트리밍 PIN과 Home Assistant 설정은 각 TV에 그대로 남습니다. 두 TV 앞에 모두 있어야 합니다.",
+    "shareIntro": "한 TV의 프로필 모양, 홈 레이아웃, 배경화면 사진, 스트리밍 프로필 선택을 다른 TV로 복사합니다. 보내는 보호자는 스트리밍 앱 PIN, Home Assistant 설정, 보호자 PIN도 함께 보낼 수 있습니다. 두 TV 모두 앞에 있어야 합니다.",
     "shareSendTitle": "다른 TV로 프로필 복사",
     "shareReceiveTitle": "다른 TV에서 프로필 복사",
     "shareSendPick": "복사할 프로필을 선택하세요",
@@ -108,6 +108,89 @@
     "shareErrorTimeout": "복사 시간이 초과되었습니다. 두 TV에서 처음부터 다시 시작하세요.",
     "shareErrorNewer": "그 TV의 Hearth가 더 최신입니다. 이 TV를 업데이트한 뒤 다시 시도하세요.",
     "shareErrorGeneric": "복사가 끝나지 않았습니다. 이 TV에서는 아무것도 바뀌지 않았습니다.",
+    "shareSendMore": "함께 보내기",
+    "@shareSendMore": {
+        "description": "Sending TV: heading over what else can be sent (pictures, PINs, Home Assistant, parent PIN)"
+    },
+    "shareSendPictures": "배경화면 사진",
+    "@shareSendPictures": {
+        "description": "Sending TV: switch for sending the profiles' wallpaper pictures"
+    },
+    "shareSendPins": "스트리밍 앱 PIN (저장됨 {count}개)",
+    "@shareSendPins": {
+        "description": "Sending TV: switch for sending streaming app PINs; {count} is how many are saved here",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareSendHa": "Home Assistant 설정",
+    "@shareSendHa": {
+        "description": "Sending TV: switch for sending the Home Assistant address and a new token for the other TV"
+    },
+    "shareNoneToSend": "보낼 것이 없습니다",
+    "@shareNoneToSend": {
+        "description": "Sending TV: a switch that is off because this TV has nothing of it"
+    },
+    "shareSendSecretsNote": "PIN과 Home Assistant 설정은 두 TV에 같은 숫자가 표시된 뒤에만 전송되며, 이후 어느 TV에도 아무것도 남지 않습니다. Home Assistant가 다른 TV용 새 토큰을 만듭니다. Home Assistant 프로필에서 확인하고 삭제할 수 있습니다.",
+    "@shareSendSecretsNote": {
+        "description": "Sending TV: what happens to PINs and Home Assistant settings"
+    },
+    "shareSendHaFailed": "Home Assistant가 다른 TV용 토큰을 만들지 못해 설정을 보내지 않았습니다.",
+    "@shareSendHaFailed": {
+        "description": "Sending TV: Home Assistant would not make a token, so its settings were not sent"
+    },
+    "shareWhatPictures": "배경화면 사진 ({count})",
+    "@shareWhatPictures": {
+        "description": "Receiving TV: switch for taking the wallpaper pictures; {count} is how many came",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareWhatPins": "스트리밍 앱 PIN ({count})",
+    "@shareWhatPins": {
+        "description": "Receiving TV: switch for taking the streaming app PINs; {count} is how many came",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareWhatHa": "Home Assistant ({host})",
+    "@shareWhatHa": {
+        "description": "Receiving TV: switch for taking the Home Assistant settings; {host} is its address",
+        "placeholders": {
+            "host": {"type": "String"}
+        }
+    },
+    "shareReplacesHere": "이 TV의 것을 대체합니다",
+    "@shareReplacesHere": {
+        "description": "Receiving TV: small text next to a switch whose copy replaces what this TV already has"
+    },
+    "shareDonePictures": "복사된 배경화면 사진: {count}장.",
+    "@shareDonePictures": {
+        "description": "Both TVs: {count} is how many wallpaper pictures were copied",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareDonePins": "저장된 스트리밍 앱 PIN: {added}개. 그대로 둔 것: {kept}개.",
+    "@shareDonePins": {
+        "description": "Both TVs: {added} PINs were saved, {kept} were already there and stayed",
+        "placeholders": {
+            "added": {"type": "int"},
+            "kept": {"type": "int"}
+        }
+    },
+    "shareDoneHa": "받는 TV용 새 토큰과 함께 Home Assistant 설정을 복사했습니다.",
+    "@shareDoneHa": {
+        "description": "Both TVs: Home Assistant settings were copied with a new token for the receiving TV"
+    },
+    "shareDoneParentPin": "보호자 PIN을 복사했습니다.",
+    "@shareDoneParentPin": {
+        "description": "Both TVs: the parent PIN was copied"
+    },
+    "shareHaMissing": "다른 TV가 Home Assistant 토큰을 만들지 못해 Home Assistant 설정이 오지 않았습니다.",
+    "@shareHaMissing": {
+        "description": "Receiving TV: the sending TV could not make a Home Assistant token"
+    },
     "backupAndRestore": "백업 및 복원",
     "exportBackup": "백업 내보내기",
     "importBackup": "백업 가져오기",

@@ -75,7 +75,7 @@
     "inputs": "入力",
     "inputSources": "入力ソース",
     "shareTitle": "テレビ間でプロフィールをコピー",
-    "shareIntro": "プロフィールの見た目、ホームの配置、ストリーミングのプロフィール選択を、別のテレビにコピーします。ストリーミングの PIN と Home Assistant の設定は各テレビに残ります。両方のテレビの前にいる必要があります。",
+    "shareIntro": "プロフィールの見た目、ホームのレイアウト、壁紙の画像、ストリーミングのプロフィール選択を、別のテレビにコピーします。送る側の保護者は、ストリーミングアプリのPIN、Home Assistantの設定、保護者用PINも送れます。両方のテレビの前にいる必要があります。",
     "shareSendTitle": "別のテレビにプロフィールをコピー",
     "shareReceiveTitle": "別のテレビからプロフィールをコピー",
     "shareSendPick": "コピーするプロフィールを選んでください",
@@ -108,6 +108,89 @@
     "shareErrorTimeout": "コピーがタイムアウトしました。両方のテレビで最初からやり直してください。",
     "shareErrorNewer": "そのテレビの Hearth の方が新しいバージョンです。こちらを更新してからもう一度お試しください。",
     "shareErrorGeneric": "コピーが完了しませんでした。このテレビでは何も変更されていません。",
+    "shareSendMore": "あわせて送る",
+    "@shareSendMore": {
+        "description": "Sending TV: heading over what else can be sent (pictures, PINs, Home Assistant, parent PIN)"
+    },
+    "shareSendPictures": "壁紙の画像",
+    "@shareSendPictures": {
+        "description": "Sending TV: switch for sending the profiles' wallpaper pictures"
+    },
+    "shareSendPins": "ストリーミングアプリのPIN（保存済み {count} 件）",
+    "@shareSendPins": {
+        "description": "Sending TV: switch for sending streaming app PINs; {count} is how many are saved here",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareSendHa": "Home Assistantの設定",
+    "@shareSendHa": {
+        "description": "Sending TV: switch for sending the Home Assistant address and a new token for the other TV"
+    },
+    "shareNoneToSend": "送るものがありません",
+    "@shareNoneToSend": {
+        "description": "Sending TV: a switch that is off because this TV has nothing of it"
+    },
+    "shareSendSecretsNote": "PINとHome Assistantの設定は、両方のテレビに同じ数字が表示されてからだけ送られ、その後はどちらのテレビにも何も残りません。Home Assistantがもう一方のテレビ用に新しいトークンを作ります。Home Assistantのプロフィールで確認・削除できます。",
+    "@shareSendSecretsNote": {
+        "description": "Sending TV: what happens to PINs and Home Assistant settings"
+    },
+    "shareSendHaFailed": "Home Assistantがもう一方のテレビ用のトークンを作れなかったため、設定は送られませんでした。",
+    "@shareSendHaFailed": {
+        "description": "Sending TV: Home Assistant would not make a token, so its settings were not sent"
+    },
+    "shareWhatPictures": "壁紙の画像（{count}）",
+    "@shareWhatPictures": {
+        "description": "Receiving TV: switch for taking the wallpaper pictures; {count} is how many came",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareWhatPins": "ストリーミングアプリのPIN（{count}）",
+    "@shareWhatPins": {
+        "description": "Receiving TV: switch for taking the streaming app PINs; {count} is how many came",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareWhatHa": "Home Assistant（{host}）",
+    "@shareWhatHa": {
+        "description": "Receiving TV: switch for taking the Home Assistant settings; {host} is its address",
+        "placeholders": {
+            "host": {"type": "String"}
+        }
+    },
+    "shareReplacesHere": "このテレビのものを置き換えます",
+    "@shareReplacesHere": {
+        "description": "Receiving TV: small text next to a switch whose copy replaces what this TV already has"
+    },
+    "shareDonePictures": "コピーした壁紙の画像: {count}。",
+    "@shareDonePictures": {
+        "description": "Both TVs: {count} is how many wallpaper pictures were copied",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareDonePins": "保存したストリーミングアプリのPIN: {added}。そのまま残したもの: {kept}。",
+    "@shareDonePins": {
+        "description": "Both TVs: {added} PINs were saved, {kept} were already there and stayed",
+        "placeholders": {
+            "added": {"type": "int"},
+            "kept": {"type": "int"}
+        }
+    },
+    "shareDoneHa": "Home Assistantの設定をコピーしました。受け取るテレビ用に新しいトークンを作成済みです。",
+    "@shareDoneHa": {
+        "description": "Both TVs: Home Assistant settings were copied with a new token for the receiving TV"
+    },
+    "shareDoneParentPin": "保護者用PINをコピーしました。",
+    "@shareDoneParentPin": {
+        "description": "Both TVs: the parent PIN was copied"
+    },
+    "shareHaMissing": "もう一方のテレビがHome Assistantのトークンを作れなかったため、Home Assistantの設定は届きませんでした。",
+    "@shareHaMissing": {
+        "description": "Receiving TV: the sending TV could not make a Home Assistant token"
+    },
     "backupAndRestore": "バックアップと復元",
     "exportBackup": "バックアップをエクスポート",
     "importBackup": "バックアップをインポート",

@@ -130,8 +130,9 @@ In a kids profile, or a profile without a Google TV PIN, holding the profile but
 instead. In a kids profile the remote's profile button always does Google TV's own job.
 
 **Copy profiles between TVs** (**Settings → Profiles**, in your own profile). Sets a new TV up like another one: a
-profile's look, home layout (which apps, in what order, the dock) and Profile Pairing choices go from one TV to the
-other, over your home network. Be at both TVs. On the TV that has the profiles, open **Copy profiles to another TV**
+profile's look, home layout (which apps, in what order, the dock), wallpaper pictures and Profile Pairing choices go from
+one TV to the other, over your home network. The parent on the sending TV can also send the streaming app PINs, the
+Home Assistant settings and the parent PIN. Be at both TVs. On the TV that has the profiles, open **Copy profiles to another TV**
 and choose which; on the other, open **Copy profiles from another TV** and choose the first (it is found by name, or
 type the address the first TV shows). Both TVs show the same six digits: if they match on both screens, say so on both,
 and the copy goes. The receiving TV then shows where each profile goes (a profile with the same name and kind here, or
@@ -140,8 +141,17 @@ and the copy goes. The receiving TV then shows where each profile goes (a profil
 - Only the apps installed on the receiving TV are placed; the others are left out and counted.
 - A streaming app profile choice the receiving TV already has is kept as it is.
 - A backup of the receiving TV is made first and listed in **Backup & Restore**, so a copy can be undone there.
-- Nothing is kept afterwards: no key, no list of TVs. Streaming PINs, Home Assistant settings, the parent PIN and
-  wallpaper pictures are not copied (set those up on each TV).
+- The sending TV chooses what goes along under **Also send**. Wallpaper pictures are on by default; streaming app PINs,
+  Home Assistant and the parent PIN are off until chosen, and choosing one asks for the parent PIN where the TV has one.
+  The receiving TV chooses again what it takes, and asks for its parent PIN before saving any of the three.
+- PINs go only to a profile that has that streaming profile paired, a PIN that already works on the receiving TV is
+  kept, and a kids profile never gets a Google TV PIN. They are checked on the receiving TV and never shown.
+- Home Assistant: the sending TV has Home Assistant make a **new** long-lived token for the other TV (named "Hearth
+  copy from …" with the date; see it, or remove it, in your Home Assistant profile). The sender's own token is never
+  sent. The TV status webhook id isn't sent either: it belongs to one TV's automation, so each TV needs its own.
+- A Home Assistant or parent PIN the receiving TV already has is replaced only if it is checked on that TV (it says
+  "replaces this TV's").
+- Nothing is kept afterwards: no key, no list of TVs.
 - If the digits don't match, nothing is sent. Someone else on your network who connects can't get anything without a
   parent saying the digits match.
 

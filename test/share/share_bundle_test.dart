@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/share/share_bundle.dart';
@@ -262,6 +263,88 @@ void main() {
       expect(got.profiles.single.name, isNot(contains("\u0000")));
       expect(got.hearth, "2026.10.62");
       expect(got.tv.length, ShareBundle.maxText);
+    });
+  });
+
+  group("pictures and the parent PIN", () {
+    final jpeg = Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3, 4]);
+
+    ShareBundle withExtras({Map<String, Map<String, Uint8List>>? pictures, String? hash}) => ShareBundle.build(
+          hearth: "x",
+          tv: "Den",
+          profiles: const [ShareProfile(id: "p1", name: "Alex", kids: false)],
+          layouts: const {},
+          pairings: const {},
+          settingKeys: keys,
+          wallpapers: pictures ?? const {},
+          parentPinHash: hash,
+        );
+
+    String altered(ShareBundle b, void Function(Map<String, dynamic>) change) {
+      final hand = jsonDecode(b.encode()) as Map<String, dynamic>;
+      change(hand);
+      return jsonEncode(hand);
+    }
+
+    test("go out and come back the same, by slot", () {
+      final got = ShareBundle.parse(
+          withExtras(pictures: {"p1": {"any": jpeg, "night": jpeg}}, hash: "c" * 64).encode(), settingKeys: keys);
+      expect(got.wallpapers["p1"]!.keys, unorderedEquals(["any", "night"]));
+      expect(got.wallpapers["p1"]!["night"], jpeg);
+      expect(got.pictureCount, 2);
+      expect(got.parentPinHash, "c" * 64);
+    });
+
+    test("are absent unless sent", () {
+      final got = ShareBundle.parse(withExtras().encode(), settingKeys: keys);
+      expect(got.wallpapers, isEmpty);
+      expect(got.parentPinHash, isNull);
+      expect(withExtras().encode(), isNot(contains("parentPin")));
+    });
+
+    test("a picture that isn't a JPEG, is too big, or has a slot of its own making is refused", () {
+      final good = withExtras(pictures: {"p1": {"any": jpeg}});
+      void refused(void Function(Map<String, dynamic>) change) {
+        expect(() => ShareBundle.parse(altered(good, change), settingKeys: keys), throwsA(isA<ShareFormatException>()));
+      }
+
+      Map<String, dynamic> picture(Map<String, dynamic> hand) =>
+          (hand["sections"] as List).firstWhere((s) => s["type"] == "wallpaper") as Map<String, dynamic>;
+      refused((hand) => picture(hand)["data"] = base64Encode([0x89, 0x50, 0x4E, 0x47, 1, 2]));
+      refused((hand) => picture(hand)["data"] = "not base64 !!");
+      final big = Uint8List(ShareBundle.maxPictureBytes + 1);
+      big.setRange(0, 3, [0xFF, 0xD8, 0xFF]);
+      refused((hand) => picture(hand)["data"] = base64Encode(big));
+      refused((hand) => picture(hand)["slot"] = "../../x");
+      refused((hand) => picture(hand)["slot"] = "wallpaper");
+    });
+
+    test("two pictures for one slot, or more than a copy may carry, are refused", () {
+      final good = withExtras(pictures: {"p1": {"any": jpeg}});
+      expect(
+          () => ShareBundle.parse(
+              altered(good, (hand) => (hand["sections"] as List).add((hand["sections"] as List).last)),
+              settingKeys: keys),
+          throwsA(isA<ShareFormatException>()));
+      expect(
+          () => ShareBundle.parse(
+              altered(good, (hand) {
+                final sections = hand["sections"] as List;
+                final one = sections.last as Map<String, dynamic>;
+                for (var i = 0; i < ShareBundle.maxPictures; i++) {
+                  sections.add({...one, "slot": ["any", "day", "night"][i % 3], "profile": "p1"});
+                }
+              }),
+              settingKeys: keys),
+          throwsA(isA<ShareFormatException>()));
+    });
+
+    test("a parent PIN has to be a SHA-256 in hex", () {
+      for (final bad in ["1234", "g" * 64, "A" * 64, "a" * 63, 7]) {
+        expect(() => ShareBundle.parse(altered(withExtras(), (hand) => hand["parentPin"] = bad), settingKeys: keys),
+            throwsA(isA<ShareFormatException>()),
+            reason: "$bad");
+      }
     });
   });
 

@@ -47,30 +47,11 @@ final class HaEvents {
      */
     static boolean listen(Context context, String eventType, long forMs, Consumer<JSONObject> onEvent,
             Consumer<HaEvents> onOpen) {
-        String base = HaConfig.baseUrl(context);
-        String token = HaConfig.token(context);
-        if (base == null || token == null) return false;
         HaEvents events = null;
         try {
-            URL url = new URL(base);
-            if (!LocalNet.allows(url)) {
-                Log.w(TAG, "Refusing plain HTTP to a non-local address; use https");
-                return false;
-            }
-            boolean tls = "https".equalsIgnoreCase(url.getProtocol());
-            int port = url.getPort() > 0 ? url.getPort() : tls ? 443 : 80;
-            Socket socket = tls ? SSLSocketFactory.getDefault().createSocket() : new Socket();
-            socket.connect(new InetSocketAddress(url.getHost(), port), 5_000);
-            socket.setSoTimeout(5_000);
-            events = new HaEvents(socket);
-            String path = (url.getPath() == null ? "" : url.getPath().replaceAll("/+$", "")) + "/api/websocket";
-            events.handshake(url.getHost() + (url.getPort() > 0 ? ":" + url.getPort() : ""), path);
-            if (!"auth_required".equals(events.readJson().optString("type"))) return false;
-            events.send(new JSONObject().put("type", "auth").put("access_token", token));
-            if (!"auth_ok".equals(events.readJson().optString("type"))) {
-                Log.w(TAG, "Home Assistant refused the token");
-                return false;
-            }
+            events = open(context);
+            if (events == null) return false;
+            Socket socket = events.mSocket;
             events.send(new JSONObject().put("id", 1).put("type", "subscribe_events").put("event_type", eventType));
             JSONObject result = events.readJson();
             if (!result.optBoolean("success")) return false;
@@ -94,6 +75,73 @@ final class HaEvents {
         } catch (Exception e) {
             Log.i(TAG, "Home Assistant events ended: " + e.getClass().getSimpleName());
             return events != null && events.mClosed;
+        } finally {
+            if (events != null) events.closeSocket();
+        }
+    }
+
+    /** Connected and signed in with the panel's token, or null (nothing set up, plain HTTP off the home network, refused). */
+    private static HaEvents open(Context context) throws Exception {
+        String base = HaConfig.baseUrl(context);
+        String token = HaConfig.token(context);
+        if (base == null || token == null) return null;
+        URL url = new URL(base);
+        if (!LocalNet.allows(url)) {
+            Log.w(TAG, "Refusing plain HTTP to a non-local address; use https");
+            return null;
+        }
+        boolean tls = "https".equalsIgnoreCase(url.getProtocol());
+        int port = url.getPort() > 0 ? url.getPort() : tls ? 443 : 80;
+        Socket socket = tls ? SSLSocketFactory.getDefault().createSocket() : new Socket();
+        HaEvents events = null;
+        try {
+            socket.connect(new InetSocketAddress(url.getHost(), port), 5_000);
+            socket.setSoTimeout(5_000);
+            events = new HaEvents(socket);
+            String path = (url.getPath() == null ? "" : url.getPath().replaceAll("/+$", "")) + "/api/websocket";
+            events.handshake(url.getHost() + (url.getPort() > 0 ? ":" + url.getPort() : ""), path);
+            JSONObject first = events.readJson();
+            if (first == null || !"auth_required".equals(first.optString("type"))) {
+                events.closeSocket();
+                return null;
+            }
+            events.send(new JSONObject().put("type", "auth").put("access_token", token));
+            JSONObject second = events.readJson();
+            if (second == null || !"auth_ok".equals(second.optString("type"))) {
+                Log.w(TAG, "Home Assistant refused the token");
+                events.closeSocket();
+                return null;
+            }
+            return events;
+        } catch (Exception e) {
+            if (events != null) events.closeSocket();
+            else socket.close();
+            throw e;
+        }
+    }
+
+    /**
+     * A new long-lived access token for another TV, made with this TV's own (Home Assistant's WebSocket API is the
+     * only place that makes one) and named {@code clientName}: it shows in the person's Home Assistant profile and
+     * they can revoke it there. Null when it couldn't be made. Blocks: run it off the main thread.
+     */
+    static String mintToken(Context context, String clientName, int lifespanDays) {
+        HaEvents events = null;
+        try {
+            events = open(context);
+            if (events == null) return null;
+            events.send(new JSONObject().put("id", 1).put("type", "auth/long_lived_access_token")
+                    .put("client_name", clientName).put("lifespan", lifespanDays));
+            JSONObject result = events.readJson();
+            if (result == null || !result.optBoolean("success")) {
+                Log.i(TAG, "Home Assistant wouldn't make a token");
+                return null;
+            }
+            String token = result.optString("result", "");
+            return token.isEmpty() ? null : token;
+        } catch (Exception e) {
+            Log.i(TAG, "A token wasn't made: " + e.getClass().getSimpleName());
+            return null;
         } finally {
             if (events != null) events.closeSocket();
         }

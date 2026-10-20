@@ -75,7 +75,7 @@
     "inputs": "इनपुट",
     "inputSources": "इनपुट स्रोत",
     "shareTitle": "टीवी के बीच प्रोफ़ाइल कॉपी करें",
-    "shareIntro": "एक टीवी से दूसरे टीवी पर प्रोफ़ाइल का रूप, होम लेआउट और स्ट्रीमिंग प्रोफ़ाइल की पसंद कॉपी करता है। स्ट्रीमिंग PIN और Home Assistant की सेटिंग हर टीवी पर ही रहती हैं। आपको दोनों टीवी के पास होना होगा।",
+    "shareIntro": "किसी प्रोफ़ाइल का लुक, होम लेआउट, वॉलपेपर तस्वीरें और स्ट्रीमिंग प्रोफ़ाइल की पसंद एक टीवी से दूसरे पर कॉपी करता है। भेजने वाले अभिभावक स्ट्रीमिंग ऐप के PIN, Home Assistant की सेटिंग और पैरेंट PIN भी भेज सकते हैं। आपको दोनों टीवी के पास होना होगा।",
     "shareSendTitle": "प्रोफ़ाइल दूसरे टीवी पर कॉपी करें",
     "shareReceiveTitle": "प्रोफ़ाइल दूसरे टीवी से कॉपी करें",
     "shareSendPick": "आप कौन-सी प्रोफ़ाइल कॉपी करना चाहते हैं?",
@@ -108,6 +108,89 @@
     "shareErrorTimeout": "कॉपी का समय समाप्त हो गया। दोनों टीवी पर फिर से शुरू करें।",
     "shareErrorNewer": "उस टीवी पर Hearth का नया संस्करण है। इसे अपडेट करें और फिर कोशिश करें।",
     "shareErrorGeneric": "कॉपी पूरी नहीं हुई। इस टीवी पर कुछ नहीं बदला।",
+    "shareSendMore": "ये भी भेजें",
+    "@shareSendMore": {
+        "description": "Sending TV: heading over what else can be sent (pictures, PINs, Home Assistant, parent PIN)"
+    },
+    "shareSendPictures": "वॉलपेपर तस्वीरें",
+    "@shareSendPictures": {
+        "description": "Sending TV: switch for sending the profiles' wallpaper pictures"
+    },
+    "shareSendPins": "स्ट्रीमिंग ऐप के PIN ({count} सहेजे हैं)",
+    "@shareSendPins": {
+        "description": "Sending TV: switch for sending streaming app PINs; {count} is how many are saved here",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareSendHa": "Home Assistant की सेटिंग",
+    "@shareSendHa": {
+        "description": "Sending TV: switch for sending the Home Assistant address and a new token for the other TV"
+    },
+    "shareNoneToSend": "भेजने के लिए कुछ नहीं",
+    "@shareNoneToSend": {
+        "description": "Sending TV: a switch that is off because this TV has nothing of it"
+    },
+    "shareSendSecretsNote": "PIN और Home Assistant की सेटिंग तभी भेजी जाती हैं जब दोनों टीवी पर एक जैसे अंक दिखें, और उसके बाद किसी भी टीवी पर कुछ नहीं रखा जाता। Home Assistant दूसरे टीवी के लिए नया टोकन बनाता है; आप उसे अपनी Home Assistant प्रोफ़ाइल में देख और हटा सकते हैं।",
+    "@shareSendSecretsNote": {
+        "description": "Sending TV: what happens to PINs and Home Assistant settings"
+    },
+    "shareSendHaFailed": "Home Assistant ने दूसरे टीवी के लिए टोकन नहीं बनाया, इसलिए उसकी सेटिंग नहीं भेजी गईं।",
+    "@shareSendHaFailed": {
+        "description": "Sending TV: Home Assistant would not make a token, so its settings were not sent"
+    },
+    "shareWhatPictures": "वॉलपेपर तस्वीरें ({count})",
+    "@shareWhatPictures": {
+        "description": "Receiving TV: switch for taking the wallpaper pictures; {count} is how many came",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareWhatPins": "स्ट्रीमिंग ऐप के PIN ({count})",
+    "@shareWhatPins": {
+        "description": "Receiving TV: switch for taking the streaming app PINs; {count} is how many came",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareWhatHa": "Home Assistant ({host})",
+    "@shareWhatHa": {
+        "description": "Receiving TV: switch for taking the Home Assistant settings; {host} is its address",
+        "placeholders": {
+            "host": {"type": "String"}
+        }
+    },
+    "shareReplacesHere": "इस टीवी वाले को बदलता है",
+    "@shareReplacesHere": {
+        "description": "Receiving TV: small text next to a switch whose copy replaces what this TV already has"
+    },
+    "shareDonePictures": "कॉपी की गई वॉलपेपर तस्वीरें: {count}।",
+    "@shareDonePictures": {
+        "description": "Both TVs: {count} is how many wallpaper pictures were copied",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareDonePins": "सहेजे गए स्ट्रीमिंग ऐप PIN: {added}। जैसे थे वैसे रखे गए: {kept}।",
+    "@shareDonePins": {
+        "description": "Both TVs: {added} PINs were saved, {kept} were already there and stayed",
+        "placeholders": {
+            "added": {"type": "int"},
+            "kept": {"type": "int"}
+        }
+    },
+    "shareDoneHa": "Home Assistant की सेटिंग कॉपी हुईं, प्राप्त करने वाले टीवी के लिए नए टोकन के साथ।",
+    "@shareDoneHa": {
+        "description": "Both TVs: Home Assistant settings were copied with a new token for the receiving TV"
+    },
+    "shareDoneParentPin": "पैरेंट PIN कॉपी हुआ।",
+    "@shareDoneParentPin": {
+        "description": "Both TVs: the parent PIN was copied"
+    },
+    "shareHaMissing": "दूसरा टीवी Home Assistant टोकन नहीं बना सका, इसलिए Home Assistant की कोई सेटिंग नहीं आई।",
+    "@shareHaMissing": {
+        "description": "Receiving TV: the sending TV could not make a Home Assistant token"
+    },
     "backupAndRestore": "बैकअप और पुनर्स्थापना",
     "exportBackup": "बैकअप निर्यात करें",
     "importBackup": "बैकअप आयात करें",

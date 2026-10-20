@@ -75,7 +75,7 @@
     "inputs": "输入源",
     "inputSources": "输入源",
     "shareTitle": "在电视之间复制个人资料",
-    "shareIntro": "把个人资料的外观、主屏幕布局和流媒体个人资料选择从一台电视复制到另一台。流媒体 PIN 码和 Home Assistant 设置会留在各自的电视上。您需要在两台电视旁。",
+    "shareIntro": "将个人资料的外观、主屏幕布局、壁纸图片和流媒体个人资料选择从一台电视复制到另一台。发送方家长还可以一并发送流媒体应用的 PIN、Home Assistant 设置和家长 PIN。你需要同时在两台电视旁。",
     "shareSendTitle": "将个人资料复制到另一台电视",
     "shareReceiveTitle": "从另一台电视复制个人资料",
     "shareSendPick": "要复制哪些个人资料？",
@@ -108,6 +108,89 @@
     "shareErrorTimeout": "复制超时。请在两台电视上重新开始。",
     "shareErrorNewer": "那台电视上的 Hearth 版本更新。请更新这台后重试。",
     "shareErrorGeneric": "复制未完成。这台电视上没有任何更改。",
+    "shareSendMore": "同时发送",
+    "@shareSendMore": {
+        "description": "Sending TV: heading over what else can be sent (pictures, PINs, Home Assistant, parent PIN)"
+    },
+    "shareSendPictures": "壁纸图片",
+    "@shareSendPictures": {
+        "description": "Sending TV: switch for sending the profiles' wallpaper pictures"
+    },
+    "shareSendPins": "流媒体应用 PIN（已保存 {count} 个）",
+    "@shareSendPins": {
+        "description": "Sending TV: switch for sending streaming app PINs; {count} is how many are saved here",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareSendHa": "Home Assistant 设置",
+    "@shareSendHa": {
+        "description": "Sending TV: switch for sending the Home Assistant address and a new token for the other TV"
+    },
+    "shareNoneToSend": "没有可发送的内容",
+    "@shareNoneToSend": {
+        "description": "Sending TV: a switch that is off because this TV has nothing of it"
+    },
+    "shareSendSecretsNote": "只有在两台电视显示相同数字之后，才会发送 PIN 和 Home Assistant 设置，之后两台电视都不会保留任何内容。Home Assistant 会为另一台电视创建一个新令牌；你可以在自己的 Home Assistant 个人资料中查看并移除它。",
+    "@shareSendSecretsNote": {
+        "description": "Sending TV: what happens to PINs and Home Assistant settings"
+    },
+    "shareSendHaFailed": "Home Assistant 没有为另一台电视创建令牌，因此未发送其设置。",
+    "@shareSendHaFailed": {
+        "description": "Sending TV: Home Assistant would not make a token, so its settings were not sent"
+    },
+    "shareWhatPictures": "壁纸图片（{count}）",
+    "@shareWhatPictures": {
+        "description": "Receiving TV: switch for taking the wallpaper pictures; {count} is how many came",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareWhatPins": "流媒体应用 PIN（{count}）",
+    "@shareWhatPins": {
+        "description": "Receiving TV: switch for taking the streaming app PINs; {count} is how many came",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareWhatHa": "Home Assistant（{host}）",
+    "@shareWhatHa": {
+        "description": "Receiving TV: switch for taking the Home Assistant settings; {host} is its address",
+        "placeholders": {
+            "host": {"type": "String"}
+        }
+    },
+    "shareReplacesHere": "将替换这台电视上的",
+    "@shareReplacesHere": {
+        "description": "Receiving TV: small text next to a switch whose copy replaces what this TV already has"
+    },
+    "shareDonePictures": "已复制的壁纸图片：{count}。",
+    "@shareDonePictures": {
+        "description": "Both TVs: {count} is how many wallpaper pictures were copied",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "shareDonePins": "已保存的流媒体应用 PIN：{added}。保持原样的：{kept}。",
+    "@shareDonePins": {
+        "description": "Both TVs: {added} PINs were saved, {kept} were already there and stayed",
+        "placeholders": {
+            "added": {"type": "int"},
+            "kept": {"type": "int"}
+        }
+    },
+    "shareDoneHa": "已复制 Home Assistant 设置，并为接收电视创建了新令牌。",
+    "@shareDoneHa": {
+        "description": "Both TVs: Home Assistant settings were copied with a new token for the receiving TV"
+    },
+    "shareDoneParentPin": "已复制家长 PIN。",
+    "@shareDoneParentPin": {
+        "description": "Both TVs: the parent PIN was copied"
+    },
+    "shareHaMissing": "另一台电视无法创建 Home Assistant 令牌，因此没有收到 Home Assistant 设置。",
+    "@shareHaMissing": {
+        "description": "Receiving TV: the sending TV could not make a Home Assistant token"
+    },
     "backupAndRestore": "备份与恢复",
     "exportBackup": "导出备份",
     "importBackup": "导入备份",

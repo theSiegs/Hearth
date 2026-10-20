@@ -199,7 +199,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shareTitle => 'نسخ الملفات الشخصية بين أجهزة التلفزيون';
 
   @override
-  String get shareIntro => 'ينسخ مظهر الملف الشخصي وتخطيط الشاشة الرئيسية واختيارات ملف البث من تلفزيون إلى آخر. تبقى أرقام PIN الخاصة بالبث وإعدادات Home Assistant على كل تلفزيون. يجب أن تكون أمام التلفزيونين.';
+  String get shareIntro => 'ينسخ مظهر الملف الشخصي وتخطيط الشاشة الرئيسية وصور الخلفية واختيارات ملف البث من تلفزيون إلى آخر. يمكن للوالد المُرسِل إرسال رموز PIN لتطبيقات البث وإعدادات Home Assistant ورمز PIN الخاص بالوالدين أيضًا. يجب أن تكون عند التلفزيونين.';
 
   @override
   String get shareSendTitle => 'نسخ الملفات الشخصية إلى تلفزيون آخر';
@@ -306,6 +306,66 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get shareErrorGeneric => 'لم يكتمل النسخ. لم يتغير شيء على هذا التلفزيون.';
+
+  @override
+  String get shareSendMore => 'أرسل أيضًا';
+
+  @override
+  String get shareSendPictures => 'صور الخلفية';
+
+  @override
+  String shareSendPins(int count) {
+    return 'رموز PIN لتطبيقات البث (المحفوظ: $count)';
+  }
+
+  @override
+  String get shareSendHa => 'إعدادات Home Assistant';
+
+  @override
+  String get shareNoneToSend => 'لا شيء للإرسال';
+
+  @override
+  String get shareSendSecretsNote => 'تُرسَل رموز PIN وإعدادات Home Assistant فقط بعد أن يعرض التلفزيونان الأرقام نفسها، ولا يُحتفَظ بشيء على أي من التلفزيونين بعد ذلك. ينشئ Home Assistant رمزًا جديدًا للتلفزيون الآخر؛ يمكنك رؤيته وحذفه من ملفك الشخصي في Home Assistant.';
+
+  @override
+  String get shareSendHaFailed => 'لم ينشئ Home Assistant رمزًا للتلفزيون الآخر، لذا لم تُرسَل إعداداته.';
+
+  @override
+  String shareWhatPictures(int count) {
+    return 'صور الخلفية ($count)';
+  }
+
+  @override
+  String shareWhatPins(int count) {
+    return 'رموز PIN لتطبيقات البث ($count)';
+  }
+
+  @override
+  String shareWhatHa(String host) {
+    return 'Home Assistant ($host)';
+  }
+
+  @override
+  String get shareReplacesHere => 'يستبدل ما في هذا التلفزيون';
+
+  @override
+  String shareDonePictures(int count) {
+    return 'عدد صور الخلفية المنسوخة: $count.';
+  }
+
+  @override
+  String shareDonePins(int added, int kept) {
+    return 'رموز PIN لتطبيقات البث المحفوظة: $added. بقيت كما هي: $kept.';
+  }
+
+  @override
+  String get shareDoneHa => 'نُسخت إعدادات Home Assistant مع رمز جديد أُنشئ للتلفزيون المستقبِل.';
+
+  @override
+  String get shareDoneParentPin => 'نُسخ رمز PIN الخاص بالوالدين.';
+
+  @override
+  String get shareHaMissing => 'لم يستطع التلفزيون الآخر إنشاء رمز Home Assistant، لذا لم تصل أي إعدادات له.';
 
   @override
   String get backupAndRestore => 'النسخ الاحتياطي والاستعادة';

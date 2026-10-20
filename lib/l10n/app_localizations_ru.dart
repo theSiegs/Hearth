@@ -199,7 +199,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get shareTitle => 'Копирование профилей между телевизорами';
 
   @override
-  String get shareIntro => 'Копирует оформление, расположение главного экрана и выбор профилей стриминга из одного телевизора в другой. PIN-коды стриминга и настройки Home Assistant остаются на каждом телевизоре. Нужно быть у обоих телевизоров.';
+  String get shareIntro => 'Копирует внешний вид профиля, раскладку главного экрана, обои и выбор профилей стриминга с одного телевизора на другой. Отправляющий родитель может также отправить PIN-коды стриминговых приложений, настройки Home Assistant и родительский PIN. Нужно находиться у обоих телевизоров.';
 
   @override
   String get shareSendTitle => 'Скопировать профили на другой телевизор';
@@ -306,6 +306,66 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get shareErrorGeneric => 'Копирование не завершено. На этом телевизоре ничего не изменено.';
+
+  @override
+  String get shareSendMore => 'Отправить также';
+
+  @override
+  String get shareSendPictures => 'Обои';
+
+  @override
+  String shareSendPins(int count) {
+    return 'PIN-коды стриминговых приложений (сохранено: $count)';
+  }
+
+  @override
+  String get shareSendHa => 'Настройки Home Assistant';
+
+  @override
+  String get shareNoneToSend => 'Отправлять нечего';
+
+  @override
+  String get shareSendSecretsNote => 'PIN-коды и настройки Home Assistant отправляются только после того, как оба телевизора показали одни и те же цифры, и после этого ни на одном из них ничего не хранится. Home Assistant создаёт новый токен для другого телевизора; его можно увидеть и удалить в вашем профиле Home Assistant.';
+
+  @override
+  String get shareSendHaFailed => 'Home Assistant не создал токен для другого телевизора, поэтому настройки не отправлены.';
+
+  @override
+  String shareWhatPictures(int count) {
+    return 'Обои ($count)';
+  }
+
+  @override
+  String shareWhatPins(int count) {
+    return 'PIN-коды стриминговых приложений ($count)';
+  }
+
+  @override
+  String shareWhatHa(String host) {
+    return 'Home Assistant ($host)';
+  }
+
+  @override
+  String get shareReplacesHere => 'заменит имеющиеся на этом телевизоре';
+
+  @override
+  String shareDonePictures(int count) {
+    return 'Скопировано обоев: $count.';
+  }
+
+  @override
+  String shareDonePins(int added, int kept) {
+    return 'Сохранено PIN-кодов стриминговых приложений: $added. Оставлено без изменений: $kept.';
+  }
+
+  @override
+  String get shareDoneHa => 'Настройки Home Assistant скопированы, для принимающего телевизора создан новый токен.';
+
+  @override
+  String get shareDoneParentPin => 'Родительский PIN скопирован.';
+
+  @override
+  String get shareHaMissing => 'Другой телевизор не смог создать токен Home Assistant, поэтому настройки Home Assistant не пришли.';
 
   @override
   String get backupAndRestore => 'Резервное копирование и восстановление';

@@ -361,7 +361,11 @@ public class MainActivity extends FlutterActivity {
             case "getSharePairings" -> result.success(ShareData.pairings(this, call.arguments()));
             case "getShareDeviceName" -> result.success(ShareDiscovery.deviceName(this));
             case "startShareSending" -> {
-                Map<String, Object> started = ShareService.startSending(call.arguments());
+                Map<String, Object> sendArgs = call.arguments();
+                String secretsRequest = (String) sendArgs.get("secrets");
+                String fromTv = ShareDiscovery.deviceName(this);
+                Map<String, Object> started = ShareService.startSending((String) sendArgs.get("bundle"),
+                        secretsRequest == null ? null : () -> ShareSecrets.build(this, secretsRequest, fromTv));
                 if (started == null) {
                     result.success(null);
                 } else {
@@ -382,6 +386,32 @@ public class MainActivity extends FlutterActivity {
                 result.success(null);
             }
             case "takeShareBundle" -> result.success(ShareService.takeBundle());
+            // What this TV could send besides the look (PINs, Home Assistant) and what arrived: counts, never the secrets
+            case "getShareSecretsOffer" -> answerFrom(sIoExecutor, result,
+                    () -> ShareSecrets.offer(this, (List<String>) call.arguments()));
+            // A picture of a profile's wallpaper as the screen shows it (at most 1920x1080, a JPEG), to send to another TV
+            case "getShareWallpaper" -> answerFrom(sIoExecutor, result, () -> shareWallpaper((String) call.arguments()));
+            case "getShareSecretsSummary" -> {
+                String secrets = ShareService.secrets();
+                result.success(secrets == null ? null : ShareSecrets.summary(secrets));
+            }
+            case "applyShareSecrets" -> {
+                Map<String, Object> args = call.arguments();
+                answerFrom(sIoExecutor, result, () -> {
+                    String secrets = ShareService.secrets();
+                    Map<String, Object> done = new HashMap<>();
+                    if (secrets == null) return done;
+                    if (Boolean.TRUE.equals(args.get("pins"))) {
+                        Map<String, String> targets = new HashMap<>();
+                        for (Map.Entry<String, Object> t : ((Map<String, Object>) args.get("targets")).entrySet()) {
+                            targets.put(t.getKey(), (String) t.getValue());
+                        }
+                        done.put("pins", ShareSecrets.applyPins(secrets, targets, ShareSecrets.vaultOf(this)));
+                    }
+                    if (Boolean.TRUE.equals(args.get("ha"))) done.put("ha", ShareSecrets.applyHa(this, secrets));
+                    return done;
+                });
+            }
             case "sendShareReport" -> {
                 ShareService.sendReport(call.arguments());
                 result.success(null);
@@ -651,6 +681,18 @@ public class MainActivity extends FlutterActivity {
                 : new Intent("android.search.action.GLOBAL_SEARCH")
                         .putExtra(SearchManager.QUERY, query);
         return tryStartActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    }
+
+    /** A picture of Hearth's own (a wallpaper file of a profile) as the screen shows it, a JPEG; null when it can't be made. */
+    private byte[] shareWallpaper(String path) {
+        try {
+            File file = new File(path).getCanonicalFile();
+            // The path comes from Flutter, but nothing outside the app's own data is read
+            if (!file.getPath().startsWith(getDataDir().getCanonicalPath() + File.separator)) return null;
+            return AgentWallpaper.encode(file);
+        } catch (java.io.IOException e) {
+            return null;
+        }
     }
 
     private List<Map<String, Object>> getProfilePairingApps() {

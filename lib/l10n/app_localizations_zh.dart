@@ -199,7 +199,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shareTitle => '在电视之间复制个人资料';
 
   @override
-  String get shareIntro => '把个人资料的外观、主屏幕布局和流媒体个人资料选择从一台电视复制到另一台。流媒体 PIN 码和 Home Assistant 设置会留在各自的电视上。您需要在两台电视旁。';
+  String get shareIntro => '将个人资料的外观、主屏幕布局、壁纸图片和流媒体个人资料选择从一台电视复制到另一台。发送方家长还可以一并发送流媒体应用的 PIN、Home Assistant 设置和家长 PIN。你需要同时在两台电视旁。';
 
   @override
   String get shareSendTitle => '将个人资料复制到另一台电视';
@@ -306,6 +306,66 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get shareErrorGeneric => '复制未完成。这台电视上没有任何更改。';
+
+  @override
+  String get shareSendMore => '同时发送';
+
+  @override
+  String get shareSendPictures => '壁纸图片';
+
+  @override
+  String shareSendPins(int count) {
+    return '流媒体应用 PIN（已保存 $count 个）';
+  }
+
+  @override
+  String get shareSendHa => 'Home Assistant 设置';
+
+  @override
+  String get shareNoneToSend => '没有可发送的内容';
+
+  @override
+  String get shareSendSecretsNote => '只有在两台电视显示相同数字之后，才会发送 PIN 和 Home Assistant 设置，之后两台电视都不会保留任何内容。Home Assistant 会为另一台电视创建一个新令牌；你可以在自己的 Home Assistant 个人资料中查看并移除它。';
+
+  @override
+  String get shareSendHaFailed => 'Home Assistant 没有为另一台电视创建令牌，因此未发送其设置。';
+
+  @override
+  String shareWhatPictures(int count) {
+    return '壁纸图片（$count）';
+  }
+
+  @override
+  String shareWhatPins(int count) {
+    return '流媒体应用 PIN（$count）';
+  }
+
+  @override
+  String shareWhatHa(String host) {
+    return 'Home Assistant（$host）';
+  }
+
+  @override
+  String get shareReplacesHere => '将替换这台电视上的';
+
+  @override
+  String shareDonePictures(int count) {
+    return '已复制的壁纸图片：$count。';
+  }
+
+  @override
+  String shareDonePins(int added, int kept) {
+    return '已保存的流媒体应用 PIN：$added。保持原样的：$kept。';
+  }
+
+  @override
+  String get shareDoneHa => '已复制 Home Assistant 设置，并为接收电视创建了新令牌。';
+
+  @override
+  String get shareDoneParentPin => '已复制家长 PIN。';
+
+  @override
+  String get shareHaMissing => '另一台电视无法创建 Home Assistant 令牌，因此没有收到 Home Assistant 设置。';
 
   @override
   String get backupAndRestore => '备份与恢复';
