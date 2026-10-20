@@ -8,6 +8,7 @@ import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/backup_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/share/share_bundle.dart';
+import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/settings/share_pages.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,6 +36,10 @@ class _ShareChannel extends FLauncherChannel {
   String? reportSent;
   int stops = 0;
   final List<(String, List<Map<String, dynamic>>)> applied = [];
+
+  /// Nobody is at the remote as far as Hearth can tell (a parent has to enter the PIN).
+  @override
+  Future<bool> isParentPresent() async => false;
 
   @override
   Future<String> getShareDeviceName() async => "Den";
@@ -161,6 +166,11 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: page),
+        onGenerateRoute: (settings) => MaterialPageRoute(
+          builder: (_) => Scaffold(
+            body: settings.name == ShareSendPage.routeName ? const ShareSendPage() : const ShareReceivePage(),
+          ),
+        ),
       ),
     ));
     await tester.pump(const Duration(milliseconds: 50));
@@ -188,6 +198,26 @@ void main() {
     expect(find.text("Copy profiles to another TV"), findsOneWidget);
     expect(find.text("Copy profiles from another TV"), findsOneWidget);
     expect(find.textContaining("Streaming PINs and Home Assistant settings stay on each TV"), findsOneWidget);
+  });
+
+  group("opening it", () {
+    testWidgets("goes straight in on a TV with no parent PIN, as a new TV is", (tester) async {
+      await pump(tester, const ShareProfilesPage());
+      await press(tester, "Copy profiles from another TV");
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text("Enter an address"), findsOneWidget);
+      await leave(tester);
+    });
+
+    testWidgets("asks for the parent PIN where the TV has one", (tester) async {
+      await settings.setParentPin("1357");
+      await pump(tester, const ShareProfilesPage());
+      await press(tester, "Copy profiles to another TV");
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(ParentPinDialog), findsOneWidget);
+      expect(find.text("Which profiles do you want to copy?"), findsNothing);
+      await leave(tester);
+    });
   });
 
   group("sending", () {

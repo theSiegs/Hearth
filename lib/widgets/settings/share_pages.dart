@@ -50,10 +50,13 @@ class ShareProfilesPage extends StatelessWidget {
     );
   }
 
-  /// A parent is at this TV (the PIN, unless one was entered a moment ago), then the page.
+  /// A parent is at this TV, then the page: the parent PIN (unless one was entered a moment ago) where the TV has one.
+  /// A TV with none, a new one above all, goes straight in: there is nothing to unlock, and nothing secret is copied.
   static Future<void> _open(BuildContext context, String route) async {
-    final allowed = await requireParentPin(context);
-    if (!allowed || !context.mounted) return;
+    if (context.read<SettingsService>().hasParentPin) {
+      final allowed = await requireParentPin(context);
+      if (!allowed || !context.mounted) return;
+    }
     Navigator.of(context).pushNamed(route);
   }
 }
