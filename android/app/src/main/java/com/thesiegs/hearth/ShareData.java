@@ -114,7 +114,7 @@ final class ShareData {
 
     /** Text from another TV: no control characters, trimmed, and not longer than a name needs. */
     static String tidy(String text) {
-        String cleaned = text.replaceAll("[\\u0000-\\u001f\\u007f]", " ").trim();
+        String cleaned = text.replaceAll("[\\u0000-\\u001f\\u007f]", " ").replaceAll("\\s+", " ").trim();
         return cleaned.length() > MAX_NAME ? cleaned.substring(0, MAX_NAME).trim() : cleaned;
     }
 }

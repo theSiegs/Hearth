@@ -155,7 +155,7 @@ class ShareBundle {
 
   /// Text from another TV for a screen or a log: no control characters, cut to [max].
   static String _clean(String value, int max) {
-    final cleaned = value.replaceAll(RegExp(r'[\u0000-\u001f\u007f]'), " ").trim();
+    final cleaned = value.replaceAll(RegExp(r'[\u0000-\u001f\u007f]'), " ").replaceAll(RegExp(r'\s+'), " ").trim();
     return cleaned.length > max ? cleaned.substring(0, max) : cleaned;
   }
 }
