@@ -2079,7 +2079,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get tvPowerGoogleTvHome => 'Google TV की होम स्क्रीन इस्तेमाल करें';
 
   @override
-  String get tvPowerGoogleTvHomeNote => 'जब तक आप इसे बंद नहीं करते, Hearth बीच में नहीं आता। होम बटन अब भी Hearth खोलता है।';
+  String get tvPowerGoogleTvHomeNote => 'जब तक आप होम बटन नहीं दबाते, Hearth बीच में नहीं आता; होम बटन Hearth खोलता है और इसे बंद कर देता है। आप इसे यहाँ से भी बंद कर सकते हैं।';
 
   @override
   String get setupFlowFinishLater => 'बाद में पूरा करें';

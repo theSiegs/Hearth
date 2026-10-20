@@ -2070,7 +2070,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get tvPowerGoogleTvHome => 'Google TV 홈 사용';
 
   @override
-  String get tvPowerGoogleTvHomeNote => '이 설정을 끌 때까지 Hearth가 나서지 않습니다. 홈 버튼은 계속 Hearth를 엽니다.';
+  String get tvPowerGoogleTvHomeNote => '홈 버튼을 누르거나 여기서 끌 때까지 Hearth가 나서지 않습니다. 홈 버튼을 누르면 Hearth가 열리고 이 설정이 꺼집니다.';
 
   @override
   String get setupFlowFinishLater => '나중에 마치기';

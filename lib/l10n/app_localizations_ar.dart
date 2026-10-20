@@ -2117,7 +2117,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get tvPowerGoogleTvHome => 'استخدام الشاشة الرئيسية لـ Google TV';
 
   @override
-  String get tvPowerGoogleTvHomeNote => 'يبقى Hearth بعيدًا حتى توقف هذا الخيار. لا يزال زر الصفحة الرئيسية يفتح Hearth.';
+  String get tvPowerGoogleTvHomeNote => 'يبقى Hearth بعيدًا حتى تضغط زر الصفحة الرئيسية، فيفتح Hearth ويوقف هذا الخيار، أو توقفه هنا.';
 
   @override
   String get setupFlowFinishLater => 'إكمال لاحقًا';

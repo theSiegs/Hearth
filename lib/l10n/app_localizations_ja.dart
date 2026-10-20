@@ -2070,7 +2070,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get tvPowerGoogleTvHome => 'Google TV のホームを使う';
 
   @override
-  String get tvPowerGoogleTvHomeNote => 'これをオフにするまで Hearth は表示されません。ホームボタンでは引き続き Hearth が開きます。';
+  String get tvPowerGoogleTvHomeNote => 'ホームボタンを押すか、ここでオフにするまで Hearth は表示されません。ホームボタンを押すと Hearth が開き、この設定はオフになります。';
 
   @override
   String get setupFlowFinishLater => '後で続ける';

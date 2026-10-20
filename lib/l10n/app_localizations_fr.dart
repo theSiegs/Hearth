@@ -2081,7 +2081,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get tvPowerGoogleTvHome => 'Utiliser l\'accueil de Google TV';
 
   @override
-  String get tvPowerGoogleTvHomeNote => 'Hearth reste en retrait jusqu\'à ce que vous désactiviez ceci. Le bouton Accueil ouvre toujours Hearth.';
+  String get tvPowerGoogleTvHomeNote => 'Hearth reste en retrait jusqu\'à ce que vous appuyiez sur le bouton Accueil, qui ouvre Hearth et désactive ceci, ou que vous le désactiviez ici.';
 
   @override
   String get setupFlowFinishLater => 'Terminer plus tard';

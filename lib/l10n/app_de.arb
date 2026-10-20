@@ -626,7 +626,7 @@
     "notifOpen": "Öffnen",
     "notifOpenHint": "OK: Öffnen · Links: Schließen · Rechts: Mehr",
     "tvPowerGoogleTvHome": "Google TV-Startbildschirm verwenden",
-    "tvPowerGoogleTvHomeNote": "Hearth hält sich zurück, bis du das ausschaltest. Die Home-Taste öffnet weiterhin Hearth.",
+    "tvPowerGoogleTvHomeNote": "Hearth hält sich zurück, bis du die Home-Taste drückst – sie öffnet Hearth und schaltet das hier aus – oder es hier ausschaltest.",
     "setupFlowFinishLater": "Später fertigstellen",
     "setupFlowStripEssentials": "Das Wichtigste",
     "setupFlowWelcomeTitle": "Willkommen bei Hearth",

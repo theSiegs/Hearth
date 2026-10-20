@@ -2094,7 +2094,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tvPowerGoogleTvHome => 'Использовать главный экран Google TV';
 
   @override
-  String get tvPowerGoogleTvHomeNote => 'Hearth не вмешивается, пока вы это не выключите. Кнопка «Домой» по-прежнему открывает Hearth.';
+  String get tvPowerGoogleTvHomeNote => 'Hearth не вмешивается, пока вы не нажмёте кнопку «Домой» (она откроет Hearth и выключит этот параметр) или не выключите его здесь.';
 
   @override
   String get setupFlowFinishLater => 'Завершить позже';

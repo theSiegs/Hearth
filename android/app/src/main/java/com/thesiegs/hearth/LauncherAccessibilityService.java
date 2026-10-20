@@ -2039,6 +2039,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
             Log.i(TAG, "Home: screenTimeLock=" + mScreenTimeLock + " suspended=" + isSuspended(this)
                     + " googleTvInFront=" + mGoogleTvScreenInFront + " hearthInFront=" + MainActivity.isInFront());
         }
+        // Home means Hearth: "Use Google TV's home" holds only until the next press of it (a bedtime lock or a
+        // suspended Hearth keeps Google TV's home as it was)
+        if (event.getKeyCode() == KeyEvent.KEYCODE_HOME && event.getAction() == KeyEvent.ACTION_DOWN
+                && canTakeOver() && isGoogleTvHome(this)) {
+            setGoogleTvHome(this, false);
+        }
         if (event.getKeyCode() == KeyEvent.KEYCODE_HOME && event.getAction() == KeyEvent.ACTION_DOWN
                 && canTakeOver() && mGoogleTvScreenInFront && !mChooserOnScreen) {
             // Home goes to Google TV as before, which may close its screen onto its home (or find the home already
@@ -2068,7 +2074,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     /**
      * Like {@link #canTakeOver()}, but also false while Google TV's home is turned on in Settings (see
      * {@link #setGoogleTvHome}). The AUTOMATIC bounce-backs use this so Hearth stops grabbing the screen; the Home
-     * button keeps using canTakeOver(), so Hearth (and the switch to turn this off) is always one press away.
+     * button keeps using canTakeOver(), so Hearth is always one press away, and that press turns the switch off.
      */
     private boolean autoTakeOverAllowed() {
         return canTakeOver() && !isGoogleTvHome(this);

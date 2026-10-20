@@ -626,7 +626,7 @@
     "notifOpen": "खोलें",
     "notifOpenHint": "OK: खोलें · बाएँ: हटाएँ · दाएँ: और",
     "tvPowerGoogleTvHome": "Google TV की होम स्क्रीन इस्तेमाल करें",
-    "tvPowerGoogleTvHomeNote": "जब तक आप इसे बंद नहीं करते, Hearth बीच में नहीं आता। होम बटन अब भी Hearth खोलता है।",
+    "tvPowerGoogleTvHomeNote": "जब तक आप होम बटन नहीं दबाते, Hearth बीच में नहीं आता; होम बटन Hearth खोलता है और इसे बंद कर देता है। आप इसे यहाँ से भी बंद कर सकते हैं।",
     "setupFlowFinishLater": "बाद में पूरा करें",
     "setupFlowStripEssentials": "ज़रूरी",
     "setupFlowWelcomeTitle": "Hearth में आपका स्वागत है",

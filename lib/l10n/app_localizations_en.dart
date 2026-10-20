@@ -2081,7 +2081,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tvPowerGoogleTvHome => 'Use Google TV\'s home';
 
   @override
-  String get tvPowerGoogleTvHomeNote => 'Hearth stays out of the way until you turn this off. The Home button still opens Hearth.';
+  String get tvPowerGoogleTvHomeNote => 'Hearth stays out of the way until you press the Home button, which opens Hearth and turns this off, or you turn it off here.';
 
   @override
   String get setupFlowFinishLater => 'Finish later';

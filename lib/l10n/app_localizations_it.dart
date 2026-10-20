@@ -2081,7 +2081,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get tvPowerGoogleTvHome => 'Usa la schermata Home di Google TV';
 
   @override
-  String get tvPowerGoogleTvHomeNote => 'Hearth resta in disparte finché non lo disattivi. Il tasto Home apre ancora Hearth.';
+  String get tvPowerGoogleTvHomeNote => 'Hearth resta in disparte finché non premi il tasto Home, che apre Hearth e disattiva questa opzione, o non la disattivi qui.';
 
   @override
   String get setupFlowFinishLater => 'Finisci più tardi';

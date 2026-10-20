@@ -2081,7 +2081,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get tvPowerGoogleTvHome => 'Usar a tela inicial do Google TV';
 
   @override
-  String get tvPowerGoogleTvHomeNote => 'O Hearth fica de fora até você desativar isto. O botão Início ainda abre o Hearth.';
+  String get tvPowerGoogleTvHomeNote => 'O Hearth fica de fora até você apertar o botão Início, que abre o Hearth e desativa isto, ou desativar aqui.';
 
   @override
   String get setupFlowFinishLater => 'Terminar depois';

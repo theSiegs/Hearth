@@ -3674,7 +3674,7 @@ abstract class AppLocalizations {
   /// TV & power: explanation under the Use Google TV's home switch
   ///
   /// In en, this message translates to:
-  /// **'Hearth stays out of the way until you turn this off. The Home button still opens Hearth.'**
+  /// **'Hearth stays out of the way until you press the Home button, which opens Hearth and turns this off, or you turn it off here.'**
   String get tvPowerGoogleTvHomeNote;
 
   /// Setup flow: top-right button that closes the flow; the home-screen chip offers to carry on

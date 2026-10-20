@@ -2070,7 +2070,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tvPowerGoogleTvHome => '使用 Google TV 主屏幕';
 
   @override
-  String get tvPowerGoogleTvHomeNote => '在您关闭此项之前，Hearth 不会介入。主屏幕按钮仍会打开 Hearth。';
+  String get tvPowerGoogleTvHomeNote => '在您按主屏幕按钮（会打开 Hearth 并关闭此项）或在此处关闭之前，Hearth 不会介入。';
 
   @override
   String get setupFlowFinishLater => '稍后完成';

@@ -2079,7 +2079,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get tvPowerGoogleTvHome => 'Google TV-Startbildschirm verwenden';
 
   @override
-  String get tvPowerGoogleTvHomeNote => 'Hearth hält sich zurück, bis du das ausschaltest. Die Home-Taste öffnet weiterhin Hearth.';
+  String get tvPowerGoogleTvHomeNote => 'Hearth hält sich zurück, bis du die Home-Taste drückst – sie öffnet Hearth und schaltet das hier aus – oder es hier ausschaltest.';
 
   @override
   String get setupFlowFinishLater => 'Später fertigstellen';

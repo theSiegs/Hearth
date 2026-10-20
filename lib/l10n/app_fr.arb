@@ -626,7 +626,7 @@
     "notifOpen": "Ouvrir",
     "notifOpenHint": "OK : Ouvrir · Gauche : Ignorer · Droite : Plus",
     "tvPowerGoogleTvHome": "Utiliser l'accueil de Google TV",
-    "tvPowerGoogleTvHomeNote": "Hearth reste en retrait jusqu'à ce que vous désactiviez ceci. Le bouton Accueil ouvre toujours Hearth.",
+    "tvPowerGoogleTvHomeNote": "Hearth reste en retrait jusqu'à ce que vous appuyiez sur le bouton Accueil, qui ouvre Hearth et désactive ceci, ou que vous le désactiviez ici.",
     "setupFlowFinishLater": "Terminer plus tard",
     "setupFlowStripEssentials": "L'essentiel",
     "setupFlowWelcomeTitle": "Bienvenue dans Hearth",

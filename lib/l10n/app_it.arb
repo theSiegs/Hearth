@@ -626,7 +626,7 @@
     "notifOpen": "Apri",
     "notifOpenHint": "OK: Apri · Sinistra: Ignora · Destra: Altro",
     "tvPowerGoogleTvHome": "Usa la schermata Home di Google TV",
-    "tvPowerGoogleTvHomeNote": "Hearth resta in disparte finché non lo disattivi. Il tasto Home apre ancora Hearth.",
+    "tvPowerGoogleTvHomeNote": "Hearth resta in disparte finché non premi il tasto Home, che apre Hearth e disattiva questa opzione, o non la disattivi qui.",
     "setupFlowFinishLater": "Finisci più tardi",
     "setupFlowStripEssentials": "Essenziali",
     "setupFlowWelcomeTitle": "Benvenuto in Hearth",

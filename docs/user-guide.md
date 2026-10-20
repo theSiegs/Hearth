@@ -178,8 +178,8 @@ A remap can apply everywhere or only on Hearth's home screen. Remote buttons nee
   there.
 - **Sleep when idle.** Puts the TV to sleep after a time with no remote use. Playing video or music counts as
   activity.
-- **Use Google TV's home.** Hearth stays out of the way and Google TV's own home shows, until you turn it off. The
-  Home button still opens Hearth.
+- **Use Google TV's home.** Hearth stays out of the way and Google TV's own home shows, until you press the Home button
+  (which opens Hearth and turns this off) or turn it off here.
 
 ## Home Assistant
 
@@ -212,8 +212,8 @@ are welcome ([list of strings to review](translations-to-review.md)).
 
 - **The Home button opens Google TV.** The Home Button Fix is off; the home screen shows **Home button needs a fix**.
   Turn it back on from there, or in **Set up Hearth**.
-- **Use Google TV's home** (**Settings → TV & power**) leaves Google TV's own home in front until you turn it off,
-  without uninstalling Hearth. The Home button still opens Hearth.
+- **Use Google TV's home** (**Settings → TV & power**) leaves Google TV's own home in front until you press Home or turn it off,
+  without uninstalling Hearth. The Home button opens Hearth and turns it off.
 - **Profile Pairing stopped picking a profile.** The app may have changed its screens; you get the app's own picker
   instead. Open the app from Hearth again so it can relearn the profiles.
 - **A saved PIN isn't typed.** **Streaming app PINs** says why: "not accepted twice" (save it again), "paused" (the

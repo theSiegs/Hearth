@@ -2607,7 +2607,7 @@
     "@tvPowerGoogleTvHome": {
         "description": "TV & power: switch that leaves Google TV's own home in front instead of Hearth"
     },
-    "tvPowerGoogleTvHomeNote": "Hearth stays out of the way until you turn this off. The Home button still opens Hearth.",
+    "tvPowerGoogleTvHomeNote": "Hearth stays out of the way until you press the Home button, which opens Hearth and turns this off, or you turn it off here.",
     "@tvPowerGoogleTvHomeNote": {
         "description": "TV & power: explanation under the Use Google TV's home switch"
     },

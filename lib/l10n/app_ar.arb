@@ -626,7 +626,7 @@
     "notifOpen": "فتح",
     "notifOpenHint": "موافق: فتح · يسار: تجاهل · يمين: المزيد",
     "tvPowerGoogleTvHome": "استخدام الشاشة الرئيسية لـ Google TV",
-    "tvPowerGoogleTvHomeNote": "يبقى Hearth بعيدًا حتى توقف هذا الخيار. لا يزال زر الصفحة الرئيسية يفتح Hearth.",
+    "tvPowerGoogleTvHomeNote": "يبقى Hearth بعيدًا حتى تضغط زر الصفحة الرئيسية، فيفتح Hearth ويوقف هذا الخيار، أو توقفه هنا.",
     "setupFlowFinishLater": "إكمال لاحقًا",
     "setupFlowStripEssentials": "الأساسيات",
     "setupFlowWelcomeTitle": "مرحبًا بك في Hearth",

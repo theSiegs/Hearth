@@ -626,7 +626,7 @@
     "notifOpen": "Aç",
     "notifOpenHint": "Tamam: Aç · Sol: Kapat · Sağ: Diğer",
     "tvPowerGoogleTvHome": "Google TV ana ekranını kullan",
-    "tvPowerGoogleTvHomeNote": "Bunu kapatana kadar Hearth araya girmez. Ana ekran düğmesi yine Hearth'ü açar.",
+    "tvPowerGoogleTvHomeNote": "Ana ekran düğmesine basana (Hearth açılır ve bu ayar kapanır) veya buradan kapatana kadar Hearth araya girmez.",
     "setupFlowFinishLater": "Sonra bitir",
     "setupFlowStripEssentials": "Temel",
     "setupFlowWelcomeTitle": "Hearth'e hoş geldiniz",

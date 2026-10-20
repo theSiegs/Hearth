@@ -2070,7 +2070,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get tvPowerGoogleTvHome => 'Google TV ana ekranını kullan';
 
   @override
-  String get tvPowerGoogleTvHomeNote => 'Bunu kapatana kadar Hearth araya girmez. Ana ekran düğmesi yine Hearth\'ü açar.';
+  String get tvPowerGoogleTvHomeNote => 'Ana ekran düğmesine basana (Hearth açılır ve bu ayar kapanır) veya buradan kapatana kadar Hearth araya girmez.';
 
   @override
   String get setupFlowFinishLater => 'Sonra bitir';

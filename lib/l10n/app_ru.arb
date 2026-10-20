@@ -626,7 +626,7 @@
     "notifOpen": "Открыть",
     "notifOpenHint": "OK: открыть · Влево: закрыть · Вправо: ещё",
     "tvPowerGoogleTvHome": "Использовать главный экран Google TV",
-    "tvPowerGoogleTvHomeNote": "Hearth не вмешивается, пока вы это не выключите. Кнопка «Домой» по-прежнему открывает Hearth.",
+    "tvPowerGoogleTvHomeNote": "Hearth не вмешивается, пока вы не нажмёте кнопку «Домой» (она откроет Hearth и выключит этот параметр) или не выключите его здесь.",
     "setupFlowFinishLater": "Завершить позже",
     "setupFlowStripEssentials": "Главное",
     "setupFlowWelcomeTitle": "Добро пожаловать в Hearth",

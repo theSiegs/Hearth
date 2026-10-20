@@ -626,7 +626,7 @@
     "notifOpen": "開く",
     "notifOpenHint": "OK: 開く · 左: 閉じる · 右: その他",
     "tvPowerGoogleTvHome": "Google TV のホームを使う",
-    "tvPowerGoogleTvHomeNote": "これをオフにするまで Hearth は表示されません。ホームボタンでは引き続き Hearth が開きます。",
+    "tvPowerGoogleTvHomeNote": "ホームボタンを押すか、ここでオフにするまで Hearth は表示されません。ホームボタンを押すと Hearth が開き、この設定はオフになります。",
     "setupFlowFinishLater": "後で続ける",
     "setupFlowStripEssentials": "基本",
     "setupFlowWelcomeTitle": "Hearth へようこそ",
