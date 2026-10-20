@@ -5,20 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
-import 'app_localizations_ar.dart';
-import 'app_localizations_de.dart';
 import 'app_localizations_en.dart';
-import 'app_localizations_es.dart';
-import 'app_localizations_fr.dart';
-import 'app_localizations_hi.dart';
-import 'app_localizations_it.dart';
-import 'app_localizations_ja.dart';
-import 'app_localizations_ko.dart';
-import 'app_localizations_pt.dart';
-import 'app_localizations_ru.dart';
-import 'app_localizations_tr.dart';
-import 'app_localizations_uk.dart';
-import 'app_localizations_zh.dart';
 
 // ignore_for_file: type=lint
 
@@ -103,20 +90,7 @@ abstract class AppLocalizations {
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
-    Locale('ar'),
-    Locale('de'),
-    Locale('en'),
-    Locale('es'),
-    Locale('fr'),
-    Locale('hi'),
-    Locale('it'),
-    Locale('ja'),
-    Locale('ko'),
-    Locale('pt'),
-    Locale('ru'),
-    Locale('tr'),
-    Locale('uk'),
-    Locale('zh')
+    Locale('en')
   ];
 
   /// No description provided for @aboutFlauncher.
@@ -952,102 +926,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start on boot (Google TV / Fire TV)'**
   String get startOnBoot;
-
-  /// No description provided for @appLanguage.
-  ///
-  /// In en, this message translates to:
-  /// **'Language'**
-  String get appLanguage;
-
-  /// No description provided for @systemDefault.
-  ///
-  /// In en, this message translates to:
-  /// **'System Default'**
-  String get systemDefault;
-
-  /// No description provided for @english.
-  ///
-  /// In en, this message translates to:
-  /// **'English'**
-  String get english;
-
-  /// No description provided for @spanish.
-  ///
-  /// In en, this message translates to:
-  /// **'Spanish'**
-  String get spanish;
-
-  /// No description provided for @ukrainian.
-  ///
-  /// In en, this message translates to:
-  /// **'Ukrainian'**
-  String get ukrainian;
-
-  /// No description provided for @chinese.
-  ///
-  /// In en, this message translates to:
-  /// **'Chinese'**
-  String get chinese;
-
-  /// No description provided for @french.
-  ///
-  /// In en, this message translates to:
-  /// **'French'**
-  String get french;
-
-  /// No description provided for @german.
-  ///
-  /// In en, this message translates to:
-  /// **'German'**
-  String get german;
-
-  /// No description provided for @japanese.
-  ///
-  /// In en, this message translates to:
-  /// **'Japanese'**
-  String get japanese;
-
-  /// No description provided for @portuguese.
-  ///
-  /// In en, this message translates to:
-  /// **'Portuguese'**
-  String get portuguese;
-
-  /// No description provided for @russian.
-  ///
-  /// In en, this message translates to:
-  /// **'Russian'**
-  String get russian;
-
-  /// No description provided for @italian.
-  ///
-  /// In en, this message translates to:
-  /// **'Italian'**
-  String get italian;
-
-  /// No description provided for @hindi.
-  ///
-  /// In en, this message translates to:
-  /// **'Hindi'**
-  String get hindi;
-
-  /// No description provided for @korean.
-  ///
-  /// In en, this message translates to:
-  /// **'Korean'**
-  String get korean;
-
-  /// No description provided for @arabic.
-  ///
-  /// In en, this message translates to:
-  /// **'Arabic'**
-  String get arabic;
-
-  /// No description provided for @turkish.
-  ///
-  /// In en, this message translates to:
-  /// **'Turkish'**
-  String get turkish;
 
   /// No description provided for @hidePersistentNotifications.
   ///
@@ -4061,12 +3939,6 @@ abstract class AppLocalizations {
   /// **'Set up later'**
   String get setupFlowSetUpLater;
 
-  /// Setup flow: first screen, link that opens the language choice; {language} is the current choice ("System Default", "English"...)
-  ///
-  /// In en, this message translates to:
-  /// **'Language: {language}'**
-  String setupFlowLanguageLink(String language);
-
   /// Setup flow: first screen, link that opens Backup & restore
   ///
   /// In en, this message translates to:
@@ -5685,7 +5557,7 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['ar', 'de', 'en', 'es', 'fr', 'hi', 'it', 'ja', 'ko', 'pt', 'ru', 'tr', 'uk', 'zh'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -5696,20 +5568,7 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
 
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'ar': return AppLocalizationsAr();
-    case 'de': return AppLocalizationsDe();
     case 'en': return AppLocalizationsEn();
-    case 'es': return AppLocalizationsEs();
-    case 'fr': return AppLocalizationsFr();
-    case 'hi': return AppLocalizationsHi();
-    case 'it': return AppLocalizationsIt();
-    case 'ja': return AppLocalizationsJa();
-    case 'ko': return AppLocalizationsKo();
-    case 'pt': return AppLocalizationsPt();
-    case 'ru': return AppLocalizationsRu();
-    case 'tr': return AppLocalizationsTr();
-    case 'uk': return AppLocalizationsUk();
-    case 'zh': return AppLocalizationsZh();
   }
 
   throw FlutterError(

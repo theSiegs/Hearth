@@ -458,54 +458,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get startOnBoot => 'Start on boot (Google TV / Fire TV)';
 
   @override
-  String get appLanguage => 'Language';
-
-  @override
-  String get systemDefault => 'System Default';
-
-  @override
-  String get english => 'English';
-
-  @override
-  String get spanish => 'Spanish';
-
-  @override
-  String get ukrainian => 'Ukrainian';
-
-  @override
-  String get chinese => 'Chinese';
-
-  @override
-  String get french => 'French';
-
-  @override
-  String get german => 'German';
-
-  @override
-  String get japanese => 'Japanese';
-
-  @override
-  String get portuguese => 'Portuguese';
-
-  @override
-  String get russian => 'Russian';
-
-  @override
-  String get italian => 'Italian';
-
-  @override
-  String get hindi => 'Hindi';
-
-  @override
-  String get korean => 'Korean';
-
-  @override
-  String get arabic => 'Arabic';
-
-  @override
-  String get turkish => 'Turkish';
-
-  @override
   String get hidePersistentNotifications => 'Hide Persistent Notifications';
 
   @override
@@ -2300,11 +2252,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setupFlowSetUpLater => 'Set up later';
-
-  @override
-  String setupFlowLanguageLink(String language) {
-    return 'Language: $language';
-  }
 
   @override
   String get setupFlowRestoreLink => 'Restore from a backup';

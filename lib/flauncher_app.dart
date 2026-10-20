@@ -48,14 +48,10 @@ class FLauncherApp extends StatelessWidget
 
   @override
   Widget build(BuildContext context) {
-    return Selector<SettingsService, (Color, Locale?)>(
-      selector: (_, settings) => (settings.accentColor, settings.appLocale),
-      builder: (context, tuple, _) {
-        final accentColor = tuple.$1;
-        final appLocale = tuple.$2;
-
+    return Selector<SettingsService, Color>(
+      selector: (_, settings) => settings.accentColor,
+      builder: (context, accentColor, _) {
         return MaterialApp(
-          locale: appLocale,
           scrollBehavior: const MaterialScrollBehavior().copyWith(
             overscroll: false,
           ),

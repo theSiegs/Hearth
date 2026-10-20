@@ -208,34 +208,6 @@ void main() async {
     });
   });
 
-  group("appLanguage and appLocale", () {
-    test("default appLanguage is empty string and appLocale is null", () async {
-      final sharedPreferences = await SharedPreferences.getInstance();
-      final settingsService = SettingsService(sharedPreferences);
-      expect(settingsService.appLanguage, "");
-      expect(settingsService.appLocale, isNull);
-    });
-
-    test("sets and gets appLanguage and appLocale", () async {
-      final sharedPreferences = await SharedPreferences.getInstance();
-      final settingsService = SettingsService(sharedPreferences);
-      await settingsService.setAppLanguage("es");
-      expect(settingsService.appLanguage, "es");
-      expect(settingsService.appLocale, equals(const Locale("es")));
-    });
-
-    test("setAppLanguage notifies listeners", () async {
-      final sharedPreferences = await SharedPreferences.getInstance();
-      final settingsService = SettingsService(sharedPreferences);
-      bool notified = false;
-      settingsService.addListener(() {
-        notified = true;
-      });
-      await settingsService.setAppLanguage("en");
-      expect(notified, isTrue);
-    });
-  });
-
   group("importSettingsMap", () {
     test("restores settings saved from another instance", () async {
       final sp1 = await SharedPreferences.getInstance();
@@ -247,7 +219,6 @@ void main() async {
       await service1.setAppKeyClickEnabled(false);
       await service1.setAutoHideAppBarEnabled(true);
       await service1.setThemes("legacy");
-      await service1.setAppLanguage("fr");
       await service1.setShowContinueWatching(false);
       await service1.setShowCategoryAppCount(true);
 
@@ -267,7 +238,6 @@ void main() async {
       expect(service2.appKeyClickEnabled, isFalse);
       expect(service2.autoHideAppBarEnabled, isTrue);
       expect(service2.themes, "legacy");
-      expect(service2.appLanguage, "fr");
       expect(service2.showContinueWatching, isFalse);
       expect(service2.showCategoryAppCount, isTrue);
     });
@@ -313,7 +283,7 @@ void main() async {
       final service = SettingsService(sharedPreferences);
       await service.importSettingsMap({"tmdb_api_key": "abc", "app_language": "fr"});
       expect(sharedPreferences.containsKey("tmdb_api_key"), isFalse);
-      expect(service.appLanguage, "fr");
+      expect(sharedPreferences.containsKey("app_language"), isFalse);
     });
   });
 

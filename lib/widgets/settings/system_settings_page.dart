@@ -24,7 +24,6 @@ import 'updates_page.dart';
 import 'hearth_about_dialog.dart';
 import 'setup_checklist_page.dart';
 import 'backup_restore_page.dart';
-import 'app_language_page.dart';
 import 'settings_page.dart';
 
 class SystemSettingsPage extends StatelessWidget {
@@ -41,11 +40,6 @@ class SystemSettingsPage extends StatelessWidget {
       children: [
         FocusableSettingsTile(
           autofocus: true,
-          leading: const Icon(Icons.language),
-          title: Text(localizations.appLanguage, style: Theme.of(context).textTheme.bodyMedium),
-          onPressed: () => Navigator.of(context).pushNamed(AppLanguagePage.routeName),
-        ),
-        FocusableSettingsTile(
           leading: const Icon(Icons.checklist),
           title: Text(AppLocalizations.of(context)!.setupHearthTitle, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: () => Navigator.of(context).pushNamed(SetupChecklistPage.routeName),

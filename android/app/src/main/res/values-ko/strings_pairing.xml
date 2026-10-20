@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="profile_pairing_description">Hearth가 Netflix, Disney+, Apple TV, HBO Max 또는 Paramount+를 열면 앱의 \"누가 시청하나요?\" 화면에서 Google TV 프로필에 맞는 프로필을 선택하고, 부모가 저장해 두었다면 그 프로필의 PIN을 입력합니다. Hearth가 앱을 연 직후의 해당 화면과 작품이 시작될 때의 Paramount+ PIN 요청만 읽습니다. 읽은 내용은 TV 밖으로 나가지 않습니다.</string>
-</resources>

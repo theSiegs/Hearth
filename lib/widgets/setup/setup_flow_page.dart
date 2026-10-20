@@ -29,7 +29,6 @@ import 'package:flauncher/providers/wallpaper_service.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/widgets/settings/adb_command_dialog.dart';
-import 'package:flauncher/widgets/settings/app_language_page.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/settings/backup_restore_page.dart';
 import 'package:flauncher/widgets/settings/kids_profiles_page.dart';
@@ -766,7 +765,6 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       );
 
   Widget _welcome(AppLocalizations l) {
-    final settings = context.watch<SettingsService?>();
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -787,13 +785,6 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
         ]),
         const SizedBox(height: 20),
         Wrap(spacing: 12, alignment: WrapAlignment.center, children: [
-          if (settings != null)
-            SetupButton(
-              compact: true,
-              icon: Icons.language,
-              label: l.setupFlowLanguageLink(AppLanguagePage.nameOf(l, settings.appLanguage)),
-              onPressed: () => _openSettingsPage(AppLanguagePage.routeName),
-            ),
           SetupButton(
             compact: true,
             icon: Icons.settings_backup_restore,

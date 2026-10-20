@@ -260,19 +260,19 @@ void main() {
 
     test("aren't exported, and the export says so", () async {
       final settingsService = SettingsService(sharedPreferences);
-      await settingsService.setAppLanguage("fr");
+      await settingsService.setAccentColor(accentColorTeal);
       final data = await backupService.buildBackupData(settingsService);
       expect(data["onlyChosenSettings"], isTrue);
-      expect(data["settings"]["app_language"], "fr");
+      expect(data["settings"]["accent_color"], accentColorTeal);
       expect((data["settings"] as Map).containsKey("date_format"), isFalse);
     });
 
     test("go back to their defaults on restore", () async {
       final settingsService = SettingsService(sharedPreferences);
       final data = await backupService.buildBackupData(settingsService);
-      await settingsService.setAppLanguage("fr");
+      await settingsService.setAccentColor(accentColorTeal);
       await backupService.restoreBackupData(data, settingsService);
-      expect(settingsService.appLanguage, "");
+      expect(settingsService.accentColorHex, accentColorPurple);
     });
 
     test("include the dock and Home Assistant panel, so a profile's layout doesn't keep another's", () async {

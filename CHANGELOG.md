@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+- Hearth is English only: the 13 machine translations and the Settings > System > Language page are gone (an old language choice in a backup is ignored).
+
 ## 2026.10.66 (pre-release)
 
 - TV status: **Create it in Home Assistant for me** (Settings > Home Assistant > TV status, and in the setup flow) makes the helpers and the automation for this TV in Home Assistant, with a new random webhook ID, and turns reporting on. It needs an administrator's token. The Home Assistant side of a TV's status is no longer a manual job.

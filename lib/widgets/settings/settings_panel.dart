@@ -51,7 +51,6 @@ import 'package:flauncher/widgets/settings/look_settings_page.dart';
 import 'package:flauncher/widgets/settings/remote_search_settings_page.dart';
 import 'package:flauncher/widgets/settings/backup_restore_page.dart';
 import 'package:flauncher/widgets/settings/share_pages.dart';
-import 'package:flauncher/widgets/settings/app_language_page.dart';
 import 'package:flauncher/widgets/settings/blocked_notifications_page.dart';
 import 'package:flauncher/widgets/settings/tv_power_settings_page.dart';
 import 'package:flauncher/widgets/settings/notifications_settings_page.dart';
@@ -220,8 +219,6 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     return _FastPageRoute(builder: (_) => const ShareReceivePage());
                   case BackupRestorePage.routeName:
                     return _FastPageRoute(builder: (_) => const BackupRestorePage());
-                  case AppLanguagePage.routeName:
-                    return _FastPageRoute(builder: (_) => const AppLanguagePage());
                   case BlockedNotificationsPage.routeName:
                     return _FastPageRoute(builder: (_) => const BlockedNotificationsPage());
                   case TvPowerSettingsPage.routeName:

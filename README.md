@@ -67,7 +67,7 @@ It's free software (GPL-3.0).
 - The Home button opens Hearth, every time.
 
 **Also:** a notifications panel, sleep when idle, TV inputs (on TVs that have them), daily backups on the TV,
-updates from GitHub releases, and 14 languages (most machine-translated; corrections welcome). If you ever want
+updates from GitHub releases, If you ever want
 Google TV's home back for a while, **Settings → TV & power → Use Google TV's home**.
 
 ## With Home Assistant

@@ -52,7 +52,7 @@ shows what's off). Reinstalling or force-stopping Hearth switches its accessibil
 | `lib/providers/` | State and services: apps, settings, wallpaper, Watch Next, profiles, search, updates, Home Assistant |
 | `lib/widgets/` | Home screen, cards, dock, panels; `settings/` holds every settings page |
 | `lib/flauncher_channel.dart` | The method channel to the Android side |
-| `lib/l10n/` | Translations (`app_en.arb` is the source; 13 more locales) |
+| `lib/l10n/` | Strings (English only: `app_en.arb`) |
 | `android/.../LauncherAccessibilityService.java` | Home Button Fix, profile tracking, screen time, remote remaps, idle sleep |
 | `android/.../ProfilePairing*.java`, `*PinRecipe.java` | Profile Pairing and PIN entry for streaming apps |
 | `android/.../Ha*.java` | Home Assistant notifications server, panel, status webhook, phone setup |
@@ -63,12 +63,10 @@ shows what's off). Reinstalling or force-stopping Hearth switches its accessibil
 
 The Dart package is still called `flauncher`, after the project Hearth descends from.
 
-## Translations
+## Strings
 
-Add every new string to `lib/l10n/app_en.arb` with a description, and to the other 13 locales. Android-side strings
-live in `android/app/src/main/res/values*/strings*.xml`. Machine translations to check are listed in
-[translations-to-review.md](translations-to-review.md). Hearth, HearthTube, Home Assistant, Google TV and app names
-stay untranslated.
+Hearth is English only. Add every new string to `lib/l10n/app_en.arb` with a description (Android-side strings live in
+`android/app/src/main/res/values/strings*.xml`). There are no other locales to keep in step.
 
 ## Testing profiles
 

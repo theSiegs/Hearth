@@ -234,9 +234,7 @@ backup at any time. Restore picks from the list of backups.
 
 ## Languages
 
-Hearth is in English, Arabic, Chinese, French, German, Hindi, Italian, Japanese, Korean, Portuguese, Russian,
-Spanish, Turkish and Ukrainian (**Settings → System → Language**). Most translations are machine-made; corrections
-are welcome ([list of strings to review](translations-to-review.md)).
+Hearth is in English only.
 
 ## When something's wrong
 

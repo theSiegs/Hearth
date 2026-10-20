@@ -82,11 +82,10 @@ const bool kPrereleaseBuild = bool.fromEnvironment("HEARTH_PRERELEASE", defaultV
 // only), and whether setting up the kids profiles also put Hearth on other adults' (they're accounts in the
 // owner's user, which has Hearth already), and the Home Assistant calendars a profile turned off (the calendars are
 // the TV's own now)
-const Set<String> _retiredKeys = {"tmdb_api_key", "push_to_adult_profiles", "ha_hidden_calendars"};
+const Set<String> _retiredKeys = {"tmdb_api_key", "push_to_adult_profiles", "ha_hidden_calendars", "app_language"};
 const String _oldDateTimeDefaultsClearedKey = "device_old_date_time_defaults_cleared";
 const String _showNotificationsWidgetInStatusBarKey = "show_notifications_widget_in_status_bar";
 const String _autoHideNotificationsWidgetKey = "auto_hide_notifications_widget";
-const String _appLanguageKey = "app_language";
 const String _showWeatherInStatusBarKey = "show_weather_in_status_bar";
 const String _showWeatherWarningsKey = "show_weather_warnings";
 // One unit for the whole TV (it's in one place), and a new key: the old "temperature_unit" was saved into layouts and
@@ -192,7 +191,6 @@ class SettingsService extends ChangeNotifier {
     _startOnBootKey,
     _showNotificationsWidgetInStatusBarKey,
     _autoHideNotificationsWidgetKey,
-    _appLanguageKey,
     _showWeatherInStatusBarKey,
     _showWeatherWarningsKey,
     _temperatureUnitKey,
@@ -401,10 +399,6 @@ class SettingsService extends ChangeNotifier {
 
   bool get useFahrenheit => temperatureUnit == temperatureUnitFahrenheit;
 
-  String get appLanguage => _string(_appLanguageKey, "");
-
-  Locale? get appLocale => appLanguage.isEmpty ? null : Locale(appLanguage);
-
   String get accentColorHex => _string(_accentColorKey, accentColorPurple);
 
   Color get accentColor => accentColorFromHex(accentColorHex);
@@ -428,8 +422,6 @@ class SettingsService extends ChangeNotifier {
     }
     reload();
   }
-
-  Future<void> setAppLanguage(String value) => _setString(_appLanguageKey, value);
 
   Future<void> setAppHighlightAnimationEnabled(bool value) => _setBool(_appHighlightAnimationEnabledKey, value);
 

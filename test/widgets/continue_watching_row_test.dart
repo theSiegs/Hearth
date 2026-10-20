@@ -186,37 +186,6 @@ void main() {
       expect(find.text('See all'), findsNothing);
     });
 
-    testWidgets('says how long is left, and the See all card, in the app\'s language', (tester) async {
-      final programs = [
-        _fakeProgram(
-            id: 1, packageName: 'app.one', title: 'Video 1', playbackPosition: 30 * 60000, duration: 120 * 60000),
-        _fakeProgram(id: 2, packageName: 'app.two', title: 'Video 2'),
-        _fakeProgram(id: 3, packageName: 'app.three', title: 'Video 3'),
-      ];
-      when(watchNextService.programs).thenReturn(programs);
-
-      Future<void> pumpIn(Locale locale) async {
-        await tester.pumpWidget(
-          _buildTestWidget(
-            child: const ContinueWatchingRow(),
-            settingsService: settingsService,
-            watchNextService: watchNextService,
-            appsService: appsService,
-            locale: locale,
-          ),
-        );
-        await tester.pumpAndSettle();
-      }
-
-      await pumpIn(const Locale('en'));
-      expect(find.text('Description for Video 1 \u00b7 1 h 30 min left'), findsOneWidget);
-
-      await pumpIn(const Locale('de'));
-      expect(find.text('WEITERSCHAUEN'), findsOneWidget);
-      expect(find.text('Description for Video 1 \u00b7 Noch 1 Std. 30 Min.'), findsOneWidget);
-      expect(find.text('Alle ansehen'), findsOneWidget);
-      expect(find.text('3 begonnen'), findsOneWidget);
-    });
   });
 
   group('WatchNextCard animations', () {

@@ -361,22 +361,6 @@
     "showAppNamesBelowIcons": "Show App Names Below Icons",
     "dataUsage": "Data Usage",
     "startOnBoot": "Start on boot (Google TV / Fire TV)",
-    "appLanguage": "Language",
-    "systemDefault": "System Default",
-    "english": "English",
-    "spanish": "Spanish",
-    "ukrainian": "Ukrainian",
-    "chinese": "Chinese",
-    "french": "French",
-    "german": "German",
-    "japanese": "Japanese",
-    "portuguese": "Portuguese",
-    "russian": "Russian",
-    "italian": "Italian",
-    "hindi": "Hindi",
-    "korean": "Korean",
-    "arabic": "Arabic",
-    "turkish": "Turkish",
     "hidePersistentNotifications": "Hide Persistent Notifications",
     "blockedNotificationApps": "Blocked Apps",
     "unblockAppNotifications": "Unblock Notifications",
@@ -2907,15 +2891,6 @@
     "setupFlowSetUpLater": "Set up later",
     "@setupFlowSetUpLater": {
         "description": "Setup flow: first screen's button that closes the flow; the home-screen chip offers to carry on"
-    },
-    "setupFlowLanguageLink": "Language: {language}",
-    "@setupFlowLanguageLink": {
-        "description": "Setup flow: first screen, link that opens the language choice; {language} is the current choice (\"System Default\", \"English\"...)",
-        "placeholders": {
-            "language": {
-                "type": "String"
-            }
-        }
     },
     "setupFlowRestoreLink": "Restore from a backup",
     "@setupFlowRestoreLink": {

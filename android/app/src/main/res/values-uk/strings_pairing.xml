@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="profile_pairing_description">Коли Hearth відкриває Netflix, Disney+, Apple TV, HBO Max або Paramount+, він вибирає профіль, що відповідає профілю Google TV, на екрані «Хто дивиться?» застосунку і вводить PIN цього профілю, якщо його зберіг батько чи мати. Він читає лише ці екрани, одразу після того як Hearth відкрив застосунок, і запит PIN у Paramount+ під час запуску фільму. Ніщо з прочитаного не залишає телевізор.</string>
-</resources>
