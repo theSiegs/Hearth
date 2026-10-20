@@ -2513,6 +2513,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get setupFlowDebugOpen => 'Hakkında\'yı aç';
 
   @override
+  String get setupFlowDebugUsbBody => 'Geliştirici seçenekleri açık, ancak USB hata ayıklama anahtarı kapalı. Hearth\'ün çocuk profillerini kurmak için buna ihtiyacı var; yalnızca kablosuz hata ayıklama yetmez. Sonraki ekranda USB hata ayıklama\'yı açıp geri gelin. Açık bırakın: Hearth\'ün yeni bir çocuk profili için buna yine ihtiyacı olacak.';
+
+  @override
+  String get setupFlowDebugUsbOpen => 'Geliştirici seçeneklerini aç';
+
+  @override
   String get setupCardSmartHome => 'Akıllı ev';
 
   @override

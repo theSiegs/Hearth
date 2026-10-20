@@ -440,6 +440,15 @@ class FLauncherChannel {
   Future<Map<dynamic, dynamic>> getSetupFamilyState() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getSetupFamilyState") ?? {};
 
+  /// Whether Developer options are unlocked. Debugging ([isAdbEnabled]) can still be off then: only Wireless
+  /// debugging was turned on.
+  Future<bool> isDeveloperOptionsOn() async =>
+      await _methodChannel.invokeMethod<bool>("isDeveloperOptionsOn") ?? false;
+
+  /// Opens Android's Developer options, where the USB debugging switch is.
+  Future<bool> openDeveloperSettings() async =>
+      await _methodChannel.invokeMethod<bool>("openDeveloperSettings") ?? false;
+
   /// Opens Android's About screen, where tapping the build number turns on Developer options (and so debugging).
   Future<bool> openDeviceInfoSettings() async =>
       await _methodChannel.invokeMethod<bool>("openDeviceInfoSettings") ?? false;

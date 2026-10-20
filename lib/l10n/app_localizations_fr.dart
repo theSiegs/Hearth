@@ -2524,6 +2524,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get setupFlowDebugOpen => 'Ouvrir À propos';
 
   @override
+  String get setupFlowDebugUsbBody => 'Les options pour les développeurs sont activées, mais l\'interrupteur Débogage USB est désactivé. Hearth en a besoin pour configurer les profils enfants, et le débogage sans fil seul ne suffit pas. Sur l\'écran suivant, activez Débogage USB, et revenez. Laissez-le activé : Hearth en aura besoin pour un nouveau profil enfant.';
+
+  @override
+  String get setupFlowDebugUsbOpen => 'Ouvrir les options pour les développeurs';
+
+  @override
   String get setupCardSmartHome => 'Maison connectée';
 
   @override

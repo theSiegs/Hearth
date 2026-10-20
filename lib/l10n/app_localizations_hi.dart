@@ -2522,6 +2522,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get setupFlowDebugOpen => 'जानकारी खोलें';
 
   @override
+  String get setupFlowDebugUsbBody => 'डेवलपर के लिए सेटिंग और टूल चालू हैं, लेकिन USB डीबगिंग का स्विच बंद है। बच्चों की प्रोफ़ाइलें सेट करने के लिए Hearth को यह चाहिए, और सिर्फ़ वायरलेस डीबगिंग काफ़ी नहीं है। अगली स्क्रीन पर USB डीबगिंग चालू करें, और वापस आएँ। इसे चालू रहने दें: नई बच्चों की प्रोफ़ाइल के लिए Hearth को यह फिर चाहिए।';
+
+  @override
+  String get setupFlowDebugUsbOpen => 'डेवलपर के लिए सेटिंग और टूल खोलें';
+
+  @override
   String get setupCardSmartHome => 'स्मार्ट होम';
 
   @override

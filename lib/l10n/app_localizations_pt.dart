@@ -2524,6 +2524,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get setupFlowDebugOpen => 'Abrir Sobre';
 
   @override
+  String get setupFlowDebugUsbBody => 'As opções do desenvolvedor estão ativadas, mas o interruptor de Depuração USB está desligado. O Hearth precisa dele para configurar os perfis infantis, e a depuração sem fio sozinha não basta. Na próxima tela, ative Depuração USB e volte. Deixe ativado: o Hearth precisa dele de novo para um novo perfil infantil.';
+
+  @override
+  String get setupFlowDebugUsbOpen => 'Abrir Opções do desenvolvedor';
+
+  @override
   String get setupCardSmartHome => 'Casa inteligente';
 
   @override

@@ -2513,6 +2513,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get setupFlowDebugOpen => '정보 열기';
 
   @override
+  String get setupFlowDebugUsbBody => '개발자 옵션은 켜져 있지만 USB 디버깅 스위치가 꺼져 있습니다. 아이 프로필을 설정하려면 Hearth에 필요하며, 무선 디버깅만으로는 충분하지 않습니다. 다음 화면에서 USB 디버깅을 켜고 돌아오세요. 켜 두세요. 새 아이 프로필에 다시 필요합니다.';
+
+  @override
+  String get setupFlowDebugUsbOpen => '개발자 옵션 열기';
+
+  @override
   String get setupCardSmartHome => '스마트 홈';
 
   @override

@@ -35,6 +35,9 @@ class SetupSnapshot {
   /// The TV's debugging switch is on, so Hearth can run its own fixes.
   final bool adbEnabled;
 
+  /// Developer options are unlocked, so a TV with debugging off needs only that switch, not the About screen.
+  final bool developerOptionsOn;
+
   /// Android lets Hearth read what was being watched (Continue Watching).
   final bool watchNextAllowed;
 
@@ -63,6 +66,7 @@ class SetupSnapshot {
     required this.steps,
     required this.packageName,
     this.adbEnabled = false,
+    this.developerOptionsOn = false,
     this.watchNextAllowed = false,
     this.hearthTubeInstalled = false,
     this.googleTv = false,
@@ -217,6 +221,7 @@ class SetupSnapshot {
       steps: steps,
       packageName: packageName,
       adbEnabled: await _safe(channel.isAdbEnabled, false),
+      developerOptionsOn: await _safe(channel.isDeveloperOptionsOn, false),
       watchNextAllowed: await _safe(channel.checkWatchNextPermission, false),
       hearthTubeInstalled: await _hearthTubeInstalled(channel),
       googleTv: family["googleTv"] == true,

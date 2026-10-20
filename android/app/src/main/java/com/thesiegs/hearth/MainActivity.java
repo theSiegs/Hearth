@@ -469,6 +469,9 @@ public class MainActivity extends FlutterActivity {
             // parent before they run. Off the main thread: adb I/O, and the first time a wait for "Allow debugging?".
             case "isAdbEnabled" -> result.success(SetupFixes.isAdbEnabled(this));
             case "getSetupFamilyState" -> result.success(getSetupFamilyState());
+            case "isDeveloperOptionsOn" -> result.success(SetupFixes.isDeveloperOptionsOn(this));
+            case "openDeveloperSettings" -> result.success(
+                    tryStartActivity(new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
             case "openDeviceInfoSettings" -> result.success(
                     tryStartActivity(new Intent(Settings.ACTION_DEVICE_INFO_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
             case "setSetupWaitingFor" -> {

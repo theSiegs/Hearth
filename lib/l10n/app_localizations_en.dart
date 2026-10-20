@@ -2524,6 +2524,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowDebugOpen => 'Open About';
 
   @override
+  String get setupFlowDebugUsbBody => 'Developer options are on, but the USB debugging switch is off. Hearth needs it to set up the kids profiles, and Wireless debugging alone isn\'t enough. On the next screen, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids profile.';
+
+  @override
+  String get setupFlowDebugUsbOpen => 'Open Developer options';
+
+  @override
   String get setupCardSmartHome => 'Smart home';
 
   @override

@@ -2522,6 +2522,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get setupFlowDebugOpen => 'Info öffnen';
 
   @override
+  String get setupFlowDebugUsbBody => 'Die Entwickleroptionen sind eingeschaltet, aber der Schalter für USB-Debugging ist aus. Hearth braucht ihn, um die Kinderprofile einzurichten; kabelloses Debugging allein reicht nicht. Schalten Sie auf dem nächsten Bildschirm USB-Debugging ein und kommen Sie zurück. Lassen Sie es eingeschaltet: Hearth braucht es wieder für ein neues Kinderprofil.';
+
+  @override
+  String get setupFlowDebugUsbOpen => 'Entwickleroptionen öffnen';
+
+  @override
   String get setupCardSmartHome => 'Smart Home';
 
   @override

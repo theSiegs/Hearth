@@ -2513,6 +2513,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get setupFlowDebugOpen => 'デバイス情報を開く';
 
   @override
+  String get setupFlowDebugUsbBody => '開発者向けオプションはオンですが、「USB デバッグ」のスイッチがオフです。子どものプロフィールを設定するために Hearth に必要で、ワイヤレス デバッグだけでは足りません。次の画面で「USB デバッグ」をオンにして、戻ってきてください。オンのままにしてください。新しい子どものプロフィールで再び必要になります。';
+
+  @override
+  String get setupFlowDebugUsbOpen => '開発者向けオプションを開く';
+
+  @override
   String get setupCardSmartHome => 'スマートホーム';
 
   @override

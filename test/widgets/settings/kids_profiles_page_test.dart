@@ -48,6 +48,8 @@ class _KidsChannel extends FLauncherChannel {
   int removes = 0;
   int uninstalls = 0;
   int aboutOpened = 0;
+  int developerOpened = 0;
+  bool developerOptions = false;
   final List<bool> reads = [];
 
   @override
@@ -72,6 +74,15 @@ class _KidsChannel extends FLauncherChannel {
 
   @override
   Future<bool> isAdbEnabled() async => adb;
+
+  @override
+  Future<bool> isDeveloperOptionsOn() async => developerOptions;
+
+  @override
+  Future<bool> openDeveloperSettings() async {
+    developerOpened++;
+    return true;
+  }
 
   @override
   Future<bool> openDeviceInfoSettings() async {
@@ -287,6 +298,22 @@ void main() {
     expect(find.text("Turn on debugging first"), findsOneWidget);
     await press(tester, "Open About");
     expect(channel.aboutOpened, 1);
+    expect(channel.fixes, 0);
+  });
+
+  testWidgets("Fix with debugging off but Developer options on opens Developer options, not About", (tester) async {
+    channel.adb = false;
+    channel.developerOptions = true;
+    channel.kids = [
+      {"userId": 10, "name": "Sam", "hearth": false},
+    ];
+    await pump(tester, const KidsProfilesPage());
+    await press(tester, "Fix");
+    expect(find.text("Turn on debugging first"), findsOneWidget);
+    expect(find.textContaining("Wireless debugging alone isn't enough"), findsOneWidget);
+    await press(tester, "Open Developer options");
+    expect(channel.developerOpened, 1);
+    expect(channel.aboutOpened, 0);
     expect(channel.fixes, 0);
   });
 

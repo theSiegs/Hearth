@@ -2513,6 +2513,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get setupFlowDebugOpen => '打开“关于”';
 
   @override
+  String get setupFlowDebugUsbBody => '开发者选项已开启，但“USB 调试”开关是关闭的。Hearth 需要它来设置孩子的个人资料，仅有无线调试是不够的。在下一个界面中开启“USB 调试”，再回来。请保持开启：添加新的孩子个人资料时 Hearth 还需要它。';
+
+  @override
+  String get setupFlowDebugUsbOpen => '打开“开发者选项”';
+
+  @override
   String get setupCardSmartHome => '智能家居';
 
   @override

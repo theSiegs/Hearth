@@ -3221,6 +3221,14 @@
     "@setupFlowDebugOpen": {
         "description": "Setup flow: button that opens Android's About screen"
     },
+    "setupFlowDebugUsbBody": "Developer options are on, but the USB debugging switch is off. Hearth needs it to set up the kids profiles, and Wireless debugging alone isn't enough. On the next screen, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids profile.",
+    "@setupFlowDebugUsbBody": {
+        "description": "Setup flow and Kids profiles: USB debugging is off though Developer options are on; Developer options and USB debugging are Android's labels"
+    },
+    "setupFlowDebugUsbOpen": "Open Developer options",
+    "@setupFlowDebugUsbOpen": {
+        "description": "Setup flow and Kids profiles: button that opens Android's Developer options"
+    },
     "setupCardSmartHome": "Smart home",
     "@setupCardSmartHome": {
         "description": "Setup flow: the Home Assistant card's name"

@@ -767,6 +767,8 @@
     "setupFlowDebugTitle": "Ative a depuração primeiro",
     "setupFlowDebugBody": "O Hearth precisa do interruptor de depuração da TV para configurar os perfis infantis. Na próxima tela, selecione \"Versão do Android TV OS\" sete vezes. Depois, em Configurações > Sistema > Opções do desenvolvedor, ative Depuração USB e volte. Deixe ativado: o Hearth precisa dele de novo para um novo perfil infantil.",
     "setupFlowDebugOpen": "Abrir Sobre",
+    "setupFlowDebugUsbBody": "As opções do desenvolvedor estão ativadas, mas o interruptor de Depuração USB está desligado. O Hearth precisa dele para configurar os perfis infantis, e a depuração sem fio sozinha não basta. Na próxima tela, ative Depuração USB e volte. Deixe ativado: o Hearth precisa dele de novo para um novo perfil infantil.",
+    "setupFlowDebugUsbOpen": "Abrir Opções do desenvolvedor",
     "setupCardSmartHome": "Casa inteligente",
     "setupFlowHaBenefit": "Campainha e outros alertas na TV, e seu painel do Home Assistant a um toque.",
     "setupFlowHaIncluded1": "Campainha e outros alertas sobre qualquer app",

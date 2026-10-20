@@ -4517,6 +4517,18 @@ abstract class AppLocalizations {
   /// **'Open About'**
   String get setupFlowDebugOpen;
 
+  /// Setup flow and Kids profiles: USB debugging is off though Developer options are on; Developer options and USB debugging are Android's labels
+  ///
+  /// In en, this message translates to:
+  /// **'Developer options are on, but the USB debugging switch is off. Hearth needs it to set up the kids profiles, and Wireless debugging alone isn\'t enough. On the next screen, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids profile.'**
+  String get setupFlowDebugUsbBody;
+
+  /// Setup flow and Kids profiles: button that opens Android's Developer options
+  ///
+  /// In en, this message translates to:
+  /// **'Open Developer options'**
+  String get setupFlowDebugUsbOpen;
+
   /// Setup flow: the Home Assistant card's name
   ///
   /// In en, this message translates to:

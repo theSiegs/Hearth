@@ -767,6 +767,8 @@
     "setupFlowDebugTitle": "Prima attiva il debug",
     "setupFlowDebugBody": "Hearth ha bisogno dell'interruttore di debug della TV per configurare i profili dei bambini. Nella schermata successiva, seleziona \"Build Android TV OS\" sette volte. Poi in Impostazioni > Sistema > Opzioni sviluppatore, attiva Debug USB e torna qui. Lascialo attivo: Hearth ne avrà ancora bisogno per un nuovo profilo bambino.",
     "setupFlowDebugOpen": "Apri Info",
+    "setupFlowDebugUsbBody": "Le opzioni sviluppatore sono attive, ma l'interruttore Debug USB è spento. Hearth ne ha bisogno per configurare i profili dei bambini, e il debug wireless da solo non basta. Nella schermata successiva, attiva Debug USB e torna qui. Lascialo attivo: Hearth ne avrà ancora bisogno per un nuovo profilo bambino.",
+    "setupFlowDebugUsbOpen": "Apri Opzioni sviluppatore",
     "setupCardSmartHome": "Casa intelligente",
     "setupFlowHaBenefit": "Il campanello e altri avvisi sulla TV, e la tua dashboard di Home Assistant a un tasto di distanza.",
     "setupFlowHaIncluded1": "Campanello e altri avvisi sopra qualsiasi app",

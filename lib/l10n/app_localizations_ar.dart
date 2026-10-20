@@ -2560,6 +2560,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get setupFlowDebugOpen => 'فتح \"حول\"';
 
   @override
+  String get setupFlowDebugUsbBody => 'خيارات المطوّرين مفعّلة، لكن مفتاح تصحيح أخطاء USB متوقف. يحتاجه Hearth لإعداد ملفات الأطفال، ولا يكفي تصحيح الأخطاء اللاسلكي وحده. في الشاشة التالية، شغّل تصحيح أخطاء USB وارجع. اتركه مفعّلًا: يحتاجه Hearth مجددًا لملف طفل جديد.';
+
+  @override
+  String get setupFlowDebugUsbOpen => 'فتح خيارات المطوّرين';
+
+  @override
   String get setupCardSmartHome => 'المنزل الذكي';
 
   @override

@@ -2537,6 +2537,12 @@ class AppLocalizationsUk extends AppLocalizations {
   String get setupFlowDebugOpen => 'Відкрити «Про пристрій»';
 
   @override
+  String get setupFlowDebugUsbBody => 'Параметри розробника ввімкнено, але перемикач «Налагодження USB» вимкнено. Він потрібен Hearth, щоб налаштувати дитячі профілі, а самого бездротового налагодження недостатньо. На наступному екрані увімкніть «Налагодження USB» і поверніться. Залиште його увімкненим: Hearth знадобиться воно для нового дитячого профілю.';
+
+  @override
+  String get setupFlowDebugUsbOpen => 'Відкрити «Параметри розробника»';
+
+  @override
   String get setupCardSmartHome => 'Розумний дім';
 
   @override

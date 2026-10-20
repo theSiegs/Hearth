@@ -364,10 +364,14 @@ extension _CardScreens on _SetupFlowPageState {
       return SetupScreenBody(
         icon: Icons.developer_mode,
         title: l.setupFlowDebugTitle,
-        body: l.setupFlowDebugBody,
+        body: snap.developerOptionsOn ? l.setupFlowDebugUsbBody : l.setupFlowDebugBody,
         buttons: [
           skip,
-          SetupButton(label: l.setupFlowDebugOpen, focusNode: _primary, autofocus: true, onPressed: _openAbout),
+          SetupButton(
+              label: snap.developerOptionsOn ? l.setupFlowDebugUsbOpen : l.setupFlowDebugOpen,
+              focusNode: _primary,
+              autofocus: true,
+              onPressed: () => _openDebugging(snap.developerOptionsOn)),
         ],
       );
     }
@@ -383,10 +387,12 @@ extension _CardScreens on _SetupFlowPageState {
     );
   }
 
-  /// Android's About screen, to turn on Developer options and debugging; checked again when Hearth is back.
-  Future<void> _openAbout() async {
+  /// Android's Developer options when they're already on (the switch is there), else its About screen, to turn
+  /// them on; checked again when Hearth is back.
+  Future<void> _openDebugging(bool developerOptionsOn) async {
     _update(() => _state = SetupStepState.waiting);
     try {
+      if (developerOptionsOn && await _channel.openDeveloperSettings()) return;
       await _channel.openDeviceInfoSettings();
     } catch (err) { noteFailure('setup_flow_cards', err); }
   }

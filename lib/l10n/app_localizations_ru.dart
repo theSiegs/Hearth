@@ -2537,6 +2537,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get setupFlowDebugOpen => 'Открыть «Об устройстве»';
 
   @override
+  String get setupFlowDebugUsbBody => 'Раздел «Для разработчиков» включён, но переключатель «Отладка по USB» выключен. Он нужен Hearth для настройки детских профилей, а одной беспроводной отладки недостаточно. На следующем экране включите «Отладку по USB» и вернитесь. Оставьте её включённой: Hearth понадобится она для нового детского профиля.';
+
+  @override
+  String get setupFlowDebugUsbOpen => 'Открыть «Для разработчиков»';
+
+  @override
   String get setupCardSmartHome => 'Умный дом';
 
   @override

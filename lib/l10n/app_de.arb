@@ -767,6 +767,8 @@
     "setupFlowDebugTitle": "Zuerst Debugging einschalten",
     "setupFlowDebugBody": "Hearth braucht den Debugging-Schalter des Fernsehers, um die Kinderprofile einzurichten. Wählen Sie auf dem nächsten Bildschirm siebenmal „Android TV OS-Build“. Schalten Sie dann unter Einstellungen > System > Entwickleroptionen USB-Debugging ein und kommen Sie zurück. Lassen Sie es eingeschaltet: Hearth braucht es wieder für ein neues Kinderprofil.",
     "setupFlowDebugOpen": "Info öffnen",
+    "setupFlowDebugUsbBody": "Die Entwickleroptionen sind eingeschaltet, aber der Schalter für USB-Debugging ist aus. Hearth braucht ihn, um die Kinderprofile einzurichten; kabelloses Debugging allein reicht nicht. Schalten Sie auf dem nächsten Bildschirm USB-Debugging ein und kommen Sie zurück. Lassen Sie es eingeschaltet: Hearth braucht es wieder für ein neues Kinderprofil.",
+    "setupFlowDebugUsbOpen": "Entwickleroptionen öffnen",
     "setupCardSmartHome": "Smart Home",
     "setupFlowHaBenefit": "Türklingel und andere Hinweise auf dem Fernseher, und Ihr Home Assistant-Dashboard nur einen Tastendruck entfernt.",
     "setupFlowHaIncluded1": "Türklingel und andere Hinweise über jeder App",

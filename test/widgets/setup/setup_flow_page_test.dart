@@ -334,6 +334,21 @@ void main() {
       expect(find.text("Profile Pairing is on"), findsOneWidget);
     });
 
+    testWidgets("kids profiles: with Developer options already on, it opens them for the USB debugging switch",
+        (tester) async {
+      await SettingsService(prefs).setParentPin("1357");
+      channel.pairing = true;
+      channel.kidsProfiles = 2;
+      channel.developerOptions = true;
+      await openAtFamily(tester);
+      await press(tester, "Turn on");
+      expect(find.text("Turn on debugging first"), findsOneWidget);
+      expect(find.textContaining("Wireless debugging alone isn't enough"), findsOneWidget);
+      await press(tester, "Open Developer options");
+      expect(channel.developerOpened, 1);
+      expect(channel.aboutOpened, 0);
+    });
+
     testWidgets("kids profiles: turn on debugging, then Hearth goes on them from the screen that says what it does",
         (tester) async {
       await SettingsService(prefs).setParentPin("1357");

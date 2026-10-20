@@ -78,6 +78,14 @@ final class SetupFixes {
         return Settings.Global.getInt(context.getContentResolver(), Settings.Global.ADB_ENABLED, 0) == 1;
     }
 
+    /**
+     * Whether Developer options are unlocked. The debugging switch can be off while they are on (a parent turned on
+     * only Wireless debugging), and then the next step is that switch, not tapping the build number.
+     */
+    static boolean isDeveloperOptionsOn(Context context) {
+        return Settings.Global.getInt(context.getContentResolver(), Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) == 1;
+    }
+
     /** The shell commands a fix runs, for the parent to see first; null for a fix Hearth doesn't know. */
     static List<String> commands(Context context, String fix) {
         String pkg = context.getPackageName();

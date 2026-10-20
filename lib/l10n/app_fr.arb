@@ -767,6 +767,8 @@
     "setupFlowDebugTitle": "Activez d'abord le débogage",
     "setupFlowDebugBody": "Hearth a besoin de l'interrupteur de débogage de la TV pour configurer les profils enfants. Sur l'écran suivant, sélectionnez sept fois « Build d'Android TV OS ». Puis dans Paramètres > Système > Options pour les développeurs, activez Débogage USB, et revenez. Laissez-le activé : Hearth en aura besoin pour un nouveau profil enfant.",
     "setupFlowDebugOpen": "Ouvrir À propos",
+    "setupFlowDebugUsbBody": "Les options pour les développeurs sont activées, mais l'interrupteur Débogage USB est désactivé. Hearth en a besoin pour configurer les profils enfants, et le débogage sans fil seul ne suffit pas. Sur l'écran suivant, activez Débogage USB, et revenez. Laissez-le activé : Hearth en aura besoin pour un nouveau profil enfant.",
+    "setupFlowDebugUsbOpen": "Ouvrir les options pour les développeurs",
     "setupCardSmartHome": "Maison connectée",
     "setupFlowHaBenefit": "La sonnette et d'autres alertes sur la TV, et votre tableau de bord Home Assistant à une touche.",
     "setupFlowHaIncluded1": "La sonnette et d'autres alertes par-dessus toute appli",

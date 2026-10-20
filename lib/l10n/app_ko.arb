@@ -767,6 +767,8 @@
     "setupFlowDebugTitle": "먼저 디버깅 켜기",
     "setupFlowDebugBody": "아이 프로필을 설정하려면 TV의 디버깅 스위치가 필요합니다. 다음 화면에서 \"Android TV OS 빌드\"를 일곱 번 선택하세요. 그런 다음 설정 > 시스템 > 개발자 옵션에서 USB 디버깅을 켜고 돌아오세요. 켜 두세요. 새 아이 프로필에 다시 필요합니다.",
     "setupFlowDebugOpen": "정보 열기",
+    "setupFlowDebugUsbBody": "개발자 옵션은 켜져 있지만 USB 디버깅 스위치가 꺼져 있습니다. 아이 프로필을 설정하려면 Hearth에 필요하며, 무선 디버깅만으로는 충분하지 않습니다. 다음 화면에서 USB 디버깅을 켜고 돌아오세요. 켜 두세요. 새 아이 프로필에 다시 필요합니다.",
+    "setupFlowDebugUsbOpen": "개발자 옵션 열기",
     "setupCardSmartHome": "스마트 홈",
     "setupFlowHaBenefit": "초인종 등 알림을 TV에서 보고, Home Assistant 대시보드를 버튼 하나로 엽니다.",
     "setupFlowHaIncluded1": "어떤 앱 위에서도 초인종 등 알림",

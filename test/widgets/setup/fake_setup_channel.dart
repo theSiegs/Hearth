@@ -43,6 +43,8 @@ class FakeSetupChannel extends FLauncherChannel {
   bool profilesKept = true;
   int profilesAdded = 0;
   int aboutOpened = 0;
+  int developerOpened = 0;
+  bool developerOptions = false;
   int voiceSettingsOpened = 0;
   bool hearthTube = false;
   int idleMinutes = 0;
@@ -119,6 +121,15 @@ class FakeSetupChannel extends FLauncherChannel {
 
   @override
   Future<bool> getHaSetupReceived() async => haSetupReceived;
+
+  @override
+  Future<bool> isDeveloperOptionsOn() async => developerOptions;
+
+  @override
+  Future<bool> openDeveloperSettings() async {
+    developerOpened++;
+    return true;
+  }
 
   @override
   Future<bool> openDeviceInfoSettings() async {

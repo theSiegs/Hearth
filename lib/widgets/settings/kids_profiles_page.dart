@@ -190,12 +190,23 @@ class _KidsProfilesPageState extends State<KidsProfilesPage> with WidgetsBinding
     return ok;
   }
 
-  /// Hearth's own adb needs the TV's debugging switch: what to do, and the way to Android's About screen.
+  /// Hearth's own adb needs the TV's debugging switch: what to do, and the way to Android's Developer options when
+  /// they're on already, else to its About screen.
   Future<void> _askForDebugging() async {
     final l = AppLocalizations.of(context)!;
-    final open = await _confirm(title: l.setupFlowDebugTitle, lines: [l.setupFlowDebugBody], action: l.setupFlowDebugOpen);
+    var developer = false;
+    try {
+      developer = await _channel.isDeveloperOptionsOn();
+    } catch (err) { noteFailure('kids_profiles_page', err); }
+    if (!mounted) return;
+    final open = await _confirm(
+      title: l.setupFlowDebugTitle,
+      lines: [developer ? l.setupFlowDebugUsbBody : l.setupFlowDebugBody],
+      action: developer ? l.setupFlowDebugUsbOpen : l.setupFlowDebugOpen,
+    );
     if (open != true) return;
     try {
+      if (developer && await _channel.openDeveloperSettings()) return;
       await _channel.openDeviceInfoSettings();
     } catch (err) { noteFailure('kids_profiles_page', err); }
   }
