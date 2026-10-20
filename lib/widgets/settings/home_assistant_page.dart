@@ -424,6 +424,42 @@ class _HaStatusPageState extends State<HaStatusPage> with WidgetsBindingObserver
     } catch (err) { noteFailure('home_assistant_page', err); }
   }
 
+  bool _creating = false;
+
+  /// Has Hearth make TV status in Home Assistant (helpers, automation, a new webhook id) and start reporting.
+  Future<void> _createStatus() async {
+    if (_creating) return;
+    final l = AppLocalizations.of(context)!;
+    setState(() {
+      _creating = true;
+      _statusSaved = l.haStatusCreating;
+    });
+    String message;
+    try {
+      final result = await _channel.setUpHaStatus();
+      switch (result["state"]) {
+        case "done":
+          message = l.haStatusCreated((result["automation"] as String?) ?? "");
+          await _load();
+        case "not_admin":
+          message = l.haStatusNotAdmin;
+        case "not_set_up":
+          message = l.haStatusNotSetUp;
+        default:
+          message = l.haStatusCreateFailed;
+      }
+    } catch (err) {
+      noteFailure('home_assistant_page', err);
+      message = l.haStatusCreateFailed;
+    }
+    if (mounted) {
+      setState(() {
+        _creating = false;
+        _statusSaved = message;
+      });
+    }
+  }
+
   Future<void> _saveStatus() async {
     final url = _url.text.trim();
     final webhook = _webhook.text.trim();
@@ -462,6 +498,11 @@ class _HaStatusPageState extends State<HaStatusPage> with WidgetsBindingObserver
         // Focus starts here, not in a text field, so the keyboard doesn't pop up on the way in
         FocusableSettingsTile(
           autofocus: true,
+          leading: const Icon(Icons.auto_fix_high),
+          title: Text(l.haStatusCreate, style: Theme.of(context).textTheme.bodyMedium),
+          onPressed: _createStatus,
+        ),
+        FocusableSettingsTile(
           leading: const Icon(Icons.save_outlined),
           title: Text(l.save, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: _saveStatus,

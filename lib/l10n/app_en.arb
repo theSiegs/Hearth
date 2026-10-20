@@ -1257,6 +1257,33 @@
     "@parentPinKidsSubtitle": {
         "description": "PIN screen in a kids profile: under Parent PIN"
     },
+    "haStatusCreate": "Create it in Home Assistant for me",
+    "@haStatusCreate": {
+        "description": "TV status: button that makes the helpers and the automation in Home Assistant and turns reporting on"
+    },
+    "haStatusCreating": "Setting up Home Assistant…",
+    "@haStatusCreating": {
+        "description": "TV status: while Hearth makes the helpers and the automation"
+    },
+    "haStatusCreated": "Done. Home Assistant has the automation \"{automation}\" and its helpers, and this TV is reporting to it.",
+    "@haStatusCreated": {
+        "description": "TV status: Hearth made it; {automation} is the automation's name",
+        "placeholders": {
+            "automation": {"type": "String"}
+        }
+    },
+    "haStatusNotAdmin": "Home Assistant wouldn't let this TV's token make them. Use an administrator's token (Home Assistant address and token), or make the automation yourself and enter its webhook ID.",
+    "@haStatusNotAdmin": {
+        "description": "TV status: the token isn't an administrator's"
+    },
+    "haStatusNotSetUp": "Add Home Assistant's address and token first (Set up from phone), then try again.",
+    "@haStatusNotSetUp": {
+        "description": "TV status: Home Assistant isn't set up on this TV yet"
+    },
+    "haStatusCreateFailed": "Couldn't set it up in Home Assistant. Check its address and token, or enter a webhook ID by hand.",
+    "@haStatusCreateFailed": {
+        "description": "TV status: something went wrong making it in Home Assistant"
+    },
     "parentPinLocked": "TOO MANY TRIES. WAIT {seconds} s",
     "@parentPinLocked": {
         "description": "PIN pad: too many wrong PINs in a row, so it waits; {seconds} is how long is left",

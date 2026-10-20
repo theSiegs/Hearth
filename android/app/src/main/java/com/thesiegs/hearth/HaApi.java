@@ -110,16 +110,37 @@ final class HaApi {
         }
     }
 
+    /** What Home Assistant answered: the HTTP status (0 when it couldn't be reached or isn't set up) and the body. */
+    static final class Response {
+        final int code;
+        final byte[] body;
+
+        Response(int code, byte[] body) {
+            this.code = code;
+            this.body = body;
+        }
+
+        boolean ok() {
+            return code >= 200 && code < 300;
+        }
+    }
+
     private static byte[] request(Context context, String method, String path, byte[] body) {
+        Response response = exchange(context, method, path, body);
+        return response.ok() ? response.body : null;
+    }
+
+    /** One call to Home Assistant's REST API, whatever it answers. */
+    static Response exchange(Context context, String method, String path, byte[] body) {
         String base = HaConfig.baseUrl(context);
         String token = HaConfig.token(context);
-        if (base == null || token == null) return null;
+        if (base == null || token == null) return new Response(0, null);
         HttpURLConnection connection = null;
         try {
             URL url = new URL(base + path);
             if (!LocalNet.allows(url)) {
                 Log.w(TAG, "Refusing plain HTTP to a non-local address; use https");
-                return null;
+                return new Response(0, null);
             }
             connection = (HttpURLConnection) url.openConnection();
             connection.setConnectTimeout(5000);
@@ -136,18 +157,18 @@ final class HaApi {
             int code = connection.getResponseCode();
             if (code < 200 || code >= 300) {
                 Log.w(TAG, method + " " + path + " -> " + code);
-                return null;
+                return new Response(code, null);
             }
             try (InputStream in = connection.getInputStream()) {
                 ByteArrayOutputStream buffer = new ByteArrayOutputStream();
                 byte[] chunk = new byte[16 * 1024];
                 int n;
                 while ((n = in.read(chunk)) > 0) buffer.write(chunk, 0, n);
-                return buffer.toByteArray();
+                return new Response(code, buffer.toByteArray());
             }
         } catch (IOException e) {
             Log.w(TAG, method + " " + path + " failed: " + e.getMessage());
-            return null;
+            return new Response(0, null);
         } finally {
             if (connection != null) connection.disconnect();
         }

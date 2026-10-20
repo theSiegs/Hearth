@@ -113,6 +113,15 @@ class FakeSetupChannel extends FLauncherChannel {
   @override
   Future<Map<dynamic, dynamic>> getHaStatusConfig() async => {"url": null, "webhookId": haWebhook};
 
+  /// What making TV status in Home Assistant answers; "done" also leaves a webhook id behind, as the real one does.
+  String haCreateState = "failed";
+
+  @override
+  Future<Map<dynamic, dynamic>> setUpHaStatus() async {
+    if (haCreateState == "done") haWebhook = "hearth-den-0123456789ab";
+    return {"state": haCreateState, "automation": "Den TV - Status from Hearth"};
+  }
+
   @override
   Future<String?> startHaSetup() async => "http://192.0.2.10:8765/secret";
 

@@ -3,8 +3,9 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
-## Unreleased
+## 2026.10.66 (pre-release)
 
+- TV status: **Create it in Home Assistant for me** (Settings > Home Assistant > TV status, and in the setup flow) makes the helpers and the automation for this TV in Home Assistant, with a new random webhook ID, and turns reporting on. It needs an administrator's token. The Home Assistant side of a TV's status is no longer a manual job.
 - Wrong PINs on a PIN pad lock it for 30 seconds after five misses in a row, doubling each time up to five minutes. Hearth checks the certificate's host name when it talks to Home Assistant over https. A kids profile can't be given a Google TV PIN.
 
 ## 2026.10.65 (pre-release)

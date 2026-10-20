@@ -425,6 +425,11 @@ class FLauncherChannel {
   Future<Map<dynamic, dynamic>> getShareSecretsOffer(List<String> profileKeys) async =>
       (await _methodChannel.invokeMapMethod<dynamic, dynamic>("getShareSecretsOffer", profileKeys)) ?? {};
 
+  /// Makes TV status in Home Assistant for this TV with its own token (helpers, an automation, a new webhook id) and
+  /// turns reporting on: {state: done | not_admin | not_set_up | failed, helpers?, webhook?, automation?}.
+  Future<Map<dynamic, dynamic>> setUpHaStatus() async =>
+      (await _methodChannel.invokeMapMethod<dynamic, dynamic>("setUpHaStatus")) ?? {"state": "failed"};
+
   /// What came with the bundle besides the look: {pins: how many, ha: the Home Assistant host or "", haFailed};
   /// null when nothing came. Never the PINs or the token.
   Future<Map<dynamic, dynamic>?> getShareSecretsSummary() async =>

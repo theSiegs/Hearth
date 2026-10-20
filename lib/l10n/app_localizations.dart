@@ -2153,6 +2153,42 @@ abstract class AppLocalizations {
   /// **'Kids profile: enter the parent PIN to change the launcher'**
   String get parentPinKidsSubtitle;
 
+  /// TV status: button that makes the helpers and the automation in Home Assistant and turns reporting on
+  ///
+  /// In en, this message translates to:
+  /// **'Create it in Home Assistant for me'**
+  String get haStatusCreate;
+
+  /// TV status: while Hearth makes the helpers and the automation
+  ///
+  /// In en, this message translates to:
+  /// **'Setting up Home Assistant…'**
+  String get haStatusCreating;
+
+  /// TV status: Hearth made it; {automation} is the automation's name
+  ///
+  /// In en, this message translates to:
+  /// **'Done. Home Assistant has the automation \"{automation}\" and its helpers, and this TV is reporting to it.'**
+  String haStatusCreated(String automation);
+
+  /// TV status: the token isn't an administrator's
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant wouldn\'t let this TV\'s token make them. Use an administrator\'s token (Home Assistant address and token), or make the automation yourself and enter its webhook ID.'**
+  String get haStatusNotAdmin;
+
+  /// TV status: Home Assistant isn't set up on this TV yet
+  ///
+  /// In en, this message translates to:
+  /// **'Add Home Assistant\'s address and token first (Set up from phone), then try again.'**
+  String get haStatusNotSetUp;
+
+  /// TV status: something went wrong making it in Home Assistant
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t set it up in Home Assistant. Check its address and token, or enter a webhook ID by hand.'**
+  String get haStatusCreateFailed;
+
   /// PIN pad: too many wrong PINs in a row, so it waits; {seconds} is how long is left
   ///
   /// In en, this message translates to:

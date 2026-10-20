@@ -157,6 +157,41 @@ final class HaEvents {
         }
     }
 
+    /** A signed-in connection for commands (not events), or null; end it with {@link #disconnect}. Blocks. */
+    static HaEvents connect(Context context) {
+        try {
+            return open(context);
+        } catch (Exception e) {
+            Log.i(TAG, "Couldn't connect to Home Assistant: " + e.getClass().getSimpleName());
+            return null;
+        }
+    }
+
+    private int mNextId = 1;
+
+    /**
+     * One command ({"type": ..., more fields}) and its answer: {"success": bool, "result": ..., "error": {"code": ...}};
+     * null when the connection broke. Blocks.
+     */
+    JSONObject command(JSONObject message) {
+        try {
+            int id = ++mNextId;
+            send(message.put("id", id));
+            for (int i = 0; i < 20; i++) {
+                JSONObject answer = readJson();
+                if (answer == null) return null;
+                if (answer.optInt("id") == id) return answer;
+            }
+        } catch (Exception e) {
+            Log.i(TAG, "A command to Home Assistant failed: " + e.getClass().getSimpleName());
+        }
+        return null;
+    }
+
+    void disconnect() {
+        closeSocket();
+    }
+
     /** Stops listening (from any thread). */
     void close() {
         mClosed = true;

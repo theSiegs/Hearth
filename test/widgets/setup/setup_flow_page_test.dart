@@ -697,6 +697,32 @@ void main() {
     });
   });
 
+  group("TV status made by Hearth", () {
+    testWidgets("says why it didn't work, then is done once Home Assistant made it", (tester) async {
+      await open(tester, startAt: "smartHome");
+      await press(tester, "I use Home Assistant");
+      await press(tester, "Skip");
+      await press(tester, "Skip");
+      expect(find.text("Tell Home Assistant what's on"), findsOneWidget);
+
+      channel.haCreateState = "not_admin";
+      await press(tester, "Create it in Home Assistant for me");
+      await tester.pumpAndSettle();
+      expect(find.textContaining("administrator's token"), findsOneWidget);
+
+      channel.haCreateState = "failed";
+      await press(tester, "Create it in Home Assistant for me");
+      await tester.pumpAndSettle();
+      expect(find.textContaining("Couldn't set it up in Home Assistant"), findsOneWidget);
+
+      channel.haCreateState = "done";
+      await press(tester, "Create it in Home Assistant for me");
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      expect(find.text("The TV tells Home Assistant what's on"), findsOneWidget);
+    });
+  });
+
   group("finish", () {
     testWidgets("everything on: Finish says so, and nothing is left to resume", (tester) async {
       channel.homeButtonOn = true;

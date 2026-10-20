@@ -323,6 +323,9 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   /// The answer to Home Assistant's question about HearthTube's now playing; null while never asked.
   bool? _haShareNowPlaying;
 
+  /// What the last "create it in Home Assistant" said, when it didn't work.
+  String? _haCreateNote;
+
   /// Shows [screen]. [resumed]: picking up where the flow was left, so a step that's done by now says so (and moves
   /// on) rather than being skipped without a word.
   void _show(SetupScreen screen, {bool resumed = false, SetupStepState? state}) {

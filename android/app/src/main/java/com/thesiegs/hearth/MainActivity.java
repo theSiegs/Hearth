@@ -252,6 +252,11 @@ public class MainActivity extends FlutterActivity {
                         call.arguments());
                 result.success(null);
             }
+            // Makes TV status in Home Assistant for this TV (helpers, automation, webhook id) with the TV's own token
+            case "setUpHaStatus" -> {
+                String tvName = ShareDiscovery.deviceName(this);
+                answerFrom(sIoExecutor, result, () -> HaProvision.setUp(this, tvName));
+            }
             case "getHaNotifyServices" -> answerFrom(sIoExecutor, result, () -> PhoneApproval.notifyServices(this));
             case "testPhoneApproval" -> {
                 String key = LauncherAccessibilityService.getActiveProfileKey(this);

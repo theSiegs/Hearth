@@ -113,6 +113,16 @@ refuses isn't entered again until it's saved anew. **Send a test notification** 
 Hearth posts what the TV is doing to a Home Assistant webhook, when it changes (within a second or two) and every
 10 minutes as a heartbeat. Home Assistant needs no credentials for the TV.
 
+**The easy way:** once Hearth has the Home Assistant address and an administrator's token, **Settings → Home Assistant
+→ TV status → Create it in Home Assistant for me** (also a button in the setup flow) makes everything for this TV: seven
+helpers (`input_select.<tv>_tv_state` and the app, media title, media artist, profile, kids-profile and screen-time-up
+helpers), an automation "<TV> TV - Status from Hearth" with a **Webhook** trigger (a random id, `hearth-<tv>-…`,
+local network only) that writes the status into them, and the address and webhook ID in Hearth. The names come from the
+TV's name, so each TV gets its own; running it again reuses what exists. With a token that isn't an administrator's,
+Home Assistant refuses and Hearth says so: use the manual way. (It doesn't make the shared YouTube-time helpers.)
+
+**By hand:**
+
 1. In Home Assistant, create an automation with a **Webhook** trigger and note its webhook ID.
 2. In Hearth, enter the Home Assistant address and the webhook ID.
 

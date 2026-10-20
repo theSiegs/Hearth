@@ -1169,6 +1169,26 @@ class AppLocalizationsRu extends AppLocalizations {
   String get parentPinKidsSubtitle => 'Детский профиль: введите родительский PIN-код, чтобы изменить лаунчер';
 
   @override
+  String get haStatusCreate => 'Create it in Home Assistant for me';
+
+  @override
+  String get haStatusCreating => 'Setting up Home Assistant…';
+
+  @override
+  String haStatusCreated(String automation) {
+    return 'Done. Home Assistant has the automation \"$automation\" and its helpers, and this TV is reporting to it.';
+  }
+
+  @override
+  String get haStatusNotAdmin => 'Home Assistant wouldn\'t let this TV\'s token make them. Use an administrator\'s token (Home Assistant address and token), or make the automation yourself and enter its webhook ID.';
+
+  @override
+  String get haStatusNotSetUp => 'Add Home Assistant\'s address and token first (Set up from phone), then try again.';
+
+  @override
+  String get haStatusCreateFailed => 'Couldn\'t set it up in Home Assistant. Check its address and token, or enter a webhook ID by hand.';
+
+  @override
   String parentPinLocked(int seconds) {
     return 'TOO MANY TRIES. WAIT $seconds s';
   }

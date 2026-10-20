@@ -750,7 +750,8 @@ extension _CardScreens on _SetupFlowPageState {
       title: l.setupFlowHaStatusTitle,
       body: l.setupFlowHaStatusBody,
       content: [
-        if (_state == SetupStepState.notYet)
+        if (_haCreateNote != null) Text(_haCreateNote!, style: const TextStyle(color: Colors.amber, fontSize: 13))
+        else if (_state == SetupStepState.notYet)
           Text(l.setupFlowHaStatusNoWebhook, style: const TextStyle(color: Colors.amber, fontSize: 13)),
       ],
       buttons: [
@@ -758,9 +759,14 @@ extension _CardScreens on _SetupFlowPageState {
         SetupButton(
           label: l.haSetUpFromPhone,
           icon: Icons.qr_code_2,
+          onPressed: () => _haFromPhone(SetupScreen.haStatus),
+        ),
+        SetupButton(
+          label: l.haStatusCreate,
+          icon: Icons.auto_fix_high,
           focusNode: _primary,
           autofocus: true,
-          onPressed: () => _haFromPhone(SetupScreen.haStatus),
+          onPressed: _haCreateStatus,
         ),
       ],
     );
@@ -792,6 +798,35 @@ extension _CardScreens on _SetupFlowPageState {
         ),
       ],
     );
+  }
+
+  /// Has Hearth make TV status in Home Assistant for this TV; done when it worked, else says why.
+  Future<void> _haCreateStatus() async {
+    final l = AppLocalizations.of(context)!;
+    String? note;
+    try {
+      final result = await _channel.setUpHaStatus();
+      switch (result["state"]) {
+        case "done":
+          await _refresh();
+          if (!mounted) return;
+          _update(() => _haCreateNote = null);
+          _showDone(SetupScreen.haStatus, const Duration(seconds: 2));
+          return;
+        case "not_admin":
+          note = l.haStatusNotAdmin;
+        case "not_set_up":
+          note = l.haStatusNotSetUp;
+        default:
+          note = l.haStatusCreateFailed;
+      }
+    } catch (err) {
+      noteFailure('setup_flow_cards', err);
+      note = l.haStatusCreateFailed;
+    }
+    if (!mounted) return;
+    _update(() => _haCreateNote = note);
+    _focusPrimary();
   }
 
   /// The phone page's QR code; once the phone has sent, what it set up shows as done.
