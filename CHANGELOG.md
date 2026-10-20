@@ -5,6 +5,7 @@
 
 ## Unreleased
 
+- Set up from your phone (Home Assistant): the page now offers to set up TV status for you when you send an administrator's token, and says when it is done. The webhook ID field moved under "I already have a webhook ID".
 - Hearth is English only: the 13 machine translations and the Settings > System > Language page are gone (an old language choice in a backup is ignored).
 
 ## 2026.10.66 (pre-release)

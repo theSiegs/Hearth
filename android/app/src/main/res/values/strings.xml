@@ -16,13 +16,19 @@
     <string name="ha_setup_token_label">Long-lived access token</string>
     <string name="ha_setup_token_hint">Paste the token here</string>
     <string name="ha_setup_send">Send to TV</string>
-    <string name="ha_setup_help">Create the token in Home Assistant while signed in as the user for this TV: profile, Security tab, Long-lived access tokens. It goes straight to the TV over your home network.</string>
+    <string name="ha_setup_help">It goes straight to the TV over your home network.</string>
+    <string name="ha_setup_token_help">Make it in Home Assistant: click your name, Security tab, Long-lived access tokens, Create token.</string>
+    <string name="ha_setup_create_label">Set up TV status in Home Assistant for me</string>
+    <string name="ha_setup_create_help">Needs a token from an administrator. Hearth makes the helpers and the automation, so you never need a webhook ID. You can delete the token in Home Assistant when this says it is done.</string>
+    <string name="ha_setup_created">TV status is set up: Hearth made the helpers and the automation in Home Assistant, and the TV is reporting to it. If you used an administrator\'s token only for this, you can delete it in Home Assistant now.</string>
+    <string name="ha_setup_not_admin">The token works, but it isn\'t an administrator\'s, so TV status wasn\'t set up. Send a token from an administrator (or set it up on the TV, under Settings, Home Assistant, TV status).</string>
+    <string name="ha_setup_create_failed">The token was saved, but Hearth couldn\'t set up TV status. Try Settings, Home Assistant, TV status on the TV.</string>
     <string name="ha_setup_missing">Enter the Home Assistant address and the token.</string>
     <string name="ha_setup_failed">The TV didn’t take it. Show the QR code on the TV again and retry.</string>
     <string name="ha_setup_sent_title">Sent to the TV</string>
     <string name="ha_setup_sent_detail">Hearth has the address and token. You can close this page.</string>
-    <string name="ha_setup_webhook_label">TV status webhook ID (optional)</string>
-    <string name="ha_setup_webhook_help">To have the TV tell Home Assistant what\'s on (the app, what\'s playing, the profile), add an automation with a Webhook trigger in Home Assistant and put its ID here. For only this, the token can stay empty.</string>
+    <string name="ha_setup_webhook_label">I already have a webhook ID for TV status</string>
+    <string name="ha_setup_webhook_help">To have the TV tell Home Assistant what\'s on (the app, what\'s playing, the profile), put the ID of its Webhook automation here and the token can stay empty. Otherwise leave this closed: with an administrator\'s token, Hearth makes it for you.</string>
 
     <!-- Profile Pairing's cover card and first-match notice (ProfilePairingService) -->
     <string name="profile_pairing_opening">Opening %1$s as %2$s…</string>

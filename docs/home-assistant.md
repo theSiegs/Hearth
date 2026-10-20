@@ -21,6 +21,12 @@ the QR code is on screen. The page seals what it sends with a key that's only in
 which a browser never sends over the network), so the token can't be read on your network; it needs a recent phone
 browser, opened from the QR code.
 
+The page also offers **Set up TV status in Home Assistant for me** (ticked): with a token from an administrator, Hearth
+makes the helpers and the automation for the TV, as the button under TV status does, so you never need a webhook ID.
+The page says when it is done; you can delete that token in Home Assistant afterward. A token that isn't an
+administrator's is still saved (for the dashboard panel), and the page says TV status wasn't set up. Someone who
+already has a webhook ID opens **I already have a webhook ID** on the page and uses that instead.
+
 ## Notifications
 
 Pop-ups over any app: the doorbell, a finished wash, a reminder. Hearth speaks the protocol of the

@@ -1938,7 +1938,7 @@ abstract class AppLocalizations {
   /// TV status page: note at the bottom
   ///
   /// In en, this message translates to:
-  /// **'The TV sends Home Assistant what\'s on: the app, what\'s playing, the Google TV profile, and kids screen time. It only sends to the address above, as changes happen.'**
+  /// **'The TV sends Home Assistant what\'s on: the app, what\'s playing, the Google TV profile, and kids screen time. It only sends to the address above, as changes happen. The create button needs an administrator\'s token (send it from your phone: Dashboard panel, Set up from your phone); it is only used for that, so delete the token in Home Assistant afterward.'**
   String get haStatusHelp;
 
   /// Set up from your phone dialog: shown when the TV has no local network address

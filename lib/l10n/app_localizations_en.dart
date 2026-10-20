@@ -1068,7 +1068,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get haStatusNowPlayingOff => 'Now playing: turn on notification access';
 
   @override
-  String get haStatusHelp => 'The TV sends Home Assistant what\'s on: the app, what\'s playing, the Google TV profile, and kids screen time. It only sends to the address above, as changes happen.';
+  String get haStatusHelp => 'The TV sends Home Assistant what\'s on: the app, what\'s playing, the Google TV profile, and kids screen time. It only sends to the address above, as changes happen. The create button needs an administrator\'s token (send it from your phone: Dashboard panel, Set up from your phone); it is only used for that, so delete the token in Home Assistant afterward.';
 
   @override
   String get haPhoneSetupNoNetwork => 'This TV isn\'t on the home network, so the phone can\'t reach it.';

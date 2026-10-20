@@ -164,11 +164,14 @@ final class HaSetupServer {
             new Handler(Looper.getMainLooper())
                     .post(() -> LauncherAccessibilityService.setHaStatusConfig(mContext, sent.url, sent.webhook));
         }
+        // An administrator's token lets Hearth make the TV status automation itself: nobody has to find a webhook id
+        String state = sent.create ? HaProvision.setUp(mContext, ShareDiscovery.deviceName(mContext)).get("state").toString()
+                : "saved";
         mReceived = true;
         synchronized (HaSetupServer.class) {
             sLastReceived = true;
         }
-        MiniHttp.respond(out, 200, "OK");
+        MiniHttp.respond(out, 200, state);
     }
 
     /** What the phone sent, once it passed the checks in {@link #parse}. */
@@ -177,17 +180,21 @@ final class HaSetupServer {
         final String token;
         final String webhook;
         final boolean webhookOk;
+        /** The phone asked Hearth to make the TV status automation (it needs a token, and no webhook id came). */
+        final boolean create;
 
-        Sent(String url, String token, String webhook, boolean webhookOk) {
+        Sent(String url, String token, String webhook, boolean webhookOk, boolean create) {
             this.url = url;
             this.token = token;
             this.webhook = webhook;
             this.webhookOk = webhookOk;
+            this.create = create;
         }
     }
 
     /**
-     * Reads {"url", "token", "webhook"}: the address, and a token or a webhook id (TV status alone needs no token).
+     * Reads {"url", "token", "webhook", "create"}: the address, and a token or a webhook id (TV status alone needs no
+     * token); "create" asks Hearth to make the TV status automation with the token, unless a webhook id came too.
      * Null when there's no address, neither a token nor a webhook id, or a webhook id that isn't one.
      */
     static Sent parse(String json) throws JSONException {
@@ -197,7 +204,8 @@ final class HaSetupServer {
         String webhook = fields.optString("webhook", "").trim();
         boolean webhookOk = WEBHOOK_ID.matcher(webhook).matches();
         if (url == null || (token.isEmpty() && !webhookOk) || (!webhook.isEmpty() && !webhookOk)) return null;
-        return new Sent(url, token, webhook, webhookOk);
+        boolean create = fields.optBoolean("create", false) && !token.isEmpty() && !webhookOk;
+        return new Sent(url, token, webhook, webhookOk, create);
     }
 
     private String formPage(String url) {
@@ -207,16 +215,22 @@ final class HaSetupServer {
                 + "<label for='token'>" + text(R.string.ha_setup_token_label) + "</label>"
                 + "<textarea id='token' rows='5' placeholder='" + text(R.string.ha_setup_token_hint)
                 + "' autofocus></textarea>"
-                + "<label for='webhook'>" + text(R.string.ha_setup_webhook_label) + "</label>"
+                + "<p class='help'>" + text(R.string.ha_setup_token_help) + "</p>"
+                + "<label class='row'><input id='create' type='checkbox' checked> "
+                + text(R.string.ha_setup_create_label) + "</label>"
+                + "<p class='help'>" + text(R.string.ha_setup_create_help) + "</p>"
+                + "<details><summary>" + text(R.string.ha_setup_webhook_label) + "</summary>"
                 + "<input id='webhook' autocapitalize='off'>"
-                + "<p class='help'>" + text(R.string.ha_setup_webhook_help) + "</p>"
+                + "<p class='help'>" + text(R.string.ha_setup_webhook_help) + "</p></details>"
                 + "<p id='err' class='err'></p>"
                 + "<button type='submit'>" + text(R.string.ha_setup_send) + "</button></form>"
-                + "<div id='done' hidden><p>" + text(R.string.ha_setup_sent_detail) + "</p></div>"
+                + "<div id='done' hidden><p>" + text(R.string.ha_setup_sent_detail) + "</p><p id='more'></p></div>"
                 + "<p class='help'>" + text(R.string.ha_setup_help) + "</p>";
         String script = "<script>" + raw(R.raw.phone_seal) + "</script><script>"
                 + "var M={missing:'" + js(R.string.ha_setup_missing) + "',failed:'" + js(R.string.ha_setup_failed)
-                + "',old:'" + js(R.string.pin_phone_old_browser) + "',sent:'" + js(R.string.ha_setup_sent_title) + "'};"
+                + "',old:'" + js(R.string.pin_phone_old_browser) + "',sent:'" + js(R.string.ha_setup_sent_title)
+                + "',done:'" + js(R.string.ha_setup_created) + "',admin:'" + js(R.string.ha_setup_not_admin)
+                + "',nope:'" + js(R.string.ha_setup_create_failed) + "'};"
                 + PAGE_SCRIPT + "</script>";
         return page(mContext.getString(R.string.ha_setup_title), form, script);
     }
@@ -233,12 +247,17 @@ final class HaSetupServer {
             + "err.textContent=M.old;}"
             + "f.addEventListener('submit',function(e){e.preventDefault();err.textContent='';"
             + "var body;try{body=HearthSeal.sealText(location.hash.substring(1),location.pathname,JSON.stringify("
-            + "{url:v('url').trim(),token:v('token').replace(/\\s/g,''),webhook:v('webhook').trim()}));}"
+            + "{url:v('url').trim(),token:v('token').replace(/\\s/g,''),webhook:v('webhook').trim(),"
+            + "create:document.getElementById('create').checked}));}"
             + "catch(x){err.textContent=M.old;return;}"
             + "fetch(location.pathname,{method:'POST',headers:{'Content-Type':'text/plain'},body:body})"
-            + ".then(function(r){if(r.status===422){err.textContent=M.missing;return;}if(!r.ok)throw r;"
+            + ".then(function(r){if(r.status===422){err.textContent=M.missing;return null;}if(!r.ok)throw r;"
+            + "return r.text();}).then(function(t){if(t===null)return;"
             + "document.getElementById('token').value='';f.hidden=true;document.getElementById('done').hidden=false;"
-            + "document.querySelector('h2').textContent=M.sent;})"
+            + "document.querySelector('h2').textContent=M.sent;"
+            + "if(t==='done')document.getElementById('more').textContent=M.done;"
+            + "else if(t==='not_admin')document.getElementById('more').textContent=M.admin;"
+            + "else if(t==='failed'||t==='not_set_up')document.getElementById('more').textContent=M.nope;})"
             + ".catch(function(){err.textContent=M.failed;});});";
 
     private String raw(int id) {
@@ -274,6 +293,8 @@ final class HaSetupServer {
                 + "border:2px solid #444;background:#222;color:#eee}textarea{font-family:monospace;font-size:13px}"
                 + "button{margin-top:20px;width:100%;padding:14px;font-size:16px;border:0;border-radius:8px;"
                 + "background:#ff7a1a;color:#111;font-weight:600}.help{color:#888;font-size:14px}.err{color:#ff8a80}"
+                + "label.row{display:flex;align-items:center;gap:10px;color:#ddd}label.row input{width:auto}"
+                + "summary{color:#bbb;margin-top:16px}"
                 + "</style></head><body><div class='c'><h2>" + escape(title) + "</h2>" + body + "</div>" + script
                 + "</body></html>";
     }

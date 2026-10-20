@@ -31,6 +31,19 @@ public class HaSetupServerTest {
     }
 
     @Test
+    public void asksToCreateTvStatusOnlyWithATokenAndNoWebhookId() throws Exception {
+        assertTrue(HaSetupServer.parse(
+                "{\"url\":\"192.0.2.10:8123\",\"token\":\"abc\",\"webhook\":\"\",\"create\":true}").create);
+        // Not asked for, or nothing to do it with, or an id already given
+        assertFalse(HaSetupServer.parse(
+                "{\"url\":\"192.0.2.10:8123\",\"token\":\"abc\",\"webhook\":\"\"}").create);
+        assertFalse(HaSetupServer.parse(
+                "{\"url\":\"192.0.2.10:8123\",\"token\":\"\",\"webhook\":\"hearth-1\",\"create\":true}").create);
+        assertFalse(HaSetupServer.parse(
+                "{\"url\":\"192.0.2.10:8123\",\"token\":\"abc\",\"webhook\":\"hearth-1\",\"create\":true}").create);
+    }
+
+    @Test
     public void refusesWhatCouldNotWork() throws Exception {
         // No address
         assertNull(HaSetupServer.parse("{\"url\":\"\",\"token\":\"abc\",\"webhook\":\"\"}"));
