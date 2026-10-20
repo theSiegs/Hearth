@@ -1169,6 +1169,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get parentPinKidsSubtitle => 'Детский профиль: введите родительский PIN-код, чтобы изменить лаунчер';
 
   @override
+  String parentPinLocked(int seconds) {
+    return 'TOO MANY TRIES. WAIT $seconds s';
+  }
+
+  @override
   String get parentPinWrong => 'НЕВЕРНЫЙ PIN-КОД';
 
   @override

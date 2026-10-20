@@ -1177,6 +1177,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get parentPinKidsSubtitle => 'ملف شخصي للأطفال: أدخل رمز PIN للوالدين لتغيير المشغّل';
 
   @override
+  String parentPinLocked(int seconds) {
+    return 'TOO MANY TRIES. WAIT $seconds s';
+  }
+
+  @override
   String get parentPinWrong => 'رمز PIN خاطئ';
 
   @override

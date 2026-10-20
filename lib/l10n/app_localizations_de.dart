@@ -1166,6 +1166,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get parentPinKidsSubtitle => 'Kinderprofil: Eltern-PIN eingeben, um den Launcher zu ändern';
 
   @override
+  String parentPinLocked(int seconds) {
+    return 'TOO MANY TRIES. WAIT $seconds s';
+  }
+
+  @override
   String get parentPinWrong => 'FALSCHE PIN';
 
   @override

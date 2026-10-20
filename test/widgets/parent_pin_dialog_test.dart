@@ -155,4 +155,74 @@ void main() {
     await tester.pumpAndSettle();
     expect(result, "2468");
   });
+
+  group("the lockout", () {
+    final t0 = DateTime(2026, 10, 20, 12);
+
+    test("gives five tries, then waits 30 seconds and doubles up to five minutes", () {
+      final lock = PinLockout();
+      for (var i = 0; i < 4; i++) {
+        lock.miss(t0);
+        expect(lock.lockedAt(t0), isFalse);
+      }
+      lock.miss(t0);
+      expect(lock.lockedAt(t0), isTrue);
+      expect(lock.secondsLeft(t0), 31);
+      expect(lock.lockedAt(t0.add(const Duration(seconds: 31))), isFalse);
+
+      lock.miss(t0);
+      expect(lock.lockedAt(t0.add(const Duration(seconds: 59))), isTrue);
+      expect(lock.lockedAt(t0.add(const Duration(seconds: 61))), isFalse);
+      for (var i = 0; i < 10; i++) {
+        lock.miss(t0);
+      }
+      expect(lock.lockedAt(t0.add(const Duration(seconds: 299))), isTrue);
+      expect(lock.lockedAt(t0.add(const Duration(seconds: 302))), isFalse);
+    });
+
+    test("a right PIN clears it", () {
+      final lock = PinLockout();
+      for (var i = 0; i < 5; i++) {
+        lock.miss(t0);
+      }
+      lock.clear();
+      expect(lock.lockedAt(t0), isFalse);
+    });
+
+    testWidgets("the pad ignores digits while locked, even the right PIN", (tester) async {
+      final lock = PinLockout();
+      for (var i = 0; i < 5; i++) {
+        lock.miss(DateTime.now());
+      }
+      String? result;
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async => result = await showDialog<String>(
+              context: context,
+              builder: (_) => ParentPinDialog(title: "PIN", verify: (pin) => pin == "2468", lockout: lock),
+            ),
+            child: const Text("open"),
+          ),
+        ),
+      ));
+      await tester.tap(find.text("open"));
+      await tester.pumpAndSettle();
+      expect(find.textContaining("TOO MANY TRIES"), findsOneWidget);
+      for (final key in [
+        LogicalKeyboardKey.digit2,
+        LogicalKeyboardKey.digit4,
+        LogicalKeyboardKey.digit6,
+        LogicalKeyboardKey.digit8,
+      ]) {
+        await tester.sendKeyEvent(key);
+        await tester.pump();
+      }
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(result, isNull);
+      expect(find.byType(ParentPinDialog), findsOneWidget);
+    });
+  });
 }

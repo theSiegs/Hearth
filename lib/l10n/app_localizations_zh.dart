@@ -1163,6 +1163,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get parentPinKidsSubtitle => '儿童个人资料：输入家长 PIN 码以更改启动器';
 
   @override
+  String parentPinLocked(int seconds) {
+    return 'TOO MANY TRIES. WAIT $seconds s';
+  }
+
+  @override
   String get parentPinWrong => 'PIN 码错误';
 
   @override

@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flauncher/l10n/app_localizations.dart';
@@ -121,6 +122,36 @@ Future<bool> chooseNewParentPin(BuildContext context) async {
 
 /// Full-screen PIN entry in Google TV's style: the shuffled row pad (see [_RowPad]), number keys type directly.
 /// Pops with the entered PIN, or null on Back.
+/// Repeated wrong guesses lock a PIN pad for a while: after [freeTries] misses in a row it waits [baseSeconds], and
+/// each miss after that doubles the wait (up to [maxSeconds]). A right PIN clears it. Shared by every pad that checks
+/// a PIN, so closing and reopening the dialog doesn't give the tries back.
+class PinLockout {
+  static const int freeTries = 5;
+  static const int baseSeconds = 30;
+  static const int maxSeconds = 300;
+
+  static final PinLockout shared = PinLockout();
+
+  int _misses = 0;
+  DateTime? _until;
+
+  bool lockedAt(DateTime now) => _until != null && now.isBefore(_until!);
+
+  int secondsLeft(DateTime now) => lockedAt(now) ? _until!.difference(now).inSeconds + 1 : 0;
+
+  void miss(DateTime now) {
+    _misses++;
+    if (_misses < freeTries) return;
+    final seconds = (baseSeconds * (1 << (_misses - freeTries))).clamp(baseSeconds, maxSeconds);
+    _until = now.add(Duration(seconds: seconds));
+  }
+
+  void clear() {
+    _misses = 0;
+    _until = null;
+  }
+}
+
 class ParentPinDialog extends StatefulWidget {
   final String title;
   final String? subtitle;
@@ -133,8 +164,17 @@ class ParentPinDialog extends StatefulWidget {
   /// The pad's shuffle (tests pass a seeded one); a secure random by default.
   final Random? random;
 
+  /// Where wrong guesses are counted (tests pass their own).
+  final PinLockout? lockout;
+
   const ParentPinDialog(
-      {super.key, required this.title, this.subtitle, this.verify, this.random, this.length = digitCount});
+      {super.key,
+      required this.title,
+      this.subtitle,
+      this.verify,
+      this.random,
+      this.lockout,
+      this.length = digitCount});
 
   @override
   State<ParentPinDialog> createState() => _ParentPinDialogState();
@@ -143,9 +183,29 @@ class ParentPinDialog extends StatefulWidget {
 class _ParentPinDialogState extends State<ParentPinDialog> {
   String _entered = "";
   bool _error = false;
+  Timer? _tick;
+
+  PinLockout get _lockout => widget.lockout ?? PinLockout.shared;
+
+  bool get _locked => widget.verify != null && _lockout.lockedAt(DateTime.now());
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  void _lock() {
+    _tick?.cancel();
+    _tick = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return timer.cancel();
+      setState(() {});
+      if (!_locked) timer.cancel();
+    });
+  }
 
   void _onDigit(String digit) {
-    if (_entered.length >= widget.length) return;
+    if (_locked || _entered.length >= widget.length) return;
     setState(() {
       _entered += digit;
       _error = false;
@@ -153,9 +213,12 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
     if (_entered.length < widget.length) return;
 
     if (widget.verify == null || widget.verify!(_entered)) {
+      if (widget.verify != null) _lockout.clear();
       Navigator.of(context).pop(_entered);
       return;
     }
+    _lockout.miss(DateTime.now());
+    if (_locked) _lock();
     setState(() => _error = true);
     Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) setState(() => _entered = "");
@@ -208,9 +271,16 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(_error ? l.parentPinWrong : l.parentPinEnter,
+                  Text(
+                      _locked
+                          ? l.parentPinLocked(_lockout.secondsLeft(DateTime.now()))
+                          : _error
+                              ? l.parentPinWrong
+                              : l.parentPinEnter,
                       style: TextStyle(
-                          color: _error ? const Color(0xFFF2B8B5) : _textDim, fontSize: 12, letterSpacing: 2)),
+                          color: _error || _locked ? const Color(0xFFF2B8B5) : _textDim,
+                          fontSize: 12,
+                          letterSpacing: 2)),
                   const SizedBox(height: 16),
                   Row(
                     children: List.generate(widget.length, (i) {

@@ -36,6 +36,11 @@ as Wikidata asks.
 - **The phone setup pages** (Home Assistant, streaming app PINs), only while their QR code is on screen, at a
   one-time secret link. The PIN page's QR code also carries a one-time key, after a `#` that browsers never send;
   the phone encrypts the PINs with it, so nothing else on the network can read them.
+- **Copy profiles between TVs** (ports 8770 to 8774 and a `_hearth-share._tcp` announcement on the home network), only
+  while the Copy profiles page is open on the sending TV. Both TVs must show the same six digits and a parent must say
+  they match on both before anything is sent; the transfer is encrypted with a key made for that one copy and nothing
+  is kept afterwards. Streaming PINs and the Home Assistant settings are sent only if the sending parent chooses them
+  (Home Assistant gets a new token made for the other TV, never a copy of the sender's).
 - **Port 47474 on the TV's own loopback address** (not the network), for Hearth's helpers in your kids profiles.
   Each helper and Hearth prove to each other that they share that helper's key without sending it, so no other app
   can pose as either.
@@ -58,10 +63,9 @@ as Wikidata asks.
 
 **Hearth on the kids profiles** uses the TV's own debugging connection (Android asks you to allow it once) to install
 Hearth's two apps in your kids profiles and keep them there, including a kids profile added later. It connects
-only to the TV itself and only touches Hearth and HearthTube. Hearth's helper in each kids profile keeps a copy of
-the key for that connection in its own private storage. It uses it to let itself read that profile's Watch Next and
-calendars, and, if Hearth is ever uninstalled with Android's own uninstall, to remove Hearth's copies from its
-profile. The key goes to a helper only after the helper has proven itself (above), sealed for that one connection.
+only to the TV itself and only touches Hearth and HearthTube. Hearth's helpers in the kids profiles do not hold that
+key (since 2026.10.61): Hearth, in your own profile, checks them once a day, keeps them installed, and lets them read
+that profile's Watch Next and the calendars.
 On a switch between adults' profiles, Hearth also closes streaming apps both profiles share, so each opens on its
 own profile screen.
 

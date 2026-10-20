@@ -42,7 +42,7 @@ jobs:
         run: flutter pub run drift_dev schema generate drift_schemas/ test/generated_migrations/
 
       - name: Analyze
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+        run: flutter analyze --no-fatal-infos
 
       - name: Test
         run: flutter test

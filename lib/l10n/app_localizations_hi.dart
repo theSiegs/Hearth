@@ -1166,6 +1166,11 @@ class AppLocalizationsHi extends AppLocalizations {
   String get parentPinKidsSubtitle => 'बच्चों की प्रोफ़ाइल: लॉन्चर बदलने के लिए अभिभावक PIN दर्ज करें';
 
   @override
+  String parentPinLocked(int seconds) {
+    return 'TOO MANY TRIES. WAIT $seconds s';
+  }
+
+  @override
   String get parentPinWrong => 'गलत PIN';
 
   @override

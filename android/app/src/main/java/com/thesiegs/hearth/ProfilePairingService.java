@@ -1077,7 +1077,7 @@ public class ProfilePairingService extends AccessibilityService {
         char[] pin = PinVault.open(this, profileKey, pkg, vault);
         if (pin == null) return;
         if (pin.length != recipe.pinLength()) {
-            java.util.Arrays.fill(pin, ' ');
+            java.util.Arrays.fill(pin, '\0');
             return;
         }
         if (mSession != null) finish(QUIET, "Google TV PIN");

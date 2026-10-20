@@ -1163,6 +1163,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get parentPinKidsSubtitle => 'キッズプロフィール：ランチャーを変更するには保護者用 PIN を入力してください';
 
   @override
+  String parentPinLocked(int seconds) {
+    return 'TOO MANY TRIES. WAIT $seconds s';
+  }
+
+  @override
   String get parentPinWrong => 'PIN が違います';
 
   @override

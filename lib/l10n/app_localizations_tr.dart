@@ -1163,6 +1163,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get parentPinKidsSubtitle => 'Çocuk profili: başlatıcıyı değiştirmek için ebeveyn PIN\'ini girin';
 
   @override
+  String parentPinLocked(int seconds) {
+    return 'TOO MANY TRIES. WAIT $seconds s';
+  }
+
+  @override
   String get parentPinWrong => 'YANLIŞ PIN';
 
   @override

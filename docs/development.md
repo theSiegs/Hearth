@@ -10,7 +10,7 @@ installs, and the Watch Next provider.
 ## Requirements
 
 - Flutter **3.24.5** (pinned in `pubspec.yaml`)
-- JDK 17 and the Android SDK (compile and target SDK 35)
+- JDK 21 and the Android SDK (compile and target SDK 35)
 - A Google TV device or emulator. Profile features need Google TV; the Google TV emulator images work for most of it
   (see [Testing profiles](#testing-profiles)).
 

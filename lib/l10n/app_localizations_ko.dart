@@ -1163,6 +1163,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get parentPinKidsSubtitle => '어린이 프로필: 런처를 변경하려면 보호자 PIN을 입력하세요';
 
   @override
+  String parentPinLocked(int seconds) {
+    return 'TOO MANY TRIES. WAIT $seconds s';
+  }
+
+  @override
   String get parentPinWrong => 'PIN이 틀렸습니다';
 
   @override

@@ -1257,6 +1257,13 @@
     "@parentPinKidsSubtitle": {
         "description": "PIN screen in a kids profile: under Parent PIN"
     },
+    "parentPinLocked": "TOO MANY TRIES. WAIT {seconds} s",
+    "@parentPinLocked": {
+        "description": "PIN pad: too many wrong PINs in a row, so it waits; {seconds} is how long is left",
+        "placeholders": {
+            "seconds": {"type": "int"}
+        }
+    },
     "parentPinWrong": "WRONG PIN",
     "@parentPinWrong": {
         "description": "PIN screen: small capitals above the digits after a wrong PIN"

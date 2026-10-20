@@ -92,10 +92,20 @@ final class HaEvents {
         }
         boolean tls = "https".equalsIgnoreCase(url.getProtocol());
         int port = url.getPort() > 0 ? url.getPort() : tls ? 443 : 80;
-        Socket socket = tls ? SSLSocketFactory.getDefault().createSocket() : new Socket();
+        Socket socket = new Socket();
         HaEvents events = null;
         try {
             socket.connect(new InetSocketAddress(url.getHost(), port), 5_000);
+            if (tls) {
+                // The certificate has to be for the address asked for, or the token goes to whoever answers
+                javax.net.ssl.SSLSocket secure = (javax.net.ssl.SSLSocket) ((SSLSocketFactory) SSLSocketFactory.getDefault())
+                        .createSocket(socket, url.getHost(), port, true);
+                javax.net.ssl.SSLParameters parameters = secure.getSSLParameters();
+                parameters.setEndpointIdentificationAlgorithm("HTTPS");
+                secure.setSSLParameters(parameters);
+                secure.startHandshake();
+                socket = secure;
+            }
             socket.setSoTimeout(5_000);
             events = new HaEvents(socket);
             String path = (url.getPath() == null ? "" : url.getPath().replaceAll("/+$", "")) + "/api/websocket";

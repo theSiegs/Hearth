@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+- Wrong PINs on a PIN pad lock it for 30 seconds after five misses in a row, doubling each time up to five minutes. Hearth checks the certificate's host name when it talks to Home Assistant over https. A kids profile can't be given a Google TV PIN.
+
 ## 2026.10.65 (pre-release)
 
 - Copy profiles between TVs on a new TV: with one grown-up profile on each TV, the copy goes onto it whatever the names (kids profiles still need the same name), and streaming PINs are only saved where a parent PIN guards them, this TV's or the one coming with the copy.

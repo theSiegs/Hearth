@@ -260,7 +260,9 @@ public class MainActivity extends FlutterActivity {
             case "saveGoogleTvPin" -> {
                 String pin = call.arguments();
                 char[] digits = pin != null ? pin.toCharArray() : new char[0];
-                result.success(digits.length == 4 && PinVault.save(this, LauncherAccessibilityService.getActiveProfileKey(this),
+                String owner = LauncherAccessibilityService.getActiveProfileKey(this);
+                // A kids profile's way into Google TV is never saved: the PIN is the grown-ups' to type
+                result.success(digits.length == 4 && !ProfilePairing.isKids(this, owner) && PinVault.save(this, owner,
                         LauncherAccessibilityService.GOOGLE_TV_PACKAGE, GooglePinRecipe.VAULT_NAME, digits));
                 java.util.Arrays.fill(digits, ' ');
             }

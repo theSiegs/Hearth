@@ -2153,6 +2153,12 @@ abstract class AppLocalizations {
   /// **'Kids profile: enter the parent PIN to change the launcher'**
   String get parentPinKidsSubtitle;
 
+  /// PIN pad: too many wrong PINs in a row, so it waits; {seconds} is how long is left
+  ///
+  /// In en, this message translates to:
+  /// **'TOO MANY TRIES. WAIT {seconds} s'**
+  String parentPinLocked(int seconds);
+
   /// PIN screen: small capitals above the digits after a wrong PIN
   ///
   /// In en, this message translates to:
