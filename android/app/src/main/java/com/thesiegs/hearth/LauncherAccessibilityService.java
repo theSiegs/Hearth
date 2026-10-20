@@ -251,6 +251,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             // Hearth comes up under the card: it goes once Hearth is drawn, so Google's home never shows
             KidsHomeCover.hideSoon(800);
         } else {
+            logTakeOverDeclined("kids home, after the grace");
             KidsHomeCover.hideNow();
         }
     };
@@ -258,6 +259,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // Not if Google TV put a screen of its own up (the chooser) or an app came up meanwhile
         if (autoTakeOverAllowed() && !mGoogleTvScreenInFront && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage)) {
             takeOverHome();
+        } else {
+            logTakeOverDeclined("home, after the grace");
         }
     };
     /**
@@ -1404,7 +1407,19 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage) && SystemClock.elapsedRealtime() >= mGoogleSetupUntil
                 && !mNewProfileHold) {
             openLauncher();
+        } else if (takeOver || ifConfirmed) {
+            logTakeOverDeclined("after the home was read (confirmed=" + confirmed + ")");
         }
+    }
+
+    /** Why Hearth left Google TV's home in front, for the log: every condition that can stop a takeover. */
+    private void logTakeOverDeclined(String where) {
+        Log.i(TAG, "Not taking over (" + where + "): screenTimeLock=" + mScreenTimeLock
+                + " suspended=" + isSuspended(this) + " googleTvHomeOn=" + isGoogleTvHome(this)
+                + " googleTvScreenInFront=" + mGoogleTvScreenInFront + " lastWindow=" + mLastWindowPackage
+                + " setupHoldMs=" + Math.max(0, mGoogleSetupUntil - SystemClock.elapsedRealtime())
+                + " newProfileHold=" + mNewProfileHold + " readingHomeAccount=" + mReadingHomeAccount
+                + " chooserOnScreen=" + mChooserOnScreen);
     }
 
     /** Hearth takes over Google TV's home: now, or once the home has said who's logged in, if that's being read. */
@@ -1516,6 +1531,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
                     mHandler.postDelayed(mHomeTakeOver, HOME_GRACE_MS);
                 }
             } else {
+                logTakeOverDeclined("Google TV's home came up");
                 mPendingBounceAt = now;
                 // Google TV's home stays: it's read whenever it comes up
                 if (readAccount) readHomeAccount(false, pick);
