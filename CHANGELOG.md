@@ -5,6 +5,7 @@
 
 ## Unreleased
 
+- After a parent gives a kid more time, Hearth now takes over Google TV's home once the time-up lock clears (it used to stay on Google TV's home until the next profile or Home press).
 - Kids profiles no longer list the Play Store: apps added there aren't on Google TV's approved list for the kid and get removed at the next update or restart. Parents add apps in Google TV's Manage apps; the user guide says how.
 
 ## 2026.10.67 (pre-release)

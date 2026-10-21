@@ -1682,6 +1682,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 && (!mKidsLockHold || ProfileUsers.isKids(this))) {
             Log.i(TAG, "Screen time is over: the approved apps are unblocked (" + why + ")");
             clearScreenTimeLock();
+            // More time was given while Google TV's home was already up (its time up screen closed onto it): the
+            // takeover it declined for the lock has nothing to ask for it again, so ask now
+            if (GOOGLE_TV_PACKAGE.equals(mLastWindowPackage) && !mGoogleTvScreenInFront && autoTakeOverAllowed()) {
+                Log.i(TAG, "Screen time is over with Google TV's home in front: taking over");
+                mHandler.removeCallbacks(mHomeTakeOver);
+                mHandler.postDelayed(mHomeTakeOver, HOME_GRACE_MS);
+            }
         }
     }
 
