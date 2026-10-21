@@ -889,16 +889,19 @@ public class MainActivity extends FlutterActivity {
             List<ResolveInfo> nonTvActivitiesInfo = resultOr(lists.get(1), Collections.emptyList());
 
             boolean settingsPresent = false;
+            boolean kids = ProfileUsers.isKids(this);
             Set<String> tvPackages = new HashSet<>();
             List<Callable<Map<String, Serializable>>> builds = new ArrayList<>();
             for (ResolveInfo tvActivityInfo : tvActivitiesInfo) {
                 String packageName = tvActivityInfo.activityInfo.packageName;
+                if (ProfileUsers.hiddenInKids(kids, packageName)) continue;
                 settingsPresent |= packageName.equals("com.android.tv.settings");
                 tvPackages.add(packageName);
                 builds.add(() -> buildAppMap(tvActivityInfo.activityInfo, false, null));
             }
             for (ResolveInfo nonTvActivityInfo : nonTvActivitiesInfo) {
                 String packageName = nonTvActivityInfo.activityInfo.packageName;
+                if (ProfileUsers.hiddenInKids(kids, packageName)) continue;
                 settingsPresent |= packageName.equals("com.android.settings");
                 if (!tvPackages.contains(packageName)) {
                     builds.add(() -> buildAppMap(nonTvActivityInfo.activityInfo, true, null));
@@ -934,7 +937,7 @@ public class MainActivity extends FlutterActivity {
 
     public Map<String, Serializable> getApplication(String packageName) {
         Map<String, Serializable> map = new HashMap<>();
-        if (packageName.equals(getPackageName())) {
+        if (packageName.equals(getPackageName()) || ProfileUsers.hiddenInKids(ProfileUsers.isKids(this), packageName)) {
             return map;
         }
         PackageManager packageManager = getPackageManager();

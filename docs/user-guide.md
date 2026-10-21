@@ -170,9 +170,14 @@ Hearth treats a profile as a kids profile when Family Link supervises it.
 - **YouTube only in HearthTube.** With HearthTube installed, a kids profile watches YouTube only there, where its
   YouTube time applies: YouTube's own app is hidden, and if it opens anyway (a voice search, a link) HearthTube opens
   over it. Adults' profiles start with YouTube's app hidden too; show it again from its app options if you want it.
-- **Hearth on the kids profiles.** Google TV removes apps that aren't from the Play Store from kids profiles every
-  time a profile starts, so Hearth puts itself (and HearthTube) back and keeps them there, using the TV's own
-  debugging connection. The setup does this once:
+- **Apps on the kids profiles.** Google TV keeps a list of the apps a parent has approved for each kid and removes
+  every other app from the kid's profile: after any app is installed or updated on the TV, when the TV starts, and
+  at many profile starts. Apps added from the Play Store inside a kids profile aren't on that list, so they are
+  removed. Hearth hides the Play Store in kids profiles for that reason. Add an app for a kid from your own profile:
+  Settings > Accounts & Sign In > the kid > Manage apps (it asks for your Google PIN). Google TV then installs it in
+  the kid's profile, and it shows up in the kid's Hearth.
+- **Hearth on the kids profiles.** Hearth puts itself (and HearthTube) back on the kids profiles and keeps them there,
+  using the TV's own debugging connection. The setup does this once:
   - When the TV asks "Allow debugging?", choose **Always allow**.
   - Leave debugging on, and in Developer options also turn on **Disable adb authorization timeout**, so the TV keeps
     trusting Hearth (Google TV turns the debugging switch off by itself over time).

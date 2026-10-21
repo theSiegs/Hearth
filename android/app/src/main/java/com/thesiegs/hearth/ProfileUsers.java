@@ -60,6 +60,18 @@ final class ProfileUsers {
     private static final Set<String> NEVER_BLOCKED = new HashSet<>(Arrays.asList(
             "com.android.vending"));
 
+    /**
+     * Apps a kids profile never lists: apps added there with the Play Store aren't on Google TV's approved list for the
+     * kid, so Google TV removes them at the next update or restart. A parent adds apps (Settings > Accounts &amp; Sign In
+     * &gt; the kid &gt; Manage apps) and they show up once Google TV has put them in the kid's profile.
+     */
+    private static final Set<String> HIDDEN_IN_KIDS = new HashSet<>(Arrays.asList("com.android.vending"));
+
+    /** Whether {@code packageName} is left out of a kids profile's app list. */
+    static boolean hiddenInKids(boolean kids, String packageName) {
+        return kids && HIDDEN_IN_KIDS.contains(packageName);
+    }
+
     private ProfileUsers() {
     }
 

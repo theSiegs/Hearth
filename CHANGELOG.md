@@ -3,6 +3,10 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+- Kids profiles no longer list the Play Store: apps added there aren't on Google TV's approved list for the kid and get removed at the next update or restart. Parents add apps in Google TV's Manage apps; the user guide says how.
+
 ## 2026.10.67 (pre-release)
 
 - Set up from your phone (Home Assistant): the page now offers to set up TV status for you when you send an administrator's token, and says when it is done. The webhook ID field moved under "I already have a webhook ID".
