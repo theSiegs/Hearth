@@ -17,7 +17,8 @@ and token, Home Button Fix) stay on that TV.
 - **Household**: the TVs that share one secret key. Joined once, by a parent.
 - **Entry**: one synced value, with an id, a profile, a value, a timestamp, the TV that wrote it, and a deleted flag.
 - **Profile match**: profiles differ in number from TV to TV (Android numbers its users per TV), so entries name the
-  profile by its Google TV profile name, and each TV maps that name to its own profile key.
+  profile by its Google TV profile name, and each TV maps that name to its own profile key. **Profile names must be
+  unique across the household** (compared without case or surrounding spaces); see Unique names.
 
 ## What syncs
 
@@ -57,6 +58,32 @@ when the streaming app profile it was played under is known on the receiving TV.
 
 Leaving a household wipes the key and stops syncing; the entries stay as ordinary settings. **Reset the household**
 makes a new key; the other TVs then need to join again. This is also how a lost or sold TV is cut off.
+
+## Setup flow
+
+The guided setup gets a step, **Sync with your other TVs**, after Home Assistant and before the wrap-up:
+
+- **Set up a household on this TV** (the first TV; nothing to find): makes the household key and turns the switch on.
+- **Join a household** (a later TV): finds the TV that has one, shows the digits, and on a match takes the key and does
+  the first sync, as Joining describes. Where this TV already has profiles, the step shows what would change first.
+- **Not now** skips it; Settings > Profiles > Household does the same later.
+
+The step is offered on every TV's setup, ahead of the other steps that ask for choices a household could already have
+(wallpaper, Profile Pairing, PINs, Parent PIN), so a joined TV doesn't ask for what it is about to receive. A TV that
+joins during setup skips those steps and shows them as filled in, with a chance to change any.
+
+## Unique names
+
+Sync matches profiles by name, so two profiles with one name would mix. Names are unique household-wide:
+
+- Hearth already keeps names unique within a TV. With sync, a profile name that another TV in the household already
+  uses for a different person isn't allowed: the TV that sees the clash keeps the earlier profile (by creation time) and
+  marks the later one **needs a new name**.
+- A profile that needs a new name doesn't send or take entries until it has one, and its card on Household says so.
+  Nothing is deleted or renamed for it.
+- At joining, a TV whose profile names clash with the household's shows them before anything moves, and a parent
+  renames or skips each.
+- The same name on two TVs is the same person: that is how profiles follow people.
 
 ## Moving entries
 
@@ -132,5 +159,5 @@ Parent PIN is asked for the household's before it takes it, so a join can't sile
 
 ## Open questions
 
-- How are two profiles with the same name on one TV (an adult and a kid named alike) told apart? (Today names must be
-  unique per user; a clash would stop the entry and say so.)
+- Renaming a profile on one TV changes the name everywhere: is that a rename entry (the profile keeps its history) or a
+  new profile? A rename entry is assumed; the build must carry it.
