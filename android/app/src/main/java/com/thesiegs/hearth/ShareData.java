@@ -25,6 +25,7 @@ final class ShareData {
         if (active != null && !keys.contains(active)) keys.add(active);
         List<Map<String, Object>> profiles = new ArrayList<>();
         for (String key : keys) {
+            if (!listable(key, ProfileUsers.getName(context, ProfileUsers.serialOfKey(key)))) continue;
             Map<String, Object> profile = new HashMap<>();
             profile.put("key", key);
             profile.put("name", ProfileUsers.displayName(context, key));
@@ -32,6 +33,16 @@ final class ShareData {
             profiles.add(profile);
         }
         return profiles;
+    }
+
+    /**
+     * Whether a profile belongs in a copy. Android keeps a spare user ready for the next profile that's added; no one has
+     * used it, so Hearth never learned a name for it, and it isn't a profile to send or to receive into. A key that isn't
+     * a user's (a name saved before keys), and another account's profile in a user, always count.
+     */
+    static boolean listable(String key, String learnedName) {
+        if (key == null || ProfileUsers.serialOfKey(key) == ProfileUsers.UNKNOWN) return key != null;
+        return ProfileUsers.accountOfKey(key) != null || (learnedName != null && !learnedName.isEmpty());
     }
 
     /** The choices a person made for this profile (an app profile, or always ask): not the automatic matches. */

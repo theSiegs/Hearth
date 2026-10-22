@@ -253,6 +253,7 @@ class _ShareSendPageState extends State<ShareSendPage> with _ShareStatusPolling<
   void initState() {
     super.initState();
     _load();
+    _refreshOffer();
   }
 
   Future<void> _refreshOffer() async {

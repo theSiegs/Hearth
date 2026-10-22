@@ -57,6 +57,18 @@ public class ShareDataTest {
     }
 
     @Test
+    public void aSpareUserAndroidKeepsReadyIsNotAProfileToCopy() {
+        // Hearth never learned a name for it
+        assertFalse(ShareData.listable("user:10", null));
+        assertFalse(ShareData.listable("user:10", ""));
+        assertTrue(ShareData.listable("user:10", "Alex"));
+        // Another account in a user, and a name saved before keys, count
+        assertTrue(ShareData.listable("user:0:sam", null));
+        assertTrue(ShareData.listable("Alex", null));
+        assertFalse(ShareData.listable(null, null));
+    }
+
+    @Test
     public void onlyAProfileWithNoChoiceOfItsOwnTakesAnother() {
         assertTrue(ShareData.shouldApply(ProfilePairing.MODE_AUTO));
         assertFalse(ShareData.shouldApply(ProfilePairing.MODE_PROFILE));
