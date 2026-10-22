@@ -24,11 +24,11 @@ and token, Home Button Fix) stay on that TV.
 | Kind | Per | Notes |
 |---|---|---|
 | Profile Pairing | profile and streaming app | the chosen app profile, or "always ask" |
-| Streaming app PINs | profile and streaming app | secret; encrypted; see Kids |
+| Streaming app PINs | profile and streaming app | secret; encrypted |
 | Look | profile | wallpaper kind and pictures, day/night picture, gradient, theme, clock/format choices |
 | Home layout | profile | the dock, rows, app order, hidden apps, per-profile panel choices |
 | Continue Watching | profile | Hearth's own watch history (see below) |
-| Parent PIN | household | opt-in; changing it needs the old one on every TV |
+| Parent PIN | household | including every change to it; see Parent PIN |
 
 Never synced: the Home Assistant token, the webhook ID, the TV's name, permissions, anything about a TV's hardware.
 
@@ -79,21 +79,33 @@ Assistant never gets the key). A TV that wakes reads the mailbox first. Because 
 Home Assistant, every TV republishes what it has on its 10-minute heartbeat; nothing relies on Home Assistant keeping it.
 Without Home Assistant everything above still works.
 
-**Conflicts.** One rule per entry: the newest write wins (a hybrid logical clock keeps TVs with wrong clocks from
-winning forever; a tie goes to the lower TV id). A delete is an entry with a deleted flag and a timestamp, kept for 90
+**Conflicts.** One rule per entry: the newest write wins. Each TV stamps entries with its own clock, which Android
+sets from the network (and Home Assistant adds nothing to), so the clocks agree to within a second or two and nothing
+syncs time itself. A hybrid logical clock keeps a TV whose clock jumps from winning forever; a tie goes to the lower TV
+id. A delete is an entry with a deleted flag and a timestamp, kept for 90
 days, so a TV that was off can't bring a deleted PIN back. A few kinds merge rather than overwrite: Continue Watching is a
 set (union, newest play per title), and a profile's list of hidden apps merges by app.
 
 **Size.** Entries are small, except pictures and watch history. History keeps at most 100 entries per profile, 90 days.
 A TV never sends a picture a peer already has.
 
-## Kids
+## One switch
 
-The question for a parent: should a kid's profile follow them from TV to TV? Our default is **no until a parent says
-so**, per kids profile: **Settings > Profiles > Kids profiles > Follow this profile to other TVs**, behind the Parent
-PIN. When off, that profile's entries aren't sent or taken. PINs for a kids profile are never sent unless that switch
-is on and the parent also turns on **PINs**. Synced Continue Watching for a kid is per streaming app profile, so a kid's
-card can't appear in a grown-up's row.
+**Settings > Profiles > Household > Sync with my other TVs** is one switch, on by default once a TV has joined a
+household, and it covers every profile, kids' included: a kid follows themselves from TV to TV like anyone else.
+Turning it off needs the Parent PIN, stops this TV sending and taking entries, and leaves what it has. There are no
+per-kind or per-profile switches. A kid's synced Continue Watching is still per streaming app profile, so a kid's card
+can't appear in a grown-up's row.
+
+Joining is still a deliberate act (a parent, both TVs, matching digits). "On by default" means a joined TV syncs
+everything without further choices.
+
+## Parent PIN
+
+The Parent PIN is one value for the household, and every change to it syncs, like any entry (newest wins). Setting,
+changing or removing it needs the current Parent PIN on the TV where it is done, so a kid can't change it on one TV
+and carry the change to the rest. A TV that joins takes the household's Parent PIN. A TV that has its own, different
+Parent PIN is asked for the household's before it takes it, so a join can't silently replace a PIN.
 
 ## Failure and safety
 
@@ -111,7 +123,7 @@ card can't appear in a grown-up's row.
 
 1. **Household and storage**: household key, joining, the entry store (SQLite, per kind), the version vector, and
    encryption. Unit tests for merge, deletes, ordering and tampering.
-2. **Pairing and PINs**: the first kinds, over TV to TV; the Household settings screen; the kids switch.
+2. **Pairing and PINs**: the first kinds, over TV to TV; the Household settings screen and its one switch.
 3. **Home Assistant mailbox**.
 4. **Continue Watching**.
 5. **Look and layout, then wallpaper pictures.**
@@ -120,8 +132,5 @@ card can't appear in a grown-up's row.
 
 ## Open questions
 
-- Do kids' profiles follow a kid by default once a parent turns on the switch, or per kind (look yes, PINs no)?
-- Should the Parent PIN sync at all, or stay a per-TV choice with a reminder when TVs disagree?
 - How are two profiles with the same name on one TV (an adult and a kid named alike) told apart? (Today names must be
   unique per user; a clash would stop the entry and say so.)
-- A TV's own clock can be wrong; do we also ask Home Assistant for the time when it is there?
