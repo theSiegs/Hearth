@@ -2157,6 +2157,18 @@ abstract class AppLocalizations {
   /// **'Couldn\'t set it up in Home Assistant. Check its address and token, or enter a webhook ID by hand.'**
   String get haStatusCreateFailed;
 
+  /// PIN screen: a parent's phone was sent a request to allow this instead of the PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Asked a parent\'s phone. Allow it there, or enter the PIN here.'**
+  String get parentPinPhoneAsked;
+
+  /// PIN screen: the parent's phone answered Deny
+  ///
+  /// In en, this message translates to:
+  /// **'Not allowed from the phone. Enter the PIN here.'**
+  String get parentPinPhoneDenied;
+
   /// PIN pad: too many wrong PINs in a row, so it waits; {seconds} is how long is left
   ///
   /// In en, this message translates to:

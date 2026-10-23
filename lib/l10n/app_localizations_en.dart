@@ -1194,6 +1194,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get haStatusCreateFailed => 'Couldn\'t set it up in Home Assistant. Check its address and token, or enter a webhook ID by hand.';
 
   @override
+  String get parentPinPhoneAsked => 'Asked a parent\'s phone. Allow it there, or enter the PIN here.';
+
+  @override
+  String get parentPinPhoneDenied => 'Not allowed from the phone. Enter the PIN here.';
+
+  @override
   String parentPinLocked(int seconds) {
     return 'TOO MANY TRIES. WAIT $seconds s';
   }

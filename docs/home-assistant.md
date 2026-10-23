@@ -114,6 +114,17 @@ Typing the PIN with the remote always works: a digit, arrow, OK, Back or Delete 
 request (volume, power and media keys, and a key held down, don't; the log line names the key and where it came from). A PIN Google
 refuses isn't entered again until it's saved anew. **Send a test notification** checks the phone is reached.
 
+### The Parent PIN, from a phone
+
+The same switch and phone also let a parent allow the **Parent PIN** prompt (a kids profile opening Hearth's settings or an
+app's menu, or an adult's profile changing something only a parent may) without typing the PIN. When that prompt opens,
+Hearth sends an Allow/Deny notification (`tag` `hearth-parent-…`, action ids `HEARTH_PARENT_ALLOW_…` and
+`HEARTH_PARENT_DENY_…`, a one-time id, two minutes) to the phone of **every adult profile that has approval on**; the
+first answer decides. The notification names the profile and the TV. Allow closes the prompt as if the PIN had been entered
+(an adult's profile also counts as "a parent is at the remote" for five minutes, like a typed PIN); Deny says so on the
+prompt and leaves the PIN pad. The PIN pad always works, and closing the prompt withdraws the request from the phones.
+Changing the Parent PIN itself, and the pads for new PINs, never use the phone. Needs no Google TV PIN saved.
+
 ## TV status
 
 Hearth posts what the TV is doing to a Home Assistant webhook, when it changes (within a second or two) and every

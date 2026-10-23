@@ -499,6 +499,13 @@ public class MainActivity extends FlutterActivity {
             }
             case "getHaSetupReceived" -> result.success(HaSetupServer.received());
             case "isParentPresent" -> result.success(ParentPresence.isPresent(SystemClock.elapsedRealtime()));
+            // A parent allows what asks for the Parent PIN from their phone (ParentApproval)
+            case "startParentApproval" -> result.success(ParentApproval.start(this));
+            case "pollParentApproval" -> result.success(ParentApproval.poll());
+            case "cancelParentApproval" -> {
+                ParentApproval.cancel(this);
+                result.success(null);
+            }
             case "parentConfirmed" -> {
                 ParentPresence.confirmed(SystemClock.elapsedRealtime());
                 result.success(null);

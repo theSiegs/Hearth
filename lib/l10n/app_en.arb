@@ -1334,6 +1334,14 @@
     "@haStatusCreateFailed": {
         "description": "TV status: something went wrong making it in Home Assistant"
     },
+    "parentPinPhoneAsked": "Asked a parent's phone. Allow it there, or enter the PIN here.",
+    "@parentPinPhoneAsked": {
+        "description": "PIN screen: a parent's phone was sent a request to allow this instead of the PIN"
+    },
+    "parentPinPhoneDenied": "Not allowed from the phone. Enter the PIN here.",
+    "@parentPinPhoneDenied": {
+        "description": "PIN screen: the parent's phone answered Deny"
+    },
     "parentPinLocked": "TOO MANY TRIES. WAIT {seconds} s",
     "@parentPinLocked": {
         "description": "PIN pad: too many wrong PINs in a row, so it waits; {seconds} is how long is left",

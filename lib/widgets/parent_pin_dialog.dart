@@ -56,6 +56,7 @@ Future<bool> requireParent(BuildContext context) async {
       title: l.parentPinTitle,
       subtitle: l.parentPinKidsSubtitle,
       verify: settings.verifyParentPin,
+      phone: context.read<FLauncherChannel?>(),
     ),
   );
   return pin != null;
@@ -81,7 +82,7 @@ Future<bool> requireParentPin(BuildContext context) async {
   }
   final String? pin = await showDialog<String>(
     context: context,
-    builder: (_) => ParentPinDialog(title: l.parentPinTitle, verify: settings.verifyParentPin),
+    builder: (_) => ParentPinDialog(title: l.parentPinTitle, verify: settings.verifyParentPin, phone: channel),
   );
   if (pin != null && !kids && channel != null) {
     try {
@@ -167,6 +168,10 @@ class ParentPinDialog extends StatefulWidget {
   /// Where wrong guesses are counted (tests pass their own).
   final PinLockout? lockout;
 
+  /// Set where this asks for the Parent PIN: a parent's phone may allow it instead, and the dialog closes as if the
+  /// PIN had been entered (see ParentApproval). Left null for every other pad (new PINs, streaming apps' PINs).
+  final FLauncherChannel? phone;
+
   const ParentPinDialog(
       {super.key,
       required this.title,
@@ -174,6 +179,7 @@ class ParentPinDialog extends StatefulWidget {
       this.verify,
       this.random,
       this.lockout,
+      this.phone,
       this.length = digitCount});
 
   @override
@@ -184,15 +190,53 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
   String _entered = "";
   bool _error = false;
   Timer? _tick;
+  Timer? _phoneTimer;
+  // Whether a parent's phone was asked, and whether it said no
+  bool _phoneAsked = false;
+  bool _phoneDenied = false;
 
   PinLockout get _lockout => widget.lockout ?? PinLockout.shared;
 
   bool get _locked => widget.verify != null && _lockout.lockedAt(DateTime.now());
 
   @override
+  void initState() {
+    super.initState();
+    final phone = widget.phone;
+    if (phone != null && widget.verify != null) _askPhone(phone);
+  }
+
+  @override
   void dispose() {
     _tick?.cancel();
+    _phoneTimer?.cancel();
+    if (widget.phone != null && _phoneAsked) widget.phone!.cancelParentApproval();
     super.dispose();
+  }
+
+  Future<void> _askPhone(FLauncherChannel phone) async {
+    final asked = await phone.startParentApproval();
+    if (!mounted) {
+      if (asked > 0) phone.cancelParentApproval();
+      return;
+    }
+    if (asked <= 0) return;
+    setState(() => _phoneAsked = true);
+    _phoneTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      final state = await phone.pollParentApproval();
+      if (!mounted) return timer.cancel();
+      if (state == "allowed") {
+        timer.cancel();
+        _phoneAsked = false;
+        Navigator.of(context).pop("");
+      } else if (state == "denied") {
+        timer.cancel();
+        setState(() => _phoneDenied = true);
+      } else if (state != "pending") {
+        timer.cancel();
+        setState(() => _phoneAsked = false);
+      }
+    });
   }
 
   void _lock() {
@@ -264,6 +308,11 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
                     if (widget.subtitle != null) ...[
                       const SizedBox(height: 16),
                       Text(widget.subtitle!, style: const TextStyle(color: _textDim, fontSize: 15)),
+                    ],
+                    if (_phoneAsked || _phoneDenied) ...[
+                      const SizedBox(height: 16),
+                      Text(_phoneDenied ? l.parentPinPhoneDenied : l.parentPinPhoneAsked,
+                          style: const TextStyle(color: _textDim, fontSize: 15)),
                     ],
                   ],
                 ),

@@ -13,4 +13,7 @@
     <string name="approval_denied">%1$s didn’t allow it.</string>
     <string name="approval_test_title">Hearth</string>
     <string name="approval_test_message">This phone will be asked before anyone opens your Google TV profile.</string>
+    <string name="parent_approval_title">TV: allow this?</string>
+    <string name="parent_approval_message">Someone in %1$s’s profile on %2$s needs a parent’s OK. Allow it, and the TV skips the Parent PIN.</string>
+    <string name="parent_approval_ha_message">Someone in %1$s’s profile on %2$s needs a parent’s OK. Answer from the notification on your phone (Allow or Deny). The request ends by itself after 2 minutes.</string>
 </resources>

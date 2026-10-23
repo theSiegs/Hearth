@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
@@ -103,6 +104,89 @@ void main() {
     }
     await tester.pumpAndSettle();
     expect(allowed, isTrue);
+  });
+
+  group("a parent's phone", () {
+    late MockFLauncherChannel channel;
+
+    setUp(() {
+      channel = MockFLauncherChannel();
+      when(profile.isKidsProfile).thenReturn(true);
+      when(settings.hasParentPin).thenReturn(true);
+      when(settings.verifyParentPin(any)).thenAnswer((i) => i.positionalArguments[0] == "2468");
+      when(channel.cancelParentApproval()).thenAnswer((_) async {});
+    });
+
+    Future<void> open(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<ProfileService>.value(value: profile),
+          Provider<FLauncherChannel?>.value(value: channel),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async => allowed = await requireParent(context),
+              child: const Text("open"),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text("open"));
+      await tester.pump();
+      await tester.pump();
+    }
+
+    testWidgets("is asked when the prompt opens, and Allow opens the way without the PIN", (tester) async {
+      when(channel.startParentApproval()).thenAnswer((_) async => 1);
+      when(channel.pollParentApproval()).thenAnswer((_) async => "allowed");
+      await open(tester);
+      expect(find.textContaining("Asked a parent's phone"), findsOneWidget);
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      expect(allowed, isTrue);
+    });
+
+    testWidgets("Deny says so and leaves the PIN pad", (tester) async {
+      when(channel.startParentApproval()).thenAnswer((_) async => 1);
+      when(channel.pollParentApproval()).thenAnswer((_) async => "denied");
+      await open(tester);
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump();
+      expect(find.textContaining("Not allowed from the phone"), findsOneWidget);
+      expect(allowed, isNull);
+    });
+
+    testWidgets("with no phone to ask, nothing is said and the PIN works as before", (tester) async {
+      when(channel.startParentApproval()).thenAnswer((_) async => 0);
+      await open(tester);
+      expect(find.textContaining("Asked a parent's phone"), findsNothing);
+      verifyNever(channel.pollParentApproval());
+    });
+
+    testWidgets("typing the PIN works while the phone is asked, and the request is withdrawn", (tester) async {
+      when(channel.startParentApproval()).thenAnswer((_) async => 1);
+      when(channel.pollParentApproval()).thenAnswer((_) async => "pending");
+      await open(tester);
+      for (final key in [
+        LogicalKeyboardKey.digit2,
+        LogicalKeyboardKey.digit4,
+        LogicalKeyboardKey.digit6,
+        LogicalKeyboardKey.digit8,
+      ]) {
+        await tester.sendKeyEvent(key);
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+      expect(allowed, isTrue);
+      verify(channel.cancelParentApproval()).called(1);
+    });
   });
 
   testWidgets("the row pad: Up/Down pick a row, Left/OK/Right its first/middle/last digit, ⌫ under the rows",

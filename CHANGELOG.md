@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+- The Parent PIN prompt can be allowed from a parent's phone: with Home Assistant set up and **Approve switches from my phone** on, the phones of the adults who have it on get an Allow/Deny notification when a kids profile (or anything only a parent may do) asks for the Parent PIN. Typing the PIN still works.
+
 ## 2026.10.68 (pre-release)
 
 - After a parent gives a kid more time, Hearth now takes over Google TV's home once the time-up lock clears (it used to stay on Google TV's home until the next profile or Home press).

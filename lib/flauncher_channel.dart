@@ -616,6 +616,36 @@ class FLauncherChannel {
     }
   }
 
+  /// Asks the phones of the adults who allow it to approve the Parent PIN prompt now open. Returns how many it asked
+  /// (0 when Home Assistant isn't set up or no phone is chosen).
+  Future<int> startParentApproval() async {
+    try {
+      return await _methodChannel.invokeMethod<int>("startParentApproval") ?? 0;
+    } catch (e) {
+      _failed("startParentApproval", e);
+      return 0;
+    }
+  }
+
+  /// Where that request stands: "none", "pending", "allowed" (said once), "denied" or "expired".
+  Future<String> pollParentApproval() async {
+    try {
+      return await _methodChannel.invokeMethod<String>("pollParentApproval") ?? "none";
+    } catch (e) {
+      _failed("pollParentApproval", e);
+      return "none";
+    }
+  }
+
+  /// The Parent PIN prompt closed: the request ends and its notification goes from the phones.
+  Future<void> cancelParentApproval() async {
+    try {
+      await _methodChannel.invokeMethod("cancelParentApproval");
+    } catch (e) {
+      _failed("cancelParentApproval", e);
+    }
+  }
+
   /// The parent PIN was just entered in an adult's profile.
   Future<void> parentConfirmed() async {
     try {
