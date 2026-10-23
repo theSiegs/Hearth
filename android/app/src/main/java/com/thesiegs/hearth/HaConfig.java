@@ -10,7 +10,10 @@ import android.content.SharedPreferences;
 final class HaConfig {
     static final String URL_KEY = "ha_base_url";
     static final String WEBHOOK_KEY = "ha_webhook_id";
-    static final String TOKEN_KEY = "ha_panel_token";
+    /** The token before it was kept encrypted: read once, moved to {@link #TOKEN_SEALED_KEY}, and removed. */
+    private static final String TOKEN_KEY = "ha_panel_token";
+    private static final String TOKEN_SEALED_KEY = "ha_panel_token_sealed";
+    private static final String TOKEN_ALIAS = "hearth_ha_token_v1";
 
     private HaConfig() {}
 
@@ -31,10 +34,35 @@ final class HaConfig {
         return normalizeUrl(prefs(context).getString(URL_KEY, null));
     }
 
-    /** The panel's long-lived access token, also used for the REST API; null when none is set. */
+    /**
+     * The panel's long-lived access token, also used for the REST API; null when none is set. It is kept sealed under a
+     * Keystore key; one saved before that is sealed on first read. A sealed token that no longer opens (the key is
+     * gone) reads as none, and the parent sets it again.
+     */
     static String token(Context context) {
-        String token = prefs(context).getString(TOKEN_KEY, null);
-        return token == null || token.isEmpty() ? null : token;
+        SharedPreferences prefs = prefs(context);
+        String sealed = prefs.getString(TOKEN_SEALED_KEY, null);
+        if (sealed != null) {
+            String token = SecretBox.openText(SecretBox.keystore(), TOKEN_ALIAS, sealed);
+            return token == null || token.isEmpty() ? null : token;
+        }
+        String legacy = prefs.getString(TOKEN_KEY, null);
+        if (legacy == null || legacy.isEmpty()) return null;
+        setToken(context, legacy);
+        return legacy;
+    }
+
+    /** Saves the token sealed (null or empty clears it); false when the Keystore wouldn't seal it, and nothing changes. */
+    static boolean setToken(Context context, String token) {
+        SharedPreferences.Editor editor = prefs(context).edit();
+        if (token == null || token.isEmpty()) {
+            editor.remove(TOKEN_SEALED_KEY).remove(TOKEN_KEY).apply();
+            return true;
+        }
+        String sealed = SecretBox.sealText(SecretBox.keystore(), TOKEN_ALIAS, token);
+        if (sealed == null) return false;
+        editor.putString(TOKEN_SEALED_KEY, sealed).remove(TOKEN_KEY).apply();
+        return true;
     }
 
     /** An address and a token are both set, so the panel and the REST API can sign in. */

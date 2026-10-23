@@ -42,10 +42,7 @@ public class HaPanelActivity extends Activity {
 
     static void setConfig(Context context, String token, String dashboard) {
         SharedPreferences.Editor editor = HaConfig.prefs(context).edit();
-        if (token != null) {
-            if (token.isEmpty()) editor.remove(HaConfig.TOKEN_KEY);
-            else editor.putString(HaConfig.TOKEN_KEY, token);
-        }
+        if (token != null) HaConfig.setToken(context, token);
         if (dashboard != null) {
             String path = dashboard.trim().replaceAll("^/+|/+$", "");
             if (path.isEmpty()) editor.remove(DASHBOARD_KEY);

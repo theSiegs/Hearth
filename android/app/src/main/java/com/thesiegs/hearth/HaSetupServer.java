@@ -157,8 +157,8 @@ final class HaSetupServer {
             return;
         }
         SharedPreferences.Editor edit = HaConfig.prefs(mContext).edit().putString(HaConfig.URL_KEY, sent.url);
-        if (!sent.token.isEmpty()) edit.putString(HaConfig.TOKEN_KEY, sent.token);
         edit.apply();
+        if (!sent.token.isEmpty()) HaConfig.setToken(mContext, sent.token);
         // Starts reporting right away when Home Button Fix runs; the reporter lives on the main thread
         if (sent.webhookOk) {
             new Handler(Looper.getMainLooper())

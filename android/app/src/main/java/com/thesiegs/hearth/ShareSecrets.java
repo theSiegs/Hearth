@@ -253,7 +253,8 @@ final class ShareSecrets {
             String url = HaConfig.normalizeUrl(ha.optString("url", ""));
             String token = ha.optString("token", "").replaceAll("\\s", "");
             if (url == null || token.isEmpty() || token.length() > 4096) return false;
-            HaConfig.prefs(context).edit().putString(HaConfig.URL_KEY, url).putString(HaConfig.TOKEN_KEY, token).apply();
+            if (!HaConfig.setToken(context, token)) return false;
+            HaConfig.prefs(context).edit().putString(HaConfig.URL_KEY, url).apply();
             return true;
         } catch (Exception e) {
             return false;
