@@ -72,6 +72,22 @@ final class HouseholdLog {
         return true;
     }
 
+    /**
+     * Puts back what {@link #all} and {@link #vector} gave earlier (saved and loaded by the caller). Replaces what is
+     * held. An entry that isn't well formed is skipped.
+     */
+    void restore(List<HouseholdEntry> saved, Map<String, Long> savedVector) {
+        entries.clear();
+        vector.clear();
+        lastClock = 0;
+        for (HouseholdEntry entry : saved) {
+            if (entry == null) continue;
+            entries.put(entry.id(), entry);
+            lastClock = Math.max(lastClock, entry.clock);
+        }
+        for (Map.Entry<String, Long> seen : savedVector.entrySet()) vector.put(seen.getKey(), seen.getValue());
+    }
+
     /** The live value, or null if there is none or it was deleted. */
     HouseholdEntry get(String kind, String profile, String item) {
         HouseholdEntry entry = entries.get(id(kind, profile, item));
