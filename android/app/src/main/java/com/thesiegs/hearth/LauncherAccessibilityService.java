@@ -874,6 +874,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
             Map<String, String> emails) {
         if (!mChooserOnScreen) return;
         if (current != null) mChooserCurrent = current;
+        // How many tiles named an address (no names or addresses in the log): household sync identifies people by it
+        Log.i(TAG, "Chooser read: " + names.size() + " profile(s), " + emails.size() + " with an account address");
         // Each profile's Google account address, which the TV's calendars are filed by (TvCalendars)
         for (Map.Entry<String, String> email : emails.entrySet()) {
             ProfileUsers.setEmail(this, email.getKey(), email.getValue());
