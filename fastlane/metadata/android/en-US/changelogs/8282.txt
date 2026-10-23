@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Settings > System > Google's ad sandbox: keep Android's Privacy Sandbox off.
