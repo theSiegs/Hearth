@@ -1,0 +1,4 @@
+- Early development pre-release.
+- Household sync, first part: TVs can keep Profile Pairing choices and saved PINs in step.
+- The Home Assistant token is kept encrypted and the Parent PIN as a salted hash.
+- Kids profiles no longer list the Play Store.
