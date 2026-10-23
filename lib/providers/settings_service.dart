@@ -17,10 +17,9 @@
  */
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:ui' as ui;
 
-import 'package:crypto/crypto.dart';
+import 'package:flauncher/providers/parent_pin_hash.dart';
 
 import 'package:flutter/material.dart';
 
@@ -372,18 +371,25 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool verifyParentPin(String pin) => _sharedPreferences.getString(_parentPinHashKey) == _hashPin(pin);
+  /// Whether [pin] is the Parent PIN. A PIN kept in the old form (an unsalted hash) is kept in the new one after the
+  /// first good check.
+  bool verifyParentPin(String pin) {
+    final stored = _sharedPreferences.getString(_parentPinHashKey);
+    if (!ParentPinHash.verify(pin, stored)) return false;
+    if (ParentPinHash.isLegacy(stored)) {
+      _sharedPreferences.setString(_parentPinHashKey, ParentPinHash.hash(pin));
+    }
+    return true;
+  }
 
   Future<void> setParentPin(String? pin) async {
     if (pin == null) {
       await _sharedPreferences.remove(_parentPinHashKey);
     } else {
-      await _sharedPreferences.setString(_parentPinHashKey, _hashPin(pin));
+      await _sharedPreferences.setString(_parentPinHashKey, ParentPinHash.hash(pin));
     }
     notifyListeners();
   }
-
-  static String _hashPin(String pin) => sha256.convert(utf8.encode("ltv-parent-pin:$pin")).toString();
 
   bool get showNotificationsWidgetInStatusBar => _bool(_showNotificationsWidgetInStatusBarKey, true);
 

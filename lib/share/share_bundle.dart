@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flauncher/models/category.dart';
+import 'package:flauncher/providers/parent_pin_hash.dart';
 
 /// The data of a copy of a profile from one TV to another: what the sending TV puts together, and what the receiving
 /// TV takes of it. The bytes come from another TV and are not trusted: everything is checked here, a setting only
@@ -27,7 +28,7 @@ class ShareBundle {
   static const List<String> wallpaperSlots = ["any", "day", "night"];
 
   /// The parent PIN's hash as the TV keeps it: SHA-256, in hex.
-  static final RegExp parentPinHashPattern = RegExp(r'^[0-9a-f]{64}$');
+  static final RegExp parentPinHashPattern = ParentPinHash.pattern;
   static const int maxProfiles = 16;
   static const int maxApps = 2000;
   static const int maxCategories = 200;

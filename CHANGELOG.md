@@ -9,6 +9,7 @@
 - Kids profiles no longer list the Play Store: apps added there aren't on Google TV's approved list for the kid and get removed at the next update or restart. Parents add apps in Google TV's Manage apps; the user guide says how.
 - Copy profiles between TVs: Streaming app PINs and Home Assistant settings can be ticked as soon as the screen opens (they said "Nothing to send" until a profile was ticked).
 - Copy profiles between TVs ignores the spare user Android keeps ready for the next profile; it is no longer offered as a profile to send or to receive into.
+- Security: the Home Assistant token is kept encrypted with a key held by the TV's secure hardware, and the Parent PIN is kept as a salted slow hash instead of a plain one. Both are converted the first time they are used; nothing needs to be entered again. (A TV that receives a copied Parent PIN from a TV that has not updated yet still accepts it.)
 
 ## 2026.10.67 (pre-release)
 
