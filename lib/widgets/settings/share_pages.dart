@@ -18,6 +18,7 @@ import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
 import 'message_dialog.dart';
+import 'household_page.dart';
 import 'settings_page.dart';
 
 /// Copying profiles between TVs: the page that offers it (Settings > Profiles), and the two ends of a copy.
@@ -49,6 +50,12 @@ class ShareProfilesPage extends StatelessWidget {
           title: Text(l.shareReceiveTitle, style: textTheme.bodyMedium),
           trailing: const Icon(Icons.chevron_right, color: Colors.white54),
           onPressed: () => _open(context, ShareReceivePage.routeName),
+        ),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.holiday_village_outlined),
+          title: Text(l.householdTitle, style: textTheme.bodyMedium),
+          trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+          onPressed: () => Navigator.of(context).pushNamed(HouseholdPage.routeName),
         ),
       ],
     );
@@ -241,6 +248,7 @@ class _ShareSendPageState extends State<ShareSendPage> with _ShareStatusPolling<
   bool _pins = false;
   bool _ha = false;
   bool _parentPin = false;
+  bool _household = false;
 
   /// What this TV could send for the chosen profiles: how many PINs are saved, and whether Home Assistant is set up.
   int _pinsSaved = 0;
@@ -292,7 +300,7 @@ class _ShareSendPageState extends State<ShareSendPage> with _ShareStatusPolling<
   }
 
   Future<void> _start() async {
-    if (_starting || _picked.isEmpty) return;
+    if (_starting || (_picked.isEmpty && !_household)) return;
     setState(() => _starting = true);
     try {
       final settings = context.read<SettingsService>();
@@ -345,7 +353,9 @@ class _ShareSendPageState extends State<ShareSendPage> with _ShareStatusPolling<
         wallpapers: pictures,
         parentPinHash: _parentPin ? settings.parentPinHash : null,
       ).encode();
-      final secrets = _pins || _ha ? jsonEncode({"profiles": keys, "pins": _pins, "ha": _ha}) : null;
+      final secrets = _pins || _ha || _household
+          ? jsonEncode({"profiles": keys, "pins": _pins, "ha": _ha, if (_household) "household": true})
+          : null;
       final started = await channel.startShareSending(bundle, secretsRequest: secrets);
       if (!mounted) return;
       if (started == null) {
@@ -398,10 +408,16 @@ class _ShareSendPageState extends State<ShareSendPage> with _ShareStatusPolling<
       tile(Icons.home_outlined, l.shareSendHa, _ha, _haReady, () => _toggleSecret(_ha, (v) => _ha = v)),
       tile(Icons.lock_outline, l.parentPinTitle, _parentPin, hasParentPin,
           () => _toggleSecret(_parentPin, (v) => _parentPin = v)),
+      tile(Icons.holiday_village_outlined, l.shareSendHousehold, _household, true,
+          () => _toggleSecret(_household, (v) => _household = v)),
       if (_pins || _ha || _parentPin)
         Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
             child: Text(l.shareSendSecretsNote, style: textTheme.bodySmall)),
+      if (_household)
+        Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: Text(l.shareSendHouseholdNote, style: textTheme.bodySmall)),
     ];
   }
 
@@ -466,8 +482,8 @@ class _ShareSendPageState extends State<ShareSendPage> with _ShareStatusPolling<
                   FocusableSettingsTile(
                     leading: const Icon(Icons.arrow_forward),
                     title: Text(l.shareContinue,
-                        style: textTheme.bodyMedium?.copyWith(color: _picked.isEmpty ? Colors.white38 : null)),
-                    onPressed: _picked.isEmpty ? null : _start,
+                        style: textTheme.bodyMedium?.copyWith(color: _picked.isEmpty && !_household ? Colors.white38 : null)),
+                    onPressed: _picked.isEmpty && !_household ? null : _start,
                   ),
               ]);
       case _SendPhase.waiting:
@@ -581,6 +597,7 @@ class _ShareReceivePageState extends State<ShareReceivePage> with _ShareStatusPo
   bool _pins = true;
   bool _ha = true;
   bool _parentPin = true;
+  bool _household = true;
   Map<dynamic, dynamic>? _secrets;
 
   /// This TV already has Home Assistant set up (a copy would replace it).
@@ -765,8 +782,9 @@ class _ShareReceivePageState extends State<ShareReceivePage> with _ShareStatusPo
     final takePins = _pins && _pinsCame > 0 && _pinsAllowed(bundle);
     final takeHa = _ha && _haHost.isNotEmpty;
     final takeParentPin = _parentPin && bundle.parentPinHash != null;
-    // PINs, Home Assistant and the parent PIN are saved only with the parent PIN, where this TV has one
-    if ((takePins || takeHa || takeParentPin) && settings.hasParentPin) {
+    final takeHousehold = _household && _secrets?["household"] == true;
+    // PINs, Home Assistant, the parent PIN and a household are saved only with the parent PIN, where this TV has one
+    if ((takePins || takeHa || takeParentPin || takeHousehold) && settings.hasParentPin) {
       final allowed = await requireParentPin(context);
       if (!allowed || !mounted) return;
     }
@@ -792,12 +810,13 @@ class _ShareReceivePageState extends State<ShareReceivePage> with _ShareStatusPo
         pictures: _pictures,
         parentPin: takeParentPin,
       );
-      if (takePins || takeHa) {
+      if (takePins || takeHa || takeHousehold) {
         // After the pairings: a PIN is kept only for an app profile this TV has the profile paired with
         final saved = await channel.applyShareSecrets(
           {for (final e in targets.entries) e.key: e.value.key},
           pins: takePins,
           ha: takeHa,
+          household: takeHousehold,
         );
         report = report.withSecrets(ShareSecretsReport.fromChannel(saved));
       }
@@ -883,6 +902,7 @@ class _ShareReceivePageState extends State<ShareReceivePage> with _ShareStatusPo
     final any = (hasTargets &&
             (_layouts || _pairings || (_pictures && bundle.pictureCount > 0) || (_pins && _pinsCame > 0 && _pinsAllowed(bundle)))) ||
         (_ha && _haHost.isNotEmpty) ||
+        (_household && _secrets?["household"] == true) ||
         (_parentPin && bundle.parentPinHash != null);
     Widget choice(IconData icon, String title, bool on, bool replaces, VoidCallback onPressed) => FocusableSettingsTile(
           leading: Icon(icon),
@@ -923,6 +943,9 @@ class _ShareReceivePageState extends State<ShareReceivePage> with _ShareStatusPo
             () => _togglePins(l, bundle)),
       if (_haHost.isNotEmpty)
         choice(Icons.home_outlined, l.shareWhatHa(_haHost), _ha, _haHere, () => setState(() => _ha = !_ha)),
+      if (_secrets?["household"] == true)
+        choice(Icons.holiday_village_outlined, l.shareWhatHousehold, _household, false,
+            () => setState(() => _household = !_household)),
       if (bundle.parentPinHash != null)
         choice(Icons.lock_outline, l.parentPinTitle, _parentPin, hasParentPin, () => setState(() => _parentPin = !_parentPin)),
       if (_secrets?["haFailed"] == true)

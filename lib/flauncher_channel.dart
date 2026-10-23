@@ -437,10 +437,27 @@ class FLauncherChannel {
 
   /// Saves the PINs and/or Home Assistant settings that came (by this TV's own checks): [targets] is the copy's
   /// profile id to this TV's profile key. Returns {pins: {added, kept, skipped}, ha: bool}.
-  Future<Map<dynamic, dynamic>> applyShareSecrets(Map<String, String> targets, {required bool pins, required bool ha}) async =>
+  Future<Map<dynamic, dynamic>> applyShareSecrets(Map<String, String> targets,
+          {required bool pins, required bool ha, bool household = false}) async =>
       (await _methodChannel.invokeMapMethod<dynamic, dynamic>(
-          "applyShareSecrets", {"targets": targets, "pins": pins, "ha": ha})) ??
+          "applyShareSecrets", {"targets": targets, "pins": pins, "ha": ha, "household": household})) ??
       {};
+
+  /// Where this TV stands in its household: {joined, lost, enabled, tvId, peers: [{tvId}], lastSyncAt, lastResult}.
+  Future<Map<dynamic, dynamic>> getHouseholdStatus() async =>
+      (await _methodChannel.invokeMapMethod<dynamic, dynamic>("getHouseholdStatus")) ?? {};
+
+  /// Starts a household on this TV; false if it is already in one.
+  Future<bool> createHousehold() async => await _methodChannel.invokeMethod<bool>("createHousehold") ?? false;
+
+  /// The one switch: whether this TV syncs with the other TVs of its household.
+  Future<void> setHouseholdEnabled(bool on) async => await _methodChannel.invokeMethod("setHouseholdEnabled", on);
+
+  /// Leaves the household: the key and the entries are forgotten on this TV.
+  Future<void> leaveHousehold() async => await _methodChannel.invokeMethod("leaveHousehold");
+
+  /// Trades entries with the other TVs now.
+  Future<void> syncHouseholdNow() async => await _methodChannel.invokeMethod("syncHouseholdNow");
 
   /// A wallpaper picture of this app as the screen shows it (a JPEG of at most 1920x1080); null when it can't be made.
   Future<Uint8List?> getShareWallpaper(String path) async =>

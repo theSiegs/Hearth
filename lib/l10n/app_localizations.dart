@@ -687,6 +687,96 @@ abstract class AppLocalizations {
   /// **'Home Assistant settings'**
   String get shareSendHa;
 
+  /// Sending TV: switch for giving the other TV this household's key
+  ///
+  /// In en, this message translates to:
+  /// **'Add this TV to my household (keeps profiles and PINs in step)'**
+  String get shareSendHousehold;
+
+  /// Sending TV: what adding a TV to the household does
+  ///
+  /// In en, this message translates to:
+  /// **'The other TV gets the household\'s key and then keeps in step with this one over your home network. Only do this for your own TVs.'**
+  String get shareSendHouseholdNote;
+
+  /// Receiving TV: switch for joining the sending TV's household
+  ///
+  /// In en, this message translates to:
+  /// **'Join the household: keep in step with its TVs'**
+  String get shareWhatHousehold;
+
+  /// Settings: page for syncing between TVs
+  ///
+  /// In en, this message translates to:
+  /// **'Household sync'**
+  String get householdTitle;
+
+  /// Household page: what it is
+  ///
+  /// In en, this message translates to:
+  /// **'TVs in a household keep Profile Pairing and saved PINs in step over your home network, whichever TV someone uses.'**
+  String get householdIntro;
+
+  /// Household page: not in one
+  ///
+  /// In en, this message translates to:
+  /// **'This TV isn\'t in a household.'**
+  String get householdNone;
+
+  /// Household page: button
+  ///
+  /// In en, this message translates to:
+  /// **'Start a household on this TV'**
+  String get householdStart;
+
+  /// Household page: in one
+  ///
+  /// In en, this message translates to:
+  /// **'This TV is in a household.'**
+  String get householdIn;
+
+  /// Household page: the one on/off switch
+  ///
+  /// In en, this message translates to:
+  /// **'Sync with my other TVs'**
+  String get householdSwitch;
+
+  /// Household page: button
+  ///
+  /// In en, this message translates to:
+  /// **'Sync now'**
+  String get householdSyncNow;
+
+  /// Household page: button
+  ///
+  /// In en, this message translates to:
+  /// **'Leave the household'**
+  String get householdLeave;
+
+  /// Household page: the key is gone
+  ///
+  /// In en, this message translates to:
+  /// **'This TV was in a household but can\'t open its key any more. Join again from another TV.'**
+  String get householdLost;
+
+  /// Household page: how to add a TV
+  ///
+  /// In en, this message translates to:
+  /// **'To add a TV: on a TV that is in the household, open Copy profiles between TVs, then Copy profiles to another TV, and tick Add this TV to my household.'**
+  String get householdAddHint;
+
+  /// Household page: how many other TVs of the household are on the network now
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No other TVs seen right now} =1{1 other TV seen right now} other{{count} other TVs seen right now}}'**
+  String householdPeers(int count);
+
+  /// Household page: what the last sync did
+  ///
+  /// In en, this message translates to:
+  /// **'Last sync: {result}'**
+  String householdLast(String result);
+
   /// Sending TV: a switch that is off because this TV has nothing of it
   ///
   /// In en, this message translates to:

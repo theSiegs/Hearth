@@ -322,6 +322,62 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareSendHa => 'Home Assistant settings';
 
   @override
+  String get shareSendHousehold => 'Add this TV to my household (keeps profiles and PINs in step)';
+
+  @override
+  String get shareSendHouseholdNote => 'The other TV gets the household\'s key and then keeps in step with this one over your home network. Only do this for your own TVs.';
+
+  @override
+  String get shareWhatHousehold => 'Join the household: keep in step with its TVs';
+
+  @override
+  String get householdTitle => 'Household sync';
+
+  @override
+  String get householdIntro => 'TVs in a household keep Profile Pairing and saved PINs in step over your home network, whichever TV someone uses.';
+
+  @override
+  String get householdNone => 'This TV isn\'t in a household.';
+
+  @override
+  String get householdStart => 'Start a household on this TV';
+
+  @override
+  String get householdIn => 'This TV is in a household.';
+
+  @override
+  String get householdSwitch => 'Sync with my other TVs';
+
+  @override
+  String get householdSyncNow => 'Sync now';
+
+  @override
+  String get householdLeave => 'Leave the household';
+
+  @override
+  String get householdLost => 'This TV was in a household but can\'t open its key any more. Join again from another TV.';
+
+  @override
+  String get householdAddHint => 'To add a TV: on a TV that is in the household, open Copy profiles between TVs, then Copy profiles to another TV, and tick Add this TV to my household.';
+
+  @override
+  String householdPeers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count other TVs seen right now',
+      one: '1 other TV seen right now',
+      zero: 'No other TVs seen right now',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String householdLast(String result) {
+    return 'Last sync: $result';
+  }
+
+  @override
   String get shareNoneToSend => 'Nothing to send';
 
   @override

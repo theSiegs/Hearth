@@ -398,6 +398,20 @@ public class MainActivity extends FlutterActivity {
                     () -> ShareSecrets.offer(this, (List<String>) call.arguments()));
             // A picture of a profile's wallpaper as the screen shows it (at most 1920x1080, a JPEG), to send to another TV
             case "getShareWallpaper" -> answerFrom(sIoExecutor, result, () -> shareWallpaper((String) call.arguments()));
+            case "getHouseholdStatus" -> result.success(Household.status(this));
+            case "createHousehold" -> result.success(Household.create(this));
+            case "setHouseholdEnabled" -> {
+                Household.setEnabled(this, Boolean.TRUE.equals(call.arguments()));
+                result.success(null);
+            }
+            case "leaveHousehold" -> {
+                Household.leave(this);
+                result.success(null);
+            }
+            case "syncHouseholdNow" -> {
+                Household.syncNowAsync(this);
+                result.success(null);
+            }
             case "getShareSecretsSummary" -> {
                 String secrets = ShareService.secrets();
                 result.success(secrets == null ? null : ShareSecrets.summary(secrets));
@@ -416,6 +430,7 @@ public class MainActivity extends FlutterActivity {
                         done.put("pins", ShareSecrets.applyPins(secrets, targets, ShareSecrets.vaultOf(this)));
                     }
                     if (Boolean.TRUE.equals(args.get("ha"))) done.put("ha", ShareSecrets.applyHa(this, secrets));
+                    if (Boolean.TRUE.equals(args.get("household"))) done.put("household", Household.joinFromSecrets(this, secrets));
                     return done;
                 });
             }

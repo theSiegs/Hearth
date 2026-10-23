@@ -86,7 +86,7 @@ class _ShareChannel extends FLauncherChannel {
 
   @override
   Future<Map<dynamic, dynamic>> applyShareSecrets(Map<String, String> targets,
-      {required bool pins, required bool ha}) async {
+      {required bool pins, required bool ha, bool household = false}) async {
     secretsTargets = targets;
     secretsPins = pins;
     secretsHa = ha;
@@ -346,6 +346,17 @@ void main() {
       });
       // The bundle carries no PIN or token: those are the Java side's
       expect(channel.bundleOut, isNot(contains('"pin"')));
+      await leave(tester);
+    });
+
+    testWidgets("adding the TV to the household asks for the key, with or without a profile", (tester) async {
+      await pump(tester, const ShareSendPage());
+      await press(tester, "Add this TV to my household (keeps profiles and PINs in step)");
+      expect(find.textContaining("gets the household's key"), findsOneWidget);
+      await press(tester, "Continue");
+      final request = jsonDecode(channel.secretsOut!) as Map<String, dynamic>;
+      expect(request["household"], true);
+      expect(request["pins"], false);
       await leave(tester);
     });
 

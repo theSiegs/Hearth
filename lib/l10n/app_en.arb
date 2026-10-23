@@ -245,6 +245,72 @@
     "@shareSendHa": {
         "description": "Sending TV: switch for sending the Home Assistant address and a new token for the other TV"
     },
+    "shareSendHousehold": "Add this TV to my household (keeps profiles and PINs in step)",
+    "@shareSendHousehold": {
+        "description": "Sending TV: switch for giving the other TV this household's key"
+    },
+    "shareSendHouseholdNote": "The other TV gets the household's key and then keeps in step with this one over your home network. Only do this for your own TVs.",
+    "@shareSendHouseholdNote": {
+        "description": "Sending TV: what adding a TV to the household does"
+    },
+    "shareWhatHousehold": "Join the household: keep in step with its TVs",
+    "@shareWhatHousehold": {
+        "description": "Receiving TV: switch for joining the sending TV's household"
+    },
+    "householdTitle": "Household sync",
+    "@householdTitle": {
+        "description": "Settings: page for syncing between TVs"
+    },
+    "householdIntro": "TVs in a household keep Profile Pairing and saved PINs in step over your home network, whichever TV someone uses.",
+    "@householdIntro": {
+        "description": "Household page: what it is"
+    },
+    "householdNone": "This TV isn't in a household.",
+    "@householdNone": {
+        "description": "Household page: not in one"
+    },
+    "householdStart": "Start a household on this TV",
+    "@householdStart": {
+        "description": "Household page: button"
+    },
+    "householdIn": "This TV is in a household.",
+    "@householdIn": {
+        "description": "Household page: in one"
+    },
+    "householdSwitch": "Sync with my other TVs",
+    "@householdSwitch": {
+        "description": "Household page: the one on/off switch"
+    },
+    "householdSyncNow": "Sync now",
+    "@householdSyncNow": {
+        "description": "Household page: button"
+    },
+    "householdLeave": "Leave the household",
+    "@householdLeave": {
+        "description": "Household page: button"
+    },
+    "householdLost": "This TV was in a household but can't open its key any more. Join again from another TV.",
+    "@householdLost": {
+        "description": "Household page: the key is gone"
+    },
+    "householdAddHint": "To add a TV: on a TV that is in the household, open Copy profiles between TVs, then Copy profiles to another TV, and tick Add this TV to my household.",
+    "@householdAddHint": {
+        "description": "Household page: how to add a TV"
+    },
+    "householdPeers": "{count, plural, =0{No other TVs seen right now} =1{1 other TV seen right now} other{{count} other TVs seen right now}}",
+    "@householdPeers": {
+        "description": "Household page: how many other TVs of the household are on the network now",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "householdLast": "Last sync: {result}",
+    "@householdLast": {
+        "description": "Household page: what the last sync did",
+        "placeholders": {
+            "result": {"type": "String"}
+        }
+    },
     "shareNoneToSend": "Nothing to send",
     "@shareNoneToSend": {
         "description": "Sending TV: a switch that is off because this TV has nothing of it"

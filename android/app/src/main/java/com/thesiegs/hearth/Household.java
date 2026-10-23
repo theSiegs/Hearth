@@ -271,6 +271,31 @@ final class Household {
         return ok;
     }
 
+    /** The household key to hand to a TV that joins, making a household here first if there is none; null on failure. */
+    static byte[] keyToJoin(Context context) {
+        HouseholdStore store = store(context);
+        if (!store.joined() && !create(context)) return null;
+        return store.exportKey();
+    }
+
+    /** Joins the household whose key {@code secrets} carries (a copy from another TV). False if it has none. */
+    static boolean joinFromSecrets(Context context, String secrets) {
+        try {
+            String encoded = new org.json.JSONObject(secrets).optString("household", "");
+            if (encoded.isEmpty()) return false;
+            byte[] key = java.util.Base64.getDecoder().decode(encoded);
+            boolean ok = store(context).join(key);
+            Arrays.fill(key, (byte) 0);
+            if (ok) {
+                store(context).setEnabled(true);
+                start(context);
+            }
+            return ok;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /** Turns syncing on or off (the one switch). */
     static void setEnabled(Context context, boolean on) {
         store(context).setEnabled(on);

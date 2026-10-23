@@ -72,6 +72,16 @@ final class ShareSecrets {
                 addPins(context, pins, null, PinVault.SHARED, false);
                 out.put("pins", pins);
             }
+            if (wanted.optBoolean("household")) {
+                // The household's key goes to the other TV (a household is made here first if there is none)
+                byte[] key = Household.keyToJoin(context);
+                if (key != null) {
+                    out.put("household", java.util.Base64.getEncoder().encodeToString(key));
+                    java.util.Arrays.fill(key, (byte) 0);
+                } else {
+                    out.put("householdFailed", true);
+                }
+            }
             if (wanted.optBoolean("ha")) {
                 String base = HaConfig.baseUrl(context);
                 String name = tokenName(fromTv, new Date());
@@ -147,6 +157,12 @@ final class ShareSecrets {
         out.put("pins", pins);
         out.put("ha", ha);
         out.put("haFailed", haFailed);
+        boolean household = false;
+        try {
+            household = new JSONObject(secrets).optString("household", "").length() > 0;
+        } catch (Exception ignored) {
+        }
+        out.put("household", household);
         return out;
     }
 
