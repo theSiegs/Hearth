@@ -17,42 +17,43 @@ import java.util.Set;
 final class HouseholdLocal implements HouseholdBridge.Local {
     private static final String TAG = "HearthHousehold";
     private final Context context;
+    private final HouseholdSeal seal;
 
-    HouseholdLocal(Context context) {
+    HouseholdLocal(Context context, HouseholdSeal seal) {
         this.context = context.getApplicationContext();
+        this.seal = seal;
     }
 
-    /** The key of the profile that has {@code name} on this TV (normalized), or null when none or two do. */
-    static String keyOf(Context context, String name) {
-        return new HouseholdLocal(context).profiles().get(HouseholdEntry.normalize(name));
-    }
-
-    /** The household's name for a profile key on this TV: its normalized display name. */
-    static String nameOf(Context context, String key) {
-        return key == null ? HouseholdBridge.SHARED : HouseholdEntry.normalize(ProfileUsers.displayName(context, key));
+    /**
+     * Who a profile is to the household: the id made from its Google account address, or, until Hearth has seen the
+     * address (the chooser hasn't shown the profile yet), "n:" and its name. Null for the whole TV's.
+     */
+    String personIdOf(String key) {
+        if (key == null) return HouseholdBridge.SHARED;
+        String id = seal.personId(ProfileUsers.emailOf(context, key));
+        if (id != null) return id;
+        String name = HouseholdEntry.normalize(ProfileUsers.displayName(context, key));
+        return name.isEmpty() ? null : "n:" + name;
     }
 
     @Override
     public Map<String, String> profiles() {
         List<String> keys = ProfilePairing.getHearthProfiles(context);
         String active = LauncherAccessibilityService.getActiveProfileKey(context);
-        Map<String, String> byName = new LinkedHashMap<>();
-        Set<String> clashes = new HashSet<>();
+        Map<String, String> byPerson = new LinkedHashMap<>();
         Set<String> seen = new HashSet<>();
         for (String key : keys) {
-            if (seen.add(key)) add(byName, clashes, key);
+            if (seen.add(key)) add(byPerson, key);
         }
-        if (active != null && seen.add(active)) add(byName, clashes, active);
-        for (String name : clashes) byName.remove(name);
-        return byName;
+        if (active != null && seen.add(active)) add(byPerson, active);
+        return byPerson;
     }
 
-    private void add(Map<String, String> byName, Set<String> clashes, String key) {
+    /** The first profile with a person's id counts; another with the same address is left out. */
+    private void add(Map<String, String> byPerson, String key) {
         if (!ShareData.listable(key, ProfileUsers.getName(context, ProfileUsers.serialOfKey(key)))) return;
-        String name = nameOf(context, key);
-        if (name.isEmpty()) return;
-        if (byName.containsKey(name)) clashes.add(name);
-        else byName.put(name, key);
+        String id = personIdOf(key);
+        if (id != null && !id.isEmpty() && !byPerson.containsKey(id)) byPerson.put(id, key);
     }
 
     @Override

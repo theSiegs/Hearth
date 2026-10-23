@@ -77,6 +77,10 @@ final class Household {
         return sStore;
     }
 
+    private static HouseholdLocal local(Context context) {
+        return new HouseholdLocal(context, store(context).seal());
+    }
+
     /** Sync is on: in a household and the switch is on. */
     private static boolean active(Context context) {
         if (!mayBeInHousehold(context)) return false;
@@ -143,15 +147,16 @@ final class Household {
         if (!mayBeInHousehold(context)) return;
         EXEC.execute(() -> {
             if (!active(context)) return;
-            publish(context, HouseholdBridge.PAIRING, profileKey, pkg, new HouseholdLocal(context).pairings(profileKey).get(pkg));
+            publish(context, HouseholdBridge.PAIRING, profileKey, pkg, local(context).pairings(profileKey).get(pkg));
         });
     }
 
     /** Writes one setting as an entry if it differs from the log's (null: delete it if the log has it). */
     private static void publish(Context context, String kind, String ownerKey, String item, String value) {
         HouseholdStore store = store(context);
-        String name = HouseholdLocal.nameOf(context, ownerKey);
-        if (ownerKey != null && !ownerKey.equals(new HouseholdLocal(context).profiles().get(name))) return;
+        HouseholdLocal local = local(context);
+        String name = local.personIdOf(ownerKey);
+        if (name == null || (ownerKey != null && !ownerKey.equals(local.profiles().get(name)))) return;
         HouseholdLog log = store.log();
         HouseholdEntry have = log.get(kind, name, item);
         long now = System.currentTimeMillis();
@@ -171,7 +176,7 @@ final class Household {
         if (sContext == null || !active(sContext)) return;
         HouseholdStore store = store(sContext);
         long now = System.currentTimeMillis();
-        Map<String, String[]> fresh = HouseholdBridge.unpublished(new HouseholdLocal(sContext), store.log());
+        Map<String, String[]> fresh = HouseholdBridge.unpublished(local(sContext), store.log());
         for (String[] f : fresh.values()) store.log().put(f[0], f[1], f[2], f[3], now);
         if (!fresh.isEmpty()) {
             store.save();
@@ -181,7 +186,7 @@ final class Household {
 
     private static void applyEntries() {
         if (sContext == null || !active(sContext)) return;
-        int changed = HouseholdBridge.apply(new HouseholdLocal(sContext), store(sContext).log());
+        int changed = HouseholdBridge.apply(local(sContext), store(sContext).log());
         if (changed > 0) Log.i(TAG, "Applied " + changed + " setting(s) from the household");
     }
 

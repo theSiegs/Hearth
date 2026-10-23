@@ -203,6 +203,22 @@ public class HouseholdSyncTest {
     }
 
     @Test
+    public void aPersonIdIsTheSameForTheHouseholdAndSaysNothingOfTheAddress() throws Exception {
+        byte[] key = HouseholdSeal.newKey();
+        HouseholdSeal a = new HouseholdSeal(key);
+        HouseholdSeal b = new HouseholdSeal(key.clone());
+        String id = a.personId("Alex@Example.com ");
+        assertEquals(id, b.personId("alex@example.com"));
+        assertTrue(id.startsWith("a:") && id.length() == 26);
+        assertFalse(id.contains("alex"));
+        assertNotEquals(id, a.personId("sam@example.com"));
+        // another household makes another id for the same address
+        assertNotEquals(id, new HouseholdSeal(HouseholdSeal.newKey()).personId("alex@example.com"));
+        assertNull(a.personId(null));
+        assertNull(a.personId("  "));
+    }
+
+    @Test
     public void aWrongSizedKeyIsRefused() {
         try {
             new HouseholdSeal(new byte[5]);
