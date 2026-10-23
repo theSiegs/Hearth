@@ -85,6 +85,37 @@ Sync matches profiles by name, so two profiles with one name would mix. Names ar
   renames or skips each.
 - The same name on two TVs is the same person: that is how profiles follow people.
 
+## Secrets at rest
+
+What the Android Keystore does and doesn't give us, and how sync uses it:
+
+- **It protects data at rest, not from Hearth itself.** A Keystore key never leaves the secure hardware, so a copy of
+  the app's files (a backup, a pulled data folder, a rooted TV's disk) can't be decrypted off the TV. Hearth must still
+  decrypt PINs to type them, so anything running as Hearth can use them. That is the same as today's PinVault.
+- **One wrap key per purpose, AES-256-GCM, non-exportable, no user-authentication requirement** (a TV has no
+  biometrics or screen lock to bind to). Ask for StrongBox where the TV has it and fall back to the TEE.
+- **The household key is wrapped by a Keystore key** (alias `hearth_household_v1`) and kept as ciphertext in a prefs
+  file of its own that no backup, layout or share bundle includes. It is decrypted into memory only to seal or open
+  entries, then wiped. Because a Keystore key can't be moved, the household key itself is not Keystore-bound: it has to
+  travel when a TV joins (that is what the digits step protects).
+- **The entry log is encrypted at rest** under a second Keystore key, because PIN entries hold the PIN. The streaming
+  PINs the TV types still live in PinVault (its own key); a received PIN entry is written there and the log copy is
+  what's synced.
+- **A lost key is a normal case.** If the wrapped key or log won't decrypt (cleared data, restored disk), the TV says it
+  is no longer in a household and offers to rejoin. It never invents a new key silently, and never deletes PinVault.
+- **Other secrets, today and what to change:**
+  - Streaming and Google PINs: PinVault, already Keystore-wrapped. Keep.
+  - Home Assistant token and webhook ID: plain preferences. Wrap them with a Keystore key the same way (a token is a
+    person's rights in Home Assistant). Migrate on first run.
+  - Parent PIN: an unsalted SHA-256 of a four-digit number, so anyone who can read the preference can recover it in
+    milliseconds. Replace it with a random salt and PBKDF2 (a slow hash), keep the existing lockout, and sync the salt
+    and hash together as the household's Parent PIN entry. A Keystore HMAC around it would add protection only on one
+    TV, and would stop the hash being the same on every TV, so it is not used for the synced verifier.
+  - A shared-secret PIN can't be made unguessable (ten thousand values): the protections that matter are the lockout
+    after wrong guesses and the hash never leaving the TV except sealed.
+  - Phone approval's Google PIN: PinVault, with a sealed notification path. Keep.
+- **Sync doesn't send a TV's wrap keys, ever.** Each TV re-wraps what it receives under its own Keystore keys.
+
 ## Moving entries
 
 **Encryption.** Every entry, and every message about entries, is sealed with ChaCha20-Poly1305 under a key derived
