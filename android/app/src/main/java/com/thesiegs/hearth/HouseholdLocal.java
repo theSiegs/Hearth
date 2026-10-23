@@ -88,7 +88,10 @@ final class HouseholdLocal implements HouseholdBridge.Local {
     @Override
     public Map<String, String> pins(String key) {
         Map<String, String> out = new HashMap<>();
+        boolean kids = key != null && ProfilePairing.isKids(context, key);
         for (PinVault.Slot slot : PinVault.slots(context, key)) {
+            // A kids profile's way into Google TV isn't shared (as in a copy)
+            if (kids && ShareSecrets.isGoogleTvPin(slot.pkg)) continue;
             char[] pin = PinVault.open(context, slot.owner, slot.pkg, slot.appProfile);
             if (pin == null) continue;
             try {
@@ -106,6 +109,7 @@ final class HouseholdLocal implements HouseholdBridge.Local {
         if (bar <= 0) return;
         String pkg = item.substring(0, bar);
         String appProfile = item.substring(bar + 1);
+        if (key != null && ShareSecrets.isGoogleTvPin(pkg) && ProfilePairing.isKids(context, key)) return;
         if (digits == null) {
             PinVault.remove(context, key, pkg, appProfile);
             return;
