@@ -1,0 +1,3 @@
+- Early development pre-release.
+- A parent's phone can allow the Parent PIN prompt through Home Assistant.
+- Setup has a step to start a household for syncing TVs.

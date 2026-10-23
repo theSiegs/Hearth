@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+## 2026.10.69 (pre-release)
+
 - Setup flow: a "Sync with your other TVs" step after the family steps starts a household on this TV (skipped on a TV already in one). Other TVs are added from their Copy screens.
 - The Parent PIN prompt can be allowed from a parent's phone: with Home Assistant set up and **Approve switches from my phone** on, the phones of the adults who have it on get an Allow/Deny notification when a kids profile (or anything only a parent may do) asks for the Parent PIN. Typing the PIN still works.
 
