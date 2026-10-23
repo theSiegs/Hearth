@@ -90,11 +90,19 @@ class CompanionUpdater {
   final bool Function() _includePrereleases;
   final GitHubReleases Function(String repo) _releasesFor;
 
+  /// Hearth's own update, with the same switch: tried each hour until it gets to look (the screen must be off), then
+  /// daily. Returns whether it looked.
+  final Future<bool> Function()? _selfUpdate;
+  static const String _lastSelfCheckKey = "hearth_last_auto_check";
+
   /// [releasesFor] is for tests; GitHub otherwise.
   CompanionUpdater(this._channel, this._sharedPreferences,
-      {bool Function()? includePrereleases, GitHubReleases Function(String repo)? releasesFor})
+      {bool Function()? includePrereleases,
+      GitHubReleases Function(String repo)? releasesFor,
+      Future<bool> Function()? selfUpdate})
       : _includePrereleases = includePrereleases ?? (() => false),
-        _releasesFor = releasesFor ?? ((repo) => GitHubReleases(repo, userAgent: _userAgent));
+        _releasesFor = releasesFor ?? ((repo) => GitHubReleases(repo, userAgent: _userAgent)),
+        _selfUpdate = selfUpdate;
 
   /// Starts the background checks (first a couple of minutes after Hearth starts, so it never slows the start).
   void start() {
@@ -120,17 +128,25 @@ class CompanionUpdater {
 
   Future<void> _maybeCheck() async {
     try {
-      final last = _sharedPreferences.getInt(_lastCheckKey) ?? 0;
-      if (DateTime.now().millisecondsSinceEpoch - last < _checkEvery.inMilliseconds) return;
       if (!await autoUpdateEnabled()) return;
-      await _sharedPreferences.setInt(_lastCheckKey, DateTime.now().millisecondsSinceEpoch);
-      for (final app in companionApps) {
-        await _autoUpdate(app);
+      if (_due(_lastCheckKey)) {
+        await _sharedPreferences.setInt(_lastCheckKey, DateTime.now().millisecondsSinceEpoch);
+        for (final app in companionApps) {
+          await _autoUpdate(app);
+        }
+      }
+      // Hearth last: installing it restarts Hearth
+      final selfUpdate = _selfUpdate;
+      if (selfUpdate != null && _due(_lastSelfCheckKey) && await selfUpdate()) {
+        await _sharedPreferences.setInt(_lastSelfCheckKey, DateTime.now().millisecondsSinceEpoch);
       }
     } catch (e) {
       log("Companion update check failed", name: "CompanionUpdater", error: e);
     }
   }
+
+  bool _due(String key) =>
+      DateTime.now().millisecondsSinceEpoch - (_sharedPreferences.getInt(key) ?? 0) >= _checkEvery.inMilliseconds;
 
   Future<void> _autoUpdate(CompanionApp app) async {
     final installed = await _channel.getPackageVersion(app.packageName);

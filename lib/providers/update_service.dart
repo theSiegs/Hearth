@@ -213,6 +213,21 @@ class UpdateService extends ChangeNotifier {
     await _channel.installApk(path);
   }
 
+  /// Hearth's own update in the background, with "Update automatically" on: only while the TV's screen is off, as
+  /// installing restarts Hearth and the home with it. Android lets an app update itself without asking. Only the
+  /// owner user's Hearth does it: the app is the same in every profile. Returns whether it got as far as looking for
+  /// a release (false: not now, try again later).
+  Future<bool> updateQuietly() async {
+    if (!await _channel.isOwnerUser()) return true;
+    if (await _channel.isScreenOn() || !await _channel.checkInstallPermission()) return false;
+    await checkForUpdate();
+    if (_status == UpdateStatus.available) {
+      developer.log("Updating Hearth to ${_updateInfo?.tagName}", name: "UpdateService");
+      await downloadAndInstall();
+    }
+    return _status != UpdateStatus.error || _error == UpdateError.noApkForDevice;
+  }
+
   /// Call after the user returns from granting the install-unknown-apps
   /// permission, to retry launching the installer with the already-downloaded APK.
   Future<void> retryInstall() async {

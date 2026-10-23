@@ -2085,7 +2085,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updatesAutoUpdate => 'Update automatically';
 
   @override
-  String get updatesAutoUpdateDescription => 'Hearth checks daily and installs updates to apps it installed, when they\'re not in use';
+  String get updatesAutoUpdateDescription => 'Hearth checks daily and installs updates to apps it installed, when they\'re not in use, and to itself while the TV is off';
 
   @override
   String get updatesIncludePrereleases => 'Include pre-releases';

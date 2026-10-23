@@ -3618,7 +3618,7 @@ abstract class AppLocalizations {
   /// Line under the Update automatically switch on the Updates page
   ///
   /// In en, this message translates to:
-  /// **'Hearth checks daily and installs updates to apps it installed, when they\'re not in use'**
+  /// **'Hearth checks daily and installs updates to apps it installed, when they\'re not in use, and to itself while the TV is off'**
   String get updatesAutoUpdateDescription;
 
   /// Switch on the Updates page: Hearth's and HearthTube's updates also offer pre-release (early test) builds

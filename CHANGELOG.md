@@ -5,6 +5,10 @@
 
 ## Unreleased
 
+## 2026.10.73 (pre-release)
+
+- **Update automatically** now updates Hearth itself too: it checks daily and installs a newer Hearth, without asking, while the TV's screen is off. Only the main user's Hearth does it.
+
 ## 2026.10.72 (pre-release)
 
 - Google's ad sandbox: **Keep it off** no longer asks for the Parent PIN; only turning the sandbox back on does.

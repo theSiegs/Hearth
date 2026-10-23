@@ -159,6 +159,12 @@ class FLauncherChannel {
   /// The app whose window is in front (as Hearth's accessibility service last saw it), or null.
   Future<String?> getForegroundPackage() async => await _methodChannel.invokeMethod<String>("getForegroundPackage");
 
+  /// Whether the TV's screen is on (someone may be watching); true when Android won't say.
+  Future<bool> isScreenOn() async => await _methodChannel.invokeMethod<bool>("isScreenOn") ?? true;
+
+  /// Whether this Hearth runs in the TV's owner user (not a kids profile's).
+  Future<bool> isOwnerUser() async => await _methodChannel.invokeMethod<bool>("isOwnerUser") ?? false;
+
   /// The companion update setting changed (HearthTube reads it from Hearth's provider).
   Future<void> companionSettingsChanged() async => await _methodChannel.invokeMethod("companionSettingsChanged");
 

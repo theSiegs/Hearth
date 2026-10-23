@@ -646,6 +646,11 @@ public class MainActivity extends FlutterActivity {
             case "installApk" -> result.success(installApk(call.argument("path")));
             case "isInstalledByHearth" -> result.success(CompanionApps.installedByHearth(this, call.arguments()));
             case "getForegroundPackage" -> result.success(LauncherAccessibilityService.foregroundPackage());
+            case "isScreenOn" -> {
+                android.os.PowerManager power = getSystemService(android.os.PowerManager.class);
+                result.success(power == null || power.isInteractive());
+            }
+            case "isOwnerUser" -> result.success(android.os.Process.myUid() / 100000 == 0);
             case "companionSettingsChanged" -> {
                 ProfileProvider.notifyChanged(this);  // updates_hearthtube
                 result.success(null);

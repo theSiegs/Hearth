@@ -168,7 +168,8 @@ Future<void> main() async {
             create: (context) {
               final settings = context.read<SettingsService>();
               return CompanionUpdater(fLauncherChannel, sharedPreferences,
-                  includePrereleases: () => settings.updatesIncludePrereleases)
+                  includePrereleases: () => settings.updatesIncludePrereleases,
+                  selfUpdate: () => context.read<UpdateService>().updateQuietly())
                 ..start();
             },
             dispose: (_, updater) => updater.dispose(),

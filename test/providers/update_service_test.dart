@@ -60,4 +60,40 @@ void main() {
       expect(service.status, UpdateStatus.upToDate);
     });
   });
+
+  group("updating quietly", () {
+    late MockFLauncherChannel channel;
+    final releases = _FakeReleases([_release("v2026.10.01")]);
+
+    setUp(() {
+      PackageInfo.setMockInitialValues(
+          appName: "Hearth", packageName: "x", version: "2026.10.05", buildNumber: "8113", buildSignature: "");
+      channel = MockFLauncherChannel();
+      when(channel.getSupportedAbis()).thenAnswer((_) async => ["arm64-v8a"]);
+      when(channel.isOwnerUser()).thenAnswer((_) async => true);
+      when(channel.isScreenOn()).thenAnswer((_) async => false);
+      when(channel.checkInstallPermission()).thenAnswer((_) async => true);
+    });
+
+    test("waits while the screen is on", () async {
+      when(channel.isScreenOn()).thenAnswer((_) async => true);
+      final service = UpdateService(channel, releases: releases);
+      expect(await service.updateQuietly(), isFalse);
+      verifyNever(channel.getSupportedAbis());
+    });
+
+    test("a kids profile's Hearth leaves it to the owner's", () async {
+      when(channel.isOwnerUser()).thenAnswer((_) async => false);
+      final service = UpdateService(channel, releases: releases);
+      expect(await service.updateQuietly(), isTrue);
+      verifyNever(channel.getSupportedAbis());
+    });
+
+    test("with the screen off and nothing newer: looked, nothing installed", () async {
+      final service = UpdateService(channel, releases: releases);
+      expect(await service.updateQuietly(), isTrue);
+      expect(service.status, UpdateStatus.upToDate);
+      verifyNever(channel.installApk(any));
+    });
+  });
 }
