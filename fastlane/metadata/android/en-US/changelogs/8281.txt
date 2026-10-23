@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Remote buttons: an opt-in switch makes the YouTube button open HearthTube.
