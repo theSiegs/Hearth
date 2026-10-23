@@ -69,6 +69,14 @@
     <queries>
         <package android:name="org.breezyweather" />
         <package android:name="com.google.android.apps.tv.launcherx" />
+        <!-- "Keep Google's ad sandbox off" (AdSandbox) checks whether these are on -->
+        <package android:name="com.android.adservices.api" />
+        <package android:name="com.google.android.adservices.api" />
+        <package android:name="com.google.android.ext.adservices.api" />
+        <package android:name="com.android.ondevicepersonalization.services" />
+        <package android:name="com.google.android.ondevicepersonalization.services" />
+        <package android:name="com.android.federatedcompute.services" />
+        <package android:name="com.google.android.federatedcompute" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
         </intent>

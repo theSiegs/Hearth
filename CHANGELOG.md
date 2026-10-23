@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+- Settings > System > **Google's ad sandbox**: **Keep it off** turns off Android's Privacy Sandbox (ad topics, on-device ad auctions and ad measurement, with on-device personalization and federated learning) for the TV's main user, and keeps it off: Hearth checks each time the TV wakes and turns off any part that came back on. It shows the commands first, asks for the Parent PIN if there is one, and turning it off again turns back on exactly what Hearth turned off.
+
 ## 2026.10.70 (pre-release)
 
 - Remote buttons: **YouTube button opens HearthTube**, an opt-in switch shown when HearthTube is installed. The remote's YouTube button (Button 3 on Google TV remotes) then opens HearthTube instead of YouTube, in every profile. No button press is needed to set it up.

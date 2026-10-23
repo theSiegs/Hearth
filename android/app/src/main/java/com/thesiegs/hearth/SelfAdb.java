@@ -12,8 +12,9 @@ import dadb.Dadb;
 /**
  * Hearth's own loopback adb connection: it lets Hearth run a few commands as the {@code shell} user on its OWN TV,
  * by being an adb client to the TV's own {@code adbd} on {@code 127.0.0.1:5555}. {@link ProfileAppAccess} uses this
- * to add/remove its own apps in kids profiles, and {@link SetupFixes} to turn on Hearth's own switches. Nothing here
- * is a general back door: it runs only the specific commands those two build.
+ * to add/remove its own apps in kids profiles, {@link SetupFixes} to turn on Hearth's own switches, and
+ * {@link AdSandbox} to keep Android's Privacy Sandbox modules off when a parent asked for that. Nothing here is a
+ * general back door: it runs only the specific commands those build, from fixed lists.
  *
  * <h3>The one-time consent</h3>
  * The first time Hearth connects with its key, the TV shows the system "Allow debugging?" prompt. The PARENT

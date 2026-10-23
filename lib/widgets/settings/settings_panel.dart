@@ -26,6 +26,7 @@ import 'package:flauncher/widgets/settings/phone_approval_page.dart';
 import 'package:flauncher/widgets/settings/streaming_pins_page.dart';
 import 'package:flauncher/widgets/settings/home_assistant_page.dart';
 import 'package:flauncher/widgets/settings/remote_buttons_page.dart';
+import 'package:flauncher/widgets/settings/ad_sandbox_page.dart';
 import 'package:flauncher/widgets/settings/side_panel_overlay.dart';
 import 'package:flauncher/widgets/settings/applications_panel_page.dart';
 import 'package:flauncher/widgets/settings/launcher_sections_panel_page.dart';
@@ -194,6 +195,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     return _FastPageRoute(builder: (_) => const UpdatesPage());
                   case HomeAssistantPage.routeName:
                     return _FastPageRoute(builder: (_) => const HomeAssistantPage());
+                  case AdSandboxPage.routeName:
+                    return _FastPageRoute(builder: (_) => const AdSandboxPage());
                   case RemoteButtonsPage.routeName:
                     return _FastPageRoute(builder: (_) => const RemoteButtonsPage());
                   case ProfilesSettingsPage.routeName:

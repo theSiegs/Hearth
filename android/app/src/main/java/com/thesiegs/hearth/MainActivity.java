@@ -595,6 +595,25 @@ public class MainActivity extends FlutterActivity {
                     }
                 });
             }
+            case "getAdSandbox" -> {
+                Map<String, Object> status = new HashMap<>();
+                status.put("keptOff", AdSandbox.isKeptOff(this));
+                status.put("installed", AdSandbox.installed(this));
+                status.put("on", AdSandbox.stillOn(this));
+                result.success(status);
+            }
+            case "getAdSandboxCommands" -> result.success(AdSandbox.commands(this, Boolean.TRUE.equals(call.arguments())));
+            case "setAdSandboxKeptOff" -> {
+                boolean keepOff = Boolean.TRUE.equals(call.arguments());
+                sIoExecutor.execute(() -> {
+                    try {
+                        List<String> log = AdSandbox.setKeptOff(this, keepOff);
+                        runOnUiThread(() -> result.success(log));
+                    } catch (Exception e) {
+                        runOnUiThread(() -> result.error("SELF_ADB", e.getMessage(), null));
+                    }
+                });
+            }
             case "openTextToSpeechSettings" -> result.success(openTextToSpeechSettings());
             case "checkWatchNextPermission" -> result.success(checkWatchNextPermission());
             case "requestWatchNextPermission" -> requestWatchNextPermission(result);

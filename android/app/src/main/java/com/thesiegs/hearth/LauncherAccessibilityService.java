@@ -427,6 +427,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             // "Choose a profile when the TV wakes": Google TV's profile chooser on waking after long enough asleep
             if (on) {
                 ProfileLock.onScreenOn(context);
+                AdSandbox.check(context);
             } else {
                 ProfileLock.onScreenOff();
             }
@@ -502,6 +503,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         sInstance = this;
         LogNames.refresh(this);
         Household.start(this);
+        AdSandbox.check(this);
         // One of Google TV's screens may be up already (the service restarted over its chooser)
         AccessibilityNodeInfo front = getRootInActiveWindow();
         setGoogleTvEvents(front != null && GOOGLE_TV_PACKAGE.equals(String.valueOf(front.getPackageName())));

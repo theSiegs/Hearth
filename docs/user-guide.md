@@ -241,6 +241,16 @@ older version.
 **Settings → System → Backup & Restore.** Hearth backs up its settings and layouts every day, and you can make a
 backup at any time. Restore picks from the list of backups.
 
+## Google's ad sandbox
+
+**Settings → System → Google's ad sandbox.** Android's Privacy Sandbox guesses ad topics from the apps you use, runs
+ad auctions on the TV and measures ads; on-device personalization and federated learning come with it. Google turns it
+on or off from its servers, and a module update can turn it back on. **Keep it off** turns these parts off for the
+TV's main user, through Hearth's own debugging connection, after showing you the commands (and asking for the Parent
+PIN, if there is one). Hearth then checks each time the TV wakes and turns off any part that came back on. That check
+needs the TV to already trust Hearth's debugging key, so it never shows "Allow debugging?". Play Store, voice and
+casting keep working. Turning the switch off turns back on exactly what Hearth turned off.
+
 ## Languages
 
 Hearth is in English only.

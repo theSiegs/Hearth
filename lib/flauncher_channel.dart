@@ -563,6 +563,19 @@ class FLauncherChannel {
   Future<List<String>> runSetupFixes(List<String> fixes) async =>
       await _methodChannel.invokeListMethod<String>("runSetupFixes", fixes) ?? [];
 
+  /// "Keep Google's ad sandbox off" (AdSandbox.java): {"keptOff": bool, "installed": [package], "on": [package]}.
+  Future<Map<dynamic, dynamic>> getAdSandbox() async =>
+      await _methodChannel.invokeMapMethod<dynamic, dynamic>("getAdSandbox") ?? const {};
+
+  /// The shell commands turning the switch on ([keepOff]) or off would run now, for the parent to see first.
+  Future<List<String>> getAdSandboxCommands(bool keepOff) async =>
+      await _methodChannel.invokeListMethod<String>("getAdSandboxCommands", keepOff) ?? [];
+
+  /// Runs them over Hearth's own adb and remembers the choice. Throws a PlatformException ("SELF_ADB") when the TV's
+  /// debugging doesn't answer or isn't allowed yet.
+  Future<List<String>> setAdSandboxKeptOff(bool keepOff) async =>
+      await _methodChannel.invokeListMethod<String>("setAdSandboxKeptOff", keepOff) ?? [];
+
   Future<bool> openTextToSpeechSettings() async =>
       await _methodChannel.invokeMethod<bool>("openTextToSpeechSettings") ?? false;
 

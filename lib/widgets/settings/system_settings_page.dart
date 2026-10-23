@@ -24,6 +24,7 @@ import 'updates_page.dart';
 import 'hearth_about_dialog.dart';
 import 'setup_checklist_page.dart';
 import 'backup_restore_page.dart';
+import 'ad_sandbox_page.dart';
 import 'settings_page.dart';
 
 class SystemSettingsPage extends StatelessWidget {
@@ -53,6 +54,11 @@ class SystemSettingsPage extends StatelessWidget {
           leading: const Icon(Icons.settings_backup_restore),
           title: Text(localizations.backupAndRestore, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: () => Navigator.of(context).pushNamed(BackupRestorePage.routeName),
+        ),
+        FocusableSettingsTile(
+          leading: const Icon(Icons.privacy_tip_outlined),
+          title: Text(localizations.adSandboxTitle, style: Theme.of(context).textTheme.bodyMedium),
+          onPressed: () => Navigator.of(context).pushNamed(AdSandboxPage.routeName),
         ),
         FocusableSettingsTile(
           leading: const Icon(Icons.info_outline),

@@ -1403,6 +1403,29 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get adSandboxTitle => 'Google\'s ad sandbox';
+
+  @override
+  String get adSandboxIntro => 'Android\'s Privacy Sandbox guesses ad topics from the apps you use, runs ad auctions on the TV and measures ads. On-device personalization and federated learning come with it. Google turns it on or off from its servers, and its updates can turn it back on. Hearth can turn these parts off and keep them off: it looks again each time the TV wakes.';
+
+  @override
+  String get adSandboxKeepOff => 'Keep it off';
+
+  @override
+  String adSandboxStatus(int off, int count) {
+    return '$off of $count parts are off on this TV.';
+  }
+
+  @override
+  String get adSandboxNone => 'This TV doesn\'t have Google\'s ad sandbox.';
+
+  @override
+  String get adSandboxNote => 'Only these parts are turned off, and only for this TV\'s main user. Play Store, voice and casting keep working. Turning the switch off turns back on exactly what Hearth turned off.';
+
+  @override
+  String get adSandboxConfirmApproval => 'The first time, the TV asks \"Allow debugging?\". Choose Always allow.';
+
+  @override
   String get remoteButtonsYouTubeOpensHearthTube => 'YouTube button opens HearthTube';
 
   @override

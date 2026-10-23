@@ -2487,6 +2487,48 @@ abstract class AppLocalizations {
   /// **'Hold: {action}'**
   String remoteButtonsHoldOption(String action);
 
+  /// Settings > System: page and row for keeping Android's Privacy Sandbox (ad services) turned off
+  ///
+  /// In en, this message translates to:
+  /// **'Google\'s ad sandbox'**
+  String get adSandboxTitle;
+
+  /// Ad sandbox page: what the Privacy Sandbox is and what the switch does
+  ///
+  /// In en, this message translates to:
+  /// **'Android\'s Privacy Sandbox guesses ad topics from the apps you use, runs ad auctions on the TV and measures ads. On-device personalization and federated learning come with it. Google turns it on or off from its servers, and its updates can turn it back on. Hearth can turn these parts off and keep them off: it looks again each time the TV wakes.'**
+  String get adSandboxIntro;
+
+  /// Ad sandbox page: the switch
+  ///
+  /// In en, this message translates to:
+  /// **'Keep it off'**
+  String get adSandboxKeepOff;
+
+  /// Ad sandbox page: how many of the sandbox packages on this TV are turned off
+  ///
+  /// In en, this message translates to:
+  /// **'{off} of {count} parts are off on this TV.'**
+  String adSandboxStatus(int off, int count);
+
+  /// Ad sandbox page: none of the sandbox packages is on this TV
+  ///
+  /// In en, this message translates to:
+  /// **'This TV doesn\'t have Google\'s ad sandbox.'**
+  String get adSandboxNone;
+
+  /// Ad sandbox page: note under the switch
+  ///
+  /// In en, this message translates to:
+  /// **'Only these parts are turned off, and only for this TV\'s main user. Play Store, voice and casting keep working. Turning the switch off turns back on exactly what Hearth turned off.'**
+  String get adSandboxNote;
+
+  /// Ad sandbox page: note under the commands Hearth is about to run
+  ///
+  /// In en, this message translates to:
+  /// **'The first time, the TV asks \"Allow debugging?\". Choose Always allow.'**
+  String get adSandboxConfirmApproval;
+
   /// Remote buttons page: opt-in switch; the remote's YouTube button opens HearthTube instead of YouTube
   ///
   /// In en, this message translates to:
