@@ -207,6 +207,10 @@ Hearth treats a profile as a kids profile when Family Link supervises it.
 
 A remap can apply everywhere or only on Hearth's home screen. Remote buttons need the Home Button Fix.
 
+With HearthTube installed, the same page has **YouTube button opens HearthTube** (off until you turn it on). The
+remote's YouTube button then opens HearthTube instead of YouTube, in every profile; in a kids profile it opens the
+kid's own HearthTube. Turn it off to give the button back to YouTube.
+
 ## TV & power
 
 - **Screensaver.** Hearth uses Google TV's screensaver; choose Google Photos (and which albums) or another source

@@ -1403,6 +1403,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get remoteButtonsYouTubeOpensHearthTube => 'YouTube button opens HearthTube';
+
+  @override
+  String get remoteButtonsYouTubeButton => 'YouTube button';
+
+  @override
   String get remoteButtonsSearchPreset => 'Tap for Hearth search, hold for Google';
 
   @override

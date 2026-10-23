@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+- Remote buttons: **YouTube button opens HearthTube**, an opt-in switch shown when HearthTube is installed. The remote's YouTube button (Button 3 on Google TV remotes) then opens HearthTube instead of YouTube, in every profile. No button press is needed to set it up.
+
 ## 2026.10.69 (pre-release)
 
 - Setup flow: a "Sync with your other TVs" step after the family steps starts a household on this TV (skipped on a TV already in one). Other TVs are added from their Copy screens.

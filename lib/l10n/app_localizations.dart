@@ -2487,6 +2487,18 @@ abstract class AppLocalizations {
   /// **'Hold: {action}'**
   String remoteButtonsHoldOption(String action);
 
+  /// Remote buttons page: opt-in switch; the remote's YouTube button opens HearthTube instead of YouTube
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube button opens HearthTube'**
+  String get remoteButtonsYouTubeOpensHearthTube;
+
+  /// Remote buttons page: name of the remote's YouTube button (KEYCODE_BUTTON_3) in the list of remapped buttons
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube button'**
+  String get remoteButtonsYouTubeButton;
+
   /// Remote buttons page: option that sets press to Hearth search and hold to Google's assistant
   ///
   /// In en, this message translates to:

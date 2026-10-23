@@ -51,6 +51,10 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
   // current language (see _actionLabel).
   static const Map<String, dynamic> _searchVoice = {"type": "search", "target": "voice", "label": "Hearth search (voice)"};
   static const Map<String, dynamic> _assistant = {"type": "assistant", "label": "Google Assistant (Gemini)"};
+  /// The YouTube button: KEYCODE_BUTTON_3 on Google TV remotes (onn, Chromecast, Google TV Streamer), which Google TV
+  /// answers with YouTube. The opt-in below sends it to HearthTube instead.
+  static const String youTubeButton = "190";
+  static const Map<String, dynamic> _hearthTube = {"type": "app", "target": AppsService.hearthTube, "label": "HearthTube"};
 
   late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   Map<String, dynamic> _mappings = {};
@@ -75,6 +79,7 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
   }
 
   static String buttonName(String? raw, String keyCode, AppLocalizations l) {
+    if (keyCode == youTubeButton) return l.remoteButtonsYouTubeButton;
     if (raw == null || raw.isEmpty) return l.remoteButtonsButtonNumber(keyCode);
     final words = raw.replaceFirst("KEYCODE_", "").replaceFirst("PROG_", "").replaceFirst("MEDIA_", "").split("_");
     return words.map((w) => w.isEmpty ? w : w[0] + w.substring(1).toLowerCase()).join(" ");
@@ -94,6 +99,22 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
       "settings" => l.remoteButtonsActionAndroidSettings,
       _ => action["label"] as String? ?? "?",
     };
+  }
+
+  /// Whether a press of the YouTube button opens HearthTube.
+  bool get _youTubeOpensHearthTube {
+    final entry = _mappings[youTubeButton];
+    return entry is Map && (entry[_press] as Map?)?["target"] == AppsService.hearthTube;
+  }
+
+  /// The opt-in: the YouTube button opens HearthTube (in a kids profile, its own copy), or goes back to its normal job.
+  Future<void> _toggleYouTubeButton() async {
+    if (_youTubeOpensHearthTube) {
+      _mappings.remove(youTubeButton);
+    } else {
+      _mappings[youTubeButton] = {"name": "KEYCODE_BUTTON_3", _press: _hearthTube};
+    }
+    await _save();
   }
 
   Future<void> _addButton() async {
@@ -315,6 +336,8 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final keys = _mappings.keys.toList()..sort();
+    final hearthTubeInstalled =
+        context.read<AppsService>().applications.any((app) => app.packageName == AppsService.hearthTube);
     return SettingsPage(
       title: l.remoteButtonsTitle,
       children: [
@@ -324,6 +347,13 @@ class _RemoteButtonsPageState extends State<RemoteButtonsPage> {
           title: Text(l.remoteButtonsRemapButton, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: _addButton,
         ),
+        if (hearthTubeInstalled)
+          FocusableSettingsTile(
+            leading: const Icon(Icons.smart_display_outlined),
+            title: Text(l.remoteButtonsYouTubeOpensHearthTube, style: Theme.of(context).textTheme.bodyMedium),
+            trailing: Icon(_youTubeOpensHearthTube ? Icons.check_box : Icons.check_box_outline_blank),
+            onPressed: _toggleYouTubeButton,
+          ),
         for (final keyCode in keys)
           FocusableSettingsTile(
             leading: const Icon(Icons.settings_remote_outlined),

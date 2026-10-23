@@ -1656,6 +1656,14 @@
             }
         }
     },
+    "remoteButtonsYouTubeOpensHearthTube": "YouTube button opens HearthTube",
+    "@remoteButtonsYouTubeOpensHearthTube": {
+        "description": "Remote buttons page: opt-in switch; the remote's YouTube button opens HearthTube instead of YouTube"
+    },
+    "remoteButtonsYouTubeButton": "YouTube button",
+    "@remoteButtonsYouTubeButton": {
+        "description": "Remote buttons page: name of the remote's YouTube button (KEYCODE_BUTTON_3) in the list of remapped buttons"
+    },
     "remoteButtonsSearchPreset": "Tap for Hearth search, hold for Google",
     "@remoteButtonsSearchPreset": {
         "description": "Remote buttons page: option that sets press to Hearth search and hold to Google's assistant"
