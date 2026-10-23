@@ -94,6 +94,11 @@ final class HouseholdLog {
         return entry == null || entry.deleted ? null : entry;
     }
 
+    /** Whether any entry for this id is held, a delete included. */
+    boolean hasEntry(String kind, String profile, String item) {
+        return entries.containsKey(id(kind, profile, item));
+    }
+
     /** Every entry held, deletes included. */
     List<HouseholdEntry> all() {
         return new ArrayList<>(entries.values());
