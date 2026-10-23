@@ -454,6 +454,56 @@ extension _CardScreens on _SetupFlowPageState {
     _focusPrimary();
   }
 
+  /// Google's ad sandbox, right after debugging is approved: the commands on the screen itself, and one press to run
+  /// them (Settings > System has the same switch).
+  Widget _adSandbox(AppLocalizations l) {
+    if (_state == SetupStepState.done) return _doneBody(l, l.setupFlowAdSandboxDone);
+    final commands = _adSandboxCommands;
+    return SetupScreenBody(
+      icon: Icons.privacy_tip_outlined,
+      title: l.adSandboxTitle,
+      body: l.setupFlowAdSandboxBody,
+      content: [
+        if (commands != null && commands.isNotEmpty) SetupCommandBox(lines: commands),
+        Text(l.adSandboxConfirmApproval, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+      ],
+      buttons: [
+        SetupButton(label: l.setupFlowSkip, onPressed: _next),
+        SetupButton(label: l.adSandboxKeepOff, focusNode: _primary, autofocus: true, onPressed: _keepAdSandboxOff),
+      ],
+    );
+  }
+
+  Future<void> _readAdSandboxCommands() async {
+    try {
+      final commands = await _channel.getAdSandboxCommands(true);
+      if (mounted) _update(() => _adSandboxCommands = commands);
+    } catch (err) {
+      noteFailure('setup_flow_cards', err);
+    }
+  }
+
+  Future<void> _keepAdSandboxOff() async {
+    if (_adSandboxCommands == null) return;
+    final l = AppLocalizations.of(context)!;
+    _update(() => _fixing = true);
+    bool ran = true;
+    try {
+      await _channel.setAdSandboxKeptOff(true).timeout(_SetupFlowPageState._selfAdbLimit);
+    } catch (err) {
+      noteFailure('setup_flow_cards', err);
+      ran = false;
+    }
+    if (!mounted) return;
+    _update(() => _fixing = false);
+    if (ran) {
+      _showDone(SetupScreen.familyAdSandbox, const Duration(seconds: 2));
+      return;
+    }
+    await showMessageDialog(context, title: l.setupFlowFixFailedTitle, message: l.setupFlowFixFailedBody);
+    _focusPrimary();
+  }
+
   // --- Watching ---
 
   /// Continue Watching: Android's own question, right over Hearth.

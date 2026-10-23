@@ -30,7 +30,7 @@ import 'settings_page.dart';
 
 /// Settings > System > Google's ad sandbox: one switch that turns Android's Privacy Sandbox off on this TV and keeps it
 /// off (AdSandbox.java looks again whenever the TV wakes). Hearth's own adb runs the commands, shown to the parent
-/// first; the parent PIN is asked where the TV has one.
+/// first; turning the sandbox back on asks for the parent PIN where the TV has one.
 class AdSandboxPage extends StatefulWidget {
   static const String routeName = "ad_sandbox";
 
@@ -67,7 +67,8 @@ class _AdSandboxPageState extends State<AdSandboxPage> {
 
   Future<void> _toggle() async {
     final keepOff = !_keptOff;
-    if (context.read<SettingsService>().hasParentPin && !await requireParentPin(context)) return;
+    // Keeping it off needs no PIN: only turning the sandbox back on does
+    if (!keepOff && context.read<SettingsService>().hasParentPin && !await requireParentPin(context)) return;
     if (!mounted) return;
     final l = AppLocalizations.of(context)!;
     List<String> commands;

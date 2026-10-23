@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Setup flow offers to keep Google's ad sandbox off; keeping it off no longer needs the Parent PIN.

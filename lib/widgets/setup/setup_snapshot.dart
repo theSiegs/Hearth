@@ -60,6 +60,9 @@ class SetupSnapshot {
   /// This TV is in a household of TVs that keep profile settings in step.
   final bool household;
 
+  /// The TV has Google's ad sandbox and Hearth isn't keeping it off yet.
+  final bool adSandboxToTurnOff;
+
   /// Home Assistant: its pop-ups are on, the dashboard panel has a sign-in, and the TV reports its status.
   final bool haAlerts;
   final bool haPanel;
@@ -77,6 +80,7 @@ class SetupSnapshot {
     this.kidsReady = 0,
     this.netflix = false,
     this.household = false,
+    this.adSandboxToTurnOff = false,
     this.haAlerts = false,
     this.haPanel = false,
     this.haStatus = false,
@@ -221,6 +225,7 @@ class SetupSnapshot {
     final steps = await loadSetupSteps(channel, packageName, l);
     final family = await _safe(channel.getSetupFamilyState, <dynamic, dynamic>{});
     final ha = await _loadHomeAssistant(channel);
+    final sandbox = await _safe(channel.getAdSandbox, <dynamic, dynamic>{});
     return SetupSnapshot(
       steps: steps,
       packageName: packageName,
@@ -233,6 +238,7 @@ class SetupSnapshot {
       kidsReady: (family["kidsReady"] as int?) ?? 0,
       netflix: family["netflix"] == true,
       household: (await _safe(channel.getHouseholdStatus, <dynamic, dynamic>{}))["joined"] == true,
+      adSandboxToTurnOff: sandbox["keptOff"] != true && ((sandbox["installed"] as List?)?.isNotEmpty ?? false),
       haAlerts: ha.alerts,
       haPanel: ha.panel,
       haStatus: ha.status,

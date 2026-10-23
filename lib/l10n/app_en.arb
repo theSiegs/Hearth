@@ -3563,6 +3563,14 @@
     "@setupFlowHouseholdDone": {
         "description": "Setup flow: household sync step, once started"
     },
+    "setupFlowAdSandboxBody": "Android's Privacy Sandbox guesses ad topics from the apps you use and measures ads. Hearth can turn it off with these commands and keep it off. You can turn it back on in Settings > System.",
+    "@setupFlowAdSandboxBody": {
+        "description": "Setup flow: ad sandbox step, above the commands it runs"
+    },
+    "setupFlowAdSandboxDone": "Google's ad sandbox is off, and Hearth keeps it off.",
+    "@setupFlowAdSandboxDone": {
+        "description": "Setup flow: ad sandbox step, once done"
+    },
     "setupFlowKidsTitle": "Keep Hearth on your kids profiles",
     "@setupFlowKidsTitle": {
         "description": "Setup flow: kids profiles step's title"

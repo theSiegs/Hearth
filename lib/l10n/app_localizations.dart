@@ -4857,6 +4857,18 @@ abstract class AppLocalizations {
   /// **'This TV has a household. Add the others from Copy profiles between TVs.'**
   String get setupFlowHouseholdDone;
 
+  /// Setup flow: ad sandbox step, above the commands it runs
+  ///
+  /// In en, this message translates to:
+  /// **'Android\'s Privacy Sandbox guesses ad topics from the apps you use and measures ads. Hearth can turn it off with these commands and keep it off. You can turn it back on in Settings > System.'**
+  String get setupFlowAdSandboxBody;
+
+  /// Setup flow: ad sandbox step, once done
+  ///
+  /// In en, this message translates to:
+  /// **'Google\'s ad sandbox is off, and Hearth keeps it off.'**
+  String get setupFlowAdSandboxDone;
+
   /// Setup flow: kids profiles step's title
   ///
   /// In en, this message translates to:

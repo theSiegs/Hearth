@@ -61,6 +61,7 @@ enum SetupScreen {
   familyPairingBlocked,
   familyVoice,
   familyKids,
+  familyAdSandbox,
   familyHousehold,
   watching,
   watchingContinue,
@@ -142,6 +143,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     SetupScreen.familyPairing,
     SetupScreen.familyVoice,
     SetupScreen.familyKids,
+    SetupScreen.familyAdSandbox,
     SetupScreen.familyHousehold,
     SetupScreen.watching,
     SetupScreen.watchingContinue,
@@ -168,6 +170,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       SetupScreen.familyPairing,
       SetupScreen.familyVoice,
       SetupScreen.familyKids,
+      SetupScreen.familyAdSandbox,
       SetupScreen.familyHousehold,
     ],
     SetupCard.watching: [SetupScreen.watching, SetupScreen.watchingContinue, SetupScreen.watchingNotifications],
@@ -241,6 +244,9 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
 
   /// How the Home Assistant test pop-up went: null when it showed (or none was sent).
   String? _haTestResult;
+
+  /// The commands the ad sandbox step runs, once read.
+  List<String>? _adSandboxCommands;
 
   /// A backup was restored from Welcome: its look came with it, so the look screen isn't shown.
   bool _restored = false;
@@ -345,6 +351,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     if (screen == SetupScreen.tv) _readIdleMinutes();
     if (screen == SetupScreen.look) _startPreview();
     if (screen == SetupScreen.haAlerts) _readIp();
+    if (screen == SetupScreen.familyAdSandbox) _readAdSandboxCommands();
     if (!_single && screen != SetupScreen.finish) unawaited(_flow.saveResume(screen.name, widget.mode));
     if (screen == SetupScreen.finish) unawaited(_flow.finish());
     if (_blockedFrom.containsKey(screen)) _startPolling();
@@ -381,6 +388,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
         !snap.netflix || !snap.isDone(SetupStepId.profilePairing) || snap.isDone(SetupStepId.voice),
       SetupScreen.familyKids => snap.kidsProfiles == 0 ||
           SetupSnapshot.kidsCovered(snap.kidsProfiles, kidsProtected: _flow.kidsProtected, kidsReady: snap.kidsReady),
+      // Kept off already, or no sandbox; and without debugging Hearth can't run the commands
+      SetupScreen.familyAdSandbox => !snap.adSandboxToTurnOff || !snap.adbEnabled,
       // Already in a household: nothing to start
       SetupScreen.familyHousehold => snap.household,
       SetupScreen.look => _restored,
@@ -722,6 +731,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
         SetupScreen.familyPairingBlocked => _blocked(l, SetupStepId.profilePairing),
         SetupScreen.familyVoice => _voice(l),
         SetupScreen.familyKids => _kids(l),
+        SetupScreen.familyAdSandbox => _adSandbox(l),
         SetupScreen.familyHousehold => _household(l),
         SetupScreen.watching => _cardScreen(l, SetupCard.watching),
         SetupScreen.watchingContinue => _continueWatching(l),

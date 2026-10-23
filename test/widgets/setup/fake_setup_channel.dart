@@ -38,6 +38,10 @@ class FakeSetupChannel extends FLauncherChannel {
   bool household = false;
   int householdsStarted = 0;
 
+  /// Google's ad sandbox packages on the TV, and whether Hearth keeps them off.
+  List<String> adSandbox = const [];
+  bool adSandboxKeptOff = false;
+
   /// Whether adding Hearth to the kids profiles works (false: "Allow debugging?" wasn't approved).
   bool profilesWork = true;
 
@@ -101,6 +105,20 @@ class FakeSetupChannel extends FLauncherChannel {
     householdsStarted++;
     household = true;
     return true;
+  }
+
+  @override
+  Future<Map<dynamic, dynamic>> getAdSandbox() async =>
+      {"keptOff": adSandboxKeptOff, "installed": adSandbox, "on": adSandboxKeptOff ? const <String>[] : adSandbox};
+
+  @override
+  Future<List<String>> getAdSandboxCommands(bool keepOff) async =>
+      [for (final p in adSandbox) "pm disable-user --user 0 $p"];
+
+  @override
+  Future<List<String>> setAdSandboxKeptOff(bool keepOff) async {
+    adSandboxKeptOff = keepOff;
+    return const [];
   }
 
   @override

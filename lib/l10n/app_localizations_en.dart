@@ -2744,6 +2744,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowHouseholdDone => 'This TV has a household. Add the others from Copy profiles between TVs.';
 
   @override
+  String get setupFlowAdSandboxBody => 'Android\'s Privacy Sandbox guesses ad topics from the apps you use and measures ads. Hearth can turn it off with these commands and keep it off. You can turn it back on in Settings > System.';
+
+  @override
+  String get setupFlowAdSandboxDone => 'Google\'s ad sandbox is off, and Hearth keeps it off.';
+
+  @override
   String get setupFlowKidsTitle => 'Keep Hearth on your kids profiles';
 
   @override

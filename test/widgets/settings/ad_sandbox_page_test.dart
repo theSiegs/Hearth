@@ -1,6 +1,7 @@
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/settings/ad_sandbox_page.dart';
 import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
 import 'package:flutter/material.dart';
@@ -86,6 +87,25 @@ void main() {
     expect(runs, [true]);
     expect(checkbox(tester), Icons.check_box);
     expect(find.text("3 of 3 parts are off on this TV."), findsOneWidget);
+  });
+
+  testWidgets("keeping it off asks for no parent PIN", (tester) async {
+    when(settings.hasParentPin).thenReturn(true);
+    await pumpPage(tester);
+    await tester.tap(find.text("Keep it off"));
+    await tester.pumpAndSettle();
+    expect(find.byType(ParentPinDialog), findsNothing);
+    expect(find.text("pm disable-user --user 0 com.android.adservices.api", findRichText: true), findsOneWidget);
+  });
+
+  testWidgets("turning the sandbox back on asks for the parent PIN", (tester) async {
+    when(settings.hasParentPin).thenReturn(true);
+    keptOff = true;
+    await pumpPage(tester);
+    await tester.tap(find.text("Keep it off"));
+    await tester.pumpAndSettle();
+    expect(find.byType(ParentPinDialog), findsOneWidget);
+    expect(runs, isEmpty);
   });
 
   testWidgets("Cancel runs nothing", (tester) async {

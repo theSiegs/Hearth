@@ -5,6 +5,11 @@
 
 ## Unreleased
 
+## 2026.10.72 (pre-release)
+
+- Google's ad sandbox: **Keep it off** no longer asks for the Parent PIN; only turning the sandbox back on does.
+- Setup flow: when debugging is on, a step after the kids profiles shows the ad sandbox commands and turns it off with one press.
+
 ## 2026.10.71 (pre-release)
 
 - Settings > System > **Google's ad sandbox**: **Keep it off** turns off Android's Privacy Sandbox (ad topics, on-device ad auctions and ad measurement, with on-device personalization and federated learning) for the TV's main user, and keeps it off: Hearth checks each time the TV wakes and turns off any part that came back on. It shows the commands first, asks for the Parent PIN if there is one, and turning it off again turns back on exactly what Hearth turned off.
