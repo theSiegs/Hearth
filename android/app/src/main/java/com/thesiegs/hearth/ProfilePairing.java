@@ -115,6 +115,7 @@ final class ProfilePairing {
         // A choice made in the menu needs no "Hearth matched…" notice.
         editor.putBoolean(ANNOUNCED_PREFIX + packageName + "|" + hearthProfile, true);
         editor.apply();
+        Household.onPairingChanged(context, packageName, hearthProfile);
     }
 
     /** Whether Hearth already told the user about its name match for this app and profile; marks it told. */

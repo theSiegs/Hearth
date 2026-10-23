@@ -501,6 +501,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         super.onServiceConnected();
         sInstance = this;
         LogNames.refresh(this);
+        Household.start(this);
         // One of Google TV's screens may be up already (the service restarted over its chooser)
         AccessibilityNodeInfo front = getRootInActiveWindow();
         setGoogleTvEvents(front != null && GOOGLE_TV_PACKAGE.equals(String.valueOf(front.getPackageName())));

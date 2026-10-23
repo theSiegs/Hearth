@@ -92,8 +92,13 @@ final class PinVault {
      * not to the app profile: another Google TV profile paired with the same app profile doesn't get it typed.
      */
     static String id(String owner, String pkg, String appProfile) {
-        String name = appProfile.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+        String name = normalizeProfile(appProfile);
         return owner == null ? pkg + "|" + name : OWNER_PREFIX + owner + "|" + pkg + "|" + name;
+    }
+
+    /** An app profile's name as the vault keys it (and the household's entries name it). */
+    static String normalizeProfile(String appProfile) {
+        return appProfile.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
     }
 
     private static SecretKey key() throws Exception {
@@ -130,6 +135,7 @@ final class PinVault {
                     .put("status", STATUS_SAVED)
                     .put("rejections", 0);
             prefs(context).edit().putString(id(owner, pkg, appProfile), entry.toString()).apply();
+            Household.onPinSaved(context, owner, pkg, normalizeProfile(appProfile));
             return true;
         } catch (Exception e) {
             Log.w(TAG, "Couldn't save a PIN for " + pkg + ": " + e.getClass().getSimpleName());
@@ -191,10 +197,15 @@ final class PinVault {
 
     static void remove(Context context, String owner, String pkg, String appProfile) {
         prefs(context).edit().remove(id(owner, pkg, appProfile)).apply();
+        Household.onPinRemoved(context, owner, pkg, normalizeProfile(appProfile));
     }
 
     /** Every PIN of an app (its pairings removed, the app uninstalled). */
     static void removeApp(Context context, String pkg) {
+        for (Map.Entry<String, ?> saved : prefs(context).getAll().entrySet()) {
+            Slot slot = saved.getValue() instanceof String ? slotOf(saved.getKey()) : null;
+            if (slot != null && pkg.equals(slot.pkg)) Household.onPinRemoved(context, slot.owner, slot.pkg, slot.appProfile);
+        }
         SharedPreferences.Editor editor = prefs(context).edit();
         for (String k : prefs(context).getAll().keySet()) {
             if (k.startsWith(pkg + "|") || (k.startsWith(OWNER_PREFIX) && k.contains("|" + pkg + "|"))
@@ -207,7 +218,21 @@ final class PinVault {
 
     /** Every PIN (the parent PIN was removed: nobody can vouch for them any more). */
     static void removeAll(Context context) {
+        for (Map.Entry<String, ?> saved : prefs(context).getAll().entrySet()) {
+            Slot slot = saved.getValue() instanceof String ? slotOf(saved.getKey()) : null;
+            if (slot != null) Household.onPinRemoved(context, slot.owner, slot.pkg, slot.appProfile);
+        }
         prefs(context).edit().clear().apply();
+    }
+
+    /** The slot a stored id stands for, whoever's it is; null for the bookkeeping entries. */
+    private static Slot slotOf(String id) {
+        if (id.startsWith(OWNER_PREFIX)) {
+            int bar = id.indexOf('|', OWNER_PREFIX.length());
+            if (bar < 0) return null;
+            return parseSlot(id, id.substring(OWNER_PREFIX.length(), bar));
+        }
+        return parseSlot(id, null);
     }
 
     private static JSONObject entry(Context context, String owner, String pkg, String appProfile) {
