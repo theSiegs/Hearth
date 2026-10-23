@@ -2703,6 +2703,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowVoiceDone => 'Hearth voice is on';
 
   @override
+  String get setupFlowHouseholdTitle => 'Sync with your other TVs';
+
+  @override
+  String get setupFlowHouseholdBody => 'TVs in a household keep profile settings and saved PINs in step, so anyone who switches TVs picks up where they left off. They talk over your home network, encrypted. Start the household here, then add each other TV from its own Copy screen (Settings > Profiles > Copy profiles between TVs). If another TV already has a household, skip this and add this TV from that one.';
+
+  @override
+  String get setupFlowHouseholdStart => 'Start a household';
+
+  @override
+  String get setupFlowHouseholdDone => 'This TV has a household. Add the others from Copy profiles between TVs.';
+
+  @override
   String get setupFlowKidsTitle => 'Keep Hearth on your kids profiles';
 
   @override

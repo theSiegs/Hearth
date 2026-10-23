@@ -4779,6 +4779,30 @@ abstract class AppLocalizations {
   /// **'Hearth voice is on'**
   String get setupFlowVoiceDone;
 
+  /// Setup flow: household sync step's title
+  ///
+  /// In en, this message translates to:
+  /// **'Sync with your other TVs'**
+  String get setupFlowHouseholdTitle;
+
+  /// Setup flow: household sync step's explanation
+  ///
+  /// In en, this message translates to:
+  /// **'TVs in a household keep profile settings and saved PINs in step, so anyone who switches TVs picks up where they left off. They talk over your home network, encrypted. Start the household here, then add each other TV from its own Copy screen (Settings > Profiles > Copy profiles between TVs). If another TV already has a household, skip this and add this TV from that one.'**
+  String get setupFlowHouseholdBody;
+
+  /// Setup flow: household sync step's button
+  ///
+  /// In en, this message translates to:
+  /// **'Start a household'**
+  String get setupFlowHouseholdStart;
+
+  /// Setup flow: household sync step, once started
+  ///
+  /// In en, this message translates to:
+  /// **'This TV has a household. Add the others from Copy profiles between TVs.'**
+  String get setupFlowHouseholdDone;
+
   /// Setup flow: kids profiles step's title
   ///
   /// In en, this message translates to:

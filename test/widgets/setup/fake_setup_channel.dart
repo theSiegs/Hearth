@@ -35,6 +35,8 @@ class FakeSetupChannel extends FLauncherChannel {
   bool netflix = false;
   bool pairing = false;
   bool voice = false;
+  bool household = false;
+  int householdsStarted = 0;
 
   /// Whether adding Hearth to the kids profiles works (false: "Allow debugging?" wasn't approved).
   bool profilesWork = true;
@@ -90,6 +92,16 @@ class FakeSetupChannel extends FLauncherChannel {
 
   @override
   Future<bool> checkInstallPermission() async => install;
+
+  @override
+  Future<Map<dynamic, dynamic>> getHouseholdStatus() async => {"joined": household};
+
+  @override
+  Future<bool> createHousehold() async {
+    householdsStarted++;
+    household = true;
+    return true;
+  }
 
   @override
   Future<Map<dynamic, dynamic>> getProfilePairingStatus() async => {"enabled": pairing, "voiceDefault": voice};

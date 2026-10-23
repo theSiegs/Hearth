@@ -429,6 +429,28 @@ void main() {
       expect(find.text("Next"), findsOneWidget);
     });
 
+    testWidgets("after the family steps: Sync with your other TVs starts a household, or Skip leaves it", (tester) async {
+      channel.pairing = true;
+      await openAtFamily(tester);
+      await press(tester, "Turn on");
+      await press(tester, "Skip"); // the parent PIN
+      expect(find.text("Sync with your other TVs"), findsOneWidget);
+      expect(channel.householdsStarted, 0);
+      await press(tester, "Start a household");
+      expect(channel.householdsStarted, 1);
+      expect(find.textContaining("This TV has a household"), findsOneWidget);
+    });
+
+    testWidgets("a TV already in a household isn't asked to start one", (tester) async {
+      channel.pairing = true;
+      channel.household = true;
+      await openAtFamily(tester);
+      await press(tester, "Turn on");
+      await press(tester, "Skip"); // the parent PIN
+      expect(find.text("Sync with your other TVs"), findsNothing);
+      expect(channel.householdsStarted, 0);
+    });
+
     testWidgets("all on already: each item is checked, and Next goes on", (tester) async {
       await SettingsService(prefs).setParentPin("1357");
       channel.pairing = true;

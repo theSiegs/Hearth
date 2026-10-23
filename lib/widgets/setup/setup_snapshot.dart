@@ -57,6 +57,9 @@ class SetupSnapshot {
   /// Netflix is installed: its profile screen needs Hearth voice.
   final bool netflix;
 
+  /// This TV is in a household of TVs that keep profile settings in step.
+  final bool household;
+
   /// Home Assistant: its pop-ups are on, the dashboard panel has a sign-in, and the TV reports its status.
   final bool haAlerts;
   final bool haPanel;
@@ -73,6 +76,7 @@ class SetupSnapshot {
     this.kidsProfiles = 0,
     this.kidsReady = 0,
     this.netflix = false,
+    this.household = false,
     this.haAlerts = false,
     this.haPanel = false,
     this.haStatus = false,
@@ -228,6 +232,7 @@ class SetupSnapshot {
       kidsProfiles: (family["kidsProfiles"] as int?) ?? 0,
       kidsReady: (family["kidsReady"] as int?) ?? 0,
       netflix: family["netflix"] == true,
+      household: (await _safe(channel.getHouseholdStatus, <dynamic, dynamic>{}))["joined"] == true,
       haAlerts: ha.alerts,
       haPanel: ha.panel,
       haStatus: ha.status,

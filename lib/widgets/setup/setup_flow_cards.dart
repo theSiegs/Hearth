@@ -227,6 +227,29 @@ extension _CardScreens on _SetupFlowPageState {
     );
   }
 
+  Widget _household(AppLocalizations l) {
+    if (_state == SetupStepState.done) return _doneBody(l, l.setupFlowHouseholdDone);
+    return SetupScreenBody(
+      icon: Icons.holiday_village_outlined,
+      title: l.setupFlowHouseholdTitle,
+      body: l.setupFlowHouseholdBody,
+      buttons: [
+        SetupButton(label: l.setupFlowSkip, onPressed: _next),
+        SetupButton(label: l.setupFlowHouseholdStart, focusNode: _primary, autofocus: true, onPressed: _startHousehold),
+      ],
+    );
+  }
+
+  Future<void> _startHousehold() async {
+    try {
+      await _channel.createHousehold();
+    } catch (err) {
+      noteFailure('setup_flow', err);
+    }
+    if (!mounted) return;
+    _showDone(SetupScreen.familyHousehold, null);
+  }
+
   /// The row pad twice (Settings' own PIN dialogs), then on.
   Future<void> _chooseParentPin() async {
     final set = await chooseNewParentPin(context);

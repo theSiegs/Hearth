@@ -3503,6 +3503,22 @@
     "@setupFlowVoiceDone": {
         "description": "Setup flow: Hearth voice step, once it's the preferred engine"
     },
+    "setupFlowHouseholdTitle": "Sync with your other TVs",
+    "@setupFlowHouseholdTitle": {
+        "description": "Setup flow: household sync step's title"
+    },
+    "setupFlowHouseholdBody": "TVs in a household keep profile settings and saved PINs in step, so anyone who switches TVs picks up where they left off. They talk over your home network, encrypted. Start the household here, then add each other TV from its own Copy screen (Settings > Profiles > Copy profiles between TVs). If another TV already has a household, skip this and add this TV from that one.",
+    "@setupFlowHouseholdBody": {
+        "description": "Setup flow: household sync step's explanation"
+    },
+    "setupFlowHouseholdStart": "Start a household",
+    "@setupFlowHouseholdStart": {
+        "description": "Setup flow: household sync step's button"
+    },
+    "setupFlowHouseholdDone": "This TV has a household. Add the others from Copy profiles between TVs.",
+    "@setupFlowHouseholdDone": {
+        "description": "Setup flow: household sync step, once started"
+    },
     "setupFlowKidsTitle": "Keep Hearth on your kids profiles",
     "@setupFlowKidsTitle": {
         "description": "Setup flow: kids profiles step's title"
