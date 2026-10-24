@@ -50,7 +50,7 @@ public class HouseholdSyncExchangeTest {
         return new HouseholdTvs.Tv[] {a, b};
     }
 
-    private static final class Wire {
+    static final class Wire {
         final ByteArrayOutputStream seen = new ByteArrayOutputStream();
     }
 
@@ -59,7 +59,7 @@ public class HouseholdSyncExchangeTest {
     }
 
     /** Runs one exchange: {@code a} connects, {@code b} accepts. */
-    private static HouseholdSync.Result[] exchange(HouseholdStore a, HouseholdStore b, Wire wire, long now)
+    static HouseholdSync.Result[] exchange(HouseholdStore a, HouseholdStore b, Wire wire, long now)
             throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(2);
         try (ServerSocket server = new ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress())) {

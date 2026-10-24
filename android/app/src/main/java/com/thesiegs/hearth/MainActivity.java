@@ -411,6 +411,14 @@ public class MainActivity extends FlutterActivity {
             });
             case "removeHouseholdTv" -> answerFrom(sIoExecutor, result,
                     () -> Household.removeTv(this, (String) call.arguments()));
+            // Joining from this TV: ask a TV of the household heard on the network; a parent answers on a phone or there
+            case "requestHouseholdJoin" -> answerFrom(sIoExecutor, result, () -> Household.requestJoin(this));
+            case "cancelHouseholdJoin" -> {
+                HouseholdJoining.cancel();
+                result.success(null);
+            }
+            // A parent answered, on this TV, another TV's request to join
+            case "answerHouseholdJoin" -> result.success(HouseholdJoining.answer(Boolean.TRUE.equals(call.arguments())));
             case "lookForHouseholds" -> {
                 Household.lookAround(this);
                 result.success(null);

@@ -4,7 +4,9 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -12,6 +14,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -41,6 +44,20 @@ final class Household {
         thread.setDaemon(true);
         return thread;
     });
+
+    /**
+     * Reads what a connection is (an exchange or a join request) off the household thread, which never waits on one; a
+     * join request waits on a parent here. A few at a time: a connection beyond that is closed, so idle connections
+     * can't use up a TV's threads.
+     */
+    private static final ExecutorService NET = new java.util.concurrent.ThreadPoolExecutor(0, 4, 30,
+            TimeUnit.SECONDS, new java.util.concurrent.SynchronousQueue<>(), r -> {
+        Thread thread = new Thread(r, "household-net");
+        thread.setDaemon(true);
+        return thread;
+    });
+    /** How long a connection has to say what it is. */
+    private static final int ROUTE_TIMEOUT_MS = 5_000;
 
     private static Context sContext;
     private static HouseholdStore sStore;
@@ -115,7 +132,16 @@ final class Household {
             EXEC.execute(() -> forget(context));
             return;
         }
-        HouseholdNet.start(context, store.tvId(), store.householdId(), socket -> EXEC.execute(() -> accept(socket)));
+        HouseholdNet.start(context, store.tvId(), store.householdId(), socket -> {
+            try {
+                NET.execute(() -> route(socket));
+            } catch (java.util.concurrent.RejectedExecutionException e) {
+                try {
+                    socket.close();
+                } catch (IOException ignored) {
+                }
+            }
+        });
         synchronized (Household.class) {
             if (!sPeriodicScheduled) {
                 sPeriodicScheduled = true;
@@ -288,12 +314,38 @@ final class Household {
         }
     }
 
-    private static void accept(Socket socket) {
+    /** A TV connected: a join request is served here (it waits on a parent), an exchange on the household thread. */
+    private static void route(Socket socket) {
+        try {
+            socket.setSoTimeout(ROUTE_TIMEOUT_MS);
+            BufferedInputStream in = new BufferedInputStream(socket.getInputStream());
+            in.mark(HouseholdJoin.MAGIC.length);
+            byte[] magic = new byte[HouseholdJoin.MAGIC.length];
+            new java.io.DataInputStream(in).readFully(magic);
+            if (Arrays.equals(magic, HouseholdJoin.MAGIC)) {
+                if (member(sContext)) {
+                    HouseholdJoining.serve(sContext, socket, in);
+                } else {
+                    socket.close();
+                }
+                return;
+            }
+            in.reset();
+            EXEC.execute(() -> accept(socket, in));
+        } catch (IOException e) {
+            try {
+                socket.close();
+            } catch (IOException ignored) {
+            }
+        }
+    }
+
+    private static void accept(Socket socket, InputStream in) {
         try (Socket s = socket) {
             if (!active(sContext)) return;
             s.setSoTimeout(SOCKET_TIMEOUT_MS);
             HouseholdStore store = store(sContext);
-            HouseholdSync.Result result = HouseholdSync.run(s.getInputStream(), s.getOutputStream(), false, store,
+            HouseholdSync.Result result = HouseholdSync.run(in, s.getOutputStream(), false, store,
                     ShareDiscovery.deviceName(sContext), System.currentTimeMillis());
             finish(store, result, "from a TV");
         } catch (IOException | java.security.GeneralSecurityException e) {
@@ -379,6 +431,9 @@ final class Household {
         out.put("members", members);
         // Households on the network this TV could join (each a list of its TVs' names; a name may be null)
         out.put("nearby", HouseholdMembers.nearby(HouseholdNet.heard(), joined ? store.householdId() : null));
+        // A TV asking this one to let it join, for a parent to answer here; and this TV's own request to join one
+        out.put("joinRequest", joined ? HouseholdJoining.request() : null);
+        out.put("join", HouseholdJoining.status());
         return out;
     }
 
@@ -431,16 +486,56 @@ final class Household {
                 ok = store(context).joinV1(key);
                 Arrays.fill(key, (byte) 0);
             }
-            if (ok) {
-                // The TVs of a household this one was in before aren't members of this one
-                prefs(context).edit().remove(SEEN_PREF).apply();
-                store(context).setEnabled(true);
-                start(context);
-            }
+            if (ok) joined(context);
             return ok;
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /** A household was joined: a fresh list of TVs seen, sync on, and the first exchange soon. */
+    private static void joined(Context context) {
+        // The TVs of a household this one was in before aren't members of this one
+        prefs(context).edit().remove(SEEN_PREF).apply();
+        store(context).setEnabled(true);
+        start(context);
+    }
+
+    /**
+     * Joins with what a TV of the household sent once a parent allowed (HouseholdJoin): its invitation, and its Home
+     * Assistant settings when this TV had none. Blocks: not on the main thread.
+     */
+    static boolean joinFromInvitation(Context context, String payload) {
+        Context app = context.getApplicationContext();
+        try {
+            org.json.JSONObject root = new org.json.JSONObject(payload);
+            HouseholdStore.Invitation inv = HouseholdStore.Invitation.fromJson(root.optString("invitation", ""));
+            if (inv == null) return false;
+            // All of it on the household thread, so a slow exchange there delays the join but can't split it in two
+            return EXEC.submit(() -> {
+                HouseholdStore store = store(app);
+                if (!store.join(inv, ShareDiscovery.deviceName(app), System.currentTimeMillis())) {
+                    // The household this TV was in, if any, carries on
+                    start(app);
+                    return false;
+                }
+                if (!HaConfig.isConfigured(app) && ShareSecrets.applyHa(app, payload)) {
+                    Log.i(TAG, "Joined with the household's Home Assistant settings");
+                }
+                stop();
+                joined(app);
+                return true;
+            }).get(2, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            Log.i(TAG, "Couldn't join with the invitation: " + e.getClass().getSimpleName());
+            return false;
+        }
+    }
+
+    /** Asks a TV of the household heard on the network to let this one join (HouseholdJoining). */
+    static boolean requestJoin(Context context) {
+        HouseholdStore store = store(context);
+        return HouseholdJoining.start(context, store.joined() ? store.householdId() : null);
     }
 
     /** Turns syncing on or off (the one switch). */

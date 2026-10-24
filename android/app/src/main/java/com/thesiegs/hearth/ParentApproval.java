@@ -21,8 +21,11 @@ import java.util.concurrent.Executors;
  * for the answer (HaEvents). Allow: the dialog completes as if the PIN had been entered. Deny, or no answer: the dialog
  * stays and the PIN still works. Typing the PIN is never blocked while a request waits.
  *
- * <p>One request at a time. An Allow is used once: {@link #poll} reports it once and then forgets it, so it can't
- * open a second dialog. Closing the dialog ends the request and takes the notification off the phones.
+ * <p>Each request ({@link Request}) has its own nonce, listener and answer, so two never take each other's Allow: the
+ * Parent PIN dialog has one current request ({@link #start}, {@link #poll}, {@link #cancel}), and a TV asking to join
+ * the household (HouseholdJoining) asks with its own ({@link #ask}). An Allow is used once: {@link #poll} reports it once
+ * and then forgets it, so it can't open a second dialog. Closing the dialog ends the request and takes the notification
+ * off the phones.
  */
 final class ParentApproval {
     private static final String TAG = "HearthApproval";
@@ -36,12 +39,53 @@ final class ParentApproval {
     private static final ExecutorService WORKER = Executors.newCachedThreadPool();
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    private static String sNonce;
-    private static String sState = NONE;
-    private static HaEvents sEvents;
-    private static List<String> sServices = new ArrayList<>();
+    /** The Parent PIN dialog's request; null when none. */
+    private static Request sCurrent;
 
     private ParentApproval() {
+    }
+
+    /** One question to the parents' phones and its answer. */
+    static final class Request {
+        private final Context context;
+        private final String nonce;
+        private final List<String> services;
+        private String state = PENDING;
+        private HaEvents events;
+
+        private Request(Context context, String nonce, List<String> services) {
+            this.context = context;
+            this.nonce = nonce;
+            this.services = services;
+        }
+
+        /** Where it stands: pending, allowed, denied or expired. */
+        synchronized String state() {
+            return state;
+        }
+
+        private void answer(String answer) {
+            HaEvents listening;
+            synchronized (this) {
+                if (!PENDING.equals(state)) return;
+                state = answer;
+                listening = events;
+            }
+            Log.i(TAG, "A parent phone answered: " + answer);
+            if (listening != null) listening.close();
+        }
+
+        /** Ends it if it still waits, and takes its notification off the phones. */
+        void cancel() {
+            HaEvents listening;
+            synchronized (this) {
+                if (!PENDING.equals(state)) return;
+                state = EXPIRED;
+                listening = events;
+            }
+            if (listening != null) listening.close();
+            clearOnPhones(context, nonce, services);
+        }
     }
 
     /** The phones that may answer: each adult profile that has phone approval on and a phone chosen, once each. */
@@ -55,107 +99,97 @@ final class ParentApproval {
         return new ArrayList<>(services);
     }
 
-    /** Asks the parents' phones. Returns how many it asked (0: Home Assistant isn't set up, or no phone is chosen). */
+    /** The Parent PIN dialog asks the parents' phones. Returns how many it asked (0: no Home Assistant, or no phone). */
     static int start(Context context) {
         cancel(context);
-        if (!HaConfig.isConfigured(context)) return 0;
+        String profile = ProfileUsers.displayName(context, LauncherAccessibilityService.getActiveProfileKey(context));
+        String tv = ShareDiscovery.deviceName(context);
+        Request request = ask(context, context.getString(R.string.parent_approval_title),
+                context.getString(R.string.parent_approval_message, profile, tv),
+                context.getString(R.string.parent_approval_ha_message, profile, tv));
+        if (request == null) return 0;
+        synchronized (ParentApproval.class) {
+            sCurrent = request;
+        }
+        return request.services.size();
+    }
+
+    /**
+     * Asks the parents' phones something, in its own words: {@code message} on the phone, {@code haMessage} in Home
+     * Assistant's own list. Null when there is no one to ask (no Home Assistant, or no phone chosen).
+     */
+    static Request ask(Context context, String title, String message, String haMessage) {
+        if (!HaConfig.isConfigured(context)) return null;
         List<String> services = parentPhones(context);
-        if (services.isEmpty()) return 0;
+        if (services.isEmpty()) return null;
         byte[] bytes = new byte[8];
         RANDOM.nextBytes(bytes);
-        String nonce = AgentAuth.hex(bytes);
-        String profile = ProfileUsers.displayName(context, LauncherAccessibilityService.getActiveProfileKey(context));
-        synchronized (ParentApproval.class) {
-            sNonce = nonce;
-            sState = PENDING;
-            sServices = services;
-        }
-        Log.i(TAG, "Asking " + services.size() + " parent phone(s) to allow what asks for the Parent PIN");
+        Request request = new Request(context, AgentAuth.hex(bytes), services);
+        String nonce = request.nonce;
+        Log.i(TAG, "Asking " + services.size() + " parent phone(s): " + title);
         WORKER.execute(() -> {
             boolean listened = HaEvents.listen(context, PhoneApproval.EVENT, PhoneApproval.ANSWER_MS, data -> {
                 String action = data != null ? data.optString("action") : "";
                 if (action.equals(ACTION_PREFIX + "ALLOW_" + nonce)) {
-                    answer(nonce, ALLOWED);
+                    request.answer(ALLOWED);
                 } else if (action.equals(ACTION_PREFIX + "DENY_" + nonce)) {
-                    answer(nonce, DENIED);
+                    request.answer(DENIED);
                 }
             }, events -> {
-                boolean current;
-                synchronized (ParentApproval.class) {
-                    current = nonce.equals(sNonce) && PENDING.equals(sState);
-                    if (current) sEvents = events;
+                boolean waiting;
+                synchronized (request) {
+                    waiting = PENDING.equals(request.state);
+                    if (waiting) request.events = events;
                 }
-                if (!current) {
+                if (!waiting) {
                     events.close();
                     return;
                 }
                 int sent = 0;
                 for (String service : services) {
-                    if (send(context, service, nonce, profile)) sent++;
+                    if (send(context, service, nonce, title, message)) sent++;
                 }
                 if (sent == 0) {
                     Log.i(TAG, "Couldn't send the request to a parent phone");
                     events.close();
                 } else {
-                    postPersistent(context, nonce, profile);
+                    postPersistent(context, nonce, title, haMessage);
                 }
             });
             if (!listened) Log.i(TAG, "Couldn't listen for a parent phone's answer");
-            synchronized (ParentApproval.class) {
-                if (nonce.equals(sNonce) && PENDING.equals(sState)) sState = EXPIRED;
+            synchronized (request) {
+                if (PENDING.equals(request.state)) request.state = EXPIRED;
             }
             clearOnPhones(context, nonce, services);
         });
-        return services.size();
+        return request;
     }
 
-    private static void answer(String nonce, String state) {
-        HaEvents events;
+    /** Where the Parent PIN dialog's request stands: none, pending, allowed (reported once), denied or expired. */
+    static String poll() {
         synchronized (ParentApproval.class) {
-            if (!nonce.equals(sNonce) || !PENDING.equals(sState)) return;
-            sState = state;
-            events = sEvents;
+            if (sCurrent == null) return NONE;
+            String state = sCurrent.state();
+            if (ALLOWED.equals(state)) sCurrent = null;
+            return state;
         }
-        Log.i(TAG, "A parent phone answered: " + state);
-        if (events != null) events.close();
     }
 
-    /** Where the request stands: none, pending, allowed (reported once), denied or expired. */
-    static synchronized String poll() {
-        String state = sState;
-        if (ALLOWED.equals(state)) {
-            sState = NONE;
-            sNonce = null;
-        }
-        return state;
-    }
-
-    /** The dialog closed: ends a request still waiting and takes its notification off the phones. */
+    /** The Parent PIN dialog closed: ends its request if it still waits and takes the notification off the phones. */
     static void cancel(Context context) {
-        String nonce;
-        List<String> services;
-        HaEvents events;
+        Request request;
         synchronized (ParentApproval.class) {
-            nonce = sNonce;
-            services = sServices;
-            events = sEvents;
-            boolean waiting = PENDING.equals(sState);
-            sNonce = null;
-            sState = NONE;
-            sEvents = null;
-            sServices = new ArrayList<>();
-            if (nonce == null || !waiting) return;
+            request = sCurrent;
+            sCurrent = null;
         }
-        if (events != null) events.close();
-        clearOnPhones(context, nonce, services);
+        if (request != null) request.cancel();
     }
 
-    private static boolean send(Context context, String service, String nonce, String profile) {
+    private static boolean send(Context context, String service, String nonce, String title, String message) {
         try {
             return HaApi.callService(context, "notify", service, new JSONObject()
-                    .put("title", context.getString(R.string.parent_approval_title))
-                    .put("message", context.getString(R.string.parent_approval_message, profile,
-                            ShareDiscovery.deviceName(context)))
+                    .put("title", title)
+                    .put("message", message)
                     .put("data", pushData(context.getString(R.string.approval_allow),
                             context.getString(R.string.approval_deny), nonce)));
         } catch (Exception e) {
@@ -164,13 +198,12 @@ final class ParentApproval {
     }
 
     /** The same request in Home Assistant's own list, for someone who opens it or a push that was dismissed. */
-    private static void postPersistent(Context context, String nonce, String profile) {
+    private static void postPersistent(Context context, String nonce, String title, String message) {
         try {
             HaApi.callService(context, "persistent_notification", "create", new JSONObject()
                     .put("notification_id", TAG_PREFIX + nonce)
-                    .put("title", context.getString(R.string.parent_approval_title))
-                    .put("message", context.getString(R.string.parent_approval_ha_message, profile,
-                            ShareDiscovery.deviceName(context))));
+                    .put("title", title)
+                    .put("message", message));
         } catch (Exception e) {
             Log.i(TAG, "The request wasn't posted in Home Assistant: " + e.getClass().getSimpleName());
         }

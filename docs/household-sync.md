@@ -97,22 +97,25 @@ A TV joins from its own screen, and a parent approves from wherever they are.
 
 1. The new TV, on its own, hears TVs of a household on the network (`_hearth-sync._tcp`; each announces its TV id, its
    household's id and its name). Your TVs, and the setup step, show that household's TVs and a **Join** button.
-2. Join connects to one of those TVs that is on (a sleeping TV answers too: its sync service runs with the screen off).
-   They run the usual key exchange, and both derive a **join code** (four digits) from it. The new TV shows the code.
-3. The household TV asks a parent:
-   - **Phone approval** (Home Assistant, any adult profile with phone approval on): "Kitchen TV wants to join your
-     household. Code 4821. Approve / Deny." The parent checks the code against the screen in front of them. A device on
-     the network that put itself between the two TVs would produce a different code.
-   - **On that TV's screen**, if no one has phone approval: the household TV shows the same prompt, after its Parent
-     PIN. This needs a parent at both TVs, as Copy did, and is only the fallback.
-4. On approval, the household TV writes the new TV's `member` entry and runs a first sync with it. The new TV takes the
-   household's Parent PIN (see Parent PIN) and is handed the Home Assistant address, if the household TV has one.
-5. **A TV that already has its own setup** shows what joining will change before taking anything (profiles' looks,
-   layouts, PINs), and keeps a backup, as Copy did. For an entry both have, the household's wins; profiles only this TV
-   has are kept and synced out.
+2. Join connects to one of those TVs that is on, on its sync port (a sleeping TV answers too: its sync service runs with
+   the screen off), and says it is a join request (`HHJ1`), with its name. They run Copy profiles' key exchange, in
+   which each side commits to its key before seeing the other's, so a device in the middle can't steer the result, and
+   both derive the same **join code** (six digits). The new TV shows the code.
+3. The household TV asks a parent, both ways at once; the first answer counts:
+   - **Phone approval** (Home Assistant, any adult profile with phone approval on): "Kitchen wants to join your TVs,
+     asked through Office. Allow only if its screen shows 482 105. Allow / Deny." The parent checks the code against the
+     screen in front of them. A device on the network that put itself between the two TVs would produce a different code.
+   - **On that TV's screen**: its Household page shows the request with the code, and Allow (after its Parent PIN) or
+     Don't allow. This needs a parent at both TVs, as Copy did, and is the fallback where no one has phone approval.
+4. On Allow, the household TV sends an invitation over the sealed session (the same one a copy hands over: see
+   Joining until step 2 is built), and a Home Assistant address and a new token of its own when the new TV has none.
+   The new TV joins with it, and their first exchange lists it.
+5. **A TV that already has its own setup**: for an entry both have, the household's wins; settings only this TV has are
+   kept and synced out. (A preview of what changes, and a backup, are not built yet.)
 
-The new TV never sends the Parent PIN, and nothing secret moves before the approval. Denying, a wrong code, or no answer
-in five minutes ends it with nothing written.
+The new TV never sends the Parent PIN, and nothing secret moves before the Allow. Denying, or no answer in two minutes
+(the phones' notification lasts as long), ends it with nothing sent. A household TV answers one request at a time, and
+after one that wasn't allowed it ignores requests for 30 seconds, so a TV can't flood the parents' phones.
 
 **The first TV** makes its TV key and a one-TV member list during setup, so there is no "start a household" step. A TV
 on its own that hears a different household on the network still offers Join; **Start a separate household** only
@@ -270,8 +273,8 @@ receiving TV converts at once.
    the copy, conversion from version 1, leave and remove (a Remove action on the Household page's TV list). Unit tests
    for the channel (an outsider, a forged id, a spent invitation, a removed TV either way round), removal never losing,
    leaving, and conversion.
-2. **Joining from the new TV**: the join request, the join code, phone approval through the household TV, the on-screen
-   fallback, the first sync and the preview of what changes.
+2. **Joining from the new TV** (built, except the preview of what changes): the join request, the join code, phone
+   approval through the household TV, the on-screen fallback on its Household page, the first sync.
 3. **Look and layout, then wallpaper pictures.**
 4. **Your TVs page and the setup step**; Copy profiles leaves Settings.
 5. **Home Assistant mailbox**, sealed per member.

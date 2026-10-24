@@ -837,11 +837,65 @@ abstract class AppLocalizations {
   /// **'Join the household'**
   String get householdJoin;
 
-  /// Household page: how joining works (a copy from a TV of the household)
+  /// Household page: how joining works (a parent allows it on a phone or on a TV of the household)
   ///
   /// In en, this message translates to:
-  /// **'On one of those TVs, open Settings > Profiles > Copy profiles between TVs > Copy profiles to another TV, tick Add this TV to my household, and continue. Then choose that TV here.'**
+  /// **'Choose Join, then allow it on your phone or on one of those TVs.'**
   String get householdJoinHint;
+
+  /// Join dialog: connecting to a TV of the household
+  ///
+  /// In en, this message translates to:
+  /// **'Asking your other TVs…'**
+  String get householdJoinFinding;
+
+  /// Join dialog: waiting for a parent to allow this TV
+  ///
+  /// In en, this message translates to:
+  /// **'Allow it on your phone'**
+  String get householdJoinWaitTitle;
+
+  /// Join dialog: what to do while waiting; the code is shown above this text
+  ///
+  /// In en, this message translates to:
+  /// **'Your phone gets a request to add this TV. Allow it only if it shows the code above. No phone set up for this? Allow it on one of your other TVs, in Settings > Profiles > Copy profiles between TVs > Household sync.'**
+  String get householdJoinWaitBody;
+
+  /// Join dialog: joined
+  ///
+  /// In en, this message translates to:
+  /// **'This TV is in the household now.'**
+  String get householdJoinDone;
+
+  /// Join dialog: the parent said no or the request ran out
+  ///
+  /// In en, this message translates to:
+  /// **'It wasn\'t allowed, or no one answered in time.'**
+  String get householdJoinDenied;
+
+  /// Join dialog: the connection failed
+  ///
+  /// In en, this message translates to:
+  /// **'That didn\'t work. Check that one of your other TVs is on, then try again.'**
+  String get householdJoinFailed;
+
+  /// Household page on a TV of the household: another TV asks to join; {code} is six digits
+  ///
+  /// In en, this message translates to:
+  /// **'{name} wants to join your TVs. Allow only if its screen shows {code}.'**
+  String householdJoinRequest(String name, String code);
+
+  /// Household page: let the TV that asks join
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get householdJoinAllow;
+
+  /// Household page: refuse the TV that asks to join
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t allow'**
+  String get householdJoinDeny;
 
   /// Household page: start a new household although one was found
   ///
@@ -4938,7 +4992,7 @@ abstract class AppLocalizations {
   /// Setup flow: household sync step when another TV's household was found on the network
   ///
   /// In en, this message translates to:
-  /// **'Your other TVs have a household: {names}. Join it, and this TV keeps profile settings and saved PINs in step with them. On one of those TVs, open Settings > Profiles > Copy profiles between TVs > Copy profiles to another TV, tick Add this TV to my household, and continue. Then choose Join the household here and pick that TV.'**
+  /// **'Your other TVs have a household: {names}. Join it, and this TV keeps profile settings and saved PINs in step with them. You allow it on your phone, or on one of those TVs.'**
   String setupFlowHouseholdFound(String names);
 
   /// Setup flow: household step's button to start a new household although one was found

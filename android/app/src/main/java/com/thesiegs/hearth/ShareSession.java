@@ -31,8 +31,16 @@ import java.util.Arrays;
 final class ShareSession {
     /** A peer that refused (a parent saw different digits) or a stream that broke the protocol. */
     static final class ShareException extends IOException {
+        /** The other end said stop (a parent refused), as opposed to a broken protocol. */
+        final boolean stopped;
+
         ShareException(String message) {
+            this(message, false);
+        }
+
+        ShareException(String message, boolean stopped) {
             super(message);
+            this.stopped = stopped;
         }
     }
 
@@ -138,7 +146,7 @@ final class ShareSession {
         if (mSas == null) throw new IllegalStateException("handshake first");
         writeSealed(CONFIRM, 0, new byte[0]);
         Frame frame = readFrame();
-        if (frame.type == ABORT) throw new ShareException("The other TV stopped");
+        if (frame.type == ABORT) throw new ShareException("The other TV stopped", true);
         if (frame.type != CONFIRM) throw new ShareException("Expected a confirmation");
         openFrame(frame);
         mConfirmed = true;
@@ -170,7 +178,7 @@ final class ShareSession {
         ByteArrayOutputStream whole = new ByteArrayOutputStream();
         while (true) {
             Frame frame = readFrame();
-            if (frame.type == ABORT) throw new ShareException("The other TV stopped");
+            if (frame.type == ABORT) throw new ShareException("The other TV stopped", true);
             if (frame.type != DATA) throw new ShareException("Expected data");
             byte[] chunk = openFrame(frame);
             if (whole.size() + chunk.length > maxBytes) throw new ShareException("More than this TV will take");
@@ -230,7 +238,7 @@ final class ShareSession {
 
     private byte[] read(byte expected) throws IOException {
         Frame frame = readFrame();
-        if (frame.type == ABORT) throw new ShareException("The other TV stopped");
+        if (frame.type == ABORT) throw new ShareException("The other TV stopped", true);
         if (frame.type != expected) throw new ShareException("Out of order");
         return frame.body;
     }

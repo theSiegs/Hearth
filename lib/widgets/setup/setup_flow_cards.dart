@@ -289,16 +289,10 @@ extension _CardScreens on _SetupFlowPageState {
 
   /// The copy screen that takes a household's key from one of its TVs; done once this TV is in it.
   Future<void> _joinHousehold() async {
-    await _openSettingsPage(ShareReceivePage.routeName);
-    if (!mounted) return;
-    try {
-      if ((await _channel.getHouseholdStatus())["joined"] == true) {
-        _householdJoined = true;
-        _showDone(SetupScreen.familyHousehold, null);
-      }
-    } catch (err) {
-      noteFailure('setup_flow', err);
-    }
+    final joined = await joinNearbyHousehold(context, _channel);
+    if (!mounted || !joined) return;
+    _householdJoined = true;
+    _showDone(SetupScreen.familyHousehold, null);
   }
 
   Future<void> _startHousehold() async {

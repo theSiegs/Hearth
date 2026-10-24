@@ -418,7 +418,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdJoin => 'Join the household';
 
   @override
-  String get householdJoinHint => 'On one of those TVs, open Settings > Profiles > Copy profiles between TVs > Copy profiles to another TV, tick Add this TV to my household, and continue. Then choose that TV here.';
+  String get householdJoinHint => 'Choose Join, then allow it on your phone or on one of those TVs.';
+
+  @override
+  String get householdJoinFinding => 'Asking your other TVs…';
+
+  @override
+  String get householdJoinWaitTitle => 'Allow it on your phone';
+
+  @override
+  String get householdJoinWaitBody => 'Your phone gets a request to add this TV. Allow it only if it shows the code above. No phone set up for this? Allow it on one of your other TVs, in Settings > Profiles > Copy profiles between TVs > Household sync.';
+
+  @override
+  String get householdJoinDone => 'This TV is in the household now.';
+
+  @override
+  String get householdJoinDenied => 'It wasn\'t allowed, or no one answered in time.';
+
+  @override
+  String get householdJoinFailed => 'That didn\'t work. Check that one of your other TVs is on, then try again.';
+
+  @override
+  String householdJoinRequest(String name, String code) {
+    return '$name wants to join your TVs. Allow only if its screen shows $code.';
+  }
+
+  @override
+  String get householdJoinAllow => 'Allow';
+
+  @override
+  String get householdJoinDeny => 'Don\'t allow';
 
   @override
   String get householdStartAnyway => 'Start a separate household instead';
@@ -2796,7 +2825,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String setupFlowHouseholdFound(String names) {
-    return 'Your other TVs have a household: $names. Join it, and this TV keeps profile settings and saved PINs in step with them. On one of those TVs, open Settings > Profiles > Copy profiles between TVs > Copy profiles to another TV, tick Add this TV to my household, and continue. Then choose Join the household here and pick that TV.';
+    return 'Your other TVs have a household: $names. Join it, and this TV keeps profile settings and saved PINs in step with them. You allow it on your phone, or on one of those TVs.';
   }
 
   @override

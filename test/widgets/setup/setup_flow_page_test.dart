@@ -480,6 +480,45 @@ void main() {
       expect(channel.householdsStarted, 1);
     });
 
+    testWidgets("joining shows the code to check, and the step is done once a parent allowed it", (tester) async {
+      channel.pairing = true;
+      channel.nearbyHouseholds = const [
+        ["Kitchen"]
+      ];
+      await openAtFamily(tester);
+      await press(tester, "Turn on");
+      await press(tester, "Skip"); // the parent PIN
+      await press(tester, "Join the household");
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      expect(channel.joinRequests, 1);
+      expect(find.text("Allow it on your phone"), findsOneWidget);
+      expect(find.text("123 456"), findsOneWidget);
+      // a parent allowed it on their phone
+      channel.joinState = "joined";
+      channel.household = true;
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      expect(find.text("123 456"), findsNothing);
+      expect(find.textContaining("This TV is in the household now"), findsOneWidget);
+    });
+
+    testWidgets("backing out of joining stops the request and stays on the step", (tester) async {
+      channel.pairing = true;
+      channel.nearbyHouseholds = const [
+        ["Kitchen"]
+      ];
+      await openAtFamily(tester);
+      await press(tester, "Turn on");
+      await press(tester, "Skip"); // the parent PIN
+      await press(tester, "Join the household");
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      await press(tester, "Cancel");
+      expect(channel.joinState, "none");
+      expect(find.text("Join the household"), findsOneWidget);
+    });
+
     testWidgets("a TV already in a household isn't asked to start one", (tester) async {
       channel.pairing = true;
       channel.household = true;

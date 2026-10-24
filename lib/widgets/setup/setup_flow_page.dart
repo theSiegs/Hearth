@@ -38,7 +38,6 @@ import 'package:flauncher/widgets/settings/look_settings_page.dart';
 import 'package:flauncher/widgets/settings/message_dialog.dart';
 import 'package:flauncher/widgets/settings/profile_pairing_page.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
-import 'package:flauncher/widgets/settings/share_pages.dart';
 import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
 import 'package:flauncher/widgets/settings/weather_location_dialog.dart';
 import 'package:flauncher/quiet_failure.dart';

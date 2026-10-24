@@ -15,5 +15,9 @@
     <string name="approval_test_message">This phone will be asked before anyone opens your Google TV profile.</string>
     <string name="parent_approval_title">TV: allow this?</string>
     <string name="parent_approval_message">Someone in %1$s’s profile on %2$s needs a parent’s OK. Allow it, and the TV skips the Parent PIN.</string>
+    <string name="household_join_unnamed">A new TV</string>
+    <string name="household_join_title">Add a TV to your household?</string>
+    <string name="household_join_message">%1$s wants to join your TVs, asked through %2$s. Allow only if its screen shows %3$s.</string>
+    <string name="household_join_ha_message">%1$s wants to join your TVs, asked through %2$s. Allow only if its screen shows %3$s. Answer from the notification on your phone (Allow or Deny), or on %2$s. The request ends by itself after 2 minutes.</string>
     <string name="parent_approval_ha_message">Someone in %1$s’s profile on %2$s needs a parent’s OK. Answer from the notification on your phone (Allow or Deny). The request ends by itself after 2 minutes.</string>
 </resources>

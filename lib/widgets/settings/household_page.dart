@@ -27,7 +27,6 @@ import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
 import 'settings_page.dart';
-import 'share_pages.dart';
 
 /// The other households [FLauncherChannel.getHouseholdStatus] heard on the network, each as its TVs' names.
 List<List<String?>> householdsNearby(Map<dynamic, dynamic> status) => [
@@ -40,6 +39,124 @@ String householdTvNames(AppLocalizations l, List<String?> names) {
   final named = names.whereType<String>().toSet().toList()..sort();
   final unnamed = names.length - names.whereType<String>().length;
   return [...named, if (unnamed > 0) l.householdUnnamedTvs(unnamed)].join(", ");
+}
+
+/// Asks to join the household heard on the network, in a dialog that shows the code to check and follows the answer.
+/// True when this TV joined.
+Future<bool> joinNearbyHousehold(BuildContext context, FLauncherChannel channel) async {
+  final joined = await showDialog<bool>(
+      context: context, barrierDismissible: false, builder: (_) => _JoinDialog(channel: channel));
+  return joined == true;
+}
+
+class _JoinDialog extends StatefulWidget {
+  final FLauncherChannel channel;
+
+  const _JoinDialog({required this.channel});
+
+  @override
+  State<_JoinDialog> createState() => _JoinDialogState();
+}
+
+class _JoinDialogState extends State<_JoinDialog> {
+  String _state = "connecting";
+  String? _code;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _begin();
+  }
+
+  Future<void> _begin() async {
+    try {
+      final started = await widget.channel.requestHouseholdJoin();
+      if (!mounted) return;
+      if (!started) {
+        setState(() => _state = "failed");
+        return;
+      }
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) => _poll());
+    } catch (err) {
+      noteFailure('household_page', err);
+      if (mounted) setState(() => _state = "failed");
+    }
+  }
+
+  Future<void> _poll() async {
+    try {
+      final join = (await widget.channel.getHouseholdStatus())["join"];
+      if (!mounted || join is! Map) return;
+      final state = join["state"] as String? ?? "none";
+      setState(() {
+        _state = state;
+        _code = join["code"] as String?;
+      });
+      if (state != "connecting" && state != "waiting") _timer?.cancel();
+      if (state == "joined") Navigator.of(context).pop(true);
+    } catch (err) {
+      noteFailure('household_page', err);
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    // Closed while the request was under way (Back, or Cancel): it stops, so a later Allow can't join this TV
+    _stopRequest();
+    super.dispose();
+  }
+
+  void _stopRequest() {
+    if (_state == "connecting" || _state == "waiting") {
+      _state = "none";
+      widget.channel.cancelHouseholdJoin().catchError((Object err) => noteFailure('household_page', err));
+    }
+  }
+
+  void _cancel() {
+    _stopRequest();
+    Navigator.of(context).pop(false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final textTheme = Theme.of(context).textTheme;
+    final waiting = _state == "waiting" && _code != null;
+    final String title;
+    final List<Widget> body;
+    switch (_state) {
+      case "denied":
+        title = l.householdJoin;
+        body = [Text(l.householdJoinDenied, style: textTheme.bodyMedium)];
+      case "failed":
+        title = l.householdJoin;
+        body = [Text(l.householdJoinFailed, style: textTheme.bodyMedium)];
+      default:
+        title = waiting ? l.householdJoinWaitTitle : l.householdJoin;
+        body = waiting
+            ? [
+                // The code is what the parent checks against the phone: large, alone on its line
+                Text(_code!, style: textTheme.displaySmall),
+                const SizedBox(height: 16),
+                Text(l.householdJoinWaitBody, style: textTheme.bodyMedium),
+              ]
+            : [Text(l.householdJoinFinding, style: textTheme.bodyMedium)];
+    }
+    final over = _state == "denied" || _state == "failed";
+    return AlertDialog(
+      title: Text(title),
+      content: SizedBox(
+        width: 460,
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: body),
+      ),
+      actions: [
+        TextButton(autofocus: true, onPressed: _cancel, child: Text(over ? l.close : l.cancel)),
+      ],
+    );
+  }
 }
 
 /// Settings > Profiles > Copy profiles between TVs > Household sync: whether this TV is in a household of TVs that keep
@@ -108,11 +225,20 @@ class _HouseholdPageState extends State<HouseholdPage> {
     await _refresh();
   }
 
-  /// Joining is a copy from one of the household's TVs: this TV's end of it.
+  /// Joining: this TV asks one of the household's, and a parent allows it on a phone or on that TV.
   Future<void> _join() async {
-    if (!await _allowed()) return;
-    if (!mounted) return;
-    await Navigator.of(context).pushNamed(ShareReceivePage.routeName);
+    await joinNearbyHousehold(context, _channel);
+    await _refresh();
+  }
+
+  /// Another TV's request to join, answered here (allowing takes the parent PIN where this TV has one).
+  Future<void> _answer(bool allow) async {
+    if (allow && !await _allowed()) return;
+    try {
+      await _channel.answerHouseholdJoin(allow);
+    } catch (err) {
+      noteFailure('household_page', err);
+    }
     await _refresh();
   }
 
@@ -166,6 +292,7 @@ class _HouseholdPageState extends State<HouseholdPage> {
     final last = _status["lastResult"] as String?;
     final members = [for (final m in (_status["members"] as List?) ?? const []) if (m is Map) m];
     final nearby = householdsNearby(_status);
+    final request = _status["joinRequest"];
     Widget note(String text) =>
         Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 12), child: Text(text, style: textTheme.bodySmall));
     return SettingsPage(
@@ -200,9 +327,24 @@ class _HouseholdPageState extends State<HouseholdPage> {
             ),
           note(l.householdAddHint),
         ] else ...[
+          if (request is Map) ...[
+            // Another TV is waiting on a parent's answer: it comes first, with the code to check
+            note(l.householdJoinRequest(request["name"] as String? ?? l.householdUnnamedTvs(1), request["code"] as String? ?? "")),
+            FocusableSettingsTile(
+              autofocus: true,
+              leading: const Icon(Icons.check),
+              title: Text(l.householdJoinAllow, style: textTheme.bodyMedium),
+              onPressed: () => _answer(true),
+            ),
+            FocusableSettingsTile(
+              leading: const Icon(Icons.close),
+              title: Text(l.householdJoinDeny, style: textTheme.bodyMedium),
+              onPressed: () => _answer(false),
+            ),
+          ],
           note(l.householdIn),
           FocusableSettingsTile(
-            autofocus: true,
+            autofocus: request is! Map,
             leading: const Icon(Icons.sync),
             title: Text(l.householdSwitch, style: textTheme.bodyMedium),
             trailing: Icon(enabled ? Icons.check_box : Icons.check_box_outline_blank),

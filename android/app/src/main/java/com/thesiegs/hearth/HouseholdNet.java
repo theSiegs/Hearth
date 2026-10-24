@@ -54,11 +54,20 @@ final class HouseholdNet {
         final String tvId;
         final String householdId;
         final String name;
+        /** Where it listens, for a TV that asks to join its household; null host when not known. */
+        final String host;
+        final int port;
 
         Heard(String tvId, String householdId, String name) {
+            this(tvId, householdId, name, null, 0);
+        }
+
+        Heard(String tvId, String householdId, String name, String host, int port) {
             this.tvId = tvId;
             this.householdId = householdId;
             this.name = name;
+            this.host = host;
+            this.port = port;
         }
     }
 
@@ -266,7 +275,8 @@ final class HouseholdNet {
                     String tvId = serviceInfo.getServiceName();
                     synchronized (HouseholdNet.class) {
                         if (host != null && LocalNet.isLocal(host) && household != null && !tvId.equals(sTvId)) {
-                            sHeard.put(tvId, new Heard(tvId, household, name));
+                            sHeard.put(tvId, new Heard(tvId, household, name, host.getHostAddress(),
+                                    serviceInfo.getPort()));
                             if (household.equals(sHouseholdId)) {
                                 sPeers.put(tvId, new Peer(tvId, host.getHostAddress(), serviceInfo.getPort(), name));
                                 Household.peerFound();

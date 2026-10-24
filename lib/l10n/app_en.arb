@@ -357,9 +357,49 @@
     "@householdJoin": {
         "description": "Button: join the household found on the network"
     },
-    "householdJoinHint": "On one of those TVs, open Settings > Profiles > Copy profiles between TVs > Copy profiles to another TV, tick Add this TV to my household, and continue. Then choose that TV here.",
+    "householdJoinHint": "Choose Join, then allow it on your phone or on one of those TVs.",
     "@householdJoinHint": {
-        "description": "Household page: how joining works (a copy from a TV of the household)"
+        "description": "Household page: how joining works (a parent allows it on a phone or on a TV of the household)"
+    },
+    "householdJoinFinding": "Asking your other TVs…",
+    "@householdJoinFinding": {
+        "description": "Join dialog: connecting to a TV of the household"
+    },
+    "householdJoinWaitTitle": "Allow it on your phone",
+    "@householdJoinWaitTitle": {
+        "description": "Join dialog: waiting for a parent to allow this TV"
+    },
+    "householdJoinWaitBody": "Your phone gets a request to add this TV. Allow it only if it shows the code above. No phone set up for this? Allow it on one of your other TVs, in Settings > Profiles > Copy profiles between TVs > Household sync.",
+    "@householdJoinWaitBody": {
+        "description": "Join dialog: what to do while waiting; the code is shown above this text"
+    },
+    "householdJoinDone": "This TV is in the household now.",
+    "@householdJoinDone": {
+        "description": "Join dialog: joined"
+    },
+    "householdJoinDenied": "It wasn't allowed, or no one answered in time.",
+    "@householdJoinDenied": {
+        "description": "Join dialog: the parent said no or the request ran out"
+    },
+    "householdJoinFailed": "That didn't work. Check that one of your other TVs is on, then try again.",
+    "@householdJoinFailed": {
+        "description": "Join dialog: the connection failed"
+    },
+    "householdJoinRequest": "{name} wants to join your TVs. Allow only if its screen shows {code}.",
+    "@householdJoinRequest": {
+        "description": "Household page on a TV of the household: another TV asks to join; {code} is six digits",
+        "placeholders": {
+            "name": {"type": "String"},
+            "code": {"type": "String"}
+        }
+    },
+    "householdJoinAllow": "Allow",
+    "@householdJoinAllow": {
+        "description": "Household page: let the TV that asks join"
+    },
+    "householdJoinDeny": "Don't allow",
+    "@householdJoinDeny": {
+        "description": "Household page: refuse the TV that asks to join"
     },
     "householdStartAnyway": "Start a separate household instead",
     "@householdStartAnyway": {
@@ -3624,7 +3664,7 @@
     "@setupFlowHouseholdDone": {
         "description": "Setup flow: household sync step, once started"
     },
-    "setupFlowHouseholdFound": "Your other TVs have a household: {names}. Join it, and this TV keeps profile settings and saved PINs in step with them. On one of those TVs, open Settings > Profiles > Copy profiles between TVs > Copy profiles to another TV, tick Add this TV to my household, and continue. Then choose Join the household here and pick that TV.",
+    "setupFlowHouseholdFound": "Your other TVs have a household: {names}. Join it, and this TV keeps profile settings and saved PINs in step with them. You allow it on your phone, or on one of those TVs.",
     "@setupFlowHouseholdFound": {
         "description": "Setup flow: household sync step when another TV's household was found on the network",
         "placeholders": {
