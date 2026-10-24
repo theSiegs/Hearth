@@ -1,85 +1,86 @@
 package com.thesiegs.hearth;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
-import java.util.Arrays;
 
 /**
- * Seals and opens household entries (docs/household-sync.md): ChaCha20-Poly1305 under a key derived from the household
- * key, so a TV outside the household can't read or forge one, and Home Assistant, which only stores the sealed bytes,
- * can't either. A sealed entry is a random 64-bit nonce counter and the ciphertext; the household's id is authenticated
- * with it, so an entry sealed for another household doesn't open. Each purpose has its own derived key.
+ * Who a person is to the household (docs/household-sync.md, "Who a profile is"): a keyed hash of their Google account
+ * address under the household's person salt, the same on every TV of the household. Also what a version 1 household key
+ * becomes when its TVs convert: the household's id, the person salt (so person ids don't change), and the key that lets
+ * two converting TVs admit each other.
  */
 final class HouseholdSeal {
-    static final int HOUSEHOLD_KEY_BYTES = 32;
-    private static final int TAG_BYTES = 16;
-    private static final byte[] ENTRY_LABEL = ShareCrypto.bytes("hearth-household-entry-v1");
-    private static final byte[] PERSON_LABEL = ShareCrypto.bytes("hearth-household-person-v1");
-    private static final byte[] ID_LABEL = ShareCrypto.bytes("hearth-household-id-v1");
+    static final int SALT_BYTES = 32;
+    /** A version 1 household key. */
+    static final int V1_KEY_BYTES = 32;
+    private static final byte[] V1_PERSON_LABEL = ShareCrypto.bytes("hearth-household-person-v1");
+    private static final byte[] V1_ID_LABEL = ShareCrypto.bytes("hearth-household-id-v1");
+    private static final byte[] V1_ADMIT_LABEL = ShareCrypto.bytes("hearth-household-admit-v2");
+    private static final byte[] ID_LABEL = ShareCrypto.bytes("hearth-household-id-v2");
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    private final byte[] entryKey;
-    private final byte[] aad;
-    private final byte[] personKey;
+    private final byte[] personSalt;
 
-    HouseholdSeal(byte[] householdKey) throws GeneralSecurityException {
-        if (householdKey == null || householdKey.length != HOUSEHOLD_KEY_BYTES) {
-            throw new IllegalArgumentException("household key");
-        }
-        byte[] prk = ShareCrypto.hkdfExtract(new byte[0], householdKey);
-        entryKey = ShareCrypto.hkdfExpand(prk, ENTRY_LABEL, ShareCrypto.KEY_BYTES);
-        aad = ShareCrypto.hkdfExpand(prk, ID_LABEL, 8);
-        personKey = ShareCrypto.hkdfExpand(prk, PERSON_LABEL, ShareCrypto.KEY_BYTES);
+    HouseholdSeal(byte[] personSalt) {
+        if (personSalt == null || personSalt.length != SALT_BYTES) throw new IllegalArgumentException("person salt");
+        this.personSalt = personSalt.clone();
     }
 
     /**
      * Who a Google account is to the household: a keyed hash of the address, "a:" and 24 hex digits. The same on every
-     * TV in the household, and the address can't be read from it or guessed against it without the key. Null when
-     * there is no address.
+     * TV in the household, and the address can't be read from it. Null when there is no address.
      */
     String personId(String email) {
         if (email == null || email.trim().isEmpty()) return null;
         try {
-            byte[] mac = ShareCrypto.hkdfExtract(personKey, ShareCrypto.bytes(email.trim().toLowerCase(java.util.Locale.ROOT)));
-            StringBuilder out = new StringBuilder("a:");
-            for (int i = 0; i < 12; i++) out.append(String.format("%02x", mac[i]));
-            return out.toString();
+            byte[] mac = ShareCrypto.hkdfExtract(personSalt, ShareCrypto.bytes(email.trim().toLowerCase(java.util.Locale.ROOT)));
+            return "a:" + hex(mac, 12);
         } catch (GeneralSecurityException e) {
             return null;
         }
     }
 
-    /** A new household key. */
-    static byte[] newKey() {
-        byte[] key = new byte[HOUSEHOLD_KEY_BYTES];
-        RANDOM.nextBytes(key);
-        return key;
+    /** A new household's person salt. */
+    static byte[] newSalt() {
+        byte[] salt = new byte[SALT_BYTES];
+        RANDOM.nextBytes(salt);
+        return salt;
     }
 
-    /** The household's id: the same for every TV with the key, and says nothing about the key. */
-    String id() {
-        StringBuilder out = new StringBuilder();
-        for (byte b : aad) out.append(String.format("%02x", b));
-        return out.toString();
-    }
-
-    byte[] seal(HouseholdEntry entry) throws GeneralSecurityException {
-        long counter = RANDOM.nextLong();
-        byte[] sealed = ShareCrypto.seal(entryKey, counter, aad, ShareCrypto.bytes(entry.toJson()));
-        return ByteBuffer.allocate(8 + sealed.length).putLong(counter).put(sealed).array();
-    }
-
-    /** The entry in {@code blob}, or null if it doesn't open (another household, altered, truncated) or isn't an entry. */
-    HouseholdEntry open(byte[] blob) {
-        if (blob == null || blob.length < 8 + TAG_BYTES) return null;
+    /** A new household's id, from the TV that starts it: 16 hex digits that name it and prove nothing. */
+    static String newId(String firstTvId) {
         try {
-            long counter = ByteBuffer.wrap(blob, 0, 8).getLong();
-            byte[] plain = ShareCrypto.open(entryKey, counter, aad, Arrays.copyOfRange(blob, 8, blob.length));
-            return HouseholdEntry.fromJson(new String(plain, StandardCharsets.UTF_8));
+            return hex(ShareCrypto.sha256(ID_LABEL, ShareCrypto.bytes(firstTvId)), 8);
         } catch (GeneralSecurityException e) {
-            return null;
+            throw new IllegalStateException(e);
         }
+    }
+
+    // ---- Version 1 ----
+
+    /** A version 1 household's id, as its TVs announced it. */
+    static String v1Id(byte[] key) throws GeneralSecurityException {
+        return hex(ShareCrypto.hkdfExpand(v1Prk(key), V1_ID_LABEL, 8), 8);
+    }
+
+    /** A version 1 household's person salt: its old person key, so person ids stay the same. */
+    static byte[] v1PersonSalt(byte[] key) throws GeneralSecurityException {
+        return ShareCrypto.hkdfExpand(v1Prk(key), V1_PERSON_LABEL, SALT_BYTES);
+    }
+
+    /** What two TVs of a version 1 household prove to each other while they convert. */
+    static byte[] v1AdmitKey(byte[] key) throws GeneralSecurityException {
+        return ShareCrypto.hkdfExpand(v1Prk(key), V1_ADMIT_LABEL, ShareCrypto.KEY_BYTES);
+    }
+
+    private static byte[] v1Prk(byte[] key) throws GeneralSecurityException {
+        if (key == null || key.length != V1_KEY_BYTES) throw new IllegalArgumentException("household key");
+        return ShareCrypto.hkdfExtract(new byte[0], key);
+    }
+
+    static String hex(byte[] bytes, int count) {
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < count; i++) out.append(String.format("%02x", bytes[i]));
+        return out.toString();
     }
 }

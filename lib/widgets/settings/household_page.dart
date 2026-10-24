@@ -116,6 +116,33 @@ class _HouseholdPageState extends State<HouseholdPage> {
     await _refresh();
   }
 
+  /// Removes another TV, after asking (and the parent PIN where there is one).
+  Future<void> _remove(AppLocalizations l, Map<dynamic, dynamic> member) async {
+    final tvId = member["tvId"];
+    if (tvId is! String) return;
+    final name = (member["name"] as String?) ?? l.householdUnnamedTvs(1);
+    final textTheme = Theme.of(context).textTheme;
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l.householdRemoveTitle(name)),
+        content: SizedBox(width: 460, child: Text(l.householdRemoveBody, style: textTheme.bodyMedium)),
+        actions: [
+          // Keeping the TV is the safe choice, so it has the focus
+          TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(false), child: Text(l.notNow)),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l.remove)),
+        ],
+      ),
+    );
+    if (go != true || !mounted || !await _allowed()) return;
+    final removed = await _channel.removeHouseholdTv(tvId);
+    if (!mounted) return;
+    if (!removed) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(l.householdRemoveFailed)));
+    }
+    await _refresh();
+  }
+
   /// How a member is doing: this TV, on now, or when it was last on.
   String _memberStatus(AppLocalizations l, Map<dynamic, dynamic> member) {
     if (member["self"] == true) return l.householdThisTv;
@@ -134,6 +161,7 @@ class _HouseholdPageState extends State<HouseholdPage> {
     final textTheme = Theme.of(context).textTheme;
     final joined = _status["joined"] == true;
     final lost = _status["lost"] == true;
+    final removed = _status["removed"] == true;
     final enabled = _status["enabled"] != false;
     final last = _status["lastResult"] as String?;
     final members = [for (final m in (_status["members"] as List?) ?? const []) if (m is Map) m];
@@ -162,7 +190,7 @@ class _HouseholdPageState extends State<HouseholdPage> {
               onPressed: _start,
             ),
         ] else if (!joined) ...[
-          note(lost ? l.householdLost : l.householdNone),
+          note(lost ? l.householdLost : (removed ? l.householdRemoved : l.householdNone)),
           if (!lost)
             FocusableSettingsTile(
               autofocus: true,
@@ -189,6 +217,7 @@ class _HouseholdPageState extends State<HouseholdPage> {
               leading: Icon(Icons.tv, color: member["self"] == true || member["online"] == true ? null : Colors.white38),
               title: Text((member["name"] as String?) ?? l.householdUnnamedTvs(1), style: textTheme.bodyMedium),
               trailing: Text(_memberStatus(l, member), style: textTheme.bodySmall),
+              onPressed: member["self"] == true ? null : () => _remove(l, member),
             ),
           if (last != null && last.isNotEmpty) note(l.householdLast(last)),
           FocusableSettingsTile(

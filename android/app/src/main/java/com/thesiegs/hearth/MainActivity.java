@@ -399,7 +399,8 @@ public class MainActivity extends FlutterActivity {
             // A picture of a profile's wallpaper as the screen shows it (at most 1920x1080, a JPEG), to send to another TV
             case "getShareWallpaper" -> answerFrom(sIoExecutor, result, () -> shareWallpaper((String) call.arguments()));
             case "getHouseholdStatus" -> answerFrom(sIoExecutor, result, () -> Household.status(this));
-            case "createHousehold" -> result.success(Household.create(this));
+            // Makes this TV's key in the Keystore: off the main thread
+            case "createHousehold" -> answerFrom(sIoExecutor, result, () -> Household.create(this));
             case "setHouseholdEnabled" -> {
                 Household.setEnabled(this, Boolean.TRUE.equals(call.arguments()));
                 result.success(null);
@@ -408,6 +409,8 @@ public class MainActivity extends FlutterActivity {
                 Household.leave(this);
                 return null;
             });
+            case "removeHouseholdTv" -> answerFrom(sIoExecutor, result,
+                    () -> Household.removeTv(this, (String) call.arguments()));
             case "lookForHouseholds" -> {
                 Household.lookAround(this);
                 result.success(null);

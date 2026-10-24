@@ -10,6 +10,9 @@ import java.util.Map;
  * This TV's copy of the household's entries (docs/household-sync.md): one entry per id, the newest write winning
  * (HouseholdEntry.beats), plus a version vector of the highest {@code seq} seen from each TV, which is how two TVs find
  * what the other lacks. In memory; the caller saves and restores it with {@link #all} and {@link #merge}. Not thread safe.
+ * One exception to newest-wins: removing a TV from the member list (a delete of a {@link HouseholdMembers#KIND} entry)
+ * is final. It beats any write for that TV, later ones included, nothing written after it replaces it, and it is never
+ * purged.
  */
 final class HouseholdLog {
     /** Deletes are remembered this long, so a TV that was off for less than this can't bring a value back. */
@@ -43,7 +46,10 @@ final class HouseholdLog {
         return kind + "|" + HouseholdEntry.normalize(profile) + "|" + (item == null ? "" : item);
     }
 
+    /** Null when the write would undo a final delete (see the class comment): nothing is written. */
     private HouseholdEntry write(String kind, String profile, String item, String value, long nowMs, boolean deleted) {
+        HouseholdEntry had = entries.get(id(kind, profile, item));
+        if (had != null && isFinal(had)) return null;
         long clock = Math.max(lastClock + 1, nowMs << COUNTER_BITS);
         HouseholdEntry existing = entries.get(id(kind, profile, item));
         if (existing != null && existing.clock >= clock) clock = existing.clock + 1;
@@ -67,7 +73,8 @@ final class HouseholdLog {
         if (incoming.seq > vector.getOrDefault(incoming.tv, 0L)) vector.put(incoming.tv, incoming.seq);
         lastClock = Math.max(lastClock, incoming.clock);
         HouseholdEntry existing = entries.get(incoming.id());
-        if (existing != null && !incoming.beats(existing)) return false;
+        if (existing != null && isFinal(existing)) return false;
+        if (existing != null && !isFinal(incoming) && !incoming.beats(existing)) return false;
         entries.put(incoming.id(), incoming);
         return true;
     }
@@ -92,6 +99,16 @@ final class HouseholdLog {
     HouseholdEntry get(String kind, String profile, String item) {
         HouseholdEntry entry = entries.get(id(kind, profile, item));
         return entry == null || entry.deleted ? null : entry;
+    }
+
+    /** Whether this id holds a final delete: a TV removed from the member list. */
+    boolean isRemoved(String kind, String profile, String item) {
+        HouseholdEntry entry = entries.get(id(kind, profile, item));
+        return entry != null && isFinal(entry);
+    }
+
+    private static boolean isFinal(HouseholdEntry entry) {
+        return entry.deleted && HouseholdMembers.KIND.equals(entry.kind);
     }
 
     /** Whether any entry for this id is held, a delete included. */
@@ -124,7 +141,7 @@ final class HouseholdLog {
         int removed = 0;
         for (Iterator<HouseholdEntry> it = entries.values().iterator(); it.hasNext();) {
             HouseholdEntry entry = it.next();
-            if (entry.deleted && (entry.clock >> COUNTER_BITS) < nowMs - TOMBSTONE_MS) {
+            if (entry.deleted && !isFinal(entry) && (entry.clock >> COUNTER_BITS) < nowMs - TOMBSTONE_MS) {
                 it.remove();
                 removed++;
             }

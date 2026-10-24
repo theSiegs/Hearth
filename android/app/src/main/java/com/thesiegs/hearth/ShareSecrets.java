@@ -73,11 +73,10 @@ final class ShareSecrets {
                 out.put("pins", pins);
             }
             if (wanted.optBoolean("household")) {
-                // The household's key goes to the other TV (a household is made here first if there is none)
-                byte[] key = Household.keyToJoin(context);
-                if (key != null) {
-                    out.put("household", java.util.Base64.getEncoder().encodeToString(key));
-                    java.util.Arrays.fill(key, (byte) 0);
+                // An invitation to the household goes to the other TV (a household is made here first if there is none)
+                String invitation = Household.invitationToJoin(context);
+                if (invitation != null) {
+                    out.put("household2", invitation);
                 } else {
                     out.put("householdFailed", true);
                 }
@@ -159,7 +158,8 @@ final class ShareSecrets {
         out.put("haFailed", haFailed);
         boolean household = false;
         try {
-            household = new JSONObject(secrets).optString("household", "").length() > 0;
+            JSONObject root = new JSONObject(secrets);
+            household = root.optString("household2", "").length() > 0 || root.optString("household", "").length() > 0;
         } catch (Exception ignored) {
         }
         out.put("household", household);

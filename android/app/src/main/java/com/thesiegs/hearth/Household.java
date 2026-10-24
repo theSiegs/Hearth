@@ -18,14 +18,15 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * This TV's part in a household (docs/household-sync.md): the one place that knows whether sync is on, hears about
- * changes to Profile Pairing and saved PINs, and runs the exchanges with the other TVs. Everything that touches the
- * entries runs on one thread, so changes and exchanges never overlap. Where this TV is in no household every call
- * here is a cheap no-op, and the Keystore is never touched.
+ * changes to Profile Pairing and saved PINs, runs the exchanges with the other TVs, and adds, removes and leaves.
+ * Everything that touches the entries runs on one thread, so changes and exchanges never overlap. Where this TV is in no
+ * household every call here is a cheap no-op, and the Keystore is never touched.
  */
 final class Household {
     private static final String TAG = "HearthHousehold";
     private static final String PREFS = "household";
-    private static final String KEY_SEALED_PREF = "key_sealed";
+    /** Any of these in the preferences: this TV is, was, or is leaving a household (version 1 kept only the key). */
+    private static final String[] HOUSEHOLD_PREFS = {"household_id", "key_sealed", "removed"};
     /** The TVs this one has synced with ({tvId: {name, at}}), for the list of members. */
     private static final String SEEN_PREF = "seen";
     /** How long leaving waits to tell the TVs on now that this one is gone. */
@@ -57,7 +58,11 @@ final class Household {
 
     /** Whether this TV has ever been in a household, without touching the Keystore. */
     private static boolean mayBeInHousehold(Context context) {
-        return prefs(context).getString(KEY_SEALED_PREF, null) != null;
+        SharedPreferences prefs = prefs(context);
+        for (String key : HOUSEHOLD_PREFS) {
+            if (prefs.getString(key, null) != null) return true;
+        }
+        return false;
     }
 
     private static synchronized HouseholdStore store(Context context) {
@@ -76,7 +81,7 @@ final class Household {
                 @Override public void remove(String key) {
                     prefs.edit().remove(key).apply();
                 }
-            }, SecretBox.keystore());
+            }, SecretBox.keystore(), HouseholdIdentity.keystore());
         }
         return sStore;
     }
@@ -85,11 +90,16 @@ final class Household {
         return new HouseholdLocal(context, store(context).seal());
     }
 
-    /** Sync is on: in a household and the switch is on. */
+    /** Sync is on: in a household (or leaving one and still telling it) and the switch is on. */
     private static boolean active(Context context) {
         if (!mayBeInHousehold(context)) return false;
         HouseholdStore store = store(context);
-        return store.joined() && store.enabled();
+        return store.syncs() && store.enabled();
+    }
+
+    /** Sync is on and this TV is a member, not leaving: its own settings go out and the household's come in. */
+    private static boolean member(Context context) {
+        return active(context) && store(context).joined();
     }
 
     // ---- Starting and stopping ----
@@ -101,6 +111,10 @@ final class Household {
             return;
         }
         HouseholdStore store = store(context);
+        if (store.leavingExpired(System.currentTimeMillis())) {
+            EXEC.execute(() -> forget(context));
+            return;
+        }
         HouseholdNet.start(context, store.tvId(), store.householdId(), socket -> EXEC.execute(() -> accept(socket)));
         synchronized (Household.class) {
             if (!sPeriodicScheduled) {
@@ -119,25 +133,22 @@ final class Household {
         syncSoon();
     }
 
-    /** This TV's own entry (HouseholdMembers), so the others list it: written when missing, renamed or a day old. */
+    /** This TV's own member entry (HouseholdMembers), so the others list it: written when missing, renamed or a day old. */
     private static void publishSelf() {
-        if (sContext == null || !active(sContext)) return;
+        if (sContext == null || !member(sContext)) return;
         HouseholdStore store = store(sContext);
-        String name = ShareDiscovery.deviceName(sContext);
-        long now = System.currentTimeMillis();
-        if (!HouseholdMembers.selfNeedsWrite(store.log(), store.tvId(), name, now)) return;
-        store.log().put(HouseholdMembers.KIND, HouseholdBridge.SHARED, store.tvId(), HouseholdMembers.value(name), now);
+        if (!store.publishSelf(ShareDiscovery.deviceName(sContext), System.currentTimeMillis())) return;
         store.save();
         syncSoon();
     }
 
-    /** A TV of the household synced with this one: kept, so it is listed while it's off. */
-    private static void noteSeen(HouseholdNet.Peer peer) {
-        if (peer == null || sContext == null) return;
+    /** A TV of the household synced with this one: when, for the list of members. */
+    private static void noteSeen(String tvId, String name) {
+        if (tvId == null || sContext == null) return;
         try {
             SharedPreferences prefs = prefs(sContext);
             org.json.JSONObject seen = new org.json.JSONObject(prefs.getString(SEEN_PREF, "{}"));
-            seen.put(peer.tvId, new org.json.JSONObject().put("name", peer.name == null ? "" : peer.name)
+            seen.put(tvId, new org.json.JSONObject().put("name", name == null ? "" : name)
                     .put("at", System.currentTimeMillis()));
             prefs.edit().putString(SEEN_PREF, seen.toString()).apply();
         } catch (org.json.JSONException e) {
@@ -161,14 +172,6 @@ final class Household {
         return out;
     }
 
-    private static HouseholdNet.Peer peerAt(java.net.InetAddress address) {
-        if (address == null) return null;
-        for (HouseholdNet.Peer peer : HouseholdNet.peers()) {
-            if (peer.host.equals(address.getHostAddress())) return peer;
-        }
-        return null;
-    }
-
     static void stop() {
         HouseholdNet.stop();
     }
@@ -183,7 +186,7 @@ final class Household {
     static void onPinSaved(Context context, String owner, String pkg, String appProfile) {
         if (!mayBeInHousehold(context)) return;
         EXEC.execute(() -> {
-            if (!active(context)) return;
+            if (!member(context)) return;
             char[] pin = PinVault.open(context, owner, pkg, appProfile);
             if (pin == null) return;
             try {
@@ -197,14 +200,14 @@ final class Household {
     static void onPinRemoved(Context context, String owner, String pkg, String appProfile) {
         if (!mayBeInHousehold(context)) return;
         EXEC.execute(() -> {
-            if (active(context)) publish(context, HouseholdBridge.PIN, owner, pkg + "|" + appProfile, null);
+            if (member(context)) publish(context, HouseholdBridge.PIN, owner, pkg + "|" + appProfile, null);
         });
     }
 
     static void onPairingChanged(Context context, String pkg, String profileKey) {
         if (!mayBeInHousehold(context)) return;
         EXEC.execute(() -> {
-            if (!active(context)) return;
+            if (!member(context)) return;
             publish(context, HouseholdBridge.PAIRING, profileKey, pkg, local(context).pairings(profileKey).get(pkg));
         });
     }
@@ -231,7 +234,7 @@ final class Household {
 
     /** Settings that are set here and have no entry yet become entries (the household's values win over this TV's). */
     private static void publishUnpublished() {
-        if (sContext == null || !active(sContext)) return;
+        if (sContext == null || !member(sContext)) return;
         HouseholdStore store = store(sContext);
         long now = System.currentTimeMillis();
         Map<String, String[]> fresh = HouseholdBridge.unpublished(local(sContext), store.log());
@@ -243,7 +246,7 @@ final class Household {
     }
 
     private static void applyEntries() {
-        if (sContext == null || !active(sContext)) return;
+        if (sContext == null || !member(sContext)) return;
         int changed = HouseholdBridge.apply(local(sContext), store(sContext).log());
         if (changed > 0) Log.i(TAG, "Applied " + changed + " setting(s) from the household");
     }
@@ -264,7 +267,11 @@ final class Household {
     /** Exchanges with every TV of the household that is on the network. */
     static void syncAll(String why) {
         if (sContext == null || !active(sContext)) return;
-        for (HouseholdNet.Peer peer : HouseholdNet.peers()) exchangeWith(peer, why);
+        for (HouseholdNet.Peer peer : HouseholdNet.peers()) {
+            // An exchange can end the household here (this TV was removed, or it finished leaving)
+            if (!active(sContext)) return;
+            exchangeWith(peer, why);
+        }
     }
 
     private static void exchangeWith(HouseholdNet.Peer peer, String why) {
@@ -273,9 +280,8 @@ final class Household {
             socket.connect(new InetSocketAddress(peer.host, peer.port), 5_000);
             socket.setSoTimeout(SOCKET_TIMEOUT_MS);
             HouseholdSync.Result result = HouseholdSync.run(socket.getInputStream(), socket.getOutputStream(), true,
-                    store, System.currentTimeMillis());
+                    store, ShareDiscovery.deviceName(sContext), System.currentTimeMillis());
             finish(store, result, "to " + why);
-            noteSeen(peer);
         } catch (IOException | java.security.GeneralSecurityException e) {
             sLastResult = "failed: " + e.getClass().getSimpleName();
             Log.i(TAG, "Couldn't sync with a TV of the household: " + e.getClass().getSimpleName());
@@ -288,16 +294,32 @@ final class Household {
             s.setSoTimeout(SOCKET_TIMEOUT_MS);
             HouseholdStore store = store(sContext);
             HouseholdSync.Result result = HouseholdSync.run(s.getInputStream(), s.getOutputStream(), false, store,
-                    System.currentTimeMillis());
+                    ShareDiscovery.deviceName(sContext), System.currentTimeMillis());
             finish(store, result, "from a TV");
-            // The sealed exchange is what shows it's of the household; its id comes from what the network announces
-            noteSeen(peerAt(s.getInetAddress()));
         } catch (IOException | java.security.GeneralSecurityException e) {
             Log.i(TAG, "A TV tried to sync and couldn't: " + e.getClass().getSimpleName());
         }
     }
 
     private static void finish(HouseholdStore store, HouseholdSync.Result result, String how) {
+        if (result.removedHere) {
+            Log.i(TAG, "Another TV of the household has this one removed: forgetting the household");
+            stop();
+            store.markRemoved();
+            prefs(sContext).edit().remove(SEEN_PREF).apply();
+            return;
+        }
+        if (result.peerRemoved) {
+            Log.i(TAG, "A TV removed from the household tried to sync, and was told");
+            return;
+        }
+        noteSeen(result.peer, result.peerName);
+        if (store.leaving()) {
+            // This TV's removal of itself reached a TV of the household: nothing more to tell
+            Log.i(TAG, "Left the household: another TV has it now");
+            forget(sContext);
+            return;
+        }
         store.log().purge(System.currentTimeMillis());
         store.save();
         applyEntries();
@@ -316,6 +338,7 @@ final class Household {
         HouseholdStore store = in ? store(context) : null;
         out.put("joined", store != null && store.joined());
         out.put("lost", store != null && store.lost());
+        out.put("removed", store != null && !store.joined() && store.removed());
         out.put("enabled", store == null || store.enabled());
         out.put("tvId", store == null ? null : store.tvId());
         List<Map<String, Object>> peers = new ArrayList<>();
@@ -345,6 +368,7 @@ final class Household {
             for (HouseholdMembers.Member m : HouseholdMembers.list(entries, seen(context), online, store.tvId(),
                     ShareDiscovery.deviceName(context), System.currentTimeMillis())) {
                 Map<String, Object> member = new HashMap<>();
+                member.put("tvId", m.tvId);
                 member.put("name", m.name);
                 member.put("self", m.self);
                 member.put("online", m.online);
@@ -369,26 +393,44 @@ final class Household {
 
     /** Starts a household here. False when this TV is already in one. */
     static boolean create(Context context) {
-        boolean ok = store(context).create();
-        if (ok) start(context);
+        boolean ok = store(context).create(ShareDiscovery.deviceName(context), System.currentTimeMillis());
+        if (ok) {
+            prefs(context).edit().remove(SEEN_PREF).apply();
+            start(context);
+        }
         return ok;
     }
 
-    /** The household key to hand to a TV that joins, making a household here first if there is none; null on failure. */
-    static byte[] keyToJoin(Context context) {
+    /**
+     * An invitation for the TV a copy goes to (HouseholdStore.Invitation, as JSON), making a household here first if
+     * there is none; null on failure.
+     */
+    static String invitationToJoin(Context context) {
         HouseholdStore store = store(context);
         if (!store.joined() && !create(context)) return null;
-        return store.exportKey();
+        HouseholdStore.Invitation inv = store.invite(ShareDiscovery.deviceName(context), System.currentTimeMillis());
+        return inv == null ? null : inv.toJson();
     }
 
-    /** Joins the household whose key {@code secrets} carries (a copy from another TV). False if it has none. */
+    /**
+     * Joins the household that {@code secrets} (a copy from another TV) carries an invitation to, or the key of when
+     * the other TV still runs version 1. False if it carries neither.
+     */
     static boolean joinFromSecrets(Context context, String secrets) {
         try {
-            String encoded = new org.json.JSONObject(secrets).optString("household", "");
-            if (encoded.isEmpty()) return false;
-            byte[] key = java.util.Base64.getDecoder().decode(encoded);
-            boolean ok = store(context).join(key);
-            Arrays.fill(key, (byte) 0);
+            org.json.JSONObject root = new org.json.JSONObject(secrets);
+            boolean ok;
+            String invitation = root.optString("household2", "");
+            if (!invitation.isEmpty()) {
+                ok = store(context).join(HouseholdStore.Invitation.fromJson(invitation),
+                        ShareDiscovery.deviceName(context), System.currentTimeMillis());
+            } else {
+                String encoded = root.optString("household", "");
+                if (encoded.isEmpty()) return false;
+                byte[] key = java.util.Base64.getDecoder().decode(encoded);
+                ok = store(context).joinV1(key);
+                Arrays.fill(key, (byte) 0);
+            }
             if (ok) {
                 // The TVs of a household this one was in before aren't members of this one
                 prefs(context).edit().remove(SEEN_PREF).apply();
@@ -408,34 +450,62 @@ final class Household {
     }
 
     /**
-     * Leaves the household: first tells the TVs on now that this one is gone (it deletes its own entry and syncs, for at
-     * most {@link #LEAVE_SYNC_MS}; a TV that's off hears it from them), then forgets the key and the entries here. Blocks:
-     * not on the main thread.
+     * Leaves the household: this TV removes itself from the member list and hands that to the TVs on now (for at most
+     * {@link #LEAVE_SYNC_MS}); the first that takes it ends the household here. With none on, this TV stays only to hand
+     * it to the first it meets, for up to HouseholdStore.LEAVING_MS. Blocks: not on the main thread.
      */
     static void leave(Context context) {
         if (!mayBeInHousehold(context)) return;
         sContext = context.getApplicationContext();
         try {
             EXEC.submit(() -> {
-                if (!active(sContext)) return;
                 HouseholdStore store = store(sContext);
-                store.log().delete(HouseholdMembers.KIND, HouseholdBridge.SHARED, store.tvId(), System.currentTimeMillis());
-                store.save();
-                syncAll("leave");
+                if (!store.joined()) return;
+                store.beginLeaving(System.currentTimeMillis());
+                if (store.enabled()) {
+                    syncAll("leave");
+                } else {
+                    // Sync is off: there's no one to tell
+                    forget(sContext);
+                }
             }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-            Log.i(TAG, "Left without telling every TV: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Leaving the household: no TV took it yet (" + e.getClass().getSimpleName() + ")");
         }
-        Runnable forget = () -> {
-            stop();
-            store(sContext).leave();
-            prefs(sContext).edit().remove(SEEN_PREF).apply();
-        };
+    }
+
+    /** Forgets the household here. On the household thread. */
+    private static void forget(Context context) {
+        stop();
+        store(context).leave();
+        prefs(context).edit().remove(SEEN_PREF).apply();
+    }
+
+    /**
+     * Removes another TV from the household: it is taken off the member list, which reaches the other TVs like any
+     * change, and they stop syncing with it. False for this TV (that's {@link #leave}) or one this TV can't remove.
+     * Blocks: not on the main thread.
+     */
+    static boolean removeTv(Context context, String tvId) {
+        if (!mayBeInHousehold(context)) return false;
+        sContext = context.getApplicationContext();
         try {
-            EXEC.submit(forget).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
+            return EXEC.submit(() -> {
+                HouseholdStore store = store(sContext);
+                if (!store.remove(tvId, System.currentTimeMillis())) return false;
+                store.save();
+                try {
+                    org.json.JSONObject seen = new org.json.JSONObject(prefs(sContext).getString(SEEN_PREF, "{}"));
+                    seen.remove(tvId);
+                    prefs(sContext).edit().putString(SEEN_PREF, seen.toString()).apply();
+                } catch (org.json.JSONException ignored) {
+                }
+                syncSoon();
+                return true;
+            }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-            // The household thread is stuck: forget here, so leaving can't fail
-            forget.run();
+            Log.i(TAG, "Couldn't remove the TV: " + e.getClass().getSimpleName());
+            return false;
         }
     }
 

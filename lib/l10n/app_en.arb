@@ -293,6 +293,25 @@
     "@householdLost": {
         "description": "Household page: the key is gone"
     },
+    "householdRemoved": "This TV was removed from the household on another TV. Join again to keep it in step.",
+    "@householdRemoved": {
+        "description": "Household page: another TV removed this one from the household"
+    },
+    "householdRemoveTitle": "Remove {name}?",
+    "@householdRemoveTitle": {
+        "description": "Household page: asking before removing another TV from the household; {name} is that TV's name",
+        "placeholders": {
+            "name": {"type": "String"}
+        }
+    },
+    "householdRemoveBody": "It stops syncing with your other TVs. To bring it back, join the household again from that TV.",
+    "@householdRemoveBody": {
+        "description": "Household page: what removing a TV does"
+    },
+    "householdRemoveFailed": "That TV couldn't be removed. Try again.",
+    "@householdRemoveFailed": {
+        "description": "Household page: removing a TV didn't work"
+    },
     "householdAddHint": "To add a TV: on a TV that is in the household, open Copy profiles between TVs, then Copy profiles to another TV, and tick Add this TV to my household.",
     "@householdAddHint": {
         "description": "Household page: how to add a TV"

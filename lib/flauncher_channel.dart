@@ -449,9 +449,10 @@ class FLauncherChannel {
           "applyShareSecrets", {"targets": targets, "pins": pins, "ha": ha, "household": household})) ??
       {};
 
-  /// Where this TV stands in its household: {joined, lost, enabled, tvId, peers: [{tvId}], lastSyncAt, lastResult,
-  /// members: [{name, self, online, lastSeen}], nearby: [[name, …], …]}. `members` is the household's TVs (this one
-  /// first); `nearby` is the other households heard on the network, each as its TVs' names (a name may be null).
+  /// Where this TV stands in its household: {joined, lost, removed, enabled, tvId, peers: [{tvId}], lastSyncAt,
+  /// lastResult, members: [{tvId, name, self, online, lastSeen}], nearby: [[name, …], …]}. `members` is the household's
+  /// TVs (this one first); `removed` says another TV removed this one; `nearby` is the other households heard on the
+  /// network, each as its TVs' names (a name may be null).
   Future<Map<dynamic, dynamic>> getHouseholdStatus() async =>
       (await _methodChannel.invokeMapMethod<dynamic, dynamic>("getHouseholdStatus")) ?? {};
 
@@ -466,7 +467,11 @@ class FLauncherChannel {
   /// The one switch: whether this TV syncs with the other TVs of its household.
   Future<void> setHouseholdEnabled(bool on) async => await _methodChannel.invokeMethod("setHouseholdEnabled", on);
 
-  /// Leaves the household: the key and the entries are forgotten on this TV.
+  /// Removes another TV of the household (by its tvId from `members`); false if it couldn't be.
+  Future<bool> removeHouseholdTv(String tvId) async =>
+      await _methodChannel.invokeMethod<bool>("removeHouseholdTv", tvId) ?? false;
+
+  /// Leaves the household: this TV tells the others it's gone, then forgets its key and the entries.
   Future<void> leaveHousehold() async => await _methodChannel.invokeMethod("leaveHousehold");
 
   /// Trades entries with the other TVs now.

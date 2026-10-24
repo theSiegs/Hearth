@@ -64,10 +64,10 @@ Every TV on the list keeps the whole list, so each knows every other, even two t
 - **A TV syncs only with listed TVs.** Each exchange begins with both TVs proving they hold the private key of a listed
   member (see Moving entries). A TV not on this TV's list gets nothing and can send nothing.
 - **Adding** a TV is one new `member` entry, written by the member that approved the join.
-- **Removing** a TV is a `removed` entry for its TV id. It spreads like any change, and each TV that takes it stops
-  talking to that TV. No key changes, and the TVs that stay do nothing.
-- **A removal is final for that key.** A `removed` entry is never overwritten (not even by a newer `member` entry for
-  the same id) and never purged. A removed TV comes back only by joining again, which gives it a new TV key and so a new
+- **Removing** a TV deletes its `member` entry (the removal). It spreads like any change, and each TV that takes it
+  stops talking to that TV. No key changes, and the TVs that stay do nothing.
+- **A removal is final for that key.** It beats any write for that TV, a later one included, nothing written after it
+  replaces it, and it is never purged. A removed TV comes back only by joining again, which gives it a new TV key and so a new
   id; it shows as a new member.
 - Each TV still writes its name into its own `member` entry when renamed, and refreshes it once a day, so the list shows
   current names and when each TV was last on.
@@ -77,10 +77,11 @@ it means leave; on another TV's row it removes that TV. Removing another TV asks
 approval where it's on). A TV that hasn't been seen for 60 days is marked "Not seen for 2 months" with Remove next to
 it; nothing is ever removed on its own.
 
-**Leaving** (removing this TV) writes this TV's `removed` entry, tries to hand it to the TVs that are on now (for up to
-ten seconds), then deletes this TV's key, its entries and its member list. If no other TV is on, this TV keeps only the
-signed `removed` entry and delivers it to the first household TV it hears, for up to 90 days; until then the others
-still list it, as they would a TV that was switched off.
+**Leaving** (removing this TV) writes this TV's own removal and tries to hand it to the TVs that are on now (for up to
+ten seconds). The first exchange that carries it ends the household here: the TV deletes its key, its entries and its
+member list. If no other TV is on, the TV stays only to do that, taking no settings from the household and giving none,
+until the first household TV it meets, for up to 90 days; until then the others still list it, as they would a TV that
+was switched off.
 
 **A removed TV that was off** finds out when it next tries to sync: the TV it reaches refuses it and says why, in a
 message signed by that TV's key. It then shows "This TV was removed from the household", drops what it held, and offers
@@ -169,7 +170,7 @@ Assistant everything above still works.
 sets from the network, so the clocks agree to within a second or two and nothing syncs time itself. A hybrid logical
 clock keeps a TV whose clock jumps from winning forever; a tie goes to the lower TV id. A delete is an entry with a
 deleted flag and a timestamp, kept for 90 days, so a TV that was off can't bring a deleted PIN back. Exceptions:
-`removed` entries never lose and are never purged; Continue Watching is a set (union, newest play per title); a
+removals never lose and are never purged; Continue Watching is a set (union, newest play per title); a
 profile's list of hidden apps merges by app.
 
 **Size.** Entries are small, except pictures and watch history. History keeps at most 100 entries per profile, 90 days.
@@ -245,22 +246,30 @@ Changed in version 2:
 | One household key on every TV proves membership and seals entries and exchanges | A TV key per TV; the synced member list says who is in; exchanges are signed and sealed per pair |
 | Person ids keyed by the household key | Keyed by the person salt |
 | Join through Copy profiles, digits on both screens | Join from the new TV, approved on a parent's phone (or on the household TV) |
-| Leaving wipes the key; cutting a TV off means resetting the household | Remove from household: one `removed` entry, nothing else changes |
+| Leaving wipes the key; cutting a TV off means resetting the household | Remove from household: one removal, nothing else changes |
 | "Start a household on this TV" | Every TV is in one from setup |
 | Copy profiles between TVs, separate from sync | Gone from Settings once look and layout sync; Backup & restore stays for a TV off the network |
 
 **Converting a version 1 household.** On updating, a TV that holds a version 1 household key makes its TV key, and the
 first exchange between two such TVs runs under the version 1 key one last time to trade public keys and write both
 `member` entries; the person salt is taken from the version 1 key (HKDF, the label of the old person key), so person ids
-don't change and no entry is rewritten. Once a TV has a member list it drops the version 1 key and stops accepting
-version 1 exchanges. A TV still on version 1 can't sync with a converted one; it converts when it updates (Hearth updates
-itself in the background), and a TV that never updates is removed like any other.
+don't change and no entry is rewritten. A converted TV keeps the version 1 key for 90 days from its first exchange, only
+to admit the household's other TVs as they convert, then drops it. A TV still on version 1 can't sync with a converted
+one; it converts when it updates (Hearth updates itself in the background), and a TV that never updates is removed like
+any other.
+
+**Joining until step 2 is built.** A copy with "Add this TV to my household" ticked hands the new TV an invitation
+instead of the household key: the household's id and person salt, the sending TV's id and public key, and a random
+secret that admits one TV, once, within an hour. The new TV lists the sending TV and proves the secret at their first
+exchange; the sending TV then lists it. A copy from a TV still on version 1 still hands over the version 1 key, and the
+receiving TV converts at once.
 
 ## Build order
 
-1. **TV keys and the member list**: the signed channel, `member` and `removed` entries, conversion from version 1,
-   leave and remove. Unit tests for the channel (wrong key, removed id, replay, tampering), removal never losing, and
-   conversion.
+1. **TV keys and the member list** (built): the signed channel, member entries and final removals, invitations through
+   the copy, conversion from version 1, leave and remove (a Remove action on the Household page's TV list). Unit tests
+   for the channel (an outsider, a forged id, a spent invitation, a removed TV either way round), removal never losing,
+   leaving, and conversion.
 2. **Joining from the new TV**: the join request, the join code, phone approval through the household TV, the on-screen
    fallback, the first sync and the preview of what changes.
 3. **Look and layout, then wallpaper pictures.**

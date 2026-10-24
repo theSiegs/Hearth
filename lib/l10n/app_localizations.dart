@@ -759,6 +759,30 @@ abstract class AppLocalizations {
   /// **'This TV was in a household but can\'t open its key any more. Join again from another TV.'**
   String get householdLost;
 
+  /// Household page: another TV removed this one from the household
+  ///
+  /// In en, this message translates to:
+  /// **'This TV was removed from the household on another TV. Join again to keep it in step.'**
+  String get householdRemoved;
+
+  /// Household page: asking before removing another TV from the household; {name} is that TV's name
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name}?'**
+  String householdRemoveTitle(String name);
+
+  /// Household page: what removing a TV does
+  ///
+  /// In en, this message translates to:
+  /// **'It stops syncing with your other TVs. To bring it back, join the household again from that TV.'**
+  String get householdRemoveBody;
+
+  /// Household page: removing a TV didn't work
+  ///
+  /// In en, this message translates to:
+  /// **'That TV couldn\'t be removed. Try again.'**
+  String get householdRemoveFailed;
+
   /// Household page: how to add a TV
   ///
   /// In en, this message translates to:

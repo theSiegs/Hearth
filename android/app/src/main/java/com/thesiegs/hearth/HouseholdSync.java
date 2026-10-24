@@ -11,43 +11,62 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.KeyPair;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
- * One exchange of entries between two TVs of a household (docs/household-sync.md), over any pair of streams. Both
- * sides trade a random nonce in the clear, then every frame is sealed (ChaCha20-Poly1305) under keys derived from the
- * household key and both nonces, with a counter per direction, so a TV that doesn't have the key can't take part, and a
- * recorded exchange can't be played back. Each side says what it has seen from each TV (its version vector), then
- * sends what the other lacks, then merges what it got. The initiator speaks first at every step, so neither side waits on
- * the other's write. Nothing about a profile or a PIN is in the clear.
+ * One exchange of entries between two TVs of a household (docs/household-sync.md, "Moving entries"), over any pair of
+ * streams. Each side sends its TV id, a fresh ECDH key and a nonce in the clear; every frame after that is sealed
+ * (ChaCha20-Poly1305) under keys derived from the shared secret and the whole opening (the transcript), with a counter
+ * per direction, so it can't be read, altered or played back. Then each side signs the transcript with its TV key, and
+ * the other checks that key against its member list: a listed TV goes on, a removed one is told so, an unknown one is
+ * refused unless it proves an invitation or the version 1 household key, which lists it. Then each says what it has seen
+ * from each TV (its version vector), sends what the other lacks, and merges what it got. The initiator speaks first at
+ * every step, so neither side waits on the other's write.
  */
 final class HouseholdSync {
-    private static final byte[] MAGIC = {'H', 'H', 'S', '1'};
+    private static final byte[] MAGIC = {'H', 'H', 'S', '2'};
     private static final int NONCE_BYTES = 16;
+    private static final int POINT_BYTES = 65;
     private static final int MAX_FRAME_BYTES = 8 * 1024 * 1024;
     static final int MAX_ENTRIES = 20_000;
-    private static final byte[] LABEL = ShareCrypto.bytes("hearth-household-sync-v1");
+    private static final byte[] LABEL = ShareCrypto.bytes("hearth-household-sync-v2");
+    private static final Pattern TV_ID = Pattern.compile("tv-[0-9a-f]{16}");
+    private static final String MEMBER = "member";
+    private static final String REMOVED = "removed";
     private static final SecureRandom RANDOM = new SecureRandom();
 
     /** What an exchange did, for the screen and the log. */
     static final class Result {
         final String peer;
+        /** The name the other TV gave. */
+        final String peerName;
         final int sent;
         final int received;
         /** The entries that changed this TV (they beat what it had), for the app to apply. */
         final List<HouseholdEntry> applied;
+        /** The other TV is removed from this TV's list; it was told, and nothing moved. */
+        final boolean peerRemoved;
+        /** The other TV has this one removed; nothing moved. The caller forgets the household. */
+        final boolean removedHere;
 
-        Result(String peer, int sent, int received, List<HouseholdEntry> applied) {
+        Result(String peer, String peerName, int sent, int received, List<HouseholdEntry> applied, boolean peerRemoved,
+                boolean removedHere) {
             this.peer = peer;
+            this.peerName = peerName;
             this.sent = sent;
             this.received = received;
             this.applied = applied;
+            this.peerRemoved = peerRemoved;
+            this.removedHere = removedHere;
         }
     }
 
@@ -62,65 +81,76 @@ final class HouseholdSync {
     private final DataOutputStream out;
     private final boolean initiator;
     private final HouseholdStore store;
+    private final String name;
     private final long now;
+    private byte[] transcript;
     private byte[] sendKey;
     private byte[] receiveKey;
     private byte[] aad;
     private long sendCounter;
     private long receiveCounter;
+    private String peer;
+    private String peerName;
 
-    private HouseholdSync(InputStream in, OutputStream out, boolean initiator, HouseholdStore store, long now) {
+    private HouseholdSync(InputStream in, OutputStream out, boolean initiator, HouseholdStore store, String name,
+            long now) {
         this.in = new DataInputStream(in);
         this.out = new DataOutputStream(out);
         this.initiator = initiator;
         this.store = store;
+        this.name = name;
         this.now = now;
     }
 
     /**
-     * Runs the exchange as the TV that connected ({@code initiator}) or the one that accepted. The log is merged but
-     * not saved; the caller saves it ({@link HouseholdStore#save}) and applies {@link Result#applied}.
+     * Runs the exchange as the TV that connected ({@code initiator}) or the one that accepted; {@code name} is this TV's
+     * name, for a TV that lists it. The log is merged but not saved; the caller saves it ({@link HouseholdStore#save})
+     * and applies {@link Result#applied}.
      */
-    static Result run(InputStream in, OutputStream out, boolean initiator, HouseholdStore store, long now)
+    static Result run(InputStream in, OutputStream out, boolean initiator, HouseholdStore store, String name, long now)
             throws IOException, GeneralSecurityException {
-        if (!store.joined() || store.log() == null) throw new SyncException("Not in a household");
+        if (!store.syncs() || store.log() == null) throw new SyncException("Not in a household");
         try {
-            return new HouseholdSync(in, out, initiator, store, now).exchange();
-        } catch (JSONException e) {
+            return new HouseholdSync(in, out, initiator, store, name, now).exchange();
+        } catch (JSONException | IllegalArgumentException e) {
             throw new SyncException("Not a household exchange");
         }
     }
 
     private Result exchange() throws IOException, GeneralSecurityException, JSONException {
-        byte[] mine = new byte[NONCE_BYTES];
-        RANDOM.nextBytes(mine);
-        byte[] theirs = new byte[NONCE_BYTES];
-        byte[] magic = new byte[MAGIC.length];
-        if (initiator) {
-            sendHello(mine);
-            readHello(magic, theirs);
-        } else {
-            readHello(magic, theirs);
-            sendHello(mine);
-        }
-        deriveKeys(initiator ? mine : theirs, initiator ? theirs : mine);
+        open();
 
-        // 1. what each side has seen
-        JSONObject hello = new JSONObject().put("tv", store.tvId()).put("vector", vectorJson(store.log().vector()));
-        JSONObject peerHello;
+        // 1. who each side is, and where the other stands
+        JSONObject mine = auth();
+        boolean peerRemoved;
         if (initiator) {
-            writeFrame(hello.toString().getBytes(StandardCharsets.UTF_8));
-            peerHello = new JSONObject(readText());
+            writeJson(mine);
+            JSONObject theirs = readJson();
+            peerRemoved = check(theirs) == HouseholdMembers.Standing.REMOVED;
+            if (REMOVED.equals(theirs.optString("verdict"))) return stopped(false, true);
+            writeJson(new JSONObject().put("verdict", peerRemoved ? REMOVED : MEMBER));
+            if (peerRemoved) return stopped(true, false);
         } else {
-            peerHello = new JSONObject(readText());
-            writeFrame(hello.toString().getBytes(StandardCharsets.UTF_8));
+            peerRemoved = check(readJson()) == HouseholdMembers.Standing.REMOVED;
+            writeJson(mine.put("verdict", peerRemoved ? REMOVED : MEMBER));
+            if (peerRemoved) return stopped(true, false);
+            if (REMOVED.equals(readJson().optString("verdict"))) return stopped(false, true);
         }
-        String peer = peerHello.getString("tv");
-        if (peer.isEmpty() || peer.equals(store.tvId())) throw new SyncException("Bad peer");
-        Map<String, Long> peerVector = readVector(peerHello.getJSONObject("vector"));
 
-        // 2. what each side lacks
-        List<HouseholdEntry> toSend = store.log().missingFrom(peerVector);
+        // 2. what each side has seen
+        JSONObject vector = new JSONObject().put("vector", vectorJson(store.log().vector()));
+        JSONObject peerVector;
+        if (initiator) {
+            writeJson(vector);
+            peerVector = readJson();
+        } else {
+            peerVector = readJson();
+            writeJson(vector);
+        }
+        Map<String, Long> theirVector = readVector(peerVector.getJSONObject("vector"));
+
+        // 3. what each side lacks
+        List<HouseholdEntry> toSend = store.log().missingFrom(theirVector);
         if (toSend.size() > MAX_ENTRIES) toSend = toSend.subList(0, MAX_ENTRIES);
         String payload = entriesJson(toSend);
         String incoming;
@@ -132,7 +162,7 @@ final class HouseholdSync {
             writeFrame(payload.getBytes(StandardCharsets.UTF_8));
         }
 
-        // 3. merge
+        // 4. merge
         JSONArray array = new JSONArray(incoming);
         if (array.length() > MAX_ENTRIES) throw new SyncException("Too many entries");
         List<HouseholdEntry> applied = new ArrayList<>();
@@ -143,34 +173,137 @@ final class HouseholdSync {
             received++;
             if (store.log().merge(entry, now)) applied.add(entry);
         }
-        return new Result(peer, toSend.size(), received, applied);
+        // The TV that invited this one has listed it: the invitation is spent
+        if (store.joinProofFor(peer) != null) store.joinProofUsed();
+        return new Result(peer, peerName, toSend.size(), received, applied, false, false);
     }
 
-    private void sendHello(byte[] nonce) throws IOException {
-        out.write(MAGIC);
-        out.write(nonce);
-        out.flush();
+    private Result stopped(boolean peerRemoved, boolean removedHere) {
+        return new Result(peer, peerName, 0, 0, new ArrayList<>(), peerRemoved, removedHere);
     }
 
-    private void readHello(byte[] magic, byte[] nonce) throws IOException {
-        in.readFully(magic);
-        if (!MessageDigest.isEqual(magic, MAGIC)) throw new SyncException("Not a household exchange");
-        in.readFully(nonce);
-    }
+    // ---- Opening: the clear hellos, the shared secret, the session keys ----
 
-    private void deriveKeys(byte[] initiatorNonce, byte[] responderNonce) throws IOException, GeneralSecurityException {
-        byte[] key = store.exportKey();
-        if (key == null) throw new SyncException("Not in a household");
+    private void open() throws IOException, GeneralSecurityException {
+        KeyPair ephemeral = ShareCrypto.newKeyPair();
+        byte[] point = ShareCrypto.encodePoint(ephemeral.getPublic());
+        byte[] nonce = new byte[NONCE_BYTES];
+        RANDOM.nextBytes(nonce);
+        String peerId;
+        byte[] peerPoint = new byte[POINT_BYTES];
+        byte[] peerNonce = new byte[NONCE_BYTES];
+        if (initiator) {
+            sendHello(point, nonce);
+            peerId = readHello(peerPoint, peerNonce);
+        } else {
+            peerId = readHello(peerPoint, peerNonce);
+            sendHello(point, nonce);
+        }
+        if (peerId.equals(store.tvId())) throw new SyncException("Bad peer");
+        peer = peerId;
+        byte[] shared = ShareCrypto.agree(ephemeral, ShareCrypto.decodePoint(peerPoint, ShareCrypto.params(ephemeral)));
         try {
-            byte[] prk = ShareCrypto.hkdfExtract(ShareCrypto.sha256(LABEL, initiatorNonce, responderNonce), key);
+            byte[] household = ShareCrypto.bytes(store.householdId());
+            String iId = initiator ? store.tvId() : peerId;
+            String rId = initiator ? peerId : store.tvId();
+            transcript = ShareCrypto.sha256(LABEL, household, ShareCrypto.bytes(iId), initiator ? point : peerPoint,
+                    initiator ? nonce : peerNonce, ShareCrypto.bytes(rId), initiator ? peerPoint : point,
+                    initiator ? peerNonce : nonce);
+            byte[] prk = ShareCrypto.hkdfExtract(transcript, shared);
             byte[] i2r = ShareCrypto.hkdfExpand(prk, ShareCrypto.bytes("i2r"), ShareCrypto.KEY_BYTES);
             byte[] r2i = ShareCrypto.hkdfExpand(prk, ShareCrypto.bytes("r2i"), ShareCrypto.KEY_BYTES);
             sendKey = initiator ? i2r : r2i;
             receiveKey = initiator ? r2i : i2r;
-            aad = ShareCrypto.bytes(store.householdId());
+            aad = household;
         } finally {
-            java.util.Arrays.fill(key, (byte) 0);
+            java.util.Arrays.fill(shared, (byte) 0);
         }
+    }
+
+    private void sendHello(byte[] point, byte[] nonce) throws IOException {
+        out.write(MAGIC);
+        out.writeUTF(store.tvId());
+        out.write(point);
+        out.write(nonce);
+        out.flush();
+    }
+
+    private String readHello(byte[] point, byte[] nonce) throws IOException {
+        byte[] magic = new byte[MAGIC.length];
+        in.readFully(magic);
+        if (!MessageDigest.isEqual(magic, MAGIC)) throw new SyncException("Not a household exchange");
+        String id = in.readUTF();
+        if (!TV_ID.matcher(id).matches()) throw new SyncException("Not a household exchange");
+        in.readFully(point);
+        in.readFully(nonce);
+        return id;
+    }
+
+    // ---- Proving who each side is ----
+
+    private byte[] signed(boolean ofInitiator, String purpose) {
+        byte[] role = ShareCrypto.bytes((ofInitiator ? "i" : "r") + purpose);
+        byte[] out = java.util.Arrays.copyOf(transcript, transcript.length + role.length);
+        System.arraycopy(role, 0, out, transcript.length, role.length);
+        return out;
+    }
+
+    /** This side's proof: its key, its signature over the transcript, its name, and what admits it if it isn't listed. */
+    private JSONObject auth() throws GeneralSecurityException, JSONException {
+        Base64.Encoder b64 = Base64.getEncoder();
+        JSONObject auth = new JSONObject()
+                .put("key", b64.encodeToString(store.publicKey()))
+                .put("sig", b64.encodeToString(store.identity().sign(signed(initiator, ""))))
+                .put("name", name == null ? "" : name);
+        byte[] v1 = store.v1AdmitKey(now);
+        if (v1 != null) auth.put("v1", b64.encodeToString(ShareCrypto.hkdfExtract(v1, signed(initiator, "v1"))));
+        byte[] invite = store.joinProofFor(peer);
+        if (invite != null) {
+            auth.put("invite", b64.encodeToString(ShareCrypto.hkdfExtract(invite, signed(initiator, "invite"))));
+            java.util.Arrays.fill(invite, (byte) 0);
+        }
+        return auth;
+    }
+
+    /**
+     * Checks the other side's proof and returns where it stands; one not listed is listed if it proves an invitation or
+     * the version 1 key, and refused otherwise.
+     */
+    private HouseholdMembers.Standing check(JSONObject auth) throws IOException, GeneralSecurityException {
+        Base64.Decoder b64 = Base64.getDecoder();
+        byte[] key = b64.decode(auth.optString("key", ""));
+        byte[] sig = b64.decode(auth.optString("sig", ""));
+        boolean ofInitiator = !initiator;
+        if (!HouseholdIdentity.tvIdOf(key).equals(peer) || !HouseholdIdentity.verify(key, signed(ofInitiator, ""), sig)) {
+            throw new SyncException("The other TV isn't who it says");
+        }
+        String given = auth.optString("name", "").trim();
+        peerName = given.isEmpty() ? null : given;
+        HouseholdMembers.Standing standing = HouseholdMembers.standing(store.log(), peer);
+        if (standing != HouseholdMembers.Standing.UNKNOWN) return standing;
+        byte[] v1 = store.v1AdmitKey(now);
+        String v1Mac = auth.optString("v1", "");
+        if (v1 != null && !v1Mac.isEmpty()
+                && MessageDigest.isEqual(ShareCrypto.hkdfExtract(v1, signed(ofInitiator, "v1")), b64.decode(v1Mac))) {
+            store.admit(peer, key, peerName, now);
+            return HouseholdMembers.Standing.MEMBER;
+        }
+        String inviteMac = auth.optString("invite", "");
+        if (!inviteMac.isEmpty() && store.useInvite(signed(ofInitiator, "invite"), b64.decode(inviteMac), now)) {
+            store.admit(peer, key, peerName, now);
+            return HouseholdMembers.Standing.MEMBER;
+        }
+        throw new SyncException("The other TV is not in this household");
+    }
+
+    // ---- Frames ----
+
+    private void writeJson(JSONObject json) throws IOException, GeneralSecurityException {
+        writeFrame(json.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    private JSONObject readJson() throws IOException, GeneralSecurityException, JSONException {
+        return new JSONObject(readText());
     }
 
     private void writeFrame(byte[] plain) throws IOException, GeneralSecurityException {

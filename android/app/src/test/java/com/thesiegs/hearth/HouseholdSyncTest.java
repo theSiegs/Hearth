@@ -161,71 +161,61 @@ public class HouseholdSyncTest {
     }
 
     @Test
-    public void aSealedEntryOpensOnlyWithTheHouseholdKey() throws Exception {
-        HouseholdSeal ours = new HouseholdSeal(HouseholdSeal.newKey());
-        HouseholdSeal stranger = new HouseholdSeal(HouseholdSeal.newKey());
-        HouseholdEntry entry = new HouseholdEntry("pin", "Sam", "disney", "secret", T0, "tv-a", 1, false);
-        byte[] blob = ours.seal(entry);
-        assertEquals("secret", ours.open(blob).value);
-        assertNull(stranger.open(blob));
-        assertFalse(new String(blob, java.nio.charset.StandardCharsets.ISO_8859_1).contains("secret"));
-    }
-
-    @Test
-    public void aTamperedOrTruncatedBlobDoesNotOpen() throws Exception {
-        HouseholdSeal seal = new HouseholdSeal(HouseholdSeal.newKey());
-        byte[] blob = seal.seal(new HouseholdEntry("look", "Alex", "theme", "dark", T0, "tv-a", 1, false));
-        byte[] flipped = blob.clone();
-        flipped[flipped.length - 1] ^= 1;
-        assertNull(seal.open(flipped));
-        byte[] flippedNonce = blob.clone();
-        flippedNonce[0] ^= 1;
-        assertNull(seal.open(flippedNonce));
-        assertNull(seal.open(Arrays.copyOf(blob, blob.length - 1)));
-        assertNull(seal.open(new byte[3]));
-        assertNull(seal.open(null));
-    }
-
-    @Test
-    public void sealingTheSameEntryTwiceGivesDifferentBytes() throws Exception {
-        HouseholdSeal seal = new HouseholdSeal(HouseholdSeal.newKey());
-        HouseholdEntry entry = new HouseholdEntry("look", "Alex", "theme", "dark", T0, "tv-a", 1, false);
-        assertFalse(Arrays.equals(seal.seal(entry), seal.seal(entry)));
-    }
-
-    @Test
-    public void theHouseholdIdIsStableAndDoesNotShowTheKey() throws Exception {
-        byte[] key = HouseholdSeal.newKey();
-        String id = new HouseholdSeal(key).id();
-        assertEquals(id, new HouseholdSeal(key).id());
-        assertEquals(16, id.length());
-        assertNotEquals(id, new HouseholdSeal(HouseholdSeal.newKey()).id());
-    }
-
-    @Test
-    public void aPersonIdIsTheSameForTheHouseholdAndSaysNothingOfTheAddress() throws Exception {
-        byte[] key = HouseholdSeal.newKey();
-        HouseholdSeal a = new HouseholdSeal(key);
-        HouseholdSeal b = new HouseholdSeal(key.clone());
+    public void aPersonIdIsTheSameForTheHouseholdAndSaysNothingOfTheAddress() {
+        byte[] salt = HouseholdSeal.newSalt();
+        HouseholdSeal a = new HouseholdSeal(salt);
+        HouseholdSeal b = new HouseholdSeal(salt.clone());
         String id = a.personId("Alex@Example.com ");
         assertEquals(id, b.personId("alex@example.com"));
         assertTrue(id.startsWith("a:") && id.length() == 26);
         assertFalse(id.contains("alex"));
         assertNotEquals(id, a.personId("sam@example.com"));
         // another household makes another id for the same address
-        assertNotEquals(id, new HouseholdSeal(HouseholdSeal.newKey()).personId("alex@example.com"));
+        assertNotEquals(id, new HouseholdSeal(HouseholdSeal.newSalt()).personId("alex@example.com"));
         assertNull(a.personId(null));
         assertNull(a.personId("  "));
     }
 
     @Test
-    public void aWrongSizedKeyIsRefused() {
+    public void aWrongSizedSaltIsRefused() {
         try {
             new HouseholdSeal(new byte[5]);
             org.junit.Assert.fail("expected a refusal");
-        } catch (IllegalArgumentException | java.security.GeneralSecurityException expected) {
+        } catch (IllegalArgumentException expected) {
             // refused
         }
+    }
+
+    @Test
+    public void householdIdsAreSixteenHexDigitsAndDiffer() throws Exception {
+        String id = HouseholdSeal.newId("tv-0123456789abcdef");
+        assertEquals(id, HouseholdSeal.newId("tv-0123456789abcdef"));
+        assertTrue(id.matches("[0-9a-f]{16}"));
+        assertNotEquals(id, HouseholdSeal.newId("tv-fedcba9876543210"));
+        assertTrue(HouseholdSeal.v1Id(new byte[32]).matches("[0-9a-f]{16}"));
+    }
+
+    @Test
+    public void removingATvIsFinal() {
+        HouseholdLog a = new HouseholdLog("tv-a");
+        HouseholdLog b = new HouseholdLog("tv-b");
+        b.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, "tv-c", "{}", T0);
+        a.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, "tv-c", "{}", T0);
+        a.delete(HouseholdMembers.KIND, HouseholdBridge.SHARED, "tv-c", T0 + 1);
+        // a later write on a TV that hadn't heard: the removal still wins, wherever they meet
+        b.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, "tv-c", "{\"name\":\"later\"}", T0 + 5000);
+        sync(b, a, T0 + 6000);
+        assertTrue(a.isRemoved(HouseholdMembers.KIND, HouseholdBridge.SHARED, "tv-c"));
+        sync(a, b, T0 + 6000);
+        assertTrue(b.isRemoved(HouseholdMembers.KIND, HouseholdBridge.SHARED, "tv-c"));
+        // nothing written here replaces it, and it is never purged
+        assertNull(b.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, "tv-c", "{}", T0 + 7000));
+        b.purge(T0 + 10 * HouseholdLog.TOMBSTONE_MS);
+        assertTrue(b.isRemoved(HouseholdMembers.KIND, HouseholdBridge.SHARED, "tv-c"));
+        // an ordinary delete is not final
+        b.delete("pin", "Sam", "disney", T0);
+        assertFalse(b.isRemoved("pin", "Sam", "disney"));
+        assertNotNull(b.put("pin", "Sam", "disney", "1", T0 + 8000));
     }
 
     @Test

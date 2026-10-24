@@ -5,6 +5,10 @@
 
 ## Unreleased
 
+- Household sync, version 2: each TV has its own key, kept in the Android Keystore, and the household is a list of its TVs that syncs like everything else. Two TVs sync only when each signs the exchange with a key on the other's list. Copying profiles with "Add this TV to my household" now hands the new TV a one-time invitation, good for an hour, instead of the household's key.
+- Household sync: each other TV on the Household page has **Remove**, after the Parent PIN. A removed TV stops syncing with the rest at once, without a new key for the others, and is told it was removed the next time it tries. Leaving works the same way: the TV removes itself and hands that to the next TV it meets.
+- Household sync: a household from 2026.10.68 to 2026.10.74 converts on its own when its TVs update, keeping who is who.
+
 ## 2026.10.74 (pre-release)
 
 - Household sync: a TV in no household now shows when your other TVs already have one, names them, and offers **Join the household** (the copy screen that takes the household's key from one of them), with starting a separate household as the second choice. The setup flow's "Sync with your other TVs" step does the same, so a later TV no longer starts a second household by mistake.

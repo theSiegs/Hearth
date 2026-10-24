@@ -358,6 +358,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdLost => 'This TV was in a household but can\'t open its key any more. Join again from another TV.';
 
   @override
+  String get householdRemoved => 'This TV was removed from the household on another TV. Join again to keep it in step.';
+
+  @override
+  String householdRemoveTitle(String name) {
+    return 'Remove $name?';
+  }
+
+  @override
+  String get householdRemoveBody => 'It stops syncing with your other TVs. To bring it back, join the household again from that TV.';
+
+  @override
+  String get householdRemoveFailed => 'That TV couldn\'t be removed. Try again.';
+
+  @override
   String get householdAddHint => 'To add a TV: on a TV that is in the household, open Copy profiles between TVs, then Copy profiles to another TV, and tick Add this TV to my household.';
 
   @override
