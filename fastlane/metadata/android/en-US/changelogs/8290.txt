@@ -1,0 +1,1 @@
+A join request that came while a kids profile was on now shows up once an adult's profile is on. Household sync looks for your other TVs before offering to start a household.

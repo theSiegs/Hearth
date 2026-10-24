@@ -5,6 +5,12 @@
 
 ## Unreleased
 
+## 2026.10.79 (pre-release)
+
+- Household sync: a join request that came while a kids profile was on now shows up, and pops up, as soon as an adult's profile comes on. Before, it stayed hidden until the next request.
+- Household sync: the page shows "Looking for your other TVs…" for a few seconds before offering to start a household, so Start isn't offered while a household is still being found.
+- The joining TV says "an adult's profile" instead of "a grown-up's profile".
+
 ## 2026.10.78 (pre-release)
 
 - Household sync: a TV asking to join shows up in the **notification Bell** of the TV it asked, on grown-ups' profiles only, and pops up: its name, with **Allow** and **Don't allow**. No Parent PIN, no code to compare, no phone. The joining TV says which TV to allow it on and waits up to five minutes.
