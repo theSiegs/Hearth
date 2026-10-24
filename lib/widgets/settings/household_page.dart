@@ -154,7 +154,8 @@ class _JoinDialogState extends State<_JoinDialog> {
 }
 
 /// Settings > Family > Household sync: whether this TV is in a household of TVs that keep every profile in step,
-/// which TVs are in it, the one switch, and leaving. A TV in none sees a household its other TVs have, to join.
+/// which TVs are in it (first, each with a card to remove it), the one switch, and leaving. A TV in none sees the
+/// household its other TVs have, and its TVs, to join.
 class HouseholdPage extends StatefulWidget {
   static const String routeName = "household";
 
@@ -165,7 +166,7 @@ class HouseholdPage extends StatefulWidget {
 }
 
 class _HouseholdPageState extends State<HouseholdPage> {
-  final FLauncherChannel _channel = FLauncherChannel();
+  late final FLauncherChannel _channel = context.read<FLauncherChannel?>() ?? FLauncherChannel();
   Map<dynamic, dynamic> _status = const {};
   Timer? _timer;
 
@@ -238,25 +239,32 @@ class _HouseholdPageState extends State<HouseholdPage> {
     await _refresh();
   }
 
-  /// Removes another TV, after asking (and the parent PIN where there is one).
-  Future<void> _remove(AppLocalizations l, Map<dynamic, dynamic> member) async {
+  /// Another TV's card: how it's doing, and taking it out of the household (with the parent PIN where there is one).
+  Future<void> _openMember(AppLocalizations l, Map<dynamic, dynamic> member) async {
     final tvId = member["tvId"];
     if (tvId is! String) return;
     final name = (member["name"] as String?) ?? l.householdUnnamedTvs(1);
     final textTheme = Theme.of(context).textTheme;
-    final go = await showDialog<bool>(
+    final remove = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(l.householdRemoveTitle(name)),
-        content: SizedBox(width: 460, child: Text(l.householdRemoveBody, style: textTheme.bodyMedium)),
+        title: Text(name),
+        content: SizedBox(
+          width: 460,
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(memberStatus(l, member), style: textTheme.bodyMedium),
+            const SizedBox(height: 12),
+            Text(l.householdRemoveBody, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
+          ]),
+        ),
         actions: [
-          // Keeping the TV is the safe choice, so it has the focus
-          TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(false), child: Text(l.notNow)),
-          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l.remove)),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l.householdRemoveTv)),
+          // Keeping the TV is the safe choice, so Close has the focus
+          TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(false), child: Text(l.close)),
         ],
       ),
     );
-    if (go != true || !mounted || !await _allowed()) return;
+    if (remove != true || !mounted || !await _allowed()) return;
     final removed = await _channel.removeHouseholdTv(tvId);
     if (!mounted) return;
     if (!removed) {
@@ -266,7 +274,7 @@ class _HouseholdPageState extends State<HouseholdPage> {
   }
 
   /// How a member is doing: this TV, on now, or when it was last on.
-  String _memberStatus(AppLocalizations l, Map<dynamic, dynamic> member) {
+  static String memberStatus(AppLocalizations l, Map<dynamic, dynamic> member) {
     if (member["self"] == true) return l.householdThisTv;
     if (member["online"] == true) return l.householdOnNow;
     final at = (member["lastSeen"] as num?)?.toInt() ?? 0;
@@ -286,15 +294,36 @@ class _HouseholdPageState extends State<HouseholdPage> {
     final removed = _status["removed"] == true;
     final enabled = _status["enabled"] != false;
     final last = _status["lastResult"] as String?;
+    final asking = _status["asking"] as String?;
     final members = [for (final m in (_status["members"] as List?) ?? const []) if (m is Map) m];
+    final others = members.where((m) => m["self"] != true).toList();
     final nearby = householdsNearby(_status);
     Widget note(String text) =>
         Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 12), child: Text(text, style: textTheme.bodySmall));
+    Widget heading(String text) =>
+        Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 4), child: Text(text, style: textTheme.titleSmall));
+    // A TV shown but not chosen: the found household's, for knowing what joining means
+    Widget tvRow(String name) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 26),
+          child: Row(children: [
+            const Icon(Icons.tv, size: 20, color: Colors.white54),
+            const SizedBox(width: 16),
+            Text(name, style: textTheme.bodyMedium),
+          ]),
+        );
+    Widget twoLines(String title, String detail) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(title, style: textTheme.bodyMedium),
+            Text(detail, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
+          ],
+        );
     return SettingsPage(
       title: l.householdTitle,
       children: [
-        note(l.householdIntro),
-        if (_status.isEmpty || (!joined && nearby.isEmpty && _looking))
+        if (_status.isEmpty || (!joined && nearby.isEmpty && _looking)) ...[
+          note(l.householdIntro),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: Row(children: [
@@ -302,10 +331,12 @@ class _HouseholdPageState extends State<HouseholdPage> {
               const SizedBox(width: 16),
               Text(l.householdLooking, style: textTheme.bodyMedium),
             ]),
-          )
-        else if (!joined && nearby.isNotEmpty) ...[
+          ),
+        ] else if (!joined && nearby.isNotEmpty) ...[
           // Another TV has a household: joining it comes first, so the TVs aren't split into two
-          note(l.householdFound(householdTvNames(l, nearby.first))),
+          note(l.householdFound),
+          heading(l.householdNearby),
+          for (final name in nearby.first) tvRow(name ?? l.householdUnnamedTvs(1)),
           FocusableSettingsTile(
             autofocus: true,
             leading: const Icon(Icons.login),
@@ -320,7 +351,9 @@ class _HouseholdPageState extends State<HouseholdPage> {
               title: Text(l.householdStartAnyway, style: textTheme.bodyMedium),
               onPressed: _start,
             ),
+          note(l.householdIntro),
         ] else if (!joined) ...[
+          note(l.householdIntro),
           note(lost ? l.householdLost : (removed ? l.householdRemoved : l.householdNone)),
           if (!lost)
             FocusableSettingsTile(
@@ -331,37 +364,46 @@ class _HouseholdPageState extends State<HouseholdPage> {
             ),
           note(l.householdAddHint),
         ] else ...[
-          note(l.householdIn),
+          // The household's TVs first: this one, then the others, those on now first
+          heading(l.householdMembers),
+          for (final member in members)
+            FocusableSettingsTile(
+              autofocus: member == (others.isNotEmpty ? others.first : null),
+              leading: Icon(Icons.tv, color: member["self"] == true || member["online"] == true ? null : Colors.white38),
+              title: Text((member["name"] as String?) ?? l.householdUnnamedTvs(1), style: textTheme.bodyMedium),
+              trailing: Text(memberStatus(l, member), style: textTheme.bodySmall),
+              onPressed: member["self"] == true ? null : () => _openMember(l, member),
+            ),
+          // A TV waiting to be let in, answered only from the Bell
+          if (asking != null && asking.isNotEmpty)
+            FocusableSettingsTile(
+              leading: const Icon(Icons.tv, color: Colors.amber),
+              title: twoLines(asking, l.householdAskingHint),
+              trailing: Text(l.householdAsking, style: textTheme.bodySmall?.copyWith(color: Colors.amber)),
+            ),
+          const SizedBox(height: 8),
           FocusableSettingsTile(
-            autofocus: true,
+            autofocus: others.isEmpty,
             leading: const Icon(Icons.sync),
-            title: Text(l.householdSwitch, style: textTheme.bodyMedium),
+            title: last != null && last.isNotEmpty
+                ? twoLines(l.householdSwitch, l.householdLast(last))
+                : Text(l.householdSwitch, style: textTheme.bodyMedium),
             trailing: Icon(enabled ? Icons.check_box : Icons.check_box_outline_blank),
             onPressed: () => _toggle(!enabled),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Text(l.householdMembers, style: textTheme.titleSmall),
-          ),
-          for (final member in members)
-            FocusableSettingsTile(
-              leading: Icon(Icons.tv, color: member["self"] == true || member["online"] == true ? null : Colors.white38),
-              title: Text((member["name"] as String?) ?? l.householdUnnamedTvs(1), style: textTheme.bodyMedium),
-              trailing: Text(_memberStatus(l, member), style: textTheme.bodySmall),
-              onPressed: member["self"] == true ? null : () => _remove(l, member),
-            ),
-          if (last != null && last.isNotEmpty) note(l.householdLast(last)),
           FocusableSettingsTile(
             leading: const Icon(Icons.sync_alt),
             title: Text(l.householdSyncNow, style: textTheme.bodyMedium),
             onPressed: enabled ? () => _channel.syncHouseholdNow() : null,
           ),
+          const Divider(),
+          note(l.householdAddHint),
           FocusableSettingsTile(
             leading: const Icon(Icons.logout),
             title: Text(l.householdLeave, style: textTheme.bodyMedium),
             onPressed: _leave,
           ),
-          note(l.householdAddHint),
+          note(l.householdIntro),
         ],
       ],
     );

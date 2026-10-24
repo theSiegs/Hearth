@@ -63,12 +63,7 @@ class FamilySettingsPage extends StatelessWidget {
           onPressed: () => Navigator.of(context).pushNamed(ProfilePairingPage.routeName),
         ),
         // Every profile's look, layout, pairing choices and PINs, kept in step with the household's other TVs
-        FocusableSettingsTile(
-          leading: const Icon(Icons.holiday_village_outlined),
-          title: Text(l.householdTitle, style: textTheme.bodyMedium),
-          trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-          onPressed: () => Navigator.of(context).pushNamed(HouseholdPage.routeName),
-        ),
+        const _HouseholdTile(),
       ],
     );
   }
@@ -145,6 +140,61 @@ class _KidsProfilesTileState extends State<_KidsProfilesTile> {
               style: textTheme.bodySmall?.copyWith(color: needing > 0 ? Colors.amber : Colors.green)),
       onPressed: () async {
         await Navigator.of(context).pushNamed(KidsProfilesPage.routeName);
+        _read();
+      },
+    );
+  }
+}
+
+/// Household sync: how many TVs, Off, Not set up, or a household found to join; read as the page opens.
+class _HouseholdTile extends StatefulWidget {
+  const _HouseholdTile();
+
+  @override
+  State<_HouseholdTile> createState() => _HouseholdTileState();
+}
+
+class _HouseholdTileState extends State<_HouseholdTile> {
+  late final FLauncherChannel? _channel = context.read<FLauncherChannel?>();
+  Map<dynamic, dynamic>? _status;
+
+  @override
+  void initState() {
+    super.initState();
+    _read();
+  }
+
+  Future<void> _read() async {
+    try {
+      final status = await _channel?.getHouseholdStatus();
+      if (mounted && status != null) setState(() => _status = status);
+    } catch (err) { noteFailure('family_settings_page', err); }
+  }
+
+  /// The state in a word or two; null before it's read.
+  static String? summary(AppLocalizations l, Map<dynamic, dynamic>? status) {
+    if (status == null || status.isEmpty) return null;
+    if (status["joined"] == true) {
+      if (status["enabled"] == false) return l.householdSummaryOff;
+      final members = (status["members"] as List?)?.length ?? 0;
+      return l.householdSummaryTvs(members < 1 ? 1 : members);
+    }
+    return householdsNearby(status).isNotEmpty ? l.householdSummaryFound : l.householdSummaryNone;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final textTheme = Theme.of(context).textTheme;
+    final text = summary(l, _status);
+    return FocusableSettingsTile(
+      leading: const Icon(Icons.holiday_village_outlined),
+      title: Text(l.householdTitle, style: textTheme.bodyMedium),
+      trailing: text == null
+          ? const Icon(Icons.chevron_right, color: Colors.white54)
+          : Text(text, style: textTheme.bodySmall),
+      onPressed: () async {
+        await Navigator.of(context).pushNamed(HouseholdPage.routeName);
         _read();
       },
     );

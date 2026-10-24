@@ -449,6 +449,8 @@ final class Household {
         out.put("nearby", HouseholdMembers.nearby(HouseholdNet.heard(), joined ? store.householdId() : null));
         // A TV asking this one to let it join, for a parent to answer here; and this TV's own request to join one
         out.put("join", HouseholdJoining.status());
+        // The name of a TV asking to join, while its request waits for an answer in the Bell
+        out.put("asking", HouseholdJoining.requestName());
         return out;
     }
 

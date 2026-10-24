@@ -273,10 +273,6 @@
     "@householdStart": {
         "description": "Household page: button"
     },
-    "householdIn": "This TV is in a household.",
-    "@householdIn": {
-        "description": "Household page: in one"
-    },
     "householdSwitch": "Sync with my other TVs",
     "@householdSwitch": {
         "description": "Household page: the one on/off switch"
@@ -346,12 +342,44 @@
             "count": {"type": "int"}
         }
     },
-    "householdFound": "Your other TVs have a household: {names}. Join it so this TV keeps in step with them.",
+    "householdFound": "Your other TVs have a household. Join it so this TV keeps in step with them.",
     "@householdFound": {
-        "description": "Household page, on a TV in no household: a household was found on the network",
+        "description": "Household page, on a TV in no household: a household was found on the network; its TVs are listed under it"
+    },
+    "householdNearby": "Household on your network",
+    "@householdNearby": {
+        "description": "Household page, on a TV in no household: heading over the found household's TVs"
+    },
+    "householdAsking": "Asking to join",
+    "@householdAsking": {
+        "description": "Household page: in the list of TVs, a TV waiting to be let into the household"
+    },
+    "householdAskingHint": "Allow it or not from the notification Bell",
+    "@householdAskingHint": {
+        "description": "Household page: under a TV asking to join; it is answered only in the Bell"
+    },
+    "householdRemoveTv": "Remove from household",
+    "@householdRemoveTv": {
+        "description": "Household page: a TV's card, the button that takes it out of the household"
+    },
+    "householdSummaryTvs": "{count, plural, =1{1 TV} other{{count} TVs}}",
+    "@householdSummaryTvs": {
+        "description": "Settings > Family: beside Household sync, how many TVs the household has",
         "placeholders": {
-            "names": {"type": "String", "example": "Kitchen, Office"}
+            "count": {"type": "int"}
         }
+    },
+    "householdSummaryOff": "Off",
+    "@householdSummaryOff": {
+        "description": "Settings > Family: beside Household sync, in a household with syncing turned off"
+    },
+    "householdSummaryNone": "Not set up",
+    "@householdSummaryNone": {
+        "description": "Settings > Family: beside Household sync, in no household"
+    },
+    "householdSummaryFound": "Household found",
+    "@householdSummaryFound": {
+        "description": "Settings > Family: beside Household sync, in no household but the other TVs have one to join"
     },
     "householdJoin": "Join the household",
     "@householdJoin": {

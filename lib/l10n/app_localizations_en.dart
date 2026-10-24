@@ -343,9 +343,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdStart => 'Start a household on this TV';
 
   @override
-  String get householdIn => 'This TV is in a household.';
-
-  @override
   String get householdSwitch => 'Sync with my other TVs';
 
   @override
@@ -410,9 +407,39 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String householdFound(String names) {
-    return 'Your other TVs have a household: $names. Join it so this TV keeps in step with them.';
+  String get householdFound => 'Your other TVs have a household. Join it so this TV keeps in step with them.';
+
+  @override
+  String get householdNearby => 'Household on your network';
+
+  @override
+  String get householdAsking => 'Asking to join';
+
+  @override
+  String get householdAskingHint => 'Allow it or not from the notification Bell';
+
+  @override
+  String get householdRemoveTv => 'Remove from household';
+
+  @override
+  String householdSummaryTvs(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count TVs',
+      one: '1 TV',
+    );
+    return '$_temp0';
   }
+
+  @override
+  String get householdSummaryOff => 'Off';
+
+  @override
+  String get householdSummaryNone => 'Not set up';
+
+  @override
+  String get householdSummaryFound => 'Household found';
 
   @override
   String get householdJoin => 'Join the household';

@@ -729,12 +729,6 @@ abstract class AppLocalizations {
   /// **'Start a household on this TV'**
   String get householdStart;
 
-  /// Household page: in one
-  ///
-  /// In en, this message translates to:
-  /// **'This TV is in a household.'**
-  String get householdIn;
-
   /// Household page: the one on/off switch
   ///
   /// In en, this message translates to:
@@ -825,11 +819,59 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{a Hearth TV} other{{count} Hearth TVs}}'**
   String householdUnnamedTvs(int count);
 
-  /// Household page, on a TV in no household: a household was found on the network
+  /// Household page, on a TV in no household: a household was found on the network; its TVs are listed under it
   ///
   /// In en, this message translates to:
-  /// **'Your other TVs have a household: {names}. Join it so this TV keeps in step with them.'**
-  String householdFound(String names);
+  /// **'Your other TVs have a household. Join it so this TV keeps in step with them.'**
+  String get householdFound;
+
+  /// Household page, on a TV in no household: heading over the found household's TVs
+  ///
+  /// In en, this message translates to:
+  /// **'Household on your network'**
+  String get householdNearby;
+
+  /// Household page: in the list of TVs, a TV waiting to be let into the household
+  ///
+  /// In en, this message translates to:
+  /// **'Asking to join'**
+  String get householdAsking;
+
+  /// Household page: under a TV asking to join; it is answered only in the Bell
+  ///
+  /// In en, this message translates to:
+  /// **'Allow it or not from the notification Bell'**
+  String get householdAskingHint;
+
+  /// Household page: a TV's card, the button that takes it out of the household
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from household'**
+  String get householdRemoveTv;
+
+  /// Settings > Family: beside Household sync, how many TVs the household has
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 TV} other{{count} TVs}}'**
+  String householdSummaryTvs(int count);
+
+  /// Settings > Family: beside Household sync, in a household with syncing turned off
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get householdSummaryOff;
+
+  /// Settings > Family: beside Household sync, in no household
+  ///
+  /// In en, this message translates to:
+  /// **'Not set up'**
+  String get householdSummaryNone;
+
+  /// Settings > Family: beside Household sync, in no household but the other TVs have one to join
+  ///
+  /// In en, this message translates to:
+  /// **'Household found'**
+  String get householdSummaryFound;
 
   /// Button: join the household found on the network
   ///
