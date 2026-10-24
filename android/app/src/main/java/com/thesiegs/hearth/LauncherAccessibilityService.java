@@ -74,7 +74,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private static final String HA_ENABLED_KEY = "ha_notifications_enabled";
 
     private static final long PENDING_BOUNCE_WINDOW_MS = 10_000;
-    // How long "use Google TV for now" holds off the automatic bounce-back (the parent returns sooner via Home).
     /** How long after Google's last setup screen Hearth keeps out of the way (refreshed by each setup screen). */
     private static final long GOOGLE_SETUP_HOLD_MS = 2 * 60_000;
     private static final long NEW_PROFILE_HOLD_MS = 15_000;
@@ -94,7 +93,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
      */
     /**
      * Google TV's kids home put up a kid's bedtime screen 2.7 s after it came up on a switch between kids (the TV,
-     * 2026-10-11); Hearth's welcome card covers the home meanwhile (KidsHomeCover).
+     * 2026-10-11); Hearth's welcome card covers the home meanwhile (SwitchCover).
      */
     private static final long KIDS_HOME_GRACE_MS = 3_500;
     private static final String KIDS_HOME_GRACE_SETTING = "hearth_kids_home_grace_ms";
@@ -147,6 +146,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private String mChooserCurrent;
     /** Reading who Google TV's home says is logged in, before Hearth covers it (readHomeAccount). */
     private boolean mReadingHomeAccount;
+    /** The card is up for that read (an adult's pick), not for a kids home's grace: it goes when the read ends. */
+    private boolean mCoverForRead;
     private long mHomeAccountStartedAt;
     /** Who the home should name: the pick that led to it, if any. A read that agrees ends the wait at once. */
     private String mHomeAccountExpected;
@@ -250,10 +251,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
             mProfileLockSeenAt = 0; // a profile lock that led here was passed
             takeOverHome();
             // Hearth comes up under the card: it goes once Hearth is drawn, so Google's home never shows
-            KidsHomeCover.hideSoon(800);
+            SwitchCover.hideSoon(800);
         } else {
             logTakeOverDeclined("kids home, after the grace");
-            KidsHomeCover.hideNow();
+            SwitchCover.hideNow();
         }
     };
     private final Runnable mHomeTakeOver = () -> {
@@ -1393,6 +1394,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         boolean ifConfirmed = mTakeOverIfConfirmed;
         mTakeOverAfterRead = false;
         mTakeOverIfConfirmed = false;
+        boolean coverForRead = mCoverForRead;
+        mCoverForRead = false;
         if (mHomeAccountRead != null) {
             onAccountLoggedIn(mHomeAccountRead, "Google TV's home");
         } else if (expected != null && mLastPickClicked && ProfileUsers.serialOf(this, expected) == mActiveSerial) {
@@ -1414,8 +1417,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage) && SystemClock.elapsedRealtime() >= mGoogleSetupUntil
                 && !mNewProfileHold) {
             openLauncher();
-        } else if (takeOver || ifConfirmed) {
-            logTakeOverDeclined("after the home was read (confirmed=" + confirmed + ")");
+            // Hearth comes up under the card: it goes once Hearth is drawn
+            SwitchCover.hideSoon(800);
+        } else {
+            if (takeOver || ifConfirmed) logTakeOverDeclined("after the home was read (confirmed=" + confirmed + ")");
+            // Google TV's home stays (or something else came up): the card mustn't hide it
+            if (coverForRead) SwitchCover.hideNow();
         }
     }
 
@@ -1446,7 +1453,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         boolean wellbeing = className.startsWith(GOOGLE_TV_WELLBEING_PREFIX);
         if (wellbeing) {
             // Google's bedtime / time up screen: the kid sees it, not Hearth's card
-            KidsHomeCover.hideNow();
+            SwitchCover.hideNow();
             mWellbeingSeenAt = SystemClock.elapsedRealtime();
             // A kids profile's screen, whatever user Android reports (see mKidsLockHold)
             mKidsLockHold = true;
@@ -1525,12 +1532,18 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 mHandler.removeCallbacks(mKidsHomeTakeOver);
                 mHandler.postDelayed(mKidsHomeTakeOver, grace);
                 // A kids profile: Hearth's card over Google's home while it decides on bedtime (it keeps running)
-                if (kidsHome) KidsHomeCover.show(this, pick != null ? pick : ProfileUsers.profileName(this, mActiveSerial));
+                if (kidsHome) SwitchCover.show(this, pick != null ? pick : ProfileUsers.profileName(this, mActiveSerial));
                 // Only a pick in the chooser changes whose profile is on (a right PIN doesn't): only then is the home
                 // read first, which the takeover waits for
                 if (afterProfileLock && readAccount && pick != null) readHomeAccount(false, pick);
             } else if (autoTakeOverAllowed()) {
                 if (readAccount && chooserClosed) {
+                    // The chooser closed onto the home after a pick: the read takes a moment, under Hearth's card
+                    // rather than Google's home
+                    if (pick != null) {
+                        SwitchCover.show(this, pick);
+                        mCoverForRead = true;
+                    }
                     readHomeAccount(true, pick);
                 } else {
                     // Its chooser may be coming over it (the profile button); a home read under way goes first
@@ -1546,13 +1559,15 @@ public class LauncherAccessibilityService extends AccessibilityService {
         } else if (className.startsWith(GOOGLE_TV_PACKAGE + ".") || className.startsWith("com.google.android.libraries.tv.")) {
             // Its own screens (chooser, PIN, time up); plain view classes are overlays on its home.
             mGoogleTvScreenInFront = true;
+            // Never over one of them: the person has to see the chooser or the PIN pad
+            SwitchCover.hideNow();
             if (!mChooserOnScreen) startScreenGoneChecks(CHOOSER_GONE_CHECK_MS);
         }
     }
 
     /** Any other window: Hearth, an app, or something that comes up over one (the keyboard, a system pop-up). */
     private void onOtherWindow(String packageName, boolean isHearth, boolean isApp) {
-        if (isApp) KidsHomeCover.hideNow();
+        if (isApp) SwitchCover.hideNow();
         if (isHearth) {
             // Back in the launcher without Google TV's home in between: the switch was cancelled (its early
             // welcome card goes now, not after its time limit)
@@ -2106,6 +2121,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     static void setGoogleTvHome(Context context, boolean on) {
         context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).edit().putBoolean(GOOGLE_TV_HOME_KEY, on).apply();
         Log.i(TAG, "Google TV's home " + (on ? "on" : "off"));
+        // Google TV's home is to stay in sight: no card over it (main thread, from Settings or the Home key)
+        if (on) SwitchCover.hideNow();
     }
 
     /** Whether a package is an app with a launcher entry, asked once per package (two PackageManager calls). */

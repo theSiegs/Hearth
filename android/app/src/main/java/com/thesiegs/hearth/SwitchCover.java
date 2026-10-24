@@ -14,24 +14,31 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 /**
- * A welcome card over Google TV's kids home while Hearth gives it its moment (KIDS_HOME_GRACE_MS). Google TV puts up
- * a kid's bedtime / time up screen from that home only while the home is the resumed activity, a few seconds after
- * it comes up (2.7 s on the TV, 2026-10-11); an accessibility overlay doesn't pause it the way Hearth's own screen
- * would, so the kid sees Hearth's card instead of Google TV's home, and still gets Google's screen when it's due.
- * The card goes when Google's screen comes up, when Hearth takes the home over, or when anything else comes up.
- * Main thread only.
+ * A welcome card over Google TV's home while a profile switch finishes, so the person sees Hearth's card instead of
+ * Google's home before Hearth comes up:
+ * <ul>
+ * <li>a kids profile's home, while Hearth gives it its moment (KIDS_HOME_GRACE_MS). Google TV puts up a kid's
+ * bedtime / time up screen from that home only while the home is the resumed activity, a few seconds after it comes
+ * up (2.7 s on the TV, 2026-10-11); an accessibility overlay doesn't pause it the way Hearth's own screen would, so
+ * the kid still gets Google's screen when it's due.</li>
+ * <li>an adult's home after a pick in the chooser, while Hearth reads who the home says is logged in (up to a few
+ * seconds) before it takes over.</li>
+ * </ul>
+ * Only where Hearth will take the home over: never while "Use Google TV's home" is on, or during Google's own setup.
+ * The card goes when any of Google TV's own screens comes up (the chooser, a PIN, time up), so none is ever hidden;
+ * when Hearth takes the home over; when anything else comes up; or after {@link #MAX_MS}. Main thread only.
  */
-final class KidsHomeCover {
+final class SwitchCover {
     private static final String TAG = "HearthProfile";
     /** The card never outstays this, whatever happens. */
     private static final long MAX_MS = 10_000;
 
     private static View sCover;
-    private static final Runnable sTimeout = KidsHomeCover::hideNow;
+    private static final Runnable sTimeout = SwitchCover::hideNow;
     private static android.os.Handler sHandler;
     private static Context sContext;
 
-    private KidsHomeCover() {
+    private SwitchCover() {
     }
 
     static void show(Context context, String name) {
@@ -48,7 +55,7 @@ final class KidsHomeCover {
 
             TextView title = new TextView(c);
             title.setText(name != null && !name.isEmpty()
-                    ? c.getString(R.string.kids_home_cover, name) : c.getString(R.string.kids_home_cover_unnamed));
+                    ? c.getString(R.string.switch_cover, name) : c.getString(R.string.switch_cover_unnamed));
             title.setTextColor(Color.WHITE);
             title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 30);
             title.setGravity(Gravity.CENTER);
