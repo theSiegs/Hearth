@@ -57,7 +57,9 @@ app's side does the work, every 20 seconds while Hearth runs (HouseholdLooksServ
 
 - **Taking.** For each grown-up profile whose look or layout entry changed, it fits the household's to the apps
   installed here (as a copy does) and puts it in place: live when the profile is on screen, else in the profile's saved
-  layout, which comes up when someone switches to it. A changed picture is written to the profile's folder.
+  layout, which comes up when someone switches to it. A changed picture is written to the profile's folder. Before a
+  profile first takes the household's look on a TV, everything is kept as a backup, as a copy does, so it can be undone
+  in Backup & Restore.
 - **Giving.** The profile on screen goes out when its look, layout or a picked picture differs from what this TV last
   took or gave. Its layout keeps the household's apps that aren't installed here, and their places in rows it still has,
   so a TV without an app doesn't take it away from the others.
@@ -132,7 +134,8 @@ A TV joins from its own screen, and a parent approves from wherever they are.
    Joining until step 2 is built), and a Home Assistant address and a new token of its own when the new TV has none.
    The new TV joins with it, and their first exchange lists it.
 5. **A TV that already has its own setup**: for an entry both have, the household's wins; settings only this TV has are
-   kept and synced out. (A preview of what changes, and a backup, are not built yet.)
+   kept and synced out. A backup is kept before a profile first takes the household's look (see Look and layout); a
+   preview of what changes is not built yet.
 
 The new TV never sends the Parent PIN, and nothing secret moves before the Allow. Denying, or no answer in two minutes
 (the phones' notification lasts as long), ends it with nothing sent. A household TV answers one request at a time, and

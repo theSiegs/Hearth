@@ -40,6 +40,7 @@ class HouseholdLooksService {
 
   Timer? _timer;
   bool _running = false;
+  bool _backedUp = false;
   int _version = 0;
   Map<String, dynamic> _profiles = const {};
 
@@ -127,6 +128,12 @@ class HouseholdLooksService {
         await _localLayout(profileKey),
       );
       if (composed != null) {
+        // The first time a profile takes the household's look here, everything is kept first, as a copy does, so it
+        // can be undone in Backup & Restore
+        if (mine["look"] == null && mine["layout"] == null && !_backedUp) {
+          await _backup.backupBeforeCopy(_settings);
+          _backedUp = true;
+        }
         final live = _settings.layoutOwner == profileKey;
         final fitted = composed.forInstalled(await _backup.installedApps());
         await _backup.applySharedLayout(profileKey, fitted.backup, _settings, live: live);
