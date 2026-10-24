@@ -66,15 +66,19 @@ class SystemSettingsPage extends StatelessWidget {
         FocusableSettingsTile(
           leading: const Icon(Icons.info_outline),
           title: Text(localizations.aboutFlauncher, style: Theme.of(context).textTheme.bodyMedium),
-          onPressed: () => showDialog(
-            context: context,
-            builder: (_) => FutureBuilder<(PackageInfo, String?)>(
-              future: _aboutInfo(context.read<FLauncherChannel>()),
-              builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && snapshot.hasData
-                  ? HearthAboutDialog(packageInfo: snapshot.data!.$1, tvName: snapshot.data!.$2)
-                  : Container(),
-            ),
-          ),
+          onPressed: () {
+            // Read once: the dialog's builder runs again as it opens, and a new read would start it over
+            final info = _aboutInfo(context.read<FLauncherChannel>());
+            showDialog(
+              context: context,
+              builder: (_) => FutureBuilder<(PackageInfo, String?)>(
+                future: info,
+                builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && snapshot.hasData
+                    ? HearthAboutDialog(packageInfo: snapshot.data!.$1, tvName: snapshot.data!.$2)
+                    : Container(),
+              ),
+            );
+          },
         ),
       ],
     );

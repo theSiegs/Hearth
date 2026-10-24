@@ -150,6 +150,10 @@ void main() {
     final settingsService = _settings();
     when(settingsService.accentColor).thenReturn(const Color(0xFF7C4DFF));
     PackageInfoPlatform.instance = _MockPackageInfoPlatform();
+    const channel = MethodChannel('me.efesser.flauncher/method');
+    tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async => call.method == "getTvName" ? "Kitchen TV" : null);
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null));
     await _pumpWidgetWithProviders(tester, settingsService, _apps(), home: const SystemSettingsPage());
 
     await tester.ensureVisible(find.text("About Hearth"));
@@ -157,6 +161,7 @@ void main() {
     await tester.tap(find.text("About Hearth"));
     await tester.pumpAndSettle();
     expect(find.byType(HearthAboutDialog), findsOneWidget);
+    expect(find.text("This TV: Kitchen TV"), findsOneWidget);
   });
 
   testWidgets("TV & power opens Android settings", (tester) async {

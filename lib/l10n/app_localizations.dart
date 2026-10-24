@@ -714,7 +714,7 @@ abstract class AppLocalizations {
   /// Household page: what it is
   ///
   /// In en, this message translates to:
-  /// **'TVs in a household keep Profile Pairing and saved PINs in step over your home network, whichever TV someone uses.'**
+  /// **'TVs in a household keep every profile in step over your home network: its look, home layout, wallpaper, Profile Pairing and saved PINs. The latest change wins, whichever TV it was made on.'**
   String get householdIntro;
 
   /// Household page: not in one
@@ -786,7 +786,7 @@ abstract class AppLocalizations {
   /// Household page: how to add a TV
   ///
   /// In en, this message translates to:
-  /// **'To add a TV: on a TV that is in the household, open Copy profiles between TVs, then Copy profiles to another TV, and tick Add this TV to my household.'**
+  /// **'To add a TV: on that TV, open Settings > Profiles > Household sync and choose Join the household.'**
   String get householdAddHint;
 
   /// Household page: heading over the list of the household's TVs

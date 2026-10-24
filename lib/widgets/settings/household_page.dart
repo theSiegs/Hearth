@@ -159,9 +159,8 @@ class _JoinDialogState extends State<_JoinDialog> {
   }
 }
 
-/// Settings > Profiles > Copy profiles between TVs > Household sync: whether this TV is in a household of TVs that keep
-/// Profile Pairing and saved PINs in step, which TVs are in it, the one switch, and leaving. A TV in none sees a
-/// household its other TVs have, to join. (Adding a TV is a copy: see ShareSendPage.)
+/// Settings > Profiles > Household sync: whether this TV is in a household of TVs that keep every profile in step,
+/// which TVs are in it, the one switch, and leaving. A TV in none sees a household its other TVs have, to join.
 class HouseholdPage extends StatefulWidget {
   static const String routeName = "household";
 

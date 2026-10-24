@@ -334,7 +334,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdTitle => 'Household sync';
 
   @override
-  String get householdIntro => 'TVs in a household keep Profile Pairing and saved PINs in step over your home network, whichever TV someone uses.';
+  String get householdIntro => 'TVs in a household keep every profile in step over your home network: its look, home layout, wallpaper, Profile Pairing and saved PINs. The latest change wins, whichever TV it was made on.';
 
   @override
   String get householdNone => 'This TV isn\'t in a household.';
@@ -372,7 +372,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdRemoveFailed => 'That TV couldn\'t be removed. Try again.';
 
   @override
-  String get householdAddHint => 'To add a TV: on a TV that is in the household, open Copy profiles between TVs, then Copy profiles to another TV, and tick Add this TV to my household.';
+  String get householdAddHint => 'To add a TV: on that TV, open Settings > Profiles > Household sync and choose Join the household.';
 
   @override
   String get householdMembers => 'TVs in this household';

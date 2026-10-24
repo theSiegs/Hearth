@@ -30,7 +30,7 @@ import 'kids_profiles_page.dart';
 import 'phone_approval_page.dart';
 import 'profile_pairing_page.dart';
 import 'settings_lock.dart';
-import 'share_pages.dart';
+import 'household_page.dart';
 import 'settings_page.dart';
 import 'streaming_pins_page.dart';
 
@@ -84,13 +84,13 @@ class ProfilesSettingsPage extends StatelessWidget {
             onPressed: () => Navigator.of(context).pushNamed(StreamingPinsPage.routeName),
           ),
         if (!locked) const _KidsProfilesTile(),
-        // A profile's look, layout and pairing choices, copied to or from another TV (a parent at both)
+        // Every profile's look, layout, pairing choices and PINs, kept in step with the household's other TVs
         if (!locked)
           FocusableSettingsTile(
-            leading: const Icon(Icons.sync_alt),
-            title: Text(l.shareTitle, style: textTheme.bodyMedium),
+            leading: const Icon(Icons.holiday_village_outlined),
+            title: Text(l.householdTitle, style: textTheme.bodyMedium),
             trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-            onPressed: () => Navigator.of(context).pushNamed(ShareProfilesPage.routeName),
+            onPressed: () => Navigator.of(context).pushNamed(HouseholdPage.routeName),
           ),
         // YouTube time is a kid's only: each kid's is set in Kids profiles, without switching to them
         if (!locked)
