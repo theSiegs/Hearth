@@ -5,6 +5,11 @@
 
 ## Unreleased
 
+## 2026.10.80 (pre-release)
+
+- Settings has a new **Family** group, right after Profiles, for what's the whole TV's: **Parent PIN** (first, as the rest leans on it), **Kids profiles**, **Profile Pairing** and **Household sync**. **Profiles** keeps only the profile on now: Switch profile, **Lock now**, **Lock when the TV wakes**, **Unlock from my phone** (was "Approve switches from my phone") and Streaming app PINs.
+- Switching to an adult's profile: Hearth's "Hi" card covers Google TV's home while Hearth checks whose profile came on, instead of Google's home showing for a moment or two. As before, never while "Use Google TV's home" is on, and never over Google TV's chooser or PIN screen.
+
 ## 2026.10.79 (pre-release)
 
 - Household sync: a join request that came while a kids profile was on now shows up, and pops up, as soon as an adult's profile comes on. Before, it stayed hidden until the next request.

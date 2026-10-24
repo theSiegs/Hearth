@@ -1,0 +1,1 @@
+A new Family group in Settings holds the parent PIN, kids profiles, Profile Pairing and Household sync; Profiles keeps just the profile on now. Switching to an adult's profile shows Hearth's card instead of Google TV's home.
