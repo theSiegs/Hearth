@@ -449,9 +449,16 @@ class FLauncherChannel {
           "applyShareSecrets", {"targets": targets, "pins": pins, "ha": ha, "household": household})) ??
       {};
 
-  /// Where this TV stands in its household: {joined, lost, enabled, tvId, peers: [{tvId}], lastSyncAt, lastResult}.
+  /// Where this TV stands in its household: {joined, lost, enabled, tvId, peers: [{tvId}], lastSyncAt, lastResult,
+  /// members: [{name, self, online, lastSeen}], nearby: [[name, …], …]}. `members` is the household's TVs (this one
+  /// first); `nearby` is the other households heard on the network, each as its TVs' names (a name may be null).
   Future<Map<dynamic, dynamic>> getHouseholdStatus() async =>
       (await _methodChannel.invokeMapMethod<dynamic, dynamic>("getHouseholdStatus")) ?? {};
+
+  /// Looks for households on the network (for `nearby`) while this TV is in none, until [stopLookingForHouseholds].
+  Future<void> lookForHouseholds() async => await _methodChannel.invokeMethod("lookForHouseholds");
+
+  Future<void> stopLookingForHouseholds() async => await _methodChannel.invokeMethod("stopLookingForHouseholds");
 
   /// Starts a household on this TV; false if it is already in one.
   Future<bool> createHousehold() async => await _methodChannel.invokeMethod<bool>("createHousehold") ?? false;

@@ -5,6 +5,11 @@
 
 ## Unreleased
 
+## 2026.10.74 (pre-release)
+
+- Household sync: a TV in no household now shows when your other TVs already have one, names them, and offers **Join the household** (the copy screen that takes the household's key from one of them), with starting a separate household as the second choice. The setup flow's "Sync with your other TVs" step does the same, so a later TV no longer starts a second household by mistake.
+- Household sync: the Household page lists the **TVs in this household**: this TV, the ones on now, and when each of the others was last on. Each TV announces its name and writes an entry about itself that syncs, so every TV learns of the others even if they were never on together; a TV that leaves takes its entry away.
+
 ## 2026.10.73 (pre-release)
 
 - **Update automatically** now updates Hearth itself too: it checks daily and installs a newer Hearth, without asking, while the TV's screen is off. Only the main user's Hearth does it.

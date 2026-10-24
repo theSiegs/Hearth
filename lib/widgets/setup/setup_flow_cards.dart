@@ -228,7 +228,23 @@ extension _CardScreens on _SetupFlowPageState {
   }
 
   Widget _household(AppLocalizations l) {
-    if (_state == SetupStepState.done) return _doneBody(l, l.setupFlowHouseholdDone);
+    if (_state == SetupStepState.done) {
+      return _doneBody(l, _householdJoined ? l.setupFlowHouseholdJoined : l.setupFlowHouseholdDone);
+    }
+    // Another TV has one already: joining it is the step, and a second household would split the TVs
+    if (_nearbyHouseholds.isNotEmpty) {
+      final names = householdTvNames(l, _nearbyHouseholds.first);
+      return SetupScreenBody(
+        icon: Icons.holiday_village_outlined,
+        title: l.setupFlowHouseholdTitle,
+        body: l.setupFlowHouseholdFound(names),
+        buttons: [
+          SetupButton(label: l.setupFlowSkip, onPressed: _next),
+          SetupButton(label: l.setupFlowHouseholdStartAnyway, onPressed: _startHousehold),
+          SetupButton(label: l.householdJoin, focusNode: _primary, autofocus: true, onPressed: _joinHousehold),
+        ],
+      );
+    }
     return SetupScreenBody(
       icon: Icons.holiday_village_outlined,
       title: l.setupFlowHouseholdTitle,
@@ -238,6 +254,51 @@ extension _CardScreens on _SetupFlowPageState {
         SetupButton(label: l.setupFlowHouseholdStart, focusNode: _primary, autofocus: true, onPressed: _startHousehold),
       ],
     );
+  }
+
+  /// Listens for other TVs' households while the household step shows, so it can offer to join one.
+  void _lookForHouseholds() {
+    if (!_lookingForHouseholds) {
+      _lookingForHouseholds = true;
+      unawaited(_channel.lookForHouseholds().catchError((Object err) => noteFailure('setup_flow', err)));
+    }
+    Future<void> read() async {
+      try {
+        final status = await _channel.getHouseholdStatus();
+        final nearby = householdsNearby(status);
+        if (!mounted || _screen != SetupScreen.familyHousehold) return;
+        if (nearby.length != _nearbyHouseholds.length ||
+            (nearby.isNotEmpty && nearby.first.length != _nearbyHouseholds.first.length)) {
+          _update(() => _nearbyHouseholds = nearby);
+          if (nearby.isNotEmpty) _focusPrimary();
+        }
+      } catch (err) {
+        noteFailure('setup_flow', err);
+      }
+    }
+
+    unawaited(read());
+    _poll = Timer.periodic(const Duration(seconds: 3), (_) => read());
+  }
+
+  void _stopLookingForHouseholds() {
+    if (!_lookingForHouseholds) return;
+    _lookingForHouseholds = false;
+    unawaited(_channel.stopLookingForHouseholds().catchError((Object err) => noteFailure('setup_flow', err)));
+  }
+
+  /// The copy screen that takes a household's key from one of its TVs; done once this TV is in it.
+  Future<void> _joinHousehold() async {
+    await _openSettingsPage(ShareReceivePage.routeName);
+    if (!mounted) return;
+    try {
+      if ((await _channel.getHouseholdStatus())["joined"] == true) {
+        _householdJoined = true;
+        _showDone(SetupScreen.familyHousehold, null);
+      }
+    } catch (err) {
+      noteFailure('setup_flow', err);
+    }
   }
 
   Future<void> _startHousehold() async {

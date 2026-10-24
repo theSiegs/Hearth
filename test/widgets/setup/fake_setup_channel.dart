@@ -38,6 +38,10 @@ class FakeSetupChannel extends FLauncherChannel {
   bool household = false;
   int householdsStarted = 0;
 
+  /// Other TVs' households heard on the network (each its TVs' names), and whether the flow is looking.
+  List<List<String?>> nearbyHouseholds = const [];
+  bool lookingForHouseholds = false;
+
   /// Google's ad sandbox packages on the TV, and whether Hearth keeps them off.
   List<String> adSandbox = const [];
   bool adSandboxKeptOff = false;
@@ -98,7 +102,13 @@ class FakeSetupChannel extends FLauncherChannel {
   Future<bool> checkInstallPermission() async => install;
 
   @override
-  Future<Map<dynamic, dynamic>> getHouseholdStatus() async => {"joined": household};
+  Future<Map<dynamic, dynamic>> getHouseholdStatus() async => {"joined": household, "nearby": nearbyHouseholds};
+
+  @override
+  Future<void> lookForHouseholds() async => lookingForHouseholds = true;
+
+  @override
+  Future<void> stopLookingForHouseholds() async => lookingForHouseholds = false;
 
   @override
   Future<bool> createHousehold() async {

@@ -765,11 +765,65 @@ abstract class AppLocalizations {
   /// **'To add a TV: on a TV that is in the household, open Copy profiles between TVs, then Copy profiles to another TV, and tick Add this TV to my household.'**
   String get householdAddHint;
 
-  /// Household page: how many other TVs of the household are on the network now
+  /// Household page: heading over the list of the household's TVs
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =0{No other TVs seen right now} =1{1 other TV seen right now} other{{count} other TVs seen right now}}'**
-  String householdPeers(int count);
+  /// **'TVs in this household'**
+  String get householdMembers;
+
+  /// Household page: the list's row for the TV you're using
+  ///
+  /// In en, this message translates to:
+  /// **'This TV'**
+  String get householdThisTv;
+
+  /// Household page: a TV of the household is on the network right now
+  ///
+  /// In en, this message translates to:
+  /// **'On now'**
+  String get householdOnNow;
+
+  /// Household page: a TV of the household this TV hasn't been on with yet
+  ///
+  /// In en, this message translates to:
+  /// **'Not seen yet'**
+  String get householdNotSeen;
+
+  /// Household page: when a TV of the household was last on
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =0{Last on today} =1{Last on yesterday} other{Last on {days} days ago}}'**
+  String householdLastOn(int days);
+
+  /// Household page: a TV that didn't say its name (an older Hearth)
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{a Hearth TV} other{{count} Hearth TVs}}'**
+  String householdUnnamedTvs(int count);
+
+  /// Household page, on a TV in no household: a household was found on the network
+  ///
+  /// In en, this message translates to:
+  /// **'Your other TVs have a household: {names}. Join it so this TV keeps in step with them.'**
+  String householdFound(String names);
+
+  /// Button: join the household found on the network
+  ///
+  /// In en, this message translates to:
+  /// **'Join the household'**
+  String get householdJoin;
+
+  /// Household page: how joining works (a copy from a TV of the household)
+  ///
+  /// In en, this message translates to:
+  /// **'On one of those TVs, open Settings > Profiles > Copy profiles between TVs > Copy profiles to another TV, tick Add this TV to my household, and continue. Then choose that TV here.'**
+  String get householdJoinHint;
+
+  /// Household page: start a new household although one was found
+  ///
+  /// In en, this message translates to:
+  /// **'Start a separate household instead'**
+  String get householdStartAnyway;
 
   /// Household page: what the last sync did
   ///
@@ -4856,6 +4910,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This TV has a household. Add the others from Copy profiles between TVs.'**
   String get setupFlowHouseholdDone;
+
+  /// Setup flow: household sync step when another TV's household was found on the network
+  ///
+  /// In en, this message translates to:
+  /// **'Your other TVs have a household: {names}. Join it, and this TV keeps profile settings and saved PINs in step with them. On one of those TVs, open Settings > Profiles > Copy profiles between TVs > Copy profiles to another TV, tick Add this TV to my household, and continue. Then choose Join the household here and pick that TV.'**
+  String setupFlowHouseholdFound(String names);
+
+  /// Setup flow: household step's button to start a new household although one was found
+  ///
+  /// In en, this message translates to:
+  /// **'Start a separate one'**
+  String get setupFlowHouseholdStartAnyway;
+
+  /// Setup flow: household sync step, once joined
+  ///
+  /// In en, this message translates to:
+  /// **'This TV is in the household now and keeps in step with its other TVs.'**
+  String get setupFlowHouseholdJoined;
 
   /// Setup flow: ad sandbox step, above the commands it runs
   ///

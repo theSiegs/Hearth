@@ -33,10 +33,12 @@ import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/settings/backup_restore_page.dart';
 import 'package:flauncher/widgets/settings/kids_profiles_page.dart';
 import 'package:flauncher/widgets/settings/ha_phone_setup_dialog.dart';
+import 'package:flauncher/widgets/settings/household_page.dart';
 import 'package:flauncher/widgets/settings/look_settings_page.dart';
 import 'package:flauncher/widgets/settings/message_dialog.dart';
 import 'package:flauncher/widgets/settings/profile_pairing_page.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
+import 'package:flauncher/widgets/settings/share_pages.dart';
 import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
 import 'package:flauncher/widgets/settings/weather_location_dialog.dart';
 import 'package:flauncher/quiet_failure.dart';
@@ -248,6 +250,11 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   /// The commands the ad sandbox step runs, once read.
   List<String>? _adSandboxCommands;
 
+  /// Other TVs' households heard on the network while the household step shows (each as its TVs' names).
+  List<List<String?>> _nearbyHouseholds = const [];
+  bool _lookingForHouseholds = false;
+  bool _householdJoined = false;
+
   /// A backup was restored from Welcome: its look came with it, so the look screen isn't shown.
   bool _restored = false;
 
@@ -282,6 +289,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     WidgetsBinding.instance.removeObserver(this);
     _poll?.cancel();
     _autoNext?.cancel();
+    _stopLookingForHouseholds();
     _primary.dispose();
     // Closed while a look was only being previewed: the home goes back to how it was
     _endPreview();
@@ -352,6 +360,11 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     if (screen == SetupScreen.look) _startPreview();
     if (screen == SetupScreen.haAlerts) _readIp();
     if (screen == SetupScreen.familyAdSandbox) _readAdSandboxCommands();
+    if (screen == SetupScreen.familyHousehold) {
+      _lookForHouseholds();
+    } else {
+      _stopLookingForHouseholds();
+    }
     if (!_single && screen != SetupScreen.finish) unawaited(_flow.saveResume(screen.name, widget.mode));
     if (screen == SetupScreen.finish) unawaited(_flow.finish());
     if (_blockedFrom.containsKey(screen)) _startPolling();

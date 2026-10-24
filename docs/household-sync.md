@@ -55,7 +55,21 @@ when the streaming app profile it was played under is known on the receiving TV.
 4. The two TVs then run a first sync and show what moved. A TV that was already set up shows what it would change
    before it takes anything (it keeps a backup, as Copy does).
 
-Leaving a household wipes the key and stops syncing; the entries stay as ordinary settings. **Reset the household**
+**Finding a household to join (built).** A TV in no household listens for `_hearth-sync._tcp` while the Household page
+or the setup step shows, without announcing itself. When it hears TVs of a household, it names them (each TV announces
+its name as an attribute) and offers **Join the household**, which opens Copy profiles from another TV; starting a
+separate household is the second choice. Hearing a household proves nothing (its id isn't secret), so nothing is taken
+from it; the key still only comes through the copy.
+
+**Members (built).** Each TV writes an entry about itself (kind `tv`, the whole household's, item: its TV id, value:
+its name), again when renamed and once a day, so every TV lists every other one, even two that are never on together.
+A TV this one has completed a sealed exchange with is listed too (one too old to write its entry). The Household page
+shows this TV, the ones heard on now, and when the others were last on. Older TVs keep `tv` entries and pass them on
+without applying them, like any unknown kind.
+
+Leaving a household wipes the key and stops syncing; the entries stay as ordinary settings. Before it forgets the key,
+a leaving TV deletes its own `tv` entry and syncs with the TVs on now (for up to ten seconds), so it drops off their
+lists; a TV that is off hears it from them later. **Reset the household**
 makes a new key; the other TVs then need to join again. This is also how a lost or sold TV is cut off.
 
 ## Setup flow

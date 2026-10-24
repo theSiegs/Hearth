@@ -361,16 +361,53 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdAddHint => 'To add a TV: on a TV that is in the household, open Copy profiles between TVs, then Copy profiles to another TV, and tick Add this TV to my household.';
 
   @override
-  String householdPeers(int count) {
+  String get householdMembers => 'TVs in this household';
+
+  @override
+  String get householdThisTv => 'This TV';
+
+  @override
+  String get householdOnNow => 'On now';
+
+  @override
+  String get householdNotSeen => 'Not seen yet';
+
+  @override
+  String householdLastOn(int days) {
     String _temp0 = intl.Intl.pluralLogic(
-      count,
+      days,
       locale: localeName,
-      other: '$count other TVs seen right now',
-      one: '1 other TV seen right now',
-      zero: 'No other TVs seen right now',
+      other: 'Last on $days days ago',
+      one: 'Last on yesterday',
+      zero: 'Last on today',
     );
     return '$_temp0';
   }
+
+  @override
+  String householdUnnamedTvs(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Hearth TVs',
+      one: 'a Hearth TV',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String householdFound(String names) {
+    return 'Your other TVs have a household: $names. Join it so this TV keeps in step with them.';
+  }
+
+  @override
+  String get householdJoin => 'Join the household';
+
+  @override
+  String get householdJoinHint => 'On one of those TVs, open Settings > Profiles > Copy profiles between TVs > Copy profiles to another TV, tick Add this TV to my household, and continue. Then choose that TV here.';
+
+  @override
+  String get householdStartAnyway => 'Start a separate household instead';
 
   @override
   String householdLast(String result) {
@@ -2742,6 +2779,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setupFlowHouseholdDone => 'This TV has a household. Add the others from Copy profiles between TVs.';
+
+  @override
+  String setupFlowHouseholdFound(String names) {
+    return 'Your other TVs have a household: $names. Join it, and this TV keeps profile settings and saved PINs in step with them. On one of those TVs, open Settings > Profiles > Copy profiles between TVs > Copy profiles to another TV, tick Add this TV to my household, and continue. Then choose Join the household here and pick that TV.';
+  }
+
+  @override
+  String get setupFlowHouseholdStartAnyway => 'Start a separate one';
+
+  @override
+  String get setupFlowHouseholdJoined => 'This TV is in the household now and keeps in step with its other TVs.';
 
   @override
   String get setupFlowAdSandboxBody => 'Android\'s Privacy Sandbox guesses ad topics from the apps you use and measures ads. Hearth can turn it off with these commands and keep it off. You can turn it back on in Settings > System.';

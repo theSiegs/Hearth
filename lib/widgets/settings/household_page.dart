@@ -27,9 +27,24 @@ import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
 import 'settings_page.dart';
+import 'share_pages.dart';
+
+/// The other households [FLauncherChannel.getHouseholdStatus] heard on the network, each as its TVs' names.
+List<List<String?>> householdsNearby(Map<dynamic, dynamic> status) => [
+      for (final household in (status["nearby"] as List?) ?? const [])
+        if (household is List && household.isNotEmpty) [for (final name in household) name is String ? name : null],
+    ];
+
+/// TVs' names for a sentence ("Den, Kitchen"); a TV that gave no name is "a Hearth TV".
+String householdTvNames(AppLocalizations l, List<String?> names) {
+  final named = names.whereType<String>().toSet().toList()..sort();
+  final unnamed = names.length - names.whereType<String>().length;
+  return [...named, if (unnamed > 0) l.householdUnnamedTvs(unnamed)].join(", ");
+}
 
 /// Settings > Profiles > Copy profiles between TVs > Household sync: whether this TV is in a household of TVs that keep
-/// Profile Pairing and saved PINs in step, the one switch, and leaving. (Adding a TV is a copy: see ShareSendPage.)
+/// Profile Pairing and saved PINs in step, which TVs are in it, the one switch, and leaving. A TV in none sees a
+/// household its other TVs have, to join. (Adding a TV is a copy: see ShareSendPage.)
 class HouseholdPage extends StatefulWidget {
   static const String routeName = "household";
 
@@ -47,6 +62,7 @@ class _HouseholdPageState extends State<HouseholdPage> {
   @override
   void initState() {
     super.initState();
+    _channel.lookForHouseholds().catchError((Object err) => noteFailure('household_page', err));
     _refresh();
     _timer = Timer.periodic(const Duration(seconds: 3), (_) => _refresh());
   }
@@ -54,6 +70,7 @@ class _HouseholdPageState extends State<HouseholdPage> {
   @override
   void dispose() {
     _timer?.cancel();
+    _channel.stopLookingForHouseholds().catchError((Object err) => noteFailure('household_page', err));
     super.dispose();
   }
 
@@ -91,6 +108,26 @@ class _HouseholdPageState extends State<HouseholdPage> {
     await _refresh();
   }
 
+  /// Joining is a copy from one of the household's TVs: this TV's end of it.
+  Future<void> _join() async {
+    if (!await _allowed()) return;
+    if (!mounted) return;
+    await Navigator.of(context).pushNamed(ShareReceivePage.routeName);
+    await _refresh();
+  }
+
+  /// How a member is doing: this TV, on now, or when it was last on.
+  String _memberStatus(AppLocalizations l, Map<dynamic, dynamic> member) {
+    if (member["self"] == true) return l.householdThisTv;
+    if (member["online"] == true) return l.householdOnNow;
+    final at = (member["lastSeen"] as num?)?.toInt() ?? 0;
+    if (at <= 0) return l.householdNotSeen;
+    final then = DateTime.fromMillisecondsSinceEpoch(at);
+    final now = DateTime.now();
+    final days = DateTime(now.year, now.month, now.day).difference(DateTime(then.year, then.month, then.day)).inDays;
+    return l.householdLastOn(days < 0 ? 0 : days);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -98,15 +135,33 @@ class _HouseholdPageState extends State<HouseholdPage> {
     final joined = _status["joined"] == true;
     final lost = _status["lost"] == true;
     final enabled = _status["enabled"] != false;
-    final peers = (_status["peers"] as List?)?.length ?? 0;
     final last = _status["lastResult"] as String?;
+    final members = [for (final m in (_status["members"] as List?) ?? const []) if (m is Map) m];
+    final nearby = householdsNearby(_status);
     Widget note(String text) =>
         Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 12), child: Text(text, style: textTheme.bodySmall));
     return SettingsPage(
       title: l.householdTitle,
       children: [
         note(l.householdIntro),
-        if (!joined) ...[
+        if (!joined && nearby.isNotEmpty) ...[
+          // Another TV has a household: joining it comes first, so the TVs aren't split into two
+          note(l.householdFound(householdTvNames(l, nearby.first))),
+          FocusableSettingsTile(
+            autofocus: true,
+            leading: const Icon(Icons.login),
+            title: Text(l.householdJoin, style: textTheme.bodyMedium),
+            trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+            onPressed: _join,
+          ),
+          note(l.householdJoinHint),
+          if (!lost)
+            FocusableSettingsTile(
+              leading: const Icon(Icons.add_home_outlined),
+              title: Text(l.householdStartAnyway, style: textTheme.bodyMedium),
+              onPressed: _start,
+            ),
+        ] else if (!joined) ...[
           note(lost ? l.householdLost : l.householdNone),
           if (!lost)
             FocusableSettingsTile(
@@ -125,7 +180,16 @@ class _HouseholdPageState extends State<HouseholdPage> {
             trailing: Icon(enabled ? Icons.check_box : Icons.check_box_outline_blank),
             onPressed: () => _toggle(!enabled),
           ),
-          note(l.householdPeers(peers)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(l.householdMembers, style: textTheme.titleSmall),
+          ),
+          for (final member in members)
+            FocusableSettingsTile(
+              leading: Icon(Icons.tv, color: member["self"] == true || member["online"] == true ? null : Colors.white38),
+              title: Text((member["name"] as String?) ?? l.householdUnnamedTvs(1), style: textTheme.bodyMedium),
+              trailing: Text(_memberStatus(l, member), style: textTheme.bodySmall),
+            ),
           if (last != null && last.isNotEmpty) note(l.householdLast(last)),
           FocusableSettingsTile(
             leading: const Icon(Icons.sync_alt),

@@ -465,6 +465,21 @@ void main() {
       expect(find.text("Sync with your other TVs"), findsOneWidget);
     });
 
+    testWidgets("another TV's household on the network: the step offers to join it first", (tester) async {
+      channel.pairing = true;
+      channel.nearbyHouseholds = const [
+        ["Kitchen", "Attic"]
+      ];
+      await openAtFamily(tester);
+      await press(tester, "Turn on");
+      await press(tester, "Skip"); // the parent PIN
+      expect(channel.lookingForHouseholds, isTrue);
+      expect(find.textContaining("Your other TVs have a household: Attic, Kitchen."), findsOneWidget);
+      expect(find.text("Join the household"), findsOneWidget);
+      await press(tester, "Start a separate one");
+      expect(channel.householdsStarted, 1);
+    });
+
     testWidgets("a TV already in a household isn't asked to start one", (tester) async {
       channel.pairing = true;
       channel.household = true;

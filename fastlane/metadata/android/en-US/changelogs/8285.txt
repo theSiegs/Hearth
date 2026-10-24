@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Household sync shows a household your other TVs already have, offers to join it, and lists the TVs in your household.

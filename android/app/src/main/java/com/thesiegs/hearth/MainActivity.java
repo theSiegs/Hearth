@@ -398,14 +398,22 @@ public class MainActivity extends FlutterActivity {
                     () -> ShareSecrets.offer(this, (List<String>) call.arguments()));
             // A picture of a profile's wallpaper as the screen shows it (at most 1920x1080, a JPEG), to send to another TV
             case "getShareWallpaper" -> answerFrom(sIoExecutor, result, () -> shareWallpaper((String) call.arguments()));
-            case "getHouseholdStatus" -> result.success(Household.status(this));
+            case "getHouseholdStatus" -> answerFrom(sIoExecutor, result, () -> Household.status(this));
             case "createHousehold" -> result.success(Household.create(this));
             case "setHouseholdEnabled" -> {
                 Household.setEnabled(this, Boolean.TRUE.equals(call.arguments()));
                 result.success(null);
             }
-            case "leaveHousehold" -> {
+            case "leaveHousehold" -> answerFrom(sIoExecutor, result, () -> {
                 Household.leave(this);
+                return null;
+            });
+            case "lookForHouseholds" -> {
+                Household.lookAround(this);
+                result.success(null);
+            }
+            case "stopLookingForHouseholds" -> {
+                Household.stopLooking();
                 result.success(null);
             }
             case "syncHouseholdNow" -> {
