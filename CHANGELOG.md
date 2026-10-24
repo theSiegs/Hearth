@@ -5,6 +5,11 @@
 
 ## Unreleased
 
+## 2026.10.78 (pre-release)
+
+- Household sync: a TV asking to join shows up in the **notification Bell** of the TV it asked, on grown-ups' profiles only, and pops up: its name, with **Allow** and **Don't allow**. No Parent PIN, no code to compare, no phone. The joining TV says which TV to allow it on and waits up to five minutes.
+- Notifications: the Bell shows each app's real name (system apps no longer show as a package name like com.google.android...), reads the title and text of every notification style, and a tap goes where the app told Google TV it should, opening the app when the notification can't. A notification whose buttons change is updated, so a button pressed is the one shown. Newest first.
+
 ## 2026.10.77 (pre-release)
 
 - Household sync is now the one way to keep TVs alike: the **Copy profiles to / from another TV** screens are gone, and so is typing another TV's address. Settings > Profiles opens **Household sync** directly. A new TV chooses Join the household, shows a code, and a parent allows it on their phone or on another TV's Household page.

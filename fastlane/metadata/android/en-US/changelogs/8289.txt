@@ -1,0 +1,1 @@
+A TV asking to join the household shows up in the notification Bell of your other TV, for grown-ups only, with Allow and Don't allow. Notifications show real app names and better titles, and tapping them opens what they're about.
