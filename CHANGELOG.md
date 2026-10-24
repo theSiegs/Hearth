@@ -5,6 +5,10 @@
 
 ## Unreleased
 
+## 2026.10.76 (pre-release)
+
+- Household sync: a backup is kept in Backup & Restore before a profile first takes the household's look, layout or wallpaper on a TV, as a copy does.
+
 ## 2026.10.75 (pre-release)
 
 - Household sync, version 2: each TV has its own key, kept in the Android Keystore, and the household is a list of its TVs that syncs like everything else. Two TVs sync only when each signs the exchange with a key on the other's list. Copying profiles with "Add this TV to my household" now hands the new TV a one-time invitation, good for an hour, instead of the household's key.
