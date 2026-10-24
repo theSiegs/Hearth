@@ -641,33 +641,33 @@
     "@kidsProfilesRemoveTitle": {
         "description": "Kids profiles page: button and dialog title"
     },
-    "kidsProfilesRemoveBody": "This takes Hearth and HearthTube off your kids profiles, and Hearth stops adding itself to new ones. Do this before you uninstall Hearth.",
+    "kidsProfilesRemoveBody": "This takes Hearth and HearthTube off your kids profiles, and Hearth stops adding itself to new ones. Hearth stays on your profile.",
     "@kidsProfilesRemoveBody": {
         "description": "Kids profiles page: Remove dialog text"
     },
-    "kidsProfilesUninstallTitle": "Uninstall Hearth",
-    "@kidsProfilesUninstallTitle": {
-        "description": "Kids profiles page: button and dialog title"
+    "uninstallHearthTitle": "Uninstall Hearth",
+    "@uninstallHearthTitle": {
+        "description": "Settings > System: the last row, and its dialog's title; Hearth off the whole TV"
     },
-    "kidsProfilesUninstallBody": "This first takes Hearth and HearthTube off your kids profiles, then uninstalls Hearth.",
-    "@kidsProfilesUninstallBody": {
-        "description": "Kids profiles page: Uninstall dialog, first paragraph"
+    "uninstallHearthBody": "This uninstalls Hearth from this TV. It first takes Hearth and HearthTube off your kids profiles.",
+    "@uninstallHearthBody": {
+        "description": "Uninstall Hearth dialog, first paragraph"
     },
-    "kidsProfilesUninstallWhyHere": "Uninstalling here — rather than from Android's settings — makes sure nothing is left behind on the kids profiles.",
-    "@kidsProfilesUninstallWhyHere": {
-        "description": "Kids profiles page: Uninstall dialog, second paragraph"
+    "uninstallHearthWhyHere": "Uninstalling here — rather than from Android's settings — makes sure nothing is left behind on the kids profiles.",
+    "@uninstallHearthWhyHere": {
+        "description": "Uninstall Hearth dialog, second paragraph"
     },
-    "kidsProfilesApprovalFirstTitle": "Finish the one-time approval first",
-    "@kidsProfilesApprovalFirstTitle": {
-        "description": "Kids profiles page: dialog title when Uninstall couldn't take Hearth off the kids profiles"
+    "uninstallHearthApprovalFirstTitle": "Finish the one-time approval first",
+    "@uninstallHearthApprovalFirstTitle": {
+        "description": "Dialog title when Uninstall Hearth couldn't take Hearth off the kids profiles"
     },
-    "kidsProfilesApprovalFirstBody": "Hearth couldn't take itself off the kids profiles yet: it needs the one-time \"Allow debugging?\" approval on the TV.",
-    "@kidsProfilesApprovalFirstBody": {
-        "description": "Kids profiles page: that dialog's first paragraph; quotes Android's debugging prompt"
+    "uninstallHearthApprovalFirstBody": "Hearth couldn't take itself off the kids profiles yet: it needs the one-time \"Allow debugging?\" approval on the TV.",
+    "@uninstallHearthApprovalFirstBody": {
+        "description": "That dialog's first paragraph; quotes Android's debugging prompt"
     },
-    "kidsProfilesApprovalFirstRetry": "Approve it, then try Uninstall again, so nothing is left on the kids profiles.",
-    "@kidsProfilesApprovalFirstRetry": {
-        "description": "Kids profiles page: that dialog's second paragraph"
+    "uninstallHearthApprovalFirstRetry": "Approve it, then try Uninstall again, so nothing is left on the kids profiles.",
+    "@uninstallHearthApprovalFirstRetry": {
+        "description": "That dialog's second paragraph"
     },
     "kidsProfilesFailedTitle": "Couldn't change the kids profiles",
     "@kidsProfilesFailedTitle": {
@@ -3715,7 +3715,7 @@
     "@setupFlowKidsDone": {
         "description": "Setup flow: kids profiles step, once Hearth was added"
     },
-    "setupFlowKidsKeepDebugging": "Leave debugging on: Hearth needs it again for a new kids profile, and to remove or uninstall itself.",
+    "setupFlowKidsKeepDebugging": "Leave debugging on: Hearth needs it again for a new kids profile, and to take itself off them later.",
     "@setupFlowKidsKeepDebugging": {
         "description": "Setup flow: kids profiles step, once done: debugging stays on"
     },

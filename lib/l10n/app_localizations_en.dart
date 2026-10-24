@@ -724,25 +724,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kidsProfilesRemoveTitle => 'Remove Hearth from kids profiles';
 
   @override
-  String get kidsProfilesRemoveBody => 'This takes Hearth and HearthTube off your kids profiles, and Hearth stops adding itself to new ones. Do this before you uninstall Hearth.';
+  String get kidsProfilesRemoveBody => 'This takes Hearth and HearthTube off your kids profiles, and Hearth stops adding itself to new ones. Hearth stays on your profile.';
 
   @override
-  String get kidsProfilesUninstallTitle => 'Uninstall Hearth';
+  String get uninstallHearthTitle => 'Uninstall Hearth';
 
   @override
-  String get kidsProfilesUninstallBody => 'This first takes Hearth and HearthTube off your kids profiles, then uninstalls Hearth.';
+  String get uninstallHearthBody => 'This uninstalls Hearth from this TV. It first takes Hearth and HearthTube off your kids profiles.';
 
   @override
-  String get kidsProfilesUninstallWhyHere => 'Uninstalling here — rather than from Android\'s settings — makes sure nothing is left behind on the kids profiles.';
+  String get uninstallHearthWhyHere => 'Uninstalling here — rather than from Android\'s settings — makes sure nothing is left behind on the kids profiles.';
 
   @override
-  String get kidsProfilesApprovalFirstTitle => 'Finish the one-time approval first';
+  String get uninstallHearthApprovalFirstTitle => 'Finish the one-time approval first';
 
   @override
-  String get kidsProfilesApprovalFirstBody => 'Hearth couldn\'t take itself off the kids profiles yet: it needs the one-time \"Allow debugging?\" approval on the TV.';
+  String get uninstallHearthApprovalFirstBody => 'Hearth couldn\'t take itself off the kids profiles yet: it needs the one-time \"Allow debugging?\" approval on the TV.';
 
   @override
-  String get kidsProfilesApprovalFirstRetry => 'Approve it, then try Uninstall again, so nothing is left on the kids profiles.';
+  String get uninstallHearthApprovalFirstRetry => 'Approve it, then try Uninstall again, so nothing is left on the kids profiles.';
 
   @override
   String get kidsProfilesFailedTitle => 'Couldn\'t change the kids profiles';
@@ -2863,7 +2863,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowKidsDone => 'Hearth is on your kids profiles';
 
   @override
-  String get setupFlowKidsKeepDebugging => 'Leave debugging on: Hearth needs it again for a new kids profile, and to remove or uninstall itself.';
+  String get setupFlowKidsKeepDebugging => 'Leave debugging on: Hearth needs it again for a new kids profile, and to take itself off them later.';
 
   @override
   String get setupFlowDebugTitle => 'Turn on debugging first';

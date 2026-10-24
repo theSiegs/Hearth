@@ -30,8 +30,9 @@ import 'kid_profile_page.dart';
 import 'settings_page.dart';
 
 /// Settings > Family > Kids profiles: whether Hearth (and HearthTube, when the owner has it) is on each kids'
-/// profile, one Fix for any that got out of step, and taking Hearth off them before uninstalling it. The setup flow
-/// puts Hearth there in the first place; after that Hearth puts itself on new kids profiles too.
+/// profile, one Fix for any that got out of step, and taking Hearth off them. The setup flow puts Hearth there in the
+/// first place; after that Hearth puts itself on new kids profiles too. Uninstalling Hearth is the whole TV's, in
+/// Settings > System (UninstallHearthTile), and takes it off them first.
 class KidsProfilesPage extends StatefulWidget {
   static const String routeName = "kids_profiles";
 
@@ -150,27 +151,6 @@ class _KidsProfilesPageState extends State<KidsProfilesPage> with WidgetsBinding
     if (!await _run(_Job.remove, _channel.removeHearthFromKidsProfiles) && mounted) {
       await _showMessage(l.kidsProfilesFailedTitle, [l.kidsProfilesFailedBody, l.kidsProfilesFailedRetry]);
     }
-  }
-
-  /// Uninstall Hearth the safe way: take it off the kids profiles first (so nothing is left behind there), then open
-  /// Android's uninstall screen for Hearth itself. If that can't run yet, stop and ask for the approval rather than
-  /// uninstall with copies left behind.
-  Future<void> _uninstallHearth() async {
-    final l = AppLocalizations.of(context)!;
-    final go = await _confirm(
-      title: l.kidsProfilesUninstallTitle,
-      lines: [l.kidsProfilesUninstallBody, l.kidsProfilesUninstallWhyHere],
-      action: l.uninstall,
-    );
-    if (go != true || !mounted) return;
-    if (!await _run(_Job.uninstall, _channel.removeHearthFromKidsProfiles)) {
-      if (mounted) {
-        await _showMessage(l.kidsProfilesApprovalFirstTitle,
-            [l.kidsProfilesApprovalFirstBody, l.kidsProfilesApprovalFirstRetry]);
-      }
-      return;
-    }
-    await _channel.uninstallHearth();
   }
 
   /// Runs one of Hearth's own adb jobs, then reads the profiles again. False when it couldn't run (most likely
@@ -342,12 +322,6 @@ class _KidsProfilesPageState extends State<KidsProfilesPage> with WidgetsBinding
           trailing: _trailing(_Job.remove),
           onPressed: _busy != null ? null : _remove,
         ),
-        FocusableSettingsTile(
-          leading: const Icon(Icons.delete_outline),
-          title: Text(l.kidsProfilesUninstallTitle, style: textTheme.bodyMedium),
-          trailing: _trailing(_Job.uninstall),
-          onPressed: _busy != null ? null : _uninstallHearth,
-        ),
       ],
     );
   }
@@ -358,4 +332,4 @@ class _KidsProfilesPageState extends State<KidsProfilesPage> with WidgetsBinding
       : const Icon(Icons.chevron_right, color: Colors.white54);
 }
 
-enum _Job { fix, remove, uninstall }
+enum _Job { fix, remove }

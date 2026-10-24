@@ -86,7 +86,7 @@ Other tools: `tool/generate_icons.py` (app icon and TV banner).
 
 Hearth and HearthTube on a kids profile carry Android's per-user "block uninstall" flag, so Google TV's launcher
 can't remove them at a profile start. Only Hearth in the owner's user sets and lifts the flag, over its own adb;
-Hearth's Remove (Settings > Profiles, and the step before Uninstall Hearth) lifts it first. The copies hold no adb key
+Hearth's Remove (Settings > Family > Kids profiles, and the step before Settings > System > Uninstall Hearth) lifts it first. The copies hold no adb key
 (Hearth up to 2026.10.60 shared its key with them so a copy could clean itself up; newer versions tell a copy that
 still has it to delete it). So if Hearth is uninstalled from the owner's user some other way, the kids' copies stay
 and can't be removed from the kids profile. To release them, any one of:

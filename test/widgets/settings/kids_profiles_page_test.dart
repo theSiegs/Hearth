@@ -27,6 +27,7 @@ import 'package:flauncher/widgets/settings/kid_profile_page.dart';
 import 'package:flauncher/widgets/settings/kids_profiles_page.dart';
 import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
 import 'package:flauncher/widgets/settings/family_settings_page.dart';
+import 'package:flauncher/widgets/settings/uninstall_hearth_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -346,7 +347,7 @@ void main() {
       {"userId": 10, "name": "Sam", "hearth": true},
     ];
     channel.works = false;
-    await pump(tester, const KidsProfilesPage());
+    await pump(tester, const UninstallHearthTile());
     await press(tester, "Uninstall Hearth");
     await press(tester, "Uninstall");
     expect(find.text("Finish the one-time approval first"), findsOneWidget);
@@ -447,11 +448,12 @@ void main() {
     expect(find.text("HearthTube settings"), findsNothing);
   });
 
-  testWidgets("no kids profiles: says so, and Uninstall is still there", (tester) async {
+  testWidgets("no kids profiles: says so; Remove is there, Uninstall isn't (it's in System)", (tester) async {
     await pump(tester, const KidsProfilesPage());
     expect(find.text("There are no kids profiles on this TV."), findsOneWidget);
     expect(find.text("Fix"), findsNothing);
-    expect(find.text("Uninstall Hearth"), findsOneWidget);
+    expect(find.text("Remove Hearth from kids profiles"), findsOneWidget);
+    expect(find.textContaining("Uninstall"), findsNothing);
   });
 
   testWidgets("Family shows how many kids profiles need a fix; Profiles has Streaming app PINs", (tester) async {

@@ -1392,44 +1392,44 @@ abstract class AppLocalizations {
   /// Kids profiles page: Remove dialog text
   ///
   /// In en, this message translates to:
-  /// **'This takes Hearth and HearthTube off your kids profiles, and Hearth stops adding itself to new ones. Do this before you uninstall Hearth.'**
+  /// **'This takes Hearth and HearthTube off your kids profiles, and Hearth stops adding itself to new ones. Hearth stays on your profile.'**
   String get kidsProfilesRemoveBody;
 
-  /// Kids profiles page: button and dialog title
+  /// Settings > System: the last row, and its dialog's title; Hearth off the whole TV
   ///
   /// In en, this message translates to:
   /// **'Uninstall Hearth'**
-  String get kidsProfilesUninstallTitle;
+  String get uninstallHearthTitle;
 
-  /// Kids profiles page: Uninstall dialog, first paragraph
+  /// Uninstall Hearth dialog, first paragraph
   ///
   /// In en, this message translates to:
-  /// **'This first takes Hearth and HearthTube off your kids profiles, then uninstalls Hearth.'**
-  String get kidsProfilesUninstallBody;
+  /// **'This uninstalls Hearth from this TV. It first takes Hearth and HearthTube off your kids profiles.'**
+  String get uninstallHearthBody;
 
-  /// Kids profiles page: Uninstall dialog, second paragraph
+  /// Uninstall Hearth dialog, second paragraph
   ///
   /// In en, this message translates to:
   /// **'Uninstalling here — rather than from Android\'s settings — makes sure nothing is left behind on the kids profiles.'**
-  String get kidsProfilesUninstallWhyHere;
+  String get uninstallHearthWhyHere;
 
-  /// Kids profiles page: dialog title when Uninstall couldn't take Hearth off the kids profiles
+  /// Dialog title when Uninstall Hearth couldn't take Hearth off the kids profiles
   ///
   /// In en, this message translates to:
   /// **'Finish the one-time approval first'**
-  String get kidsProfilesApprovalFirstTitle;
+  String get uninstallHearthApprovalFirstTitle;
 
-  /// Kids profiles page: that dialog's first paragraph; quotes Android's debugging prompt
+  /// That dialog's first paragraph; quotes Android's debugging prompt
   ///
   /// In en, this message translates to:
   /// **'Hearth couldn\'t take itself off the kids profiles yet: it needs the one-time \"Allow debugging?\" approval on the TV.'**
-  String get kidsProfilesApprovalFirstBody;
+  String get uninstallHearthApprovalFirstBody;
 
-  /// Kids profiles page: that dialog's second paragraph
+  /// That dialog's second paragraph
   ///
   /// In en, this message translates to:
   /// **'Approve it, then try Uninstall again, so nothing is left on the kids profiles.'**
-  String get kidsProfilesApprovalFirstRetry;
+  String get uninstallHearthApprovalFirstRetry;
 
   /// Kids profiles page and setup flow: dialog title when Fix or Remove couldn't run
   ///
@@ -5058,7 +5058,7 @@ abstract class AppLocalizations {
   /// Setup flow: kids profiles step, once done: debugging stays on
   ///
   /// In en, this message translates to:
-  /// **'Leave debugging on: Hearth needs it again for a new kids profile, and to remove or uninstall itself.'**
+  /// **'Leave debugging on: Hearth needs it again for a new kids profile, and to take itself off them later.'**
   String get setupFlowKidsKeepDebugging;
 
   /// Setup flow: kids profiles step when the TV's debugging switch is off

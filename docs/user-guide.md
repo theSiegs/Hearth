@@ -191,9 +191,10 @@ Hearth treats a profile as a kids profile when Family Link supervises it.
     with the family's other devices can count too, and the stricter one wins. Adults have no YouTube limit.
   - **HearthTube**: **Get HearthTube** installs it (on the TV, then for that kid), and while that kid's profile is on,
     **HearthTube settings** opens HearthTube's own settings for them, behind the parent PIN.
-- **Uninstalling.** Use **Settings → Profiles → Kids profiles → Uninstall Hearth**: it takes Hearth off the kids
-  profiles first. Android's own uninstall would leave copies behind there. **Remove Hearth from kids profiles** does
-  only that first part, and Hearth stops adding itself to new ones.
+- **Removing Hearth from kids profiles.** **Remove Hearth from kids profiles** takes Hearth and HearthTube off
+  them, and Hearth stops adding itself to new ones; Hearth stays on your profile.
+- **Uninstalling.** Use **Settings → System → Uninstall Hearth**: it takes Hearth off the kids profiles first.
+  Android's own uninstall would leave copies behind there.
 
 ## The remote
 

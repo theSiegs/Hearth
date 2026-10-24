@@ -29,6 +29,7 @@ import 'setup_checklist_page.dart';
 import 'backup_restore_page.dart';
 import 'ad_sandbox_page.dart';
 import 'settings_page.dart';
+import 'uninstall_hearth_tile.dart';
 
 class SystemSettingsPage extends StatelessWidget {
   static const String routeName = "general_settings_panel";
@@ -80,6 +81,8 @@ class SystemSettingsPage extends StatelessWidget {
             );
           },
         ),
+        // Last: Hearth off the whole TV, its kids profiles first
+        const UninstallHearthTile(),
       ],
     );
   }
