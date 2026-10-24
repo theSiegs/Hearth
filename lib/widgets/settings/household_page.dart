@@ -153,7 +153,7 @@ class _JoinDialogState extends State<_JoinDialog> {
   }
 }
 
-/// Settings > Profiles > Household sync: whether this TV is in a household of TVs that keep every profile in step,
+/// Settings > Family > Household sync: whether this TV is in a household of TVs that keep every profile in step,
 /// which TVs are in it, the one switch, and leaving. A TV in none sees a household its other TVs have, to join.
 class HouseholdPage extends StatefulWidget {
   static const String routeName = "household";

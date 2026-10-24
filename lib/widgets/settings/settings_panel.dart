@@ -47,6 +47,7 @@ import 'package:flauncher/widgets/settings/system_settings_page.dart';
 import 'package:flauncher/widgets/settings/card_style_page.dart';
 import 'package:flauncher/widgets/settings/dock_labels_page.dart';
 import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
+import 'package:flauncher/widgets/settings/family_settings_page.dart';
 import 'package:flauncher/widgets/settings/settings_lock.dart';
 import 'package:flauncher/widgets/settings/look_settings_page.dart';
 import 'package:flauncher/widgets/settings/remote_search_settings_page.dart';
@@ -200,6 +201,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     return _FastPageRoute(builder: (_) => const RemoteButtonsPage());
                   case ProfilesSettingsPage.routeName:
                     return _FastPageRoute(builder: (_) => const ProfilesSettingsPage());
+                  case FamilySettingsPage.routeName:
+                    return _FastPageRoute(builder: (_) => const FamilySettingsPage());
                   case LookSettingsPage.routeName:
                     return _FastPageRoute(builder: (_) => const LookSettingsPage());
                   case RemoteSearchSettingsPage.routeName:

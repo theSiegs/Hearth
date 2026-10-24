@@ -46,7 +46,7 @@ Future<bool> requireParent(BuildContext context) async {
   if (!settings.hasParentPin) {
     await showMessageDialog(context,
         title: l.parentPinAskTitle,
-        message: l.parentPinAskBody(l.settingsTitle, l.profilesTitle, l.parentPinTitle));
+        message: l.parentPinAskBody(l.settingsTitle, l.familyTitle, l.parentPinTitle));
     return false;
   }
 
@@ -77,7 +77,7 @@ Future<bool> requireParentPin(BuildContext context) async {
   if (!settings.hasParentPin) {
     await showMessageDialog(context,
         title: l.parentPinTitle,
-        message: l.profilePinNeedsParentPin(l.settingsTitle, l.profilesTitle, l.parentPinTitle));
+        message: l.profilePinNeedsParentPin(l.settingsTitle, l.familyTitle, l.parentPinTitle));
     return false;
   }
   final String? pin = await showDialog<String>(

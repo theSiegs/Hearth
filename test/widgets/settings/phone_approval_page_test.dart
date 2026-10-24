@@ -28,7 +28,7 @@ void main() {
   testWidgets("without Home Assistant the row is greyed out and says what it needs", (tester) async {
     await pump(tester, _Channel());
     expect(find.text("Needs Home Assistant"), findsOneWidget);
-    await tester.tap(find.text("Approve switches from my phone"));
+    await tester.tap(find.text("Unlock from my phone"));
     await tester.pumpAndSettle();
     expect(find.textContaining("Set up Home Assistant in Settings first"), findsOneWidget);
   });

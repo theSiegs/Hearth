@@ -372,7 +372,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdRemoveFailed => 'That TV couldn\'t be removed. Try again.';
 
   @override
-  String get householdAddHint => 'To add a TV: on that TV, open Settings > Profiles > Household sync and choose Join the household.';
+  String get householdAddHint => 'To add a TV: on that TV, open Settings > Family > Household sync and choose Join the household.';
 
   @override
   String get householdMembers => 'TVs in this household';
@@ -648,6 +648,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profilesTitle => 'Profiles';
+
+  @override
+  String get familyTitle => 'Family';
 
   @override
   String get homeScreenTitle => 'Home screen';
@@ -2288,7 +2291,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pinPhoneSetupScan => 'Scan with a phone on the same Wi-Fi and type the PINs there. They’re encrypted on the phone; the page only works while this is open.';
 
   @override
-  String get approvalTitle => 'Approve switches from my phone';
+  String get approvalTitle => 'Unlock from my phone';
 
   @override
   String get approvalOn => 'On';
@@ -2368,10 +2371,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get streamingPinsNone => 'None of the apps Hearth can type PINs in is installed.';
 
   @override
-  String get profileLockNow => 'Lock Profile';
+  String get profileLockNow => 'Lock now';
 
   @override
-  String get profileLockOnSleep => 'Choose a profile when the TV wakes';
+  String get profileLockOnSleep => 'Lock when the TV wakes';
 
   @override
   String get profileLockEveryTime => 'Every time';
@@ -2819,7 +2822,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowHouseholdTitle => 'Sync with your other TVs';
 
   @override
-  String get setupFlowHouseholdBody => 'TVs in a household keep profile settings and saved PINs in step, so anyone who switches TVs picks up where they left off. They talk over your home network, encrypted. Start the household here, then add each other TV from its own Copy screen (Settings > Profiles > Copy profiles between TVs). If another TV already has a household, skip this and add this TV from that one.';
+  String get setupFlowHouseholdBody => 'TVs in a household keep profile settings and saved PINs in step, so anyone who switches TVs picks up where they left off. They talk over your home network, encrypted. Start the household here, then on each other TV open Settings > Family > Household sync and choose Join the household. If another TV already has a household, join it instead.';
 
   @override
   String get setupFlowHouseholdStart => 'Start a household';

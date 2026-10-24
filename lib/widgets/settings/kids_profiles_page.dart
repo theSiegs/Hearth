@@ -29,7 +29,7 @@ import 'focusable_settings_tile.dart';
 import 'kid_profile_page.dart';
 import 'settings_page.dart';
 
-/// Settings > Profiles > Kids profiles: whether Hearth (and HearthTube, when the owner has it) is on each kids'
+/// Settings > Family > Kids profiles: whether Hearth (and HearthTube, when the owner has it) is on each kids'
 /// profile, one Fix for any that got out of step, and taking Hearth off them before uninstalling it. The setup flow
 /// puts Hearth there in the first place; after that Hearth puts itself on new kids profiles too.
 class KidsProfilesPage extends StatefulWidget {

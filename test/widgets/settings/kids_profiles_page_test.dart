@@ -26,6 +26,7 @@ import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flauncher/widgets/settings/kid_profile_page.dart';
 import 'package:flauncher/widgets/settings/kids_profiles_page.dart';
 import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
+import 'package:flauncher/widgets/settings/family_settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -453,14 +454,18 @@ void main() {
     expect(find.text("Uninstall Hearth"), findsOneWidget);
   });
 
-  testWidgets("Profiles shows how many kids profiles need a fix, and Streaming app PINs", (tester) async {
+  testWidgets("Family shows how many kids profiles need a fix; Profiles has Streaming app PINs", (tester) async {
     channel.kids = [
       {"userId": 10, "name": "Sam", "hearth": true},
       {"userId": 11, "name": "Alex", "hearth": false},
     ];
-    await pump(tester, const ProfilesSettingsPage());
+    await pump(tester, const FamilySettingsPage());
     expect(find.text("Kids profiles"), findsOneWidget);
     expect(find.text("1 needs a fix"), findsOneWidget);
+    expect(find.text("Profile Pairing"), findsOneWidget);
+    expect(find.text("Household sync"), findsOneWidget);
+    await pump(tester, const ProfilesSettingsPage());
+    expect(find.text("Kids profiles"), findsNothing);
     expect(find.text("Streaming app PINs"), findsOneWidget);
     expect(find.text("Hearth on other profiles"), findsNothing);
   });

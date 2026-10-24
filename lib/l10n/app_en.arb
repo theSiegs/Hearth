@@ -312,7 +312,7 @@
     "@householdRemoveFailed": {
         "description": "Household page: removing a TV didn't work"
     },
-    "householdAddHint": "To add a TV: on that TV, open Settings > Profiles > Household sync and choose Join the household.",
+    "householdAddHint": "To add a TV: on that TV, open Settings > Family > Household sync and choose Join the household.",
     "@householdAddHint": {
         "description": "Household page: how to add a TV"
     },
@@ -545,6 +545,10 @@
         "description": "Settings page title, also its row in the page that opens it"
     },
     "profilesTitle": "Profiles",
+    "familyTitle": "Family",
+    "@familyTitle": {
+        "description": "Settings: the group (and its page) for the whole TV's parent settings: parent PIN, kids profiles, Profile Pairing, Household sync"
+    },
     "@profilesTitle": {
         "description": "Settings page title, also its row in the page that opens it"
     },
@@ -570,7 +574,7 @@
     },
     "kidsProfilesTitle": "Kids profiles",
     "@kidsProfilesTitle": {
-        "description": "Settings > Profiles: the page (and its row) about Hearth on the TV's kids profiles"
+        "description": "Settings > Family: the page (and its row) about Hearth on the TV's kids profiles"
     },
     "kidsProfilesUnnamed": "A kids profile",
     "@kidsProfilesUnnamed": {
@@ -2904,7 +2908,7 @@
     "@pinPhoneSetupScan": {
         "description": "Streaming app PINs: set up from a phone (QR code)"
     },
-    "approvalTitle": "Approve switches from my phone",
+    "approvalTitle": "Unlock from my phone",
     "@approvalTitle": {
         "description": "Profiles: approving switches into a PIN-locked profile from a phone"
     },
@@ -3029,11 +3033,11 @@
     "@streamingPinsNone": {
         "description": "Streaming app PINs page: when none of the apps it supports is installed"
     },
-    "profileLockNow": "Lock Profile",
+    "profileLockNow": "Lock now",
     "@profileLockNow": {
         "description": "Settings > Profiles: locking an adult profile with Google TV's profile lock"
     },
-    "profileLockOnSleep": "Choose a profile when the TV wakes",
+    "profileLockOnSleep": "Lock when the TV wakes",
     "@profileLockOnSleep": {
         "description": "Settings > Profiles: locking an adult profile with Google TV's profile lock"
     },
@@ -3656,7 +3660,7 @@
     "@setupFlowHouseholdTitle": {
         "description": "Setup flow: household sync step's title"
     },
-    "setupFlowHouseholdBody": "TVs in a household keep profile settings and saved PINs in step, so anyone who switches TVs picks up where they left off. They talk over your home network, encrypted. Start the household here, then add each other TV from its own Copy screen (Settings > Profiles > Copy profiles between TVs). If another TV already has a household, skip this and add this TV from that one.",
+    "setupFlowHouseholdBody": "TVs in a household keep profile settings and saved PINs in step, so anyone who switches TVs picks up where they left off. They talk over your home network, encrypted. Start the household here, then on each other TV open Settings > Family > Household sync and choose Join the household. If another TV already has a household, join it instead.",
     "@setupFlowHouseholdBody": {
         "description": "Setup flow: household sync step's explanation"
     },
@@ -4019,7 +4023,7 @@
         "placeholders": {
             "place": {
                 "type": "String",
-                "example": "Settings > Profiles > Kids profiles"
+                "example": "Settings > Family > Kids profiles"
             }
         }
     },

@@ -91,7 +91,7 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
     (Map<dynamic, dynamic>, Map<dynamic, dynamic>)? contentPin;
     final active = context.read<ProfileService?>()?.activeProfileKey;
     // Not known to be an adult's profile: no content PIN row
-    final grownUp = !(context.read<ProfileService?>()?.isKidsProfile ?? true);
+    final adult = !(context.read<ProfileService?>()?.isKidsProfile ?? true);
     bool typingOn = true;
     List<Map<dynamic, dynamic>> log = const [];
     try {
@@ -106,7 +106,7 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
       for (final app in await _channel.getProfilePairingApps()) {
         final pkg = app["packageName"] as String;
         _appLabels[pkg] = app["label"] as String? ?? pkg;
-        if (grownUp && pkg == StreamingPinsPage.contentPinPackage && app["installed"] == true) {
+        if (adult && pkg == StreamingPinsPage.contentPinPackage && app["installed"] == true) {
           contentPin = (app, await _channel.getContentPinStatus(pkg));
         }
         if (app["installed"] != true || !await _channel.profilePinEntrySupported(pkg)) continue;

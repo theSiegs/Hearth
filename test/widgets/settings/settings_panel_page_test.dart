@@ -28,6 +28,7 @@ import 'package:flauncher/widgets/settings/notifications_settings_page.dart';
 import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
 import 'package:flauncher/widgets/settings/home_assistant_page.dart';
 import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
+import 'package:flauncher/widgets/settings/family_settings_page.dart';
 import 'package:flauncher/widgets/settings/hearth_about_dialog.dart';
 import 'package:flauncher/widgets/settings/settings_panel_page.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +47,7 @@ import '../../mocks.mocks.dart';
 /// The top level's rows and the pages they open.
 const _rows = {
   "Profiles": ProfilesSettingsPage.routeName,
+  "Family": FamilySettingsPage.routeName,
   "Home screen": HomeScreenSettingsPage.routeName,
   "Notifications": NotificationsSettingsPage.routeName,
   "Home Assistant": HomeAssistantPage.routeName,
@@ -75,7 +77,7 @@ void main() {
     expect(find.text("Settings"), findsNothing);
   });
 
-  testWidgets("the top level is the six groups, in order", (tester) async {
+  testWidgets("the top level is the seven groups, in order", (tester) async {
     await _pumpWidgetWithProviders(tester, _settings(), _apps());
 
     final titles = tester

@@ -15,7 +15,7 @@ and token, Home Button Fix, the ad sandbox) stay on that TV.
 
 **One idea for the person using it: "Your TVs".** There is no separate copy, sync and household to understand. Every
 Hearth TV is in a household, even when it is the only one. A TV on its own that hears another household on the network
-offers to join it; a TV in a household lists its TVs. Joining is the first sync. Settings > Profiles > **Your TVs**
+offers to join it; a TV in a household lists its TVs. Joining is the first sync. Settings > Family > **Household sync**
 replaces both Copy profiles between TVs and Household sync.
 
 ## Terms
@@ -206,7 +206,7 @@ A TV never sends a picture a peer already has.
 
 ## One switch
 
-**Settings > Profiles > Your TVs > Keep my TVs in step** is one switch, on by default, and it covers every profile,
+**Settings > Family > Household sync > Sync with my other TVs** is one switch, on by default, and it covers every profile,
 kids' included: a kid follows themselves from TV to TV like anyone else. Turning it off needs the Parent PIN, stops this
 TV sending and taking entries, and leaves what it has; the TV stays on the member list. There are no per-kind or
 per-profile switches. A kid's synced Continue Watching is still per streaming app profile, so a kid's card can't appear

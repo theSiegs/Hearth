@@ -91,7 +91,7 @@ Hearth's Remove (Settings > Profiles, and the step before Uninstall Hearth) lift
 still has it to delete it). So if Hearth is uninstalled from the owner's user some other way, the kids' copies stay
 and can't be removed from the kids profile. To release them, any one of:
 
-- Install Hearth again (same signing key) and use Settings > Profiles > Remove from the kids profiles.
+- Install Hearth again (same signing key) and use Settings > Family > Kids profiles > Remove Hearth from kids profiles.
 - With adb to the TV, for each user `N` and package (`com.thesiegs.hearth`, `com.thesiegs.hearthtube`), run the flag
   helper from Hearth's APK with `false`, then uninstall:
   `CLASSPATH=$(pm path com.thesiegs.hearth | sed s/package://) app_process /system/bin

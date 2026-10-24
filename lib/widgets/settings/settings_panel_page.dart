@@ -22,13 +22,14 @@ import 'package:flauncher/widgets/settings/home_assistant_page.dart';
 import 'package:flauncher/widgets/settings/home_screen_settings_page.dart';
 import 'package:flauncher/widgets/settings/notifications_settings_page.dart';
 import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
+import 'package:flauncher/widgets/settings/family_settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 
 import 'focusable_settings_tile.dart';
 import 'settings_lock.dart';
 
-/// The top of Settings: eight groups, each a page of its own.
+/// The top of Settings: its groups, each a page of its own.
 class SettingsPanelPage extends StatelessWidget {
   static const String routeName = "settings_panel";
 
@@ -38,7 +39,7 @@ class SettingsPanelPage extends StatelessWidget {
   Widget build(BuildContext context) {
     AppLocalizations localizations = AppLocalizations.of(context)!;
     // In a kids profile only Profiles (switching) and Home screen (their own look) show, until a parent opens
-    // Parent settings with the PIN; then everything shows until the panel closes, starting from Applications.
+    // Parent settings with the PIN; then everything shows until the panel closes, starting from Family.
     final bool locked = settingsLocked(context);
     final bool justUnlocked = settingsUnlocked(context);
 
@@ -66,6 +67,14 @@ class SettingsPanelPage extends StatelessWidget {
                   trailing: Text(ProfilesSettingsPage.activeProfileLabel(context) ?? "", style: Theme.of(context).textTheme.bodySmall),
                   onPressed: () => Navigator.of(context).pushNamed(ProfilesSettingsPage.routeName),
                 ),
+                // The whole TV's, a parent's: parent PIN, kids profiles, Profile Pairing, Household sync
+                if (!locked)
+                  FocusableSettingsTile(
+                    autofocus: justUnlocked,
+                    leading: const Icon(Icons.family_restroom),
+                    title: Text(localizations.familyTitle, style: Theme.of(context).textTheme.bodyMedium),
+                    onPressed: () => Navigator.of(context).pushNamed(FamilySettingsPage.routeName),
+                  ),
                 FocusableSettingsTile(
                   leading: const Icon(Icons.auto_awesome_mosaic_outlined),
                   title: Text(localizations.homeScreenTitle, style: Theme.of(context).textTheme.bodyMedium),
@@ -73,7 +82,6 @@ class SettingsPanelPage extends StatelessWidget {
                 ),
                 if (!locked) ...[
                   FocusableSettingsTile(
-                    autofocus: justUnlocked,
                     leading: const Icon(Icons.notifications_active_outlined),
                     title: Text(localizations.notifications, style: Theme.of(context).textTheme.bodyMedium),
                     onPressed: () => Navigator.of(context).pushNamed(NotificationsSettingsPage.routeName),

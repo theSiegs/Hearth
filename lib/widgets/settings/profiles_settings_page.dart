@@ -17,24 +17,19 @@
 
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/flauncher_channel.dart';
-import 'package:flauncher/models/kids_profiles.dart';
 import 'package:flauncher/providers/profile_service.dart';
-import 'package:flauncher/providers/settings_service.dart';
-import 'package:flauncher/widgets/parent_pin_dialog.dart';
-import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
-import 'kids_profiles_page.dart';
 import 'phone_approval_page.dart';
-import 'profile_pairing_page.dart';
 import 'settings_lock.dart';
-import 'household_page.dart';
 import 'settings_page.dart';
 import 'streaming_pins_page.dart';
 
-/// Google TV profiles, Profile Pairing in the streaming apps, and the parent PIN.
+/// Settings > Profiles: the Google TV profile on now, short and most used first: switching, the profile lock (an
+/// adult's), and its streaming app PINs. What's the whole TV's (the parent PIN, kids profiles, Profile Pairing,
+/// Household sync) is in Settings > Family.
 class ProfilesSettingsPage extends StatelessWidget {
   static const String routeName = "profiles_settings";
 
@@ -44,7 +39,6 @@ class ProfilesSettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
-    final hasPin = context.select<SettingsService, bool>((s) => s.hasParentPin);
     final bool locked = settingsLocked(context);
     return SettingsPage(
       title: l.profilesTitle,
@@ -56,7 +50,8 @@ class ProfilesSettingsPage extends StatelessWidget {
           trailing: Text(activeProfileLabel(context) ?? "", style: textTheme.bodySmall),
           onPressed: () => context.read<FLauncherChannel>().openProfileChooser(),
         ),
-        // Adult profiles: Google TV's own profile lock, now or whenever the TV wakes from a sleep
+        // Adult profiles: Google TV's own profile lock, now or whenever the TV wakes from a sleep, and unlocking it
+        // from the owner's phone (Home Assistant), where Hearth enters the PIN
         if (!(context.select<ProfileService?, bool>((p) => p?.isKidsProfile ?? false))) ...[
           FocusableSettingsTile(
             leading: const Icon(Icons.lock_person_outlined),
@@ -64,41 +59,15 @@ class ProfilesSettingsPage extends StatelessWidget {
             onPressed: () => context.read<FLauncherChannel?>()?.lockProfile(),
           ),
           const _LockOnSleepTile(),
-          // Its owner allows a switch into it from their phone (Home Assistant), and Hearth enters the PIN
           const PhoneApprovalTile(),
         ],
-        // No PIN of its own: in a kids profile, Settings already took the parent PIN to get here, and
-        // adult profiles are only reached past Google TV's PIN.
-        if (!locked)
-          FocusableSettingsTile(
-            leading: const Icon(Icons.switch_account),
-            title: Text(l.profilePairingTitle, style: textTheme.bodyMedium),
-            onPressed: () => Navigator.of(context).pushNamed(ProfilePairingPage.routeName),
-          ),
-        // Each streaming app's profile PINs in one place, matched by name or chosen in Profile Pairing
+        // This profile's PINs in each streaming app, matched by name or chosen in Profile Pairing
         if (!locked)
           FocusableSettingsTile(
             leading: const Icon(Icons.pin_outlined),
             title: Text(l.streamingPinsTitle, style: textTheme.bodyMedium),
             trailing: const Icon(Icons.chevron_right, color: Colors.white54),
             onPressed: () => Navigator.of(context).pushNamed(StreamingPinsPage.routeName),
-          ),
-        if (!locked) const _KidsProfilesTile(),
-        // Every profile's look, layout, pairing choices and PINs, kept in step with the household's other TVs
-        if (!locked)
-          FocusableSettingsTile(
-            leading: const Icon(Icons.holiday_village_outlined),
-            title: Text(l.householdTitle, style: textTheme.bodyMedium),
-            trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-            onPressed: () => Navigator.of(context).pushNamed(HouseholdPage.routeName),
-          ),
-        // YouTube time is a kid's only: each kid's is set in Kids profiles, without switching to them
-        if (!locked)
-          FocusableSettingsTile(
-            leading: const Icon(Icons.lock_outline),
-            title: Text(l.parentPinTitle, style: textTheme.bodyMedium),
-            trailing: Text(hasPin ? l.parentPinOn : l.parentPinOff, style: textTheme.bodySmall),
-            onPressed: () => _editParentPin(context),
           ),
       ],
     );
@@ -107,83 +76,6 @@ class ProfilesSettingsPage extends StatelessWidget {
   /// The signed-in Google TV profile's name, when Hearth knows it (and there is a ProfileService).
   static String? activeProfileLabel(BuildContext context) =>
       context.select<ProfileService?, String?>((p) => p?.activeProfileName);
-
-  Future<void> _editParentPin(BuildContext context) async {
-    final l = AppLocalizations.of(context)!;
-    final settings = context.read<SettingsService>();
-    if (settings.hasParentPin) {
-      final current = await showDialog<String>(
-        context: context,
-        builder: (_) => ParentPinDialog(title: l.parentPinCurrent, verify: settings.verifyParentPin),
-      );
-      if (current == null || !context.mounted) return;
-      final bool? remove = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(l.parentPinTitle),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l.parentPinRemove)),
-            TextButton(
-                autofocus: true, onPressed: () => Navigator.of(context).pop(false), child: Text(l.parentPinChange)),
-          ],
-        ),
-      );
-      if (remove == null || !context.mounted) return;
-      if (remove) {
-        await settings.setParentPin(null);
-        // The streaming apps' profile PINs were saved under the parent PIN: they go with it
-        if (context.mounted) await context.read<FLauncherChannel>().removeAllProfilePins();
-        return;
-      }
-    }
-    await chooseNewParentPin(context);
-  }
-}
-
-/// Kids profiles: how many need a fix, read as the page opens (what Android lists; no adb).
-class _KidsProfilesTile extends StatefulWidget {
-  const _KidsProfilesTile();
-
-  @override
-  State<_KidsProfilesTile> createState() => _KidsProfilesTileState();
-}
-
-class _KidsProfilesTileState extends State<_KidsProfilesTile> {
-  late final FLauncherChannel? _channel = context.read<FLauncherChannel?>();
-  KidsProfilesState? _state;
-
-  @override
-  void initState() {
-    super.initState();
-    _read();
-  }
-
-  Future<void> _read() async {
-    try {
-      final map = await _channel?.getKidsProfilesState();
-      if (mounted && map != null) setState(() => _state = KidsProfilesState.fromMap(map));
-    } catch (err) { noteFailure('profiles_settings_page', err); }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final textTheme = Theme.of(context).textTheme;
-    final state = _state;
-    final needing = state?.needingFix ?? 0;
-    return FocusableSettingsTile(
-      leading: const Icon(Icons.child_care),
-      title: Text(l.kidsProfilesTitle, style: textTheme.bodyMedium),
-      trailing: state == null || state.kids.isEmpty
-          ? const Icon(Icons.chevron_right, color: Colors.white54)
-          : Text(needing > 0 ? l.kidsProfilesNeedFixCount(needing) : l.kidsProfilesReady,
-              style: textTheme.bodySmall?.copyWith(color: needing > 0 ? Colors.amber : Colors.green)),
-      onPressed: () async {
-        await Navigator.of(context).pushNamed(KidsProfilesPage.routeName);
-        _read();
-      },
-    );
-  }
 }
 
 /// "Lock when the TV sleeps": Google TV's profile lock comes up as the TV wakes after sleeping at least this long.

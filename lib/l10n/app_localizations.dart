@@ -786,7 +786,7 @@ abstract class AppLocalizations {
   /// Household page: how to add a TV
   ///
   /// In en, this message translates to:
-  /// **'To add a TV: on that TV, open Settings > Profiles > Household sync and choose Join the household.'**
+  /// **'To add a TV: on that TV, open Settings > Family > Household sync and choose Join the household.'**
   String get householdAddHint;
 
   /// Household page: heading over the list of the household's TVs
@@ -1257,6 +1257,12 @@ abstract class AppLocalizations {
   /// **'Profiles'**
   String get profilesTitle;
 
+  /// Settings: the group (and its page) for the whole TV's parent settings: parent PIN, kids profiles, Profile Pairing, Household sync
+  ///
+  /// In en, this message translates to:
+  /// **'Family'**
+  String get familyTitle;
+
   /// Settings page title, also its row in the page that opens it
   ///
   /// In en, this message translates to:
@@ -1287,7 +1293,7 @@ abstract class AppLocalizations {
   /// **'Updates'**
   String get updatesTitle;
 
-  /// Settings > Profiles: the page (and its row) about Hearth on the TV's kids profiles
+  /// Settings > Family: the page (and its row) about Hearth on the TV's kids profiles
   ///
   /// In en, this message translates to:
   /// **'Kids profiles'**
@@ -3972,7 +3978,7 @@ abstract class AppLocalizations {
   /// Profiles: approving switches into a PIN-locked profile from a phone
   ///
   /// In en, this message translates to:
-  /// **'Approve switches from my phone'**
+  /// **'Unlock from my phone'**
   String get approvalTitle;
 
   /// Profiles: approving switches into a PIN-locked profile from a phone
@@ -4116,13 +4122,13 @@ abstract class AppLocalizations {
   /// Settings > Profiles: locking an adult profile with Google TV's profile lock
   ///
   /// In en, this message translates to:
-  /// **'Lock Profile'**
+  /// **'Lock now'**
   String get profileLockNow;
 
   /// Settings > Profiles: locking an adult profile with Google TV's profile lock
   ///
   /// In en, this message translates to:
-  /// **'Choose a profile when the TV wakes'**
+  /// **'Lock when the TV wakes'**
   String get profileLockOnSleep;
 
   /// Settings > Profiles: locking an adult profile with Google TV's profile lock
@@ -4974,7 +4980,7 @@ abstract class AppLocalizations {
   /// Setup flow: household sync step's explanation
   ///
   /// In en, this message translates to:
-  /// **'TVs in a household keep profile settings and saved PINs in step, so anyone who switches TVs picks up where they left off. They talk over your home network, encrypted. Start the household here, then add each other TV from its own Copy screen (Settings > Profiles > Copy profiles between TVs). If another TV already has a household, skip this and add this TV from that one.'**
+  /// **'TVs in a household keep profile settings and saved PINs in step, so anyone who switches TVs picks up where they left off. They talk over your home network, encrypted. Start the household here, then on each other TV open Settings > Family > Household sync and choose Join the household. If another TV already has a household, join it instead.'**
   String get setupFlowHouseholdBody;
 
   /// Setup flow: household sync step's button
