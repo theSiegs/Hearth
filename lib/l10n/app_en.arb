@@ -385,12 +385,11 @@
     "@householdJoinFailed": {
         "description": "Join dialog: the connection failed"
     },
-    "householdJoinRequest": "{name} wants to join your TVs. Allow only if its screen shows {code}.",
+    "householdJoinRequest": "{name} wants to join your TVs.",
     "@householdJoinRequest": {
-        "description": "Household page on a TV of the household: another TV asks to join; {code} is six digits",
+        "description": "Household page on a TV of the household: another TV, by its name, asks to join",
         "placeholders": {
-            "name": {"type": "String"},
-            "code": {"type": "String"}
+            "name": {"type": "String"}
         }
     },
     "householdJoinAllow": "Allow",

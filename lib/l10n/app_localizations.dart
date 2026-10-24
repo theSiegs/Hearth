@@ -879,11 +879,11 @@ abstract class AppLocalizations {
   /// **'That didn\'t work. Check that one of your other TVs is on, then try again.'**
   String get householdJoinFailed;
 
-  /// Household page on a TV of the household: another TV asks to join; {code} is six digits
+  /// Household page on a TV of the household: another TV, by its name, asks to join
   ///
   /// In en, this message translates to:
-  /// **'{name} wants to join your TVs. Allow only if its screen shows {code}.'**
-  String householdJoinRequest(String name, String code);
+  /// **'{name} wants to join your TVs.'**
+  String householdJoinRequest(String name);
 
   /// Household page: let the TV that asks join
   ///

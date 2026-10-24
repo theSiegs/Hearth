@@ -230,9 +230,8 @@ class _HouseholdPageState extends State<HouseholdPage> {
     await _refresh();
   }
 
-  /// Another TV's request to join, answered here (allowing takes the parent PIN where this TV has one).
+  /// Another TV's request to join, answered here: whoever is at this TV sees which TV asks and answers, without a PIN.
   Future<void> _answer(bool allow) async {
-    if (allow && !await _allowed()) return;
     try {
       await _channel.answerHouseholdJoin(allow);
     } catch (err) {
@@ -327,8 +326,8 @@ class _HouseholdPageState extends State<HouseholdPage> {
           note(l.householdAddHint),
         ] else ...[
           if (request is Map) ...[
-            // Another TV is waiting on a parent's answer: it comes first, with the code to check
-            note(l.householdJoinRequest(request["name"] as String? ?? l.householdUnnamedTvs(1), request["code"] as String? ?? "")),
+            // Another TV is waiting on an answer: it comes first, by its name
+            note(l.householdJoinRequest(request["name"] as String? ?? l.householdUnnamedTvs(1))),
             FocusableSettingsTile(
               autofocus: true,
               leading: const Icon(Icons.check),

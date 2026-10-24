@@ -439,8 +439,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdJoinFailed => 'That didn\'t work. Check that one of your other TVs is on, then try again.';
 
   @override
-  String householdJoinRequest(String name, String code) {
-    return '$name wants to join your TVs. Allow only if its screen shows $code.';
+  String householdJoinRequest(String name) {
+    return '$name wants to join your TVs.';
   }
 
   @override
