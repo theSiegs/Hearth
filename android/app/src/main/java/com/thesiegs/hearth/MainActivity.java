@@ -576,6 +576,7 @@ public class MainActivity extends FlutterActivity {
                 result.success(null);
             }
             case "getActiveProfileName" -> result.success(LauncherAccessibilityService.getActiveProfileName(this));
+            case "getTvName" -> result.success(ShareDiscovery.deviceName(this));
             case "getActiveProfileKey" -> result.success(LauncherAccessibilityService.getActiveProfileKey(this));
             case "isProfileDataReady" -> answerFrom(sAppsExecutor, result, this::isProfileDataReady);
             case "setProfileReady" -> {

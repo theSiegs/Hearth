@@ -27,6 +27,7 @@ void main() {
         home: Scaffold(
           body: HearthAboutDialog(
             packageInfo: PackageInfo(appName: "Hearth", packageName: "x", version: "1", buildNumber: "1"),
+            tvName: "Kitchen TV",
           ),
         ),
       ),
@@ -37,5 +38,7 @@ void main() {
     // The GPL's notice for the code Hearth includes, without a "built on" or fork credit
     expect(find.textContaining("Includes code from FLauncher"), findsOneWidget);
     expect(find.textContaining("Built on"), findsNothing);
+    // Which TV this is, so a household's TVs can be told apart
+    expect(find.text("This TV: Kitchen TV"), findsOneWidget);
   });
 }

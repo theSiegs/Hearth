@@ -35,7 +35,10 @@ class HearthAboutDialog extends StatelessWidget {
   static const String tmdbNotice =
       "This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.";
 
-  const HearthAboutDialog({super.key, required this.packageInfo});
+  /// What this TV is called, so a household's TVs can be told apart; null when it couldn't be read.
+  final String? tvName;
+
+  const HearthAboutDialog({super.key, required this.packageInfo, this.tvName});
 
   @override
   Widget build(BuildContext context) {
@@ -73,6 +76,14 @@ class HearthAboutDialog extends StatelessWidget {
               fontSize: 12,
             ),
           ),
+          if (tvName != null && tvName!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              localizations.aboutTvName(tvName!),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+          ],
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

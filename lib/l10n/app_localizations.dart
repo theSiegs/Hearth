@@ -4149,6 +4149,12 @@ abstract class AppLocalizations {
   /// **'Opens Google TV\'s profile chooser when the TV wakes, so a profile with a PIN asks for it before it opens. Kids profiles are left alone.'**
   String get profileLockNeedsGoogleLock;
 
+  /// About: the TV's own name (Google TV's device name), under Hearth's version
+  ///
+  /// In en, this message translates to:
+  /// **'This TV: {name}'**
+  String aboutTvName(String name);
+
   /// About: heading over the Bing photo of the day's title and credit (shown only while it is the wallpaper)
   ///
   /// In en, this message translates to:

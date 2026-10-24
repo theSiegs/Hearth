@@ -2386,6 +2386,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileLockNeedsGoogleLock => 'Opens Google TV\'s profile chooser when the TV wakes, so a profile with a PIN asks for it before it opens. Kids profiles are left alone.';
 
   @override
+  String aboutTvName(String name) {
+    return 'This TV: $name';
+  }
+
+  @override
   String get aboutWallpaperPhoto => 'WALLPAPER PHOTO';
 
   @override

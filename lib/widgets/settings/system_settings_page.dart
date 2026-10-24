@@ -17,6 +17,9 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/quiet_failure.dart';
+import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'focusable_settings_tile.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -65,15 +68,27 @@ class SystemSettingsPage extends StatelessWidget {
           title: Text(localizations.aboutFlauncher, style: Theme.of(context).textTheme.bodyMedium),
           onPressed: () => showDialog(
             context: context,
-            builder: (_) => FutureBuilder<PackageInfo>(
-              future: PackageInfo.fromPlatform(),
+            builder: (_) => FutureBuilder<(PackageInfo, String?)>(
+              future: _aboutInfo(context.read<FLauncherChannel>()),
               builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done && snapshot.hasData
-                  ? HearthAboutDialog(packageInfo: snapshot.data!)
+                  ? HearthAboutDialog(packageInfo: snapshot.data!.$1, tvName: snapshot.data!.$2)
                   : Container(),
             ),
           ),
         ),
       ],
     );
+  }
+
+  /// Hearth's version and this TV's name; the About page still opens when the name can't be read.
+  static Future<(PackageInfo, String?)> _aboutInfo(FLauncherChannel channel) async {
+    final info = await PackageInfo.fromPlatform();
+    String? name;
+    try {
+      name = await channel.getTvName();
+    } catch (err) {
+      noteFailure('system_settings_page', err);
+    }
+    return (info, name);
   }
 }

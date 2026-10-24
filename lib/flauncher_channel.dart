@@ -148,6 +148,9 @@ class FLauncherChannel {
 
   Future<String?> getActiveProfileName() async => await _methodChannel.invokeMethod<String>("getActiveProfileName");
 
+  /// What this TV is called (Google TV's Settings > System > About > Device name), else its model.
+  Future<String?> getTvName() async => await _methodChannel.invokeMethod<String>("getTvName");
+
   /// The active Google TV profile's lasting key ("user:11"), known before its name and unchanged by renames;
   /// per-profile things are saved under it. Null when Hearth can't tell.
   Future<String?> getActiveProfileKey() async => await _methodChannel.invokeMethod<String>("getActiveProfileKey");

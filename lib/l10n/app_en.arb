@@ -3059,6 +3059,15 @@
     "@profileLockNeedsGoogleLock": {
         "description": "Settings > Profiles: locking an adult profile with Google TV's profile lock"
     },
+    "aboutTvName": "This TV: {name}",
+    "@aboutTvName": {
+        "description": "About: the TV's own name (Google TV's device name), under Hearth's version",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
     "aboutWallpaperPhoto": "WALLPAPER PHOTO",
     "@aboutWallpaperPhoto": {
         "description": "About: heading over the Bing photo of the day's title and credit (shown only while it is the wallpaper)"
