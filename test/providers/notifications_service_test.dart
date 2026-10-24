@@ -406,4 +406,39 @@ void main() {
       expect(service.notifications.map((n) => n.key), ['k1']);
     });
   });
+
+  group('NotificationItem', () {
+    Map<String, Object> item({String label = 'Movies', List<Map<String, Object>> actions = const []}) => {
+          'key': 'k1',
+          'packageName': 'com.example.movies',
+          'appLabel': label,
+          'title': 'New episode',
+          'text': 'Out now',
+          'isClearable': true,
+          'canOpen': true,
+          'actions': actions,
+        };
+
+    test("reads the app's name as Android gives it", () {
+      expect(NotificationItem.fromMap(item()).appLabel, 'Movies');
+      expect(NotificationItem.fromMap({'key': 'k', 'packageName': 'p'}).appLabel, '');
+    });
+
+    test('changed buttons are a change, so a button pressed is the one shown', () {
+      final before = NotificationItem.fromMap(item(actions: [
+        {'index': 0, 'title': 'Watch'},
+      ]));
+      final same = NotificationItem.fromMap(item(actions: [
+        {'index': 0, 'title': 'Watch'},
+      ]));
+      final after = NotificationItem.fromMap(item(actions: [
+        {'index': 0, 'title': 'Later'},
+      ]));
+      expect(before.sameAs(same), isTrue);
+      expect(before.sameAs(after), isFalse);
+      expect(before.sameAs(NotificationItem.fromMap(item(label: 'Shows', actions: [
+        {'index': 0, 'title': 'Watch'},
+      ]))), isFalse);
+    });
+  });
 }

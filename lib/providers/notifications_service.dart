@@ -11,11 +11,20 @@ class NotificationAction {
   final String title;
 
   const NotificationAction(this.index, this.title);
+
+  @override
+  bool operator ==(Object other) => other is NotificationAction && other.index == index && other.title == title;
+
+  @override
+  int get hashCode => Object.hash(index, title);
 }
 
 class NotificationItem {
   final String key;
   final String packageName;
+
+  /// The app's name as the TV shows it (or the name a system notification is shown under); empty when unknown.
+  final String appLabel;
   final String title;
   final String text;
   final bool isClearable;
@@ -29,6 +38,7 @@ class NotificationItem {
   NotificationItem({
     required this.key,
     required this.packageName,
+    this.appLabel = '',
     required this.title,
     required this.text,
     required this.isClearable,
@@ -36,10 +46,22 @@ class NotificationItem {
     this.actions = const [],
   });
 
+  /// Whether this says and offers the same as [other]: an app that changes only its buttons is a change too, else
+  /// a button pressed here could be another one by now.
+  bool sameAs(NotificationItem other) =>
+      key == other.key &&
+      appLabel == other.appLabel &&
+      title == other.title &&
+      text == other.text &&
+      isClearable == other.isClearable &&
+      canOpen == other.canOpen &&
+      const ListEquality<NotificationAction>().equals(actions, other.actions);
+
   factory NotificationItem.fromMap(Map<dynamic, dynamic> map) {
     return NotificationItem(
       key: map['key'] as String? ?? '',
       packageName: map['packageName'] as String? ?? '',
+      appLabel: map['appLabel'] as String? ?? '',
       title: map['title'] as String? ?? '',
       text: map['text'] as String? ?? '',
       isClearable: map['isClearable'] as bool? ?? false,
@@ -194,10 +216,7 @@ class NotificationsService extends ChangeNotifier with WidgetsBindingObserver {
         changed = true;
       } else {
         for (int i = 0; i < _notifications.length; i++) {
-          if (_notifications[i].key != newNotifications[i].key ||
-              _notifications[i].title != newNotifications[i].title ||
-              _notifications[i].text != newNotifications[i].text ||
-              _notifications[i].isClearable != newNotifications[i].isClearable) {
+          if (!_notifications[i].sameAs(newNotifications[i])) {
             changed = true;
             break;
           }

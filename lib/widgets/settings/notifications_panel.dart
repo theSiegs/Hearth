@@ -124,7 +124,10 @@ class NotificationsPanel extends StatelessWidget {
                           final app = appsService.applications.firstWhereOrNull(
                             (a) => a.packageName == notification.packageName,
                           );
-                          final appName = app?.name ?? notification.packageName;
+                          // Android's name for it first: system apps aren't in Hearth's list
+                          final appName = notification.appLabel.isNotEmpty
+                              ? notification.appLabel
+                              : (app?.name ?? notification.packageName);
 
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),

@@ -5,6 +5,7 @@ import android.app.ActivityOptions;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.service.notification.StatusBarNotification;
@@ -76,19 +77,19 @@ final class NotificationsEventStreamHandler implements EventChannel.StreamHandle
                     map.put("packageName", sbn.getPackageName());
 
                     Notification notification = sbn.getNotification();
-                    String title = "";
-                    String text = "";
-                    if (notification != null && notification.extras != null) {
-                        CharSequence titleChar = notification.extras.getCharSequence(Notification.EXTRA_TITLE);
-                        CharSequence textChar = notification.extras.getCharSequence(Notification.EXTRA_TEXT);
-                        if (titleChar != null) title = titleChar.toString();
-                        if (textChar != null) text = textChar.toString();
-                    }
+                    Bundle extras = notification != null ? notification.extras : null;
+                    String label = NotificationContent.appLabel(service, sbn.getPackageName(), extras);
+                    String title = notification != null ? NotificationContent.title(extras) : "";
+                    String text = notification != null ? NotificationContent.text(notification) : "";
+                    map.put("appLabel", label);
                     map.put("title", title);
                     map.put("text", text);
+                    map.put("postTime", sbn.getPostTime());
                     map.put("isClearable", sbn.isClearable());
-                    // What a tap on the notification does, and its buttons (not ones that need typed text)
-                    map.put("canOpen", notification != null && notification.contentIntent != null);
+                    // What a tap on the notification does (else the app opens), and its buttons (not ones that need
+                    // typed text)
+                    map.put("canOpen", notification != null && (NotificationContent.contentIntent(notification) != null
+                            || NotificationContent.launchIntent(service, sbn.getPackageName()) != null));
                     List<Map<String, Object>> actions = new ArrayList<>();
                     if (notification != null && notification.actions != null) {
                         for (int i = 0; i < notification.actions.length; i++) {
@@ -104,6 +105,8 @@ final class NotificationsEventStreamHandler implements EventChannel.StreamHandle
                     map.put("actions", actions);
                     list.add(map);
                 }
+                // Newest first, as in Android's own shade
+                list.sort((a, b) -> Long.compare((Long) b.get("postTime"), (Long) a.get("postTime")));
             }
         } catch (Exception e) {
             Log.w(TAG, "Couldn't read the active notifications", e);
@@ -118,7 +121,9 @@ final class NotificationsEventStreamHandler implements EventChannel.StreamHandle
 
     /**
      * Does what tapping the notification does (action -1) or presses one of its buttons, as the system shade would.
-     * A tap on a notification that cancels itself on a tap also removes it. Whether it was sent.
+     * A tap goes where the app told Google TV it should, and opens the app as well when the notification has no tap
+     * of its own or its tap may not bring anything up ({@link NotificationContent#opensScreen}). A tap on a
+     * notification that cancels itself on a tap also removes it. Whether something was sent or opened.
      */
     static boolean open(Context context, String key, int action) {
         LauncherNotificationListenerService service = LauncherNotificationListenerService.getInstance();
@@ -132,13 +137,15 @@ final class NotificationsEventStreamHandler implements EventChannel.StreamHandle
                 if (notification == null) return false;
                 PendingIntent intent;
                 if (action < 0) {
-                    intent = notification.contentIntent;
+                    intent = NotificationContent.contentIntent(notification);
                 } else if (notification.actions != null && action < notification.actions.length) {
                     intent = notification.actions[action].actionIntent;
                 } else {
                     intent = null;
                 }
-                if (intent == null) return false;
+                Intent app = action < 0 && !NotificationContent.opensScreen(intent)
+                        ? NotificationContent.launchIntent(context, sbn.getPackageName()) : null;
+                if (intent == null && app == null) return false;
                 Bundle options = null;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                     // Hearth is in front: the app it opens may start its activity
@@ -147,7 +154,24 @@ final class NotificationsEventStreamHandler implements EventChannel.StreamHandle
                                     ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)
                             .toBundle();
                 }
-                intent.send(context, 0, null, null, null, null, options);
+                boolean sent = false;
+                if (intent != null) {
+                    try {
+                        intent.send(context, 0, null, null, null, null, options);
+                        sent = true;
+                    } catch (PendingIntent.CanceledException e) {
+                        Log.w(TAG, "A notification's intent was cancelled");
+                    }
+                }
+                if (app != null) {
+                    try {
+                        context.startActivity(app);
+                        sent = true;
+                    } catch (RuntimeException e) {
+                        Log.w(TAG, "Couldn't open a notification's app", e);
+                    }
+                }
+                if (!sent) return false;
                 if (action < 0 && (notification.flags & Notification.FLAG_AUTO_CANCEL) != 0 && sbn.isClearable()) {
                     service.cancelNotification(key);
                 }

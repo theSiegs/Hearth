@@ -111,23 +111,20 @@ public class LauncherNotificationListenerService extends NotificationListenerSer
     /** Pops up a new notification for a few seconds in the top corner, when that's turned on. */
     private void showNotificationPopup(StatusBarNotification sbn) {
         if (!shouldPopUp(sbn)) return;
-        Bundle extras = sbn.getNotification().extras;
-        CharSequence titleChar = extras.getCharSequence(Notification.EXTRA_TITLE);
-        CharSequence textChar = extras.getCharSequence(Notification.EXTRA_TEXT);
-        String title = titleChar != null ? titleChar.toString().trim() : "";
-        String text = textChar != null ? textChar.toString().trim() : "";
+        Notification notification = sbn.getNotification();
+        Bundle extras = notification.extras;
+        String title = NotificationContent.title(extras);
+        String text = NotificationContent.text(notification);
         if (title.isEmpty() && text.isEmpty()) return;
 
         String packageName = sbn.getPackageName();
         PackageManager pm = getPackageManager();
-        String appLabel = packageName;
+        String appLabel = NotificationContent.appLabel(this, packageName, extras);
         Drawable appIcon = null;
         try {
-            ApplicationInfo appInfo = pm.getApplicationInfo(packageName, 0);
-            appLabel = pm.getApplicationLabel(appInfo).toString().trim();
-            appIcon = pm.getApplicationIcon(appInfo);
+            appIcon = pm.getApplicationIcon(pm.getApplicationInfo(packageName, 0));
         } catch (Exception e) {
-            Log.w(TAG, "No label or icon for " + packageName, e);
+            Log.w(TAG, "No icon for " + packageName, e);
         }
 
         // Generic "app is running" notifications whose title and text are just the app's name

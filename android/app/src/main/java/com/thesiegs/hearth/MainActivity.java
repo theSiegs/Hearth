@@ -20,7 +20,9 @@ package com.thesiegs.hearth;
 
 import android.Manifest;
 import android.app.AppOpsManager;
+import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.SearchManager;
 import android.app.role.RoleManager;
 import android.content.ComponentName;
@@ -44,6 +46,7 @@ import android.os.Process;
 import android.os.SystemClock;
 import android.os.UserHandle;
 import android.provider.Settings;
+import android.service.notification.StatusBarNotification;
 import android.speech.RecognizerIntent;
 import android.util.Log;
 import android.view.SoundEffectConstants;
@@ -1473,6 +1476,22 @@ public class MainActivity extends FlutterActivity {
             return false;
         }
         try {
+            // Android tells the app through the notification's own delete intent; a TV app may listen on the one it
+            // gave Google TV instead
+            StatusBarNotification[] active = service.getActiveNotifications();
+            if (active != null) {
+                for (StatusBarNotification sbn : active) {
+                    Notification notification = sbn.getNotification();
+                    if (!key.equals(sbn.getKey()) || notification == null) continue;
+                    PendingIntent tv = NotificationContent.deleteIntent(notification);
+                    if (tv != null && tv != notification.deleteIntent) {
+                        try {
+                            tv.send();
+                        } catch (PendingIntent.CanceledException ignored) {
+                        }
+                    }
+                }
+            }
             service.cancelNotification(key);
             return true;
         } catch (Exception e) {
