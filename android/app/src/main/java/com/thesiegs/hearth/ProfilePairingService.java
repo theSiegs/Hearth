@@ -1021,7 +1021,7 @@ public class ProfilePairingService extends AccessibilityService {
         String pkg = ContentPin.PACKAGE;
         long serial = ProfileUsers.settledSerial(this);
         String name = LauncherAccessibilityService.getActiveProfileName(this);
-        String why = ContentPin.whyNot(ProfileUsers.isKids(this), ProfileUsers.isGrownUps(this, serial),
+        String why = ContentPin.whyNot(ProfileUsers.isKids(this), ProfileUsers.isAdults(this, serial),
                 ProfileUsers.isLocked(this, name), PinVault.statusOf(this, PinVault.SHARED, pkg, ContentPin.VAULT_PROFILE),
                 PinVault.isPaused(this, pkg));
         if (why == null) why = whyNoTyping(pkg);

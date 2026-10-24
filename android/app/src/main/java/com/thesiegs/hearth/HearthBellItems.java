@@ -9,7 +9,7 @@ import java.util.Map;
 
 /**
  * What Hearth lists in its notification Bell itself, beside the apps' notifications: a TV asking to join the household
- * (HouseholdJoining), with Allow and Don't allow. Only grown-ups see it: never while a kids profile is on.
+ * (HouseholdJoining), with Allow and Don't allow. Only adults see it: never while a kids profile is on.
  */
 final class HearthBellItems {
     private static final String PREFIX = "hearth:";

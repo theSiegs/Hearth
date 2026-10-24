@@ -35,14 +35,14 @@ public class ProfilePairingTilesTest {
     }
 
     @Test
-    public void onlyAnotherGrownUpsAppsStartAgain() {
+    public void onlyAnotherAdultsAppsStartAgain() {
         // The other adult had it: it starts again at its picker
-        assertTrue(GrownUpsApps.stops("user:0", "user:0:sam", 0));
-        assertTrue(GrownUpsApps.stops("user:0:sam", "user:0", 0));
+        assertTrue(AdultsApps.stops("user:0", "user:0:sam", 0));
+        assertTrue(AdultsApps.stops("user:0:sam", "user:0", 0));
         // This profile had it, nobody did, or a kids profile (its own copy, in its own user)
-        assertFalse(GrownUpsApps.stops("user:0:sam", "user:0:sam", 0));
-        assertFalse(GrownUpsApps.stops(null, "user:0", 0));
-        assertFalse(GrownUpsApps.stops("user:11", "user:0", 0));
+        assertFalse(AdultsApps.stops("user:0:sam", "user:0:sam", 0));
+        assertFalse(AdultsApps.stops(null, "user:0", 0));
+        assertFalse(AdultsApps.stops("user:11", "user:0", 0));
     }
 
     private static String netflix(String text) {

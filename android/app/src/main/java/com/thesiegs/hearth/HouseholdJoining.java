@@ -23,7 +23,7 @@ import java.util.concurrent.Executors;
 
 /**
  * Joining a household from the new TV's own screen (docs/household-sync.md, "Joining"), over HouseholdJoin. On a TV of
- * the household it serves one request at a time: the request goes in that TV's notification Bell, on grown-ups'
+ * the household it serves one request at a time: the request goes in that TV's notification Bell, on adults'
  * profiles only (HearthBellItems), naming the TV that asks, with Allow and Don't allow. On the new TV it connects to a
  * TV of the household heard on the network, says which TV to answer on, and joins with what comes back.
  */

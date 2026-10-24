@@ -136,7 +136,7 @@ Home Assistant settings and the parent PIN. Be at both TVs. On the TV that has t
 and choose which; on the other, open **Copy profiles from another TV** and choose the first (it is found by name, or
 type the address the first TV shows). Both TVs show the same six digits: if they match on both screens, say so on both,
 and the copy goes. The receiving TV then shows where each profile goes (a profile with the same name and kind here, or
-**Don't copy**; a kids profile never goes onto a grown-up's, nor the other way round) and what to take.
+**Don't copy**; a kids profile never goes onto an adult's, nor the other way round) and what to take.
 
 - Only the apps installed on the receiving TV are placed; the others are left out and counted.
 - A streaming app profile choice the receiving TV already has is kept as it is.
@@ -154,7 +154,7 @@ and the copy goes. The receiving TV then shows where each profile goes (a profil
 - It works the same with no kids profiles, no parent PIN or no Home Assistant: what a TV doesn't have shows as
   "Nothing to send" there, and a copy is then just the look, layout, pictures and pairings. A new TV with no parent PIN
   can take the sender's along with its PINs (a PIN is only saved where a parent PIN guards it), and a new TV with one
-  grown-up profile puts the copied grown-up's profile on it whatever the names; kids profiles go only to the same name.
+  adult profile puts the copied adult's profile on it whatever the names; kids profiles go only to the same name.
 - Nothing is kept afterwards: no key, no list of TVs.
 - If the digits don't match, nothing is sent. Someone else on your network who connects can't get anything without a
   parent saying the digits match.

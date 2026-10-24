@@ -91,9 +91,9 @@ final class PinSetupServer {
 
     private void readRows() {
         PackageManager pm = mContext.getPackageManager();
-        boolean grownUp = !ProfilePairing.isKids(mContext, mOwner) && mOwner.startsWith("user:0");
+        boolean adult = !ProfilePairing.isKids(mContext, mOwner) && mOwner.startsWith("user:0");
         // An adult's own Google TV PIN, for approving switches from their phone
-        if (grownUp) {
+        if (adult) {
             mRows.add(new Row(LauncherAccessibilityService.GOOGLE_TV_PACKAGE, "Google TV", GooglePinRecipe.VAULT_NAME,
                     false, 4, PhoneApproval.hasPin(mContext, mOwner), false));
         }
@@ -104,7 +104,7 @@ final class PinSetupServer {
             } catch (PackageManager.NameNotFoundException e) {
                 continue;
             }
-            if (grownUp && ContentPin.PACKAGE.equals(pkg)) {
+            if (adult && ContentPin.PACKAGE.equals(pkg)) {
                 mRows.add(new Row(pkg, label, ContentPin.VAULT_PROFILE, false, ContentPin.LENGTH,
                         !PinVault.STATUS_NONE.equals(PinVault.statusOf(mContext, PinVault.SHARED, pkg,
                                 ContentPin.VAULT_PROFILE)), true));

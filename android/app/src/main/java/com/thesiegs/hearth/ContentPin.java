@@ -75,10 +75,10 @@ final class ContentPin {
      * one, and in an adults' user) whose Google TV profile is known to be PIN-locked (unknown counts as not), with
      * a saved PIN that wasn't rejected (never retried on its own: a new one is saved in Settings) and entry not paused.
      */
-    static String whyNot(boolean kids, boolean grownUpsUser, Boolean profileLocked, String pinStatus,
+    static String whyNot(boolean kids, boolean adultsUser, Boolean profileLocked, String pinStatus,
             boolean paused) {
         if (kids) return "a kids profile";
-        if (!grownUpsUser) return "not an adult's profile";
+        if (!adultsUser) return "not an adult's profile";
         if (profileLocked == null) return "the profile's lock isn't known yet";
         if (!profileLocked) return "the profile has no Google TV PIN lock";
         if (pinStatus == null || PinVault.STATUS_NONE.equals(pinStatus)) return "no content PIN saved";

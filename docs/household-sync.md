@@ -126,7 +126,7 @@ A TV joins from its own screen, and someone allows it from the notification Bell
    the screen off), and says it is a join request (`HHJ1`), with its name. They run Copy profiles' key exchange, in
    which each side commits to its key before seeing the other's, so a device in the middle can't steer the result, and
    both derive the same join code (six digits). The new TV says which TV it asked: "Allow it on Office".
-3. The household TV puts the request in its **notification Bell**, on grown-ups' profiles only (never while a kids
+3. The household TV puts the request in its **notification Bell**, on adults' profiles only (never while a kids
    profile is on), and pops it up: "Kitchen wants to join your TVs", with **Allow** and **Don't allow**. No Parent PIN
    and no code to compare: the TV's name is what the person checks. Clearing it is Don't allow. (The code still binds
    the session; no one compares it, so a device on the network that put itself between the two TVs, and named itself
@@ -210,7 +210,7 @@ A TV never sends a picture a peer already has.
 kids' included: a kid follows themselves from TV to TV like anyone else. Turning it off needs the Parent PIN, stops this
 TV sending and taking entries, and leaves what it has; the TV stays on the member list. There are no per-kind or
 per-profile switches. A kid's synced Continue Watching is still per streaming app profile, so a kid's card can't appear
-in a grown-up's row.
+in an adult's row.
 
 ## Parent PIN
 

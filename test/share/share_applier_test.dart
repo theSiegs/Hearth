@@ -132,7 +132,7 @@ void main() {
     const alex = ShareProfile(id: "p1", name: "Alex", kids: false);
     const sam = ShareProfile(id: "p2", name: "Sam", kids: true);
 
-    test("a household of one grown-up goes to this TV's one grown-up, whatever the names", () {
+    test("a household of one adult goes to this TV's one adult, whatever the names", () {
       const locals = [LocalProfile(key: "user:0:kev", name: "Kev", kids: false)];
       expect(defaultTargets(const [alex], locals)["p1"]!.key, "user:0:kev");
     });
@@ -222,10 +222,10 @@ void main() {
       expect(report.profiles.single.layout, isFalse);
     });
 
-    test("never puts a kids profile on a grown-up's or the other way round", () async {
+    test("never puts a kids profile on an adult's or the other way round", () async {
       final report = await applier.apply(received(), {
-        "p1": sam, // a grown-up's copy, aimed at a kid
-        "p2": alex, // a kid's copy, aimed at a grown-up
+        "p1": sam, // an adult's copy, aimed at a kid
+        "p2": alex, // a kid's copy, aimed at an adult
       });
       expect(report.profiles, isEmpty);
       expect(channel.pairings, isEmpty);

@@ -249,7 +249,7 @@ final class ProfileUsers {
     }
 
     /** Whether this is an adult's user (not supervised by Family Link), which can hold several accounts' profiles. */
-    static boolean isGrownUps(Context context, long serial) {
+    static boolean isAdults(Context context, long serial) {
         return Boolean.FALSE.equals(isSupervised(context, serial));
     }
 

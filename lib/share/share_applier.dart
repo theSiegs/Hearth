@@ -22,7 +22,7 @@ class LocalProfile {
 }
 
 /// The profile of this TV a copied profile goes to by default: the one with the same name and the same kind (a kids
-/// profile never lands on a grown-up's or the other way round), or none. A parent can pick another before copying.
+/// profile never lands on an adult's or the other way round), or none. A parent can pick another before copying.
 LocalProfile? defaultTarget(ShareProfile source, List<LocalProfile> locals) {
   String norm(String name) => name.trim().toLowerCase();
   for (final local in locals) {
@@ -32,7 +32,7 @@ LocalProfile? defaultTarget(ShareProfile source, List<LocalProfile> locals) {
 }
 
 /// Where each copied profile goes by default ([ShareProfile.id] to a profile of this TV, or none): the one with the same
-/// name and kind; and, for a household of one grown-up on each TV (a new TV knows only its own), the one grown-up
+/// name and kind; and, for a household of one adult on each TV (a new TV knows only its own), the one adult
 /// profile here even when the names differ. A kids profile is never matched by guesswork: it brings the streaming
 /// profile its child watches as, so only the same name will do.
 Map<String, LocalProfile?> defaultTargets(List<ShareProfile> sources, List<LocalProfile> locals) {

@@ -16,12 +16,12 @@ import java.util.concurrent.Executors;
  * when the TV already trusts its key: never an "Allow debugging?" prompt), and the next opening shows the picker,
  * where Profile Pairing picks this profile's.
  */
-final class GrownUpsApps {
+final class AdultsApps {
     private static final String TAG = "HearthPairing";
     private static final int QUIET_TIMEOUT_MS = 5_000;
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
 
-    private GrownUpsApps() {
+    private AdultsApps() {
     }
 
     /** The paired apps to stop for {@code profileKey}: installed, and last opened by another profile of its user. */

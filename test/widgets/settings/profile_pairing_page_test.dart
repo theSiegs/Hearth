@@ -16,7 +16,7 @@ void main() {
   test("summaries say what Hearth will pick", () {
     expect(choice("auto", auto: "Alex Morgan").summary(l), "Alex Morgan (matched by name)");
     expect(choice("auto").summary(l), "No match yet: shows the picker");
-    expect(choice("profile", chosen: "Grown Ups").summary(l), "Grown Ups");
+    expect(choice("profile", chosen: "Adults").summary(l), "Adults");
     expect(choice("picker").summary(l), "Always show the picker");
   });
 

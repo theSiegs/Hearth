@@ -112,12 +112,12 @@ public class ContentPinTest {
     // ---- Who may have it typed ----
 
     @Test
-    public void typedOnlyInAGrownUpsLockedProfile() {
+    public void typedOnlyInAnAdultsLockedProfile() {
         assertNull(ContentPin.whyNot(false, true, true, PinVault.STATUS_SAVED, false));
     }
 
     @Test
-    public void notInAGrownUpsUnlockedOrUnknownProfile() {
+    public void notInAnAdultsUnlockedOrUnknownProfile() {
         assertNotNull(ContentPin.whyNot(false, true, false, PinVault.STATUS_SAVED, false));
         assertNotNull(ContentPin.whyNot(false, true, null, PinVault.STATUS_SAVED, false));
     }
