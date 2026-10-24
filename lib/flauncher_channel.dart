@@ -473,7 +473,7 @@ class FLauncherChannel {
   Future<void> setHouseholdEnabled(bool on) async => await _methodChannel.invokeMethod("setHouseholdEnabled", on);
 
   /// Asks a TV of the household heard on the network (the first of `nearby`) to let this one join; someone allows it
-  /// in that TV's notification Bell, on a grown-up's profile. False when none answered or a request is already under way. Follow it in `join`.
+  /// in that TV's notification Bell, on an adult's profile. False when none answered or a request is already under way. Follow it in `join`.
   Future<bool> requestHouseholdJoin() async => await _methodChannel.invokeMethod<bool>("requestHouseholdJoin") ?? false;
 
   /// Stops this TV's request to join.

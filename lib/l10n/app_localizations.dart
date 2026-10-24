@@ -840,7 +840,7 @@ abstract class AppLocalizations {
   /// Household page: how joining works (a parent allows it on a phone or on a TV of the household)
   ///
   /// In en, this message translates to:
-  /// **'Choose Join, then allow it in the notification Bell on one of those TVs, on a grown-up\'s profile.'**
+  /// **'Choose Join, then allow it in the notification Bell on one of those TVs, on an adult\'s profile.'**
   String get householdJoinHint;
 
   /// Join dialog: waiting for someone to allow this TV on another TV of the household, by its name
@@ -852,7 +852,7 @@ abstract class AppLocalizations {
   /// Join dialog: what to do while waiting; {tv} is the TV of the household that was asked
   ///
   /// In en, this message translates to:
-  /// **'On {tv}, open the notification Bell on a grown-up\'s profile and choose Allow. This TV waits up to 5 minutes.'**
+  /// **'On {tv}, open the notification Bell on an adult\'s profile and choose Allow. This TV waits up to 5 minutes.'**
   String householdJoinWaitBody(String tv);
 
   /// Join dialog: stands in for the TV's name in the two texts above when it isn't known

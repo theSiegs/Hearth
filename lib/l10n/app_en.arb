@@ -357,7 +357,7 @@
     "@householdJoin": {
         "description": "Button: join the household found on the network"
     },
-    "householdJoinHint": "Choose Join, then allow it in the notification Bell on one of those TVs, on a grown-up's profile.",
+    "householdJoinHint": "Choose Join, then allow it in the notification Bell on one of those TVs, on an adult's profile.",
     "@householdJoinHint": {
         "description": "Household page: how joining works (a parent allows it on a phone or on a TV of the household)"
     },
@@ -368,7 +368,7 @@
             "tv": {"type": "String"}
         }
     },
-    "householdJoinWaitBody": "On {tv}, open the notification Bell on a grown-up's profile and choose Allow. This TV waits up to 5 minutes.",
+    "householdJoinWaitBody": "On {tv}, open the notification Bell on an adult's profile and choose Allow. This TV waits up to 5 minutes.",
     "@householdJoinWaitBody": {
         "description": "Join dialog: what to do while waiting; {tv} is the TV of the household that was asked",
         "placeholders": {

@@ -418,7 +418,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdJoin => 'Join the household';
 
   @override
-  String get householdJoinHint => 'Choose Join, then allow it in the notification Bell on one of those TVs, on a grown-up\'s profile.';
+  String get householdJoinHint => 'Choose Join, then allow it in the notification Bell on one of those TVs, on an adult\'s profile.';
 
   @override
   String householdJoinWaitTitle(String tv) {
@@ -427,7 +427,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String householdJoinWaitBody(String tv) {
-    return 'On $tv, open the notification Bell on a grown-up\'s profile and choose Allow. This TV waits up to 5 minutes.';
+    return 'On $tv, open the notification Bell on an adult\'s profile and choose Allow. This TV waits up to 5 minutes.';
   }
 
   @override
