@@ -1,0 +1,1 @@
+Household sync now opens on the list of your TVs, each with a card to remove it; Settings > Family shows how many TVs are in the household.

@@ -5,6 +5,11 @@
 
 ## Unreleased
 
+## 2026.10.82 (pre-release)
+
+- **Household sync** opens on the household's TVs: this TV first, then the others with whether they're on now or when they were last on. A TV asking to join shows there too (answered in the notification Bell). Choosing another TV opens a card with **Remove from household**. A TV not in a household lists the found household's TVs above **Join**.
+- **Settings > Family** shows how the household stands beside Household sync: how many TVs, Off, Not set up, or Household found.
+
 ## 2026.10.81 (pre-release)
 
 - **Uninstall Hearth** moved from Kids profiles to the end of **Settings > System**, since it takes Hearth off the whole TV (still taking it off the kids profiles first). The Kids profiles page now only talks about removing Hearth from them.
