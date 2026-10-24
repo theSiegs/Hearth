@@ -35,7 +35,7 @@ List<List<String?>> householdsNearby(Map<dynamic, dynamic> status) => [
         if (household is List && household.isNotEmpty) [for (final name in household) name is String ? name : null],
     ];
 
-/// TVs' names for a sentence ("Den, Kitchen"); a TV that gave no name is "a Hearth TV".
+/// TVs' names for a sentence ("Kitchen, Office"); a TV that gave no name is "a Hearth TV".
 String householdTvNames(AppLocalizations l, List<String?> names) {
   final named = names.whereType<String>().toSet().toList()..sort();
   final unnamed = names.length - names.whereType<String>().length;

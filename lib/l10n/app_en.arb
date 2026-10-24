@@ -331,7 +331,7 @@
     "@householdFound": {
         "description": "Household page, on a TV in no household: a household was found on the network",
         "placeholders": {
-            "names": {"type": "String", "example": "Den, Kitchen"}
+            "names": {"type": "String", "example": "Kitchen, Office"}
         }
     },
     "householdJoin": "Join the household",
@@ -3609,7 +3609,7 @@
     "@setupFlowHouseholdFound": {
         "description": "Setup flow: household sync step when another TV's household was found on the network",
         "placeholders": {
-            "names": {"type": "String", "example": "Den, Kitchen"}
+            "names": {"type": "String", "example": "Kitchen, Office"}
         }
     },
     "setupFlowHouseholdStartAnyway": "Start a separate one",
