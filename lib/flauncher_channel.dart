@@ -480,7 +480,7 @@ class FLauncherChannel {
   Future<bool> answerHouseholdJoin(bool allow) async =>
       await _methodChannel.invokeMethod<bool>("answerHouseholdJoin", allow) ?? false;
 
-  /// The household's looks, layouts and wallpapers for this TV's grown-up profiles when they changed since [since] (a
+  /// The household's looks, layouts and wallpapers for this TV's profiles (kids' too) when they changed since [since] (a
   /// version this gave before; 0: all): {version, profiles: {profileKey: {look, layout, wallpapers: {slot: {hash, path}
   /// or null}}}}, only {version} when nothing changed, and null outside a household.
   Future<Map<dynamic, dynamic>?> getHouseholdLooks(int since) async =>

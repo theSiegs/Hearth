@@ -12,7 +12,7 @@ import 'package:flauncher/share/share_bundle.dart';
 import 'package:flauncher/share/share_wallpapers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Keeps each grown-up profile's look, layout and wallpaper pictures in step with the household's (docs/household-sync.md,
+/// Keeps each profile's look (kids' included), layout and wallpaper pictures in step with the household's (docs/household-sync.md,
 /// "Look and layout"). Every so often it asks the Java side what the household has; a profile whose look or layout
 /// changed there gets it, fitted to the apps installed here (live when it is the profile on screen, else in its saved
 /// layout), and a changed picture is written to the profile's folder. Then the profile on screen goes out: its look,
@@ -182,7 +182,7 @@ class HouseholdLooksService {
     final profileKey = _settings.layoutOwner;
     if (profileKey == null) return;
     final state = _profiles[profileKey];
-    // Not a profile whose look the household keeps (a kids profile, or one not told apart yet)
+    // Not a profile the household knows (one whose Google account Hearth hasn't seen yet)
     if (state is! Map) return;
     final local = await _localLayout(profileKey);
     if (local == null) return;

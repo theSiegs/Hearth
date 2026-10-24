@@ -55,7 +55,7 @@ copy carries) and its layout another (`layout`: apps and whether each is hidden,
 names, which are each TV's own). Both are written in a fixed order, so the same layout is always the same text. The
 app's side does the work, every 20 seconds while Hearth runs (HouseholdLooksService):
 
-- **Taking.** For each grown-up profile whose look or layout entry changed, it fits the household's to the apps
+- **Taking.** For each profile, kids' included, whose look or layout entry changed, it fits the household's to the apps
   installed here (as a copy does) and puts it in place: live when the profile is on screen, else in the profile's saved
   layout, which comes up when someone switches to it. A changed picture is written to the profile's folder. Before a
   profile first takes the household's look on a TV, everything is kept as a backup, as a copy does, so it can be undone
@@ -70,8 +70,10 @@ app's side does the work, every 20 seconds while Hearth runs (HouseholdLooksServ
   fetching them. A picked picture goes out as the screen shows it (a JPEG of at most 1920x1080, as a copy sends it), is
   kept once per TV by its SHA-256 (HouseholdPictures), and moves at the end of an exchange to a TV whose entries name it
   and lacks it. A TV checks that a picture it takes is a JPEG of a wallpaper's size and has the hash it asked for.
-- **Kids profiles** have a Hearth of their own (each runs in its own Android user, with its own settings), outside the
-  household for now, so their looks don't sync yet.
+- **Kids profiles** sync like any other: Hearth in the owner's user is every profile's home and keeps each one's layout
+  (a kids profile's own Android user only runs Hearth as its agent), and a kid is the same person on every TV by their
+  Google account, as for PINs and pairings. A kid's layout is fitted to the apps installed here, and the apps a kids
+  profile hides by default are hidden again when it is switched to.
 
 **Continue Watching** syncs Hearth's own per-profile watch history (the app, title, episode, how far, when, and the
 deep link that opens it), not Google's Watch Next, which ends in 2027. Opening an entry on another TV launches the same
@@ -299,7 +301,7 @@ receiving TV converts at once.
    leaving, and conversion.
 2. **Joining from the new TV** (built, except the preview of what changes): the join request, the join code, phone
    approval through the household TV, the on-screen fallback on its Household page, the first sync.
-3. **Look and layout, then wallpaper pictures** (built, for grown-up profiles; kids profiles later).
+3. **Look and layout, then wallpaper pictures** (built, every profile, kids' included).
 4. **Your TVs page and the setup step**; Copy profiles leaves Settings.
 5. **Home Assistant mailbox**, sealed per member.
 6. **Continue Watching**.

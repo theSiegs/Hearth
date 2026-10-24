@@ -636,13 +636,16 @@ final class Household {
         return sLooksVersion;
     }
 
-    /** The profiles whose look this TV's Hearth keeps: grown-ups' (a kids profile has a Hearth of its own). */
+    /**
+     * The profiles whose look this TV's Hearth keeps: every one, kids' included (Hearth in the owner's user is every
+     * profile's home and swaps their layouts; Hearth in a kids profile's own user is only its agent).
+     */
     private static boolean keepsLook(Context context, String profileKey) {
-        return profileKey != null && !ProfilePairing.isKids(context, profileKey);
+        return profileKey != null;
     }
 
     /**
-     * The household's looks, layouts and wallpapers for this TV's profiles, when they changed since {@code since} (a
+     * The household's looks, layouts and wallpapers for this TV's profiles (kids' included), when they changed since {@code since} (a
      * version this returned before; 0 for all): {version, profiles: {profileKey: {look, layout, wallpapers: {slot:
      * {hash, path}}}}}. Just {version} when nothing changed, and null when this TV isn't a member. Blocks: not on the
      * main thread.

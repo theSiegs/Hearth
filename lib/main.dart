@@ -181,14 +181,21 @@ Future<void> main() async {
                 context.read<SettingsService>(), context.read<AppsService>(),
                 wallpaperService: context.read<WallpaperService>()),
             lazy: false),
-        // Household sync: each grown-up profile's look, layout and wallpaper pictures in step across the TVs
+        // Household sync: each profile's look, layout and wallpaper pictures in step across the TVs
         Provider<HouseholdLooksService>(
             create: (context) {
               final apps = context.read<AppsService>();
               final wallpaper = context.read<WallpaperService>();
+              final profiles = context.read<ProfileService>();
+              final settings = context.read<SettingsService>();
               return HouseholdLooksService(fLauncherChannel, sharedPreferences, context.read<BackupService>(),
-                  context.read<SettingsService>(), ShareWallpapers(fLauncherChannel),
-                  onLiveChanged: () => apps.refreshState(),
+                  settings, ShareWallpapers(fLauncherChannel),
+                  onLiveChanged: () async {
+                    // What a profile hides by default stays hidden (a kid's YouTube, where HearthTube is), as on a switch
+                    final key = settings.layoutOwner;
+                    if (key != null) await apps.hideDefaultHiddenApps(key, kids: profiles.isKidsProfile);
+                    await apps.refreshState();
+                  },
                   onPicturesCopied: (key) => wallpaper.picturesCopied(key))
                 ..start();
             },
