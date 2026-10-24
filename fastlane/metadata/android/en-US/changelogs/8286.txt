@@ -1,0 +1,2 @@
+- Early development pre-release.
+- Household sync, version 2: a key per TV, join from the new TV with a parent's OK on their phone, remove a TV, and each grown-up profile's look, home layout and wallpaper pictures on every TV.
