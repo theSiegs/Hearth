@@ -804,6 +804,8 @@ public class MainActivity extends FlutterActivity {
         List<Map<String, Object>> choices = new ArrayList<>();
         // hearthProfile is the key choices are saved under; displayName is what to show
         for (String hearth : hearthProfiles) {
+            // Android's spare user for the next new profile isn't one (ShareData.listable)
+            if (!ShareData.listable(hearth, ProfileUsers.getName(this, ProfileUsers.serialOfKey(hearth)))) continue;
             String name = ProfileUsers.displayName(this, hearth);
             Map<String, Object> choice = new HashMap<>();
             choice.put("hearthProfile", hearth);
