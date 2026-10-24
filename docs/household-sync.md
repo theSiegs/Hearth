@@ -47,8 +47,29 @@ then makes its own webhook and asks for its own token.
 **Look and layout are where conflicts get visible.** Two TVs with different screen sizes show the same layout, so a
 layout entry stores order and choices, never pixel positions. An app that isn't installed on a TV is skipped there and
 kept in the entry, so it comes back when the app is installed. Wallpaper pictures are large: an entry carries the
-picture's hash, and the picture itself moves in a separate, resumable transfer only to a TV that lacks that hash. Bing's
-photo of the day and gradients are just settings.
+picture's hash, and the picture itself moves only to a TV that lacks that hash. Bing's photo of the day and gradients
+are just settings.
+
+**How look and layout are built (step 3).** A profile's look is one entry (`look`: its chosen settings, the same ones a
+copy carries) and its layout another (`layout`: apps and whether each is hidden, rows, placements, spacers, without app
+names, which are each TV's own). Both are written in a fixed order, so the same layout is always the same text. The
+app's side does the work, every 20 seconds while Hearth runs (HouseholdLooksService):
+
+- **Taking.** For each grown-up profile whose look or layout entry changed, it fits the household's to the apps
+  installed here (as a copy does) and puts it in place: live when the profile is on screen, else in the profile's saved
+  layout, which comes up when someone switches to it. A changed picture is written to the profile's folder.
+- **Giving.** The profile on screen goes out when its look, layout or a picked picture differs from what this TV last
+  took or gave. Its layout keeps the household's apps that aren't installed here, and their places in rows it still has,
+  so a TV without an app doesn't take it away from the others.
+- What this TV last took or gave is remembered per profile (by fingerprint), so taking the household's doesn't send it
+  straight back, and two TVs settle on one layout.
+- **Pictures.** Only pictures someone picked for a profile move between TVs. Bing's photo of the day is a setting, and
+  each TV downloads it; a future Google Photos source would be the same, its album or photos a setting and each TV
+  fetching them. A picked picture goes out as the screen shows it (a JPEG of at most 1920x1080, as a copy sends it), is
+  kept once per TV by its SHA-256 (HouseholdPictures), and moves at the end of an exchange to a TV whose entries name it
+  and lacks it. A TV checks that a picture it takes is a JPEG of a wallpaper's size and has the hash it asked for.
+- **Kids profiles** have a Hearth of their own (each runs in its own Android user, with its own settings), outside the
+  household for now, so their looks don't sync yet.
 
 **Continue Watching** syncs Hearth's own per-profile watch history (the app, title, episode, how far, when, and the
 deep link that opens it), not Google's Watch Next, which ends in 2027. Opening an entry on another TV launches the same
@@ -275,7 +296,7 @@ receiving TV converts at once.
    leaving, and conversion.
 2. **Joining from the new TV** (built, except the preview of what changes): the join request, the join code, phone
    approval through the household TV, the on-screen fallback on its Household page, the first sync.
-3. **Look and layout, then wallpaper pictures.**
+3. **Look and layout, then wallpaper pictures** (built, for grown-up profiles; kids profiles later).
 4. **Your TVs page and the setup step**; Copy profiles leaves Settings.
 5. **Home Assistant mailbox**, sealed per member.
 6. **Continue Watching**.

@@ -1,7 +1,11 @@
 package com.thesiegs.hearth;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Between the household's entries and this TV's own settings (docs/household-sync.md): which settings are entries, how a
@@ -12,10 +16,21 @@ import java.util.Map;
  * item is the app's package and the value is {@code {"mode":"profile","appProfile":"…"}} or {@code {"mode":"picker"}};
  * no entry means the automatic match. {@code pin}: a saved PIN; the item is {@code <package>|<app profile>} and the value
  * is the PIN's digits; a profile of "" is the whole TV's (a content PIN not tied to a person).
+ *
+ * <p>Three more that the app's own side puts in place, not this class (they're its settings and files): {@code look}, a
+ * profile's chosen settings as JSON; {@code layout}, its apps, rows and spacers as JSON; and {@code wallpaper}, one of its
+ * pictures, the item being the slot ({@link #SLOTS}) and the value {@code {"hash":"…"}} naming a HouseholdPictures file.
  */
 final class HouseholdBridge {
     static final String PAIRING = "pairing";
     static final String PIN = "pin";
+    static final String LOOK = "look";
+    static final String LAYOUT = "layout";
+    static final String WALLPAPER = "wallpaper";
+    /** Where a wallpaper picture shows: always, by day, by night. */
+    static final List<String> SLOTS = Arrays.asList("any", "day", "night");
+    /** A look or layout's JSON may be this long; a layout with hundreds of apps is some 100 KB. */
+    static final int MAX_LOOK_CHARS = 1024 * 1024;
     /** The profile name of a setting that belongs to the whole TV, not a person. */
     static final String SHARED = "";
 
@@ -48,6 +63,36 @@ final class HouseholdBridge {
         } catch (org.json.JSONException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /** A wallpaper entry's value for the picture named {@code hash}. */
+    static String wallpaperValue(String hash) {
+        try {
+            return new org.json.JSONObject().put("hash", hash).toString();
+        } catch (org.json.JSONException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /** The picture a wallpaper entry's value names, or null when it names none. */
+    static String pictureOf(String value) {
+        try {
+            String hash = new org.json.JSONObject(value).optString("hash", "");
+            return HouseholdPictures.validHash(hash) ? hash : null;
+        } catch (org.json.JSONException e) {
+            return null;
+        }
+    }
+
+    /** The pictures the live wallpaper entries name: what a TV keeps, and asks another TV for when it lacks one. */
+    static Set<String> pictures(HouseholdLog log) {
+        Set<String> out = new HashSet<>();
+        for (HouseholdEntry entry : log.all()) {
+            if (!WALLPAPER.equals(entry.kind) || entry.deleted) continue;
+            String hash = pictureOf(entry.value);
+            if (hash != null) out.add(hash);
+        }
+        return out;
     }
 
     /** What a profile's settings are now, as entries that don't match the log yet: {@code kind|profile|item -> value}. */

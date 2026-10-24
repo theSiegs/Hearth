@@ -61,13 +61,20 @@ public class HouseholdSyncExchangeTest {
     /** Runs one exchange: {@code a} connects, {@code b} accepts. */
     static HouseholdSync.Result[] exchange(HouseholdStore a, HouseholdStore b, Wire wire, long now)
             throws Exception {
+        return exchange(a, null, b, null, wire, now);
+    }
+
+    /** Runs one exchange with each side's wallpaper pictures ({@code null}: a side keeps none). */
+    static HouseholdSync.Result[] exchange(HouseholdStore a, HouseholdPictures aPictures, HouseholdStore b,
+            HouseholdPictures bPictures, Wire wire, long now) throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(2);
         try (ServerSocket server = new ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress())) {
             server.setSoTimeout(5000);
             Future<HouseholdSync.Result> accepting = pool.submit(() -> {
                 try (Socket socket = server.accept()) {
                     socket.setSoTimeout(5000);
-                    return HouseholdSync.run(socket.getInputStream(), socket.getOutputStream(), false, b, "B", now);
+                    return HouseholdSync.run(socket.getInputStream(), socket.getOutputStream(), false, b, bPictures, "B",
+                            now);
                 }
             });
             Future<HouseholdSync.Result> connecting = pool.submit(() -> {
@@ -76,9 +83,9 @@ public class HouseholdSyncExchangeTest {
                     InputStream in = socket.getInputStream();
                     OutputStream out = socket.getOutputStream();
                     if (wire != null) {
-                        return HouseholdSync.run(tapped(in, wire), tapped(out, wire), true, a, "A", now);
+                        return HouseholdSync.run(tapped(in, wire), tapped(out, wire), true, a, aPictures, "A", now);
                     }
-                    return HouseholdSync.run(in, out, true, a, "A", now);
+                    return HouseholdSync.run(in, out, true, a, aPictures, "A", now);
                 }
             });
             HouseholdSync.Result connected;

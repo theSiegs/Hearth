@@ -39,6 +39,8 @@ import 'package:flauncher/providers/notifications_service.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/providers/backup_service.dart';
+import 'package:flauncher/providers/household_looks_service.dart';
+import 'package:flauncher/share/share_wallpapers.dart';
 import 'package:flauncher/providers/update_service.dart';
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flutter/material.dart';
@@ -178,6 +180,19 @@ Future<void> main() async {
             create: (context) => ProfileService(fLauncherChannel, sharedPreferences, context.read<BackupService>(),
                 context.read<SettingsService>(), context.read<AppsService>(),
                 wallpaperService: context.read<WallpaperService>()),
+            lazy: false),
+        // Household sync: each grown-up profile's look, layout and wallpaper pictures in step across the TVs
+        Provider<HouseholdLooksService>(
+            create: (context) {
+              final apps = context.read<AppsService>();
+              final wallpaper = context.read<WallpaperService>();
+              return HouseholdLooksService(fLauncherChannel, sharedPreferences, context.read<BackupService>(),
+                  context.read<SettingsService>(), ShareWallpapers(fLauncherChannel),
+                  onLiveChanged: () => apps.refreshState(),
+                  onPicturesCopied: (key) => wallpaper.picturesCopied(key))
+                ..start();
+            },
+            dispose: (_, looks) => looks.dispose(),
             lazy: false),
       ],
       child: FLauncherApp()

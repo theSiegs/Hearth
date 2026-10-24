@@ -60,6 +60,8 @@ final class Household {
     private static final int ROUTE_TIMEOUT_MS = 5_000;
 
     private static Context sContext;
+    /** Goes up whenever a look, layout or wallpaper changed here (from another TV or published): the app checks it. */
+    private static long sLooksVersion = 1;
     private static HouseholdStore sStore;
     private static boolean sSyncQueued;
     private static boolean sPeriodicScheduled;
@@ -101,6 +103,11 @@ final class Household {
             }, SecretBox.keystore(), HouseholdIdentity.keystore());
         }
         return sStore;
+    }
+
+    /** The household's wallpaper pictures, in this app's own files. */
+    static HouseholdPictures pictures(Context context) {
+        return new HouseholdPictures(new java.io.File(context.getFilesDir(), "household_pictures"));
     }
 
     private static HouseholdLocal local(Context context) {
@@ -306,7 +313,7 @@ final class Household {
             socket.connect(new InetSocketAddress(peer.host, peer.port), 5_000);
             socket.setSoTimeout(SOCKET_TIMEOUT_MS);
             HouseholdSync.Result result = HouseholdSync.run(socket.getInputStream(), socket.getOutputStream(), true,
-                    store, ShareDiscovery.deviceName(sContext), System.currentTimeMillis());
+                    store, pictures(sContext), ShareDiscovery.deviceName(sContext), System.currentTimeMillis());
             finish(store, result, "to " + why);
         } catch (IOException | java.security.GeneralSecurityException e) {
             sLastResult = "failed: " + e.getClass().getSimpleName();
@@ -345,7 +352,7 @@ final class Household {
             if (!active(sContext)) return;
             s.setSoTimeout(SOCKET_TIMEOUT_MS);
             HouseholdStore store = store(sContext);
-            HouseholdSync.Result result = HouseholdSync.run(in, s.getOutputStream(), false, store,
+            HouseholdSync.Result result = HouseholdSync.run(in, s.getOutputStream(), false, store, pictures(sContext),
                     ShareDiscovery.deviceName(sContext), System.currentTimeMillis());
             finish(store, result, "from a TV");
         } catch (IOException | java.security.GeneralSecurityException e) {
@@ -359,6 +366,7 @@ final class Household {
             stop();
             store.markRemoved();
             prefs(sContext).edit().remove(SEEN_PREF).apply();
+            pictures(sContext).clear();
             return;
         }
         if (result.peerRemoved) {
@@ -374,6 +382,14 @@ final class Household {
         }
         store.log().purge(System.currentTimeMillis());
         store.save();
+        for (HouseholdEntry entry : result.applied) {
+            if (isLook(entry.kind)) {
+                looksChanged();
+                break;
+            }
+        }
+        if (result.pictures > 0) looksChanged();
+        pictures(sContext).keepOnly(HouseholdBridge.pictures(store.log()));
         applyEntries();
         publishUnpublished();
         sLastSyncAt = System.currentTimeMillis();
@@ -574,6 +590,7 @@ final class Household {
         stop();
         store(context).leave();
         prefs(context).edit().remove(SEEN_PREF).apply();
+        pictures(context).clear();
     }
 
     /**
@@ -601,6 +618,127 @@ final class Household {
         } catch (Exception e) {
             Log.i(TAG, "Couldn't remove the TV: " + e.getClass().getSimpleName());
             return false;
+        }
+    }
+
+    // ---- Looks, layouts and wallpapers (the app puts them in place: they're its settings and files) ----
+
+    private static boolean isLook(String kind) {
+        return HouseholdBridge.LOOK.equals(kind) || HouseholdBridge.LAYOUT.equals(kind)
+                || HouseholdBridge.WALLPAPER.equals(kind);
+    }
+
+    private static synchronized void looksChanged() {
+        sLooksVersion++;
+    }
+
+    private static synchronized long looksVersion() {
+        return sLooksVersion;
+    }
+
+    /** The profiles whose look this TV's Hearth keeps: grown-ups' (a kids profile has a Hearth of its own). */
+    private static boolean keepsLook(Context context, String profileKey) {
+        return profileKey != null && !ProfilePairing.isKids(context, profileKey);
+    }
+
+    /**
+     * The household's looks, layouts and wallpapers for this TV's profiles, when they changed since {@code since} (a
+     * version this returned before; 0 for all): {version, profiles: {profileKey: {look, layout, wallpapers: {slot:
+     * {hash, path}}}}}. Just {version} when nothing changed, and null when this TV isn't a member. Blocks: not on the
+     * main thread.
+     */
+    static Map<String, Object> looks(Context context, long since) {
+        if (!mayBeInHousehold(context)) return null;
+        Context app = context.getApplicationContext();
+        try {
+            return EXEC.submit(() -> {
+                if (!member(app)) return null;
+                Map<String, Object> out = new HashMap<>();
+                long version = looksVersion();
+                out.put("version", version);
+                if (since == version) return out;
+                HouseholdLog log = store(app).log();
+                HouseholdPictures pictures = pictures(app);
+                Map<String, Object> profiles = new HashMap<>();
+                for (Map.Entry<String, String> profile : local(app).profiles().entrySet()) {
+                    String key = profile.getValue();
+                    if (!keepsLook(app, key)) continue;
+                    Map<String, Object> state = new HashMap<>();
+                    HouseholdEntry look = log.get(HouseholdBridge.LOOK, profile.getKey(), "");
+                    HouseholdEntry layout = log.get(HouseholdBridge.LAYOUT, profile.getKey(), "");
+                    if (look != null) state.put("look", look.value);
+                    if (layout != null) state.put("layout", layout.value);
+                    Map<String, Object> wallpapers = new HashMap<>();
+                    for (String slot : HouseholdBridge.SLOTS) {
+                        HouseholdEntry picture = log.get(HouseholdBridge.WALLPAPER, profile.getKey(), slot);
+                        if (picture == null) {
+                            // Deleted in the household (or never set): the app keeps what it has unless it was a delete
+                            if (log.hasEntry(HouseholdBridge.WALLPAPER, profile.getKey(), slot)) wallpapers.put(slot, null);
+                            continue;
+                        }
+                        String hash = HouseholdBridge.pictureOf(picture.value);
+                        // A picture not here yet comes with a later exchange: it's left out until then
+                        if (hash == null || !pictures.has(hash)) continue;
+                        Map<String, Object> file = new HashMap<>();
+                        file.put("hash", hash);
+                        file.put("path", pictures.file(hash).getAbsolutePath());
+                        wallpapers.put(slot, file);
+                    }
+                    state.put("wallpapers", wallpapers);
+                    profiles.put(key, state);
+                }
+                out.put("profiles", profiles);
+                return out;
+            }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            Log.i(TAG, "Couldn't read the household's looks: " + e.getClass().getSimpleName());
+            return null;
+        }
+    }
+
+    /**
+     * A profile's look or layout ({@code kind}: HouseholdBridge.LOOK or LAYOUT) as this TV has it now, for the
+     * household. False when this TV isn't a member, the profile isn't one whose look it keeps, or the value is too big.
+     * Blocks: not on the main thread.
+     */
+    static boolean publishLook(Context context, String profileKey, String kind, String value) {
+        if (!mayBeInHousehold(context) || value == null || value.length() > HouseholdBridge.MAX_LOOK_CHARS) return false;
+        if (!HouseholdBridge.LOOK.equals(kind) && !HouseholdBridge.LAYOUT.equals(kind)) return false;
+        Context app = context.getApplicationContext();
+        try {
+            return EXEC.submit(() -> {
+                if (!member(app) || !keepsLook(app, profileKey)) return false;
+                publish(app, kind, profileKey, "", value);
+                looksChanged();
+                return true;
+            }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * One of a profile's wallpaper pictures ({@code jpeg}; null: the slot has none now) for the household. Returns the
+     * picture's hash ("" for none), or null when it couldn't be. Blocks: not on the main thread.
+     */
+    static String publishPicture(Context context, String profileKey, String slot, byte[] jpeg) {
+        if (!mayBeInHousehold(context) || !HouseholdBridge.SLOTS.contains(slot)) return null;
+        Context app = context.getApplicationContext();
+        try {
+            return EXEC.submit(() -> {
+                if (!member(app) || !keepsLook(app, profileKey)) return null;
+                String hash = "";
+                if (jpeg != null) {
+                    hash = pictures(app).write(jpeg, null);
+                    if (hash == null) return null;
+                }
+                publish(app, HouseholdBridge.WALLPAPER, profileKey, slot,
+                        jpeg == null ? null : HouseholdBridge.wallpaperValue(hash));
+                looksChanged();
+                return hash;
+            }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            return null;
         }
     }
 

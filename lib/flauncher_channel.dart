@@ -480,6 +480,25 @@ class FLauncherChannel {
   Future<bool> answerHouseholdJoin(bool allow) async =>
       await _methodChannel.invokeMethod<bool>("answerHouseholdJoin", allow) ?? false;
 
+  /// The household's looks, layouts and wallpapers for this TV's grown-up profiles when they changed since [since] (a
+  /// version this gave before; 0: all): {version, profiles: {profileKey: {look, layout, wallpapers: {slot: {hash, path}
+  /// or null}}}}, only {version} when nothing changed, and null outside a household.
+  Future<Map<dynamic, dynamic>?> getHouseholdLooks(int since) async =>
+      await _methodChannel.invokeMapMethod<dynamic, dynamic>("getHouseholdLooks", since);
+
+  /// A profile's look or layout ([kind]: "look" or "layout") as this TV has it, for the household; false when it isn't
+  /// taken (not in a household, or not a profile whose look the household keeps).
+  Future<bool> publishHouseholdLook(String profileKey, String kind, String value) async =>
+      await _methodChannel.invokeMethod<bool>(
+          "publishHouseholdLook", {"profile": profileKey, "kind": kind, "value": value}) ??
+      false;
+
+  /// One of a profile's wallpaper pictures for the household ([jpeg] null: that slot has none now). The picture's
+  /// hash ("" for none), or null when it isn't taken.
+  Future<String?> publishHouseholdPicture(String profileKey, String slot, Uint8List? jpeg) async =>
+      await _methodChannel
+          .invokeMethod<String>("publishHouseholdPicture", {"profile": profileKey, "slot": slot, "jpeg": jpeg});
+
   /// Removes another TV of the household (by its tvId from `members`); false if it couldn't be.
   Future<bool> removeHouseholdTv(String tvId) async =>
       await _methodChannel.invokeMethod<bool>("removeHouseholdTv", tvId) ?? false;

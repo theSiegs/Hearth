@@ -34,6 +34,17 @@ class ShareWallpapers {
     return pictures;
   }
 
+  /// Where the profile's picture for [slot] is kept (it may not be there).
+  Future<File> file(String profileKey, String slot) async =>
+      File("${await _folder(profileKey)}/${fileNames[slot] ?? fileNames["any"]}");
+
+  /// Takes the profile's picture for [slot] away (household sync: it was taken away on another TV).
+  Future<void> delete(String profileKey, String slot) async {
+    if (!fileNames.containsKey(slot)) return;
+    final picture = await file(profileKey, slot);
+    if (await picture.exists()) await picture.delete();
+  }
+
   /// Puts the pictures in the profile's folder (replacing the ones in those slots); how many were written.
   Future<int> write(String profileKey, Map<String, Uint8List> pictures) async {
     final folder = await _folder(profileKey);

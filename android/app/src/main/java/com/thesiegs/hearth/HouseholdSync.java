@@ -29,8 +29,9 @@ import java.util.regex.Pattern;
  * per direction, so it can't be read, altered or played back. Then each side signs the transcript with its TV key, and
  * the other checks that key against its member list: a listed TV goes on, a removed one is told so, an unknown one is
  * refused unless it proves an invitation or the version 1 household key, which lists it. Then each says what it has seen
- * from each TV (its version vector), sends what the other lacks, and merges what it got. The initiator speaks first at
- * every step, so neither side waits on the other's write.
+ * from each TV (its version vector), sends what the other lacks, and merges what it got. Last, each says which wallpaper
+ * pictures its entries name that it doesn't have, and the other sends those it has (HouseholdPictures). The initiator
+ * speaks first at every step, so neither side waits on the other's write.
  */
 final class HouseholdSync {
     private static final byte[] MAGIC = {'H', 'H', 'S', '2'};
@@ -43,6 +44,8 @@ final class HouseholdSync {
     private static final String MEMBER = "member";
     private static final String REMOVED = "removed";
     private static final SecureRandom RANDOM = new SecureRandom();
+    /** Pictures asked for or sent in one exchange: three slots for a household's worth of profiles. */
+    static final int MAX_PICTURES = 48;
 
     /** What an exchange did, for the screen and the log. */
     static final class Result {
@@ -57,9 +60,11 @@ final class HouseholdSync {
         final boolean peerRemoved;
         /** The other TV has this one removed; nothing moved. The caller forgets the household. */
         final boolean removedHere;
+        /** Wallpaper pictures that came from the other TV. */
+        final int pictures;
 
         Result(String peer, String peerName, int sent, int received, List<HouseholdEntry> applied, boolean peerRemoved,
-                boolean removedHere) {
+                boolean removedHere, int pictures) {
             this.peer = peer;
             this.peerName = peerName;
             this.sent = sent;
@@ -67,6 +72,7 @@ final class HouseholdSync {
             this.applied = applied;
             this.peerRemoved = peerRemoved;
             this.removedHere = removedHere;
+            this.pictures = pictures;
         }
     }
 
@@ -81,6 +87,8 @@ final class HouseholdSync {
     private final DataOutputStream out;
     private final boolean initiator;
     private final HouseholdStore store;
+    /** Where wallpaper pictures are kept; null: this side has none and asks for none. */
+    private final HouseholdPictures pictures;
     private final String name;
     private final long now;
     private byte[] transcript;
@@ -92,12 +100,13 @@ final class HouseholdSync {
     private String peer;
     private String peerName;
 
-    private HouseholdSync(InputStream in, OutputStream out, boolean initiator, HouseholdStore store, String name,
-            long now) {
+    private HouseholdSync(InputStream in, OutputStream out, boolean initiator, HouseholdStore store,
+            HouseholdPictures pictures, String name, long now) {
         this.in = new DataInputStream(in);
         this.out = new DataOutputStream(out);
         this.initiator = initiator;
         this.store = store;
+        this.pictures = pictures;
         this.name = name;
         this.now = now;
     }
@@ -109,9 +118,15 @@ final class HouseholdSync {
      */
     static Result run(InputStream in, OutputStream out, boolean initiator, HouseholdStore store, String name, long now)
             throws IOException, GeneralSecurityException {
+        return run(in, out, initiator, store, null, name, now);
+    }
+
+    /** As {@link #run(InputStream, OutputStream, boolean, HouseholdStore, String, long)}, trading wallpaper pictures too. */
+    static Result run(InputStream in, OutputStream out, boolean initiator, HouseholdStore store,
+            HouseholdPictures pictures, String name, long now) throws IOException, GeneralSecurityException {
         if (!store.syncs() || store.log() == null) throw new SyncException("Not in a household");
         try {
-            return new HouseholdSync(in, out, initiator, store, name, now).exchange();
+            return new HouseholdSync(in, out, initiator, store, pictures, name, now).exchange();
         } catch (JSONException | IllegalArgumentException e) {
             throw new SyncException("Not a household exchange");
         }
@@ -173,13 +188,76 @@ final class HouseholdSync {
             received++;
             if (store.log().merge(entry, now)) applied.add(entry);
         }
+        // 5. the pictures the entries name that a side lacks
+        int took = tradePictures();
+
         // The TV that invited this one has listed it: the invitation is spent
         if (store.joinProofFor(peer) != null) store.joinProofUsed();
-        return new Result(peer, peerName, toSend.size(), received, applied, false, false);
+        return new Result(peer, peerName, toSend.size(), received, applied, false, false, took);
     }
 
     private Result stopped(boolean peerRemoved, boolean removedHere) {
-        return new Result(peer, peerName, 0, 0, new ArrayList<>(), peerRemoved, removedHere);
+        return new Result(peer, peerName, 0, 0, new ArrayList<>(), peerRemoved, removedHere, 0);
+    }
+
+    /** Asks for the pictures this side's entries name and it lacks, sends those the other asks for; how many came. */
+    private int tradePictures() throws IOException, GeneralSecurityException, JSONException {
+        JSONArray wanted = new JSONArray();
+        if (pictures != null) {
+            for (String hash : HouseholdBridge.pictures(store.log())) {
+                if (wanted.length() >= MAX_PICTURES) break;
+                if (!pictures.has(hash)) wanted.put(hash);
+            }
+        }
+        JSONArray asked;
+        if (initiator) {
+            writeFrame(wanted.toString().getBytes(StandardCharsets.UTF_8));
+            asked = new JSONArray(readText());
+        } else {
+            asked = new JSONArray(readText());
+            writeFrame(wanted.toString().getBytes(StandardCharsets.UTF_8));
+        }
+        if (asked.length() > MAX_PICTURES) throw new SyncException("Too many pictures asked for");
+        if (initiator) {
+            sendPictures(asked);
+            return takePictures(wanted);
+        }
+        int took = takePictures(wanted);
+        sendPictures(asked);
+        return took;
+    }
+
+    /** Says which of the asked-for pictures follow, then sends each as a frame of its own. */
+    private void sendPictures(JSONArray asked) throws IOException, GeneralSecurityException, JSONException {
+        List<byte[]> bytes = new ArrayList<>();
+        JSONArray names = new JSONArray();
+        for (int i = 0; i < asked.length() && pictures != null; i++) {
+            String hash = asked.optString(i, "");
+            byte[] picture = HouseholdPictures.validHash(hash) ? pictures.read(hash) : null;
+            if (picture == null) continue;
+            names.put(hash);
+            bytes.add(picture);
+        }
+        writeFrame(names.toString().getBytes(StandardCharsets.UTF_8));
+        for (byte[] picture : bytes) writeFrame(picture);
+    }
+
+    /** Takes the pictures the other side sends; one that wasn't asked for, isn't a picture or isn't its hash fails. */
+    private int takePictures(JSONArray wanted) throws IOException, GeneralSecurityException, JSONException {
+        JSONArray names = new JSONArray(readText());
+        if (names.length() > wanted.length()) throw new SyncException("More pictures than asked for");
+        java.util.Set<String> asked = new java.util.HashSet<>();
+        for (int i = 0; i < wanted.length(); i++) asked.add(wanted.getString(i));
+        int took = 0;
+        for (int i = 0; i < names.length(); i++) {
+            String hash = names.getString(i);
+            byte[] picture = readFrame();
+            if (!asked.remove(hash) || pictures == null || pictures.write(picture, hash) == null) {
+                throw new SyncException("A picture that wasn't asked for, or isn't the one named");
+            }
+            took++;
+        }
+        return took;
     }
 
     // ---- Opening: the clear hellos, the shared secret, the session keys ----

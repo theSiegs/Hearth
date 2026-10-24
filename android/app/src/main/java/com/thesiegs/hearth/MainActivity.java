@@ -419,6 +419,15 @@ public class MainActivity extends FlutterActivity {
             }
             // A parent answered, on this TV, another TV's request to join
             case "answerHouseholdJoin" -> result.success(HouseholdJoining.answer(Boolean.TRUE.equals(call.arguments())));
+            // Looks, layouts and wallpapers: the household's for this TV's profiles, and the live profile's for it
+            case "getHouseholdLooks" -> answerFrom(sIoExecutor, result, () -> {
+                Number since = call.arguments();
+                return Household.looks(this, since == null ? 0 : since.longValue());
+            });
+            case "publishHouseholdLook" -> answerFrom(sIoExecutor, result, () -> Household.publishLook(this,
+                    call.argument("profile"), call.argument("kind"), call.argument("value")));
+            case "publishHouseholdPicture" -> answerFrom(sIoExecutor, result, () -> Household.publishPicture(this,
+                    call.argument("profile"), call.argument("slot"), call.argument("jpeg")));
             case "lookForHouseholds" -> {
                 Household.lookAround(this);
                 result.success(null);
