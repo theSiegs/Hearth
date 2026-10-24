@@ -5,6 +5,11 @@
 
 ## Unreleased
 
+## 2026.10.81 (pre-release)
+
+- **Uninstall Hearth** moved from Kids profiles to the end of **Settings > System**, since it takes Hearth off the whole TV (still taking it off the kids profiles first). The Kids profiles page now only talks about removing Hearth from them.
+- Wording: "adult" instead of "grown-up" throughout; "parent" only for parental controls.
+
 ## 2026.10.80 (pre-release)
 
 - Settings has a new **Family** group, right after Profiles, for what's the whole TV's: **Parent PIN** (first, as the rest leans on it), **Kids profiles**, **Profile Pairing** and **Household sync**. **Profiles** keeps only the profile on now: Switch profile, **Lock now**, **Lock when the TV wakes**, **Unlock from my phone** (was "Approve switches from my phone") and Streaming app PINs.
