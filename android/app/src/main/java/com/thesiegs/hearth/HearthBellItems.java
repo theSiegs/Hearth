@@ -41,6 +41,21 @@ final class HearthBellItems {
         }
     }
 
+    /**
+     * The profile on screen changed: a request that came while a kids profile was on shows now, and pops up, for the
+     * adult who came on; a kids profile's Bell loses it.
+     */
+    static void profileChanged(Context context) {
+        String joiner = HouseholdJoining.requestName();
+        if (joiner == null) return;
+        LauncherNotificationListenerService.hearthItemsChanged();
+        if (!ProfileUsers.isKids(context)) {
+            LauncherNotificationListenerService.popUpHearthItem(context.getString(R.string.household_join_bell_app),
+                    context.getString(R.string.household_join_bell_title, joiner),
+                    context.getString(R.string.household_join_bell_text));
+        }
+    }
+
     /** Adds Hearth's items to the Bell's list, in its form; none on a kids profile. */
     static void addTo(Context context, List<Map<String, Object>> list) {
         String joiner = HouseholdJoining.requestName();

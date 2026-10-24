@@ -721,6 +721,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             } else {
                 ParentPresence.ended();
             }
+            HearthBellItems.profileChanged(this);
         }
         restartFront();
         // The new profile's allowance, fresh

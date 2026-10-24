@@ -867,6 +867,12 @@ abstract class AppLocalizations {
   /// **'Asking your other TVs…'**
   String get householdJoinFinding;
 
+  /// No description provided for @householdLooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for your other TVs…'**
+  String get householdLooking;
+
   /// Join dialog: joined
   ///
   /// In en, this message translates to:

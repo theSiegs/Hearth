@@ -169,12 +169,26 @@ class _HouseholdPageState extends State<HouseholdPage> {
   Map<dynamic, dynamic> _status = const {};
   Timer? _timer;
 
+  /// How long a TV in no household listens for one before offering to start its own, so Start isn't offered while
+  /// the other TVs are still answering.
+  static const Duration lookFor = Duration(seconds: 6);
+
+  /// Still listening: no household heard yet, and [lookFor] not over.
+  bool _looking = true;
+
   @override
   void initState() {
     super.initState();
     _channel.lookForHouseholds().catchError((Object err) => noteFailure('household_page', err));
     _refresh();
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) => _refresh());
+    // Every second while listening, so a household heard shows at once; every 3 after
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _refresh());
+    Future.delayed(lookFor, () {
+      if (!mounted) return;
+      _timer?.cancel();
+      _timer = Timer.periodic(const Duration(seconds: 3), (_) => _refresh());
+      setState(() => _looking = false);
+    });
   }
 
   @override
@@ -280,7 +294,16 @@ class _HouseholdPageState extends State<HouseholdPage> {
       title: l.householdTitle,
       children: [
         note(l.householdIntro),
-        if (!joined && nearby.isNotEmpty) ...[
+        if (_status.isEmpty || (!joined && nearby.isEmpty && _looking))
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Row(children: [
+              const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+              const SizedBox(width: 16),
+              Text(l.householdLooking, style: textTheme.bodyMedium),
+            ]),
+          )
+        else if (!joined && nearby.isNotEmpty) ...[
           // Another TV has a household: joining it comes first, so the TVs aren't split into two
           note(l.householdFound(householdTvNames(l, nearby.first))),
           FocusableSettingsTile(

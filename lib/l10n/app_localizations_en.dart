@@ -437,6 +437,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdJoinFinding => 'Asking your other TVs…';
 
   @override
+  String get householdLooking => 'Looking for your other TVs…';
+
+  @override
   String get householdJoinDone => 'This TV is in the household now.';
 
   @override

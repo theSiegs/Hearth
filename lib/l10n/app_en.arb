@@ -380,6 +380,7 @@
         "description": "Join dialog: stands in for the TV's name in the two texts above when it isn't known"
     },
     "householdJoinFinding": "Asking your other TVs…",
+    "householdLooking": "Looking for your other TVs…",
     "@householdJoinFinding": {
         "description": "Join dialog: connecting to a TV of the household"
     },
