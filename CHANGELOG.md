@@ -5,10 +5,16 @@
 
 ## Unreleased
 
+## 2026.10.77 (pre-release)
+
+- Household sync is now the one way to keep TVs alike: the **Copy profiles to / from another TV** screens are gone, and so is typing another TV's address. Settings > Profiles opens **Household sync** directly. A new TV chooses Join the household, shows a code, and a parent allows it on their phone or on another TV's Household page.
+- Household sync: kids profiles' looks, layouts and wallpapers sync too, like everyone else's.
+- Profile Pairing no longer lists the spare user Android keeps ready for the next new profile (it showed as "Profile 13" or similar).
+- About Hearth shows this TV's name.
+
 ## 2026.10.76 (pre-release)
 
 - Household sync: a backup is kept in Backup & Restore before a profile first takes the household's look, layout or wallpaper on a TV, as a copy does.
-- Household sync: kids profiles' looks, layouts and wallpapers sync too, like everyone else's.
 
 ## 2026.10.75 (pre-release)
 
