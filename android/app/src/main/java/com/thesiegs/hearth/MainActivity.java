@@ -421,7 +421,6 @@ public class MainActivity extends FlutterActivity {
                 result.success(null);
             }
             // A parent answered, on this TV, another TV's request to join
-            case "answerHouseholdJoin" -> result.success(HouseholdJoining.answer(Boolean.TRUE.equals(call.arguments())));
             // Looks, layouts and wallpapers: the household's for this TV's profiles, and the live profile's for it
             case "getHouseholdLooks" -> answerFrom(sIoExecutor, result, () -> {
                 Number since = call.arguments();
@@ -1472,6 +1471,7 @@ public class MainActivity extends FlutterActivity {
 
     private boolean dismissNotification(String key) {
         LauncherNotificationListenerService service = LauncherNotificationListenerService.getInstance();
+        if (HearthBellItems.owns(key)) return HearthBellItems.dismiss(key);
         if (service == null || key == null) {
             return false;
         }

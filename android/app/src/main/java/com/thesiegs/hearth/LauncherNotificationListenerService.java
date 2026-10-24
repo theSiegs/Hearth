@@ -89,6 +89,29 @@ public class LauncherNotificationListenerService extends NotificationListenerSer
         notifyListeners();
     }
 
+    /** Something Hearth lists among the notifications itself changed (HearthBellItems). */
+    static void hearthItemsChanged() {
+        LauncherNotificationListenerService service = instance;
+        if (service != null) service.mHandler.post(service::notifyListeners);
+    }
+
+    /**
+     * Pops up one of Hearth's own items (it asks for an answer, so it pops up whether or not app notifications do),
+     * where Hearth may draw over apps.
+     */
+    static void popUpHearthItem(String label, String title, String text) {
+        LauncherNotificationListenerService service = instance;
+        if (service == null || !service.canShowPopup()) return;
+        service.mHandler.post(() -> {
+            try {
+                Drawable icon = service.getPackageManager().getApplicationIcon(service.getPackageName());
+                service.showFor(service.buildPopup(label, icon, title, text), POPUP_MS * 2);
+            } catch (Exception e) {
+                Log.w(TAG, "Couldn't show Hearth's popup", e);
+            }
+        });
+    }
+
     private void notifyListeners() {
         synchronized (listeners) {
             for (NotificationListener listener : listeners) {

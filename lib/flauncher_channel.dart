@@ -453,11 +453,11 @@ class FLauncherChannel {
       {};
 
   /// Where this TV stands in its household: {joined, lost, removed, enabled, tvId, peers: [{tvId}], lastSyncAt,
-  /// lastResult, members: [{tvId, name, self, online, lastSeen}], nearby: [[name, …], …], joinRequest: {name, code} or
-  /// null, join: {state, code}}. `members` is the household's TVs (this one first); `removed` says another TV removed
+  /// lastResult, members: [{tvId, name, self, online, lastSeen}], nearby: [[name, …], …],
+  /// join: {state, code, via}}. `members` is the household's TVs (this one first); `removed` says another TV removed
   /// this one; `nearby` is the other households heard on the network, each as its TVs' names (a name may be null).
-  /// `joinRequest` is another TV asking this one to let it join, for a parent to answer here; `join` is this TV's own
-  /// request ([requestHouseholdJoin]): state none, connecting, waiting (with the code to show), joined, denied or failed.
+  /// `join` is this TV's own request ([requestHouseholdJoin]): state none, connecting, waiting (`via` is the TV to
+  /// answer on), joined, denied or failed. Another TV's request to join this one is in the notification Bell.
   Future<Map<dynamic, dynamic>> getHouseholdStatus() async =>
       (await _methodChannel.invokeMapMethod<dynamic, dynamic>("getHouseholdStatus")) ?? {};
 
@@ -472,16 +472,12 @@ class FLauncherChannel {
   /// The one switch: whether this TV syncs with the other TVs of its household.
   Future<void> setHouseholdEnabled(bool on) async => await _methodChannel.invokeMethod("setHouseholdEnabled", on);
 
-  /// Asks a TV of the household heard on the network (the first of `nearby`) to let this one join; a parent allows it
-  /// on a phone or on that TV. False when none answered or a request is already under way. Follow it in `join`.
+  /// Asks a TV of the household heard on the network (the first of `nearby`) to let this one join; someone allows it
+  /// in that TV's notification Bell, on a grown-up's profile. False when none answered or a request is already under way. Follow it in `join`.
   Future<bool> requestHouseholdJoin() async => await _methodChannel.invokeMethod<bool>("requestHouseholdJoin") ?? false;
 
   /// Stops this TV's request to join.
   Future<void> cancelHouseholdJoin() async => await _methodChannel.invokeMethod("cancelHouseholdJoin");
-
-  /// A parent's answer, on this TV, to another TV's request to join (`joinRequest`); false when none is waiting.
-  Future<bool> answerHouseholdJoin(bool allow) async =>
-      await _methodChannel.invokeMethod<bool>("answerHouseholdJoin", allow) ?? false;
 
   /// The household's looks, layouts and wallpapers for this TV's profiles (kids' too) when they changed since [since] (a
   /// version this gave before; 0: all): {version, profiles: {profileKey: {look, layout, wallpapers: {slot: {hash, path}

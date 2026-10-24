@@ -60,7 +60,7 @@ class _JoinDialog extends StatefulWidget {
 
 class _JoinDialogState extends State<_JoinDialog> {
   String _state = "connecting";
-  String? _code;
+  String? _via;
   Timer? _timer;
 
   @override
@@ -91,7 +91,7 @@ class _JoinDialogState extends State<_JoinDialog> {
       final state = join["state"] as String? ?? "none";
       setState(() {
         _state = state;
-        _code = join["code"] as String?;
+        _via = join["via"] as String?;
       });
       if (state != "connecting" && state != "waiting") _timer?.cancel();
       if (state == "joined") Navigator.of(context).pop(true);
@@ -124,7 +124,8 @@ class _JoinDialogState extends State<_JoinDialog> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
-    final waiting = _state == "waiting" && _code != null;
+    final waiting = _state == "waiting";
+    final via = _via != null && _via!.isNotEmpty ? _via! : l.householdJoinViaAny;
     final String title;
     final List<Widget> body;
     switch (_state) {
@@ -135,15 +136,8 @@ class _JoinDialogState extends State<_JoinDialog> {
         title = l.householdJoin;
         body = [Text(l.householdJoinFailed, style: textTheme.bodyMedium)];
       default:
-        title = waiting ? l.householdJoinWaitTitle : l.householdJoin;
-        body = waiting
-            ? [
-                // The code is what the parent checks against the phone: large, alone on its line
-                Text(_code!, style: textTheme.displaySmall),
-                const SizedBox(height: 16),
-                Text(l.householdJoinWaitBody, style: textTheme.bodyMedium),
-              ]
-            : [Text(l.householdJoinFinding, style: textTheme.bodyMedium)];
+        title = waiting ? l.householdJoinWaitTitle(via) : l.householdJoin;
+        body = [Text(waiting ? l.householdJoinWaitBody(via) : l.householdJoinFinding, style: textTheme.bodyMedium)];
     }
     final over = _state == "denied" || _state == "failed";
     return AlertDialog(
@@ -230,16 +224,6 @@ class _HouseholdPageState extends State<HouseholdPage> {
     await _refresh();
   }
 
-  /// Another TV's request to join, answered here: whoever is at this TV sees which TV asks and answers, without a PIN.
-  Future<void> _answer(bool allow) async {
-    try {
-      await _channel.answerHouseholdJoin(allow);
-    } catch (err) {
-      noteFailure('household_page', err);
-    }
-    await _refresh();
-  }
-
   /// Removes another TV, after asking (and the parent PIN where there is one).
   Future<void> _remove(AppLocalizations l, Map<dynamic, dynamic> member) async {
     final tvId = member["tvId"];
@@ -290,7 +274,6 @@ class _HouseholdPageState extends State<HouseholdPage> {
     final last = _status["lastResult"] as String?;
     final members = [for (final m in (_status["members"] as List?) ?? const []) if (m is Map) m];
     final nearby = householdsNearby(_status);
-    final request = _status["joinRequest"];
     Widget note(String text) =>
         Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 12), child: Text(text, style: textTheme.bodySmall));
     return SettingsPage(
@@ -325,24 +308,9 @@ class _HouseholdPageState extends State<HouseholdPage> {
             ),
           note(l.householdAddHint),
         ] else ...[
-          if (request is Map) ...[
-            // Another TV is waiting on an answer: it comes first, by its name
-            note(l.householdJoinRequest(request["name"] as String? ?? l.householdUnnamedTvs(1))),
-            FocusableSettingsTile(
-              autofocus: true,
-              leading: const Icon(Icons.check),
-              title: Text(l.householdJoinAllow, style: textTheme.bodyMedium),
-              onPressed: () => _answer(true),
-            ),
-            FocusableSettingsTile(
-              leading: const Icon(Icons.close),
-              title: Text(l.householdJoinDeny, style: textTheme.bodyMedium),
-              onPressed: () => _answer(false),
-            ),
-          ],
           note(l.householdIn),
           FocusableSettingsTile(
-            autofocus: request is! Map,
+            autofocus: true,
             leading: const Icon(Icons.sync),
             title: Text(l.householdSwitch, style: textTheme.bodyMedium),
             trailing: Icon(enabled ? Icons.check_box : Icons.check_box_outline_blank),

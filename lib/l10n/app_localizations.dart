@@ -840,26 +840,32 @@ abstract class AppLocalizations {
   /// Household page: how joining works (a parent allows it on a phone or on a TV of the household)
   ///
   /// In en, this message translates to:
-  /// **'Choose Join, then allow it on your phone or on one of those TVs.'**
+  /// **'Choose Join, then allow it in the notification Bell on one of those TVs, on a grown-up\'s profile.'**
   String get householdJoinHint;
+
+  /// Join dialog: waiting for someone to allow this TV on another TV of the household, by its name
+  ///
+  /// In en, this message translates to:
+  /// **'Allow it on {tv}'**
+  String householdJoinWaitTitle(String tv);
+
+  /// Join dialog: what to do while waiting; {tv} is the TV of the household that was asked
+  ///
+  /// In en, this message translates to:
+  /// **'On {tv}, open the notification Bell on a grown-up\'s profile and choose Allow. This TV waits up to 5 minutes.'**
+  String householdJoinWaitBody(String tv);
+
+  /// Join dialog: stands in for the TV's name in the two texts above when it isn't known
+  ///
+  /// In en, this message translates to:
+  /// **'one of your other TVs'**
+  String get householdJoinViaAny;
 
   /// Join dialog: connecting to a TV of the household
   ///
   /// In en, this message translates to:
   /// **'Asking your other TVs…'**
   String get householdJoinFinding;
-
-  /// Join dialog: waiting for a parent to allow this TV
-  ///
-  /// In en, this message translates to:
-  /// **'Allow it on your phone'**
-  String get householdJoinWaitTitle;
-
-  /// Join dialog: what to do while waiting; the code is shown above this text
-  ///
-  /// In en, this message translates to:
-  /// **'Your phone gets a request to add this TV. Allow it only if it shows the code above. No phone set up for this? Allow it on one of your other TVs, in Settings > Profiles > Copy profiles between TVs > Household sync.'**
-  String get householdJoinWaitBody;
 
   /// Join dialog: joined
   ///
@@ -878,24 +884,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'That didn\'t work. Check that one of your other TVs is on, then try again.'**
   String get householdJoinFailed;
-
-  /// Household page on a TV of the household: another TV, by its name, asks to join
-  ///
-  /// In en, this message translates to:
-  /// **'{name} wants to join your TVs.'**
-  String householdJoinRequest(String name);
-
-  /// Household page: let the TV that asks join
-  ///
-  /// In en, this message translates to:
-  /// **'Allow'**
-  String get householdJoinAllow;
-
-  /// Household page: refuse the TV that asks to join
-  ///
-  /// In en, this message translates to:
-  /// **'Don\'t allow'**
-  String get householdJoinDeny;
 
   /// Household page: start a new household although one was found
   ///

@@ -23,14 +23,14 @@ import java.util.concurrent.Executors;
 
 /**
  * Joining a household from the new TV's own screen (docs/household-sync.md, "Joining"), over HouseholdJoin. On a TV of
- * the household it serves one request at a time: it asks the parents' phones (ParentApproval, with the request's code)
- * and shows the request on its Household page, and the first answer from either counts. On the new TV it connects to a
- * TV of the household heard on the network, shows the code, and joins with what comes back.
+ * the household it serves one request at a time: the request goes in that TV's notification Bell, on grown-ups'
+ * profiles only (HearthBellItems), naming the TV that asks, with Allow and Don't allow. On the new TV it connects to a
+ * TV of the household heard on the network, says which TV to answer on, and joins with what comes back.
  */
 final class HouseholdJoining {
     private static final String TAG = "HearthHousehold";
-    /** How long a parent has to answer; the phones' notification lasts as long. */
-    static final long ANSWER_MS = PhoneApproval.ANSWER_MS;
+    /** How long someone has to answer: time to go to the other TV, turn it on and open its Bell. */
+    static final long ANSWER_MS = 5 * 60_000;
     /** A request refused or unanswered holds off the next for this long, so a TV can't be flooded with requests. */
     private static final long COOLDOWN_MS = 30_000;
     private static final int CONNECT_MS = 5_000;
@@ -57,6 +57,8 @@ final class HouseholdJoining {
     static final String FAILED = "failed";
     private static String sJoinState = NONE;
     private static String sJoinCode;
+    /** The household's TV this one asked, to answer on. */
+    private static String sJoinVia;
     private static Socket sJoinSocket;
     /** Which request is the current one: a worker of an earlier one (cancelled, then started again) stops. */
     private static int sJoinGeneration;
@@ -100,35 +102,29 @@ final class HouseholdJoining {
         return new HouseholdJoin.Host() {
             @Override
             public boolean approve(String name, String code) throws InterruptedException {
-                String shown = spaced(code);
                 String joiner = name.isEmpty() ? context.getString(R.string.household_join_unnamed) : name;
-                String here = ShareDiscovery.deviceName(context);
                 synchronized (HouseholdJoining.class) {
                     sRequestName = joiner;
-                    sRequestCode = shown;
+                    sRequestCode = spaced(code);
                     sScreenAnswer = null;
                 }
-                // Its own request, apart from the Parent PIN dialog's, so neither takes the other's answer
-                ParentApproval.Request phones = ParentApproval.ask(context, context.getString(R.string.household_join_title),
-                        context.getString(R.string.household_join_message, joiner, here, shown),
-                        context.getString(R.string.household_join_ha_message, joiner, here, shown));
-                Log.i(TAG, "A TV asks to join the household" + (phones == null ? "; no parent phone to ask" : ""));
+                Log.i(TAG, "A TV asks to join the household");
+                HearthBellItems.joinRequestChanged(context, joiner);
                 long deadline = SystemClock.elapsedRealtime() + ANSWER_MS;
                 try {
                     while (SystemClock.elapsedRealtime() < deadline) {
                         synchronized (HouseholdJoining.class) {
                             if (sScreenAnswer != null) return sScreenAnswer;
                         }
-                        if (phones != null) {
-                            String state = phones.state();
-                            if (ParentApproval.ALLOWED.equals(state)) return true;
-                            if (ParentApproval.DENIED.equals(state)) return false;
-                        }
                         Thread.sleep(500);
                     }
                     return false;
                 } finally {
-                    if (phones != null) phones.cancel();
+                    synchronized (HouseholdJoining.class) {
+                        sRequestName = null;
+                        sRequestCode = null;
+                    }
+                    HearthBellItems.joinRequestChanged(context, null);
                 }
             }
 
@@ -163,16 +159,12 @@ final class HouseholdJoining {
         return code.length() == 6 ? code.substring(0, 3) + " " + code.substring(3) : code;
     }
 
-    /** The request waiting for an answer, for the Household page ({name, code}); null when none. */
-    static synchronized Map<String, Object> request() {
-        if (sRequestCode == null) return null;
-        Map<String, Object> out = new HashMap<>();
-        out.put("name", sRequestName);
-        out.put("code", sRequestCode);
-        return out;
+    /** The name of the TV whose request waits for an answer, for the Bell; null when none. */
+    static synchronized String requestName() {
+        return sRequestCode == null ? null : sRequestName;
     }
 
-    /** A parent answered on this TV's screen. False when no request is waiting. */
+    /** Someone answered in this TV's Bell. False when no request is waiting. */
     static synchronized boolean answer(boolean allow) {
         if (sRequestCode == null || sScreenAnswer != null) return false;
         sScreenAnswer = allow;
@@ -193,6 +185,7 @@ final class HouseholdJoining {
             if (candidates.isEmpty()) return false;
             sJoinState = CONNECTING;
             sJoinCode = null;
+            sJoinVia = null;
             generation = ++sJoinGeneration;
         }
         Context app = context.getApplicationContext();
@@ -239,6 +232,7 @@ final class HouseholdJoining {
                     if (!current(generation)) return;
                     sJoinState = WAITING;
                     sJoinCode = spaced(code);
+                    sJoinVia = tv.name;
                 }
                 asked = true;
                 String payload = request.await();
@@ -270,15 +264,17 @@ final class HouseholdJoining {
             sJoinSocket = null;
             sJoinState = NONE;
             sJoinCode = null;
+            sJoinVia = null;
         }
         if (socket != null) close(socket);
     }
 
-    /** Where this TV's own request stands, for its screen: {state, code}. */
+    /** Where this TV's own request stands, for its screen: {state, code, via (the TV to answer on, when known)}. */
     static synchronized Map<String, Object> status() {
         Map<String, Object> out = new HashMap<>();
         out.put("state", sJoinState);
         out.put("code", sJoinCode);
+        out.put("via", sJoinVia);
         return out;
     }
 

@@ -101,23 +101,23 @@ class FakeSetupChannel extends FLauncherChannel {
   @override
   Future<bool> checkInstallPermission() async => install;
 
-  /// This TV's own request to join ("none", "waiting", "joined", …), the code it shows, and how many were made.
+  /// This TV's own request to join ("none", "waiting", "joined", …), the TV it asked, and how many were made.
   String joinState = "none";
-  String? joinCode;
+  String? joinVia;
   int joinRequests = 0;
 
   @override
   Future<Map<dynamic, dynamic>> getHouseholdStatus() async => {
         "joined": household,
         "nearby": nearbyHouseholds,
-        "join": {"state": joinState, "code": joinCode},
+        "join": {"state": joinState, "code": "123 456", "via": joinVia},
       };
 
   @override
   Future<bool> requestHouseholdJoin() async {
     joinRequests++;
     joinState = "waiting";
-    joinCode = "123 456";
+    joinVia = "Kitchen";
     return true;
   }
 

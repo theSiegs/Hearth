@@ -118,20 +118,19 @@ family's own TVs, so that window is accepted; it closes as soon as either of the
 
 ## Joining
 
-A TV joins from its own screen, and a parent approves from wherever they are.
+A TV joins from its own screen, and someone allows it from the notification Bell of the TV it asked.
 
 1. The new TV, on its own, hears TVs of a household on the network (`_hearth-sync._tcp`; each announces its TV id, its
    household's id and its name). Your TVs, and the setup step, show that household's TVs and a **Join** button.
 2. Join connects to one of those TVs that is on, on its sync port (a sleeping TV answers too: its sync service runs with
    the screen off), and says it is a join request (`HHJ1`), with its name. They run Copy profiles' key exchange, in
    which each side commits to its key before seeing the other's, so a device in the middle can't steer the result, and
-   both derive the same **join code** (six digits). The new TV shows the code.
-3. The household TV asks a parent, both ways at once; the first answer counts:
-   - **Phone approval** (Home Assistant, any adult profile with phone approval on): "Kitchen wants to join your TVs,
-     asked through Office. Allow only if its screen shows 482 105. Allow / Deny." The parent checks the code against the
-     screen in front of them. A device on the network that put itself between the two TVs would produce a different code.
-   - **On that TV's screen**: its Household page shows the request with the code, and Allow (after its Parent PIN) or
-     Don't allow. This needs a parent at both TVs, as Copy did, and is the fallback where no one has phone approval.
+   both derive the same join code (six digits). The new TV says which TV it asked: "Allow it on Office".
+3. The household TV puts the request in its **notification Bell**, on grown-ups' profiles only (never while a kids
+   profile is on), and pops it up: "Kitchen wants to join your TVs", with **Allow** and **Don't allow**. No Parent PIN
+   and no code to compare: the TV's name is what the person checks. Clearing it is Don't allow. (The code still binds
+   the session; no one compares it, so a device on the network that put itself between the two TVs, and named itself
+   after the new TV, could be let in: a trade chosen for a home network.)
 4. On Allow, the household TV sends an invitation over the sealed session (the same one a copy hands over: see
    Joining until step 2 is built), and a Home Assistant address and a new token of its own when the new TV has none.
    The new TV joins with it, and their first exchange lists it.
@@ -139,9 +138,9 @@ A TV joins from its own screen, and a parent approves from wherever they are.
    kept and synced out. A backup is kept before a profile first takes the household's look (see Look and layout); a
    preview of what changes is not built yet.
 
-The new TV never sends the Parent PIN, and nothing secret moves before the Allow. Denying, or no answer in two minutes
-(the phones' notification lasts as long), ends it with nothing sent. A household TV answers one request at a time, and
-after one that wasn't allowed it ignores requests for 30 seconds, so a TV can't flood the parents' phones.
+The new TV never sends the Parent PIN, and nothing secret moves before the Allow. Denying, or no answer in five
+minutes (time to walk to the other TV and turn it on), ends it with nothing sent. A household TV answers one request at
+a time, and after one that wasn't allowed it ignores requests for 30 seconds, so a TV can't flood its Bell.
 
 **The first TV** makes its TV key and a one-TV member list during setup, so there is no "start a household" step. A TV
 on its own that hears a different household on the network still offers Join; **Start a separate household** only

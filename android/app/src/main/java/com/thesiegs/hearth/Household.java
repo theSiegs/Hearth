@@ -448,7 +448,6 @@ final class Household {
         // Households on the network this TV could join (each a list of its TVs' names; a name may be null)
         out.put("nearby", HouseholdMembers.nearby(HouseholdNet.heard(), joined ? store.householdId() : null));
         // A TV asking this one to let it join, for a parent to answer here; and this TV's own request to join one
-        out.put("joinRequest", joined ? HouseholdJoining.request() : null);
         out.put("join", HouseholdJoining.status());
         return out;
     }

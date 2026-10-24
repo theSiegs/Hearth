@@ -480,7 +480,7 @@ void main() {
       expect(channel.householdsStarted, 1);
     });
 
-    testWidgets("joining shows the code to check, and the step is done once a parent allowed it", (tester) async {
+    testWidgets("joining says which TV to allow it on, and the step is done once someone allowed it", (tester) async {
       channel.pairing = true;
       channel.nearbyHouseholds = const [
         ["Kitchen"]
@@ -492,14 +492,16 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
       expect(channel.joinRequests, 1);
-      expect(find.text("Allow it on your phone"), findsOneWidget);
-      expect(find.text("123 456"), findsOneWidget);
-      // a parent allowed it on their phone
+      expect(find.text("Allow it on Kitchen"), findsOneWidget);
+      expect(find.textContaining("open the notification Bell"), findsOneWidget);
+      // No code to compare: the TV's name is what's checked
+      expect(find.text("123 456"), findsNothing);
+      // someone allowed it in that TV's Bell
       channel.joinState = "joined";
       channel.household = true;
       await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
-      expect(find.text("123 456"), findsNothing);
+      expect(find.text("Allow it on Kitchen"), findsNothing);
       expect(find.textContaining("This TV is in the household now"), findsOneWidget);
     });
 

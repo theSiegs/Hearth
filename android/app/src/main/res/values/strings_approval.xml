@@ -16,8 +16,10 @@
     <string name="parent_approval_title">TV: allow this?</string>
     <string name="parent_approval_message">Someone in %1$s’s profile on %2$s needs a parent’s OK. Allow it, and the TV skips the Parent PIN.</string>
     <string name="household_join_unnamed">A new TV</string>
-    <string name="household_join_title">Add a TV to your household?</string>
-    <string name="household_join_message">%1$s wants to join your TVs, asked through %2$s. Allow only if its screen shows %3$s.</string>
-    <string name="household_join_ha_message">%1$s wants to join your TVs, asked through %2$s. Allow only if its screen shows %3$s. Answer from the notification on your phone (Allow or Deny), or on %2$s. The request ends by itself after 2 minutes.</string>
+    <string name="household_join_bell_app">Household sync</string>
+    <string name="household_join_bell_title">%1$s wants to join your TVs</string>
+    <string name="household_join_bell_text">It will keep every profile in step with this TV, and get its saved PINs and Home Assistant settings.</string>
+    <string name="household_join_allow">Allow</string>
+    <string name="household_join_deny">Don\'t allow</string>
     <string name="parent_approval_ha_message">Someone in %1$s’s profile on %2$s needs a parent’s OK. Answer from the notification on your phone (Allow or Deny). The request ends by itself after 2 minutes.</string>
 </resources>

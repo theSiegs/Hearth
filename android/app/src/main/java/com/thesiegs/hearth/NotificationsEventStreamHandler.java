@@ -105,6 +105,7 @@ final class NotificationsEventStreamHandler implements EventChannel.StreamHandle
                     map.put("actions", actions);
                     list.add(map);
                 }
+                HearthBellItems.addTo(service, list);
                 // Newest first, as in Android's own shade
                 list.sort((a, b) -> Long.compare((Long) b.get("postTime"), (Long) a.get("postTime")));
             }
@@ -126,6 +127,7 @@ final class NotificationsEventStreamHandler implements EventChannel.StreamHandle
      * notification that cancels itself on a tap also removes it. Whether something was sent or opened.
      */
     static boolean open(Context context, String key, int action) {
+        if (HearthBellItems.owns(key)) return HearthBellItems.open(key, action);
         LauncherNotificationListenerService service = LauncherNotificationListenerService.getInstance();
         if (service == null || key == null) return false;
         try {

@@ -418,16 +418,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdJoin => 'Join the household';
 
   @override
-  String get householdJoinHint => 'Choose Join, then allow it on your phone or on one of those TVs.';
+  String get householdJoinHint => 'Choose Join, then allow it in the notification Bell on one of those TVs, on a grown-up\'s profile.';
+
+  @override
+  String householdJoinWaitTitle(String tv) {
+    return 'Allow it on $tv';
+  }
+
+  @override
+  String householdJoinWaitBody(String tv) {
+    return 'On $tv, open the notification Bell on a grown-up\'s profile and choose Allow. This TV waits up to 5 minutes.';
+  }
+
+  @override
+  String get householdJoinViaAny => 'one of your other TVs';
 
   @override
   String get householdJoinFinding => 'Asking your other TVs…';
-
-  @override
-  String get householdJoinWaitTitle => 'Allow it on your phone';
-
-  @override
-  String get householdJoinWaitBody => 'Your phone gets a request to add this TV. Allow it only if it shows the code above. No phone set up for this? Allow it on one of your other TVs, in Settings > Profiles > Copy profiles between TVs > Household sync.';
 
   @override
   String get householdJoinDone => 'This TV is in the household now.';
@@ -437,17 +444,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get householdJoinFailed => 'That didn\'t work. Check that one of your other TVs is on, then try again.';
-
-  @override
-  String householdJoinRequest(String name) {
-    return '$name wants to join your TVs.';
-  }
-
-  @override
-  String get householdJoinAllow => 'Allow';
-
-  @override
-  String get householdJoinDeny => 'Don\'t allow';
 
   @override
   String get householdStartAnyway => 'Start a separate household instead';
