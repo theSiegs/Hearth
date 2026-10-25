@@ -5,6 +5,11 @@
 
 ## Unreleased
 
+## 2026.10.84 (pre-release)
+
+- **Ad tracking**: when it's kept off but still on (Hearth's debugging not approved yet), the page shows **Turn it off now**, which does it after the TV asks once to allow debugging.
+- Letting ad tracking back on also turns on any part of it found off, not only what Hearth turned off itself.
+
 ## 2026.10.83 (pre-release)
 
 - **Ad tracking** (was "Google's ad sandbox", Settings > System): **Keep ad tracking off** is now on unless a parent turns it off, and covers the kids profiles too. The page and the setup step say what it is in plain words, without the shell commands.

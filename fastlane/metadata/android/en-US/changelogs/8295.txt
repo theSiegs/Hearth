@@ -1,0 +1,1 @@
+Ad tracking: a Turn it off now button when it's still on, and letting it back on turns every part back on.
