@@ -3,7 +3,6 @@ package com.thesiegs.hearth;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.SystemClock;
 import android.util.Log;
 
 /**
@@ -23,11 +22,10 @@ final class ProfileLock {
     static final String ACTION = "android.apps.tv.launcherx.PROFILE_LOCK_REAUTH";
     private static final String PREFS = "profile_lock";
     private static final String ON_SLEEP_KEY = "lock_on_sleep_minutes";
+    /** When the screen last went off (wall clock), kept so a Hearth restart while the TV sleeps (an update) still knows. */
+    private static final String OFF_AT_KEY = "screen_off_at";
     /** "Lock when the TV sleeps" is off. */
     static final int OFF = -1;
-
-    /** When the screen last went off (elapsed time, which counts sleep), or 0. */
-    private static long sScreenOffAt = 0;
 
     private ProfileLock() {
     }
@@ -63,11 +61,19 @@ final class ProfileLock {
         prefs(context).edit().putInt(ON_SLEEP_KEY, minutes).apply();
     }
 
-    static void onScreenOff() {
-        sScreenOffAt = SystemClock.elapsedRealtime();
+    static void onScreenOff(Context context) {
+        prefs(context).edit().putLong(OFF_AT_KEY, System.currentTimeMillis()).apply();
     }
 
-    /** Whether a wake at {@code now} after the screen went off at {@code offAt} (0: unknown) is due, for {@code minutes}. */
+    /**
+     * Hearth started (an update, a restart) with the screen off and no time saved from before: the TV has slept at
+     * least since now, so waking still counts it.
+     */
+    static void onStartedAsleep(Context context) {
+        if (prefs(context).getLong(OFF_AT_KEY, 0) == 0) onScreenOff(context);
+    }
+
+    /** Whether a wake at {@code now} after the screen went off at {@code offAt} (wall clock; 0: unknown) is due, for {@code minutes}. */
     static boolean due(int minutes, long offAt, long now) {
         if (offAt == 0 || minutes == OFF) return false;
         return now - offAt >= minutes * 60_000L;
@@ -75,9 +81,10 @@ final class ProfileLock {
 
     /** The TV woke: opens the profile chooser if it slept at least the chosen time. */
     static void onScreenOn(Context context) {
-        long offAt = sScreenOffAt;
-        sScreenOffAt = 0;
-        long now = SystemClock.elapsedRealtime();
+        SharedPreferences prefs = prefs(context);
+        long offAt = prefs.getLong(OFF_AT_KEY, 0);
+        prefs.edit().remove(OFF_AT_KEY).apply();
+        long now = System.currentTimeMillis();
         if (!due(lockOnSleepMinutes(context), offAt, now)) return;
         Log.i(TAG, "Woke after " + (now - offAt) / 1000 + " s asleep: opening the profile chooser");
         showChooser(context);

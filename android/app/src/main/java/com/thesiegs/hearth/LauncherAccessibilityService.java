@@ -425,12 +425,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
             mInteractive = on;
             restartFront();
             HaBridgeService.setScreenOn(on);
-            // "Choose a profile when the TV wakes": Google TV's profile chooser on waking after long enough asleep
+            // "Lock when the TV wakes": Google TV's profile chooser on waking after long enough asleep
             if (on) {
                 ProfileLock.onScreenOn(context);
                 AdSandbox.check(context);
             } else {
-                ProfileLock.onScreenOff();
+                ProfileLock.onScreenOff(context);
             }
         }
     };
@@ -550,6 +550,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         screenFilter.addAction(Intent.ACTION_DREAMING_STOPPED);
         PowerManager power = (PowerManager) getSystemService(Context.POWER_SERVICE);
         mInteractive = power == null || power.isInteractive();
+        if (!mInteractive) ProfileLock.onStartedAsleep(this);
         registerReceiver(mScreenReceiver, screenFilter);
         LauncherApps launcherApps = (LauncherApps) getSystemService(Context.LAUNCHER_APPS_SERVICE);
         if (launcherApps != null) {
