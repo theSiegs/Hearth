@@ -5,6 +5,11 @@
 
 ## Unreleased
 
+## 2026.10.83 (pre-release)
+
+- **Ad tracking** (was "Google's ad sandbox", Settings > System): **Keep ad tracking off** is now on unless a parent turns it off, and covers the kids profiles too. The page and the setup step say what it is in plain words, without the shell commands.
+- **Lock when the TV wakes** works after Hearth was updated or restarted while the TV slept; before, that wake went straight to the last profile.
+
 ## 2026.10.82 (pre-release)
 
 - **Household sync** opens on the household's TVs: this TV first, then the others with whether they're on now or when they were last on. A TV asking to join shows there too (answered in the notification Bell). Choosing another TV opens a card with **Remove from household**. A TV not in a household lists the found household's TVs above **Join**.

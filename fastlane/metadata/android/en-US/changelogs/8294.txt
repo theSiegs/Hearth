@@ -1,0 +1,1 @@
+Ad tracking is kept off by default for every profile, explained simply. Lock when the TV wakes now works after an update while the TV slept.
