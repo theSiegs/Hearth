@@ -1524,7 +1524,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adSandboxStatusOff => 'Off on this TV.';
 
   @override
-  String get adSandboxStatusOn => 'On. Hearth turns it off the next time it can.';
+  String get adSandboxStatusOn => 'Still on on this TV. Choose Turn it off now.';
+
+  @override
+  String get adSandboxTurnOffNow => 'Turn it off now';
 
   @override
   String get adSandboxStatusAllowed => 'On. Turn on Keep ad tracking off to stop it.';

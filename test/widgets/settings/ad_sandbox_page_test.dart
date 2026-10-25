@@ -74,13 +74,19 @@ void main() {
               (w) => w is Icon && (w.icon == Icons.check_box || w.icon == Icons.check_box_outline_blank))))
       .icon!;
 
-  testWidgets("kept off but still on: one press turns it off, with no commands to read", (tester) async {
+  testWidgets("kept off but still on: Turn it off now does it, with no commands to read", (tester) async {
     keptOff = true;
     stillOn = true;
     await pumpPage(tester);
     expect(find.text("Ad tracking"), findsOneWidget);
-    expect(find.text("On. Hearth turns it off the next time it can."), findsOneWidget);
+    expect(find.text("Still on on this TV. Choose Turn it off now."), findsOneWidget);
     expect(find.textContaining("pm "), findsNothing);
+    stillOn = false;
+    await tester.tap(find.text("Turn it off now"));
+    await tester.pumpAndSettle();
+    expect(runs, [true]);
+    expect(find.text("Off on this TV."), findsOneWidget);
+    expect(find.text("Turn it off now"), findsNothing);
   });
 
   testWidgets("turning it on runs at once, with no PIN, and says it's off", (tester) async {

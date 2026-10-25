@@ -64,8 +64,8 @@ class _AdSandboxPageState extends State<AdSandboxPage> {
 
   bool get _keptOff => _status?["keptOff"] == true;
 
-  Future<void> _toggle() async {
-    final keepOff = !_keptOff;
+  /// Keeps ad tracking off ([keepOff]), or lets it back on.
+  Future<void> _set(bool keepOff) async {
     // Keeping it off needs no PIN: only turning the sandbox back on does
     if (!keepOff && context.read<SettingsService>().hasParentPin && !await requireParentPin(context)) return;
     if (!mounted) return;
@@ -102,14 +102,25 @@ class _AdSandboxPageState extends State<AdSandboxPage> {
         if (_status != null && installed == 0)
           note(l.adSandboxNone)
         else ...[
+          // Kept off, but still on (Hearth's debugging wasn't approved yet): this does it now, asking once
+          if (_keptOff && on > 0)
+            FocusableSettingsTile(
+              autofocus: true,
+              leading: const Icon(Icons.privacy_tip_outlined),
+              title: Text(l.adSandboxTurnOffNow, style: textTheme.bodyMedium),
+              trailing: _running
+                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                  : null,
+              onPressed: _running ? null : () => _set(true),
+            ),
           FocusableSettingsTile(
-            autofocus: true,
+            autofocus: !(_keptOff && on > 0),
             leading: const Icon(Icons.block),
             title: Text(l.adSandboxKeepOff, style: textTheme.bodyMedium),
-            trailing: _running
+            trailing: _running && !(_keptOff && on > 0)
                 ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
                 : Icon(_keptOff ? Icons.check_box : Icons.check_box_outline_blank),
-            onPressed: _status == null || _running ? null : _toggle,
+            onPressed: _status == null || _running ? null : () => _set(!_keptOff),
           ),
           if (_status != null) note(status),
           // Still on: Hearth's debugging may need its one-time approval to do it

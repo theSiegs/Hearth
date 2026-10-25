@@ -2688,8 +2688,14 @@ abstract class AppLocalizations {
   /// Ad tracking page: under the switch, kept off but something is still on (Hearth's debugging not set up yet)
   ///
   /// In en, this message translates to:
-  /// **'On. Hearth turns it off the next time it can.'**
+  /// **'Still on on this TV. Choose Turn it off now.'**
   String get adSandboxStatusOn;
+
+  /// Ad tracking page: shown while ad tracking is still on; turns it off (the TV may ask to allow debugging once)
+  ///
+  /// In en, this message translates to:
+  /// **'Turn it off now'**
+  String get adSandboxTurnOffNow;
 
   /// Ad tracking page: under the switch, a parent let ad tracking stay on
   ///

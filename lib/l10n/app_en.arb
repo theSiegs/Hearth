@@ -1800,9 +1800,13 @@
     "@adSandboxStatusOff": {
         "description": "Ad tracking page: under the switch, everything Hearth turns off is off"
     },
-    "adSandboxStatusOn": "On. Hearth turns it off the next time it can.",
+    "adSandboxStatusOn": "Still on on this TV. Choose Turn it off now.",
     "@adSandboxStatusOn": {
         "description": "Ad tracking page: under the switch, kept off but something is still on (Hearth's debugging not set up yet)"
+    },
+    "adSandboxTurnOffNow": "Turn it off now",
+    "@adSandboxTurnOffNow": {
+        "description": "Ad tracking page: shown while ad tracking is still on; turns it off (the TV may ask to allow debugging once)"
     },
     "adSandboxStatusAllowed": "On. Turn on Keep ad tracking off to stop it.",
     "@adSandboxStatusAllowed": {
