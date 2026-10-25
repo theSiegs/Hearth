@@ -60,7 +60,7 @@ class SetupSnapshot {
   /// This TV is in a household of TVs that keep profile settings in step.
   final bool household;
 
-  /// The TV has Google's ad sandbox and Hearth isn't keeping it off yet.
+  /// The TV has Google's ad tracking and some of it is still on.
   final bool adSandboxToTurnOff;
 
   /// Home Assistant: its pop-ups are on, the dashboard panel has a sign-in, and the TV reports its status.
@@ -238,7 +238,7 @@ class SetupSnapshot {
       kidsReady: (family["kidsReady"] as int?) ?? 0,
       netflix: family["netflix"] == true,
       household: (await _safe(channel.getHouseholdStatus, <dynamic, dynamic>{}))["joined"] == true,
-      adSandboxToTurnOff: sandbox["keptOff"] != true && ((sandbox["installed"] as List?)?.isNotEmpty ?? false),
+      adSandboxToTurnOff: (sandbox["on"] as List?)?.isNotEmpty ?? false,
       haAlerts: ha.alerts,
       haPanel: ha.panel,
       haStatus: ha.status,

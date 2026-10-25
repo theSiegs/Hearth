@@ -25,6 +25,7 @@ void main() {
   late List<String> installed;
   late List<bool> runs;
   late bool fails;
+  late bool stillOn;
 
   setUp(() {
     settings = MockSettingsService();
@@ -33,13 +34,14 @@ void main() {
     installed = List.of(_packages);
     runs = [];
     fails = false;
+    stillOn = false;
   });
 
   Future<void> pumpPage(WidgetTester tester) async {
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(_channel, (call) async {
       switch (call.method) {
         case "getAdSandbox":
-          return {"keptOff": keptOff, "installed": installed, "on": keptOff ? <String>[] : installed};
+          return {"keptOff": keptOff, "installed": installed, "on": keptOff && !stillOn ? <String>[] : installed};
         case "getAdSandboxCommands":
           final off = call.arguments == true;
           return [for (final p in installed) off ? "pm disable-user --user 0 $p" : "pm enable --user 0 $p"];
@@ -67,64 +69,48 @@ void main() {
 
   IconData checkbox(WidgetTester tester) => tester
       .widget<Icon>(find.descendant(
-          of: find.ancestor(of: find.text("Keep it off"), matching: find.byType(FocusableSettingsTile)).first,
+          of: find.ancestor(of: find.text("Keep ad tracking off"), matching: find.byType(FocusableSettingsTile)).first,
           matching: find.byWidgetPredicate(
               (w) => w is Icon && (w.icon == Icons.check_box || w.icon == Icons.check_box_outline_blank))))
       .icon!;
 
-  testWidgets("shows the commands first, runs them, and then shows the parts off", (tester) async {
+  testWidgets("kept off but still on: one press turns it off, with no commands to read", (tester) async {
+    keptOff = true;
+    stillOn = true;
     await pumpPage(tester);
-    expect(checkbox(tester), Icons.check_box_outline_blank);
-    expect(find.text("0 of 3 parts are off on this TV."), findsOneWidget);
-
-    await tester.tap(find.text("Keep it off"));
-    await tester.pumpAndSettle();
-    expect(find.text("pm disable-user --user 0 com.android.adservices.api", findRichText: true), findsOneWidget);
-    expect(runs, isEmpty);
-
-    await tester.tap(find.text("Run it"));
-    await tester.pumpAndSettle();
-    expect(runs, [true]);
-    expect(checkbox(tester), Icons.check_box);
-    expect(find.text("3 of 3 parts are off on this TV."), findsOneWidget);
+    expect(find.text("Ad tracking"), findsOneWidget);
+    expect(find.text("On. Hearth turns it off the next time it can."), findsOneWidget);
+    expect(find.textContaining("pm "), findsNothing);
   });
 
-  testWidgets("keeping it off asks for no parent PIN", (tester) async {
+  testWidgets("turning it on runs at once, with no PIN, and says it's off", (tester) async {
     when(settings.hasParentPin).thenReturn(true);
     await pumpPage(tester);
-    await tester.tap(find.text("Keep it off"));
+    expect(checkbox(tester), Icons.check_box_outline_blank);
+    expect(find.text("On. Turn on Keep ad tracking off to stop it."), findsOneWidget);
+    await tester.tap(find.text("Keep ad tracking off"));
     await tester.pumpAndSettle();
     expect(find.byType(ParentPinDialog), findsNothing);
-    expect(find.text("pm disable-user --user 0 com.android.adservices.api", findRichText: true), findsOneWidget);
+    expect(find.textContaining("pm "), findsNothing);
+    expect(runs, [true]);
+    expect(checkbox(tester), Icons.check_box);
+    expect(find.text("Off on this TV."), findsOneWidget);
   });
 
-  testWidgets("turning the sandbox back on asks for the parent PIN", (tester) async {
+  testWidgets("letting ad tracking back on asks for the parent PIN", (tester) async {
     when(settings.hasParentPin).thenReturn(true);
     keptOff = true;
     await pumpPage(tester);
-    await tester.tap(find.text("Keep it off"));
+    await tester.tap(find.text("Keep ad tracking off"));
     await tester.pumpAndSettle();
     expect(find.byType(ParentPinDialog), findsOneWidget);
     expect(runs, isEmpty);
   });
 
-  testWidgets("Cancel runs nothing", (tester) async {
-    await pumpPage(tester);
-    await tester.tap(find.text("Keep it off"));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text("Cancel"));
-    await tester.pumpAndSettle();
-    expect(runs, isEmpty);
-    expect(checkbox(tester), Icons.check_box_outline_blank);
-  });
-
-  testWidgets("turning it off again turns the parts back on", (tester) async {
+  testWidgets("without a parent PIN, turning the switch off lets it back on", (tester) async {
     keptOff = true;
     await pumpPage(tester);
-    await tester.tap(find.text("Keep it off"));
-    await tester.pumpAndSettle();
-    expect(find.text("pm enable --user 0 com.android.adservices.api", findRichText: true), findsOneWidget);
-    await tester.tap(find.text("Run it"));
+    await tester.tap(find.text("Keep ad tracking off"));
     await tester.pumpAndSettle();
     expect(runs, [false]);
     expect(checkbox(tester), Icons.check_box_outline_blank);
@@ -133,17 +119,15 @@ void main() {
   testWidgets("says so when Hearth's debugging doesn't answer", (tester) async {
     fails = true;
     await pumpPage(tester);
-    await tester.tap(find.text("Keep it off"));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text("Run it"));
+    await tester.tap(find.text("Keep ad tracking off"));
     await tester.pumpAndSettle();
     expect(find.text("Hearth couldn't do it"), findsOneWidget);
   });
 
-  testWidgets("a TV without the sandbox has no switch", (tester) async {
+  testWidgets("a TV without it has no switch", (tester) async {
     installed = [];
     await pumpPage(tester);
-    expect(find.text("This TV doesn't have Google's ad sandbox."), findsOneWidget);
-    expect(find.text("Keep it off"), findsNothing);
+    expect(find.text("This TV doesn't have Google's ad tracking."), findsOneWidget);
+    expect(find.text("Keep ad tracking off"), findsNothing);
   });
 }

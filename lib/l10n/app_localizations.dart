@@ -2661,40 +2661,52 @@ abstract class AppLocalizations {
   /// **'Hold: {action}'**
   String remoteButtonsHoldOption(String action);
 
-  /// Settings > System: page and row for keeping Android's Privacy Sandbox (ad services) turned off
+  /// Settings > System: page and row for keeping Android's Privacy Sandbox (ad services) turned off; said simply for anyone
   ///
   /// In en, this message translates to:
-  /// **'Google\'s ad sandbox'**
+  /// **'Ad tracking'**
   String get adSandboxTitle;
 
   /// Ad sandbox page: what the Privacy Sandbox is and what the switch does
   ///
   /// In en, this message translates to:
-  /// **'Android\'s Privacy Sandbox guesses ad topics from the apps you use, runs ad auctions on the TV and measures ads. On-device personalization and federated learning come with it. Google turns it on or off from its servers, and its updates can turn it back on. Hearth can turn these parts off and keep them off: it looks again each time the TV wakes.'**
+  /// **'Google can learn what you like from the apps you use on this TV and use it for ads. Hearth turns that off for everyone on this TV, kids profiles included, and keeps it off.'**
   String get adSandboxIntro;
 
   /// Ad sandbox page: the switch
   ///
   /// In en, this message translates to:
-  /// **'Keep it off'**
+  /// **'Keep ad tracking off'**
   String get adSandboxKeepOff;
 
-  /// Ad sandbox page: how many of the sandbox packages on this TV are turned off
+  /// Ad tracking page: under the switch, everything Hearth turns off is off
   ///
   /// In en, this message translates to:
-  /// **'{off} of {count} parts are off on this TV.'**
-  String adSandboxStatus(int off, int count);
+  /// **'Off on this TV.'**
+  String get adSandboxStatusOff;
+
+  /// Ad tracking page: under the switch, kept off but something is still on (Hearth's debugging not set up yet)
+  ///
+  /// In en, this message translates to:
+  /// **'On. Hearth turns it off the next time it can.'**
+  String get adSandboxStatusOn;
+
+  /// Ad tracking page: under the switch, a parent let ad tracking stay on
+  ///
+  /// In en, this message translates to:
+  /// **'On. Turn on Keep ad tracking off to stop it.'**
+  String get adSandboxStatusAllowed;
 
   /// Ad sandbox page: none of the sandbox packages is on this TV
   ///
   /// In en, this message translates to:
-  /// **'This TV doesn\'t have Google\'s ad sandbox.'**
+  /// **'This TV doesn\'t have Google\'s ad tracking.'**
   String get adSandboxNone;
 
   /// Ad sandbox page: note under the switch
   ///
   /// In en, this message translates to:
-  /// **'Only these parts are turned off, and only for this TV\'s main user. Play Store, voice and casting keep working. Turning the switch off turns back on exactly what Hearth turned off.'**
+  /// **'Your apps, the Play Store, voice search and casting all keep working.'**
   String get adSandboxNote;
 
   /// Ad sandbox page: note under the commands Hearth is about to run
@@ -5058,13 +5070,13 @@ abstract class AppLocalizations {
   /// Setup flow: ad sandbox step, above the commands it runs
   ///
   /// In en, this message translates to:
-  /// **'Android\'s Privacy Sandbox guesses ad topics from the apps you use and measures ads. Hearth can turn it off with these commands and keep it off. You can turn it back on in Settings > System.'**
+  /// **'Google can learn what you like from the apps you use on this TV and use it for ads. Hearth turns that off for everyone on this TV and keeps it off. You can change this in Settings > System.'**
   String get setupFlowAdSandboxBody;
 
   /// Setup flow: ad sandbox step, once done
   ///
   /// In en, this message translates to:
-  /// **'Google\'s ad sandbox is off, and Hearth keeps it off.'**
+  /// **'Ad tracking is off, and Hearth keeps it off.'**
   String get setupFlowAdSandboxDone;
 
   /// Setup flow: kids profiles step's title

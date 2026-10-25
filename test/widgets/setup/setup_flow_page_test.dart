@@ -441,27 +441,27 @@ void main() {
       expect(find.textContaining("This TV has a household"), findsOneWidget);
     });
 
-    testWidgets("with debugging on: the ad sandbox step shows its commands and Keep it off runs them", (tester) async {
+    testWidgets("with debugging on: the ad tracking step says it simply, and Keep ad tracking off does it", (tester) async {
       channel.pairing = true;
       channel.adb = true;
       channel.adSandbox = const ["com.android.adservices.api"];
       await openAtFamily(tester);
       await press(tester, "Turn on");
       await press(tester, "Skip"); // the parent PIN
-      expect(find.text("Google's ad sandbox"), findsOneWidget);
-      expect(find.text("pm disable-user --user 0 com.android.adservices.api", findRichText: true), findsOneWidget);
-      await press(tester, "Keep it off");
+      expect(find.text("Ad tracking"), findsOneWidget);
+      expect(find.textContaining("pm disable-user", findRichText: true), findsNothing);
+      await press(tester, "Keep ad tracking off");
       expect(channel.adSandboxKeptOff, isTrue);
-      expect(find.text("Google's ad sandbox is off, and Hearth keeps it off."), findsOneWidget);
+      expect(find.text("Ad tracking is off, and Hearth keeps it off."), findsOneWidget);
     });
 
-    testWidgets("without debugging, or with it kept off already, there's no ad sandbox step", (tester) async {
+    testWidgets("without debugging, or with it off already, there's no ad tracking step", (tester) async {
       channel.pairing = true;
       channel.adSandbox = const ["com.android.adservices.api"];
       await openAtFamily(tester);
       await press(tester, "Turn on");
       await press(tester, "Skip"); // the parent PIN
-      expect(find.text("Google's ad sandbox"), findsNothing);
+      expect(find.text("Ad tracking"), findsNothing);
       expect(find.text("Sync with your other TVs"), findsOneWidget);
     });
 

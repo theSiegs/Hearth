@@ -509,17 +509,15 @@ extension _CardScreens on _SetupFlowPageState {
     _focusPrimary();
   }
 
-  /// Google's ad sandbox, right after debugging is approved: the commands on the screen itself, and one press to run
-  /// them (Settings > System has the same switch).
+  /// Ad tracking, right after debugging is approved: what it is in plain words, and one press to turn it off
+  /// (Settings > System has the same switch).
   Widget _adSandbox(AppLocalizations l) {
     if (_state == SetupStepState.done) return _doneBody(l, l.setupFlowAdSandboxDone);
-    final commands = _adSandboxCommands;
     return SetupScreenBody(
       icon: Icons.privacy_tip_outlined,
       title: l.adSandboxTitle,
       body: l.setupFlowAdSandboxBody,
       content: [
-        if (commands != null && commands.isNotEmpty) SetupCommandBox(lines: commands),
         Text(l.adSandboxConfirmApproval, style: const TextStyle(color: Colors.white54, fontSize: 13)),
       ],
       buttons: [

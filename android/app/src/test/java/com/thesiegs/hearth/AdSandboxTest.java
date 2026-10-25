@@ -32,6 +32,14 @@ public class AdSandboxTest {
     }
 
     @Test
+    public void readsWhichOfTheListAreOn() {
+        assertEquals(Arrays.asList("com.android.adservices.api", "com.android.federatedcompute.services"),
+                AdSandbox.enabledIn("package:com.android.adservices.api\r\npackage:com.netflix.ninja\n"
+                        + "package:com.android.federatedcompute.services\n"));
+        assertTrue(AdSandbox.enabledIn("").isEmpty());
+    }
+
+    @Test
     public void backOnEnablesWhatWasTurnedOff() {
         assertEquals(Arrays.asList("pm enable --user 0 com.android.federatedcompute.services"),
                 AdSandbox.onCommands(Arrays.asList("com.android.federatedcompute.services"), 0));

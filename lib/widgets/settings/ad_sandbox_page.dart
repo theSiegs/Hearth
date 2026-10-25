@@ -20,7 +20,6 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/quiet_failure.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
-import 'package:flauncher/widgets/setup/setup_frame.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -28,9 +27,9 @@ import 'focusable_settings_tile.dart';
 import 'message_dialog.dart';
 import 'settings_page.dart';
 
-/// Settings > System > Google's ad sandbox: one switch that turns Android's Privacy Sandbox off on this TV and keeps it
-/// off (AdSandbox.java looks again whenever the TV wakes). Hearth's own adb runs the commands, shown to the parent
-/// first; turning the sandbox back on asks for the parent PIN where the TV has one.
+/// Settings > System > Ad tracking: one switch, on unless a parent turned it off, that keeps Android's Privacy Sandbox
+/// off for every profile on this TV (AdSandbox.java looks again whenever the TV wakes). Hearth's own adb does it;
+/// letting ad tracking back on asks for the parent PIN where the TV has one.
 class AdSandboxPage extends StatefulWidget {
   static const String routeName = "ad_sandbox";
 
@@ -71,43 +70,6 @@ class _AdSandboxPageState extends State<AdSandboxPage> {
     if (!keepOff && context.read<SettingsService>().hasParentPin && !await requireParentPin(context)) return;
     if (!mounted) return;
     final l = AppLocalizations.of(context)!;
-    List<String> commands;
-    try {
-      commands = await _channel.getAdSandboxCommands(keepOff);
-    } catch (err) {
-      noteFailure('ad_sandbox_page', err);
-      return;
-    }
-    if (!mounted) return;
-    if (commands.isNotEmpty) {
-      final go = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(l.adSandboxTitle),
-          content: SizedBox(
-            width: 520,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(l.setupFlowFixConfirmBody),
-                  const SizedBox(height: 12),
-                  SetupCommandBox(lines: commands),
-                  const SizedBox(height: 12),
-                  Text(l.adSandboxConfirmApproval),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(l.cancel)),
-            TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(true), child: Text(l.setupFlowFixRun)),
-          ],
-        ),
-      );
-      if (go != true || !mounted) return;
-    }
     setState(() => _running = true);
     bool ran = true;
     try {
@@ -130,6 +92,7 @@ class _AdSandboxPageState extends State<AdSandboxPage> {
     final textTheme = Theme.of(context).textTheme;
     final installed = (_status?["installed"] as List?)?.length ?? 0;
     final on = (_status?["on"] as List?)?.length ?? 0;
+    final status = !_keptOff ? l.adSandboxStatusAllowed : (on == 0 ? l.adSandboxStatusOff : l.adSandboxStatusOn);
     Widget note(String text) =>
         Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 12), child: Text(text, style: textTheme.bodySmall));
     return SettingsPage(
@@ -148,7 +111,9 @@ class _AdSandboxPageState extends State<AdSandboxPage> {
                 : Icon(_keptOff ? Icons.check_box : Icons.check_box_outline_blank),
             onPressed: _status == null || _running ? null : _toggle,
           ),
-          if (_status != null) note(l.adSandboxStatus(installed - on, installed)),
+          if (_status != null) note(status),
+          // Still on: Hearth's debugging may need its one-time approval to do it
+          if (_status != null && (!_keptOff || on > 0)) note(l.adSandboxConfirmApproval),
           note(l.adSandboxNote),
         ],
       ],

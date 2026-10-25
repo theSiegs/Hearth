@@ -1512,24 +1512,28 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get adSandboxTitle => 'Google\'s ad sandbox';
+  String get adSandboxTitle => 'Ad tracking';
 
   @override
-  String get adSandboxIntro => 'Android\'s Privacy Sandbox guesses ad topics from the apps you use, runs ad auctions on the TV and measures ads. On-device personalization and federated learning come with it. Google turns it on or off from its servers, and its updates can turn it back on. Hearth can turn these parts off and keep them off: it looks again each time the TV wakes.';
+  String get adSandboxIntro => 'Google can learn what you like from the apps you use on this TV and use it for ads. Hearth turns that off for everyone on this TV, kids profiles included, and keeps it off.';
 
   @override
-  String get adSandboxKeepOff => 'Keep it off';
+  String get adSandboxKeepOff => 'Keep ad tracking off';
 
   @override
-  String adSandboxStatus(int off, int count) {
-    return '$off of $count parts are off on this TV.';
-  }
+  String get adSandboxStatusOff => 'Off on this TV.';
 
   @override
-  String get adSandboxNone => 'This TV doesn\'t have Google\'s ad sandbox.';
+  String get adSandboxStatusOn => 'On. Hearth turns it off the next time it can.';
 
   @override
-  String get adSandboxNote => 'Only these parts are turned off, and only for this TV\'s main user. Play Store, voice and casting keep working. Turning the switch off turns back on exactly what Hearth turned off.';
+  String get adSandboxStatusAllowed => 'On. Turn on Keep ad tracking off to stop it.';
+
+  @override
+  String get adSandboxNone => 'This TV doesn\'t have Google\'s ad tracking.';
+
+  @override
+  String get adSandboxNote => 'Your apps, the Play Store, voice search and casting all keep working.';
 
   @override
   String get adSandboxConfirmApproval => 'The first time, the TV asks \"Allow debugging?\". Choose Always allow.';
@@ -2869,10 +2873,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowHouseholdJoined => 'This TV is in the household now and keeps in step with its other TVs.';
 
   @override
-  String get setupFlowAdSandboxBody => 'Android\'s Privacy Sandbox guesses ad topics from the apps you use and measures ads. Hearth can turn it off with these commands and keep it off. You can turn it back on in Settings > System.';
+  String get setupFlowAdSandboxBody => 'Google can learn what you like from the apps you use on this TV and use it for ads. Hearth turns that off for everyone on this TV and keeps it off. You can change this in Settings > System.';
 
   @override
-  String get setupFlowAdSandboxDone => 'Google\'s ad sandbox is off, and Hearth keeps it off.';
+  String get setupFlowAdSandboxDone => 'Ad tracking is off, and Hearth keeps it off.';
 
   @override
   String get setupFlowKidsTitle => 'Keep Hearth on your kids profiles';
