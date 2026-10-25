@@ -251,7 +251,7 @@ profile on the TV, kids profiles included, through its own debugging connection.
 right after the kids profiles, when debugging is on. Google can turn them back on from its servers or with a module
 update, so Hearth checks again when the TV wakes (the kids profiles every few hours). That check needs the TV to
 already trust Hearth's debugging key, so it never shows "Allow debugging?". Play Store, voice and casting keep working.
-Turning the switch off turns back on exactly what Hearth turned off, and asks for the Parent PIN if there is one.
+Turning the switch off turns these parts back on, and asks for the Parent PIN if there is one.
 
 ## Languages
 

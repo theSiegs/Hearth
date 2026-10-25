@@ -34,9 +34,9 @@ public class AdSandboxTest {
     @Test
     public void readsWhichOfTheListAreOn() {
         assertEquals(Arrays.asList("com.android.adservices.api", "com.android.federatedcompute.services"),
-                AdSandbox.enabledIn("package:com.android.adservices.api\r\npackage:com.netflix.ninja\n"
+                AdSandbox.listedIn("package:com.android.adservices.api\r\npackage:com.netflix.ninja\n"
                         + "package:com.android.federatedcompute.services\n"));
-        assertTrue(AdSandbox.enabledIn("").isEmpty());
+        assertTrue(AdSandbox.listedIn("").isEmpty());
     }
 
     @Test

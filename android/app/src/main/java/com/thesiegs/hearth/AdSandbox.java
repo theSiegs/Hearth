@@ -25,8 +25,8 @@ import java.util.concurrent.Executors;
  *
  * <p>The packages are a fixed list (the names the modules have on Google TV and on other Android builds); nothing
  * else is ever turned off. It runs over Hearth's own adb ({@link SelfAdb}). The automatic look uses adb only when the
- * TV already trusts Hearth's key, so it never raises "Allow debugging?". Turning the switch off turns back on exactly
- * what Hearth turned off.
+ * TV already trusts Hearth's key, so it never raises "Allow debugging?". Turning the switch off turns the list back on
+ * in each user: what Hearth turned off, and any of it found off (turned off by hand, say).
  */
 final class AdSandbox {
     private static final String TAG = "HearthSandbox";
@@ -139,8 +139,8 @@ final class AdSandbox {
         return out;
     }
 
-    /** Of {@link #PACKAGES}, those {@code pm list packages -e} printed (one "package:name" a line). */
-    static List<String> enabledIn(String listing) {
+    /** Of {@link #PACKAGES}, those {@code pm list packages} printed (one "package:name" a line). */
+    static List<String> listedIn(String listing) {
         Set<String> listed = new HashSet<>();
         if (listing != null) {
             for (String line : listing.split("\r?\n")) {
@@ -159,7 +159,7 @@ final class AdSandbox {
     private static Set<String> turnOff(SelfAdb shell, List<Integer> users) throws Exception {
         Set<String> off = new HashSet<>();
         for (int user : users) {
-            List<String> on = enabledIn(shell.run("pm list packages -e --user " + user));
+            List<String> on = listedIn(shell.run("pm list packages -e --user " + user));
             for (String command : offCommands(on, user)) {
                 String output = shell.run(command);
                 Log.i(TAG, "Ran " + command + (output == null || output.isEmpty() ? "" : ": " + output.trim()));
@@ -190,9 +190,14 @@ final class AdSandbox {
             prefs(context).edit().putBoolean(KEEP_OFF, true).apply();
             return log;
         }
-        Set<String> back = prefs(context).getStringSet(TURNED_OFF, Collections.emptySet());
-        if (!back.isEmpty()) {
+        // What Hearth turned off, in whichever user, and any of the list found off in the users Hearth looks after
+        Set<String> back = new HashSet<>(prefs(context).getStringSet(TURNED_OFF, Collections.emptySet()));
+        boolean any = !back.isEmpty() || !installed(context).isEmpty();
+        if (any) {
             try (SelfAdb shell = SelfAdb.open(context)) {
+                for (int user : users(context)) {
+                    for (String pkg : listedIn(shell.run("pm list packages -d --user " + user))) back.add(user + " " + pkg);
+                }
                 for (String entry : back) {
                     int space = entry.indexOf(' ');
                     int user = space < 0 ? userId() : Integer.parseInt(entry.substring(0, space));
