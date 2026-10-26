@@ -3392,4 +3392,63 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get haShareNowPlayingDetail => 'The video\'s title and channel, to Home Assistant';
+
+  @override
+  String get haPairTitle => 'Pair with Home Assistant';
+
+  @override
+  String get haPairPaired => 'Paired';
+
+  @override
+  String get haPairNotPaired => 'Not paired';
+
+  @override
+  String get haPairIntro => 'With the Hearth integration in Home Assistant, this TV reports what it\'s doing and gets each profile\'s time limits, with no token or webhook. Install the integration and add it in Home Assistant first (Settings > Devices & services > Add integration > Hearth).';
+
+  @override
+  String get haPairStart => 'Pair';
+
+  @override
+  String get haPairCode => 'In Home Assistant, open Settings > Devices & services. Under Discovered, open this TV, check it shows the same code, and confirm.';
+
+  @override
+  String get haPairDone => 'Paired. This TV reports to Home Assistant\'s Hearth integration now, and gets its time limits from it.';
+
+  @override
+  String haPairIsPaired(String url) {
+    return 'This TV is paired with Home Assistant at $url.';
+  }
+
+  @override
+  String get haPairUnpair => 'Unpair';
+
+  @override
+  String get haPairUnpaired => 'Unpaired. To remove the TV from Home Assistant too, delete its device there.';
+
+  @override
+  String get haPairNoAddress => 'Enter Home Assistant\'s address first.';
+
+  @override
+  String get haPairNotSetUp => 'Home Assistant has the Hearth integration but no household yet. Add it there first (Settings > Devices & services > Add integration > Hearth).';
+
+  @override
+  String get haPairNoIntegration => 'Home Assistant answered, but the Hearth integration isn\'t installed there.';
+
+  @override
+  String get haPairUnreachable => 'Couldn\'t reach Home Assistant at that address.';
+
+  @override
+  String get haPairTryLater => 'Home Assistant has other requests waiting. Try again in a minute.';
+
+  @override
+  String get haPairNotLocal => 'Home Assistant only pairs TVs on the home network.';
+
+  @override
+  String get haPairFailed => 'Pairing didn\'t work. Try again.';
+
+  @override
+  String get haPairDenied => 'Home Assistant turned the request down.';
+
+  @override
+  String get haPairEnded => 'The request ended before it was confirmed. Try again.';
 }

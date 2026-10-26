@@ -560,6 +560,34 @@ public class MainActivity extends FlutterActivity {
                 result.success(null);
             }
             case "getHaStatusConfig" -> result.success(getHaStatusConfig());
+            // The Hearth integration for Home Assistant: pairing this TV (see HaIntegration)
+            case "getHaIntegration" -> answerFrom(sIoExecutor, result, () -> {
+                Map<String, Object> state = new HashMap<>();
+                state.put("paired", HaIntegration.isPaired(this));
+                state.put("url", HaConfig.baseUrl(this));
+                return state;
+            });
+            case "startHaPairing" -> {
+                String url = HaConfig.normalizeUrl(call.argument("url"));
+                String nonce = HaIntegration.randomToken(32);
+                answerFrom(sIoExecutor, result, () -> {
+                    Map<String, Object> answer = new HashMap<>();
+                    org.json.JSONObject started = HaIntegration.startPairing(this, url, nonce);
+                    for (java.util.Iterator<String> keys = started.keys(); keys.hasNext(); ) {
+                        String key = keys.next();
+                        answer.put(key, started.opt(key));
+                    }
+                    answer.put("nonce", nonce);
+                    return answer;
+                });
+            }
+            case "pollHaPairing" -> answerFrom(sIoExecutor, result,
+                    () -> HaIntegration.pollPairing(this, HaConfig.normalizeUrl(call.argument("url")),
+                            call.argument("pairingId"), call.argument("nonce")));
+            case "unpairHaIntegration" -> answerFrom(sIoExecutor, result, () -> {
+                HaIntegration.unpair(this);
+                return null;
+            });
             case "setHaStatusConfig" -> {
                 LauncherAccessibilityService.setHaStatusConfig(this, call.argument("url"), call.argument("webhookId"));
                 result.success(null);

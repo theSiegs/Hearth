@@ -79,6 +79,8 @@ test/mocks.mocks.dart
 *.py
 !.github/scripts/**/*.py
 !tool/*.py
+!custom_components/**/*.py
+!ha_tests/*.py
 sqlite_lib/
 com.thesiegs.hearth.yml
 *.db

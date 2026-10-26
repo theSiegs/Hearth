@@ -5,8 +5,11 @@ import android.content.SharedPreferences;
 import android.os.SystemClock;
 import android.util.Log;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.Iterator;
 
 /**
  * Each profile's allowance as Home Assistant works it out (a YouTube time pool shared with the family's other
@@ -15,6 +18,10 @@ import org.json.JSONObject;
  * {"youtube_minutes_left": int or null, "schedule_locked": bool, "message": optional text}. Read with the Home Assistant panel's address and token,
  * every minute or so and at once when the profile changes; the last good read is kept for the day (a new day forgets
  * it), and when it was read goes with it, so HearthTube can tell how fresh it is and decide what to do without one.
+ *
+ * A TV paired with the Hearth integration (see {@link HaIntegration}) doesn't read the entity: each status post's
+ * answer carries every profile's groups and minutes left, and the YouTube minutes are the fewest left in any group
+ * holding HearthTube ({@link #fromDocument}).
  */
 final class HaAllowance {
     private static final String TAG = "HearthAllowance";
@@ -63,7 +70,7 @@ final class HaAllowance {
         synchronized (HaAllowance.class) {
             sNextReadAt = SystemClock.elapsedRealtime() + RETRY_AFTER_FAILURE_MS;
         }
-        if (!HaConfig.isConfigured(context)) return false;
+        if (!HaConfig.isConfigured(context) || HaIntegration.isPaired(context)) return false;
         JSONObject state = HaApi.state(context, ENTITY);
         JSONObject profiles = profilesOf(state);
         if (profiles == null) {
@@ -82,6 +89,60 @@ final class HaAllowance {
                 .apply();
         // Even the same values: the read time changed, and HearthTube judges freshness by it
         return true;
+    }
+
+    /** Keeps the profiles from the integration's answer (its state document) as today's allowance. */
+    static void fromDocument(Context context, JSONObject state) {
+        JSONObject profiles = profilesFromDocument(state);
+        if (profiles == null) return;
+        long now = System.currentTimeMillis();
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(DAY_KEY, UsageToday.day(now))
+                .putString(PROFILES_KEY, profiles.toString())
+                .putLong(CHECKED_KEY, now)
+                .apply();
+    }
+
+    /**
+     * The allowance map from the integration's state document, {"profiles": {"user:10": {"groups": [{"id",
+     * "minutes_left", "apps": [...]}]}}}: per profile, the fewest minutes left in a group holding HearthTube (none:
+     * no limit). Null when it isn't such a document.
+     */
+    static JSONObject profilesFromDocument(JSONObject state) {
+        JSONObject documents = state != null ? state.optJSONObject("profiles") : null;
+        if (documents == null) return null;
+        JSONObject profiles = new JSONObject();
+        try {
+            for (Iterator<String> keys = documents.keys(); keys.hasNext(); ) {
+                String profileId = keys.next();
+                JSONObject person = documents.optJSONObject(profileId);
+                JSONArray groups = person != null ? person.optJSONArray("groups") : null;
+                Integer least = null;
+                for (int i = 0; groups != null && i < groups.length(); i++) {
+                    JSONObject group = groups.optJSONObject(i);
+                    if (group == null || group.isNull("minutes_left") || !holdsHearthTube(group.optJSONArray("apps"))) {
+                        continue;
+                    }
+                    int left = Math.max(0, group.optInt("minutes_left", 0));
+                    least = least == null ? left : Math.min(least, left);
+                }
+                JSONObject entry = new JSONObject();
+                entry.put("youtube_minutes_left", least == null ? JSONObject.NULL : least);
+                entry.put("schedule_locked", false);
+                profiles.put(profileId, entry);
+            }
+        } catch (JSONException e) {
+            return null;
+        }
+        return profiles;
+    }
+
+    private static boolean holdsHearthTube(JSONArray apps) {
+        for (int i = 0; apps != null && i < apps.length(); i++) {
+            String app = apps.optString(i);
+            if (CompanionApps.HEARTHTUBE.equals(app) || "com.thesiegs.hearthtube.mobile".equals(app)) return true;
+        }
+        return false;
     }
 
     /**

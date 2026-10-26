@@ -1,0 +1,230 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Set up Hearth",
+        "description": "Your household's Hearth TVs, phones and tablets pair with Home Assistant from their own settings (on a TV: Settings > Home Assistant > Pair with Home Assistant). Each one that asks shows up here to confirm.",
+        "data": {
+          "name": "Household name"
+        }
+      },
+      "confirm": {
+        "title": "Pair {name}?",
+        "description": "Check that {name} shows this code:\n\n**{code}**\n\nPair it only if the codes match. A device you don't recognize, or a code that doesn't match, may be someone else's: close this instead.",
+        "data": {
+          "person": "Whose device is it?"
+        },
+        "data_description": {
+          "person": "For a phone or tablet: the person it belongs to. Its screen time counts for them."
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Hearth is already set up. TVs and phones pair from their own settings.",
+      "expired": "This request has ended. Ask again from the TV or phone.",
+      "paired": "{name} is paired."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "tv_state": {
+        "name": "State",
+        "state": {
+          "off": "Off",
+          "idle": "Idle",
+          "paused": "Paused",
+          "playing": "Playing"
+        }
+      },
+      "app": {
+        "name": "App"
+      },
+      "media_title": {
+        "name": "Media title"
+      },
+      "media_artist": {
+        "name": "Media artist"
+      },
+      "media_app": {
+        "name": "Media app"
+      },
+      "profile": {
+        "name": "Profile"
+      },
+      "seconds_today": {
+        "name": "Screen time today"
+      },
+      "person_screen_time_today": {
+        "name": "Screen time today"
+      },
+      "person_group_today": {
+        "name": "{group} today"
+      },
+      "person_minutes_left": {
+        "name": "{group} minutes left"
+      },
+      "person_playing": {
+        "name": "Playing"
+      },
+      "person_together_today": {
+        "name": "Playing together today"
+      }
+    },
+    "binary_sensor": {
+      "connected": {
+        "name": "Connected"
+      },
+      "kids_profile": {
+        "name": "Kids profile"
+      },
+      "screen_time_up": {
+        "name": "Screen time up"
+      },
+      "playing_together": {
+        "name": "Playing together"
+      }
+    },
+    "number": {
+      "budget_weekday": {
+        "name": "{group} budget on weekdays"
+      },
+      "budget_weekend": {
+        "name": "{group} budget at weekends"
+      },
+      "bonus_today": {
+        "name": "{group} bonus today"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Hearth",
+        "menu_options": {
+          "people": "Who's who on the TVs",
+          "add_group": "Add a group",
+          "group_apps": "Add apps to Video or Games",
+          "remove_group": "Remove a group",
+          "add_source": "Add a screen time source",
+          "remove_source": "Remove a screen time source",
+          "add_title": "Add a title",
+          "remove_title": "Remove a title"
+        }
+      },
+      "people": {
+        "title": "Who's who on the TVs",
+        "description": "Each Google TV profile the household's TVs have reported, and the person it is. Leave a guest or shared profile empty: its time counts for nobody."
+      },
+      "add_group": {
+        "title": "Add a group",
+        "description": "A group's apps count together against one budget, on every device. For example YouTube: YouTube and HearthTube.",
+        "data": {
+          "name": "Name",
+          "apps": "Apps"
+        }
+      },
+      "group_apps": {
+        "title": "Add apps to Video or Games",
+        "description": "Apps Android marks as video or games are in these already. Add the ones it misses.",
+        "data": {
+          "video": "Video",
+          "games": "Games"
+        }
+      },
+      "remove_group": {
+        "title": "Remove a group",
+        "description": "Its budgets and bonuses go with it.",
+        "data": {
+          "groups": "Groups"
+        }
+      },
+      "add_source": {
+        "title": "Add a screen time source",
+        "description": "Another integration's sensor: time today (Family Link's Daily Screen Time, Family Safety's Screen Time, Nintendo's Used screen time), or, with Live on, what's being played now (Xbox's Now playing, a Switch presence Game sensor), which Hearth times itself. If it's the same device as a Hearth device or another source, say so: its minutes are then counted once.",
+        "data": {
+          "entity_id": "Sensor",
+          "person": "Whose",
+          "name": "Name",
+          "live": "Live: it says what's being played now",
+          "same_as": "Same device as",
+          "group": "Its time is in"
+        },
+        "data_description": {
+          "group": "For time it can't put on an app: Games for a Switch or Xbox."
+        }
+      },
+      "remove_source": {
+        "title": "Remove a screen time source",
+        "data": {
+          "items": "Sources"
+        }
+      },
+      "add_title": {
+        "title": "Add a title",
+        "description": "One game or app by every name it has: the Android package, its name on Xbox and Switch, the PC app. Its time is counted together, and people on it at the same time are playing together.",
+        "data": {
+          "name": "Name",
+          "matches": "Also known as"
+        }
+      },
+      "remove_title": {
+        "title": "Remove a title",
+        "data": {
+          "items": "Titles"
+        }
+      }
+    },
+    "error": {
+      "name_taken": "That name is taken.",
+      "already_added": "That sensor is a source already."
+    },
+    "abort": {
+      "no_profiles": "No TV has reported its profiles yet. Pair a TV and let it post its status first.",
+      "no_groups": "There are no groups of your own to remove.",
+      "nothing_to_remove": "There's nothing to remove."
+    }
+  },
+  "services": {
+    "add_bonus": {
+      "name": "Add a bonus",
+      "description": "Adds minutes to a person's budget for today (a negative number takes them away).",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Whose budget."
+        },
+        "minutes": {
+          "name": "Minutes",
+          "description": "How many minutes."
+        },
+        "group": {
+          "name": "Group",
+          "description": "The group's id: all, video, games, or one of your own."
+        }
+      }
+    },
+    "set_budget": {
+      "name": "Set a budget",
+      "description": "Sets a person's daily budget for a group. Leave minutes empty for no limit.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Whose budget."
+        },
+        "group": {
+          "name": "Group",
+          "description": "The group's id: all, video, games, or one of your own."
+        },
+        "minutes": {
+          "name": "Minutes",
+          "description": "Minutes a day."
+        },
+        "days": {
+          "name": "Days",
+          "description": "Weekdays, weekends, or both."
+        }
+      }
+    }
+  }
+}

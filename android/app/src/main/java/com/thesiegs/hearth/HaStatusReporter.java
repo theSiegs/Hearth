@@ -29,9 +29,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Pushes what the TV is doing to a Home Assistant webhook: foreground app, now playing (from any app's media
- * session, which needs notification access), Google TV profile, kids profile, screen time lock, screen on/off.
- * Sent on change (debounced) and as a heartbeat, so Home Assistant needs no credentials for the TV.
+ * Pushes what the TV is doing to Home Assistant: foreground app, now playing (from any app's media session, which
+ * needs notification access), Google TV profile, kids profile, screen time lock, screen on/off, usage today and each
+ * app's Android category. Sent on change (debounced) and as a heartbeat. Paired with the Hearth integration
+ * ({@link HaIntegration}), it goes there with the TV's secret, and the answer is each profile's limits (kept as the
+ * allowance HearthTube enforces); otherwise to a webhook, which needs no credentials for the TV.
  */
 final class HaStatusReporter {
     // HaConfig's keys, under the names the activity and the accessibility service use
@@ -111,7 +113,9 @@ final class HaStatusReporter {
         @Override
         public void run() {
             send(true);
-            mHandler.postDelayed(this, HEARTBEAT_MS);
+            // Paired, each answer refreshes the profiles' limits: often enough that HearthTube's stay fresh (a post
+            // to the integration runs no automation)
+            mHandler.postDelayed(this, HaIntegration.isPaired(mContext) ? USAGE_TICK_MS : HEARTBEAT_MS);
         }
     };
     /** Sends if today's usage changed (an unchanged status isn't sent again). */
@@ -128,7 +132,7 @@ final class HaStatusReporter {
     }
 
     static boolean isConfigured(Context context) {
-        return webhookUrl(context) != null;
+        return HaIntegration.isPaired(context) || webhookUrl(context) != null;
     }
 
     static String webhookUrl(Context context) {
@@ -250,8 +254,9 @@ final class HaStatusReporter {
 
     /** Sends the status unless it's the same as the last one sent; a forced send goes out anyway. */
     private void send(boolean force) {
-        String url = webhookUrl(mContext);
-        if (url == null) return;
+        boolean paired = HaIntegration.isPaired(mContext);
+        String url = paired ? null : webhookUrl(mContext);
+        if (!paired && url == null) return;
         Snapshot snapshot = new Snapshot(this, primaryController());
         // Labels, the profile and the allowed apps take PackageManager and UserManager calls: off the main thread
         sender().execute(() -> {
@@ -264,7 +269,11 @@ final class HaStatusReporter {
             }
             if (!force && body.equals(mLastSent)) return;
             mLastSent = body;
-            post(url, body);
+            if (paired) {
+                postToIntegration(body);
+            } else {
+                post(url, body);
+            }
         });
     }
 
@@ -318,6 +327,7 @@ final class HaStatusReporter {
         status.put("playing_seconds_today", mine != null ? mine.optJSONObject(UsageToday.PLAYING) : new JSONObject());
         status.put("usage_today", usage);
         status.put("allowed_apps", kids ? allowedApps(mContext, pm) : JSONObject.NULL);
+        status.put("app_categories", categories(pm, usage, s.foregroundPackage));
 
         String state = "idle";
         if (s.playback != null) {
@@ -399,6 +409,44 @@ final class HaStatusReporter {
             }
         }
         return new JSONArray(names);
+    }
+
+    /**
+     * Android's category of each app in today's usage (and the one in front), for the integration's Video and Games.
+     * A kids profile's apps that aren't installed for the TV's owner have none here.
+     */
+    private static JSONObject categories(PackageManager pm, JSONObject usage, String foreground) throws JSONException {
+        TreeSet<String> packages = new TreeSet<>();
+        if (foreground != null) packages.add(foreground);
+        for (java.util.Iterator<String> keys = usage.keys(); keys.hasNext(); ) {
+            JSONObject entry = usage.optJSONObject(keys.next());
+            if (entry == null) continue;
+            for (String part : new String[]{UsageToday.FRONT, UsageToday.PLAYING}) {
+                JSONObject apps = entry.optJSONObject(part);
+                if (apps == null) continue;
+                for (java.util.Iterator<String> names = apps.keys(); names.hasNext(); ) packages.add(names.next());
+            }
+        }
+        JSONObject categories = new JSONObject();
+        for (String pkg : packages) {
+            String category = HaIntegration.category(pm, pkg);
+            if (category != null) categories.put(pkg, category);
+        }
+        return categories;
+    }
+
+    /** Posts to the integration; its answer's limits become the profiles' allowance. */
+    private void postToIntegration(String body) {
+        HaIntegration.Answer answer = HaIntegration.postStatus(mContext, body);
+        Log.d(TAG, "Status sent, the Hearth integration answered " + answer.code);
+        if (answer.code == 200 && answer.body != null) {
+            HaAllowance.fromDocument(mContext, answer.body.optJSONObject("state"));
+            mHandler.post(() -> ProfileProvider.notifyChanged(mContext));
+            return;
+        }
+        // Retry with the next change or heartbeat
+        mLastSent = null;
+        if (answer.code == 401) mHandler.post(() -> HaBridgeService.sync(mContext));
     }
 
     private void post(String url, String body) {

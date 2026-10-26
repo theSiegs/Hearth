@@ -27,6 +27,7 @@ import '../rounded_switch_list_tile.dart';
 import 'focusable_settings_tile.dart';
 import 'remote_text_field.dart';
 import 'ha_dashboard_dialog.dart';
+import 'ha_pair_page.dart';
 import 'ha_phone_setup_dialog.dart';
 import 'settings_page.dart';
 import 'setup_checklist_page.dart';
@@ -46,6 +47,7 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
   late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   bool? _notifications;
   bool? _reporting;
+  bool? _paired;
   // HearthTube's now playing for Home Assistant: null when never asked (HearthTube's own default then, on)
   bool? _shareNowPlaying;
 
@@ -59,6 +61,7 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
     try {
       final enabled = await _channel.getHaNotificationsEnabled();
       final config = await _channel.getHaStatusConfig();
+      final integration = await _channel.getHaIntegration();
       bool? share;
       try {
         share = await _channel.getHaShareNowPlaying();
@@ -67,7 +70,9 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
         setState(() {
           _shareNowPlaying = share;
           _notifications = enabled;
-          _reporting = (config["url"] as String? ?? "").isNotEmpty && (config["webhookId"] as String? ?? "").isNotEmpty;
+          _paired = integration["paired"] == true;
+          _reporting = _paired! ||
+              (config["url"] as String? ?? "").isNotEmpty && (config["webhookId"] as String? ?? "").isNotEmpty;
         });
       }
     } catch (err) { noteFailure('home_assistant_page', err); }
@@ -90,6 +95,12 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
       children: [
         FocusableSettingsTile(
           autofocus: true,
+          leading: const Icon(Icons.link),
+          title: Text(l.haPairTitle, style: textTheme.bodyMedium),
+          trailing: Text(_paired == null ? "" : (_paired! ? l.haPairPaired : l.haPairNotPaired), style: textTheme.bodySmall),
+          onPressed: () => _open(HaPairPage.routeName),
+        ),
+        FocusableSettingsTile(
           leading: const Icon(Icons.notifications_active_outlined),
           title: Text(l.notifications, style: textTheme.bodyMedium),
           trailing: Text(_onOff(l, _notifications), style: textTheme.bodySmall),

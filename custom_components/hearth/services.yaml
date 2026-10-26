@@ -1,0 +1,53 @@
+add_bonus:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    minutes:
+      required: true
+      example: 15
+      selector:
+        number:
+          min: -1440
+          max: 1440
+          step: 5
+          unit_of_measurement: min
+          mode: box
+    group:
+      default: all
+      example: youtube
+      selector:
+        text:
+
+set_budget:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    group:
+      required: true
+      example: games
+      selector:
+        text:
+    minutes:
+      required: true
+      example: 90
+      selector:
+        number:
+          min: 0
+          max: 1440
+          step: 5
+          unit_of_measurement: min
+          mode: box
+    days:
+      default: both
+      selector:
+        select:
+          options:
+            - both
+            - weekday
+            - weekend

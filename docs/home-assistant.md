@@ -9,7 +9,8 @@ Hearth talks to Home Assistant these ways, each optional:
 |---|---|---|
 | [Notifications](#notifications) | Home Assistant → TV | Home Button Fix on |
 | [Dashboard panel](#dashboard-panel) | TV shows Home Assistant | Address and an access token |
-| [TV status](#tv-status) | TV → Home Assistant | Address and a webhook ID |
+| [Hearth integration](#hearth-integration) | TV ↔ Home Assistant | The integration in Home Assistant, and pairing |
+| [TV status](#tv-status) | TV → Home Assistant | Address and a webhook ID (or the Hearth integration) |
 | [Approve switches from a phone](#approve-switches-from-a-phone) | TV → a phone → TV | Address, token, and the companion app on the phone |
 
 Everything stays on your home network: Hearth talks only to the address you give it, and accepts notifications
@@ -124,6 +125,25 @@ first answer decides. The notification names the profile and the TV. Allow close
 (an adult's profile also counts as "a parent is at the remote" for five minutes, like a typed PIN); Deny says so on the
 prompt and leaves the PIN pad. The PIN pad always works, and closing the prompt withdraws the request from the phones.
 Changing the Parent PIN itself, and the pads for new PINs, never use the phone. Needs no Google TV PIN saved.
+
+## Hearth integration
+
+Hearth has an integration of its own for Home Assistant (`custom_components/hearth` in this repository; see
+[home-assistant-integration.md](home-assistant-integration.md)). With it, the TV needs no token and no webhook:
+
+1. Install it (HACS custom repository, or copy the folder) and add it: Settings > Devices & services > Add
+   integration > Hearth.
+2. On the TV: **Settings > Home Assistant > Pair with Home Assistant**, enter Home Assistant's address, and choose
+   **Pair**. The TV shows a 6-digit code.
+3. In Home Assistant, Settings > Devices & services: under Discovered, open the TV, check it shows the same code, and
+   confirm. The TV says it's paired.
+
+Paired, the TV posts the [TV status](#tv-status) to the integration (with its own secret, made at pairing, which works
+only on Hearth's endpoints) instead of to a webhook, every 2 minutes at least. It also sends each app's Android category
+(`app_categories`), for the integration's Video and Games. Each answer carries every profile's minutes left per group,
+and the fewest left in a group holding HearthTube becomes the profile's YouTube allowance (instead of reading
+`sensor.hearth_allowance`). **Unpair** forgets the pairing on the TV; deleting the TV's device in Home Assistant
+removes it there (the TV then finds itself unpaired at its next post).
 
 ## TV status
 
