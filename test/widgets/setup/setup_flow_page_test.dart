@@ -465,19 +465,48 @@ void main() {
       expect(find.text("Sync with your other TVs"), findsOneWidget);
     });
 
-    testWidgets("another TV's household on the network: the step offers to join it first", (tester) async {
+    testWidgets("another TV's household on the network: Join your other TVs comes right after the essentials",
+        (tester) async {
       channel.pairing = true;
       channel.nearbyHouseholds = const [
         ["Kitchen", "Attic"]
       ];
       await openAtFamily(tester);
+      expect(channel.lookingForHouseholds, isTrue);
+      expect(find.text("Join your other TVs"), findsOneWidget);
+      expect(find.textContaining("Your other TVs are in a household: Attic, Kitchen."), findsOneWidget);
+      // No second household offered: it would split the TVs
+      expect(find.text("Start a household"), findsNothing);
+      await press(tester, "Not now");
+      expect(find.text("Your family"), findsWidgets);
       await press(tester, "Turn on");
       await press(tester, "Skip"); // the parent PIN
-      expect(channel.lookingForHouseholds, isTrue);
-      expect(find.textContaining("Your other TVs have a household: Attic, Kitchen."), findsOneWidget);
+      // Declined: the family card's household step doesn't ask again
+      expect(find.text("Join your other TVs"), findsNothing);
+      expect(find.text("Sync with your other TVs"), findsNothing);
+      expect(channel.householdsStarted, 0);
+    });
+
+    testWidgets("no household heard: no join screen, and the family card offers to start one", (tester) async {
+      channel.pairing = true;
+      await openAtFamily(tester);
+      expect(find.text("Join your other TVs"), findsNothing);
+      expect(find.text("Your family"), findsWidgets);
+    });
+
+    testWidgets("a household heard only later: the family card's step offers to join it", (tester) async {
+      channel.pairing = true;
+      await openAtFamily(tester);
+      channel.nearbyHouseholds = const [
+        ["Kitchen"]
+      ];
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      await press(tester, "Turn on");
+      await press(tester, "Skip"); // the parent PIN
+      expect(find.text("Join your other TVs"), findsOneWidget);
+      expect(find.text("Start a household"), findsNothing);
       expect(find.text("Join the household"), findsOneWidget);
-      await press(tester, "Start a separate one");
-      expect(channel.householdsStarted, 1);
     });
 
     testWidgets("joining says which TV to allow it on, and the step is done once someone allowed it", (tester) async {
@@ -486,8 +515,6 @@ void main() {
         ["Kitchen"]
       ];
       await openAtFamily(tester);
-      await press(tester, "Turn on");
-      await press(tester, "Skip"); // the parent PIN
       await press(tester, "Join the household");
       await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
@@ -511,8 +538,6 @@ void main() {
         ["Kitchen"]
       ];
       await openAtFamily(tester);
-      await press(tester, "Turn on");
-      await press(tester, "Skip"); // the parent PIN
       await press(tester, "Join the household");
       await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();

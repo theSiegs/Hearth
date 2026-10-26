@@ -56,6 +56,7 @@ enum SetupScreen {
   homeButton,
   homeButtonBlocked,
   homeApp,
+  householdJoin,
   family,
   familyPin,
   familyPairing,
@@ -90,8 +91,9 @@ enum SetupFlowResult { closed, openSettings }
 
 /// Hearth's first-run setup: one full-screen flow over the home that walks through
 /// what Hearth needs from Android, one decision per screen, and comes back to where it was after each trip to
-/// Android's settings. The order: Welcome, the essentials (the Home button, then the home app), the optional cards
-/// (each a Not now / Turn on choice, its steps only after Turn on), then Finish.
+/// Android's settings. The order: Welcome, the essentials (the Home button, then the home app), joining the household
+/// the other TVs are in (only when one is heard), the optional cards (each a Not now / Turn on choice, its steps only
+/// after Turn on), then Finish.
 class SetupFlowPage extends StatefulWidget {
   static const String routeName = "setup_flow";
 
@@ -139,6 +141,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     SetupScreen.welcome,
     SetupScreen.homeButton,
     SetupScreen.homeApp,
+    SetupScreen.householdJoin,
     SetupScreen.family,
     SetupScreen.familyPin,
     SetupScreen.familyPairing,
@@ -246,13 +249,14 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   /// How the Home Assistant test pop-up went: null when it showed (or none was sent).
   String? _haTestResult;
 
-  /// The commands the ad sandbox step runs, once read.
-  List<String>? _adSandboxCommands;
-
-  /// Other TVs' households heard on the network while the household step shows (each as its TVs' names).
+  /// Other TVs' households heard on the network while the flow shows (each as its TVs' names).
   List<List<String?>> _nearbyHouseholds = const [];
   bool _lookingForHouseholds = false;
+  Timer? _householdPoll;
   bool _householdJoined = false;
+
+  /// Not now on joining: the family card's household step doesn't ask again, nor offer to start a separate one.
+  bool _householdDeclined = false;
 
   /// A backup was restored from Welcome: its look came with it, so the look screen isn't shown.
   bool _restored = false;
@@ -280,6 +284,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _flow.showing = true;
+    // From the start, so a household is heard by the time the essentials are done
+    if (!_single) _lookForHouseholds();
     WidgetsBinding.instance.addPostFrameCallback((_) => _start());
   }
 
@@ -288,6 +294,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     WidgetsBinding.instance.removeObserver(this);
     _poll?.cancel();
     _autoNext?.cancel();
+    _householdPoll?.cancel();
     _stopLookingForHouseholds();
     _primary.dispose();
     // Closed while a look was only being previewed: the home goes back to how it was
@@ -358,12 +365,6 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     if (screen == SetupScreen.tv) _readIdleMinutes();
     if (screen == SetupScreen.look) _startPreview();
     if (screen == SetupScreen.haAlerts) _readIp();
-    if (screen == SetupScreen.familyAdSandbox) _readAdSandboxCommands();
-    if (screen == SetupScreen.familyHousehold) {
-      _lookForHouseholds();
-    } else {
-      _stopLookingForHouseholds();
-    }
     if (!_single && screen != SetupScreen.finish) unawaited(_flow.saveResume(screen.name, widget.mode));
     if (screen == SetupScreen.finish) unawaited(_flow.finish());
     if (_blockedFrom.containsKey(screen)) _startPolling();
@@ -402,9 +403,12 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
           SetupSnapshot.kidsCovered(snap.kidsProfiles, kidsProtected: _flow.kidsProtected, kidsReady: snap.kidsReady),
       // Kept off already, or no sandbox; and without debugging Hearth can't run the commands
       SetupScreen.familyAdSandbox => !snap.adSandboxToTurnOff || !snap.adbEnabled,
-      // Already in a household: nothing to start
-      SetupScreen.familyHousehold => snap.household,
-      SetupScreen.look => _restored,
+      // Offered only when the other TVs' household is heard, and this TV isn't in one
+      SetupScreen.householdJoin => snap.household || _householdJoined || _nearbyHouseholds.isEmpty,
+      // Already in a household, or joining was offered and declined: nothing to start
+      SetupScreen.familyHousehold => snap.household || _householdJoined || _householdDeclined,
+      // A restored backup, or the household, brings the look
+      SetupScreen.look => _restored || _householdJoined,
       SetupScreen.haAlerts => snap.haAlerts,
       SetupScreen.haDashboard => snap.haPanel && (context.read<SettingsService?>()?.haPanelEnabled ?? false),
       SetupScreen.haStatus => snap.haStatus,
@@ -737,6 +741,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
         SetupScreen.homeButton => _homeButton(l),
         SetupScreen.homeButtonBlocked => _blocked(l, SetupStepId.homeButton),
         SetupScreen.homeApp => _homeApp(l),
+        SetupScreen.householdJoin => _householdJoin(l),
         SetupScreen.family => _cardScreen(l, SetupCard.family),
         SetupScreen.familyPin => _parentPin(l),
         SetupScreen.familyPairing => _pairing(l),

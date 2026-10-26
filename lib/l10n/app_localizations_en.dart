@@ -2856,24 +2856,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowHouseholdTitle => 'Sync with your other TVs';
 
   @override
-  String get setupFlowHouseholdBody => 'TVs in a household keep profile settings and saved PINs in step, so anyone who switches TVs picks up where they left off. They talk over your home network, encrypted. Start the household here, then on each other TV open Settings > Family > Household sync and choose Join the household. If another TV already has a household, join it instead.';
+  String get setupFlowHouseholdBody => 'TVs in a household keep everyone\'s looks, home layouts, streaming profiles and saved PINs in step, so anyone who switches TVs picks up where they left off. They talk over your home network, encrypted. Start one here; each TV you set up later offers to join it.';
 
   @override
   String get setupFlowHouseholdStart => 'Start a household';
 
   @override
-  String get setupFlowHouseholdDone => 'This TV has a household. Add the others from Copy profiles between TVs.';
+  String get setupFlowHouseholdDone => 'This TV has a household. Each TV you set up later offers to join it, or on one you have already, open Settings > Family > Household sync and choose Join the household.';
 
   @override
   String setupFlowHouseholdFound(String names) {
-    return 'Your other TVs have a household: $names. Join it, and this TV keeps profile settings and saved PINs in step with them. You allow it on your phone, or on one of those TVs.';
+    return 'Your other TVs are in a household: $names. Join it, and everyone\'s looks, home layouts, streaming profiles and saved PINs come to this TV. Someone allows it in the notification Bell on one of those TVs.';
   }
 
   @override
-  String get setupFlowHouseholdStartAnyway => 'Start a separate one';
+  String get setupFlowHouseholdJoinTitle => 'Join your other TVs';
 
   @override
-  String get setupFlowHouseholdJoined => 'This TV is in the household now and keeps in step with its other TVs.';
+  String get setupFlowHouseholdJoined => 'This TV is in the household now. Everyone\'s looks and settings arrive from your other TVs in a moment.';
 
   @override
   String get setupFlowAdSandboxBody => 'Google can learn what you like from the apps you use on this TV and use it for ads. Hearth turns that off for everyone on this TV and keeps it off. You can change this in Settings > System.';

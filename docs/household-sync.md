@@ -240,12 +240,15 @@ stays short; no step lists and no internal terms ("Profile Pairing" appears only
 
 ## Setup flow
 
-The guided setup's **Your TVs** step comes after Home Assistant and before the wrap-up:
+The guided setup listens for households from its first screen. Its **Join your other TVs** screen comes right after
+the essentials (the Home button, the home app), before the cards, so the household's choices arrive before the steps
+that would ask for them:
 
-- **A household is on the network**: the step shows its TVs and **Join** (with Not now). Joining there runs Joining
-  above; once joined, the steps that ask for choices the household already has (wallpaper, Profile Pairing, PINs, Parent
-  PIN) show as filled in, with a chance to change any.
-- **None is heard**: nothing to ask. The TV is the household's first; the step is skipped.
+- **A household is on the network**: the screen names its TVs, with **Join the household** and Not now. Joining there
+  runs Joining above; once joined, the look screen isn't shown (the profile's look comes from the household). Not now
+  is final for this run: the family card doesn't ask again, nor offer to start a separate household.
+- **None is heard**: no screen. The family card's last step offers **Start a household**, for the TVs set up later;
+  if a household is heard by then (the other TV came on meanwhile), that step offers Join instead.
 
 ## Failure and safety
 

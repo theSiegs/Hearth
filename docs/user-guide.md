@@ -8,7 +8,9 @@
 1. Install the APK from the [latest release](https://github.com/theSiegs/Hearth/releases/latest) (see the
    [README](../README.md#install)).
 2. Open Hearth. Its first-run setup starts by itself: it makes the Home button open Hearth, makes Hearth the home
-   app, and ends with what's on. Skip anything; the home screen's **Finish setting up** chip and **Settings → System →
+   app, and ends with what's on. When your other Hearth TVs are in a household, it next offers to join it (someone
+   allows it in the notification Bell on one of those TVs), and everyone's looks, layouts, streaming profiles and saved
+   PINs come to this TV. Skip anything; the home screen's **Finish setting up** chip and **Settings → System →
    Set up Hearth** carry on later.
 3. **Settings → System → Set up Hearth** also lists each item below with its state. Each says why Hearth needs it
    and opens the Android screen where you turn it on.

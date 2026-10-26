@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+- **Setup**: when your other TVs are in a household, a **Join your other TVs** screen comes right after the Home button and home app steps, so their looks, layouts, streaming profiles and saved PINs arrive before the steps that would ask for them. The household step's text no longer points to the removed Copy screens.
+
 ## 2026.10.84 (pre-release)
 
 - **Ad tracking**: when it's kept off but still on (Hearth's debugging not approved yet), the page shows **Turn it off now**, which does it after the TV asks once to allow debugging.

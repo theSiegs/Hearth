@@ -5040,7 +5040,7 @@ abstract class AppLocalizations {
   /// Setup flow: household sync step's explanation
   ///
   /// In en, this message translates to:
-  /// **'TVs in a household keep profile settings and saved PINs in step, so anyone who switches TVs picks up where they left off. They talk over your home network, encrypted. Start the household here, then on each other TV open Settings > Family > Household sync and choose Join the household. If another TV already has a household, join it instead.'**
+  /// **'TVs in a household keep everyone\'s looks, home layouts, streaming profiles and saved PINs in step, so anyone who switches TVs picks up where they left off. They talk over your home network, encrypted. Start one here; each TV you set up later offers to join it.'**
   String get setupFlowHouseholdBody;
 
   /// Setup flow: household sync step's button
@@ -5052,25 +5052,25 @@ abstract class AppLocalizations {
   /// Setup flow: household sync step, once started
   ///
   /// In en, this message translates to:
-  /// **'This TV has a household. Add the others from Copy profiles between TVs.'**
+  /// **'This TV has a household. Each TV you set up later offers to join it, or on one you have already, open Settings > Family > Household sync and choose Join the household.'**
   String get setupFlowHouseholdDone;
 
-  /// Setup flow: household sync step when another TV's household was found on the network
+  /// Setup flow: the join screen (and the household step) when another TV's household was found on the network
   ///
   /// In en, this message translates to:
-  /// **'Your other TVs have a household: {names}. Join it, and this TV keeps profile settings and saved PINs in step with them. You allow it on your phone, or on one of those TVs.'**
+  /// **'Your other TVs are in a household: {names}. Join it, and everyone\'s looks, home layouts, streaming profiles and saved PINs come to this TV. Someone allows it in the notification Bell on one of those TVs.'**
   String setupFlowHouseholdFound(String names);
 
-  /// Setup flow: household step's button to start a new household although one was found
+  /// Setup flow: title of the screen after the essentials that offers to join the household heard on the network
   ///
   /// In en, this message translates to:
-  /// **'Start a separate one'**
-  String get setupFlowHouseholdStartAnyway;
+  /// **'Join your other TVs'**
+  String get setupFlowHouseholdJoinTitle;
 
   /// Setup flow: household sync step, once joined
   ///
   /// In en, this message translates to:
-  /// **'This TV is in the household now and keeps in step with its other TVs.'**
+  /// **'This TV is in the household now. Everyone\'s looks and settings arrive from your other TVs in a moment.'**
   String get setupFlowHouseholdJoined;
 
   /// Setup flow: ad sandbox step, above the commands it runs

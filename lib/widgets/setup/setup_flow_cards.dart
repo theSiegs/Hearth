@@ -227,21 +227,54 @@ extension _CardScreens on _SetupFlowPageState {
     );
   }
 
+  // --- Your other TVs ---
+
+  /// Right after the essentials, when the other TVs' household is heard: joining brings everyone's looks, layouts,
+  /// streaming profile choices and saved PINs, so it comes before the steps that would ask for them.
+  Widget _householdJoin(AppLocalizations l) {
+    if (_state == SetupStepState.done) return _doneBody(l, l.setupFlowHouseholdJoined);
+    final names = _nearbyHouseholds.isEmpty ? "" : householdTvNames(l, _nearbyHouseholds.first);
+    return SetupScreenBody(
+      icon: Icons.holiday_village_outlined,
+      title: l.setupFlowHouseholdJoinTitle,
+      body: l.setupFlowHouseholdFound(names),
+      buttons: [
+        SetupButton(
+          label: l.notNow,
+          onPressed: () {
+            _householdDeclined = true;
+            _next();
+          },
+        ),
+        SetupButton(
+          label: l.householdJoin,
+          focusNode: _primary,
+          autofocus: true,
+          onPressed: () => _joinHousehold(SetupScreen.householdJoin),
+        ),
+      ],
+    );
+  }
+
+  /// The family card's last step: start a household for the TVs to come. A household heard only since the join
+  /// screen was passed is offered here instead (a second one would split the TVs).
   Widget _household(AppLocalizations l) {
     if (_state == SetupStepState.done) {
       return _doneBody(l, _householdJoined ? l.setupFlowHouseholdJoined : l.setupFlowHouseholdDone);
     }
-    // Another TV has one already: joining it is the step, and a second household would split the TVs
     if (_nearbyHouseholds.isNotEmpty) {
-      final names = householdTvNames(l, _nearbyHouseholds.first);
       return SetupScreenBody(
         icon: Icons.holiday_village_outlined,
-        title: l.setupFlowHouseholdTitle,
-        body: l.setupFlowHouseholdFound(names),
+        title: l.setupFlowHouseholdJoinTitle,
+        body: l.setupFlowHouseholdFound(householdTvNames(l, _nearbyHouseholds.first)),
         buttons: [
           SetupButton(label: l.setupFlowSkip, onPressed: _next),
-          SetupButton(label: l.setupFlowHouseholdStartAnyway, onPressed: _startHousehold),
-          SetupButton(label: l.householdJoin, focusNode: _primary, autofocus: true, onPressed: _joinHousehold),
+          SetupButton(
+            label: l.householdJoin,
+            focusNode: _primary,
+            autofocus: true,
+            onPressed: () => _joinHousehold(SetupScreen.familyHousehold),
+          ),
         ],
       );
     }
@@ -256,43 +289,49 @@ extension _CardScreens on _SetupFlowPageState {
     );
   }
 
-  /// Listens for other TVs' households while the household step shows, so it can offer to join one.
+  /// Listens for other TVs' households while the flow shows, so it can offer to join one. Listening only: this TV
+  /// says nothing about itself until it's in a household.
   void _lookForHouseholds() {
-    if (!_lookingForHouseholds) {
-      _lookingForHouseholds = true;
-      unawaited(_channel.lookForHouseholds().catchError((Object err) => noteFailure('setup_flow', err)));
-    }
-    Future<void> read() async {
-      try {
-        final status = await _channel.getHouseholdStatus();
-        final nearby = householdsNearby(status);
-        if (!mounted || _screen != SetupScreen.familyHousehold) return;
-        if (nearby.length != _nearbyHouseholds.length ||
-            (nearby.isNotEmpty && nearby.first.length != _nearbyHouseholds.first.length)) {
-          _update(() => _nearbyHouseholds = nearby);
-          if (nearby.isNotEmpty) _focusPrimary();
-        }
-      } catch (err) {
-        noteFailure('setup_flow', err);
-      }
-    }
+    if (_lookingForHouseholds) return;
+    _lookingForHouseholds = true;
+    unawaited(_channel.lookForHouseholds().catchError((Object err) => noteFailure('setup_flow', err)));
+    unawaited(_readHouseholds());
+    _householdPoll = Timer.periodic(const Duration(seconds: 3), (_) => _readHouseholds());
+  }
 
-    unawaited(read());
-    _poll = Timer.periodic(const Duration(seconds: 3), (_) => read());
+  Future<void> _readHouseholds() async {
+    try {
+      final nearby = householdsNearby(await _channel.getHouseholdStatus());
+      if (!mounted || nearby.toString() == _nearbyHouseholds.toString()) return;
+      _update(() => _nearbyHouseholds = nearby);
+      // The household step showing Start, now that there's one to join: focus goes to Join
+      if (_screen == SetupScreen.familyHousehold && _state == SetupStepState.intro) _focusPrimary();
+    } catch (err) {
+      noteFailure('setup_flow', err);
+    }
   }
 
   void _stopLookingForHouseholds() {
     if (!_lookingForHouseholds) return;
     _lookingForHouseholds = false;
+    _householdPoll?.cancel();
     unawaited(_channel.stopLookingForHouseholds().catchError((Object err) => noteFailure('setup_flow', err)));
   }
 
-  /// The copy screen that takes a household's key from one of its TVs; done once this TV is in it.
-  Future<void> _joinHousehold() async {
+  /// Asks the household's TVs to let this one in; done once someone allowed it there. The look comes with the
+  /// household, so the look screen isn't shown.
+  Future<void> _joinHousehold(SetupScreen from) async {
     final joined = await joinNearbyHousehold(context, _channel);
-    if (!mounted || !joined) return;
+    if (!mounted) return;
+    if (!joined) {
+      _focusPrimary();
+      return;
+    }
     _householdJoined = true;
-    _showDone(SetupScreen.familyHousehold, null);
+    _stopLookingForHouseholds();
+    if (!_lookOnly) await _flow.decide(SetupCard.home.name, SetupChoice.on);
+    await _refresh();
+    if (mounted) _showDone(from, null);
   }
 
   Future<void> _startHousehold() async {
@@ -527,17 +566,7 @@ extension _CardScreens on _SetupFlowPageState {
     );
   }
 
-  Future<void> _readAdSandboxCommands() async {
-    try {
-      final commands = await _channel.getAdSandboxCommands(true);
-      if (mounted) _update(() => _adSandboxCommands = commands);
-    } catch (err) {
-      noteFailure('setup_flow_cards', err);
-    }
-  }
-
   Future<void> _keepAdSandboxOff() async {
-    if (_adSandboxCommands == null) return;
     final l = AppLocalizations.of(context)!;
     _update(() => _fixing = true);
     bool ran = true;
