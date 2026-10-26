@@ -1,9 +1,10 @@
-"""What a Hearth TV calls: pairing, and posting its status.
+"""What a Hearth device (Hearth on a TV, Hearth Mobile on a phone or tablet) calls: pairing, and posting its status.
 
-All of it answers local network addresses only. The TV proves who it is with its own secret (header
-X-Hearth-Secret), made at pairing; it works on these endpoints only, never as a Home Assistant login. A refused
-secret gets a plain 401 answer, not a failed login, so a TV removed from the household isn't banned from Home
-Assistant's other pages for posting with its old one.
+All of it answers local network addresses only (a phone away from home is a later step, see
+docs/home-assistant-integration.md). The device proves who it is with its own secret (header X-Hearth-Secret), made
+at pairing; it works on these endpoints only, never as a Home Assistant login. A refused secret gets a plain 401
+answer, not a failed login, so a device removed from the household isn't banned from Home Assistant's other pages
+for posting with its old one.
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY
 from homeassistant.core import HomeAssistant
 from homeassistant.util.network import is_local
 
-from .const import DOMAIN, MAX_STATUS_BYTES, PAIRING_EXPIRES
+from .const import DOMAIN, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
 from .hub import HearthHub
 from .status import clean_status, text
 
@@ -61,10 +62,10 @@ async def _json_body(request: web.Request) -> Any:
 
 
 class PairStartView(HomeAssistantView):
-    """POST /api/hearth/pair {tv_id, name, model, version, nonce} -> {pairing_id, code, expires_in}.
+    """POST /api/hearth/pair {device_id, kind, name, model, version, nonce} -> {pairing_id, code, expires_in}.
 
-    The TV shows the code; an administrator checks it matches in Home Assistant (Settings > Devices & services, a
-    discovered Hearth TV) and confirms.
+    The device shows the code; an administrator checks it matches in Home Assistant (Settings > Devices & services, a
+    discovered Hearth device) and confirms.
     """
 
     url = "/api/hearth/pair"
@@ -81,14 +82,22 @@ class PairStartView(HomeAssistantView):
         body = await _json_body(request)
         if not isinstance(body, dict):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
-        tv_id, nonce = body.get("tv_id"), body.get("nonce")
+        device_id, nonce = body.get("device_id"), body.get("nonce")
+        kind = body.get("kind", KIND_TV)
         name = text(body.get("name"), 64)
-        if not isinstance(tv_id, str) or not _ID.match(tv_id) or not isinstance(nonce, str) or not _NONCE.match(nonce):
+        if (
+            not isinstance(device_id, str)
+            or not _ID.match(device_id)
+            or not isinstance(nonce, str)
+            or not _NONCE.match(nonce)
+            or kind not in KINDS
+        ):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         pairing = hub.start_pairing(
             request.remote or "",
-            tv_id,
-            name or "TV",
+            device_id,
+            kind,
+            name or ("TV" if kind == KIND_TV else "Phone"),
             text(body.get("model"), 64),
             text(body.get("version"), 32),
             nonce,
@@ -113,7 +122,7 @@ class PairStartView(HomeAssistantView):
 
 class PairStatusView(HomeAssistantView):
     """GET /api/hearth/pair/{pairing_id} (header X-Hearth-Nonce) -> {"status": "pending" | "denied"} or, once,
-    {"status": "approved", "tv_id", "secret"}. An unknown or expired pairing is 404."""
+    {"status": "approved", "device_id", "secret"}. An unknown or expired pairing is 404."""
 
     url = "/api/hearth/pair/{pairing_id}"
     name = "api:hearth:pair:status"
@@ -132,29 +141,29 @@ class PairStatusView(HomeAssistantView):
         secret = hub.collect(pairing)
         if secret is None:
             return web.json_response({"status": "pending"})
-        return web.json_response({"status": "approved", "tv_id": pairing.tv_id, "secret": secret})
+        return web.json_response({"status": "approved", "device_id": pairing.device_id, "secret": secret})
 
 
 class StatusView(HomeAssistantView):
-    """POST /api/hearth/tv/{tv_id}/status (header X-Hearth-Secret): the TV's status JSON."""
+    """POST /api/hearth/device/{device_id}/status (header X-Hearth-Secret): the device's status JSON."""
 
-    url = "/api/hearth/tv/{tv_id}/status"
-    name = "api:hearth:tv:status"
+    url = "/api/hearth/device/{device_id}/status"
+    name = "api:hearth:device:status"
     requires_auth = False
 
-    async def post(self, request: web.Request, tv_id: str) -> web.Response:
+    async def post(self, request: web.Request, device_id: str) -> web.Response:
         hass: HomeAssistant = request.app["hass"]
         if not _local(request):
             return _error(HTTPStatus.FORBIDDEN, "not_local")
         hub = _hub(hass)
-        if hub is None or not hub.authorized(tv_id, request.headers.get(HEADER_SECRET)):
+        if hub is None or not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
             return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
-        if hub.too_often(tv_id):
+        if hub.too_often(device_id):
             return _error(HTTPStatus.TOO_MANY_REQUESTS, "too_often")
         status = clean_status(await _json_body(request))
         if status is None:
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
-        hub.update_status(tv_id, status)
+        hub.update_status(device_id, status)
         return web.json_response({"ok": True})
 
 

@@ -4,19 +4,19 @@
     "step": {
       "user": {
         "title": "Set up Hearth",
-        "description": "Your household's Hearth TVs pair with Home Assistant from their own settings (Settings > Home Assistant > Pair with Home Assistant). Each TV that asks shows up here to confirm.",
+        "description": "Your household's Hearth TVs, phones and tablets pair with Home Assistant from their own settings (on a TV: Settings > Home Assistant > Pair with Home Assistant). Each one that asks shows up here to confirm.",
         "data": {
           "name": "Household name"
         }
       },
       "confirm": {
         "title": "Pair {name}?",
-        "description": "Check that the TV called {name} shows this code:\n\n**{code}**\n\nPair it only if the codes match. A TV you don't recognize, or a code that doesn't match, may be someone else's: close this instead."
+        "description": "Check that {name} shows this code:\n\n**{code}**\n\nPair it only if the codes match. A device you don't recognize, or a code that doesn't match, may be someone else's: close this instead."
       }
     },
     "abort": {
-      "single_instance_allowed": "Hearth is already set up. TVs pair from their own settings.",
-      "expired": "This TV's request has ended. Ask again from the TV.",
+      "single_instance_allowed": "Hearth is already set up. TVs and phones pair from their own settings.",
+      "expired": "This request has ended. Ask again from the TV or phone.",
       "paired": "{name} is paired."
     }
   },

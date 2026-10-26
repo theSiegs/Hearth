@@ -1,8 +1,8 @@
-"""Setting up the household, and pairing each TV.
+"""Setting up the household, and pairing each device (Hearth on a TV, Hearth Mobile on a phone or tablet).
 
-The household is set up once (Settings > Devices & services > Add > Hearth). A TV then asks to pair from its own
-settings: it shows a code, and Home Assistant shows the same code as a discovered Hearth TV. An administrator who sees
-the codes match confirms, and the TV gets its own secret. No token or webhook ID is typed anywhere.
+The household is set up once (Settings > Devices & services > Add > Hearth). A device then asks to pair from its own
+settings: it shows a code, and Home Assistant shows the same code as a discovered Hearth device. An administrator who
+sees the codes match confirms, and the device gets its own secret. No token or webhook ID is typed anywhere.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ class HearthConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_integration_discovery(self, discovery_info: dict[str, Any]) -> ConfigFlowResult:
-        """A TV asked to pair (see api.PairStartView)."""
+        """A device asked to pair (see api.PairStartView)."""
         self._pairing_id = discovery_info["pairing_id"]
         pairing = self._hub_pairing()
         if pairing is None:

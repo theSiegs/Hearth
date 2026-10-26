@@ -1,4 +1,4 @@
-"""A Hearth TV's binary sensors: connected, in a kids profile, and screen time up."""
+"""A Hearth device's binary sensors: connected, and on a TV in a kids profile and screen time up."""
 
 from __future__ import annotations
 
@@ -16,7 +16,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HearthConfigEntry
-from .entity import HearthEntity, async_add_tv_entities
+from .const import KIND_TV
+from .entity import HearthEntity, async_add_device_entities
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -60,12 +61,12 @@ async def async_setup_entry(
 ) -> None:
     hub = entry.runtime_data
 
-    def make(tv_id: str):
-        return [HearthConnected(hub, tv_id, CONNECTED)] + [
-            HearthBinarySensor(hub, tv_id, d) for d in STATUS_SENSORS
-        ]
+    def make(device_id: str, kind: str | None):
+        # A phone is one person's: no profile switching, and its screen time limits are Family Link's
+        status = [HearthBinarySensor(hub, device_id, d) for d in STATUS_SENSORS] if kind == KIND_TV else []
+        return [HearthConnected(hub, device_id, CONNECTED), *status]
 
-    entry.async_on_unload(async_add_tv_entities(hass, hub, async_add_entities, make))
+    entry.async_on_unload(async_add_device_entities(hass, hub, async_add_entities, make))
 
 
 class HearthBinarySensor(HearthEntity, BinarySensorEntity):
@@ -84,7 +85,7 @@ class HearthBinarySensor(HearthEntity, BinarySensorEntity):
 
 
 class HearthConnected(HearthEntity, BinarySensorEntity):
-    """On while the TV has posted in the last 15 minutes; always available, so it can say off."""
+    """On while the device has posted in the last 15 minutes; always available, so it can say off."""
 
     @property
     def available(self) -> bool:
@@ -92,4 +93,4 @@ class HearthConnected(HearthEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
-        return self.hub.connected(self.tv_id)
+        return self.hub.connected(self.device_id)

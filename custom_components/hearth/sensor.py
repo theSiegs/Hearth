@@ -1,4 +1,4 @@
-"""A Hearth TV's sensors: its state, the app in front, what's playing, the profile, and usage today."""
+"""A Hearth device's sensors: the app in front, what's playing, usage today, and on a TV its state and profile."""
 
 from __future__ import annotations
 
@@ -17,14 +17,19 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HearthConfigEntry
-from .const import TV_STATES
-from .entity import HearthEntity, async_add_tv_entities
+from .const import KIND_MOBILE, KIND_TV, TV_STATES
+from .entity import HearthEntity, async_add_device_entities
+
+BOTH = frozenset({KIND_TV, KIND_MOBILE})
+TV = frozenset({KIND_TV})
 
 
 @dataclass(frozen=True, kw_only=True)
 class HearthSensorDescription(SensorEntityDescription):
     value: Callable[[dict[str, Any]], Any]
     attributes: Callable[[dict[str, Any]], dict[str, Any]] | None = None
+    # The kinds of device that have it
+    kinds: frozenset[str] = BOTH
 
 
 SENSORS: tuple[HearthSensorDescription, ...] = (
@@ -34,6 +39,7 @@ SENSORS: tuple[HearthSensorDescription, ...] = (
         device_class=SensorDeviceClass.ENUM,
         options=TV_STATES,
         value=lambda s: s.get("state"),
+        kinds=TV,
     ),
     HearthSensorDescription(
         key="app",
@@ -58,6 +64,7 @@ SENSORS: tuple[HearthSensorDescription, ...] = (
         translation_key="profile",
         value=lambda s: s.get("profile"),
         attributes=lambda s: {"profile_id": s.get("profile_id"), "kids_profile": s.get("kids_profile")},
+        kinds=TV,
     ),
     HearthSensorDescription(
         key="seconds_today",
@@ -82,8 +89,11 @@ async def async_setup_entry(
 ) -> None:
     hub = entry.runtime_data
     entry.async_on_unload(
-        async_add_tv_entities(
-            hass, hub, async_add_entities, lambda tv_id: [HearthSensor(hub, tv_id, d) for d in SENSORS]
+        async_add_device_entities(
+            hass,
+            hub,
+            async_add_entities,
+            lambda device_id, kind: [HearthSensor(hub, device_id, d) for d in SENSORS if kind in d.kinds],
         )
     )
 

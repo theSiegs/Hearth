@@ -1,4 +1,7 @@
-"""Hearth: the household's Hearth TVs in Home Assistant (see docs/home-assistant-integration.md)."""
+"""Hearth: the household's Hearth devices (TVs, phones and tablets) in Home Assistant.
+
+See docs/home-assistant-integration.md.
+"""
 
 from __future__ import annotations
 
@@ -39,8 +42,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> b
 async def async_remove_config_entry_device(
     hass: HomeAssistant, entry: HearthConfigEntry, device: dr.DeviceEntry
 ) -> bool:
-    """Deleting a TV's device removes the TV from the household: its secret stops working at once."""
-    for domain, tv_id in device.identifiers:
+    """Deleting a device removes it from the household: its secret stops working at once."""
+    for domain, device_id in device.identifiers:
         if domain == DOMAIN:
-            await entry.runtime_data.async_remove_tv(tv_id)
+            await entry.runtime_data.async_remove_device(device_id)
     return True
