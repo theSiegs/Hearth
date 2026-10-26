@@ -46,8 +46,8 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Hearth as an agent: when Hearth runs in another Google TV profile's user (one a parent approved Hearth for), it
  * shows nothing there and instead keeps this connection to Hearth in the owner's user (see {@link AgentHub}): it
- * reports this user's Watch Next and opens what Hearth asks for (via {@link AgentActivity}). It starts with the
- * profile (BOOT_COMPLETED, once Hearth has started it here the first time) and lives while the profile user runs.
+ * reports this user's Watch Next and what plays here, and opens what Hearth asks for (via {@link AgentActivity}).
+ * It starts with the profile (BOOT_COMPLETED, once Hearth has started it here the first time) and lives while the profile user runs.
  */
 public class AgentService extends Service {
     private static final String TAG = "HearthAgent";
@@ -264,6 +264,22 @@ public class AgentService extends Service {
         // How long apps play in this profile's user, for its usage today in Hearth (needs notification access here)
         mPlaying = new PlayingClock(this, mHandler,
                 (pkg, ms, now) -> send(json("type", "playing", "package", pkg, "ms", ms)));
+        // What plays here (title, episode, how far it got), for this profile's watch history in Hearth (the same
+        // notification access): Hearth's own recorder sees only the owner's user
+        long mine = ((UserManager) getSystemService(Context.USER_SERVICE)).getSerialNumberForUser(Process.myUserHandle());
+        mPlayback = new PlaybackRecorder(this, new PlaybackRecorder.Sink() {
+            @Override
+            public String profile() {
+                return ProfileUsers.key(mine);
+            }
+
+            @Override
+            public void record(String profile, String packageName, String title, String subtitle, long durationMs,
+                    long positionMs, long now) {
+                send(json("type", "played", "package", packageName, "title", title, "subtitle", subtitle,
+                        "duration", durationMs, "position", positionMs));
+            }
+        });
         mHandler.post(mPlayingTick);
         mWatchNextObserver = new ContentObserver(mHandler) {
             @Override
@@ -536,11 +552,16 @@ public class AgentService extends Service {
     };
 
     private PlayingClock mPlaying;
-    /** Starts counting once notification access is there, and hands over what's played so far. */
+    private PlaybackRecorder mPlayback;
+    /** Starts counting and recording once notification access is there, and hands over what's played so far. */
     private final Runnable mPlayingTick = new Runnable() {
         @Override
         public void run() {
             if (mPlaying.ensureStarted()) mPlaying.flush();
+            // Its callbacks run on the main thread (its own handler); starting it twice changes nothing
+            new Handler(getMainLooper()).post(() -> {
+                if (mRunning) mPlayback.ensureStarted();
+            });
             mHandler.postDelayed(this, PING_MS);
         }
     };
@@ -588,6 +609,8 @@ public class AgentService extends Service {
     public void onDestroy() {
         mRunning = false;
         if (mPlaying != null) mHandler.post(mPlaying::stop);
+        // On the main thread, where its callbacks run
+        if (mPlayback != null) mPlayback.stop();
         // Ends the socket thread's read, so it stops handling Hearth's messages and Hearth sees the agent go.
         Socket socket = mSocket;
         if (socket != null) {

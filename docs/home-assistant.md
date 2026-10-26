@@ -181,11 +181,14 @@ Never asked, HearthTube shares (its own **Tell Home Assistant what's playing** s
 **Where the playing time comes from.** HearthTube reports its own playing time, in every profile. Other apps' comes
 from their media sessions, which Android only shows to a notification listener in the same Android user. In the TV's
 main user that's Hearth itself (its notification access). A kids profile's apps play in that profile's own Android
-user, so there it's Hearth's agent, which needs notification access granted in that user, once, over adb:
+user, so there it's Hearth's agent, which needs notification access granted in that user. A parent's **Fix**
+(Settings → Profiles → Kids profiles) grants it over Hearth's own adb; by hand it's
 `adb shell cmd notification allow_listener com.thesiegs.hearth/com.thesiegs.hearth.LauncherNotificationListenerService
 <user id>`. Without it, that profile's `playing` lists HearthTube only (its `apps` time in front is counted either
-way). In a kids profile the agent's notification access does nothing else: no pop-ups, nothing read or kept but what's
-playing and for how long.
+way). In a kids profile the agent's notification access does nothing else: no pop-ups, nothing read but what's
+playing. What plays (title, episode, how far it got) is kept on the TV for that kid's own watch history and
+Continue Watching, and with household sync on it goes to the household's other TVs for that kid's row only; it isn't
+sent to Home Assistant.
 
 **Allowance for HearthTube (optional).** Hearth enforces a daily YouTube limit on its own (Settings → Profiles →
 YouTube time per day). Home Assistant can add its say, e.g. a pool shared with the family's phones and tablets:

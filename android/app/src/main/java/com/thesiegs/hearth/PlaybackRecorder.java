@@ -23,11 +23,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Records what plays on the TV into the active adult profile's watch history (WatchHistory), from the apps'
- * media sessions: their title and episode, how long it is and how far it got. Only what plays for a while counts,
- * so trailers and previews that start by themselves mostly don't. Needs Hearth's notification access, as Android
- * only shows other apps' media sessions to a notification listener; a kids profile's apps play in its own user,
- * which Hearth's sessions don't see.
+ * Records what plays into a profile's watch history, from the apps' media sessions: their title and episode, how
+ * long it is and how far it got. Only what plays for a while counts, so trailers and previews that start by
+ * themselves mostly don't. Needs notification access, as Android only shows other apps' media sessions to a
+ * notification listener, and only its own user's: in the owner's user Hearth records for the active adult profile
+ * (WatchHistory, {@link #PlaybackRecorder(Context)}); a kids profile's apps play in its own user, where Hearth's
+ * agent records them and sends them to Hearth for that profile (its {@link Sink}).
  */
 final class PlaybackRecorder {
     private static final String TAG = "HearthWatchNext";
@@ -40,15 +41,43 @@ final class PlaybackRecorder {
             LauncherAccessibilityService.GOOGLE_TV_PACKAGE,
             "com.google.android.youtube.tvmusic"));
 
+    /** Where what plays goes. */
+    interface Sink {
+        /** The profile what plays now counts for; null: no one's (not counted). */
+        String profile();
+
+        /** That profile is playing this, with where it's got to (on a background thread, in order). */
+        void record(String profile, String packageName, String title, String subtitle, long durationMs,
+                long positionMs, long now);
+    }
+
     private final Context mContext;
+    private final Sink mSink;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService mWriter = Executors.newSingleThreadExecutor(r -> new Thread(r, "HearthHistory"));
     private final List<Tracker> mTrackers = new ArrayList<>();
     private MediaSessionManager mSessions;
     private final MediaSessionManager.OnActiveSessionsChangedListener mListener = this::setControllers;
 
+    /** For the owner's user: into the active adult profile's watch history here. */
     PlaybackRecorder(Context context) {
+        this(context, new Sink() {
+            @Override
+            public String profile() {
+                return activeAdult(context);
+            }
+
+            @Override
+            public void record(String profile, String packageName, String title, String subtitle, long durationMs,
+                    long positionMs, long now) {
+                WatchHistory.get(context).recordPlay(profile, packageName, title, subtitle, durationMs, positionMs, now);
+            }
+        });
+    }
+
+    PlaybackRecorder(Context context, Sink sink) {
         mContext = context;
+        mSink = sink;
     }
 
     /** Starts listening, if it isn't and Hearth has notification access; false without it (try again later). */
@@ -127,10 +156,10 @@ final class PlaybackRecorder {
     }
 
     /** The profile whose history this goes into: the active one, if it's an adult's in Hearth's own user. */
-    private String profile() {
-        String key = LauncherAccessibilityService.getActiveProfileKey(mContext);
-        if (key == null || ProfileUsers.serialOfKey(key) != ProfileUsers.ownerSerial(mContext)) return null;
-        return ProfileUsers.isKids(mContext) ? null : key;
+    private static String activeAdult(Context context) {
+        String key = LauncherAccessibilityService.getActiveProfileKey(context);
+        if (key == null || ProfileUsers.serialOfKey(key) != ProfileUsers.ownerSerial(context)) return null;
+        return ProfileUsers.isKids(context) ? null : key;
     }
 
     /** One app's media session: what it plays, and for how long. */
@@ -204,7 +233,7 @@ final class PlaybackRecorder {
             long played = mPlayedMs + (mPlayingSince != 0 ? SystemClock.elapsedRealtime() - mPlayingSince : 0);
             if (mProfile == null) {
                 if (played < COUNTS_AFTER_MS) return;
-                mProfile = profile();
+                mProfile = mSink.profile();
                 if (mProfile == null) return;
                 Log.i(TAG, "Watching in " + mController.getPackageName() + " for " + LogNames.key(mProfile) + ": " + mTitle
                         + (mSubtitle != null ? " / " + mSubtitle : ""));
@@ -213,8 +242,7 @@ final class PlaybackRecorder {
             final long duration = mDuration, position = position(mController.getPlaybackState());
             final long now = System.currentTimeMillis();
             try {
-                mWriter.execute(() -> WatchHistory.get(mContext)
-                        .recordPlay(profile, pkg, title, subtitle, duration, position, now));
+                mWriter.execute(() -> mSink.record(profile, pkg, title, subtitle, duration, position, now));
             } catch (RuntimeException ignored) {
                 // Stopping
             }

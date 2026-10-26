@@ -31,6 +31,8 @@ public class KidsProfilesTest {
         final Set<String> kept = new HashSet<>();
         /** "user/package/permission" granted. */
         final Set<String> granted = new HashSet<>();
+        /** "user/component" given notification access. */
+        final Set<String> listeners = new HashSet<>();
         final List<String> commands = new ArrayList<>();
 
         FakeShell has(int user, String... packages) {
@@ -72,6 +74,16 @@ public class KidsProfilesTest {
                     return "Exception occurred while executing 'grant': Unknown package: " + words[4];
                 }
                 granted.add(user + "/" + words[4] + "/" + words[5]);
+                return "";
+            }
+            if (command.startsWith("cmd notification allow_listener ")) {
+                // cmd notification allow_listener <component> <user>
+                int user = Integer.parseInt(words[4]);
+                String pkg = words[3].substring(0, words[3].indexOf('/'));
+                if (!installed.getOrDefault(user, Collections.emptySet()).contains(pkg)) {
+                    return "Unknown component: " + words[3];
+                }
+                listeners.add(user + "/" + words[3]);
                 return "";
             }
             if (command.contains(" app_process ")) {
@@ -242,6 +254,46 @@ public class KidsProfilesTest {
         try {
             ProfileAppAccess.grantCalendarCommand(TUBE, 12);
             fail("granted to another app");
+        } catch (IllegalArgumentException expected) {
+            // refused
+        }
+    }
+
+    @Test
+    public void hearthSeesWhatPlaysOnEachKidsProfile() throws Exception {
+        // Android shows other apps' media sessions only to a notification listener in the same user
+        FakeShell shell = new FakeShell().has(0, HEARTH, TUBE);
+        List<String> log = ProfileAppAccess.addToKids(APK, shell, Collections.singletonList(10));
+        String listener = HEARTH + "/" + ProfileAppAccess.LISTENER_CLASS;
+        assertTrue(shell.listeners.contains("10/" + listener));
+        assertTrue(shell.indexOf("pm install-existing --user 10 " + HEARTH)
+                < shell.indexOf("cmd notification allow_listener " + listener + " 10"));
+        // Only Hearth's, and nothing in the log when it took
+        assertEquals(1, shell.count("cmd notification allow_listener"));
+        assertEquals(Arrays.asList("user 10: added and kept " + HEARTH, "user 10: added and kept " + TUBE), log);
+    }
+
+    @Test
+    public void aCopyPutThereEarlierGetsNotificationAccessToo() throws Exception {
+        FakeShell shell = new FakeShell().has(0, HEARTH, TUBE).has(11, HEARTH, TUBE).keeps(11, HEARTH).keeps(11, TUBE);
+        ProfileAppAccess.addToKids(APK, shell, Collections.singletonList(11));
+        assertEquals(0, shell.count("pm install-existing"));
+        assertTrue(shell.listeners.contains("11/" + HEARTH + "/" + ProfileAppAccess.LISTENER_CLASS));
+    }
+
+    @Test
+    public void notificationAccessIsOnlyEverHearthsOnAnotherProfile() {
+        assertEquals("cmd notification allow_listener " + HEARTH + "/" + ProfileAppAccess.LISTENER_CLASS + " 12",
+                ProfileAppAccess.allowListenerCommand(HEARTH, 12));
+        try {
+            ProfileAppAccess.allowListenerCommand(HEARTH, 0);
+            fail("allowed in the owner's user");
+        } catch (IllegalArgumentException expected) {
+            // refused
+        }
+        try {
+            ProfileAppAccess.allowListenerCommand(TUBE, 12);
+            fail("allowed another app");
         } catch (IllegalArgumentException expected) {
             // refused
         }

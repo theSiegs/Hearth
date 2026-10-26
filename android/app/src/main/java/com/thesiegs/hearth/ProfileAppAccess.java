@@ -29,8 +29,9 @@ import java.util.Set;
  *   <li>Only what the owner has: install-existing copies the owner's app, so one the owner doesn't have is skipped.</li>
  *   <li>Adding changes only what's out of place: a copy that's there and kept is left alone, so Family Link's "app
  *       added" notice goes out only for a copy that's actually added.</li>
- *   <li>The only permissions granted are Hearth's {@link #READ_TV_LISTINGS} ({@link #grantWatchNextCommand}) and
- *       {@link #READ_CALENDAR} ({@link #grantCalendarCommand}).</li>
+ *   <li>The only permissions granted are Hearth's {@link #READ_TV_LISTINGS} ({@link #grantWatchNextCommand}),
+ *       {@link #READ_CALENDAR} ({@link #grantCalendarCommand}) and its notification access there
+ *       ({@link #allowListenerCommand}).</li>
  * </ul>
  *
  * <h3>The one safety rule</h3>
@@ -146,10 +147,30 @@ public final class ProfileAppAccess {
                         log.add(String.format(Locale.US, "user %d: couldn't let %s read the calendars: %s", user, pkg,
                                 out.trim()));
                     }
+                    out = shell.run(allowListenerCommand(pkg, user));
+                    if (out != null && !out.trim().isEmpty()) {
+                        log.add(String.format(Locale.US, "user %d: couldn't let %s see what plays: %s", user, pkg,
+                                out.trim()));
+                    }
                 }
             }
         }
         return log;
+    }
+
+    /** Hearth's notification listener: what lets an app see the other apps' media sessions in its user. */
+    static final String LISTENER_CLASS = LauncherNotificationListenerService.class.getName();
+
+    /**
+     * Gives Hearth's copy in a kids profile notification access there, so its agent sees what that profile's apps
+     * play (title, episode, how far it got) for that profile's watch history and usage today: Android shows other
+     * apps' media sessions only to a notification listener in the same user. Kept per user by Android, across the
+     * profile stopping and starting. Only Hearth, and only another profile's user.
+     */
+    static String allowListenerCommand(String pkg, int user) {
+        requireOtherUser(user);
+        if (!HEARTH.equals(pkg)) throw new IllegalArgumentException("Only Hearth listens: " + pkg);
+        return "cmd notification allow_listener " + pkg + "/" + LISTENER_CLASS + " " + user;
     }
 
     /** The permission that lets an app read the calendars synced to its user. */

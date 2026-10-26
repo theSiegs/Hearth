@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Pattern;
 
 /**
  * Hearth's side (the owner's user) of its agents: Hearth itself, running in each other Google TV profile's user
@@ -51,6 +52,8 @@ import java.util.concurrent.Executors;
  * Agent to Hearth:
  * {"type":"watchNext","rows":[…]},
  * {"type":"ping"}, {"type":"playing","package":"…","ms":n} (an app played that long in the profile's user),
+ * {"type":"played","package":"…","title":"…","subtitle":"…","duration":ms,"position":ms} (what plays there, for the
+ * profile's watch history),
  * {"type":"opened","ok":bool}, {"type":"speech","package":"…","text":"…"} (what an app said through
  * Hearth's voice there, for Profile Pairing), {"type":"calendar","access":bool,"calendars":[…],"events":[…]} (the
  * Google calendars synced to that profile's user and their coming days' events, TvCalendars' maps). Hearth to agent: {"type":"welcome"}, {"type":"open","intent":"intent:…"},
@@ -232,6 +235,17 @@ final class AgentHub {
                                     System.currentTimeMillis());
                         }
                         break;
+                    case "played": {
+                        // What plays in this profile's user, into its own watch history (never an adult's: the
+                        // owner's user is Hearth's own recorder's)
+                        Played p = played(message);
+                        if (p == null || serial == ProfileUsers.ownerSerial(sContext)) break;
+                        // Saved while it plays, as for an adult: Continue Watching shows it when it's next read
+                        HISTORY.execute(() -> WatchHistory.get(sContext).recordPlay(
+                                ProfileUsers.profileKey(sContext, serial), p.packageName, p.title, p.subtitle,
+                                p.durationMs, p.positionMs, System.currentTimeMillis()));
+                        break;
+                    }
                     case "speech": {
                         // Only the app Profile Pairing is handling (ProfilePairingService checks too)
                         String pkg = message.optString("package");
@@ -258,6 +272,64 @@ final class AgentHub {
             if (connection != null) sConnections.remove(connection.serial, connection);
             closeQuietly(socket);
         }
+    }
+
+    /** What an agent says plays in its profile, checked: the agent is another user's app, so nothing is taken as is. */
+    static final class Played {
+        final String packageName;
+        final String title;
+        final String subtitle;
+        final long durationMs;
+        final long positionMs;
+
+        Played(String packageName, String title, String subtitle, long durationMs, long positionMs) {
+            this.packageName = packageName;
+            this.title = title;
+            this.subtitle = subtitle;
+            this.durationMs = durationMs;
+            this.positionMs = positionMs;
+        }
+    }
+
+    static final int MAX_PLAYED_TITLE = 200;
+    /** Longer than any show or film: a duration or position past it isn't one. */
+    static final long MAX_PLAYED_MS = 24L * 60 * 60 * 1000;
+    private static final Pattern PACKAGE_NAME =
+            Pattern.compile("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+");
+
+    /** A "played" message as Hearth keeps it, or null when it isn't one (no app or title, or numbers that aren't). */
+    static Played played(JSONObject message) {
+        String pkg = message.optString("package", "");
+        if (pkg.length() > 255 || !PACKAGE_NAME.matcher(pkg).matches()) return null;
+        String title = playedText(message.opt("title"));
+        if (title == null) return null;
+        long duration = message.optLong("duration", 0);
+        long position = message.optLong("position", 0);
+        if (duration < 0 || duration > MAX_PLAYED_MS || position < 0 || position > MAX_PLAYED_MS) return null;
+        if (duration > 0 && position > duration) position = duration;
+        return new Played(pkg, title, playedText(message.opt("subtitle")), duration, position);
+    }
+
+    /** A title or episode as kept: on one line, without control characters, cut to a sane length; null if empty. */
+    private static String playedText(Object value) {
+        if (!(value instanceof String)) return null;
+        StringBuilder out = new StringBuilder();
+        String text = (String) value;
+        for (int i = 0; i < text.length(); ) {
+            int c = text.codePointAt(i);
+            i += Character.charCount(c);
+            int type = Character.getType(c);
+            boolean invisible = type == Character.CONTROL || type == Character.FORMAT || type == Character.SURROGATE
+                    || type == Character.UNASSIGNED || type == Character.LINE_SEPARATOR
+                    || type == Character.PARAGRAPH_SEPARATOR;
+            out.appendCodePoint(invisible ? ' ' : c);
+        }
+        String clean = out.toString().replaceAll("\\s+", " ").trim();
+        if (clean.isEmpty()) return null;
+        if (clean.codePointCount(0, clean.length()) > MAX_PLAYED_TITLE) {
+            clean = clean.substring(0, clean.offsetByCodePoints(0, MAX_PLAYED_TITLE)).trim();
+        }
+        return clean;
     }
 
     private static List<Map<String, Object>> rows(long serial, JSONArray array) {

@@ -6,6 +6,8 @@
 Hearth has no ads, analytics, crash reporting or trackers, and no Hearth account or server. Your settings, layouts,
 profile pairings and backups stay on the TV. So does each profile's watch history: the titles apps say are playing,
 and the Continue Watching entries Hearth keeps for each profile (forgotten after 90 days, or when you remove a card).
+A kids profile's history is kept the same way, under that kid's profile only, and with household sync on it goes to
+the household's other TVs for that kid's own row there (never an adult's or another kid's).
 Calendar events are read from the TV when they show and aren't stored or sent anywhere.
 
 ## What Hearth connects to
@@ -53,7 +55,7 @@ as Wikidata asks.
 | Accessibility (Home Button Fix) | Opens Hearth when you press Home; follows Google TV profile switches and its screen time screens; remote button remaps; idle sleep; pop-ups. It reads Google TV's own screens, not your apps' content. |
 | Accessibility (Profile Pairing) | Reads the profile screen of a streaming app that Hearth opened, picks your profile, and types its PIN if you saved one. It acts on a profile screen only when Hearth itself opened the app. The one exception is Paramount+'s content PIN, asked for when a title starts: if you saved it, Hearth types it then, in an adult's profile that has its own Google TV PIN. |
 | Text-to-speech engine (Hearth voice) | Some apps only announce their profile screen out loud; Hearth voice lets Profile Pairing hear it, and passes all speech on to the TV's usual voice, so apps sound the same. Nothing is recorded or sent. |
-| Notification access | Shows notifications in Hearth; sees what's playing for Continue Watching, each profile's watch history and usage today, and TV status. In a kids profile (granted there over adb), only lets Hearth's agent count what plays and for how long, for that profile's usage today. |
+| Notification access | Shows notifications in Hearth; sees what's playing for Continue Watching, each profile's watch history and usage today, and TV status. In a kids profile (a parent's Fix grants it there over adb, only for Hearth), lets Hearth's agent see what plays there (the title, episode and how far it got) for that kid's own watch history and Continue Watching, and for how long, for that profile's usage today. |
 | Usage access | Knows which app is in front, for TV status and idle sleep; reads how much data the TV and each app used, for the data usage in the top bar (kept on the TV). |
 | Install apps / delete apps | Updates Hearth and HearthTube; puts them on other profiles. |
 | Display over other apps | Home Assistant pop-ups. |
