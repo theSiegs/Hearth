@@ -160,7 +160,7 @@ phones and tablets, and game apps on a TV. How the integration knows:
 
 | Where | Counts as games | Per game |
 |---|---|---|
-| Nintendo Switch | all of it | from the Nintendo integration's `device_usage_report` action, which the integration calls a few times an hour |
+| Nintendo Switch | all of it | live: Nintendo Switch Online friend presence (state and game, Switch and Switch 2) read through a self-hosted nxapi presence server or the HACS Nintendo-Switch-Presence sensors, about 30-60 s behind; needs a separate adult "watcher" account friended with each kid. Fallback: per-app minutes from the built-in Nintendo integration, the playing game inferred from which app's minutes grew |
 | Xbox | all of it | what's playing, from Home Assistant's Xbox integration (now playing per gamer), timed by the integration; Family Safety gives totals only |
 | Windows | by app, from a list (Steam, Epic, Battle.net, Minecraft Launcher and the like, editable) | the playing title where a source has it; otherwise the launcher's time |
 | Phones, tablets, TVs | apps Android marks as games (Hearth sends each app's category), plus any an adult adds | per app, from Hearth and Family Link |
@@ -182,8 +182,8 @@ for (everyone or some people), and one of:
 A rule can apply only **when** something is true; outside it, the title counts as usual:
 
 - **Together:** two or more of the household's people are playing that title at the same time (seen where a source
-  knows what's playing now: Hearth devices and Xbox; Nintendo and Family Safety report only after the fact, so
-  together on a Switch can't be seen yet);
+  knows what's playing now: Hearth devices, Xbox, and a Switch through friend presence; Family Safety reports only
+  after the fact);
 - on certain days, or between certain times.
 
 **Playing together** is a state the integration knows and shows, not only a rule's condition: a **Playing together**
@@ -351,7 +351,10 @@ at pairing; the integration raises a repair issue when the two are too far apart
 - **Enforcing a rule on another service:** when games are used up but Minecraft's own limit isn't, a Hearth device can
   keep only Minecraft open; on a Switch or Xbox the service's own limits can't tell titles apart the same way (Nintendo
   limits the whole Switch; Family Safety can block other apps one by one). How far blueprints should go there is open.
-- **Together on a Switch:** Nintendo reports play after the fact, so "together" can't be seen there yet.
+- **Together on a Switch:** friend presence (unofficial API; login goes through a third-party token server; breaks
+  a few times a year) or the parental controls fallback (no third party, delay unmeasured). To test first: can the
+  kids' supervised Switch users accept the watcher, how fast presence changes, whether two kids in Minecraft show the
+  same game name, and whether Switch Minecraft also shows in the Xbox integration's now playing sensor.
 - **Counting once:** is "the larger of two sources for one device" right, or should one source be chosen per device?
 - **Budget kinds:** are video, games and other enough, and should the shared pool be the default?
 - **Dashboard panel without a person's token:** can the integration serve a chosen user's dashboard config, or does the
