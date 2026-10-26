@@ -22,7 +22,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import DOMAIN, SIGNAL_PEOPLE
-from .entity import HearthEntity, async_add_device_entities
+from .entity import HearthEntity, HearthPersonEntity, async_add_device_entities
 from .hub import HearthHub
 
 
@@ -74,6 +74,7 @@ async def async_setup_entry(
 
     entry.async_on_unload(async_add_device_entities(hass, hub, async_add_entities, make))
     async_add_entities([PlayingTogether(hub)])
+    async_add_entities([PersonLocked(hub, person, "locked") for person in hub.household.people()])
 
 
 class HearthBinarySensor(HearthEntity, BinarySensorEntity):
@@ -144,3 +145,17 @@ class PlayingTogether(BinarySensorEntity):
                 for t in together
             ]
         }
+
+
+class PersonLocked(HearthPersonEntity, BinarySensorEntity):
+    """On while one of the person's lock entities is (bedtime, school time): Hearth devices hold their apps."""
+
+    _attr_translation_key = "person_locked"
+
+    @property
+    def is_on(self) -> bool:
+        return bool(self.day and self.day.locked)
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {"locked_by": self.day.locked_by if self.day else []}

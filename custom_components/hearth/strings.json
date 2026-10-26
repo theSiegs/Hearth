@@ -83,6 +83,9 @@
       },
       "playing_together": {
         "name": "Playing together"
+      },
+      "person_locked": {
+        "name": "Locked"
       }
     },
     "number": {
@@ -109,7 +112,8 @@
           "add_source": "Add a screen time source",
           "remove_source": "Remove a screen time source",
           "add_title": "Add a title",
-          "remove_title": "Remove a title"
+          "remove_title": "Remove a title",
+          "locks": "Locks (bedtime, school time)"
         }
       },
       "people": {
@@ -172,6 +176,14 @@
         "title": "Remove a title",
         "data": {
           "items": "Titles"
+        }
+      },
+      "locks": {
+        "title": "Locks",
+        "description": "Sensors that are on while this person may not watch, such as Family Link's bedtime and school time ones. While any is on, the person's Hearth devices hold their apps. Choosing a person again replaces their locks; none clears them.",
+        "data": {
+          "person": "Person",
+          "entities": "Lock sensors"
         }
       }
     },

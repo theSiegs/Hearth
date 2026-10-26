@@ -46,4 +46,12 @@ public class HaAllowanceDocumentTest {
         assertNull(HaAllowance.profilesFromDocument(new JSONObject("{\"person\": {\"groups\": []}}")));
         assertNull(HaAllowance.profilesFromDocument(null));
     }
+
+    @Test
+    public void lockedIsTheScheduleLock() throws Exception {
+        JSONObject profiles = HaAllowance.profilesFromDocument(document("{\"user:10\": {\"groups\": [], \"locked\": true},"
+                + " \"user:11\": {\"groups\": []}}"));
+        assertTrue(HaAllowance.valuesOf(profiles.optJSONObject("user:10"), 1L).scheduleLocked);
+        assertFalse(HaAllowance.valuesOf(profiles.optJSONObject("user:11"), 1L).scheduleLocked);
+    }
 }

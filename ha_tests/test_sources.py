@@ -159,3 +159,30 @@ async def test_playing_together(hass: HomeAssistant, hass_client_no_auth: Client
 def test_names_match_across_stores():
     assert normalize("Minecraft: Java Edition") == normalize("Minecraft™")
     assert normalize("Minecraft for Nintendo Switch") == "minecraft"
+
+
+async def test_a_lock_holds_the_person(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    hass.states.async_set("binary_sensor.sam_tablet_bedtime_active", "off")
+    hass.states.async_set("binary_sensor.sam_phone_school_time_active", "off")
+    await _option(
+        hass,
+        "locks",
+        {
+            "person": "person.sam",
+            "entities": ["binary_sensor.sam_tablet_bedtime_active", "binary_sensor.sam_phone_school_time_active"],
+        },
+    )
+    assert _state(hass, "binary_sensor.hearth_sam_locked") == "off"
+
+    hass.states.async_set("binary_sensor.sam_tablet_bedtime_active", "on")
+    await hass.async_block_till_done()
+    locked = hass.states.get("binary_sensor.hearth_sam_locked")
+    assert locked.state == "on"
+    assert locked.attributes["locked_by"] == ["binary_sensor.sam_tablet_bedtime_active"]
+
+    from test_people import KID, _tv_status
+    from test_init import _post
+
+    body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
+    assert body["state"]["profiles"][KID]["locked"] is True

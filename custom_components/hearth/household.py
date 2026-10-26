@@ -21,6 +21,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_KIND,
+    CONF_LOCKS,
     CONF_PERSON,
     CONF_PROFILES,
     DOMAIN,
@@ -65,6 +66,9 @@ class PersonDay:
     limits: dict[str, GroupState] = field(default_factory=dict)
     playing: list[Playing] = field(default_factory=list)
     together_s: float = 0.0
+    # A lock entity of theirs is on (Family Link's bedtime or school time, say)
+    locked: bool = False
+    locked_by: list[str] = field(default_factory=list)
 
     @property
     def total_s(self) -> float:
@@ -110,6 +114,7 @@ class Household:
         found = {p for p in self.profile_people().values() if p}
         found |= {d.get(CONF_PERSON) for d in self.hub.devices.values() if d.get(CONF_PERSON)}
         found |= {s.person for s in sources_from_options(self.options)}
+        found |= {lock["person"] for lock in self.options.get(CONF_LOCKS, []) if lock.get("person")}
         return sorted(found)
 
     def person_name(self, person: str) -> str:
@@ -117,7 +122,18 @@ class Household:
         return state.name if state else person.split(".", 1)[-1].replace("_", " ").title()
 
     def source_entities(self) -> list[str]:
-        return [s.entity_id for s in sources_from_options(self.options)]
+        """Entities whose changes count: the screen time sources and the locks."""
+        locks = [lock["entity_id"] for lock in self.options.get(CONF_LOCKS, [])]
+        return [s.entity_id for s in sources_from_options(self.options)] + locks
+
+    def _locked_by(self, person: str) -> list[str]:
+        return [
+            lock["entity_id"]
+            for lock in self.options.get(CONF_LOCKS, [])
+            if lock.get("person") == person
+            and (state := self.hass.states.get(lock["entity_id"])) is not None
+            and state.state == "on"
+        ]
 
     def seen_profiles(self) -> dict[str, str | None]:
         """TV profiles the TVs have reported: profile_id -> its name, for the options."""
@@ -269,8 +285,10 @@ class Household:
         for person in self.people():
             devices = {device: merge(r) for device, r in readings.get(person, {}).items()}
             seconds = group_seconds(devices, membership)
+            locked_by = self._locked_by(person)
             day = PersonDay(person, devices, seconds, playing=playing.get(person, []),
-                            together_s=self.live.together_s.get(person, 0.0))
+                            together_s=self.live.together_s.get(person, 0.0), locked=bool(locked_by),
+                            locked_by=locked_by)
             for group in self.groups:
                 state = self.limits.state(person, group.id, seconds.get(group.id, 0.0) / 60, today)
                 day.limits[group.id] = state
@@ -329,7 +347,7 @@ class Household:
                     "apps": self._group_apps(group, membership),
                 }
             )
-        return {"person": person, "groups": groups}
+        return {"person": person, "groups": groups, "locked": bool(day and day.locked)}
 
     def document_for(self, device_id: str) -> dict[str, Any]:
         """The device's state document: per TV profile (or, for a phone, its person) what's left today."""

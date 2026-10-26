@@ -128,7 +128,7 @@ final class HaAllowance {
                 }
                 JSONObject entry = new JSONObject();
                 entry.put("youtube_minutes_left", least == null ? JSONObject.NULL : least);
-                entry.put("schedule_locked", false);
+                entry.put("schedule_locked", person != null && person.optBoolean("locked", false));
                 profiles.put(profileId, entry);
             }
         } catch (JSONException e) {

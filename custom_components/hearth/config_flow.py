@@ -25,7 +25,7 @@ from homeassistant.helpers.selector import (
     TextSelector,
 )
 
-from .const import CONF_GROUP_APPS, CONF_GROUPS, CONF_PERSON, CONF_PROFILES, DOMAIN, KIND_MOBILE
+from .const import CONF_GROUP_APPS, CONF_GROUPS, CONF_LOCKS, CONF_PERSON, CONF_PROFILES, DOMAIN, KIND_MOBILE
 from .limits import BUILTIN_GROUPS, GAMES, VIDEO, slug
 from .sources import CONF_SOURCES, CONF_TITLES
 
@@ -103,6 +103,7 @@ class HearthOptionsFlow(OptionsFlow):
                 "remove_source",
                 "add_title",
                 "remove_title",
+                "locks",
                 "add_group",
                 "group_apps",
                 "remove_group",
@@ -290,3 +291,23 @@ class HearthOptionsFlow(OptionsFlow):
 
     async def async_step_remove_title(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         return self._remove_from(CONF_TITLES, "remove_title", user_input)
+
+    async def async_step_locks(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """A person's locks: entities that are on while they may not watch (Family Link's bedtime or school time
+        sensors). Choosing a person's again replaces theirs; none clears them."""
+        options = self._options()
+        locks: list[dict[str, Any]] = list(options.get(CONF_LOCKS, []))
+        if user_input is not None:
+            person = user_input[CONF_PERSON]
+            kept = [lock for lock in locks if lock.get("person") != person]
+            kept += [{"entity_id": entity_id, "person": person} for entity_id in user_input.get("entities", [])]
+            return self.async_create_entry(data={**options, CONF_LOCKS: kept})
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_PERSON): PERSON_SELECTOR,
+                vol.Optional("entities", default=[]): EntitySelector(
+                    EntitySelectorConfig(domain=["binary_sensor", "input_boolean", "switch"], multiple=True)
+                ),
+            }
+        )
+        return self.async_show_form(step_id="locks", data_schema=schema)
