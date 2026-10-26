@@ -110,129 +110,188 @@ entities; it never signs in to those services itself.
 | Hearth Mobile | this one | seconds today and per app on that phone | seconds to minutes |
 | Phones, tablets, Google TV kids profiles | [HAFamilyLink, theSiegs fork](https://github.com/theSiegs/HAFamilyLink) (branch `ha/combined`) | per child: Daily Screen Time (with usage totals) and Screen Time Remaining; per device: Daily Screen Time (per-app seconds in `apps`) and per-app usage sensors | polled every 60 s, but Google's numbers lag: seconds to about 40 minutes, for a TV profile sometimes until it next starts |
 | Xbox, Windows | [Microsoft Family Safety](https://github.com/noiwid/HAFamilySafety) (HACS) | `sensor.<child>_screen_time` (minutes today, the whole account) and `sensor.<device>_screen_time` per device | polled, 5 minutes by default (30 s to an hour) |
-| Nintendo Switch | [Nintendo Switch parental controls](https://www.home-assistant.io/integrations/nintendo_parental_controls) (built in) | Used screen time and Time remaining per Switch (minutes) | cloud polling; the Switch must be online |
+| Nintendo Switch | [Nintendo Switch parental controls](https://www.home-assistant.io/integrations/nintendo_parental_controls) (built in) | Used screen time and Time remaining per Switch (minutes); per app through its usage report | polled every 60 s; the Switch must be online |
+| Nintendo Switch, live | Switch friend presence: HACS [Nintendo-Switch-Presence](https://github.com/itsfatlum/Nintendo-Switch-Presence), fed by a self-hosted [nxapi](https://github.com/samuelthomas2774/nxapi) presence server and a watcher account | what each kid's Switch is playing now | 30-60 s |
+| Xbox, live | Home Assistant's Xbox integration | now playing per gamer | about a minute |
 
 How a source is added: in the household's options, **Add a screen time source**: pick a `duration` sensor (or one in
 minutes), whose it is (a person), what kind of time it is (**video**, **games** or **other**), and whether it's one
 device or a whole account. Hearth's own devices are sources automatically: a phone counts for its person, a TV's
 profile for the person mapped to it ([People](#people)).
 
-**Counting each minute once.**
-
-- Pick per-device sensors over per-account ones where the service has both (Family Safety's account total already
-  includes its devices; add either the account or its devices, never both: the options flow refuses a device sensor
-  next to its own account's).
-- One device, one source. Hearth Mobile on a phone and Family Link for the same phone both see that phone's time: the
-  person's total takes the larger of the two for that device, not the sum; the breakdown keeps both.
-- Family Link lists each kid's Google TV profile as a device of its own, so a TV's minutes come from Hearth and from
-  Family Link. The options flow links that Family Link device to the TV profile it is, and Hearth's (fresher) count is
-  used for it.
-- Sources reset at their own midnight (the service's account time zone). A value that drops counts as a new day.
-- A source that hasn't changed in a long time is shown as stale in the breakdown, not dropped: its last count still
-  counts for today.
-
-What's not available from those services, as of this writing: per-app minutes from Family Safety (it lists apps, not
-their time), and Nintendo per-game time other than through its usage-report action.
+How minutes from these are combined, counted once and tied to games: see [Counting](#counting).
 
 ## People
 
-The household maps once, in the options:
+The household maps once (see [Setting it up](#setting-it-up)):
 
 - each **TV profile** (`profile_id`, as Hearth reports it) to a person, or to nobody (a guest or shared profile);
 - each **phone** to its person (asked when it pairs);
-- each **screen time source** to its person.
+- each **screen time source** to its person;
+- each **gamer account** (Xbox gamertag, Switch user as friend presence names it) to its person.
 
 Hearth's TVs can suggest the mapping by name (a profile called like a person), for an adult to check. The integration,
 not Hearth, owns this map; Hearth's `profile_id` to name map goes away.
 
-Per person, the integration makes:
+## Counting
 
-- **Screen time today** (minutes): the total, counted once per device as above. Attributes: per source (with its
-  freshness), per kind (video, games, other), per device.
-- **Video today**, **Games today** (minutes), from the same sources by their kind.
+### Play sessions
 
-## Data out
+Where a source says what's playing **now** (Hearth TVs and phones, Xbox now playing, Switch friend presence), the
+integration keeps **play sessions**: person, device, app or title, which source saw it, start, and last seen. A
+session ends when the source says something else or nothing for 2 minutes (a dropped poll doesn't end it). Sessions
+are kept for 7 days, so a day's timeline can be shown and checked.
+
+Where a source only gives **totals** (Family Link, Family Safety, the Nintendo integration), the integration takes the
+increase since its last reading as minutes on that device, at the time it saw them grow. Those minutes have no exact
+time; they're "sometime before this reading".
+
+### Counting each minute once
+
+Per person, per device, per app or title, the day's minutes are the **larger** of what each source says, never the
+sum; the breakdown keeps every source's number. So:
+
+- Hearth Mobile and Family Link on the same phone: the larger of the two.
+- A Google TV kids profile: Family Link lists it as a device of its own; the options link it to the TV profile it is,
+  and Hearth's count wins whenever it's larger (it's fresher).
+- Switch friend presence and the Nintendo integration on the same Switch: the larger.
+- Family Safety's account total already includes its devices: add the account or its devices, never both (the
+  options refuse a device sensor next to its own account's).
+
+Days start at local midnight. A source that resets at its own midnight (another time zone) is read as dropping to
+zero: a drop is a new day for that source. A source that stops changing is shown as stale in the breakdown; its last
+count still counts.
 
 ### Games and titles
 
 **Games** are games wherever they're played: Xbox, Windows (Steam and other launchers among them), Nintendo Switch,
 phones and tablets, and game apps on a TV. How the integration knows:
 
-| Where | Counts as games | Per game |
-|---|---|---|
-| Nintendo Switch | all of it | live: Nintendo Switch Online friend presence (state and game, Switch and Switch 2) read through a self-hosted nxapi presence server or the HACS Nintendo-Switch-Presence sensors, about 30-60 s behind; needs a separate adult "watcher" account friended with each kid. Fallback: per-app minutes from the built-in Nintendo integration, the playing game inferred from which app's minutes grew |
-| Xbox | all of it | what's playing, from Home Assistant's Xbox integration (now playing per gamer), timed by the integration; Family Safety gives totals only |
-| Windows | by app, from a list (Steam, Epic, Battle.net, Minecraft Launcher and the like, editable) | the playing title where a source has it; otherwise the launcher's time |
-| Phones, tablets, TVs | apps Android marks as games (Hearth sends each app's category), plus any an adult adds | per app, from Hearth and Family Link |
+| Where | Counts as games | Per game | Live (for together) |
+|---|---|---|---|
+| Nintendo Switch | all of it | Switch friend presence (state and game, Switch and Switch 2) through a self-hosted nxapi presence server or the HACS Nintendo-Switch-Presence sensors; needs a separate adult "watcher" account friended with each kid. Fallback: per-app minutes from the built-in Nintendo integration | presence, 30-60 s behind |
+| Xbox | all of it | Home Assistant's Xbox integration (now playing per gamer), timed by the integration; Family Safety gives totals only | yes |
+| Windows | by app, from a list (Steam, Epic, Battle.net, Minecraft Launcher and the like, editable) | the playing title where a source has it (Xbox now playing covers Xbox-signed-in PC games); otherwise the launcher's time | partly |
+| Phones, tablets, TVs | apps Android marks as games (Hearth sends each app's category), plus any an adult adds | per app, from Hearth and Family Link | on Hearth devices |
 
-**Titles** tie one game together across places: a title (for example "Minecraft") lists what it's called in each source
-(the Android package, the Xbox and Nintendo names, the Windows app). The integration offers the matches it sees and an
-adult confirms them. A title's time is its time everywhere.
+**Titles** tie one game (or show service, or app) together across places: a title (for example "Minecraft") lists what
+it's called in each source (the Android package, the Xbox and Nintendo names, the Windows app). The integration offers
+the matches it sees (same name once cleaned of marks and editions) and an adult confirms them. A title's time is its
+time everywhere.
 
-### Rules
+### Playing together
 
-Budgets apply to everything of their kind unless a **rule** says otherwise. A rule names a title (or an app), who it's
-for (everyone or some people), and one of:
+**Playing together** is a state of its own: two or more of the household's people in play sessions of the same title
+at the same time (overlapping by a minute or more). The integration shows it as:
 
-- **Doesn't count:** time on it is shown but never taken from any budget (homework apps, a music app, a drawing app).
-- **Own limit:** it has its own daily budget instead of its kind's, which may be longer than the person's whole daily
-  screen time (Minecraft: 3 hours, while games are 90 minutes). Its time counts toward that limit only.
-- **Counts less:** each minute counts as a fraction (half, a quarter) toward the kind's budget.
+- a **Playing together** binary sensor for the household (attributes: the title, who, since when, on which devices);
+- **Playing together today**, a duration per person.
 
-A rule can apply only **when** something is true; outside it, the title counts as usual:
+Automations and dashboards can use it like any other state, and rules can depend on it. Only live sources can show
+it; minutes known only from totals are never "together".
 
-- **Together:** two or more of the household's people are playing that title at the same time (seen where a source
-  knows what's playing now: Hearth devices, Xbox, and a Switch through friend presence; Family Safety reports only
-  after the fact);
-- on certain days, or between certain times.
+## Limits
 
-**Playing together** is a state the integration knows and shows, not only a rule's condition: a **Playing together**
-binary sensor for the household (on while two or more people play the same title; attributes: the title, who, since
-when, on which devices), and a **Playing together today** duration per person. Automations and dashboards can use it
-like any other state.
+### Groups
 
-Rules decide in the order listed, the first that applies wins. Examples: "Minecraft, everyone, together: own limit 4
-hours"; "Khan Academy Kids: doesn't count". Anything else (a longer afternoon one day, a weekend treat) is an
-**extension**: the same bonus as "ask for more", given to a kind or to one title (see [Budgets](#budgets)).
+A budget is set on a **group**: a set of apps and titles whose minutes count together. Built in:
+
+- **All screen time**: everything not excluded by a rule.
+- **Video**: video apps (Android's video category, plus any an adult adds).
+- **Games**: as above.
+
+An adult can add groups: **YouTube** (YouTube and HearthTube, on every device) is the household's pool today. A
+minute counts toward every group its app or title is in, so a YouTube minute is taken from YouTube, Video and All
+screen time. A device's time is up when **any** group it's playing from is used up.
 
 ### Budgets
 
-Replaces the hand-made pool templates. Per person, number entities an adult (or an automation) sets:
+Per person and group, number entities an adult (or an automation) sets:
 
-- a daily **budget** per kind (for example video 120, games 90; unset is no limit), weekday and weekend values;
-- **Bonus today** (minutes, reset at midnight), what chores, "ask for more" approvals and automations add to: the
-  one extension mechanism, for a kind or for one title with its own limit.
+- a daily **budget** (weekday and weekend values; unset is no limit);
+- **Bonus today** (minutes, back to 0 at midnight).
 
-And per person and kind: **Minutes left** (budget + bonus - used today, never below 0), and the event
-`hearth_budget_reached` (person, kind) once a day when it reaches 0. A title with its own limit gets its own **Minutes
-left** and event (person, title), and devices are told which titles are still open when the kind's budget is used up. An optional **shared pool** counts every kind
-together against one budget, which is how the household's YouTube pool works today.
+From them, per person and group: **Minutes left** (budget + bonus - counted today, never below 0) and the event
+`hearth_budget_reached` (person, group) once a day when it reaches 0. A **shared budget** can also span people (one
+pool the siblings draw from), with its own Minutes left.
 
-Services: `hearth.add_bonus` (person, minutes, and a kind or a title), `hearth.set_budget`.
+### Rules
+
+Budgets apply to everything in their groups unless a **rule** says otherwise. A rule names a title or an app, who it's
+for (everyone or some people), and one of:
+
+- **Doesn't count:** time on it is shown but taken from no group (homework apps, a music app, a drawing app).
+- **Own limit:** it leaves its groups and has its own daily budget, which may be longer than the person's whole daily
+  screen time (Minecraft: 3 hours, while games are 90 minutes). It gets its own Minutes left and
+  `hearth_budget_reached` (person, title).
+- **Counts less:** each minute counts as a fraction (half, a quarter) toward its groups.
+
+A rule can apply only **when**:
+
+- **together:** the title is being played together (see [Playing together](#playing-together));
+- on certain days, or between certain times.
+
+Rules are checked in the order listed; the first that applies wins; a title no rule matches counts as usual. Minutes
+with no exact time (from totals) count as usual too: a rule with a condition can only lighten minutes the integration
+saw live. Examples: "Minecraft, everyone, together: own limit 4 hours"; "Khan Academy Kids: doesn't count".
+
+### Extensions
+
+Anything else (a longer afternoon one day, a weekend treat, chores) is an **extension**: minutes added to a person's
+Bonus today, for a group or for one title with its own limit. There's one way to add them, `hearth.add_bonus` (person,
+minutes, group or title), whoever asks:
+
+- **Ask for more.** A kid asks from a Hearth device (Hearth Mobile's "ask for 15 more", or a TV's time's-up screen).
+  The integration fires `hearth_more_time_requested` and sends the adults' phones an actionable notification: **+15**,
+  **+30**, **Not now**. The first answer adds the bonus (or not) and is shown on the kid's device. One open request
+  per person; it ends after 10 minutes.
+- **Chores, automations, a dashboard button**: call `hearth.add_bonus`.
 
 **Who enforces.** The integration counts and tells; it doesn't lock anything itself:
 
-- Hearth devices get the person's minutes left (below) and enforce it in HearthTube as Hearth does with
-  `sensor.hearth_allowance` now.
-- Other services keep their own limits. Automations act on `hearth_budget_reached` with those services' own actions:
-  Nintendo's Max screentime today and Suspend software, Family Safety's `lock_platform` or daily limits, Family Link's
-  app limits. Example blueprints ship with the integration.
-- Granting more works the same way in reverse: `hearth_more_time_requested` answered with Allow adds a bonus here, and
-  a blueprint can pass the same minutes on (Nintendo's `add_bonus_time`, Family Safety's `approve_request`).
+- Hearth devices get the person's Minutes left per group (below) and enforce them as Hearth does with
+  `sensor.hearth_allowance` now (HearthTube for YouTube; more apps later).
+- Other services keep their own limits. Blueprints that ship with the integration act on `hearth_budget_reached`
+  with those services' own actions: Nintendo's Max screentime today and Suspend software, Family Safety's
+  `lock_platform` or daily limits, Family Link's app limits. And the reverse: a bonus passed on (Nintendo's
+  `add_bonus_time`, Family Safety's `approve_request`).
+
+## Data out
 
 ### What a device gets
 
-- **A TV**, in the answer to each status post: per profile, `{"minutes_left": {"video": n | null, ...},
-  "schedule_locked": bool, "message": text | null, "pause": {"until": iso, "reason": text} | null}`. Same meaning as
-  `sensor.hearth_allowance`'s map today, so Hearth's enforcement doesn't change. A TV that hasn't posted in a while
-  gets it on its next post (it posts at least every 10 minutes, and every 2 while playing).
-- **A phone**: its person's state document (the same fields, plus bedtime) in the answer to each post, and pushed when
-  it changes (see [Away from home](#away-from-home)).
-- **Pop-ups**: `hearth.notify` (target: devices, a person's devices, or the household; `title`, `message`,
-  `duration`, `position`, `image`, `camera`, up to three `actions`). On a TV it's Hearth's pop-up; on a phone, a
-  notification. Actions call a Home Assistant service as a user the household chose, not with any device's secret.
-- **Family pause**: `hearth.pause` (minutes, reason) and `hearth.resume`: every device shows the pause and HearthTube
-  stops; replaces the hand-made pause helpers and scripts.
+The answer to each status post carries the person's (or, on a TV, each profile's) **state document**:
+
+```json
+{
+  "profiles": {
+    "user:10": {
+      "person": "person.sam",
+      "groups": [{"id": "youtube", "name": "YouTube", "minutes_left": 25, "apps": ["com.thesiegs.hearthtube"]}],
+      "open_titles": [{"title": "Minecraft", "minutes_left": 140, "apps": ["com.mojang.minecraftpe"]}],
+      "pause": {"until": "2026-10-26T19:00:00-05:00", "reason": "Dinner"},
+      "request": {"status": "answered", "minutes": 15},
+      "message": null
+    }
+  },
+  "version": 42
+}
+```
+
+`groups` lists only groups with a budget; `minutes_left` null is no limit. `open_titles` are the own-limit titles still
+open when their usual groups are used up. A TV that hasn't posted in a while gets it on its next post (at least every
+10 minutes, every 2 while playing); `version` lets it skip an unchanged one. This replaces `sensor.hearth_allowance`:
+same meaning, from the integration instead of a template.
+
+A **phone** gets its person's part of the same document, in the answer to each post and pushed when it changes (see
+[Away from home](#away-from-home)).
+
+**Pop-ups**: `hearth.notify` (target: devices, a person's devices, or the household; `title`, `message`, `duration`,
+`position`, `image`, `camera`, up to three `actions`). On a TV it's Hearth's pop-up; on a phone, a notification.
+Actions call a Home Assistant service as a user the household chose, not with any device's secret.
+
+**Family pause**: `hearth.pause` (minutes, reason, people or everyone) and `hearth.resume`: the devices show the pause
+and stop playing; replaces the hand-made pause helpers and scripts.
 
 ### Approvals
 
@@ -258,6 +317,46 @@ registers (`webhook.async_register`, not local-only), and, when Home Assistant C
 The device's secret is still required on every call: knowing the URL isn't enough. Home Assistant to the phone uses a
 push channel the phone holds open (ntfy, per Hearth Mobile's design), carrying only "something changed"; the phone
 then fetches its state with its secret.
+
+## Setting it up
+
+All in the household's options (Settings > Devices & services > Hearth > Configure), a menu:
+
+1. **People**: the TV profiles the TVs have reported, each with a person or nobody; gamer accounts likewise.
+2. **Screen time sources**: add (a sensor, whose, which device or account, and the Family Link device that is really a
+   TV profile), remove.
+3. **Titles**: the suggested matches to confirm, and titles to edit.
+4. **Groups**: the built-in ones, and groups an adult adds (name, apps and titles).
+5. **Rules**: an ordered list; add, edit, move, remove.
+
+Budgets aren't in the options: they're number entities, so a dashboard, a voice assistant or an automation can change
+them like any other. The lists (titles, groups, rules) are kept with Home Assistant's storage helper; if editing them
+in the options flow proves clumsy, a small panel of the integration's own takes over later.
+
+## Entities
+
+Per Hearth device: as in [Kinds](#kinds).
+
+Per person (a device of its own in Home Assistant, "Hearth: <person>"):
+
+| Entity | Type |
+|---|---|
+| Screen time today | duration; attributes per source, per device, per group, and stale sources |
+| <group> today, for each group with a budget | duration |
+| <group> budget, weekday / weekend | number (minutes) |
+| <group> minutes left | duration |
+| Bonus today, per group | number (minutes) |
+| <title> minutes left, for each own-limit title | duration |
+| Playing | sensor: the title or app now, and where |
+| Playing together today | duration |
+
+Per household: **Playing together** (binary sensor), **Shared budgets** (their minutes left), **Requests** (open
+"ask for more" requests).
+
+Events: `hearth_budget_reached` (person, group or title), `hearth_more_time_requested` (person, device, group or
+title), `hearth_more_time_answered`, `hearth_playing_together` (title, people, started or ended).
+
+Services: `hearth.add_bonus`, `hearth.set_budget`, `hearth.notify`, `hearth.pause`, `hearth.resume`.
 
 ## The device's side of the API
 
@@ -309,7 +408,18 @@ device removes it from the household.
 1. Ship the integration alongside the old paths; a paired device prefers the integration.
 2. A paired TV stops posting to its old webhook and says so. The old automation, helpers and pool templates are left
    alone and listed as no longer used; the integration offers to remove only what it made.
-3. Devices move one at a time, checked in history.
+3. What a household like this one has made by hand, and what takes its place:
+
+   | By hand today | With the integration |
+   |---|---|
+   | Per-TV status helpers and webhook automations | each TV's device |
+   | A YouTube pool (weekday and weekend helpers) and a per-kid "minutes left" template | a YouTube group with a weekday and weekend budget per kid, or a shared budget |
+   | Per-kid bonus helpers, reset at midnight | Bonus today |
+   | Chores automations that add to the bonus | the same automations, calling `hearth.add_bonus` |
+   | Pause helpers and start / end scripts | `hearth.pause`, `hearth.resume` |
+   | `sensor.hearth_allowance` | the state document in each status answer |
+
+   Each moves when an adult chooses, checked side by side in history for a few days first.
 4. After a release or two of both, the webhook path is documented as legacy.
 
 ## Testing
@@ -332,16 +442,18 @@ at pairing; the integration raises a repair issue when the two are too far apart
 
 1. **Done:** skeleton, household setup, pairing with kinds, a device per Hearth device, status endpoint and entities,
    Connected.
-2. Hearth TV side: **Pair with Home Assistant**, posting status to the integration (and no longer to the webhook).
-3. People: the person mapping, per-person Screen time today from Hearth's own devices.
-4. Screen time sources: Family Link, Family Safety, Nintendo; counting once; per-kind totals.
-5. Budgets, bonus, minutes left, `hearth_budget_reached`; minutes left back to the TVs (replacing
-   `sensor.hearth_allowance`); blueprints for the other services' locks.
-6. `hearth.notify`, `hearth.pause`.
-7. Approvals through the integration; `hearth_more_time_requested`.
-8. Hearth Mobile: pairing with a person, the webhook away from home, its state document.
-9. The household mailbox.
-10. The dashboard endpoint (only if worth it).
+2. Hearth TV side: **Pair with Home Assistant**, posting status to the integration (and no longer to the webhook),
+   with each app's category.
+3. People: the person mapping; per-person Screen time today and Playing from Hearth's own devices; play sessions.
+4. Sources: Family Link, Family Safety, Nintendo, Xbox, Switch presence; counting once; titles; Playing together.
+5. Groups, budgets, bonus, minutes left, `hearth_budget_reached`; the state document back to the TVs (replacing
+   `sensor.hearth_allowance`).
+6. Rules.
+7. Ask for more; `hearth.notify`, `hearth.pause`; blueprints for the other services.
+8. Approvals through the integration.
+9. Hearth Mobile: pairing with a person, the webhook away from home, its state document.
+10. The household mailbox.
+11. The dashboard endpoint (only if worth it).
 
 ## Open questions
 
@@ -355,9 +467,9 @@ at pairing; the integration raises a repair issue when the two are too far apart
   a few times a year) or the parental controls fallback (no third party, delay unmeasured). To test first: can the
   kids' supervised Switch users accept the watcher, how fast presence changes, whether two kids in Minecraft show the
   same game name, and whether Switch Minecraft also shows in the Xbox integration's now playing sensor.
-- **Counting once:** is "the larger of two sources for one device" right, or should one source be chosen per device?
-- **Budget kinds:** are video, games and other enough, and should the shared pool be the default?
 - **Dashboard panel without a person's token:** can the integration serve a chosen user's dashboard config, or does the
   panel keep a non-admin user's token?
+- **Video category:** Android's video category misses some apps (a TV's live channels, browsers); the built-in Video
+  group may need a starter list.
 - **Second household on one Home Assistant:** not planned.
 - **Devices on another network segment:** Zeroconf won't cross it; keep the address-typed path.
