@@ -1,9 +1,11 @@
 # Hearth integration for Home Assistant (design draft)
 
-> **Design draft.** Nothing here is built. It is written so another person or agent can pick it up: it says what Hearth
-> does with Home Assistant today, what hurts, what the integration should be, and what is still undecided. Read
-> [home-assistant.md](home-assistant.md) first (what exists) and [household-sync.md](household-sync.md) (the first
-> new consumer).
+> **Design draft, step 1 in progress.** Build order step 1 (household setup, pairing, a device per TV, the status
+> endpoint and its entities) is in `custom_components/hearth`, see [The TV's side of the API](#the-tvs-side-of-the-api);
+> the TV side (**Pair with Home Assistant**) isn't built yet. The rest is written so another person or agent can pick it
+> up: what Hearth does with Home Assistant today, what hurts, what the integration should be, and what is still
+> undecided. Read [home-assistant.md](home-assistant.md) first (what exists) and [household-sync.md](household-sync.md)
+> (the first new consumer).
 
 ## Why
 
@@ -129,6 +131,39 @@ The first new consumer ([household-sync.md](household-sync.md)). The integration
   blobs dropped first. Pictures are not stored here; they move TV to TV.
 - The integration never has the household key and can't read the blobs. TVs still publish on their heartbeat as a backstop.
 
+## The TV's side of the API
+
+What step 1 built, for the TV side to call. Every endpoint answers local network addresses only (403 otherwise) and
+answers JSON; errors are `{"error": "<reason>"}`.
+
+**Pairing.** The household is set up once in Home Assistant (Add integration > Hearth, a name). Then, from the TV:
+
+1. `POST /api/hearth/pair` with `{"tv_id", "name", "model", "version", "nonce"}`. `tv_id` is the TV's own stable id
+   (8-64 of `A-Z a-z 0-9 _ -`, made once and kept); `nonce` is 32-128 of the same characters, random, made for this
+   pairing and never shown. Answers `{"pairing_id", "code", "expires_in"}` (seconds, 600). The TV shows `code`.
+   404 `not_set_up` when the household isn't set up, 429 `try_later` when this address asked in the last 10 seconds or
+   five TVs are already waiting, 400 `bad_request` for a malformed body.
+2. Home Assistant shows a discovered **Hearth** TV named `name`; an administrator checks the codes match and confirms.
+   Asking again from the same TV replaces its earlier request.
+3. The TV polls `GET /api/hearth/pair/<pairing_id>` with header `X-Hearth-Nonce: <nonce>` (every 2 seconds is
+   plenty): `{"status": "pending"}`, then once `{"status": "approved", "tv_id", "secret"}`. After that, or once the
+   request expires (10 minutes, or 2 minutes after approval), it's 404. A wrong or missing nonce is 404 too.
+4. The TV keeps `secret` (and nothing else of Home Assistant's). Pairing again gives a new secret; the old one stops
+   working.
+
+**Status.** `POST /api/hearth/tv/<tv_id>/status` with header `X-Hearth-Secret: <secret>` and the same JSON body as the
+webhook post ([home-assistant.md](home-assistant.md#tv-status)), at most 64 KB. 200 `{"ok": true}`; 401 `not_paired`
+for an unknown TV or wrong secret (the TV was removed: stop posting and offer to pair again); 429 `too_often` past 20
+posts a minute; 400 `bad_request`. A refused secret is a plain 401, never a failed Home Assistant login, so it doesn't
+count toward Home Assistant's IP ban.
+
+**Entities**, per TV: State (`off`, `idle`, `paused`, `playing`), App (attribute `package`), Media title (attributes
+`album`, `duration_s`, `now_playing_available`), Media artist, Media app, Profile (attributes `profile_id`,
+`kids_profile`), Screen time today (seconds, with per-app, playing and per-profile attributes kept out of history), Kids
+profile (attribute `allowed_apps`), Screen time up (attributes `reason`, `text`, `minutes_left`, `unlocks_at`, `event`,
+`event_at`), and Connected (diagnostic). All but Connected are unavailable until the TV's first post and once it's quiet
+for 15 minutes; the last status is kept across Home Assistant restarts. Deleting the TV's device removes the TV.
+
 ## Security
 
 - Each TV's secret works on Hearth's endpoints only. A leaked secret can post status and read/write the mailbox, not
@@ -157,6 +192,7 @@ The first new consumer ([household-sync.md](household-sync.md)). The integration
 - A contract test shared with Hearth: the TV status JSON in [home-assistant.md](home-assistant.md) is one fixture used by
   both sides.
 - Manual: a real Home Assistant, a real TV, phone approval end to end.
+- Running them: Home Assistant's test tools need Linux (on Windows, a container: `docker run --rm -v <repo>:/src:ro python:3.14-slim`, then `pip install pytest-homeassistant-custom-component`, copy `custom_components` and `ha_tests` out of `/src`, and run `python -m pytest` in `ha_tests`).
 
 ## Releasing
 

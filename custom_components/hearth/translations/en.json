@@ -1,0 +1,47 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Set up Hearth",
+        "description": "Your household's Hearth TVs pair with Home Assistant from their own settings (Settings > Home Assistant > Pair with Home Assistant). Each TV that asks shows up here to confirm.",
+        "data": {
+          "name": "Household name"
+        }
+      },
+      "confirm": {
+        "title": "Pair {name}?",
+        "description": "Check that the TV called {name} shows this code:\n\n**{code}**\n\nPair it only if the codes match. A TV you don't recognize, or a code that doesn't match, may be someone else's: close this instead."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Hearth is already set up. TVs pair from their own settings.",
+      "expired": "This TV's request has ended. Ask again from the TV.",
+      "paired": "{name} is paired."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "tv_state": {
+        "name": "State",
+        "state": {
+          "off": "Off",
+          "idle": "Idle",
+          "paused": "Paused",
+          "playing": "Playing"
+        }
+      },
+      "app": { "name": "App" },
+      "media_title": { "name": "Media title" },
+      "media_artist": { "name": "Media artist" },
+      "media_app": { "name": "Media app" },
+      "profile": { "name": "Profile" },
+      "seconds_today": { "name": "Screen time today" }
+    },
+    "binary_sensor": {
+      "connected": { "name": "Connected" },
+      "kids_profile": { "name": "Kids profile" },
+      "screen_time_up": { "name": "Screen time up" }
+    }
+  }
+}

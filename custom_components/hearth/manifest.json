@@ -1,0 +1,13 @@
+{
+  "domain": "hearth",
+  "name": "Hearth",
+  "codeowners": ["@theSiegs"],
+  "config_flow": true,
+  "dependencies": ["http"],
+  "documentation": "https://github.com/theSiegs/Hearth/blob/master/docs/home-assistant-integration.md",
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/theSiegs/Hearth/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
