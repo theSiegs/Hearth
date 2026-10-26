@@ -153,6 +153,44 @@ Per person, the integration makes:
 
 ## Data out
 
+### Games and titles
+
+**Games** are games wherever they're played: Xbox, Windows (Steam and other launchers among them), Nintendo Switch,
+phones and tablets, and game apps on a TV. How the integration knows:
+
+| Where | Counts as games | Per game |
+|---|---|---|
+| Nintendo Switch | all of it | from the Nintendo integration's `device_usage_report` action, which the integration calls a few times an hour |
+| Xbox | all of it | what's playing, from Home Assistant's Xbox integration (now playing per gamer), timed by the integration; Family Safety gives totals only |
+| Windows | by app, from a list (Steam, Epic, Battle.net, Minecraft Launcher and the like, editable) | the playing title where a source has it; otherwise the launcher's time |
+| Phones, tablets, TVs | apps Android marks as games (Hearth sends each app's category), plus any an adult adds | per app, from Hearth and Family Link |
+
+**Titles** tie one game together across places: a title (for example "Minecraft") lists what it's called in each source
+(the Android package, the Xbox and Nintendo names, the Windows app). The integration offers the matches it sees and an
+adult confirms them. A title's time is its time everywhere.
+
+### Rules
+
+Budgets apply to everything of their kind unless a **rule** says otherwise. A rule names a title (or an app), who it's
+for (everyone or some people), and one of:
+
+- **Doesn't count:** time on it is shown but never taken from any budget (homework apps, a music app, a drawing app).
+- **Own limit:** it has its own daily budget instead of its kind's, which may be longer than the person's whole daily
+  screen time (Minecraft: 3 hours, while games are 90 minutes). Its time counts toward that limit only.
+- **Counts less:** each minute counts as a fraction (half, a quarter) toward the kind's budget.
+
+A rule can apply only **when** something is true; outside it, the title counts as usual:
+
+- **Together:** two or more of the household's people are playing that title at the same time (seen where a source
+  knows what's playing now: Hearth devices and Xbox; Nintendo and Family Safety report only after the fact, so
+  together on a Switch can't be seen yet);
+- on certain days, or between certain times;
+- any Home Assistant condition (a state, a template, a helper such as "long play day"), so "a nice day" can be the
+  weather entity, or simply a switch an adult turns on.
+
+Rules decide in the order listed, the first that applies wins. Examples: "Minecraft, everyone, together: own limit 4
+hours"; "Minecraft, alone, on a sunny weekend afternoon: counts as usual"; "Khan Academy Kids: doesn't count".
+
 ### Budgets
 
 Replaces the hand-made pool templates. Per person, number entities an adult (or an automation) sets:
@@ -161,7 +199,8 @@ Replaces the hand-made pool templates. Per person, number entities an adult (or 
 - **Bonus today** (minutes, reset at midnight), what chores, "ask for more" approvals and automations add to.
 
 And per person and kind: **Minutes left** (budget + bonus - used today, never below 0), and the event
-`hearth_budget_reached` (person, kind) once a day when it reaches 0. An optional **shared pool** counts every kind
+`hearth_budget_reached` (person, kind) once a day when it reaches 0. A title with its own limit gets its own **Minutes
+left** and event (person, title), and devices are told which titles are still open when the kind's budget is used up. An optional **shared pool** counts every kind
 together against one budget, which is how the household's YouTube pool works today.
 
 Services: `hearth.add_bonus` (person, minutes, kind), `hearth.set_budget`.
@@ -304,8 +343,10 @@ at pairing; the integration raises a repair issue when the two are too far apart
 - **Family Link's per-device numbers:** a test phone (an emulator) once showed 1.2 minutes in Home Assistant against 2
   hours on the device. Check on a real phone before trusting them in budgets; the per-child total may be the safer
   source until then.
-- **Games on a TV:** does a TV profile's game app count as games? (A kind per app, set in the options, is the likely
-  answer.)
+- **Enforcing a rule on another service:** when games are used up but Minecraft's own limit isn't, a Hearth device can
+  keep only Minecraft open; on a Switch or Xbox the service's own limits can't tell titles apart the same way (Nintendo
+  limits the whole Switch; Family Safety can block other apps one by one). How far blueprints should go there is open.
+- **Together on a Switch:** Nintendo reports play after the fact, so "together" can't be seen there yet.
 - **Counting once:** is "the larger of two sources for one device" right, or should one source be chosen per device?
 - **Budget kinds:** are video, games and other enough, and should the shared pool be the default?
 - **Dashboard panel without a person's token:** can the integration serve a chosen user's dashboard config, or does the
