@@ -62,6 +62,32 @@ class Pairing:
     denied: bool = False
 
 
+def _shared(hass: HomeAssistant) -> dict[str, dict]:
+    """Pairings kept outside the entry: approving one saves the device, which reloads the entry, and the device
+    asking for its secret meanwhile must still find it."""
+    return hass.data.setdefault(f"{DOMAIN}_pairing", {"pairings": {}, "asked_at": {}})
+
+
+def find_pairing(hass: HomeAssistant, pairing_id: str, nonce: str | None) -> Pairing | None:
+    """A waiting pairing, only for the device that started it (it holds the nonce); works while the entry reloads."""
+    pairings: dict[str, Pairing] = _shared(hass)["pairings"]
+    now = dt_util.utcnow()
+    for gone in [p.pairing_id for p in pairings.values() if p.expires <= now]:
+        del pairings[gone]
+    pairing = pairings.get(pairing_id)
+    if pairing is None or not nonce or not hmac.compare_digest(pairing.nonce_hash, hash_secret(nonce)):
+        return None
+    return pairing
+
+
+def collect_secret(hass: HomeAssistant, pairing: Pairing) -> str | None:
+    """The approved secret, once: the pairing ends with it."""
+    secret = pairing.secret
+    if secret is not None:
+        _shared(hass)["pairings"].pop(pairing.pairing_id, None)
+    return secret
+
+
 @dataclass
 class DeviceState:
     status: dict[str, Any] | None = None
@@ -78,7 +104,7 @@ class HearthHub:
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, f"{STORAGE_KEY}.{entry.entry_id}")
         self._states: dict[str, DeviceState] = {}
         # Kept outside the entry, so a pairing waiting to be collected survives the entry reloading
-        shared = hass.data.setdefault(f"{DOMAIN}_pairing", {"pairings": {}, "asked_at": {}})
+        shared = _shared(hass)
         self._pairings: dict[str, Pairing] = shared["pairings"]
         self._asked_at: dict[str, datetime] = shared["asked_at"]
         self.household = Household(hass, self)

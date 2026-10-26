@@ -23,7 +23,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util.network import is_local
 
 from .const import DOMAIN, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
-from .hub import HearthHub
+from .hub import HearthHub, collect_secret, find_pairing
 from .status import clean_status, text
 
 HEADER_SECRET = "X-Hearth-Secret"
@@ -132,13 +132,13 @@ class PairStatusView(HomeAssistantView):
         hass: HomeAssistant = request.app["hass"]
         if not _local(request):
             return _error(HTTPStatus.FORBIDDEN, "not_local")
-        hub = _hub(hass)
-        pairing = hub.pairing_for(pairing_id, request.headers.get(HEADER_NONCE)) if hub else None
+        # Not through the entry: approving saves the device and reloads the entry, and this must answer meanwhile
+        pairing = find_pairing(hass, pairing_id, request.headers.get(HEADER_NONCE))
         if pairing is None:
             return _error(HTTPStatus.NOT_FOUND, "unknown")
         if pairing.denied:
             return web.json_response({"status": "denied"})
-        secret = hub.collect(pairing)
+        secret = collect_secret(hass, pairing)
         if secret is None:
             return web.json_response({"status": "pending"})
         return web.json_response({"status": "approved", "device_id": pairing.device_id, "secret": secret})

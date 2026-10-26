@@ -135,11 +135,17 @@ final class HaIntegration {
         if (base == null || pairingId == null || !pairingId.matches("[A-Za-z0-9_-]{8,64}")) return "ended";
         Answer answer = request(base + "/api/hearth/pair/" + pairingId, "GET", null, nonce);
         if (answer.code == 0) return "unreachable";
-        if (answer.code != 200 || answer.body == null) return "ended";
+        if (answer.code != 200 || answer.body == null) {
+            Log.i(TAG, "Pairing ended: Home Assistant answered " + answer.code);
+            return "ended";
+        }
         String status = answer.body.optString("status");
         if ("approved".equals(status)) {
             String secret = answer.body.optString("secret", "");
-            if (secret.isEmpty() || !setSecret(context, secret)) return "ended";
+            if (secret.isEmpty() || !setSecret(context, secret)) {
+                Log.w(TAG, "Pairing approved, but the secret " + (secret.isEmpty() ? "was missing" : "couldn't be kept"));
+                return "ended";
+            }
             // The address that answered is Home Assistant's now (only now: a mistyped one never replaces the panel's)
             HaConfig.prefs(context).edit().putString(HaConfig.URL_KEY, base).apply();
             Log.i(TAG, "Paired with Home Assistant");

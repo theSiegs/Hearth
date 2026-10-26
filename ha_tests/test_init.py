@@ -272,3 +272,20 @@ async def test_a_phone_gets_a_phone_s_entities(
         "binary_sensor.sam_s_phone_screen_time_up",
     ):
         assert hass.states.get(missing) is None
+
+
+async def test_the_secret_is_collected_while_the_household_reloads(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """Approving saves the device, which reloads the entry; a poll meanwhile still gets its secret."""
+    entry = await _set_up(hass)
+    client = await hass_client_no_auth()
+    response = await client.post("/api/hearth/pair", json={"device_id": TV_ID, "name": "Kitchen", "nonce": NONCE})
+    pairing_id = (await response.json())["pairing_id"]
+    await hass.async_block_till_done()
+    flow = hass.config_entries.flow.async_progress_by_handler(DOMAIN)[0]
+    await hass.config_entries.flow.async_configure(flow["flow_id"], {})
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+    answer = await client.get(f"/api/hearth/pair/{pairing_id}", headers={"X-Hearth-Nonce": NONCE})
+    assert (await answer.json())["status"] == "approved"
