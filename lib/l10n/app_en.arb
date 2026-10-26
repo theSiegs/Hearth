@@ -4468,5 +4468,84 @@
     "haShareNowPlayingDetail": "The video's title and channel, to Home Assistant",
     "@haShareNowPlayingDetail": {
         "description": "Home Assistant: whether HearthTube shares what's playing"
+    },
+    "haPairTitle": "Pair with Home Assistant",
+    "@haPairTitle": {
+        "description": "Home Assistant: the Hearth integration's pairing page and tile"
+    },
+    "haPairPaired": "Paired",
+    "@haPairPaired": {
+        "description": "Home Assistant: summary of the pairing tile when paired"
+    },
+    "haPairNotPaired": "Not paired",
+    "@haPairNotPaired": {
+        "description": "Home Assistant: summary of the pairing tile when not paired"
+    },
+    "haPairIntro": "With the Hearth integration in Home Assistant, this TV reports what it's doing and gets each profile's time limits, with no token or webhook. Install the integration and add it in Home Assistant first (Settings > Devices & services > Add integration > Hearth).",
+    "@haPairIntro": {
+        "description": "Home Assistant pairing: what pairing does and what it needs"
+    },
+    "haPairStart": "Pair",
+    "@haPairStart": {
+        "description": "Home Assistant pairing: start pairing"
+    },
+    "haPairCode": "In Home Assistant, open Settings > Devices & services. Under Discovered, open this TV, check it shows the same code, and confirm.",
+    "@haPairCode": {
+        "description": "Home Assistant pairing: what to do while the code is shown"
+    },
+    "haPairDone": "Paired. This TV reports to Home Assistant's Hearth integration now, and gets its time limits from it.",
+    "@haPairDone": {
+        "description": "Home Assistant pairing: it worked"
+    },
+    "haPairIsPaired": "This TV is paired with Home Assistant at {url}.",
+    "@haPairIsPaired": {
+        "description": "Home Assistant pairing: already paired; {url} is the address",
+        "placeholders": {
+            "url": {"type": "String"}
+        }
+    },
+    "haPairUnpair": "Unpair",
+    "@haPairUnpair": {
+        "description": "Home Assistant pairing: forget the pairing on this TV"
+    },
+    "haPairUnpaired": "Unpaired. To remove the TV from Home Assistant too, delete its device there.",
+    "@haPairUnpaired": {
+        "description": "Home Assistant pairing: after unpairing"
+    },
+    "haPairNoAddress": "Enter Home Assistant's address first.",
+    "@haPairNoAddress": {
+        "description": "Home Assistant pairing: no address"
+    },
+    "haPairNotSetUp": "Home Assistant has the Hearth integration but no household yet. Add it there first (Settings > Devices & services > Add integration > Hearth).",
+    "@haPairNotSetUp": {
+        "description": "Home Assistant pairing: the integration is installed but not set up"
+    },
+    "haPairNoIntegration": "Home Assistant answered, but the Hearth integration isn't installed there.",
+    "@haPairNoIntegration": {
+        "description": "Home Assistant pairing: the integration isn't installed"
+    },
+    "haPairUnreachable": "Couldn't reach Home Assistant at that address.",
+    "@haPairUnreachable": {
+        "description": "Home Assistant pairing: no answer"
+    },
+    "haPairTryLater": "Home Assistant has other requests waiting. Try again in a minute.",
+    "@haPairTryLater": {
+        "description": "Home Assistant pairing: asked too often"
+    },
+    "haPairNotLocal": "Home Assistant only pairs TVs on the home network.",
+    "@haPairNotLocal": {
+        "description": "Home Assistant pairing: the TV isn't on the home network"
+    },
+    "haPairFailed": "Pairing didn't work. Try again.",
+    "@haPairFailed": {
+        "description": "Home Assistant pairing: something else went wrong"
+    },
+    "haPairDenied": "Home Assistant turned the request down.",
+    "@haPairDenied": {
+        "description": "Home Assistant pairing: refused"
+    },
+    "haPairEnded": "The request ended before it was confirmed. Try again.",
+    "@haPairEnded": {
+        "description": "Home Assistant pairing: expired"
     }
 }

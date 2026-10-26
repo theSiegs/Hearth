@@ -3,7 +3,8 @@
 > **Design draft, partly built.** In `custom_components/hearth`: household setup, pairing, a device per Hearth TV or
 > phone with its status entities, people, screen time sources (totals and live), titles, counting once, playing
 > together, groups, budgets, bonuses, minutes left and the state document (see [Build order](#build-order) and
-> [The device's side of the API](#the-devices-side-of-the-api)). Nothing on the TV or the phone calls it yet. The rest is
+> [The device's side of the API](#the-devices-side-of-the-api)). Hearth on a TV pairs and reports to it; Hearth
+> Mobile doesn't yet. The rest is
 > written so another person or agent can pick it up: what Hearth does with Home Assistant today, what the integration
 > should be, and what is still undecided. Read [home-assistant.md](home-assistant.md) first (what exists) and
 > [household-sync.md](household-sync.md) (the mailbox's first user).
@@ -456,8 +457,9 @@ at pairing; the integration raises a repair issue when the two are too far apart
    Screen time today, group times, Playing (Hearth devices), groups (built-in and one's own, apps added to Video or
    Games), budgets (weekday and weekend numbers), Bonus today, Minutes left, `hearth_budget_reached`, `hearth.add_bonus`,
    `hearth.set_budget`, and the state document in each status answer (groups only; no titles, pause or requests yet).
-2. Hearth TV side: **Pair with Home Assistant**, posting status to the integration (and no longer to the webhook),
-   with each app's category.
+2. **Done:** Hearth TV side: **Pair with Home Assistant** (Settings > Home Assistant), posting status to the
+   integration (and no longer to the webhook) with each app's category, and each answer's minutes left as HearthTube's
+   allowance (the fewest left in a group holding HearthTube).
 3. People: the person mapping; per-person Screen time today and Playing from Hearth's own devices; play sessions.
 4. Sources: Family Link, Family Safety, Nintendo, Xbox, Switch presence; counting once; titles; Playing together.
 5. Groups, budgets, bonus, minutes left, `hearth_budget_reached`; the state document back to the TVs (replacing

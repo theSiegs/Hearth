@@ -5996,6 +5996,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The video\'s title and channel, to Home Assistant'**
   String get haShareNowPlayingDetail;
+
+  /// Home Assistant: the Hearth integration's pairing page and tile
+  ///
+  /// In en, this message translates to:
+  /// **'Pair with Home Assistant'**
+  String get haPairTitle;
+
+  /// Home Assistant: summary of the pairing tile when paired
+  ///
+  /// In en, this message translates to:
+  /// **'Paired'**
+  String get haPairPaired;
+
+  /// Home Assistant: summary of the pairing tile when not paired
+  ///
+  /// In en, this message translates to:
+  /// **'Not paired'**
+  String get haPairNotPaired;
+
+  /// Home Assistant pairing: what pairing does and what it needs
+  ///
+  /// In en, this message translates to:
+  /// **'With the Hearth integration in Home Assistant, this TV reports what it\'s doing and gets each profile\'s time limits, with no token or webhook. Install the integration and add it in Home Assistant first (Settings > Devices & services > Add integration > Hearth).'**
+  String get haPairIntro;
+
+  /// Home Assistant pairing: start pairing
+  ///
+  /// In en, this message translates to:
+  /// **'Pair'**
+  String get haPairStart;
+
+  /// Home Assistant pairing: what to do while the code is shown
+  ///
+  /// In en, this message translates to:
+  /// **'In Home Assistant, open Settings > Devices & services. Under Discovered, open this TV, check it shows the same code, and confirm.'**
+  String get haPairCode;
+
+  /// Home Assistant pairing: it worked
+  ///
+  /// In en, this message translates to:
+  /// **'Paired. This TV reports to Home Assistant\'s Hearth integration now, and gets its time limits from it.'**
+  String get haPairDone;
+
+  /// Home Assistant pairing: already paired; {url} is the address
+  ///
+  /// In en, this message translates to:
+  /// **'This TV is paired with Home Assistant at {url}.'**
+  String haPairIsPaired(String url);
+
+  /// Home Assistant pairing: forget the pairing on this TV
+  ///
+  /// In en, this message translates to:
+  /// **'Unpair'**
+  String get haPairUnpair;
+
+  /// Home Assistant pairing: after unpairing
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaired. To remove the TV from Home Assistant too, delete its device there.'**
+  String get haPairUnpaired;
+
+  /// Home Assistant pairing: no address
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Home Assistant\'s address first.'**
+  String get haPairNoAddress;
+
+  /// Home Assistant pairing: the integration is installed but not set up
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant has the Hearth integration but no household yet. Add it there first (Settings > Devices & services > Add integration > Hearth).'**
+  String get haPairNotSetUp;
+
+  /// Home Assistant pairing: the integration isn't installed
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant answered, but the Hearth integration isn\'t installed there.'**
+  String get haPairNoIntegration;
+
+  /// Home Assistant pairing: no answer
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach Home Assistant at that address.'**
+  String get haPairUnreachable;
+
+  /// Home Assistant pairing: asked too often
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant has other requests waiting. Try again in a minute.'**
+  String get haPairTryLater;
+
+  /// Home Assistant pairing: the TV isn't on the home network
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant only pairs TVs on the home network.'**
+  String get haPairNotLocal;
+
+  /// Home Assistant pairing: something else went wrong
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing didn\'t work. Try again.'**
+  String get haPairFailed;
+
+  /// Home Assistant pairing: refused
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant turned the request down.'**
+  String get haPairDenied;
+
+  /// Home Assistant pairing: expired
+  ///
+  /// In en, this message translates to:
+  /// **'The request ended before it was confirmed. Try again.'**
+  String get haPairEnded;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
