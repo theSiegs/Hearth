@@ -81,6 +81,31 @@ title in the streaming app, which resumes from its own account's saved position,
 playback position it can't act on. A title finished (95% or more) anywhere is finished everywhere. An entry only moves
 when the streaming app profile it was played under is known on the receiving TV.
 
+**How Continue Watching is built (step 6).** One `watch` entry per person, app and title: the item is
+`played|<package>|<title|episode>` for what an app said was playing (WatchHistory's played entries) or
+`kept|<package>|<app's id or title>` for a Watch Next entry Hearth kept for the person, the value its title, episode,
+length, position and time, plus for a kept one the Watch Next row itself (deep link included, and only for the app it's
+filed under). The Java side does all of it (HouseholdWatch, Household), so it runs whenever Hearth's accessibility
+service does, Hearth's screen open or not:
+
+- **Giving.** A play saved here (PlaybackRecorder, every few seconds while something plays) or Continue Watching read
+  here asks for a sweep a minute later; the five-minute periodic round and the service starting sweep too. A sweep
+  writes each person's 40 newest titles of this TV's own (not ones taken from the household) that differ from the
+  log, then the usual exchange follows two seconds later. A title isn't written over a newer play from another TV,
+  nor over a removal, unless it was played here since.
+- **Taking.** After every exchange, the entries it brought go into the watch history as the household's (a `shared`
+  column, so they never go back out as this TV's), when they're newer than what this TV has for that title and less
+  than 90 days old. Every round and every service start applies them all again, for a profile whose Google account
+  Hearth has only seen since. A kept one shows as an entry the app here doesn't list, until its person opens that app
+  here (then the app's own list is the truth).
+- **Removing.** Taking a card out of Continue Watching, or the app letting one go for its own profile, deletes the
+  entry; the other TVs drop it unless it was played there since.
+- **Showing.** Continue Watching shows the profile on screen its own synced titles as it shows its own played and kept
+  ones; one from an app that isn't installed here stays in the history but isn't shown. A "continue" card whose title
+  its profile has since played to the end, on any TV, is left out (an up-next card stays).
+- Entries older than WatchHistory's 90 days leave every TV's log. Kids profiles have no Continue Watching history in
+  the owner's user (what plays in a kids profile is its own Android user's), so in practice the adults' titles move.
+
 ## Members
 
 The member list is entries of kind `member`, one per TV: its public key, its name, which member added it and when.
@@ -220,6 +245,18 @@ so a kid can't change it on one TV and carry the change to the rest. A TV that j
 A TV that has its own, different Parent PIN is asked for the household's before it takes it, so a join can't silently
 replace a PIN.
 
+**How it's built.** One `parent_pin` entry for the whole household (profile "", item ""), its value the stored hash.
+The app's side decides (HouseholdParentPin, every 20 seconds while Hearth runs, with the looks), remembering the hash it
+last took or gave:
+
+- No Parent PIN here: the household's is taken, so a TV set up by joining needs no Parent PIN step.
+- Here before joining, and different: kept. **Settings > Family** shows **Use your other TVs' Parent PIN**, which takes
+  the household's once it's entered here. Until then this TV's own changes don't go out either.
+- Changed or removed here since (which took the PIN here): it goes out. Changed or removed on another TV: this TV
+  follows. A household with none takes the first TV's.
+- Leaving the household forgets what was taken or given; the PIN stays. The Java side's check of the PIN (HearthTube,
+  the kids profiles' agent) reads the salted form too, so a PIN taken from the household works there.
+
 ## Your TVs (the page)
 
 ```
@@ -306,7 +343,7 @@ receiving TV converts at once.
 3. **Look and layout, then wallpaper pictures** (built, every profile, kids' included).
 4. **Your TVs page and the setup step**; Copy profiles leaves Settings.
 5. **Home Assistant mailbox**, sealed per member.
-6. **Continue Watching**.
+6. **Continue Watching** (built), and the **Parent PIN** (built).
 7. **Hardening**: a security review of the channel, the join and conversion before release; long-offline TV tests; a
    test with two TVs whose clocks disagree.
 

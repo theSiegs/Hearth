@@ -43,16 +43,25 @@ class FamilySettingsPage extends StatelessWidget {
     final l = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final hasPin = context.select<SettingsService, bool>((s) => s.hasParentPin);
+    final householdPin = context.select<SettingsService, bool>((s) => s.householdParentPinOffered != null);
     return SettingsPage(
       title: l.familyTitle,
       children: [
         FocusableSettingsTile(
-          autofocus: true,
+          autofocus: !householdPin,
           leading: const Icon(Icons.lock_outline),
           title: Text(l.parentPinTitle, style: textTheme.bodyMedium),
           trailing: Text(hasPin ? l.parentPinOn : l.parentPinOff, style: textTheme.bodySmall),
           onPressed: () => _editParentPin(context),
         ),
+        // This TV had its own Parent PIN when it joined the household, and the other TVs use another one
+        if (householdPin)
+          FocusableSettingsTile(
+            autofocus: true,
+            leading: const Icon(Icons.holiday_village_outlined, color: Colors.amber),
+            title: Text(l.parentPinHouseholdUse, style: textTheme.bodyMedium),
+            onPressed: () => _takeHouseholdPin(context),
+          ),
         const _KidsProfilesTile(),
         // No PIN of its own: in a kids profile, Settings already took the parent PIN to get here, and adult profiles
         // are only reached past Google TV's PIN.
@@ -66,6 +75,20 @@ class FamilySettingsPage extends StatelessWidget {
         const _HouseholdTile(),
       ],
     );
+  }
+
+  /// The household's Parent PIN, entered here, becomes this TV's (so joining never replaced it unseen).
+  Future<void> _takeHouseholdPin(BuildContext context) async {
+    final l = AppLocalizations.of(context)!;
+    final settings = context.read<SettingsService>();
+    final pin = await showDialog<String>(
+      context: context,
+      builder: (_) => ParentPinDialog(
+          title: l.parentPinHouseholdTitle,
+          subtitle: l.parentPinHouseholdSubtitle,
+          verify: settings.verifyHouseholdParentPin),
+    );
+    if (pin != null) await settings.takeHouseholdParentPin();
   }
 
   Future<void> _editParentPin(BuildContext context) async {

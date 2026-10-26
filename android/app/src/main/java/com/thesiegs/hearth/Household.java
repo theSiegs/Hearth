@@ -38,6 +38,8 @@ final class Household {
     private static final long SYNC_DELAY_MS = 2_000;
     private static final long PERIODIC_MS = 5 * 60_000;
     private static final int SOCKET_TIMEOUT_MS = 15_000;
+    /** How long after a play is saved its title goes out: plays save often, and one sweep covers them all. */
+    private static final long WATCH_DELAY_MS = 60_000;
 
     private static final ScheduledExecutorService EXEC = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread thread = new Thread(r, "household");
@@ -64,6 +66,7 @@ final class Household {
     private static long sLooksVersion = 1;
     private static HouseholdStore sStore;
     private static boolean sSyncQueued;
+    private static boolean sWatchQueued;
     private static boolean sPeriodicScheduled;
     private static long sLastSyncAt;
     private static String sLastResult;
@@ -154,6 +157,9 @@ final class Household {
                 sPeriodicScheduled = true;
                 EXEC.scheduleWithFixedDelay(() -> {
                     publishSelf();
+                    // A profile whose Google account Hearth has seen since takes its titles now
+                    applyWatch(null);
+                    publishWatch();
                     syncAll("periodic");
                 }, PERIODIC_MS, PERIODIC_MS, TimeUnit.MILLISECONDS);
             }
@@ -162,6 +168,8 @@ final class Household {
             publishSelf();
             publishUnpublished();
             applyEntries();
+            applyWatch(null);
+            publishWatch();
         });
         syncSoon();
     }
@@ -243,6 +251,81 @@ final class Household {
             if (!member(context)) return;
             publish(context, HouseholdBridge.PAIRING, profileKey, pkg, local(context).pairings(profileKey).get(pkg));
         });
+    }
+
+    // ---- Continue Watching (HouseholdWatch) ----
+
+    /** Something was played or listed in Continue Watching here: it goes out within a minute (a play saves often). */
+    static void onWatchChanged(Context context) {
+        if (!mayBeInHousehold(context)) return;
+        sContext = context.getApplicationContext();
+        synchronized (Household.class) {
+            if (sWatchQueued) return;
+            sWatchQueued = true;
+        }
+        EXEC.schedule(() -> {
+            synchronized (Household.class) {
+                sWatchQueued = false;
+            }
+            publishWatch();
+        }, WATCH_DELAY_MS, TimeUnit.MILLISECONDS);
+    }
+
+    /** A profile's title was taken out of Continue Watching here (or finished): gone from the other TVs too. */
+    static void onWatchRemoved(Context context, String profileKey, String kind, String pkg, String item) {
+        if (!mayBeInHousehold(context) || profileKey == null) return;
+        Context app = context.getApplicationContext();
+        EXEC.execute(() -> {
+            if (member(app)) publish(app, HouseholdBridge.WATCH, profileKey, HouseholdWatch.itemOf(kind, pkg, item), null);
+        });
+    }
+
+    /** Each person's own newest titles that differ from the household's become entries. On the household thread. */
+    private static void publishWatch() {
+        if (sContext == null || !member(sContext)) return;
+        HouseholdStore store = store(sContext);
+        HouseholdLog log = store.log();
+        WatchHistory history = WatchHistory.get(sContext);
+        long now = System.currentTimeMillis();
+        int sent = 0;
+        for (Map.Entry<String, String> person : local(sContext).profiles().entrySet()) {
+            for (WatchHistory.Entry e : HouseholdWatch.toSend(history.ownEntries(person.getValue()), now)) {
+                String item = HouseholdWatch.itemOf(e.kind, e.packageName, e.item);
+                if (!HouseholdWatch.sends(e, log.entry(HouseholdBridge.WATCH, person.getKey(), item))) continue;
+                if (log.put(HouseholdBridge.WATCH, person.getKey(), item, HouseholdWatch.valueOf(e), now) != null) sent++;
+            }
+        }
+        if (sent == 0) return;
+        store.save();
+        Log.i(TAG, "Continue Watching: " + sent + " title(s) for the household");
+        syncSoon();
+    }
+
+    /**
+     * Puts the household's Continue Watching entries among {@code entries} (null: all of them) in place for this TV's
+     * profiles.
+     */
+    private static void applyWatch(List<HouseholdEntry> entries) {
+        if (sContext == null || !member(sContext)) return;
+        if (entries == null) entries = store(sContext).log().all();
+        Map<String, String> profiles = local(sContext).profiles();
+        WatchHistory history = WatchHistory.get(sContext);
+        long now = System.currentTimeMillis();
+        int changed = 0;
+        for (HouseholdEntry entry : entries) {
+            if (!HouseholdBridge.WATCH.equals(entry.kind)) continue;
+            String key = profiles.get(entry.profile);
+            if (key == null) continue;
+            if (entry.deleted) {
+                String[] parts = HouseholdWatch.partsOf(entry.item);
+                if (parts != null && history.removeShared(key, parts[0], parts[1], parts[2],
+                        HouseholdLog.millisOf(entry))) changed++;
+                continue;
+            }
+            HouseholdWatch.Card card = HouseholdWatch.cardOf(entry);
+            if (card != null && history.applyShared(key, card, now)) changed++;
+        }
+        if (changed > 0) Log.i(TAG, "Continue Watching: took " + changed + " title(s) from the household");
     }
 
     /** Writes one setting as an entry if it differs from the log's (null: delete it if the log has it). */
@@ -391,6 +474,7 @@ final class Household {
         if (result.pictures > 0) looksChanged();
         pictures(sContext).keepOnly(HouseholdBridge.pictures(store.log()));
         applyEntries();
+        applyWatch(result.applied);
         publishUnpublished();
         sLastSyncAt = System.currentTimeMillis();
         sLastResult = "sent " + result.sent + ", took " + result.received;
@@ -743,6 +827,62 @@ final class Household {
             }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    // ---- The Parent PIN (the app keeps it: HouseholdParentPin on the Dart side) ----
+
+    /** What a stored Parent PIN may look like (ParentPinHash in Dart): the old 64 hex digits or the salted form. */
+    static final java.util.regex.Pattern PARENT_PIN_HASH =
+            java.util.regex.Pattern.compile("^([0-9a-f]{64}|v2\\$[0-9]{1,7}\\$[0-9a-f]{32}\\$[0-9a-f]{64})$");
+
+    /**
+     * The household's Parent PIN: {state: "live" (with its hash), "removed" or "none"}; null when this TV isn't a
+     * member. Blocks: not on the main thread.
+     */
+    static Map<String, Object> parentPin(Context context) {
+        if (!mayBeInHousehold(context)) return null;
+        Context app = context.getApplicationContext();
+        try {
+            return EXEC.submit(() -> {
+                if (!member(app)) return null;
+                HouseholdEntry entry = store(app).log().entry(HouseholdBridge.PARENT_PIN, HouseholdBridge.SHARED, "");
+                Map<String, Object> out = new HashMap<>();
+                if (entry == null) {
+                    out.put("state", "none");
+                } else if (entry.deleted) {
+                    out.put("state", "removed");
+                } else if (PARENT_PIN_HASH.matcher(entry.value).matches()) {
+                    out.put("state", "live");
+                    out.put("hash", entry.value);
+                } else {
+                    // Not one a TV would write: as if there were none, and this TV's can replace it
+                    out.put("state", "none");
+                }
+                return out;
+            }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            Log.i(TAG, "Couldn't read the household's Parent PIN: " + e.getClass().getSimpleName());
+            return null;
+        }
+    }
+
+    /**
+     * This TV's Parent PIN (its stored hash; null: removed) for the household. The app decides when (HouseholdParentPin):
+     * only a change made here, past the PIN, goes out. False when this TV isn't a member or the hash isn't one. Blocks:
+     * not on the main thread.
+     */
+    static boolean publishParentPin(Context context, String hash) {
+        if (!mayBeInHousehold(context) || (hash != null && !PARENT_PIN_HASH.matcher(hash).matches())) return false;
+        Context app = context.getApplicationContext();
+        try {
+            return EXEC.submit(() -> {
+                if (!member(app)) return false;
+                publish(app, HouseholdBridge.PARENT_PIN, null, "", hash);
+                return true;
+            }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            return false;
         }
     }
 

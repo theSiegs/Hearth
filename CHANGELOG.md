@@ -5,6 +5,10 @@
 
 ## Unreleased
 
+- **Household sync: Parent PIN.** The household's TVs share one Parent PIN (as its salted hash, never the PIN). A TV that joins without one takes it; a change or removal on one TV, which needs the PIN there, reaches the others. A TV that had its own, different PIN when it joined keeps it until an adult chooses **Use your other TVs' Parent PIN** in Settings > Family and enters theirs.
+- **Household sync: Continue Watching.** Each person's titles (what played, and Watch Next entries Hearth kept for them, with their deep link) follow them to the household's other TVs, in the background whenever Hearth's accessibility service runs. The newest play of a title wins, one finished anywhere drops its "continue" card everywhere, and a card taken out on one TV goes from the others. Titles from apps a TV doesn't have aren't shown there.
+- HearthTube and the kids profiles' agent check the Parent PIN in its salted form too; before, only the old form worked there.
+
 - **Setup**: when your other TVs are in a household, a **Join your other TVs** screen comes right after the Home button and home app steps, so their looks, layouts, streaming profiles and saved PINs arrive before the steps that would ask for them. The household step's text no longer points to the removed Copy screens.
 
 ## 2026.10.84 (pre-release)

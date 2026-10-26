@@ -1269,6 +1269,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get parentPinNewSubtitle => 'Needed to change the launcher in Google TV kids profiles';
 
   @override
+  String get parentPinHouseholdUse => 'Use your other TVs\' Parent PIN';
+
+  @override
+  String get parentPinHouseholdTitle => 'Your other TVs\' Parent PIN';
+
+  @override
+  String get parentPinHouseholdSubtitle => 'Enter the Parent PIN your other TVs use, and this TV uses it too';
+
+  @override
   String get parentPinConfirm => 'Enter the PIN again';
 
   @override

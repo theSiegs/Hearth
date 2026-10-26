@@ -1408,6 +1408,18 @@
     "@parentPinNewSubtitle": {
         "description": "PIN screen: under New parent PIN"
     },
+    "parentPinHouseholdUse": "Use your other TVs' Parent PIN",
+    "@parentPinHouseholdUse": {
+        "description": "Family settings: shown when this TV had its own Parent PIN before joining the household and the other TVs use a different one"
+    },
+    "parentPinHouseholdTitle": "Your other TVs' Parent PIN",
+    "@parentPinHouseholdTitle": {
+        "description": "PIN screen title: entering the household's Parent PIN to use it on this TV too"
+    },
+    "parentPinHouseholdSubtitle": "Enter the Parent PIN your other TVs use, and this TV uses it too",
+    "@parentPinHouseholdSubtitle": {
+        "description": "PIN screen: under Your other TVs' Parent PIN"
+    },
     "parentPinConfirm": "Enter the PIN again",
     "@parentPinConfirm": {
         "description": "PIN screen title: confirming the new parent PIN"

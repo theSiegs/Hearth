@@ -34,7 +34,8 @@ import java.util.TreeMap;
 final class WatchHistory extends SQLiteOpenHelper {
     private static final String TAG = "HearthWatchNext";
     private static final String DB = "watch_history.db";
-    private static final int VERSION = 1;
+    /** 2: the {@code shared} column (an entry that came from the household's other TVs). */
+    private static final int VERSION = 2;
     private static final String TABLE = "history";
     static final String PLAYED = "played";
     static final String KEPT = "kept";
@@ -52,8 +53,11 @@ final class WatchHistory extends SQLiteOpenHelper {
 
     private static WatchHistory sInstance;
 
+    private final Context mContext;
+
     private WatchHistory(Context context) {
         super(context.getApplicationContext(), DB, null, VERSION);
+        mContext = context.getApplicationContext();
     }
 
     static synchronized WatchHistory get(Context context) {
@@ -81,11 +85,18 @@ final class WatchHistory extends SQLiteOpenHelper {
                 + "row TEXT,"
                 // kept: when the app took the entry out of Watch Next (0: still in it)
                 + "gone_at INTEGER NOT NULL DEFAULT 0,"
+                // 1: as the household's other TVs had it (HouseholdWatch), so it isn't sent back to them
+                + "shared INTEGER NOT NULL DEFAULT 0,"
                 + "UNIQUE(kind, profile, package, item))");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        if (oldVersion == 1) {
+            // What was watched is kept
+            db.execSQL("ALTER TABLE " + TABLE + " ADD COLUMN shared INTEGER NOT NULL DEFAULT 0");
+            return;
+        }
         db.execSQL("DROP TABLE IF EXISTS " + TABLE);
         onCreate(db);
     }
@@ -103,6 +114,8 @@ final class WatchHistory extends SQLiteOpenHelper {
         values.put("duration", Math.max(0, durationMs));
         values.put("position", Math.max(0, positionMs));
         values.put("last_at", now);
+        // Played here: this TV's again, for the household too
+        values.put("shared", 0);
         try {
             SQLiteDatabase db = getWritableDatabase();
             int updated = db.update(TABLE, values, "kind=? AND profile=? AND package=? AND item=?",
@@ -115,6 +128,7 @@ final class WatchHistory extends SQLiteOpenHelper {
                 db.insert(TABLE, null, values);
                 prunePlayed(db, profile, now);
             }
+            Household.onWatchChanged(mContext);
         } catch (RuntimeException e) {
             Log.w(TAG, "Couldn't record what's playing", e);
         }
@@ -148,9 +162,16 @@ final class WatchHistory extends SQLiteOpenHelper {
         final long lastAt;
         final String row;
         final long goneAt;
+        /** It came from the household's other TVs. */
+        final boolean shared;
 
         Entry(long id, String kind, String profile, String packageName, String item, String title, String subtitle,
                 long duration, long position, long lastAt, String row, long goneAt) {
+            this(id, kind, profile, packageName, item, title, subtitle, duration, position, lastAt, row, goneAt, false);
+        }
+
+        Entry(long id, String kind, String profile, String packageName, String item, String title, String subtitle,
+                long duration, long position, long lastAt, String row, long goneAt, boolean shared) {
             this.id = id;
             this.kind = kind;
             this.profile = profile;
@@ -163,17 +184,18 @@ final class WatchHistory extends SQLiteOpenHelper {
             this.lastAt = lastAt;
             this.row = row;
             this.goneAt = goneAt;
+            this.shared = shared;
         }
     }
 
     private List<Entry> entries(SQLiteDatabase db) {
         List<Entry> entries = new ArrayList<>();
         try (Cursor c = db.query(TABLE, new String[]{"id", "kind", "profile", "package", "item", "title", "subtitle",
-                "duration", "position", "last_at", "row", "gone_at"}, null, null, null, null, "last_at DESC")) {
+                "duration", "position", "last_at", "row", "gone_at", "shared"}, null, null, null, null, "last_at DESC")) {
             while (c.moveToNext()) {
                 entries.add(new Entry(c.getLong(0), c.getString(1), c.getString(2), c.getString(3), c.getString(4),
                         c.getString(5), c.getString(6), c.getLong(7), c.getLong(8), c.getLong(9), c.getString(10),
-                        c.getLong(11)));
+                        c.getLong(11), c.getInt(12) != 0));
             }
         }
         return entries;
@@ -210,16 +232,22 @@ final class WatchHistory extends SQLiteOpenHelper {
             }
             // Counts only, no titles: whose each app's entries are
             Log.i(TAG, "Owners of the listed entries: " + owners);
+            List<Entry> let = new ArrayList<>();
             db.beginTransaction();
             try {
-                keep(context, db, entries, out, serial, now);
+                keep(context, db, entries, out, serial, now, let);
                 db.setTransactionSuccessful();
             } finally {
                 db.endTransaction();
             }
-            // Kept entries the app no longer lists, for their own profile
+            // Let go here (finished, or the app dropped it for its own profile): gone from the other TVs too
+            for (Entry e : let) Household.onWatchRemoved(context, e.profile, e.kind, e.packageName, e.item);
+            Household.onWatchChanged(context);
+            Map<String, Boolean> installed = new HashMap<>();
+            // Kept entries the app no longer lists, for their own profile (the household's other TVs' too)
             for (Entry e : entries(db)) {
                 if (!KEPT.equals(e.kind) || e.goneAt == 0 || e.row == null) continue;
+                if (e.shared && !installed(context, e.packageName, installed)) continue;
                 Map<String, Object> row = rowOf(e.row);
                 if (row == null) continue;
                 row.put("id", -e.id);
@@ -230,6 +258,8 @@ final class WatchHistory extends SQLiteOpenHelper {
             // Played but not in Watch Next (listed or kept): shown from what was played
             for (Entry e : played) {
                 if (!showsOnItsOwn(e, now) || inWatchNext(out, e)) continue;
+                // Played on another TV of the household, in an app this TV doesn't have: kept, not shown
+                if (e.shared && !installed(context, e.packageName, installed)) continue;
                 Map<String, Object> row = new HashMap<>();
                 row.put("id", -e.id);
                 row.put("packageName", e.packageName);
@@ -245,10 +275,41 @@ final class WatchHistory extends SQLiteOpenHelper {
                 row.put("played", true);
                 out.add(row);
             }
+            // A "continue" card finished since by its own profile, here or on another TV of the household: done
+            // everywhere (an up-next card is the next episode, so it stays)
+            out.removeIf(row -> Boolean.TRUE != row.get("played") && longOf(row.get("watchNextType")) == 0
+                    && finishedSince(played, (String) row.get("watchedBy"), (String) row.get("packageName"),
+                    (String) row.get("title"), longOf(row.get("lastEngagementTime"))));
         } catch (RuntimeException e) {
             Log.w(TAG, "Couldn't read Hearth's watch history", e);
         }
         return out;
+    }
+
+    /** Whether {@code owner} played this show or film to its end after {@code time} (in any TV of the household). */
+    static boolean finishedSince(List<Entry> played, String owner, String packageName, String title, long time) {
+        if (owner == null || packageName == null) return false;
+        for (Entry e : played) {
+            if (!owner.equals(e.profile) || !packageName.equals(e.packageName) || e.lastAt <= time) continue;
+            if (e.duration > 0 && e.position >= e.duration * FINISHED_FRACTION && sameTitle(e.title, e.subtitle, title)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean installed(Context context, String packageName, Map<String, Boolean> known) {
+        Boolean have = known.get(packageName);
+        if (have == null) {
+            try {
+                context.getPackageManager().getPackageInfo(packageName, 0);
+                have = true;
+            } catch (Exception e) {
+                have = false;
+            }
+            known.put(packageName, have);
+        }
+        return have;
     }
 
     /**
@@ -257,7 +318,7 @@ final class WatchHistory extends SQLiteOpenHelper {
      * there); otherwise it stays, as another profile's use of the app took it out.
      */
     private static void keep(Context context, SQLiteDatabase db, List<Entry> entries, List<Map<String, Object>> rows,
-            long serial, long now) {
+            long serial, long now, List<Entry> let) {
         Map<String, Map<String, Object>> byItem = new HashMap<>();
         for (Map<String, Object> row : rows) byItem.put(row.get("packageName") + "\n" + keptItem(row), row);
         for (Entry e : entries) {
@@ -266,7 +327,10 @@ final class WatchHistory extends SQLiteOpenHelper {
             Map<String, Object> row = byItem.get(e.packageName + "\n" + e.item);
             if (row != null) {
                 // Listed: it's the listed entry's profile's now (written below)
-                if (!e.profile.equals(row.get("watchedBy"))) db.delete(TABLE, where, null);
+                if (!e.profile.equals(row.get("watchedBy"))) {
+                    db.delete(TABLE, where, null);
+                    let.add(e);
+                }
                 continue;
             }
             if (e.lastAt < now - MAX_AGE_MS) {
@@ -277,6 +341,7 @@ final class WatchHistory extends SQLiteOpenHelper {
             if (e.goneAt == 0) {
                 if (e.profile.equals(holder)) {
                     db.delete(TABLE, where, null);
+                    let.add(e);
                 } else {
                     ContentValues gone = new ContentValues();
                     gone.put("gone_at", now);
@@ -284,6 +349,7 @@ final class WatchHistory extends SQLiteOpenHelper {
                 }
             } else if (AppWatchers.openedSince(context, e.packageName, e.profile, e.goneAt)) {
                 db.delete(TABLE, where, null);
+                let.add(e);
             }
         }
         for (Map<String, Object> row : rows) {
@@ -297,6 +363,8 @@ final class WatchHistory extends SQLiteOpenHelper {
             values.put("last_at", longOf(row.get("lastEngagementTime")));
             values.put("row", new JSONObject(withoutOwner(row)).toString());
             values.put("gone_at", 0);
+            // Listed here: this TV's, for the household too
+            values.put("shared", 0);
             String[] key = {KEPT, owner, (String) row.get("packageName"), keptItem(row)};
             if (db.update(TABLE, values, "kind=? AND profile=? AND package=? AND item=?", key) == 0) {
                 values.put("kind", key[0]);
@@ -311,8 +379,11 @@ final class WatchHistory extends SQLiteOpenHelper {
     /** Forgets the kept copies of a Watch Next entry that was removed from Continue Watching. */
     synchronized void forgetListed(String packageName, Map<String, Object> row) {
         try {
-            getWritableDatabase().delete(TABLE, "kind=? AND package=? AND item=?",
-                    new String[]{KEPT, packageName, keptItem(row)});
+            SQLiteDatabase db = getWritableDatabase();
+            String[] args = {KEPT, packageName, keptItem(row)};
+            List<Entry> gone = select(db, "kind=? AND package=? AND item=?", args);
+            db.delete(TABLE, "kind=? AND package=? AND item=?", args);
+            forgotten(gone);
         } catch (RuntimeException e) {
             Log.w(TAG, "Couldn't forget a kept entry", e);
         }
@@ -321,9 +392,94 @@ final class WatchHistory extends SQLiteOpenHelper {
     /** Forgets a kept or played entry (its id is the negative one Continue Watching had). */
     synchronized boolean forget(long id) {
         try {
-            return getWritableDatabase().delete(TABLE, "id=?", new String[]{String.valueOf(-id)}) > 0;
+            SQLiteDatabase db = getWritableDatabase();
+            String[] args = {String.valueOf(-id)};
+            List<Entry> gone = select(db, "id=?", args);
+            boolean removed = db.delete(TABLE, "id=?", args) > 0;
+            forgotten(gone);
+            return removed;
         } catch (RuntimeException e) {
             Log.w(TAG, "Couldn't forget a watch history entry", e);
+            return false;
+        }
+    }
+
+    /** Someone took these out of Continue Watching: out on the household's other TVs too. */
+    private void forgotten(List<Entry> gone) {
+        for (Entry e : gone) Household.onWatchRemoved(mContext, e.profile, e.kind, e.packageName, e.item);
+    }
+
+    private static List<Entry> select(SQLiteDatabase db, String where, String[] args) {
+        List<Entry> out = new ArrayList<>();
+        try (Cursor c = db.query(TABLE, new String[]{"id", "kind", "profile", "package", "item", "title", "subtitle",
+                "duration", "position", "last_at", "row", "gone_at", "shared"}, where, args, null, null, "last_at DESC")) {
+            while (c.moveToNext()) {
+                out.add(new Entry(c.getLong(0), c.getString(1), c.getString(2), c.getString(3), c.getString(4),
+                        c.getString(5), c.getString(6), c.getLong(7), c.getLong(8), c.getLong(9), c.getString(10),
+                        c.getLong(11), c.getInt(12) != 0));
+            }
+        }
+        return out;
+    }
+
+    // --- the household (HouseholdWatch) ---
+
+    /** A profile's own entries (played or kept here, not from the household), newest first. */
+    synchronized List<Entry> ownEntries(String profile) {
+        try {
+            return select(getReadableDatabase(), "profile=? AND shared=0", new String[]{profile});
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Couldn't read the watch history for the household", e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Puts in place what another TV of the household had for a profile: a played entry, or a kept Watch Next entry
+     * (shown as the app no longer listing it here). Only when it's newer than what this TV has for it. Returns whether
+     * it changed anything.
+     */
+    synchronized boolean applyShared(String profile, HouseholdWatch.Card card, long now) {
+        try {
+            SQLiteDatabase db = getWritableDatabase();
+            String[] key = {card.kind, profile, card.packageName, card.item};
+            List<Entry> have = select(db, "kind=? AND profile=? AND package=? AND item=?", key);
+            if (!HouseholdWatch.takes(have.isEmpty() ? null : have.get(0), card, now)) return false;
+            ContentValues values = new ContentValues();
+            values.put("title", card.title);
+            values.put("subtitle", card.subtitle);
+            values.put("duration", card.duration);
+            values.put("position", card.position);
+            values.put("last_at", card.lastAt);
+            values.put("row", card.row);
+            // A kept entry the app here doesn't list: shown until its profile opens the app here (see keep)
+            values.put("gone_at", KEPT.equals(card.kind) ? now : 0);
+            values.put("shared", 1);
+            if (db.update(TABLE, values, "kind=? AND profile=? AND package=? AND item=?", key) == 0) {
+                values.put("kind", key[0]);
+                values.put("profile", key[1]);
+                values.put("package", key[2]);
+                values.put("item", key[3]);
+                db.insert(TABLE, null, values);
+                if (PLAYED.equals(card.kind)) prunePlayed(db, profile, now);
+            }
+            return true;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Couldn't take a watch history entry from the household", e);
+            return false;
+        }
+    }
+
+    /**
+     * Another TV of the household took this out of Continue Watching at {@code removedAt}. A play here since then
+     * keeps it. Returns whether this TV had it.
+     */
+    synchronized boolean removeShared(String profile, String kind, String packageName, String item, long removedAt) {
+        try {
+            return getWritableDatabase().delete(TABLE, "kind=? AND profile=? AND package=? AND item=? AND last_at<=?",
+                    new String[]{kind, profile, packageName, item, String.valueOf(removedAt)}) > 0;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Couldn't remove a watch history entry for the household", e);
             return false;
         }
     }
