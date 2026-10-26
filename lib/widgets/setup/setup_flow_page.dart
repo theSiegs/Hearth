@@ -22,6 +22,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/models/kids_profiles.dart';
 import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flauncher/providers/home_looks.dart';
+import 'package:flauncher/providers/household_looks_service.dart';
 import 'package:flauncher/providers/open_meteo_client.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';

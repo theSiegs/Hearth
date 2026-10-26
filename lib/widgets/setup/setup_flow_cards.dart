@@ -347,7 +347,10 @@ extension _CardScreens on _SetupFlowPageState {
     }
     _householdJoined = true;
     _stopLookingForHouseholds();
+    final looks = context.read<HouseholdLooksService?>();
     if (!_lookOnly) await _flow.decide(SetupCard.home.name, SetupChoice.on);
+    // A round now rather than in up to 20 seconds: the household's Parent PIN and looks come with it
+    if (looks != null) unawaited(looks.tick().catchError((Object err) => noteFailure('setup_flow', err)));
     await _refresh();
     if (!mounted) return;
     _showDone(from, null);
