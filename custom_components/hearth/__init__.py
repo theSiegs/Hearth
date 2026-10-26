@@ -15,7 +15,11 @@ from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.event import async_track_time_change, async_track_time_interval
+from homeassistant.helpers.event import (
+    async_track_state_change_event,
+    async_track_time_change,
+    async_track_time_interval,
+)
 
 from .api import async_register_views
 from .const import DOMAIN
@@ -98,6 +102,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     # A new day starts at midnight; budgets, bonuses and quiet devices are looked at again every minute
     entry.async_on_unload(async_track_time_change(hass, recompute, hour=0, minute=0, second=1))
     entry.async_on_unload(async_track_time_interval(hass, recompute, timedelta(minutes=1)))
+    # And whenever a screen time source changes
+    if entities := hub.household.source_entities():
+        entry.async_on_unload(async_track_state_change_event(hass, entities, recompute))
     # People and groups come from the entry: when it changes (options, a phone paired), its entities are made again
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
     return True

@@ -1,8 +1,8 @@
 # Hearth integration for Home Assistant (design draft)
 
 > **Design draft, partly built.** In `custom_components/hearth`: household setup, pairing, a device per Hearth TV or
-> phone with its status entities, people (TV profiles and phones), each person's screen time from Hearth's own
-> devices, groups, budgets, bonuses, minutes left and the state document (see [Build order](#build-order) and
+> phone with its status entities, people, screen time sources (totals and live), titles, counting once, playing
+> together, groups, budgets, bonuses, minutes left and the state document (see [Build order](#build-order) and
 > [The device's side of the API](#the-devices-side-of-the-api)). Nothing on the TV or the phone calls it yet. The rest is
 > written so another person or agent can pick it up: what Hearth does with Home Assistant today, what the integration
 > should be, and what is still undecided. Read [home-assistant.md](home-assistant.md) first (what exists) and
@@ -139,9 +139,10 @@ not Hearth, owns this map; Hearth's `profile_id` to name map goes away.
 ### Play sessions
 
 Where a source says what's playing **now** (Hearth TVs and phones, Xbox now playing, Switch friend presence), the
-integration keeps **play sessions**: person, device, app or title, which source saw it, start, and last seen. A
-session ends when the source says something else or nothing for 2 minutes (a dropped poll doesn't end it). Sessions
-are kept for 7 days, so a day's timeline can be shown and checked.
+integration looks at least once a minute and whenever the sensor changes. A live source's time accrues between two
+looks that both saw the same title (a skipped look loses that minute, never adds one; a gap of over 3 minutes, such as
+Home Assistant being stopped, adds nothing). Today's timed seconds per source and title are kept across restarts.
+(Built so far: today's totals. A 7-day timeline of sessions, to show and check a day, is still to do.)
 
 Where a source only gives **totals** (Family Link, Family Safety, the Nintendo integration), the integration takes the
 increase since its last reading as minutes on that device, at the time it saw them grow. Those minutes have no exact
@@ -156,8 +157,8 @@ sum; the breakdown keeps every source's number. So:
 - A Google TV kids profile: Family Link lists it as a device of its own; the options link it to the TV profile it is,
   and Hearth's count wins whenever it's larger (it's fresher).
 - Switch friend presence and the Nintendo integration on the same Switch: the larger.
-- Family Safety's account total already includes its devices: add the account or its devices, never both (the
-  options refuse a device sensor next to its own account's).
+- Family Safety's account total already includes its devices: add the account or its devices, never both. (The
+  options don't check this yet.)
 
 Days start at local midnight. A source that resets at its own midnight (another time zone) is read as dropping to
 zero: a drop is a new day for that source. A source that stops changing is shown as stale in the breakdown; its last
@@ -176,9 +177,10 @@ phones and tablets, and game apps on a TV. How the integration knows:
 | Phones, tablets, TVs | apps Android marks as games (Hearth sends each app's category), plus any an adult adds | per app, from Hearth and Family Link | on Hearth devices |
 
 **Titles** tie one game (or show service, or app) together across places: a title (for example "Minecraft") lists what
-it's called in each source (the Android package, the Xbox and Nintendo names, the Windows app). The integration offers
-the matches it sees (same name once cleaned of marks and editions) and an adult confirms them. A title's time is its
-time everywhere.
+it's called in each source (the Android package, the Xbox and Nintendo names, the Windows app). Names match once
+cleaned (case, marks, "Edition", "for Nintendo Switch", "Java", "Bedrock"), so "Minecraft for Nintendo Switch" and
+"Minecraft: Java Edition" are both "Minecraft". A title's time is its time everywhere. (Built: an adult adds a title
+and picks its other names from what's been seen. Still to do: offering matches by itself.)
 
 ### Playing together
 
@@ -446,7 +448,11 @@ at pairing; the integration raises a repair issue when the two are too far apart
 
 1. **Done:** skeleton, household setup, pairing with kinds, a device per Hearth device, status endpoint and entities,
    Connected.
-   **Also done, ahead of order:** people (options: who each TV profile is; whose a phone is, at pairing), per-person
+   **Also done, ahead of order:** sources (options: a sensor, whose, live or totals, the same device as a Hearth device
+   or another source, the group its unexplained time is in; read from Family Link's `apps` breakdown; minutes, hours or
+   seconds), live timing, titles (options), counting once per device, **Playing together** (household binary sensor,
+   `hearth_playing_together` started and ended), Playing together today per person; people (options: who each TV
+   profile is; whose a phone is, at pairing), per-person
    Screen time today, group times, Playing (Hearth devices), groups (built-in and one's own, apps added to Video or
    Games), budgets (weekday and weekend numbers), Bonus today, Minutes left, `hearth_budget_reached`, `hearth.add_bonus`,
    `hearth.set_budget`, and the state document in each status answer (groups only; no titles, pause or requests yet).

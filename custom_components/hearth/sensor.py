@@ -103,6 +103,7 @@ async def async_setup_entry(
     for person in household.people():
         people.append(PersonScreenTime(hub, person, "screen_time_today"))
         people.append(PersonPlaying(hub, person, "playing"))
+        people.append(PersonTogetherToday(hub, person, "together_today"))
         for group in household.groups:
             if group.id != ALL:
                 people.append(PersonGroupToday(hub, person, "group_today", group))
@@ -149,6 +150,7 @@ class PersonScreenTime(HearthPersonEntity, SensorEntity):
         if day is None:
             return {}
         names = {device_id: d.get("name") or device_id for device_id, d in self.hub.devices.items()}
+        names.update({f"source:{s.id}": s.name for s in self.hub.household.sources})
         return {
             "devices": {
                 names.get(device_id, device_id): {
@@ -212,3 +214,16 @@ class PersonPlaying(HearthPersonEntity, SensorEntity):
                 {"app": p.app, "package": p.package, "device": p.device, "state": p.state} for p in playing
             ]
         }
+
+
+class PersonTogetherToday(HearthPersonEntity, SensorEntity):
+    """How long the person has played together with someone else of the household today."""
+
+    _attr_translation_key = "person_together_today"
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+
+    @property
+    def native_value(self) -> int:
+        return _minutes(self.day.together_s) if self.day else 0

@@ -49,6 +49,7 @@ CONF_GROUP_APPS = "group_apps"
 SIGNAL_PEOPLE = "hearth_people"
 
 EVENT_BUDGET_REACHED = "hearth_budget_reached"
+EVENT_PLAYING_TOGETHER = "hearth_playing_together"
 
 # Android app categories a device may report for its apps (ApplicationInfo.category, lower case)
 APP_CATEGORIES = ("game", "video", "audio", "image", "social", "news", "maps", "productivity", "accessibility")

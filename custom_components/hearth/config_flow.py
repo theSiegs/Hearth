@@ -27,6 +27,7 @@ from homeassistant.helpers.selector import (
 
 from .const import CONF_GROUP_APPS, CONF_GROUPS, CONF_PERSON, CONF_PROFILES, DOMAIN, KIND_MOBILE
 from .limits import BUILTIN_GROUPS, GAMES, VIDEO, slug
+from .sources import CONF_SOURCES, CONF_TITLES
 
 PERSON_SELECTOR = EntitySelector(EntitySelectorConfig(domain="person"))
 
@@ -94,7 +95,19 @@ class HearthOptionsFlow(OptionsFlow):
     """The household's options: who each TV profile is, and the groups budgets are set on."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        return self.async_show_menu(step_id="init", menu_options=["people", "add_group", "group_apps", "remove_group"])
+        return self.async_show_menu(
+            step_id="init",
+            menu_options=[
+                "people",
+                "add_source",
+                "remove_source",
+                "add_title",
+                "remove_title",
+                "add_group",
+                "group_apps",
+                "remove_group",
+            ],
+        )
 
     def _options(self) -> dict[str, Any]:
         return {**self.config_entry.options}
@@ -186,3 +199,94 @@ class HearthOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="remove_group", data_schema=schema)
+
+
+    def _remove_from(self, key: str, step_id: str, user_input: dict[str, Any] | None) -> ConfigFlowResult:
+        options = self._options()
+        items: list[dict[str, Any]] = list(options.get(key, []))
+        if not items:
+            return self.async_abort(reason="nothing_to_remove")
+        if user_input is not None:
+            gone = set(user_input.get("items", []))
+            return self.async_create_entry(data={**options, key: [i for i in items if i["id"] not in gone]})
+        schema = vol.Schema(
+            {
+                vol.Required("items"): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[SelectOptionDict(value=i["id"], label=i["name"]) for i in items], multiple=True
+                    )
+                )
+            }
+        )
+        return self.async_show_form(step_id=step_id, data_schema=schema)
+
+    async def async_step_add_source(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Another integration's screen time (a sensor of time today) or now playing (a sensor of what's played)."""
+        options = self._options()
+        sources: list[dict[str, Any]] = list(options.get(CONF_SOURCES, []))
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            entity_id = user_input["entity_id"]
+            if any(s["entity_id"] == entity_id for s in sources):
+                errors["entity_id"] = "already_added"
+            else:
+                state = self.hass.states.get(entity_id)
+                name = user_input.get(CONF_NAME) or (state.name if state else entity_id)
+                base = slug(name)
+                source_id, n = base, 2
+                while any(s["id"] == source_id for s in sources):
+                    source_id, n = f"{base}_{n}", n + 1
+                sources.append(
+                    {
+                        "id": source_id,
+                        "entity_id": entity_id,
+                        "person": user_input[CONF_PERSON],
+                        "name": name,
+                        "live": user_input.get("live", False),
+                        "same_as": user_input.get("same_as") or None,
+                        "group": user_input.get("group") or None,
+                    }
+                )
+                return self.async_create_entry(data={**options, CONF_SOURCES: sources})
+        hub = self.config_entry.runtime_data
+        same_as = [
+            SelectOptionDict(value=f"hearth:{device_id}", label=device.get("name") or device_id)
+            for device_id, device in hub.devices.items()
+        ] + [SelectOptionDict(value=s["id"], label=s["name"]) for s in sources]
+        groups = [SelectOptionDict(value=g.id, label=g.name) for g in hub.household.groups if g.id != "all"]
+        schema = vol.Schema(
+            {
+                vol.Required("entity_id"): EntitySelector(EntitySelectorConfig(domain="sensor")),
+                vol.Required(CONF_PERSON): PERSON_SELECTOR,
+                vol.Optional(CONF_NAME): TextSelector(),
+                vol.Optional("live", default=False): bool,
+                vol.Optional("same_as"): SelectSelector(SelectSelectorConfig(options=same_as)),
+                vol.Optional("group"): SelectSelector(SelectSelectorConfig(options=groups)),
+            }
+        )
+        return self.async_show_form(step_id="add_source", data_schema=schema, errors=errors)
+
+    async def async_step_remove_source(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        return self._remove_from(CONF_SOURCES, "remove_source", user_input)
+
+    async def async_step_add_title(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """One game (or app) by every name it has: the Android package, the Xbox and Switch names, the PC app."""
+        options = self._options()
+        titles: list[dict[str, Any]] = list(options.get(CONF_TITLES, []))
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            name = user_input[CONF_NAME].strip()
+            title_id = slug(name)
+            if not name or any(t["id"] == title_id for t in titles):
+                errors[CONF_NAME] = "name_taken"
+            else:
+                matches = [m for m in user_input.get("matches", []) if not m.startswith("title:")]
+                titles.append({"id": title_id, "name": name, "matches": matches})
+                return self.async_create_entry(data={**options, CONF_TITLES: titles})
+        schema = vol.Schema(
+            {vol.Required(CONF_NAME): TextSelector(), vol.Optional("matches", default=[]): self._app_selector([])}
+        )
+        return self.async_show_form(step_id="add_title", data_schema=schema, errors=errors)
+
+    async def async_step_remove_title(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        return self._remove_from(CONF_TITLES, "remove_title", user_input)
