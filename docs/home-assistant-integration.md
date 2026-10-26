@@ -184,26 +184,26 @@ A rule can apply only **when** something is true; outside it, the title counts a
 - **Together:** two or more of the household's people are playing that title at the same time (seen where a source
   knows what's playing now: Hearth devices and Xbox; Nintendo and Family Safety report only after the fact, so
   together on a Switch can't be seen yet);
-- on certain days, or between certain times;
-- any Home Assistant condition (a state, a template, a helper such as "long play day"), so "a nice day" can be the
-  weather entity, or simply a switch an adult turns on.
+- on certain days, or between certain times.
 
 Rules decide in the order listed, the first that applies wins. Examples: "Minecraft, everyone, together: own limit 4
-hours"; "Minecraft, alone, on a sunny weekend afternoon: counts as usual"; "Khan Academy Kids: doesn't count".
+hours"; "Khan Academy Kids: doesn't count". Anything else (a longer afternoon one day, a weekend treat) is an
+**extension**: the same bonus as "ask for more", given to a kind or to one title (see [Budgets](#budgets)).
 
 ### Budgets
 
 Replaces the hand-made pool templates. Per person, number entities an adult (or an automation) sets:
 
 - a daily **budget** per kind (for example video 120, games 90; unset is no limit), weekday and weekend values;
-- **Bonus today** (minutes, reset at midnight), what chores, "ask for more" approvals and automations add to.
+- **Bonus today** (minutes, reset at midnight), what chores, "ask for more" approvals and automations add to: the
+  one extension mechanism, for a kind or for one title with its own limit.
 
 And per person and kind: **Minutes left** (budget + bonus - used today, never below 0), and the event
 `hearth_budget_reached` (person, kind) once a day when it reaches 0. A title with its own limit gets its own **Minutes
 left** and event (person, title), and devices are told which titles are still open when the kind's budget is used up. An optional **shared pool** counts every kind
 together against one budget, which is how the household's YouTube pool works today.
 
-Services: `hearth.add_bonus` (person, minutes, kind), `hearth.set_budget`.
+Services: `hearth.add_bonus` (person, minutes, and a kind or a title), `hearth.set_budget`.
 
 **Who enforces.** The integration counts and tells; it doesn't lock anything itself:
 
