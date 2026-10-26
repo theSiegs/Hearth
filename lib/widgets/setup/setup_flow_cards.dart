@@ -233,6 +233,15 @@ extension _CardScreens on _SetupFlowPageState {
   /// streaming profile choices and saved PINs, so it comes before the steps that would ask for them.
   Widget _householdJoin(AppLocalizations l) {
     if (_state == SetupStepState.done) return _doneBody(l, l.setupFlowHouseholdJoined);
+    // The other TVs haven't answered yet (the flow opened moments ago): a few seconds more, then on
+    if (_nearbyHouseholds.isEmpty) {
+      return SetupScreenBody(
+        icon: Icons.holiday_village_outlined,
+        title: l.setupFlowHouseholdLooking,
+        content: const [Center(child: CircularProgressIndicator())],
+        buttons: [SetupButton(label: l.setupFlowSkip, focusNode: _primary, autofocus: true, onPressed: _next)],
+      );
+    }
     final names = _nearbyHouseholds.isEmpty ? "" : householdTvNames(l, _nearbyHouseholds.first);
     return SetupScreenBody(
       icon: Icons.holiday_village_outlined,
@@ -256,8 +265,8 @@ extension _CardScreens on _SetupFlowPageState {
     );
   }
 
-  /// The family card's last step: start a household for the TVs to come. A household heard only since the join
-  /// screen was passed is offered here instead (a second one would split the TVs).
+  /// Before Finish: start a household for the TVs to come. A household heard only since the join screen was passed
+  /// is offered here instead (a second one would split the TVs).
   Widget _household(AppLocalizations l) {
     if (_state == SetupStepState.done) {
       return _doneBody(l, _householdJoined ? l.setupFlowHouseholdJoined : l.setupFlowHouseholdDone);
@@ -273,7 +282,7 @@ extension _CardScreens on _SetupFlowPageState {
             label: l.householdJoin,
             focusNode: _primary,
             autofocus: true,
-            onPressed: () => _joinHousehold(SetupScreen.familyHousehold),
+            onPressed: () => _joinHousehold(SetupScreen.household),
           ),
         ],
       );
@@ -297,6 +306,12 @@ extension _CardScreens on _SetupFlowPageState {
     unawaited(_channel.lookForHouseholds().catchError((Object err) => noteFailure('setup_flow', err)));
     unawaited(_readHouseholds());
     _householdPoll = Timer.periodic(const Duration(seconds: 3), (_) => _readHouseholds());
+    _lookedTimer = Timer(_SetupFlowPageState._lookFor, () {
+      if (!mounted) return;
+      _lookedLongEnough = true;
+      // Still nothing heard while the join screen waited: nothing to join
+      if (_screen == SetupScreen.householdJoin && _state == SetupStepState.intro && _nearbyHouseholds.isEmpty) _next();
+    });
   }
 
   Future<void> _readHouseholds() async {
@@ -304,8 +319,11 @@ extension _CardScreens on _SetupFlowPageState {
       final nearby = householdsNearby(await _channel.getHouseholdStatus());
       if (!mounted || nearby.toString() == _nearbyHouseholds.toString()) return;
       _update(() => _nearbyHouseholds = nearby);
-      // The household step showing Start, now that there's one to join: focus goes to Join
-      if (_screen == SetupScreen.familyHousehold && _state == SetupStepState.intro) _focusPrimary();
+      // A screen that was looking, or showing Start, now that there's one to join: focus goes to Join
+      if ((_screen == SetupScreen.householdJoin || _screen == SetupScreen.household) &&
+          _state == SetupStepState.intro) {
+        _focusPrimary();
+      }
     } catch (err) {
       noteFailure('setup_flow', err);
     }
@@ -331,7 +349,29 @@ extension _CardScreens on _SetupFlowPageState {
     _stopLookingForHouseholds();
     if (!_lookOnly) await _flow.decide(SetupCard.home.name, SetupChoice.on);
     await _refresh();
-    if (mounted) _showDone(from, null);
+    if (!mounted) return;
+    _showDone(from, null);
+    // The choices came along, the switch didn't: on now when the TV already trusts Hearth's adb (no question asked)
+    if (!(_snap?.isDone(SetupStepId.profilePairing) ?? true) && (_snap?.adbEnabled ?? false)) {
+      try {
+        final kids = await _channel.getKidsProfilesState();
+        if (kids["trusted"] == true) await _turnOnPairing();
+      } catch (err) {
+        noteFailure('setup_flow', err);
+      }
+    }
+  }
+
+  /// Profile Pairing's switch, over Hearth's own adb: after joining, the household brings its choices.
+  Future<void> _turnOnPairing() async {
+    try {
+      await _channel
+          .runSetupFixes(const ["restricted_settings", "profile_pairing"])
+          .timeout(_SetupFlowPageState._selfAdbLimit);
+    } catch (err) {
+      noteFailure('setup_flow', err);
+    }
+    if (mounted) await _refresh();
   }
 
   Future<void> _startHousehold() async {
@@ -341,7 +381,7 @@ extension _CardScreens on _SetupFlowPageState {
       noteFailure('setup_flow', err);
     }
     if (!mounted) return;
-    _showDone(SetupScreen.familyHousehold, null);
+    _showDone(SetupScreen.household, null);
   }
 
   /// The row pad twice (Settings' own PIN dialogs), then on.
@@ -548,10 +588,28 @@ extension _CardScreens on _SetupFlowPageState {
     _focusPrimary();
   }
 
-  /// Ad tracking, right after debugging is approved: what it is in plain words, and one press to turn it off
-  /// (Settings > System has the same switch).
+  /// Ad tracking, while some of it is on: what it is in plain words, and one press to turn it off (Settings > System
+  /// has the same switch). Turning it off needs the TV's debugging switch, so with that off the screen walks through
+  /// it first, as the kids' step does; the kids' step then needs no trip of its own.
   Widget _adSandbox(AppLocalizations l) {
     if (_state == SetupStepState.done) return _doneBody(l, l.setupFlowAdSandboxDone);
+    final snap = _snap!;
+    if (!snap.adbEnabled) {
+      return SetupScreenBody(
+        icon: Icons.privacy_tip_outlined,
+        title: l.adSandboxTitle,
+        body: "${l.setupFlowAdSandboxBody}\n\n"
+            "${snap.developerOptionsOn ? l.setupFlowAdSandboxDebugUsb : l.setupFlowAdSandboxDebug}",
+        buttons: [
+          SetupButton(label: l.setupFlowSkip, onPressed: _next),
+          SetupButton(
+              label: snap.developerOptionsOn ? l.setupFlowDebugUsbOpen : l.setupFlowDebugOpen,
+              focusNode: _primary,
+              autofocus: true,
+              onPressed: () => _openDebugging(snap.developerOptionsOn)),
+        ],
+      );
+    }
     return SetupScreenBody(
       icon: Icons.privacy_tip_outlined,
       title: l.adSandboxTitle,
@@ -576,10 +634,20 @@ extension _CardScreens on _SetupFlowPageState {
       noteFailure('setup_flow_cards', err);
       ran = false;
     }
+    // Joined, with Profile Pairing's switch still off: the same approval turns it on
+    if (ran && _householdJoined && !(_snap?.isDone(SetupStepId.profilePairing) ?? true)) await _turnOnPairing();
     if (!mounted) return;
     _update(() => _fixing = false);
     if (ran) {
-      _showDone(SetupScreen.familyAdSandbox, const Duration(seconds: 2));
+      await _refresh();
+      if (!mounted) return;
+      // Still on (the TV didn't allow debugging): say so rather than done
+      if (_snap?.adSandboxToTurnOff ?? false) {
+        await showMessageDialog(context, title: l.setupFlowFixFailedTitle, message: l.setupFlowFixFailedBody);
+        _focusPrimary();
+        return;
+      }
+      _showDone(SetupScreen.adTracking, const Duration(seconds: 2));
       return;
     }
     await showMessageDialog(context, title: l.setupFlowFixFailedTitle, message: l.setupFlowFixFailedBody);

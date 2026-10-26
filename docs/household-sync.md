@@ -245,10 +245,15 @@ the essentials (the Home button, the home app), before the cards, so the househo
 that would ask for them:
 
 - **A household is on the network**: the screen names its TVs, with **Join the household** and Not now. Joining there
-  runs Joining above; once joined, the look screen isn't shown (the profile's look comes from the household). Not now
-  is final for this run: the family card doesn't ask again, nor offer to start a separate household.
-- **None is heard**: no screen. The family card's last step offers **Start a household**, for the TVs set up later;
-  if a household is heard by then (the other TV came on meanwhile), that step offers Join instead.
+  runs Joining above; once joined, the look, Parent PIN and Profile Pairing screens aren't shown (they come from the
+  household). Profile Pairing's switch is still each TV's own: Hearth turns it on over its own adb, at once when the TV
+  trusts Hearth's key already, else with the ad tracking step's one approval; failing both it stays in Settings'
+  checklist. Not now is final for this run: the flow doesn't ask again, nor offer to start a separate household.
+- **Not heard yet**: when the flow gets there within 5 seconds of opening (a rerun with the essentials on), the screen
+  says it's looking, with Skip, and moves on by itself if no household answers.
+- **None is heard**: no screen. A **Sync with your other TVs** step just before Finish offers **Start a household**,
+  for the TVs set up later; if a household is heard by then (the other TV came on meanwhile), it offers Join instead.
+  Finish lists the TV as in step with the others, or the household as left for later.
 
 ## Failure and safety
 

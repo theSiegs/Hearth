@@ -5,7 +5,7 @@
 
 ## Unreleased
 
-- **Setup**: when your other TVs are in a household, a **Join your other TVs** screen comes right after the Home button and home app steps, so their looks, layouts, streaming profiles and saved PINs arrive before the steps that would ask for them. The household step's text no longer points to the removed Copy screens.
+- **Setup**: when your other TVs are in a household, a **Join your other TVs** screen comes right after the Home button and home app steps (it looks for a few seconds when the flow has just opened). Joining skips the look, Parent PIN and Profile Pairing screens, which come with the household; Hearth turns Profile Pairing's switch on itself when it can. **Ad tracking** is its own step right after, shown whenever some of it is still on, and walks through turning the TV's debugging on when it's off, so it's no longer skipped without a word. Starting a household moved to a step just before Finish, and Finish says whether the TV is in step with the others. The household texts no longer point to the removed Copy screens.
 
 ## 2026.10.84 (pre-release)
 

@@ -5061,6 +5061,30 @@ abstract class AppLocalizations {
   /// **'Your other TVs are in a household: {names}. Join it, and everyone\'s looks, home layouts, streaming profiles and saved PINs come to this TV. Someone allows it in the notification Bell on one of those TVs.'**
   String setupFlowHouseholdFound(String names);
 
+  /// Setup flow: the join screen while it waits a few seconds for other TVs' households to answer
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for your other TVs…'**
+  String get setupFlowHouseholdLooking;
+
+  /// Setup flow: Finish screen item when this TV is in a household
+  ///
+  /// In en, this message translates to:
+  /// **'In step with your other TVs'**
+  String get setupFlowFinishHousehold;
+
+  /// Setup flow: ad tracking step when the TV's debugging (and Developer options) is off
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth needs the TV\'s debugging switch to do it. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on, so Hearth can keep ad tracking off.'**
+  String get setupFlowAdSandboxDebug;
+
+  /// Setup flow: ad tracking step when Developer options are on but USB debugging is off
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth needs the TV\'s USB debugging switch to do it. On the next screen, turn on USB debugging, and come back. Leave it on, so Hearth can keep ad tracking off.'**
+  String get setupFlowAdSandboxDebugUsb;
+
   /// Setup flow: title of the screen after the essentials that offers to join the household heard on the network
   ///
   /// In en, this message translates to:

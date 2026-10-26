@@ -3711,6 +3711,22 @@
             "names": {"type": "String", "example": "Kitchen, Office"}
         }
     },
+    "setupFlowHouseholdLooking": "Looking for your other TVs…",
+    "@setupFlowHouseholdLooking": {
+        "description": "Setup flow: the join screen while it waits a few seconds for other TVs' households to answer"
+    },
+    "setupFlowFinishHousehold": "In step with your other TVs",
+    "@setupFlowFinishHousehold": {
+        "description": "Setup flow: Finish screen item when this TV is in a household"
+    },
+    "setupFlowAdSandboxDebug": "Hearth needs the TV's debugging switch to do it. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on, so Hearth can keep ad tracking off.",
+    "@setupFlowAdSandboxDebug": {
+        "description": "Setup flow: ad tracking step when the TV's debugging (and Developer options) is off"
+    },
+    "setupFlowAdSandboxDebugUsb": "Hearth needs the TV's USB debugging switch to do it. On the next screen, turn on USB debugging, and come back. Leave it on, so Hearth can keep ad tracking off.",
+    "@setupFlowAdSandboxDebugUsb": {
+        "description": "Setup flow: ad tracking step when Developer options are on but USB debugging is off"
+    },
     "setupFlowHouseholdJoinTitle": "Join your other TVs",
     "@setupFlowHouseholdJoinTitle": {
         "description": "Setup flow: title of the screen after the essentials that offers to join the household heard on the network"

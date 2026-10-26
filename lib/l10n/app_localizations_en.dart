@@ -2870,6 +2870,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get setupFlowHouseholdLooking => 'Looking for your other TVs…';
+
+  @override
+  String get setupFlowFinishHousehold => 'In step with your other TVs';
+
+  @override
+  String get setupFlowAdSandboxDebug => 'Hearth needs the TV\'s debugging switch to do it. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on, so Hearth can keep ad tracking off.';
+
+  @override
+  String get setupFlowAdSandboxDebugUsb => 'Hearth needs the TV\'s USB debugging switch to do it. On the next screen, turn on USB debugging, and come back. Leave it on, so Hearth can keep ad tracking off.';
+
+  @override
   String get setupFlowHouseholdJoinTitle => 'Join your other TVs';
 
   @override

@@ -429,11 +429,8 @@ void main() {
       expect(find.text("Next"), findsOneWidget);
     });
 
-    testWidgets("after the family steps: Sync with your other TVs starts a household, or Skip leaves it", (tester) async {
-      channel.pairing = true;
-      await openAtFamily(tester);
-      await press(tester, "Turn on");
-      await press(tester, "Skip"); // the parent PIN
+    testWidgets("before Finish: Sync with your other TVs starts a household, or Skip leaves it", (tester) async {
+      await open(tester, startAt: "household");
       expect(find.text("Sync with your other TVs"), findsOneWidget);
       expect(channel.householdsStarted, 0);
       await press(tester, "Start a household");
@@ -441,13 +438,12 @@ void main() {
       expect(find.textContaining("This TV has a household"), findsOneWidget);
     });
 
-    testWidgets("with debugging on: the ad tracking step says it simply, and Keep ad tracking off does it", (tester) async {
+    testWidgets("ad tracking on: its step comes right after the essentials, and Keep ad tracking off does it",
+        (tester) async {
       channel.pairing = true;
       channel.adb = true;
       channel.adSandbox = const ["com.android.adservices.api"];
       await openAtFamily(tester);
-      await press(tester, "Turn on");
-      await press(tester, "Skip"); // the parent PIN
       expect(find.text("Ad tracking"), findsOneWidget);
       expect(find.textContaining("pm disable-user", findRichText: true), findsNothing);
       await press(tester, "Keep ad tracking off");
@@ -455,14 +451,20 @@ void main() {
       expect(find.text("Ad tracking is off, and Hearth keeps it off."), findsOneWidget);
     });
 
-    testWidgets("without debugging, or with it off already, there's no ad tracking step", (tester) async {
+    testWidgets("ad tracking on without debugging: the step walks through turning debugging on", (tester) async {
       channel.pairing = true;
       channel.adSandbox = const ["com.android.adservices.api"];
       await openAtFamily(tester);
-      await press(tester, "Turn on");
-      await press(tester, "Skip"); // the parent PIN
+      expect(find.text("Ad tracking"), findsOneWidget);
+      expect(find.textContaining("Android TV OS build"), findsOneWidget);
+      expect(find.text("Open About"), findsOneWidget);
+    });
+
+    testWidgets("ad tracking off already: no step", (tester) async {
+      channel.pairing = true;
+      await openAtFamily(tester);
       expect(find.text("Ad tracking"), findsNothing);
-      expect(find.text("Sync with your other TVs"), findsOneWidget);
+      expect(find.text("Your family"), findsWidgets);
     });
 
     testWidgets("another TV's household on the network: Join your other TVs comes right after the essentials",
@@ -494,16 +496,14 @@ void main() {
       expect(find.text("Your family"), findsWidgets);
     });
 
-    testWidgets("a household heard only later: the family card's step offers to join it", (tester) async {
-      channel.pairing = true;
-      await openAtFamily(tester);
+    testWidgets("a household heard only later: the step before Finish offers to join it", (tester) async {
+      await open(tester, startAt: "household");
+      expect(find.text("Start a household"), findsOneWidget);
       channel.nearbyHouseholds = const [
         ["Kitchen"]
       ];
       await tester.pump(const Duration(seconds: 3));
       await tester.pumpAndSettle();
-      await press(tester, "Turn on");
-      await press(tester, "Skip"); // the parent PIN
       expect(find.text("Join your other TVs"), findsOneWidget);
       expect(find.text("Start a household"), findsNothing);
       expect(find.text("Join the household"), findsOneWidget);
@@ -530,6 +530,52 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text("Allow it on Kitchen"), findsNothing);
       expect(find.textContaining("This TV is in the household now"), findsOneWidget);
+    });
+
+    testWidgets("joined: the Parent PIN and Profile Pairing steps aren't asked, the household brings them",
+        (tester) async {
+      channel.nearbyHouseholds = const [
+        ["Kitchen"]
+      ];
+      await openAtFamily(tester);
+      await press(tester, "Join the household");
+      await tester.pump(const Duration(seconds: 1));
+      channel.joinState = "joined";
+      channel.household = true;
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      await press(tester, "Next");
+      expect(find.text("Your family"), findsWidgets);
+      await press(tester, "Turn on");
+      expect(find.text("Choose a parent PIN"), findsNothing);
+      expect(find.text("Pick the right profile in streaming apps"), findsNothing);
+      expect(find.text("Watching"), findsWidgets);
+    });
+
+    testWidgets("the other TVs not answered yet: the join screen looks a few seconds, then moves on", (tester) async {
+      channel.homeButtonOn = true;
+      channel.homeApp = true;
+      channel.googleTv = true;
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(setupTestApp(
+          channel,
+          flow,
+          prefs,
+          Builder(
+              builder: (context) => TextButton(
+                  onPressed: () => SetupFlowPage.open(context, mode: SetupMode.rerun), child: const Text("home")))));
+      await tester.tap(find.text("home"));
+      // Not settled: the spinner turns while it looks
+      for (int i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.text("Looking for your other TVs…"), findsOneWidget);
+      await tester.pump(const Duration(seconds: 6));
+      await tester.pumpAndSettle();
+      expect(find.text("Looking for your other TVs…"), findsNothing);
+      expect(find.text("Your family"), findsWidgets);
     });
 
     testWidgets("backing out of joining stops the request and stays on the step", (tester) async {
@@ -665,6 +711,9 @@ void main() {
       await press(tester, "Next");
       expect(find.text("Install HearthTube?"), findsOneWidget);
       await press(tester, "Not now");
+      // Before Finish: a household for the TVs to come
+      expect(find.text("Sync with your other TVs"), findsOneWidget);
+      await press(tester, "Skip");
       expect(find.text("Hearth is ready"), findsOneWidget);
     });
 
@@ -858,6 +907,7 @@ void main() {
       channel.notifications = true;
       channel.install = true;
       channel.hearthTube = true;
+      channel.household = true;
       await prefs.setBool("show_continue_watching", true);
       await open(tester);
       await press(tester, "Get started");

@@ -250,7 +250,8 @@ backup at any time. Restore picks from the list of backups.
 (Android's Privacy Sandbox: ad topics, on-device ad auctions and ad measurement, with on-device personalization and
 federated learning). **Keep ad tracking off** is on unless you turn it off: Hearth turns these parts off for every
 profile on the TV, kids profiles included, through its own debugging connection. The setup flow offers the same step
-right after the kids profiles, when debugging is on. Google can turn them back on from its servers or with a module
+right after the Home button and home app steps whenever some of it is on; with the TV's debugging off, it first walks
+through turning debugging on (which the kids profiles step then reuses). Google can turn them back on from its servers or with a module
 update, so Hearth checks again when the TV wakes (the kids profiles every few hours). That check needs the TV to
 already trust Hearth's debugging key, so it never shows "Allow debugging?". Play Store, voice and casting keep working.
 Turning the switch off turns these parts back on, and asks for the Parent PIN if there is one.

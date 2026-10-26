@@ -57,14 +57,13 @@ enum SetupScreen {
   homeButtonBlocked,
   homeApp,
   householdJoin,
+  adTracking,
   family,
   familyPin,
   familyPairing,
   familyPairingBlocked,
   familyVoice,
   familyKids,
-  familyAdSandbox,
-  familyHousehold,
   watching,
   watchingContinue,
   watchingNotifications,
@@ -79,6 +78,7 @@ enum SetupScreen {
   updates,
   updatesInstall,
   updatesHearthTube,
+  household,
   finish,
 }
 
@@ -92,8 +92,8 @@ enum SetupFlowResult { closed, openSettings }
 /// Hearth's first-run setup: one full-screen flow over the home that walks through
 /// what Hearth needs from Android, one decision per screen, and comes back to where it was after each trip to
 /// Android's settings. The order: Welcome, the essentials (the Home button, then the home app), joining the household
-/// the other TVs are in (only when one is heard), the optional cards (each a Not now / Turn on choice, its steps only
-/// after Turn on), then Finish.
+/// the other TVs are in (only when one is heard), ad tracking (while it's on), the optional cards (each a Not now /
+/// Turn on choice, its steps only after Turn on), starting a household for TVs to come, then Finish.
 class SetupFlowPage extends StatefulWidget {
   static const String routeName = "setup_flow";
 
@@ -142,13 +142,12 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     SetupScreen.homeButton,
     SetupScreen.homeApp,
     SetupScreen.householdJoin,
+    SetupScreen.adTracking,
     SetupScreen.family,
     SetupScreen.familyPin,
     SetupScreen.familyPairing,
     SetupScreen.familyVoice,
     SetupScreen.familyKids,
-    SetupScreen.familyAdSandbox,
-    SetupScreen.familyHousehold,
     SetupScreen.watching,
     SetupScreen.watchingContinue,
     SetupScreen.watchingNotifications,
@@ -163,6 +162,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     SetupScreen.updates,
     SetupScreen.updatesInstall,
     SetupScreen.updatesHearthTube,
+    SetupScreen.household,
     SetupScreen.finish,
   ];
 
@@ -174,8 +174,6 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       SetupScreen.familyPairing,
       SetupScreen.familyVoice,
       SetupScreen.familyKids,
-      SetupScreen.familyAdSandbox,
-      SetupScreen.familyHousehold,
     ],
     SetupCard.watching: [SetupScreen.watching, SetupScreen.watchingContinue, SetupScreen.watchingNotifications],
     SetupCard.home: [SetupScreen.look, SetupScreen.lookWeather],
@@ -255,6 +253,13 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   Timer? _householdPoll;
   bool _householdJoined = false;
 
+  /// The flow has listened long enough for the other TVs to answer: before that, the join screen says it's looking.
+  bool _lookedLongEnough = false;
+  Timer? _lookedTimer;
+
+  /// How long the other TVs get to answer before the join screen gives up on them.
+  static const Duration _lookFor = Duration(seconds: 5);
+
   /// Not now on joining: the family card's household step doesn't ask again, nor offer to start a separate one.
   bool _householdDeclined = false;
 
@@ -295,6 +300,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     _poll?.cancel();
     _autoNext?.cancel();
     _householdPoll?.cancel();
+    _lookedTimer?.cancel();
     _stopLookingForHouseholds();
     _primary.dispose();
     // Closed while a look was only being previewed: the home goes back to how it was
@@ -394,19 +400,21 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       SetupScreen.watchingNotifications => snap.isDone(SetupStepId.notifications),
       SetupScreen.updatesInstall => snap.isDone(SetupStepId.install),
       SetupScreen.updatesHearthTube => snap.hearthTubeInstalled,
-      SetupScreen.familyPin => _hasParentPin,
-      SetupScreen.familyPairing => snap.isDone(SetupStepId.profilePairing),
+      // Joined: the household's Parent PIN and streaming profile choices come with it
+      SetupScreen.familyPin => _hasParentPin || _householdJoined,
+      SetupScreen.familyPairing => snap.isDone(SetupStepId.profilePairing) || _householdJoined,
       // Only Netflix needs it, and only once Profile Pairing is on
       SetupScreen.familyVoice =>
         !snap.netflix || !snap.isDone(SetupStepId.profilePairing) || snap.isDone(SetupStepId.voice),
       SetupScreen.familyKids => snap.kidsProfiles == 0 ||
           SetupSnapshot.kidsCovered(snap.kidsProfiles, kidsProtected: _flow.kidsProtected, kidsReady: snap.kidsReady),
-      // Kept off already, or no sandbox; and without debugging Hearth can't run the commands
-      SetupScreen.familyAdSandbox => !snap.adSandboxToTurnOff || !snap.adbEnabled,
-      // Offered only when the other TVs' household is heard, and this TV isn't in one
-      SetupScreen.householdJoin => snap.household || _householdJoined || _nearbyHouseholds.isEmpty,
+      // Offered only when the other TVs' household is heard (or they may still answer), and this TV isn't in one
+      SetupScreen.householdJoin =>
+        snap.household || _householdJoined || _nearbyHouseholds.isEmpty && (_lookedLongEnough || !_lookingForHouseholds),
+      // Nothing of it left on; the screen itself walks through turning debugging on when it's off
+      SetupScreen.adTracking => !snap.adSandboxToTurnOff,
       // Already in a household, or joining was offered and declined: nothing to start
-      SetupScreen.familyHousehold => snap.household || _householdJoined || _householdDeclined,
+      SetupScreen.household => snap.household || _householdJoined || _householdDeclined,
       // A restored backup, or the household, brings the look
       SetupScreen.look => _restored || _householdJoined,
       SetupScreen.haAlerts => snap.haAlerts,
@@ -524,7 +532,8 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
           }
         }
       case SetupScreen.familyKids:
-        // Back from turning debugging on: on to adding Hearth
+      case SetupScreen.adTracking:
+        // Back from turning debugging on: on to what the step does with it
         if (_state == SetupStepState.waiting && snap.adbEnabled) {
           setState(() => _state = SetupStepState.intro);
           _focusPrimary();
@@ -742,14 +751,13 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
         SetupScreen.homeButtonBlocked => _blocked(l, SetupStepId.homeButton),
         SetupScreen.homeApp => _homeApp(l),
         SetupScreen.householdJoin => _householdJoin(l),
+        SetupScreen.adTracking => _adSandbox(l),
         SetupScreen.family => _cardScreen(l, SetupCard.family),
         SetupScreen.familyPin => _parentPin(l),
         SetupScreen.familyPairing => _pairing(l),
         SetupScreen.familyPairingBlocked => _blocked(l, SetupStepId.profilePairing),
         SetupScreen.familyVoice => _voice(l),
         SetupScreen.familyKids => _kids(l),
-        SetupScreen.familyAdSandbox => _adSandbox(l),
-        SetupScreen.familyHousehold => _household(l),
         SetupScreen.watching => _cardScreen(l, SetupCard.watching),
         SetupScreen.watchingContinue => _continueWatching(l),
         SetupScreen.watchingNotifications => _notifications(l),
@@ -764,6 +772,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
         SetupScreen.updates => _cardScreen(l, SetupCard.updates),
         SetupScreen.updatesInstall => _installs(l),
         SetupScreen.updatesHearthTube => _hearthTube(l),
+        SetupScreen.household => _household(l),
         SetupScreen.finish => _finish(l),
       };
 
@@ -1030,12 +1039,14 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       if (snap.isDone(SetupStepId.homeApp)) l.setupFlowHomeAppDone,
       for (final card in SetupCard.values)
         if (_cardShown(card) && cardOn(card)) _cardInfo(l, card).title,
+      if (snap.household || _householdJoined) l.setupFlowFinishHousehold,
     ];
     final later = <String>[
       if (!snap.isDone(SetupStepId.homeButton)) snap.step(SetupStepId.homeButton).title,
       if (!snap.isDone(SetupStepId.homeApp)) snap.step(SetupStepId.homeApp).title,
       for (final card in SetupCard.values)
         if (_cardShown(card) && !cardOn(card)) _cardInfo(l, card).title,
+      if (!snap.household && !_householdJoined) l.setupFlowHouseholdTitle,
     ];
     const heading = TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600);
     return SetupScreenBody(
