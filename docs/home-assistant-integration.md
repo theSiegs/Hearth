@@ -186,6 +186,11 @@ A rule can apply only **when** something is true; outside it, the title counts a
   together on a Switch can't be seen yet);
 - on certain days, or between certain times.
 
+**Playing together** is a state the integration knows and shows, not only a rule's condition: a **Playing together**
+binary sensor for the household (on while two or more people play the same title; attributes: the title, who, since
+when, on which devices), and a **Playing together today** duration per person. Automations and dashboards can use it
+like any other state.
+
 Rules decide in the order listed, the first that applies wins. Examples: "Minecraft, everyone, together: own limit 4
 hours"; "Khan Academy Kids: doesn't count". Anything else (a longer afternoon one day, a weekend treat) is an
 **extension**: the same bonus as "ask for more", given to a kind or to one title (see [Budgets](#budgets)).
