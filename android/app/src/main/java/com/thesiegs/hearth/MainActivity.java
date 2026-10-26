@@ -430,6 +430,10 @@ public class MainActivity extends FlutterActivity {
                     call.argument("profile"), call.argument("kind"), call.argument("value")));
             case "publishHouseholdPicture" -> answerFrom(sIoExecutor, result, () -> Household.publishPicture(this,
                     call.argument("profile"), call.argument("slot"), call.argument("jpeg")));
+            // The Parent PIN: the household's, and this TV's for it (HouseholdParentPin decides which way)
+            case "getHouseholdParentPin" -> answerFrom(sIoExecutor, result, () -> Household.parentPin(this));
+            case "publishHouseholdParentPin" -> answerFrom(sIoExecutor, result,
+                    () -> Household.publishParentPin(this, (String) call.arguments()));
             case "lookForHouseholds" -> {
                 Household.lookAround(this);
                 result.success(null);

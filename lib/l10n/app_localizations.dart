@@ -2271,6 +2271,24 @@ abstract class AppLocalizations {
   /// **'Needed to change the launcher in Google TV kids profiles'**
   String get parentPinNewSubtitle;
 
+  /// Family settings: shown when this TV had its own Parent PIN before joining the household and the other TVs use a different one
+  ///
+  /// In en, this message translates to:
+  /// **'Use your other TVs\' Parent PIN'**
+  String get parentPinHouseholdUse;
+
+  /// PIN screen title: entering the household's Parent PIN to use it on this TV too
+  ///
+  /// In en, this message translates to:
+  /// **'Your other TVs\' Parent PIN'**
+  String get parentPinHouseholdTitle;
+
+  /// PIN screen: under Your other TVs' Parent PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the Parent PIN your other TVs use, and this TV uses it too'**
+  String get parentPinHouseholdSubtitle;
+
   /// PIN screen title: confirming the new parent PIN
   ///
   /// In en, this message translates to:

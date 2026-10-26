@@ -22,6 +22,7 @@ import 'package:flauncher/database.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/home_forecast.dart';
+import 'package:flauncher/providers/household_parent_pin.dart';
 import 'package:flauncher/providers/home_agenda.dart';
 import 'package:flauncher/providers/calendars.dart';
 import 'package:flauncher/providers/home_data_usage.dart';
@@ -196,7 +197,8 @@ Future<void> main() async {
                     if (key != null) await apps.hideDefaultHiddenApps(key, kids: profiles.isKidsProfile);
                     await apps.refreshState();
                   },
-                  onPicturesCopied: (key) => wallpaper.picturesCopied(key))
+                  onPicturesCopied: (key) => wallpaper.picturesCopied(key),
+                  parentPin: HouseholdParentPin(fLauncherChannel, sharedPreferences, settings))
                 ..start();
             },
             dispose: (_, looks) => looks.dispose(),

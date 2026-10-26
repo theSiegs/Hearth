@@ -247,7 +247,8 @@ public class ProfileProvider extends ContentProvider {
         }
 
         String hash = FlutterPrefs.getString(context, "device_parent_pin_hash", null);
-        boolean ok = hash != null && pin != null && hash.equals(hashPin(pin));
+        // Either form the app keeps (ParentPinHash): the salted one, or the old one
+        boolean ok = ParentPinHash.verify(pin, hash);
 
         if (ok) {
             sWrongPins = 0;
@@ -258,16 +259,6 @@ public class ProfileProvider extends ContentProvider {
 
         result.putBoolean("ok", ok);
         return result;
-    }
-
-    /** Same hash as SettingsService._hashPin in Dart. */
-    private static String hashPin(String pin) {
-        try {
-            return Hex.of(MessageDigest.getInstance("SHA-256")
-                    .digest(("ltv-parent-pin:" + pin).getBytes(StandardCharsets.UTF_8)));
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     /** {date, time} formats. */

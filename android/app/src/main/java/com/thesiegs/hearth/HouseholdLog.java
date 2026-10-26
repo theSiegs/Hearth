@@ -95,6 +95,16 @@ final class HouseholdLog {
         for (Map.Entry<String, Long> seen : savedVector.entrySet()) vector.put(seen.getKey(), seen.getValue());
     }
 
+    /** When an entry was written, in milliseconds (its clock without the counter). */
+    static long millisOf(HouseholdEntry entry) {
+        return entry.clock >> COUNTER_BITS;
+    }
+
+    /** What is held for this id, a delete included; null when nothing is. */
+    HouseholdEntry entry(String kind, String profile, String item) {
+        return entries.get(id(kind, profile, item));
+    }
+
     /** The live value, or null if there is none or it was deleted. */
     HouseholdEntry get(String kind, String profile, String item) {
         HouseholdEntry entry = entries.get(id(kind, profile, item));
@@ -136,12 +146,17 @@ final class HouseholdLog {
         return out;
     }
 
-    /** Forgets deletes older than {@link #TOMBSTONE_MS}; returns how many. */
+    /**
+     * Forgets deletes older than {@link #TOMBSTONE_MS}, and Continue Watching entries ({@link HouseholdBridge#WATCH})
+     * older than its {@link WatchHistory#MAX_AGE_MS}, which every TV forgets anyway; returns how many.
+     */
     int purge(long nowMs) {
         int removed = 0;
         for (Iterator<HouseholdEntry> it = entries.values().iterator(); it.hasNext();) {
             HouseholdEntry entry = it.next();
-            if (entry.deleted && !isFinal(entry) && (entry.clock >> COUNTER_BITS) < nowMs - TOMBSTONE_MS) {
+            long age = nowMs - (entry.clock >> COUNTER_BITS);
+            boolean expired = HouseholdBridge.WATCH.equals(entry.kind) && age > WatchHistory.MAX_AGE_MS;
+            if (expired || entry.deleted && !isFinal(entry) && age > TOMBSTONE_MS) {
                 it.remove();
                 removed++;
             }

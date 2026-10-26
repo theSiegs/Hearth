@@ -27,6 +27,10 @@ final class HouseholdBridge {
     static final String LOOK = "look";
     static final String LAYOUT = "layout";
     static final String WALLPAPER = "wallpaper";
+    /** The household's Parent PIN: the whole TV's ({@link #SHARED}), item "", the value its salted hash (never the PIN). */
+    static final String PARENT_PIN = "parent_pin";
+    /** Continue Watching: a person's played and kept titles (HouseholdWatch). */
+    static final String WATCH = "watch";
     /** Where a wallpaper picture shows: always, by day, by night. */
     static final List<String> SLOTS = Arrays.asList("any", "day", "night");
     /** A look or layout's JSON may be this long; a layout with hundreds of apps is some 100 KB. */

@@ -50,7 +50,9 @@ Change its look in **Settings → Home screen → Look**, or turn it off to get 
 **Continue Watching** shows what apps put in Google TV's Watch Next list, most recent first, with cover art. It shows
 the current profile's own list. Hearth also keeps each profile's own history on the TV: what apps say is playing,
 which adds shows from apps that don't use Watch Next (with the app's icon instead of cover art), and entries an app
-dropped when someone else used it (Netflix lists only its current profile's), until that profile opens the app again. Choose which apps appear, the card size and how many in
+dropped when someone else used it (Netflix lists only its current profile's), until that profile opens the app again.
+With household sync on, each person's titles follow them to the household's other TVs, and one taken out or
+finished on one TV goes from the others. Choose which apps appear, the card size and how many in
 **Settings → Home screen → Continue Watching**.
 
 **Sections.** Arrange apps into sections (rows or grids), rename, reorder and hide them in
@@ -168,7 +170,10 @@ Hearth treats a profile as a kids profile when Family Link supervises it.
 - **Screen time.** When Google TV shows its bedtime or "time's up" screen, Hearth stays out of the way and returns
   when the kid is allowed back. Remote button remaps pause while those screens show.
 - **Parent PIN** (**Settings → Profiles → Parent PIN**). Kids see their own settings plus one "Parent settings" row;
-  anything that could undo your setup asks for the PIN.
+  anything that could undo your setup asks for the PIN. With household sync on, the household's TVs share one Parent
+  PIN: a TV that joins without one takes it, and a change on one TV reaches the others. A TV that had its own,
+  different PIN when it joined keeps it until you choose **Use your other TVs' Parent PIN** in **Settings → Family**
+  and enter theirs.
 - **YouTube only in HearthTube.** With HearthTube installed, a kids profile watches YouTube only there, where its
   YouTube time applies: YouTube's own app is hidden, and if it opens anyway (a voice search, a link) HearthTube opens
   over it. Adults' profiles start with YouTube's app hidden too; show it again from its app options if you want it.

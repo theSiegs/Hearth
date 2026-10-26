@@ -498,6 +498,15 @@ class FLauncherChannel {
       await _methodChannel
           .invokeMethod<String>("publishHouseholdPicture", {"profile": profileKey, "slot": slot, "jpeg": jpeg});
 
+  /// The household's Parent PIN: {state: "live" (with `hash`, the salted hash), "removed" or "none"}; null outside a
+  /// household.
+  Future<Map<dynamic, dynamic>?> getHouseholdParentPin() async =>
+      await _methodChannel.invokeMapMethod<dynamic, dynamic>("getHouseholdParentPin");
+
+  /// This TV's Parent PIN as it keeps it (a hash; null: removed) for the household; false when it isn't taken.
+  Future<bool> publishHouseholdParentPin(String? hash) async =>
+      await _methodChannel.invokeMethod<bool>("publishHouseholdParentPin", hash) ?? false;
+
   /// Removes another TV of the household (by its tvId from `members`); false if it couldn't be.
   Future<bool> removeHouseholdTv(String tvId) async =>
       await _methodChannel.invokeMethod<bool>("removeHouseholdTv", tvId) ?? false;

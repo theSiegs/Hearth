@@ -72,6 +72,7 @@ const String _hiddenWatchNextPackagesKey = "hidden_watch_next_packages";
 const String _startOnBootKey = "start_on_boot";
 // device_ prefix: shared by all profiles, never part of a per-profile layout
 const String _parentPinHashKey = "device_parent_pin_hash";
+const String _householdParentPinOfferedKey = "device_household_parent_pin_offered";
 const String _updatesIncludePrereleasesKey = "device_updates_include_prereleases";
 const String _updatesBuildKindKey = "device_updates_build_kind";
 
@@ -380,6 +381,32 @@ class SettingsService extends ChangeNotifier {
       _sharedPreferences.setString(_parentPinHashKey, ParentPinHash.hash(pin));
     }
     return true;
+  }
+
+  /// The household's Parent PIN (its hash) when it differs from the one this TV had before it joined: this TV keeps
+  /// its own until an adult enters the household's here ([takeHouseholdParentPin]). Null otherwise.
+  String? get householdParentPinOffered => _sharedPreferences.getString(_householdParentPinOfferedKey);
+
+  Future<void> setHouseholdParentPinOffered(String? hash) async {
+    if (hash == householdParentPinOffered) return;
+    if (hash == null) {
+      await _sharedPreferences.remove(_householdParentPinOfferedKey);
+    } else {
+      await _sharedPreferences.setString(_householdParentPinOfferedKey, hash);
+    }
+    notifyListeners();
+  }
+
+  /// Whether [pin] is the household's Parent PIN, for taking it here.
+  bool verifyHouseholdParentPin(String pin) => ParentPinHash.verify(pin, householdParentPinOffered);
+
+  /// The household's Parent PIN becomes this TV's (once [verifyHouseholdParentPin] said it was entered).
+  Future<void> takeHouseholdParentPin() async {
+    final hash = householdParentPinOffered;
+    if (hash == null) return;
+    await _sharedPreferences.setString(_parentPinHashKey, hash);
+    await _sharedPreferences.remove(_householdParentPinOfferedKey);
+    notifyListeners();
   }
 
   Future<void> setParentPin(String? pin) async {

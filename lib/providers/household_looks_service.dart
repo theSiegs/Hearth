@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/backup_service.dart';
+import 'package:flauncher/providers/household_parent_pin.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/quiet_failure.dart';
 import 'package:flauncher/share/household_looks.dart';
@@ -44,10 +45,16 @@ class HouseholdLooksService {
   int _version = 0;
   Map<String, dynamic> _profiles = const {};
 
+  /// The household's Parent PIN, kept in step on the same rounds.
+  final HouseholdParentPin? _parentPin;
+
   HouseholdLooksService(this._channel, this._prefs, this._backup, this._settings, this._wallpapers,
-      {required Future<void> Function() onLiveChanged, required Future<void> Function(String profileKey) onPicturesCopied})
+      {required Future<void> Function() onLiveChanged,
+      required Future<void> Function(String profileKey) onPicturesCopied,
+      HouseholdParentPin? parentPin})
       : _onLiveChanged = onLiveChanged,
-        _onPicturesCopied = onPicturesCopied;
+        _onPicturesCopied = onPicturesCopied,
+        _parentPin = parentPin;
 
   void start() {
     _timer ??= Timer.periodic(every, (_) => unawaited(tick()));
@@ -63,6 +70,7 @@ class HouseholdLooksService {
     if (_running) return;
     _running = true;
     try {
+      await _parentPin?.tick();
       final looks = await _channel.getHouseholdLooks(_version);
       if (looks == null) {
         _version = 0;
