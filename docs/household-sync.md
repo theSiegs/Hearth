@@ -103,8 +103,25 @@ service does, Hearth's screen open or not:
 - **Showing.** Continue Watching shows the profile on screen its own synced titles as it shows its own played and kept
   ones; one from an app that isn't installed here stays in the history but isn't shown. A "continue" card whose title
   its profile has since played to the end, on any TV, is left out (an up-next card stays).
-- Entries older than WatchHistory's 90 days leave every TV's log. Kids profiles have no Continue Watching history in
-  the owner's user (what plays in a kids profile is its own Android user's), so in practice the adults' titles move.
+- **Kids profiles.** A kids profile is its own Android user with one profile in it, so every Watch Next entry its agent
+  reports is that kid's. Each report (AgentHub's `watchNext`, as it arrives, and each read of the kid's row) goes
+  through WatchHistory: the rows are kept under the kid's profile key, one the kid's list no longer has is let go
+  (it was finished or removed there, so it goes from the other TVs too), and the household's entries for the kid that
+  the list lacks are added, in apps the kid has (approved there). The kid is the same person on every TV as for looks
+  and PINs (their Google account, else their name). Only the kid's own entries are read for the kid's row, and the
+  adults' row reads only the owner's user's, so a kid's card never shows to an adult or another kid, nor an adult's to
+  a kid. What plays in a kids profile's apps isn't seen (its media sessions are in its own user), so a kid's titles
+  are their Watch Next entries only. Opening a kid's card from another TV goes through the kid's agent as any of
+  their cards does (the app opens in the kid's user from the deep link).
+- **Posters.** A kept card's poster address is the app's on the TV that sent it, which another TV often can't load. So
+  a kept card goes out with its poster as a household picture: read as for the row, a JPEG at most 320 px wide and
+  64 KB, named by its SHA-256 in the entry's value (`ph`) and kept in HouseholdPictures, made once per poster address
+  (WatchHistory's `posters` table; an address that gave none is tried again after a day; ten new ones a round at
+  most). Pictures move as wallpapers do (asked for by hash when missing, checked as a JPEG of that hash), wallpapers
+  first. The receiving TV shows the card with `hearth-poster:<hash>` as its poster, served from that file. A picture
+  goes when no live entry names it any more, after each exchange. A kid's poster whose address is in the kid's own user
+  (content://) can't be read from the owner's, so only one with a web address goes along.
+- Entries older than WatchHistory's 90 days leave every TV's log.
 
 ## Members
 

@@ -1578,7 +1578,8 @@ public class MainActivity extends FlutterActivity {
         // (it's starting, or stopping as the TV switches away): the owner's list is never another profile's
         long serial = ProfileUsers.settledSerial(this);
         if (ProfileUsers.otherUser(this, serial) != null) {
-            return AgentHub.watchNext(serial);
+            // All of it that profile's own; kept so it goes to the household, with what the other TVs had for it
+            return AgentHub.kidsContinueWatching(this, serial);
         }
         // This user's list is all its adults' profiles' (one per account): Hearth's own watch history says whose
         // each entry is, keeps the ones an app dropped for another profile, and adds what was played without one
@@ -1593,6 +1594,16 @@ public class MainActivity extends FlutterActivity {
             // One of Hearth's own (kept or played): only Hearth has it
             result.success(WatchHistory.get(this).forget(id.longValue()));
         } else {
+            // A kids profile's (its agent's rows): its own copy goes, here and on the household's other TVs
+            long serial = ProfileUsers.settledSerial(this);
+            if (ProfileUsers.otherUser(this, serial) != null) {
+                for (Map<String, Object> row : AgentHub.watchNext(serial)) {
+                    if (row.get("id") instanceof Number && ((Number) row.get("id")).longValue() == id.longValue()) {
+                        WatchHistory.get(this).forgetListedFor(ProfileUsers.profileKey(this, serial),
+                                (String) row.get("packageName"), row);
+                    }
+                }
+            }
             // Hearth's copy goes too, or it would come back as kept
             for (Map<String, Object> row : WatchNextRows.read(this)) {
                 if (row.get("id") instanceof Number && ((Number) row.get("id")).longValue() == id.longValue()) {

@@ -39,14 +39,64 @@ final class WatchNextPosters {
 
     private WatchNextPosters() {}
 
+    /** A Continue Watching card's poster as the household sends it: a JPEG at most this wide, and this big. */
+    static final int HOUSEHOLD_WIDTH = 320;
+    static final int HOUSEHOLD_MAX_BYTES = 64 * 1024;
+
     static byte[] load(Context context, String uri) {
         if (uri == null || uri.isEmpty()) return null;
+        // One that came from another TV of the household with its card
+        String household = HouseholdWatch.posterHashOf(uri);
+        if (household != null) return Household.pictures(context).read(household);
+        if (uri.startsWith(HouseholdWatch.POSTER_SCHEME)) return null;
         try {
             if (uri.startsWith("https://") || uri.startsWith("http://")) return loadRemote(context, uri);
             byte[] raw = loadLocal(context, uri);
             return raw == null ? null : downscale(raw);
         } catch (Exception e) {
             Log.w(TAG, "Poster unavailable: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * A poster as the household sends it with its card: read as for the row, then a JPEG of at most
+     * {@link #HOUSEHOLD_WIDTH} px wide and {@link #HOUSEHOLD_MAX_BYTES}; null when it can't be read or made that small.
+     */
+    static byte[] forHousehold(Context context, String uri) {
+        byte[] raw = load(context, uri);
+        return raw == null ? null : householdJpeg(raw);
+    }
+
+    private static byte[] householdJpeg(byte[] raw) {
+        try {
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(raw, 0, raw.length, bounds);
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null;
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inSampleSize = 1;
+            while (bounds.outWidth / (opts.inSampleSize * 2) >= HOUSEHOLD_WIDTH) opts.inSampleSize *= 2;
+            Bitmap bmp = BitmapFactory.decodeByteArray(raw, 0, raw.length, opts);
+            if (bmp == null) return null;
+            if (bmp.getWidth() > HOUSEHOLD_WIDTH) {
+                Bitmap scaled = Bitmap.createScaledBitmap(bmp, HOUSEHOLD_WIDTH,
+                        Math.max(1, Math.round(bmp.getHeight() * (HOUSEHOLD_WIDTH / (float) bmp.getWidth()))), true);
+                bmp.recycle();
+                bmp = scaled;
+            }
+            byte[] out = null;
+            for (int quality : new int[]{80, 60, 40}) {
+                ByteArrayOutputStream jpeg = new ByteArrayOutputStream();
+                bmp.compress(Bitmap.CompressFormat.JPEG, quality, jpeg);
+                if (jpeg.size() <= HOUSEHOLD_MAX_BYTES) {
+                    out = jpeg.toByteArray();
+                    break;
+                }
+            }
+            bmp.recycle();
+            return out;
+        } catch (Throwable t) {
             return null;
         }
     }

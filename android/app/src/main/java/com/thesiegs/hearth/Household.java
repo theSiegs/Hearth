@@ -286,19 +286,63 @@ final class Household {
         HouseholdStore store = store(sContext);
         HouseholdLog log = store.log();
         WatchHistory history = WatchHistory.get(sContext);
+        HouseholdPictures pictures = pictures(sContext);
         long now = System.currentTimeMillis();
         int sent = 0;
+        int[] fetches = {POSTER_FETCHES_PER_ROUND};
         for (Map.Entry<String, String> person : local(sContext).profiles().entrySet()) {
             for (WatchHistory.Entry e : HouseholdWatch.toSend(history.ownEntries(person.getValue()), now)) {
                 String item = HouseholdWatch.itemOf(e.kind, e.packageName, e.item);
-                if (!HouseholdWatch.sends(e, log.entry(HouseholdBridge.WATCH, person.getKey(), item))) continue;
-                if (log.put(HouseholdBridge.WATCH, person.getKey(), item, HouseholdWatch.valueOf(e), now) != null) sent++;
+                // A kept entry's poster goes with it: the other TV can't load this one's address for it
+                String poster = WatchHistory.KEPT.equals(e.kind) ? posterOf(history, pictures, e, fetches, now) : null;
+                String value = HouseholdWatch.valueOf(e, poster);
+                if (!HouseholdWatch.sends(e, value, log.entry(HouseholdBridge.WATCH, person.getKey(), item))) continue;
+                if (log.put(HouseholdBridge.WATCH, person.getKey(), item, value, now) != null) sent++;
             }
         }
         if (sent == 0) return;
         store.save();
         Log.i(TAG, "Continue Watching: " + sent + " title(s) for the household");
         syncSoon();
+    }
+
+    /** New posters made for the household in one round at most (each may be a download); the rest wait a round. */
+    private static final int POSTER_FETCHES_PER_ROUND = 10;
+
+    /**
+     * The household picture of a kept entry's poster (its hash), made once per poster address and kept in
+     * HouseholdPictures; null when the entry has none or it can't be read. {@code fetches}: how many new ones this
+     * round may still make.
+     */
+    private static String posterOf(WatchHistory history, HouseholdPictures pictures, WatchHistory.Entry e,
+            int[] fetches, long now) {
+        String uri = posterAddressOf(e.row);
+        if (uri == null) return null;
+        String own = HouseholdWatch.posterHashOf(uri);
+        if (own != null) return pictures.has(own) ? own : null;
+        String known = history.posterFor(uri);
+        if (WatchHistory.NO_POSTER.equals(known)) return null;
+        if (known != null && pictures.has(known)) {
+            history.rememberPoster(uri, known, now);
+            return known;
+        }
+        if (fetches[0] <= 0) return null;
+        fetches[0]--;
+        String hash = null;
+        byte[] jpeg = WatchNextPosters.forHousehold(sContext, uri);
+        if (jpeg != null) hash = pictures.write(jpeg, null);
+        history.rememberPoster(uri, hash != null ? hash : WatchHistory.NO_POSTER, now);
+        return hash;
+    }
+
+    private static String posterAddressOf(String row) {
+        if (row == null) return null;
+        try {
+            String uri = new org.json.JSONObject(row).optString("posterArtUri", "");
+            return uri.isEmpty() ? null : uri;
+        } catch (org.json.JSONException e) {
+            return null;
+        }
     }
 
     /**

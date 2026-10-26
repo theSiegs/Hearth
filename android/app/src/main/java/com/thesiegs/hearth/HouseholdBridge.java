@@ -3,6 +3,7 @@ package com.thesiegs.hearth;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -88,13 +89,21 @@ final class HouseholdBridge {
         }
     }
 
-    /** The pictures the live wallpaper entries name: what a TV keeps, and asks another TV for when it lacks one. */
+    /**
+     * The pictures the live entries name: wallpapers, then Continue Watching posters (HouseholdWatch), so an exchange
+     * that can carry only some brings the wallpapers first. What a TV keeps, and asks another TV for when it lacks one.
+     */
     static Set<String> pictures(HouseholdLog log) {
-        Set<String> out = new HashSet<>();
-        for (HouseholdEntry entry : log.all()) {
+        Set<String> out = new LinkedHashSet<>();
+        List<HouseholdEntry> all = log.all();
+        for (HouseholdEntry entry : all) {
             if (!WALLPAPER.equals(entry.kind) || entry.deleted) continue;
             String hash = pictureOf(entry.value);
             if (hash != null) out.add(hash);
+        }
+        for (HouseholdEntry entry : all) {
+            String poster = HouseholdWatch.posterOf(entry);
+            if (poster != null) out.add(poster);
         }
         return out;
     }

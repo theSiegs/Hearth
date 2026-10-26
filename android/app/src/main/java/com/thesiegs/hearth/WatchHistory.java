@@ -16,7 +16,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Predicate;
 
 /**
  * What each adult profile watched on this TV, kept by Hearth itself. Android's Watch Next list is per Android
@@ -30,13 +32,24 @@ import java.util.TreeMap;
  * </ul>
  * Continue Watching then shows each profile its own Watch Next entries (whose: what it played, else who had the
  * app, see AppWatchers), its kept entries, and what it played that Watch Next doesn't have.
+ *
+ * <p>A kids profile is its own Android user, with one profile in it, so all of its agent's Watch Next entries are its
+ * own ({@link #kidsContinueWatching}): kept under its key so they go to the household's other TVs, with what those TVs
+ * had for it. Its plays aren't seen (its media sessions are in its own user), so it has kept entries only.
  */
 final class WatchHistory extends SQLiteOpenHelper {
     private static final String TAG = "HearthWatchNext";
     private static final String DB = "watch_history.db";
-    /** 2: the {@code shared} column (an entry that came from the household's other TVs). */
-    private static final int VERSION = 2;
+    /**
+     * 2: the {@code shared} column (an entry that came from the household's other TVs). 3: the {@code posters} table
+     * (the household picture made from each poster address, so it's made once).
+     */
+    private static final int VERSION = 3;
     private static final String TABLE = "history";
+    private static final String POSTERS = "posters";
+    /** In the posters table: that address gave no picture (tried again after a day). */
+    static final String NO_POSTER = "-";
+    private static final long NO_POSTER_RETRY_MS = 24L * 60 * 60_000;
     static final String PLAYED = "played";
     static final String KEPT = "kept";
 
@@ -88,16 +101,25 @@ final class WatchHistory extends SQLiteOpenHelper {
                 // 1: as the household's other TVs had it (HouseholdWatch), so it isn't sent back to them
                 + "shared INTEGER NOT NULL DEFAULT 0,"
                 + "UNIQUE(kind, profile, package, item))");
+        createPosters(db);
+    }
+
+    private static void createPosters(SQLiteDatabase db) {
+        // A poster address and the household picture (HouseholdPictures) made from it; at: when it was last used
+        db.execSQL("CREATE TABLE IF NOT EXISTS " + POSTERS + " (uri TEXT PRIMARY KEY, hash TEXT NOT NULL,"
+                + " at INTEGER NOT NULL DEFAULT 0)");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if (oldVersion == 1) {
+        if (oldVersion >= 1 && oldVersion <= 2) {
             // What was watched is kept
-            db.execSQL("ALTER TABLE " + TABLE + " ADD COLUMN shared INTEGER NOT NULL DEFAULT 0");
+            if (oldVersion == 1) db.execSQL("ALTER TABLE " + TABLE + " ADD COLUMN shared INTEGER NOT NULL DEFAULT 0");
+            createPosters(db);
             return;
         }
         db.execSQL("DROP TABLE IF EXISTS " + TABLE);
+        db.execSQL("DROP TABLE IF EXISTS " + POSTERS);
         onCreate(db);
     }
 
@@ -245,35 +267,13 @@ final class WatchHistory extends SQLiteOpenHelper {
             Household.onWatchChanged(context);
             Map<String, Boolean> installed = new HashMap<>();
             // Kept entries the app no longer lists, for their own profile (the household's other TVs' too)
-            for (Entry e : entries(db)) {
-                if (!KEPT.equals(e.kind) || e.goneAt == 0 || e.row == null) continue;
-                if (e.shared && !installed(context, e.packageName, installed)) continue;
-                Map<String, Object> row = rowOf(e.row);
-                if (row == null) continue;
-                row.put("id", -e.id);
-                row.put("watchedBy", e.profile);
-                row.put("kept", true);
-                out.add(row);
-            }
+            out.addAll(keptCards(entries(db), serial, pkg -> installed(context, pkg, installed)));
             // Played but not in Watch Next (listed or kept): shown from what was played
             for (Entry e : played) {
                 if (!showsOnItsOwn(e, now) || inWatchNext(out, e)) continue;
                 // Played on another TV of the household, in an app this TV doesn't have: kept, not shown
                 if (e.shared && !installed(context, e.packageName, installed)) continue;
-                Map<String, Object> row = new HashMap<>();
-                row.put("id", -e.id);
-                row.put("packageName", e.packageName);
-                row.put("title", e.title);
-                row.put("description", e.subtitle != null ? e.subtitle : "");
-                row.put("watchNextType", 0);
-                row.put("lastEngagementTime", e.lastAt);
-                row.put("playbackPosition", e.position);
-                row.put("duration", e.duration);
-                row.put("intentUri", "");
-                row.put("posterArtUri", "");
-                row.put("watchedBy", e.profile);
-                row.put("played", true);
-                out.add(row);
+                out.add(playedRow(e, false));
             }
             // A "continue" card finished since by its own profile, here or on another TV of the household: done
             // everywhere (an up-next card is the next episode, so it stays)
@@ -352,6 +352,11 @@ final class WatchHistory extends SQLiteOpenHelper {
                 let.add(e);
             }
         }
+        keepListed(db, rows);
+    }
+
+    /** Writes each listed entry with an owner as that profile's kept copy (this TV's own, for the household too). */
+    private static void keepListed(SQLiteDatabase db, List<Map<String, Object>> rows) {
         for (Map<String, Object> row : rows) {
             String owner = (String) row.get("watchedBy");
             if (owner == null) continue;
@@ -386,6 +391,186 @@ final class WatchHistory extends SQLiteOpenHelper {
             forgotten(gone);
         } catch (RuntimeException e) {
             Log.w(TAG, "Couldn't forget a kept entry", e);
+        }
+    }
+
+    /** As {@link #forgetListed}, for one profile's copy only (a kids profile's entry, removed from its row). */
+    synchronized void forgetListedFor(String profile, String packageName, Map<String, Object> row) {
+        if (profile == null) return;
+        try {
+            SQLiteDatabase db = getWritableDatabase();
+            String[] args = {KEPT, profile, packageName, keptItem(row)};
+            List<Entry> gone = select(db, "kind=? AND profile=? AND package=? AND item=?", args);
+            db.delete(TABLE, "kind=? AND profile=? AND package=? AND item=?", args);
+            forgotten(gone);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Couldn't forget a kept entry", e);
+        }
+    }
+
+    // --- a kids profile (its own Android user) ---
+
+    /**
+     * A kids profile's Continue Watching: its agent's rows ({@code rows}, every one its own), kept under its key
+     * ({@code profile}) so they go to the household's other TVs, and what those TVs had for it that the rows lack.
+     * {@code reported}: the agent has reported since Hearth started (before that, the rows say nothing, and nothing
+     * kept is let go). {@code apps}: the apps the profile has (a parent approved them there); null when unreadable.
+     * Never anyone else's: only entries under {@code profile} are read.
+     */
+    synchronized List<Map<String, Object>> kidsContinueWatching(Context context, List<Map<String, Object>> rows,
+            String profile, boolean reported, Set<String> apps, long now) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            Map<String, Object> copy = new HashMap<>(row);
+            copy.put("watchedBy", profile);
+            out.add(copy);
+        }
+        if (profile == null) return out;
+        try {
+            SQLiteDatabase db = getWritableDatabase();
+            String[] mineArgs = {profile};
+            List<Entry> let = new ArrayList<>();
+            if (reported) {
+                db.beginTransaction();
+                try {
+                    let.addAll(keepKids(db, select(db, "profile=?", mineArgs), out, now));
+                    keepListed(db, out);
+                    db.setTransactionSuccessful();
+                } finally {
+                    db.endTransaction();
+                }
+                // Dropped from the kid's own list here (finished, or removed): gone from the other TVs too
+                for (Entry e : let) Household.onWatchRemoved(context, e.profile, e.kind, e.packageName, e.item);
+                Household.onWatchChanged(context);
+            }
+            Map<String, Boolean> installed = new HashMap<>();
+            return kidsCards(select(db, "profile=?", mineArgs), out, profile,
+                    pkg -> kidHas(context, apps, pkg, installed), now);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Couldn't read a kids profile's watch history", e);
+        }
+        return out;
+    }
+
+    /**
+     * The kept entries a user's Continue Watching adds (those the app no longer lists): only that user's profiles',
+     * so a kids profile's never shows among the adults', and one from another TV only in an app {@code has}. Each is
+     * its own profile's ("watchedBy"), whatever a row from another TV said.
+     */
+    static List<Map<String, Object>> keptCards(List<Entry> entries, long serial, Predicate<String> has) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Entry e : entries) {
+            if (!KEPT.equals(e.kind) || e.goneAt == 0 || e.row == null) continue;
+            if (ProfileUsers.serialOfKey(e.profile) != serial) continue;
+            if (e.shared && !has.test(e.packageName)) continue;
+            Map<String, Object> row = rowOf(e.row);
+            if (row == null) continue;
+            row.put("id", -e.id);
+            row.put("watchedBy", e.profile);
+            row.remove("profileOwned");
+            row.put("kept", true);
+            out.add(row);
+        }
+        return out;
+    }
+
+    /**
+     * A kids profile's cards: its list ({@code listed}, marked its own), what the household's other TVs had for it
+     * that the list lacks (in an app it has, {@code has}), and what was played that nothing lists. {@code mine} must
+     * be that profile's entries alone. A "continue" card it has finished since is left out.
+     */
+    static List<Map<String, Object>> kidsCards(List<Entry> mine, List<Map<String, Object>> listed, String profile,
+            Predicate<String> has, long now) {
+        List<Map<String, Object>> out = new ArrayList<>(listed);
+        List<Entry> played = new ArrayList<>();
+        for (Entry e : mine) if (profile.equals(e.profile) && PLAYED.equals(e.kind)) played.add(e);
+        for (Entry e : mine) {
+            if (!profile.equals(e.profile) || !KEPT.equals(e.kind) || !e.shared || e.row == null) continue;
+            if (e.lastAt < now - MAX_AGE_MS || !has.test(e.packageName) || listed(out, e)) continue;
+            Map<String, Object> row = rowOf(e.row);
+            if (row == null) continue;
+            row.put("id", -e.id);
+            row.put("watchedBy", profile);
+            row.put("kept", true);
+            row.put("profileOwned", true);
+            out.add(row);
+        }
+        for (Entry e : played) {
+            if (!showsOnItsOwn(e, now) || inWatchNext(out, e) || !has.test(e.packageName)) continue;
+            out.add(playedRow(e, true));
+        }
+        out.removeIf(row -> Boolean.TRUE != row.get("played") && longOf(row.get("watchNextType")) == 0
+                && finishedSince(played, profile, (String) row.get("packageName"), (String) row.get("title"),
+                longOf(row.get("lastEngagementTime"))));
+        return out;
+    }
+
+    /**
+     * Of a kids profile's entries, the kept ones of its own its list no longer has: let go (its list is its alone, so
+     * an entry missing from it was finished or removed there), as are old ones. Returns those let go.
+     */
+    private static List<Entry> keepKids(SQLiteDatabase db, List<Entry> mine, List<Map<String, Object>> rows, long now) {
+        List<Entry> let = new ArrayList<>();
+        for (Entry e : kidsDropped(mine, rows, now)) {
+            db.delete(TABLE, "id=" + e.id, null);
+            if (e.lastAt >= now - MAX_AGE_MS) let.add(e);
+        }
+        return let;
+    }
+
+    /**
+     * Of a kids profile's kept entries, those to drop: its own ones its list ({@code rows}) no longer has, and any
+     * that are old. One from another TV of the household stays (this TV's list never had it).
+     */
+    static List<Entry> kidsDropped(List<Entry> mine, List<Map<String, Object>> rows, long now) {
+        List<Entry> out = new ArrayList<>();
+        for (Entry e : mine) {
+            if (!KEPT.equals(e.kind)) continue;
+            boolean old = e.lastAt < now - MAX_AGE_MS;
+            if (old || (!e.shared && !listed(rows, e))) out.add(e);
+        }
+        return out;
+    }
+
+    /** Whether the rows list this kept entry (the same app and item). */
+    private static boolean listed(List<Map<String, Object>> rows, Entry e) {
+        for (Map<String, Object> row : rows) {
+            if (e.packageName.equals(row.get("packageName")) && e.item.equals(keptItem(row))) return true;
+        }
+        return false;
+    }
+
+    /** Whether the kids profile has the app: approved there, or (when that can't be read) installed here. */
+    private static boolean kidHas(Context context, Set<String> apps, String packageName, Map<String, Boolean> known) {
+        return apps != null ? apps.contains(packageName) : installed(context, packageName, known);
+    }
+
+    // --- posters for the household ---
+
+    /** The household picture made from this poster address before, or null. */
+    synchronized String posterFor(String uri) {
+        if (uri == null || uri.isEmpty()) return null;
+        try (Cursor c = getReadableDatabase().query(POSTERS, new String[]{"hash"}, "uri=?", new String[]{uri},
+                null, null, null)) {
+            return c.moveToFirst() ? c.getString(0) : null;
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /** Notes the household picture made from a poster address, and forgets ones not used for {@link #MAX_AGE_MS}. */
+    synchronized void rememberPoster(String uri, String hash, long now) {
+        try {
+            SQLiteDatabase db = getWritableDatabase();
+            ContentValues values = new ContentValues();
+            values.put("uri", uri);
+            values.put("hash", hash);
+            values.put("at", now);
+            db.insertWithOnConflict(POSTERS, null, values, SQLiteDatabase.CONFLICT_REPLACE);
+            db.delete(POSTERS, "at < ?", new String[]{String.valueOf(now - MAX_AGE_MS)});
+            db.delete(POSTERS, "hash=? AND at < ?", new String[]{NO_POSTER, String.valueOf(now - NO_POSTER_RETRY_MS)});
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Couldn't note a poster for the household", e);
         }
     }
 
@@ -451,7 +636,8 @@ final class WatchHistory extends SQLiteOpenHelper {
             values.put("duration", card.duration);
             values.put("position", card.position);
             values.put("last_at", card.lastAt);
-            values.put("row", card.row);
+            // With the poster that came along in place of the other TV's address for it
+            values.put("row", card.shownRow());
             // A kept entry the app here doesn't list: shown until its profile opens the app here (see keep)
             values.put("gone_at", KEPT.equals(card.kind) ? now : 0);
             values.put("shared", 1);
@@ -582,9 +768,30 @@ final class WatchHistory extends SQLiteOpenHelper {
         return false;
     }
 
-    private static Map<String, Object> withoutOwner(Map<String, Object> row) {
+    /** A played entry as a Continue Watching card (no Watch Next entry for it). */
+    private static Map<String, Object> playedRow(Entry e, boolean profileOwned) {
+        Map<String, Object> row = new HashMap<>();
+        row.put("id", -e.id);
+        row.put("packageName", e.packageName);
+        row.put("title", e.title);
+        row.put("description", e.subtitle != null ? e.subtitle : "");
+        row.put("watchNextType", 0);
+        row.put("lastEngagementTime", e.lastAt);
+        row.put("playbackPosition", e.position);
+        row.put("duration", e.duration);
+        row.put("intentUri", "");
+        row.put("posterArtUri", "");
+        row.put("watchedBy", e.profile);
+        row.put("played", true);
+        if (profileOwned) row.put("profileOwned", true);
+        return row;
+    }
+
+    /** A row as kept: whose it is (and that a kids profile's list said so) is the entry's, not the row's. */
+    static Map<String, Object> withoutOwner(Map<String, Object> row) {
         Map<String, Object> copy = new HashMap<>(row);
         copy.remove("watchedBy");
+        copy.remove("profileOwned");
         return copy;
     }
 

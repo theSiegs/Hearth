@@ -51,8 +51,8 @@ Change its look in **Settings → Home screen → Look**, or turn it off to get 
 the current profile's own list. Hearth also keeps each profile's own history on the TV: what apps say is playing,
 which adds shows from apps that don't use Watch Next (with the app's icon instead of cover art), and entries an app
 dropped when someone else used it (Netflix lists only its current profile's), until that profile opens the app again.
-With household sync on, each person's titles follow them to the household's other TVs, and one taken out or
-finished on one TV goes from the others. Choose which apps appear, the card size and how many in
+With household sync on, each person's titles follow them to the household's other TVs, kids' included (a kid's
+only ever in their own row), with their cover art, and one taken out or finished on one TV goes from the others. Choose which apps appear, the card size and how many in
 **Settings → Home screen → Continue Watching**.
 
 **Sections.** Arrange apps into sections (rows or grids), rename, reorder and hide them in

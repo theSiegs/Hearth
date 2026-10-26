@@ -79,6 +79,8 @@ final class AgentHub {
     private static final Map<Long, CalendarReport> sCalendars = new ConcurrentHashMap<>();
     private static volatile String sListening;
     private static final ExecutorService SENDER = Executors.newSingleThreadExecutor();
+    /** Keeps what a kids profile's agent reports in WatchHistory, off the connection's thread. */
+    private static final ExecutorService HISTORY = Executors.newSingleThreadExecutor();
 
     private static final class Connection {
         final long serial;
@@ -211,6 +213,8 @@ final class AgentHub {
                     case "watchNext":
                         sWatchNext.put(serial, rows(serial, message.optJSONArray("rows")));
                         notifyWatchNextChanged();
+                        // Kept and sent to the household now, not only when the row is next read for that profile
+                        HISTORY.execute(() -> kidsContinueWatching(sContext, serial));
                         break;
                     case "calendar":
                         sCalendars.put(serial, new CalendarReport(message.optBoolean("access"),
@@ -418,6 +422,16 @@ final class AgentHub {
 
     static boolean isConnected(long serial) {
         return sConnections.containsKey(serial);
+    }
+
+    /**
+     * A kids profile's Continue Watching: its agent's rows, every one its own, through WatchHistory (kept under its
+     * key for the household, with what the household's other TVs had for it).
+     */
+    static List<Map<String, Object>> kidsContinueWatching(Context context, long serial) {
+        return WatchHistory.get(context).kidsContinueWatching(context, watchNext(serial),
+                ProfileUsers.profileKey(context, serial), hasReported(serial), ProfileUsers.approvedApps(context, serial),
+                System.currentTimeMillis());
     }
 
     /** The profile's Watch Next as its agent last reported it (empty before it has). */
