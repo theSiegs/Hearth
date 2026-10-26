@@ -108,7 +108,7 @@ entities; it never signs in to those services itself.
 |---|---|---|---|
 | Hearth TVs | this one | seconds today per profile and per app (`usage_today`), playing time per app | seconds |
 | Hearth Mobile | this one | seconds today and per app on that phone | seconds to minutes |
-| Phones and tablets with Family Link | a Family Link integration (HACS) | screen time today, per app on supervised Android devices | lags; minutes to an hour |
+| Phones, tablets, Google TV kids profiles | [HAFamilyLink, theSiegs fork](https://github.com/theSiegs/HAFamilyLink) (branch `ha/combined`) | per child: Daily Screen Time (with usage totals) and Screen Time Remaining; per device: Daily Screen Time (per-app seconds in `apps`) and per-app usage sensors | polled every 60 s, but Google's numbers lag: seconds to about 40 minutes, for a TV profile sometimes until it next starts |
 | Xbox, Windows | [Microsoft Family Safety](https://github.com/noiwid/HAFamilySafety) (HACS) | `sensor.<child>_screen_time` (minutes today, the whole account) and `sensor.<device>_screen_time` per device | polled, 5 minutes by default (30 s to an hour) |
 | Nintendo Switch | [Nintendo Switch parental controls](https://www.home-assistant.io/integrations/nintendo_parental_controls) (built in) | Used screen time and Time remaining per Switch (minutes) | cloud polling; the Switch must be online |
 
@@ -124,6 +124,9 @@ profile for the person mapped to it ([People](#people)).
   next to its own account's).
 - One device, one source. Hearth Mobile on a phone and Family Link for the same phone both see that phone's time: the
   person's total takes the larger of the two for that device, not the sum; the breakdown keeps both.
+- Family Link lists each kid's Google TV profile as a device of its own, so a TV's minutes come from Hearth and from
+  Family Link. The options flow links that Family Link device to the TV profile it is, and Hearth's (fresher) count is
+  used for it.
 - Sources reset at their own midnight (the service's account time zone). A value that drops counts as a new day.
 - A source that hasn't changed in a long time is shown as stale in the breakdown, not dropped: its last count still
   counts for today.
@@ -298,8 +301,9 @@ at pairing; the integration raises a repair issue when the two are too far apart
 
 ## Open questions
 
-- **Family Link source:** which integration's entities, and are its per-device numbers reliable enough (a test once
-  showed an emulator's time far off)?
+- **Family Link's per-device numbers:** a test phone (an emulator) once showed 1.2 minutes in Home Assistant against 2
+  hours on the device. Check on a real phone before trusting them in budgets; the per-child total may be the safer
+  source until then.
 - **Games on a TV:** does a TV profile's game app count as games? (A kind per app, set in the options, is the likely
   answer.)
 - **Counting once:** is "the larger of two sources for one device" right, or should one source be chosen per device?
