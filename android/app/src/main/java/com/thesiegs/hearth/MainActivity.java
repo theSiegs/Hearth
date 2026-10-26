@@ -569,11 +569,10 @@ public class MainActivity extends FlutterActivity {
             });
             case "startHaPairing" -> {
                 String url = HaConfig.normalizeUrl(call.argument("url"));
-                if (url != null) HaConfig.prefs(this).edit().putString(HaConfig.URL_KEY, url).apply();
                 String nonce = HaIntegration.randomToken(32);
                 answerFrom(sIoExecutor, result, () -> {
                     Map<String, Object> answer = new HashMap<>();
-                    org.json.JSONObject started = HaIntegration.startPairing(this, nonce);
+                    org.json.JSONObject started = HaIntegration.startPairing(this, url, nonce);
                     for (java.util.Iterator<String> keys = started.keys(); keys.hasNext(); ) {
                         String key = keys.next();
                         answer.put(key, started.opt(key));
@@ -583,7 +582,8 @@ public class MainActivity extends FlutterActivity {
                 });
             }
             case "pollHaPairing" -> answerFrom(sIoExecutor, result,
-                    () -> HaIntegration.pollPairing(this, call.argument("pairingId"), call.argument("nonce")));
+                    () -> HaIntegration.pollPairing(this, HaConfig.normalizeUrl(call.argument("url")),
+                            call.argument("pairingId"), call.argument("nonce")));
             case "unpairHaIntegration" -> answerFrom(sIoExecutor, result, () -> {
                 HaIntegration.unpair(this);
                 return null;

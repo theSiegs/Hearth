@@ -102,9 +102,9 @@ final class HaIntegration {
     /**
      * Asks Home Assistant to pair (blocking): {pairing_id, code, expires_in} to show, or {error}. The nonce, made
      * here and never shown, is what later collects the secret; the caller keeps it for {@link #pollPairing}.
+     * [base] is the address to ask; it becomes Home Assistant's address (the panel's too) only once paired.
      */
-    static JSONObject startPairing(Context context, String nonce) {
-        String base = HaConfig.baseUrl(context);
+    static JSONObject startPairing(Context context, String base, String nonce) {
         JSONObject result = new JSONObject();
         try {
             if (base == null) return result.put("error", "no_address");
@@ -131,8 +131,7 @@ final class HaIntegration {
      * Asks how the pairing stands (blocking): "pending", "paired" (the secret is kept: the TV is paired now),
      * "denied", "ended" (expired, or unknown), or "unreachable".
      */
-    static String pollPairing(Context context, String pairingId, String nonce) {
-        String base = HaConfig.baseUrl(context);
+    static String pollPairing(Context context, String base, String pairingId, String nonce) {
         if (base == null || pairingId == null || !pairingId.matches("[A-Za-z0-9_-]{8,64}")) return "ended";
         Answer answer = request(base + "/api/hearth/pair/" + pairingId, "GET", null, nonce);
         if (answer.code == 0) return "unreachable";
@@ -141,6 +140,8 @@ final class HaIntegration {
         if ("approved".equals(status)) {
             String secret = answer.body.optString("secret", "");
             if (secret.isEmpty() || !setSecret(context, secret)) return "ended";
+            // The address that answered is Home Assistant's now (only now: a mistyped one never replaces the panel's)
+            HaConfig.prefs(context).edit().putString(HaConfig.URL_KEY, base).apply();
             Log.i(TAG, "Paired with Home Assistant");
             HaBridgeService.sync(context);
             return "paired";

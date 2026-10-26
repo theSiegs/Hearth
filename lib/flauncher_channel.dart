@@ -770,15 +770,16 @@ class FLauncherChannel {
   Future<Map<dynamic, dynamic>> getHaIntegration() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getHaIntegration") ?? {};
 
-  /// Asks Home Assistant (at [url], kept as the address) to pair this TV: {pairing_id, code, expires_in, nonce} to
+  /// Asks Home Assistant (at [url]; kept as its address only once paired) to pair this TV: {pairing_id, code, expires_in, nonce} to
   /// show and poll with, or {error: no_address | not_set_up | no_integration | try_later | not_local | unreachable |
   /// failed, nonce}.
   Future<Map<dynamic, dynamic>> startHaPairing(String? url) async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("startHaPairing", {"url": url}) ?? {};
 
   /// How a pairing stands: pending | paired | denied | ended | unreachable.
-  Future<String> pollHaPairing(String pairingId, String nonce) async =>
-      await _methodChannel.invokeMethod<String>("pollHaPairing", {"pairingId": pairingId, "nonce": nonce}) ?? "ended";
+  Future<String> pollHaPairing(String url, String pairingId, String nonce) async =>
+      await _methodChannel.invokeMethod<String>("pollHaPairing", {"url": url, "pairingId": pairingId, "nonce": nonce}) ??
+      "ended";
 
   Future<void> unpairHaIntegration() async => await _methodChannel.invokeMethod("unpairHaIntegration");
 

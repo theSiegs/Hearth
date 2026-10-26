@@ -117,7 +117,7 @@ class _HaPairPageState extends State<HaPairPage> {
         _code = started["code"] as String;
         _until = DateTime.now().add(Duration(seconds: seconds));
       });
-      _poll = Timer.periodic(HaPairPage.pollEvery, (_) => _check(pairingId, nonce));
+      _poll = Timer.periodic(HaPairPage.pollEvery, (_) => _check(url, pairingId, nonce));
     } catch (err) {
       noteFailure('ha_pair_page', err);
       if (mounted) {
@@ -131,11 +131,11 @@ class _HaPairPageState extends State<HaPairPage> {
 
   bool _checking = false;
 
-  Future<void> _check(String pairingId, String nonce) async {
+  Future<void> _check(String url, String pairingId, String nonce) async {
     if (_checking) return;
     _checking = true;
     try {
-      final status = await _channel.pollHaPairing(pairingId, nonce);
+      final status = await _channel.pollHaPairing(url, pairingId, nonce);
       if (!mounted) return;
       final l = AppLocalizations.of(context)!;
       final expired = _until != null && DateTime.now().isAfter(_until!);

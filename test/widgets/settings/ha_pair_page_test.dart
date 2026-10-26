@@ -14,6 +14,7 @@ void main() {
   late List<String> answers;
   late List<String?> urls;
   late int unpaired;
+  late List<String?> polledUrls;
 
   setUp(() {
     paired = false;
@@ -21,6 +22,7 @@ void main() {
     answers = ["pending", "paired"];
     urls = [];
     unpaired = 0;
+    polledUrls = [];
   });
 
   Future<void> pumpPage(WidgetTester tester) async {
@@ -32,6 +34,7 @@ void main() {
           urls.add((call.arguments as Map)["url"] as String?);
           return started;
         case "pollHaPairing":
+          polledUrls.add((call.arguments as Map)["url"] as String?);
           final answer = answers.length > 1 ? answers.removeAt(0) : answers.first;
           if (answer == "paired") paired = true;
           return answer;
@@ -69,6 +72,8 @@ void main() {
     expect(find.text("042137"), findsNothing);
     expect(find.textContaining("Paired. This TV reports"), findsOneWidget);
     expect(find.text("Unpair"), findsOneWidget);
+    // The address goes with each poll: it becomes Home Assistant's only once paired
+    expect(polledUrls, everyElement("http://192.0.2.10:8123"));
   });
 
   testWidgets("Home Assistant without the household set up says so", (tester) async {
