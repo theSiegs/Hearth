@@ -28,6 +28,7 @@ import 'package:flauncher/providers/calendars.dart';
 import 'package:flauncher/providers/home_data_usage.dart';
 import 'package:flauncher/providers/home_search.dart';
 import 'package:flauncher/providers/search_service.dart';
+import 'package:flauncher/providers/poster_lookup.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flauncher/providers/launcher_state.dart';
@@ -135,7 +136,10 @@ Future<void> main() async {
         ),
         ChangeNotifierProvider(create: (_) => TvInputsService(fLauncherChannel)),
         ChangeNotifierProvider(create: (_) => NotificationsService(fLauncherChannel, sharedPreferences)),
-        ChangeNotifierProvider(create: (_) => WatchNextService(fLauncherChannel, sharedPreferences)),
+        // Cards without a readable poster get their title's from TMDB (with the release's key; off without one)
+        ChangeNotifierProvider(
+            create: (_) => WatchNextService(fLauncherChannel, sharedPreferences,
+                posterLookup: PosterLookup(SearchService(), TmdbClient(), sharedPreferences))),
         ChangeNotifierProvider(create: (_) => WeatherService(fLauncherChannel, sharedPreferences: sharedPreferences)),
         ChangeNotifierProvider(create: (context) {
           final settings = context.read<SettingsService>();

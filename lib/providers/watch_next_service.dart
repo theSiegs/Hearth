@@ -7,6 +7,7 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/watch_next_program.dart';
 import 'apps_service.dart';
+import 'poster_lookup.dart';
 import 'settings_service.dart';
 
 class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
@@ -26,8 +27,12 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
 
   final SharedPreferences _sharedPreferences;
 
-  WatchNextService(this._channel, this._sharedPreferences, {DateTime Function()? clock})
-      : _clock = clock ?? DateTime.now {
+  /// Finds a picture by title for a card without one Hearth can read; null leaves those cards without.
+  final PosterLookup? _posterLookup;
+
+  WatchNextService(this._channel, this._sharedPreferences, {DateTime Function()? clock, PosterLookup? posterLookup})
+      : _clock = clock ?? DateTime.now,
+        _posterLookup = posterLookup {
     WidgetsBinding.instance.addObserver(this);
     // Who-watched-what records from before Hearth read each profile's own list; nothing reads them any more
     for (final key in const ["watch_next_owners_v2", "watch_next_owners"]) {
@@ -187,7 +192,7 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
       final List<WatchNextProgram> newPrograms = [];
       for (final map in await _channel.getWatchNextPrograms()) {
         final program = WatchNextProgram.fromMap(map);
-        program.posterBytes = _posters[program.posterArtUri];
+        program.posterBytes = _posters[program.posterArtUri] ?? _posters[_lookupKey(program)];
         newPrograms.add(program);
       }
 
@@ -224,34 +229,62 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// Where a card's looked-up picture is kept in [_posters] (by app and title, as the lookup goes by title).
+  static String _lookupKey(WatchNextProgram p) => "lookup:${p.packageName}:${p.title}";
+
+  // Cards whose title lookup found nothing (or failed) since Hearth started: not looked up again until a restart
+  final Set<String> _lookupsTried = {};
+
   /// Fills in poster art after the row is on screen, three at a time, so one slow image host doesn't hold up the
-  /// rest; each card updates as its poster arrives. Posters stay in memory for programs still on the row.
+  /// rest; each card updates as its poster arrives. Posters stay in memory for programs still on the row. A card
+  /// with no poster, or one that can't be read, gets its title's picture from [_posterLookup] instead.
   Future<void> _loadPosters(List<WatchNextProgram> programs, int callSnapshot) async {
-    _posters.removeWhere((uri, _) => !programs.any((p) => p.posterArtUri == uri));
-    final queue = programs.where((p) => p.posterArtUri.isNotEmpty && p.posterBytes == null).toList();
+    _posters.removeWhere((key, _) => !programs.any((p) => p.posterArtUri == key || _lookupKey(p) == key));
+    final queue = programs.where((p) => p.posterBytes == null && (p.posterArtUri.isNotEmpty || _canLookUp(p))).toList();
 
     Future<void> worker() async {
       while (queue.isNotEmpty && callSnapshot == _callCount) {
         final program = queue.removeAt(0);
-        try {
-          final bytes = await _channel.getWatchNextPoster(program.posterArtUri).timeout(const Duration(seconds: 20));
-          _postersTried.add(program.posterArtUri);
-          if (bytes == null || bytes.isEmpty) {
-            if (callSnapshot == _callCount) notifyListeners();
-            continue;
+        Uint8List? bytes;
+        if (program.posterArtUri.isNotEmpty && !_postersTried.contains(program.posterArtUri)) {
+          try {
+            bytes = await _channel.getWatchNextPoster(program.posterArtUri).timeout(const Duration(seconds: 20));
+          } catch (e) {
+            log('Failed to load poster for ${program.title}', name: 'WatchNextService', error: e);
           }
-          _posters[program.posterArtUri] = bytes;
-          program.posterBytes = bytes;
-          if (callSnapshot == _callCount) notifyListeners();
-        } catch (e) {
-          log('Failed to load poster for ${program.title}', name: 'WatchNextService', error: e);
           _postersTried.add(program.posterArtUri);
-          if (callSnapshot == _callCount) notifyListeners();
+          if (bytes != null && bytes.isNotEmpty) _posters[program.posterArtUri] = bytes;
         }
+        if ((bytes == null || bytes.isEmpty) && _canLookUp(program)) {
+          bytes = await _lookUpPoster(program);
+          if (bytes != null) _posters[_lookupKey(program)] = bytes;
+        }
+        if (bytes != null && bytes.isNotEmpty) program.posterBytes = bytes;
+        if (callSnapshot == _callCount) notifyListeners();
       }
     }
 
     await Future.wait(List.generate(3, (_) => worker()));
+  }
+
+  bool _canLookUp(WatchNextProgram p) =>
+      _posterLookup != null &&
+      !_lookupsTried.contains(_lookupKey(p)) &&
+      _posterLookup.canLookUp(p.packageName, p.title);
+
+  Future<Uint8List?> _lookUpPoster(WatchNextProgram program) async {
+    Uint8List? bytes;
+    try {
+      final url = await _posterLookup!.imageFor(program.packageName, program.title).timeout(const Duration(seconds: 30));
+      if (url != null) bytes = await _channel.getWatchNextPoster(url).timeout(const Duration(seconds: 20));
+    } catch (e) {
+      log('Failed to look up a poster', name: 'WatchNextService', error: e);
+    }
+    if (bytes == null || bytes.isEmpty) {
+      _lookupsTried.add(_lookupKey(program));
+      return null;
+    }
+    return bytes;
   }
 
   Future<bool> checkPermission() async {

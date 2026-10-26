@@ -169,6 +169,7 @@ connects only for the features you use:
 - Bing's photo of the day (`www.bing.com`)
 - Weather (`api.open-meteo.com`), unless you use the Breezy Weather app
 - Search: what you type, to Wikidata and TMDB (`www.wikidata.org`, `api.themoviedb.org`, `image.tmdb.org`)
+- Continue Watching: the title of a card that has no poster Hearth can read, to the same two, once per title
 - Continue Watching artwork, from the image hosts the apps name
 - The Home Assistant map: OpenStreetMap tiles around home, fetched once (`tile.openstreetmap.org`)
 - Updates of Hearth and HearthTube, and a list of streaming-app versions not to type PINs in (GitHub)

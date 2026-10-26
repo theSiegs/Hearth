@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
 import 'package:flauncher/models/watch_next_program.dart';
+import 'package:flauncher/providers/poster_lookup.dart';
+import 'package:flauncher/providers/search_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../mocks.mocks.dart';
@@ -413,6 +415,66 @@ void main() {
       verifyNever(mockChannel.getWatchNextPoster('https://img.example/theirs.jpg'));
       verifyNever(mockChannel.getWatchNextPoster('https://img.example/done.jpg'));
     });
+
+    group('looked up by title', () {
+      late List<String> lookedUp;
+
+      PosterLookup lookup(String? url) => _FakeLookup(prefs, url, (title) => lookedUp.add(title));
+
+      Future<WatchNextService> readyWith(PosterLookup lookup) async {
+        final service = WatchNextService(mockChannel, prefs, clock: clock, posterLookup: lookup);
+        while (!service.initialized) {
+          await Future.delayed(Duration.zero);
+        }
+        await pumpEventQueue();
+        return service;
+      }
+
+      setUp(() => lookedUp = []);
+
+      test('a card without a poster gets its title\'s picture', () async {
+        final art = Uint8List.fromList([7]);
+        when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => [program(1, '')]);
+        when(mockChannel.getWatchNextPoster('https://image.example/still.jpg')).thenAnswer((_) async => art);
+
+        final service = await readyWith(lookup('https://image.example/still.jpg'));
+
+        expect(service.programs.single.posterBytes, art);
+        expect(lookedUp, ['Show 1']);
+        verifyNever(mockChannel.getWatchNextPoster(''));
+      });
+
+      test('a poster that can\'t be read falls back to the lookup', () async {
+        final art = Uint8List.fromList([7]);
+        when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => [program(1, 'content://kids/poster/1')]);
+        when(mockChannel.getWatchNextPoster('content://kids/poster/1')).thenAnswer((_) async => null);
+        when(mockChannel.getWatchNextPoster('https://image.example/still.jpg')).thenAnswer((_) async => art);
+
+        final service = await readyWith(lookup('https://image.example/still.jpg'));
+
+        expect(service.programs.single.posterBytes, art);
+      });
+
+      test('a readable poster is used without a lookup', () async {
+        when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => [program(1, 'https://img.example/1.jpg')]);
+        when(mockChannel.getWatchNextPoster('https://img.example/1.jpg')).thenAnswer((_) async => Uint8List.fromList([1]));
+
+        await readyWith(lookup('https://image.example/still.jpg'));
+
+        expect(lookedUp, isEmpty);
+      });
+
+      test('a miss isn\'t looked up again on the next refresh', () async {
+        when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => [program(1, '')]);
+
+        final service = await readyWith(lookup(null));
+        watchNextStreamController.add(true);
+        await pumpEventQueue();
+
+        expect(service.programs.single.posterBytes, isNull);
+        expect(lookedUp, ['Show 1']);
+      });
+    });
   });
 
   group('WatchNextService ownership', () {
@@ -598,4 +660,18 @@ void main() {
       expect(ids(WatchNextService.selectForRow(programs, now)), [1, 3, 4]);
     });
   });
+}
+
+/// Answers every title with [url] (null: no match), and notes what was asked.
+class _FakeLookup extends PosterLookup {
+  final String? url;
+  final void Function(String title) asked;
+
+  _FakeLookup(SharedPreferences prefs, this.url, this.asked) : super(SearchService(), TmdbClient(apiKey: "k"), prefs);
+
+  @override
+  Future<String?> imageFor(String packageName, String title) async {
+    asked(title);
+    return url;
+  }
 }
