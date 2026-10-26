@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .const import TV_STATES
+from .const import APP_CATEGORIES, TV_STATES
 
 _CONTROL = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 
@@ -119,4 +119,19 @@ def clean_status(raw: Any) -> dict[str, Any] | None:
     status["app_seconds_today"] = _seconds_by_app(raw.get("app_seconds_today"))
     status["playing_seconds_today"] = _seconds_by_app(raw.get("playing_seconds_today"))
     status["usage_today"] = _usage_today(raw.get("usage_today"))
+    status["app_categories"] = _categories(raw.get("app_categories"))
     return status
+
+
+def _categories(value: Any) -> dict[str, str]:
+    """{"<package>": "game" | "video" | ...}: what Android says each app is, at most MAX_APPS."""
+    if not isinstance(value, dict):
+        return {}
+    out: dict[str, str] = {}
+    for package, category in value.items():
+        if len(out) >= MAX_APPS:
+            break
+        name = text(package, 128)
+        if name and category in APP_CATEGORIES:
+            out[name] = category
+    return out

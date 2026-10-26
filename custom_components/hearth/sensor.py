@@ -1,4 +1,5 @@
-"""A Hearth device's sensors: the app in front, what's playing, usage today, and on a TV its state and profile."""
+"""Sensors: per Hearth device (the app in front, what's playing, usage today, and on a TV its state and profile), and
+per person (screen time today, each group's time and minutes left, what they're playing)."""
 
 from __future__ import annotations
 
@@ -18,7 +19,8 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HearthConfigEntry
 from .const import KIND_MOBILE, KIND_TV, TV_STATES
-from .entity import HearthEntity, async_add_device_entities
+from .counting import ALL
+from .entity import HearthEntity, HearthPersonEntity, async_add_device_entities
 
 BOTH = frozenset({KIND_TV, KIND_MOBILE})
 TV = frozenset({KIND_TV})
@@ -96,6 +98,16 @@ async def async_setup_entry(
             lambda device_id, kind: [HearthSensor(hub, device_id, d) for d in SENSORS if kind in d.kinds],
         )
     )
+    household = hub.household
+    people: list[SensorEntity] = []
+    for person in household.people():
+        people.append(PersonScreenTime(hub, person, "screen_time_today"))
+        people.append(PersonPlaying(hub, person, "playing"))
+        for group in household.groups:
+            if group.id != ALL:
+                people.append(PersonGroupToday(hub, person, "group_today", group))
+            people.append(PersonMinutesLeft(hub, person, "minutes_left", group))
+    async_add_entities(people)
 
 
 class HearthSensor(HearthEntity, SensorEntity):
@@ -112,3 +124,91 @@ class HearthSensor(HearthEntity, SensorEntity):
         if self.status is None or self.entity_description.attributes is None:
             return None
         return self.entity_description.attributes(self.status)
+
+
+def _minutes(seconds: float) -> int:
+    return int(seconds // 60)
+
+
+class PersonScreenTime(HearthPersonEntity, SensorEntity):
+    """All of the person's screen time today, each minute counted once."""
+
+    _attr_translation_key = "person_screen_time_today"
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+    _unrecorded_attributes = frozenset({"devices", "groups"})
+
+    @property
+    def native_value(self) -> int:
+        return _minutes(self.day.total_s) if self.day else 0
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        day = self.day
+        if day is None:
+            return {}
+        names = {device_id: d.get("name") or device_id for device_id, d in self.hub.devices.items()}
+        return {
+            "devices": {
+                names.get(device_id, device_id): {
+                    "minutes": _minutes(usage.total_s),
+                    "sources": {source: _minutes(s) for source, s in usage.sources.items()},
+                }
+                for device_id, usage in day.devices.items()
+            },
+            "groups": {group: _minutes(seconds) for group, seconds in day.groups.items()},
+        }
+
+
+class PersonGroupToday(HearthPersonEntity, SensorEntity):
+    """The person's time today in one group (Video, Games, YouTube)."""
+
+    _attr_translation_key = "person_group_today"
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+
+    @property
+    def native_value(self) -> int:
+        return _minutes(self.day.groups.get(self.group.id, 0.0)) if self.day else 0
+
+
+class PersonMinutesLeft(HearthPersonEntity, SensorEntity):
+    """What's left today of the person's budget for one group; unknown while it has no budget."""
+
+    _attr_translation_key = "person_minutes_left"
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+
+    @property
+    def native_value(self) -> int | None:
+        state = self.day.limits.get(self.group.id) if self.day else None
+        return state.minutes_left if state else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        state = self.day.limits.get(self.group.id) if self.day else None
+        if state is None:
+            return {}
+        return {"budget": state.budget_min, "bonus": state.bonus_min, "counted": int(state.counted_min)}
+
+
+class PersonPlaying(HearthPersonEntity, SensorEntity):
+    """What the person is playing now, on a Hearth device; unknown when nothing."""
+
+    _attr_translation_key = "person_playing"
+
+    @property
+    def native_value(self) -> str | None:
+        playing = self.day.playing if self.day else []
+        return (playing[0].app or playing[0].package) if playing else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        playing = self.day.playing if self.day else []
+        return {
+            "playing": [
+                {"app": p.app, "package": p.package, "device": p.device, "state": p.state} for p in playing
+            ]
+        }

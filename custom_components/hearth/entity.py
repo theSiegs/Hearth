@@ -13,8 +13,10 @@ from homeassistant.helpers.entity import Entity, EntityDescription
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.event import async_track_time_interval
 
-from .const import CONF_MODEL, CONF_SW_VERSION, DOMAIN, KIND_TV, SIGNAL_DEVICE_ADDED, SIGNAL_STATUS
+from .const import CONF_MODEL, CONF_SW_VERSION, DOMAIN, KIND_TV, SIGNAL_DEVICE_ADDED, SIGNAL_PEOPLE, SIGNAL_STATUS
+from .household import PersonDay, person_identifier
 from .hub import HearthHub
+from .limits import Group
 
 
 class HearthEntity(Entity):
@@ -75,3 +77,36 @@ def async_add_device_entities(
     for device_id in hub.devices:
         add(device_id)
     return async_dispatcher_connect(hass, SIGNAL_DEVICE_ADDED, add)
+
+
+class HearthPersonEntity(Entity):
+    """An entity of one person's (a device of its own, "Hearth: <person>"), updated when anyone's day changes."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+
+    def __init__(self, hub: HearthHub, person: str, key: str, group: Group | None = None) -> None:
+        self.hub = hub
+        self.person = person
+        self.group = group
+        suffix = f"_{group.id}" if group else ""
+        self._attr_unique_id = f"{hub.entry.entry_id}_{person}_{key}{suffix}"
+        if group is not None:
+            self._attr_translation_placeholders = {"group": group.name}
+        self._attr_device_info = DeviceInfo(
+            identifiers={person_identifier(person)},
+            name=f"Hearth: {hub.household.person_name(person)}",
+            manufacturer="Hearth",
+            model="Person",
+        )
+
+    @property
+    def day(self) -> PersonDay | None:
+        return self.hub.household.days.get(self.person)
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_PEOPLE, self._people_changed))
+
+    @callback
+    def _people_changed(self, _new_day: bool = False) -> None:
+        self.async_write_ha_state()

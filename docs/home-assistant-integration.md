@@ -1,8 +1,9 @@
 # Hearth integration for Home Assistant (design draft)
 
-> **Design draft, step 1 built.** Step 1 of the [build order](#build-order) (household setup, pairing, a device per
-> Hearth TV or phone, the status endpoint and its entities) is in `custom_components/hearth`, see
-> [The device's side of the API](#the-devices-side-of-the-api). Nothing on the TV or the phone calls it yet. The rest is
+> **Design draft, partly built.** In `custom_components/hearth`: household setup, pairing, a device per Hearth TV or
+> phone with its status entities, people (TV profiles and phones), each person's screen time from Hearth's own
+> devices, groups, budgets, bonuses, minutes left and the state document (see [Build order](#build-order) and
+> [The device's side of the API](#the-devices-side-of-the-api)). Nothing on the TV or the phone calls it yet. The rest is
 > written so another person or agent can pick it up: what Hearth does with Home Assistant today, what the integration
 > should be, and what is still undecided. Read [home-assistant.md](home-assistant.md) first (what exists) and
 > [household-sync.md](household-sync.md) (the mailbox's first user).
@@ -382,7 +383,10 @@ What step 1 built. Every endpoint answers local network addresses only (403 othe
 (see [Device status](#device-status)), at most 64 KB. 200 `{"ok": true}`; 401 `not_paired` for an unknown device or
 wrong secret (it was removed: stop posting and offer to pair again); 429 `too_often` past 20 posts a minute; 400
 `bad_request`. A refused secret is a plain 401, never a failed Home Assistant login, so it doesn't count toward Home
-Assistant's IP ban. (The answer will carry what the device gets, see [What a device gets](#what-a-device-gets).)
+Assistant's IP ban. The 200 answer carries the device's state document, `{"ok": true, "state": {...}}` (see
+[What a device gets](#what-a-device-gets); for now only `groups` per profile or person, and `version`). A device may
+also send `app_categories`, `{"<package>": "game" | "video" | ...}` (Android's category, lower case), which puts its
+apps in Video and Games.
 
 **Entities**, per device, by kind as in [Kinds](#kinds). Screen time today is in seconds (shown in minutes), with
 per-app, playing and (on a TV) per-profile attributes kept out of history. All but Connected are unavailable until the
@@ -442,6 +446,10 @@ at pairing; the integration raises a repair issue when the two are too far apart
 
 1. **Done:** skeleton, household setup, pairing with kinds, a device per Hearth device, status endpoint and entities,
    Connected.
+   **Also done, ahead of order:** people (options: who each TV profile is; whose a phone is, at pairing), per-person
+   Screen time today, group times, Playing (Hearth devices), groups (built-in and one's own, apps added to Video or
+   Games), budgets (weekday and weekend numbers), Bonus today, Minutes left, `hearth_budget_reached`, `hearth.add_bonus`,
+   `hearth.set_budget`, and the state document in each status answer (groups only; no titles, pause or requests yet).
 2. Hearth TV side: **Pair with Home Assistant**, posting status to the integration (and no longer to the webhook),
    with each app's category.
 3. People: the person mapping; per-person Screen time today and Playing from Hearth's own devices; play sessions.

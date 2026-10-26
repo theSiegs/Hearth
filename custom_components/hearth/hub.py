@@ -16,10 +16,12 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    DOMAIN,
     APPROVED_EXPIRES,
     CONF_DEVICES,
     CONF_KIND,
     CONF_MODEL,
+    CONF_PERSON,
     CONF_SECRET_HASH,
     CONF_SW_VERSION,
     CONNECTED_WITHIN,
@@ -33,6 +35,7 @@ from .const import (
     STORAGE_KEY,
     STORAGE_VERSION,
 )
+from .household import Household
 
 
 def hash_secret(secret: str) -> str:
@@ -52,6 +55,8 @@ class Pairing:
     model: str | None
     sw_version: str | None
     expires: datetime
+    # A phone's person, chosen when an administrator confirms
+    person: str | None = None
     # Set once approved: the secret, handed to the device once
     secret: str | None = None
     denied: bool = False
@@ -72,8 +77,11 @@ class HearthHub:
         self.entry = entry
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, f"{STORAGE_KEY}.{entry.entry_id}")
         self._states: dict[str, DeviceState] = {}
-        self._pairings: dict[str, Pairing] = {}
-        self._asked_at: dict[str, datetime] = {}
+        # Kept outside the entry, so a pairing waiting to be collected survives the entry reloading
+        shared = hass.data.setdefault(f"{DOMAIN}_pairing", {"pairings": {}, "asked_at": {}})
+        self._pairings: dict[str, Pairing] = shared["pairings"]
+        self._asked_at: dict[str, datetime] = shared["asked_at"]
+        self.household = Household(hass, self)
 
     # The devices
 
@@ -89,6 +97,7 @@ class HearthHub:
         return self._states.setdefault(device_id, DeviceState())
 
     async def async_load(self) -> None:
+        await self.household.async_load()
         stored = await self._store.async_load() or {}
         for device_id, kept in stored.items():
             if device_id not in self.devices or not isinstance(kept, dict):
@@ -126,6 +135,7 @@ class HearthHub:
         state.seen = dt_util.utcnow()
         self._store.async_delay_save(self._data_to_save, 30)
         async_dispatcher_send(self.hass, SIGNAL_STATUS.format(device_id))
+        self.household.recompute()
 
     @callback
     def _data_to_save(self) -> dict[str, Any]:
@@ -138,6 +148,7 @@ class HearthHub:
     async def async_flush(self) -> None:
         """Saves what the devices last said now (Home Assistant also does when it stops)."""
         await self._store.async_save(self._data_to_save())
+        await self.household.limits.async_flush()
 
     async def async_remove_device(self, device_id: str) -> None:
         """Forgets a device: its secret stops working at once."""
@@ -145,6 +156,7 @@ class HearthHub:
         self.hass.config_entries.async_update_entry(self.entry, data={**self.entry.data, CONF_DEVICES: devices})
         self._states.pop(device_id, None)
         await self._store.async_save(self._data_to_save())
+        self.household.recompute()
 
     # Pairing
 
@@ -200,7 +212,7 @@ class HearthHub:
             return None
         return pairing
 
-    async def async_approve(self, pairing_id: str) -> bool:
+    async def async_approve(self, pairing_id: str, person: str | None = None) -> bool:
         """An administrator checked the code: the device joins (or gets a new secret, if it was here)."""
         pairing = self.pairing(pairing_id)
         if pairing is None or pairing.denied:
@@ -214,6 +226,7 @@ class HearthHub:
                 CONF_MODEL: pairing.model,
                 CONF_SW_VERSION: pairing.sw_version,
                 CONF_SECRET_HASH: hash_secret(secret),
+                CONF_PERSON: person,
             },
         }
         self.hass.config_entries.async_update_entry(self.entry, data={**self.entry.data, CONF_DEVICES: devices})

@@ -164,7 +164,8 @@ class StatusView(HomeAssistantView):
         if status is None:
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         hub.update_status(device_id, status)
-        return web.json_response({"ok": True})
+        # What the device is told: each profile's (or the phone's person's) limits today
+        return web.json_response({"ok": True, "state": hub.household.document_for(device_id)})
 
 
 def async_register_views(hass: HomeAssistant) -> None:

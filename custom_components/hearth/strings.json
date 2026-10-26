@@ -11,7 +11,13 @@
       },
       "confirm": {
         "title": "Pair {name}?",
-        "description": "Check that {name} shows this code:\n\n**{code}**\n\nPair it only if the codes match. A device you don't recognize, or a code that doesn't match, may be someone else's: close this instead."
+        "description": "Check that {name} shows this code:\n\n**{code}**\n\nPair it only if the codes match. A device you don't recognize, or a code that doesn't match, may be someone else's: close this instead.",
+        "data": {
+          "person": "Whose device is it?"
+        },
+        "data_description": {
+          "person": "For a phone or tablet: the person it belongs to. Its screen time counts for them."
+        }
       }
     },
     "abort": {
@@ -31,17 +37,147 @@
           "playing": "Playing"
         }
       },
-      "app": { "name": "App" },
-      "media_title": { "name": "Media title" },
-      "media_artist": { "name": "Media artist" },
-      "media_app": { "name": "Media app" },
-      "profile": { "name": "Profile" },
-      "seconds_today": { "name": "Screen time today" }
+      "app": {
+        "name": "App"
+      },
+      "media_title": {
+        "name": "Media title"
+      },
+      "media_artist": {
+        "name": "Media artist"
+      },
+      "media_app": {
+        "name": "Media app"
+      },
+      "profile": {
+        "name": "Profile"
+      },
+      "seconds_today": {
+        "name": "Screen time today"
+      },
+      "person_screen_time_today": {
+        "name": "Screen time today"
+      },
+      "person_group_today": {
+        "name": "{group} today"
+      },
+      "person_minutes_left": {
+        "name": "{group} minutes left"
+      },
+      "person_playing": {
+        "name": "Playing"
+      }
     },
     "binary_sensor": {
-      "connected": { "name": "Connected" },
-      "kids_profile": { "name": "Kids profile" },
-      "screen_time_up": { "name": "Screen time up" }
+      "connected": {
+        "name": "Connected"
+      },
+      "kids_profile": {
+        "name": "Kids profile"
+      },
+      "screen_time_up": {
+        "name": "Screen time up"
+      }
+    },
+    "number": {
+      "budget_weekday": {
+        "name": "{group} budget on weekdays"
+      },
+      "budget_weekend": {
+        "name": "{group} budget at weekends"
+      },
+      "bonus_today": {
+        "name": "{group} bonus today"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Hearth",
+        "menu_options": {
+          "people": "Who's who on the TVs",
+          "add_group": "Add a group",
+          "group_apps": "Add apps to Video or Games",
+          "remove_group": "Remove a group"
+        }
+      },
+      "people": {
+        "title": "Who's who on the TVs",
+        "description": "Each Google TV profile the household's TVs have reported, and the person it is. Leave a guest or shared profile empty: its time counts for nobody."
+      },
+      "add_group": {
+        "title": "Add a group",
+        "description": "A group's apps count together against one budget, on every device. For example YouTube: YouTube and HearthTube.",
+        "data": {
+          "name": "Name",
+          "apps": "Apps"
+        }
+      },
+      "group_apps": {
+        "title": "Add apps to Video or Games",
+        "description": "Apps Android marks as video or games are in these already. Add the ones it misses.",
+        "data": {
+          "video": "Video",
+          "games": "Games"
+        }
+      },
+      "remove_group": {
+        "title": "Remove a group",
+        "description": "Its budgets and bonuses go with it.",
+        "data": {
+          "groups": "Groups"
+        }
+      }
+    },
+    "error": {
+      "name_taken": "That name is taken."
+    },
+    "abort": {
+      "no_profiles": "No TV has reported its profiles yet. Pair a TV and let it post its status first.",
+      "no_groups": "There are no groups of your own to remove."
+    }
+  },
+  "services": {
+    "add_bonus": {
+      "name": "Add a bonus",
+      "description": "Adds minutes to a person's budget for today (a negative number takes them away).",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Whose budget."
+        },
+        "minutes": {
+          "name": "Minutes",
+          "description": "How many minutes."
+        },
+        "group": {
+          "name": "Group",
+          "description": "The group's id: all, video, games, or one of your own."
+        }
+      }
+    },
+    "set_budget": {
+      "name": "Set a budget",
+      "description": "Sets a person's daily budget for a group. Leave minutes empty for no limit.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Whose budget."
+        },
+        "group": {
+          "name": "Group",
+          "description": "The group's id: all, video, games, or one of your own."
+        },
+        "minutes": {
+          "name": "Minutes",
+          "description": "Minutes a day."
+        },
+        "days": {
+          "name": "Days",
+          "description": "Weekdays, weekends, or both."
+        }
+      }
     }
   }
 }

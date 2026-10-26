@@ -39,3 +39,16 @@ KIND_MOBILE = "mobile"
 KINDS = (KIND_TV, KIND_MOBILE)
 
 TV_STATES = ["off", "idle", "paused", "playing"]
+
+# A phone's person (set when it pairs); options: TV profile_id -> person
+CONF_PERSON = "person"
+CONF_PROFILES = "profiles"
+CONF_GROUPS = "groups"
+CONF_GROUP_APPS = "group_apps"
+
+SIGNAL_PEOPLE = "hearth_people"
+
+EVENT_BUDGET_REACHED = "hearth_budget_reached"
+
+# Android app categories a device may report for its apps (ApplicationInfo.category, lower case)
+APP_CATEGORIES = ("game", "video", "audio", "image", "social", "news", "maps", "productivity", "accessibility")
