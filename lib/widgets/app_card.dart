@@ -472,15 +472,9 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!context.mounted) return;
-      // In the dock only the dock's own row follows the card: the page stays put, with the first screen at the top
-      final ScrollableState? dockRow =
-          context.findAncestorWidgetOfExactType<HomeDock>() != null ? Scrollable.maybeOf(context) : null;
-      final RenderObject? card = context.findRenderObject();
-      if (dockRow != null && card != null) {
-        dockRow.position.ensureVisible(card,
-            alignment: 0.1, duration: const Duration(milliseconds: 100), curve: Curves.easeInOut);
-        return;
-      }
+      // In the dock nothing scrolls: the dock shows all its apps, and the page stays put with the first screen at the
+      // top
+      if (context.findAncestorWidgetOfExactType<HomeDock>() != null) return;
       // Centred, as when the card is selected: near the top instead, the top row would scroll its title under the
       // top bar
       Scrollable.ensureVisible(context,

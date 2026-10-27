@@ -34,7 +34,9 @@ class CategoryRow extends StatelessWidget
   /// False inside the dock, which has no heading.
   final bool showTitle;
 
-  /// Size the row to its apps instead of the full width, so a short dock stays centred.
+  /// Size the row to its apps instead of the full width, so a short dock stays centred. Such a row doesn't scroll:
+  /// apps that don't fit are drawn a little smaller (a dock that could scroll by a few pixels shifted with every move,
+  /// each card centring itself).
   final bool shrinkWrap;
 
   const CategoryRow({
@@ -52,32 +54,32 @@ class CategoryRow extends StatelessWidget
     if (applications.isEmpty) {
       categoryContent = categoryContainerEmptyState(context);
     }
+    else if (shrinkWrap) {
+      categoryContent = FittedBox(
+        fit: BoxFit.scaleDown,
+        child: SizedBox(
+          height: category.rowHeight.toDouble(),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [for (int index = 0; index < applications.length; index++) _card(context, applications, index)],
+            ),
+          ),
+        ),
+      );
+    }
     else {
       categoryContent = SizedBox(
         height: category.rowHeight.toDouble(),
         child: ListView.custom(
-          shrinkWrap: shrinkWrap,
           clipBehavior: Clip.none,
           padding: const EdgeInsets.all(8),
           scrollDirection: Axis.horizontal,
           childrenDelegate: SliverChildBuilderDelegate(
             childCount: applications.length,
             findChildIndexCallback: _findChildIndex,
-            (context, index) => Padding(
-                key: Key(applications[index].packageName),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: AppCard(
-                  category: category,
-                  application: applications[index],
-                  autofocus: index == 0,
-                  upGoesToTopBar: isFirstSection,
-                  isFirstInRow: index == 0,
-                  isLastInRow: index == applications.length - 1,
-                  onMove: (direction) => _onMove(context, direction, applications[index]),
-                  onMoveEnd: () => _onMoveEnd(context),
-                  onMoveCancel: () => _onMoveCancel(context),
-                )
-            )
+            (context, index) => _card(context, applications, index),
           )
         )
       );
@@ -95,6 +97,22 @@ class CategoryRow extends StatelessWidget
       ],
     );
   }
+
+  Widget _card(BuildContext context, List<App> applications, int index) => Padding(
+        key: Key(applications[index].packageName),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: AppCard(
+          category: category,
+          application: applications[index],
+          autofocus: index == 0,
+          upGoesToTopBar: isFirstSection,
+          isFirstInRow: index == 0,
+          isLastInRow: index == applications.length - 1,
+          onMove: (direction) => _onMove(context, direction, applications[index]),
+          onMoveEnd: () => _onMoveEnd(context),
+          onMoveCancel: () => _onMoveCancel(context),
+        ),
+      );
 
   int? _findChildIndex(Key key) {
     if (key is ValueKey<String>) {

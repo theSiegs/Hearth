@@ -322,6 +322,63 @@ void main() {
     expect(isDockAppFocused(tester, "com.example.dock0"), isTrue);
   });
 
+  testWidgets("Selecting the next app in the dock doesn't move the page", (tester) async {
+    final appsService = mkAppService();
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    favoritesCategory.applications
+        .addAll(List.generate(5, (i) => fakeApp(packageName: "com.example.dock$i", name: "Dock $i")));
+    final applicationsCategory = fakeCategory(name: "Applications", order: 1);
+    applicationsCategory.applications
+        .addAll(List.generate(30, (i) => fakeApp(packageName: "com.example.app$i", name: "App $i")));
+    when(appsService.launcherSections).thenReturn([favoritesCategory, applicationsCategory]);
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+    await tester.pumpAndSettle();
+    expect(isDockAppFocused(tester, "com.example.dock0"), isTrue);
+
+    for (final key in [LogicalKeyboardKey.arrowRight, LogicalKeyboardKey.arrowRight, LogicalKeyboardKey.arrowLeft]) {
+      await tester.sendKeyEvent(key);
+      // Frame by frame: scrolling away and back would end at the top too
+      for (int frame = 0; frame < 20; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(homeScrollOffset(tester), 0);
+      }
+    }
+    expect(isDockAppFocused(tester, "com.example.dock1"), isTrue);
+  });
+
+  testWidgets("A dock too wide for the screen is drawn smaller and stays put", (tester) async {
+    final appsService = mkAppService();
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    favoritesCategory.applications
+        .addAll(List.generate(8, (i) => fakeApp(packageName: "com.example.dock$i", name: "Dock $i")));
+    final applicationsCategory = fakeCategory(name: "Applications", order: 1);
+    applicationsCategory.applications.add(fakeApp(packageName: "com.example.app", name: "App"));
+    when(appsService.launcherSections).thenReturn([favoritesCategory, applicationsCategory]);
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+    tester.view.physicalSize = const Size(1000, 1080);
+    addTearDown(tester.view.resetPhysicalSize);
+    await tester.pumpAndSettle();
+
+    // Eight cards are wider than this screen: the dock has nothing to scroll and fits on it
+    expect(find.descendant(of: find.byType(HomeDock), matching: find.byType(Scrollable)), findsNothing);
+    final screen = tester.getRect(find.byType(FLauncher));
+    Rect card(int i) => tester.getRect(find.byKey(Key("com.example.dock$i")).first);
+    expect(card(0).left, greaterThanOrEqualTo(screen.left));
+    expect(card(7).right, lessThanOrEqualTo(screen.right));
+
+    final where = [for (int i = 0; i < 8; i++) card(i)];
+    for (int i = 1; i < 8; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(isDockAppFocused(tester, "com.example.dock$i"), isTrue);
+      expect([for (int k = 0; k < 8; k++) card(k)], where);
+    }
+  });
+
   testWidgets("Without the dock, moving the first app along the top row keeps the page at the top", (tester) async {
     final appsService = mkAppService(LiveAppsService()) as LiveAppsService;
     final tvCategory = fakeCategory(name: "TV Apps", order: 0, type: CategoryType.row);
