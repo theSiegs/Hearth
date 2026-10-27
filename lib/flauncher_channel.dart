@@ -18,6 +18,7 @@
 
 import 'dart:async';
 
+import 'package:flauncher/models/parent_channel.dart';
 import 'package:flauncher/models/data_usage.dart';
 import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/services.dart';
@@ -331,6 +332,35 @@ class FLauncherChannel {
 
   Future<void> setLockOnSleepMinutes(int minutes) async =>
       await _methodChannel.invokeMethod("setLockOnSleepMinutes", minutes);
+
+  /// The videos a kid's HearthTube started, newest first (provider contract 8). [profileKey]: the kid's ("user:11").
+  Future<List<StartedVideo>> getStartedLog(String profileKey) async {
+    final rows = await _methodChannel.invokeMethod<List<dynamic>>("getStartedLog", profileKey) ?? [];
+    final videos = <StartedVideo>[];
+    for (final row in rows) {
+      final video = row is Map ? StartedVideo.fromMap(row) : null;
+      if (video != null) videos.add(video);
+    }
+    return videos;
+  }
+
+  /// What a parent blocked in the kid's HearthTube: "own" (set in Hearth) and "ha" (from Home Assistant), each with
+  /// "videos" and "channels" (id and label) and "words".
+  Future<Map<dynamic, dynamic>> getParentBlocks(String profileKey) async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getParentBlocks", profileKey) ?? {};
+
+  /// Blocks ([on]) or unblocks one thing in the kid's HearthTube, in what is set in Hearth. [kind]: "video",
+  /// "channel" or "word"; [id] is the video or channel id, or the word. False when it isn't valid.
+  Future<bool> setParentBlock({
+    required String profileKey,
+    required String kind,
+    required String id,
+    String? label,
+    required bool on,
+  }) async =>
+      await _methodChannel.invokeMethod<bool>(
+          "setParentBlock", {"profileKey": profileKey, "kind": kind, "id": id, "label": label, "on": on}) ??
+      false;
 
   /// A profile's daily YouTube limit in HearthTube, in minutes; 0 for none. [profileKey]: a kids profile's
   /// ("user:11", from [getKidsProfilesState]); without it, the profile on now.

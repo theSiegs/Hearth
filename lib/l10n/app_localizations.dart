@@ -1329,6 +1329,108 @@ abstract class AppLocalizations {
   /// **'Everything here is this kid\'s own. You can change it from here without switching to their profile.'**
   String get kidProfileHint;
 
+  /// One kid's page: the log of videos the kid started in HearthTube, for a parent
+  ///
+  /// In en, this message translates to:
+  /// **'Videos started'**
+  String get kidWatchLog;
+
+  /// Under the log's title
+  ///
+  /// In en, this message translates to:
+  /// **'What this kid opened in HearthTube, newest first. Choose one to block it or its channel.'**
+  String get kidWatchLogBody;
+
+  /// The log is empty
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing started yet.'**
+  String get kidWatchLogEmpty;
+
+  /// Log row's choice: HearthTube won't show or play it for this kid
+  ///
+  /// In en, this message translates to:
+  /// **'Block this video'**
+  String get kidBlockVideo;
+
+  /// Log row's choice when the channel's name isn't known
+  ///
+  /// In en, this message translates to:
+  /// **'Block this channel'**
+  String get kidBlockChannel;
+
+  /// Log row's choice: HearthTube won't show or play anything from that channel for this kid
+  ///
+  /// In en, this message translates to:
+  /// **'Block the channel {channel}'**
+  String kidBlockChannelNamed(String channel);
+
+  /// Next to a log row whose video or channel is blocked
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked'**
+  String get kidBlocksBlocked;
+
+  /// One kid's page: the videos, channels and words a parent blocked in the kid's HearthTube
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked on YouTube'**
+  String get kidBlocks;
+
+  /// Under the blocked list's title
+  ///
+  /// In en, this message translates to:
+  /// **'HearthTube won\'t show or play these for this kid, and the kid can\'t undo them.'**
+  String get kidBlocksBody;
+
+  /// Adds a word that keeps a video out when it is in its title or channel name
+  ///
+  /// In en, this message translates to:
+  /// **'Block a word'**
+  String get kidBlocksAddWord;
+
+  /// The field for a word to block
+  ///
+  /// In en, this message translates to:
+  /// **'Word or phrase'**
+  String get kidBlocksWordLabel;
+
+  /// Heading of the blocked words
+  ///
+  /// In en, this message translates to:
+  /// **'Words'**
+  String get kidBlocksWords;
+
+  /// Heading of the blocked channels
+  ///
+  /// In en, this message translates to:
+  /// **'Channels'**
+  String get kidBlocksChannels;
+
+  /// Heading of the blocked videos
+  ///
+  /// In en, this message translates to:
+  /// **'Videos'**
+  String get kidBlocksVideos;
+
+  /// Next to a block that Home Assistant set; it is taken back there
+  ///
+  /// In en, this message translates to:
+  /// **'Home Assistant'**
+  String get kidBlocksFromHa;
+
+  /// Nothing a parent blocked for this kid
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is blocked.'**
+  String get kidBlocksNone;
+
+  /// Asks before taking a block back
+  ///
+  /// In en, this message translates to:
+  /// **'Show \"{label}\" again?'**
+  String kidBlocksRemove(String label);
+
   /// One kid's page: installs HearthTube when the TV doesn't have it
   ///
   /// In en, this message translates to:

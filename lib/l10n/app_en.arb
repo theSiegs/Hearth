@@ -585,6 +585,84 @@
     "@kidProfileHint": {
         "description": "One kid's page (from Kids profiles): footer"
     },
+    "kidWatchLog": "Videos started",
+    "@kidWatchLog": {
+        "description": "One kid's page: the log of videos the kid started in HearthTube, for a parent"
+    },
+    "kidWatchLogBody": "What this kid opened in HearthTube, newest first. Choose one to block it or its channel.",
+    "@kidWatchLogBody": {
+        "description": "Under the log's title"
+    },
+    "kidWatchLogEmpty": "Nothing started yet.",
+    "@kidWatchLogEmpty": {
+        "description": "The log is empty"
+    },
+    "kidBlockVideo": "Block this video",
+    "@kidBlockVideo": {
+        "description": "Log row's choice: HearthTube won't show or play it for this kid"
+    },
+    "kidBlockChannel": "Block this channel",
+    "@kidBlockChannel": {
+        "description": "Log row's choice when the channel's name isn't known"
+    },
+    "kidBlockChannelNamed": "Block the channel {channel}",
+    "@kidBlockChannelNamed": {
+        "description": "Log row's choice: HearthTube won't show or play anything from that channel for this kid",
+        "placeholders": {
+            "channel": {
+                "type": "String"
+            }
+        }
+    },
+    "kidBlocksBlocked": "Blocked",
+    "@kidBlocksBlocked": {
+        "description": "Next to a log row whose video or channel is blocked"
+    },
+    "kidBlocks": "Blocked on YouTube",
+    "@kidBlocks": {
+        "description": "One kid's page: the videos, channels and words a parent blocked in the kid's HearthTube"
+    },
+    "kidBlocksBody": "HearthTube won't show or play these for this kid, and the kid can't undo them.",
+    "@kidBlocksBody": {
+        "description": "Under the blocked list's title"
+    },
+    "kidBlocksAddWord": "Block a word",
+    "@kidBlocksAddWord": {
+        "description": "Adds a word that keeps a video out when it is in its title or channel name"
+    },
+    "kidBlocksWordLabel": "Word or phrase",
+    "@kidBlocksWordLabel": {
+        "description": "The field for a word to block"
+    },
+    "kidBlocksWords": "Words",
+    "@kidBlocksWords": {
+        "description": "Heading of the blocked words"
+    },
+    "kidBlocksChannels": "Channels",
+    "@kidBlocksChannels": {
+        "description": "Heading of the blocked channels"
+    },
+    "kidBlocksVideos": "Videos",
+    "@kidBlocksVideos": {
+        "description": "Heading of the blocked videos"
+    },
+    "kidBlocksFromHa": "Home Assistant",
+    "@kidBlocksFromHa": {
+        "description": "Next to a block that Home Assistant set; it is taken back there"
+    },
+    "kidBlocksNone": "Nothing is blocked.",
+    "@kidBlocksNone": {
+        "description": "Nothing a parent blocked for this kid"
+    },
+    "kidBlocksRemove": "Show \"{label}\" again?",
+    "@kidBlocksRemove": {
+        "description": "Asks before taking a block back",
+        "placeholders": {
+            "label": {
+                "type": "String"
+            }
+        }
+    },
     "kidProfileGetHearthTube": "Get HearthTube",
     "@kidProfileGetHearthTube": {
         "description": "One kid's page: installs HearthTube when the TV doesn't have it"

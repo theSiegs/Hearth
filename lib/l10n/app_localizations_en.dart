@@ -714,6 +714,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kidProfileHint => 'Everything here is this kid\'s own. You can change it from here without switching to their profile.';
 
   @override
+  String get kidWatchLog => 'Videos started';
+
+  @override
+  String get kidWatchLogBody => 'What this kid opened in HearthTube, newest first. Choose one to block it or its channel.';
+
+  @override
+  String get kidWatchLogEmpty => 'Nothing started yet.';
+
+  @override
+  String get kidBlockVideo => 'Block this video';
+
+  @override
+  String get kidBlockChannel => 'Block this channel';
+
+  @override
+  String kidBlockChannelNamed(String channel) {
+    return 'Block the channel $channel';
+  }
+
+  @override
+  String get kidBlocksBlocked => 'Blocked';
+
+  @override
+  String get kidBlocks => 'Blocked on YouTube';
+
+  @override
+  String get kidBlocksBody => 'HearthTube won\'t show or play these for this kid, and the kid can\'t undo them.';
+
+  @override
+  String get kidBlocksAddWord => 'Block a word';
+
+  @override
+  String get kidBlocksWordLabel => 'Word or phrase';
+
+  @override
+  String get kidBlocksWords => 'Words';
+
+  @override
+  String get kidBlocksChannels => 'Channels';
+
+  @override
+  String get kidBlocksVideos => 'Videos';
+
+  @override
+  String get kidBlocksFromHa => 'Home Assistant';
+
+  @override
+  String get kidBlocksNone => 'Nothing is blocked.';
+
+  @override
+  String kidBlocksRemove(String label) {
+    return 'Show \"$label\" again?';
+  }
+
+  @override
   String get kidProfileGetHearthTube => 'Get HearthTube';
 
   @override

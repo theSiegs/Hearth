@@ -19,6 +19,7 @@
 import 'package:flauncher/widgets/settings/updates_page.dart';
 import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
 import 'package:flauncher/models/kids_profiles.dart';
+import 'package:flauncher/widgets/settings/kid_parent_pages.dart';
 import 'package:flauncher/widgets/settings/kid_profile_page.dart';
 import 'package:flauncher/widgets/settings/kids_profiles_page.dart';
 import 'package:flauncher/widgets/settings/profile_pairing_page.dart';
@@ -188,6 +189,10 @@ class _SettingsPanelState extends State<SettingsPanel> {
                   case KidProfilePage.routeName:
                     final (state, kid) = settings.arguments as (KidsProfilesState, KidProfile);
                     return _FastPageRoute(builder: (_) => KidProfilePage(state: state, kid: kid));
+                  case KidWatchLogPage.routeName:
+                    return _FastPageRoute(builder: (_) => KidWatchLogPage(profileKey: settings.arguments as String));
+                  case KidBlocksPage.routeName:
+                    return _FastPageRoute(builder: (_) => KidBlocksPage(profileKey: settings.arguments as String));
                   case StreamingPinsPage.routeName:
                     return _FastPageRoute(builder: (_) => const StreamingPinsPage());
                   case PhoneApprovalPage.routeName:

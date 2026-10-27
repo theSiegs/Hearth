@@ -81,6 +81,7 @@ final class StartedLog {
     /** Records a start for a profile. False when it was refused (not valid) or already known. */
     static synchronized boolean record(Context context, String profile, long timeMs, String videoId, String title,
             String channel, String channelId) {
+        profile = ParentBlocks.userKey(profile);
         if (profile == null || !valid(timeMs, videoId)) return false;
         List<Entry> entries = read(context, profile);
         if (!add(entries, new Entry(timeMs, videoId, title, channel, channelId))) return true;
@@ -91,6 +92,7 @@ final class StartedLog {
     /** The profile's entries, oldest first. */
     static synchronized List<Entry> read(Context context, String profile) {
         List<Entry> entries = new ArrayList<>();
+        profile = ParentBlocks.userKey(profile);
         if (profile == null) return entries;
         try {
             JSONArray array = new JSONArray(prefs(context).getString(profile, "[]"));

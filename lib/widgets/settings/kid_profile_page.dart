@@ -26,6 +26,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
+import 'kid_parent_pages.dart';
 import 'kids_profiles_page.dart';
 import 'message_dialog.dart';
 import 'profiles_settings_page.dart';
@@ -205,6 +206,21 @@ class _KidProfilePageState extends State<KidProfilePage> {
           onPressed: ready || busy ? null : () => Navigator.of(context).pop(KidProfilePage.fix),
         ),
         if (kid.profileKey != null) YouTubeLimitTile(profileKey: kid.profileKey, autofocus: ready),
+        // What the kid's HearthTube tells a parent (contract 8): what they started, and what is blocked for them
+        if (kid.profileKey != null) ...[
+          FocusableSettingsTile(
+            leading: const Icon(Icons.history),
+            title: Text(l.kidWatchLog, style: textTheme.bodyMedium),
+            trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+            onPressed: () => Navigator.of(context).pushNamed(KidWatchLogPage.routeName, arguments: kid.profileKey),
+          ),
+          FocusableSettingsTile(
+            leading: const Icon(Icons.block),
+            title: Text(l.kidBlocks, style: textTheme.bodyMedium),
+            trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+            onPressed: () => Navigator.of(context).pushNamed(KidBlocksPage.routeName, arguments: kid.profileKey),
+          ),
+        ],
         const Divider(),
         // HearthTube: onto the TV and this profile, its version and updates, and its settings for this profile
         if (!tubeOnTv)

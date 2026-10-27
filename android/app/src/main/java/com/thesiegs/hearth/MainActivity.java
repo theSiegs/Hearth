@@ -196,6 +196,18 @@ public class MainActivity extends FlutterActivity {
                 runSelfAdb(result, () -> KidsProfiles.fix(this, onlyUser));
             }
             case "openHearthTubeSettings" -> result.success(KidsProfiles.openHearthTubeSettings(this, call.arguments()));
+            // The parent channel (provider contract 8): a kid's started videos, and what the parent blocked for them
+            case "getStartedLog" -> {
+                String profile = call.arguments();
+                answerFrom(sIoExecutor, result, () -> ParentChannelApi.startedLog(this, profile));
+            }
+            case "getParentBlocks" -> {
+                String profile = call.arguments();
+                answerFrom(sIoExecutor, result, () -> ParentChannelApi.parentBlocks(this, profile));
+            }
+            case "setParentBlock" -> answerFrom(sIoExecutor, result, () -> ParentChannelApi.setBlock(this,
+                    call.argument("profileKey"), call.argument("kind"), call.argument("id"), call.argument("label"),
+                    Boolean.TRUE.equals(call.argument("on"))));
             case "removeHearthFromKidsProfiles" -> runSelfAdb(result, () -> KidsProfiles.remove(this));
             case "uninstallHearth" -> result.success(uninstallSelf());
             case "openGoogleTvHome" -> result.success(openGoogleTvHome());

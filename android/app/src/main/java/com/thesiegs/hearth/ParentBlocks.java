@@ -8,8 +8,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -33,6 +35,8 @@ final class ParentBlocks {
         final Set<String> videos = new LinkedHashSet<>();
         final Set<String> channels = new LinkedHashSet<>();
         final Set<String> words = new LinkedHashSet<>();
+        /** What to show for a video or channel id (a title, a name); words are their own label. Kept for Hearth's screens only. */
+        final Map<String, String> labels = new LinkedHashMap<>();
 
         boolean isEmpty() {
             return videos.isEmpty() && channels.isEmpty() && words.isEmpty();
@@ -46,12 +50,20 @@ final class ParentBlocks {
             all.channels.addAll(other.channels);
             all.words.addAll(words);
             all.words.addAll(other.words);
+            all.labels.putAll(labels);
+            all.labels.putAll(other.labels);
             return all;
         }
 
+        /** The contract's three lists, as HearthTube is handed them */
         JSONObject toJson() throws JSONException {
             return new JSONObject().put("videos", new JSONArray(videos)).put("channels", new JSONArray(channels))
                     .put("words", new JSONArray(words));
+        }
+
+        /** The same with the labels, as Hearth keeps them */
+        JSONObject toStoredJson() throws JSONException {
+            return toJson().put("labels", new JSONObject(labels));
         }
 
         @Override
@@ -85,6 +97,14 @@ final class ParentBlocks {
         fill(lists.videos, json.optJSONArray("videos"), false);
         fill(lists.channels, json.optJSONArray("channels"), false);
         fill(lists.words, json.optJSONArray("words"), true);
+        JSONObject labels = json.optJSONObject("labels");
+        if (labels != null) {
+            for (java.util.Iterator<String> keys = labels.keys(); keys.hasNext() && lists.labels.size() < LIST_MAX * 2;) {
+                String id = keys.next();
+                String label = StartedLog.clean(labels.optString(id, ""));
+                if (!label.isEmpty() && (lists.videos.contains(id) || lists.channels.contains(id))) lists.labels.put(id, label);
+            }
+        }
         return lists;
     }
 
@@ -131,7 +151,18 @@ final class ParentBlocks {
         return write(context, "ha|", profile, lists);
     }
 
+    /**
+     * A profile's lists are kept under its user ("user:10"): a kids profile is one profile in an Android user, and the
+     * key Hearth's screens use for it has no account part.
+     */
+    static String userKey(String profile) {
+        if (profile == null) return null;
+        String[] parts = profile.split(":");
+        return parts.length >= 2 && "user".equals(parts[0]) ? parts[0] + ":" + parts[1] : profile;
+    }
+
     private static Lists read(Context context, String source, String profile) {
+        profile = userKey(profile);
         if (profile == null) return new Lists();
         try {
             String saved = prefs(context).getString(source + profile, null);
@@ -143,13 +174,14 @@ final class ParentBlocks {
 
     /** Saves, and when the union for this profile changed, bumps the version. True when it did. */
     private static synchronized boolean write(Context context, String source, String profile, Lists lists) {
+        profile = userKey(profile);
         if (profile == null) return false;
         String other = "own|".equals(source) ? "ha|" : "own|";
         Lists before = read(context, "own|", profile).union(read(context, "ha|", profile));
         Lists after = lists.union(read(context, other, profile));
         SharedPreferences.Editor edit = prefs(context).edit();
         try {
-            if (lists.isEmpty()) edit.remove(source + profile); else edit.putString(source + profile, lists.toJson().toString());
+            if (lists.isEmpty()) edit.remove(source + profile); else edit.putString(source + profile, lists.toStoredJson().toString());
         } catch (JSONException e) {
             return false;
         }

@@ -86,6 +86,26 @@ public class ParentChannelTest {
     }
 
     @Test
+    public void aKidsListsAreKeptUnderTheirUserNotTheirAccount() {
+        assertEquals("user:11", ParentBlocks.userKey("user:11"));
+        assertEquals("user:11", ParentBlocks.userKey("user:11:alex"));
+        assertEquals("something", ParentBlocks.userKey("something"));
+        assertNull(ParentBlocks.userKey(null));
+    }
+
+    @Test
+    public void labelsAreKeptForIdsInTheListsOnly() throws Exception {
+        ParentBlocks.Lists lists = ParentBlocks.parse(new JSONObject(
+                "{\"videos\":[\"abc123\"],\"channels\":[],\"words\":[],\"labels\":{\"abc123\":\"A title\",\"other99\":\"Not listed\"}}"));
+
+        assertEquals("A title", lists.labels.get("abc123"));
+        assertNull(lists.labels.get("other99"));
+        // HearthTube is handed the three lists only; Hearth keeps the labels
+        assertFalse(lists.toJson().has("labels"));
+        assertTrue(lists.toStoredJson().has("labels"));
+    }
+
+    @Test
     public void nothingBlockedIsEmpty() {
         assertTrue(ParentBlocks.parse(null).isEmpty());
         assertTrue(ParentBlocks.parse(new JSONObject()).isEmpty());
