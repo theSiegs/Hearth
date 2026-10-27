@@ -106,7 +106,7 @@ final class HouseholdJoining {
             allowed = HouseholdJoin.serve(watched, s.getOutputStream(), host(context, watched));
             Log.i(TAG, allowed ? "A TV was allowed to join the household" : "A TV asked to join and wasn't allowed");
         } catch (IOException | java.security.GeneralSecurityException e) {
-            Log.i(TAG, "A join request ended: " + e.getClass().getSimpleName());
+            Log.i(TAG, "A join request ended: " + Household.why(e));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } finally {
@@ -551,9 +551,9 @@ final class HouseholdJoining {
                 outcome = Household.joinFromInvitation(context, payload) ? JOINED : FAILED;
             } catch (ShareSession.ShareException e) {
                 outcome = e.stopped ? DENIED : FAILED;
-                if (!e.stopped) Log.i(TAG, "Asking to join didn't work: " + e.getMessage());
+                if (!e.stopped) Log.i(TAG, "Asking to join didn't work: " + Household.why(e));
             } catch (IOException | java.security.GeneralSecurityException e) {
-                Log.i(TAG, "Asking to join didn't work: " + e.getClass().getSimpleName());
+                Log.i(TAG, "Asking to join didn't work: " + Household.why(e));
                 outcome = FAILED;
             } finally {
                 close(socket);

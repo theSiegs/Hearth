@@ -108,6 +108,25 @@ final class Household {
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
+    /** The longest message {@link #why} keeps. */
+    private static final int WHY_CHARS = 160;
+
+    /**
+     * What went wrong, for the log: the exception's class and its message ("SyncException: The other TV is not in this
+     * household"), the cause's for a wrapper (a task's ExecutionException). The message matters as much as the class:
+     * a release build shortens Hearth's own class names, and SyncException's message is what tells its cases apart.
+     */
+    static String why(Throwable e) {
+        if (e == null) return "unknown";
+        Throwable shown = e instanceof java.util.concurrent.ExecutionException && e.getCause() != null
+                ? e.getCause() : e;
+        String message = shown.getMessage();
+        if (message == null || message.trim().isEmpty()) return shown.getClass().getSimpleName();
+        message = message.replaceAll("\\s+", " ").trim();
+        if (message.length() > WHY_CHARS) message = message.substring(0, WHY_CHARS) + "...";
+        return shown.getClass().getSimpleName() + ": " + message;
+    }
+
     /** Whether this TV has ever been in a household, without touching the Keystore. */
     private static boolean mayBeInHousehold(Context context) {
         SharedPreferences prefs = prefs(context);
@@ -498,7 +517,7 @@ final class Household {
             }
         } catch (IOException | java.security.GeneralSecurityException e) {
             sLastResult = "failed: " + e.getClass().getSimpleName();
-            Log.i(TAG, "Couldn't sync with a TV of the household: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't sync with a TV of the household: " + why(e));
         }
     }
 
@@ -558,7 +577,7 @@ final class Household {
                     ShareDiscovery.deviceName(sContext), System.currentTimeMillis());
             finish(store, result, "from a TV");
         } catch (IOException | java.security.GeneralSecurityException e) {
-            Log.i(TAG, "A TV tried to sync and couldn't: " + e.getClass().getSimpleName());
+            Log.i(TAG, "A TV tried to sync and couldn't: " + why(e));
         }
     }
 
@@ -637,7 +656,7 @@ final class Household {
                     return log == null ? new ArrayList<HouseholdEntry>() : log.all();
                 }).get(2, TimeUnit.SECONDS);
             } catch (Exception e) {
-                Log.i(TAG, "The list of TVs left out the household's entries: " + e.getClass().getSimpleName());
+                Log.i(TAG, "The list of TVs left out the household's entries: " + why(e));
             }
             for (HouseholdMembers.Member m : HouseholdMembers.list(entries, seen(context), online, store.tvId(),
                     ShareDiscovery.deviceName(context), System.currentTimeMillis())) {
@@ -701,7 +720,7 @@ final class Household {
                 return out;
             }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-            Log.i(TAG, "Couldn't tell what joining changes: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't tell what joining changes: " + why(e));
             return null;
         }
     }
@@ -733,7 +752,7 @@ final class Household {
                 return true;
             }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-            Log.i(TAG, "Couldn't finish joining: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't finish joining: " + why(e));
             return false;
         }
     }
@@ -792,7 +811,7 @@ final class Household {
                 return true;
             }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-            Log.i(TAG, "Couldn't put back the settings from before joining: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't put back the settings from before joining: " + why(e));
             return false;
         }
     }
@@ -866,7 +885,7 @@ final class Household {
                 return true;
             }).get(2, TimeUnit.MINUTES);
         } catch (Exception e) {
-            Log.i(TAG, "Couldn't join with the invitation: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't join with the invitation: " + why(e));
             return false;
         }
     }
@@ -919,7 +938,7 @@ final class Household {
                 }
             }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-            Log.i(TAG, "Leaving the household: no TV took it yet (" + e.getClass().getSimpleName() + ")");
+            Log.i(TAG, "Leaving the household: no TV took it yet (" + why(e) + ")");
         }
     }
 
@@ -955,7 +974,7 @@ final class Household {
                 return true;
             }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-            Log.i(TAG, "Couldn't remove the TV: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't remove the TV: " + why(e));
             return false;
         }
     }
@@ -1035,7 +1054,7 @@ final class Household {
                 return out;
             }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-            Log.i(TAG, "Couldn't read the household's looks: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't read the household's looks: " + why(e));
             return null;
         }
     }
@@ -1118,7 +1137,7 @@ final class Household {
                 return out;
             }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-            Log.i(TAG, "Couldn't read the household's Parent PIN: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't read the household's Parent PIN: " + why(e));
             return null;
         }
     }
@@ -1268,7 +1287,7 @@ final class Household {
         } catch (Exception e) {
             // The household thread is busy (an exchange): the Bell gets it when it's free, and a notification for
             // everyone pops up as before
-            Log.i(TAG, "A Home Assistant notification waits for the Bell: " + e.getClass().getSimpleName());
+            Log.i(TAG, "A Home Assistant notification waits for the Bell: " + why(e));
             result = -1;
             show = n.target == null;
         }

@@ -82,7 +82,7 @@ final class HouseholdLocal implements HouseholdBridge.Local {
             JSONObject o = new JSONObject(value);
             ProfilePairing.setChoice(context, pkg, key, o.getString("mode"), o.optString("appProfile", null));
         } catch (Exception e) {
-            Log.w(TAG, "A pairing from another TV wasn't applied: " + e.getClass().getSimpleName());
+            Log.w(TAG, "A pairing from another TV wasn't applied: " + Household.why(e));
         }
     }
 
