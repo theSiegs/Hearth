@@ -201,6 +201,21 @@ void main() {
     expect(householdSays("Not set up"), findsOneWidget);
   });
 
+  testWidgets("Family counts the TVs again while it's shown: a TV that just joined hears of the others later",
+      (tester) async {
+    // Just joined: only the TV that let it in is listed yet
+    channel.status = {
+      ...inHousehold,
+      "members": [for (final m in inHousehold["members"] as List) if ((m as Map)["tvId"] != "c") m],
+    };
+    await pump(tester, const FamilySettingsPage());
+    expect(householdSays("2 TVs"), findsOneWidget);
+    channel.status = inHousehold;
+    await tester.pump(const Duration(seconds: 6));
+    expect(householdSays("3 TVs"), findsOneWidget);
+    await pump(tester, const SizedBox());
+  });
+
   group("before joining", () {
     const joinedHolding = {
       "joined": true,
