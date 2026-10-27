@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
  * written, so a name from another TV can't point anywhere else.
  */
 final class HouseholdPictures {
-    /** A wallpaper picture as the screen shows it: a JPEG of at most 1920x1080 (the same limit as a copy's). */
+    /** A wallpaper picture as the screen shows it: a JPEG of at most 1920x1080 (ShareBundle's limit in the app). */
     static final int MAX_BYTES = 3 * 1024 * 1024;
     private static final Pattern HASH = Pattern.compile("[0-9a-f]{64}");
 

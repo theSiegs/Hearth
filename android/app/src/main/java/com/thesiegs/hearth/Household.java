@@ -742,7 +742,7 @@ final class Household {
     }
 
     /**
-     * An invitation for the TV a copy goes to (HouseholdStore.Invitation, as JSON), making a household here first if
+     * An invitation for a TV allowed to join (HouseholdStore.Invitation, as JSON), making a household here first if
      * there is none; null on failure.
      */
     static String invitationToJoin(Context context) {
@@ -750,32 +750,6 @@ final class Household {
         if (!store.joined() && !create(context)) return null;
         HouseholdStore.Invitation inv = store.invite(ShareDiscovery.deviceName(context), System.currentTimeMillis());
         return inv == null ? null : inv.toJson();
-    }
-
-    /**
-     * Joins the household that {@code secrets} (a copy from another TV) carries an invitation to, or the key of when
-     * the other TV still runs version 1. False if it carries neither.
-     */
-    static boolean joinFromSecrets(Context context, String secrets) {
-        try {
-            org.json.JSONObject root = new org.json.JSONObject(secrets);
-            boolean ok;
-            String invitation = root.optString("household2", "");
-            if (!invitation.isEmpty()) {
-                ok = store(context).join(HouseholdStore.Invitation.fromJson(invitation),
-                        ShareDiscovery.deviceName(context), System.currentTimeMillis());
-            } else {
-                String encoded = root.optString("household", "");
-                if (encoded.isEmpty()) return false;
-                byte[] key = java.util.Base64.getDecoder().decode(encoded);
-                ok = store(context).joinV1(key);
-                Arrays.fill(key, (byte) 0);
-            }
-            if (ok) joined(context);
-            return ok;
-        } catch (Exception e) {
-            return false;
-        }
     }
 
     /** A household was joined: a fresh list of TVs seen, sync on, and the first exchange soon. */
@@ -804,7 +778,7 @@ final class Household {
                     start(app);
                     return false;
                 }
-                if (!HaConfig.isConfigured(app) && ShareSecrets.applyHa(app, payload)) {
+                if (!HaConfig.isConfigured(app) && applyHa(app, root.optJSONObject("ha"))) {
                     Log.i(TAG, "Joined with the household's Home Assistant settings");
                 }
                 // The household's settings wait until someone has seen what they change here (finishJoin)
@@ -820,6 +794,20 @@ final class Household {
             Log.i(TAG, "Couldn't join with the invitation: " + e.getClass().getSimpleName());
             return false;
         }
+    }
+
+    /**
+     * The Home Assistant address and token a TV of the household made for this one ({url, token}), saved as this TV's:
+     * false when there are none or they're unusable.
+     */
+    private static boolean applyHa(Context context, org.json.JSONObject ha) {
+        if (ha == null) return false;
+        String url = HaConfig.normalizeUrl(ha.optString("url", ""));
+        String token = ha.optString("token", "").replaceAll("\\s", "");
+        if (url == null || token.isEmpty() || token.length() > 4096) return false;
+        if (!HaConfig.setToken(context, token)) return false;
+        HaConfig.prefs(context).edit().putString(HaConfig.URL_KEY, url).apply();
+        return true;
     }
 
     /** Asks a TV of the household heard on the network to let this one join (HouseholdJoining). */

@@ -206,8 +206,8 @@ A TV joins from its own screen, and someone allows it from the notification Bell
    and no code to compare: the TV's name is what the person checks. Clearing it is Don't allow. (The code still binds
    the session; no one compares it, so a device on the network that put itself between the two TVs, and named itself
    after the new TV, could be let in: a trade chosen for a home network.)
-4. On Allow, the household TV sends an invitation over the sealed session (the same one a copy hands over: see
-   Joining until step 2 is built), and a Home Assistant address and a new token of its own when the new TV has none.
+4. On Allow, the household TV sends an invitation over the sealed session (see The invitation, below), and a Home
+   Assistant address and a new token of its own when the new TV has none.
    The new TV joins with it, and their first exchange lists it.
 5. **A TV that already has its own setup**: for an entry both have, the household's wins; settings only this TV has are
    kept and synced out. Before anything is replaced the new TV shows what will change and keeps a copy to put back
@@ -409,11 +409,12 @@ to admit the household's other TVs as they convert, then drops it. A TV still on
 one; it converts when it updates (Hearth updates itself in the background), and a TV that never updates is removed like
 any other.
 
-**Joining until step 2 is built.** A copy with "Add this TV to my household" ticked hands the new TV an invitation
-instead of the household key: the household's id and person salt, the sending TV's id and public key, and a random
-secret that admits one TV, once, within an hour. The new TV lists the sending TV and proves the secret at their first
-exchange; the sending TV then lists it. A copy from a TV still on version 1 still hands over the version 1 key, and the
-receiving TV converts at once.
+**The invitation.** An allowed join hands the new TV an invitation instead of a household key: the household's id
+and person salt, the inviting TV's id and public key, and a random secret that admits one TV, once, within an hour.
+The new TV lists the inviting TV and proves the secret at their first exchange; the inviting TV then lists it. (Until
+joining from the new TV was built, a copy of profiles with "Add this TV to my household" ticked handed it over, and a
+copy from a TV still on version 1 handed over the version 1 key. Copy profiles and its code are gone; a TV still on
+version 1 converts as above when it updates.)
 
 ## Build order
 
@@ -425,7 +426,8 @@ receiving TV converts at once.
    on-screen fallback on its Household page, the first sync, and the preview and copy before the household's settings
    replace this TV's.
 3. **Look and layout, then wallpaper pictures** (built, every profile, kids' included).
-4. **Your TVs page and the setup step**; Copy profiles leaves Settings.
+4. **Your TVs page and the setup step**; Copy profiles leaves Settings (done, and its code is removed: the join keeps
+   only ShareSession's key exchange and ShareCrypto).
 5. **Home Assistant mailbox**, sealed per member.
 6. **Continue Watching** (built), and the **Parent PIN** (built).
 7. **Hardening**: a security review of the channel, the join and conversion before release; long-offline TV tests; a

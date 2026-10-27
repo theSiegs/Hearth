@@ -263,7 +263,7 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
     await _updateWallpaper(force: true);
   }
 
-  /// Pictures were put in a profile's folder from outside (a copy from another TV): they show now if that profile's
+  /// Pictures were put in a profile's folder from outside (the household's, or put back): they show now if that profile's
   /// pictures are the ones in place.
   Future<void> picturesCopied(String profileKey) async {
     await _ready.future;

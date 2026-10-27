@@ -274,15 +274,4 @@ public class HouseholdStoreTest {
         assertFalse(store.joined());
         assertTrue(elsewhere.reopen().lost());
     }
-
-    @Test
-    public void joiningFromAVersion1KeyConvertsAtOnce() throws Exception {
-        byte[] key = new byte[32];
-        new java.security.SecureRandom().nextBytes(key);
-        HouseholdTvs.Tv tv = new HouseholdTvs.Tv();
-        assertTrue(tv.store.joinV1(key));
-        assertTrue(tv.store.joined());
-        assertEquals(HouseholdSeal.v1Id(key), tv.store.householdId());
-        assertFalse(tv.store.joinV1(new byte[5]));
-    }
 }

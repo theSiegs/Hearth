@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/share/share_bundle.dart';
@@ -42,29 +41,11 @@ void main() {
         ],
       };
 
-  ShareBundle bundle({Map<String, dynamic>? layout}) => ShareBundle.build(
-        hearth: "2026.10.62",
-        tv: "Den",
-        profiles: const [ShareProfile(id: "p1", name: "Alex", kids: false), ShareProfile(id: "p2", name: "Sam", kids: true)],
-        layouts: {"p1": layout ?? backup()},
-        pairings: {
-          "p1": const [
-            SharedPairing(packageName: "com.example.video", picker: false, appProfile: "Alex"),
-            SharedPairing(packageName: "com.example.music", picker: true),
-          ],
-        },
-        settingKeys: keys,
-      );
+  SharedLayout layoutOf(Map<String, dynamic> backup) => SharedLayout.fromBackup(backup, settingKeys: keys);
 
-  group("a bundle", () {
-    test("goes out and comes back the same", () {
-      final sent = bundle();
-      final got = ShareBundle.parse(sent.encode(), settingKeys: keys);
-      expect(got.hearth, "2026.10.62");
-      expect(got.tv, "Den");
-      expect(got.profiles.map((p) => p.name), ["Alex", "Sam"]);
-      expect(got.profiles.map((p) => p.kids), [false, true]);
-      final layout = got.layouts["p1"]!;
+  group("a layout from another TV", () {
+    test("keeps the look's settings, the apps, rows, places and spacers", () {
+      final layout = layoutOf(backup());
       expect(layout.settings["accent_color"], "#ff7a1a");
       expect(layout.settings["show_continue_watching"], false);
       expect(layout.settings["continue_watching_max_items"], 8);
@@ -74,13 +55,10 @@ void main() {
       expect(layout.categories.map((c) => c["name"]), ["Favorites", "Kids"]);
       expect(layout.appsCategories, hasLength(3));
       expect(layout.spacers, hasLength(1));
-      expect(got.layouts.containsKey("p2"), isFalse);
-      expect(got.pairings["p1"]!.map((p) => p.picker), [false, true]);
-      expect(got.pairings["p1"]![0].appProfile, "Alex");
     });
 
-    test("never carries what belongs to a TV or is a secret, however the settings are named", () {
-      final sent = bundle(layout: backup(settings: {
+    test("never takes what belongs to a TV or is a secret, however the settings are named", () {
+      final layout = layoutOf(backup(settings: {
         "accent_color": "#00ff00",
         "device_parent_pin_hash": "c0ffee",
         "device_weather_location": "Somewhere",
@@ -93,61 +71,60 @@ void main() {
         "ha_panel_token": "secret",
         "something_new_and_unknown": "x",
       }));
-      for (final text in [sent.encode(), jsonEncode(ShareBundle.parse(sent.encode(), settingKeys: keys).layouts["p1"]!.toJson())]) {
-        final settings = (jsonDecode(text) is Map && (jsonDecode(text) as Map).containsKey("sections"))
-            ? (((jsonDecode(text) as Map)["sections"] as List).first as Map)["data"]["settings"] as Map
-            : (jsonDecode(text) as Map)["settings"] as Map;
-        expect(settings.keys.toSet(), {"accent_color"});
-      }
-      expect(sent.encode(), isNot(contains("c0ffee")));
-      expect(sent.encode(), isNot(contains("secret")));
+      expect(layout.settings.keys.toSet(), {"accent_color"});
     });
 
-    test("is checked again on the receiving end, whatever the sender did", () {
-      final hand = jsonDecode(bundle().encode()) as Map<String, dynamic>;
-      final data = ((hand["sections"] as List).first as Map)["data"] as Map;
-      (data["settings"] as Map<String, dynamic>).addAll({
-        "device_parent_pin_hash": "c0ffee",
-        "start_on_boot": true,
-        "custom_banner_x": "/etc/passwd",
+    test("takes only settings of a kind the settings use", () {
+      final layout = layoutOf(backup(settings: {
         "accent_color": "#abcdef",
         "continue_watching_max_items": {"nested": 1},
-        "app_language": "x" * 5000,
-      });
-      final got = ShareBundle.parse(jsonEncode(hand), settingKeys: keys).layouts["p1"]!;
-      expect(got.settings["accent_color"], "#abcdef");
-      expect(got.settings.keys, isNot(contains("device_parent_pin_hash")));
-      expect(got.settings.keys, isNot(contains("start_on_boot")));
-      expect(got.settings.keys, isNot(contains("custom_banner_x")));
-      expect(got.settings.keys, isNot(contains("continue_watching_max_items")));
-      expect(got.settings.keys, isNot(contains("app_language")));
+        "date_format": "x" * 5000,
+      }));
+      expect(layout.settings, {"accent_color": "#abcdef"});
     });
 
     test("drops what doesn't fit a layout instead of trusting it", () {
-      final hand = jsonDecode(bundle().encode()) as Map<String, dynamic>;
-      final data = ((hand["sections"] as List).first as Map)["data"] as Map;
-      (data["apps"] as List).addAll([
+      // As it comes from another TV: JSON, so anything can be in its lists
+      final hand = jsonDecode(jsonEncode(backup())) as Map<String, dynamic>;
+      (hand["apps"] as List).addAll([
         {"packageName": "../../etc/passwd", "name": "x"},
         {"packageName": "com.example.video", "name": "again"},
         {"packageName": "nodots", "name": "y"},
         "not a map",
       ]);
-      (data["categories"] as List).addAll([
+      (hand["categories"] as List).addAll([
         {"id": 4, "name": "Duplicate id"},
         {"id": -1, "name": "Negative"},
         {"id": 12, "name": "Wild", "sort": 99, "type": -3, "rowHeight": 99999, "columnsCount": 0, "order": "x"},
       ]);
-      (data["appsCategories"] as List).addAll([
+      (hand["appsCategories"] as List).addAll([
         {"categoryId": 77, "appPackageName": "com.example.video", "order": 0},
         {"categoryId": 4, "appPackageName": "com.example.unknown", "order": 0},
         {"categoryId": 4, "appPackageName": "com.example.video", "order": 3},
       ]);
-      final got = ShareBundle.parse(jsonEncode(hand), settingKeys: keys).layouts["p1"]!;
+      final got = layoutOf(hand);
       expect(got.apps.map((a) => a.packageName), ["com.example.video", "com.example.music", "com.example.game"]);
       expect(got.categories.map((c) => c["id"]), [4, 9, 12]);
       final wild = got.categories.last;
       expect([wild["sort"], wild["type"], wild["rowHeight"], wild["columnsCount"], wild["order"]], [0, 0, 110, 6, 0]);
       expect(got.appsCategories, hasLength(3));
+    });
+
+    test("tidies a row's name, which will be shown", () {
+      final hand = backup();
+      (hand["categories"] as List).add({"id": 20, "name": "Alex\n\u0000\u001b[31mRed${"x" * 500}"});
+      final row = layoutOf(hand).categories.last;
+      expect(row["name"], isNot(contains("\n")));
+      expect(row["name"], isNot(contains("\u0000")));
+      expect((row["name"] as String).length, ShareBundle.maxText);
+    });
+
+    test("with too many apps, or a list that isn't one, is refused; this TV's own is cut to fit instead", () {
+      final big = backup();
+      big["apps"] = List.generate(ShareBundle.maxApps + 1, (i) => {"packageName": "com.example.a$i", "name": "A"});
+      expect(() => layoutOf(big), throwsA(isA<ShareFormatException>()));
+      expect(SharedLayout.fromBackup(big, settingKeys: keys, lenient: true).apps, hasLength(ShareBundle.maxApps));
+      expect(() => layoutOf({...backup(), "spacers": "none"}), throwsA(isA<ShareFormatException>()));
     });
   });
 
@@ -158,8 +135,7 @@ void main() {
     ];
 
     test("keeps this TV's own name and version, leaves out the apps it doesn't have, and says which", () {
-      final layout = ShareBundle.parse(bundle().encode(), settingKeys: keys).layouts["p1"]!;
-      final result = layout.forInstalled(here);
+      final result = layoutOf(backup()).forInstalled(here);
       expect(result.missing, ["Music", "Game"]);
       final apps = result.backup["apps"] as List;
       expect(apps.map((a) => (a as Map)["packageName"]), ["com.example.video", "com.example.news"]);
@@ -180,199 +156,11 @@ void main() {
     });
 
     test("keeps a hidden app hidden", () {
-      final layout = ShareBundle.parse(bundle().encode(), settingKeys: keys).layouts["p1"]!;
-      final result = layout.forInstalled([
+      final result = layoutOf(backup()).forInstalled([
         const InstalledApp(packageName: "com.example.music", name: "Music", version: "2"),
       ]);
       expect(((result.backup["apps"] as List).single as Map)["hidden"], true);
       expect(result.missing, ["Video", "Game"]);
-    });
-  });
-
-  group("a bundle that isn't ours to take", () {
-    String of(Map<String, dynamic> change) {
-      final hand = jsonDecode(bundle().encode()) as Map<String, dynamic>;
-      hand.addAll(change);
-      return jsonEncode(hand);
-    }
-
-    void refused(String text, [String? part]) {
-      expect(
-        () => ShareBundle.parse(text, settingKeys: keys),
-        throwsA(isA<ShareFormatException>().having((e) => e.message, "message", part == null ? anything : contains(part))),
-      );
-    }
-
-    test("refuses what isn't one", () {
-      refused("not json at all");
-      refused("[]", "bundle");
-      refused(jsonEncode({"format": "something-else", "v": 1}), "not a Hearth");
-      refused(of({"v": "1"}), "version");
-      refused(of({"profiles": "none"}), "profiles");
-      refused("x" * (ShareBundle.maxJsonBytes + 1), "too big");
-    });
-
-    test("says when it is from a newer Hearth", () {
-      expect(
-        () => ShareBundle.parse(of({"v": 2}), settingKeys: keys),
-        throwsA(isA<ShareFormatException>().having((e) => e.newer, "newer", isTrue)),
-      );
-    });
-
-    test("refuses profiles it can't tell apart or name", () {
-      final profile = {"id": "p1", "name": "Alex", "kind": "adult"};
-      refused(of({"profiles": [profile, profile]}), "duplicate");
-      refused(of({"profiles": [{"id": "../x", "name": "Alex"}]}), "id");
-      refused(of({"profiles": [{"id": "p1", "name": "  "}]}), "name");
-      refused(of({"profiles": List.generate(ShareBundle.maxProfiles + 1, (i) => {"id": "p$i", "name": "N$i"})}), "too many");
-    });
-
-    test("refuses two layouts for one profile and layouts with too many apps", () {
-      final hand = jsonDecode(bundle().encode()) as Map<String, dynamic>;
-      final sections = hand["sections"] as List;
-      sections.add(sections.first);
-      refused(jsonEncode(hand), "duplicate");
-
-      final big = jsonDecode(bundle().encode()) as Map<String, dynamic>;
-      final data = ((big["sections"] as List).first as Map)["data"] as Map;
-      data["apps"] = List.generate(ShareBundle.maxApps + 1, (i) => {"packageName": "com.example.a$i", "name": "A"});
-      refused(jsonEncode(big), "too many");
-    });
-
-    test("ignores sections it doesn't know and sections for profiles that aren't in it", () {
-      final hand = jsonDecode(bundle().encode()) as Map<String, dynamic>;
-      (hand["sections"] as List).addAll([
-        {"type": "wallpaper-from-the-future", "profile": "p1", "data": {}},
-        {"type": "layout", "profile": "nobody", "data": backup()},
-        {"type": "secrets", "profile": "p1", "data": [{"pin": "1234"}]},
-      ]);
-      final got = ShareBundle.parse(jsonEncode(hand), settingKeys: keys);
-      expect(got.layouts.keys, ["p1"]);
-      expect(got.pairings.keys, ["p1"]);
-    });
-
-    test("tidies text that will be shown or logged", () {
-      final text = of({
-        "profiles": [
-          {"id": "p1", "name": "Alex\n\u0000\u001b[31mRed", "kind": "adult"},
-        ],
-        "from": {"hearth": "2026.10.62\r\n", "tv": "T" * 500},
-      });
-      final got = ShareBundle.parse(text, settingKeys: keys);
-      expect(got.profiles.single.name, isNot(contains("\n")));
-      expect(got.profiles.single.name, isNot(contains("\u0000")));
-      expect(got.hearth, "2026.10.62");
-      expect(got.tv.length, ShareBundle.maxText);
-    });
-  });
-
-  group("pictures and the parent PIN", () {
-    final jpeg = Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3, 4]);
-
-    ShareBundle withExtras({Map<String, Map<String, Uint8List>>? pictures, String? hash}) => ShareBundle.build(
-          hearth: "x",
-          tv: "Den",
-          profiles: const [ShareProfile(id: "p1", name: "Alex", kids: false)],
-          layouts: const {},
-          pairings: const {},
-          settingKeys: keys,
-          wallpapers: pictures ?? const {},
-          parentPinHash: hash,
-        );
-
-    String altered(ShareBundle b, void Function(Map<String, dynamic>) change) {
-      final hand = jsonDecode(b.encode()) as Map<String, dynamic>;
-      change(hand);
-      return jsonEncode(hand);
-    }
-
-    test("go out and come back the same, by slot", () {
-      final got = ShareBundle.parse(
-          withExtras(pictures: {"p1": {"any": jpeg, "night": jpeg}}, hash: "c" * 64).encode(), settingKeys: keys);
-      expect(got.wallpapers["p1"]!.keys, unorderedEquals(["any", "night"]));
-      expect(got.wallpapers["p1"]!["night"], jpeg);
-      expect(got.pictureCount, 2);
-      expect(got.parentPinHash, "c" * 64);
-    });
-
-    test("are absent unless sent", () {
-      final got = ShareBundle.parse(withExtras().encode(), settingKeys: keys);
-      expect(got.wallpapers, isEmpty);
-      expect(got.parentPinHash, isNull);
-      expect(withExtras().encode(), isNot(contains("parentPin")));
-    });
-
-    test("a picture that isn't a JPEG, is too big, or has a slot of its own making is refused", () {
-      final good = withExtras(pictures: {"p1": {"any": jpeg}});
-      void refused(void Function(Map<String, dynamic>) change) {
-        expect(() => ShareBundle.parse(altered(good, change), settingKeys: keys), throwsA(isA<ShareFormatException>()));
-      }
-
-      Map<String, dynamic> picture(Map<String, dynamic> hand) =>
-          (hand["sections"] as List).firstWhere((s) => s["type"] == "wallpaper") as Map<String, dynamic>;
-      refused((hand) => picture(hand)["data"] = base64Encode([0x89, 0x50, 0x4E, 0x47, 1, 2]));
-      refused((hand) => picture(hand)["data"] = "not base64 !!");
-      final big = Uint8List(ShareBundle.maxPictureBytes + 1);
-      big.setRange(0, 3, [0xFF, 0xD8, 0xFF]);
-      refused((hand) => picture(hand)["data"] = base64Encode(big));
-      refused((hand) => picture(hand)["slot"] = "../../x");
-      refused((hand) => picture(hand)["slot"] = "wallpaper");
-    });
-
-    test("two pictures for one slot, or more than a copy may carry, are refused", () {
-      final good = withExtras(pictures: {"p1": {"any": jpeg}});
-      expect(
-          () => ShareBundle.parse(
-              altered(good, (hand) => (hand["sections"] as List).add((hand["sections"] as List).last)),
-              settingKeys: keys),
-          throwsA(isA<ShareFormatException>()));
-      expect(
-          () => ShareBundle.parse(
-              altered(good, (hand) {
-                final sections = hand["sections"] as List;
-                final one = sections.last as Map<String, dynamic>;
-                for (var i = 0; i < ShareBundle.maxPictures; i++) {
-                  sections.add({...one, "slot": ["any", "day", "night"][i % 3], "profile": "p1"});
-                }
-              }),
-              settingKeys: keys),
-          throwsA(isA<ShareFormatException>()));
-    });
-
-    test("a parent PIN has to be a SHA-256 in hex", () {
-      for (final bad in ["1234", "g" * 64, "A" * 64, "a" * 63, 7]) {
-        expect(() => ShareBundle.parse(altered(withExtras(), (hand) => hand["parentPin"] = bad), settingKeys: keys),
-            throwsA(isA<ShareFormatException>()),
-            reason: "$bad");
-      }
-    });
-  });
-
-  group("pairings", () {
-    Map<String, dynamic> pairing(Map<String, dynamic> change) {
-      return {"pkg": "com.example.video", "mode": "profile", "appProfile": "Alex", ...change};
-    }
-
-    test("are an app profile's name or always ask, for a streaming app", () {
-      expect(SharedPairing.parse(pairing({})).appProfile, "Alex");
-      expect(SharedPairing.parse(pairing({"mode": "picker"})).picker, isTrue);
-    });
-
-    test("refuse what isn't one", () {
-      for (final bad in [
-        pairing({"pkg": "../x"}),
-        pairing({"pkg": 5}),
-        pairing({"mode": "auto"}),
-        pairing({"appProfile": ""}),
-        pairing({"appProfile": 7}),
-      ]) {
-        expect(() => SharedPairing.parse(bad), throwsA(isA<ShareFormatException>()), reason: "$bad");
-      }
-    });
-
-    test("with a name sent for a picker aren't carried", () {
-      final got = SharedPairing.parse(pairing({"mode": "picker", "appProfile": "Alex"}));
-      expect(got.appProfile, "");
     });
   });
 }

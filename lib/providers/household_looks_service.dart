@@ -208,8 +208,8 @@ class HouseholdLooksService implements HouseholdJoinReviewer {
       }
       final composed = HouseholdLooks.compose(settings, parts, local?.layout);
       if (composed != null) {
-        // The first time a profile takes the household's look here, everything is kept first, as a copy does, so it
-        // can be undone in Backup & Restore
+        // The first time a profile takes the household's look here, everything is kept first, so it can be undone in
+        // Backup & Restore
         if (mine["look"] == null && mine["layout"] == null && !_backedUp) {
           await _backup.backupBeforeCopy(_settings);
           _backedUp = true;
@@ -327,7 +327,7 @@ class HouseholdLooksService implements HouseholdJoinReviewer {
       }
       final fileHash = sha256.convert(await file.readAsBytes()).toString();
       if (had?["file"] == fileHash) continue;
-      // What goes out is the picture as the screen shows it, as a copy sends it
+      // What goes out is the picture as the screen shows it
       final jpeg = await _channel.getShareWallpaper(file.path);
       if (jpeg == null || jpeg.isEmpty || jpeg.length > ShareBundle.maxPictureBytes) continue;
       final hash = await _channel.publishHouseholdPicture(profileKey, slot, jpeg);

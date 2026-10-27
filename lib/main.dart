@@ -195,7 +195,7 @@ Future<void> main() async {
               final profiles = context.read<ProfileService>();
               final settings = context.read<SettingsService>();
               return HouseholdLooksService(fLauncherChannel, sharedPreferences, context.read<BackupService>(),
-                  settings, ShareWallpapers(fLauncherChannel),
+                  settings, const ShareWallpapers(),
                   onLiveChanged: () async {
                     // What a profile hides by default stays hidden (a kid's YouTube, where HearthTube is), as on a switch
                     final key = settings.layoutOwner;

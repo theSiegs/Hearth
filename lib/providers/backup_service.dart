@@ -419,7 +419,7 @@ class BackupService {
     return json.decode(await file.readAsString()) as Map<String, dynamic>;
   }
 
-  /// The apps installed on this TV, as Hearth lists them: what another TV's layout is fitted to (ShareBundle).
+  /// The apps installed on this TV, as Hearth lists them: what another TV's layout is fitted to (SharedLayout).
   Future<List<InstalledApp>> installedApps() async {
     return [
       for (final app in await _database.getApplications())
@@ -434,8 +434,8 @@ class BackupService {
 
   static const String _beforeCopyPrefix = "ltv_backup_before_copy_";
 
-  /// Everything as it is now, kept before a copy from another TV changes it. It shows in Backup & Restore, so a copy
-  /// can be undone there.
+  /// Everything as it is now, kept before the household's look first changes this TV's. It shows in Backup & Restore,
+  /// so that can be undone there.
   Future<File> backupBeforeCopy(SettingsService settingsService, {DateTime? now}) async {
     final Directory dir = await getApplicationDocumentsDirectory();
     final File file = File(path.join(dir.path, '$_beforeCopyPrefix${_timestamp(now ?? DateTime.now())}.json'));

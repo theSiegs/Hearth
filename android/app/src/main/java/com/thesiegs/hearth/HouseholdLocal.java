@@ -91,8 +91,8 @@ final class HouseholdLocal implements HouseholdBridge.Local {
         Map<String, String> out = new HashMap<>();
         boolean kids = key != null && ProfilePairing.isKids(context, key);
         for (PinVault.Slot slot : PinVault.slots(context, key)) {
-            // A kids profile's way into Google TV isn't shared (as in a copy)
-            if (kids && ShareSecrets.isGoogleTvPin(slot.pkg)) continue;
+            // A kids profile's way into Google TV isn't shared
+            if (kids && isGoogleTvPin(slot.pkg)) continue;
             char[] pin = PinVault.open(context, slot.owner, slot.pkg, slot.appProfile);
             if (pin == null) continue;
             try {
@@ -110,12 +110,17 @@ final class HouseholdLocal implements HouseholdBridge.Local {
         if (bar <= 0) return;
         String pkg = item.substring(0, bar);
         String appProfile = item.substring(bar + 1);
-        if (key != null && ShareSecrets.isGoogleTvPin(pkg) && ProfilePairing.isKids(context, key)) return;
+        if (key != null && isGoogleTvPin(pkg) && ProfilePairing.isKids(context, key)) return;
         if (digits == null) {
             PinVault.remove(context, key, pkg, appProfile);
             return;
         }
         char[] pin = digits.toCharArray();
         PinVault.save(context, key, pkg, appProfile, pin);
+    }
+
+    /** A kids profile's way into Google TV: never shared, nor taken. */
+    static boolean isGoogleTvPin(String pkg) {
+        return LauncherAccessibilityService.GOOGLE_TV_PACKAGE.equals(pkg);
     }
 }

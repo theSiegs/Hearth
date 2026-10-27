@@ -98,7 +98,7 @@ class _FakeBackup extends BackupService {
 }
 
 class _NoPictures extends ShareWallpapers {
-  _NoPictures(super.channel);
+  _NoPictures();
 
   @override
   Future<File> file(String profileKey, String slot) async => File("${Directory.systemTemp.path}/none-$slot-$profileKey");
@@ -137,7 +137,7 @@ void main() {
     backup = _FakeBackup(database, prefs, settings, ["com.a.app"]);
     now = 1000;
     copies = await Directory.systemTemp.createTemp("join_backup");
-    service = HouseholdLooksService(channel, prefs, backup, settings, _NoPictures(channel),
+    service = HouseholdLooksService(channel, prefs, backup, settings, _NoPictures(),
         onLiveChanged: () async {},
         onPicturesCopied: (_) async {},
         now: () => now,

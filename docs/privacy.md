@@ -39,11 +39,11 @@ as Wikidata asks.
 - **The phone setup pages** (Home Assistant, streaming app PINs), only while their QR code is on screen, at a
   one-time secret link. The PIN page's QR code also carries a one-time key, after a `#` that browsers never send;
   the phone encrypts the PINs with it, so nothing else on the network can read them.
-- **Copy profiles between TVs** (ports 8770 to 8774 and a `_hearth-share._tcp` announcement on the home network), only
-  while the Copy profiles page is open on the sending TV. Both TVs must show the same six digits and a parent must say
-  they match on both before anything is sent; the transfer is encrypted with a key made for that one copy and nothing
-  is kept afterwards. Streaming PINs and the Home Assistant settings are sent only if the sending parent chooses them
-  (Home Assistant gets a new token made for the other TV, never a copy of the sender's).
+- **Household sync** (one port Android picks, and a `_hearth-sync._tcp` announcement on the home network), while the
+  TV is in a household with sync on, answering only home-network addresses. Only TVs on the household's list of TVs
+  can exchange anything: each exchange is signed with both TVs' own keys and encrypted. A TV asking to join gets
+  nothing until someone allows it on the TV it asked (Home Assistant then gets a new token made for the new TV, never a
+  copy of the other's).
 - **Port 47474 on the TV's own loopback address** (not the network), for Hearth's helpers in your kids profiles.
   Each helper and Hearth prove to each other that they share that helper's key without sending it, so no other app
   can pose as either.

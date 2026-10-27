@@ -35,7 +35,7 @@ final class HouseholdStore {
         void remove(String key);
     }
 
-    /** What a TV that joins is handed (by a copy now, by a join request later): enough to find and prove itself. */
+    /** What a TV that joins is handed once its join request is allowed: enough to find and prove itself. */
     static final class Invitation {
         final String householdId;
         final byte[] personSalt;
@@ -288,19 +288,6 @@ final class HouseholdStore {
         backing.put(JOIN_PROOF_FOR, inv.byTv);
         save();
         return true;
-    }
-
-    /** Joins a version 1 household from its key (a copy from a TV not yet converted): this TV converts at once. */
-    boolean joinV1(byte[] key) {
-        if (key == null || key.length != HouseholdSeal.V1_KEY_BYTES) return false;
-        String sealed = SecretBox.seal(keys, KEY_ALIAS, key);
-        if (sealed == null) return false;
-        forgetState();
-        backing.remove(REMOVED);
-        backing.put(V1_KEY_SEALED, sealed);
-        lost = false;
-        load();
-        return syncs();
     }
 
     /** Starts this TV in a household: a new TV key, and the household {@code id} (null: a new one, named after it). */

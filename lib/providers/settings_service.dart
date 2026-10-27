@@ -363,7 +363,7 @@ class SettingsService extends ChangeNotifier {
 
   bool get hasParentPin => _sharedPreferences.getString(_parentPinHashKey) != null;
 
-  /// The parent PIN as the TV keeps it (a hash), for a copy to another TV; null when none is set.
+  /// The parent PIN as the TV keeps it (a hash), for the household; null when none is set.
   String? get parentPinHash => _sharedPreferences.getString(_parentPinHashKey);
 
   /// Takes another TV's parent PIN as this TV's, as that TV kept it.
