@@ -1594,8 +1594,27 @@ public class MainActivity extends FlutterActivity {
         }
         try {
             Intent intent = Intent.parseUri(intentUri, Intent.URI_INTENT_SCHEME);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             intent.setSelector(null);
+            // As AgentActivity.checked: no flags that would hand out Hearth's files, and never one of Hearth's screens
+            intent.setFlags(AgentActivity.withoutGrants(intent.getFlags()) | Intent.FLAG_ACTIVITY_NEW_TASK);
+            Set<String> household = WatchHistory.get(this).householdPackagesOf(intentUri);
+            String explicit = intent.getComponent() != null ? intent.getComponent().getPackageName()
+                    : intent.getPackage();
+            if (!household.isEmpty()) {
+                // A card from another TV opens in its own app: the link may only resolve there
+                if (explicit != null && !household.contains(explicit)) return refuseProgram(intentUri);
+                if (explicit == null && household.size() == 1) intent.setPackage(household.iterator().next());
+            }
+            if (explicit != null && !AgentActivity.isOtherApp(getPackageName(), explicit)) {
+                return refuseProgram(intentUri);
+            }
+            ResolveInfo resolved = getPackageManager().resolveActivity(intent, 0);
+            ActivityInfo activity = resolved != null ? resolved.activityInfo : null;
+            // Not here (only in another profile's user): that profile's agent checks it the same way
+            if (activity != null && !AgentActivity.mayOpenProgram(getPackageName(), activity.packageName,
+                    activity.exported, household)) {
+                return refuseProgram(intentUri);
+            }
             boolean opened = openInApp(new Intent(intent), packageOf(intent));
             if (opened) {
                 mProgramRetry = intent;
@@ -1605,6 +1624,11 @@ public class MainActivity extends FlutterActivity {
         } catch (Exception e) {
             Log.w(TAG, "Couldn't open Watch Next program " + intentUri, e);
         }
+        return false;
+    }
+
+    private boolean refuseProgram(String intentUri) {
+        Log.w(TAG, "Won't open Watch Next program " + intentUri + ": not another app's screen, or not its card's app");
         return false;
     }
 

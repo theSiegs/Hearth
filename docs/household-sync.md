@@ -463,6 +463,10 @@ What a TV checks before it takes part or takes something, and what that guards a
   any other; removing the member that added it doesn't remove it by itself, since that would also remove the TVs it
   rightly let in.
 - **An entry refused** is still counted as seen, so it isn't sent again and again; it never changes anything.
+- **Continue Watching cards from another TV** carry a deep link that TV wrote. Opening any card, the link is held as
+  the kids profiles' agent holds what it opens: no flags that would hand out access to Hearth's files, never one of
+  Hearth's own screens, and only another app's exported screen. A card from the household must also open in its own
+  app (the one it is filed under): its link is resolved only in that app, and refused when it names another.
 - **Older builds.** A TV on a build from before signing doesn't sign. Each TV says in its own member entry, and in
   its exchanges and invitations, that it signs; a TV listed as signing has unsigned entries in its name refused, and no
   entry can take back that a TV signs. A TV not listed as signing (an older build) is taken as before, unsigned, and
