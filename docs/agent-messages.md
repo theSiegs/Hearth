@@ -33,7 +33,7 @@ sequenceDiagram
     H->>Sam: the message retold in the house's voice, one note, one offer
     Sam->>H: "hold it"
     Note over H: laundry reminder waits for Alex's arrival
-    H->>P: receipt: heard in the kitchen, reminder held
+    H->>P: receipt: Sam heard it, reminder held
     P->>Alex: "Sam got it."
 ```
 
@@ -147,18 +147,58 @@ faithful:
 
 "What did Alex say, exactly?" gets the words as they were sent, read out as a quote.
 
+## Where people are
+
+Pigeon doesn't need to know which room someone is in. It needs to know **which speaker they'll hear**, so it only has
+to be as precise as the speakers are spread out, and **how sure it is**, because that decides how it delivers.
+
+No one signal says both who and where. Some say who (a phone, a watch, a voice, a TV profile), some say where (a radar,
+a motion sensor), and a few say both for a short while. The house combines one of each.
+
+| Signal | Who | Where | Notes |
+|---|---|---|---|
+| A voice a speaker just heard | with voice recognition | yes, for a few minutes | the strongest signal while it's fresh |
+| A profile on a TV that's on | yes | yes, while it plays | covers the person sitting still on the couch, whom radar misses |
+| The mesh Wi-Fi node a phone or watch is on | the device's owner | a floor at best | devices stay on whichever node they joined: in one house the kitchen fridge was on the upstairs node. And it's the phone, not the person: a phone charging on the counter "is" its owner |
+| Bluetooth from a watch or phone, heard by a small receiver in each room | the device's owner | room by room | a watch beats a phone, since it's worn. Needs a receiver per room |
+| Millimeter-wave radar, as in some voice satellites | no | yes, with how many people and how far | the kind that tracks people (up to three, with positions) sees people moving and loses people sitting still: in one house a satellite's radar was on for 7% of the time the TV in its room was playing. A static-presence kind sees still people better. Fans and curtains fool both |
+| Wi-Fi sensing (disturbances in the signals between nodes) | no | an area | in a few router products; it says "something's moving", and a cat counts |
+| Motion sensors | no | yes | enough on their own only when one person is home |
+
+**Combining them.** For each person, the house keeps where it last placed them and how sure it is (Home Assistant's
+Bayesian sensor does this kind of combining). Simple rules carry most of it:
+
+- With one person home, any occupied room with a speaker is theirs.
+- A radar counts its room as occupied if it saw someone in the last 10 to 15 minutes, so a person sitting still
+  between movements isn't lost.
+- The radar never says who. It says which rooms are occupied, which narrows what the who signals have to decide.
+- A TV profile on screen settles its room for as long as something plays.
+
+**How sure decides how it's delivered.**
+
+| The house is | It |
+|---|---|
+| Sure: a fresh voice, a TV profile, or the only one home | says it in that room |
+| Fairly sure | knocks first (below) |
+| Not sure | sends it to their phone and says nothing aloud |
+
+It never says a message in every room to find someone.
+
+**The knock.** When the house thinks Sam is in the kitchen but isn't sure, the kitchen speaker says only "Sam, there's a
+message from Alex" and listens. "Go ahead" (or "yes", "what is it") confirms Sam is there, and the message follows.
+Silence, or someone else answering, sends it to Sam's phone. Nothing private is said to the wrong person, and the
+answer is a fresh who-and-where signal for the next message.
+
+**Distance sets the volume.** A radar that knows how far away the person is lets the speaker talk softly to someone
+right next to it and louder to someone across the room.
+
+**Where someone is is used to deliver, never reported.** The sender hears "Sam got it", not where Sam was, and the house
+keeps no record of where people have been beyond what the next delivery needs.
+
 ## Delivering: finding the person, and the moment
 
-**Where.** The best signal wins, newest first:
-
-1. Where their voice was last heard by a speaker (a few minutes is enough to trust it)
-2. Their profile on a TV that's on
-3. Their phone or watch, if it's on the home network and the house has nothing better
-4. Motion in a room, when only they are home
-5. Their phone, as the fallback for everything
-
-Room presence is the weakest part of the whole idea. When the house isn't sure, it sends the phone card and says
-the message only in the one room it believes, never in every room.
+**Where.** The speaker the person will hear, chosen as in [Where people are](#where-people-are). How sure the house is
+decides whether it says the message, knocks first, or sends it to the phone.
 
 **When.** By urgency and what the person is doing:
 
@@ -334,6 +374,7 @@ No new apps, just a script, an automation and an allowlist.
 - **Land the plane** from the TV's status (what's playing, and where it is in it, where the app reports that; HearthTube
   always knows).
 - Parental weight: a parent's message may pause; nobody else's does.
+- Whose profile is on screen, as a who-and-where signal for delivery (see [Where people are](#where-people-are)).
 - A kids profile can send word from the remote's microphone to the people in its people book.
 
 ### Step 2: phones as personal assistants
@@ -351,7 +392,8 @@ No new apps, just a script, an automation and an allowlist.
 
 ## Open questions
 
-- Room presence: which signals are good enough, and how wrong can the house be before it should just use the phone?
+- How often does the knock get annoying, and when is it worth adding a Bluetooth receiver or a static-presence radar
+  to a room instead?
 - When a message is long, should the house retell only the point ("Alex said more about the car; want all of it?")?
 - How does a sender check a retelling? A "read back" setting, where the sender's assistant says how the house will put
   it before it goes, for messages that matter?
