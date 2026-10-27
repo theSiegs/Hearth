@@ -44,6 +44,36 @@ Never synced: the Home Assistant token, the webhook ID, the TV's name (each TV a
 anything about a TV's hardware. The Home Assistant address is handed over once when a TV joins (see Joining); the TV
 then makes its own webhook and asks for its own token.
 
+**Per person, and per TV.** Everything a person picks for how their home looks follows them; what belongs to the TV
+stays on it. Checked setting by setting (SettingsService's keys, the layout's tables, the pictures):
+
+| Follows the person (per profile) | Stays on each TV |
+|---|---|
+| Wallpaper: gradient, Bing's photo of the day, day/night switching, the picked pictures (any, day, night) | The TV's name, its Home Assistant address, webhook and token, Home Button Fix, the ad sandbox |
+| Theme: card shape, accent colour, highlight and click choices, app names under icons | Start on boot, the temperature unit, updates (pre-releases), the setup flow's progress |
+| The dock (the Favorites row) and its apps and order, its blur, shadow and background | Which TV calendars a profile hides (they're Android's ids for this TV's accounts) |
+| Rows: which rows, their order, sort, size and columns; spacers | Watch Next programs a profile hid (Android's ids on this TV; a removed card syncs through Continue Watching) |
+| Which apps are hidden | Apps not installed here (kept in the person's entry, see below) |
+| Top bar pills: date, time and their formats, Wi-Fi data, inputs, notifications, weather and its warnings | The once-per-TV notice before the first streaming PIN is typed |
+| Continue Watching's look (card size, how many, order, progress, description), the apps it leaves out | |
+| The Home Assistant panel: on or off, the dashboard, full or not | |
+| What Back does on the home screen | |
+
+**The newest change of each item wins.** A look entry and a layout entry each hold a whole profile's, but a
+conflict is decided item by item, each with the time it last changed (the entry's `~at` for the look, `at` for the
+layout; a TV that doesn't know them ignores them). The items are each setting, the list of rows and spacers ("rows"),
+each row's apps and their order ("row:<id>"; the dock is a row) and each app's hidden or not ("app:<package>"). A TV
+notes what changed in a profile since it last looked, with when; when the household's entry arrives, an item changed
+here later than the household's last change of it keeps this TV's, the rest take the household's, and the result goes
+out. So Alex changing the accent on one TV and the dock on another while they can't see each other keeps both, and a
+TV that joins (nothing on it has changed since it started counting) takes the household's, as Joining says. Only a
+difference in the look or layout itself goes out, never one in stamps alone, so a TV from before stamps and a newer
+one don't trade the same entry back and forth.
+
+**An app missing on one TV.** A TV without an app leaves it out of the home but keeps the household's place for it
+(its row and order, hidden or not, and when that changed) in what it gives, and can't change it: only a TV that has the
+app decides about it. Installing the app later brings it back where the person put it.
+
 **Look and layout are where conflicts get visible.** Two TVs with different screen sizes show the same layout, so a
 layout entry stores order and choices, never pixel positions. An app that isn't installed on a TV is skipped there and
 kept in the entry, so it comes back when the app is installed. Wallpaper pictures are large: an entry carries the
@@ -55,16 +85,19 @@ copy carries) and its layout another (`layout`: apps and whether each is hidden,
 names, which are each TV's own). Both are written in a fixed order, so the same layout is always the same text. The
 app's side does the work, every 20 seconds while Hearth runs (HouseholdLooksService):
 
-- **Taking.** For each profile, kids' included, whose look or layout entry changed, it fits the household's to the apps
-  installed here (as a copy does) and puts it in place: live when the profile is on screen, else in the profile's saved
-  layout, which comes up when someone switches to it. A changed picture is written to the profile's folder. Before a
-  profile first takes the household's look on a TV, everything is kept as a backup, as a copy does, so it can be undone
-  in Backup & Restore.
-- **Giving.** The profile on screen goes out when its look, layout or a picked picture differs from what this TV last
-  took or gave. Its layout keeps the household's apps that aren't installed here, and their places in rows it still has,
-  so a TV without an app doesn't take it away from the others.
+- **Taking.** For each profile, kids' included, whose look or layout entry changed, it merges the household's with this
+  TV's item by item (the newest change wins, see What syncs), fits the result to the apps installed here (as a copy
+  does) and puts it in place: live when the profile is on screen, else in the profile's saved layout, which comes up
+  when someone switches to it. The profile's settings that stay on each TV (its hidden calendars and Watch Next
+  programs) are kept as they are. A changed picture is written to the profile's folder. Before a profile first takes
+  the household's look on a TV, everything is kept as a backup, as a copy does, so it can be undone in Backup & Restore.
+- **Giving.** The profile on screen goes out when its look or layout differs from the household's, or a picked picture
+  from what this TV last took or gave; so does any other profile here that the household has no look or layout for yet
+  (one set up only on this TV, or on a TV that just joined). Its layout keeps the household's apps that aren't
+  installed here, and their places in rows it still has, so a TV without an app doesn't take it away from the others.
 - What this TV last took or gave is remembered per profile (by fingerprint), so taking the household's doesn't send it
-  straight back, and two TVs settle on one layout.
+  straight back, and two TVs settle on one layout; and so is each item as this TV last had it and when it changed
+  here, so a change made here between two rounds isn't lost to the household's.
 - **Pictures.** Only pictures someone picked for a profile move between TVs. Bing's photo of the day is a setting, and
   each TV downloads it; a future Google Photos source would be the same, its album or photos a setting and each TV
   fetching them. A picked picture goes out as the screen shows it (a JPEG of at most 1920x1080, as a copy sends it), is
@@ -241,7 +274,7 @@ sets from the network, so the clocks agree to within a second or two and nothing
 clock keeps a TV whose clock jumps from winning forever; a tie goes to the lower TV id. A delete is an entry with a
 deleted flag and a timestamp, kept for 90 days, so a TV that was off can't bring a deleted PIN back. Exceptions:
 removals never lose and are never purged; Continue Watching is a set (union, newest play per title); a
-profile's list of hidden apps merges by app.
+profile's look and layout merge item by item, each setting, row and app on its own (see What syncs).
 
 **Size.** Entries are small, except pictures and watch history. History keeps at most 100 entries per profile, 90 days.
 A TV never sends a picture a peer already has.
@@ -376,3 +409,5 @@ receiving TV converts at once.
 - The on-screen fallback for joining needs a parent at both TVs. A Parent PIN typed on the new TV would avoid that, but
   it must not reach a device pretending to be a household TV, which needs a password-authenticated key exchange
   (CPace or SPAKE2) rather than the plain one. Worth it only if many households run without phone approval.
+- Hidden calendars stay per TV because a calendar's id is Android's row number on that TV. They could follow the
+  person by a hash of the calendar's account and name, where the same Google account is on both TVs. Worth it?
