@@ -38,6 +38,11 @@ final class HouseholdSync {
     private static final int NONCE_BYTES = 16;
     private static final int POINT_BYTES = 65;
     private static final int MAX_FRAME_BYTES = 8 * 1024 * 1024;
+    /**
+     * The proofs and verdicts, read before the other side is known to be a member: a key, a signature, a name and two
+     * MACs fit in far less, and anyone on the network can send this much (it's sealed only under a key they agreed).
+     */
+    static final int MAX_AUTH_BYTES = 16 * 1024;
     static final int MAX_ENTRIES = 20_000;
     private static final byte[] LABEL = ShareCrypto.bytes("hearth-household-sync-v2");
     private static final Pattern TV_ID = Pattern.compile("tv-[0-9a-f]{16}");
@@ -140,16 +145,24 @@ final class HouseholdSync {
         boolean peerRemoved;
         if (initiator) {
             writeJson(mine);
-            JSONObject theirs = readJson();
+            JSONObject theirs = readJson(MAX_AUTH_BYTES);
             peerRemoved = check(theirs) == HouseholdMembers.Standing.REMOVED;
+            if (peerRemoved) {
+                // A TV removed here can't remove this one: what it says is ignored, and it is told (if it still listens)
+                try {
+                    writeJson(new JSONObject().put("verdict", REMOVED));
+                } catch (IOException ignored) {
+                    // it hung up first
+                }
+                return stopped(true, false);
+            }
             if (REMOVED.equals(theirs.optString("verdict"))) return stopped(false, true);
-            writeJson(new JSONObject().put("verdict", peerRemoved ? REMOVED : MEMBER));
-            if (peerRemoved) return stopped(true, false);
+            writeJson(new JSONObject().put("verdict", MEMBER));
         } else {
-            peerRemoved = check(readJson()) == HouseholdMembers.Standing.REMOVED;
+            peerRemoved = check(readJson(MAX_AUTH_BYTES)) == HouseholdMembers.Standing.REMOVED;
             writeJson(mine.put("verdict", peerRemoved ? REMOVED : MEMBER));
             if (peerRemoved) return stopped(true, false);
-            if (REMOVED.equals(readJson().optString("verdict"))) return stopped(false, true);
+            if (REMOVED.equals(readJson(MAX_AUTH_BYTES).optString("verdict"))) return stopped(false, true);
         }
 
         // 2. what each side has seen
@@ -165,8 +178,7 @@ final class HouseholdSync {
         Map<String, Long> theirVector = readVector(peerVector.getJSONObject("vector"));
 
         // 3. what each side lacks
-        List<HouseholdEntry> toSend = store.log().missingFrom(theirVector);
-        if (toSend.size() > MAX_ENTRIES) toSend = toSend.subList(0, MAX_ENTRIES);
+        List<HouseholdEntry> toSend = batch(store.log().missingFrom(theirVector), MAX_ENTRIES);
         String payload = entriesJson(toSend);
         String incoming;
         if (initiator) {
@@ -194,6 +206,18 @@ final class HouseholdSync {
         // The TV that invited this one has listed it: the invitation is spent
         if (store.joinProofFor(peer) != null) store.joinProofUsed();
         return new Result(peer, peerName, toSend.size(), received, applied, false, false, took);
+    }
+
+    /**
+     * At most {@code max} of {@code missing}, lowest sequence first, so what goes out of each TV's entries is always
+     * the start of what the other lacks. The other TV counts the highest sequence it takes from each TV as seen, so a
+     * cut anywhere else would leave out entries it never asks for again.
+     */
+    static List<HouseholdEntry> batch(List<HouseholdEntry> missing, int max) {
+        if (missing.size() <= max) return missing;
+        List<HouseholdEntry> sorted = new ArrayList<>(missing);
+        sorted.sort((a, b) -> Long.compare(a.seq, b.seq));
+        return new ArrayList<>(sorted.subList(0, max));
     }
 
     private Result stopped(boolean peerRemoved, boolean removedHere) {
@@ -384,6 +408,11 @@ final class HouseholdSync {
         return new JSONObject(readText());
     }
 
+    /** A frame of at most {@code max} bytes, as JSON: what comes before the other side has proved who it is. */
+    private JSONObject readJson(int max) throws IOException, GeneralSecurityException, JSONException {
+        return new JSONObject(new String(readFrame(max), StandardCharsets.UTF_8));
+    }
+
     private void writeFrame(byte[] plain) throws IOException, GeneralSecurityException {
         if (plain.length > MAX_FRAME_BYTES) throw new SyncException("Too much to send");
         byte[] sealed = ShareCrypto.seal(sendKey, sendCounter++, aad, plain);
@@ -393,8 +422,12 @@ final class HouseholdSync {
     }
 
     private byte[] readFrame() throws IOException, GeneralSecurityException {
+        return readFrame(MAX_FRAME_BYTES);
+    }
+
+    private byte[] readFrame(int max) throws IOException, GeneralSecurityException {
         int length = in.readInt();
-        if (length < 16 || length > MAX_FRAME_BYTES + 16) throw new SyncException("Bad frame size");
+        if (length < 16 || length > max + 16) throw new SyncException("Bad frame size");
         byte[] sealed = new byte[length];
         in.readFully(sealed);
         try {
