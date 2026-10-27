@@ -9,16 +9,17 @@ Alex, driving home, says to the phone: "Tell Sam I'll be about ten minutes late.
 
 A minute later, the speaker in the kitchen, where Sam is:
 
-> *(Alex's own voice)* "Tell Sam I'll be about ten minutes late."
-> *(the house)* "Alex's phone says 6:52. The wash finishes at 6:40, and Alex usually moves it. Should I remind you
-> when it's done, or hold the reminder until Alex is home?"
+"Sam, Alex is running about ten minutes behind and should be home around 6:52. That's after the wash finishes at
+6:40, and Alex usually moves it. Should I remind you when it's done, or hold the reminder until Alex is home?"
 
 Sam says "hold it". The house holds the laundry reminder until Alex's phone is back on the Wi-Fi, and in the car Alex
 hears "Sam got it."
 
-A text would have given Sam the same ten words and left the rest to Sam. Here the house knows things Alex's phone
-doesn't (the washer, who usually empties it), Alex's phone knows things the house doesn't (the route, the traffic),
-and neither tells the other everything to get the right result.
+The house doesn't play Alex's words back. It retells them, in its own voice, the way Sam needs to hear them: who
+it's from, what it means in clock time, and what it changes here. A text would have given Sam the same ten words and
+left the rest to Sam. Here the house knows things Alex's phone doesn't (the washer, who usually empties it), Alex's
+phone knows things the house doesn't (the route, the traffic), and neither tells the other everything to get the right
+result.
 
 ```mermaid
 sequenceDiagram
@@ -29,7 +30,7 @@ sequenceDiagram
     Alex->>P: "Tell Sam I'll be about ten minutes late"
     P->>H: envelope: the words, the gist, ETA 6:52 (live), moot when Alex is home
     Note over H: what does this touch here? wash ends 6:40, Alex usually moves it<br/>where is Sam? the kitchen, free
-    H->>Sam: Alex's clip, then one note and one offer
+    H->>Sam: the message retold in the house's voice, one note, one offer
     Sam->>H: "hold it"
     Note over H: laundry reminder waits for Alex's arrival
     H->>P: receipt: heard in the kitchen, reminder held
@@ -44,23 +45,25 @@ sequenceDiagram
 | Read out the moment it lands | Waits for a good moment, or interrupts when it should |
 | Stays true forever | Is dropped once it stops being true: "I'm late" isn't said if Alex is already home |
 | A snapshot | Can stay live: the ETA keeps updating until Alex arrives |
+| Read out in the sender's words, written for a screen | Retold for the listener, in the house's voice, with the times made clock times |
 | The reader works out what it means | The receiving assistant works out what it touches there, and offers at most one thing to do |
 | A reply is another text, to a phone | A reply goes back the same way, to wherever the sender is now |
 
 ## Principles
 
-1. **Send meaning, keep the words.** A message is an envelope, not a string: the exact words (and the sender's voice,
-   if they allow it), the gist, typed facts, and when it stops mattering. The receiver works from the facts and shows
-   the words.
+1. **Send meaning, keep the words on file.** A message is an envelope, not a string: the gist, typed facts, when it
+   stops mattering, and the exact words. The receiver works from the gist and the facts; the words are there for the
+   card and for "what did Alex say, exactly?"
 2. **The sender shares facts; the receiver owns consequences.** Alex's assistant knows Alex's world, the house knows
    the house. Each reasons over its own. Alex's phone never reads the washer, and the house never gets Alex's route,
    only an ETA. Less is shared than with a text that says "I'm on Route 40", and more gets done.
 3. **Words are data, never commands.** Nothing in a message can make the receiving assistant act. It can only lead to
    an offer the recipient accepts, or to something the recipient's own standing rule allows. This is what keeps a
    message from another household, or a kid, or a forged one, from opening a door.
-4. **Their voice for what they said, the house's voice for what it adds.** People must always be able to tell what
-   the sender said from what an assistant inferred. Spoken: the sender's clip, then the house. Shown: a quote, then a
-   note. An assistant never rewrites the words; a gist is labelled as one.
+4. **Retell, don't recite, and say who said what.** The house speaks in its own voice and retells the message for
+   the person hearing it (see [Retelling](#retelling)). Its words keep apart what the sender said ("Alex says ...")
+   from what the house worked out ("so ...", "that means ...", "I can ..."), and never put words in the sender's
+   mouth.
 5. **Deliver to the person, not to a device.** The message is for Sam. Sam's assistant (or the house, for people who
    don't have one) picks where and how.
 6. **A message lives until it's moot.** Every message says when it stops mattering. One that waits past that is
@@ -94,7 +97,6 @@ is only words Sam hears.
   "to": [{ "person": "sam" }],
   "verb": "tell",
   "words": "Tell Sam I'll be about ten minutes late",
-  "audio": "clip:4c1e (kept until delivered)",
   "gist": "Alex will be home about ten minutes later than planned.",
   "facts": [
     { "kind": "eta", "at": "18:52", "source": "maps", "live_until": "arrived" },
@@ -111,8 +113,8 @@ is only words Sam hears.
 |---|---|
 | `from` | the person, and the device that vouches for them (signed by its key, as TVs sign household entries) |
 | `to` | people, a group ("the kids", "everyone"), or a place ("the house") |
-| `words` | exactly what was said. The audio only when the sender's settings allow, and kept only until delivered |
-| `gist` | the sender's assistant's one-line reading of the words |
+| `words` | exactly what was said, as text. Shown on the card and given when asked; never played. No audio is sent |
+| `gist` | the sender's assistant's one-line reading of the words, which the receiver retells |
 | `facts` | typed, each with its source. A fact can stay live (an ETA) until a stated end |
 | `may` | what the receiver may do with it: infer notes, make offers, run named actions (almost always none) |
 | `aloud` | who may hear it said in a shared room: anyone, the household, adults only, or no one (phone only) |
@@ -125,6 +127,25 @@ is only words Sam hears.
 **The sender's assistant checks the facts before it sends.** If Alex says "ten minutes" and the phone's travel time
 says twenty, it sends the words as said and the ETA as measured, so the house can say "Alex says ten; the phone says
 closer to twenty." Alex isn't asked anything while driving.
+
+## Retelling
+
+The receiving assistant says the message in its own voice, for the person in front of it. The rules keep a retelling
+faithful:
+
+- **Turn it around.** "I'll be late" becomes "Alex will be late"; "tell Sam" disappears, since Sam is the one hearing it.
+- **Lead with who it's from**, unless the room already knows ("Sam, Alex is running late").
+- **Make times clock times** when the facts allow: "ten minutes late" becomes "home around 6:52". When the sender's
+  guess and a measured fact differ, say both: "Alex says ten minutes; the phone says closer to twenty."
+- **Keep the hedges.** "About", "maybe" and "I think" stay. A guess is never made to sound like a promise.
+- **Keep the strength.** A request stays a request and an instruction stays one: "Alex wants you off the TV now" is not
+  softened to "Alex wonders if you might stop soon", nor sharpened the other way.
+- **Add no reasons.** If Alex didn't say why, the house doesn't guess ("traffic") as if Alex had said it.
+- **Mark what's the house's.** What Alex said is "Alex says"; what the house adds is "so", "that means", "I can".
+- **Fit the listener.** Shorter for a kid, nothing that the room shouldn't hear (see `aloud`), and in the listener's
+  language if it differs from the sender's.
+
+"What did Alex say, exactly?" gets the words as they were sent, read out as a quote.
 
 ## Delivering: finding the person, and the moment
 
@@ -225,8 +246,8 @@ for the same reason.
 ## The fun ones
 
 **Land the plane.** Sam to the kitchen speaker: "Tell Robin dinner's in ten." The TV in the den has Robin's profile on,
-and the episode has seven minutes left. The card: "Sam: dinner's in ten. This episode ends in 7 minutes, a good place to
-stop." The next episode doesn't autoplay. A deadline turns into a natural stopping point.
+and the episode has seven minutes left. The card: "Sam says dinner's in ten. This episode ends in 7 minutes, a good place
+to stop." The next episode doesn't autoplay. A deadline turns into a natural stopping point.
 
 **Parental weight.** A parent's message to a kid can pause the TV. A sibling's can't. Kit says "tell Robin to get off
 the TV": Robin gets a card, and the show keeps playing.
@@ -278,8 +299,8 @@ takes Thursday if you take Tuesday. OK?" Two yeses put it on both calendars.
   can't be the one who says yes to an adult's offer.
 - **Floods.** A sender gets a few messages a minute to the same person, and a thread at most four hops. Too many in a
   row become one card ("Alex sent 6 messages").
-- **What's kept.** Audio until delivered, then deleted. The words and receipts for a week, visible to the sender and
-  the people it was for.
+- **What's kept.** No audio leaves the sender's device: messages travel as text. The words and receipts are kept for a
+  week, visible to the sender and the people it was for.
 
 ## How it could be built
 
@@ -331,8 +352,9 @@ No new apps, just a script, an automation and an allowlist.
 ## Open questions
 
 - Room presence: which signals are good enough, and how wrong can the house be before it should just use the phone?
-- When a message is long, should the house say the gist ("Alex said more about the car; want all of it?")?
-- Sender audio: on by default between household adults, or always a choice?
+- When a message is long, should the house retell only the point ("Alex said more about the car; want all of it?")?
+- How does a sender check a retelling? A "read back" setting, where the sender's assistant says how the house will put
+  it before it goes, for messages that matter?
 - Who sees the household's message log: the people in each message only, or parents too?
 - How "usually does" is learned without feeling watched, and how a person says "that's not my job any more".
 - A message to "the kids": every kid, or the ones home?
