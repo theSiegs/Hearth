@@ -22,6 +22,7 @@ from homeassistant.helpers.event import (
 )
 
 from .api import async_register_views
+from .apps import ACTION_PREFIX
 from .const import DOMAIN
 from .hub import HearthHub
 from .limits import DAY_TYPES
@@ -105,6 +106,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     # And whenever a screen time source changes
     if entities := hub.household.source_entities():
         entry.async_on_unload(async_track_state_change_event(hass, entities, recompute))
+    @callback
+    def phone_answer(event) -> None:
+        """A Sort button on a new app's phone notification: HEARTH_APP|<group>|<package>."""
+        action = str(event.data.get("action") or "")
+        if not action.startswith(ACTION_PREFIX):
+            return
+        parts = action.split("|", 2)
+        if len(parts) == 3:
+            hub.household.sort_app(parts[2], parts[1])
+
+    entry.async_on_unload(hass.bus.async_listen("mobile_app_notification_action", phone_answer))
     # People and groups come from the entry: when it changes (options, a phone paired), its entities are made again
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
     return True

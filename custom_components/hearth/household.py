@@ -30,6 +30,16 @@ from .const import (
     KIND_TV,
     SIGNAL_PEOPLE,
 )
+from .apps import (
+    CONF_APP_WATCH,
+    CONF_ASK_NOTIFY,
+    EVENT_NEW_APP,
+    AppCatalog,
+    observed_from_entities,
+    options_with_app_in_group,
+    phone_actions,
+    update_notification,
+)
 from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
 from .limits import Group, GroupState, Limits, groups_from_options, groups_of
 from .live import LiveTracker, Observation, Together
@@ -81,6 +91,7 @@ class Household:
         self.hub = hub
         self.limits = Limits(hass, hub.entry.entry_id)
         self.live = LiveTracker(hass, hub.entry.entry_id)
+        self.apps = AppCatalog(hass, hub.entry.entry_id)
         self.days: dict[str, PersonDay] = {}
         self.groups: list[Group] = []
         self.sources: list[Source] = []
@@ -92,6 +103,7 @@ class Household:
     async def async_load(self) -> None:
         await self.limits.async_load()
         await self.live.async_load()
+        await self.apps.async_load()
 
     async def async_flush(self) -> None:
         await self.limits.async_flush()
@@ -124,7 +136,8 @@ class Household:
     def source_entities(self) -> list[str]:
         """Entities whose changes count: the screen time sources and the locks."""
         locks = [lock["entity_id"] for lock in self.options.get(CONF_LOCKS, [])]
-        return [s.entity_id for s in sources_from_options(self.options)] + locks
+        watched = list(self.options.get(CONF_APP_WATCH, []))
+        return [s.entity_id for s in sources_from_options(self.options)] + locks + watched
 
     def _locked_by(self, person: str) -> list[str]:
         return [
@@ -280,6 +293,7 @@ class Household:
 
         self.categories = categories
         self._hints = hints
+        self._look_for_new_apps(categories)
         membership = self.membership()
         days: dict[str, PersonDay] = {}
         for person in self.people():
@@ -304,6 +318,73 @@ class Household:
         for together, what in [(t, "started") for t in started] + [(t, "ended") for t in ended]:
             self.hass.bus.async_fire(EVENT_PLAYING_TOGETHER, self._together_event(together, what))
         async_dispatcher_send(self.hass, SIGNAL_PEOPLE, new_day)
+
+    # New apps
+
+    def _look_for_new_apps(self, categories: dict[str, str]) -> None:
+        watched = [e for e in self.options.get(CONF_APP_WATCH, []) if self.hass.states.get(e) is not None]
+        observed = observed_from_entities(self.hass, watched)
+        sources = set(watched)
+        for device_id, device in self.hub.devices.items():
+            status = self.hub.state(device_id).status
+            if status is None:
+                continue
+            sources.add(f"hearth:{device_id}")
+            where = device.get("name") or device_id
+            packages = set(status.get("app_seconds_today") or {})
+            for usage in (status.get("usage_today") or {}).values():
+                packages |= set(usage.get("apps") or {})
+            for package in packages:
+                observed.setdefault(package, (package, where, f"hearth:{device_id}"))
+            if status.get("app_package"):
+                observed[status["app_package"]] = (
+                    status.get("app") or status["app_package"], where, f"hearth:{device_id}"
+                )
+        fresh = self.apps.observe(observed, categories, self.groups, sources)
+        for entry in fresh:
+            self.hass.bus.async_fire(
+                EVENT_NEW_APP,
+                {"package": entry.package, "name": entry.name, "who": entry.who, "suggested": entry.suggested},
+            )
+            self._ask_on_phone(entry)
+        if fresh:
+            update_notification(self.hass, self.apps.new_apps(), self.groups)
+
+    def _ask_on_phone(self, entry) -> None:
+        service = self.options.get(CONF_ASK_NOTIFY)
+        if not service or "." not in service:
+            return
+        domain, name = service.split(".", 1)
+        if not self.hass.services.has_service(domain, name):
+            return
+        self.hass.async_create_task(
+            self.hass.services.async_call(
+                domain,
+                name,
+                {
+                    "title": "New app: " + entry.name,
+                    "message": (f"{entry.who} has {entry.name}. " if entry.who else f"{entry.name} is new. ")
+                    + "Which group does it count in?",
+                    "data": {"tag": f"hearth_app_{entry.package}", "actions": phone_actions(entry, self.groups)},
+                },
+                blocking=False,
+            )
+        )
+
+    @callback
+    def sort_app(self, package: str, group: str) -> bool:
+        """An adult put an app in a group (or Other: All screen time only)."""
+        if group != "other" and self.group(group) is None:
+            return False
+        entry = self.apps.sort(package, group)
+        if entry is None:
+            return False
+        update_notification(self.hass, self.apps.new_apps(), self.groups)
+        if group != "other":
+            self.hass.config_entries.async_update_entry(
+                self.hub.entry, options=options_with_app_in_group(dict(self.hub.entry.options), package, group)
+            )
+        return True
 
     def _label(self, key: str, fallback: str | None) -> str:
         if key.startswith("title:"):

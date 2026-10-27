@@ -175,6 +175,7 @@ class HearthHub:
         """Saves what the devices last said now (Home Assistant also does when it stops)."""
         await self._store.async_save(self._data_to_save())
         await self.household.async_flush()
+        await self.household.apps.async_flush()
 
     async def async_remove_device(self, device_id: str) -> None:
         """Forgets a device: its secret stops working at once."""

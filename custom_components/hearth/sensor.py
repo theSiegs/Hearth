@@ -14,7 +14,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import UnitOfTime
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HearthConfigEntry
@@ -109,6 +109,7 @@ async def async_setup_entry(
                 people.append(PersonGroupToday(hub, person, "group_today", group))
             people.append(PersonMinutesLeft(hub, person, "minutes_left", group))
     async_add_entities(people)
+    async_add_entities([AppsToSort(hub)])
 
 
 class HearthSensor(HearthEntity, SensorEntity):
@@ -227,3 +228,46 @@ class PersonTogetherToday(HearthPersonEntity, SensorEntity):
     @property
     def native_value(self) -> int:
         return _minutes(self.day.together_s) if self.day else 0
+
+
+class AppsToSort(SensorEntity):
+    """How many new apps wait for an adult to put them in a group; which, in its attributes."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+    _attr_translation_key = "apps_to_sort"
+
+    def __init__(self, hub) -> None:
+        from homeassistant.helpers.device_registry import DeviceInfo
+
+        from .const import DOMAIN
+
+        self.hub = hub
+        self._attr_unique_id = f"{hub.entry.entry_id}_apps_to_sort"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, "household")}, name=f"Hearth: {hub.entry.title}", manufacturer="Hearth", model="Household"
+        )
+
+    async def async_added_to_hass(self) -> None:
+        from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+        from .const import SIGNAL_PEOPLE
+
+        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_PEOPLE, self._changed))
+
+    @callback
+    def _changed(self, _new_day: bool = False) -> None:
+        self.async_write_ha_state()
+
+    @property
+    def native_value(self) -> int:
+        return len(self.hub.household.apps.new_apps())
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {
+            "apps": [
+                {"package": e.package, "name": e.name, "who": e.who, "suggested": e.suggested}
+                for e in self.hub.household.apps.new_apps()[:50]
+            ]
+        }

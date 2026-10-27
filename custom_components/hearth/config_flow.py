@@ -29,6 +29,7 @@ from homeassistant.helpers.selector import (
 
 from .const import CONF_GROUP_APPS, CONF_GROUPS, CONF_LOCKS, CONF_PERSON, CONF_PROFILES, DOMAIN, KIND_MOBILE
 from .limits import BUILTIN_GROUPS, GAMES, VIDEO, slug
+from .apps import CONF_APP_WATCH, CONF_ASK_NOTIFY, OTHER, options_with_app_in_group, update_notification
 from .notifications import pairing_notification_id
 from .sources import CONF_SOURCES, CONF_TITLES
 
@@ -108,6 +109,8 @@ class HearthOptionsFlow(OptionsFlow):
                 "add_title",
                 "remove_title",
                 "locks",
+                "sort_apps",
+                "new_apps",
                 "add_group",
                 "group_apps",
                 "remove_group",
@@ -322,3 +325,60 @@ class HearthOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="locks", data_schema=schema)
+
+    async def async_step_new_apps(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Where new apps are noticed (sensors listing a kid's allowed apps, such as Family Link's), and which phone
+        is asked to sort them."""
+        options = self._options()
+        if user_input is not None:
+            return self.async_create_entry(
+                data={
+                    **options,
+                    CONF_APP_WATCH: list(user_input.get("entities", [])),
+                    CONF_ASK_NOTIFY: user_input.get("notify") or None,
+                }
+            )
+        phones = sorted(
+            f"notify.{name}" for name in self.hass.services.async_services().get("notify", {}) if name.startswith("mobile_app_")
+        )
+        schema = vol.Schema(
+            {
+                vol.Optional("entities", default=list(options.get(CONF_APP_WATCH, []))): EntitySelector(
+                    EntitySelectorConfig(domain="sensor", multiple=True)
+                ),
+                vol.Optional("notify", description={"suggested_value": options.get(CONF_ASK_NOTIFY)}): SelectSelector(
+                    SelectSelectorConfig(options=[SelectOptionDict(value=p, label=p) for p in phones])
+                ),
+            }
+        )
+        return self.async_show_form(step_id="new_apps", data_schema=schema)
+
+    async def async_step_sort_apps(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Each new app, and the group it counts in (Other: All screen time only)."""
+        household = self._household()
+        waiting = household.apps.new_apps()[:25]
+        if not waiting:
+            return self.async_abort(reason="no_new_apps")
+        labels = {f"{e.name} ({e.package})": e for e in waiting}
+        choices = [SelectOptionDict(value=g.id, label=g.name) for g in household.groups if g.id != "all"]
+        choices.append(SelectOptionDict(value=OTHER, label="Other (All screen time only)"))
+        if user_input is not None:
+            options = self._options()
+            for label, entry in labels.items():
+                group = user_input.get(label)
+                if not group:
+                    continue
+                household.apps.sort(entry.package, group)
+                if group != OTHER:
+                    options = options_with_app_in_group(options, entry.package, group)
+            update_notification(self.hass, household.apps.new_apps(), household.groups)
+            return self.async_create_entry(data=options)
+        schema = vol.Schema(
+            {
+                vol.Optional(label, description={"suggested_value": entry.suggested}): SelectSelector(
+                    SelectSelectorConfig(options=choices)
+                )
+                for label, entry in labels.items()
+            }
+        )
+        return self.async_show_form(step_id="sort_apps", data_schema=schema)

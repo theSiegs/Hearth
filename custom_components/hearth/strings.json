@@ -69,6 +69,9 @@
       },
       "person_together_today": {
         "name": "Playing together today"
+      },
+      "apps_to_sort": {
+        "name": "Apps to sort"
       }
     },
     "binary_sensor": {
@@ -113,7 +116,9 @@
           "remove_source": "Remove a screen time source",
           "add_title": "Add a title",
           "remove_title": "Remove a title",
-          "locks": "Locks (bedtime, school time)"
+          "locks": "Locks (bedtime, school time)",
+          "sort_apps": "Sort new apps",
+          "new_apps": "Watch for new apps"
         }
       },
       "people": {
@@ -189,6 +194,18 @@
           "person": "Person",
           "entities": "Lock sensors"
         }
+      },
+      "new_apps": {
+        "title": "Watch for new apps",
+        "description": "Apps the kids start using on Hearth's devices are noticed by themselves. Add sensors that list a kid's allowed apps (Family Link's Apps without limits and Apps with time limits) to notice an app as soon as it's allowed. A phone, if chosen, is asked which group each new app counts in.",
+        "data": {
+          "entities": "App lists",
+          "notify": "Ask on this phone"
+        }
+      },
+      "sort_apps": {
+        "title": "Sort new apps",
+        "description": "The group each new app counts in. Other: only All screen time. Leave one empty to sort it later."
       }
     },
     "error": {
@@ -199,7 +216,8 @@
     "abort": {
       "no_profiles": "No TV has reported its profiles yet. Pair a TV and let it post its status first.",
       "no_groups": "There are no groups of your own to remove.",
-      "nothing_to_remove": "There's nothing to remove."
+      "nothing_to_remove": "There's nothing to remove.",
+      "no_new_apps": "No new apps are waiting."
     }
   },
   "services": {
