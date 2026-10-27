@@ -268,6 +268,12 @@ final class HouseholdSync {
             writeJson(vector);
         }
         Map<String, Long> theirVector = readVector(peerVector.getJSONObject("vector"));
+        // This TV is the one that knows how many entries it wrote: a peer counting more of them was handed entries in
+        // its name it never made, which would keep its real ones from being asked for. It gets all of them, and drops
+        // the others (HouseholdLog.vouch, on its side).
+        if (theirVector.getOrDefault(selfId, 0L) > store.log().vector().getOrDefault(selfId, 0L)) {
+            theirVector.put(selfId, 0L);
+        }
 
         // 3. what each side lacks
         List<HouseholdEntry> toSend = batch(store.log().missingFrom(theirVector), MAX_ENTRIES);
@@ -298,6 +304,9 @@ final class HouseholdSync {
             }
         }
         mergeChecked(checked, applied);
+        // The other TV says how many entries it wrote itself; more counted here were someone else's in its name
+        long peerOwn = theirVector.getOrDefault(peer, 0L);
+        if (store.log().vouch(peer, peerOwn) >= 0) applied.removeIf(e -> HouseholdLog.forged(e, peer, peerOwn));
         // 5. the pictures the entries name that a side lacks
         int took = tradePictures();
 

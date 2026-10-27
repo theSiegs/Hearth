@@ -106,6 +106,31 @@ final class HouseholdLog {
     }
 
     /**
+     * {@code writer}, met directly (it proved its key in this exchange), says it has written {@code ownSeq} entries.
+     * It is the one TV that knows: when this TV has counted more of its entries than that, some came from another TV
+     * in its name with sequences it never made (forged, to stall its real entries, which a vector past them never asks
+     * for), or the writer lost its log. Its entries above {@code ownSeq} are dropped (not removals, nor the signed kinds,
+     * whose signatures already vouch for them), and its count starts over, so the next exchange brings all its entries
+     * again. Returns how many were dropped; -1 when nothing was wrong.
+     */
+    int vouch(String writer, long ownSeq) {
+        if (writer == null || writer.equals(tv) || vector.getOrDefault(writer, 0L) <= ownSeq) return -1;
+        int dropped = 0;
+        for (Iterator<HouseholdEntry> it = entries.values().iterator(); it.hasNext();) {
+            if (!forged(it.next(), writer, ownSeq)) continue;
+            it.remove();
+            dropped++;
+        }
+        vector.put(writer, 0L);
+        return dropped;
+    }
+
+    /** Whether {@link #vouch} drops {@code e}: in {@code writer}'s name, past what it wrote, and not vouched for. */
+    static boolean forged(HouseholdEntry e, String writer, long ownSeq) {
+        return e.tv.equals(writer) && e.seq > ownSeq && !isFinal(e) && !HouseholdMembers.signs(e.kind);
+    }
+
+    /**
      * Puts back what {@link #all} and {@link #vector} gave earlier (saved and loaded by the caller). Replaces what is
      * held. An entry that isn't well formed is skipped.
      */

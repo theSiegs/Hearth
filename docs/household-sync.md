@@ -473,6 +473,17 @@ What a TV checks before it takes part or takes something, and what that guards a
   any other; removing the member that added it doesn't remove it by itself, since that would also remove the TVs it
   rightly let in.
 - **An entry refused** is still counted as seen, so it isn't sent again and again; it never changes anything.
+- **Sequences in another TV's name.** Entries travel through any member, so a TV takes entries written by TVs it isn't
+  talking to, and counts each one's sequence in its version vector. A member could hand on an entry in another TV's
+  name with a sequence far past anything that TV wrote; the vector would then count that TV's real entries as seen and
+  never ask for them. Signing every entry would stop it, but costs a Keystore signature per play saved. Instead the TV
+  that wrote them is believed about its own count: in an exchange, each side's vector says how many entries it wrote
+  itself. A TV told it has counted more of the other's than that drops the entries in its name past that count (they
+  were never written by it; removals and the signed kinds, which their signatures vouch for, are kept), and asks for
+  all of that TV's entries again; and a TV that sees the other count more of its own entries than it wrote sends it all
+  of them. So such entries stall another TV's only until the TVs that took them meet that TV, and a forged one never
+  outlives that meeting. (It also mends a TV whose log was lost and that started counting again.) Content written in
+  another TV's name isn't otherwise stopped for the unsigned kinds: any member can write those in its own name anyway.
 - **Continue Watching cards from another TV** carry a deep link that TV wrote. Opening any card, the link is held as
   the kids profiles' agent holds what it opens: no flags that would hand out access to Hearth's files, never one of
   Hearth's own screens, and only another app's exported screen. A card from the household must also open in its own

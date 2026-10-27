@@ -435,6 +435,56 @@ public class HouseholdSyncExchangeTest {
     }
 
     @Test
+    public void entriesForgedInAnotherTvsNameCantStallItsRealOnes() throws Exception {
+        HouseholdTvs.Tv a = first();
+        HouseholdTvs.Tv b = joining(a, "Kitchen");
+        HouseholdTvs.Tv c = joining(a, "Attic");
+        exchange(b, a, null);
+        exchange(c, a, null);
+        exchange(a, b, null);
+        // b hands a an entry in c's name with a sequence far past anything c wrote: a would never ask c's real
+        // entries of it again
+        HouseholdEntry forged = new HouseholdEntry("look", "alex", "", "{\"forged\":1}", (T0 + 50) << 16,
+                c.store.tvId(), 1_000_000_000L, false);
+        assertTrue(b.store.log().merge(forged, T0 + 50));
+        exchange(b, a, null);
+        assertEquals("{\"forged\":1}", a.store.log().get("look", "alex", "").value);
+        c.store.log().put("pairing", "sam", "netflix", "Sam", T0 + 60);
+        // c, met directly, says how many it wrote: a drops what it never made and takes everything of c's again
+        HouseholdSync.Result[] results = exchange(c, a, null);
+        assertNull(a.store.log().get("look", "alex", ""));
+        assertTrue(results[1].applied.stream().noneMatch(e -> e.value.contains("forged")));
+        exchange(c, a, null);
+        assertEquals("Sam", a.store.log().get("pairing", "sam", "netflix").value);
+        assertTrue(a.store.log().vector().get(c.store.tvId()) < 1_000_000_000L);
+        // a TV that took the forged entry too (here b itself) is put right the same way when it meets c
+        exchange(c, b, null);
+        exchange(c, b, null);
+        assertEquals("Sam", b.store.log().get("pairing", "sam", "netflix").value);
+    }
+
+    @Test
+    public void aTvMetDirectlyIsBelievedAboutItsOwnCountOnly() {
+        HouseholdLog log = new HouseholdLog("tv-a");
+        HouseholdLog c = new HouseholdLog("tv-c");
+        for (int i = 0; i < 3; i++) log.merge(c.put("look", "alex", "i" + i, "v", T0 + i), T0 + 10);
+        // nothing wrong: nothing changes
+        assertEquals(-1, log.vouch("tv-c", 3));
+        assertEquals(-1, log.vouch("tv-c", 5));
+        assertEquals(3, log.all().size());
+        // this TV's own count is never another TV's to correct
+        log.put("look", "sam", "", "v", T0);
+        assertEquals(-1, log.vouch("tv-a", 0));
+        // a removal in its name is kept, whatever its sequence
+        HouseholdEntry removal = new HouseholdEntry(HouseholdMembers.KIND, "", "tv-x", "", T0 << 16, "tv-c", 99,
+                true);
+        log.merge(removal, T0 + 10);
+        assertEquals(0, log.vouch("tv-c", 3));
+        assertTrue(log.isRemoved(HouseholdMembers.KIND, "", "tv-x"));
+        assertEquals(Long.valueOf(0), log.vector().get("tv-c"));
+    }
+
+    @Test
     public void aRemovalReachesATvThatWasOffAndCantBeUndone() throws Exception {
         HouseholdTvs.Tv a = first();
         HouseholdTvs.Tv b = joining(a, "Kitchen");
