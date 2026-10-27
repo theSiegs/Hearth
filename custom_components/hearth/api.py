@@ -158,7 +158,10 @@ class StatusView(HomeAssistantView):
         if not _local(request):
             return _error(HTTPStatus.FORBIDDEN, "not_local")
         hub = _hub(hass)
-        if hub is None or not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
+        # Loading (a restart, or a reload after an options change): not a refusal, or the device would unpair
+        if hub is None:
+            return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
+        if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
             return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
         if hub.too_often(device_id):
             return _error(HTTPStatus.TOO_MANY_REQUESTS, "too_often")

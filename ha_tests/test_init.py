@@ -152,6 +152,20 @@ async def test_wrong_or_missing_secret_is_refused(
     assert (await _post(client, secret, device_id="tv-someoneelse00")).status == 401
 
 
+async def test_a_post_while_reloading_is_not_a_refusal(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """A reload (every options change) or a restart: the TV must not read it as "unpaired"."""
+    entry = await _set_up(hass)
+    client = await hass_client_no_auth()
+    secret = await _pair(hass, client)
+    await hass.config_entries.async_unload(entry.entry_id)
+    assert (await _post(client, secret)).status == 503
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert (await _post(client, secret)).status == 200
+
+
 async def test_wrong_nonce_cant_collect_the_secret(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:

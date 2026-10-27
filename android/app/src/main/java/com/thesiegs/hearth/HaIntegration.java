@@ -34,6 +34,9 @@ final class HaIntegration {
     static final String HEADER_SECRET = "X-Hearth-Secret";
     static final String HEADER_NONCE = "X-Hearth-Nonce";
     private static final int MAX_ANSWER_BYTES = 256 * 1024;
+    private static final String REFUSED_SINCE_KEY = "ha_integration_refused_since";
+    // Refusals for this long, not one: Home Assistant answers 401 for a moment while it restarts or reloads
+    static final long UNPAIR_AFTER_REFUSALS_MS = 10 * 60_000L;
 
     private HaIntegration() {}
 
@@ -161,7 +164,7 @@ final class HaIntegration {
         HaBridgeService.sync(context);
     }
 
-    /** Posts the status (blocking); a 401 means Home Assistant removed this TV, and the TV is unpaired. */
+    /** Posts the status (blocking); 401s for 10 minutes mean Home Assistant removed this TV, and the TV is unpaired. */
     static Answer postStatus(Context context, String body) {
         String url = statusUrl(context);
         String secret = secret(context);
@@ -172,11 +175,26 @@ final class HaIntegration {
         } catch (JSONException e) {
             return new Answer(0, null);
         }
+        SharedPreferences prefs = HaConfig.prefs(context);
         if (answer.code == 401) {
-            Log.w(TAG, "Home Assistant no longer knows this TV: unpaired");
-            setSecret(context, null);
+            long now = System.currentTimeMillis();
+            long since = prefs.getLong(REFUSED_SINCE_KEY, 0);
+            if (since == 0 || since > now) {
+                prefs.edit().putLong(REFUSED_SINCE_KEY, now).apply();
+            } else if (refusedLongEnough(since, now)) {
+                Log.w(TAG, "Home Assistant no longer knows this TV: unpaired");
+                prefs.edit().remove(REFUSED_SINCE_KEY).apply();
+                setSecret(context, null);
+            }
+        } else if (answer.code > 0 && prefs.contains(REFUSED_SINCE_KEY)) {
+            prefs.edit().remove(REFUSED_SINCE_KEY).apply();
         }
         return answer;
+    }
+
+    /** Whether the integration has refused this TV since [since] long enough to mean it was removed. */
+    static boolean refusedLongEnough(long since, long now) {
+        return now - since >= UNPAIR_AFTER_REFUSALS_MS;
     }
 
     /** Android's category for an app, as the integration names it ("game", "video"...); null when none or unknown. */
