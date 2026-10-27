@@ -37,6 +37,9 @@ final class HaIntegration {
     private static final String REFUSED_SINCE_KEY = "ha_integration_refused_since";
     // Refusals for this long, not one: Home Assistant answers 401 for a moment while it restarts or reloads
     static final long UNPAIR_AFTER_REFUSALS_MS = 10 * 60_000L;
+    private static final String REFUSED_LAST_KEY = "ha_integration_refused_last";
+    /** A paired TV posts every two minutes while on: refusals further apart than this aren't one stretch. */
+    static final long REFUSAL_GAP_MS = 5 * 60_000L;
 
     private HaIntegration() {}
 
@@ -183,18 +186,29 @@ final class HaIntegration {
         SharedPreferences prefs = HaConfig.prefs(context);
         if (answer.code == 401) {
             long now = System.currentTimeMillis();
-            long since = prefs.getLong(REFUSED_SINCE_KEY, 0);
-            if (since == 0 || since > now) {
-                prefs.edit().putLong(REFUSED_SINCE_KEY, now).apply();
-            } else if (refusedLongEnough(since, now)) {
+            long since = refusalsSince(prefs.getLong(REFUSED_SINCE_KEY, 0), prefs.getLong(REFUSED_LAST_KEY, 0), now);
+            if (refusedLongEnough(since, now)) {
                 Log.w(TAG, "Home Assistant no longer knows this TV: unpaired");
-                prefs.edit().remove(REFUSED_SINCE_KEY).apply();
+                prefs.edit().remove(REFUSED_SINCE_KEY).remove(REFUSED_LAST_KEY).apply();
                 setSecret(context, null);
+            } else {
+                prefs.edit().putLong(REFUSED_SINCE_KEY, since).putLong(REFUSED_LAST_KEY, now).apply();
             }
         } else if (answer.code > 0 && prefs.contains(REFUSED_SINCE_KEY)) {
-            prefs.edit().remove(REFUSED_SINCE_KEY).apply();
+            prefs.edit().remove(REFUSED_SINCE_KEY).remove(REFUSED_LAST_KEY).apply();
         }
         return answer;
+    }
+
+    /**
+     * Since when the refusals have lasted, given a refusal now: {@code since} (0: none counted yet) and {@code last},
+     * the previous refusal. Refusals more than {@link #REFUSAL_GAP_MS} apart aren't one stretch (the TV was off, or Home
+     * Assistant was unreachable meanwhile, which answers nothing either way), so a refusal then starts a new one: a
+     * restart's moment of 401s that happens to come long after an earlier one doesn't unpair at once.
+     */
+    static long refusalsSince(long since, long last, long now) {
+        if (since <= 0 || since > now || last <= 0 || last > now || now - last > REFUSAL_GAP_MS) return now;
+        return since;
     }
 
     /** Whether the integration has refused this TV since [since] long enough to mean it was removed. */
