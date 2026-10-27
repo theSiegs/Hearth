@@ -315,7 +315,9 @@ class NotificationsPanel extends StatelessWidget {
               ),
             for (final action in notification.actions)
               FocusableSettingsTile(
-                autofocus: !notification.canOpen && action == notification.actions.first,
+                autofocus: !notification.canOpen &&
+                    !notification.carefulActions &&
+                    action == notification.actions.first,
                 leading: const Icon(Icons.touch_app_outlined),
                 title: Text(action.title),
                 onPressed: () {
@@ -336,7 +338,8 @@ class NotificationsPanel extends StatelessWidget {
               ),
             if (notification.isClearable)
               FocusableSettingsTile(
-                autofocus: app == null && !notification.canOpen && notification.actions.isEmpty,
+                autofocus: (app == null && !notification.canOpen && notification.actions.isEmpty) ||
+                    (!notification.canOpen && notification.carefulActions),
                 leading: const Icon(Icons.close),
                 title: Text(localizations.dismiss),
                 onPressed: () {

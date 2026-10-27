@@ -11,7 +11,8 @@ import java.util.Map;
  * What Hearth lists in its notification Bell itself, beside the apps' notifications: a TV asking this one to join the
  * household (HouseholdJoining), with Allow and Don't allow, only for adults (never while a kids profile is on); and the
  * household's notifications for the profile on screen (Household.notices: Home Assistant's, and a TV asking another TV
- * of the household to join, answered from here). Clearing one of those here clears it on every TV.
+ * of the household to join, answered from here). Clearing one of those here clears it on every TV, and so does
+ * pressing one of a Home Assistant notification's buttons (Household.pressNotice runs it once).
  */
 final class HearthBellItems {
     private static final String PREFIX = "hearth:";
@@ -63,6 +64,15 @@ final class HearthBellItems {
 
     /** A household notification that came from another TV pops up (Household decides when). */
     static void popUp(Context context, HouseholdNotices.Notice n) {
+        if (!n.actions.isEmpty()) {
+            // With its buttons, as Home Assistant's own card: pressed here, it runs once and goes from every TV
+            HaNotificationServer.Notification card = new HaNotificationServer.Notification();
+            card.title = n.title;
+            card.message = n.text;
+            for (HouseholdNotices.Action a : n.actions) card.actions.add(a.asSent());
+            card.onAction = index -> Household.pressNotice(context, n.person, n.item, n.at, index);
+            if (LauncherAccessibilityService.showHaNotification(card)) return;
+        }
         String[] shown = texts(context, n);
         LauncherNotificationListenerService.popUpHearthItem(shown[0], shown[1], shown[2]);
     }
@@ -85,8 +95,17 @@ final class HearthBellItems {
         for (HouseholdNotices.Notice n : Household.notices(context)) {
             if (now >= n.until) continue;
             String[] shown = texts(context, n);
-            list.add(item(context, NOTICE_PREFIX + n.item + "|" + n.person, shown[0], shown[1], shown[2], n.at,
-                    n.isJoin()));
+            Map<String, Object> item = item(context, NOTICE_PREFIX + n.item + "|" + n.person, shown[0], shown[1],
+                    shown[2], n.at, n.isJoin());
+            if (!n.isJoin()) {
+                // Home Assistant's buttons, numbered as in the notification (Household.pressNotice)
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> actions = (List<Map<String, Object>>) item.get("actions");
+                for (int i = 0; i < n.actions.size(); i++) actions.add(action(i, n.actions.get(i).title));
+                // They act on the home: the Bell opens its options on Dismiss, as the pop-up's card on Close
+                item.put("carefulActions", !n.actions.isEmpty());
+            }
+            list.add(item);
         }
     }
 
@@ -125,14 +144,18 @@ final class HearthBellItems {
 
     /** One of Hearth's items' buttons pressed. Whether it did something. */
     static boolean open(Context context, String key, int action) {
+        String[] notice = noticeOf(key);
+        if (notice != null && HouseholdNotices.requestIdOf(notice[0]) == null) {
+            // A Home Assistant notification's button: run once, and the notification goes from every TV
+            return Household.pressNotice(context, notice[1], notice[0], action);
+        }
         if (action != ALLOW && action != DENY) return false;
         if (JOIN_KEY.equals(key)) {
             boolean answered = HouseholdJoining.answer(action == ALLOW);
             if (answered) LauncherNotificationListenerService.hearthItemsChanged();
             return answered;
         }
-        String[] notice = noticeOf(key);
-        if (notice == null || HouseholdNotices.requestIdOf(notice[0]) == null) return false;
+        if (notice == null) return false;
         return Household.answerJoin(context, notice[0], action == ALLOW);
     }
 

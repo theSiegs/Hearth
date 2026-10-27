@@ -319,6 +319,44 @@ void main() {
       await Future.delayed(Duration.zero);
       expect(notificationsService.notifications, isEmpty);
     });
+
+    test("a household notification's Home Assistant buttons are listed, careful, and pressed through the TV",
+        () async {
+      const key = 'hearth:notice:ha:0123abcd|';
+      when(mockChannel.checkNotificationListenerPermission()).thenAnswer((_) async => true);
+      when(mockChannel.getActiveNotifications()).thenAnswer((_) async => [
+            {
+              'key': key,
+              'packageName': 'com.thesiegs.hearth',
+              'appLabel': 'Home Assistant',
+              'title': 'Doorbell',
+              'text': 'Someone is at the door',
+              'isClearable': true,
+              'canOpen': false,
+              'actions': [
+                {'index': 0, 'title': 'Unlock door'},
+                {'index': 1, 'title': 'Ignore'},
+              ],
+              'carefulActions': true,
+            },
+          ]);
+      when(mockChannel.openNotification(any, action: anyNamed('action'))).thenAnswer((_) async => true);
+
+      notificationsService = NotificationsService(mockChannel, prefs);
+      while (!notificationsService.initialized) {
+        await Future.delayed(Duration.zero);
+      }
+
+      final item = notificationsService.notifications.single;
+      expect(item.actions.map((a) => a.title), ['Unlock door', 'Ignore']);
+      expect(item.carefulActions, isTrue);
+      // An app's notification isn't careful unless it says so
+      expect(NotificationItem.fromMap({'key': 'k', 'title': 't', 'text': '', 'isClearable': true}).carefulActions,
+          isFalse);
+
+      await notificationsService.open(key, action: 0);
+      verify(mockChannel.openNotification(key, action: 0)).called(1);
+    });
   });
 
   group('Persistent Notification & App Blocking', () {

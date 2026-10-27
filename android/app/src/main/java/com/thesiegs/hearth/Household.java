@@ -1167,7 +1167,7 @@ final class Household {
                 }
                 return HaNotificationServer.SHOWN;
             }
-            String value = HouseholdNotices.haValue(n.title, n.message, now);
+            String value = HouseholdNotices.haValue(n.title, n.message, n.actions, now);
             if (value == null) return -1;
             String item = HouseholdNotices.haItem(person, n.tag, n.title, n.message);
             String writer = log == LOCAL_NOTICES ? LOCAL_NOTICES_TV : store(app).tvId();
@@ -1179,8 +1179,15 @@ final class Household {
             HouseholdEntry entry = log.put(HouseholdNotices.KIND, person, item, value, now);
             if (entry != null) {
                 // It pops up here as it comes (or not at all), never again from the Bell
+                long at = HouseholdLog.millisOf(entry);
                 synchronized (sPopped) {
-                    sPopped.add(entry.item + "@" + HouseholdLog.millisOf(entry));
+                    sPopped.add(entry.item + "@" + at);
+                }
+                // Its buttons in the pop-up go the household's way: run once, and it goes from every Bell
+                HouseholdNotices.Notice kept = HouseholdNotices.parse(entry);
+                if (kept != null && kept.actions.size() == n.actions.size() && !n.actions.isEmpty()) {
+                    String who = person;
+                    n.onAction = index -> pressNotice(app, who, entry.item, at, index);
                 }
                 noticesChanged(app, log);
             }
@@ -1217,7 +1224,9 @@ final class Household {
     /** An exchange brought these: the Bell changes when notifications are among them, and a join answer is taken. */
     private static void noticesArrived(List<HouseholdEntry> applied) {
         for (HouseholdEntry entry : applied) {
-            if (HouseholdNotices.KIND.equals(entry.kind) || HouseholdNotices.ANSWER.equals(entry.kind)) {
+            if (HouseholdNotices.KIND.equals(entry.kind) || HouseholdNotices.ANSWER.equals(entry.kind)
+                    || HouseholdNotices.PRESS.equals(entry.kind)) {
+                runPresses(sContext);
                 refreshNotices(sContext);
                 HouseholdJoining.answeredInHousehold(store(sContext).log().all());
                 return;
@@ -1287,6 +1296,81 @@ final class Household {
                 cleared++;
             }
             if (cleared > 0) noticesChanged(app, log);
+        });
+    }
+
+    /**
+     * A Home Assistant notification's button pressed in the Bell: only one the profile on screen sees there (so never an
+     * adult's on a kids profile). False when it isn't in this TV's Bell, or has no such button.
+     */
+    static boolean pressNotice(Context context, String person, String item, int index) {
+        HouseholdNotices.Notice listed = null;
+        for (HouseholdNotices.Notice n : sNotices) {
+            if (!n.isJoin() && n.item.equals(item) && n.person.equals(person)) listed = n;
+        }
+        if (listed == null || index < 0 || index >= listed.actions.size()) return false;
+        pressNotice(context, person, item, listed.at, index);
+        return true;
+    }
+
+    /**
+     * Button {@code index} of the notification {@code item} written at {@code at} pressed, in the Bell or a pop-up. A TV
+     * with its own Home Assistant connection, or the one that received the notification, deletes it (so it goes from
+     * every TV) and calls the service itself; any other asks the receiving TV with a {@link HouseholdNotices#PRESS}
+     * entry ({@link #runPresses}). Either way, nothing more happens once it's handled: the button run is the one in
+     * this TV's copy, and a second press anywhere finds it gone (or already pressed).
+     */
+    static void pressNotice(Context context, String person, String item, long at, int index) {
+        Context app = context.getApplicationContext();
+        sContext = app;
+        EXEC.execute(() -> {
+            HouseholdLog log = noticeLog(app);
+            HouseholdNotices.Notice n = HouseholdNotices.parse(log.get(HouseholdNotices.KIND, person, item));
+            if (n == null || n.at != at || index < 0 || index >= n.actions.size()) return;
+            long now = System.currentTimeMillis();
+            boolean mine = log == LOCAL_NOTICES || n.writer.equals(store(app).tvId());
+            if (mine || HaConfig.isConfigured(app)) {
+                log.delete(HouseholdNotices.KIND, person, item, now);
+                noticesChanged(app, log);
+                callAction(app, n.actions.get(index));
+                return;
+            }
+            if (HouseholdNotices.pressed(log.all(), n) >= 0) return;
+            log.put(HouseholdNotices.PRESS, person, item, HouseholdNotices.pressValue(index, at), now);
+            Log.i(TAG, "A notification's button pressed: the TV that received it runs it");
+            noticesChanged(app, log);
+        });
+    }
+
+    /**
+     * Runs the buttons other TVs pressed on notifications this TV received (HouseholdNotices.due): each notification is
+     * deleted first, so it goes from every Bell and its button runs at most once. On the household thread.
+     */
+    private static void runPresses(Context context) {
+        if (context == null || !member(context)) return;
+        HouseholdLog log = store(context).log();
+        List<HouseholdNotices.Due> due = HouseholdNotices.due(log.all(), store(context).tvId(),
+                System.currentTimeMillis());
+        if (due.isEmpty()) return;
+        long now = System.currentTimeMillis();
+        for (HouseholdNotices.Due d : due) {
+            log.delete(HouseholdNotices.KIND, d.notice.person, d.notice.item, now);
+            if (d.action != null) {
+                callAction(context, d.action);
+            } else {
+                Log.i(TAG, "A notification's button pressed on another TV came too late to run; cleared it");
+            }
+        }
+        noticesChanged(context, log);
+    }
+
+    /** Calls a notification button's service with this TV's Home Assistant token, off the household thread. */
+    private static void callAction(Context context, HouseholdNotices.Action action) {
+        String[] service = action.service.split("\\.", 2);
+        org.json.JSONObject data = action.dataObject();
+        HaApi.EXECUTOR.execute(() -> {
+            boolean ok = HaApi.callService(context, service[0], service[1], data);
+            Log.i(TAG, "A notification's button ran " + service[0] + (ok ? "" : ": Home Assistant refused or is away"));
         });
     }
 

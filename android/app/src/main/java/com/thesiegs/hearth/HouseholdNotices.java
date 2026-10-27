@@ -1,5 +1,6 @@
 package com.thesiegs.hearth;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -8,19 +9,26 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Notifications that follow the household (docs/household-sync.md, "Notifications"): Home Assistant's, and a TV asking
  * to join. Each is a {@link #KIND} entry: the person it is for (a person id; {@link #ALL_ADULTS} for every adult), an
  * item naming it, and its text as the value. Cleared is a delete, so it goes from every TV; the newest write wins as for
  * any entry. A join request's answer from another TV is an {@link #ANSWER} entry, which the TV holding the request takes
- * (the first it sees decides). Both kinds leave every TV's log after {@link #MAX_AGE_MS}. Nothing here knows about
- * Android, so the rules can be tested alone.
+ * (the first it sees decides). A Home Assistant notification carries its buttons; one pressed on a TV without its own
+ * Home Assistant connection is a {@link #PRESS} entry, which the TV that received the notification takes, once
+ * ({@link #due}). All three kinds leave every TV's log after {@link #MAX_AGE_MS}. Nothing here knows about Android, so
+ * the rules can be tested alone.
  */
 final class HouseholdNotices {
     static final String KIND = "notice";
     static final String ANSWER = "join_answer";
+    /** A Home Assistant notification's button pressed on a TV that asks the one that received it to run it. */
+    static final String PRESS = "notice_press";
     /** The person of a notification for every adult: the whole household's, as for a setting of the whole TV. */
     static final String ALL_ADULTS = HouseholdBridge.SHARED;
     static final String FROM_HA = "ha";
@@ -33,7 +41,54 @@ final class HouseholdNotices {
     static final int MAX_TEXT = 1000;
     /** Home Assistant notifications one TV keeps in the household's log at most (each stays three days). */
     static final int MAX_FROM_TV = 300;
+    /** A button's data (as JSON) longer than this isn't carried to the other TVs. */
+    static final int MAX_ACTION_DATA = 1000;
+    /** A press the receiving TV hears later than this isn't run (an "Unlock door" mustn't happen long after). */
+    static final long PRESS_MS = 2 * 60_000;
     private static final String JOIN_PREFIX = "join:";
+
+    /** One of a Home Assistant notification's buttons, as Home Assistant sent it and HaNotificationServer allowed. */
+    static final class Action {
+        final String title;
+        /** "domain.service". */
+        final String service;
+        /** The service's data as JSON ("{}" for none). */
+        final String data;
+
+        Action(String title, String service, String data) {
+            this.title = title;
+            this.service = service;
+            this.data = data;
+        }
+
+        JSONObject dataObject() {
+            try {
+                return new JSONObject(data);
+            } catch (JSONException e) {
+                return new JSONObject();
+            }
+        }
+
+        /** As HaNotificationServer.Notification holds a button: {"title", "service", "data"}. */
+        JSONObject asSent() {
+            try {
+                return new JSONObject().put("title", title).put("service", service).put("data", dataObject());
+            } catch (JSONException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+    }
+
+    /** A pressed button the TV holding the notification runs: {@link #action} null when the press came too late. */
+    static final class Due {
+        final Notice notice;
+        final Action action;
+
+        Due(Notice notice, Action action) {
+            this.notice = notice;
+            this.action = action;
+        }
+    }
 
     /** One notification as the Bell shows it. */
     static final class Notice {
@@ -52,9 +107,17 @@ final class HouseholdNotices {
         final String joiner;
         final String askedTv;
         final String askedName;
+        /** A Home Assistant notification's buttons (checked again where read); empty for others. */
+        final List<Action> actions;
 
         Notice(String item, String person, String from, String title, String text, long at, long until, String writer,
                 String joiner, String askedTv, String askedName) {
+            this(item, person, from, title, text, at, until, writer, joiner, askedTv, askedName,
+                    Collections.<Action>emptyList());
+        }
+
+        Notice(String item, String person, String from, String title, String text, long at, long until, String writer,
+                String joiner, String askedTv, String askedName, List<Action> actions) {
             this.item = item;
             this.person = person;
             this.from = from;
@@ -66,6 +129,7 @@ final class HouseholdNotices {
             this.joiner = joiner;
             this.askedTv = askedTv;
             this.askedName = askedName;
+            this.actions = actions;
         }
 
         boolean isJoin() {
@@ -106,15 +170,142 @@ final class HouseholdNotices {
 
     /** A Home Assistant notification's value; null when it says nothing (a camera alone has nothing for the Bell). */
     static String haValue(String title, String text, long nowMs) {
+        return haValue(title, text, null, nowMs);
+    }
+
+    /**
+     * The same, with its buttons ({@code actions}, as HaNotificationServer allowed them). They are carried only when
+     * every one of them can be ({@link #carried}), so a button's number is the same on every TV and in the pop-up.
+     */
+    static String haValue(String title, String text, List<JSONObject> actions, long nowMs) {
         String t = clip(title, MAX_TITLE);
         String x = clip(text, MAX_TEXT);
         if (t.isEmpty() && x.isEmpty()) return null;
         try {
-            return new JSONObject().put("f", FROM_HA).put("ti", t).put("tx", x).put("at", nowMs)
-                    .put("u", nowMs + MAX_AGE_MS).toString();
+            JSONObject o = new JSONObject().put("f", FROM_HA).put("ti", t).put("tx", x).put("at", nowMs)
+                    .put("u", nowMs + MAX_AGE_MS);
+            List<Action> carried = carried(actions);
+            if (!carried.isEmpty()) {
+                JSONArray list = new JSONArray();
+                for (Action a : carried) {
+                    list.put(new JSONObject().put("ti", a.title).put("s", a.service).put("d", a.data));
+                }
+                o.put("ac", list);
+            }
+            return o.toString();
         } catch (JSONException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /**
+     * The buttons that go in the household's entry: all of {@code actions}, or none when any of them isn't allowed
+     * (HaNotificationServer.allowedAction), is too long, or there are more than HaNotificationServer.MAX_ACTIONS.
+     * What travels is checked the same way again where it is read ({@link #parse}), so an entry from another TV can't
+     * hold a button Home Assistant's own notification couldn't.
+     */
+    static List<Action> carried(List<JSONObject> actions) {
+        if (actions == null || actions.isEmpty() || actions.size() > HaNotificationServer.MAX_ACTIONS) {
+            return Collections.emptyList();
+        }
+        List<Action> out = new ArrayList<>();
+        for (JSONObject a : actions) {
+            Action ok = action(a);
+            if (ok == null) return Collections.emptyList();
+            out.add(ok);
+        }
+        return Collections.unmodifiableList(out);
+    }
+
+    /** {@code a} ({"title", "service", "data"}) as a button the household may carry, or null. */
+    private static Action action(JSONObject a) {
+        if (!HaNotificationServer.allowedAction(a)) return null;
+        String title = a.optString("title").trim();
+        if (title.length() > MAX_TITLE) return null;
+        JSONObject data = a.optJSONObject("data");
+        String json = data == null ? "{}" : data.toString();
+        if (json.length() > MAX_ACTION_DATA) return null;
+        return new Action(title, a.optString("service"), json);
+    }
+
+    /** The buttons in an entry's value, checked as when they came from Home Assistant; none when any isn't allowed. */
+    private static List<Action> actionsIn(JSONObject value) {
+        JSONArray list = value.optJSONArray("ac");
+        if (list == null || list.length() == 0 || list.length() > HaNotificationServer.MAX_ACTIONS) {
+            return Collections.emptyList();
+        }
+        List<JSONObject> asSent = new ArrayList<>();
+        try {
+            for (int i = 0; i < list.length(); i++) {
+                JSONObject a = list.getJSONObject(i);
+                String d = a.getString("d");
+                if (d.length() > MAX_ACTION_DATA) return Collections.emptyList();
+                asSent.add(new JSONObject().put("title", a.getString("ti")).put("service", a.getString("s"))
+                        .put("data", new JSONObject(d)));
+            }
+        } catch (JSONException e) {
+            return Collections.emptyList();
+        }
+        return carried(asSent);
+    }
+
+    // ---- Its buttons, pressed on any TV ----
+
+    /** A press of button {@code index} of the notification written at {@code noticeAt} (its {@link Notice#at}). */
+    static String pressValue(int index, long noticeAt) {
+        try {
+            return new JSONObject().put("a", index).put("at", noticeAt).toString();
+        } catch (JSONException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /** The button pressed for {@code n}, or -1 when none was (a press for an older one with the same item isn't). */
+    static int pressed(List<HouseholdEntry> entries, Notice n) {
+        for (HouseholdEntry e : entries) {
+            if (!PRESS.equals(e.kind) || e.deleted || !e.item.equals(n.item) || !e.profile.equals(n.person)) continue;
+            return pressIndex(e, n);
+        }
+        return -1;
+    }
+
+    private static int pressIndex(HouseholdEntry press, Notice n) {
+        try {
+            JSONObject o = new JSONObject(press.value);
+            if (o.getLong("at") != n.at) return -1;
+            int index = o.getInt("a");
+            return index >= 0 && index < n.actions.size() ? index : -1;
+        } catch (JSONException ex) {
+            return -1;
+        }
+    }
+
+    /**
+     * The presses this TV ({@code ownTv}) runs: one for each Home Assistant notification it wrote and still holds whose
+     * button another TV pressed. The TV deletes each notification before running it, so a press runs at most once and
+     * the notification goes from every Bell. One heard more than {@link #PRESS_MS} from when it was pressed only clears
+     * it ({@link Due#action} null). The button run is always the one in this TV's own copy of the notification, by its
+     * number, so a press can't name a service of its own.
+     */
+    static List<Due> due(List<HouseholdEntry> entries, String ownTv, long nowMs) {
+        Map<String, HouseholdEntry> presses = new HashMap<>();
+        for (HouseholdEntry e : entries) {
+            if (PRESS.equals(e.kind) && !e.deleted) presses.put(e.profile + "|" + e.item, e);
+        }
+        List<Due> out = new ArrayList<>();
+        if (presses.isEmpty() || ownTv == null) return out;
+        for (HouseholdEntry e : entries) {
+            if (!e.tv.equals(ownTv)) continue;
+            Notice n = parse(e);
+            if (n == null || n.actions.isEmpty() || nowMs >= n.until) continue;
+            HouseholdEntry press = presses.get(n.person + "|" + n.item);
+            if (press == null) continue;
+            int index = pressIndex(press, n);
+            if (index < 0) continue;
+            boolean late = Math.abs(nowMs - HouseholdLog.millisOf(press)) > PRESS_MS;
+            out.add(new Due(n, late ? null : n.actions.get(index)));
+        }
+        return out;
     }
 
     /**
@@ -211,7 +402,8 @@ final class HouseholdNotices {
                 String title = clip(o.optString("ti", ""), MAX_TITLE);
                 String text = clip(o.optString("tx", ""), MAX_TEXT);
                 if (title.isEmpty() && text.isEmpty()) return null;
-                return new Notice(e.item, e.profile, from, title, text, at, until, e.tv, null, null, null);
+                return new Notice(e.item, e.profile, from, title, text, at, until, e.tv, null, null, null,
+                        actionsIn(o));
             }
             if (FROM_JOIN.equals(from)) {
                 // Only for every adult, and only one the asked TV wrote about itself
@@ -231,7 +423,7 @@ final class HouseholdNotices {
      * What the Bell shows the profile on screen ({@code person}, its person id; {@code kids}: a kids profile), newest
      * first: notifications for that person, and while an adult is on, those for every adult. Not ones gone past their
      * time, nor a join request this TV holds itself ({@code ownTv}: its own Bell item answers it) or one already
-     * answered from a TV.
+     * answered from a TV, nor a Home Assistant one whose button was pressed (it is being run, and goes everywhere).
      */
     static List<Notice> visible(List<HouseholdEntry> entries, String person, boolean kids, String ownTv, long nowMs) {
         List<Notice> out = new ArrayList<>();
@@ -244,6 +436,7 @@ final class HouseholdNotices {
                 continue;
             }
             if (n.isJoin() && (n.askedTv.equals(ownTv) || answer(entries, n.item) != null)) continue;
+            if (!n.actions.isEmpty() && pressed(entries, n) >= 0) continue;
             out.add(n);
         }
         out.sort((a, b) -> Long.compare(b.at, a.at));
@@ -252,7 +445,7 @@ final class HouseholdNotices {
 
     /** Whether an entry is a notification (or an answer to one) gone past {@link #MAX_AGE_MS}: it leaves the log. */
     static boolean expired(HouseholdEntry e, long nowMs) {
-        return (KIND.equals(e.kind) || ANSWER.equals(e.kind)) && nowMs - HouseholdLog.millisOf(e) > MAX_AGE_MS;
+        return (KIND.equals(e.kind) || ANSWER.equals(e.kind) || PRESS.equals(e.kind)) && nowMs - HouseholdLog.millisOf(e) > MAX_AGE_MS;
     }
 
     // ----

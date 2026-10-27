@@ -35,6 +35,10 @@ class NotificationItem {
   /// Its buttons, except ones that need typed text.
   final List<NotificationAction> actions;
 
+  /// Whether its buttons act on the home (Home Assistant's "Unlock door"): its options open on Dismiss, not on the
+  /// first button, so a stray OK never presses one.
+  final bool carefulActions;
+
   NotificationItem({
     required this.key,
     required this.packageName,
@@ -44,6 +48,7 @@ class NotificationItem {
     required this.isClearable,
     this.canOpen = false,
     this.actions = const [],
+    this.carefulActions = false,
   });
 
   /// Whether this says and offers the same as [other]: an app that changes only its buttons is a change too, else
@@ -55,6 +60,7 @@ class NotificationItem {
       text == other.text &&
       isClearable == other.isClearable &&
       canOpen == other.canOpen &&
+      carefulActions == other.carefulActions &&
       const ListEquality<NotificationAction>().equals(actions, other.actions);
 
   factory NotificationItem.fromMap(Map<dynamic, dynamic> map) {
@@ -71,6 +77,7 @@ class NotificationItem {
           if (action is Map && action['index'] is int && action['title'] is String)
             NotificationAction(action['index'] as int, action['title'] as String),
       ],
+      carefulActions: map['carefulActions'] as bool? ?? false,
     );
   }
 }
