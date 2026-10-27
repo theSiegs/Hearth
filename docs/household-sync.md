@@ -248,7 +248,8 @@ things on joining, so it shows them first and keeps a copy:
 - **The copy.** The app keeps each listed profile's look and layout (the live one as its backup, the others' saved
   layouts) and its wallpaper pictures in a folder of its own, and the Java side keeps every profile's Profile Pairing
   choices and saved PINs (the TV's own too), sealed under a Keystore key as other secrets are. Kept 14 days, then
-  deleted. The usual Backup & Restore backup is still made too.
+  deleted, whether or not anyone opens the Household page: both sides check when Hearth starts and once a day. The
+  usual Backup & Restore backup is still made too.
 - **Put back.** The Household page shows **Put back this TV's settings from before it joined** while the copy is kept
   (asking for the Parent PIN where there is one). It restores the looks, layouts and pictures, and the pairings and
   PINs this TV had, and deletes the copy. What the household added that this TV never had (a PIN for another app) stays:
@@ -330,7 +331,8 @@ own Bell item, as before. An answer on another TV is a `join_answer` entry for t
 asks about the connection there first, and says what was chosen), which reaches the asked TV with the next exchange
 (two seconds later, both being on); that TV takes it as if pressed on its own screen. An Allow from a TV of an older
 build says nothing about the connection, so it isn't given; a request from an older asked TV carries no code (its
-Bell item says so in its old words) and its Allow asks nothing more. The request is still decided once:
+Bell item says so in its old words) and its Allow asks nothing more: that older TV hands over its connection on any
+Allow, as it always did, until it updates. The request is still decided once:
 the asked TV takes the first answer it hears, its own or another TV's, and a later one changes nothing. When the
 request ends (answered, or five minutes without an answer), the asked TV deletes its notice, which takes it from every
 Bell. A TV that answered hides the request at once. Clearing it is Don't allow, as on the asked TV.
@@ -460,7 +462,9 @@ What a TV checks before it takes part or takes something, and what that guards a
 - **Joining.** The join code binds the session between the two TVs and is shown on both: the new TV's screen and the
   request in the household's Bells (and its Allow dialog). No PIN: whoever answers is trusted to compare the code.
   Nothing secret moves before Allow, and the Home Assistant connection only after its own question, answered yes.
-  A request ends when the asking TV hangs up, and one address asking again and again waits longer each time.
+  A request ends when the asking TV hangs up, and one address asking again and again waits longer each time. Its
+  buttons answer only while an adult's profile is on: a kids profile's Bell never lists it, and the Bell refuses an
+  answer sent while a kids profile is on.
 - **Member, removal and Parent PIN entries are signed.** Each carries its writer's signature (ECDSA with its TV key,
   over every field of the entry: kind, person, item, value, clock, writer and sequence). A TV takes one only when its
   writer is on its member list at that moment (not unknown, not removed) and the signature checks against the writer's

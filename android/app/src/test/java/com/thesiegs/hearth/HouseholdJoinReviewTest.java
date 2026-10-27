@@ -137,4 +137,12 @@ public class HouseholdJoinReviewTest {
         assertFalse(empty.contains("user:"));
         assertEquals(0, HouseholdJoinReview.restore(tv, empty));
     }
+
+    @Test
+    public void theCopyFromBeforeJoiningIsKeptFourteenDays() {
+        long at = 1_800_000_000_000L;
+        assertFalse(Household.joinBackupExpired(at, at));
+        assertFalse(Household.joinBackupExpired(at, at + Household.JOIN_BACKUP_MS));
+        assertTrue(Household.joinBackupExpired(at, at + Household.JOIN_BACKUP_MS + 1));
+    }
 }

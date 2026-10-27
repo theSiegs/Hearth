@@ -173,6 +173,7 @@ final class Household {
 
     /** Starts listening, announcing and syncing when this TV is in a household with sync on; stops when it isn't. */
     static void start(Context context) {
+        expireJoinBackup(context);
         if (!active(context)) {
             stop();
             return;
@@ -737,16 +738,38 @@ final class Household {
         }
     }
 
+    private static boolean sBackupExpiryScheduled;
+
+    /**
+     * The copy from before joining goes after its {@link #JOIN_BACKUP_MS}, whether or not the Household page reads it:
+     * checked now (each start) and once a day, in a household or not (it outlives leaving one).
+     */
+    private static void expireJoinBackup(Context context) {
+        Context app = context.getApplicationContext();
+        joinBackupAt(app);
+        synchronized (Household.class) {
+            if (sBackupExpiryScheduled) return;
+            sBackupExpiryScheduled = true;
+        }
+        long day = 24L * 60 * 60_000;
+        EXEC.scheduleWithFixedDelay(() -> joinBackupAt(app), day, day, TimeUnit.MILLISECONDS);
+    }
+
     /** When the copy from before joining was made, while it's kept; 0 when there is none (a stale one is dropped). */
     static long joinBackupAt(Context context) {
         SharedPreferences prefs = prefs(context);
         long at = prefs.getLong(JOIN_BACKUP_AT_PREF, 0);
         if (at == 0) return 0;
-        if (System.currentTimeMillis() - at > JOIN_BACKUP_MS || prefs.getString(JOIN_BACKUP_PREF, null) == null) {
+        if (joinBackupExpired(at, System.currentTimeMillis()) || prefs.getString(JOIN_BACKUP_PREF, null) == null) {
             prefs.edit().remove(JOIN_BACKUP_PREF).remove(JOIN_BACKUP_AT_PREF).apply();
             return 0;
         }
         return at;
+    }
+
+    /** Whether a copy from before joining made at {@code at} is past its days. */
+    static boolean joinBackupExpired(long at, long now) {
+        return now - at > JOIN_BACKUP_MS;
     }
 
     /**

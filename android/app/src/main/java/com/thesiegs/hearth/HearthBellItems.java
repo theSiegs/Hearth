@@ -176,6 +176,8 @@ final class HearthBellItems {
     /** One of Hearth's items' buttons pressed. Whether it did something. */
     static boolean open(Context context, String key, int action) {
         if (action != ALLOW && action != DENY) return false;
+        // Adults only: a kids profile's Bell never lists a TV asking to join, and nothing it sends answers one
+        if (isJoin(key) && ProfileUsers.isKids(context)) return false;
         if (JOIN_KEY.equals(key)) {
             boolean answered = HouseholdJoining.answer(action == ALLOW);
             if (answered) LauncherNotificationListenerService.hearthItemsChanged();
@@ -207,6 +209,7 @@ final class HearthBellItems {
      * Bell.
      */
     static boolean dismiss(Context context, String key) {
+        if (isJoin(key) && ProfileUsers.isKids(context)) return false;
         String[] notice = noticeOf(key);
         if (notice == null) return open(context, key, DENY);
         if (HouseholdNotices.requestIdOf(notice[0]) != null) return Household.answerJoin(context, notice[0], false);
@@ -217,6 +220,13 @@ final class HearthBellItems {
     /** Clear all: the household's notifications the profile on screen sees go too (not a TV asking to join). */
     static void clearAll(Context context) {
         Household.clearNotices(context);
+    }
+
+    /** Whether this Bell key is a TV asking to join (this TV's request, its Home Assistant question, or another's). */
+    static boolean isJoin(String key) {
+        if (JOIN_KEY.equals(key) || JOIN_HA_KEY.equals(key)) return true;
+        String[] notice = noticeOf(key);
+        return notice != null && HouseholdNotices.requestIdOf(notice[0]) != null;
     }
 
     /** {item, person} of a household notification's key, or null when it isn't one. */

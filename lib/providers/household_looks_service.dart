@@ -81,6 +81,12 @@ class HouseholdLooksService implements HouseholdJoinReviewer {
     _timer = null;
   }
 
+  /// How often the copy from before joining is checked for its days, whether or not the Household page reads it.
+  static const Duration joinBackupCheckEvery = Duration(days: 1);
+
+  /// When the copy from before joining was last checked (null: not since Hearth started).
+  int? _joinBackupCheckedAt;
+
   /// One round: take what changed in the household, then send what changed here. Does nothing outside a household.
   Future<void> tick() async {
     if (_running) return;
@@ -116,6 +122,21 @@ class HouseholdLooksService implements HouseholdJoinReviewer {
       noteFailure('household_looks', err);
     } finally {
       _running = false;
+      // Also after a round that ended early (outside a household, or while joining)
+      await _expireJoinBackup();
+    }
+  }
+
+  /// The copy from before joining goes after its days, whether or not the Household page reads it: at the first round,
+  /// then daily (in a household or not). After the round, so it never holds one up.
+  Future<void> _expireJoinBackup() async {
+    final checkedAt = _joinBackupCheckedAt;
+    if (checkedAt != null && _now() - checkedAt < joinBackupCheckEvery.inMilliseconds) return;
+    _joinBackupCheckedAt = _now();
+    try {
+      await _joinBackupMeta();
+    } catch (err) {
+      noteFailure('household_looks', err);
     }
   }
 

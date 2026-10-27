@@ -228,6 +228,17 @@ public class HouseholdNoticesTest {
     }
 
     @Test
+    public void theBellKnowsWhichOfItsItemsAreATvAskingToJoin_soAKidsProfileCantAnswerOne() {
+        assertTrue(HearthBellItems.isJoin(HearthBellItems.JOIN_KEY));
+        assertTrue(HearthBellItems.isJoin(HearthBellItems.JOIN_HA_KEY));
+        assertTrue(HearthBellItems.isJoin("hearth:notice:" + HouseholdNotices.joinItem("r1") + "|"));
+        assertFalse(HearthBellItems.isJoin("hearth:notice:" + HouseholdNotices.haItem(ALEX, "t", null, null) + "|"
+                + ALEX));
+        assertFalse(HearthBellItems.isJoin("0|com.example.app|1|null|0"));
+        assertFalse(HearthBellItems.isJoin(null));
+    }
+
+    @Test
     public void aJoinRequestMustBeForEveryAdult_andWrittenByTheTvItAsked() {
         HouseholdLog log = new HouseholdLog("tv-b");
         log.put(HouseholdNotices.KIND, ALEX, HouseholdNotices.joinItem("r1"),
