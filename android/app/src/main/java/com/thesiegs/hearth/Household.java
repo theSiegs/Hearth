@@ -492,12 +492,22 @@ final class Household {
     /** Exchanges with every TV of the household that is on the network. */
     static void syncAll(String why) {
         if (sContext == null || !active(sContext)) return;
+        TURNS.forgetServed();
         for (HouseholdNet.Peer peer : HouseholdNet.peers()) {
             // An exchange can end the household here (this TV was removed, or it finished leaving)
             if (!active(sContext)) return;
+            // That TV opened one with this TV meanwhile, which went both ways: another adds nothing
+            if (TURNS.served(peer.tvId)) continue;
             exchangeWith(peer, why);
         }
     }
+
+    /**
+     * Whose turn the household thread is: an exchange another TV opens while this TV runs one of its own waits, or,
+     * when that TV comes first, this TV's gives way (HouseholdTurns), so two TVs syncing with each other at once
+     * don't each wait on the other until both time out.
+     */
+    private static final HouseholdTurns TURNS = new HouseholdTurns();
 
     private static void exchangeWith(HouseholdNet.Peer peer, String why) {
         HouseholdStore store = store(sContext);
@@ -506,16 +516,23 @@ final class Household {
             // dropped, so it holds the household thread for PROVE_MS at most
             java.util.concurrent.ScheduledFuture<?> deadline = closeLater(socket);
             try {
-                socket.connect(new InetSocketAddress(peer.host, peer.port), 5_000);
-                socket.setSoTimeout(SOCKET_TIMEOUT_MS);
-                HouseholdSync.Result result = HouseholdSync.run(socket.getInputStream(), socket.getOutputStream(), true,
-                        store, pictures(sContext), ShareDiscovery.deviceName(sContext), System.currentTimeMillis(),
-                        () -> deadline.cancel(false));
-                finish(store, result, "to " + why);
+                HouseholdTurns.Outcome outcome = TURNS.open(socket, () -> {
+                    socket.connect(new InetSocketAddress(peer.host, peer.port), 5_000);
+                    socket.setSoTimeout(SOCKET_TIMEOUT_MS);
+                    HouseholdSync.Result result = HouseholdSync.run(socket.getInputStream(), socket.getOutputStream(),
+                            true, store, pictures(sContext), ShareDiscovery.deviceName(sContext),
+                            System.currentTimeMillis(), () -> deadline.cancel(false));
+                    finish(store, result, "to " + why);
+                });
+                if (outcome == HouseholdTurns.Outcome.GAVE_WAY) {
+                    Log.i(TAG, "Gave way to an exchange another TV opened at the same time");
+                    // The one given way to may be another TV's (TVs waiting on each other in a ring): this one's again
+                    if (!TURNS.served(peer.tvId)) syncSoon();
+                }
             } finally {
                 deadline.cancel(false);
             }
-        } catch (IOException | java.security.GeneralSecurityException e) {
+        } catch (IOException | java.security.GeneralSecurityException | RuntimeException e) {
             sLastResult = "failed: " + e.getClass().getSimpleName();
             Log.i(TAG, "Couldn't sync with a TV of the household: " + why(e));
         }
@@ -556,7 +573,19 @@ final class Household {
             deadline = closeLater(socket);
             HouseholdSync.Accepted opened = HouseholdSync.accept(in, socket.getOutputStream(), sSelfId, sHouseholdId);
             deadline.cancel(false);
-            EXEC.execute(() -> accept(socket, opened));
+            boolean gaveWay = TURNS.arrived(new HouseholdTurns.Waiting() {
+                @Override
+                public String peer() {
+                    return opened.peer();
+                }
+
+                @Override
+                public void serve() {
+                    accept(socket, opened);
+                }
+            }, sSelfId);
+            if (gaveWay) Log.i(TAG, "Two TVs opened exchanges with each other at once: this TV's gives way");
+            EXEC.execute(TURNS::serveWaiting);
         } catch (IOException | java.security.GeneralSecurityException | RuntimeException | StackOverflowError e) {
             // Whatever a device on the network sends: an uncaught error on this pool's thread would end Hearth
             if (deadline != null) deadline.cancel(false);
@@ -573,12 +602,32 @@ final class Household {
             if (!active(sContext)) return;
             s.setSoTimeout(SOCKET_TIMEOUT_MS);
             HouseholdStore store = store(sContext);
+            // A TV not on this TV's list may have just been let in by another TV of the household: refused now, it
+            // is listed once this TV has synced with the others, so that happens soon
+            if (store.log() != null
+                    && HouseholdMembers.standing(store.log(), opened.peer()) == HouseholdMembers.Standing.UNKNOWN) {
+                newcomerSeen();
+            }
             HouseholdSync.Result result = HouseholdSync.run(opened, store, pictures(sContext),
                     ShareDiscovery.deviceName(sContext), System.currentTimeMillis());
             finish(store, result, "from a TV");
-        } catch (IOException | java.security.GeneralSecurityException e) {
+        } catch (IOException | java.security.GeneralSecurityException | RuntimeException e) {
             Log.i(TAG, "A TV tried to sync and couldn't: " + why(e));
         }
+    }
+
+    /** At most this often does a TV not on the list (yet) make this TV sync with the others. */
+    private static final long NEWCOMER_SYNC_MS = 30_000;
+    private static long sNewcomerSyncAt;
+
+    /** A TV not on this TV's list opened an exchange: the others are asked soon, in case one just let it in. */
+    private static void newcomerSeen() {
+        long now = android.os.SystemClock.elapsedRealtime();
+        synchronized (Household.class) {
+            if (sNewcomerSyncAt != 0 && now - sNewcomerSyncAt < NEWCOMER_SYNC_MS) return;
+            sNewcomerSyncAt = now;
+        }
+        syncSoon();
     }
 
     private static void finish(HouseholdStore store, HouseholdSync.Result result, String how) {
@@ -620,7 +669,18 @@ final class Household {
         sLastSyncAt = System.currentTimeMillis();
         sLastResult = "sent " + result.sent + ", took " + result.received;
         Log.i(TAG, "Synced " + how + ": sent " + result.sent + ", took " + result.received + ", changed "
-                + result.applied.size());
+                + result.applied.size() + (result.admitted ? ", and listed that TV" : ""));
+        // What came, or the TV just listed, goes on to the household's other TVs on now, rather than at the next
+        // change or check: a TV that just joined is refused by the others until its entry reaches them
+        if ((result.admitted || !result.applied.isEmpty()) && othersOnNow(result.peer)) syncSoon();
+    }
+
+    /** Whether a TV of the household other than {@code tvId} is on the network now. */
+    private static boolean othersOnNow(String tvId) {
+        for (HouseholdNet.Peer peer : HouseholdNet.peers()) {
+            if (!peer.tvId.equals(tvId)) return true;
+        }
+        return false;
     }
 
     // ---- For the settings screen ----

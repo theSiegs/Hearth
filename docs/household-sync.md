@@ -503,6 +503,17 @@ What a TV checks before it takes part or takes something, and what that guards a
   gave, within 20 seconds in all or it is closed; only then does it go to the household thread, which checks the member
   list before reading anything more and refuses a TV not on it at once. A TV this TV connects to (anything can announce
   itself) has 20 seconds to prove it's a member before the connection is closed.
+- **Two TVs syncing with each other at once don't wait on each other.** Both ends of every exchange run on their TV's
+  household thread, so two TVs that open one with each other at the same moment (right after a join, each hears the
+  other and syncs) would each hold its thread on its own and wait for the other's until both time out. An exchange
+  another TV opens waits while this TV runs one of its own, unless the other TV comes first (the lower TV id): then this
+  TV's gives way, its connection closed, and the other's, which goes both ways, goes on at once (HouseholdTurns). So
+  of two TVs, or a ring of them, one always goes on.
+- **What an exchange brings goes on.** When an exchange brought entries that changed something, or listed a TV that
+  proved an invitation, the TV syncs with the household's other TVs on now a couple of seconds later, rather than at
+  the next change or five-minute check: a TV that just joined is refused by the others until the entry listing it
+  reaches them. A TV that is refused for not being listed makes the TV that refused it sync with the others soon too
+  (at most every 30 seconds), in case one of them just let it in.
 - **Joining.** The join code binds the session between the two TVs and is shown on both: the new TV's screen and the
   request in the household's Bells (and its Allow dialog). No PIN: whoever answers is trusted to compare the code.
   Nothing secret moves before Allow, and the Home Assistant connection only after its own question, answered yes.
