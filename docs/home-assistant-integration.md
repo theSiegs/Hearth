@@ -257,7 +257,9 @@ until the group has time again (a bonus, a higher budget, a new day):
 - **Hearth devices** get the person's minutes left per group, with the group's apps, in their state document (below),
   and stop those apps themselves (HearthTube holds YouTube on its own). On a TV, in a kids profile, a held app doesn't
   open from Hearth's tiles, Continue Watching or remote buttons ("Time's up for Games today. An adult can add more
-  time."); opened another way (Google TV's kids home, a voice search, a link), Hearth's home comes back over it. All
+  time."); opened another way (Google TV's kids home, a voice search, a link), Hearth's home comes back over it.
+  YouTube's own app is the exception: kids watch YouTube in HearthTube, so it's swapped for HearthTube, which holds
+  the YouTube time itself. All
   screen time out of time holds every app. Never held: Hearth, HearthTube, Settings, the Play Store, the assistant and
   Google TV's own screens (chooser, PIN, time up). Adult profiles have no limits, and without today's answer from Home
   Assistant nothing is held.

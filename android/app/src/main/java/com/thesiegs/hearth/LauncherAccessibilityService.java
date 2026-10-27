@@ -750,15 +750,18 @@ public class LauncherAccessibilityService extends AccessibilityService {
     /**
      * YouTube's own app came up in a kids profile that has HearthTube (a voice search, a link, a hidden app shown
      * again): kids watch YouTube only in HearthTube, where their YouTube time applies, so HearthTube opens over it.
-     * A kids profile without HearthTube keeps YouTube.
+     * A kids profile without HearthTube keeps YouTube. Returns whether YouTube is HearthTube's to hold (steered now,
+     * or a moment ago), so a group's time up doesn't also send the kid home.
      */
-    private void steerKidsToHearthTube() {
+    private boolean steerKidsToHearthTube() {
         long now = SystemClock.elapsedRealtime();
-        if (now - mSteeredAt < STEER_AGAIN_AFTER_MS || !ProfileUsers.isKids(this)) return;
-        if (!Boolean.TRUE.equals(ProfileApps.launch(this, CompanionApps.HEARTHTUBE))) return;
+        if (!ProfileUsers.isKids(this)) return false;
+        if (now - mSteeredAt < STEER_AGAIN_AFTER_MS) return true;
+        if (!Boolean.TRUE.equals(ProfileApps.launch(this, CompanionApps.HEARTHTUBE))) return false;
         mSteeredAt = now;
         Log.i(TAG, "YouTube in a kids profile: HearthTube instead");
         Toast.makeText(this, R.string.youtube_in_hearthtube, Toast.LENGTH_LONG).show();
+        return true;
     }
 
     // --- A group's time up (the Hearth integration) ---
@@ -1264,8 +1267,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         // Not the keyboard, a system pop-up or the assistant's bar: those come up over the app that's still in use
         if (isHearth || isApp) mLastAppPackage = packageName;
-        if (isApp && YOUTUBE.equals(packageName)) steerKidsToHearthTube();
-        if (isApp && !isGoogleTv) holdForTime(packageName);
+        // Kids watch YouTube in HearthTube, which holds their YouTube time itself
+        boolean steered = isApp && YOUTUBE.equals(packageName) && steerKidsToHearthTube();
+        if (isApp && !isGoogleTv && !steered) holdForTime(packageName);
         if (isGoogleTv) {
             setGoogleTvEvents(true);
         } else if (isHearth || isApp) {
