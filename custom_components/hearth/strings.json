@@ -239,7 +239,7 @@
       },
       "enforce": {
         "title": "Enforce",
-        "description": "When one of this person's groups is out of time, their Hearth TVs and phones stop its apps. Here, other parental controls can hold them too, until the group has time again (more time, a new day). Family Link pauses the group's Android apps (they stay installed; Google TV ignores this, Hearth holds the TV). Family Safety locks the platforms below while one of its groups below is out of time, until midnight. Nintendo suspends the Switch's game while one of its groups below is out of time (Max screentime today set to 0, with Suspend software on), and puts its limit and Suspend software back after. Choosing a person again replaces theirs; leaving them all empty stops it, and what was held is let go.",
+        "description": "When one of this person's groups is out of time, their Hearth TVs and phones stop its apps. Here, other parental controls can hold them too, until the group has time again (more time, a new day). Family Link pauses the group's Android apps, every app for All screen time (they stay installed; Google TV ignores this, Hearth holds the TV). Family Safety locks the platforms below while one of its groups below is out of time, until midnight. Nintendo suspends the Switch's game while one of its groups below is out of time (Max screentime today set to 0, with Suspend software on), and puts its limit and Suspend software back after. Choosing a person again replaces theirs; leaving them all empty stops it, and what was held is let go.",
         "data": {
           "person": "Person",
           "family_link": "Family Link: any of the person's Family Link entities",

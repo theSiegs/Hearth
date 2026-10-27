@@ -266,8 +266,9 @@ until the group has time again (a bonus, a higher budget, a new day):
 - **Other parental controls**, per person (Configure > Enforce):
   - **Family Link** pauses the group's Android apps (`familylink.pause_app`: a 1 minute daily limit, the app stays
     installed) and resumes them (`resume_app` puts back the setting they had). Google TV ignores Family Link's app
-    limits, which is why a TV is held by Hearth. Calls, texts, the system and the parental controls' own apps are never
-    paused.
+    limits, which is why a TV is held by Hearth. All screen time out of time pauses every app of the person's Hearth
+    knows: those in any group, and those in their usage today on any device or source (at most 150). Calls, texts, the
+    system and the parental controls' own apps are never paused.
   - **Microsoft Family Safety** locks the chosen platforms (Xbox by default) until midnight while one of the chosen
     groups (Games and All screen time by default) is out of time (`lock_platform`), and unlocks them when none is.
   - **Nintendo** (the built-in [Nintendo Switch parental controls](https://www.home-assistant.io/integrations/nintendo_parental_controls)

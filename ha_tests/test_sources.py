@@ -186,3 +186,31 @@ async def test_a_lock_holds_the_person(hass: HomeAssistant, hass_client_no_auth:
 
     body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
     assert body["state"]["profiles"][KID]["locked"] is True
+
+
+async def test_all_screen_time_is_every_device_and_source(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """The TV (HearthTube among its apps), a Family Link phone, Family Safety, a Switch and a live Xbox: added up."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0))
+    await _household_with_sam(hass, hass_client_no_auth)
+    hass.states.async_set(
+        PHONE_SENSOR, "45", {"unit_of_measurement": "min", "apps": [{"package": "com.example.chat", "minutes": 45}]}
+    )
+    hass.states.async_set("sensor.sam_screen_time", "20", {"unit_of_measurement": "min"})
+    hass.states.async_set(SWITCH_SENSOR, "30", {"unit_of_measurement": "min"})
+    hass.states.async_set(XBOX_SENSOR, "")
+    await _option(hass, "add_source", {"entity_id": PHONE_SENSOR, "person": "person.sam"})
+    await _option(hass, "add_source", {"entity_id": "sensor.sam_screen_time", "person": "person.sam"})
+    await _option(hass, "add_source", {"entity_id": SWITCH_SENSOR, "person": "person.sam", "group": "games"})
+    await _option(
+        hass, "add_source", {"entity_id": XBOX_SENSOR, "person": "person.sam", "live": True, "group": "games"}
+    )
+    hass.states.async_set(XBOX_SENSOR, "Halo")
+    await hass.async_block_till_done()
+    await _minutes_pass(hass, freezer, 10)
+
+    # 15 + 45 + 20 + 30 + 10
+    assert _state(hass, "sensor.hearth_sam_screen_time_today") == "120"
+    assert _state(hass, "sensor.hearth_sam_games_today") == "45"  # 5 on the TV, the Switch, the Xbox
+    assert len(hass.states.get("sensor.hearth_sam_screen_time_today").attributes["devices"]) == 5

@@ -5,7 +5,8 @@ add, per person, the parental controls of other integrations (Configure > Enforc
 
 - Family Link (the HAFamilyLink integration): the group's Android apps are paused (familylink.pause_app: a 1 minute
   daily limit, the app stays installed) and resumed (resume_app puts back the setting they had). Google TV ignores app
-  limits, which is why a TV is held by Hearth.
+  limits, which is why a TV is held by Hearth. All screen time out of time pauses every app of the person's Hearth
+  knows: those in any group, and those in their usage today on any device.
 - Microsoft Family Safety: a platform (Xbox, Windows) is locked until midnight while one of the chosen groups (Games, All
   screen time) is out of time, and unlocked when it isn't.
 - Nintendo Switch Parental Controls (built in): while one of the chosen groups (Games, All screen time) is out of time,
@@ -138,10 +139,10 @@ def wanted(enforcer: Enforcer, day: PersonDay | None, apps_of, now: datetime | N
         now = now or dt_util.now()
         late = dt_util.start_of_local_day(now + timedelta(days=1)) - now <= NINTENDO_LET_GO_BEFORE_MIDNIGHT
         return {SWITCH} if closed and not late else set()
+    # All screen time out of time: every app the person has (apps_of says which), as on a Hearth device
     packages: set[str] = set()
     for group_id in closed:
-        if group_id != ALL:
-            packages |= {p for p in apps_of(group_id) if not essential(p)}
+        packages |= {p for p in apps_of(group_id, enforcer.person) if not essential(p)}
     return set(sorted(packages)[:MAX_PACKAGES])
 
 
@@ -203,7 +204,7 @@ class Enforcement:
 
     @callback
     def update(self, enforcers: list[Enforcer], days: dict[str, PersonDay], apps_of) -> None:
-        """[apps_of]: a group id's packages."""
+        """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs)."""
         self.enforcers = enforcers
         now = dt_util.now()
         wanted_now = {e.key: wanted(e, days.get(e.person), apps_of, now) for e in enforcers}

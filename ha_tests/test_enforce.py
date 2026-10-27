@@ -322,3 +322,31 @@ async def test_a_switch_s_used_screen_time_is_games_by_itself(
     entry = hass.config_entries.async_entries(DOMAIN)[0]
     assert entry.options["sources"][0]["group"] == "games"
     assert hass.states.get("sensor.hearth_sam_games_today").state == "45"  # 5 on the TV, 40 on the Switch
+
+
+async def test_all_screen_time_out_pauses_every_app_of_theirs(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    paused, _resumed = _family_link(hass)
+    await _household_with_sam(hass, hass_client_no_auth)
+    # Sam's phone, through Family Link: a chat app no group has, and texts (never paused)
+    hass.states.async_set(
+        FAMILY_LINK,
+        "20",
+        {
+            "unit_of_measurement": "min",
+            "apps": [
+                {"package": "com.example.chat", "minutes": 15},
+                {"package": "com.google.android.apps.messaging", "minutes": 5},
+            ],
+        },
+    )
+    await _option(hass, "add_source", {"entity_id": FAMILY_LINK, "person": "person.sam"})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+
+    await _budget(hass, "all", 30)  # 15 on the TV, 20 on the phone
+    assert len(paused) == 1
+    packages = paused[0].data["packages"]
+    assert {"com.example.chat", "com.example.game", "com.thesiegs.hearthtube"} <= set(packages)
+    assert "com.google.android.apps.messaging" not in packages
+    assert not any(essential(p) for p in packages)
