@@ -708,16 +708,9 @@ final class Household {
         if (joined) {
             Map<String, String> online = new HashMap<>();
             for (HouseholdNet.Peer peer : HouseholdNet.peers()) online.put(peer.tvId, peer.name);
-            // The log is the household thread's; an exchange holding it up only leaves out the TVs known from it
-            List<HouseholdEntry> entries = new ArrayList<>();
-            try {
-                entries = EXEC.submit(() -> {
-                    HouseholdLog log = store.log();
-                    return log == null ? new ArrayList<HouseholdEntry>() : log.all();
-                }).get(2, TimeUnit.SECONDS);
-            } catch (Exception e) {
-                Log.i(TAG, "The list of TVs left out the household's entries: " + why(e));
-            }
+            // The log as last saved: the household thread's own may be in an exchange, which this doesn't wait for
+            HouseholdLog saved = store.saved();
+            List<HouseholdEntry> entries = saved == null ? new ArrayList<>() : saved.all();
             for (HouseholdMembers.Member m : HouseholdMembers.list(entries, seen(context), online, store.tvId(),
                     ShareDiscovery.deviceName(context), System.currentTimeMillis())) {
                 Map<String, Object> member = new HashMap<>();
@@ -752,16 +745,17 @@ final class Household {
     /**
      * What the household's entries would change in this TV's pairings and PINs, while it holds them after joining:
      * {profiles: [{key, name, kids, pairings, pins}], tvPins}, a profile listed whether or not anything of it changes
-     * (the app adds its looks). Null when this TV isn't holding any. Blocks: not on the main thread.
+     * (the app adds its looks). Null when this TV isn't holding any. Read from the log as last saved, so an exchange
+     * running on the household thread doesn't hold it up. Blocks: not on the main thread.
      */
     static Map<String, Object> joinPreview(Context context) {
         if (!mayBeInHousehold(context)) return null;
         Context app = context.getApplicationContext();
         try {
-            return EXEC.submit(() -> {
-                if (!member(app) || !reviewing(app)) return null;
+            return readSaved(app, saved -> {
+                if (!reviewing(app)) return null;
                 HouseholdLocal local = local(app);
-                Map<String, int[]> changes = HouseholdJoinReview.changes(local, store(app).log());
+                Map<String, int[]> changes = HouseholdJoinReview.changes(local, saved);
                 List<Map<String, Object>> profiles = new ArrayList<>();
                 for (String key : local.profiles().values()) {
                     int[] counts = changes.get(key);
@@ -778,7 +772,7 @@ final class Household {
                 out.put("profiles", profiles);
                 out.put("tvPins", tv == null ? 0 : tv[1]);
                 return out;
-            }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
+            });
         } catch (Exception e) {
             Log.i(TAG, "Couldn't tell what joining changes: " + why(e));
             return null;
@@ -1054,6 +1048,18 @@ final class Household {
         return sLooksVersion;
     }
 
+    /** Reads the household's log as last saved (HouseholdStore.saved), off the household thread. */
+    private interface SavedRead<T> {
+        T read(HouseholdLog saved) throws Exception;
+    }
+
+    /** {@code read} on the log as last saved, while this TV is a member; null when it isn't. */
+    private static <T> T readSaved(Context app, SavedRead<T> read) throws Exception {
+        if (!member(app)) return null;
+        HouseholdLog saved = store(app).saved();
+        return saved == null ? null : read.read(saved);
+    }
+
     /**
      * The profiles whose look this TV's Hearth keeps: every one, kids' included (Hearth in the owner's user is every
      * profile's home and swaps their layouts; Hearth in a kids profile's own user is only its agent).
@@ -1065,22 +1071,21 @@ final class Household {
     /**
      * The household's looks, layouts and wallpapers for this TV's profiles (kids' included), when they changed since {@code since} (a
      * version this returned before; 0 for all): {version, profiles: {profileKey: {look, layout, wallpapers: {slot:
-     * {hash, path}}}}}. Just {version} when nothing changed, and null when this TV isn't a member. Blocks: not on the
-     * main thread.
+     * {hash, path}}}}}. Just {version} when nothing changed, and null when this TV isn't a member. Read from the log as
+     * last saved, so an exchange running on the household thread doesn't hold it up (it saves before it says the looks
+     * changed). Blocks: not on the main thread.
      */
     static Map<String, Object> looks(Context context, long since) {
         if (!mayBeInHousehold(context)) return null;
         Context app = context.getApplicationContext();
         try {
-            return EXEC.submit(() -> {
-                if (!member(app)) return null;
+            return readSaved(app, log -> {
                 Map<String, Object> out = new HashMap<>();
                 long version = looksVersion();
                 out.put("version", version);
                 // Just joined: the app shows what would change rather than taking it (it doesn't give either)
                 if (reviewing(app)) out.put("review", true);
                 if (since == version) return out;
-                HouseholdLog log = store(app).log();
                 HouseholdPictures pictures = pictures(app);
                 Map<String, Object> profiles = new HashMap<>();
                 for (Map.Entry<String, String> profile : local(app).profiles().entrySet()) {
@@ -1112,7 +1117,7 @@ final class Household {
                 }
                 out.put("profiles", profiles);
                 return out;
-            }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
+            });
         } catch (Exception e) {
             Log.i(TAG, "Couldn't read the household's looks: " + why(e));
             return null;
@@ -1173,15 +1178,15 @@ final class Household {
 
     /**
      * The household's Parent PIN: {state: "live" (with its hash), "removed" or "none"}; null when this TV isn't a
-     * member. Blocks: not on the main thread.
+     * member. Read from the log as last saved, so an exchange on the household thread doesn't hold it up. Blocks: not
+     * on the main thread.
      */
     static Map<String, Object> parentPin(Context context) {
         if (!mayBeInHousehold(context)) return null;
         Context app = context.getApplicationContext();
         try {
-            return EXEC.submit(() -> {
-                if (!member(app)) return null;
-                HouseholdEntry entry = store(app).log().entry(HouseholdBridge.PARENT_PIN, HouseholdBridge.SHARED, "");
+            return readSaved(app, log -> {
+                HouseholdEntry entry = log.entry(HouseholdBridge.PARENT_PIN, HouseholdBridge.SHARED, "");
                 Map<String, Object> out = new HashMap<>();
                 if (entry == null) {
                     out.put("state", "none");
@@ -1195,7 +1200,7 @@ final class Household {
                     out.put("state", "none");
                 }
                 return out;
-            }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
+            });
         } catch (Exception e) {
             Log.i(TAG, "Couldn't read the household's Parent PIN: " + why(e));
             return null;

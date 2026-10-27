@@ -274,4 +274,28 @@ public class HouseholdStoreTest {
         assertFalse(store.joined());
         assertTrue(elsewhere.reopen().lost());
     }
+
+    @Test
+    public void whatOtherThreadsReadIsTheLogAsLastSavedAndNoOneChangesIt() {
+        HouseholdTvs.Tv tv = new HouseholdTvs.Tv();
+        assertNull(tv.store.saved());
+        tv.store.create("Office", T0);
+        String self = tv.store.tvId();
+        assertEquals(HouseholdMembers.Standing.MEMBER, HouseholdMembers.standing(tv.store.saved(), self));
+        // A change on the household thread shows once it's saved (an exchange saves when it ends)
+        tv.store.log().put("look", "Alex", "", "dark", T0 + 1);
+        assertNull(tv.store.saved().get("look", "Alex", ""));
+        tv.store.save();
+        HouseholdLog saved = tv.store.saved();
+        assertEquals("dark", saved.get("look", "Alex", "").value);
+        // A copy: what the household thread does next doesn't change one being read
+        tv.store.log().put("look", "Alex", "", "light", T0 + 2);
+        tv.store.save();
+        assertEquals("dark", saved.get("look", "Alex", "").value);
+        assertEquals("light", tv.store.saved().get("look", "Alex", "").value);
+        // Opened again (a restart), it holds what was saved; leaving, nothing
+        assertEquals("light", tv.reopen().saved().get("look", "Alex", "").value);
+        tv.store.leave();
+        assertNull(tv.store.saved());
+    }
 }

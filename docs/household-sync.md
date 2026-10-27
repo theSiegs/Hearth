@@ -508,7 +508,8 @@ What a TV checks before it takes part or takes something, and what that guards a
   other and syncs) would each hold its thread on its own and wait for the other's until both time out. An exchange
   another TV opens waits while this TV runs one of its own, unless the other TV comes first (the lower TV id): then this
   TV's gives way, its connection closed, and the other's, which goes both ways, goes on at once (HouseholdTurns). So
-  of two TVs, or a ring of them, one always goes on.
+  of two TVs, or a ring of them, one always goes on. What the app only reads (the list of TVs, the looks, the Parent
+  PIN, what joining would change) comes from a copy of the entries as last saved, so it never waits for an exchange.
 - **What an exchange brings goes on.** When an exchange brought entries that changed something, or listed a TV that
   proved an invitation, the TV syncs with the household's other TVs on now a couple of seconds later, rather than at
   the next change or five-minute check: a TV that just joined is refused by the others until the entry listing it
