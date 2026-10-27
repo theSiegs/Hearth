@@ -98,6 +98,10 @@ class Household:
         self.school.configure(dict(hub.entry.options))
         self.enforcement = Enforcement(hass, hub.entry.entry_id)
         self.days: dict[str, PersonDay] = {}
+        # The day [days] is of
+        self.today: date | None = None
+        # Each totals source's last reading today, which counts while its sensor has no number (unavailable)
+        self._last_totals: dict[str, tuple[date, Reading]] = {}
         self.groups: list[Group] = []
         self.sources: list[Source] = []
         self.titles: list[Title] = []
@@ -285,6 +289,10 @@ class Household:
             else:
                 reading = totals_reading(self.hass, source)
                 if reading is not None:
+                    self._last_totals[source.id] = (today, reading)
+                elif (last := self._last_totals.get(source.id)) is not None and last[0] == today:
+                    reading = last[1]
+                if reading is not None:
                     add(source.person, device, reading)
 
         started, ended = self.live.look(now, today, observations)
@@ -325,6 +333,7 @@ class Household:
                     self.limits.clear_reached(person, group.id)
             days[person] = day
         self.days = days
+        self.today = today
         groups_by_id = {g.id: g for g in self.groups}
 
         def apps_of(group_id: str, person: str) -> list[str]:

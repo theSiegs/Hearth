@@ -202,7 +202,10 @@ async def test_yesterday_s_counts_don_t_count_today(
     stale = {**_tv_status(hearthtube_s=3000), "day": "2000-01-01"}
     await _post(client, secret, body=stale)
     await hass.async_block_till_done()
-    assert hass.states.get("sensor.hearth_sam_screen_time_today").state == "0"
+    # Counted: nothing (the sensor itself keeps the 15 it showed today until midnight)
+    total = hass.states.get("sensor.hearth_sam_screen_time_today")
+    assert total.attributes["groups"]["all"] == 0
+    assert total.attributes["devices"] == {}
 
 
 

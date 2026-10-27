@@ -163,7 +163,10 @@ sum; the breakdown keeps every source's number. So:
 
 Days start at local midnight. A source that resets at its own midnight (another time zone) is read as dropping to
 zero: a drop is a new day for that source. A source that stops changing is shown as stale in the breakdown; its last
-count still counts.
+count still counts, and so does its last number today while its sensor has none (unavailable). A person's Screen time
+today and group sensors (total increasing, for Home Assistant's statistics) never go down during the day: when the count
+dips (a source's number corrected down a minute), they keep the highest shown today until the count passes it, after
+a restart too; the count itself, which the budgets use, is in the attributes.
 
 ### Games and titles
 
