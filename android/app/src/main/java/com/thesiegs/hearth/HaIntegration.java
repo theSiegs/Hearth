@@ -75,6 +75,11 @@ final class HaIntegration {
         return true;
     }
 
+    /** Which pairing this is, without opening the secret: its sealed form, new with every pairing; null when unpaired. */
+    static String pairingStamp(Context context) {
+        return HaConfig.prefs(context).getString(SECRET_SEALED_KEY, null);
+    }
+
     static boolean isPaired(Context context) {
         return HaConfig.baseUrl(context) != null && secret(context) != null;
     }

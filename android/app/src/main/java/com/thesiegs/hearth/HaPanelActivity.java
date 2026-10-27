@@ -49,6 +49,8 @@ public class HaPanelActivity extends Activity {
             else editor.putString(DASHBOARD_KEY, path);
         }
         editor.apply();
+        // A new token: the status goes out at once (HaBridgeService)
+        if (token != null) HaBridgeService.sync(context);
     }
 
     @Override

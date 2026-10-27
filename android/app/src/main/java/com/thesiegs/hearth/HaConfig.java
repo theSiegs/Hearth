@@ -65,6 +65,13 @@ final class HaConfig {
         return true;
     }
 
+    /** Which token is saved, without opening it: its sealed form, new with every token saved; null when there's none. */
+    static String tokenStamp(Context context) {
+        SharedPreferences prefs = prefs(context);
+        String sealed = prefs.getString(TOKEN_SEALED_KEY, null);
+        return sealed != null ? sealed : prefs.getString(TOKEN_KEY, null) == null ? null : "legacy";
+    }
+
     /** An address and a token are both set, so the panel and the REST API can sign in. */
     static boolean isConfigured(Context context) {
         return baseUrl(context) != null && token(context) != null;

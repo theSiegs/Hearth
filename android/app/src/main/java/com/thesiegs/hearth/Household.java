@@ -807,6 +807,7 @@ final class Household {
         if (url == null || token.isEmpty() || token.length() > 4096) return false;
         if (!HaConfig.setToken(context, token)) return false;
         HaConfig.prefs(context).edit().putString(HaConfig.URL_KEY, url).apply();
+        HaBridgeService.sync(context);
         return true;
     }
 
