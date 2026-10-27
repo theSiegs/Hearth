@@ -120,7 +120,7 @@
           "add_title": "Add a title",
           "remove_title": "Remove a title",
           "locks": "Locks (bedtime, school time)",
-          "enforce": "Enforce limits (Family Link, Family Safety)",
+          "enforce": "Enforce limits (Family Link, Family Safety, Nintendo)",
           "school_days": "School days",
           "sort_apps": "Sort new apps",
           "new_apps": "Watch for new apps",
@@ -172,7 +172,7 @@
           "group": "Its time is in"
         },
         "data_description": {
-          "group": "For time it can't put on an app: Games for a Switch or Xbox."
+          "group": "For time it can't put on an app: Games for a Switch or Xbox. A Nintendo Switch Parental Controls sensor is Games when left empty."
         }
       },
       "remove_source": {
@@ -239,13 +239,15 @@
       },
       "enforce": {
         "title": "Enforce",
-        "description": "When one of this person's groups is out of time, their Hearth TVs and phones stop its apps. Here, other parental controls can hold them too, until the group has time again (more time, a new day). Family Link pauses the group's Android apps (they stay installed; Google TV ignores this, Hearth holds the TV). Family Safety locks the platforms below while one of the groups below is out of time, until midnight. Choosing a person again replaces theirs; leaving both empty stops it, and what was held is let go.",
+        "description": "When one of this person's groups is out of time, their Hearth TVs and phones stop its apps. Here, other parental controls can hold them too, until the group has time again (more time, a new day). Family Link pauses the group's Android apps (they stay installed; Google TV ignores this, Hearth holds the TV). Family Safety locks the platforms below while one of its groups below is out of time, until midnight. Nintendo suspends the Switch's game while one of its groups below is out of time (Max screentime today set to 0, with Suspend software on), and puts its limit and Suspend software back after. Choosing a person again replaces theirs; leaving them all empty stops it, and what was held is let go.",
         "data": {
           "person": "Person",
           "family_link": "Family Link: any of the person's Family Link entities",
           "family_safety": "Family Safety: the person's account sensor",
           "platforms": "Family Safety: platforms to lock",
-          "groups": "Family Safety: lock while one of these groups is out of time"
+          "groups": "Family Safety: lock while one of these groups is out of time",
+          "nintendo": "Nintendo: the person's Switch (its Max screentime today)",
+          "nintendo_groups": "Nintendo: suspend while one of these groups is out of time"
         }
       }
     },
