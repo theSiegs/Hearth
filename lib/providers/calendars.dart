@@ -37,7 +37,14 @@ enum TvCalendarAccess {
 
 /// One of the Google calendars synced to the TV, for the active profile ("tv:12", "Family").
 class TvCalendar {
+  /// Its id in this TV's calendar store ("tv:12"): this TV's own.
   final String id;
+
+  /// The same calendar on every TV that has its account ("cal:" and a hash of the account and the calendar,
+  /// TvCalendars.keyOf): what a profile's hidden calendars are kept by, so they follow the person. [id] when Hearth's
+  /// Android side didn't say (a kids profile's agent from before keys).
+  final String key;
+
   final String name;
 
   /// The Google account it belongs to (alex@example.com).
@@ -46,14 +53,22 @@ class TvCalendar {
   /// Its color (ARGB), if it has one.
   final int? color;
 
-  const TvCalendar(this.id, this.name, {this.account = "", this.color});
+  const TvCalendar(this.id, this.name, {String? key, this.account = "", this.color}) : key = key ?? id;
+
+  /// Whether [hidden] (a profile's hidden calendars) hides it: by its key, or by its id here from before keys.
+  bool hiddenBy(Set<String> hidden) => hidden.contains(key) || hidden.contains(id);
 
   @override
   bool operator ==(Object other) =>
-      other is TvCalendar && other.id == id && other.name == name && other.account == account && other.color == color;
+      other is TvCalendar &&
+      other.id == id &&
+      other.key == key &&
+      other.name == name &&
+      other.account == account &&
+      other.color == color;
 
   @override
-  int get hashCode => Object.hash(id, name, account, color);
+  int get hashCode => Object.hash(id, key, name, account, color);
 
   @override
   String toString() => "$name ($id)";
@@ -130,6 +145,9 @@ class CalendarParser {
   /// The prefix of a TV calendar's id, before its id in Android's calendar store.
   static const String tvPrefix = "tv:";
 
+  /// A calendar's key, the same on every TV (TvCalendars.keyOf): "cal:" and 32 hex digits.
+  static final RegExp keyPattern = RegExp(r'^cal:[0-9a-f]{32}$');
+
   /// getCalendarAccess: "granted", "denied" or "waiting".
   static TvCalendarAccess parseAccess(Object? value) => switch (value) {
         "granted" => TvCalendarAccess.granted,
@@ -137,7 +155,8 @@ class CalendarParser {
         _ => TvCalendarAccess.denied,
       };
 
-  /// getCalendars: [{"id": 12, "name": "Family", "color": -12396910, "account": "alex@example.com"}, ...], by name.
+  /// getCalendars: [{"id": 12, "key": "cal:…", "name": "Family", "color": -12396910, "account": "alex@example.com"},
+  /// ...], by name.
   static List<TvCalendar> parseCalendars(Object? json) {
     final out = <TvCalendar>[];
     if (json is! List) return out;
@@ -147,8 +166,11 @@ class CalendarParser {
       if (id is! int) continue;
       final name = c["name"];
       final account = c["account"];
+      final key = c["key"];
       out.add(TvCalendar("$tvPrefix$id", name is String && name.trim().isNotEmpty ? name.trim() : "$id",
-          account: account is String ? account : "", color: _color(c["color"])));
+          key: key is String && keyPattern.hasMatch(key) ? key : null,
+          account: account is String ? account : "",
+          color: _color(c["color"])));
     }
     out.sort((a, b) {
       final byName = a.name.toLowerCase().compareTo(b.name.toLowerCase());
@@ -256,6 +278,9 @@ class CalendarService extends ChangeNotifier {
   final Future<CalendarReading> Function(DateTime from, DateTime to) _read;
   final Future<bool> Function()? _requestAccess;
   final List<String> Function() _hidden;
+
+  /// Puts each calendar's key in place of its id here in the profile's hidden calendars (from before keys).
+  final Future<void> Function(Map<String, String> idToKey)? _rekeyHidden;
   final String? Function() _profileKey;
   final DateTime Function() _now;
   final Listenable? _settings;
@@ -275,6 +300,7 @@ class CalendarService extends ChangeNotifier {
   CalendarService({
     required Future<CalendarReading> Function(DateTime from, DateTime to) read,
     required List<String> Function() hiddenCalendars,
+    Future<void> Function(Map<String, String> idToKey)? rekeyHiddenCalendars,
     Future<bool> Function()? requestAccess,
     String? Function()? profileKey,
     DateTime Function()? now,
@@ -282,6 +308,7 @@ class CalendarService extends ChangeNotifier {
   })  : _read = read,
         _requestAccess = requestAccess,
         _hidden = hiddenCalendars,
+        _rekeyHidden = rekeyHiddenCalendars,
         _profileKey = profileKey ?? (() => null),
         _now = now ?? DateTime.now,
         _settings = settings {
@@ -313,7 +340,7 @@ class CalendarService extends ChangeNotifier {
   /// The calendars this profile shows (all but those turned off).
   List<TvCalendar> get shownCalendars {
     final hidden = _hidden().toSet();
-    return _calendars.where((c) => !hidden.contains(c.id)).toList();
+    return _calendars.where((c) => !c.hiddenBy(hidden)).toList();
   }
 
   /// There's a calendar this profile shows: the date and time take focus.
@@ -322,7 +349,8 @@ class CalendarService extends ChangeNotifier {
   /// The shown calendars' events over the coming [days].
   List<CalendarEvent> get events {
     final hidden = _hidden().toSet();
-    return _events.where((e) => !hidden.contains(e.calendarId)).toList();
+    final hiddenIds = {...hidden, for (final c in _calendars) if (c.hiddenBy(hidden)) c.id};
+    return _events.where((e) => !hiddenIds.contains(e.calendarId)).toList();
   }
 
   /// What's left of today.
@@ -367,6 +395,7 @@ class CalendarService extends ChangeNotifier {
       _lastTryFailed = reading.access == TvCalendarAccess.waiting;
       if (reading.access == TvCalendarAccess.granted) _readAt = now;
       _set(reading.access, reading.calendars, reading.events);
+      await _rekey(reading.calendars);
     } catch (err) {
         noteFailure('calendars', err);
       _lastTryFailed = true;
@@ -374,6 +403,24 @@ class CalendarService extends ChangeNotifier {
       if (_readAt == null || now.difference(_readAt!) > keepStaleFor) {
         _set(_access, const [], const []);
       }
+    }
+  }
+
+  /// The profile's calendars hidden by their id here (from before keys) are kept by their key from now on, so they
+  /// follow the person to the household's other TVs. Once per profile: a calendar it hides later is kept by its key.
+  Future<void> _rekey(List<TvCalendar> calendars) async {
+    final rekey = _rekeyHidden;
+    if (rekey == null || _disposed) return;
+    final hidden = _hidden().toSet();
+    final idToKey = {
+      for (final c in calendars)
+        if (c.key != c.id && hidden.contains(c.id)) c.id: c.key,
+    };
+    if (idToKey.isEmpty) return;
+    try {
+      await rekey(idToKey);
+    } catch (err) {
+      noteFailure('calendars', err);
     }
   }
 

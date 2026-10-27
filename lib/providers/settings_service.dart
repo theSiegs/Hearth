@@ -20,6 +20,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flauncher/providers/parent_pin_hash.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 
 import 'package:flutter/material.dart';
 
@@ -544,8 +545,10 @@ class SettingsService extends ChangeNotifier {
 
   Future<void> setHaPanelDashboard(String path) => _setString(_haPanelDashboardKey, path);
 
-  /// The calendars on the TV ("tv:12") this profile doesn't show by the top bar's date and time; every other one
-  /// shows, so a new calendar shows until it's turned off.
+  /// The calendars this profile doesn't show by the top bar's date and time, by their key ("cal:…", the same on every
+  /// TV with their account, so they follow the person through household sync; one only another TV has stays, for when
+  /// it comes here), or by their id on this TV ("tv:12") until the calendars are next read. Every other one shows, so
+  /// a new calendar shows until it's turned off.
   List<String> get hiddenCalendars => _list(_hiddenCalendarsKey);
 
   /// The panel shows Home Assistant's own dashboard (the web page) instead of Hearth's drawing of it. Per profile, off
@@ -554,10 +557,30 @@ class SettingsService extends ChangeNotifier {
 
   Future<void> setHaPanelFullDashboard(bool enabled) => _setBool(_haPanelFullDashboardKey, enabled);
 
-  Future<void> setCalendarShown(String id, bool shown) async {
+  /// Shows or hides the calendar [key] ("cal:…", the same on every TV, so it follows the person); [id], its id on
+  /// this TV ("tv:12"), is let go of, as a profile's hidden calendars were kept by it before keys.
+  Future<void> setCalendarShown(String key, bool shown, {String? id}) async {
     final hidden = hiddenCalendars;
-    if (shown == !hidden.contains(id)) return;
-    await _saveList(_hiddenCalendarsKey, shown ? ([...hidden]..remove(id)) : [...hidden, id]);
+    final next = [
+      for (final c in hidden)
+        if (c != id && (c != key || !shown)) c,
+    ];
+    if (!shown && !next.contains(key)) next.add(key);
+    if (listEquals(next, hidden)) return;
+    await _saveList(_hiddenCalendarsKey, next);
+  }
+
+  /// The profile's hidden calendars kept by their id on this TV ("tv:12") from before keys, kept by their key
+  /// ([idToKey]) from now on.
+  Future<void> rekeyHiddenCalendars(Map<String, String> idToKey) async {
+    final hidden = hiddenCalendars;
+    final next = <String>[];
+    for (final c in hidden) {
+      final key = idToKey[c] ?? c;
+      if (!next.contains(key)) next.add(key);
+    }
+    if (listEquals(next, hidden)) return;
+    await _saveList(_hiddenCalendarsKey, next);
   }
 
   Future<void> setShowInputsWidgetInStatusBar(bool show) => _setBool(_showInputsWidgetInStatusBarKey, show);

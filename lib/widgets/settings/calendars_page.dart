@@ -110,8 +110,9 @@ class _CalendarsPageState extends State<CalendarsPage> {
         for (final (i, calendar) in calendars.indexed)
           RoundedSwitchListTile(
             autofocus: i == 0,
-            value: !hidden.contains(calendar.id),
-            onChanged: (shown) => context.read<SettingsService>().setCalendarShown(calendar.id, shown),
+            value: !calendar.hiddenBy(hidden),
+            onChanged: (shown) =>
+                context.read<SettingsService>().setCalendarShown(calendar.key, shown, id: calendar.id),
             title: Text(calendar.name),
             subtitle: calendar.account.isEmpty || calendar.account == calendar.name ? null : Text(calendar.account),
             secondary: Icon(Icons.event_outlined,

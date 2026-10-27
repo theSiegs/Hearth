@@ -159,6 +159,7 @@ Future<void> main() async {
                 read: (from, to) => CalendarService.readChannel(fLauncherChannel, from, to),
                 requestAccess: fLauncherChannel.requestCalendarPermission,
                 hiddenCalendars: () => settings.hiddenCalendars,
+                rekeyHiddenCalendars: settings.rekeyHiddenCalendars,
                 profileKey: () => settings.layoutOwner,
                 settings: settings,
               )..start();

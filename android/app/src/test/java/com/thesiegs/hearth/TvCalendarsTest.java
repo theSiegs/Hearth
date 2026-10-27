@@ -2,6 +2,7 @@ package com.thesiegs.hearth;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -63,6 +64,36 @@ public class TvCalendarsTest {
         List<TvCalendars.Cal> shown = TvCalendars.shown(all, null);
         assertEquals(3, shown.size());
         for (TvCalendars.Cal cal : shown) assertTrue(cal.visible && cal.synced);
+    }
+
+    @Test
+    public void aCalendarsKeyIsTheSameOnEveryTvWithItsAccount() {
+        String key = TvCalendars.keyOf("alex@example.com", "com.google", "family01@group.calendar.google.com",
+                "Family");
+        assertTrue(key.matches("cal:[0-9a-f]{32}"));
+        // Another TV: another row in its store, the address's case, a renamed calendar
+        assertEquals(key, TvCalendars.keyOf(" Alex@Example.com", "com.google", "FAMILY01@group.calendar.google.com",
+                "Kitchen"));
+        // Another account with the same calendar, another account type, another calendar
+        assertNotEquals(key, TvCalendars.keyOf("sam@example.com", "com.google", "family01@group.calendar.google.com",
+                "Family"));
+        assertNotEquals(key, TvCalendars.keyOf("alex@example.com", "LOCAL", "family01@group.calendar.google.com",
+                "Family"));
+        assertNotEquals(key, TvCalendars.keyOf("alex@example.com", "com.google", "alex@example.com", "Family"));
+        // Without an owner account, by its name
+        assertEquals(TvCalendars.keyOf("alex@example.com", "LOCAL", null, "Chores"),
+                TvCalendars.keyOf("alex@example.com", "LOCAL", "", " Chores "));
+        assertNotEquals(TvCalendars.keyOf("alex@example.com", "LOCAL", null, "Chores"),
+                TvCalendars.keyOf("alex@example.com", "LOCAL", null, "Birthdays"));
+        // It names no account in the clear
+        assertFalse(key.contains("alex"));
+    }
+
+    @Test
+    public void flutterGetsTheKeyWithTheId() {
+        TvCalendars.Cal cal = new TvCalendars.Cal(12, "alex@example.com", "Family", 0, true, true, false, "cal:ab");
+        assertEquals(12L, cal.toMap().get("id"));
+        assertEquals("cal:ab", cal.toMap().get("key"));
     }
 
     @Test

@@ -149,9 +149,18 @@ class HouseholdLooks {
 
   // ---- Items: what "the newest change wins" is counted by ----
 
-  /// A look's items: each setting by its key, its value as text (a setting at its default isn't there).
-  static Map<String, String> lookItems(Map<String, Object> settings) =>
-      {for (final entry in settings.entries) entry.key: jsonEncode(entry.value)};
+  /// What a look item of one hidden calendar starts with, before the calendar's key ("calendar:cal:…").
+  static const String calendarItemPrefix = "calendar:";
+
+  /// A look's items: each setting by its key, its value as text (a setting at its default isn't there), except the
+  /// hidden calendars, each of which is an item of its own ("calendar:<key>"), so hiding one on a TV and another on
+  /// another keeps both.
+  static Map<String, String> lookItems(Map<String, Object> settings) => {
+        for (final entry in settings.entries)
+          if (entry.key != ShareBundle.hiddenCalendarsKey) entry.key: jsonEncode(entry.value),
+        for (final key in ShareBundle.sharedCalendars(settings[ShareBundle.hiddenCalendarsKey]))
+          "$calendarItemPrefix$key": "hidden",
+      };
 
   /// A layout's items, each one thing a person changes on its own: "rows" (the rows and spacers, their order and how
   /// each looks), "row:<id>" (the apps in that row and their order; the dock is a row) and "app:<package>" (whether it
@@ -206,12 +215,16 @@ class HouseholdLooks {
       (local[item] ?? 0) > (household[item] ?? 0);
 
   /// The look when the household's ([household], stamped [householdStamps]) arrives on a TV whose own is [local]
-  /// ([localStamps]): setting by setting, the newer change wins. Returns the settings and their stamps.
+  /// ([localStamps]): setting by setting, the newer change wins, and calendar by calendar for the hidden ones (see
+  /// [_mergeCalendars]). Returns the settings and their stamps.
   static ({Map<String, Object> settings, Map<String, int> stamps}) mergeLook(Map<String, Object> household,
       Map<String, int> householdStamps, Map<String, Object> local, Map<String, int> localStamps) {
     final settings = <String, Object>{};
     final stamps = <String, int>{};
-    final keys = {...household.keys, ...local.keys, ...householdStamps.keys, ...localStamps.keys};
+    final keys = {...household.keys, ...local.keys, ...householdStamps.keys, ...localStamps.keys}
+      ..removeWhere((key) => key == ShareBundle.hiddenCalendarsKey || key.startsWith(calendarItemPrefix));
+    final hidden = _mergeCalendars(household, householdStamps, local, localStamps, stamps);
+    if (hidden.isNotEmpty) settings[ShareBundle.hiddenCalendarsKey] = hidden;
     for (final key in keys) {
       final h = household[key];
       final l = local[key];
@@ -230,6 +243,47 @@ class HouseholdLooks {
     }
     stamps.removeWhere((_, at) => at == 0);
     return (settings: settings, stamps: stamps);
+  }
+
+  /// The hidden calendars when the household's look arrives (see [mergeLook]), by key, each with its stamp put in
+  /// [stamps]: the newer change of each calendar wins. A calendar only one side hides stays hidden unless the other
+  /// side showed it later: the household's not hiding one it has no stamp for (an entry from a TV before keys, or one
+  /// that never had the calendar) isn't showing it, nor is a tie (the household's entry giving back this TV's own
+  /// stamp). So a calendar only one TV has keeps its flag for when it shows up on another.
+  static List<String> _mergeCalendars(Map<String, Object> household, Map<String, int> householdStamps,
+      Map<String, Object> local, Map<String, int> localStamps, Map<String, int> stamps) {
+    final h = ShareBundle.sharedCalendars(household[ShareBundle.hiddenCalendarsKey]).toSet();
+    final l = ShareBundle.sharedCalendars(local[ShareBundle.hiddenCalendarsKey]).toSet();
+    final calendars = {
+      ...h,
+      ...l,
+      for (final item in [...householdStamps.keys, ...localStamps.keys])
+        if (item.startsWith(calendarItemPrefix)) item.substring(calendarItemPrefix.length),
+    };
+    final hidden = <String>[];
+    for (final calendar in calendars) {
+      final item = "$calendarItemPrefix$calendar";
+      final hs = householdStamps[item];
+      final ls = localStamps[item];
+      final bool hide;
+      if (h.contains(calendar) == l.contains(calendar)) {
+        hide = h.contains(calendar);
+        stamps[item] = _max(hs, ls);
+      } else if (l.contains(calendar)) {
+        // Hidden here, not in the household's: shown only by a later change there
+        final shownThere = hs != null && hs > (ls ?? 0);
+        hide = !shownThere;
+        stamps[item] = (shownThere ? hs : ls) ?? 0;
+      } else {
+        // Hidden in the household's, not here: the household's unless it was shown here later
+        final shownHere = _localWins(item, localStamps, householdStamps);
+        hide = !shownHere;
+        stamps[item] = (shownHere ? ls : hs) ?? 0;
+      }
+      if (hide) hidden.add(calendar);
+    }
+    hidden.sort();
+    return hidden.take(ShareBundle.maxHiddenCalendars).toList();
   }
 
   /// The layout when the household's arrives on a TV whose own is [local], with [installed] the apps this TV has:

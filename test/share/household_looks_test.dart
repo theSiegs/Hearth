@@ -216,6 +216,81 @@ void main() {
           ["com.a.app", "com.b.app", "com.only.there"]);
     });
 
+    group("hidden calendars, calendar by calendar", () {
+      final family = "cal:${"1" * 32}";
+      final school = "cal:${"2" * 32}";
+      final chores = "cal:${"3" * 32}";
+      Map<String, Object> hiding(List<String> calendars) => {"hidden_calendars": calendars};
+
+      test("only their keys go between TVs, each once and in order, each its own item", () {
+        final look = HouseholdLooks.parseLook(
+            jsonEncode({
+              "hidden_calendars": [school, "tv:3", family, school, "alex@example.com"]
+            }),
+            settingKeys)!;
+        expect(look, {
+          "hidden_calendars": [family, school]
+        });
+        expect(HouseholdLooks.lookItems({"accent_color": "FF6D00", ...look}),
+            {"accent_color": '"FF6D00"', "calendar:$family": "hidden", "calendar:$school": "hidden"});
+        // Kept by their ids here only (from before keys): nothing goes out
+        expect(layoutOf(backup(installed: [], settings: {"hidden_calendars": ["tv:3"]})).settings, isEmpty);
+      });
+
+      test("two TVs hiding different calendars both keep theirs", () {
+        final merged = HouseholdLooks.mergeLook(
+            hiding([family]), {"calendar:$family": 200}, hiding([school]), {"calendar:$school": 300});
+        expect(merged.settings, hiding([family, school]));
+        expect(merged.stamps, {"calendar:$family": 200, "calendar:$school": 300});
+      });
+
+      test("shown again later on one TV, it's shown on the other; hidden again later here, it stays hidden", () {
+        // Shown on another TV (its item gone there, stamped) after it was hidden here
+        expect(
+            HouseholdLooks.mergeLook({}, {"calendar:$family": 300}, hiding([family]), {"calendar:$family": 200})
+                .settings,
+            isEmpty);
+        expect(
+            HouseholdLooks.mergeLook({}, {"calendar:$family": 200}, hiding([family]), {"calendar:$family": 300})
+                .settings,
+            hiding([family]));
+        // Shown here after it was hidden on another TV
+        expect(
+            HouseholdLooks.mergeLook(hiding([family]), {"calendar:$family": 200}, {}, {"calendar:$family": 300})
+                .settings,
+            isEmpty);
+        expect(
+            HouseholdLooks.mergeLook(hiding([family]), {"calendar:$family": 300}, {}, {"calendar:$family": 200})
+                .settings,
+            hiding([family]));
+      });
+
+      test("one the household has no say about stays hidden here, and one only another TV has is kept", () {
+        // A TV that just joined (nothing stamped here), the household's entry from a TV before keys or one without
+        // the calendar, and the household's giving back this TV's own stamp
+        expect(HouseholdLooks.mergeLook({"accent_color": "FF6D00"}, {}, hiding([chores]), {}).settings,
+            {"accent_color": "FF6D00", ...hiding([chores])});
+        expect(HouseholdLooks.mergeLook({}, {"calendar:$chores": 200}, hiding([chores]), {"calendar:$chores": 200})
+                .settings,
+            hiding([chores]));
+        // Hidden on a TV this one's account isn't on: kept, so it applies when the calendar comes here
+        final kept = HouseholdLooks.mergeLook(hiding([school]), {"calendar:$school": 200}, {}, {});
+        expect(kept.settings, hiding([school]));
+        expect(kept.stamps, {"calendar:$school": 200});
+      });
+
+      test("observed one by one: hiding one and showing another are separate changes", () {
+        final seen = <String, String>{};
+        final stamps = <String, int>{};
+        HouseholdLooks.observe(seen, stamps, HouseholdLooks.lookItems({"accent_color": "FF6D00"}), 100);
+        HouseholdLooks.observe(
+            seen, stamps, HouseholdLooks.lookItems({"accent_color": "FF6D00", ...hiding([family, school])}), 200);
+        HouseholdLooks.observe(
+            seen, stamps, HouseholdLooks.lookItems({"accent_color": "FF6D00", ...hiding([school])}), 300);
+        expect(stamps, {"accent_color": 0, "calendar:$family": 300, "calendar:$school": 200});
+      });
+    });
+
     test("rows added on the household's side come with their apps; a row added here later stays", () {
       final installed = {"com.a.app"};
       final household = layoutOf(backup(installed: ["com.a.app"], rows: [1, 2], placements: [
