@@ -197,6 +197,51 @@ public class HouseholdNoticesTest {
     }
 
     @Test
+    public void aJoinRequestCarriesItsCodeAndWhetherAnAllowGivesHomeAssistant() {
+        HouseholdLog asked = new HouseholdLog("tv-a");
+        String item = HouseholdNotices.joinItem("r1");
+        asked.put(HouseholdNotices.KIND, HouseholdNotices.ALL_ADULTS, item,
+                HouseholdNotices.joinValue("Kitchen", "tv-a", "Office", NOW, NOW + 300_000, "123 456", true), NOW);
+        HouseholdNotices.Notice n = HouseholdNotices.visible(asked.all(), ALEX, false, "tv-x", NOW).get(0);
+        assertEquals("123 456", n.code);
+        assertTrue(n.offersHa);
+        // from a TV of an older build: no code, and its Allow asks nothing more
+        HouseholdLog older = new HouseholdLog("tv-c");
+        older.put(HouseholdNotices.KIND, HouseholdNotices.ALL_ADULTS, HouseholdNotices.joinItem("r2"),
+                HouseholdNotices.joinValue("Kitchen", "tv-c", "Study", NOW, NOW + 300_000), NOW);
+        HouseholdNotices.Notice o = HouseholdNotices.visible(older.all(), ALEX, false, "tv-x", NOW).get(0);
+        assertEquals("", o.code);
+        assertFalse(o.offersHa);
+
+        // An Allow says whether the connection goes with it; an older TV's Allow, and a Don't allow, don't give it
+        HouseholdLog b = new HouseholdLog("tv-b");
+        b.put(HouseholdNotices.ANSWER, HouseholdNotices.ALL_ADULTS, item, HouseholdNotices.answerValue(true, true), NOW);
+        assertEquals(Boolean.TRUE, HouseholdNotices.answer(b.all(), item));
+        assertTrue(HouseholdNotices.answerGivesHa(b.all(), item));
+        b.put(HouseholdNotices.ANSWER, HouseholdNotices.ALL_ADULTS, item, HouseholdNotices.answerValue(true, false),
+                NOW + 1);
+        assertFalse(HouseholdNotices.answerGivesHa(b.all(), item));
+        b.put(HouseholdNotices.ANSWER, HouseholdNotices.ALL_ADULTS, item, HouseholdNotices.answerValue(true), NOW + 2);
+        assertEquals(Boolean.TRUE, HouseholdNotices.answer(b.all(), item));
+        assertFalse(HouseholdNotices.answerGivesHa(b.all(), item));
+        b.put(HouseholdNotices.ANSWER, HouseholdNotices.ALL_ADULTS, item, HouseholdNotices.answerValue(false, true),
+                NOW + 3);
+        assertEquals(Boolean.FALSE, HouseholdNotices.answer(b.all(), item));
+        assertFalse(HouseholdNotices.answerGivesHa(b.all(), item));
+    }
+
+    @Test
+    public void theBellKnowsWhichOfItsItemsAreATvAskingToJoin_soAKidsProfileCantAnswerOne() {
+        assertTrue(HearthBellItems.isJoin(HearthBellItems.JOIN_KEY));
+        assertTrue(HearthBellItems.isJoin(HearthBellItems.JOIN_HA_KEY));
+        assertTrue(HearthBellItems.isJoin("hearth:notice:" + HouseholdNotices.joinItem("r1") + "|"));
+        assertFalse(HearthBellItems.isJoin("hearth:notice:" + HouseholdNotices.haItem(ALEX, "t", null, null) + "|"
+                + ALEX));
+        assertFalse(HearthBellItems.isJoin("0|com.example.app|1|null|0"));
+        assertFalse(HearthBellItems.isJoin(null));
+    }
+
+    @Test
     public void aJoinRequestMustBeForEveryAdult_andWrittenByTheTvItAsked() {
         HouseholdLog log = new HouseholdLog("tv-b");
         log.put(HouseholdNotices.KIND, ALEX, HouseholdNotices.joinItem("r1"),

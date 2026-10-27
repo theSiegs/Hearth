@@ -609,6 +609,27 @@ final class WatchHistory extends SQLiteOpenHelper {
 
     // --- the household (HouseholdWatch) ---
 
+    /**
+     * The apps of the household's cards (kept entries from another TV) whose deep link is {@code intentUri}: opening
+     * one must land in its own app (MainActivity.launchWatchNextProgram). Empty when no card from the household has it.
+     */
+    synchronized Set<String> householdPackagesOf(String intentUri) {
+        Set<String> out = new java.util.HashSet<>();
+        if (intentUri == null || intentUri.isEmpty()) return out;
+        try {
+            for (Entry e : select(getReadableDatabase(), "shared=1 AND kind=?", new String[]{KEPT})) {
+                if (e.row == null) continue;
+                Map<String, Object> row = rowOf(e.row);
+                if (row != null && intentUri.equals(row.get("intentUri"))) out.add(e.packageName);
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Couldn't read the household's cards", e);
+            // Unknown: treated as the household's, so it's held to an app of its own
+            out.add("");
+        }
+        return out;
+    }
+
     /** A profile's own entries (played or kept here, not from the household), newest first. */
     synchronized List<Entry> ownEntries(String profile) {
         try {

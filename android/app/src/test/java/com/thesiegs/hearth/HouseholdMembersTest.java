@@ -108,7 +108,11 @@ public class HouseholdMembersTest {
     public void thisTvsEntryIsWrittenWhenMissingRenamedOrADayOld() {
         HouseholdLog log = new HouseholdLog("tv-a");
         assertTrue(HouseholdMembers.selfNeedsWrite(log, "tv-a", "Bedroom", KEY, T0));
+        // one from before signing is written again at once, saying this TV signs
         log.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, "tv-a", value("Bedroom"), T0);
+        assertTrue(HouseholdMembers.selfNeedsWrite(log, "tv-a", "Bedroom", KEY, T0 + 60_000));
+        log.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, "tv-a",
+                HouseholdMembers.value("Bedroom", KEY, "tv-a", true), T0);
         assertFalse(HouseholdMembers.selfNeedsWrite(log, "tv-a", "Bedroom", KEY, T0 + 60_000));
         assertTrue(HouseholdMembers.selfNeedsWrite(log, "tv-a", "Guest room", KEY, T0 + 60_000));
         assertTrue(HouseholdMembers.selfNeedsWrite(log, "tv-a", "Bedroom", new byte[] {4}, T0 + 60_000));

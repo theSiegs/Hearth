@@ -18,11 +18,21 @@
     <string name="household_join_unnamed">A new TV</string>
     <string name="household_join_bell_app">Household sync</string>
     <string name="household_join_bell_title">%1$s wants to join your TVs</string>
-    <string name="household_join_bell_text">It will keep every profile in step with this TV, and get its saved PINs and Home Assistant settings.</string>
-    <!-- The same request in the Bell of the household's other TVs; %1$s is the TV it asked -->
+    <!-- %1$s: the six digits the new TV shows ("123 456") -->
+    <string name="household_join_bell_text">Check that the new TV shows %1$s before you choose Allow. It will keep every profile in step with this TV, and get its saved PINs.</string>
+    <!-- The same request in the Bell of the household's other TVs; %1$s is the TV it asked. From a TV of an older build, which sends no code. -->
     <string name="household_join_bell_text_other">It asked %1$s, which lets it in. It will keep every profile in step with your TVs, and get their saved PINs and Home Assistant settings.</string>
+    <!-- The same, with the code; %1$s is the TV it asked, %2$s the six digits the new TV shows -->
+    <string name="household_join_bell_text_other_code">It asked %1$s, which lets it in. Check that the new TV shows %2$s before you choose Allow. It will keep every profile in step with your TVs, and get their saved PINs.</string>
     <string name="household_join_asked_unnamed">another of your TVs</string>
     <string name="household_join_allow">Allow</string>
     <string name="household_join_deny">Don\'t allow</string>
+    <!-- Asked after Allow, on its own; %1$s is the TV that joins -->
+    <string name="household_join_ha_title">Also give %1$s this TV\'s Home Assistant connection?</string>
+    <!-- The same on another TV of the household; %2$s is the TV it asked, whose connection it would get -->
+    <string name="household_join_ha_title_other">Also give %1$s the Home Assistant connection of %2$s?</string>
+    <string name="household_join_ha_text">It gets a Home Assistant sign-in of its own, for the same Home Assistant user as the Home Assistant panel. If no one answers, it joins without it.</string>
+    <string name="household_join_ha_give">Give it</string>
+    <string name="household_join_ha_keep">Don\'t give it</string>
     <string name="parent_approval_ha_message">Someone in %1$s’s profile on %2$s needs a parent’s OK. Answer from the notification on your phone (Allow or Deny). The request ends by itself after 2 minutes.</string>
 </resources>

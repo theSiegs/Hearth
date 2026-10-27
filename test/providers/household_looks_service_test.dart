@@ -311,5 +311,39 @@ void main() {
       expect(await service.joinBackupAt(), isNull);
       expect(await Directory("${copies.path}/copy").exists(), isFalse);
     });
+
+    test("the copy goes after 14 days even when the Household page never reads it: at start, then daily", () async {
+      await service.finishJoin((await service.joinPreview())!);
+      await service.tick();
+      expect(await Directory("${copies.path}/copy").exists(), isTrue);
+      now += const Duration(days: 15).inMilliseconds;
+      final restarted = HouseholdLooksService(channel, prefs, backup, settings, _NoPictures(),
+          onLiveChanged: () async {},
+          onPicturesCopied: (_) async {},
+          now: () => now,
+          joinBackupFolder: () async => Directory("${copies.path}/copy"));
+      // Hearth starting again looks at its first round
+      await restarted.tick();
+      expect(await Directory("${copies.path}/copy").exists(), isFalse);
+    });
+
+    test("a running Hearth checks the copy again a day after it last did", () async {
+      await service.finishJoin((await service.joinPreview())!);
+      final running = HouseholdLooksService(channel, prefs, backup, settings, _NoPictures(),
+          onLiveChanged: () async {},
+          onPicturesCopied: (_) async {},
+          now: () => now,
+          joinBackupFolder: () async => Directory("${copies.path}/copy"));
+      now += const Duration(days: 13, hours: 23).inMilliseconds;
+      await running.tick();
+      expect(await Directory("${copies.path}/copy").exists(), isTrue);
+      // within a day of that check it isn't looked at again; a day after, it is
+      now += const Duration(hours: 2).inMilliseconds;
+      await running.tick();
+      expect(await Directory("${copies.path}/copy").exists(), isTrue);
+      now += const Duration(days: 1).inMilliseconds;
+      await running.tick();
+      expect(await Directory("${copies.path}/copy").exists(), isFalse);
+    });
   });
 }
