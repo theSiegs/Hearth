@@ -19,6 +19,9 @@
     <string name="household_join_bell_app">Household sync</string>
     <string name="household_join_bell_title">%1$s wants to join your TVs</string>
     <string name="household_join_bell_text">It will keep every profile in step with this TV, and get its saved PINs and Home Assistant settings.</string>
+    <!-- The same request in the Bell of the household's other TVs; %1$s is the TV it asked -->
+    <string name="household_join_bell_text_other">It asked %1$s, which lets it in. It will keep every profile in step with your TVs, and get their saved PINs and Home Assistant settings.</string>
+    <string name="household_join_asked_unnamed">another of your TVs</string>
     <string name="household_join_allow">Allow</string>
     <string name="household_join_deny">Don\'t allow</string>
     <string name="parent_approval_ha_message">Someone in %1$s’s profile on %2$s needs a parent’s OK. Answer from the notification on your phone (Allow or Deny). The request ends by itself after 2 minutes.</string>

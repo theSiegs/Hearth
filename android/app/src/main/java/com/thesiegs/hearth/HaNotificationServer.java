@@ -25,12 +25,21 @@ import java.util.Map;
  * Hearth also takes two fields of its own, which Home Assistant can send with a rest_command:
  * "camera" (a camera entity shown live in the card, picture-in-picture style) and "actions" (a JSON list of
  * up to three buttons, each {"title", "service": "domain.service", "data": {...}}, run with the panel's token).
- * Only accepts connections from the local network.
+ * Two more say who it's for and name it in the Bell (Household.onHaNotification): "for" (a profile's name, Google
+ * account address or key, such as "user:10"; none: every adult) and "tag" (a later one with the same tag replaces it,
+ * and the message "clear_notification" with a tag clears it). The Bell gets only the title and message, never the
+ * buttons or the camera. Only accepts connections from the local network.
  */
 final class HaNotificationServer {
     static final int PORT = 7676;
     private static final String TAG = "HearthHaNotify";
     private static final int MAX_BODY_BYTES = 10 * 1024 * 1024;
+    /** A "for" or "tag" longer than this isn't one. */
+    static final int MAX_NAME_CHARS = 200;
+    /** What the listener did with a notification. */
+    static final int SHOWN = 0;
+    static final int CANT_SHOW = 1;
+    static final int UNKNOWN_PERSON = 2;
 
     static final class Notification {
         String title;
@@ -44,11 +53,23 @@ final class HaNotificationServer {
         String camera;
         /** Buttons, each {"title", "service", "data"}; empty for an ordinary notification. */
         final List<JSONObject> actions = new ArrayList<>();
+        /** Who it's for, as Home Assistant named them; null: every adult. */
+        String target;
+        /** Its tag, or null. */
+        String tag;
+
+        /** Whether this clears the notification with its tag instead of being one. */
+        boolean clears() {
+            return tag != null && "clear_notification".equals(message);
+        }
     }
 
     interface Listener {
-        /** False when the notification can't be shown now (the accessibility service that draws it is off). */
-        boolean onNotification(Notification notification);
+        /**
+         * {@link #SHOWN}; {@link #CANT_SHOW} when it can't be shown now (the accessibility service that draws it is
+         * off); {@link #UNKNOWN_PERSON} when no profile on this TV is the one it's for.
+         */
+        int onNotification(Notification notification);
     }
 
     private final Listener mListener;
@@ -121,7 +142,12 @@ final class HaNotificationServer {
             MiniHttp.respond(out, 400, "Missing msg");
             return;
         }
-        if (!mListener.onNotification(notification)) {
+        int done = mListener.onNotification(notification);
+        if (done == UNKNOWN_PERSON) {
+            MiniHttp.respond(out, 404, "No profile on this TV is the one it's for");
+            return;
+        }
+        if (done == CANT_SHOW) {
             // Home Assistant is told, as it was when nothing listened at all
             MiniHttp.respond(out, 503, "Hearth can't show pop-ups now");
             return;
@@ -159,6 +185,8 @@ final class HaNotificationServer {
         n.image = fields.get("filename2");
         n.camera = text(fields, "camera");
         if (n.camera != null && !n.camera.matches("camera\\.[a-z0-9_]+")) n.camera = null;
+        n.target = name(fields, "for");
+        n.tag = name(fields, "tag");
         String actions = text(fields, "actions");
         if (actions != null && !actions.isEmpty()) {
             try {
@@ -222,6 +250,16 @@ final class HaNotificationServer {
     private static String text(Map<String, byte[]> fields, String key) {
         byte[] value = fields.get(key);
         return value == null ? null : new String(value, StandardCharsets.UTF_8).trim();
+    }
+
+    /**
+     * A "for" or "tag": null when missing or blank, and cut to {@link #MAX_NAME_CHARS} when longer (such a "for" is
+     * no profile's, so the notification isn't shown to anyone).
+     */
+    private static String name(Map<String, byte[]> fields, String key) {
+        String value = text(fields, key);
+        if (value == null || value.isEmpty()) return null;
+        return value.length() > MAX_NAME_CHARS ? value.substring(0, MAX_NAME_CHARS) : value;
     }
 
     private static int intValue(Map<String, byte[]> fields, String key, int fallback) {

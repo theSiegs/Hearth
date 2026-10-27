@@ -282,6 +282,43 @@ void main() {
       verify(mockChannel.getActiveNotifications()).called(2); // Initial + refresh
       expect(notificationsService.notifications, isEmpty);
     });
+
+    test("a household notification is listed like an app's, cleared through the TV, and goes when another TV clears it",
+        () async {
+      // What the TV lists for a Home Assistant notification synced from the household (HearthBellItems)
+      const key = 'hearth:notice:ha:0123abcd|a:0123abcd';
+      when(mockChannel.checkNotificationListenerPermission()).thenAnswer((_) async => true);
+      when(mockChannel.getActiveNotifications()).thenAnswer((_) async => [
+            {
+              'key': key,
+              'packageName': 'com.thesiegs.hearth',
+              'appLabel': 'Home Assistant',
+              'title': 'Washer',
+              'text': 'The wash is done',
+              'isClearable': true,
+              'canOpen': false,
+              'actions': <Map<String, Object>>[],
+            },
+          ]);
+      when(mockChannel.dismissNotification(any)).thenAnswer((_) async => true);
+
+      notificationsService = NotificationsService(mockChannel, prefs);
+      while (!notificationsService.initialized) {
+        await Future.delayed(Duration.zero);
+      }
+
+      expect(notificationsService.notifications.single.appLabel, 'Home Assistant');
+      expect(notificationsService.notifications.single.text, 'The wash is done');
+      expect(notificationsService.getNotificationCount('com.thesiegs.hearth'), 1);
+
+      await notificationsService.dismiss(key);
+      verify(mockChannel.dismissNotification(key)).called(1);
+
+      // Cleared on another TV: the TV's next list lacks it
+      streamController.add([]);
+      await Future.delayed(Duration.zero);
+      expect(notificationsService.notifications, isEmpty);
+    });
   });
 
   group('Persistent Notification & App Blocking', () {

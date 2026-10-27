@@ -46,7 +46,10 @@ final class HouseholdJoining {
     private static long sServedUntil;
     private static String sRequestName;
     private static String sRequestCode;
+    /** The waiting request's id in the household's Bells (HouseholdNotices.joinItem). */
+    private static String sRequestId;
     private static Boolean sScreenAnswer;
+    private static final java.security.SecureRandom RANDOM = new java.security.SecureRandom();
 
     // The new TV: its own request
     static final String NONE = "none";
@@ -93,6 +96,7 @@ final class HouseholdJoining {
                 sServing = false;
                 sRequestName = null;
                 sRequestCode = null;
+                sRequestId = null;
                 sScreenAnswer = null;
             }
         }
@@ -103,13 +107,19 @@ final class HouseholdJoining {
             @Override
             public boolean approve(String name, String code) throws InterruptedException {
                 String joiner = name.isEmpty() ? context.getString(R.string.household_join_unnamed) : name;
+                byte[] random = new byte[12];
+                RANDOM.nextBytes(random);
+                String requestId = Hex.of(random);
                 synchronized (HouseholdJoining.class) {
                     sRequestName = joiner;
                     sRequestCode = spaced(code);
+                    sRequestId = requestId;
                     sScreenAnswer = null;
                 }
                 Log.i(TAG, "A TV asks to join the household");
                 HearthBellItems.joinRequestChanged(context, joiner);
+                // The household's other TVs list it too, and can answer it (Household.answerJoin)
+                Household.joinRequestStarted(context, requestId, joiner, System.currentTimeMillis() + ANSWER_MS);
                 long deadline = SystemClock.elapsedRealtime() + ANSWER_MS;
                 try {
                     while (SystemClock.elapsedRealtime() < deadline) {
@@ -123,8 +133,10 @@ final class HouseholdJoining {
                     synchronized (HouseholdJoining.class) {
                         sRequestName = null;
                         sRequestCode = null;
+                        sRequestId = null;
                     }
                     HearthBellItems.joinRequestChanged(context, null);
+                    Household.joinRequestEnded(context, requestId);
                 }
             }
 
@@ -164,11 +176,31 @@ final class HouseholdJoining {
         return sRequestCode == null ? null : sRequestName;
     }
 
-    /** Someone answered in this TV's Bell. False when no request is waiting. */
+    /** Someone answered in this TV's Bell. False when no request is waiting, or it was answered already. */
     static synchronized boolean answer(boolean allow) {
         if (sRequestCode == null || sScreenAnswer != null) return false;
         sScreenAnswer = allow;
         return true;
+    }
+
+    /**
+     * The household's entries changed: someone may have answered the waiting request in another TV's Bell. The first
+     * answer, here or there, decides; a later one changes nothing.
+     */
+    static void answeredInHousehold(List<HouseholdEntry> entries) {
+        String id;
+        synchronized (HouseholdJoining.class) {
+            id = sRequestCode == null ? null : sRequestId;
+        }
+        if (id == null) return;
+        Boolean allow = HouseholdNotices.answer(entries, HouseholdNotices.joinItem(id));
+        if (allow == null) return;
+        boolean answered;
+        synchronized (HouseholdJoining.class) {
+            // Still the same request: one that ended meanwhile, and the next, aren't answered by it
+            answered = id.equals(sRequestId) && answer(allow);
+        }
+        if (answered) Log.i(TAG, "A join request was answered on another TV of the household");
     }
 
     // ---- On the new TV ----

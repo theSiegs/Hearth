@@ -12,8 +12,11 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -160,6 +163,8 @@ final class Household {
                     // A profile whose Google account Hearth has seen since takes its titles now
                     applyWatch(null);
                     publishWatch();
+                    // A notification past its time leaves the Bell
+                    refreshNotices(sContext);
                     syncAll("periodic");
                 }, PERIODIC_MS, PERIODIC_MS, TimeUnit.MILLISECONDS);
             }
@@ -170,6 +175,7 @@ final class Household {
             applyEntries();
             applyWatch(null);
             publishWatch();
+            refreshNotices(sContext);
         });
         syncSoon();
     }
@@ -519,6 +525,7 @@ final class Household {
         pictures(sContext).keepOnly(HouseholdBridge.pictures(store.log()));
         applyEntries();
         applyWatch(result.applied);
+        noticesArrived(result.applied);
         publishUnpublished();
         sLastSyncAt = System.currentTimeMillis();
         sLastResult = "sent " + result.sent + ", took " + result.received;
@@ -928,6 +935,264 @@ final class Household {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    // ---- Notifications (HouseholdNotices; the Bell shows them through HearthBellItems) ----
+
+    /** How long Home Assistant's request waits for the household thread before the pop-up goes ahead without it. */
+    private static final long NOTICE_WAIT_MS = 5_000;
+    /**
+     * The notifications of a TV that isn't a member (or has sync off): this TV's own, in memory only, so they're gone
+     * when Hearth restarts. On the household thread.
+     */
+    private static final HouseholdLog LOCAL_NOTICES = new HouseholdLog("this-tv");
+    /** What the Bell shows the profile on screen, newest first; made on the household thread. */
+    private static volatile List<HouseholdNotices.Notice> sNotices = new ArrayList<>();
+    /** The profile {@link #sNotices} is for (its key). */
+    private static volatile String sNoticesFor;
+    /** The notifications (item and time) already popped up, or there before Hearth started: each pops up once. */
+    private static final Set<String> sPopped = new HashSet<>();
+    private static boolean sNoticesRead;
+
+    /**
+     * The Bell's notifications for the profile on screen (HearthBellItems); none for a moment after a switch, until
+     * they're worked out for the profile that came on, so one profile's never show to another.
+     */
+    static List<HouseholdNotices.Notice> notices(Context context) {
+        List<HouseholdNotices.Notice> notices = sNotices;
+        String key = LauncherAccessibilityService.getActiveProfileKey(context);
+        return key != null && key.equals(sNoticesFor) ? notices : new ArrayList<>();
+    }
+
+    /** Where notifications are kept: the household's log while this TV is a member, else this TV's own. */
+    private static HouseholdLog noticeLog(Context context) {
+        return member(context) ? store(context).log() : LOCAL_NOTICES;
+    }
+
+    /** This TV's profiles, each with who it is: its person id in a household, else its key (this TV's alone). */
+    private static List<HouseholdNotices.Person> people(Context context) {
+        List<HouseholdNotices.Person> out = new ArrayList<>();
+        if (member(context)) {
+            for (Map.Entry<String, String> p : local(context).profiles().entrySet()) {
+                out.add(new HouseholdNotices.Person(p.getValue(), p.getKey(),
+                        ProfileUsers.displayName(context, p.getValue()), ProfileUsers.emailOf(context, p.getValue())));
+            }
+            return out;
+        }
+        Set<String> keys = new LinkedHashSet<>(ProfilePairing.getHearthProfiles(context));
+        String active = LauncherAccessibilityService.getActiveProfileKey(context);
+        if (active != null) keys.add(active);
+        for (String key : keys) {
+            out.add(new HouseholdNotices.Person(key, "k:" + key, ProfileUsers.displayName(context, key),
+                    ProfileUsers.emailOf(context, key)));
+        }
+        return out;
+    }
+
+    /** Who the profile on screen is, as {@link #people} names it; null when that isn't known. */
+    private static String personOnScreen(Context context) {
+        return personOf(context, LauncherAccessibilityService.getActiveProfileKey(context));
+    }
+
+    private static String personOf(Context context, String key) {
+        if (key == null) return null;
+        if (!member(context)) return "k:" + key;
+        String id = local(context).personIdOf(key);
+        return id == null || id.isEmpty() ? null : id;
+    }
+
+    /**
+     * A notification from Home Assistant (HaNotificationServer), answered as HaNotificationServer.Listener says. It
+     * goes in the Bell, on every TV of the household, for the person its {@code for} names (none: every adult), and
+     * pops up here as before when it is for everyone or for the profile on screen. A "clear_notification" with a tag
+     * clears the one with that tag instead. Blocks: not on the main thread.
+     */
+    static int onHaNotification(Context context, HaNotificationServer.Notification n) {
+        Context app = context.getApplicationContext();
+        sContext = app;
+        boolean[] onScreen = {n.target == null};
+        java.util.concurrent.Future<Integer> filed = EXEC.submit(() -> {
+            String person = HouseholdNotices.ALL_ADULTS;
+            if (n.target != null) {
+                person = HouseholdNotices.target(n.target, people(app));
+                if (person == null) return HaNotificationServer.UNKNOWN_PERSON;
+                onScreen[0] = person.equals(personOnScreen(app));
+            }
+            HouseholdLog log = noticeLog(app);
+            long now = System.currentTimeMillis();
+            if (n.clears()) {
+                String item = HouseholdNotices.haItem(person, n.tag, null, null);
+                if (log.get(HouseholdNotices.KIND, person, item) != null) {
+                    log.delete(HouseholdNotices.KIND, person, item, now);
+                    noticesChanged(app, log);
+                }
+                return HaNotificationServer.SHOWN;
+            }
+            String value = HouseholdNotices.haValue(n.title, n.message, now);
+            if (value == null) return -1;
+            HouseholdEntry entry = log.put(HouseholdNotices.KIND, person,
+                    HouseholdNotices.haItem(person, n.tag, n.title, n.message), value, now);
+            if (entry != null) {
+                // It pops up here as it comes (or not at all), never again from the Bell
+                synchronized (sPopped) {
+                    sPopped.add(entry.item + "@" + HouseholdLog.millisOf(entry));
+                }
+                noticesChanged(app, log);
+            }
+            return -1;
+        });
+        int result;
+        boolean show;
+        try {
+            result = filed.get(NOTICE_WAIT_MS, TimeUnit.MILLISECONDS);
+            show = onScreen[0];
+        } catch (Exception e) {
+            // The household thread is busy (an exchange): the Bell gets it when it's free, and a notification for
+            // everyone pops up as before
+            Log.i(TAG, "A Home Assistant notification waits for the Bell: " + e.getClass().getSimpleName());
+            result = -1;
+            show = n.target == null;
+        }
+        if (result >= 0) return result;
+        if (!show) return HaNotificationServer.SHOWN;
+        if (LauncherAccessibilityService.showHaNotification(n)) return HaNotificationServer.SHOWN;
+        // For everyone: Home Assistant is told it couldn't pop up, as before. One for a person is in their Bell.
+        return n.target == null ? HaNotificationServer.CANT_SHOW : HaNotificationServer.SHOWN;
+    }
+
+    /** A notification was written or cleared here: saved and sent when it's the household's, and the Bell changes. */
+    private static void noticesChanged(Context context, HouseholdLog log) {
+        if (log != LOCAL_NOTICES) {
+            store(context).save();
+            syncSoon();
+        }
+        refreshNotices(context);
+    }
+
+    /** An exchange brought these: the Bell changes when notifications are among them, and a join answer is taken. */
+    private static void noticesArrived(List<HouseholdEntry> applied) {
+        for (HouseholdEntry entry : applied) {
+            if (HouseholdNotices.KIND.equals(entry.kind) || HouseholdNotices.ANSWER.equals(entry.kind)) {
+                refreshNotices(sContext);
+                HouseholdJoining.answeredInHousehold(store(sContext).log().all());
+                return;
+            }
+        }
+    }
+
+    /** The profile on screen changed: the Bell shows its notifications. */
+    static void noticesProfileChanged(Context context) {
+        Context app = context.getApplicationContext();
+        sContext = app;
+        EXEC.execute(() -> refreshNotices(app));
+    }
+
+    /**
+     * Works out what the Bell shows the profile on screen, and pops up what came from another TV since: a join request
+     * while it waits, another notification while it's a couple of minutes old. On the household thread.
+     */
+    private static void refreshNotices(Context context) {
+        if (context == null) return;
+        HouseholdLog log = noticeLog(context);
+        long now = System.currentTimeMillis();
+        if (log == LOCAL_NOTICES) log.purge(now);
+        String ownTv = log == LOCAL_NOTICES ? null : store(context).tvId();
+        String key = LauncherAccessibilityService.getActiveProfileKey(context);
+        List<HouseholdNotices.Notice> visible = HouseholdNotices.visible(log.all(), personOf(context, key),
+                ProfileUsers.isKids(context), ownTv, now);
+        sNoticesFor = null;
+        sNotices = visible;
+        sNoticesFor = key;
+        List<HouseholdNotices.Notice> popUp = new ArrayList<>();
+        synchronized (sPopped) {
+            if (sPopped.size() > 1000) sPopped.clear();
+            for (HouseholdNotices.Notice n : visible) {
+                if (!sPopped.add(n.item + "@" + n.at) || !sNoticesRead || n.writer.equals(ownTv)) continue;
+                if (n.isJoin() || now - n.at < HouseholdNotices.POP_UP_MS) popUp.add(n);
+            }
+            sNoticesRead = true;
+        }
+        LauncherNotificationListenerService.hearthItemsChanged();
+        for (HouseholdNotices.Notice n : popUp) HearthBellItems.popUp(context, n);
+    }
+
+    /** Clears a notification from the Bell, and so from the household's other TVs. */
+    static void clearNotice(Context context, String person, String item) {
+        Context app = context.getApplicationContext();
+        sContext = app;
+        EXEC.execute(() -> {
+            HouseholdLog log = noticeLog(app);
+            if (log.get(HouseholdNotices.KIND, person, item) == null) return;
+            log.delete(HouseholdNotices.KIND, person, item, System.currentTimeMillis());
+            noticesChanged(app, log);
+        });
+    }
+
+    /** Clear all in the Bell: every notification the profile on screen sees, except a TV asking to join. */
+    static void clearNotices(Context context) {
+        Context app = context.getApplicationContext();
+        sContext = app;
+        EXEC.execute(() -> {
+            HouseholdLog log = noticeLog(app);
+            long now = System.currentTimeMillis();
+            int cleared = 0;
+            for (HouseholdNotices.Notice n : sNotices) {
+                if (n.isJoin() || log.get(HouseholdNotices.KIND, n.person, n.item) == null) continue;
+                log.delete(HouseholdNotices.KIND, n.person, n.item, now);
+                cleared++;
+            }
+            if (cleared > 0) noticesChanged(app, log);
+        });
+    }
+
+    /**
+     * Allow or Don't allow pressed for another TV's join request: the answer goes to the TV that holds it, which takes
+     * the first answer it hears. A second answer, here or anywhere, changes nothing. False when the request isn't in
+     * this TV's Bell.
+     */
+    static boolean answerJoin(Context context, String item, boolean allow) {
+        boolean listed = false;
+        for (HouseholdNotices.Notice n : sNotices) listed |= n.isJoin() && n.item.equals(item);
+        if (!listed) return false;
+        Context app = context.getApplicationContext();
+        sContext = app;
+        EXEC.execute(() -> {
+            if (!member(app)) return;
+            HouseholdLog log = store(app).log();
+            if (log.get(HouseholdNotices.KIND, HouseholdNotices.ALL_ADULTS, item) == null
+                    || HouseholdNotices.answer(log.all(), item) != null) return;
+            log.put(HouseholdNotices.ANSWER, HouseholdNotices.ALL_ADULTS, item, HouseholdNotices.answerValue(allow),
+                    System.currentTimeMillis());
+            Log.i(TAG, "Answered another TV's join request: " + (allow ? "allow" : "don't allow"));
+            noticesChanged(app, log);
+        });
+        return true;
+    }
+
+    /** A TV asks this one to join (HouseholdJoining): the request goes in the Bell of the household's other TVs too. */
+    static void joinRequestStarted(Context context, String requestId, String joiner, long untilMs) {
+        Context app = context.getApplicationContext();
+        EXEC.execute(() -> {
+            if (!member(app)) return;
+            HouseholdStore store = store(app);
+            long now = System.currentTimeMillis();
+            store.log().put(HouseholdNotices.KIND, HouseholdNotices.ALL_ADULTS, HouseholdNotices.joinItem(requestId),
+                    HouseholdNotices.joinValue(joiner, store.tvId(), ShareDiscovery.deviceName(app), now, untilMs), now);
+            noticesChanged(app, store.log());
+        });
+    }
+
+    /** The request was answered, or ran out: it goes from the other TVs' Bells. */
+    static void joinRequestEnded(Context context, String requestId) {
+        Context app = context.getApplicationContext();
+        EXEC.execute(() -> {
+            if (!member(app)) return;
+            HouseholdLog log = store(app).log();
+            String item = HouseholdNotices.joinItem(requestId);
+            if (log.get(HouseholdNotices.KIND, HouseholdNotices.ALL_ADULTS, item) == null) return;
+            log.delete(HouseholdNotices.KIND, HouseholdNotices.ALL_ADULTS, item, System.currentTimeMillis());
+            noticesChanged(app, log);
+        });
     }
 
     /** Syncs now, for the screen's button. */
