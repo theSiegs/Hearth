@@ -24,6 +24,8 @@ final class HouseholdJoin {
     static final byte[] MAGIC = {'H', 'H', 'J', '1'};
     static final int MAX_PAYLOAD = 64 * 1024;
     private static final int MAX_NAME = 60;
+    /** The longest hello taken: {"name": a name of {@link #MAX_NAME}, escaped, "ha": a flag} fits several times over. */
+    static final int MAX_HELLO_BYTES = 1024;
 
     /** The household TV's side: who decides, and what it gives. */
     interface Host {
@@ -45,8 +47,17 @@ final class HouseholdJoin {
             throws IOException, GeneralSecurityException, InterruptedException {
         String name;
         boolean wantsHa;
+        // Anyone on the network can send this, before any key exchange: a TV's hello is a name and a flag, so a longer
+        // one isn't parsed (Android's JSON parser recurses, and deep nesting would overflow the thread's stack)
+        DataInputStream data = new DataInputStream(in);
+        int length = data.readUnsignedShort();
+        if (length > MAX_HELLO_BYTES) throw new ShareSession.ShareException("Not a join request");
+        byte[] utf = new byte[2 + length];
+        utf[0] = (byte) (length >>> 8);
+        utf[1] = (byte) length;
+        data.readFully(utf, 2, length);
         try {
-            JSONObject hello = new JSONObject(new DataInputStream(in).readUTF());
+            JSONObject hello = new JSONObject(new DataInputStream(new java.io.ByteArrayInputStream(utf)).readUTF());
             name = tidy(hello.optString("name", ""));
             wantsHa = hello.optBoolean("ha");
         } catch (JSONException e) {

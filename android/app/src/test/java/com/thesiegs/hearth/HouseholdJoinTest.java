@@ -138,6 +138,55 @@ public class HouseholdJoinTest {
     }
 
     @Test
+    public void aHelloNoTvWouldSendIsRefusedBeforeItIsParsed() throws Exception {
+        // Anyone on the network can send a hello. Android's JSON parser recurses, so 60,000 nested brackets (well
+        // within a hello's 64 KB) overflow the thread's stack there and take Hearth down; this JVM's parser copes, so
+        // the test checks the bound that keeps them from being parsed at all, with JSON that is otherwise fine.
+        StringBuilder pad = new StringBuilder();
+        for (int i = 0; i < 2_000; i++) pad.append('x');
+        String[] hellos = {"{\"name\":\"Kitchen\",\"x\":\"" + pad + "\"}", "{\"name\":\"Kitchen\",\"x\":" + "[".repeat(60_000)};
+        for (String text : hellos) {
+            HouseholdTvs.Tv household = new HouseholdTvs.Tv();
+            household.store.create("Office", T0);
+            Asked asked = new Asked();
+            ExecutorService pool = Executors.newFixedThreadPool(2);
+            try (ServerSocket server = new ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress())) {
+                server.setSoTimeout(5000);
+                Future<Boolean> serving = pool.submit(() -> {
+                    try (Socket socket = server.accept()) {
+                        socket.setSoTimeout(5000);
+                        DataInputStream in = new DataInputStream(socket.getInputStream());
+                        in.readFully(new byte[4]);
+                        return HouseholdJoin.serve(in, socket.getOutputStream(), host(household, true, asked));
+                    }
+                });
+                // The asking side, as a TV would be but for its hello: the key exchange follows
+                pool.submit(() -> {
+                    try (Socket socket = new Socket(java.net.InetAddress.getLoopbackAddress(), server.getLocalPort())) {
+                        socket.setSoTimeout(5000);
+                        java.io.DataOutputStream out = new java.io.DataOutputStream(socket.getOutputStream());
+                        out.write(HouseholdJoin.MAGIC);
+                        out.writeUTF(text);
+                        out.flush();
+                        ShareSession.receiver(socket.getInputStream(), socket.getOutputStream()).handshake();
+                    }
+                    return null;
+                });
+                try {
+                    serving.get(10, TimeUnit.SECONDS);
+                    fail("expected a refusal");
+                } catch (java.util.concurrent.ExecutionException expected) {
+                    assertTrue(expected.getCause() instanceof ShareSession.ShareException);
+                }
+                // not a join request: no parent was asked
+                assertNull(asked.name.get());
+            } finally {
+                pool.shutdownNow();
+            }
+        }
+    }
+
+    @Test
     public void theCandidatesAreTheTvsOfTheLargestOtherHouseholdThatCanBeReached() {
         List<HouseholdNet.Heard> heard = Arrays.asList(
                 new HouseholdNet.Heard("tv-b", "h1", "Kitchen", "192.0.2.11", 4000),

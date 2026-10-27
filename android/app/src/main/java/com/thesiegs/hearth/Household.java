@@ -495,7 +495,8 @@ final class Household {
             }
             in.reset();
             EXEC.execute(() -> accept(socket, in));
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException | StackOverflowError e) {
+            // Whatever a device on the network sends: an uncaught error on this pool's thread would end Hearth
             try {
                 socket.close();
             } catch (IOException ignored) {
