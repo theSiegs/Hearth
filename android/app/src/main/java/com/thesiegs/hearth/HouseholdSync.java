@@ -88,14 +88,39 @@ final class HouseholdSync {
         }
     }
 
+    /**
+     * An exchange this TV accepted whose other side has proved it holds the key of the TV id it gave (its signature
+     * over the opening checks), read off the household thread ({@link #accept}); whether that TV is on the member list
+     * is checked when it goes on ({@link #run(Accepted, HouseholdStore, HouseholdPictures, String, long)}).
+     */
+    static final class Accepted {
+        private final HouseholdSync sync;
+
+        private Accepted(HouseholdSync sync) {
+            this.sync = sync;
+        }
+
+        /** The TV id the other side proved. */
+        String peer() {
+            return sync.peer;
+        }
+    }
+
     private final DataInputStream in;
     private final DataOutputStream out;
     private final boolean initiator;
-    private final HouseholdStore store;
+    /** This TV's id and household, as they were when the exchange opened. */
+    private final String selfId;
+    private final String householdId;
+    private HouseholdStore store;
     /** Where wallpaper pictures are kept; null: this side has none and asks for none. */
-    private final HouseholdPictures pictures;
-    private final String name;
-    private final long now;
+    private HouseholdPictures pictures;
+    private String name;
+    private long now;
+    /** Called once the other side is known to be a member (or is told it's removed); may be null. */
+    private Runnable proven;
+    /** What the TV that connected sent to prove itself, read and checked already ({@link #accept}). */
+    private JSONObject acceptedAuth;
     private byte[] transcript;
     private byte[] sendKey;
     private byte[] receiveKey;
@@ -105,11 +130,19 @@ final class HouseholdSync {
     private String peer;
     private String peerName;
 
-    private HouseholdSync(InputStream in, OutputStream out, boolean initiator, HouseholdStore store,
-            HouseholdPictures pictures, String name, long now) {
+    private HouseholdSync(InputStream in, OutputStream out, boolean initiator, String selfId, String householdId) {
         this.in = new DataInputStream(in);
         this.out = new DataOutputStream(out);
         this.initiator = initiator;
+        this.selfId = selfId;
+        this.householdId = householdId;
+    }
+
+    private void bind(HouseholdStore store, HouseholdPictures pictures, String name, long now) throws SyncException {
+        if (!store.syncs() || store.log() == null || !selfId.equals(store.tvId())
+                || !householdId.equals(store.householdId())) {
+            throw new SyncException("Not in a household");
+        }
         this.store = store;
         this.pictures = pictures;
         this.name = name;
@@ -129,16 +162,67 @@ final class HouseholdSync {
     /** As {@link #run(InputStream, OutputStream, boolean, HouseholdStore, String, long)}, trading wallpaper pictures too. */
     static Result run(InputStream in, OutputStream out, boolean initiator, HouseholdStore store,
             HouseholdPictures pictures, String name, long now) throws IOException, GeneralSecurityException {
+        return run(in, out, initiator, store, pictures, name, now, null);
+    }
+
+    /**
+     * As {@link #run(InputStream, OutputStream, boolean, HouseholdStore, HouseholdPictures, String, long)};
+     * {@code proven} is called once the other side has proved it's a member (or is told it's removed), so a caller can
+     * stop a deadline that covers only the opening.
+     */
+    static Result run(InputStream in, OutputStream out, boolean initiator, HouseholdStore store,
+            HouseholdPictures pictures, String name, long now, Runnable proven)
+            throws IOException, GeneralSecurityException {
         if (!store.syncs() || store.log() == null) throw new SyncException("Not in a household");
+        HouseholdSync sync = new HouseholdSync(in, out, initiator, store.tvId(), store.householdId());
+        sync.bind(store, pictures, name, now);
+        sync.proven = proven;
         try {
-            return new HouseholdSync(in, out, initiator, store, pictures, name, now).exchange();
+            return sync.exchange();
+        } catch (JSONException | IllegalArgumentException e) {
+            throw new SyncException("Not a household exchange");
+        }
+    }
+
+    /**
+     * The opening of an exchange this TV accepted, up to the other side's proof that it holds the key of the TV id it
+     * gave: the part anyone on the network can drag out, so it runs off the household thread under the caller's
+     * deadline. Touches no entries. {@code selfId} and {@code householdId}: this TV's, as the household thread last
+     * had them. Throws for anything that isn't a TV of some household proving its key.
+     */
+    static Accepted accept(InputStream in, OutputStream out, String selfId, String householdId)
+            throws IOException, GeneralSecurityException {
+        if (selfId == null || householdId == null) throw new SyncException("Not in a household");
+        HouseholdSync sync = new HouseholdSync(in, out, false, selfId, householdId);
+        try {
+            sync.open();
+            JSONObject theirs = sync.readJson(MAX_AUTH_BYTES);
+            sync.verify(theirs);
+            sync.acceptedAuth = theirs;
+        } catch (JSONException | IllegalArgumentException e) {
+            throw new SyncException("Not a household exchange");
+        }
+        return new Accepted(sync);
+    }
+
+    /**
+     * Goes on with an exchange {@link #accept} opened, on the household thread: where the other TV stands on the member
+     * list, then everything else. Refused at once when it isn't a member and proves no invitation, before anything more
+     * is read from it.
+     */
+    static Result run(Accepted accepted, HouseholdStore store, HouseholdPictures pictures, String name, long now)
+            throws IOException, GeneralSecurityException {
+        HouseholdSync sync = accepted.sync;
+        sync.bind(store, pictures, name, now);
+        try {
+            return sync.exchange();
         } catch (JSONException | IllegalArgumentException e) {
             throw new SyncException("Not a household exchange");
         }
     }
 
     private Result exchange() throws IOException, GeneralSecurityException, JSONException {
-        open();
+        if (transcript == null) open();
 
         // 1. who each side is, and where the other stands
         JSONObject mine = auth();
@@ -146,7 +230,9 @@ final class HouseholdSync {
         if (initiator) {
             writeJson(mine);
             JSONObject theirs = readJson(MAX_AUTH_BYTES);
-            peerRemoved = check(theirs) == HouseholdMembers.Standing.REMOVED;
+            verify(theirs);
+            peerRemoved = standing(theirs) == HouseholdMembers.Standing.REMOVED;
+            if (proven != null) proven.run();
             if (peerRemoved) {
                 // A TV removed here can't remove this one: what it says is ignored, and it is told (if it still listens)
                 try {
@@ -159,7 +245,13 @@ final class HouseholdSync {
             if (REMOVED.equals(theirs.optString("verdict"))) return stopped(false, true);
             writeJson(new JSONObject().put("verdict", MEMBER));
         } else {
-            peerRemoved = check(readJson(MAX_AUTH_BYTES)) == HouseholdMembers.Standing.REMOVED;
+            JSONObject theirs = acceptedAuth;
+            if (theirs == null) {
+                theirs = readJson(MAX_AUTH_BYTES);
+                verify(theirs);
+            }
+            peerRemoved = standing(theirs) == HouseholdMembers.Standing.REMOVED;
+            if (proven != null) proven.run();
             writeJson(mine.put("verdict", peerRemoved ? REMOVED : MEMBER));
             if (peerRemoved) return stopped(true, false);
             if (REMOVED.equals(readJson(MAX_AUTH_BYTES).optString("verdict"))) return stopped(false, true);
@@ -330,13 +422,13 @@ final class HouseholdSync {
             peerId = readHello(peerPoint, peerNonce);
             sendHello(point, nonce);
         }
-        if (peerId.equals(store.tvId())) throw new SyncException("Bad peer");
+        if (peerId.equals(selfId)) throw new SyncException("Bad peer");
         peer = peerId;
         byte[] shared = ShareCrypto.agree(ephemeral, ShareCrypto.decodePoint(peerPoint, ShareCrypto.params(ephemeral)));
         try {
-            byte[] household = ShareCrypto.bytes(store.householdId());
-            String iId = initiator ? store.tvId() : peerId;
-            String rId = initiator ? peerId : store.tvId();
+            byte[] household = ShareCrypto.bytes(householdId);
+            String iId = initiator ? selfId : peerId;
+            String rId = initiator ? peerId : selfId;
             transcript = ShareCrypto.sha256(LABEL, household, ShareCrypto.bytes(iId), initiator ? point : peerPoint,
                     initiator ? nonce : peerNonce, ShareCrypto.bytes(rId), initiator ? peerPoint : point,
                     initiator ? peerNonce : nonce);
@@ -353,7 +445,7 @@ final class HouseholdSync {
 
     private void sendHello(byte[] point, byte[] nonce) throws IOException {
         out.write(MAGIC);
-        out.writeUTF(store.tvId());
+        out.writeUTF(selfId);
         out.write(point);
         out.write(nonce);
         out.flush();
@@ -398,11 +490,8 @@ final class HouseholdSync {
         return auth;
     }
 
-    /**
-     * Checks the other side's proof and returns where it stands; one not listed is listed if it proves an invitation or
-     * the version 1 key, and refused otherwise.
-     */
-    private HouseholdMembers.Standing check(JSONObject auth) throws IOException, GeneralSecurityException {
+    /** Checks that the other side holds the key of the TV id it gave: its signature over the opening. */
+    private void verify(JSONObject auth) throws IOException {
         Base64.Decoder b64 = Base64.getDecoder();
         byte[] key = b64.decode(auth.optString("key", ""));
         byte[] sig = b64.decode(auth.optString("sig", ""));
@@ -412,6 +501,16 @@ final class HouseholdSync {
         }
         String given = auth.optString("name", "").trim();
         peerName = given.isEmpty() ? null : given;
+    }
+
+    /**
+     * Where the other side (its proof checked by {@link #verify}) stands; one not listed is listed if it proves an
+     * invitation or the version 1 key, and refused otherwise.
+     */
+    private HouseholdMembers.Standing standing(JSONObject auth) throws IOException, GeneralSecurityException {
+        Base64.Decoder b64 = Base64.getDecoder();
+        byte[] key = b64.decode(auth.optString("key", ""));
+        boolean ofInitiator = !initiator;
         HouseholdMembers.Standing standing = HouseholdMembers.standing(store.log(), peer);
         if (standing != HouseholdMembers.Standing.UNKNOWN) return standing;
         byte[] v1 = store.v1AdmitKey(now);

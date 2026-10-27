@@ -63,6 +63,20 @@ final class Household {
     });
     /** How long a connection has to say what it is. */
     private static final int ROUTE_TIMEOUT_MS = 5_000;
+    /**
+     * How long a TV has, in all, to open an exchange and prove it holds its key (and, connecting out, that the other is
+     * a member): a connection that trickles its bytes is closed then, so it can't hold a thread, the household's least.
+     */
+    static final long PROVE_MS = 20_000;
+    /** Closes connections that haven't proved themselves by their deadline. */
+    private static final ScheduledExecutorService DEADLINES = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread thread = new Thread(r, "household-deadline");
+        thread.setDaemon(true);
+        return thread;
+    });
+    /** This TV's id and household as the household thread last saw them, for opening exchanges off that thread. */
+    private static volatile String sSelfId;
+    private static volatile String sHouseholdId;
 
     /**
      * Since when this TV, having just joined, holds the household's settings until someone has seen what they change
@@ -168,6 +182,8 @@ final class Household {
             EXEC.execute(() -> forget(context));
             return;
         }
+        sSelfId = store.tvId();
+        sHouseholdId = store.householdId();
         HouseholdNet.start(context, store.tvId(), store.householdId(), socket -> {
             try {
                 NET.execute(() -> route(socket));
@@ -466,19 +482,42 @@ final class Household {
     private static void exchangeWith(HouseholdNet.Peer peer, String why) {
         HouseholdStore store = store(sContext);
         try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress(peer.host, peer.port), 5_000);
-            socket.setSoTimeout(SOCKET_TIMEOUT_MS);
-            HouseholdSync.Result result = HouseholdSync.run(socket.getInputStream(), socket.getOutputStream(), true,
-                    store, pictures(sContext), ShareDiscovery.deviceName(sContext), System.currentTimeMillis());
-            finish(store, result, "to " + why);
+            // Anything can announce itself as a TV of the household: one that doesn't prove it's a member in time is
+            // dropped, so it holds the household thread for PROVE_MS at most
+            java.util.concurrent.ScheduledFuture<?> deadline = closeLater(socket);
+            try {
+                socket.connect(new InetSocketAddress(peer.host, peer.port), 5_000);
+                socket.setSoTimeout(SOCKET_TIMEOUT_MS);
+                HouseholdSync.Result result = HouseholdSync.run(socket.getInputStream(), socket.getOutputStream(), true,
+                        store, pictures(sContext), ShareDiscovery.deviceName(sContext), System.currentTimeMillis(),
+                        () -> deadline.cancel(false));
+                finish(store, result, "to " + why);
+            } finally {
+                deadline.cancel(false);
+            }
         } catch (IOException | java.security.GeneralSecurityException e) {
             sLastResult = "failed: " + e.getClass().getSimpleName();
             Log.i(TAG, "Couldn't sync with a TV of the household: " + e.getClass().getSimpleName());
         }
     }
 
-    /** A TV connected: a join request is served here (it waits on a parent), an exchange on the household thread. */
+    /** Closes {@code socket} after {@link #PROVE_MS} unless the returned deadline is cancelled first. */
+    private static java.util.concurrent.ScheduledFuture<?> closeLater(Socket socket) {
+        return DEADLINES.schedule(() -> {
+            try {
+                socket.close();
+            } catch (IOException ignored) {
+            }
+        }, PROVE_MS, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * A TV connected: a join request is served here (it waits on an adult); an exchange is opened here, until the
+     * other TV has proved it holds its key, within {@link #PROVE_MS} in all, and only then goes on on the household
+     * thread. So a connection that never proves anything, or trickles its bytes, never holds the household thread.
+     */
     private static void route(Socket socket) {
+        java.util.concurrent.ScheduledFuture<?> deadline = null;
         try {
             socket.setSoTimeout(ROUTE_TIMEOUT_MS);
             BufferedInputStream in = new BufferedInputStream(socket.getInputStream());
@@ -494,9 +533,13 @@ final class Household {
                 return;
             }
             in.reset();
-            EXEC.execute(() -> accept(socket, in));
-        } catch (IOException | RuntimeException | StackOverflowError e) {
+            deadline = closeLater(socket);
+            HouseholdSync.Accepted opened = HouseholdSync.accept(in, socket.getOutputStream(), sSelfId, sHouseholdId);
+            deadline.cancel(false);
+            EXEC.execute(() -> accept(socket, opened));
+        } catch (IOException | java.security.GeneralSecurityException | RuntimeException | StackOverflowError e) {
             // Whatever a device on the network sends: an uncaught error on this pool's thread would end Hearth
+            if (deadline != null) deadline.cancel(false);
             try {
                 socket.close();
             } catch (IOException ignored) {
@@ -504,12 +547,13 @@ final class Household {
         }
     }
 
-    private static void accept(Socket socket, InputStream in) {
+    /** Goes on, on the household thread, with an exchange whose other side proved its key (route). */
+    private static void accept(Socket socket, HouseholdSync.Accepted opened) {
         try (Socket s = socket) {
             if (!active(sContext)) return;
             s.setSoTimeout(SOCKET_TIMEOUT_MS);
             HouseholdStore store = store(sContext);
-            HouseholdSync.Result result = HouseholdSync.run(in, s.getOutputStream(), false, store, pictures(sContext),
+            HouseholdSync.Result result = HouseholdSync.run(opened, store, pictures(sContext),
                     ShareDiscovery.deviceName(sContext), System.currentTimeMillis());
             finish(store, result, "from a TV");
         } catch (IOException | java.security.GeneralSecurityException e) {

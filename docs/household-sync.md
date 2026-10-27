@@ -448,6 +448,12 @@ What a TV checks before it takes part or takes something, and what that guards a
 - **The channel.** Only a TV that signs the exchange with the key on this TV's member list takes part (Moving
   entries); a removed one is told, an unknown one refused unless it proves an invitation (or, converting, the version 1
   key).
+- **No connection holds the household thread unproven.** Everything that touches the entries runs on one household
+  thread, so a connection that sends its opening a byte at a time could stall sync for every TV. A connection this TV
+  accepts is read on a network thread (four at most) until the other side has proved it holds the key of the id it
+  gave, within 20 seconds in all or it is closed; only then does it go to the household thread, which checks the member
+  list before reading anything more and refuses a TV not on it at once. A TV this TV connects to (anything can announce
+  itself) has 20 seconds to prove it's a member before the connection is closed.
 - **Joining.** The join code binds the session between the two TVs and is shown on both: the new TV's screen and the
   request in the household's Bells (and its Allow dialog). No PIN: whoever answers is trusted to compare the code.
   Nothing secret moves before Allow, and the Home Assistant connection only after its own question, answered yes.
