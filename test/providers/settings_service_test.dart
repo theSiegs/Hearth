@@ -50,6 +50,25 @@ void main() async {
     expect(sharedPreferences.containsKey("hidden_calendars"), isFalse);
   });
 
+  test("a calendar is hidden by its key, and its id here from before keys goes", () async {
+    final service = SettingsService(sharedPreferences);
+    await sharedPreferences.setStringList("hidden_calendars", ["tv:3", "tv:7", "cal:other"]);
+    await service.rekeyHiddenCalendars({"tv:3": "cal:family", "tv:9": "cal:none"});
+    expect(service.hiddenCalendars, ["cal:family", "tv:7", "cal:other"]);
+    // Shown again by its key, its id here goes too
+    await service.setCalendarShown("cal:school", true, id: "tv:7");
+    expect(service.hiddenCalendars, ["cal:family", "cal:other"]);
+    await service.setCalendarShown("cal:family", false, id: "tv:3");
+    expect(service.hiddenCalendars, ["cal:family", "cal:other"]);
+    await sharedPreferences.setStringList("hidden_calendars", ["tv:4"]);
+    await service.setCalendarShown("cal:chores", false, id: "tv:4");
+    expect(service.hiddenCalendars, ["cal:chores"]);
+    // Two ids here for one key keep it once
+    await sharedPreferences.setStringList("hidden_calendars", ["tv:1", "tv:2"]);
+    await service.rekeyHiddenCalendars({"tv:1": "cal:same", "tv:2": "cal:same"});
+    expect(service.hiddenCalendars, ["cal:same"]);
+  });
+
   test("the Home Assistant calendars a profile turned off are forgotten", () async {
     await sharedPreferences.setStringList("ha_hidden_calendars", ["calendar.family"]);
     SettingsService(sharedPreferences);

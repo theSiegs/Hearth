@@ -69,6 +69,20 @@ void main() {
       expect(CalendarParser.parseCalendars(null), isEmpty);
     });
 
+    test("a calendar's key is what Hearth's Android side says, else its id here", () {
+      final key = "cal:${"ab" * 16}";
+      final calendars = CalendarParser.parseCalendars([
+        {"id": 3, "key": key, "name": "Family"},
+        {"id": 4, "key": "alex@example.com", "name": "School"},
+        {"id": 5, "name": "Chores"},
+      ]);
+      expect(calendars.map((c) => c.key), ["tv:5", key, "tv:4"]);
+      expect(calendars.map((c) => c.id), ["tv:5", "tv:3", "tv:4"]);
+      expect(calendars[1].hiddenBy({key}), isTrue);
+      expect(calendars[1].hiddenBy({"tv:3"}), isTrue);
+      expect(calendars[1].hiddenBy({"tv:5"}), isFalse);
+    });
+
     test("reads the access", () {
       expect(CalendarParser.parseAccess("granted"), TvCalendarAccess.granted);
       expect(CalendarParser.parseAccess("waiting"), TvCalendarAccess.waiting);
@@ -299,6 +313,41 @@ void main() {
       settings.value++;
       expect(s.available, isFalse);
       s.dispose();
+    });
+
+    test("a calendar hidden by its key leaves out its events; one hidden by its id here gets its key", () async {
+      final familyKey = "cal:${"1" * 32}";
+      final schoolKey = "cal:${"2" * 32}";
+      tv.calendars = [
+        TvCalendar("tv:1", "Family", key: familyKey, account: "alex@example.com"),
+        TvCalendar("tv:2", "School", key: schoolKey, account: "alex@example.com"),
+      ];
+      final rekeyed = <Map<String, String>>[];
+      // Hidden before keys, by the id here, and one only another TV has, by its key
+      hidden = ["tv:2", "cal:${"9" * 32}"];
+      final s = CalendarService(
+        read: tv.read,
+        hiddenCalendars: () => hidden,
+        rekeyHiddenCalendars: (idToKey) async {
+          rekeyed.add(idToKey);
+          hidden = [for (final c in hidden) idToKey[c] ?? c];
+        },
+        profileKey: () => profile,
+        now: () => now,
+      );
+      await s.refresh();
+      expect(rekeyed, [
+        {"tv:2": schoolKey}
+      ]);
+      expect(hidden, [schoolKey, "cal:${"9" * 32}"]);
+      expect(s.shownCalendars.map((c) => c.name), ["Family"]);
+      expect(s.week().map((d) => d.$1), [DateTime(2026, 10, 10)]);
+      // Once: nothing is left to put keys in place of
+      await s.refresh(force: true);
+      expect(rekeyed, hasLength(1));
+      hidden = [familyKey, schoolKey];
+      expect(s.available, isFalse);
+      expect(s.events, isEmpty);
     });
 
     test("another profile reads its own calendars at once, and the last one's are gone meanwhile", () async {

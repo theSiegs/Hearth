@@ -158,6 +158,41 @@ void main() {
     expect(settingsOf("user:0"), {"accent_color": "FF6D00", "hidden_calendars": ["tv:3"]});
   });
 
+  test("hidden calendars follow the person by their keys, one by one; those hidden by their id here stay here",
+      () async {
+    final family = "cal:${"1" * 32}";
+    final school = "cal:${"2" * 32}";
+    backup.layouts["user:0"] = _backup({"accent_color": "00BFA5", "hidden_calendars": [school, "tv:3"]});
+    channel.profiles["user:0"] = {
+      "look": HouseholdLooks.lookJson({"accent_color": "00BFA5"})
+    };
+    await service.tick();
+    // Joining: the household has no say about the calendar this TV hides, so it stays, and goes out by its key only
+    expect(settingsOf("user:0")["hidden_calendars"], [school, "tv:3"]);
+    var look = channel.profiles["user:0"]!["look"] as String;
+    expect(HouseholdLooks.parseLook(look, settings.settingKeys), {
+      "accent_color": "00BFA5",
+      "hidden_calendars": [school]
+    });
+    expect(look, isNot(contains("tv:3")));
+
+    // Another TV hides Family at 1500; this one shows School again at 2000
+    now = 2000;
+    backup.layouts["user:0"] = _backup({"accent_color": "00BFA5", "hidden_calendars": ["tv:3"]});
+    channel.profiles["user:0"]!["look"] = HouseholdLooks.lookJson({
+      "accent_color": "00BFA5",
+      "hidden_calendars": [family, school]
+    }, {
+      "calendar:$family": 1500
+    });
+    channel.version++;
+    await service.tick();
+    expect(settingsOf("user:0")["hidden_calendars"], [family, "tv:3"]);
+    look = channel.profiles["user:0"]!["look"] as String;
+    expect(HouseholdLooks.parseLook(look, settings.settingKeys)!["hidden_calendars"], [family]);
+    expect(HouseholdLooks.lookStamps(look), {"calendar:$family": 1500, "calendar:$school": 2000});
+  });
+
   test("a setting changed here and another changed on another TV meanwhile both stay, and both go out", () async {
     backup.layouts["user:0"] = _backup({"accent_color": "00BFA5"});
     channel.profiles["user:0"] = {"look": HouseholdLooks.lookJson({"accent_color": "00BFA5"})};

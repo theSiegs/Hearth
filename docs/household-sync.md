@@ -52,17 +52,19 @@ stays on it. Checked setting by setting (SettingsService's keys, the layout's ta
 |---|---|
 | Wallpaper: gradient, Bing's photo of the day, day/night switching, the picked pictures (any, day, night) | The TV's name, its Home Assistant address, webhook and token, Home Button Fix, the ad sandbox |
 | Theme: card shape, accent colour, highlight and click choices, app names under icons | Start on boot, the temperature unit, updates (pre-releases), the setup flow's progress |
-| The dock (the Favorites row) and its apps and order, its blur, shadow and background | Which TV calendars a profile hides (they're Android's ids for this TV's accounts) |
-| Rows: which rows, their order, sort, size and columns; spacers | Watch Next programs a profile hid (Android's ids on this TV; a removed card syncs through Continue Watching) |
-| Which apps are hidden | Apps not installed here (kept in the person's entry, see below) |
-| Top bar pills: date, time and their formats, Wi-Fi data, inputs, notifications, weather and its warnings | The once-per-TV notice before the first streaming PIN is typed |
+| The dock (the Favorites row) and its apps and order, its blur, shadow and background | Watch Next programs a profile hid (Android's ids on this TV; a removed card syncs through Continue Watching) |
+| Rows: which rows, their order, sort, size and columns; spacers | Apps not installed here (kept in the person's entry, see below) |
+| Which apps are hidden | The once-per-TV notice before the first streaming PIN is typed |
+| Top bar pills: date, time and their formats, Wi-Fi data, inputs, notifications, weather and its warnings | A calendar hidden by its id on this TV, from before calendar keys, until the calendars are next read |
+| Which calendars a profile hides, each by its key (see Hidden calendars below) | |
 | Continue Watching's look (card size, how many, order, progress, description), the apps it leaves out | |
 | The Home Assistant panel: on or off, the dashboard, full or not | |
 | What Back does on the home screen | |
 
 **The newest change of each item wins.** A look entry and a layout entry each hold a whole profile's, but a
 conflict is decided item by item, each with the time it last changed (the entry's `~at` for the look, `at` for the
-layout; a TV that doesn't know them ignores them). The items are each setting, the list of rows and spacers ("rows"),
+layout; a TV that doesn't know them ignores them). The items are each setting (each hidden calendar is an item of its
+own, "calendar:<key>"), the list of rows and spacers ("rows"),
 each row's apps and their order ("row:<id>"; the dock is a row) and each app's hidden or not ("app:<package>"). A TV
 notes what changed in a profile since it last looked, with when; when the household's entry arrives, an item changed
 here later than the household's last change of it keeps this TV's, the rest take the household's, and the result goes
@@ -70,6 +72,21 @@ out. So Alex changing the accent on one TV and the dock on another while they ca
 TV that joins (nothing on it has changed since it started counting) takes the household's, as Joining says. Only a
 difference in the look or layout itself goes out, never one in stamps alone, so a TV from before stamps and a newer
 one don't trade the same entry back and forth.
+
+**Hidden calendars.** A calendar's id in Android's calendar store is only a row number on that TV, so a profile keeps
+the calendars it hides by a **key** instead (TvCalendars.keyOf): "cal:" and the first half of a SHA-256 of the account
+(its address in lower case and its type) and the calendar (its owner account, which for a Google calendar is the
+calendar's own address and survives a rename; else its name). Where the same Google account is on two TVs, its
+calendars have the same keys on both; the key names no account in the clear, and it moves only inside the encrypted
+log. Each hidden calendar is a look item of its own, so hiding one on one TV and another on another keeps both, and the
+later of hiding and showing one wins. A calendar hidden only where it exists (its account is on one TV) keeps its flag
+in the person's look, so it applies when the calendar shows up on another TV; a household entry that doesn't mention a
+calendar and has no stamp for it (a TV from before keys, or a TV that just joined) doesn't show it again, nor does one
+that gives back this TV's own stamp. A profile's calendars hidden by their id here before keys get their keys the next
+time that profile's calendars are read (it's on screen); until then they stay on this TV only. A kids profile's
+calendars come from its agent, which reads them in its own user and sends the same keys (a kids profile's agent from
+before keys sends none, and its calendars are hidden by their id there, on that TV only). Without household sync a
+profile's hidden calendars work as before, by key, on the one TV.
 
 **An app missing on one TV.** A TV without an app leaves it out of the home but keeps the household's place for it
 (its row and order, hidden or not, and when that changed) in what it gives, and can't change it: only a TV that has the
@@ -89,8 +106,8 @@ app's side does the work, every 20 seconds while Hearth runs (HouseholdLooksServ
 - **Taking.** For each profile, kids' included, whose look or layout entry changed, it merges the household's with this
   TV's item by item (the newest change wins, see What syncs), fits the result to the apps installed here (as a copy
   does) and puts it in place: live when the profile is on screen, else in the profile's saved layout, which comes up
-  when someone switches to it. The profile's settings that stay on each TV (its hidden calendars and Watch Next
-  programs) are kept as they are. A changed picture is written to the profile's folder. Before a profile first takes
+  when someone switches to it. The profile's settings that stay on each TV (its Watch Next programs, and calendars
+  hidden by their id here from before keys) are kept as they are. A changed picture is written to the profile's folder. Before a profile first takes
   the household's look on a TV, everything is kept as a backup, as a copy does, so it can be undone in Backup & Restore.
 - **Giving.** The profile on screen goes out when its look or layout differs from the household's, or a picked picture
   from what this TV last took or gave; so does any other profile here that the household has no look or layout for yet
@@ -504,13 +521,16 @@ version 1 converts as above when it updates.)
 - The on-screen fallback for joining needs a parent at both TVs. A Parent PIN typed on the new TV would avoid that, but
   it must not reach a device pretending to be a household TV, which needs a password-authenticated key exchange
   (CPace or SPAKE2) rather than the plain one. Worth it only if many households run without phone approval.
-- Notifications without `for` go to every adult. Should they rather go to the adult on screen when they came (and
-  every adult when a kid or no one was on)?
-- A notification for every adult cleared by one adult is cleared for all. Should each adult clear their own instead
-  (a per-person clear, so Sam still sees what Alex cleared)?
-- Should a notification for everyone still pop up over a kids profile on the TV that received it (it does, as
-  before: a doorbell camera is for whoever is watching), or only over an adult's?
 - Home Assistant's buttons stay on the TV that received the notification. Carrying them to the other TVs' Bells
   would let any household TV ask another to call a Home Assistant service; worth it?
-- Hidden calendars stay per TV because a calendar's id is Android's row number on that TV. They could follow the
-  person by a hash of the calendar's account and name, where the same Google account is on both TVs. Worth it?
+
+Decided by the owner:
+
+- Notifications without `for` go to every adult (not only the adult on screen when they came).
+- A notification for every adult cleared by one adult is cleared for all adults (no per-person clear).
+- A notification for everyone still pops up over a kids profile on the TV that received it (a doorbell camera is for
+  whoever is watching).
+- Putting back the copy from before joining does not leave the household: the TV stays in, and what was put back goes
+  out as the newest change (see Put back). Only a reset or a deliberate leave or remove takes a TV out.
+- Hidden calendars follow the person, by a key made from the calendar's account and the calendar (see Hidden
+  calendars).

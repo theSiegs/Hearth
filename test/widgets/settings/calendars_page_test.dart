@@ -10,6 +10,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+const familyKey = "cal:11111111111111111111111111111111";
+
 void main() {
   late SettingsService settings;
   late TvCalendarAccess access;
@@ -21,7 +23,8 @@ void main() {
             ? (
                 access: access,
                 calendars: const [
-                  TvCalendar("tv:1", "Family", account: "alex@example.com", color: 0xFF3366CC),
+                  TvCalendar("tv:1", "Family",
+                      key: familyKey, account: "alex@example.com", color: 0xFF3366CC),
                   TvCalendar("tv:2", "alex@example.com", account: "alex@example.com"),
                 ],
                 events: const <CalendarEvent>[],
@@ -76,9 +79,29 @@ void main() {
     expect(find.text("alex@example.com"), findsNWidgets(2));
     expect(find.byKey(const Key("calendars_allow")), findsNothing);
 
+    // Kept by the calendar's key, which is the same on the household's other TVs
     await tester.tap(find.text("Family"));
     await tester.pumpAndSettle();
-    expect(settings.hiddenCalendars, ["tv:1"]);
+    expect(settings.hiddenCalendars, [familyKey]);
+    await tester.tap(find.text("Family"));
+    await tester.pumpAndSettle();
+    expect(settings.hiddenCalendars, isEmpty);
+    // A calendar without a key (a kids profile's Hearth from before keys) by its id here
+    await tester.tap(find.byType(Switch).at(1));
+    await tester.pumpAndSettle();
+    expect(settings.hiddenCalendars, ["tv:2"]);
+  });
+
+  testWidgets("a calendar hidden by its id here from before keys shows as hidden, and shown again lets it go",
+      (tester) async {
+    await SharedPreferences.getInstance().then((p) => p.setStringList("hidden_calendars", ["tv:1"]));
+    settings.reload();
+    await tester.pumpWidget(app(service(), const CalendarsPage()));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Switch>(find.byType(Switch).first).value, isFalse);
+    await tester.tap(find.text("Family"));
+    await tester.pumpAndSettle();
+    expect(settings.hiddenCalendars, isEmpty);
   });
 
   testWidgets("without access, offers to allow it", (tester) async {

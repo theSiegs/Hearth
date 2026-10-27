@@ -141,8 +141,9 @@ class HouseholdLooksService implements HouseholdJoinReviewer {
   }
 
   /// A profile's look and layout as this TV has them, and the settings of it that stay this TV's own
-  /// ([ShareBundle.notShared]: putting the household's in place would otherwise clear them).
-  Future<({SharedLayout layout, Map<String, Object> own})?> _local(String profileKey) async {
+  /// ([ShareBundle.notShared], and the calendars it hides by their id here: putting the household's in place would
+  /// otherwise clear them).
+  Future<({SharedLayout layout, Map<String, Object> own, List<String> ownCalendars})?> _local(String profileKey) async {
     final backup = _settings.layoutOwner == profileKey
         ? await _backup.buildBackupData(_settings, true)
         : await _backup.readProfileLayout(profileKey);
@@ -154,6 +155,7 @@ class HouseholdLooksService implements HouseholdJoinReviewer {
         for (final key in ShareBundle.notShared)
           if (raw[key] != null && !BackupService.isDeviceLevelKey(key)) key: raw[key] as Object,
       },
+      ownCalendars: ShareBundle.thisTvsCalendars(raw[ShareBundle.hiddenCalendarsKey]),
     );
   }
 
@@ -216,8 +218,16 @@ class HouseholdLooksService implements HouseholdJoinReviewer {
         }
         final live = _settings.layoutOwner == profileKey;
         final fitted = composed.forInstalled(await _backup.installedApps());
-        // The profile's settings that are this TV's own stay as they are
-        fitted.backup["settings"] = <String, Object>{...composed.settings, ...?local?.own};
+        // The profile's settings that are this TV's own stay as they are, the calendars it hides by their id here too
+        final settings = <String, Object>{...composed.settings, ...?local?.own};
+        final ownCalendars = local?.ownCalendars ?? const <String>[];
+        if (ownCalendars.isNotEmpty) {
+          settings[ShareBundle.hiddenCalendarsKey] = [
+            ...ShareBundle.sharedCalendars(settings[ShareBundle.hiddenCalendarsKey]),
+            ...ownCalendars,
+          ];
+        }
+        fitted.backup["settings"] = settings;
         await _backup.applySharedLayout(profileKey, fitted.backup, _settings, live: live);
         if (live) await _onLiveChanged();
         if (look != null) mine["look"] = HouseholdLooks.fingerprint(look);

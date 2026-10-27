@@ -9,6 +9,9 @@ import android.net.Uri;
 import android.provider.CalendarContract;
 import android.util.Log;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -51,8 +54,15 @@ final class TvCalendars {
         final boolean visible;
         final boolean synced;
         final boolean primary;
+        /** The same calendar's name on every TV ({@link #keyOf}); the store's id is this TV's own. */
+        final String key;
 
         Cal(long id, String account, String name, int color, boolean visible, boolean synced, boolean primary) {
+            this(id, account, name, color, visible, synced, primary, keyOf(account, "", "", name));
+        }
+
+        Cal(long id, String account, String name, int color, boolean visible, boolean synced, boolean primary,
+                String key) {
             this.id = id;
             this.account = account;
             this.name = name;
@@ -60,16 +70,43 @@ final class TvCalendars {
             this.visible = visible;
             this.synced = synced;
             this.primary = primary;
+            this.key = key;
         }
 
         Map<String, Object> toMap() {
             Map<String, Object> map = new HashMap<>();
             map.put("id", id);
+            map.put("key", key);
             map.put("name", name);
             map.put("color", color);
             map.put("account", account);
             map.put("primary", primary);
             return map;
+        }
+    }
+
+    /** What a calendar's key starts with. */
+    static final String KEY_PREFIX = "cal:";
+
+    /**
+     * A calendar's key, the same on every TV that has its account: a hash of the account (its name, in lower case, and
+     * type) and the calendar (its owner account, which for a Google calendar is the calendar's own address and stays
+     * when it is renamed; else its name). So a profile's hidden calendars can follow the person (household sync) without
+     * naming the accounts in the clear. "cal:" and 32 hex digits.
+     */
+    static String keyOf(String account, String accountType, String ownerAccount, String name) {
+        String calendar = ownerAccount != null && !ownerAccount.trim().isEmpty()
+                ? "owner\n" + ownerAccount.trim().toLowerCase(Locale.ROOT)
+                : "name\n" + (name != null ? name.trim() : "");
+        String text = "hearth-calendar\n" + (account != null ? account.trim().toLowerCase(Locale.ROOT) : "") + "\n"
+                + (accountType != null ? accountType.trim() : "") + "\n" + calendar;
+        try {
+            byte[] hash = MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8));
+            StringBuilder out = new StringBuilder(KEY_PREFIX);
+            for (int i = 0; i < 16; i++) out.append(String.format(Locale.ROOT, "%02x", hash[i] & 0xff));
+            return out.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
         }
     }
 
@@ -89,6 +126,8 @@ final class TvCalendars {
                 CalendarContract.Calendars.VISIBLE,
                 CalendarContract.Calendars.SYNC_EVENTS,
                 CalendarContract.Calendars.IS_PRIMARY,
+                CalendarContract.Calendars.ACCOUNT_TYPE,
+                CalendarContract.Calendars.OWNER_ACCOUNT,
         };
         try (Cursor c = context.getContentResolver().query(CalendarContract.Calendars.CONTENT_URI, projection, null,
                 null, CalendarContract.Calendars._ID + " ASC")) {
@@ -98,7 +137,8 @@ final class TvCalendars {
                 String name = c.getString(2);
                 out.add(new Cal(c.getLong(0), account != null ? account : "",
                         name != null && !name.trim().isEmpty() ? name.trim() : (account != null ? account : ""),
-                        c.getInt(3), c.getInt(4) == 1, c.getInt(5) == 1, !c.isNull(6) && c.getInt(6) == 1));
+                        c.getInt(3), c.getInt(4) == 1, c.getInt(5) == 1, !c.isNull(6) && c.getInt(6) == 1,
+                        keyOf(account, c.getString(7), c.getString(8), name)));
             }
         } catch (RuntimeException e) {
             Log.w(TAG, "Couldn't read the calendars: " + e);

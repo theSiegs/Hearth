@@ -74,6 +74,19 @@ void main() {
       expect(layout.settings.keys.toSet(), {"accent_color"});
     });
 
+    test("takes hidden calendars only by their keys, which are the same on every TV, at most 500", () {
+      final key = "cal:${"a" * 32}";
+      final layout = layoutOf(backup(settings: {
+        "hidden_calendars": ["tv:3", key, "cal:short", "alex@example.com", key],
+      }));
+      expect(layout.settings, {
+        "hidden_calendars": [key]
+      });
+      final many = [for (var i = 0; i < 600; i++) "cal:${i.toRadixString(16).padLeft(32, "0")}"];
+      expect((layoutOf(backup(settings: {"hidden_calendars": many})).settings["hidden_calendars"] as List),
+          hasLength(500));
+    });
+
     test("takes only settings of a kind the settings use", () {
       final layout = layoutOf(backup(settings: {
         "accent_color": "#abcdef",

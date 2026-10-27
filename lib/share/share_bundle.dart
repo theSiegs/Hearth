@@ -17,10 +17,24 @@ class ShareBundle {
 
   /// Settings that belong to the TV even when a profile has them.
   static const Set<String> notShared = {
-    "hidden_calendars", // calendar ids are this TV's own accounts
     "hidden_watch_next_program_ids", // program ids are this TV's own
     "start_on_boot",
   };
+
+  /// The setting of a profile's hidden calendars. Only their keys (the same calendar on every TV, "cal:…") go between
+  /// TVs; one hidden by its id on this TV ("tv:12", from before keys) stays here ([sharedCalendars], [thisTvsCalendars]).
+  static const String hiddenCalendarsKey = "hidden_calendars";
+  static const int maxHiddenCalendars = 500;
+
+  static final RegExp _calendarKey = RegExp(r'^cal:[0-9a-f]{32}$');
+
+  /// The calendar keys in a hidden calendars setting, each once and in order: what goes between TVs.
+  static List<String> sharedCalendars(Object? value) =>
+      value is List ? ({for (final c in value) if (c is String && _calendarKey.hasMatch(c)) c}.toList()..sort()) : [];
+
+  /// The calendars in a hidden calendars setting that are this TV's own (hidden by their id here).
+  static List<String> thisTvsCalendars(Object? value) =>
+      value is List ? [for (final c in value) if (c is String && !_calendarKey.hasMatch(c)) c] : [];
 
   /// Letters, digits, dots and underscores: what an Android package name holds.
   static final RegExp packagePattern = RegExp(r'^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)+$');
@@ -84,6 +98,13 @@ class SharedLayout {
       for (final entry in rawSettings.entries) {
         final key = entry.key;
         if (key is! String || !allowed.contains(key)) continue;
+        if (key == ShareBundle.hiddenCalendarsKey) {
+          final calendars = entry.value is List && (entry.value as List).length <= 2000
+              ? ShareBundle.sharedCalendars(entry.value).take(ShareBundle.maxHiddenCalendars).toList()
+              : const <String>[];
+          if (calendars.isNotEmpty) settings[key] = calendars;
+          continue;
+        }
         final value = _setting(entry.value);
         if (value != null) settings[key] = value;
       }
