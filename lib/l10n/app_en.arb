@@ -220,6 +220,14 @@
             "tv": {"type": "String"}
         }
     },
+    "householdJoinCode": "Join code",
+    "@householdJoinCode": {
+        "description": "Join dialog, while waiting: label over the six-digit code, which the request in the other TV's Bell shows too"
+    },
+    "householdJoinCodeHint": "The request in the Bell shows a code too. Choose Allow only when it's this one.",
+    "@householdJoinCodeHint": {
+        "description": "Join dialog, while waiting: under the six-digit code; the adult compares it with the code in the Bell before choosing Allow"
+    },
     "householdJoinViaAny": "one of your other TVs",
     "@householdJoinViaAny": {
         "description": "Join dialog: stands in for the TV's name in the two texts above when it isn't known"

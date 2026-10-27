@@ -57,6 +57,9 @@ class _HouseholdChannel extends FLauncherChannel {
   Future<bool> requestHouseholdJoin() async => true;
 
   @override
+  Future<void> cancelHouseholdJoin() async {}
+
+  @override
   Future<void> leaveHousehold() async => left = true;
 }
 
@@ -220,6 +223,29 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       return answers;
     }
+
+    testWidgets("while it waits for Allow, the join code shows large, grouped as the Bell shows it", (tester) async {
+      channel.status = {
+        "joined": false,
+        "join": {"state": "waiting", "code": "626 952", "via": "Office"},
+      };
+      await openJoin(tester);
+      expect(find.text("Allow it on Office"), findsOneWidget);
+      expect(find.text("Join code"), findsOneWidget);
+      final code = tester.widget<Text>(find.byKey(const ValueKey("householdJoinCode")));
+      expect(code.data, "626 952");
+      expect(code.style!.fontSize, greaterThanOrEqualTo(40));
+      expect(find.textContaining("Choose Allow only when it's this one"), findsOneWidget);
+      await tester.tap(find.text("Cancel"));
+      await tester.pumpAndSettle();
+      await leave(tester);
+    });
+
+    test("the join code is grouped in threes, however it comes", () {
+      expect(joinCodeText("626952"), "626 952");
+      expect(joinCodeText("626 952"), "626 952");
+      expect(joinCodeText("12345"), "12345");
+    });
 
     testWidgets("once allowed, what changes here is listed first; Join and use these goes on", (tester) async {
       channel.status = joinedHolding;

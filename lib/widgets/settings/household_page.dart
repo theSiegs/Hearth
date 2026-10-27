@@ -60,6 +60,12 @@ Future<bool> reviewHouseholdJoin(BuildContext context, FLauncherChannel channel)
   return joined != false;
 }
 
+/// The join code as both TVs show it: six digits in two groups, "626 952" (the Bell's request shows it so too).
+String joinCodeText(String code) {
+  final digits = code.replaceAll(RegExp(r"\s"), "");
+  return digits.length == 6 ? "${digits.substring(0, 3)} ${digits.substring(3)}" : code.trim();
+}
+
 /// One profile's line in what joining changes: "Alex: look, home layout, 1 saved PIN".
 String joinChangeLine(AppLocalizations l, JoinChange change) {
   final parts = [
@@ -90,6 +96,9 @@ class _JoinDialogState extends State<_JoinDialog> {
 
   String _state = "connecting";
   String? _via;
+
+  /// The six digits both TVs worked out ("123 456"), which the request in the other TV's Bell shows too.
+  String? _code;
   Timer? _timer;
 
   // Once allowed: what joining changes
@@ -201,6 +210,7 @@ class _JoinDialogState extends State<_JoinDialog> {
       setState(() {
         _state = state;
         _via = join["via"] as String?;
+        _code = join["code"] as String?;
       });
       if (state != "connecting" && state != "waiting") _timer?.cancel();
       if (state == "joined") _review();
@@ -248,6 +258,21 @@ class _JoinDialogState extends State<_JoinDialog> {
       default:
         title = waiting ? l.householdJoinWaitTitle(via) : l.householdJoin;
         body = [Text(waiting ? l.householdJoinWaitBody(via) : l.householdJoinFinding, style: textTheme.bodyMedium)];
+        final code = _code;
+        // The code to compare: the adult checks it against the request in the Bell before choosing Allow
+        if (waiting && code != null && code.isNotEmpty) {
+          body.addAll([
+            const SizedBox(height: 20),
+            Text(l.householdJoinCode, style: textTheme.bodySmall?.copyWith(color: Colors.white70)),
+            const SizedBox(height: 4),
+            Text(joinCodeText(code),
+                key: const ValueKey("householdJoinCode"),
+                style: textTheme.displayMedium?.copyWith(
+                    fontWeight: FontWeight.w600, letterSpacing: 6, fontFeatures: const [FontFeature.tabularFigures()])),
+            const SizedBox(height: 8),
+            Text(l.householdJoinCodeHint, style: textTheme.bodySmall?.copyWith(color: Colors.white70)),
+          ]);
+        }
     }
     final over = _state == "denied" || _state == "failed";
     return AlertDialog(
