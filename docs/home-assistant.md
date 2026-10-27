@@ -73,14 +73,20 @@ rest_command:
       | to_json | urlencode }}
 ```
 
-Buttons need the [dashboard panel](#dashboard-panel)'s token, since Hearth calls the service as that user.
+Buttons need the [dashboard panel](#dashboard-panel)'s token, since Hearth calls the service as that user. A button
+whose `data` isn't an object is left out. The buttons are in the Bell too, on every TV of the household (below).
 
 ### In the Bell, and for one person
 
 Every notification with a title or message also goes in the TV's notification Bell (it needs Notification access), and
 with household sync on, in the Bell of every TV of the household; clearing it on one TV clears it on all. The Bell
-keeps the title and message only: buttons and the camera are in the pop-up of the TV it was sent to. A notification
-leaves the Bell after three days (on a TV not in a household, or with sync off, also when Hearth restarts).
+keeps the title, the message and the buttons; the camera stays in the pop-up of the TV it was sent to. A button
+pressed on any TV (in its Bell or pop-up) runs once and the notification goes from every Bell: a TV with its own Home
+Assistant connection calls the service itself, any other asks the TV the notification was sent to, which calls it with
+its token. That TV runs only a button of its own copy, by its number, and only if it hears of the press within two
+minutes (an "Unlock" must not happen long after); later, the notification is only cleared. Buttons whose data is over
+1,000 characters stay in that TV's pop-up only. A notification leaves the Bell after three days (on a TV not in a
+household, or with sync off, also when Hearth restarts).
 
 A notification is for every adult unless it says who it's for. Two more fields of Hearth's own, sent with a
 `rest_command` as above:

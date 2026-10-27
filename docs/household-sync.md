@@ -314,9 +314,8 @@ own Android notifications stay on their TV (they belong to that TV's apps, and t
 
 **How it travels.** Each notification is one `notice` entry in the household log: the person is the target person id,
 or "" for every adult; the item names the notification; the value holds what it says (title and text, cut to 200 and
-1,000 characters), when it was written and when it ends. The Bell gets only the text: Home Assistant's buttons and
-camera stay in the pop-up of the TV that received it, so a notification moving between TVs never carries a service
-call. The item of a Home Assistant notification is a hash of its person and its `tag` when it has one (a later one
+1,000 characters), when it was written and when it ends, and Home Assistant's buttons (below). The camera stays in
+the pop-up of the TV that received it. The item of a Home Assistant notification is a hash of its person and its `tag` when it has one (a later one
 with the same tag replaces it, as on Home Assistant's phone app), else of its person, title and text, so the same
 notification sent to every TV (one `notify` per TV) is one notification, not one per TV, and sent again after it was
 cleared it shows again (a newer write). A TV that isn't in a household, or has sync off, keeps its notifications to
@@ -326,6 +325,34 @@ itself, in memory only.
 entry, which reaches the other TVs like any change; the newest write wins, so a clear beats the notification it cleared
 and loses to the same notification sent again later. Home Assistant can clear one with the message
 `clear_notification` and its `tag`. A notification for every adult cleared by one adult is cleared for all of them.
+
+**Buttons.** A Home Assistant notification's buttons (up to three, each a title and a service call, as
+HaNotificationServer allowed them) travel in its entry, so every TV's Bell shows them, and a notification from another
+TV pops up with them when Hearth's accessibility service can draw the card (else as the small card, without them).
+
+- **What travels.** Only buttons the receiving TV's server allowed: a title, a service `domain.service`, data that is
+  an object of at most 1,000 characters. All of them or none (none when one doesn't fit), so a button's number is the
+  same in the pop-up and in every Bell. Every TV checks them again, the same way, when it reads the entry; an entry
+  with a button that fails is shown without buttons. An entry can't name anything Home Assistant's own notification
+  couldn't.
+- **Pressing.** On a TV with its own Home Assistant connection (an address and a token), or on the TV that received it,
+  pressing a button deletes the notification (so it goes from every TV, as a clear does) and then calls the service
+  with that TV's token. A TV without one writes a `notice_press` entry for the notification (same person and item):
+  the button's number and when the notification was written. It hides the notification at once there, and on every
+  TV that has the press.
+- **Run once.** The TV that wrote the notification takes a press for a notification it still holds, written at that
+  time (a later one with the same tag isn't the one pressed), with a button of that number in its own copy. It deletes
+  the notification first, then runs the button from its own copy, so the press never names a service, it runs at most
+  once there, and a second press anywhere finds the notification gone. A press it hears more than two minutes after it
+  was pressed only clears it (an "Unlock door" mustn't happen long after because a TV was off). Presses leave the log
+  with notifications, three days after they were written.
+- **Who can press.** Only what the Bell shows the profile on screen, so kids' profiles never get an adult's buttons.
+  The pop-up on the TV that received a notification for everyone works as before over any profile (Home Assistant
+  sent it to that TV), and pressing there clears it from every Bell too.
+- **What isn't guaranteed.** Two TVs that each have their own Home Assistant connection, pressed within the same
+  couple of seconds (before an exchange), can each call the service; so can one of them and the receiving TV when a
+  press from a third TV reaches the receiving TV first. A press asked of a TV that is off and stays off runs nothing,
+  and the notification stays hidden where the press is held.
 
 **Expiry.** A notification, cleared or not, leaves every TV's log three days after it was written, and the Bell before
 that if its own end comes first (a join request's, five minutes). Its delete is always newer than what it cleared, so
@@ -346,7 +373,7 @@ it; people are named by their person id, never their address. A log line about a
 
 **How it's built.** HouseholdNotices (the rules), Household (writing, clearing, answering and what the Bell shows the
 profile on screen, on the household thread), HearthBellItems (the Bell's items and buttons) and HaNotificationServer
-(`for` and `tag`).
+(`for`, `tag` and the buttons it allows).
 
 ## Moving entries
 

@@ -27,8 +27,8 @@ import java.util.Map;
  * up to three buttons, each {"title", "service": "domain.service", "data": {...}}, run with the panel's token).
  * Two more say who it's for and name it in the Bell (Household.onHaNotification): "for" (a profile's name, Google
  * account address or key, such as "user:10"; none: every adult) and "tag" (a later one with the same tag replaces it,
- * and the message "clear_notification" with a tag clears it). The Bell gets only the title and message, never the
- * buttons or the camera. Only accepts connections from the local network.
+ * and the message "clear_notification" with a tag clears it). The Bells get the title, message and buttons (a press
+ * on any TV runs it once and clears it from all of them), never the camera. Only accepts connections from the local network.
  */
 final class HaNotificationServer {
     static final int PORT = 7676;
@@ -40,6 +40,14 @@ final class HaNotificationServer {
     static final int SHOWN = 0;
     static final int CANT_SHOW = 1;
     static final int UNKNOWN_PERSON = 2;
+    /** A notification has this many buttons at most. */
+    static final int MAX_ACTIONS = 3;
+    private static final String SERVICE_PATTERN = "[a-z_]+\\.[a-z0-9_]+";
+
+    /** What a card's button does instead of calling its service itself (Household: once, and on every TV). */
+    interface ActionHandler {
+        void press(int index);
+    }
 
     static final class Notification {
         String title;
@@ -57,6 +65,8 @@ final class HaNotificationServer {
         String target;
         /** Its tag, or null. */
         String tag;
+        /** When set, a button press goes here (the notification is in the household's Bells); else it runs here. */
+        volatile ActionHandler onAction;
 
         /** Whether this clears the notification with its tag instead of being one. */
         boolean clears() {
@@ -191,17 +201,25 @@ final class HaNotificationServer {
         if (actions != null && !actions.isEmpty()) {
             try {
                 JSONArray list = new JSONArray(actions);
-                for (int i = 0; i < list.length() && n.actions.size() < 3; i++) {
+                for (int i = 0; i < list.length() && n.actions.size() < MAX_ACTIONS; i++) {
                     JSONObject action = list.getJSONObject(i);
-                    if (!isBlank(action.optString("title")) && action.optString("service").matches("[a-z_]+\\.[a-z0-9_]+")) {
-                        n.actions.add(action);
-                    }
+                    if (allowedAction(action)) n.actions.add(action);
                 }
             } catch (JSONException e) {
                 Log.w(TAG, "Ignoring the notification's actions: not a JSON list of buttons", e);
             }
         }
         return n;
+    }
+
+    /**
+     * Whether a button is one Hearth runs: a title, a service named "domain.service", and data that is an object or
+     * none. The household's copies of a notification are checked against this again (HouseholdNotices).
+     */
+    static boolean allowedAction(JSONObject action) {
+        if (action == null || isBlank(action.optString("title"))) return false;
+        if (!action.optString("service").matches(SERVICE_PATTERN)) return false;
+        return !action.has("data") || action.isNull("data") || action.opt("data") instanceof JSONObject;
     }
 
     private static void parseMultipart(byte[] body, String boundary, Map<String, byte[]> fields) {

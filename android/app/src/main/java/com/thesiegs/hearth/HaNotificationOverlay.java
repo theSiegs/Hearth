@@ -247,9 +247,17 @@ final class HaNotificationOverlay {
         buttons.setOrientation(LinearLayout.HORIZONTAL);
         buttons.setGravity(Gravity.END);
         buttons.setPadding(dp(12), 0, dp(12), dp(12));
-        for (JSONObject action : n.actions) {
+        for (int i = 0; i < n.actions.size(); i++) {
+            JSONObject action = n.actions.get(i);
+            int index = i;
             addButton(buttons, action.optString("title"), accent, () -> {
-                run(action);
+                HaNotificationServer.ActionHandler handler = n.onAction;
+                if (handler != null) {
+                    // In the household's Bells: run once wherever it is, and cleared from every TV
+                    handler.press(index);
+                } else {
+                    run(action);
+                }
                 next();
             });
         }
