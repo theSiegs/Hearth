@@ -251,14 +251,29 @@ minutes, group or title), whoever asks:
   per person; it ends after 10 minutes.
 - **Chores, automations, a dashboard button**: call `hearth.add_bonus`.
 
-**Who enforces.** The integration counts and tells; it doesn't lock anything itself:
+**Who enforces.** When one of a person's groups is out of time, its apps are held everywhere the household chose,
+until the group has time again (a bonus, a higher budget, a new day):
 
-- Hearth devices get the person's Minutes left per group (below) and enforce them as Hearth does with
-  `sensor.hearth_allowance` now (HearthTube for YouTube; more apps later).
-- Other services keep their own limits. Blueprints that ship with the integration act on `hearth_budget_reached`
-  with those services' own actions: Nintendo's Max screentime today and Suspend software, Family Safety's
-  `lock_platform` or daily limits, Family Link's app limits. And the reverse: a bonus passed on (Nintendo's
-  `add_bonus_time`, Family Safety's `approve_request`).
+- **Hearth devices** get the person's minutes left per group, with the group's apps, in their state document (below),
+  and stop those apps themselves (HearthTube holds YouTube on its own). On a TV, in a kids profile, a held app doesn't
+  open from Hearth's tiles, Continue Watching or remote buttons ("Time's up for Games today. An adult can add more
+  time."); opened another way (Google TV's kids home, a voice search, a link), Hearth's home comes back over it. All
+  screen time out of time holds every app. Never held: Hearth, HearthTube, Settings, the Play Store, the assistant and
+  Google TV's own screens (chooser, PIN, time up). Adult profiles have no limits, and without today's answer from Home
+  Assistant nothing is held.
+- **Other parental controls**, per person (Configure > Enforce):
+  - **Family Link** pauses the group's Android apps (`familylink.pause_app`: a 1 minute daily limit, the app stays
+    installed) and resumes them (`resume_app` puts back the setting they had). Google TV ignores Family Link's app
+    limits, which is why a TV is held by Hearth. Calls, texts, the system and the parental controls' own apps are never
+    paused.
+  - **Microsoft Family Safety** locks the chosen platforms (Xbox by default) until midnight while one of the chosen
+    groups (Games and All screen time by default) is out of time (`lock_platform`), and unlocks them when none is.
+  - **Nintendo**: the same, once there's an integration for its parental controls (Suspend software, or today's play
+    time set to what was played).
+- What's held is kept across restarts, so only what Hearth held is let go. For a few minutes after Home Assistant
+  starts nothing is let go (the sources report in first). A failed call shows on the person's **Held by parental
+  controls** sensor and is tried again 5 minutes later. Each change fires `hearth_enforced` (person, by, held, let go).
+- `hearth_budget_reached` stays for anything else an automation wants to do.
 
 ## Data out
 
@@ -476,9 +491,8 @@ at pairing; the integration raises a repair issue when the two are too far apart
 - **Family Link's per-device numbers:** a test phone (an emulator) once showed 1.2 minutes in Home Assistant against 2
   hours on the device. Check on a real phone before trusting them in budgets; the per-child total may be the safer
   source until then.
-- **Enforcing a rule on another service:** when games are used up but Minecraft's own limit isn't, a Hearth device can
-  keep only Minecraft open; on a Switch or Xbox the service's own limits can't tell titles apart the same way (Nintendo
-  limits the whole Switch; Family Safety can block other apps one by one). How far blueprints should go there is open.
+- **Enforcing per title on another service:** Family Safety locks a whole platform, as Nintendo would the whole
+  Switch. Holding single Xbox titles (Family Safety's `block_app`) needs each title's Family Safety id in the group.
 - **Together on a Switch:** friend presence (unofficial API; login goes through a third-party token server; breaks
   a few times a year) or the parental controls fallback (no third party, delay unmeasured). To test first: can the
   kids' supervised Switch users accept the watcher, how fast presence changes, whether two kids in Minecraft show the

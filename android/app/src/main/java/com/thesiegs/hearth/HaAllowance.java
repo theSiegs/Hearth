@@ -9,7 +9,13 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Each profile's allowance as Home Assistant works it out (a YouTube time pool shared with the family's other
@@ -21,7 +27,8 @@ import java.util.Iterator;
  *
  * A TV paired with the Hearth integration (see {@link HaIntegration}) doesn't read the entity: each status post's
  * answer carries every profile's groups and minutes left, and the YouTube minutes are the fewest left in any group
- * holding HearthTube ({@link #fromDocument}).
+ * holding HearthTube ({@link #fromDocument}). Its other groups whose time is up today name the apps Hearth holds for
+ * the profile (Allowance.timeUpGroup): every app when it's All screen time.
  */
 final class HaAllowance {
     private static final String TAG = "HearthAllowance";
@@ -37,6 +44,19 @@ final class HaAllowance {
 
     private static long sNextReadAt;
 
+    /** The integration's group of every app: its time up holds every app (but these). */
+    static final String ALL_GROUP = "all";
+    /**
+     * Never held for a group's time: Hearth, HearthTube (it holds YouTube time itself), Settings, the store, the
+     * assistant and Google TV's own homes and screens.
+     */
+    static final Set<String> NEVER_HELD = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            "com.thesiegs.hearth", CompanionApps.HEARTHTUBE, "com.thesiegs.hearthtube.mobile",
+            "com.android.tv.settings", "com.android.settings", "com.android.vending", "com.google.android.katniss",
+            "com.google.android.apps.tv.launcherx", "com.google.android.tvlauncher",
+            "com.google.android.leanbacklauncher", "com.google.android.tvrecommendations", "com.android.systemui",
+            "android")));
+
     private HaAllowance() {
     }
 
@@ -46,12 +66,30 @@ final class HaAllowance {
         final boolean scheduleLocked;
         final String message;
         final Long checkedAt;
+        /** Apps whose group's time is up today, each with that group's name (never null). */
+        final Map<String, String> outOfTime;
+        /** All screen time's name when its time is up today (every app is held), else null. */
+        final String allOutOfTime;
 
         Values(Integer youtubeMinutesLeft, boolean scheduleLocked, String message, Long checkedAt) {
+            this(youtubeMinutesLeft, scheduleLocked, message, checkedAt, Collections.emptyMap(), null);
+        }
+
+        Values(Integer youtubeMinutesLeft, boolean scheduleLocked, String message, Long checkedAt,
+                Map<String, String> outOfTime, String allOutOfTime) {
             this.youtubeMinutesLeft = youtubeMinutesLeft;
             this.scheduleLocked = scheduleLocked;
             this.message = message;
             this.checkedAt = checkedAt;
+            this.outOfTime = outOfTime;
+            this.allOutOfTime = allOutOfTime;
+        }
+
+        /** The group whose time is up today for this app (null: none, it may open). */
+        String timeUpGroup(String packageName) {
+            if (packageName == null || NEVER_HELD.contains(packageName)) return null;
+            String group = outOfTime.get(packageName);
+            return group != null ? group : allOutOfTime;
         }
     }
 
@@ -106,7 +144,8 @@ final class HaAllowance {
     /**
      * The allowance map from the integration's state document, {"profiles": {"user:10": {"groups": [{"id",
      * "minutes_left", "apps": [...]}]}}}: per profile, the fewest minutes left in a group holding HearthTube (none:
-     * no limit). Null when it isn't such a document.
+     * no limit), and the apps of the groups with none left ("out_of_time": package -> group name; "all_out_of_time":
+     * All screen time's name when it has none left). Null when it isn't such a document.
      */
     static JSONObject profilesFromDocument(JSONObject state) {
         JSONObject documents = state != null ? state.optJSONObject("profiles") : null;
@@ -118,16 +157,32 @@ final class HaAllowance {
                 JSONObject person = documents.optJSONObject(profileId);
                 JSONArray groups = person != null ? person.optJSONArray("groups") : null;
                 Integer least = null;
+                JSONObject outOfTime = new JSONObject();
+                String allOutOfTime = null;
                 for (int i = 0; groups != null && i < groups.length(); i++) {
                     JSONObject group = groups.optJSONObject(i);
-                    if (group == null || group.isNull("minutes_left") || !holdsHearthTube(group.optJSONArray("apps"))) {
-                        continue;
-                    }
+                    if (group == null || group.isNull("minutes_left")) continue;
                     int left = Math.max(0, group.optInt("minutes_left", 0));
+                    JSONArray apps = group.optJSONArray("apps");
+                    if (left == 0) {
+                        String name = group.optString("name", "");
+                        if (name.trim().isEmpty()) name = group.optString("id", "");
+                        if (ALL_GROUP.equals(group.optString("id"))) allOutOfTime = name;
+                        for (int j = 0; apps != null && j < apps.length(); j++) {
+                            String app = apps.optString(j, "");
+                            if (!app.isEmpty() && !NEVER_HELD.contains(app) && !outOfTime.has(app)) {
+                                outOfTime.put(app, name);
+                            }
+                        }
+                    }
+                    // All screen time holds HearthTube's minutes too (its apps list is empty: every app)
+                    if (!holdsHearthTube(apps) && !ALL_GROUP.equals(group.optString("id"))) continue;
                     least = least == null ? left : Math.min(least, left);
                 }
                 JSONObject entry = new JSONObject();
                 entry.put("youtube_minutes_left", least == null ? JSONObject.NULL : least);
+                entry.put("out_of_time", outOfTime);
+                if (allOutOfTime != null) entry.put("all_out_of_time", allOutOfTime);
                 entry.put("schedule_locked", person != null && person.optBoolean("locked", false));
                 profiles.put(profileId, entry);
             }
@@ -185,7 +240,15 @@ final class HaAllowance {
         Integer minutes = entry.isNull("youtube_minutes_left") ? null
                 : Math.max(0, (int) Math.floor(entry.optDouble("youtube_minutes_left", 0)));
         String message = entry.isNull("message") ? null : entry.optString("message", null);
+        Map<String, String> outOfTime = new HashMap<>();
+        JSONObject held = entry.optJSONObject("out_of_time");
+        for (Iterator<String> keys = held != null ? held.keys() : Collections.emptyIterator(); keys.hasNext(); ) {
+            String app = keys.next();
+            outOfTime.put(app, held.optString(app, ""));
+        }
+        String all = entry.isNull("all_out_of_time") ? null : entry.optString("all_out_of_time", null);
         return new Values(minutes, entry.optBoolean("schedule_locked", false),
-                message != null && !message.trim().isEmpty() ? message.trim() : null, checkedAt);
+                message != null && !message.trim().isEmpty() ? message.trim() : null, checkedAt,
+                Collections.unmodifiableMap(outOfTime), all);
     }
 }

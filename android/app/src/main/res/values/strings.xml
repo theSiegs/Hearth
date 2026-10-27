@@ -60,6 +60,7 @@
     <string name="pin_change">Change PIN</string>
     <string name="pin_close">Close</string>
     <string name="youtube_in_hearthtube">YouTube is in HearthTube here</string>
+    <string name="time_up_for_group">Time\'s up for %1$s today. An adult can add more time.</string>
     <!-- Over Google TV’s kids home while it checks bedtime (KidsHomeCover) -->
     <string name="switch_cover">Hi, %1$s</string>
     <string name="switch_cover_unnamed">Hi</string>

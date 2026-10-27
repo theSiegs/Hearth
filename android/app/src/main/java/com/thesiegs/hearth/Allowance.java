@@ -2,12 +2,17 @@ package com.thesiegs.hearth;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.SystemClock;
+import android.widget.Toast;
 
 /**
  * A profile's YouTube allowance for HearthTube to enforce. Hearth works it out on its own: a daily limit set for the
  * profile in Hearth's Settings, less what HearthTube has played for it today (HearthTube reports that itself).
  * Home Assistant is optional: when it's set up and has a say for the profile (HaAllowance: a pool shared with the
  * family's other devices, a schedule), the stricter of the two counts.
+ *
+ * Paired with the Hearth integration, a kids profile's other groups are held too: an app whose group's time is up
+ * today doesn't open from Hearth, and comes back to Hearth's home when it opens another way ({@link #timeUpGroup}).
  */
 final class Allowance {
     private static final String PREFS = "ltv_allowance_limits";
@@ -80,6 +85,41 @@ final class Allowance {
         if (source == null && haLocked) source = SOURCE_HOME_ASSISTANT;
         String message = haLocked || SOURCE_HOME_ASSISTANT.equals(source) ? haMessage : null;
         return new Values(left, haLocked, message, haCheckedAt, source);
+    }
+
+    /**
+     * The group whose time is up today for this app in the active profile, as the Hearth integration last said
+     * (null: it may open). Never in an adult's profile, never Hearth itself, and nothing without today's word from
+     * Home Assistant.
+     */
+    static String timeUpGroup(Context context, String packageName) {
+        String profileKey = LauncherAccessibilityService.getActiveProfileKey(context);
+        if (packageName == null || profileKey == null || packageName.equals(context.getPackageName())
+                || ProfileUsers.isAdults(context, ProfileUsers.serialOfKey(profileKey))) {
+            return null;
+        }
+        return HaAllowance.forProfile(context, profileKey, System.currentTimeMillis()).timeUpGroup(packageName);
+    }
+
+    /** Whether the app is held for its group's time (main thread): if so, the kid is told why and it doesn't open. */
+    static boolean holdForTime(Context context, String packageName) {
+        String group = timeUpGroup(context, packageName);
+        if (group == null) return false;
+        showTimeUp(context, group);
+        return true;
+    }
+
+    private static final long TELL_AGAIN_AFTER_MS = 5_000;
+    private static String sToldGroup;
+    private static long sToldAt;
+
+    /** Tells the kid the group's time is up (main thread); the same group once every few seconds at most. */
+    static void showTimeUp(Context context, String group) {
+        long now = SystemClock.elapsedRealtime();
+        if (group.equals(sToldGroup) && now - sToldAt < TELL_AGAIN_AFTER_MS) return;
+        sToldGroup = group;
+        sToldAt = now;
+        Toast.makeText(context, context.getString(R.string.time_up_for_group, group), Toast.LENGTH_LONG).show();
     }
 
     private static SharedPreferences prefs(Context context) {

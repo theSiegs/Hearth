@@ -104,6 +104,7 @@ async def async_setup_entry(
         people.append(PersonScreenTime(hub, person, "screen_time_today"))
         people.append(PersonPlaying(hub, person, "playing"))
         people.append(PersonTogetherToday(hub, person, "together_today"))
+        people.append(PersonHeld(hub, person, "held"))
         for group in household.groups:
             if group.id != ALL:
                 people.append(PersonGroupToday(hub, person, "group_today", group))
@@ -228,6 +229,20 @@ class PersonTogetherToday(HearthPersonEntity, SensorEntity):
     @property
     def native_value(self) -> int:
         return _minutes(self.day.together_s) if self.day else 0
+
+
+class PersonHeld(HearthPersonEntity, SensorEntity):
+    """How many apps and platforms the other parental controls hold for the person now (Configure > Enforce)."""
+
+    _attr_translation_key = "person_held"
+
+    @property
+    def native_value(self) -> int:
+        return sum(len(v["held"]) for v in self.hub.household.enforcement.held_for(self.person).values())
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return self.hub.household.enforcement.held_for(self.person)
 
 
 class AppsToSort(SensorEntity):

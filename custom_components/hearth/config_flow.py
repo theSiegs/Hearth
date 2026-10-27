@@ -32,6 +32,7 @@ from homeassistant.helpers.selector import (
 from .const import CONF_GROUP_APPS, CONF_GROUPS, CONF_LOCKS, CONF_PERSON, CONF_PROFILES, DOMAIN, KIND_MOBILE
 from .limits import BUILTIN_GROUPS, GAMES, VIDEO, slug
 from .apps import CONF_APP_WATCH, CONF_ASK_NOTIFY, OTHER, options_with_app_in_group, update_notification
+from .enforce import CONF_ENFORCE, DEFAULT_FS_GROUPS, FAMILY_LINK, FAMILY_SAFETY, PLATFORMS
 from .notifications import pairing_notification_id
 from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
@@ -112,6 +113,7 @@ class HearthOptionsFlow(OptionsFlow):
                 "add_title",
                 "remove_title",
                 "locks",
+                "enforce",
                 "school_days",
                 "sort_apps",
                 "new_apps",
@@ -329,6 +331,45 @@ class HearthOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="locks", data_schema=schema)
+
+    async def async_step_enforce(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """The other parental controls that hold a person's apps when a group is out of time (see enforce.py).
+        Choosing a person again replaces theirs; leaving both empty stops it, and what was held is let go."""
+        options = self._options()
+        enforce: list[dict[str, Any]] = list(options.get(CONF_ENFORCE, []))
+        if user_input is not None:
+            person = user_input[CONF_PERSON]
+            kept = [e for e in enforce if e.get("person") != person]
+            if user_input.get("family_link"):
+                kept.append({"kind": FAMILY_LINK, "person": person, "entity_id": user_input["family_link"]})
+            if user_input.get("family_safety"):
+                kept.append(
+                    {
+                        "kind": FAMILY_SAFETY,
+                        "person": person,
+                        "entity_id": user_input["family_safety"],
+                        "platforms": list(user_input.get("platforms") or ["Xbox"]),
+                        "groups": list(user_input.get("groups") or DEFAULT_FS_GROUPS),
+                    }
+                )
+            return self.async_create_entry(data={**options, CONF_ENFORCE: kept})
+        groups = [SelectOptionDict(value=g.id, label=g.name) for g in self._household().groups]
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_PERSON): PERSON_SELECTOR,
+                vol.Optional("family_link"): EntitySelector(EntitySelectorConfig(integration="familylink")),
+                vol.Optional("family_safety"): EntitySelector(
+                    EntitySelectorConfig(integration="microsoft_family_safety", domain="sensor")
+                ),
+                vol.Optional("platforms", default=["Xbox"]): SelectSelector(
+                    SelectSelectorConfig(options=list(PLATFORMS), multiple=True)
+                ),
+                vol.Optional("groups", default=list(DEFAULT_FS_GROUPS)): SelectSelector(
+                    SelectSelectorConfig(options=groups, multiple=True)
+                ),
+            }
+        )
+        return self.async_show_form(step_id="enforce", data_schema=schema)
 
     async def async_step_new_apps(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Where new apps are noticed (sensors listing a kid's allowed apps, such as Family Link's), and which phone

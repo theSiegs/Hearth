@@ -761,6 +761,41 @@ public class LauncherAccessibilityService extends AccessibilityService {
         Toast.makeText(this, R.string.youtube_in_hearthtube, Toast.LENGTH_LONG).show();
     }
 
+    // --- A group's time up (the Hearth integration) ---
+
+    private static final long HOLD_WINDOW_MS = 60_000;
+    private static final int HOLDS_PER_WINDOW = 10;
+    private long mHoldWindowStart;
+    private int mHolds;
+
+    /**
+     * An app whose group's time is up today for this kid came to the front another way than Hearth's (Google TV's
+     * kids home, a voice search, a link): Hearth's home comes back over it (Google TV's when its home is turned on),
+     * and the kid is told why. Not while a profile switch is settling (the profile it would be judged for may be the
+     * one leaving), with the chooser up, or under Google TV's own screen time lock (that one is Google TV's). A few
+     * times a minute at most, so an app that keeps coming back can't make a loop of it.
+     */
+    private void holdForTime(String packageName) {
+        long now = SystemClock.elapsedRealtime();
+        boolean switching = mCandidateSerial != ProfileUsers.UNKNOWN
+                || (mPendingProfile != null && now - mPendingProfileAt < PROFILE_CLICK_WINDOW_MS);
+        if (mActiveSerial == ProfileUsers.UNKNOWN || switching || mChooserOnScreen || mScreenTimeLock) return;
+        String group = Allowance.timeUpGroup(this, packageName);
+        if (group == null) return;
+        if (now - mHoldWindowStart > HOLD_WINDOW_MS) {
+            mHoldWindowStart = now;
+            mHolds = 0;
+        }
+        if (++mHolds > HOLDS_PER_WINDOW) return;
+        Log.i(TAG, packageName + ": time is up for " + group + " today, back home");
+        if (autoTakeOverAllowed()) {
+            openLauncher();
+        } else {
+            performGlobalAction(GLOBAL_ACTION_HOME);
+        }
+        Allowance.showTimeUp(this, group);
+    }
+
     // --- Today's usage (UsageToday) ---
 
     /** The app in front changed (null: none counted, e.g. Hearth or Google TV's home). */
@@ -1230,6 +1265,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // Not the keyboard, a system pop-up or the assistant's bar: those come up over the app that's still in use
         if (isHearth || isApp) mLastAppPackage = packageName;
         if (isApp && YOUTUBE.equals(packageName)) steerKidsToHearthTube();
+        if (isApp && !isGoogleTv) holdForTime(packageName);
         if (isGoogleTv) {
             setGoogleTvEvents(true);
         } else if (isHearth || isApp) {

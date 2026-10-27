@@ -144,6 +144,8 @@ final class ButtonMapper {
         Intent intent = null;
         switch (type) {
             case "app": {
+                // Its group's time is up today for this kid (the Hearth integration)
+                if (Allowance.holdForTime(service, target)) return;
                 // Another profile on: its own copy, in its user
                 if (ProfileApps.launch(service, target) != null) return;
                 PackageManager pm = service.getPackageManager();

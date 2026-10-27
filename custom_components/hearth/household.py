@@ -42,6 +42,7 @@ from .apps import (
 )
 from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
 from .limits import OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
+from .enforce import Enforcement, enforcers_from_options
 from .schooldays import SchoolDays
 from .live import LiveTracker, Observation, Together
 from .sources import (
@@ -95,6 +96,7 @@ class Household:
         self.apps = AppCatalog(hass, hub.entry.entry_id)
         self.school = SchoolDays(hass)
         self.school.configure(dict(hub.entry.options))
+        self.enforcement = Enforcement(hass, hub.entry.entry_id)
         self.days: dict[str, PersonDay] = {}
         self.groups: list[Group] = []
         self.sources: list[Source] = []
@@ -107,10 +109,12 @@ class Household:
         await self.limits.async_load()
         await self.live.async_load()
         await self.apps.async_load()
+        await self.enforcement.async_load()
 
     async def async_flush(self) -> None:
         await self.limits.async_flush()
         await self.live.async_flush()
+        await self.enforcement.async_flush()
 
     # The mapping
 
@@ -321,6 +325,12 @@ class Household:
                     self.limits.clear_reached(person, group.id)
             days[person] = day
         self.days = days
+        groups_by_id = {g.id: g for g in self.groups}
+        self.enforcement.update(
+            enforcers_from_options(options),
+            days,
+            lambda group_id: self._group_apps(groups_by_id[group_id], membership) if group_id in groups_by_id else [],
+        )
         for together, what in [(t, "started") for t in started] + [(t, "ended") for t in ended]:
             self.hass.bus.async_fire(EVENT_PLAYING_TOGETHER, self._together_event(together, what))
         async_dispatcher_send(self.hass, SIGNAL_PEOPLE, new_day)

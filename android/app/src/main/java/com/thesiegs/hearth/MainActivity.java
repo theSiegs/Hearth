@@ -1145,6 +1145,8 @@ public class MainActivity extends FlutterActivity {
     }
 
     private boolean launchApp(String packageName) {
+        // Its group's time is up today for this kid (the Hearth integration)
+        if (Allowance.holdForTime(this, packageName)) return false;
         // Another profile on: its own copy, in its user
         Boolean inProfile = ProfileApps.launch(this, packageName);
         if (inProfile != null) return inProfile;
@@ -1863,6 +1865,7 @@ public class MainActivity extends FlutterActivity {
      * otherwise here, once something handles it, telling Profile Pairing first.
      */
     private boolean openInApp(Intent intent, String pkg) {
+        if (Allowance.holdForTime(this, pkg != null ? pkg : packageOf(intent))) return false;
         Boolean inProfile = ProfileApps.open(this, intent);
         if (inProfile != null) return inProfile;
         if (intent.resolveActivity(getPackageManager()) == null) return false;
