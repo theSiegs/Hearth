@@ -22,6 +22,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/quiet_failure.dart';
 import 'package:flauncher/share/household_join.dart';
+import 'package:flauncher/widgets/held_focus.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -60,6 +61,12 @@ Future<bool> reviewHouseholdJoin(BuildContext context, FLauncherChannel channel)
   return joined != false;
 }
 
+/// The join code as both TVs show it: six digits in two groups, "626 952" (the Bell's request shows it so too).
+String joinCodeText(String code) {
+  final digits = code.replaceAll(RegExp(r"\s"), "");
+  return digits.length == 6 ? "${digits.substring(0, 3)} ${digits.substring(3)}" : code.trim();
+}
+
 /// One profile's line in what joining changes: "Alex: look, home layout, 1 saved PIN".
 String joinChangeLine(AppLocalizations l, JoinChange change) {
   final parts = [
@@ -90,6 +97,9 @@ class _JoinDialogState extends State<_JoinDialog> {
 
   String _state = "connecting";
   String? _via;
+
+  /// The six digits both TVs worked out ("123 456"), which the request in the other TV's Bell shows too.
+  String? _code;
   Timer? _timer;
 
   // Once allowed: what joining changes
@@ -100,6 +110,12 @@ class _JoinDialogState extends State<_JoinDialog> {
   bool _busy = false;
   bool _copyFailed = false;
   JoinPreview? _preview;
+
+  /// Where the remote's focus belongs: Later once allowed (the safe choice), Cancel (or Close) before.
+  final FocusNode _laterFocus = FocusNode(debugLabel: "householdJoinLater");
+  final FocusNode _cancelFocus = FocusNode(debugLabel: "householdJoinCancel");
+
+  FocusNode get _homeFocus => _state == "review" ? _laterFocus : _cancelFocus;
 
   @override
   void initState() {
@@ -201,6 +217,7 @@ class _JoinDialogState extends State<_JoinDialog> {
       setState(() {
         _state = state;
         _via = join["via"] as String?;
+        _code = join["code"] as String?;
       });
       if (state != "connecting" && state != "waiting") _timer?.cancel();
       if (state == "joined") _review();
@@ -214,7 +231,29 @@ class _JoinDialogState extends State<_JoinDialog> {
     _timer?.cancel();
     // Closed while the request was under way (Back, or Cancel): it stops, so a later Allow can't join this TV
     _stopRequest();
+    _laterFocus.dispose();
+    _cancelFocus.dispose();
     super.dispose();
+  }
+
+  /// Back: Later once allowed (the TV stays held, and Finish joining is offered), else Cancel.
+  void _back() {
+    if (_state != "review") {
+      _cancel();
+    } else if (!_busy) {
+      Navigator.of(context).pop(true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _back();
+      },
+      child: HeldFocus(home: () => _homeFocus, child: _build(context)),
+    );
   }
 
   void _stopRequest() {
@@ -229,8 +268,7 @@ class _JoinDialogState extends State<_JoinDialog> {
     Navigator.of(context).pop(false);
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     if (_state == "review") return _buildReview(l, Theme.of(context).textTheme);
     final textTheme = Theme.of(context).textTheme;
@@ -248,6 +286,21 @@ class _JoinDialogState extends State<_JoinDialog> {
       default:
         title = waiting ? l.householdJoinWaitTitle(via) : l.householdJoin;
         body = [Text(waiting ? l.householdJoinWaitBody(via) : l.householdJoinFinding, style: textTheme.bodyMedium)];
+        final code = _code;
+        // The code to compare: the adult checks it against the request in the Bell before choosing Allow
+        if (waiting && code != null && code.isNotEmpty) {
+          body.addAll([
+            const SizedBox(height: 20),
+            Text(l.householdJoinCode, style: textTheme.bodySmall?.copyWith(color: Colors.white70)),
+            const SizedBox(height: 4),
+            Text(joinCodeText(code),
+                key: const ValueKey("householdJoinCode"),
+                style: textTheme.displayMedium?.copyWith(
+                    fontWeight: FontWeight.w600, letterSpacing: 6, fontFeatures: const [FontFeature.tabularFigures()])),
+            const SizedBox(height: 8),
+            Text(l.householdJoinCodeHint, style: textTheme.bodySmall?.copyWith(color: Colors.white70)),
+          ]);
+        }
     }
     final over = _state == "denied" || _state == "failed";
     return AlertDialog(
@@ -257,7 +310,8 @@ class _JoinDialogState extends State<_JoinDialog> {
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: body),
       ),
       actions: [
-        TextButton(autofocus: true, onPressed: _cancel, child: Text(over ? l.close : l.cancel)),
+        TextButton(
+            focusNode: _cancelFocus, autofocus: true, onPressed: _cancel, child: Text(over ? l.close : l.cancel)),
       ],
     );
   }
@@ -311,14 +365,15 @@ class _JoinDialogState extends State<_JoinDialog> {
       ),
       actions: [
         TextButton(onPressed: _busy ? null : _dontJoin, child: Text(l.householdReviewCancel)),
+        // Later is the safe choice: nothing changes here, and the page offers Finish joining
         TextButton(
-          autofocus: preview == null,
+          focusNode: _laterFocus,
+          autofocus: true,
           onPressed: _busy ? null : () => Navigator.of(context).pop(true),
           child: Text(l.householdReviewLater),
         ),
         if (preview != null)
           TextButton(
-            autofocus: true,
             onPressed: _busy ? null : () => _use(preview),
             child: Text(l.householdReviewUse),
           ),

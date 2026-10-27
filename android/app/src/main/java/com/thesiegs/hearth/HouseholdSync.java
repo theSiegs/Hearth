@@ -67,9 +67,11 @@ final class HouseholdSync {
         final boolean removedHere;
         /** Wallpaper pictures that came from the other TV. */
         final int pictures;
+        /** The other TV wasn't listed here and proved an invitation (or the version 1 key): this TV listed it. */
+        final boolean admitted;
 
         Result(String peer, String peerName, int sent, int received, List<HouseholdEntry> applied, boolean peerRemoved,
-                boolean removedHere, int pictures) {
+                boolean removedHere, int pictures, boolean admitted) {
             this.peer = peer;
             this.peerName = peerName;
             this.sent = sent;
@@ -78,6 +80,7 @@ final class HouseholdSync {
             this.peerRemoved = peerRemoved;
             this.removedHere = removedHere;
             this.pictures = pictures;
+            this.admitted = admitted;
         }
     }
 
@@ -129,6 +132,8 @@ final class HouseholdSync {
     private long receiveCounter;
     private String peer;
     private String peerName;
+    /** This exchange listed the other TV ({@link #standing}). */
+    private boolean admitted;
 
     private HouseholdSync(InputStream in, OutputStream out, boolean initiator, String selfId, String householdId) {
         this.in = new DataInputStream(in);
@@ -312,7 +317,7 @@ final class HouseholdSync {
 
         // The TV that invited this one has listed it: the invitation is spent
         if (store.joinProofFor(peer) != null) store.joinProofUsed();
-        return new Result(peer, peerName, toSend.size(), received, applied, false, false, took);
+        return new Result(peer, peerName, toSend.size(), received, applied, false, false, took, admitted);
     }
 
     /**
@@ -324,12 +329,14 @@ final class HouseholdSync {
      */
     private void mergeChecked(List<HouseholdEntry> checked, List<HouseholdEntry> applied) {
         checked.sort((a, b) -> Long.compare(a.clock, b.clock));
+        // The TV that let this one in, in their first exchange: the TVs it lists by their own entries are taken too
+        boolean fromInviter = store.invitedBy(peer);
         boolean progress = true;
         while (progress && !checked.isEmpty()) {
             progress = false;
             for (java.util.Iterator<HouseholdEntry> it = checked.iterator(); it.hasNext();) {
                 HouseholdEntry entry = it.next();
-                if (!HouseholdMembers.accepts(store.log(), entry)) continue;
+                if (!HouseholdMembers.accepts(store.log(), entry, fromInviter)) continue;
                 it.remove();
                 progress = true;
                 if (store.log().merge(entry, now)) applied.add(entry);
@@ -351,7 +358,7 @@ final class HouseholdSync {
     }
 
     private Result stopped(boolean peerRemoved, boolean removedHere) {
-        return new Result(peer, peerName, 0, 0, new ArrayList<>(), peerRemoved, removedHere, 0);
+        return new Result(peer, peerName, 0, 0, new ArrayList<>(), peerRemoved, removedHere, 0, admitted);
     }
 
     /** Asks for the pictures this side's entries name and it lacks, sends those the other asks for; how many came. */
@@ -527,11 +534,13 @@ final class HouseholdSync {
         if (v1 != null && !v1Mac.isEmpty()
                 && MessageDigest.isEqual(ShareCrypto.hkdfExtract(v1, signed(ofInitiator, "v1")), b64.decode(v1Mac))) {
             store.admit(peer, key, peerName, auth.optBoolean("signs", false), now);
+            admitted = true;
             return HouseholdMembers.Standing.MEMBER;
         }
         String inviteMac = auth.optString("invite", "");
         if (!inviteMac.isEmpty() && store.useInvite(signed(ofInitiator, "invite"), b64.decode(inviteMac), now)) {
             store.admit(peer, key, peerName, auth.optBoolean("signs", false), now);
+            admitted = true;
             return HouseholdMembers.Standing.MEMBER;
         }
         throw new SyncException("The other TV is not in this household");

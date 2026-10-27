@@ -521,8 +521,8 @@ void main() {
       expect(channel.joinRequests, 1);
       expect(find.text("Allow it on Kitchen"), findsOneWidget);
       expect(find.textContaining("open the notification Bell"), findsOneWidget);
-      // No code to compare: the TV's name is what's checked
-      expect(find.text("123 456"), findsNothing);
+      // The code to compare with the request in that TV's Bell, before choosing Allow
+      expect(find.text("123 456"), findsOneWidget);
       // someone allowed it in that TV's Bell
       channel.joinState = "joined";
       channel.household = true;

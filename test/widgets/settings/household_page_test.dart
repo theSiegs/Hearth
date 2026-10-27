@@ -23,6 +23,7 @@ import 'package:flauncher/widgets/settings/family_settings_page.dart';
 import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
 import 'package:flauncher/widgets/settings/household_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -55,6 +56,9 @@ class _HouseholdChannel extends FLauncherChannel {
 
   @override
   Future<bool> requestHouseholdJoin() async => true;
+
+  @override
+  Future<void> cancelHouseholdJoin() async {}
 
   @override
   Future<void> leaveHousehold() async => left = true;
@@ -197,6 +201,21 @@ void main() {
     expect(householdSays("Not set up"), findsOneWidget);
   });
 
+  testWidgets("Family counts the TVs again while it's shown: a TV that just joined hears of the others later",
+      (tester) async {
+    // Just joined: only the TV that let it in is listed yet
+    channel.status = {
+      ...inHousehold,
+      "members": [for (final m in inHousehold["members"] as List) if ((m as Map)["tvId"] != "c") m],
+    };
+    await pump(tester, const FamilySettingsPage());
+    expect(householdSays("2 TVs"), findsOneWidget);
+    channel.status = inHousehold;
+    await tester.pump(const Duration(seconds: 6));
+    expect(householdSays("3 TVs"), findsOneWidget);
+    await pump(tester, const SizedBox());
+  });
+
   group("before joining", () {
     const joinedHolding = {
       "joined": true,
@@ -221,6 +240,29 @@ void main() {
       return answers;
     }
 
+    testWidgets("while it waits for Allow, the join code shows large, grouped as the Bell shows it", (tester) async {
+      channel.status = {
+        "joined": false,
+        "join": {"state": "waiting", "code": "626 952", "via": "Office"},
+      };
+      await openJoin(tester);
+      expect(find.text("Allow it on Office"), findsOneWidget);
+      expect(find.text("Join code"), findsOneWidget);
+      final code = tester.widget<Text>(find.byKey(const ValueKey("householdJoinCode")));
+      expect(code.data, "626 952");
+      expect(code.style!.fontSize, greaterThanOrEqualTo(40));
+      expect(find.textContaining("Choose Allow only when it's this one"), findsOneWidget);
+      await tester.tap(find.text("Cancel"));
+      await tester.pumpAndSettle();
+      await leave(tester);
+    });
+
+    test("the join code is grouped in threes, however it comes", () {
+      expect(joinCodeText("626952"), "626 952");
+      expect(joinCodeText("626 952"), "626 952");
+      expect(joinCodeText("12345"), "12345");
+    });
+
     testWidgets("once allowed, what changes here is listed first; Join and use these goes on", (tester) async {
       channel.status = joinedHolding;
       reviewer.preview = const JoinPreview(profiles: [
@@ -237,6 +279,74 @@ void main() {
       await tester.tap(find.text("Join and use these"));
       await tester.pumpAndSettle();
       expect(reviewer.finished, isTrue);
+      expect(answers, [true]);
+      await leave(tester);
+    });
+
+    testWidgets("what changes holds the remote's focus: Later first, arrows stay in it, Back is Later", (tester) async {
+      channel.status = joinedHolding;
+      reviewer.preview = const JoinPreview(profiles: [JoinChange(key: "user:0", name: "Alex", look: true)]);
+      final answers = <bool>[];
+      final keysBehind = <LogicalKeyboardKey>[];
+      final steal = ValueNotifier(false);
+      // A page behind it that, like the settings panel, acts on the arrows, and builds a tile with autofocus as it
+      // refreshes (the Household page does once this TV has joined)
+      await pump(
+          tester,
+          Focus(
+            onKeyEvent: (node, event) {
+              if (event is KeyDownEvent) keysBehind.add(event.logicalKey);
+              return KeyEventResult.handled;
+            },
+            child: ValueListenableBuilder<bool>(
+              valueListenable: steal,
+              builder: (context, stealing, _) => Column(children: [
+                TextButton(
+                    onPressed: () async => answers.add(await joinNearbyHousehold(context, channel)),
+                    child: const Text("open")),
+                if (stealing) TextButton(autofocus: true, onPressed: () {}, child: const Text("Finish joining")),
+              ]),
+            ),
+          ));
+      await tester.tap(find.text("open"));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+      String focusedLabel() {
+        for (final label in ["Don't join", "Later", "Join and use these", "Finish joining"]) {
+          if (find.text(label).evaluate().isEmpty) continue;
+          final node = Focus.maybeOf(tester.element(find.text(label)));
+          if (node != null && node.hasPrimaryFocus) return label;
+        }
+        return "elsewhere";
+      }
+
+      expect(focusedLabel(), "Later");
+      // The page refreshes into a tile with autofocus: the focus comes back to the dialog
+      steal.value = true;
+      await tester.pump();
+      await tester.pump();
+      expect(focusedLabel(), "Later");
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump();
+      expect(focusedLabel(), "Don't join");
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump();
+      expect(focusedLabel(), "Don't join");
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+      expect(focusedLabel(), "Join and use these");
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      expect(keysBehind, isEmpty);
+      expect(find.text("Before this TV joins"), findsOneWidget);
+      // Back is Later: the TV stays held, nothing taken
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text("Before this TV joins"), findsNothing);
+      expect(reviewer.finished, isFalse);
+      expect(channel.left, isFalse);
       expect(answers, [true]);
       await leave(tester);
     });

@@ -503,6 +503,18 @@ What a TV checks before it takes part or takes something, and what that guards a
   gave, within 20 seconds in all or it is closed; only then does it go to the household thread, which checks the member
   list before reading anything more and refuses a TV not on it at once. A TV this TV connects to (anything can announce
   itself) has 20 seconds to prove it's a member before the connection is closed.
+- **Two TVs syncing with each other at once don't wait on each other.** Both ends of every exchange run on their TV's
+  household thread, so two TVs that open one with each other at the same moment (right after a join, each hears the
+  other and syncs) would each hold its thread on its own and wait for the other's until both time out. An exchange
+  another TV opens waits while this TV runs one of its own, unless the other TV comes first (the lower TV id): then this
+  TV's gives way, its connection closed, and the other's, which goes both ways, goes on at once (HouseholdTurns). So
+  of two TVs, or a ring of them, one always goes on. What the app only reads (the list of TVs, the looks, the Parent
+  PIN, what joining would change) comes from a copy of the entries as last saved, so it never waits for an exchange.
+- **What an exchange brings goes on.** When an exchange brought entries that changed something, or listed a TV that
+  proved an invitation, the TV syncs with the household's other TVs on now a couple of seconds later, rather than at
+  the next change or five-minute check: a TV that just joined is refused by the others until the entry listing it
+  reaches them. A TV that is refused for not being listed makes the TV that refused it sync with the others soon too
+  (at most every 30 seconds), in case one of them just let it in.
 - **Joining.** The join code binds the session between the two TVs and is shown on both: the new TV's screen and the
   request in the household's Bells (and its Allow dialog). No PIN: whoever answers is trusted to compare the code.
   Nothing secret moves before Allow, and the Home Assistant connection only after its own question, answered yes.
@@ -520,6 +532,12 @@ What a TV checks before it takes part or takes something, and what that guards a
   its own making in its own name. Such a TV shows on Your TVs (named, added by that member) and is removed there like
   any other; removing the member that added it doesn't remove it by itself, since that would also remove the TVs it
   rightly let in.
+- **A TV's own entry, to a TV that just joined.** A TV writes its own `member` entry again when renamed and once a day
+  (Members), and that replaces the admission its adder wrote. So a TV that joins later would find each such TV's entry
+  written by a TV it doesn't list yet, refuse it, and neither list that TV nor sync with it. In the first exchange
+  with the TV that let it in (whom it trusts with the whole household already), a joining TV also takes a TV's own
+  entry for a TV it holds nothing of: signed with the key the entry carries (the key its id was made from), and saying
+  it signs. From any other TV, or once that first exchange is done, the rule above holds.
 - **An entry refused** is still counted as seen, so it isn't sent again and again; it never changes anything.
 - **Sequences in another TV's name.** Entries travel through any member, so a TV takes entries written by TVs it isn't
   talking to, and counts each one's sequence in its version vector. A member could hand on an entry in another TV's

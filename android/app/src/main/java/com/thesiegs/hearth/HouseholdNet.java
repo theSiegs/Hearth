@@ -100,7 +100,7 @@ final class HouseholdNet {
         try {
             sServer = new ServerSocket(0);
         } catch (IOException e) {
-            Log.w(TAG, "Couldn't listen for the household: " + e.getClass().getSimpleName());
+            Log.w(TAG, "Couldn't listen for the household: " + Household.why(e));
             sServer = null;
             return;
         }
@@ -183,7 +183,7 @@ final class HouseholdNet {
                 }
                 handler.accepted(socket);
             } catch (IOException e) {
-                if (!server.isClosed()) Log.i(TAG, "Accept failed: " + e.getClass().getSimpleName());
+                if (!server.isClosed()) Log.i(TAG, "Accept failed: " + Household.why(e));
             }
         }
     }
@@ -214,7 +214,7 @@ final class HouseholdNet {
         try {
             manager.registerService(info, NsdManager.PROTOCOL_DNS_SD, sRegistration);
         } catch (RuntimeException e) {
-            Log.i(TAG, "Couldn't announce this TV: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't announce this TV: " + Household.why(e));
             sRegistration = null;
         }
     }
@@ -252,7 +252,7 @@ final class HouseholdNet {
         try {
             manager.discoverServices(TYPE, NsdManager.PROTOCOL_DNS_SD, sDiscovery);
         } catch (RuntimeException e) {
-            Log.i(TAG, "Couldn't look for the household: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't look for the household: " + Household.why(e));
             sDiscovery = null;
         }
     }
