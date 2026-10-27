@@ -64,6 +64,19 @@ final class Household {
     /** How long a connection has to say what it is. */
     private static final int ROUTE_TIMEOUT_MS = 5_000;
 
+    /**
+     * Since when this TV, having just joined, holds the household's settings until someone has seen what they change
+     * (docs/household-sync.md, "Before joining"); and whether the first exchange has brought them yet.
+     */
+    private static final String REVIEW_PREF = "join_review";
+    private static final String REVIEW_READY_PREF = "join_review_ready";
+    /** The copy of this TV's pairings and PINs from before it joined (sealed), and when it was made. */
+    private static final String JOIN_BACKUP_PREF = "join_backup";
+    private static final String JOIN_BACKUP_AT_PREF = "join_backup_at";
+    private static final String JOIN_BACKUP_ALIAS = "hearth_household_join_backup";
+    /** How long that copy is kept. */
+    static final long JOIN_BACKUP_MS = 14L * 24 * 60 * 60_000;
+
     private static Context sContext;
     /** Goes up whenever a look, layout or wallpaper changed here (from another TV or published): the app checks it. */
     private static long sLooksVersion = 1;
@@ -130,6 +143,16 @@ final class Household {
     /** Sync is on and this TV is a member, not leaving: its own settings go out and the household's come in. */
     private static boolean member(Context context) {
         return active(context) && store(context).joined();
+    }
+
+    /** This TV joined and holds the household's settings, and its own, until someone has seen what changes. */
+    private static boolean reviewing(Context context) {
+        return prefs(context).getString(REVIEW_PREF, null) != null;
+    }
+
+    /** A member that takes and gives settings: not one still holding them after joining. */
+    private static boolean giving(Context context) {
+        return member(context) && !reviewing(context);
     }
 
     // ---- Starting and stopping ----
@@ -400,7 +423,7 @@ final class Household {
 
     /** Settings that are set here and have no entry yet become entries (the household's values win over this TV's). */
     private static void publishUnpublished() {
-        if (sContext == null || !member(sContext)) return;
+        if (sContext == null || !giving(sContext)) return;
         HouseholdStore store = store(sContext);
         long now = System.currentTimeMillis();
         Map<String, String[]> fresh = HouseholdBridge.unpublished(local(sContext), store.log());
@@ -412,7 +435,7 @@ final class Household {
     }
 
     private static void applyEntries() {
-        if (sContext == null || !member(sContext)) return;
+        if (sContext == null || !giving(sContext)) return;
         int changed = HouseholdBridge.apply(local(sContext), store(sContext).log());
         if (changed > 0) Log.i(TAG, "Applied " + changed + " setting(s) from the household");
     }
@@ -498,7 +521,7 @@ final class Household {
             Log.i(TAG, "Another TV of the household has this one removed: forgetting the household");
             stop();
             store.markRemoved();
-            prefs(sContext).edit().remove(SEEN_PREF).apply();
+            prefs(sContext).edit().remove(SEEN_PREF).remove(REVIEW_PREF).remove(REVIEW_READY_PREF).apply();
             pictures(sContext).clear();
             return;
         }
@@ -523,6 +546,8 @@ final class Household {
         }
         if (result.pictures > 0) looksChanged();
         pictures(sContext).keepOnly(HouseholdBridge.pictures(store.log()));
+        // A TV that just joined has the household's entries now: what they'd change can be shown
+        if (reviewing(sContext)) prefs(sContext).edit().putString(REVIEW_READY_PREF, "1").apply();
         applyEntries();
         applyWatch(result.applied);
         noticesArrived(result.applied);
@@ -586,7 +611,122 @@ final class Household {
         out.put("join", HouseholdJoining.status());
         // The name of a TV asking to join, while its request waits for an answer in the Bell
         out.put("asking", HouseholdJoining.requestName());
+        // Just joined and holding the household's settings until someone sees what they change; ready once they came
+        if (joined && reviewing(context)) {
+            Map<String, Object> review = new HashMap<>();
+            review.put("ready", prefs(context).getString(REVIEW_READY_PREF, null) != null);
+            out.put("review", review);
+        }
+        // When the copy of this TV's settings from before it joined was made, while it's kept (0: none)
+        out.put("joinBackupAt", joinBackupAt(context));
         return out;
+    }
+
+    // ---- Before joining: what changes, and the copy to put back (docs/household-sync.md, "Before joining") ----
+
+    /**
+     * What the household's entries would change in this TV's pairings and PINs, while it holds them after joining:
+     * {profiles: [{key, name, kids, pairings, pins}], tvPins}, a profile listed whether or not anything of it changes
+     * (the app adds its looks). Null when this TV isn't holding any. Blocks: not on the main thread.
+     */
+    static Map<String, Object> joinPreview(Context context) {
+        if (!mayBeInHousehold(context)) return null;
+        Context app = context.getApplicationContext();
+        try {
+            return EXEC.submit(() -> {
+                if (!member(app) || !reviewing(app)) return null;
+                HouseholdLocal local = local(app);
+                Map<String, int[]> changes = HouseholdJoinReview.changes(local, store(app).log());
+                List<Map<String, Object>> profiles = new ArrayList<>();
+                for (String key : local.profiles().values()) {
+                    int[] counts = changes.get(key);
+                    Map<String, Object> profile = new HashMap<>();
+                    profile.put("key", key);
+                    profile.put("name", ProfileUsers.displayName(app, key));
+                    profile.put("kids", ProfilePairing.isKids(app, key));
+                    profile.put("pairings", counts == null ? 0 : counts[0]);
+                    profile.put("pins", counts == null ? 0 : counts[1]);
+                    profiles.add(profile);
+                }
+                int[] tv = changes.get(HouseholdJoinReview.TV);
+                Map<String, Object> out = new HashMap<>();
+                out.put("profiles", profiles);
+                out.put("tvPins", tv == null ? 0 : tv[1]);
+                return out;
+            }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            Log.i(TAG, "Couldn't tell what joining changes: " + e.getClass().getSimpleName());
+            return null;
+        }
+    }
+
+    /**
+     * Someone saw what joining changes and went on: this TV's pairings and PINs are kept as a copy (sealed), then the
+     * household's are put in place and this TV's own go out. False when the copy couldn't be kept (nothing changes
+     * then). Blocks: not on the main thread.
+     */
+    static boolean finishJoin(Context context) {
+        if (!mayBeInHousehold(context)) return false;
+        Context app = context.getApplicationContext();
+        try {
+            return EXEC.submit(() -> {
+                if (!member(app) || !reviewing(app)) return false;
+                String sealed = SecretBox.sealText(SecretBox.keystore(), JOIN_BACKUP_ALIAS,
+                        HouseholdJoinReview.snapshot(local(app)));
+                if (sealed == null) return false;
+                prefs(app).edit()
+                        .putString(JOIN_BACKUP_PREF, sealed)
+                        .putLong(JOIN_BACKUP_AT_PREF, System.currentTimeMillis())
+                        .remove(REVIEW_PREF)
+                        .remove(REVIEW_READY_PREF)
+                        .apply();
+                applyEntries();
+                publishUnpublished();
+                syncSoon();
+                Log.i(TAG, "Joined: the household's settings are in place, this TV's are kept as a copy");
+                return true;
+            }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            Log.i(TAG, "Couldn't finish joining: " + e.getClass().getSimpleName());
+            return false;
+        }
+    }
+
+    /** When the copy from before joining was made, while it's kept; 0 when there is none (a stale one is dropped). */
+    static long joinBackupAt(Context context) {
+        SharedPreferences prefs = prefs(context);
+        long at = prefs.getLong(JOIN_BACKUP_AT_PREF, 0);
+        if (at == 0) return 0;
+        if (System.currentTimeMillis() - at > JOIN_BACKUP_MS || prefs.getString(JOIN_BACKUP_PREF, null) == null) {
+            prefs.edit().remove(JOIN_BACKUP_PREF).remove(JOIN_BACKUP_AT_PREF).apply();
+            return 0;
+        }
+        return at;
+    }
+
+    /**
+     * Puts back this TV's pairings and PINs from before it joined (what the household added stays), then drops the
+     * copy; the ones put back are the newest now and go to the other TVs. False when there's no copy or it doesn't
+     * open. Blocks: not on the main thread.
+     */
+    static boolean restoreJoinBackup(Context context) {
+        Context app = context.getApplicationContext();
+        if (joinBackupAt(app) == 0) return false;
+        try {
+            return EXEC.submit(() -> {
+                String text = SecretBox.openText(SecretBox.keystore(), JOIN_BACKUP_ALIAS,
+                        prefs(app).getString(JOIN_BACKUP_PREF, null));
+                if (text == null) return false;
+                int changed = HouseholdJoinReview.restore(local(app), text);
+                if (changed < 0) return false;
+                prefs(app).edit().remove(JOIN_BACKUP_PREF).remove(JOIN_BACKUP_AT_PREF).apply();
+                Log.i(TAG, "Put back " + changed + " setting(s) from before joining");
+                return true;
+            }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            Log.i(TAG, "Couldn't put back the settings from before joining: " + e.getClass().getSimpleName());
+            return false;
+        }
     }
 
     /** Looks for households on the network to show (the Household page, setup), while this TV is in none. */
@@ -609,7 +749,7 @@ final class Household {
     }
 
     /**
-     * An invitation for the TV a copy goes to (HouseholdStore.Invitation, as JSON), making a household here first if
+     * An invitation for a TV allowed to join (HouseholdStore.Invitation, as JSON), making a household here first if
      * there is none; null on failure.
      */
     static String invitationToJoin(Context context) {
@@ -617,32 +757,6 @@ final class Household {
         if (!store.joined() && !create(context)) return null;
         HouseholdStore.Invitation inv = store.invite(ShareDiscovery.deviceName(context), System.currentTimeMillis());
         return inv == null ? null : inv.toJson();
-    }
-
-    /**
-     * Joins the household that {@code secrets} (a copy from another TV) carries an invitation to, or the key of when
-     * the other TV still runs version 1. False if it carries neither.
-     */
-    static boolean joinFromSecrets(Context context, String secrets) {
-        try {
-            org.json.JSONObject root = new org.json.JSONObject(secrets);
-            boolean ok;
-            String invitation = root.optString("household2", "");
-            if (!invitation.isEmpty()) {
-                ok = store(context).join(HouseholdStore.Invitation.fromJson(invitation),
-                        ShareDiscovery.deviceName(context), System.currentTimeMillis());
-            } else {
-                String encoded = root.optString("household", "");
-                if (encoded.isEmpty()) return false;
-                byte[] key = java.util.Base64.getDecoder().decode(encoded);
-                ok = store(context).joinV1(key);
-                Arrays.fill(key, (byte) 0);
-            }
-            if (ok) joined(context);
-            return ok;
-        } catch (Exception e) {
-            return false;
-        }
     }
 
     /** A household was joined: a fresh list of TVs seen, sync on, and the first exchange soon. */
@@ -671,9 +785,14 @@ final class Household {
                     start(app);
                     return false;
                 }
-                if (!HaConfig.isConfigured(app) && ShareSecrets.applyHa(app, payload)) {
+                if (!HaConfig.isConfigured(app) && applyHa(app, root.optJSONObject("ha"))) {
                     Log.i(TAG, "Joined with the household's Home Assistant settings");
                 }
+                // The household's settings wait until someone has seen what they change here (finishJoin)
+                prefs(app).edit()
+                        .putString(REVIEW_PREF, Long.toString(System.currentTimeMillis()))
+                        .remove(REVIEW_READY_PREF)
+                        .apply();
                 stop();
                 joined(app);
                 return true;
@@ -682,6 +801,21 @@ final class Household {
             Log.i(TAG, "Couldn't join with the invitation: " + e.getClass().getSimpleName());
             return false;
         }
+    }
+
+    /**
+     * The Home Assistant address and token a TV of the household made for this one ({url, token}), saved as this TV's:
+     * false when there are none or they're unusable.
+     */
+    private static boolean applyHa(Context context, org.json.JSONObject ha) {
+        if (ha == null) return false;
+        String url = HaConfig.normalizeUrl(ha.optString("url", ""));
+        String token = ha.optString("token", "").replaceAll("\\s", "");
+        if (url == null || token.isEmpty() || token.length() > 4096) return false;
+        if (!HaConfig.setToken(context, token)) return false;
+        HaConfig.prefs(context).edit().putString(HaConfig.URL_KEY, url).apply();
+        HaBridgeService.sync(context);
+        return true;
     }
 
     /** Asks a TV of the household heard on the network to let this one join (HouseholdJoining). */
@@ -725,7 +859,8 @@ final class Household {
     private static void forget(Context context) {
         stop();
         store(context).leave();
-        prefs(context).edit().remove(SEEN_PREF).apply();
+        // The copy from before joining stays for its days: it's this TV's own settings
+        prefs(context).edit().remove(SEEN_PREF).remove(REVIEW_PREF).remove(REVIEW_READY_PREF).apply();
         pictures(context).clear();
     }
 
@@ -795,6 +930,8 @@ final class Household {
                 Map<String, Object> out = new HashMap<>();
                 long version = looksVersion();
                 out.put("version", version);
+                // Just joined: the app shows what would change rather than taking it (it doesn't give either)
+                if (reviewing(app)) out.put("review", true);
                 if (since == version) return out;
                 HouseholdLog log = store(app).log();
                 HouseholdPictures pictures = pictures(app);
@@ -846,7 +983,7 @@ final class Household {
         Context app = context.getApplicationContext();
         try {
             return EXEC.submit(() -> {
-                if (!member(app) || !keepsLook(app, profileKey)) return false;
+                if (!giving(app) || !keepsLook(app, profileKey)) return false;
                 publish(app, kind, profileKey, "", value);
                 looksChanged();
                 return true;
@@ -865,7 +1002,7 @@ final class Household {
         Context app = context.getApplicationContext();
         try {
             return EXEC.submit(() -> {
-                if (!member(app) || !keepsLook(app, profileKey)) return null;
+                if (!giving(app) || !keepsLook(app, profileKey)) return null;
                 String hash = "";
                 if (jpeg != null) {
                     hash = pictures(app).write(jpeg, null);
@@ -928,7 +1065,7 @@ final class Household {
         Context app = context.getApplicationContext();
         try {
             return EXEC.submit(() -> {
-                if (!member(app)) return false;
+                if (!giving(app)) return false;
                 publish(app, HouseholdBridge.PARENT_PIN, null, "", hash);
                 return true;
             }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);

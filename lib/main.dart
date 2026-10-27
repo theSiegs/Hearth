@@ -42,6 +42,7 @@ import 'package:flauncher/providers/watch_next_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/providers/backup_service.dart';
 import 'package:flauncher/providers/household_looks_service.dart';
+import 'package:flauncher/share/household_join.dart';
 import 'package:flauncher/share/share_wallpapers.dart';
 import 'package:flauncher/providers/update_service.dart';
 import 'package:flauncher/providers/profile_service.dart';
@@ -194,7 +195,7 @@ Future<void> main() async {
               final profiles = context.read<ProfileService>();
               final settings = context.read<SettingsService>();
               return HouseholdLooksService(fLauncherChannel, sharedPreferences, context.read<BackupService>(),
-                  settings, ShareWallpapers(fLauncherChannel),
+                  settings, const ShareWallpapers(),
                   onLiveChanged: () async {
                     // What a profile hides by default stays hidden (a kid's YouTube, where HearthTube is), as on a switch
                     final key = settings.layoutOwner;
@@ -207,6 +208,8 @@ Future<void> main() async {
             },
             dispose: (_, looks) => looks.dispose(),
             lazy: false),
+        // Joining: what the household's settings change here, and putting this TV's back (the same service)
+        Provider<HouseholdJoinReviewer>(create: (context) => context.read<HouseholdLooksService>()),
       ],
       child: FLauncherApp()
     )

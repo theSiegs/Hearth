@@ -196,141 +196,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inputSources => 'Input Sources';
 
   @override
-  String get shareTitle => 'Copy profiles between TVs';
-
-  @override
-  String get shareIntro => 'Copies a profile\'s look, home layout, wallpaper pictures and streaming profile choices from one TV to another. The sending parent can also send streaming app PINs, Home Assistant settings and the parent PIN. You need to be at both TVs.';
-
-  @override
-  String get shareSendTitle => 'Copy profiles to another TV';
-
-  @override
-  String get shareReceiveTitle => 'Copy profiles from another TV';
-
-  @override
-  String get shareSendPick => 'Which profiles do you want to copy?';
-
-  @override
-  String get shareNoProfiles => 'This TV hasn\'t told its profiles apart yet. Switch to each profile once, then try again.';
-
-  @override
-  String get shareContinue => 'Continue';
-
-  @override
-  String shareSendWaiting(String name) {
-    return 'On the other TV, open Settings > Profiles > Copy profiles from another TV, then choose $name.';
-  }
-
-  @override
-  String shareSendAddress(String address) {
-    return 'Or enter this address there: $address';
-  }
-
-  @override
-  String get shareDigitsTitle => 'Do the digits match?';
-
-  @override
-  String get shareDigitsBody => 'Compare these digits with the ones on the other TV.';
-
-  @override
-  String get shareDigitsMatch => 'They match';
-
-  @override
-  String get shareDigitsDiffer => 'They don\'t match';
-
-  @override
-  String get shareWorking => 'Copying…';
-
-  @override
-  String get shareFinding => 'Looking for a TV that is ready to send. On that TV, open Copy profiles to another TV.';
-
-  @override
-  String get shareEnterAddress => 'Enter an address';
-
-  @override
-  String get shareAddressPrompt => 'The other TV\'s address, as shown on its screen (like 192.168.1.20:8770).';
-
-  @override
-  String get shareConnect => 'Connect';
-
-  @override
-  String get shareMapTitle => 'Where does each profile go?';
-
-  @override
-  String get shareMapSkip => 'Don\'t copy';
-
-  @override
-  String get shareWhatLayout => 'Look and home layout';
-
-  @override
-  String get shareWhatPairings => 'Streaming profile choices';
-
-  @override
-  String get shareCopy => 'Copy';
-
-  @override
-  String get shareDoneTitle => 'Copied';
-
-  @override
-  String shareDoneBody(int count, String backup) {
-    return 'Profiles copied: $count. A backup was kept first: $backup (Settings > System > Backup & Restore).';
-  }
-
-  @override
-  String shareSentBody(int count) {
-    return 'Profiles copied to the other TV: $count.';
-  }
-
-  @override
-  String shareMissingApps(int count) {
-    return 'Apps left out because the receiving TV doesn\'t have them: $count.';
-  }
-
-  @override
-  String get shareErrorTitle => 'The copy didn\'t finish';
-
-  @override
-  String get shareErrorNetwork => 'Couldn\'t reach the other TV. Both TVs must be on the same home network.';
-
-  @override
-  String get shareErrorMismatch => 'The digits didn\'t match, so nothing was copied.';
-
-  @override
-  String get shareErrorStopped => 'The other TV stopped the copy.';
-
-  @override
-  String get shareErrorTimeout => 'The copy timed out. Start again on both TVs.';
-
-  @override
-  String get shareErrorNewer => 'That TV has a newer Hearth. Update this one and try again.';
-
-  @override
-  String get shareErrorGeneric => 'The copy didn\'t finish. Nothing was changed on this TV.';
-
-  @override
-  String get shareSendMore => 'Also send';
-
-  @override
-  String get shareSendPictures => 'Wallpaper pictures';
-
-  @override
-  String shareSendPins(int count) {
-    return 'Streaming app PINs ($count saved)';
-  }
-
-  @override
-  String get shareSendHa => 'Home Assistant settings';
-
-  @override
-  String get shareSendHousehold => 'Add this TV to my household (keeps profiles and PINs in step)';
-
-  @override
-  String get shareSendHouseholdNote => 'The other TV gets the household\'s key and then keeps in step with this one over your home network. Only do this for your own TVs.';
-
-  @override
-  String get shareWhatHousehold => 'Join the household: keep in step with its TVs';
-
-  @override
   String get householdTitle => 'Household sync';
 
   @override
@@ -476,58 +341,123 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdJoinFailed => 'That didn\'t work. Check that one of your other TVs is on, then try again.';
 
   @override
+  String get householdReviewTitle => 'Before this TV joins';
+
+  @override
+  String get householdReviewWaiting => 'Getting your other TVs\' settings…';
+
+  @override
+  String get householdReviewNotYet => 'Your other TVs\' settings haven\'t arrived yet. Keep the TV that let this one in turned on, or finish later in Household sync.';
+
+  @override
+  String get householdReviewChanges => 'These will change on this TV:';
+
+  @override
+  String householdReviewProfile(String name, String changes) {
+    return '$name: $changes';
+  }
+
+  @override
+  String get householdReviewLook => 'look';
+
+  @override
+  String get householdReviewLayout => 'home layout';
+
+  @override
+  String householdReviewPictures(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count wallpaper pictures',
+      one: '1 wallpaper picture',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String householdReviewPairings(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'the profiles picked in $count streaming apps',
+      one: 'the profile picked in 1 streaming app',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String householdReviewPins(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count saved PINs',
+      one: '1 saved PIN',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String householdReviewTvPins(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count saved PINs for the whole TV',
+      one: '1 saved PIN for the whole TV',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get householdReviewParentPin => 'The Parent PIN';
+
+  @override
+  String get householdReviewKept => 'A copy of this TV\'s settings is kept for 14 days. You can put them back in Settings > Family > Household sync.';
+
+  @override
+  String get householdReviewUse => 'Join and use these';
+
+  @override
+  String get householdReviewCancel => 'Don\'t join';
+
+  @override
+  String get householdReviewLater => 'Later';
+
+  @override
+  String get householdReviewFailed => 'This TV\'s settings couldn\'t be copied, so nothing was changed. Try again.';
+
+  @override
+  String get householdReviewPending => 'Finish joining';
+
+  @override
+  String get householdReviewPendingHint => 'See what changes on this TV before it takes your other TVs\' settings';
+
+  @override
+  String get householdRestore => 'Put back this TV\'s settings from before it joined';
+
+  @override
+  String householdRestoreHint(String date) {
+    return 'Kept until $date';
+  }
+
+  @override
+  String get householdRestoreBody => 'The looks, home layouts, wallpapers, streaming profiles and saved PINs this TV had before it joined come back. They\'re the newest now, so your other TVs take them too, for the same people.';
+
+  @override
+  String get householdRestoreConfirm => 'Put back';
+
+  @override
+  String get householdRestoreDone => 'This TV\'s settings from before it joined are back';
+
+  @override
+  String get householdRestoreFailed => 'The settings couldn\'t be put back';
+
+  @override
   String get householdStartAnyway => 'Start a separate household instead';
 
   @override
   String householdLast(String result) {
     return 'Last sync: $result';
   }
-
-  @override
-  String get shareNoneToSend => 'Nothing to send';
-
-  @override
-  String get shareSendSecretsNote => 'PINs and Home Assistant settings are sent only after both TVs show the same digits, and nothing is kept on either TV afterwards. Home Assistant makes a new token for the other TV; you can see and remove it in your Home Assistant profile.';
-
-  @override
-  String get shareSendHaFailed => 'Home Assistant wouldn\'t make a token for the other TV, so its settings weren\'t sent.';
-
-  @override
-  String shareWhatPictures(int count) {
-    return 'Wallpaper pictures ($count)';
-  }
-
-  @override
-  String shareWhatPins(int count) {
-    return 'Streaming app PINs ($count)';
-  }
-
-  @override
-  String shareWhatHa(String host) {
-    return 'Home Assistant ($host)';
-  }
-
-  @override
-  String get shareReplacesHere => 'replaces this TV\'s';
-
-  @override
-  String shareDonePictures(int count) {
-    return 'Wallpaper pictures copied: $count.';
-  }
-
-  @override
-  String shareDonePins(int added, int kept) {
-    return 'Streaming app PINs saved: $added. Kept as they were: $kept.';
-  }
-
-  @override
-  String get shareDoneHa => 'Home Assistant settings copied, with a new token made for the receiving TV.';
-
-  @override
-  String get shareDoneParentPin => 'Parent PIN copied.';
-
-  @override
-  String get shareHaMissing => 'The other TV couldn\'t make a Home Assistant token, so no Home Assistant settings came.';
 
   @override
   String get backupAndRestore => 'Backup & Restore';

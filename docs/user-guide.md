@@ -143,35 +143,21 @@ again until it's saved anew.
 In a kids profile, or a profile without a Google TV PIN, holding the profile button opens the profile chooser
 instead. In a kids profile the remote's profile button always does Google TV's own job.
 
-**Copy profiles between TVs** (**Settings → Profiles**, in your own profile). Sets a new TV up like another one: a
-profile's look, home layout (which apps, in what order, the dock), wallpaper pictures and Profile Pairing choices go from
-one TV to the other, over your home network. The parent on the sending TV can also send the streaming app PINs, the
-Home Assistant settings and the parent PIN. Be at both TVs. On the TV that has the profiles, open **Copy profiles to another TV**
-and choose which; on the other, open **Copy profiles from another TV** and choose the first (it is found by name, or
-type the address the first TV shows). Both TVs show the same six digits: if they match on both screens, say so on both,
-and the copy goes. The receiving TV then shows where each profile goes (a profile with the same name and kind here, or
-**Don't copy**; a kids profile never goes onto an adult's, nor the other way round) and what to take.
+**Your other TVs** (**Settings → Family → Household sync**). Hearth TVs in a household keep each person's look, home
+layout (the dock, rows, hidden apps), wallpaper pictures, streaming app profile choices, saved PINs and Continue
+Watching in step, and share one Parent PIN; each TV keeps its own name, Home Assistant connection and Home Button Fix.
+A person is the same person on every TV by their Google account. When two TVs change different things, both keep
+theirs; when they change the same thing, the later change wins. An app that isn't installed on a TV is left off its
+home, and comes back where the person put it once it's installed.
 
-- Only the apps installed on the receiving TV are placed; the others are left out and counted.
-- A streaming app profile choice the receiving TV already has is kept as it is.
-- A backup of the receiving TV is made first and listed in **Backup & Restore**, so a copy can be undone there.
-- The sending TV chooses what goes along under **Also send**. Wallpaper pictures are on by default; streaming app PINs,
-  Home Assistant and the parent PIN are off until chosen, and choosing one asks for the parent PIN where the TV has one.
-  The receiving TV chooses again what it takes, and asks for its parent PIN before saving any of the three.
-- PINs go only to a profile that has that streaming profile paired, a PIN that already works on the receiving TV is
-  kept, and a kids profile never gets a Google TV PIN. They are checked on the receiving TV and never shown.
-- Home Assistant: the sending TV has Home Assistant make a **new** long-lived token for the other TV (named "Hearth
-  copy from …" with the date; see it, or remove it, in your Home Assistant profile). The sender's own token is never
-  sent. The TV status webhook id isn't sent either: it belongs to one TV's automation, so each TV needs its own.
-- A Home Assistant or parent PIN the receiving TV already has is replaced only if it is checked on that TV (it says
-  "replaces this TV's").
-- It works the same with no kids profiles, no parent PIN or no Home Assistant: what a TV doesn't have shows as
-  "Nothing to send" there, and a copy is then just the look, layout, pictures and pairings. A new TV with no parent PIN
-  can take the sender's along with its PINs (a PIN is only saved where a parent PIN guards it), and a new TV with one
-  adult profile puts the copied adult's profile on it whatever the names; kids profiles go only to the same name.
-- Nothing is kept afterwards: no key, no list of TVs.
-- If the digits don't match, nothing is sent. Someone else on your network who connects can't get anything without a
-  parent saying the digits match.
+- **Joining.** On a TV that isn't in the household, choose **Join the household**, then allow it in the notification
+  Bell of the TV it names.
+- **Before anything changes**, the new TV lists what the household's settings would change on it ("Alex: look, home
+  layout, 1 saved PIN"). **Join and use these** goes on, **Don't join** leaves the household again with nothing
+  changed, and **Later** waits (choose **Finish joining** on the Household sync page when ready).
+- **Putting it back.** For 14 days after joining, **Put back this TV's settings from before it joined** on the same
+  page restores what the TV had. What's put back is the newest change, so your other TVs take it too for the same
+  people; to keep one TV different, leave the household instead.
 
 ## Kids profiles
 

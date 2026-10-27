@@ -406,51 +406,10 @@ class FLauncherChannel {
   Future<List<Map<dynamic, dynamic>>> getProfilePairingApps() async =>
       await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getProfilePairingApps") ?? [];
 
-  /// Each known Hearth profile's choice for one app: [{hearthProfile (its key), displayName, kids, mode, chosenProfile,
-  /// autoMatch}], where mode is "auto", "profile" or "picker".
-  /// The profiles this TV has told apart: {key, name, kids}. What a copy to another TV offers.
-  Future<List<Map<dynamic, dynamic>>> getShareProfiles() async =>
-      (await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getShareProfiles")) ?? [];
-
-  /// A profile's Profile Pairing choices (an app profile or always ask), not the automatic matches:
-  /// {pkg, mode: "profile" | "picker", appProfile}.
-  Future<List<Map<dynamic, dynamic>>> getSharePairings(String profileKey) async =>
-      (await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getSharePairings", profileKey)) ?? [];
-
-  /// What this TV is called to its owner (its device name, else its model).
-  Future<String> getShareDeviceName() async => await _methodChannel.invokeMethod<String>("getShareDeviceName") ?? "";
-
-  /// Starts listening to send [bundleJson] to another TV: {host, port, name}, or null if nothing could listen.
-  /// The TV announces itself on the home network too.
-  ///
-  /// [secretsRequest] (JSON: {"profiles": {id: profile key}, "pins": bool, "ha": bool}) asks for the PINs and the
-  /// Home Assistant settings to go along; the Java side makes them once both parents said the digits match, and they
-  /// never come to Flutter.
-  Future<Map<dynamic, dynamic>?> startShareSending(String bundleJson, {String? secretsRequest}) async =>
-      await _methodChannel.invokeMapMethod<dynamic, dynamic>(
-          "startShareSending", {"bundle": bundleJson, "secrets": secretsRequest});
-
-  /// What this TV could send besides the look, for these profiles: {pins: how many are saved, ha: set up}.
-  Future<Map<dynamic, dynamic>> getShareSecretsOffer(List<String> profileKeys) async =>
-      (await _methodChannel.invokeMapMethod<dynamic, dynamic>("getShareSecretsOffer", profileKeys)) ?? {};
-
   /// Makes TV status in Home Assistant for this TV with its own token (helpers, an automation, a new webhook id) and
   /// turns reporting on: {state: done | not_admin | not_set_up | failed, helpers?, webhook?, automation?}.
   Future<Map<dynamic, dynamic>> setUpHaStatus() async =>
       (await _methodChannel.invokeMapMethod<dynamic, dynamic>("setUpHaStatus")) ?? {"state": "failed"};
-
-  /// What came with the bundle besides the look: {pins: how many, ha: the Home Assistant host or "", haFailed};
-  /// null when nothing came. Never the PINs or the token.
-  Future<Map<dynamic, dynamic>?> getShareSecretsSummary() async =>
-      await _methodChannel.invokeMapMethod<dynamic, dynamic>("getShareSecretsSummary");
-
-  /// Saves the PINs and/or Home Assistant settings that came (by this TV's own checks): [targets] is the copy's
-  /// profile id to this TV's profile key. Returns {pins: {added, kept, skipped}, ha: bool}.
-  Future<Map<dynamic, dynamic>> applyShareSecrets(Map<String, String> targets,
-          {required bool pins, required bool ha, bool household = false}) async =>
-      (await _methodChannel.invokeMapMethod<dynamic, dynamic>(
-          "applyShareSecrets", {"targets": targets, "pins": pins, "ha": ha, "household": household})) ??
-      {};
 
   /// Where this TV stands in its household: {joined, lost, removed, enabled, tvId, peers: [{tvId}], lastSyncAt,
   /// lastResult, members: [{tvId, name, self, online, lastSeen}], nearby: [[name, …], …],
@@ -458,6 +417,8 @@ class FLauncherChannel {
   /// this one; `nearby` is the other households heard on the network, each as its TVs' names (a name may be null).
   /// `join` is this TV's own request ([requestHouseholdJoin]): state none, connecting, waiting (`via` is the TV to
   /// answer on), joined, denied or failed. Another TV's request to join this one is in the notification Bell.
+  /// `review` ({ready}) is there while this TV, just joined, holds the household's settings until someone has seen what
+  /// they change (ready once they came); `joinBackupAt` is when the copy from before joining was made (0: none).
   Future<Map<dynamic, dynamic>> getHouseholdStatus() async =>
       (await _methodChannel.invokeMapMethod<dynamic, dynamic>("getHouseholdStatus")) ?? {};
 
@@ -478,6 +439,19 @@ class FLauncherChannel {
 
   /// Stops this TV's request to join.
   Future<void> cancelHouseholdJoin() async => await _methodChannel.invokeMethod("cancelHouseholdJoin");
+
+  /// While this TV, having just joined, holds the household's settings (status `review`): what they'd change in its
+  /// pairings and PINs, {profiles: [{key, name, kids, pairings, pins}], tvPins}; null when it holds none.
+  Future<Map<dynamic, dynamic>?> getHouseholdJoinPreview() async =>
+      await _methodChannel.invokeMapMethod<dynamic, dynamic>("getHouseholdJoinPreview");
+
+  /// Someone saw what joining changes and went on: this TV's pairings and PINs are kept as a copy and the household's
+  /// go in. False when the copy couldn't be kept (nothing changed then).
+  Future<bool> finishHouseholdJoin() async => await _methodChannel.invokeMethod<bool>("finishHouseholdJoin") ?? false;
+
+  /// Puts back this TV's pairings and PINs from before it joined (status `joinBackupAt` says while there's a copy).
+  Future<bool> restoreHouseholdJoinBackup() async =>
+      await _methodChannel.invokeMethod<bool>("restoreHouseholdJoinBackup") ?? false;
 
   /// The household's looks, layouts and wallpapers for this TV's profiles (kids' too) when they changed since [since] (a
   /// version this gave before; 0: all): {version, profiles: {profileKey: {look, layout, wallpapers: {slot: {hash, path}
@@ -521,40 +495,8 @@ class FLauncherChannel {
   Future<Uint8List?> getShareWallpaper(String path) async =>
       await _methodChannel.invokeMethod<Uint8List>("getShareWallpaper", path);
 
-  /// Connects to the TV that is waiting to send, to receive its bundle.
-  Future<void> startShareReceiving(String host, int port) async =>
-      await _methodChannel.invokeMethod("startShareReceiving", {"host": host, "port": port});
-
-  /// Where the copy stands: {state: idle | waiting | connecting | digits | working | received | done | failed, role,
-  /// digits?, error?, report?, mismatches}.
-  Future<Map<dynamic, dynamic>> getShareStatus() async =>
-      (await _methodChannel.invokeMapMethod<dynamic, dynamic>("getShareStatus")) ?? {"state": "idle"};
-
-  /// The parent saw the same six digits on both TVs ([same]) or didn't.
-  Future<void> confirmShare(bool same) async => await _methodChannel.invokeMethod("confirmShare", same);
-
-  /// The bundle the receiving TV got, once; null if it hasn't one.
-  Future<String?> takeShareBundle() async => await _methodChannel.invokeMethod<String>("takeShareBundle");
-
-  /// The receiving TV has applied the bundle: sends its report back to the sender.
-  Future<void> sendShareReport(String report) async => await _methodChannel.invokeMethod("sendShareReport", report);
-
-  /// Ends the copy and the announcement; nothing is kept.
-  Future<void> stopShare() async => await _methodChannel.invokeMethod("stopShare");
-
-  /// Starts listening for TVs that are waiting to send; [getShareFound] lists them.
-  Future<void> startShareFinding() async => await _methodChannel.invokeMethod("startShareFinding");
-
-  /// The TVs heard so far on the home network: {name, host, port}.
-  Future<List<Map<dynamic, dynamic>>> getShareFound() async =>
-      (await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getShareFound")) ?? [];
-
-  /// Saves another TV's pairing choices for [profileKey] where it has none of its own: {applied, kept, skipped}.
-  Future<Map<dynamic, dynamic>> applySharePairings(String profileKey, List<Map<String, dynamic>> pairings) async =>
-      (await _methodChannel.invokeMapMethod<dynamic, dynamic>(
-          "applySharePairings", {"profile": profileKey, "pairings": pairings})) ??
-      {};
-
+  /// Each known Hearth profile's choice for one app: [{hearthProfile (its key), displayName, kids, mode, chosenProfile,
+  /// autoMatch}], where mode is "auto", "profile" or "picker".
   Future<List<Map<dynamic, dynamic>>> getProfilePairingChoices(String packageName) async =>
       await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getProfilePairingChoices", packageName) ?? [];
 

@@ -366,40 +366,7 @@ public class MainActivity extends FlutterActivity {
             case "openGoogleTv" -> result.success(openGoogleTv(call.argument("link"), call.argument("query")));
             case "getProfilePairingApps" -> result.success(getProfilePairingApps());
             case "getProfilePairingChoices" -> result.success(getProfilePairingChoices(call.arguments()));
-            // A copy of a profile to another TV (ShareData): this TV's profiles, and a profile's pairing choices
-            case "getShareProfiles" -> result.success(ShareData.profiles(this));
-            case "getSharePairings" -> result.success(ShareData.pairings(this, call.arguments()));
-            case "getShareDeviceName" -> result.success(ShareDiscovery.deviceName(this));
-            case "startShareSending" -> {
-                Map<String, Object> sendArgs = call.arguments();
-                String secretsRequest = (String) sendArgs.get("secrets");
-                String fromTv = ShareDiscovery.deviceName(this);
-                Map<String, Object> started = ShareService.startSending((String) sendArgs.get("bundle"),
-                        secretsRequest == null ? null : () -> ShareSecrets.build(this, secretsRequest, fromTv));
-                if (started == null) {
-                    result.success(null);
-                } else {
-                    started.put("host", LocalNet.ipv4Address());
-                    started.put("name", ShareDiscovery.deviceName(this));
-                    ShareDiscovery.advertise(this, (Integer) started.get("port"));
-                    result.success(started);
-                }
-            }
-            case "startShareReceiving" -> {
-                Map<String, Object> args = call.arguments();
-                ShareService.startReceiving((String) args.get("host"), (Integer) args.get("port"));
-                result.success(null);
-            }
-            case "getShareStatus" -> result.success(ShareService.status());
-            case "confirmShare" -> {
-                ShareService.confirm(Boolean.TRUE.equals(call.arguments()));
-                result.success(null);
-            }
-            case "takeShareBundle" -> result.success(ShareService.takeBundle());
-            // What this TV could send besides the look (PINs, Home Assistant) and what arrived: counts, never the secrets
-            case "getShareSecretsOffer" -> answerFrom(sIoExecutor, result,
-                    () -> ShareSecrets.offer(this, (List<String>) call.arguments()));
-            // A picture of a profile's wallpaper as the screen shows it (at most 1920x1080, a JPEG), to send to another TV
+            // A picture of a profile's wallpaper as the screen shows it (at most 1920x1080, a JPEG), for the household
             case "getShareWallpaper" -> answerFrom(sIoExecutor, result, () -> shareWallpaper((String) call.arguments()));
             case "getHouseholdStatus" -> answerFrom(sIoExecutor, result, () -> Household.status(this));
             // Makes this TV's key in the Keystore: off the main thread
@@ -420,6 +387,11 @@ public class MainActivity extends FlutterActivity {
                 HouseholdJoining.cancel();
                 result.success(null);
             }
+            // Just joined: what the household's settings change here, going on, and putting this TV's back later
+            case "getHouseholdJoinPreview" -> answerFrom(sIoExecutor, result, () -> Household.joinPreview(this));
+            case "finishHouseholdJoin" -> answerFrom(sIoExecutor, result, () -> Household.finishJoin(this));
+            case "restoreHouseholdJoinBackup" -> answerFrom(sIoExecutor, result,
+                    () -> Household.restoreJoinBackup(this));
             // A parent answered, on this TV, another TV's request to join
             // Looks, layouts and wallpapers: the household's for this TV's profiles, and the live profile's for it
             case "getHouseholdLooks" -> answerFrom(sIoExecutor, result, () -> {
@@ -445,48 +417,6 @@ public class MainActivity extends FlutterActivity {
             case "syncHouseholdNow" -> {
                 Household.syncNowAsync(this);
                 result.success(null);
-            }
-            case "getShareSecretsSummary" -> {
-                String secrets = ShareService.secrets();
-                result.success(secrets == null ? null : ShareSecrets.summary(secrets));
-            }
-            case "applyShareSecrets" -> {
-                Map<String, Object> args = call.arguments();
-                answerFrom(sIoExecutor, result, () -> {
-                    String secrets = ShareService.secrets();
-                    Map<String, Object> done = new HashMap<>();
-                    if (secrets == null) return done;
-                    if (Boolean.TRUE.equals(args.get("pins"))) {
-                        Map<String, String> targets = new HashMap<>();
-                        for (Map.Entry<String, Object> t : ((Map<String, Object>) args.get("targets")).entrySet()) {
-                            targets.put(t.getKey(), (String) t.getValue());
-                        }
-                        done.put("pins", ShareSecrets.applyPins(secrets, targets, ShareSecrets.vaultOf(this)));
-                    }
-                    if (Boolean.TRUE.equals(args.get("ha"))) done.put("ha", ShareSecrets.applyHa(this, secrets));
-                    if (Boolean.TRUE.equals(args.get("household"))) done.put("household", Household.joinFromSecrets(this, secrets));
-                    return done;
-                });
-            }
-            case "sendShareReport" -> {
-                ShareService.sendReport(call.arguments());
-                result.success(null);
-            }
-            case "stopShare" -> {
-                ShareService.stop();
-                ShareDiscovery.stopAdvertising();
-                ShareDiscovery.stopFinding();
-                result.success(null);
-            }
-            case "startShareFinding" -> {
-                ShareDiscovery.startFinding(this);
-                result.success(null);
-            }
-            case "getShareFound" -> result.success(ShareDiscovery.found());
-            case "applySharePairings" -> {
-                Map<String, Object> args = call.arguments();
-                result.success(ShareData.applyPairings(this, (String) args.get("profile"),
-                        (List<Map<String, Object>>) args.get("pairings")));
             }
             case "setProfilePairingAppEnabled" -> {
                 Boolean enabled = call.argument("enabled");

@@ -104,6 +104,133 @@ void main() {
     expect(HouseholdLooks.parseLayout(jsonEncode({"apps": "x"}), settingKeys), isNull);
   });
 
+  group("the newer change of each item wins", () {
+    test("stamps ride along in the entries, and a TV that reads entries without them still reads the rest", () {
+      final look = HouseholdLooks.lookJson({"accent_color": "FF6D00"}, {"accent_color": 5, "dock_enabled": 7});
+      expect(HouseholdLooks.parseLook(look, settingKeys), {"accent_color": "FF6D00"});
+      expect(HouseholdLooks.lookStamps(look), {"accent_color": 5, "dock_enabled": 7});
+      expect(HouseholdLooks.lookStamps(HouseholdLooks.lookJson({"accent_color": "FF6D00"})), isEmpty);
+
+      final layout = layoutOf(backup(installed: ["com.a.app"], placements: [
+        [1, "com.a.app", 0],
+      ]));
+      final text = HouseholdLooks.layoutJson(layout, {"row:1": 9, "rows": 3});
+      expect(HouseholdLooks.layoutStamps(text), {"row:1": 9, "rows": 3});
+      expect(HouseholdLooks.layoutJson(HouseholdLooks.parseLayout(text, settingKeys)!), HouseholdLooks.layoutJson(layout));
+      expect(HouseholdLooks.layoutStamps("not json"), isEmpty);
+    });
+
+    test("two TVs changing different settings both keep theirs", () {
+      final merged = HouseholdLooks.mergeLook(
+        {"accent_color": "FF6D00", "dock_enabled": true},
+        {"accent_color": 200},
+        {"accent_color": "00BFA5", "dock_enabled": false},
+        {"dock_enabled": 300},
+      );
+      expect(merged.settings, {"accent_color": "FF6D00", "dock_enabled": false});
+      expect(merged.stamps, {"accent_color": 200, "dock_enabled": 300});
+    });
+
+    test("the same setting changed on both: the later change wins, and a tie or no stamps goes to the household", () {
+      expect(HouseholdLooks.mergeLook({"accent_color": "FF6D00"}, {"accent_color": 200}, {"accent_color": "00BFA5"},
+              {"accent_color": 100}).settings,
+          {"accent_color": "FF6D00"});
+      expect(HouseholdLooks.mergeLook({"accent_color": "FF6D00"}, {"accent_color": 200}, {"accent_color": "00BFA5"},
+              {"accent_color": 300}).settings,
+          {"accent_color": "00BFA5"});
+      // Joining: nothing here was changed since this TV started counting, so the household's wins
+      expect(HouseholdLooks.mergeLook({"accent_color": "FF6D00"}, {}, {"accent_color": "00BFA5", "dock_enabled": true},
+              {}).settings,
+          {"accent_color": "FF6D00"});
+    });
+
+    test("a setting put back to its default here, later, stays at its default", () {
+      final merged =
+          HouseholdLooks.mergeLook({"accent_color": "FF6D00"}, {"accent_color": 200}, {}, {"accent_color": 300});
+      expect(merged.settings, isEmpty);
+      expect(merged.stamps, {"accent_color": 300});
+    });
+
+    test("what changed here is stamped when it changed; the first look and an uninstalled app aren't changes", () {
+      final seen = <String, String>{};
+      final stamps = <String, int>{};
+      HouseholdLooks.observe(seen, stamps, {"accent_color": '"00BFA5"', "app:com.a.app": "shown"}, 100);
+      expect(stamps, {"accent_color": 0, "app:com.a.app": 0});
+      HouseholdLooks.observe(seen, stamps, {"accent_color": '"FF6D00"', "app:com.a.app": "shown"}, 200);
+      expect(stamps["accent_color"], 200);
+      expect(stamps["app:com.a.app"], 0);
+      // The setting back at its default, the app uninstalled
+      HouseholdLooks.observe(seen, stamps, {}, 300);
+      expect(stamps["accent_color"], 300);
+      expect(stamps["app:com.a.app"], 0);
+      // Nothing more changed: nothing is stamped again
+      HouseholdLooks.observe(seen, stamps, {}, 400);
+      expect(stamps["accent_color"], 300);
+      // A long value is remembered by a fingerprint, so the TV doesn't keep a copy of every row
+      final long = "x" * 100;
+      expect(HouseholdLooks.remembered(long), hasLength(lessThan(30)));
+      expect(HouseholdLooks.remembered(long), HouseholdLooks.remembered(long));
+    });
+
+    test("an app hidden here and a row reordered on another TV both stay", () {
+      final installed = {"com.a.app", "com.b.app"};
+      final household = layoutOf(backup(installed: ["com.a.app", "com.b.app"], placements: [
+        [1, "com.b.app", 0],
+        [1, "com.a.app", 1],
+      ]));
+      final here = layoutOf({
+        ...backup(installed: ["com.a.app", "com.b.app"], placements: [
+          [1, "com.a.app", 0],
+          [1, "com.b.app", 1],
+        ]),
+        "apps": [
+          {"packageName": "com.a.app", "hidden": true},
+          {"packageName": "com.b.app", "hidden": false},
+        ],
+      });
+      final merged = HouseholdLooks.mergeLayout(
+          household, {"row:1": 200}, here, {"app:com.a.app": 300, "row:1": 100}, installed);
+      expect({for (final a in merged.layout.apps) a.packageName: a.hidden}, {"com.a.app": true, "com.b.app": false});
+      expect([for (final p in merged.layout.appsCategories) p["appPackageName"]], ["com.b.app", "com.a.app"]);
+      expect(merged.stamps, {"row:1": 200, "app:com.a.app": 300});
+    });
+
+    test("a row changed here later keeps this TV's order and the household's places for apps it lacks", () {
+      final installed = {"com.a.app", "com.b.app"};
+      final household = layoutOf(backup(installed: ["com.a.app", "com.b.app", "com.only.there"], placements: [
+        [1, "com.a.app", 0],
+        [1, "com.b.app", 1],
+        [1, "com.only.there", 2],
+      ]));
+      final here = layoutOf(backup(installed: ["com.a.app", "com.b.app"], placements: [
+        [1, "com.b.app", 0],
+        [1, "com.a.app", 1],
+      ]));
+      final merged = HouseholdLooks.mergeLayout(household, {"row:1": 100}, here, {"row:1": 200}, installed);
+      expect([for (final p in merged.layout.appsCategories) p["appPackageName"]],
+          ["com.b.app", "com.a.app", "com.only.there"]);
+      expect(merged.layout.apps.map((a) => a.packageName), containsAll(["com.only.there"]));
+      // And with no stamps here (a TV that just joined) the household's row wins
+      final joined = HouseholdLooks.mergeLayout(household, {}, here, {}, installed);
+      expect([for (final p in joined.layout.appsCategories) p["appPackageName"]],
+          ["com.a.app", "com.b.app", "com.only.there"]);
+    });
+
+    test("rows added on the household's side come with their apps; a row added here later stays", () {
+      final installed = {"com.a.app"};
+      final household = layoutOf(backup(installed: ["com.a.app"], rows: [1, 2], placements: [
+        [2, "com.a.app", 0],
+      ]));
+      final here = layoutOf(backup(installed: ["com.a.app"], rows: [1]));
+      final taken = HouseholdLooks.mergeLayout(household, {"rows": 200, "row:2": 200}, here, {}, installed);
+      expect(taken.layout.categories.map((c) => c["id"]), [1, 2]);
+      expect(taken.layout.appsCategories.single["categoryId"], 2);
+      final kept = HouseholdLooks.mergeLayout(here, {"rows": 100}, household, {"rows": 200, "row:2": 200}, installed);
+      expect(kept.layout.categories.map((c) => c["id"]), [1, 2]);
+      expect(kept.layout.appsCategories.single["categoryId"], 2);
+    });
+  });
+
   test("a part the household doesn't have comes from this TV, and with neither there is nothing to put in place", () {
     final local = layoutOf(backup(installed: ["com.a.app"], settings: {"accent_color": "00BFA5"}));
     final withLook = HouseholdLooks.compose({"accent_color": "FF6D00"}, null, local)!;

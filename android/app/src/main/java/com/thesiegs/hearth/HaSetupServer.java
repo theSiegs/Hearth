@@ -159,10 +159,13 @@ final class HaSetupServer {
         SharedPreferences.Editor edit = HaConfig.prefs(mContext).edit().putString(HaConfig.URL_KEY, sent.url);
         edit.apply();
         if (!sent.token.isEmpty()) HaConfig.setToken(mContext, sent.token);
-        // Starts reporting right away when Home Button Fix runs; the reporter lives on the main thread
+        // Starts reporting right away when Home Button Fix runs; the reporter lives on the main thread. A new address
+        // or token alone posts the status at once too, where it already goes somewhere
         if (sent.webhookOk) {
             new Handler(Looper.getMainLooper())
                     .post(() -> LauncherAccessibilityService.setHaStatusConfig(mContext, sent.url, sent.webhook));
+        } else {
+            new Handler(Looper.getMainLooper()).post(() -> HaBridgeService.sync(mContext));
         }
         // An administrator's token lets Hearth make the TV status automation itself: nobody has to find a webhook id
         String state = sent.create ? HaProvision.setUp(mContext, ShareDiscovery.deviceName(mContext)).get("state").toString()

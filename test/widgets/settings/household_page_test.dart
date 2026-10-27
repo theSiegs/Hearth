@@ -18,6 +18,7 @@
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/share/household_join.dart';
 import 'package:flauncher/widgets/settings/family_settings_page.dart';
 import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
 import 'package:flauncher/widgets/settings/household_page.dart';
@@ -49,10 +50,39 @@ class _HouseholdChannel extends FLauncherChannel {
 
   @override
   Future<Map<dynamic, dynamic>> getKidsProfilesState({bool checkProtection = false}) async => {"kids": []};
+
+  bool left = false;
+
+  @override
+  Future<bool> requestHouseholdJoin() async => true;
+
+  @override
+  Future<void> leaveHousehold() async => left = true;
+}
+
+/// What joining changes, as the looks service would say, and what was decided.
+class _Reviewer implements HouseholdJoinReviewer {
+  JoinPreview? preview;
+  bool finished = false;
+  bool restored = false;
+  DateTime? backupAt;
+
+  @override
+  Future<JoinPreview?> joinPreview() async => preview;
+
+  @override
+  Future<bool> finishJoin(JoinPreview preview) async => finished = true;
+
+  @override
+  Future<DateTime?> joinBackupAt() async => backupAt;
+
+  @override
+  Future<bool> restoreJoinBackup() async => restored = true;
 }
 
 void main() {
   late _HouseholdChannel channel;
+  late _Reviewer reviewer;
   late SharedPreferences prefs;
 
   setUp(() async {
@@ -60,6 +90,7 @@ void main() {
     prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     channel = _HouseholdChannel();
+    reviewer = _Reviewer();
   });
 
   Future<void> pump(WidgetTester tester, Widget page) async {
@@ -69,6 +100,7 @@ void main() {
     await tester.pumpWidget(MultiProvider(
       providers: [
         Provider<FLauncherChannel>.value(value: channel),
+        Provider<HouseholdJoinReviewer>.value(value: reviewer),
         ChangeNotifierProvider(create: (_) => SettingsService(prefs)),
       ],
       child: MaterialApp(
@@ -163,5 +195,107 @@ void main() {
     await pump(tester, const SizedBox());
     await pump(tester, const FamilySettingsPage());
     expect(householdSays("Not set up"), findsOneWidget);
+  });
+
+  group("before joining", () {
+    const joinedHolding = {
+      "joined": true,
+      "join": {"state": "joined"},
+      "review": {"ready": true},
+      "members": [],
+    };
+
+    /// Opens the join dialog from a button, and remembers what it answered.
+    Future<List<bool>> openJoin(WidgetTester tester) async {
+      final answers = <bool>[];
+      await pump(
+          tester,
+          Builder(
+              builder: (context) => TextButton(
+                  onPressed: () async => answers.add(await joinNearbyHousehold(context, channel)),
+                  child: const Text("open"))));
+      await tester.tap(find.text("open"));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+      return answers;
+    }
+
+    testWidgets("once allowed, what changes here is listed first; Join and use these goes on", (tester) async {
+      channel.status = joinedHolding;
+      reviewer.preview = const JoinPreview(profiles: [
+        JoinChange(key: "user:0", name: "Alex", look: true, layout: true, pins: 1),
+        JoinChange(key: "user:0#sam", name: "Sam"),
+      ], parentPin: true);
+      final answers = await openJoin(tester);
+      expect(find.text("Before this TV joins"), findsOneWidget);
+      expect(find.text("These will change on this TV:"), findsOneWidget);
+      expect(find.text("Alex: look, home layout, 1 saved PIN"), findsOneWidget);
+      // Nothing of Sam's changes, so Sam isn't listed
+      expect(find.textContaining("Sam"), findsNothing);
+      expect(find.text("The Parent PIN"), findsOneWidget);
+      await tester.tap(find.text("Join and use these"));
+      await tester.pumpAndSettle();
+      expect(reviewer.finished, isTrue);
+      expect(answers, [true]);
+      await leave(tester);
+    });
+
+    testWidgets("Don't join leaves again, and nothing is taken", (tester) async {
+      channel.status = joinedHolding;
+      reviewer.preview = const JoinPreview(profiles: [JoinChange(key: "user:0", name: "Alex", look: true)]);
+      final answers = await openJoin(tester);
+      await tester.tap(find.text("Don't join"));
+      await tester.pumpAndSettle();
+      expect(channel.left, isTrue);
+      expect(reviewer.finished, isFalse);
+      expect(answers, [false]);
+      await leave(tester);
+    });
+
+    testWidgets("when nothing here would change, it joins without asking", (tester) async {
+      channel.status = joinedHolding;
+      reviewer.preview = const JoinPreview(profiles: [JoinChange(key: "user:0", name: "Alex")]);
+      final answers = await openJoin(tester);
+      await tester.pumpAndSettle();
+      expect(find.text("These will change on this TV:"), findsNothing);
+      expect(reviewer.finished, isTrue);
+      expect(answers, [true]);
+      await leave(tester);
+    });
+
+    testWidgets("until the household's settings come, it waits, and Later leaves the TV as it is", (tester) async {
+      channel.status = {...joinedHolding, "review": {"ready": false}};
+      final answers = await openJoin(tester);
+      expect(find.text("Getting your other TVs' settings…"), findsOneWidget);
+      await tester.pump(const Duration(seconds: 31));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.textContaining("haven't arrived yet"), findsOneWidget);
+      await tester.tap(find.text("Later"));
+      await tester.pumpAndSettle();
+      expect(reviewer.finished, isFalse);
+      expect(answers, [true]);
+      await leave(tester);
+    });
+
+    testWidgets("the household page offers Finish joining while holding, and Put back while the copy is kept",
+        (tester) async {
+      channel.status = {...inHousehold, "review": {"ready": true}};
+      await pump(tester, const HouseholdPage());
+      expect(find.text("Finish joining"), findsOneWidget);
+      expect(find.text("Put back this TV's settings from before it joined"), findsNothing);
+      await leave(tester);
+
+      channel.status = {...inHousehold, "joinBackupAt": DateTime(2026, 10, 1).millisecondsSinceEpoch};
+      await pump(tester, const HouseholdPage());
+      expect(find.text("Finish joining"), findsNothing);
+      expect(find.text("Kept until Oct 15, 2026"), findsOneWidget);
+      await tester.tap(find.text("Put back this TV's settings from before it joined"));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text("Put back"));
+      await tester.pumpAndSettle();
+      expect(reviewer.restored, isTrue);
+      await leave(tester);
+    });
   });
 }

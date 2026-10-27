@@ -37,7 +37,7 @@ public class HaBridgeService extends Service {
 
     private HaStatusReporter mStatus;
     private HaNotificationServer mServer;
-    /** The webhook the reporter was started for, so a refresh that changes nothing doesn't post a status. */
+    /** Where the reporter was started to post ({@link #reportTarget}), so a refresh that changes nothing doesn't post. */
     private String mReportingTo;
     private boolean mScreenReceiverOn;
 
@@ -56,6 +56,18 @@ public class HaBridgeService extends Service {
     /** Whether the bridge has anything to do: something is set up, in the TV owner's user. */
     static boolean needed(boolean statusConfigured, boolean notificationsEnabled, boolean agentUser) {
         return !agentUser && (statusConfigured || notificationsEnabled);
+    }
+
+    /**
+     * Where the status goes and with what, as one value that changes whenever any of it does: the Hearth integration
+     * ({@code integrationUrl}, set while paired, and {@code pairing}, which changes with every pairing) or else the
+     * webhook; and the Home Assistant token ({@code token}, which changes when a new one is saved). Null when the status
+     * goes nowhere.
+     */
+    static String reportTarget(String integrationUrl, String pairing, String webhookUrl, String token) {
+        String to = integrationUrl != null ? "integration " + integrationUrl + " " + pairing
+                : webhookUrl != null ? "webhook " + webhookUrl : null;
+        return to == null ? null : to + " " + token;
     }
 
     /**
@@ -152,13 +164,15 @@ public class HaBridgeService extends Service {
             stopSelf();
             return;
         }
-        String webhook = HaStatusReporter.webhookUrl(this);
-        if (webhook == null) {
+        String target = reportTarget(HaIntegration.isPaired(this) ? HaIntegration.statusUrl(this) : null,
+                HaIntegration.pairingStamp(this), HaStatusReporter.webhookUrl(this), HaConfig.tokenStamp(this));
+        if (target == null) {
             mStatus.stop();
             mReportingTo = null;
-        } else if (!webhook.equals(mReportingTo)) {
+        } else if (!target.equals(mReportingTo)) {
+            // Starting posts the status at once: a TV just paired, or given a new address or token, shows up right away
             mStatus.start();
-            mReportingTo = webhook;
+            mReportingTo = target;
         }
         boolean notifications = LauncherAccessibilityService.isHaNotificationsEnabled(this);
         if (notifications && mServer == null) {

@@ -459,252 +459,6 @@ abstract class AppLocalizations {
   /// **'Input Sources'**
   String get inputSources;
 
-  /// Settings > Profiles: copying profiles between two TVs; also the page's title
-  ///
-  /// In en, this message translates to:
-  /// **'Copy profiles between TVs'**
-  String get shareTitle;
-
-  /// Copy profiles page: what a copy takes and what stays on each TV
-  ///
-  /// In en, this message translates to:
-  /// **'Copies a profile\'s look, home layout, wallpaper pictures and streaming profile choices from one TV to another. The sending parent can also send streaming app PINs, Home Assistant settings and the parent PIN. You need to be at both TVs.'**
-  String get shareIntro;
-
-  /// Copy profiles page: the TV that has the profiles sends them
-  ///
-  /// In en, this message translates to:
-  /// **'Copy profiles to another TV'**
-  String get shareSendTitle;
-
-  /// Copy profiles page: the TV that wants the profiles receives them
-  ///
-  /// In en, this message translates to:
-  /// **'Copy profiles from another TV'**
-  String get shareReceiveTitle;
-
-  /// Sending TV: heading over the list of profiles to copy
-  ///
-  /// In en, this message translates to:
-  /// **'Which profiles do you want to copy?'**
-  String get shareSendPick;
-
-  /// Sending TV: no profiles known yet
-  ///
-  /// In en, this message translates to:
-  /// **'This TV hasn\'t told its profiles apart yet. Switch to each profile once, then try again.'**
-  String get shareNoProfiles;
-
-  /// Sending TV: after choosing profiles, start waiting for the other TV
-  ///
-  /// In en, this message translates to:
-  /// **'Continue'**
-  String get shareContinue;
-
-  /// Sending TV: what to do on the other TV; {name} is this TV's name
-  ///
-  /// In en, this message translates to:
-  /// **'On the other TV, open Settings > Profiles > Copy profiles from another TV, then choose {name}.'**
-  String shareSendWaiting(String name);
-
-  /// Sending TV: the address to type on the other TV if it can't find this one; {address} is like 192.168.1.20:8770
-  ///
-  /// In en, this message translates to:
-  /// **'Or enter this address there: {address}'**
-  String shareSendAddress(String address);
-
-  /// Both TVs: heading over six digits the parent compares between the screens
-  ///
-  /// In en, this message translates to:
-  /// **'Do the digits match?'**
-  String get shareDigitsTitle;
-
-  /// Both TVs: what to do with the digits
-  ///
-  /// In en, this message translates to:
-  /// **'Compare these digits with the ones on the other TV.'**
-  String get shareDigitsBody;
-
-  /// Both TVs: the digits are the same on both screens
-  ///
-  /// In en, this message translates to:
-  /// **'They match'**
-  String get shareDigitsMatch;
-
-  /// Both TVs: the digits differ, so nothing is copied
-  ///
-  /// In en, this message translates to:
-  /// **'They don\'t match'**
-  String get shareDigitsDiffer;
-
-  /// Both TVs: while the copy is moving
-  ///
-  /// In en, this message translates to:
-  /// **'Copying…'**
-  String get shareWorking;
-
-  /// Receiving TV: looking for a TV that is waiting to send
-  ///
-  /// In en, this message translates to:
-  /// **'Looking for a TV that is ready to send. On that TV, open Copy profiles to another TV.'**
-  String get shareFinding;
-
-  /// Receiving TV: type the sending TV's address by hand
-  ///
-  /// In en, this message translates to:
-  /// **'Enter an address'**
-  String get shareEnterAddress;
-
-  /// Receiving TV: what address to type
-  ///
-  /// In en, this message translates to:
-  /// **'The other TV\'s address, as shown on its screen (like 192.168.1.20:8770).'**
-  String get shareAddressPrompt;
-
-  /// Receiving TV: button in the address dialog
-  ///
-  /// In en, this message translates to:
-  /// **'Connect'**
-  String get shareConnect;
-
-  /// Receiving TV: heading over the list of copied profiles and where each goes on this TV
-  ///
-  /// In en, this message translates to:
-  /// **'Where does each profile go?'**
-  String get shareMapTitle;
-
-  /// Receiving TV: a copied profile that is not copied anywhere
-  ///
-  /// In en, this message translates to:
-  /// **'Don\'t copy'**
-  String get shareMapSkip;
-
-  /// Receiving TV: switch for taking the profile's look and home layout
-  ///
-  /// In en, this message translates to:
-  /// **'Look and home layout'**
-  String get shareWhatLayout;
-
-  /// Receiving TV: switch for taking the profile's Profile Pairing choices
-  ///
-  /// In en, this message translates to:
-  /// **'Streaming profile choices'**
-  String get shareWhatPairings;
-
-  /// Receiving TV: button that starts putting the copied profiles in place
-  ///
-  /// In en, this message translates to:
-  /// **'Copy'**
-  String get shareCopy;
-
-  /// Both TVs: the copy is done
-  ///
-  /// In en, this message translates to:
-  /// **'Copied'**
-  String get shareDoneTitle;
-
-  /// Receiving TV: {count} is how many profiles were copied, {backup} the backup file kept first
-  ///
-  /// In en, this message translates to:
-  /// **'Profiles copied: {count}. A backup was kept first: {backup} (Settings > System > Backup & Restore).'**
-  String shareDoneBody(int count, String backup);
-
-  /// Sending TV: {count} is how many profiles the other TV took
-  ///
-  /// In en, this message translates to:
-  /// **'Profiles copied to the other TV: {count}.'**
-  String shareSentBody(int count);
-
-  /// Both TVs: {count} is how many apps the receiving TV doesn't have
-  ///
-  /// In en, this message translates to:
-  /// **'Apps left out because the receiving TV doesn\'t have them: {count}.'**
-  String shareMissingApps(int count);
-
-  /// Both TVs: heading when the copy didn't finish
-  ///
-  /// In en, this message translates to:
-  /// **'The copy didn\'t finish'**
-  String get shareErrorTitle;
-
-  /// Both TVs: the other TV couldn't be reached
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t reach the other TV. Both TVs must be on the same home network.'**
-  String get shareErrorNetwork;
-
-  /// Both TVs: a parent said the digits differ
-  ///
-  /// In en, this message translates to:
-  /// **'The digits didn\'t match, so nothing was copied.'**
-  String get shareErrorMismatch;
-
-  /// Both TVs: the other TV ended the copy
-  ///
-  /// In en, this message translates to:
-  /// **'The other TV stopped the copy.'**
-  String get shareErrorStopped;
-
-  /// Both TVs: a step took too long
-  ///
-  /// In en, this message translates to:
-  /// **'The copy timed out. Start again on both TVs.'**
-  String get shareErrorTimeout;
-
-  /// Receiving TV: the sending TV's Hearth is newer than this one
-  ///
-  /// In en, this message translates to:
-  /// **'That TV has a newer Hearth. Update this one and try again.'**
-  String get shareErrorNewer;
-
-  /// Both TVs: any other failure
-  ///
-  /// In en, this message translates to:
-  /// **'The copy didn\'t finish. Nothing was changed on this TV.'**
-  String get shareErrorGeneric;
-
-  /// Sending TV: heading over what else can be sent (pictures, PINs, Home Assistant, parent PIN)
-  ///
-  /// In en, this message translates to:
-  /// **'Also send'**
-  String get shareSendMore;
-
-  /// Sending TV: switch for sending the profiles' wallpaper pictures
-  ///
-  /// In en, this message translates to:
-  /// **'Wallpaper pictures'**
-  String get shareSendPictures;
-
-  /// Sending TV: switch for sending streaming app PINs; {count} is how many are saved here
-  ///
-  /// In en, this message translates to:
-  /// **'Streaming app PINs ({count} saved)'**
-  String shareSendPins(int count);
-
-  /// Sending TV: switch for sending the Home Assistant address and a new token for the other TV
-  ///
-  /// In en, this message translates to:
-  /// **'Home Assistant settings'**
-  String get shareSendHa;
-
-  /// Sending TV: switch for giving the other TV this household's key
-  ///
-  /// In en, this message translates to:
-  /// **'Add this TV to my household (keeps profiles and PINs in step)'**
-  String get shareSendHousehold;
-
-  /// Sending TV: what adding a TV to the household does
-  ///
-  /// In en, this message translates to:
-  /// **'The other TV gets the household\'s key and then keeps in step with this one over your home network. Only do this for your own TVs.'**
-  String get shareSendHouseholdNote;
-
-  /// Receiving TV: switch for joining the sending TV's household
-  ///
-  /// In en, this message translates to:
-  /// **'Join the household: keep in step with its TVs'**
-  String get shareWhatHousehold;
-
   /// Settings: page for syncing between TVs
   ///
   /// In en, this message translates to:
@@ -933,6 +687,156 @@ abstract class AppLocalizations {
   /// **'That didn\'t work. Check that one of your other TVs is on, then try again.'**
   String get householdJoinFailed;
 
+  /// Join dialog, once allowed: title over what joining changes on this TV
+  ///
+  /// In en, this message translates to:
+  /// **'Before this TV joins'**
+  String get householdReviewTitle;
+
+  /// Join dialog, once allowed: waiting for the household's settings to arrive
+  ///
+  /// In en, this message translates to:
+  /// **'Getting your other TVs\' settings…'**
+  String get householdReviewWaiting;
+
+  /// Join dialog, once allowed: the household's settings haven't come after a while
+  ///
+  /// In en, this message translates to:
+  /// **'Your other TVs\' settings haven\'t arrived yet. Keep the TV that let this one in turned on, or finish later in Household sync.'**
+  String get householdReviewNotYet;
+
+  /// Join dialog: heading over the list of what joining changes
+  ///
+  /// In en, this message translates to:
+  /// **'These will change on this TV:'**
+  String get householdReviewChanges;
+
+  /// Join dialog: one profile's line in the list of what changes
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: {changes}'**
+  String householdReviewProfile(String name, String changes);
+
+  /// Join dialog: a profile's look (wallpaper, theme, top bar) changes; part of a list
+  ///
+  /// In en, this message translates to:
+  /// **'look'**
+  String get householdReviewLook;
+
+  /// Join dialog: a profile's home layout (dock, rows, hidden apps) changes; part of a list
+  ///
+  /// In en, this message translates to:
+  /// **'home layout'**
+  String get householdReviewLayout;
+
+  /// Join dialog: how many of a profile's wallpaper pictures change; part of a list
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 wallpaper picture} other{{count} wallpaper pictures}}'**
+  String householdReviewPictures(int count);
+
+  /// Join dialog: how many streaming apps get a different app profile for this person; part of a list
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{the profile picked in 1 streaming app} other{the profiles picked in {count} streaming apps}}'**
+  String householdReviewPairings(int count);
+
+  /// Join dialog: how many of a profile's saved streaming PINs change; part of a list
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 saved PIN} other{{count} saved PINs}}'**
+  String householdReviewPins(int count);
+
+  /// Join dialog: saved PINs that belong to no profile change
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 saved PIN for the whole TV} other{{count} saved PINs for the whole TV}}'**
+  String householdReviewTvPins(int count);
+
+  /// Join dialog: this TV takes the household's Parent PIN (it had none)
+  ///
+  /// In en, this message translates to:
+  /// **'The Parent PIN'**
+  String get householdReviewParentPin;
+
+  /// Join dialog: under the list of what changes
+  ///
+  /// In en, this message translates to:
+  /// **'A copy of this TV\'s settings is kept for 14 days. You can put them back in Settings > Family > Household sync.'**
+  String get householdReviewKept;
+
+  /// Join dialog: go on joining, taking the household's settings
+  ///
+  /// In en, this message translates to:
+  /// **'Join and use these'**
+  String get householdReviewUse;
+
+  /// Join dialog: leave the household again; nothing on this TV changes
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t join'**
+  String get householdReviewCancel;
+
+  /// Join dialog: decide later; the TV keeps its own settings until then
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get householdReviewLater;
+
+  /// Join dialog: keeping the copy before joining failed
+  ///
+  /// In en, this message translates to:
+  /// **'This TV\'s settings couldn\'t be copied, so nothing was changed. Try again.'**
+  String get householdReviewFailed;
+
+  /// Household page: this TV joined but hasn't taken the household's settings yet
+  ///
+  /// In en, this message translates to:
+  /// **'Finish joining'**
+  String get householdReviewPending;
+
+  /// Household page: under Finish joining
+  ///
+  /// In en, this message translates to:
+  /// **'See what changes on this TV before it takes your other TVs\' settings'**
+  String get householdReviewPendingHint;
+
+  /// Household page: restore the copy kept when this TV joined
+  ///
+  /// In en, this message translates to:
+  /// **'Put back this TV\'s settings from before it joined'**
+  String get householdRestore;
+
+  /// Household page: under the restore button, until when the copy is kept
+  ///
+  /// In en, this message translates to:
+  /// **'Kept until {date}'**
+  String householdRestoreHint(String date);
+
+  /// Household page: what restoring the copy from before joining does
+  ///
+  /// In en, this message translates to:
+  /// **'The looks, home layouts, wallpapers, streaming profiles and saved PINs this TV had before it joined come back. They\'re the newest now, so your other TVs take them too, for the same people.'**
+  String get householdRestoreBody;
+
+  /// Household page: confirm putting back the settings from before joining
+  ///
+  /// In en, this message translates to:
+  /// **'Put back'**
+  String get householdRestoreConfirm;
+
+  /// Household page: the copy was put back
+  ///
+  /// In en, this message translates to:
+  /// **'This TV\'s settings from before it joined are back'**
+  String get householdRestoreDone;
+
+  /// Household page: putting back the copy failed
+  ///
+  /// In en, this message translates to:
+  /// **'The settings couldn\'t be put back'**
+  String get householdRestoreFailed;
+
   /// Household page: start a new household although one was found
   ///
   /// In en, this message translates to:
@@ -944,78 +848,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Last sync: {result}'**
   String householdLast(String result);
-
-  /// Sending TV: a switch that is off because this TV has nothing of it
-  ///
-  /// In en, this message translates to:
-  /// **'Nothing to send'**
-  String get shareNoneToSend;
-
-  /// Sending TV: what happens to PINs and Home Assistant settings
-  ///
-  /// In en, this message translates to:
-  /// **'PINs and Home Assistant settings are sent only after both TVs show the same digits, and nothing is kept on either TV afterwards. Home Assistant makes a new token for the other TV; you can see and remove it in your Home Assistant profile.'**
-  String get shareSendSecretsNote;
-
-  /// Sending TV: Home Assistant would not make a token, so its settings were not sent
-  ///
-  /// In en, this message translates to:
-  /// **'Home Assistant wouldn\'t make a token for the other TV, so its settings weren\'t sent.'**
-  String get shareSendHaFailed;
-
-  /// Receiving TV: switch for taking the wallpaper pictures; {count} is how many came
-  ///
-  /// In en, this message translates to:
-  /// **'Wallpaper pictures ({count})'**
-  String shareWhatPictures(int count);
-
-  /// Receiving TV: switch for taking the streaming app PINs; {count} is how many came
-  ///
-  /// In en, this message translates to:
-  /// **'Streaming app PINs ({count})'**
-  String shareWhatPins(int count);
-
-  /// Receiving TV: switch for taking the Home Assistant settings; {host} is its address
-  ///
-  /// In en, this message translates to:
-  /// **'Home Assistant ({host})'**
-  String shareWhatHa(String host);
-
-  /// Receiving TV: small text next to a switch whose copy replaces what this TV already has
-  ///
-  /// In en, this message translates to:
-  /// **'replaces this TV\'s'**
-  String get shareReplacesHere;
-
-  /// Both TVs: {count} is how many wallpaper pictures were copied
-  ///
-  /// In en, this message translates to:
-  /// **'Wallpaper pictures copied: {count}.'**
-  String shareDonePictures(int count);
-
-  /// Both TVs: {added} PINs were saved, {kept} were already there and stayed
-  ///
-  /// In en, this message translates to:
-  /// **'Streaming app PINs saved: {added}. Kept as they were: {kept}.'**
-  String shareDonePins(int added, int kept);
-
-  /// Both TVs: Home Assistant settings were copied with a new token for the receiving TV
-  ///
-  /// In en, this message translates to:
-  /// **'Home Assistant settings copied, with a new token made for the receiving TV.'**
-  String get shareDoneHa;
-
-  /// Both TVs: the parent PIN was copied
-  ///
-  /// In en, this message translates to:
-  /// **'Parent PIN copied.'**
-  String get shareDoneParentPin;
-
-  /// Receiving TV: the sending TV could not make a Home Assistant token
-  ///
-  /// In en, this message translates to:
-  /// **'The other TV couldn\'t make a Home Assistant token, so no Home Assistant settings came.'**
-  String get shareHaMissing;
 
   /// No description provided for @backupAndRestore.
   ///

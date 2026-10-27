@@ -1,43 +1,21 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:flauncher/models/category.dart';
-import 'package:flauncher/providers/parent_pin_hash.dart';
 
-/// The data of a copy of a profile from one TV to another: what the sending TV puts together, and what the receiving
-/// TV takes of it. The bytes come from another TV and are not trusted: everything is checked here, a setting only
-/// goes in if it is one a profile has, and nothing in it names a path. The only secret in it is the parent PIN's hash.
-///
-/// A profile is a look (settings), a layout (apps, rows, the dock), its Profile Pairing choices and its wallpaper
-/// pictures; the TV's parent PIN may come along too. (The streaming PINs and the Home Assistant settings travel as a
-/// message of their own that only the Java side reads.) Keys like
-/// "user:11" differ from TV to TV, so profiles travel by a made-up id and a name; the receiving TV says which of its
-/// own profiles each one goes to.
+/// A profile's look and layout as they move between TVs (household sync: HouseholdLooks), and the limits what comes
+/// from another TV is checked against. What comes from another TV is not trusted: everything is checked here, a setting
+/// only goes in if it is one a profile has, and nothing in it names a path. (It began as the copy of profiles between
+/// TVs, which household sync replaced.)
 class ShareBundle {
-  static const String formatName = "hearth-share";
-  static const int version = 1;
+  ShareBundle._();
 
-  /// What the whole bundle may weigh (as JSON): a layout with hundreds of apps is some 100 KB; the pictures are the rest.
-  static const int maxJsonBytes = 40 * 1024 * 1024;
-
-  /// A wallpaper picture (a JPEG of at most 1920x1080) and how many a copy may carry (three a profile, three profiles).
+  /// A wallpaper picture as it goes to another TV: a JPEG of at most 1920x1080.
   static const int maxPictureBytes = 3 * 1024 * 1024;
-  static const int maxPictures = 9;
-
-  /// What a wallpaper picture is called by where it shows: always, by day, by night.
-  static const List<String> wallpaperSlots = ["any", "day", "night"];
-
-  /// The parent PIN's hash as the TV keeps it: SHA-256, in hex.
-  static final RegExp parentPinHashPattern = ParentPinHash.pattern;
-  static const int maxProfiles = 16;
   static const int maxApps = 2000;
   static const int maxCategories = 200;
   static const int maxAppsCategories = 20000;
   static const int maxSpacers = 200;
-  static const int maxPairings = 64;
   static const int maxText = 200;
 
-  /// Settings that belong to the TV (or to the sender's Home Assistant) even when a profile has them.
+  /// Settings that belong to the TV even when a profile has them.
   static const Set<String> notShared = {
     "hidden_calendars", // calendar ids are this TV's own accounts
     "hidden_watch_next_program_ids", // program ids are this TV's own
@@ -46,168 +24,6 @@ class ShareBundle {
 
   /// Letters, digits, dots and underscores: what an Android package name holds.
   static final RegExp packagePattern = RegExp(r'^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)+$');
-
-  final String hearth;
-  final String tv;
-  final List<ShareProfile> profiles;
-  final Map<String, SharedLayout> layouts;
-  final Map<String, List<SharedPairing>> pairings;
-
-  /// Each profile's wallpaper pictures by slot ([wallpaperSlots]), as JPEG bytes.
-  final Map<String, Map<String, Uint8List>> wallpapers;
-
-  /// The sender's parent PIN as its hash, when the sending parent chose to send it.
-  final String? parentPinHash;
-
-  const ShareBundle({
-    required this.hearth,
-    required this.tv,
-    required this.profiles,
-    required this.layouts,
-    required this.pairings,
-    this.wallpapers = const {},
-    this.parentPinHash,
-  });
-
-  int get pictureCount => wallpapers.values.fold(0, (sum, slots) => sum + slots.length);
-
-  /// The bundle as the sender puts it together. [layouts] are profile-only backups (BackupService.buildBackupData),
-  /// by profile id: only what a profile may share is kept.
-  static ShareBundle build({
-    required String hearth,
-    required String tv,
-    required List<ShareProfile> profiles,
-    required Map<String, Map<String, dynamic>> layouts,
-    required Map<String, List<SharedPairing>> pairings,
-    required Set<String> settingKeys,
-    Map<String, Map<String, Uint8List>> wallpapers = const {},
-    String? parentPinHash,
-  }) {
-    return ShareBundle(
-      hearth: hearth,
-      tv: tv,
-      profiles: profiles,
-      layouts: {
-        for (final entry in layouts.entries)
-          entry.key: SharedLayout.fromBackup(entry.value, settingKeys: settingKeys, lenient: true),
-      },
-      pairings: pairings,
-      wallpapers: wallpapers,
-      parentPinHash: parentPinHash,
-    );
-  }
-
-  String encode() {
-    final sections = <Map<String, dynamic>>[
-      for (final profile in profiles) ...[
-        if (layouts[profile.id] != null) {"type": "layout", "profile": profile.id, "data": layouts[profile.id]!.toJson()},
-        if ((pairings[profile.id] ?? const []).isNotEmpty)
-          {"type": "pairings", "profile": profile.id, "data": [for (final p in pairings[profile.id]!) p.toJson()]},
-        for (final picture in (wallpapers[profile.id] ?? const <String, Uint8List>{}).entries)
-          {"type": "wallpaper", "profile": profile.id, "slot": picture.key, "data": base64Encode(picture.value)},
-      ],
-    ];
-    return jsonEncode({
-      "format": formatName,
-      "v": version,
-      "from": {"hearth": hearth, "tv": tv},
-      "profiles": [for (final p in profiles) p.toJson()],
-      "sections": sections,
-      if (parentPinHash != null) "parentPin": parentPinHash,
-    });
-  }
-
-  /// A bundle from another TV. Throws a [ShareFormatException], whose message is for the log, if it isn't one this
-  /// Hearth takes. Sections of a type this version doesn't know are ignored, so a newer Hearth can send more.
-  static ShareBundle parse(String source, {required Set<String> settingKeys}) {
-    if (source.length > maxJsonBytes) throw const ShareFormatException("too big");
-    final Object? decoded;
-    try {
-      decoded = jsonDecode(source);
-    } on FormatException {
-      throw const ShareFormatException("not JSON");
-    }
-    final root = _map(decoded, "bundle");
-    if (root["format"] != formatName) throw const ShareFormatException("not a Hearth copy");
-    final v = root["v"];
-    if (v is! int) throw const ShareFormatException("no version");
-    if (v > version) throw const ShareFormatException("newer", newer: true);
-    final from = root["from"] is Map ? _map(root["from"], "from") : const <String, dynamic>{};
-    final profileList = _list(root["profiles"], "profiles", maxProfiles);
-    final profiles = <ShareProfile>[];
-    final ids = <String>{};
-    for (final raw in profileList) {
-      final profile = ShareProfile.parse(_map(raw, "profile"));
-      if (!ids.add(profile.id)) throw const ShareFormatException("duplicate profile");
-      profiles.add(profile);
-    }
-    final layouts = <String, SharedLayout>{};
-    final pairings = <String, List<SharedPairing>>{};
-    final wallpapers = <String, Map<String, Uint8List>>{};
-    var pictures = 0;
-    for (final raw in _list(root["sections"], "sections", maxProfiles * 8)) {
-      final section = _map(raw, "section");
-      final type = section["type"];
-      final profile = section["profile"];
-      if (type is! String || profile is! String || !ids.contains(profile)) continue;
-      switch (type) {
-        case "layout":
-          if (layouts.containsKey(profile)) throw const ShareFormatException("duplicate layout");
-          layouts[profile] = SharedLayout.fromBackup(_map(section["data"], "layout"), settingKeys: settingKeys);
-        case "pairings":
-          if (pairings.containsKey(profile)) throw const ShareFormatException("duplicate pairings");
-          pairings[profile] = [
-            for (final p in _list(section["data"], "pairings", maxPairings)) SharedPairing.parse(_map(p, "pairing")),
-          ];
-        case "wallpaper":
-          final slot = section["slot"];
-          if (slot is! String || !wallpaperSlots.contains(slot)) throw const ShareFormatException("bad picture slot");
-          if (++pictures > maxPictures) throw const ShareFormatException("too many pictures");
-          final slots = wallpapers.putIfAbsent(profile, () => {});
-          if (slots.containsKey(slot)) throw const ShareFormatException("duplicate picture");
-          slots[slot] = _picture(section["data"]);
-      }
-    }
-    final pin = root["parentPin"];
-    if (pin != null && (pin is! String || !parentPinHashPattern.hasMatch(pin))) {
-      throw const ShareFormatException("bad parent PIN");
-    }
-    return ShareBundle(
-      hearth: _text(from["hearth"], 40),
-      tv: _text(from["tv"], maxText),
-      profiles: profiles,
-      layouts: layouts,
-      pairings: pairings,
-      wallpapers: wallpapers,
-      parentPinHash: pin as String?,
-    );
-  }
-
-  /// A picture's bytes if they are a JPEG of a size a wallpaper has; nothing else is ever written to a file.
-  static Uint8List _picture(Object? data) {
-    if (data is! String || data.length > (maxPictureBytes + 2) ~/ 3 * 4) throw const ShareFormatException("bad picture");
-    final Uint8List bytes;
-    try {
-      bytes = base64Decode(data);
-    } on FormatException {
-      throw const ShareFormatException("bad picture");
-    }
-    if (bytes.length < 4 || bytes.length > maxPictureBytes || bytes[0] != 0xFF || bytes[1] != 0xD8 || bytes[2] != 0xFF) {
-      throw const ShareFormatException("not a JPEG");
-    }
-    return bytes;
-  }
-
-  static Map<String, dynamic> _map(Object? value, String what) {
-    if (value is! Map) throw ShareFormatException("$what isn't an object");
-    return Map<String, dynamic>.from(value);
-  }
-
-  static List<dynamic> _list(Object? value, String what, int max) {
-    if (value is! List) throw ShareFormatException("$what isn't a list");
-    if (value.length > max) throw ShareFormatException("$what has too many");
-    return value;
-  }
 
   static String _text(Object? value, int max) {
     if (value is! String) return "";
@@ -224,57 +40,10 @@ class ShareBundle {
 class ShareFormatException implements Exception {
   final String message;
 
-  /// The bundle is from a newer Hearth than this one.
-  final bool newer;
-
-  const ShareFormatException(this.message, {this.newer = false});
+  const ShareFormatException(this.message);
 
   @override
   String toString() => "ShareFormatException: $message";
-}
-
-/// One profile in a bundle: an id only the bundle knows, its name, and whether it is a kids profile.
-class ShareProfile {
-  final String id;
-  final String name;
-  final bool kids;
-
-  const ShareProfile({required this.id, required this.name, required this.kids});
-
-  static ShareProfile parse(Map<String, dynamic> map) {
-    final id = map["id"];
-    if (id is! String || !RegExp(r'^[A-Za-z0-9_-]{1,16}$').hasMatch(id)) throw const ShareFormatException("bad profile id");
-    final name = ShareBundle._text(map["name"], ShareBundle.maxText);
-    if (name.isEmpty) throw const ShareFormatException("a profile without a name");
-    return ShareProfile(id: id, name: name, kids: map["kind"] == "kids");
-  }
-
-  Map<String, dynamic> toJson() => {"id": id, "name": name, "kind": kids ? "kids" : "adult"};
-}
-
-/// A profile's Profile Pairing choice for one streaming app: an app profile by name, or "always ask".
-class SharedPairing {
-  final String packageName;
-  final bool picker;
-
-  /// The app profile's name; empty for [picker].
-  final String appProfile;
-
-  const SharedPairing({required this.packageName, required this.picker, this.appProfile = ""});
-
-  static SharedPairing parse(Map<String, dynamic> map) {
-    final pkg = map["pkg"];
-    if (pkg is! String || !ShareBundle.packagePattern.hasMatch(pkg) || pkg.length > 200) {
-      throw const ShareFormatException("bad pairing app");
-    }
-    if (map["mode"] == "picker") return SharedPairing(packageName: pkg, picker: true);
-    final name = ShareBundle._text(map["appProfile"], ShareBundle.maxText);
-    if (map["mode"] != "profile" || name.isEmpty) throw const ShareFormatException("bad pairing");
-    return SharedPairing(packageName: pkg, picker: false, appProfile: name);
-  }
-
-  Map<String, dynamic> toJson() =>
-      picker ? {"pkg": packageName, "mode": "picker"} : {"pkg": packageName, "mode": "profile", "appProfile": appProfile};
 }
 
 /// An app of the receiving TV, as the layout needs it: the name and version are this TV's own.
@@ -454,14 +223,6 @@ class SharedLayout {
       missing: missing,
     );
   }
-
-  Map<String, dynamic> toJson() => {
-        "settings": settings,
-        "apps": [for (final app in apps) app.toJson()],
-        "categories": categories,
-        "appsCategories": appsCategories,
-        "spacers": spacers,
-      };
 }
 
 class SharedApp {
@@ -470,6 +231,4 @@ class SharedApp {
   final bool hidden;
 
   const SharedApp(this.packageName, this.name, this.hidden);
-
-  Map<String, dynamic> toJson() => {"packageName": packageName, "name": name, "hidden": hidden};
 }
