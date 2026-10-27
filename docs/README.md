@@ -9,5 +9,7 @@
 - [Development](development.md): building, testing and releasing
 - [Home Assistant integration](home-assistant-integration.md): design draft for a Hearth integration that replaces the webhook, helpers and tokens
 - [Household sync](household-sync.md): design draft for keeping profiles, PINs, looks and Continue Watching in step across TVs
+- [Pigeon](agent-messages.md): an idea, not a plan: people passing word to each other through their assistants, which
+  work out what a message touches where it lands
 - [Provider contract](provider-contract.md): what HearthTube (or another app) can read from Hearth, and
   [wallpaper sync](wallpaper-sync.md), how HearthTube shows Hearth's wallpaper with it
