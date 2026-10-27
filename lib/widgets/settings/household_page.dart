@@ -22,6 +22,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/quiet_failure.dart';
 import 'package:flauncher/share/household_join.dart';
+import 'package:flauncher/widgets/held_focus.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -109,6 +110,12 @@ class _JoinDialogState extends State<_JoinDialog> {
   bool _busy = false;
   bool _copyFailed = false;
   JoinPreview? _preview;
+
+  /// Where the remote's focus belongs: Later once allowed (the safe choice), Cancel (or Close) before.
+  final FocusNode _laterFocus = FocusNode(debugLabel: "householdJoinLater");
+  final FocusNode _cancelFocus = FocusNode(debugLabel: "householdJoinCancel");
+
+  FocusNode get _homeFocus => _state == "review" ? _laterFocus : _cancelFocus;
 
   @override
   void initState() {
@@ -224,7 +231,29 @@ class _JoinDialogState extends State<_JoinDialog> {
     _timer?.cancel();
     // Closed while the request was under way (Back, or Cancel): it stops, so a later Allow can't join this TV
     _stopRequest();
+    _laterFocus.dispose();
+    _cancelFocus.dispose();
     super.dispose();
+  }
+
+  /// Back: Later once allowed (the TV stays held, and Finish joining is offered), else Cancel.
+  void _back() {
+    if (_state != "review") {
+      _cancel();
+    } else if (!_busy) {
+      Navigator.of(context).pop(true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _back();
+      },
+      child: HeldFocus(home: () => _homeFocus, child: _build(context)),
+    );
   }
 
   void _stopRequest() {
@@ -239,8 +268,7 @@ class _JoinDialogState extends State<_JoinDialog> {
     Navigator.of(context).pop(false);
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     if (_state == "review") return _buildReview(l, Theme.of(context).textTheme);
     final textTheme = Theme.of(context).textTheme;
@@ -282,7 +310,8 @@ class _JoinDialogState extends State<_JoinDialog> {
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: body),
       ),
       actions: [
-        TextButton(autofocus: true, onPressed: _cancel, child: Text(over ? l.close : l.cancel)),
+        TextButton(
+            focusNode: _cancelFocus, autofocus: true, onPressed: _cancel, child: Text(over ? l.close : l.cancel)),
       ],
     );
   }
@@ -336,14 +365,15 @@ class _JoinDialogState extends State<_JoinDialog> {
       ),
       actions: [
         TextButton(onPressed: _busy ? null : _dontJoin, child: Text(l.householdReviewCancel)),
+        // Later is the safe choice: nothing changes here, and the page offers Finish joining
         TextButton(
-          autofocus: preview == null,
+          focusNode: _laterFocus,
+          autofocus: true,
           onPressed: _busy ? null : () => Navigator.of(context).pop(true),
           child: Text(l.householdReviewLater),
         ),
         if (preview != null)
           TextButton(
-            autofocus: true,
             onPressed: _busy ? null : () => _use(preview),
             child: Text(l.householdReviewUse),
           ),
