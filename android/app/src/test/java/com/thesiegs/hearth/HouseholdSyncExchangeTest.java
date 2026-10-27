@@ -338,6 +338,58 @@ public class HouseholdSyncExchangeTest {
     }
 
     @Test
+    public void aTvRemovedHereCantTellThisOneItWasRemoved() throws Exception {
+        // a removes b; b (removed, or a device that kept b's key) says a is removed when a connects to it
+        HouseholdTvs.Tv[] tvs = pair();
+        assertTrue(tvs[0].store.remove(tvs[1].store.tvId(), T0 + 1));
+        assertTrue(tvs[1].store.remove(tvs[0].store.tvId(), T0 + 2));
+        HouseholdSync.Result[] results = exchange(tvs[0], tvs[1], null);
+        // a keeps its household: b is the removed one, and it is told
+        assertFalse(results[0].removedHere);
+        assertTrue(results[0].peerRemoved);
+        assertTrue(results[1].peerRemoved);
+        assertTrue(tvs[0].store.joined());
+    }
+
+    @Test
+    public void aBigExchangeGoesInBatchesThatLoseNothing() {
+        HouseholdLog from = new HouseholdLog("tv-a");
+        // entries of three TVs, as a TV holds them after syncing with the others
+        for (String tv : new String[] {"tv-b", "tv-c"}) {
+            HouseholdLog other = new HouseholdLog(tv);
+            for (int i = 0; i < 40; i++) from.merge(other.put("look", "Alex", tv + i, "v" + i, T0 + i), T0 + 100);
+        }
+        for (int i = 0; i < 40; i++) from.put("look", "Sam", "a" + i, "v" + i, T0 + i);
+        HouseholdLog to = new HouseholdLog("tv-d");
+        for (int round = 0; round < 20; round++) {
+            for (HouseholdEntry e : HouseholdSync.batch(from.missingFrom(to.vector()), 25)) to.merge(e, T0 + 100);
+        }
+        assertEquals(from.all().size(), to.all().size());
+        assertTrue(from.missingFrom(to.vector()).isEmpty());
+    }
+
+    @Test
+    public void aStrangerCantMakeATvReadABigFrameBeforeItProvesItself() throws Exception {
+        HouseholdTvs.Tv[] tvs = pair();
+        // A well-formed opening from a TV no one listed, then a frame far bigger than any proof
+        ByteArrayOutputStream hello = new ByteArrayOutputStream();
+        java.io.DataOutputStream data = new java.io.DataOutputStream(hello);
+        data.write(new byte[] {'H', 'H', 'S', '2'});
+        data.writeUTF("tv-0123456789abcdef");
+        data.write(ShareCrypto.encodePoint(ShareCrypto.newKeyPair().getPublic()));
+        data.write(new byte[16]);
+        data.writeInt(4 * 1024 * 1024);
+        try {
+            HouseholdSync.run(new java.io.ByteArrayInputStream(hello.toByteArray()), new ByteArrayOutputStream(),
+                    false, tvs[0].store, "A", T0);
+            fail("expected a refusal");
+        } catch (HouseholdSync.SyncException expected) {
+            // refused at its size, before reading it
+            assertEquals("Bad frame size", expected.getMessage());
+        }
+    }
+
+    @Test
     public void aRemovalReachesATvThatWasOffAndCantBeUndone() throws Exception {
         HouseholdTvs.Tv a = first();
         HouseholdTvs.Tv b = joining(a, "Kitchen");
