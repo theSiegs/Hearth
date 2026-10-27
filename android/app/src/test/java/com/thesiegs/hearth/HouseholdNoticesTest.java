@@ -30,6 +30,29 @@ public class HouseholdNoticesTest {
     }
 
     @Test
+    public void aFloodOfNotificationsFromTheNetworkStopsGrowingTheLog() {
+        HouseholdLog log = new HouseholdLog("tv-a");
+        // another TV's don't count against this one's
+        HouseholdLog other = new HouseholdLog("tv-b");
+        for (int i = 0; i < 50; i++) log.merge(ha(other, ALEX, null, "Other", "n" + i, NOW), NOW);
+        int kept = 0;
+        for (int i = 0; i < HouseholdNotices.MAX_FROM_TV + 200; i++) {
+            String item = HouseholdNotices.haItem(HouseholdNotices.ALL_ADULTS, null, "Spam", "n" + i);
+            if (!HouseholdNotices.roomFor(log.all(), "tv-a", item)) continue;
+            ha(log, HouseholdNotices.ALL_ADULTS, null, "Spam", "n" + i, NOW + i);
+            kept++;
+        }
+        assertEquals(HouseholdNotices.MAX_FROM_TV, kept);
+        assertEquals(HouseholdNotices.MAX_FROM_TV + 50, log.all().size());
+        // one already held (a tag sent again, the same text again) still replaces itself
+        assertTrue(HouseholdNotices.roomFor(log.all(), "tv-a",
+                HouseholdNotices.haItem(HouseholdNotices.ALL_ADULTS, null, "Spam", "n0")));
+        // and once they leave the log, there is room again
+        log.purge(NOW + HouseholdNotices.MAX_AGE_MS + HouseholdNotices.MAX_FROM_TV + 1);
+        assertTrue(HouseholdNotices.roomFor(log.all(), "tv-a", HouseholdNotices.haItem(ALEX, null, "New", "x")));
+    }
+
+    @Test
     public void oneForEveryAdultShowsToEachAdult_butNotToAKid() {
         HouseholdLog log = new HouseholdLog("tv-a");
         ha(log, HouseholdNotices.ALL_ADULTS, null, "Washer", "The wash is done", NOW);

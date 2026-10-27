@@ -1083,7 +1083,8 @@ final class Household {
      * The notifications of a TV that isn't a member (or has sync off): this TV's own, in memory only, so they're gone
      * when Hearth restarts. On the household thread.
      */
-    private static final HouseholdLog LOCAL_NOTICES = new HouseholdLog("this-tv");
+    private static final String LOCAL_NOTICES_TV = "this-tv";
+    private static final HouseholdLog LOCAL_NOTICES = new HouseholdLog(LOCAL_NOTICES_TV);
     /** What the Bell shows the profile on screen, newest first; made on the household thread. */
     private static volatile List<HouseholdNotices.Notice> sNotices = new ArrayList<>();
     /** The profile {@link #sNotices} is for (its key). */
@@ -1168,8 +1169,14 @@ final class Household {
             }
             String value = HouseholdNotices.haValue(n.title, n.message, now);
             if (value == null) return -1;
-            HouseholdEntry entry = log.put(HouseholdNotices.KIND, person,
-                    HouseholdNotices.haItem(person, n.tag, n.title, n.message), value, now);
+            String item = HouseholdNotices.haItem(person, n.tag, n.title, n.message);
+            String writer = log == LOCAL_NOTICES ? LOCAL_NOTICES_TV : store(app).tvId();
+            if (!HouseholdNotices.roomFor(log.all(), writer, item)) {
+                // A flood from the network: it pops up as before, but isn't kept
+                Log.i(TAG, "A Home Assistant notification isn't kept in the Bell: too many already");
+                return -1;
+            }
+            HouseholdEntry entry = log.put(HouseholdNotices.KIND, person, item, value, now);
             if (entry != null) {
                 // It pops up here as it comes (or not at all), never again from the Bell
                 synchronized (sPopped) {

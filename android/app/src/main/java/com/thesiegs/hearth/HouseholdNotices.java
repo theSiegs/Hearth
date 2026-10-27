@@ -31,6 +31,8 @@ final class HouseholdNotices {
     static final long POP_UP_MS = 2 * 60_000;
     static final int MAX_TITLE = 200;
     static final int MAX_TEXT = 1000;
+    /** Home Assistant notifications one TV keeps in the household's log at most (each stays three days). */
+    static final int MAX_FROM_TV = 300;
     private static final String JOIN_PREFIX = "join:";
 
     /** One notification as the Bell shows it. */
@@ -137,6 +139,23 @@ final class HouseholdNotices {
             found = p.id;
         }
         return found;
+    }
+
+    /**
+     * Whether this TV ({@code tv}, as it signs entries) may file the Home Assistant notification {@code item}: one
+     * already held (the same tag, or the same text again) always may; a new one only while fewer than
+     * {@link #MAX_FROM_TV} of this TV's are held. Home Assistant's port takes posts from anything on the network
+     * without a password, and each new one is an entry every TV keeps for three days, so a flood mustn't grow the log
+     * (and every save and exchange of it) without end; what doesn't fit still pops up here, it just isn't in the Bells.
+     */
+    static boolean roomFor(java.util.Collection<HouseholdEntry> entries, String tv, String item) {
+        int held = 0;
+        for (HouseholdEntry e : entries) {
+            if (!KIND.equals(e.kind) || !e.item.startsWith(FROM_HA + ":")) continue;
+            if (e.item.equals(item)) return true;
+            if (e.tv.equals(tv)) held++;
+        }
+        return held < MAX_FROM_TV;
     }
 
     // ---- A TV asking to join ----
