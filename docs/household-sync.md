@@ -39,6 +39,7 @@ replaces both Copy profiles between TVs and Household sync.
 | Home layout | profile | the dock, rows, app order, hidden apps, per-profile panel choices |
 | Continue Watching | profile | Hearth's own watch history (see below) |
 | Parent PIN | household | including every change to it; see Parent PIN |
+| Notifications | person, or every adult | Home Assistant's, and a TV asking to join; see [Notifications](#notifications) |
 
 Never synced: the Home Assistant token, the webhook ID, the TV's name (each TV announces its own), permissions,
 anything about a TV's hardware. The Home Assistant address is handed over once when a TV joins (see Joining); the TV
@@ -168,8 +169,9 @@ A TV joins from its own screen, and someone allows it from the notification Bell
    the screen off), and says it is a join request (`HHJ1`), with its name. They run Copy profiles' key exchange, in
    which each side commits to its key before seeing the other's, so a device in the middle can't steer the result, and
    both derive the same join code (six digits). The new TV says which TV it asked: "Allow it on Office".
-3. The household TV puts the request in its **notification Bell**, on adults' profiles only (never while a kids
-   profile is on), and pops it up: "Kitchen wants to join your TVs", with **Allow** and **Don't allow**. No Parent PIN
+3. The household TV puts the request in its **notification Bell**, and in the Bells of the household's other TVs (see
+   [Notifications](#notifications)), on adults' profiles only (never while a kids profile is on), and pops it up:
+   "Kitchen wants to join your TVs", with **Allow** and **Don't allow**, answered on any of them. No Parent PIN
    and no code to compare: the TV's name is what the person checks. Clearing it is Don't allow. (The code still binds
    the session; no one compares it, so a device on the network that put itself between the two TVs, and named itself
    after the new TV, could be let in: a trade chosen for a home network.)
@@ -207,6 +209,66 @@ It doesn't need to: sync identifies a person by their **Google account**, not by
   renamed and no one is asked anything.
 - An address can be in two profiles on one TV (an adult added twice); the first one seen counts, the second is left out,
   so one person's settings are never applied twice.
+
+## Notifications
+
+A notification one TV receives is in the notification Bell of every TV of the household, cleared on one is cleared on
+all, and each shows only to the profile it is for. Two kinds so far: Home Assistant's, and a TV asking to join. Apps'
+own Android notifications stay on their TV (they belong to that TV's apps, and their buttons only work there).
+
+**Who a notification is for.**
+
+- **A person.** Home Assistant names them with the notification's `for` field: a profile's name ("Alex"), its Google
+  account address, or its key as Hearth's Home Assistant integration lists profiles ("user:10"). The TV that receives
+  it turns that into the person id (see Who a profile is), so every TV shows it to the same person, whatever their
+  profile is called or numbered there. A name two profiles share names neither. A `for` that no profile on the
+  receiving TV is gets a 404 from that TV and is shown to no one: a notification meant for one person is never shown
+  to someone else.
+- **No one named: every adult.** A notification without `for` is the household's ("The wash is done", "Someone is at
+  the door"), so it goes in every adult's Bell. The other choice, the adult on screen when it came, fails when a kid
+  is on, or no one is: the notification would belong to no one, or to whoever had last been on. (Open question.)
+- **Kids' profiles** see nothing for every adult and nothing for another person. A notification addressed to a kid
+  (`for` naming the kid's profile) shows in that kid's Bell only.
+- **The pop-up** over what's playing works as before for a notification for everyone (Home Assistant chose to send it
+  to that TV). One for a person pops up only when that person's profile is on screen; otherwise it is only in their
+  Bell. A notification that came from another TV pops up as a small card when it is under two minutes old and the
+  profile it is for is on screen (a TV asking to join, while it waits).
+
+**How it travels.** Each notification is one `notice` entry in the household log: the person is the target person id,
+or "" for every adult; the item names the notification; the value holds what it says (title and text, cut to 200 and
+1,000 characters), when it was written and when it ends. The Bell gets only the text: Home Assistant's buttons and
+camera stay in the pop-up of the TV that received it, so a notification moving between TVs never carries a service
+call. The item of a Home Assistant notification is a hash of its person and its `tag` when it has one (a later one
+with the same tag replaces it, as on Home Assistant's phone app), else of its person, title and text, so the same
+notification sent to every TV (one `notify` per TV) is one notification, not one per TV, and sent again after it was
+cleared it shows again (a newer write). A TV that isn't in a household, or has sync off, keeps its notifications to
+itself, in memory only.
+
+**Clearing.** Clearing one in the Bell (or **Clear all**, which leaves a TV asking to join) writes a delete for that
+entry, which reaches the other TVs like any change; the newest write wins, so a clear beats the notification it cleared
+and loses to the same notification sent again later. Home Assistant can clear one with the message
+`clear_notification` and its `tag`. A notification for every adult cleared by one adult is cleared for all of them.
+
+**Expiry.** A notification, cleared or not, leaves every TV's log three days after it was written, and the Bell before
+that if its own end comes first (a join request's, five minutes). Its delete is always newer than what it cleared, so
+the delete stays as long as the notification could come back from a TV that was off.
+
+**A TV asking to join.** The TV that was asked (it holds the request's connection) writes a `notice` for every adult,
+its item `join:<a random id>`, naming the TV that asks and itself. Every other TV shows it in adults' Bells with
+**Allow** and **Don't allow** ("It asked Office, which lets it in"); the asked TV shows its own Bell item, as before.
+An answer on another TV is a `join_answer` entry for that item, which reaches the asked TV with the next exchange (two
+seconds later, both being on); that TV takes it as if pressed on its own screen. The request is still decided once:
+the asked TV takes the first answer it hears, its own or another TV's, and a later one changes nothing. When the
+request ends (answered, or five minutes without an answer), the asked TV deletes its notice, which takes it from every
+Bell. A TV that answered hides the request at once. Clearing it is Don't allow, as on the asked TV.
+
+**Privacy.** A notification's text is an entry like any other: sealed at rest under the TV's Keystore key, sealed in
+each exchange, and, when the Home Assistant mailbox is built, sealed per member there. Only the household's TVs read
+it; people are named by their person id, never their address. A log line about a notification never holds its text.
+
+**How it's built.** HouseholdNotices (the rules), Household (writing, clearing, answering and what the Bell shows the
+profile on screen, on the household thread), HearthBellItems (the Bell's items and buttons) and HaNotificationServer
+(`for` and `tag`).
 
 ## Moving entries
 
@@ -365,7 +427,9 @@ receiving TV converts at once.
 3. **Look and layout, then wallpaper pictures** (built, every profile, kids' included).
 4. **Your TVs page and the setup step**; Copy profiles leaves Settings.
 5. **Home Assistant mailbox**, sealed per member.
-6. **Continue Watching** (built), and the **Parent PIN** (built).
+6. **Continue Watching** (built), the **Parent PIN** (built), and **Notifications** (built: Home Assistant's in every
+   TV's Bell, for a person or every adult, cleared everywhere; a TV asking to join answered from any TV; not yet tried
+   on two TVs).
 7. **Hardening**: a security review of the channel, the join and conversion before release; long-offline TV tests; a
    test with two TVs whose clocks disagree.
 
@@ -376,3 +440,11 @@ receiving TV converts at once.
 - The on-screen fallback for joining needs a parent at both TVs. A Parent PIN typed on the new TV would avoid that, but
   it must not reach a device pretending to be a household TV, which needs a password-authenticated key exchange
   (CPace or SPAKE2) rather than the plain one. Worth it only if many households run without phone approval.
+- Notifications without `for` go to every adult. Should they rather go to the adult on screen when they came (and
+  every adult when a kid or no one was on)?
+- A notification for every adult cleared by one adult is cleared for all. Should each adult clear their own instead
+  (a per-person clear, so Sam still sees what Alex cleared)?
+- Should a notification for everyone still pop up over a kids profile on the TV that received it (it does, as
+  before: a doorbell camera is for whoever is watching), or only over an adult's?
+- Home Assistant's buttons stay on the TV that received the notification. Carrying them to the other TVs' Bells
+  would let any household TV ask another to call a Home Assistant service; worth it?
