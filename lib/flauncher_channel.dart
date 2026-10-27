@@ -458,6 +458,8 @@ class FLauncherChannel {
   /// this one; `nearby` is the other households heard on the network, each as its TVs' names (a name may be null).
   /// `join` is this TV's own request ([requestHouseholdJoin]): state none, connecting, waiting (`via` is the TV to
   /// answer on), joined, denied or failed. Another TV's request to join this one is in the notification Bell.
+  /// `review` ({ready}) is there while this TV, just joined, holds the household's settings until someone has seen what
+  /// they change (ready once they came); `joinBackupAt` is when the copy from before joining was made (0: none).
   Future<Map<dynamic, dynamic>> getHouseholdStatus() async =>
       (await _methodChannel.invokeMapMethod<dynamic, dynamic>("getHouseholdStatus")) ?? {};
 
@@ -478,6 +480,19 @@ class FLauncherChannel {
 
   /// Stops this TV's request to join.
   Future<void> cancelHouseholdJoin() async => await _methodChannel.invokeMethod("cancelHouseholdJoin");
+
+  /// While this TV, having just joined, holds the household's settings (status `review`): what they'd change in its
+  /// pairings and PINs, {profiles: [{key, name, kids, pairings, pins}], tvPins}; null when it holds none.
+  Future<Map<dynamic, dynamic>?> getHouseholdJoinPreview() async =>
+      await _methodChannel.invokeMapMethod<dynamic, dynamic>("getHouseholdJoinPreview");
+
+  /// Someone saw what joining changes and went on: this TV's pairings and PINs are kept as a copy and the household's
+  /// go in. False when the copy couldn't be kept (nothing changed then).
+  Future<bool> finishHouseholdJoin() async => await _methodChannel.invokeMethod<bool>("finishHouseholdJoin") ?? false;
+
+  /// Puts back this TV's pairings and PINs from before it joined (status `joinBackupAt` says while there's a copy).
+  Future<bool> restoreHouseholdJoinBackup() async =>
+      await _methodChannel.invokeMethod<bool>("restoreHouseholdJoinBackup") ?? false;
 
   /// The household's looks, layouts and wallpapers for this TV's profiles (kids' too) when they changed since [since] (a
   /// version this gave before; 0: all): {version, profiles: {profileKey: {look, layout, wallpapers: {slot: {hash, path}

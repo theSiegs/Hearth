@@ -8,9 +8,11 @@ import 'package:flauncher/providers/backup_service.dart';
 import 'package:flauncher/providers/household_parent_pin.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/quiet_failure.dart';
+import 'package:flauncher/share/household_join.dart';
 import 'package:flauncher/share/household_looks.dart';
 import 'package:flauncher/share/share_bundle.dart';
 import 'package:flauncher/share/share_wallpapers.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Keeps each profile's look (kids' included), layout and wallpaper pictures in step with the household's (docs/household-sync.md,
@@ -24,7 +26,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// layout (a setting, the rows, a row's apps, an app hidden or not) as this TV last had it, and when it changed here:
 /// when the household's arrives, the newer change of each item wins (HouseholdLooks.mergeLook, mergeLayout), so two
 /// TVs changing different things at once both keep theirs.
-class HouseholdLooksService {
+class HouseholdLooksService implements HouseholdJoinReviewer {
   static const Duration every = Duration(seconds: 20);
 
   /// device_: the TV's own, never part of a profile's layout or a backup.
@@ -58,11 +60,17 @@ class HouseholdLooksService {
       {required Future<void> Function() onLiveChanged,
       required Future<void> Function(String profileKey) onPicturesCopied,
       HouseholdParentPin? parentPin,
-      int Function()? now})
+      int Function()? now,
+      Future<Directory> Function()? joinBackupFolder})
       : _onLiveChanged = onLiveChanged,
         _onPicturesCopied = onPicturesCopied,
         _parentPin = parentPin,
-        _now = now ?? (() => DateTime.now().millisecondsSinceEpoch);
+        _now = now ?? (() => DateTime.now().millisecondsSinceEpoch),
+        _joinBackupFolder = joinBackupFolder ??
+            (() async => Directory("${(await getApplicationDocumentsDirectory()).path}/household_join_backup"));
+
+  /// Where the copy of this TV's looks, layouts and pictures from before it joined is kept.
+  final Future<Directory> Function() _joinBackupFolder;
 
   void start() {
     _timer ??= Timer.periodic(every, (_) => unawaited(tick()));
@@ -78,8 +86,13 @@ class HouseholdLooksService {
     if (_running) return;
     _running = true;
     try {
-      await _parentPin?.tick();
       final looks = await _channel.getHouseholdLooks(_version);
+      // Just joined: nothing is taken or given until someone has seen what it changes (joinPreview, finishJoin)
+      if (looks != null && looks["review"] == true) {
+        _version = 0;
+        return;
+      }
+      await _parentPin?.tick();
       if (looks == null) {
         _version = 0;
         return;
@@ -321,5 +334,181 @@ class HouseholdLooksService {
       if (hash != null && hash.isNotEmpty) pictures[slot] = {"entry": hash, "file": fileHash};
     }
     mine["pictures"] = pictures;
+  }
+
+  // ---- Before joining: what changes, and the copy to put back (docs/household-sync.md, "Before joining") ----
+
+  @override
+  Future<JoinPreview?> joinPreview() async {
+    final java = await _channel.getHouseholdJoinPreview();
+    final looks = await _channel.getHouseholdLooks(0);
+    if (java == null || looks == null) return null;
+    final states = looks["profiles"] is Map ? looks["profiles"] as Map : const {};
+    final keys = _settings.settingKeys;
+    final installed = {for (final app in await _backup.installedApps()) app.packageName};
+    final profiles = <JoinChange>[];
+    for (final raw in (java["profiles"] as List?) ?? const []) {
+      if (raw is! Map || raw["key"] is! String) continue;
+      final key = raw["key"] as String;
+      final state = states[key] is Map ? states[key] as Map : const {};
+      final local = await _local(key);
+      final look = state["look"] is String ? HouseholdLooks.parseLook(state["look"] as String, keys) : null;
+      final layout = state["layout"] is String ? HouseholdLooks.parseLayout(state["layout"] as String, keys) : null;
+      profiles.add(JoinChange(
+        key: key,
+        name: (raw["name"] as String?) ?? "",
+        kids: raw["kids"] == true,
+        look: look != null && HouseholdLooks.lookDiffers(look, local?.layout.settings),
+        layout: layout != null && HouseholdLooks.layoutDiffers(layout, local?.layout, installed),
+        pictures: state["wallpapers"] is Map ? await _picturesChanged(key, state["wallpapers"] as Map) : 0,
+        pairings: (raw["pairings"] as num?)?.toInt() ?? 0,
+        pins: (raw["pins"] as num?)?.toInt() ?? 0,
+      ));
+    }
+    // A Parent PIN differing from this TV's own is kept until it's entered here; only one where there was none changes
+    final pin = await _channel.getHouseholdParentPin();
+    return JoinPreview(
+      profiles: profiles,
+      parentPin: pin?["state"] == "live" && _settings.parentPinHash == null,
+      tvPins: (java["tvPins"] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  /// How many of a profile's pictures the household's would replace or take away.
+  Future<int> _picturesChanged(String profileKey, Map wallpapers) async {
+    var changed = 0;
+    for (final entry in wallpapers.entries) {
+      if (!ShareWallpapers.fileNames.containsKey(entry.key)) continue;
+      final here = await _wallpapers.file(profileKey, entry.key as String);
+      final value = entry.value;
+      if (value == null) {
+        if (await here.exists()) changed++;
+        continue;
+      }
+      final path = value is Map ? value["path"] as String? : null;
+      if (path == null) continue;
+      if (!await here.exists() ||
+          sha256.convert(await here.readAsBytes()) != sha256.convert(await File(path).readAsBytes())) {
+        changed++;
+      }
+    }
+    return changed;
+  }
+
+  @override
+  Future<bool> finishJoin(JoinPreview preview) async {
+    try {
+      await _saveJoinBackup([for (final p in preview.profiles) p.key]);
+    } catch (err) {
+      // Without the copy nothing is replaced: the TV stays as it is, still holding the household's settings
+      noteFailure('household_looks', err);
+      return false;
+    }
+    if (!await _channel.finishHouseholdJoin()) return false;
+    _version = 0;
+    unawaited(tick());
+    return true;
+  }
+
+  Future<void> _saveJoinBackup(List<String> profileKeys) async {
+    final folder = await _joinBackupFolder();
+    if (await folder.exists()) await folder.delete(recursive: true);
+    await folder.create(recursive: true);
+    final kept = <String, int>{};
+    for (var i = 0; i < profileKeys.length; i++) {
+      final key = profileKeys[i];
+      final layout = _settings.layoutOwner == key
+          ? await _backup.buildBackupData(_settings, true)
+          : await _backup.readProfileLayout(key);
+      if (layout != null) await File("${folder.path}/layout_$i.json").writeAsString(jsonEncode(layout), flush: true);
+      for (final slot in ShareWallpapers.fileNames.keys) {
+        final picture = await _wallpapers.file(key, slot);
+        if (await picture.exists()) await picture.copy("${folder.path}/picture_${i}_$slot");
+      }
+      kept[key] = i;
+    }
+    // Written last: a copy without it is one that didn't finish, and isn't offered
+    await File("${folder.path}/meta.json")
+        .writeAsString(jsonEncode({"at": _now(), "profiles": kept}), flush: true);
+  }
+
+  Future<Map<String, dynamic>?> _joinBackupMeta() async {
+    final folder = await _joinBackupFolder();
+    final meta = File("${folder.path}/meta.json");
+    if (!await meta.exists()) return null;
+    try {
+      final decoded = jsonDecode(await meta.readAsString());
+      if (decoded is! Map || decoded["at"] is! int || decoded["profiles"] is! Map) return null;
+      final at = decoded["at"] as int;
+      if (_now() - at > HouseholdJoinReviewer.keptFor.inMilliseconds) {
+        await folder.delete(recursive: true);
+        return null;
+      }
+      return Map<String, dynamic>.from(decoded);
+    } on FormatException {
+      return null;
+    }
+  }
+
+  @override
+  Future<DateTime?> joinBackupAt() async {
+    final meta = await _joinBackupMeta();
+    return meta == null ? null : DateTime.fromMillisecondsSinceEpoch(meta["at"] as int);
+  }
+
+  @override
+  Future<bool> restoreJoinBackup() async {
+    // Not while a round is putting the household's in place
+    while (_running) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    _running = true;
+    try {
+      return await _restoreJoinBackup();
+    } finally {
+      _running = false;
+    }
+  }
+
+  Future<bool> _restoreJoinBackup() async {
+    final meta = await _joinBackupMeta();
+    // No copy of the looks here (it didn't finish): the pairings and PINs can still come back
+    if (meta == null) return _channel.restoreHouseholdJoinBackup();
+    final folder = await _joinBackupFolder();
+    final profiles = Map<String, dynamic>.from(meta["profiles"] as Map);
+    for (final entry in profiles.entries) {
+      final key = entry.key;
+      final i = entry.value;
+      final layout = File("${folder.path}/layout_$i.json");
+      if (await layout.exists()) {
+        final data = jsonDecode(await layout.readAsString());
+        if (data is Map) {
+          final live = _settings.layoutOwner == key;
+          await _backup.applySharedLayout(key, Map<String, dynamic>.from(data), _settings, live: live);
+          if (live) await _onLiveChanged();
+        }
+      }
+      for (final slot in ShareWallpapers.fileNames.keys) {
+        final picture = File("${folder.path}/picture_${i}_$slot");
+        if (await picture.exists()) {
+          await _wallpapers.write(key, {slot: await picture.readAsBytes()});
+        } else {
+          await _wallpapers.delete(key, slot);
+        }
+      }
+      await _onPicturesCopied(key);
+    }
+    // The pairings and PINs (a copy whose days are over on the Java side is just gone: the rest still came back)
+    await _channel.restoreHouseholdJoinBackup();
+    await folder.delete(recursive: true);
+    // What came back is the newest change of each item now, and goes out at once, the profiles not on screen too
+    final known = _known();
+    final installed = {for (final app in await _backup.installedApps()) app.packageName};
+    for (final key in profiles.keys) {
+      final state = _profiles[key];
+      if (state is Map) await _give(key, Map<String, dynamic>.from(state), known, installed);
+    }
+    await _saveKnown(known);
+    return true;
   }
 }

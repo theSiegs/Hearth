@@ -424,6 +424,125 @@
     "@householdJoinFailed": {
         "description": "Join dialog: the connection failed"
     },
+    "householdReviewTitle": "Before this TV joins",
+    "@householdReviewTitle": {
+        "description": "Join dialog, once allowed: title over what joining changes on this TV"
+    },
+    "householdReviewWaiting": "Getting your other TVs' settings…",
+    "@householdReviewWaiting": {
+        "description": "Join dialog, once allowed: waiting for the household's settings to arrive"
+    },
+    "householdReviewNotYet": "Your other TVs' settings haven't arrived yet. Keep the TV that let this one in turned on, or finish later in Household sync.",
+    "@householdReviewNotYet": {
+        "description": "Join dialog, once allowed: the household's settings haven't come after a while"
+    },
+    "householdReviewChanges": "These will change on this TV:",
+    "@householdReviewChanges": {
+        "description": "Join dialog: heading over the list of what joining changes"
+    },
+    "householdReviewProfile": "{name}: {changes}",
+    "@householdReviewProfile": {
+        "description": "Join dialog: one profile's line in the list of what changes",
+        "placeholders": {
+            "name": {"type": "String"},
+            "changes": {"type": "String"}
+        }
+    },
+    "householdReviewLook": "look",
+    "@householdReviewLook": {
+        "description": "Join dialog: a profile's look (wallpaper, theme, top bar) changes; part of a list"
+    },
+    "householdReviewLayout": "home layout",
+    "@householdReviewLayout": {
+        "description": "Join dialog: a profile's home layout (dock, rows, hidden apps) changes; part of a list"
+    },
+    "householdReviewPictures": "{count, plural, =1{1 wallpaper picture} other{{count} wallpaper pictures}}",
+    "@householdReviewPictures": {
+        "description": "Join dialog: how many of a profile's wallpaper pictures change; part of a list",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "householdReviewPairings": "{count, plural, =1{the profile picked in 1 streaming app} other{the profiles picked in {count} streaming apps}}",
+    "@householdReviewPairings": {
+        "description": "Join dialog: how many streaming apps get a different app profile for this person; part of a list",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "householdReviewPins": "{count, plural, =1{1 saved PIN} other{{count} saved PINs}}",
+    "@householdReviewPins": {
+        "description": "Join dialog: how many of a profile's saved streaming PINs change; part of a list",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "householdReviewTvPins": "{count, plural, =1{1 saved PIN for the whole TV} other{{count} saved PINs for the whole TV}}",
+    "@householdReviewTvPins": {
+        "description": "Join dialog: saved PINs that belong to no profile change",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "householdReviewParentPin": "The Parent PIN",
+    "@householdReviewParentPin": {
+        "description": "Join dialog: this TV takes the household's Parent PIN (it had none)"
+    },
+    "householdReviewKept": "A copy of this TV's settings is kept for 14 days. You can put them back in Settings > Family > Household sync.",
+    "@householdReviewKept": {
+        "description": "Join dialog: under the list of what changes"
+    },
+    "householdReviewUse": "Join and use these",
+    "@householdReviewUse": {
+        "description": "Join dialog: go on joining, taking the household's settings"
+    },
+    "householdReviewCancel": "Don't join",
+    "@householdReviewCancel": {
+        "description": "Join dialog: leave the household again; nothing on this TV changes"
+    },
+    "householdReviewLater": "Later",
+    "@householdReviewLater": {
+        "description": "Join dialog: decide later; the TV keeps its own settings until then"
+    },
+    "householdReviewFailed": "This TV's settings couldn't be copied, so nothing was changed. Try again.",
+    "@householdReviewFailed": {
+        "description": "Join dialog: keeping the copy before joining failed"
+    },
+    "householdReviewPending": "Finish joining",
+    "@householdReviewPending": {
+        "description": "Household page: this TV joined but hasn't taken the household's settings yet"
+    },
+    "householdReviewPendingHint": "See what changes on this TV before it takes your other TVs' settings",
+    "@householdReviewPendingHint": {
+        "description": "Household page: under Finish joining"
+    },
+    "householdRestore": "Put back this TV's settings from before it joined",
+    "@householdRestore": {
+        "description": "Household page: restore the copy kept when this TV joined"
+    },
+    "householdRestoreHint": "Kept until {date}",
+    "@householdRestoreHint": {
+        "description": "Household page: under the restore button, until when the copy is kept",
+        "placeholders": {
+            "date": {"type": "String"}
+        }
+    },
+    "householdRestoreBody": "The looks, home layouts, wallpapers, streaming profiles and saved PINs this TV had before it joined come back. They're the newest now, so your other TVs take them too, for the same people.",
+    "@householdRestoreBody": {
+        "description": "Household page: what restoring the copy from before joining does"
+    },
+    "householdRestoreConfirm": "Put back",
+    "@householdRestoreConfirm": {
+        "description": "Household page: confirm putting back the settings from before joining"
+    },
+    "householdRestoreDone": "This TV's settings from before it joined are back",
+    "@householdRestoreDone": {
+        "description": "Household page: the copy was put back"
+    },
+    "householdRestoreFailed": "The settings couldn't be put back",
+    "@householdRestoreFailed": {
+        "description": "Household page: putting back the copy failed"
+    },
     "householdStartAnyway": "Start a separate household instead",
     "@householdStartAnyway": {
         "description": "Household page: start a new household although one was found"

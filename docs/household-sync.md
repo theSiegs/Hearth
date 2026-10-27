@@ -210,12 +210,40 @@ A TV joins from its own screen, and someone allows it from the notification Bell
    Joining until step 2 is built), and a Home Assistant address and a new token of its own when the new TV has none.
    The new TV joins with it, and their first exchange lists it.
 5. **A TV that already has its own setup**: for an entry both have, the household's wins; settings only this TV has are
-   kept and synced out. A backup is kept before a profile first takes the household's look (see Look and layout); a
-   preview of what changes is not built yet.
+   kept and synced out. Before anything is replaced the new TV shows what will change and keeps a copy to put back
+   (see Before joining, below).
 
 The new TV never sends the Parent PIN, and nothing secret moves before the Allow. Denying, or no answer in five
 minutes (time to walk to the other TV and turn it on), ends it with nothing sent. A household TV answers one request at
 a time, and after one that wasn't allowed it ignores requests for 30 seconds, so a TV can't flood its Bell.
+
+**Before joining: what changes, and putting it back.** "The household wins" means a TV with its own setup loses
+things on joining, so it shows them first and keeps a copy:
+
+- **Held.** A TV that joined through a request (HouseholdJoining) is *reviewing* until someone decides. It is a
+  member and exchanges entries, but takes none of the household's settings and gives none of its own: no pairings or
+  PINs are applied or published (HouseholdBridge), and the app neither takes nor gives looks, layouts, pictures or the
+  Parent PIN. Continue Watching isn't held: it only adds the household's titles, it replaces nothing.
+- **Preview.** Once the first exchange has brought the household's entries, the join screen lists what would change,
+  per person and only where it differs from this TV: "These will change on this TV: Alex: look, home layout, 2
+  wallpaper pictures, the profiles picked in 3 streaming apps, 1 saved PIN", plus the Parent PIN when this TV has none
+  and the household has one (a different Parent PIN here is kept until it's entered, see Parent PIN), and saved PINs for
+  the whole TV. The Java side counts pairings and PINs (HouseholdJoinReview.changes); the app compares looks, layouts
+  (only the apps installed here count) and pictures. When nothing would change it goes on without asking.
+- **Join and use these** keeps the copy, then ends the hold: the household's entries are applied and the next round
+  takes its looks (the newest-change rule finds nothing here newer, so the household's win, as before). **Don't join**
+  leaves the household (see Leaving); nothing on this TV changed. **Later** closes the screen; the Household page
+  offers **Finish joining** until someone decides, and the TV stays held meanwhile. If the entries haven't come yet,
+  the screen says so (the TV that let this one in may have gone off).
+- **The copy.** The app keeps each listed profile's look and layout (the live one as its backup, the others' saved
+  layouts) and its wallpaper pictures in a folder of its own, and the Java side keeps every profile's Profile Pairing
+  choices and saved PINs (the TV's own too), sealed under a Keystore key as other secrets are. Kept 14 days, then
+  deleted. The usual Backup & Restore backup is still made too.
+- **Put back.** The Household page shows **Put back this TV's settings from before it joined** while the copy is kept
+  (asking for the Parent PIN where there is one). It restores the looks, layouts and pictures, and the pairings and
+  PINs this TV had, and deletes the copy. What the household added that this TV never had (a PIN for another app) stays:
+  taking it away would take it from every TV. The TV stays in the household, and what was put back is the newest
+  change, so the other TVs take it too for the same people; to keep a TV different, leave the household instead.
 
 **The first TV** makes its TV key and a one-TV member list during setup, so there is no "start a household" step. A TV
 on its own that hears a different household on the network still offers Join; **Start a separate household** only
@@ -393,8 +421,9 @@ receiving TV converts at once.
    the copy, conversion from version 1, leave and remove (a Remove action on the Household page's TV list). Unit tests
    for the channel (an outsider, a forged id, a spent invitation, a removed TV either way round), removal never losing,
    leaving, and conversion.
-2. **Joining from the new TV** (built, except the preview of what changes): the join request, the join code, phone
-   approval through the household TV, the on-screen fallback on its Household page, the first sync.
+2. **Joining from the new TV** (built): the join request, the join code, phone approval through the household TV, the
+   on-screen fallback on its Household page, the first sync, and the preview and copy before the household's settings
+   replace this TV's.
 3. **Look and layout, then wallpaper pictures** (built, every profile, kids' included).
 4. **Your TVs page and the setup step**; Copy profiles leaves Settings.
 5. **Home Assistant mailbox**, sealed per member.

@@ -476,6 +476,117 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdJoinFailed => 'That didn\'t work. Check that one of your other TVs is on, then try again.';
 
   @override
+  String get householdReviewTitle => 'Before this TV joins';
+
+  @override
+  String get householdReviewWaiting => 'Getting your other TVs\' settings…';
+
+  @override
+  String get householdReviewNotYet => 'Your other TVs\' settings haven\'t arrived yet. Keep the TV that let this one in turned on, or finish later in Household sync.';
+
+  @override
+  String get householdReviewChanges => 'These will change on this TV:';
+
+  @override
+  String householdReviewProfile(String name, String changes) {
+    return '$name: $changes';
+  }
+
+  @override
+  String get householdReviewLook => 'look';
+
+  @override
+  String get householdReviewLayout => 'home layout';
+
+  @override
+  String householdReviewPictures(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count wallpaper pictures',
+      one: '1 wallpaper picture',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String householdReviewPairings(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'the profiles picked in $count streaming apps',
+      one: 'the profile picked in 1 streaming app',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String householdReviewPins(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count saved PINs',
+      one: '1 saved PIN',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String householdReviewTvPins(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count saved PINs for the whole TV',
+      one: '1 saved PIN for the whole TV',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get householdReviewParentPin => 'The Parent PIN';
+
+  @override
+  String get householdReviewKept => 'A copy of this TV\'s settings is kept for 14 days. You can put them back in Settings > Family > Household sync.';
+
+  @override
+  String get householdReviewUse => 'Join and use these';
+
+  @override
+  String get householdReviewCancel => 'Don\'t join';
+
+  @override
+  String get householdReviewLater => 'Later';
+
+  @override
+  String get householdReviewFailed => 'This TV\'s settings couldn\'t be copied, so nothing was changed. Try again.';
+
+  @override
+  String get householdReviewPending => 'Finish joining';
+
+  @override
+  String get householdReviewPendingHint => 'See what changes on this TV before it takes your other TVs\' settings';
+
+  @override
+  String get householdRestore => 'Put back this TV\'s settings from before it joined';
+
+  @override
+  String householdRestoreHint(String date) {
+    return 'Kept until $date';
+  }
+
+  @override
+  String get householdRestoreBody => 'The looks, home layouts, wallpapers, streaming profiles and saved PINs this TV had before it joined come back. They\'re the newest now, so your other TVs take them too, for the same people.';
+
+  @override
+  String get householdRestoreConfirm => 'Put back';
+
+  @override
+  String get householdRestoreDone => 'This TV\'s settings from before it joined are back';
+
+  @override
+  String get householdRestoreFailed => 'The settings couldn\'t be put back';
+
+  @override
   String get householdStartAnyway => 'Start a separate household instead';
 
   @override

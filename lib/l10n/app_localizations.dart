@@ -933,6 +933,156 @@ abstract class AppLocalizations {
   /// **'That didn\'t work. Check that one of your other TVs is on, then try again.'**
   String get householdJoinFailed;
 
+  /// Join dialog, once allowed: title over what joining changes on this TV
+  ///
+  /// In en, this message translates to:
+  /// **'Before this TV joins'**
+  String get householdReviewTitle;
+
+  /// Join dialog, once allowed: waiting for the household's settings to arrive
+  ///
+  /// In en, this message translates to:
+  /// **'Getting your other TVs\' settings…'**
+  String get householdReviewWaiting;
+
+  /// Join dialog, once allowed: the household's settings haven't come after a while
+  ///
+  /// In en, this message translates to:
+  /// **'Your other TVs\' settings haven\'t arrived yet. Keep the TV that let this one in turned on, or finish later in Household sync.'**
+  String get householdReviewNotYet;
+
+  /// Join dialog: heading over the list of what joining changes
+  ///
+  /// In en, this message translates to:
+  /// **'These will change on this TV:'**
+  String get householdReviewChanges;
+
+  /// Join dialog: one profile's line in the list of what changes
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: {changes}'**
+  String householdReviewProfile(String name, String changes);
+
+  /// Join dialog: a profile's look (wallpaper, theme, top bar) changes; part of a list
+  ///
+  /// In en, this message translates to:
+  /// **'look'**
+  String get householdReviewLook;
+
+  /// Join dialog: a profile's home layout (dock, rows, hidden apps) changes; part of a list
+  ///
+  /// In en, this message translates to:
+  /// **'home layout'**
+  String get householdReviewLayout;
+
+  /// Join dialog: how many of a profile's wallpaper pictures change; part of a list
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 wallpaper picture} other{{count} wallpaper pictures}}'**
+  String householdReviewPictures(int count);
+
+  /// Join dialog: how many streaming apps get a different app profile for this person; part of a list
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{the profile picked in 1 streaming app} other{the profiles picked in {count} streaming apps}}'**
+  String householdReviewPairings(int count);
+
+  /// Join dialog: how many of a profile's saved streaming PINs change; part of a list
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 saved PIN} other{{count} saved PINs}}'**
+  String householdReviewPins(int count);
+
+  /// Join dialog: saved PINs that belong to no profile change
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 saved PIN for the whole TV} other{{count} saved PINs for the whole TV}}'**
+  String householdReviewTvPins(int count);
+
+  /// Join dialog: this TV takes the household's Parent PIN (it had none)
+  ///
+  /// In en, this message translates to:
+  /// **'The Parent PIN'**
+  String get householdReviewParentPin;
+
+  /// Join dialog: under the list of what changes
+  ///
+  /// In en, this message translates to:
+  /// **'A copy of this TV\'s settings is kept for 14 days. You can put them back in Settings > Family > Household sync.'**
+  String get householdReviewKept;
+
+  /// Join dialog: go on joining, taking the household's settings
+  ///
+  /// In en, this message translates to:
+  /// **'Join and use these'**
+  String get householdReviewUse;
+
+  /// Join dialog: leave the household again; nothing on this TV changes
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t join'**
+  String get householdReviewCancel;
+
+  /// Join dialog: decide later; the TV keeps its own settings until then
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get householdReviewLater;
+
+  /// Join dialog: keeping the copy before joining failed
+  ///
+  /// In en, this message translates to:
+  /// **'This TV\'s settings couldn\'t be copied, so nothing was changed. Try again.'**
+  String get householdReviewFailed;
+
+  /// Household page: this TV joined but hasn't taken the household's settings yet
+  ///
+  /// In en, this message translates to:
+  /// **'Finish joining'**
+  String get householdReviewPending;
+
+  /// Household page: under Finish joining
+  ///
+  /// In en, this message translates to:
+  /// **'See what changes on this TV before it takes your other TVs\' settings'**
+  String get householdReviewPendingHint;
+
+  /// Household page: restore the copy kept when this TV joined
+  ///
+  /// In en, this message translates to:
+  /// **'Put back this TV\'s settings from before it joined'**
+  String get householdRestore;
+
+  /// Household page: under the restore button, until when the copy is kept
+  ///
+  /// In en, this message translates to:
+  /// **'Kept until {date}'**
+  String householdRestoreHint(String date);
+
+  /// Household page: what restoring the copy from before joining does
+  ///
+  /// In en, this message translates to:
+  /// **'The looks, home layouts, wallpapers, streaming profiles and saved PINs this TV had before it joined come back. They\'re the newest now, so your other TVs take them too, for the same people.'**
+  String get householdRestoreBody;
+
+  /// Household page: confirm putting back the settings from before joining
+  ///
+  /// In en, this message translates to:
+  /// **'Put back'**
+  String get householdRestoreConfirm;
+
+  /// Household page: the copy was put back
+  ///
+  /// In en, this message translates to:
+  /// **'This TV\'s settings from before it joined are back'**
+  String get householdRestoreDone;
+
+  /// Household page: putting back the copy failed
+  ///
+  /// In en, this message translates to:
+  /// **'The settings couldn\'t be put back'**
+  String get householdRestoreFailed;
+
   /// Household page: start a new household although one was found
   ///
   /// In en, this message translates to:

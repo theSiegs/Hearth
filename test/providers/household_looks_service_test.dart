@@ -19,11 +19,19 @@ class _FakeChannel extends FLauncherChannel {
   int version = 1;
   final List<String> given = [];
 
+  /// Just joined, holding the household's settings; what the Java side says they change in pairings and PINs.
+  bool review = false;
+  Map<dynamic, dynamic>? javaPreview;
+  bool finished = false;
+  bool restored = false;
+  String? parentPinHash;
+
   @override
   Future<Map<dynamic, dynamic>?> getHouseholdLooks(int since) async {
-    if (since == version) return {"version": version};
+    if (since == version) return {"version": version, if (review) "review": true};
     return {
       "version": version,
+      if (review) "review": true,
       "profiles": {for (final e in profiles.entries) e.key: {...e.value, "wallpapers": {}}},
     };
   }
@@ -38,6 +46,24 @@ class _FakeChannel extends FLauncherChannel {
 
   @override
   Future<String?> publishHouseholdPicture(String profileKey, String slot, Uint8List? jpeg) async => "";
+
+  @override
+  Future<Map<dynamic, dynamic>?> getHouseholdJoinPreview() async => review ? javaPreview : null;
+
+  @override
+  Future<bool> finishHouseholdJoin() async {
+    finished = true;
+    review = false;
+    version++;
+    return true;
+  }
+
+  @override
+  Future<bool> restoreHouseholdJoinBackup() async => restored = true;
+
+  @override
+  Future<Map<dynamic, dynamic>?> getHouseholdParentPin() async =>
+      parentPinHash == null ? {"state": "none"} : {"state": "live", "hash": parentPinHash};
 }
 
 /// This TV's profiles: the live one's backup and the others' saved layouts, and what was put in place.
@@ -99,6 +125,7 @@ void main() {
   late _FakeChannel channel;
   late _FakeBackup backup;
   late HouseholdLooksService service;
+  late Directory copies;
   var now = 1000;
 
   setUp(() async {
@@ -109,11 +136,18 @@ void main() {
     database = FLauncherDatabase.inMemory();
     backup = _FakeBackup(database, prefs, settings, ["com.a.app"]);
     now = 1000;
+    copies = await Directory.systemTemp.createTemp("join_backup");
     service = HouseholdLooksService(channel, prefs, backup, settings, _NoPictures(channel),
-        onLiveChanged: () async {}, onPicturesCopied: (_) async {}, now: () => now);
+        onLiveChanged: () async {},
+        onPicturesCopied: (_) async {},
+        now: () => now,
+        joinBackupFolder: () async => Directory("${copies.path}/copy"));
   });
 
-  tearDown(() => database.close());
+  tearDown(() async {
+    await database.close();
+    await copies.delete(recursive: true);
+  });
 
   Map<String, dynamic> settingsOf(String key) => Map<String, dynamic>.from(backup.layouts[key]!["settings"] as Map);
 
@@ -178,5 +212,69 @@ void main() {
     await service.tick();
     expect(channel.given, containsAll(["user:0#sam look", "user:0#sam layout"]));
     expect(jsonDecode(channel.profiles["user:0#sam"]!["look"] as String)["accent_color"], "FF6D00");
+  });
+
+  group("before joining", () {
+    setUp(() {
+      channel.review = true;
+      channel.javaPreview = {
+        "profiles": [
+          {"key": "user:0", "name": "Alex", "kids": false, "pairings": 2, "pins": 1},
+        ],
+        "tvPins": 0,
+      };
+      backup.layouts["user:0"] = _backup({"accent_color": "00BFA5"});
+      channel.profiles["user:0"] = {
+        "look": HouseholdLooks.lookJson({"accent_color": "FF6D00"}),
+        "layout": HouseholdLooks.layoutJson(
+            SharedLayout.fromBackup(_backup({}), settingKeys: settings.settingKeys, lenient: true)),
+      };
+    });
+
+    test("nothing is taken or given while someone hasn't seen what joining changes", () async {
+      await service.tick();
+      expect(backup.applied, isEmpty);
+      expect(channel.given, isEmpty);
+    });
+
+    test("the preview lists what differs here: the look, not the same layout, and the Java side's counts", () async {
+      final preview = (await service.joinPreview())!;
+      final alex = preview.profiles.single;
+      expect(alex.name, "Alex");
+      expect(alex.look, isTrue);
+      expect(alex.layout, isFalse);
+      expect(alex.pairings, 2);
+      expect(alex.pins, 1);
+      expect(preview.parentPin, isFalse);
+      expect(preview.isEmpty, isFalse);
+      // The household has a Parent PIN and this TV none: it changes
+      channel.parentPinHash = "a" * 64;
+      expect((await service.joinPreview())!.parentPin, isTrue);
+    });
+
+    test("joining keeps a copy; putting it back restores the look, which then goes out as the newest", () async {
+      final preview = (await service.joinPreview())!;
+      expect(await service.finishJoin(preview), isTrue);
+      expect(channel.finished, isTrue);
+      expect(await service.joinBackupAt(), DateTime.fromMillisecondsSinceEpoch(1000));
+      await service.tick();
+      expect(settingsOf("user:0")["accent_color"], "FF6D00");
+
+      now = 5000;
+      expect(await service.restoreJoinBackup(), isTrue);
+      expect(channel.restored, isTrue);
+      expect(settingsOf("user:0")["accent_color"], "00BFA5");
+      final look = channel.profiles["user:0"]!["look"] as String;
+      expect(jsonDecode(look)["accent_color"], "00BFA5");
+      expect(HouseholdLooks.lookStamps(look)["accent_color"], 5000);
+      expect(await service.joinBackupAt(), isNull);
+    });
+
+    test("the copy is gone after 14 days", () async {
+      await service.finishJoin((await service.joinPreview())!);
+      now += const Duration(days: 15).inMilliseconds;
+      expect(await service.joinBackupAt(), isNull);
+      expect(await Directory("${copies.path}/copy").exists(), isFalse);
+    });
   });
 }

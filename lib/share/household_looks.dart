@@ -298,6 +298,20 @@ class HouseholdLooks {
 
   static int _max(int? a, int? b) => (a ?? 0) > (b ?? 0) ? a! : (b ?? 0);
 
+  // ---- What joining would change (docs/household-sync.md, "Before joining") ----
+
+  /// Whether taking the household's look ([household]) changes this TV's ([local]; null: it has none yet).
+  static bool lookDiffers(Map<String, Object> household, Map<String, Object>? local) =>
+      local == null || lookJson(household) != lookJson(local);
+
+  /// Whether taking the household's layout changes this TV's home: only what the household says about apps installed
+  /// here ([installed]) counts, and an app installed here that it doesn't mention stays as it is.
+  static bool layoutDiffers(SharedLayout household, SharedLayout? local, Set<String> installed) {
+    if (local == null) return true;
+    final mine = layoutItems(local, installed);
+    return layoutItems(household, installed).entries.any((item) => mine[item.key] != item.value);
+  }
+
   /// The profile's look and layout put back together from its entries, each taken from [local] when the household has
   /// none; null when a part is in neither (a profile this TV has no layout for yet).
   static SharedLayout? compose(Map<String, Object>? look, SharedLayout? layout, SharedLayout? local) {

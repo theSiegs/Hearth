@@ -21,8 +21,10 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/quiet_failure.dart';
+import 'package:flauncher/share/household_join.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
@@ -41,32 +43,139 @@ String householdTvNames(AppLocalizations l, List<String?> names) {
   return [...named, if (unnamed > 0) l.householdUnnamedTvs(unnamed)].join(", ");
 }
 
-/// Asks to join the household heard on the network, in a dialog that shows the code to check and follows the answer.
-/// True when this TV joined.
+/// Asks to join the household heard on the network, in a dialog that shows the code to check and follows the answer,
+/// then what joining changes on this TV before it does (docs/household-sync.md, "Before joining"). True when this TV
+/// joined (its own settings may still be held, when someone chose Later).
 Future<bool> joinNearbyHousehold(BuildContext context, FLauncherChannel channel) async {
   final joined = await showDialog<bool>(
       context: context, barrierDismissible: false, builder: (_) => _JoinDialog(channel: channel));
   return joined == true;
 }
 
+/// What joining changes, for a TV that joined and holds the household's settings (Finish joining). True when it went
+/// on or chose Later; false when it left again.
+Future<bool> reviewHouseholdJoin(BuildContext context, FLauncherChannel channel) async {
+  final joined = await showDialog<bool>(
+      context: context, barrierDismissible: false, builder: (_) => _JoinDialog(channel: channel, reviewOnly: true));
+  return joined != false;
+}
+
+/// One profile's line in what joining changes: "Alex: look, home layout, 1 saved PIN".
+String joinChangeLine(AppLocalizations l, JoinChange change) {
+  final parts = [
+    if (change.look) l.householdReviewLook,
+    if (change.layout) l.householdReviewLayout,
+    if (change.pictures > 0) l.householdReviewPictures(change.pictures),
+    if (change.pairings > 0) l.householdReviewPairings(change.pairings),
+    if (change.pins > 0) l.householdReviewPins(change.pins),
+  ];
+  return l.householdReviewProfile(change.name.isEmpty ? change.key : change.name, parts.join(", "));
+}
+
 class _JoinDialog extends StatefulWidget {
   final FLauncherChannel channel;
 
-  const _JoinDialog({required this.channel});
+  /// Already joined: only what changes is shown.
+  final bool reviewOnly;
+
+  const _JoinDialog({required this.channel, this.reviewOnly = false});
 
   @override
   State<_JoinDialog> createState() => _JoinDialogState();
 }
 
 class _JoinDialogState extends State<_JoinDialog> {
+  /// After this many looks (one a second) without the household's settings, the dialog says they haven't come.
+  static const int notYetAfter = 30;
+
   String _state = "connecting";
   String? _via;
   Timer? _timer;
 
+  // Once allowed: what joining changes
+  late final HouseholdJoinReviewer? _reviewer = context.read<HouseholdJoinReviewer?>();
+  int _looked = 0;
+  bool _notYet = false;
+  bool _checking = false;
+  bool _busy = false;
+  bool _copyFailed = false;
+  JoinPreview? _preview;
+
   @override
   void initState() {
     super.initState();
-    _begin();
+    if (widget.reviewOnly) {
+      _review();
+    } else {
+      _begin();
+    }
+  }
+
+  /// Joined: the household's settings are held here until someone sees what they change.
+  void _review() {
+    _timer?.cancel();
+    _state = "review";
+    _looked = 0;
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _pollReview());
+    _pollReview();
+  }
+
+  Future<void> _pollReview() async {
+    if (_checking || _preview != null) return;
+    _checking = true;
+    try {
+      final review = (await widget.channel.getHouseholdStatus())["review"];
+      if (!mounted) return;
+      // Not holding anything (it was settled elsewhere): nothing to show
+      if (review is! Map) {
+        _timer?.cancel();
+        Navigator.of(context).pop(true);
+        return;
+      }
+      if (review["ready"] != true) {
+        if (!_notYet && ++_looked > notYetAfter) setState(() => _notYet = true);
+        return;
+      }
+      final preview = await _reviewer?.joinPreview();
+      if (!mounted || preview == null) return;
+      _timer?.cancel();
+      if (preview.isEmpty) {
+        await _use(preview);
+      } else {
+        setState(() => _preview = preview);
+      }
+    } catch (err) {
+      noteFailure('household_page', err);
+    } finally {
+      _checking = false;
+    }
+  }
+
+  /// Join and use these: a copy is kept, then the household's settings come in.
+  Future<void> _use(JoinPreview preview) async {
+    setState(() => _busy = true);
+    final ok = _reviewer != null ? await _reviewer.finishJoin(preview) : await widget.channel.finishHouseholdJoin();
+    if (!mounted) return;
+    if (ok) {
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() {
+        _busy = false;
+        _copyFailed = true;
+      });
+    }
+  }
+
+  /// Don't join: this TV leaves again, nothing of it changed.
+  Future<void> _dontJoin() async {
+    _timer?.cancel();
+    setState(() => _busy = true);
+    try {
+      await widget.channel.leaveHousehold();
+    } catch (err) {
+      noteFailure('household_page', err);
+    }
+    if (mounted) Navigator.of(context).pop(false);
   }
 
   Future<void> _begin() async {
@@ -87,14 +196,14 @@ class _JoinDialogState extends State<_JoinDialog> {
   Future<void> _poll() async {
     try {
       final join = (await widget.channel.getHouseholdStatus())["join"];
-      if (!mounted || join is! Map) return;
+      if (!mounted || join is! Map || _state == "review") return;
       final state = join["state"] as String? ?? "none";
       setState(() {
         _state = state;
         _via = join["via"] as String?;
       });
       if (state != "connecting" && state != "waiting") _timer?.cancel();
-      if (state == "joined") Navigator.of(context).pop(true);
+      if (state == "joined") _review();
     } catch (err) {
       noteFailure('household_page', err);
     }
@@ -123,6 +232,7 @@ class _JoinDialogState extends State<_JoinDialog> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    if (_state == "review") return _buildReview(l, Theme.of(context).textTheme);
     final textTheme = Theme.of(context).textTheme;
     final waiting = _state == "waiting";
     final via = _via != null && _via!.isNotEmpty ? _via! : l.householdJoinViaAny;
@@ -148,6 +258,70 @@ class _JoinDialogState extends State<_JoinDialog> {
       ),
       actions: [
         TextButton(autofocus: true, onPressed: _cancel, child: Text(over ? l.close : l.cancel)),
+      ],
+    );
+  }
+
+  /// What joining changes here, or waiting for the household's settings to come.
+  Widget _buildReview(AppLocalizations l, TextTheme textTheme) {
+    final preview = _preview;
+    final body = <Widget>[];
+    if (preview == null) {
+      body.add(Row(children: [
+        const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+        const SizedBox(width: 16),
+        Expanded(child: Text(l.householdReviewWaiting, style: textTheme.bodyMedium)),
+      ]));
+      if (_notYet) {
+        body.addAll([const SizedBox(height: 12), Text(l.householdReviewNotYet, style: textTheme.bodySmall)]);
+      }
+    } else {
+      body.addAll([
+        Text(l.householdReviewChanges, style: textTheme.bodyMedium),
+        const SizedBox(height: 8),
+        for (final change in preview.changed)
+          Padding(
+            padding: const EdgeInsets.only(left: 12, bottom: 4),
+            child: Text(joinChangeLine(l, change), style: textTheme.bodyMedium),
+          ),
+        if (preview.parentPin)
+          Padding(
+            padding: const EdgeInsets.only(left: 12, bottom: 4),
+            child: Text(l.householdReviewParentPin, style: textTheme.bodyMedium),
+          ),
+        if (preview.tvPins > 0)
+          Padding(
+            padding: const EdgeInsets.only(left: 12, bottom: 4),
+            child: Text(l.householdReviewTvPins(preview.tvPins), style: textTheme.bodyMedium),
+          ),
+        const SizedBox(height: 12),
+        Text(l.householdReviewKept, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
+      ]);
+    }
+    if (_copyFailed) {
+      body.addAll([const SizedBox(height: 12), Text(l.householdReviewFailed, style: textTheme.bodySmall)]);
+    }
+    return AlertDialog(
+      title: Text(l.householdReviewTitle),
+      content: SizedBox(
+        width: 520,
+        child: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: body),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: _busy ? null : _dontJoin, child: Text(l.householdReviewCancel)),
+        TextButton(
+          autofocus: preview == null,
+          onPressed: _busy ? null : () => Navigator.of(context).pop(true),
+          child: Text(l.householdReviewLater),
+        ),
+        if (preview != null)
+          TextButton(
+            autofocus: true,
+            onPressed: _busy ? null : () => _use(preview),
+            child: Text(l.householdReviewUse),
+          ),
       ],
     );
   }
@@ -239,6 +413,41 @@ class _HouseholdPageState extends State<HouseholdPage> {
     await _refresh();
   }
 
+  /// Joined, and the household's settings held: what they change, then going on (or leaving again).
+  Future<void> _finishJoining() async {
+    await reviewHouseholdJoin(context, _channel);
+    await _refresh();
+  }
+
+  /// This TV's settings from before it joined come back (with the parent PIN where there is one).
+  Future<void> _restore() async {
+    final l = AppLocalizations.of(context)!;
+    final textTheme = Theme.of(context).textTheme;
+    final reviewer = context.read<HouseholdJoinReviewer?>();
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l.householdRestore),
+        content: SizedBox(width: 460, child: Text(l.householdRestoreBody, style: textTheme.bodyMedium)),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l.householdRestoreConfirm)),
+          TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(false), child: Text(l.cancel)),
+        ],
+      ),
+    );
+    if (go != true || !mounted || !await _allowed()) return;
+    var done = false;
+    try {
+      done = reviewer != null ? await reviewer.restoreJoinBackup() : await _channel.restoreHouseholdJoinBackup();
+    } catch (err) {
+      noteFailure('household_page', err);
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.maybeOf(context)
+        ?.showSnackBar(SnackBar(content: Text(done ? l.householdRestoreDone : l.householdRestoreFailed)));
+    await _refresh();
+  }
+
   /// Another TV's card: how it's doing, and taking it out of the household (with the parent PIN where there is one).
   Future<void> _openMember(AppLocalizations l, Map<dynamic, dynamic> member) async {
     final tvId = member["tvId"];
@@ -295,6 +504,8 @@ class _HouseholdPageState extends State<HouseholdPage> {
     final enabled = _status["enabled"] != false;
     final last = _status["lastResult"] as String?;
     final asking = _status["asking"] as String?;
+    final reviewing = _status["review"] is Map;
+    final backupAt = (_status["joinBackupAt"] as num?)?.toInt() ?? 0;
     final members = [for (final m in (_status["members"] as List?) ?? const []) if (m is Map) m];
     final others = members.where((m) => m["self"] != true).toList();
     final nearby = householdsNearby(_status);
@@ -364,11 +575,20 @@ class _HouseholdPageState extends State<HouseholdPage> {
             ),
           note(l.householdAddHint),
         ] else ...[
+          // Joined, and still holding the household's settings until someone sees what they change
+          if (reviewing)
+            FocusableSettingsTile(
+              autofocus: true,
+              leading: const Icon(Icons.fact_check_outlined, color: Colors.amber),
+              title: twoLines(l.householdReviewPending, l.householdReviewPendingHint),
+              trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+              onPressed: _finishJoining,
+            ),
           // The household's TVs first: this one, then the others, those on now first
           heading(l.householdMembers),
           for (final member in members)
             FocusableSettingsTile(
-              autofocus: member == (others.isNotEmpty ? others.first : null),
+              autofocus: !reviewing && member == (others.isNotEmpty ? others.first : null),
               leading: Icon(Icons.tv, color: member["self"] == true || member["online"] == true ? null : Colors.white38),
               title: Text((member["name"] as String?) ?? l.householdUnnamedTvs(1), style: textTheme.bodyMedium),
               trailing: Text(memberStatus(l, member), style: textTheme.bodySmall),
@@ -383,7 +603,7 @@ class _HouseholdPageState extends State<HouseholdPage> {
             ),
           const SizedBox(height: 8),
           FocusableSettingsTile(
-            autofocus: others.isEmpty,
+            autofocus: !reviewing && others.isEmpty,
             leading: const Icon(Icons.sync),
             title: last != null && last.isNotEmpty
                 ? twoLines(l.householdSwitch, l.householdLast(last))
@@ -396,6 +616,16 @@ class _HouseholdPageState extends State<HouseholdPage> {
             title: Text(l.householdSyncNow, style: textTheme.bodyMedium),
             onPressed: enabled ? () => _channel.syncHouseholdNow() : null,
           ),
+          // The copy of this TV's settings from before it joined, while it's kept
+          if (backupAt > 0)
+            FocusableSettingsTile(
+              leading: const Icon(Icons.settings_backup_restore),
+              title: twoLines(
+                  l.householdRestore,
+                  l.householdRestoreHint(DateFormat.yMMMd(Localizations.localeOf(context).toString()).format(
+                      DateTime.fromMillisecondsSinceEpoch(backupAt).add(HouseholdJoinReviewer.keptFor)))),
+              onPressed: _restore,
+            ),
           const Divider(),
           note(l.householdAddHint),
           FocusableSettingsTile(

@@ -420,6 +420,11 @@ public class MainActivity extends FlutterActivity {
                 HouseholdJoining.cancel();
                 result.success(null);
             }
+            // Just joined: what the household's settings change here, going on, and putting this TV's back later
+            case "getHouseholdJoinPreview" -> answerFrom(sIoExecutor, result, () -> Household.joinPreview(this));
+            case "finishHouseholdJoin" -> answerFrom(sIoExecutor, result, () -> Household.finishJoin(this));
+            case "restoreHouseholdJoinBackup" -> answerFrom(sIoExecutor, result,
+                    () -> Household.restoreJoinBackup(this));
             // A parent answered, on this TV, another TV's request to join
             // Looks, layouts and wallpapers: the household's for this TV's profiles, and the live profile's for it
             case "getHouseholdLooks" -> answerFrom(sIoExecutor, result, () -> {
