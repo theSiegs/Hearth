@@ -175,7 +175,7 @@ class PersonGroupToday(HearthPersonEntity, SensorEntity):
 
     @property
     def native_value(self) -> int:
-        return _minutes(self.day.groups.get(self.group.id, 0.0)) if self.day else 0
+        return _minutes(self.day.groups.get(self.budget_group.id, 0.0)) if self.day else 0
 
 
 class PersonMinutesLeft(HearthPersonEntity, SensorEntity):
@@ -187,12 +187,12 @@ class PersonMinutesLeft(HearthPersonEntity, SensorEntity):
 
     @property
     def native_value(self) -> int | None:
-        state = self.day.limits.get(self.group.id) if self.day else None
+        state = self.day.limits.get(self.budget_group.id) if self.day else None
         return state.minutes_left if state else None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        state = self.day.limits.get(self.group.id) if self.day else None
+        state = self.day.limits.get(self.budget_group.id) if self.day else None
         if state is None:
             return {}
         return {"budget": state.budget_min, "bonus": state.bonus_min, "counted": int(state.counted_min)}

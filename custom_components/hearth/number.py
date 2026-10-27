@@ -46,12 +46,12 @@ class Budget(HearthPersonEntity, NumberEntity):
 
     @property
     def native_value(self) -> float:
-        minutes = self.hub.household.limits.budget(self.person, self.group.id, self.kind)
+        minutes = self.hub.household.limits.budget(self.person, self.budget_group.id, self.kind)
         return NO_LIMIT if minutes is None else minutes
 
     async def async_set_native_value(self, value: float) -> None:
         minutes = None if value < 0 else int(value)
-        self.hub.household.set_budget(self.person, self.group.id, self.kind, minutes)
+        self.hub.household.set_budget(self.person, self.budget_group.id, self.kind, minutes)
 
 
 class Bonus(HearthPersonEntity, NumberEntity):
@@ -69,7 +69,7 @@ class Bonus(HearthPersonEntity, NumberEntity):
 
     @property
     def native_value(self) -> float:
-        return self.hub.household.limits.bonus(self.person, self.group.id)
+        return self.hub.household.limits.bonus(self.person, self.budget_group.id)
 
     async def async_set_native_value(self, value: float) -> None:
-        self.hub.household.set_bonus(self.person, self.group.id, int(value))
+        self.hub.household.set_bonus(self.person, self.budget_group.id, int(value))

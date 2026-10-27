@@ -88,7 +88,8 @@ class HearthPersonEntity(Entity):
     def __init__(self, hub: HearthHub, person: str, key: str, group: Group | None = None) -> None:
         self.hub = hub
         self.person = person
-        self.group = group
+        # Not "group": Home Assistant's own entity attribute
+        self.budget_group = group
         suffix = f"_{group.id}" if group else ""
         self._attr_unique_id = f"{hub.entry.entry_id}_{person}_{key}{suffix}"
         if group is not None:
