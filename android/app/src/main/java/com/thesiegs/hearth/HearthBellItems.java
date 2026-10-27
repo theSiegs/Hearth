@@ -67,7 +67,7 @@ final class HearthBellItems {
     private static String[] haTexts(Context context) {
         String own = HouseholdJoining.haQuestion();
         String[] other = own == null ? HouseholdJoining.otherHaQuestion() : null;
-        if (own == null && other == null) return null;
+        if (own == null && (other == null || !listed(context, other[0]))) return null;
         String title = own != null ? context.getString(R.string.household_join_ha_title, own)
                 : context.getString(R.string.household_join_ha_title_other, other[1], other[2]);
         return new String[] {context.getString(R.string.household_join_bell_app), title,
@@ -93,6 +93,14 @@ final class HearthBellItems {
     static void popUp(Context context, HouseholdNotices.Notice n) {
         String[] shown = texts(context, n);
         LauncherNotificationListenerService.popUpHearthItem(shown[0], shown[1], shown[2]);
+    }
+
+    /** Whether another TV's join request {@code item} still waits in this TV's Bell (it ends when that TV's does). */
+    private static boolean listed(Context context, String item) {
+        for (HouseholdNotices.Notice n : Household.notices(context)) {
+            if (n.isJoin() && n.item.equals(item)) return true;
+        }
+        return false;
     }
 
     /** Adds Hearth's items to the Bell's list, in its form; a kids profile sees only what is for that kid. */

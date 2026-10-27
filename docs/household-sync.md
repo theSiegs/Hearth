@@ -221,8 +221,11 @@ A TV joins from its own screen, and someone allows it from the notification Bell
    (see Before joining, below).
 
 The new TV never sends the Parent PIN, and nothing secret moves before the Allow. Denying, or no answer in five
-minutes (time to walk to the other TV and turn it on), ends it with nothing sent. A household TV answers one request at
-a time, and after one that wasn't allowed it ignores requests for 30 seconds, so a TV can't flood its Bell.
+minutes (time to walk to the other TV and turn it on), ends it with nothing sent; so does the new TV hanging up (backing
+out, or going off): the asked TV sees the connection close within a second and takes the request out of every Bell. A
+household TV answers one request at a time, and after one that wasn't allowed it ignores requests for 30 seconds, and
+requests from that address for longer each time one in a row isn't allowed (30 seconds, then a minute, two, and so on
+up to an hour; a day without one, or one allowed, starts it over), so a device can't keep the Bells full.
 
 **Before joining: what changes, and putting it back.** "The household wins" means a TV with its own setup loses
 things on joining, so it shows them first and keeps a copy:
@@ -457,6 +460,7 @@ What a TV checks before it takes part or takes something, and what that guards a
 - **Joining.** The join code binds the session between the two TVs and is shown on both: the new TV's screen and the
   request in the household's Bells (and its Allow dialog). No PIN: whoever answers is trusted to compare the code.
   Nothing secret moves before Allow, and the Home Assistant connection only after its own question, answered yes.
+  A request ends when the asking TV hangs up, and one address asking again and again waits longer each time.
 - **Member, removal and Parent PIN entries are signed.** Each carries its writer's signature (ECDSA with its TV key,
   over every field of the entry: kind, person, item, value, clock, writer and sequence). A TV takes one only when its
   writer is on its member list at that moment (not unknown, not removed) and the signature checks against the writer's

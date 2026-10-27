@@ -81,41 +81,61 @@ final class HouseholdJoining {
 
     // ---- On a TV of the household ----
 
+    /** Requests from each address, so one that keeps asking waits longer each time (COOLDOWNS). */
+    private static final Cooldowns COOLDOWNS = new Cooldowns();
+
     /** Serves a join request that has said HouseholdJoin.MAGIC (already read from {@code in}). Closes the socket. */
     static void serve(Context context, Socket socket, InputStream in) {
+        java.net.InetAddress address = socket.getInetAddress();
+        String from = address == null ? "" : address.getHostAddress();
+        boolean serving = false;
+        boolean allowed = false;
         try (Socket s = socket) {
             synchronized (HouseholdJoining.class) {
-                if (sServing || SystemClock.elapsedRealtime() < sServedUntil) {
+                long now = SystemClock.elapsedRealtime();
+                if (sServing || now < sServedUntil || COOLDOWNS.waiting(from, now)) {
                     Log.i(TAG, "A join request came while another was being answered, or too soon after one");
                     return;
                 }
                 sServing = true;
+                serving = true;
             }
             s.setSoTimeout((int) (ANSWER_MS + HA_ANSWER_MS) + 30_000);
-            boolean allowed = HouseholdJoin.serve(in, s.getOutputStream(), host(context));
+            // Read through this, so the wait for an answer ends when the asking TV hangs up
+            Watched watched = new Watched(in, s);
+            allowed = HouseholdJoin.serve(watched, s.getOutputStream(), host(context, watched));
             Log.i(TAG, allowed ? "A TV was allowed to join the household" : "A TV asked to join and wasn't allowed");
-            synchronized (HouseholdJoining.class) {
-                if (!allowed) sServedUntil = SystemClock.elapsedRealtime() + COOLDOWN_MS;
-            }
         } catch (IOException | java.security.GeneralSecurityException e) {
             Log.i(TAG, "A join request ended: " + e.getClass().getSimpleName());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } finally {
-            synchronized (HouseholdJoining.class) {
-                sServing = false;
-                sRequestName = null;
-                sRequestCode = null;
-                sRequestId = null;
-                sScreenAnswer = null;
-                sHaAsking = false;
-                sHaAnswer = null;
-                sGiveHa = false;
-            }
+            if (serving) finishServing(from, allowed);
         }
     }
 
-    private static HouseholdJoin.Host host(Context context) {
+    /** The request this TV was answering ended: its state goes, and one not allowed holds off the next. */
+    private static void finishServing(String from, boolean allowed) {
+        synchronized (HouseholdJoining.class) {
+            long now = SystemClock.elapsedRealtime();
+            if (allowed) {
+                COOLDOWNS.allowed(from);
+            } else {
+                sServedUntil = now + COOLDOWN_MS;
+                COOLDOWNS.refused(from, now);
+            }
+            sServing = false;
+            sRequestName = null;
+            sRequestCode = null;
+            sRequestId = null;
+            sScreenAnswer = null;
+            sHaAsking = false;
+            sHaAnswer = null;
+            sGiveHa = false;
+        }
+    }
+
+    private static HouseholdJoin.Host host(Context context, Watched asking) {
         return new HouseholdJoin.Host() {
             @Override
             public boolean approve(String name, String code, boolean wantsHa) throws InterruptedException {
@@ -149,6 +169,11 @@ final class HouseholdJoining {
                                 break;
                             }
                         }
+                        // The asking TV gave up (backed out, or went off): the request ends, everywhere
+                        if (asking.gone()) {
+                            Log.i(TAG, "The TV asking to join hung up");
+                            break;
+                        }
                         Thread.sleep(500);
                     }
                 } finally {
@@ -163,8 +188,8 @@ final class HouseholdJoining {
                 if (!allowed) return false;
                 // Within what a TV of an older build waits for the answer (five minutes and a half)
                 long left = deadline + 25_000 - SystemClock.elapsedRealtime();
-                if (offersHa && left > 0) askAboutHa(context, joiner, Math.min(HA_ANSWER_MS, left));
-                return true;
+                if (offersHa && left > 0) askAboutHa(context, joiner, Math.min(HA_ANSWER_MS, left), asking);
+                return !asking.gone();
             }
 
             @Override
@@ -196,7 +221,8 @@ final class HouseholdJoining {
      * Allow was chosen: asks, on its own and with no as the default, whether the new TV also gets this TV's Home
      * Assistant connection, for up to {@code waitMs}. An Allow from another TV of the household says already.
      */
-    private static void askAboutHa(Context context, String joiner, long waitMs) throws InterruptedException {
+    private static void askAboutHa(Context context, String joiner, long waitMs, Watched asking)
+            throws InterruptedException {
         synchronized (HouseholdJoining.class) {
             if (sHaAnswer != null) {
                 sGiveHa = sHaAnswer;
@@ -213,6 +239,7 @@ final class HouseholdJoining {
                 synchronized (HouseholdJoining.class) {
                     if (sHaAnswer != null) break;
                 }
+                if (asking.gone()) break;
                 Thread.sleep(500);
             }
         } finally {
@@ -282,6 +309,125 @@ final class HouseholdJoining {
         }
         HearthBellItems.haQuestionChanged(context, null);
         return Household.answerJoin(context, item, true, give);
+    }
+
+    /**
+     * The asking TV's connection, read through while it waits: {@link #gone} tells whether it hung up, without losing
+     * what it sent meanwhile (its confirmation, which the session reads after the answer). It isn't let send much while
+     * waiting.
+     */
+    static final class Watched extends InputStream {
+        /** What a waiting TV may send before it counts as gone: its confirmation is a fraction of this. */
+        static final int MAX_AHEAD = 4096;
+        private static final int PEEK_MS = 50;
+        private final InputStream in;
+        private final Socket socket;
+        private final java.io.ByteArrayOutputStream ahead = new java.io.ByteArrayOutputStream();
+        private byte[] buffered = new byte[0];
+        private int pos;
+        private boolean ended;
+
+        Watched(InputStream in, Socket socket) {
+            this.in = in;
+            this.socket = socket;
+        }
+
+        /** Whether the other end hung up (or sent more than a waiting TV would). Looks for a moment, at most. */
+        boolean gone() {
+            if (ended || socket.isClosed()) return true;
+            int timeout;
+            try {
+                timeout = socket.getSoTimeout();
+            } catch (java.net.SocketException e) {
+                return true;
+            }
+            try {
+                socket.setSoTimeout(PEEK_MS);
+                byte[] chunk = new byte[512];
+                int n = in.read(chunk);
+                if (n < 0) {
+                    ended = true;
+                    return true;
+                }
+                keep(chunk, n);
+                return buffered.length - pos > MAX_AHEAD;
+            } catch (java.net.SocketTimeoutException e) {
+                return false;
+            } catch (IOException e) {
+                ended = true;
+                return true;
+            } finally {
+                try {
+                    socket.setSoTimeout(timeout);
+                } catch (java.net.SocketException ignored) {
+                }
+            }
+        }
+
+        private void keep(byte[] chunk, int n) {
+            ahead.reset();
+            ahead.write(buffered, pos, buffered.length - pos);
+            ahead.write(chunk, 0, n);
+            buffered = ahead.toByteArray();
+            pos = 0;
+        }
+
+        @Override
+        public int read() throws IOException {
+            if (pos < buffered.length) return buffered[pos++] & 0xff;
+            return ended ? -1 : in.read();
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            if (len == 0) return 0;
+            if (pos < buffered.length) {
+                int n = Math.min(len, buffered.length - pos);
+                System.arraycopy(buffered, pos, b, off, n);
+                pos += n;
+                return n;
+            }
+            return ended ? -1 : in.read(b, off, len);
+        }
+
+        @Override
+        public int available() throws IOException {
+            return buffered.length - pos + (ended ? 0 : in.available());
+        }
+    }
+
+    /**
+     * How long each address waits before its next join request is served: nothing at first, then
+     * {@link #FIRST_MS}, doubling with each request in a row that wasn't allowed, up to {@link #MOST_MS}. A day
+     * without one starts it over; an allowed one clears it. Times are SystemClock.elapsedRealtime's.
+     */
+    static final class Cooldowns {
+        static final long FIRST_MS = 30_000;
+        static final long MOST_MS = 60 * 60_000;
+        static final long FORGET_MS = 24L * 60 * 60_000;
+        /** Addresses remembered at most: the oldest goes first. */
+        static final int MAX_ADDRESSES = 256;
+        /** {requests not allowed in a row, until when the next waits, when the last ended}, by address. */
+        private final Map<String, long[]> byAddress = new LinkedHashMap<>();
+
+        synchronized boolean waiting(String address, long now) {
+            long[] a = byAddress.get(address);
+            return a != null && now < a[1];
+        }
+
+        synchronized void refused(String address, long now) {
+            long[] a = byAddress.remove(address);
+            if (a == null || now - a[2] > FORGET_MS) a = new long[3];
+            a[0]++;
+            a[1] = now + Math.min(MOST_MS, FIRST_MS << Math.min(a[0] - 1, 20));
+            a[2] = now;
+            byAddress.put(address, a);
+            while (byAddress.size() > MAX_ADDRESSES) byAddress.remove(byAddress.keySet().iterator().next());
+        }
+
+        synchronized void allowed(String address) {
+            byAddress.remove(address);
+        }
     }
 
     /** The new TV's token's name in Home Assistant: unique (Home Assistant refuses a name twice). */
