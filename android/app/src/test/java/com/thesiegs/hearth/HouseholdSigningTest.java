@@ -203,4 +203,65 @@ public class HouseholdSigningTest {
         assertEquals(0, again[0].sent);
         assertEquals(0, again[1].sent);
     }
+
+    @Test
+    public void aTvsOwnEntryForATvNotKnownHereIsTakenOnlyFromTheTvThatLetThisOneIn() throws Exception {
+        Key here = new Key();
+        Key inviter = new Key();
+        Key other = new Key();
+        list(here, inviter, true);
+        // other's own entry, written again (renamed, or a day on): it replaced the one its adder wrote
+        HouseholdEntry own = member(other, other, inviter.id, true, T0 + 1);
+        assertFalse(HouseholdMembers.accepts(here.log, own));
+        assertFalse(HouseholdMembers.accepts(here.log, own, false));
+        assertTrue(HouseholdMembers.accepts(here.log, own, true));
+        // but never one signed with another key, unsigned, or not saying it signs
+        Key forger = new Key();
+        HouseholdEntry forgerSigned = forger.log.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, other.id,
+                own.value, T0 + 1);
+        HouseholdEntry forged = new HouseholdEntry(own.kind, own.profile, own.item, own.value, own.clock, own.tv,
+                own.seq, own.deleted).signed(forgerSigned.sig);
+        assertFalse(HouseholdMembers.accepts(here.log, forged, true));
+        assertFalse(HouseholdMembers.accepts(here.log, own.signed(""), true));
+        HouseholdLog oldLog = new HouseholdLog(other.id);
+        assertFalse(HouseholdMembers.accepts(here.log, oldLog.put(HouseholdMembers.KIND, HouseholdBridge.SHARED,
+                other.id, HouseholdMembers.value("TV", other.pub(), inviter.id), T0 + 2), true));
+        // nor one for a TV removed here, nor another TV's entry for it (that's an admission, by a listed TV only)
+        Key removed = new Key();
+        here.log.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, removed.id,
+                HouseholdMembers.value("TV", removed.pub(), here.id, true), T0);
+        here.log.delete(HouseholdMembers.KIND, HouseholdBridge.SHARED, removed.id, T0 + 1);
+        assertFalse(HouseholdMembers.accepts(here.log, member(removed, removed, inviter.id, true, T0 + 5), true));
+        Key stranger = new Key();
+        assertFalse(HouseholdMembers.accepts(here.log, member(stranger, other, stranger.id, true, T0 + 6), true));
+    }
+
+    @Test
+    public void aTvThatJoinsListsTheTvsThatWroteTheirOwnEntriesSinceTheyWereAdded() throws Exception {
+        HouseholdTvs.Tv a = new HouseholdTvs.Tv();
+        a.store.create("Office", T0);
+        HouseholdTvs.Tv c = new HouseholdTvs.Tv();
+        assertTrue(c.store.join(a.store.invite("Office", T0), "Attic", T0));
+        HouseholdSyncExchangeTest.exchange(c.store, a.store, null, T0 + 100);
+        // A day on, each TV writes its own entry again, which replaces the one a wrote when it let c in
+        long day = T0 + HouseholdMembers.REFRESH_MS + 1000;
+        assertTrue(c.store.publishSelf("Attic", day));
+        assertTrue(a.store.publishSelf("Office", day));
+        HouseholdSyncExchangeTest.exchange(c.store, a.store, null, day + 100);
+        c.store.log().put(HouseholdBridge.PARENT_PIN, HouseholdBridge.SHARED, "", "hash", day + 150);
+        HouseholdSyncExchangeTest.exchange(c.store, a.store, null, day + 160);
+        // A new TV, let in by a: its first exchange lists every TV, c too, and takes what c signed
+        HouseholdTvs.Tv n = new HouseholdTvs.Tv();
+        assertTrue(n.store.join(a.store.invite("Office", day + 200), "Kitchen", day + 200));
+        HouseholdSyncExchangeTest.exchange(n.store, a.store, null, day + 300);
+        assertEquals(HouseholdMembers.Standing.MEMBER, HouseholdMembers.standing(n.store.log(), c.store.tvId()));
+        assertEquals("hash", n.store.log().get(HouseholdBridge.PARENT_PIN, HouseholdBridge.SHARED, "").value);
+        assertEquals(3, HouseholdMembers.list(n.store.log().all(), new java.util.HashMap<>(), new java.util.HashMap<>(),
+                n.store.tvId(), "Kitchen", day + 300).size());
+        // once c hears of n from a, the two sync with each other
+        HouseholdSyncExchangeTest.exchange(c.store, a.store, null, day + 400);
+        HouseholdSyncExchangeTest.exchange(n.store, c.store, null, day + 500);
+        assertEquals(3, HouseholdMembers.list(c.store.log().all(), new java.util.HashMap<>(), new java.util.HashMap<>(),
+                c.store.tvId(), "Attic", day + 500).size());
+    }
 }

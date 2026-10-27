@@ -329,12 +329,14 @@ final class HouseholdSync {
      */
     private void mergeChecked(List<HouseholdEntry> checked, List<HouseholdEntry> applied) {
         checked.sort((a, b) -> Long.compare(a.clock, b.clock));
+        // The TV that let this one in, in their first exchange: the TVs it lists by their own entries are taken too
+        boolean fromInviter = store.invitedBy(peer);
         boolean progress = true;
         while (progress && !checked.isEmpty()) {
             progress = false;
             for (java.util.Iterator<HouseholdEntry> it = checked.iterator(); it.hasNext();) {
                 HouseholdEntry entry = it.next();
-                if (!HouseholdMembers.accepts(store.log(), entry)) continue;
+                if (!HouseholdMembers.accepts(store.log(), entry, fromInviter)) continue;
                 it.remove();
                 progress = true;
                 if (store.log().merge(entry, now)) applied.add(entry);

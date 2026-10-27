@@ -421,6 +421,11 @@ final class HouseholdStore {
         return SecretBox.open(keys, INVITES_ALIAS, backing.get(JOIN_PROOF_SEALED));
     }
 
+    /** Whether {@code peer} is the TV that let this one join and they haven't finished an exchange yet. */
+    boolean invitedBy(String peer) {
+        return peer != null && peer.equals(backing.get(JOIN_PROOF_FOR)) && backing.get(JOIN_PROOF_SEALED) != null;
+    }
+
     /** The inviting TV has listed this one: the invitation's secret is no longer needed. */
     void joinProofUsed() {
         backing.remove(JOIN_PROOF_SEALED);

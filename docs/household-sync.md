@@ -532,6 +532,12 @@ What a TV checks before it takes part or takes something, and what that guards a
   its own making in its own name. Such a TV shows on Your TVs (named, added by that member) and is removed there like
   any other; removing the member that added it doesn't remove it by itself, since that would also remove the TVs it
   rightly let in.
+- **A TV's own entry, to a TV that just joined.** A TV writes its own `member` entry again when renamed and once a day
+  (Members), and that replaces the admission its adder wrote. So a TV that joins later would find each such TV's entry
+  written by a TV it doesn't list yet, refuse it, and neither list that TV nor sync with it. In the first exchange
+  with the TV that let it in (whom it trusts with the whole household already), a joining TV also takes a TV's own
+  entry for a TV it holds nothing of: signed with the key the entry carries (the key its id was made from), and saying
+  it signs. From any other TV, or once that first exchange is done, the rule above holds.
 - **An entry refused** is still counted as seen, so it isn't sent again and again; it never changes anything.
 - **Sequences in another TV's name.** Entries travel through any member, so a TV takes entries written by TVs it isn't
   talking to, and counts each one's sequence in its version vector. A member could hand on an entry in another TV's
