@@ -1505,7 +1505,7 @@ public class MainActivity extends FlutterActivity {
 
     private boolean dismissNotification(String key) {
         LauncherNotificationListenerService service = LauncherNotificationListenerService.getInstance();
-        if (HearthBellItems.owns(key)) return HearthBellItems.dismiss(key);
+        if (HearthBellItems.owns(key)) return HearthBellItems.dismiss(this, key);
         if (service == null || key == null) {
             return false;
         }
@@ -1535,6 +1535,8 @@ public class MainActivity extends FlutterActivity {
     }
 
     private boolean dismissAllNotifications() {
+        // The household's notifications on screen go from every TV (a TV asking to join stays, to be answered)
+        HearthBellItems.clearAll(this);
         LauncherNotificationListenerService service = LauncherNotificationListenerService.getInstance();
         if (service == null) {
             return false;

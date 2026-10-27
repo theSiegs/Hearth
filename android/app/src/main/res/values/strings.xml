@@ -4,6 +4,8 @@
     <!-- Home Assistant notifications over whatever is playing (HaNotificationOverlay) -->
     <string name="ha_notification_close">Close</string>
     <string name="ha_notification_test_message">Test notification from Hearth</string>
+    <!-- The name Home Assistant's notifications show under in the notification Bell (HearthBellItems) -->
+    <string name="ha_notification_bell_app">Home Assistant</string>
 
     <!-- The Home Assistant dashboard panel (HaPanelActivity) -->
     <string name="ha_panel_unreachable">Can\'t reach Home Assistant</string>

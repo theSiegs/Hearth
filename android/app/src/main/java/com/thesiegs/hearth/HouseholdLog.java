@@ -147,15 +147,18 @@ final class HouseholdLog {
     }
 
     /**
-     * Forgets deletes older than {@link #TOMBSTONE_MS}, and Continue Watching entries ({@link HouseholdBridge#WATCH})
-     * older than its {@link WatchHistory#MAX_AGE_MS}, which every TV forgets anyway; returns how many.
+     * Forgets deletes older than {@link #TOMBSTONE_MS}, Continue Watching entries ({@link HouseholdBridge#WATCH})
+     * older than its {@link WatchHistory#MAX_AGE_MS}, and notifications, cleared or not, older than
+     * {@link HouseholdNotices#MAX_AGE_MS}, which every TV forgets anyway; returns how many. A notification's delete is
+     * always newer than what it cleared, so the delete outlives it.
      */
     int purge(long nowMs) {
         int removed = 0;
         for (Iterator<HouseholdEntry> it = entries.values().iterator(); it.hasNext();) {
             HouseholdEntry entry = it.next();
             long age = nowMs - (entry.clock >> COUNTER_BITS);
-            boolean expired = HouseholdBridge.WATCH.equals(entry.kind) && age > WatchHistory.MAX_AGE_MS;
+            boolean expired = HouseholdBridge.WATCH.equals(entry.kind) && age > WatchHistory.MAX_AGE_MS
+                    || HouseholdNotices.expired(entry, nowMs);
             if (expired || entry.deleted && !isFinal(entry) && age > TOMBSTONE_MS) {
                 it.remove();
                 removed++;

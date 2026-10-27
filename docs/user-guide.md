@@ -70,6 +70,14 @@ weather for today's (or, from 5 PM, tonight's) summary; OK goes on to the next h
 from today to this week and this month), whether the TV is on Wi-Fi and if a VPN is on; it says "No internet" when
 the TV has been offline for a few seconds. Android counts Wi-Fi and mobile data only, not Ethernet.
 
+**Notification Bell.** The bell lists the TV's notifications, and Home Assistant's (which also pop up over what's
+playing). With household sync on, Home Assistant's are in the Bell on every TV of the household, and clearing one
+clears it on all of them. Each shows only to the profile it's for: one Home Assistant sends to a person (see
+[Home Assistant](home-assistant.md#notifications)) only to them, one sent to no one in particular to every adult, and
+kids' profiles only what is sent to that kid. A TV asking to join the household shows in the Bell of every household
+TV, for adults, and **Allow** or **Don't allow** works on any of them; the first answer decides. The Bell needs
+Notification access.
+
 **Calendar.** With calendar access allowed (**Settings → Home screen → Status bar → Calendars**), the date and time
 in the top bar can be selected: they show the rest of today's events, and OK shows the next 7 days. The events come
 from the profile's own Google calendars synced to the TV; each profile turns its calendars on or off there. In a kids

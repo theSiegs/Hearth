@@ -75,6 +75,41 @@ rest_command:
 
 Buttons need the [dashboard panel](#dashboard-panel)'s token, since Hearth calls the service as that user.
 
+### In the Bell, and for one person
+
+Every notification with a title or message also goes in the TV's notification Bell (it needs Notification access), and
+with household sync on, in the Bell of every TV of the household; clearing it on one TV clears it on all. The Bell
+keeps the title and message only: buttons and the camera are in the pop-up of the TV it was sent to. A notification
+leaves the Bell after three days (on a TV not in a household, or with sync off, also when Hearth restarts).
+
+A notification is for every adult unless it says who it's for. Two more fields of Hearth's own, sent with a
+`rest_command` as above:
+
+- `for`: who it's for: the profile's name as the TV shows it (`Alex`), its Google account address, or its profile id
+  as the [Hearth integration](#hearth-integration) lists it (`user:10`). It shows only in that person's Bell, on every
+  TV, and pops up only when their profile is on screen. A name two profiles share is no one's; a `for` that is no
+  profile on the TV gets a 404 and is shown to no one. A kids profile can be named too; otherwise kids' profiles see
+  none of these.
+- `tag`: names the notification. A later one with the same tag (and the same `for`) replaces it, and the message
+  `clear_notification` with its tag clears it from every Bell. Without a tag, the same notification sent to several
+  TVs at once is still one notification.
+
+```yaml
+rest_command:
+  tv_parcel_for_alex:
+    url: "http://192.0.2.10:7676/"
+    method: post
+    content_type: "application/x-www-form-urlencoded"
+    payload: "title=Parcel&msg=Your%20parcel%20came&for=Alex&tag=parcel"
+  tv_parcel_clear:
+    url: "http://192.0.2.10:7676/"
+    method: post
+    content_type: "application/x-www-form-urlencoded"
+    payload: "msg=clear_notification&for=Alex&tag=parcel"
+```
+
+Without `for` and `tag` a notification works as it always did: it pops up whichever profile is on.
+
 ## Dashboard panel
 
 A Home Assistant dashboard one press away: **Right** at the right edge of the home opens it.

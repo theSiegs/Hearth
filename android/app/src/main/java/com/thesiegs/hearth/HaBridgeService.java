@@ -162,7 +162,7 @@ public class HaBridgeService extends Service {
         }
         boolean notifications = LauncherAccessibilityService.isHaNotificationsEnabled(this);
         if (notifications && mServer == null) {
-            mServer = new HaNotificationServer(LauncherAccessibilityService::showHaNotification);
+            mServer = new HaNotificationServer(n -> Household.onHaNotification(this, n));
             mServer.start();
         } else if (!notifications && mServer != null) {
             mServer.stop();
