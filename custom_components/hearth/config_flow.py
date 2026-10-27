@@ -19,18 +19,21 @@ from homeassistant.const import CONF_NAME
 from homeassistant.components import persistent_notification
 from homeassistant.core import callback
 from homeassistant.helpers.selector import (
+    DateSelector,
     EntitySelector,
     EntitySelectorConfig,
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     TextSelector,
+    TextSelectorConfig,
 )
 
 from .const import CONF_GROUP_APPS, CONF_GROUPS, CONF_LOCKS, CONF_PERSON, CONF_PROFILES, DOMAIN, KIND_MOBILE
 from .limits import BUILTIN_GROUPS, GAMES, VIDEO, slug
 from .apps import CONF_APP_WATCH, CONF_ASK_NOTIFY, OTHER, options_with_app_in_group, update_notification
 from .notifications import pairing_notification_id
+from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
 
 PERSON_SELECTOR = EntitySelector(EntitySelectorConfig(domain="person"))
@@ -109,6 +112,7 @@ class HearthOptionsFlow(OptionsFlow):
                 "add_title",
                 "remove_title",
                 "locks",
+                "school_days",
                 "sort_apps",
                 "new_apps",
                 "add_group",
@@ -382,3 +386,44 @@ class HearthOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="sort_apps", data_schema=schema)
+
+    async def async_step_school_days(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """How the household knows a school day (any mix; see schooldays.py for the order they're asked in)."""
+        options = self._options()
+        current: dict[str, Any] = dict(options.get(CONF_SCHOOL_DAYS) or {})
+        if user_input is not None:
+            kept = {k: v for k, v in user_input.items() if v not in (None, "", [])}
+            return self.async_create_entry(data={**options, CONF_SCHOOL_DAYS: kept})
+
+        def suggested(key: str) -> dict[str, Any]:
+            return {"suggested_value": current.get(key)}
+
+        schema = vol.Schema(
+            {
+                vol.Optional("entity", description=suggested("entity")): EntitySelector(EntitySelectorConfig()),
+                vol.Optional("school_states", description=suggested("school_states")): TextSelector(),
+                vol.Optional("calendar", description=suggested("calendar")): EntitySelector(
+                    EntitySelectorConfig(domain="calendar")
+                ),
+                vol.Optional(
+                    "calendar_mode", description={"suggested_value": current.get("calendar_mode", CALENDAR_OFF)}
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            SelectOptionDict(value=CALENDAR_OFF, label="Its events are days off"),
+                            SelectOptionDict(value=CALENDAR_SCHOOL, label="Its events are the school days"),
+                        ]
+                    )
+                ),
+                vol.Optional("keywords", description=suggested("keywords")): TextSelector(),
+                vol.Optional("year_start", description=suggested("year_start")): DateSelector(),
+                vol.Optional("year_end", description=suggested("year_end")): DateSelector(),
+                vol.Optional("days_off", description=suggested("days_off")): TextSelector(
+                    TextSelectorConfig(multiline=True)
+                ),
+                vol.Optional("extra_school_days", description=suggested("extra_school_days")): TextSelector(
+                    TextSelectorConfig(multiline=True)
+                ),
+            }
+        )
+        return self.async_show_form(step_id="school_days", data_schema=schema)

@@ -46,7 +46,10 @@ STARTER_VIDEO_APPS = frozenset(
     }
 )
 
+# The two budgets: on school days ("weekday", its stored name from before school days) and on other days ("weekend")
 DAY_TYPES = ("weekday", "weekend")
+SCHOOL_DAY = "weekday"
+OTHER_DAY = "weekend"
 
 
 @dataclass(frozen=True)
@@ -194,5 +197,6 @@ class Limits:
             marks.remove(group)
             self._save()
 
-    def state(self, person: str, group: str, counted_min: float, today: date) -> GroupState:
-        return GroupState(counted_min, self.budget(person, group, day_type(today)), self.bonus(person, group))
+    def state(self, person: str, group: str, counted_min: float, kind: str) -> GroupState:
+        """The group's state today, with the budget for [kind] of day (SCHOOL_DAY or OTHER_DAY)."""
+        return GroupState(counted_min, self.budget(person, group, kind), self.bonus(person, group))

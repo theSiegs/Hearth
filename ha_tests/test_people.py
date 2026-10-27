@@ -118,11 +118,11 @@ async def test_budget_minutes_left_and_reached(
 
 async def test_budget_numbers(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
     await _household_with_sam(hass, hass_client_no_auth)
-    weekday = "number.hearth_sam_games_budget_on_weekdays"
+    weekday = "number.hearth_sam_games_budget_on_school_days"
     assert hass.states.get(weekday).state == "-1"
     await hass.services.async_call("number", "set_value", {"entity_id": weekday, "value": 90}, blocking=True)
     await hass.services.async_call(
-        "number", "set_value", {"entity_id": "number.hearth_sam_games_budget_at_weekends", "value": 120}, blocking=True
+        "number", "set_value", {"entity_id": "number.hearth_sam_games_budget_on_other_days", "value": 120}, blocking=True
     )
     await hass.async_block_till_done()
     assert hass.states.get(weekday).state == "90"

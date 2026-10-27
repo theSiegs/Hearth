@@ -89,14 +89,17 @@
       },
       "person_locked": {
         "name": "Locked"
+      },
+      "school_day": {
+        "name": "School day"
       }
     },
     "number": {
       "budget_weekday": {
-        "name": "{group} budget on weekdays"
+        "name": "{group} budget on school days"
       },
       "budget_weekend": {
-        "name": "{group} budget at weekends"
+        "name": "{group} budget on other days"
       },
       "bonus_today": {
         "name": "{group} bonus today"
@@ -118,7 +121,8 @@
           "remove_title": "Remove a title",
           "locks": "Locks (bedtime, school time)",
           "sort_apps": "Sort new apps",
-          "new_apps": "Watch for new apps"
+          "new_apps": "Watch for new apps",
+          "school_days": "School days"
         }
       },
       "people": {
@@ -206,6 +210,28 @@
       "sort_apps": {
         "title": "Sort new apps",
         "description": "The group each new app counts in. Other: only All screen time. Leave one empty to sort it later."
+      },
+      "school_days": {
+        "title": "School days",
+        "description": "Which budget applies today: the school-day one or the other-day one. Give any mix of these; the first that answers decides: the dates below, then the entity, then the calendar, then Monday to Friday within the school year.",
+        "data": {
+          "entity": "An entity that says what today is",
+          "school_states": "Its states that mean a school day",
+          "calendar": "A calendar",
+          "calendar_mode": "Its events are",
+          "keywords": "Only events whose title has one of these words",
+          "year_start": "First day of the school year",
+          "year_end": "Last day of the school year",
+          "days_off": "Days off",
+          "extra_school_days": "Extra school days"
+        },
+        "data_description": {
+          "entity": "A helper an automation keeps, the Workday integration's sensor, an input_boolean. Unavailable passes the question on.",
+          "school_states": "Separated by commas. Leave empty for on, school, true, yes.",
+          "keywords": "Separated by commas, for a calendar of days off: closed, break, holiday. Empty: any event.",
+          "days_off": "Dates (2026-11-26) or ranges (2026-12-24..2027-01-01), separated by commas or new lines.",
+          "extra_school_days": "Same, for days that are school days although they'd be off."
+        }
       }
     },
     "error": {
@@ -241,7 +267,7 @@
     },
     "set_budget": {
       "name": "Set a budget",
-      "description": "Sets a person's daily budget for a group. Leave minutes empty for no limit.",
+      "description": "Sets a person's daily budget for a group, on school days, other days, or both. Leave minutes empty for no limit.",
       "fields": {
         "person": {
           "name": "Person",
@@ -257,7 +283,7 @@
         },
         "days": {
           "name": "Days",
-          "description": "Weekdays, weekends, or both."
+          "description": "school_days, other_days, or both (weekday and weekend are older names for the first two)."
         }
       }
     }

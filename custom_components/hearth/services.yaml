@@ -49,5 +49,5 @@ set_budget:
         select:
           options:
             - both
-            - weekday
-            - weekend
+            - school_days
+            - other_days

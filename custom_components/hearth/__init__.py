@@ -50,7 +50,8 @@ SET_BUDGET_SCHEMA = vol.Schema(
         vol.Required("person"): cv.entity_id,
         vol.Required("group"): cv.string,
         vol.Required("minutes"): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=0, max=1440))),
-        vol.Optional("days", default="both"): vol.In(["weekday", "weekend", "both"]),
+        # School days and other days (weekday and weekend are their older names)
+        vol.Optional("days", default="both"): vol.In(["school_days", "other_days", "weekday", "weekend", "both"]),
     }
 )
 
@@ -75,7 +76,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     @callback
     def set_budget(call: ServiceCall) -> None:
         target = household(call)
-        days = DAY_TYPES if call.data["days"] == "both" else (call.data["days"],)
+        names = {"school_days": "weekday", "other_days": "weekend", "weekday": "weekday", "weekend": "weekend"}
+        days = DAY_TYPES if call.data["days"] == "both" else (names[call.data["days"]],)
         for kind in days:
             target.set_budget(call.data["person"], call.data["group"], kind, call.data["minutes"])
 
@@ -88,6 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     hub = HearthHub(hass, entry)
     await hub.async_load()
     entry.runtime_data = hub
+    await hub.household.school.async_refresh()
     hub.household.recompute()
     # The views stay registered for Home Assistant's lifetime (aiohttp can't take one away); with no entry
     # loaded they answer that Hearth isn't set up
@@ -100,8 +103,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     def recompute(_now) -> None:
         hub.household.recompute()
 
+    async def school_then_recompute(_now=None) -> None:
+        """Today's school-day answer again (the calendar is asked once a day), then everyone's limits."""
+        await hub.household.school.async_refresh()
+        hub.household.recompute()
+
     # A new day starts at midnight; budgets, bonuses and quiet devices are looked at again every minute
-    entry.async_on_unload(async_track_time_change(hass, recompute, hour=0, minute=0, second=1))
+    entry.async_on_unload(async_track_time_change(hass, school_then_recompute, hour=0, minute=0, second=1))
+    entry.async_on_unload(async_track_time_interval(hass, school_then_recompute, timedelta(hours=1)))
+    if school := hub.household.school.watched_entities():
+        entry.async_on_unload(async_track_state_change_event(hass, school, school_then_recompute))
     entry.async_on_unload(async_track_time_interval(hass, recompute, timedelta(minutes=1)))
     # And whenever a screen time source changes
     if entities := hub.household.source_entities():

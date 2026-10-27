@@ -73,7 +73,7 @@ async def async_setup_entry(
         return [HearthConnected(hub, device_id, CONNECTED), *status]
 
     entry.async_on_unload(async_add_device_entities(hass, hub, async_add_entities, make))
-    async_add_entities([PlayingTogether(hub)])
+    async_add_entities([PlayingTogether(hub), SchoolDay(hub)])
     async_add_entities([PersonLocked(hub, person, "locked") for person in hub.household.people()])
 
 
@@ -159,3 +159,34 @@ class PersonLocked(HearthPersonEntity, BinarySensorEntity):
     @property
     def extra_state_attributes(self) -> dict:
         return {"locked_by": self.day.locked_by if self.day else []}
+
+
+class SchoolDay(BinarySensorEntity):
+    """On on a school day (the school-day budgets apply), with how that was decided."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+    _attr_translation_key = "school_day"
+
+    def __init__(self, hub: HearthHub) -> None:
+        self.hub = hub
+        self._attr_unique_id = f"{hub.entry.entry_id}_school_day"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, "household")}, name=f"Hearth: {hub.entry.title}", manufacturer="Hearth", model="Household"
+        )
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_PEOPLE, self._changed))
+
+    @callback
+    def _changed(self, _new_day: bool = False) -> None:
+        self.async_write_ha_state()
+
+    @property
+    def is_on(self) -> bool:
+        return self.hub.household.school.school
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        school = self.hub.household.school
+        return {"decided_by": school.reason, "day": school.day.isoformat() if school.day else None}

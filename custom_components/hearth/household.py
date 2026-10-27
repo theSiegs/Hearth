@@ -41,7 +41,8 @@ from .apps import (
     update_notification,
 )
 from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
-from .limits import Group, GroupState, Limits, groups_from_options, groups_of
+from .limits import OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
+from .schooldays import SchoolDays
 from .live import LiveTracker, Observation, Together
 from .sources import (
     Source,
@@ -92,6 +93,8 @@ class Household:
         self.limits = Limits(hass, hub.entry.entry_id)
         self.live = LiveTracker(hass, hub.entry.entry_id)
         self.apps = AppCatalog(hass, hub.entry.entry_id)
+        self.school = SchoolDays(hass)
+        self.school.configure(dict(hub.entry.options))
         self.days: dict[str, PersonDay] = {}
         self.groups: list[Group] = []
         self.sources: list[Source] = []
@@ -137,7 +140,7 @@ class Household:
         """Entities whose changes count: the screen time sources and the locks."""
         locks = [lock["entity_id"] for lock in self.options.get(CONF_LOCKS, [])]
         watched = list(self.options.get(CONF_APP_WATCH, []))
-        return [s.entity_id for s in sources_from_options(self.options)] + locks + watched
+        return [s.entity_id for s in sources_from_options(self.options)] + locks + watched + self.school.watched_entities()
 
     def _locked_by(self, person: str) -> list[str]:
         return [
@@ -295,6 +298,9 @@ class Household:
         self._hints = hints
         self._look_for_new_apps(categories)
         membership = self.membership()
+        # Today's answer as last worked out; if the day turned without a refresh yet, what's known now
+        is_school = self.school.school if self.school.day == today else self.school.decide(today)[0]
+        kind = SCHOOL_DAY if is_school else OTHER_DAY
         days: dict[str, PersonDay] = {}
         for person in self.people():
             devices = {device: merge(r) for device, r in readings.get(person, {}).items()}
@@ -304,7 +310,7 @@ class Household:
                             together_s=self.live.together_s.get(person, 0.0), locked=bool(locked_by),
                             locked_by=locked_by)
             for group in self.groups:
-                state = self.limits.state(person, group.id, seconds.get(group.id, 0.0) / 60, today)
+                state = self.limits.state(person, group.id, seconds.get(group.id, 0.0) / 60, kind)
                 day.limits[group.id] = state
                 if state.minutes_left == 0:
                     if self.limits.mark_reached(person, group.id):
