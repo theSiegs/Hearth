@@ -108,6 +108,25 @@ final class Household {
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
+    /** The longest message {@link #why} keeps. */
+    private static final int WHY_CHARS = 160;
+
+    /**
+     * What went wrong, for the log: the exception's class and its message ("SyncException: The other TV is not in this
+     * household"), the cause's for a wrapper (a task's ExecutionException). The message matters as much as the class:
+     * a release build shortens Hearth's own class names, and SyncException's message is what tells its cases apart.
+     */
+    static String why(Throwable e) {
+        if (e == null) return "unknown";
+        Throwable shown = e instanceof java.util.concurrent.ExecutionException && e.getCause() != null
+                ? e.getCause() : e;
+        String message = shown.getMessage();
+        if (message == null || message.trim().isEmpty()) return shown.getClass().getSimpleName();
+        message = message.replaceAll("\\s+", " ").trim();
+        if (message.length() > WHY_CHARS) message = message.substring(0, WHY_CHARS) + "...";
+        return shown.getClass().getSimpleName() + ": " + message;
+    }
+
     /** Whether this TV has ever been in a household, without touching the Keystore. */
     private static boolean mayBeInHousehold(Context context) {
         SharedPreferences prefs = prefs(context);
@@ -473,12 +492,22 @@ final class Household {
     /** Exchanges with every TV of the household that is on the network. */
     static void syncAll(String why) {
         if (sContext == null || !active(sContext)) return;
+        TURNS.forgetServed();
         for (HouseholdNet.Peer peer : HouseholdNet.peers()) {
             // An exchange can end the household here (this TV was removed, or it finished leaving)
             if (!active(sContext)) return;
+            // That TV opened one with this TV meanwhile, which went both ways: another adds nothing
+            if (TURNS.served(peer.tvId)) continue;
             exchangeWith(peer, why);
         }
     }
+
+    /**
+     * Whose turn the household thread is: an exchange another TV opens while this TV runs one of its own waits, or,
+     * when that TV comes first, this TV's gives way (HouseholdTurns), so two TVs syncing with each other at once
+     * don't each wait on the other until both time out.
+     */
+    private static final HouseholdTurns TURNS = new HouseholdTurns();
 
     private static void exchangeWith(HouseholdNet.Peer peer, String why) {
         HouseholdStore store = store(sContext);
@@ -487,18 +516,25 @@ final class Household {
             // dropped, so it holds the household thread for PROVE_MS at most
             java.util.concurrent.ScheduledFuture<?> deadline = closeLater(socket);
             try {
-                socket.connect(new InetSocketAddress(peer.host, peer.port), 5_000);
-                socket.setSoTimeout(SOCKET_TIMEOUT_MS);
-                HouseholdSync.Result result = HouseholdSync.run(socket.getInputStream(), socket.getOutputStream(), true,
-                        store, pictures(sContext), ShareDiscovery.deviceName(sContext), System.currentTimeMillis(),
-                        () -> deadline.cancel(false));
-                finish(store, result, "to " + why);
+                HouseholdTurns.Outcome outcome = TURNS.open(socket, () -> {
+                    socket.connect(new InetSocketAddress(peer.host, peer.port), 5_000);
+                    socket.setSoTimeout(SOCKET_TIMEOUT_MS);
+                    HouseholdSync.Result result = HouseholdSync.run(socket.getInputStream(), socket.getOutputStream(),
+                            true, store, pictures(sContext), ShareDiscovery.deviceName(sContext),
+                            System.currentTimeMillis(), () -> deadline.cancel(false));
+                    finish(store, result, "to " + why);
+                });
+                if (outcome == HouseholdTurns.Outcome.GAVE_WAY) {
+                    Log.i(TAG, "Gave way to an exchange another TV opened at the same time");
+                    // The one given way to may be another TV's (TVs waiting on each other in a ring): this one's again
+                    if (!TURNS.served(peer.tvId)) syncSoon();
+                }
             } finally {
                 deadline.cancel(false);
             }
-        } catch (IOException | java.security.GeneralSecurityException e) {
+        } catch (IOException | java.security.GeneralSecurityException | RuntimeException e) {
             sLastResult = "failed: " + e.getClass().getSimpleName();
-            Log.i(TAG, "Couldn't sync with a TV of the household: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't sync with a TV of the household: " + why(e));
         }
     }
 
@@ -537,7 +573,19 @@ final class Household {
             deadline = closeLater(socket);
             HouseholdSync.Accepted opened = HouseholdSync.accept(in, socket.getOutputStream(), sSelfId, sHouseholdId);
             deadline.cancel(false);
-            EXEC.execute(() -> accept(socket, opened));
+            boolean gaveWay = TURNS.arrived(new HouseholdTurns.Waiting() {
+                @Override
+                public String peer() {
+                    return opened.peer();
+                }
+
+                @Override
+                public void serve() {
+                    accept(socket, opened);
+                }
+            }, sSelfId);
+            if (gaveWay) Log.i(TAG, "Two TVs opened exchanges with each other at once: this TV's gives way");
+            EXEC.execute(TURNS::serveWaiting);
         } catch (IOException | java.security.GeneralSecurityException | RuntimeException | StackOverflowError e) {
             // Whatever a device on the network sends: an uncaught error on this pool's thread would end Hearth
             if (deadline != null) deadline.cancel(false);
@@ -554,12 +602,32 @@ final class Household {
             if (!active(sContext)) return;
             s.setSoTimeout(SOCKET_TIMEOUT_MS);
             HouseholdStore store = store(sContext);
+            // A TV not on this TV's list may have just been let in by another TV of the household: refused now, it
+            // is listed once this TV has synced with the others, so that happens soon
+            if (store.log() != null
+                    && HouseholdMembers.standing(store.log(), opened.peer()) == HouseholdMembers.Standing.UNKNOWN) {
+                newcomerSeen();
+            }
             HouseholdSync.Result result = HouseholdSync.run(opened, store, pictures(sContext),
                     ShareDiscovery.deviceName(sContext), System.currentTimeMillis());
             finish(store, result, "from a TV");
-        } catch (IOException | java.security.GeneralSecurityException e) {
-            Log.i(TAG, "A TV tried to sync and couldn't: " + e.getClass().getSimpleName());
+        } catch (IOException | java.security.GeneralSecurityException | RuntimeException e) {
+            Log.i(TAG, "A TV tried to sync and couldn't: " + why(e));
         }
+    }
+
+    /** At most this often does a TV not on the list (yet) make this TV sync with the others. */
+    private static final long NEWCOMER_SYNC_MS = 30_000;
+    private static long sNewcomerSyncAt;
+
+    /** A TV not on this TV's list opened an exchange: the others are asked soon, in case one just let it in. */
+    private static void newcomerSeen() {
+        long now = android.os.SystemClock.elapsedRealtime();
+        synchronized (Household.class) {
+            if (sNewcomerSyncAt != 0 && now - sNewcomerSyncAt < NEWCOMER_SYNC_MS) return;
+            sNewcomerSyncAt = now;
+        }
+        syncSoon();
     }
 
     private static void finish(HouseholdStore store, HouseholdSync.Result result, String how) {
@@ -601,7 +669,18 @@ final class Household {
         sLastSyncAt = System.currentTimeMillis();
         sLastResult = "sent " + result.sent + ", took " + result.received;
         Log.i(TAG, "Synced " + how + ": sent " + result.sent + ", took " + result.received + ", changed "
-                + result.applied.size());
+                + result.applied.size() + (result.admitted ? ", and listed that TV" : ""));
+        // What came, or the TV just listed, goes on to the household's other TVs on now, rather than at the next
+        // change or check: a TV that just joined is refused by the others until its entry reaches them
+        if ((result.admitted || !result.applied.isEmpty()) && othersOnNow(result.peer)) syncSoon();
+    }
+
+    /** Whether a TV of the household other than {@code tvId} is on the network now. */
+    private static boolean othersOnNow(String tvId) {
+        for (HouseholdNet.Peer peer : HouseholdNet.peers()) {
+            if (!peer.tvId.equals(tvId)) return true;
+        }
+        return false;
     }
 
     // ---- For the settings screen ----
@@ -629,16 +708,9 @@ final class Household {
         if (joined) {
             Map<String, String> online = new HashMap<>();
             for (HouseholdNet.Peer peer : HouseholdNet.peers()) online.put(peer.tvId, peer.name);
-            // The log is the household thread's; an exchange holding it up only leaves out the TVs known from it
-            List<HouseholdEntry> entries = new ArrayList<>();
-            try {
-                entries = EXEC.submit(() -> {
-                    HouseholdLog log = store.log();
-                    return log == null ? new ArrayList<HouseholdEntry>() : log.all();
-                }).get(2, TimeUnit.SECONDS);
-            } catch (Exception e) {
-                Log.i(TAG, "The list of TVs left out the household's entries: " + e.getClass().getSimpleName());
-            }
+            // The log as last saved: the household thread's own may be in an exchange, which this doesn't wait for
+            HouseholdLog saved = store.saved();
+            List<HouseholdEntry> entries = saved == null ? new ArrayList<>() : saved.all();
             for (HouseholdMembers.Member m : HouseholdMembers.list(entries, seen(context), online, store.tvId(),
                     ShareDiscovery.deviceName(context), System.currentTimeMillis())) {
                 Map<String, Object> member = new HashMap<>();
@@ -673,16 +745,17 @@ final class Household {
     /**
      * What the household's entries would change in this TV's pairings and PINs, while it holds them after joining:
      * {profiles: [{key, name, kids, pairings, pins}], tvPins}, a profile listed whether or not anything of it changes
-     * (the app adds its looks). Null when this TV isn't holding any. Blocks: not on the main thread.
+     * (the app adds its looks). Null when this TV isn't holding any. Read from the log as last saved, so an exchange
+     * running on the household thread doesn't hold it up. Blocks: not on the main thread.
      */
     static Map<String, Object> joinPreview(Context context) {
         if (!mayBeInHousehold(context)) return null;
         Context app = context.getApplicationContext();
         try {
-            return EXEC.submit(() -> {
-                if (!member(app) || !reviewing(app)) return null;
+            return readSaved(app, saved -> {
+                if (!reviewing(app)) return null;
                 HouseholdLocal local = local(app);
-                Map<String, int[]> changes = HouseholdJoinReview.changes(local, store(app).log());
+                Map<String, int[]> changes = HouseholdJoinReview.changes(local, saved);
                 List<Map<String, Object>> profiles = new ArrayList<>();
                 for (String key : local.profiles().values()) {
                     int[] counts = changes.get(key);
@@ -699,9 +772,9 @@ final class Household {
                 out.put("profiles", profiles);
                 out.put("tvPins", tv == null ? 0 : tv[1]);
                 return out;
-            }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
+            });
         } catch (Exception e) {
-            Log.i(TAG, "Couldn't tell what joining changes: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't tell what joining changes: " + why(e));
             return null;
         }
     }
@@ -733,7 +806,7 @@ final class Household {
                 return true;
             }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-            Log.i(TAG, "Couldn't finish joining: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't finish joining: " + why(e));
             return false;
         }
     }
@@ -792,7 +865,7 @@ final class Household {
                 return true;
             }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-            Log.i(TAG, "Couldn't put back the settings from before joining: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't put back the settings from before joining: " + why(e));
             return false;
         }
     }
@@ -866,7 +939,7 @@ final class Household {
                 return true;
             }).get(2, TimeUnit.MINUTES);
         } catch (Exception e) {
-            Log.i(TAG, "Couldn't join with the invitation: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't join with the invitation: " + why(e));
             return false;
         }
     }
@@ -919,7 +992,7 @@ final class Household {
                 }
             }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-            Log.i(TAG, "Leaving the household: no TV took it yet (" + e.getClass().getSimpleName() + ")");
+            Log.i(TAG, "Leaving the household: no TV took it yet (" + why(e) + ")");
         }
     }
 
@@ -955,7 +1028,7 @@ final class Household {
                 return true;
             }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-            Log.i(TAG, "Couldn't remove the TV: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't remove the TV: " + why(e));
             return false;
         }
     }
@@ -975,6 +1048,18 @@ final class Household {
         return sLooksVersion;
     }
 
+    /** Reads the household's log as last saved (HouseholdStore.saved), off the household thread. */
+    private interface SavedRead<T> {
+        T read(HouseholdLog saved) throws Exception;
+    }
+
+    /** {@code read} on the log as last saved, while this TV is a member; null when it isn't. */
+    private static <T> T readSaved(Context app, SavedRead<T> read) throws Exception {
+        if (!member(app)) return null;
+        HouseholdLog saved = store(app).saved();
+        return saved == null ? null : read.read(saved);
+    }
+
     /**
      * The profiles whose look this TV's Hearth keeps: every one, kids' included (Hearth in the owner's user is every
      * profile's home and swaps their layouts; Hearth in a kids profile's own user is only its agent).
@@ -986,22 +1071,21 @@ final class Household {
     /**
      * The household's looks, layouts and wallpapers for this TV's profiles (kids' included), when they changed since {@code since} (a
      * version this returned before; 0 for all): {version, profiles: {profileKey: {look, layout, wallpapers: {slot:
-     * {hash, path}}}}}. Just {version} when nothing changed, and null when this TV isn't a member. Blocks: not on the
-     * main thread.
+     * {hash, path}}}}}. Just {version} when nothing changed, and null when this TV isn't a member. Read from the log as
+     * last saved, so an exchange running on the household thread doesn't hold it up (it saves before it says the looks
+     * changed). Blocks: not on the main thread.
      */
     static Map<String, Object> looks(Context context, long since) {
         if (!mayBeInHousehold(context)) return null;
         Context app = context.getApplicationContext();
         try {
-            return EXEC.submit(() -> {
-                if (!member(app)) return null;
+            return readSaved(app, log -> {
                 Map<String, Object> out = new HashMap<>();
                 long version = looksVersion();
                 out.put("version", version);
                 // Just joined: the app shows what would change rather than taking it (it doesn't give either)
                 if (reviewing(app)) out.put("review", true);
                 if (since == version) return out;
-                HouseholdLog log = store(app).log();
                 HouseholdPictures pictures = pictures(app);
                 Map<String, Object> profiles = new HashMap<>();
                 for (Map.Entry<String, String> profile : local(app).profiles().entrySet()) {
@@ -1033,9 +1117,9 @@ final class Household {
                 }
                 out.put("profiles", profiles);
                 return out;
-            }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
+            });
         } catch (Exception e) {
-            Log.i(TAG, "Couldn't read the household's looks: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't read the household's looks: " + why(e));
             return null;
         }
     }
@@ -1094,15 +1178,15 @@ final class Household {
 
     /**
      * The household's Parent PIN: {state: "live" (with its hash), "removed" or "none"}; null when this TV isn't a
-     * member. Blocks: not on the main thread.
+     * member. Read from the log as last saved, so an exchange on the household thread doesn't hold it up. Blocks: not
+     * on the main thread.
      */
     static Map<String, Object> parentPin(Context context) {
         if (!mayBeInHousehold(context)) return null;
         Context app = context.getApplicationContext();
         try {
-            return EXEC.submit(() -> {
-                if (!member(app)) return null;
-                HouseholdEntry entry = store(app).log().entry(HouseholdBridge.PARENT_PIN, HouseholdBridge.SHARED, "");
+            return readSaved(app, log -> {
+                HouseholdEntry entry = log.entry(HouseholdBridge.PARENT_PIN, HouseholdBridge.SHARED, "");
                 Map<String, Object> out = new HashMap<>();
                 if (entry == null) {
                     out.put("state", "none");
@@ -1116,9 +1200,9 @@ final class Household {
                     out.put("state", "none");
                 }
                 return out;
-            }).get(LEAVE_SYNC_MS, TimeUnit.MILLISECONDS);
+            });
         } catch (Exception e) {
-            Log.i(TAG, "Couldn't read the household's Parent PIN: " + e.getClass().getSimpleName());
+            Log.i(TAG, "Couldn't read the household's Parent PIN: " + why(e));
             return null;
         }
     }
@@ -1268,7 +1352,7 @@ final class Household {
         } catch (Exception e) {
             // The household thread is busy (an exchange): the Bell gets it when it's free, and a notification for
             // everyone pops up as before
-            Log.i(TAG, "A Home Assistant notification waits for the Bell: " + e.getClass().getSimpleName());
+            Log.i(TAG, "A Home Assistant notification waits for the Bell: " + why(e));
             result = -1;
             show = n.target == null;
         }

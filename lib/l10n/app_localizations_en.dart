@@ -323,6 +323,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get householdJoinCode => 'Join code';
+
+  @override
+  String get householdJoinCodeHint => 'The request in the Bell shows a code too. Choose Allow only when it\'s this one.';
+
+  @override
   String get householdJoinViaAny => 'one of your other TVs';
 
   @override

@@ -125,6 +125,11 @@ final class HouseholdStore {
     private String householdId;
     private HouseholdSeal seal;
     private HouseholdLog log;
+    /**
+     * A copy of the log as it was last saved (or opened), for reading off the household thread, which may be busy with
+     * an exchange (the member list, the looks); null when this TV is in no household. Never changed: a save replaces it.
+     */
+    private volatile HouseholdLog saved;
     private boolean lost;
 
     private HouseholdStore(Backing backing, SecretBox.Keys keys, HouseholdIdentity.Keys identities) {
@@ -137,6 +142,7 @@ final class HouseholdStore {
     static HouseholdStore open(Backing backing, SecretBox.Keys keys, HouseholdIdentity.Keys identities) {
         HouseholdStore store = new HouseholdStore(backing, keys, identities);
         store.load();
+        store.keepSaved();
         return store;
     }
 
@@ -415,6 +421,11 @@ final class HouseholdStore {
         return SecretBox.open(keys, INVITES_ALIAS, backing.get(JOIN_PROOF_SEALED));
     }
 
+    /** Whether {@code peer} is the TV that let this one join and they haven't finished an exchange yet. */
+    boolean invitedBy(String peer) {
+        return peer != null && peer.equals(backing.get(JOIN_PROOF_FOR)) && backing.get(JOIN_PROOF_SEALED) != null;
+    }
+
     /** The inviting TV has listed this one: the invitation's secret is no longer needed. */
     void joinProofUsed() {
         backing.remove(JOIN_PROOF_SEALED);
@@ -518,11 +529,14 @@ final class HouseholdStore {
         householdId = null;
         seal = null;
         log = null;
+        saved = null;
     }
 
     /** Saves the log, encrypted; false when it couldn't be sealed (the next change tries again). */
     boolean save() {
         if (log == null) return false;
+        // What's held now, sealed or not, is what other threads read
+        keepSaved();
         try {
             JSONArray entries = new JSONArray();
             for (HouseholdEntry entry : log.all()) entries.put(entry.toJson());
@@ -536,5 +550,23 @@ final class HouseholdStore {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * The log as it was last saved, for reading off the household thread (status, looks, the Parent PIN) without waiting
+     * for an exchange there to end: a copy no one changes. Null when this TV is in no household.
+     */
+    HouseholdLog saved() {
+        return saved;
+    }
+
+    private void keepSaved() {
+        if (log == null) {
+            saved = null;
+            return;
+        }
+        HouseholdLog copy = new HouseholdLog(tvId);
+        copy.restore(log.all(), log.vector());
+        saved = copy;
     }
 }

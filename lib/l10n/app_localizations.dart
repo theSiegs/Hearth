@@ -651,6 +651,18 @@ abstract class AppLocalizations {
   /// **'On {tv}, open the notification Bell on an adult\'s profile and choose Allow. This TV waits up to 5 minutes.'**
   String householdJoinWaitBody(String tv);
 
+  /// Join dialog, while waiting: label over the six-digit code, which the request in the other TV's Bell shows too
+  ///
+  /// In en, this message translates to:
+  /// **'Join code'**
+  String get householdJoinCode;
+
+  /// Join dialog, while waiting: under the six-digit code; the adult compares it with the code in the Bell before choosing Allow
+  ///
+  /// In en, this message translates to:
+  /// **'The request in the Bell shows a code too. Choose Allow only when it\'s this one.'**
+  String get householdJoinCodeHint;
+
   /// Join dialog: stands in for the TV's name in the two texts above when it isn't known
   ///
   /// In en, this message translates to:

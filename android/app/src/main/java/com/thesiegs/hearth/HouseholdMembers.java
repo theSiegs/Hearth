@@ -106,10 +106,27 @@ final class HouseholdMembers {
      * (an admission) must name its writer as the TV that added it; and one can't take back that a TV signs.
      */
     static boolean accepts(HouseholdLog log, HouseholdEntry e) {
+        return accepts(log, e, false);
+    }
+
+    /**
+     * As {@link #accepts(HouseholdLog, HouseholdEntry)}; {@code fromInviter}: the entry came from the TV that let this
+     * one join, in their first exchange, which also takes a TV's own entry for a TV this one doesn't know yet
+     * ({@link #introduces}). A TV writes its own entry again when renamed and once a day, and that replaces the entry of
+     * the member that added it, so a TV that joins later would otherwise never list it (nor sync with it).
+     */
+    static boolean accepts(HouseholdLog log, HouseholdEntry e, boolean fromInviter) {
         if (!signs(e.kind)) return true;
         byte[] writerKey = keyFor(log, e.tv);
-        if (writerKey == null) return false;
-        boolean writerSigns = signingOf(log.get(KIND, HouseholdBridge.SHARED, e.tv).value);
+        boolean writerSigns;
+        if (writerKey != null) {
+            writerSigns = signingOf(log.get(KIND, HouseholdBridge.SHARED, e.tv).value);
+        } else if (fromInviter && introduces(log, e)) {
+            writerKey = keyOf(e.value);
+            writerSigns = true;
+        } else {
+            return false;
+        }
         if (e.sig.isEmpty()) {
             if (writerSigns || (KIND.equals(e.kind) && !e.deleted && signingOf(e.value))) return false;
         } else {
@@ -128,6 +145,19 @@ final class HouseholdMembers {
         if (!e.item.equals(e.tv) && !e.tv.equals(byOf(e.value, ""))) return false;
         HouseholdEntry had = log.get(KIND, HouseholdBridge.SHARED, e.item);
         return had == null || !signingOf(had.value) || signingOf(e.value);
+    }
+
+    /**
+     * Whether {@code e} is a TV's own member entry for a TV {@code log} holds nothing of (not listed, not removed):
+     * written by that TV, saying it signs, and holding the key its id was made from, which the caller checks its
+     * signature with. Taken only from the TV that let this one join, which this TV trusts with the whole household.
+     */
+    static boolean introduces(HouseholdLog log, HouseholdEntry e) {
+        if (!KIND.equals(e.kind) || e.deleted || !HouseholdBridge.SHARED.equals(e.profile)) return false;
+        if (!e.item.equals(e.tv) || e.sig.isEmpty() || !signingOf(e.value)) return false;
+        if (log.hasEntry(KIND, HouseholdBridge.SHARED, e.item)) return false;
+        byte[] key = keyOf(e.value);
+        return key != null && HouseholdIdentity.tvIdOf(key).equals(e.item);
     }
 
     /** The name a member entry carries, or null. */

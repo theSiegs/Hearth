@@ -15,6 +15,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
+
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/models/kids_profiles.dart';
@@ -181,10 +183,22 @@ class _HouseholdTileState extends State<_HouseholdTile> {
   late final FLauncherChannel? _channel = context.read<FLauncherChannel?>();
   Map<dynamic, dynamic>? _status;
 
+  /// How often it's read again while shown: a TV that just joined lists the household's other TVs once their entries
+  /// come, which can be after this page opened.
+  static const Duration refreshEvery = Duration(seconds: 5);
+  Timer? _timer;
+
   @override
   void initState() {
     super.initState();
     _read();
+    _timer = Timer.periodic(refreshEvery, (_) => _read());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   Future<void> _read() async {
