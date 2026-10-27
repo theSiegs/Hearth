@@ -29,14 +29,16 @@ public class HouseholdJoinTest {
     private static final class Asked {
         final AtomicReference<String> name = new AtomicReference<>();
         final AtomicReference<String> code = new AtomicReference<>();
+        final java.util.concurrent.atomic.AtomicBoolean wantsHa = new java.util.concurrent.atomic.AtomicBoolean();
     }
 
     private static HouseholdJoin.Host host(HouseholdTvs.Tv tv, boolean allow, Asked asked) {
         return new HouseholdJoin.Host() {
             @Override
-            public boolean approve(String name, String code) {
+            public boolean approve(String name, String code, boolean wantsHa) {
                 asked.name.set(name);
                 asked.code.set(code);
+                asked.wantsHa.set(wantsHa);
                 return allow;
             }
 
@@ -99,6 +101,8 @@ public class HouseholdJoinTest {
         assertEquals("Kitchen", asked.name.get());
         assertEquals(got[0], asked.code.get());
         assertTrue(got[0].matches("[0-9]{6}"));
+        // it said it has no Home Assistant connection: the household TV asks about giving it one, separately
+        assertTrue(asked.wantsHa.get());
         JSONObject payload = new JSONObject(got[1]);
         assertEquals("http://192.0.2.10:8123", payload.getJSONObject("ha").getString("url"));
         HouseholdTvs.Tv joining = new HouseholdTvs.Tv();
@@ -183,6 +187,72 @@ public class HouseholdJoinTest {
             } finally {
                 pool.shutdownNow();
             }
+        }
+    }
+
+    @Test
+    public void aTvThatKeepsAskingWaitsLongerEachTime_andOneAllowedStartsOver() {
+        HouseholdJoining.Cooldowns c = new HouseholdJoining.Cooldowns();
+        long t = 1_000_000;
+        assertFalse(c.waiting("192.0.2.20", t));
+        c.refused("192.0.2.20", t);
+        assertTrue(c.waiting("192.0.2.20", t + 29_000));
+        assertFalse(c.waiting("192.0.2.20", t + 31_000));
+        // another address isn't held up by it
+        assertFalse(c.waiting("192.0.2.21", t + 1));
+        c.refused("192.0.2.20", t + 31_000);
+        assertTrue(c.waiting("192.0.2.20", t + 31_000 + 59_000));
+        assertFalse(c.waiting("192.0.2.20", t + 31_000 + 61_000));
+        long at = t + 100_000;
+        for (int i = 0; i < 30; i++) c.refused("192.0.2.20", at);
+        // at most an hour
+        assertTrue(c.waiting("192.0.2.20", at + HouseholdJoining.Cooldowns.MOST_MS - 1));
+        assertFalse(c.waiting("192.0.2.20", at + HouseholdJoining.Cooldowns.MOST_MS));
+        // a day later it starts over at the first wait
+        long later = at + HouseholdJoining.Cooldowns.FORGET_MS + 1;
+        c.refused("192.0.2.20", later);
+        assertFalse(c.waiting("192.0.2.20", later + HouseholdJoining.Cooldowns.FIRST_MS));
+        c.refused("192.0.2.22", later);
+        c.allowed("192.0.2.22");
+        assertFalse(c.waiting("192.0.2.22", later + 1));
+        // the addresses kept are bounded
+        for (int i = 0; i < 1000; i++) c.refused("198.51.100." + i, later);
+        assertFalse(c.waiting("192.0.2.20", later + 1));
+    }
+
+    @Test
+    public void theWaitForAnAnswerSeesTheAskingTvHangUp_andKeepsWhatItSentMeanwhile() throws Exception {
+        try (ServerSocket server = new ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress());
+                Socket asking = new Socket(java.net.InetAddress.getLoopbackAddress(), server.getLocalPort());
+                Socket asked = server.accept()) {
+            asked.setSoTimeout(5000);
+            HouseholdJoining.Watched watched = new HouseholdJoining.Watched(asked.getInputStream(), asked);
+            assertFalse(watched.gone());
+            // its confirmation, sent while it waits, is still there to be read after
+            asking.getOutputStream().write(new byte[] {1, 2, 3});
+            asking.getOutputStream().flush();
+            Thread.sleep(100);
+            assertFalse(watched.gone());
+            assertEquals(5000, asked.getSoTimeout());
+            byte[] got = new byte[3];
+            new DataInputStream(watched).readFully(got);
+            assertTrue(Arrays.equals(new byte[] {1, 2, 3}, got));
+            // more than a waiting TV sends counts as gone
+            asking.getOutputStream().write(new byte[HouseholdJoining.Watched.MAX_AHEAD + 1024]);
+            asking.getOutputStream().flush();
+            Thread.sleep(100);
+            boolean tooMuch = false;
+            for (int i = 0; i < 40 && !tooMuch; i++) tooMuch = watched.gone();
+            assertTrue(tooMuch);
+        }
+        try (ServerSocket server = new ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress());
+                Socket asking = new Socket(java.net.InetAddress.getLoopbackAddress(), server.getLocalPort());
+                Socket asked = server.accept()) {
+            HouseholdJoining.Watched watched = new HouseholdJoining.Watched(asked.getInputStream(), asked);
+            asking.close();
+            Thread.sleep(100);
+            assertTrue(watched.gone());
+            assertEquals(-1, watched.read());
         }
     }
 

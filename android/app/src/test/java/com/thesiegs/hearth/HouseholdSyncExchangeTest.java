@@ -73,8 +73,10 @@ public class HouseholdSyncExchangeTest {
             Future<HouseholdSync.Result> accepting = pool.submit(() -> {
                 try (Socket socket = server.accept()) {
                     socket.setSoTimeout(5000);
-                    return HouseholdSync.run(socket.getInputStream(), socket.getOutputStream(), false, b, bPictures, "B",
-                            now);
+                    // As a TV does: the opening off the household thread, the rest on it
+                    HouseholdSync.Accepted opened = HouseholdSync.accept(socket.getInputStream(),
+                            socket.getOutputStream(), b.tvId(), b.householdId());
+                    return HouseholdSync.run(opened, b, bPictures, "B", now);
                 }
             });
             Future<HouseholdSync.Result> connecting = pool.submit(() -> {
@@ -387,6 +389,99 @@ public class HouseholdSyncExchangeTest {
             // refused at its size, before reading it
             assertEquals("Bad frame size", expected.getMessage());
         }
+    }
+
+    @Test
+    public void theOpeningReadOffTheHouseholdThreadTouchesNoEntriesAndAStrangerGoesNoFurther() throws Exception {
+        HouseholdTvs.Tv[] tvs = pair();
+        // A stranger's whole opening, proving a key of its own, for this household (its id isn't secret) and with a
+        // made-up invitation: what anyone on the network can send
+        HouseholdTvs.Tv stranger = new HouseholdTvs.Tv();
+        HouseholdStore.Invitation real = tvs[0].store.invite("Office", T0);
+        stranger.store.join(new HouseholdStore.Invitation(real.householdId, real.personSalt, real.byTv, real.byKey,
+                real.byName, new byte[HouseholdStore.SECRET_BYTES]), "Attic", T0);
+        java.io.PipedInputStream toUs = new java.io.PipedInputStream(64 * 1024);
+        java.io.PipedOutputStream strangerOut = new java.io.PipedOutputStream(toUs);
+        java.io.PipedInputStream toStranger = new java.io.PipedInputStream(64 * 1024);
+        java.io.PipedOutputStream ourOut = new java.io.PipedOutputStream(toStranger);
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try {
+            pool.submit(() -> HouseholdSync.run(toStranger, strangerOut, true, stranger.store, "X", T0));
+            int entries = tvs[0].store.log().all().size();
+            HouseholdSync.Accepted opened = HouseholdSync.accept(toUs, ourOut, tvs[0].store.tvId(),
+                    tvs[0].store.householdId());
+            assertEquals(stranger.store.tvId(), opened.peer());
+            assertEquals(entries, tvs[0].store.log().all().size());
+            // on the household thread it isn't listed and proves no invitation: refused before anything more is read
+            try {
+                HouseholdSync.run(opened, tvs[0].store, null, "A", T0);
+                fail("expected a refusal");
+            } catch (HouseholdSync.SyncException expected) {
+                assertEquals("The other TV is not in this household", expected.getMessage());
+            }
+            // and an opening made for this TV doesn't go on for another (it left, or joined another household since)
+            HouseholdTvs.Tv other = first();
+            try {
+                HouseholdSync.run(opened, other.store, null, "A", T0);
+                fail("expected a refusal");
+            } catch (HouseholdSync.SyncException expected) {
+                assertEquals("Not in a household", expected.getMessage());
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+        assertEquals(HouseholdMembers.Standing.UNKNOWN,
+                HouseholdMembers.standing(tvs[0].store.log(), stranger.store.tvId()));
+    }
+
+    @Test
+    public void entriesForgedInAnotherTvsNameCantStallItsRealOnes() throws Exception {
+        HouseholdTvs.Tv a = first();
+        HouseholdTvs.Tv b = joining(a, "Kitchen");
+        HouseholdTvs.Tv c = joining(a, "Attic");
+        exchange(b, a, null);
+        exchange(c, a, null);
+        exchange(a, b, null);
+        // b hands a an entry in c's name with a sequence far past anything c wrote: a would never ask c's real
+        // entries of it again
+        HouseholdEntry forged = new HouseholdEntry("look", "alex", "", "{\"forged\":1}", (T0 + 50) << 16,
+                c.store.tvId(), 1_000_000_000L, false);
+        assertTrue(b.store.log().merge(forged, T0 + 50));
+        exchange(b, a, null);
+        assertEquals("{\"forged\":1}", a.store.log().get("look", "alex", "").value);
+        c.store.log().put("pairing", "sam", "netflix", "Sam", T0 + 60);
+        // c, met directly, says how many it wrote: a drops what it never made and takes everything of c's again
+        HouseholdSync.Result[] results = exchange(c, a, null);
+        assertNull(a.store.log().get("look", "alex", ""));
+        assertTrue(results[1].applied.stream().noneMatch(e -> e.value.contains("forged")));
+        exchange(c, a, null);
+        assertEquals("Sam", a.store.log().get("pairing", "sam", "netflix").value);
+        assertTrue(a.store.log().vector().get(c.store.tvId()) < 1_000_000_000L);
+        // a TV that took the forged entry too (here b itself) is put right the same way when it meets c
+        exchange(c, b, null);
+        exchange(c, b, null);
+        assertEquals("Sam", b.store.log().get("pairing", "sam", "netflix").value);
+    }
+
+    @Test
+    public void aTvMetDirectlyIsBelievedAboutItsOwnCountOnly() {
+        HouseholdLog log = new HouseholdLog("tv-a");
+        HouseholdLog c = new HouseholdLog("tv-c");
+        for (int i = 0; i < 3; i++) log.merge(c.put("look", "alex", "i" + i, "v", T0 + i), T0 + 10);
+        // nothing wrong: nothing changes
+        assertEquals(-1, log.vouch("tv-c", 3));
+        assertEquals(-1, log.vouch("tv-c", 5));
+        assertEquals(3, log.all().size());
+        // this TV's own count is never another TV's to correct
+        log.put("look", "sam", "", "v", T0);
+        assertEquals(-1, log.vouch("tv-a", 0));
+        // a removal in its name is kept, whatever its sequence
+        HouseholdEntry removal = new HouseholdEntry(HouseholdMembers.KIND, "", "tv-x", "", T0 << 16, "tv-c", 99,
+                true);
+        log.merge(removal, T0 + 10);
+        assertEquals(0, log.vouch("tv-c", 3));
+        assertTrue(log.isRemoved(HouseholdMembers.KIND, "", "tv-x"));
+        assertEquals(Long.valueOf(0), log.vector().get("tv-c"));
     }
 
     @Test

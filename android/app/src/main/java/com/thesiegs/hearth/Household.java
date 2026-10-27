@@ -63,6 +63,20 @@ final class Household {
     });
     /** How long a connection has to say what it is. */
     private static final int ROUTE_TIMEOUT_MS = 5_000;
+    /**
+     * How long a TV has, in all, to open an exchange and prove it holds its key (and, connecting out, that the other is
+     * a member): a connection that trickles its bytes is closed then, so it can't hold a thread, the household's least.
+     */
+    static final long PROVE_MS = 20_000;
+    /** Closes connections that haven't proved themselves by their deadline. */
+    private static final ScheduledExecutorService DEADLINES = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread thread = new Thread(r, "household-deadline");
+        thread.setDaemon(true);
+        return thread;
+    });
+    /** This TV's id and household as the household thread last saw them, for opening exchanges off that thread. */
+    private static volatile String sSelfId;
+    private static volatile String sHouseholdId;
 
     /**
      * Since when this TV, having just joined, holds the household's settings until someone has seen what they change
@@ -159,6 +173,7 @@ final class Household {
 
     /** Starts listening, announcing and syncing when this TV is in a household with sync on; stops when it isn't. */
     static void start(Context context) {
+        expireJoinBackup(context);
         if (!active(context)) {
             stop();
             return;
@@ -168,6 +183,8 @@ final class Household {
             EXEC.execute(() -> forget(context));
             return;
         }
+        sSelfId = store.tvId();
+        sHouseholdId = store.householdId();
         HouseholdNet.start(context, store.tvId(), store.householdId(), socket -> {
             try {
                 NET.execute(() -> route(socket));
@@ -466,19 +483,42 @@ final class Household {
     private static void exchangeWith(HouseholdNet.Peer peer, String why) {
         HouseholdStore store = store(sContext);
         try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress(peer.host, peer.port), 5_000);
-            socket.setSoTimeout(SOCKET_TIMEOUT_MS);
-            HouseholdSync.Result result = HouseholdSync.run(socket.getInputStream(), socket.getOutputStream(), true,
-                    store, pictures(sContext), ShareDiscovery.deviceName(sContext), System.currentTimeMillis());
-            finish(store, result, "to " + why);
+            // Anything can announce itself as a TV of the household: one that doesn't prove it's a member in time is
+            // dropped, so it holds the household thread for PROVE_MS at most
+            java.util.concurrent.ScheduledFuture<?> deadline = closeLater(socket);
+            try {
+                socket.connect(new InetSocketAddress(peer.host, peer.port), 5_000);
+                socket.setSoTimeout(SOCKET_TIMEOUT_MS);
+                HouseholdSync.Result result = HouseholdSync.run(socket.getInputStream(), socket.getOutputStream(), true,
+                        store, pictures(sContext), ShareDiscovery.deviceName(sContext), System.currentTimeMillis(),
+                        () -> deadline.cancel(false));
+                finish(store, result, "to " + why);
+            } finally {
+                deadline.cancel(false);
+            }
         } catch (IOException | java.security.GeneralSecurityException e) {
             sLastResult = "failed: " + e.getClass().getSimpleName();
             Log.i(TAG, "Couldn't sync with a TV of the household: " + e.getClass().getSimpleName());
         }
     }
 
-    /** A TV connected: a join request is served here (it waits on a parent), an exchange on the household thread. */
+    /** Closes {@code socket} after {@link #PROVE_MS} unless the returned deadline is cancelled first. */
+    private static java.util.concurrent.ScheduledFuture<?> closeLater(Socket socket) {
+        return DEADLINES.schedule(() -> {
+            try {
+                socket.close();
+            } catch (IOException ignored) {
+            }
+        }, PROVE_MS, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * A TV connected: a join request is served here (it waits on an adult); an exchange is opened here, until the
+     * other TV has proved it holds its key, within {@link #PROVE_MS} in all, and only then goes on on the household
+     * thread. So a connection that never proves anything, or trickles its bytes, never holds the household thread.
+     */
     private static void route(Socket socket) {
+        java.util.concurrent.ScheduledFuture<?> deadline = null;
         try {
             socket.setSoTimeout(ROUTE_TIMEOUT_MS);
             BufferedInputStream in = new BufferedInputStream(socket.getInputStream());
@@ -494,9 +534,13 @@ final class Household {
                 return;
             }
             in.reset();
-            EXEC.execute(() -> accept(socket, in));
-        } catch (IOException | RuntimeException | StackOverflowError e) {
+            deadline = closeLater(socket);
+            HouseholdSync.Accepted opened = HouseholdSync.accept(in, socket.getOutputStream(), sSelfId, sHouseholdId);
+            deadline.cancel(false);
+            EXEC.execute(() -> accept(socket, opened));
+        } catch (IOException | java.security.GeneralSecurityException | RuntimeException | StackOverflowError e) {
             // Whatever a device on the network sends: an uncaught error on this pool's thread would end Hearth
+            if (deadline != null) deadline.cancel(false);
             try {
                 socket.close();
             } catch (IOException ignored) {
@@ -504,12 +548,13 @@ final class Household {
         }
     }
 
-    private static void accept(Socket socket, InputStream in) {
+    /** Goes on, on the household thread, with an exchange whose other side proved its key (route). */
+    private static void accept(Socket socket, HouseholdSync.Accepted opened) {
         try (Socket s = socket) {
             if (!active(sContext)) return;
             s.setSoTimeout(SOCKET_TIMEOUT_MS);
             HouseholdStore store = store(sContext);
-            HouseholdSync.Result result = HouseholdSync.run(in, s.getOutputStream(), false, store, pictures(sContext),
+            HouseholdSync.Result result = HouseholdSync.run(opened, store, pictures(sContext),
                     ShareDiscovery.deviceName(sContext), System.currentTimeMillis());
             finish(store, result, "from a TV");
         } catch (IOException | java.security.GeneralSecurityException e) {
@@ -693,16 +738,38 @@ final class Household {
         }
     }
 
+    private static boolean sBackupExpiryScheduled;
+
+    /**
+     * The copy from before joining goes after its {@link #JOIN_BACKUP_MS}, whether or not the Household page reads it:
+     * checked now (each start) and once a day, in a household or not (it outlives leaving one).
+     */
+    private static void expireJoinBackup(Context context) {
+        Context app = context.getApplicationContext();
+        joinBackupAt(app);
+        synchronized (Household.class) {
+            if (sBackupExpiryScheduled) return;
+            sBackupExpiryScheduled = true;
+        }
+        long day = 24L * 60 * 60_000;
+        EXEC.scheduleWithFixedDelay(() -> joinBackupAt(app), day, day, TimeUnit.MILLISECONDS);
+    }
+
     /** When the copy from before joining was made, while it's kept; 0 when there is none (a stale one is dropped). */
     static long joinBackupAt(Context context) {
         SharedPreferences prefs = prefs(context);
         long at = prefs.getLong(JOIN_BACKUP_AT_PREF, 0);
         if (at == 0) return 0;
-        if (System.currentTimeMillis() - at > JOIN_BACKUP_MS || prefs.getString(JOIN_BACKUP_PREF, null) == null) {
+        if (joinBackupExpired(at, System.currentTimeMillis()) || prefs.getString(JOIN_BACKUP_PREF, null) == null) {
             prefs.edit().remove(JOIN_BACKUP_PREF).remove(JOIN_BACKUP_AT_PREF).apply();
             return 0;
         }
         return at;
+    }
+
+    /** Whether a copy from before joining made at {@code at} is past its days. */
+    static boolean joinBackupExpired(long at, long now) {
+        return now - at > JOIN_BACKUP_MS;
     }
 
     /**
@@ -1380,6 +1447,14 @@ final class Household {
      * this TV's Bell.
      */
     static boolean answerJoin(Context context, String item, boolean allow) {
+        return answerJoin(context, item, allow, false);
+    }
+
+    /**
+     * As {@link #answerJoin(Context, String, boolean)}; {@code giveHa}: an Allow also gives the asked TV's Home
+     * Assistant connection.
+     */
+    static boolean answerJoin(Context context, String item, boolean allow, boolean giveHa) {
         boolean listed = false;
         for (HouseholdNotices.Notice n : sNotices) listed |= n.isJoin() && n.item.equals(item);
         if (!listed) return false;
@@ -1390,8 +1465,8 @@ final class Household {
             HouseholdLog log = store(app).log();
             if (log.get(HouseholdNotices.KIND, HouseholdNotices.ALL_ADULTS, item) == null
                     || HouseholdNotices.answer(log.all(), item) != null) return;
-            log.put(HouseholdNotices.ANSWER, HouseholdNotices.ALL_ADULTS, item, HouseholdNotices.answerValue(allow),
-                    System.currentTimeMillis());
+            log.put(HouseholdNotices.ANSWER, HouseholdNotices.ALL_ADULTS, item,
+                    HouseholdNotices.answerValue(allow, giveHa), System.currentTimeMillis());
             Log.i(TAG, "Answered another TV's join request: " + (allow ? "allow" : "don't allow"));
             noticesChanged(app, log);
         });
@@ -1399,14 +1474,16 @@ final class Household {
     }
 
     /** A TV asks this one to join (HouseholdJoining): the request goes in the Bell of the household's other TVs too. */
-    static void joinRequestStarted(Context context, String requestId, String joiner, long untilMs) {
+    static void joinRequestStarted(Context context, String requestId, String joiner, long untilMs, String code,
+            boolean offersHa) {
         Context app = context.getApplicationContext();
         EXEC.execute(() -> {
             if (!member(app)) return;
             HouseholdStore store = store(app);
             long now = System.currentTimeMillis();
             store.log().put(HouseholdNotices.KIND, HouseholdNotices.ALL_ADULTS, HouseholdNotices.joinItem(requestId),
-                    HouseholdNotices.joinValue(joiner, store.tvId(), ShareDiscovery.deviceName(app), now, untilMs), now);
+                    HouseholdNotices.joinValue(joiner, store.tvId(), ShareDiscovery.deviceName(app), now, untilMs,
+                            code, offersHa), now);
             noticesChanged(app, store.log());
         });
     }

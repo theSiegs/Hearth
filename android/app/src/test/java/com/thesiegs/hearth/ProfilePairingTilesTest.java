@@ -77,4 +77,19 @@ public class ProfilePairingTilesTest {
         assertEquals(newTask, AgentActivity.withoutGrants(grants | newTask));
     }
 
+    @Test
+    public void aContinueWatchingCardOpensOnlyAnotherAppsScreen_andOneFromTheHouseholdOnlyItsOwnApp() {
+        java.util.Set<String> none = java.util.Collections.emptySet();
+        java.util.Set<String> netflix = java.util.Collections.singleton("com.example.netflix");
+        String own = "com.example.hearth";
+        assertTrue(AgentActivity.mayOpenProgram(own, "com.example.netflix", true, none));
+        // never one of Hearth's own screens, and never a screen its app keeps to itself
+        assertFalse(AgentActivity.mayOpenProgram(own, own, true, none));
+        assertFalse(AgentActivity.mayOpenProgram(own, "com.example.netflix", false, none));
+        // a card from another TV says it's Netflix's: it opens Netflix, nothing else
+        assertTrue(AgentActivity.mayOpenProgram(own, "com.example.netflix", true, netflix));
+        assertFalse(AgentActivity.mayOpenProgram(own, "com.example.settings", true, netflix));
+        assertFalse(AgentActivity.mayOpenProgram(own, own, true, java.util.Collections.singleton(own)));
+    }
+
 }

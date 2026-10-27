@@ -109,15 +109,34 @@ final class HouseholdNotices {
         final String askedName;
         /** A Home Assistant notification's buttons (checked again where read); empty for others. */
         final List<Action> actions;
+        /**
+         * A join request: the six digits both TVs show ("" from a TV older than showing them on the household's side),
+         * and whether allowing it also asks about handing over the asked TV's Home Assistant connection.
+         */
+        final String code;
+        final boolean offersHa;
 
         Notice(String item, String person, String from, String title, String text, long at, long until, String writer,
                 String joiner, String askedTv, String askedName) {
-            this(item, person, from, title, text, at, until, writer, joiner, askedTv, askedName,
+            this(item, person, from, title, text, at, until, writer, joiner, askedTv, askedName, "", false,
                     Collections.<Action>emptyList());
         }
 
         Notice(String item, String person, String from, String title, String text, long at, long until, String writer,
                 String joiner, String askedTv, String askedName, List<Action> actions) {
+            this(item, person, from, title, text, at, until, writer, joiner, askedTv, askedName, "", false, actions);
+        }
+
+        Notice(String item, String person, String from, String title, String text, long at, long until, String writer,
+                String joiner, String askedTv, String askedName, String code, boolean offersHa) {
+            this(item, person, from, title, text, at, until, writer, joiner, askedTv, askedName, code, offersHa,
+                    Collections.<Action>emptyList());
+        }
+
+        Notice(String item, String person, String from, String title, String text, long at, long until, String writer,
+                String joiner, String askedTv, String askedName, String code, boolean offersHa, List<Action> actions) {
+            this.code = code == null ? "" : code;
+            this.offersHa = offersHa;
             this.item = item;
             this.person = person;
             this.from = from;
@@ -363,12 +382,44 @@ final class HouseholdNotices {
     }
 
     static String joinValue(String joiner, String askedTv, String askedName, long nowMs, long untilMs) {
+        return joinValue(joiner, askedTv, askedName, nowMs, untilMs, "", false);
+    }
+
+    /**
+     * A join request's value; {@code code}: the six digits the new TV shows, for the adult to compare; {@code offersHa}:
+     * allowing it asks next whether it gets the asked TV's Home Assistant connection.
+     */
+    static String joinValue(String joiner, String askedTv, String askedName, long nowMs, long untilMs, String code,
+            boolean offersHa) {
         try {
             return new JSONObject().put("f", FROM_JOIN).put("j", clip(joiner, MAX_TITLE)).put("tv", nonNull(askedTv))
-                    .put("tn", clip(askedName, MAX_TITLE)).put("at", nowMs).put("u", untilMs).toString();
+                    .put("tn", clip(askedName, MAX_TITLE)).put("at", nowMs).put("u", untilMs)
+                    .put("c", clip(code, 16)).put("ha", offersHa).toString();
         } catch (JSONException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /** An Allow that says whether the new TV also gets the asked TV's Home Assistant connection. */
+    static String answerValue(boolean allow, boolean giveHa) {
+        return allow ? "{\"allow\":true,\"ha\":" + giveHa + "}" : answerValue(false);
+    }
+
+    /**
+     * Whether the household's answer to {@code item} gives the new TV the Home Assistant connection: only an Allow that
+     * says so (an older TV's Allow doesn't).
+     */
+    static boolean answerGivesHa(List<HouseholdEntry> entries, String item) {
+        for (HouseholdEntry e : entries) {
+            if (!ANSWER.equals(e.kind) || e.deleted || !e.item.equals(item)) continue;
+            try {
+                JSONObject o = new JSONObject(e.value);
+                return o.optBoolean("allow", false) && o.optBoolean("ha", false);
+            } catch (JSONException ex) {
+                return false;
+            }
+        }
+        return false;
     }
 
     static String answerValue(boolean allow) {
@@ -411,7 +462,8 @@ final class HouseholdNotices {
                 String asked = o.optString("tv", "");
                 if (!asked.equals(e.tv)) return null;
                 return new Notice(e.item, e.profile, from, "", "", at, until, e.tv,
-                        clip(o.optString("j", ""), MAX_TITLE), asked, clip(o.optString("tn", ""), MAX_TITLE));
+                        clip(o.optString("j", ""), MAX_TITLE), asked, clip(o.optString("tn", ""), MAX_TITLE),
+                        clip(o.optString("c", ""), 16), o.optBoolean("ha", false));
             }
             return null;
         } catch (JSONException ex) {

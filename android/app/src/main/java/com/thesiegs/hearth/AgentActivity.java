@@ -89,6 +89,16 @@ public class AgentActivity extends Activity {
         return target != null && !target.isEmpty() && !target.equals(own);
     }
 
+    /**
+     * Whether a Continue Watching card's deep link may open the screen it resolved to ({@code resolved}, its package;
+     * {@code exported}): another app's, exported, and for a card from the household's other TVs
+     * ({@code household}: the apps of its cards with that link; empty: not one) in that card's own app.
+     */
+    static boolean mayOpenProgram(String own, String resolved, boolean exported, java.util.Set<String> household) {
+        if (!isOtherApp(own, resolved) || !exported) return false;
+        return household.isEmpty() || household.contains(resolved);
+    }
+
     /** Flags without the ones that grant access to content URIs. */
     static int withoutGrants(int flags) {
         return flags & ~(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION

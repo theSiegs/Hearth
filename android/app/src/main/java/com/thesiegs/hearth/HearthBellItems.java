@@ -17,6 +17,8 @@ import java.util.Map;
 final class HearthBellItems {
     private static final String PREFIX = "hearth:";
     static final String JOIN_KEY = PREFIX + "household-join";
+    /** After Allow: whether the new TV also gets the Home Assistant connection (this TV's request, or another's). */
+    static final String JOIN_HA_KEY = PREFIX + "household-join-ha";
     /** A household notification's key: this, its item, "|" and its person (an item never holds a "|"). */
     private static final String NOTICE_PREFIX = PREFIX + "notice:";
     static final int ALLOW = 0;
@@ -41,9 +43,36 @@ final class HearthBellItems {
         LauncherNotificationListenerService.hearthItemsChanged();
         if (joiner != null && !ProfileUsers.isKids(context)) {
             LauncherNotificationListenerService.popUpHearthItem(context.getString(R.string.household_join_bell_app),
-                    context.getString(R.string.household_join_bell_title, joiner),
-                    context.getString(R.string.household_join_bell_text));
+                    context.getString(R.string.household_join_bell_title, joiner), joinText(context));
         }
+    }
+
+    /** The waiting request's text: the code to check against the new TV's screen, and what joining gives it. */
+    private static String joinText(Context context) {
+        String code = HouseholdJoining.requestCode();
+        return context.getString(R.string.household_join_bell_text, code == null ? "" : code);
+    }
+
+    /**
+     * Allow was chosen and the Home Assistant question follows ({@code joiner}, the TV that joins), or it was answered
+     * (null): the Bell changes, and the question pops up.
+     */
+    static void haQuestionChanged(Context context, String joiner) {
+        LauncherNotificationListenerService.hearthItemsChanged();
+        if (joiner == null || ProfileUsers.isKids(context)) return;
+        String[] shown = haTexts(context);
+        if (shown != null) LauncherNotificationListenerService.popUpHearthItem(shown[0], shown[1], shown[2]);
+    }
+
+    /** The Home Assistant question's app name, title and text, or null when none is asked here. */
+    private static String[] haTexts(Context context) {
+        String own = HouseholdJoining.haQuestion();
+        String[] other = own == null ? HouseholdJoining.otherHaQuestion() : null;
+        if (own == null && (other == null || !listed(context, other[0]))) return null;
+        String title = own != null ? context.getString(R.string.household_join_ha_title, own)
+                : context.getString(R.string.household_join_ha_title_other, other[1], other[2]);
+        return new String[] {context.getString(R.string.household_join_bell_app), title,
+                context.getString(R.string.household_join_ha_text)};
     }
 
     /**
@@ -57,8 +86,7 @@ final class HearthBellItems {
         LauncherNotificationListenerService.hearthItemsChanged();
         if (!ProfileUsers.isKids(context)) {
             LauncherNotificationListenerService.popUpHearthItem(context.getString(R.string.household_join_bell_app),
-                    context.getString(R.string.household_join_bell_title, joiner),
-                    context.getString(R.string.household_join_bell_text));
+                    context.getString(R.string.household_join_bell_title, joiner), joinText(context));
         }
     }
 
@@ -77,6 +105,14 @@ final class HearthBellItems {
         LauncherNotificationListenerService.popUpHearthItem(shown[0], shown[1], shown[2]);
     }
 
+    /** Whether another TV's join request {@code item} still waits in this TV's Bell (it ends when that TV's does). */
+    private static boolean listed(Context context, String item) {
+        for (HouseholdNotices.Notice n : Household.notices(context)) {
+            if (n.isJoin() && n.item.equals(item)) return true;
+        }
+        return false;
+    }
+
     /** Adds Hearth's items to the Bell's list, in its form; a kids profile sees only what is for that kid. */
     static void addTo(Context context, List<Map<String, Object>> list) {
         String joiner = HouseholdJoining.requestName();
@@ -88,12 +124,25 @@ final class HearthBellItems {
             // Counted on the Bell like any app's; clearing it is Don't allow ({@link #dismiss}). It also goes away
             // when the request ends.
             list.add(item(context, JOIN_KEY, context.getString(R.string.household_join_bell_app),
-                    context.getString(R.string.household_join_bell_title, joiner),
-                    context.getString(R.string.household_join_bell_text), posted, true));
+                    context.getString(R.string.household_join_bell_title, joiner), joinText(context), posted, true));
         }
+        String[] ha = ProfileUsers.isKids(context) ? null : haTexts(context);
+        if (ha != null) {
+            // Clearing it is no: the new TV joins without the connection
+            Map<String, Object> question = item(context, JOIN_HA_KEY, ha[0], ha[1], ha[2], System.currentTimeMillis(),
+                    false);
+            List<Map<String, Object>> actions = new ArrayList<>();
+            actions.add(action(ALLOW, context.getString(R.string.household_join_ha_give)));
+            actions.add(action(DENY, context.getString(R.string.household_join_ha_keep)));
+            question.put("actions", actions);
+            list.add(question);
+        }
+        String[] otherHa = HouseholdJoining.otherHaQuestion();
         long now = System.currentTimeMillis();
         for (HouseholdNotices.Notice n : Household.notices(context)) {
             if (now >= n.until) continue;
+            // Allowed here, and its Home Assistant question shows instead
+            if (otherHa != null && otherHa[0].equals(n.item)) continue;
             String[] shown = texts(context, n);
             Map<String, Object> item = item(context, NOTICE_PREFIX + n.item + "|" + n.person, shown[0], shown[1],
                     shown[2], n.at, n.isJoin());
@@ -117,7 +166,8 @@ final class HearthBellItems {
                     : n.askedName;
             return new String[] {context.getString(R.string.household_join_bell_app),
                     context.getString(R.string.household_join_bell_title, joiner),
-                    context.getString(R.string.household_join_bell_text_other, asked)};
+                    n.code.isEmpty() ? context.getString(R.string.household_join_bell_text_other, asked)
+                            : context.getString(R.string.household_join_bell_text_other_code, asked, n.code)};
         }
         return new String[] {context.getString(R.string.ha_notification_bell_app), n.title, n.text};
     }
@@ -150,12 +200,30 @@ final class HearthBellItems {
             return Household.pressNotice(context, notice[1], notice[0], action);
         }
         if (action != ALLOW && action != DENY) return false;
+        // Adults only: a kids profile's Bell never lists a TV asking to join, and nothing it sends answers one
+        if (isJoin(key) && ProfileUsers.isKids(context)) return false;
         if (JOIN_KEY.equals(key)) {
             boolean answered = HouseholdJoining.answer(action == ALLOW);
             if (answered) LauncherNotificationListenerService.hearthItemsChanged();
             return answered;
         }
-        if (notice == null) return false;
+        if (JOIN_HA_KEY.equals(key)) {
+            if (HouseholdJoining.answerHa(action == ALLOW)) return true;
+            String[] other = HouseholdJoining.otherHaQuestion();
+            return other != null && HouseholdJoining.answerHaForOther(context, other[0], action == ALLOW);
+        }
+        if (notice == null || HouseholdNotices.requestIdOf(notice[0]) == null) return false;
+        if (action == ALLOW) {
+            // A request that offers its asked TV's Home Assistant connection asks about it next, then answers
+            for (HouseholdNotices.Notice n : Household.notices(context)) {
+                if (!n.isJoin() || !n.item.equals(notice[0]) || !n.offersHa) continue;
+                String joiner = n.joiner.isEmpty() ? context.getString(R.string.household_join_unnamed) : n.joiner;
+                String asked = n.askedName.isEmpty() ? context.getString(R.string.household_join_asked_unnamed)
+                        : n.askedName;
+                HouseholdJoining.askHaForOther(context, n.item, joiner, asked);
+                return true;
+            }
+        }
         return Household.answerJoin(context, notice[0], action == ALLOW);
     }
 
@@ -164,6 +232,7 @@ final class HearthBellItems {
      * Bell.
      */
     static boolean dismiss(Context context, String key) {
+        if (isJoin(key) && ProfileUsers.isKids(context)) return false;
         String[] notice = noticeOf(key);
         if (notice == null) return open(context, key, DENY);
         if (HouseholdNotices.requestIdOf(notice[0]) != null) return Household.answerJoin(context, notice[0], false);
@@ -174,6 +243,13 @@ final class HearthBellItems {
     /** Clear all: the household's notifications the profile on screen sees go too (not a TV asking to join). */
     static void clearAll(Context context) {
         Household.clearNotices(context);
+    }
+
+    /** Whether this Bell key is a TV asking to join (this TV's request, its Home Assistant question, or another's). */
+    static boolean isJoin(String key) {
+        if (JOIN_KEY.equals(key) || JOIN_HA_KEY.equals(key)) return true;
+        String[] notice = noticeOf(key);
+        return notice != null && HouseholdNotices.requestIdOf(notice[0]) != null;
     }
 
     /** {item, person} of a household notification's key, or null when it isn't one. */

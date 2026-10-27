@@ -43,14 +43,22 @@ final class HouseholdStore {
         final byte[] byKey;
         final String byName;
         final byte[] secret;
+        /** The inviting TV signs its member, removal and Parent PIN entries (false from a TV older than signing). */
+        final boolean signing;
 
         Invitation(String householdId, byte[] personSalt, String byTv, byte[] byKey, String byName, byte[] secret) {
+            this(householdId, personSalt, byTv, byKey, byName, secret, true);
+        }
+
+        Invitation(String householdId, byte[] personSalt, String byTv, byte[] byKey, String byName, byte[] secret,
+                boolean signing) {
             this.householdId = householdId;
             this.personSalt = personSalt;
             this.byTv = byTv;
             this.byKey = byKey;
             this.byName = byName;
             this.secret = secret;
+            this.signing = signing;
         }
 
         String toJson() {
@@ -58,7 +66,7 @@ final class HouseholdStore {
                 Base64.Encoder b64 = Base64.getEncoder();
                 return new JSONObject().put("id", householdId).put("salt", b64.encodeToString(personSalt))
                         .put("tv", byTv).put("key", b64.encodeToString(byKey)).put("name", byName == null ? "" : byName)
-                        .put("secret", b64.encodeToString(secret)).toString();
+                        .put("secret", b64.encodeToString(secret)).put("signs", signing).toString();
             } catch (Exception e) {
                 throw new IllegalStateException(e);
             }
@@ -70,7 +78,8 @@ final class HouseholdStore {
                 JSONObject o = new JSONObject(json);
                 Base64.Decoder b64 = Base64.getDecoder();
                 Invitation inv = new Invitation(o.getString("id"), b64.decode(o.getString("salt")), o.getString("tv"),
-                        b64.decode(o.getString("key")), o.optString("name", ""), b64.decode(o.getString("secret")));
+                        b64.decode(o.getString("key")), o.optString("name", ""), b64.decode(o.getString("secret")),
+                        o.optBoolean("signs", false));
                 if (inv.householdId.isEmpty() || inv.personSalt.length != HouseholdSeal.SALT_BYTES
                         || inv.secret.length != SECRET_BYTES || !HouseholdIdentity.tvIdOf(inv.byKey).equals(inv.byTv)) {
                     return null;
@@ -149,14 +158,28 @@ final class HouseholdStore {
         tvId = HouseholdIdentity.tvIdOf(identity.publicKey());
         seal = new HouseholdSeal(salt);
         Arrays.fill(salt, (byte) 0);
-        log = new HouseholdLog(tvId);
+        log = newLog();
         String sealedLog = backing.get(LOG_SEALED);
         if (sealedLog == null) return;
         String json = SecretBox.openText(keys, LOG_ALIAS, sealedLog);
         if (json == null || !readLog(json)) {
             // The entries can't be read: start empty (they come back from the other TVs), but keep the household
-            log = new HouseholdLog(tvId);
+            log = newLog();
         }
+    }
+
+    /** An empty log for this TV, signing what it writes of the kinds that carry a signature. */
+    private HouseholdLog newLog() {
+        HouseholdLog made = new HouseholdLog(tvId);
+        HouseholdIdentity.Signer signer = identity;
+        made.setSigner(entry -> {
+            try {
+                return Base64.getEncoder().encodeToString(signer.sign(entry.signedBytes()));
+            } catch (GeneralSecurityException | RuntimeException e) {
+                return null;
+            }
+        });
+        return made;
     }
 
     /** A version 1 household becomes this TV's: a TV key, the same id and person ids, the old key kept a while. */
@@ -283,7 +306,7 @@ final class HouseholdStore {
         if (sealedProof == null) return false;
         if (!begin(inv.householdId, inv.personSalt.clone(), name, nowMs)) return false;
         log.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, inv.byTv,
-                HouseholdMembers.value(inv.byName, inv.byKey, inv.byTv), nowMs);
+                HouseholdMembers.value(inv.byName, inv.byKey, inv.byTv, inv.signing), nowMs);
         backing.put(JOIN_PROOF_SEALED, sealedProof);
         backing.put(JOIN_PROOF_FOR, inv.byTv);
         save();
@@ -303,14 +326,14 @@ final class HouseholdStore {
         householdId = id;
         seal = new HouseholdSeal(salt);
         Arrays.fill(salt, (byte) 0);
-        log = new HouseholdLog(tvId);
+        log = newLog();
         backing.put(SALT_SEALED, sealedSalt);
         backing.put(HOUSEHOLD_ID, id);
         backing.put(TV_ID, tvId);
         backing.remove(REMOVED);
         lost = false;
-        log.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, tvId, HouseholdMembers.value(name, made.publicKey(), tvId),
-                nowMs);
+        log.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, tvId, HouseholdMembers.value(name, made.publicKey(), tvId,
+                true), nowMs);
         save();
         return true;
     }
@@ -428,13 +451,17 @@ final class HouseholdStore {
         if (!HouseholdMembers.selfNeedsWrite(log, tvId, name, key, nowMs)) return false;
         HouseholdEntry had = log.get(HouseholdMembers.KIND, HouseholdBridge.SHARED, tvId);
         String by = had == null ? tvId : HouseholdMembers.byOf(had.value, tvId);
-        return log.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, tvId, HouseholdMembers.value(name, key, by), nowMs)
+        return log.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, tvId, HouseholdMembers.value(name, key, by, true), nowMs)
                 != null;
     }
 
-    /** Lists a TV that proved itself: its key, its name, this TV as the one that added it. */
-    void admit(String peer, byte[] publicKey, String name, long nowMs) {
-        log.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, peer, HouseholdMembers.value(name, publicKey, tvId), nowMs);
+    /**
+     * Lists a TV that proved itself: its key, its name, this TV as the one that added it, and whether it said it signs
+     * its entries ({@code signing}).
+     */
+    void admit(String peer, byte[] publicKey, String name, boolean signing, long nowMs) {
+        log.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, peer,
+                HouseholdMembers.value(name, publicKey, tvId, signing), nowMs);
     }
 
     // ---- Leaving and removal ----
