@@ -54,7 +54,8 @@ import java.util.regex.Pattern;
  * {"type":"ping"}, {"type":"playing","package":"…","ms":n} (an app played that long in the profile's user),
  * {"type":"played","package":"…","title":"…","subtitle":"…","duration":ms,"position":ms} (what plays there, for the
  * profile's watch history),
- * {"type":"opened","ok":bool}, {"type":"speech","package":"…","text":"…"} (what an app said through
+ * {"type":"started","t":ms,"v":"id","title":"…","ch":"…","cid":"…"} (a video HearthTube started there, for the
+ * parent's log: StartedLog), {"type":"opened","ok":bool}, {"type":"speech","package":"…","text":"…"} (what an app said through
  * Hearth's voice there, for Profile Pairing), {"type":"calendar","access":bool,"calendars":[…],"events":[…]} (the
  * Google calendars synced to that profile's user and their coming days' events, TvCalendars' maps). Hearth to agent: {"type":"welcome"}, {"type":"open","intent":"intent:…"},
  * {"type":"listen","package":"…" or null} (the app Profile Pairing is handling, whose speech to relay),
@@ -235,6 +236,15 @@ final class AgentHub {
                                     System.currentTimeMillis());
                         }
                         break;
+                    case "started": {
+                        // A video HearthTube started in this profile's user (never an adult's: a kid's log only)
+                        if (serial == ProfileUsers.ownerSerial(sContext)) break;
+                        String profile = ProfileUsers.profileKey(sContext, serial);
+                        HISTORY.execute(() -> StartedLog.record(sContext, profile, message.optLong("t"),
+                                message.optString("v", null), message.optString("title", ""),
+                                message.optString("ch", ""), message.optString("cid", "")));
+                        break;
+                    }
                     case "played": {
                         // What plays in this profile's user, into its own watch history (never an adult's: the
                         // owner's user is Hearth's own recorder's)

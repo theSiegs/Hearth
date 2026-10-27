@@ -36,9 +36,9 @@ public class ProfileProvider extends ContentProvider {
             "profile_ready", "switch_generation", "updates_hearthtube", "wallpaper_kind", "wallpaper_version",
             "wallpaper_brightness", "wallpaper_gradient", "wallpaper_title", "wallpaper_credit",
             "youtube_minutes_left", "schedule_locked", "allowance_message", "allowance_checked_at", "allowance_source",
-            "ha_share_now_playing"};
+            "ha_share_now_playing", "parent_blocks", "parent_blocks_version"};
     /** docs/provider-contract.md: bumped when a column's meaning changes or one is added or removed. */
-    static final int CONTRACT_VERSION = 7;
+    static final int CONTRACT_VERSION = 8;
     private static final String SHARE_NOW_PLAYING_KEY = "ha_share_now_playing";
 
     /**
@@ -133,7 +133,10 @@ public class ProfileProvider extends ContentProvider {
                 allowance.message,
                 allowance.checkedAt,
                 allowance.source,
-                shareNowPlaying(context) == null ? null : shareNowPlaying(context) ? 1 : 0};
+                shareNowPlaying(context) == null ? null : shareNowPlaying(context) ? 1 : 0,
+                // What a parent blocked in HearthTube for the active profile (both sources), and a change counter
+                ParentBlocks.json(context, LauncherAccessibilityService.getActiveProfileKey(context)),
+                ParentBlocks.version(context)};
     }
 
     static String[] columns() {
@@ -190,6 +193,28 @@ public class ProfileProvider extends ContentProvider {
                 Context context = getContext();
                 String profile = LauncherAccessibilityService.getActiveProfileKey(context);
                 addHearthTubePlaying(context, profile, ms);
+            }
+            Bundle result = new Bundle();
+            result.putBoolean("ok", true);
+            return result;
+        }
+
+        if ("report_started".equals(method)) {
+            // HearthTube started a video in a kids profile: kept for a parent (and sent to Home Assistant when set up)
+            if (extras == null) return null;
+            long timeMs = extras.getLong("time_ms", 0);
+            String videoId = extras.getString("video_id");
+            if (!StartedLog.valid(timeMs, videoId)) return null;
+            String title = extras.getString("title");
+            String channel = extras.getString("channel");
+            String channelId = extras.getString("channel_id");
+            if (AgentService.isAgent(getContext())) {
+                // Not passed on (Hearth not connected): null, and HearthTube sends it again later
+                if (!AgentService.relayStarted(timeMs, videoId, title, channel, channelId)) return null;
+            } else {
+                Context context = getContext();
+                StartedLog.record(context, LauncherAccessibilityService.getActiveProfileKey(context), timeMs, videoId,
+                        title, channel, channelId);
             }
             Bundle result = new Bundle();
             result.putBoolean("ok", true);

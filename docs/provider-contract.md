@@ -4,7 +4,7 @@ Hearth shares its state with other apps (today: HearthTube) through one content 
 contract: what each column means, when it changes, and what callers may rely on. The provider's `contract_version`
 column says which version of this page it implements.
 
-**Current version: 7** (Hearth 2026.10, `ProfileProvider.CONTRACT_VERSION`).
+**Current version: 8** (`ProfileProvider.CONTRACT_VERSION`).
 
 Change rules: adding, removing or changing the meaning of a column or call bumps the version and gets a line in
 the history below. A reader that sees a newer version than it knows keeps using the columns it understands; columns
@@ -77,7 +77,9 @@ answer within a few seconds. Without an agent, a Hearth installed there answers 
 | `allowance_checked_at` | integer or null | When Hearth last read the allowance from Home Assistant (epoch ms), today; null when it hasn't today (not set up, unreachable, or a new day). Hearth reads it every minute or so and at each profile change; after a failed read it tries again within 10 minutes. How old a value may be before it no longer counts is the caller's choice. |
 | `allowance_source` | text or null | Whose minutes `youtube_minutes_left` are: "hearth" (the limit set in Hearth) or "home_assistant"; "home_assistant" too when there are no minutes but Home Assistant locks; null when there's neither. A lock is always Home Assistant's. |
 | `ha_share_now_playing` | 0/1 or null | Whether HearthTube may tell Home Assistant what's playing (the video's title and channel, through its media session): Hearth asks it in Home Assistant's setup and in Settings → Home Assistant. Null when it was never asked; HearthTube then keeps its own default (on). A change in HearthTube's own settings stands until this value changes. |
-| `contract_version` | integer | This page's version (7). Missing on Hearth builds from before version 2. |
+| `parent_blocks` | text (JSON) or null | What a parent has blocked in HearthTube for the active profile: `{"videos": ["<video id>", ...], "channels": ["<channel id>", ...], "words": ["<lower case word>", ...]}`. The union of what is set in Hearth itself and what Home Assistant's integration says (when it's set up); null when nothing is blocked. HearthTube applies them in a kids profile and doesn't let the kid undo them. In a profile's agent, as Hearth last sent it. |
+| `parent_blocks_version` | integer | Goes up whenever `parent_blocks` changes for any profile (0 before the first change). Observers on `/active` are notified. |
+| `contract_version` | integer | This page's version (8). Missing on Hearth builds from before version 2. |
 
 None of these are secret: everything is on screen in Hearth.
 
@@ -94,8 +96,18 @@ so while playing and when playback stops. Same callers as above; returns a Bundl
 agent it's passed on to Hearth, and returns null when it couldn't be (Hearth not connected): report that time again
 later. Observers on `/active` are told when a report changes `youtube_minutes_left`, not at every report.
 
+`call(uri /active, "report_started", null, extras {"time_ms": long, "video_id": string, "title": string, "channel": string, "channel_id": string})`:
+HearthTube started a video in a kids profile (time in epoch milliseconds). Hearth keeps it in that profile's log of started
+videos (the newest 2,000; the same `time_ms` and `video_id` twice is one entry, so a resend is harmless) for a parent to
+read, and sends it to Home Assistant when that is set up. Hearth works without Home Assistant. `title`, `channel` and
+`channel_id` may be empty. Same callers as above; returns a Bundle with `ok` true, or null for a start that isn't valid
+(no time, an id that isn't a video id). In a profile's agent it's passed on to Hearth and returns null when it couldn't be
+(Hearth not connected): HearthTube keeps the entry and sends it again later.
+
 ## History
 
+- **8** (2026-10-27): added `parent_blocks`, `parent_blocks_version` and the `report_started` call (a kids profile's
+  started videos up, the parent's blocked videos, channels and words down). Also in a profile's agent, as Hearth sends it.
 - **7** (2026-10-14): added `ha_share_now_playing` (Home Assistant's setup question for HearthTube's now playing).
   Also in a profile's agent, as Hearth sends it.
 - **6** (2026-10-10): added `youtube_minutes_left`, `schedule_locked`, `allowance_message`, `allowance_checked_at`,

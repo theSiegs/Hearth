@@ -191,6 +191,18 @@ public class AgentService extends Service {
         return true;
     }
 
+    /**
+     * HearthTube started a video in this profile's user: Hearth keeps it for the parent. False when Hearth isn't
+     * connected, so nothing was passed on and HearthTube keeps it to send again.
+     */
+    static boolean relayStarted(long timeMs, String videoId, String title, String channel, String channelId) {
+        AgentService service = sInstance;
+        if (service == null || !sConnected) return false;
+        service.send(json("type", "started", "t", timeMs, "v", videoId, "title", title != null ? title : "",
+                "ch", channel != null ? channel : "", "cid", channelId != null ? channelId : ""));
+        return true;
+    }
+
     /** Checks a PIN with Hearth (it stays there); null when Hearth doesn't answer within a few seconds. */
     static Bundle verifyPinWithHearth(String pin) {
         AgentService service = sInstance;
