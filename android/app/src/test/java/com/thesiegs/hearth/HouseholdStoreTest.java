@@ -142,10 +142,10 @@ public class HouseholdStoreTest {
         HouseholdTvs.Tv tv = new HouseholdTvs.Tv();
         tv.store.create("Office", T0);
         String other = HouseholdIdentity.tvIdOf(new byte[] {1, 2, 3});
-        tv.store.admit(other, new byte[] {1, 2, 3}, "Kitchen", T0);
+        tv.store.admit(other, new byte[] {1, 2, 3}, "Kitchen", true, T0);
         assertTrue(tv.store.remove(other, T0 + 1));
         assertEquals(HouseholdMembers.Standing.REMOVED, HouseholdMembers.standing(tv.store.log(), other));
-        tv.store.admit(other, new byte[] {1, 2, 3}, "Kitchen", T0 + 2);
+        tv.store.admit(other, new byte[] {1, 2, 3}, "Kitchen", true, T0 + 2);
         assertEquals(HouseholdMembers.Standing.REMOVED, HouseholdMembers.standing(tv.store.log(), other));
         assertFalse(tv.store.remove(tv.store.tvId(), T0 + 3));
     }

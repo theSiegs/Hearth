@@ -1296,6 +1296,14 @@ final class Household {
      * this TV's Bell.
      */
     static boolean answerJoin(Context context, String item, boolean allow) {
+        return answerJoin(context, item, allow, false);
+    }
+
+    /**
+     * As {@link #answerJoin(Context, String, boolean)}; {@code giveHa}: an Allow also gives the asked TV's Home
+     * Assistant connection.
+     */
+    static boolean answerJoin(Context context, String item, boolean allow, boolean giveHa) {
         boolean listed = false;
         for (HouseholdNotices.Notice n : sNotices) listed |= n.isJoin() && n.item.equals(item);
         if (!listed) return false;
@@ -1306,8 +1314,8 @@ final class Household {
             HouseholdLog log = store(app).log();
             if (log.get(HouseholdNotices.KIND, HouseholdNotices.ALL_ADULTS, item) == null
                     || HouseholdNotices.answer(log.all(), item) != null) return;
-            log.put(HouseholdNotices.ANSWER, HouseholdNotices.ALL_ADULTS, item, HouseholdNotices.answerValue(allow),
-                    System.currentTimeMillis());
+            log.put(HouseholdNotices.ANSWER, HouseholdNotices.ALL_ADULTS, item,
+                    HouseholdNotices.answerValue(allow, giveHa), System.currentTimeMillis());
             Log.i(TAG, "Answered another TV's join request: " + (allow ? "allow" : "don't allow"));
             noticesChanged(app, log);
         });
@@ -1315,14 +1323,16 @@ final class Household {
     }
 
     /** A TV asks this one to join (HouseholdJoining): the request goes in the Bell of the household's other TVs too. */
-    static void joinRequestStarted(Context context, String requestId, String joiner, long untilMs) {
+    static void joinRequestStarted(Context context, String requestId, String joiner, long untilMs, String code,
+            boolean offersHa) {
         Context app = context.getApplicationContext();
         EXEC.execute(() -> {
             if (!member(app)) return;
             HouseholdStore store = store(app);
             long now = System.currentTimeMillis();
             store.log().put(HouseholdNotices.KIND, HouseholdNotices.ALL_ADULTS, HouseholdNotices.joinItem(requestId),
-                    HouseholdNotices.joinValue(joiner, store.tvId(), ShareDiscovery.deviceName(app), now, untilMs), now);
+                    HouseholdNotices.joinValue(joiner, store.tvId(), ShareDiscovery.deviceName(app), now, untilMs,
+                            code, offersHa), now);
             noticesChanged(app, store.log());
         });
     }

@@ -42,8 +42,8 @@ replaces both Copy profiles between TVs and Household sync.
 | Notifications | person, or every adult | Home Assistant's, and a TV asking to join; see [Notifications](#notifications) |
 
 Never synced: the Home Assistant token, the webhook ID, the TV's name (each TV announces its own), permissions,
-anything about a TV's hardware. The Home Assistant address is handed over once when a TV joins (see Joining); the TV
-then makes its own webhook and asks for its own token.
+anything about a TV's hardware. The Home Assistant address and a token are handed over once when a TV joins, when the
+adult who allows it says so (see Joining); the TV then makes its own webhook.
 
 **Per person, and per TV.** Everything a person picks for how their home looks follows them; what belongs to the TV
 stays on it. Checked setting by setting (SettingsService's keys, the layout's tables, the pictures):
@@ -164,7 +164,8 @@ Every TV on the list keeps the whole list, so each knows every other, even two t
 
 - **A TV syncs only with listed TVs.** Each exchange begins with both TVs proving they hold the private key of a listed
   member (see Moving entries). A TV not on this TV's list gets nothing and can send nothing.
-- **Adding** a TV is one new `member` entry, written by the member that approved the join.
+- **Adding** a TV is one new `member` entry, written by the member that approved the join, naming itself as the TV
+  that added it, and signed with its TV key (see [What's checked](#whats-checked)).
 - **Removing** a TV deletes its `member` entry (the removal). It spreads like any change, and each TV that takes it
   stops talking to that TV. No key changes, and the TVs that stay do nothing.
 - **A removal is final for that key.** It beats any write for that TV, a later one included, nothing written after it
@@ -204,12 +205,16 @@ A TV joins from its own screen, and someone allows it from the notification Bell
    both derive the same join code (six digits). The new TV says which TV it asked: "Allow it on Office".
 3. The household TV puts the request in its **notification Bell**, and in the Bells of the household's other TVs (see
    [Notifications](#notifications)), on adults' profiles only (never while a kids profile is on), and pops it up:
-   "Kitchen wants to join your TVs", with **Allow** and **Don't allow**, answered on any of them. No Parent PIN
-   and no code to compare: the TV's name is what the person checks. Clearing it is Don't allow. (The code still binds
-   the session; no one compares it, so a device on the network that put itself between the two TVs, and named itself
-   after the new TV, could be let in: a trade chosen for a home network.)
-4. On Allow, the household TV sends an invitation over the sealed session (see The invitation, below), and a Home
-   Assistant address and a new token of its own when the new TV has none.
+   "Kitchen wants to join your TVs", with **Allow** and **Don't allow**, answered on any of them. The request shows
+   the join code, "Check that the new TV shows 123 456 before you choose Allow", so the adult compares it with the new
+   TV's screen: a device on the network that put itself between the two TVs (and named itself after the new TV) gets
+   another code. No Parent PIN: accepting needs none. Clearing it is Don't allow.
+4. On Allow, the household TV sends an invitation over the sealed session (see The invitation, below). When the new
+   TV has no Home Assistant connection and asks for one, and the asked TV has one, the TV where Allow was chosen first
+   asks on its own: "Also give Kitchen this TV's Home Assistant connection?", with **Give it** and **Don't give it**.
+   No is the default: clearing it, or a minute without an answer, joins the TV without it. Given, the asked TV makes a
+   new long-lived token with its own (as before), so it is for the Home Assistant user this TV's token is, the one its
+   Home Assistant panel signs in as, and shows in that user's profile, where it can be revoked.
    The new TV joins with it, and their first exchange lists it.
 5. **A TV that already has its own setup**: for an entry both have, the household's wins; settings only this TV has are
    kept and synced out. Before anything is replaced the new TV shows what will change and keeps a copy to put back
@@ -315,10 +320,14 @@ that if its own end comes first (a join request's, five minutes). Its delete is 
 the delete stays as long as the notification could come back from a TV that was off.
 
 **A TV asking to join.** The TV that was asked (it holds the request's connection) writes a `notice` for every adult,
-its item `join:<a random id>`, naming the TV that asks and itself. Every other TV shows it in adults' Bells with
-**Allow** and **Don't allow** ("It asked Office, which lets it in"); the asked TV shows its own Bell item, as before.
-An answer on another TV is a `join_answer` entry for that item, which reaches the asked TV with the next exchange (two
-seconds later, both being on); that TV takes it as if pressed on its own screen. The request is still decided once:
+its item `join:<a random id>`, naming the TV that asks and itself, with the join code and whether allowing it asks
+about the Home Assistant connection. Every other TV shows it in adults' Bells with **Allow** and **Don't allow** ("It
+asked Office, which lets it in. Check that the new TV shows 123 456 before you choose Allow"); the asked TV shows its
+own Bell item, as before. An answer on another TV is a `join_answer` entry for that item (`{"allow", "ha"}`: an Allow
+asks about the connection there first, and says what was chosen), which reaches the asked TV with the next exchange
+(two seconds later, both being on); that TV takes it as if pressed on its own screen. An Allow from a TV of an older
+build says nothing about the connection, so it isn't given; a request from an older asked TV carries no code (its
+Bell item says so in its old words) and its Allow asks nothing more. The request is still decided once:
 the asked TV takes the first answer it hears, its own or another TV's, and a later one changes nothing. When the
 request ends (answered, or five minutes without an answer), the asked TV deletes its notice, which takes it from every
 Bell. A TV that answered hides the request at once. Clearing it is Don't allow, as on the asked TV.
@@ -431,6 +440,36 @@ that would ask for them:
 - **None is heard**: no screen. A **Sync with your other TVs** step just before Finish offers **Start a household**,
   for the TVs set up later; if a household is heard by then (the other TV came on meanwhile), it offers Join instead.
   Finish lists the TV as in step with the others, or the household as left for later.
+
+## What's checked
+
+What a TV checks before it takes part or takes something, and what that guards against.
+
+- **The channel.** Only a TV that signs the exchange with the key on this TV's member list takes part (Moving
+  entries); a removed one is told, an unknown one refused unless it proves an invitation (or, converting, the version 1
+  key).
+- **Joining.** The join code binds the session between the two TVs and is shown on both: the new TV's screen and the
+  request in the household's Bells (and its Allow dialog). No PIN: whoever answers is trusted to compare the code.
+  Nothing secret moves before Allow, and the Home Assistant connection only after its own question, answered yes.
+- **Member, removal and Parent PIN entries are signed.** Each carries its writer's signature (ECDSA with its TV key,
+  over every field of the entry: kind, person, item, value, clock, writer and sequence). A TV takes one only when its
+  writer is on its member list at that moment (not unknown, not removed) and the signature checks against the writer's
+  listed key. So a TV that was removed, or never admitted, can't add, remove or rename TVs or change the Parent PIN,
+  even through a TV that hasn't heard of the removal; and a member can't write those in another member's name.
+- **Admissions.** A `member` entry must hold the key its TV id was made from, and one for another TV (an admission)
+  must name its writer as the TV that added it. So every TV on the list shows which member added it, and an admission
+  can't be put in another member's name. What it can't stop: a TV that is a member, while it is one, can list a key of
+  its own making in its own name. Such a TV shows on Your TVs (named, added by that member) and is removed there like
+  any other; removing the member that added it doesn't remove it by itself, since that would also remove the TVs it
+  rightly let in.
+- **An entry refused** is still counted as seen, so it isn't sent again and again; it never changes anything.
+- **Older builds.** A TV on a build from before signing doesn't sign. Each TV says in its own member entry, and in
+  its exchanges and invitations, that it signs; a TV listed as signing has unsigned entries in its name refused, and no
+  entry can take back that a TV signs. A TV not listed as signing (an older build) is taken as before, unsigned, and
+  what it writes can't claim another TV signs. So while an older TV is in the household, a member could write unsigned
+  entries in that older TV's name; this ends when it updates (Hearth updates itself), its next own entry then saying it
+  signs. An older TV also drops signatures when it passes entries on, so a TV that hears another only through an older
+  one may miss that TV's renames and the TVs it added until it meets it or the older one updates.
 
 ## Failure and safety
 

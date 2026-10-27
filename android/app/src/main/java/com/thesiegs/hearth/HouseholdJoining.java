@@ -49,6 +49,16 @@ final class HouseholdJoining {
     /** The waiting request's id in the household's Bells (HouseholdNotices.joinItem). */
     private static String sRequestId;
     private static Boolean sScreenAnswer;
+    /**
+     * After Allow, while the adult is asked whether the new TV also gets this TV's Home Assistant connection: the
+     * question shows ({@link #haQuestion}) until answered, or {@link #HA_ANSWER_MS} without an answer, which is no.
+     */
+    private static boolean sHaAsking;
+    private static Boolean sHaAnswer;
+    /** What was decided for the request being served: hand over the Home Assistant connection. */
+    private static boolean sGiveHa;
+    /** How long the Home Assistant question waits for an answer before the new TV joins without it. */
+    static final long HA_ANSWER_MS = 60_000;
     private static final java.security.SecureRandom RANDOM = new java.security.SecureRandom();
 
     // The new TV: its own request
@@ -81,7 +91,7 @@ final class HouseholdJoining {
                 }
                 sServing = true;
             }
-            s.setSoTimeout((int) ANSWER_MS + 30_000);
+            s.setSoTimeout((int) (ANSWER_MS + HA_ANSWER_MS) + 30_000);
             boolean allowed = HouseholdJoin.serve(in, s.getOutputStream(), host(context));
             Log.i(TAG, allowed ? "A TV was allowed to join the household" : "A TV asked to join and wasn't allowed");
             synchronized (HouseholdJoining.class) {
@@ -98,6 +108,9 @@ final class HouseholdJoining {
                 sRequestCode = null;
                 sRequestId = null;
                 sScreenAnswer = null;
+                sHaAsking = false;
+                sHaAnswer = null;
+                sGiveHa = false;
             }
         }
     }
@@ -105,8 +118,10 @@ final class HouseholdJoining {
     private static HouseholdJoin.Host host(Context context) {
         return new HouseholdJoin.Host() {
             @Override
-            public boolean approve(String name, String code) throws InterruptedException {
+            public boolean approve(String name, String code, boolean wantsHa) throws InterruptedException {
                 String joiner = name.isEmpty() ? context.getString(R.string.household_join_unnamed) : name;
+                // Allowing it asks next about this TV's Home Assistant connection, when it asked for one and there is one
+                boolean offersHa = wantsHa && HaConfig.baseUrl(context) != null;
                 byte[] random = new byte[12];
                 RANDOM.nextBytes(random);
                 String requestId = Hex.of(random);
@@ -115,20 +130,27 @@ final class HouseholdJoining {
                     sRequestCode = spaced(code);
                     sRequestId = requestId;
                     sScreenAnswer = null;
+                    sHaAsking = false;
+                    sHaAnswer = null;
+                    sGiveHa = false;
                 }
                 Log.i(TAG, "A TV asks to join the household");
                 HearthBellItems.joinRequestChanged(context, joiner);
                 // The household's other TVs list it too, and can answer it (Household.answerJoin)
-                Household.joinRequestStarted(context, requestId, joiner, System.currentTimeMillis() + ANSWER_MS);
+                Household.joinRequestStarted(context, requestId, joiner, System.currentTimeMillis() + ANSWER_MS,
+                        spaced(code), offersHa);
                 long deadline = SystemClock.elapsedRealtime() + ANSWER_MS;
+                boolean allowed = false;
                 try {
                     while (SystemClock.elapsedRealtime() < deadline) {
                         synchronized (HouseholdJoining.class) {
-                            if (sScreenAnswer != null) return sScreenAnswer;
+                            if (sScreenAnswer != null) {
+                                allowed = sScreenAnswer;
+                                break;
+                            }
                         }
                         Thread.sleep(500);
                     }
-                    return false;
                 } finally {
                     synchronized (HouseholdJoining.class) {
                         sRequestName = null;
@@ -138,16 +160,27 @@ final class HouseholdJoining {
                     HearthBellItems.joinRequestChanged(context, null);
                     Household.joinRequestEnded(context, requestId);
                 }
+                if (!allowed) return false;
+                // Within what a TV of an older build waits for the answer (five minutes and a half)
+                long left = deadline + 25_000 - SystemClock.elapsedRealtime();
+                if (offersHa && left > 0) askAboutHa(context, joiner, Math.min(HA_ANSWER_MS, left));
+                return true;
             }
 
             @Override
             public String payload(String name, boolean wantsHa) {
                 String invitation = Household.invitationToJoin(context);
                 if (invitation == null) return null;
+                boolean giveHa;
+                synchronized (HouseholdJoining.class) {
+                    giveHa = sGiveHa;
+                }
                 try {
                     JSONObject out = new JSONObject().put("invitation", invitation);
                     String base = HaConfig.baseUrl(context);
-                    if (wantsHa && base != null) {
+                    // The token is made as now, with this TV's own: it's for the Home Assistant user this TV's panel
+                    // signs in as, and shows in that user's profile, where it can be revoked
+                    if (wantsHa && giveHa && base != null) {
                         String token = HaEvents.mintToken(context, tokenName(name, new Date()), TOKEN_DAYS);
                         if (token != null) out.put("ha", new JSONObject().put("url", base).put("token", token));
                     }
@@ -157,6 +190,98 @@ final class HouseholdJoining {
                 }
             }
         };
+    }
+
+    /**
+     * Allow was chosen: asks, on its own and with no as the default, whether the new TV also gets this TV's Home
+     * Assistant connection, for up to {@code waitMs}. An Allow from another TV of the household says already.
+     */
+    private static void askAboutHa(Context context, String joiner, long waitMs) throws InterruptedException {
+        synchronized (HouseholdJoining.class) {
+            if (sHaAnswer != null) {
+                sGiveHa = sHaAnswer;
+                return;
+            }
+            sHaAsking = true;
+            sRequestName = joiner;
+        }
+        HearthBellItems.haQuestionChanged(context, joiner);
+        long until = SystemClock.elapsedRealtime() + waitMs;
+        boolean give = false;
+        try {
+            while (SystemClock.elapsedRealtime() < until) {
+                synchronized (HouseholdJoining.class) {
+                    if (sHaAnswer != null) break;
+                }
+                Thread.sleep(500);
+            }
+        } finally {
+            synchronized (HouseholdJoining.class) {
+                give = Boolean.TRUE.equals(sHaAnswer);
+                sGiveHa = give;
+                sHaAsking = false;
+                sRequestName = null;
+            }
+            HearthBellItems.haQuestionChanged(context, null);
+        }
+        Log.i(TAG, give ? "The new TV gets this TV's Home Assistant connection"
+                : "The new TV joins without Home Assistant");
+    }
+
+    /** The name of the TV allowed to join while this TV asks about its Home Assistant connection; null when not. */
+    static synchronized String haQuestion() {
+        return sHaAsking ? sRequestName : null;
+    }
+
+    /** Answered in this TV's Bell: the new TV gets the Home Assistant connection, or not. False when not asked. */
+    static synchronized boolean answerHa(boolean give) {
+        if (!sHaAsking || sHaAnswer != null) return false;
+        sHaAnswer = give;
+        return true;
+    }
+
+    // Another TV's join request, allowed here: the Home Assistant question that follows, until answered (no by default)
+    private static String sOtherItem;
+    private static String sOtherJoiner;
+    private static String sOtherAsked;
+
+    /**
+     * Allow was chosen here for another TV's request that offers its Home Assistant connection: the Bell asks about it
+     * next, and the Allow goes out with the answer, or without the connection after {@link #HA_ANSWER_MS}.
+     */
+    static void askHaForOther(Context context, String item, String joiner, String askedName) {
+        synchronized (HouseholdJoining.class) {
+            sOtherItem = item;
+            sOtherJoiner = joiner;
+            sOtherAsked = askedName;
+        }
+        HearthBellItems.haQuestionChanged(context, joiner);
+        Context app = context.getApplicationContext();
+        WORKER.execute(() -> {
+            try {
+                Thread.sleep(HA_ANSWER_MS);
+            } catch (InterruptedException e) {
+                return;
+            }
+            answerHaForOther(app, item, false);
+        });
+    }
+
+    /** {item, joiner, asked TV's name} of another TV's request whose Home Assistant question shows here; or null. */
+    static synchronized String[] otherHaQuestion() {
+        return sOtherItem == null ? null : new String[] {sOtherItem, sOtherJoiner, sOtherAsked};
+    }
+
+    /** The Home Assistant question for another TV's request answered (or timed out): the Allow goes out with it. */
+    static boolean answerHaForOther(Context context, String item, boolean give) {
+        synchronized (HouseholdJoining.class) {
+            if (item == null || !item.equals(sOtherItem)) return false;
+            sOtherItem = null;
+            sOtherJoiner = null;
+            sOtherAsked = null;
+        }
+        HearthBellItems.haQuestionChanged(context, null);
+        return Household.answerJoin(context, item, true, give);
     }
 
     /** The new TV's token's name in Home Assistant: unique (Home Assistant refuses a name twice). */
@@ -176,6 +301,11 @@ final class HouseholdJoining {
         return sRequestCode == null ? null : sRequestName;
     }
 
+    /** The six digits of the request waiting for an answer ("123 456"), which the new TV shows too; null when none. */
+    static synchronized String requestCode() {
+        return sRequestCode;
+    }
+
     /** Someone answered in this TV's Bell. False when no request is waiting, or it was answered already. */
     static synchronized boolean answer(boolean allow) {
         if (sRequestCode == null || sScreenAnswer != null) return false;
@@ -193,12 +323,15 @@ final class HouseholdJoining {
             id = sRequestCode == null ? null : sRequestId;
         }
         if (id == null) return;
-        Boolean allow = HouseholdNotices.answer(entries, HouseholdNotices.joinItem(id));
+        String item = HouseholdNotices.joinItem(id);
+        Boolean allow = HouseholdNotices.answer(entries, item);
         if (allow == null) return;
         boolean answered;
         synchronized (HouseholdJoining.class) {
             // Still the same request: one that ended meanwhile, and the next, aren't answered by it
             answered = id.equals(sRequestId) && answer(allow);
+            // The TV that allowed it asked about the Home Assistant connection itself (an older TV's Allow: not given)
+            if (answered && allow) sHaAnswer = HouseholdNotices.answerGivesHa(entries, item);
         }
         if (answered) Log.i(TAG, "A join request was answered on another TV of the household");
     }
@@ -257,7 +390,8 @@ final class HouseholdJoining {
             boolean asked = false;
             try {
                 socket.connect(new InetSocketAddress(tv.host, tv.port), CONNECT_MS);
-                socket.setSoTimeout((int) ANSWER_MS + 30_000);
+                // The answer, then the question about Home Assistant's connection that may follow it
+                socket.setSoTimeout((int) (ANSWER_MS + HA_ANSWER_MS) + 30_000);
                 HouseholdJoin.Request request = new HouseholdJoin.Request(socket.getInputStream(), socket.getOutputStream());
                 String code = request.start(ShareDiscovery.deviceName(context), !HaConfig.isConfigured(context));
                 synchronized (HouseholdJoining.class) {

@@ -22,14 +22,26 @@ final class HouseholdLog {
     /** A clock further ahead of this TV's than this is refused (a TV with a broken clock can't pin an entry forever). */
     static final long MAX_AHEAD_MS = 24L * 60 * 60 * 1000;
 
+    /** Signs this TV's entries of the kinds that carry a signature (HouseholdMembers.signs) with its TV key. */
+    interface Signer {
+        /** The signature (base64) of {@code entry}'s HouseholdEntry.signedBytes; null when it can't be made. */
+        String sign(HouseholdEntry entry);
+    }
+
     private final String tv;
     private final Map<String, HouseholdEntry> entries = new HashMap<>();
     private final Map<String, Long> vector = new HashMap<>();
     private long lastClock;
+    private Signer signer;
 
     HouseholdLog(String tv) {
         if (tv == null || tv.isEmpty()) throw new IllegalArgumentException("tv");
         this.tv = tv;
+    }
+
+    /** From now on this TV's member, removal and Parent PIN entries are signed with {@code signer}. */
+    void setSigner(Signer signer) {
+        this.signer = signer;
     }
 
     /** Writes a value on this TV; returns the entry to send to the others. */
@@ -56,6 +68,11 @@ final class HouseholdLog {
         lastClock = clock;
         long seq = vector.getOrDefault(tv, 0L) + 1;
         HouseholdEntry entry = new HouseholdEntry(kind, profile, item, value, clock, tv, seq, deleted);
+        if (signer != null && HouseholdMembers.signs(kind)) {
+            String sig = signer.sign(entry);
+            // Unsigned, the other TVs refuse it (and this TV makes it again: its own entry is rewritten when stale)
+            if (sig != null) entry = entry.signed(sig);
+        }
         entries.put(entry.id(), entry);
         vector.put(tv, seq);
         return entry;
@@ -67,15 +84,24 @@ final class HouseholdLog {
      * claims to come from this TV with a sequence this TV never made, or its clock is too far ahead.
      */
     boolean merge(HouseholdEntry incoming, long nowMs) {
-        if (incoming == null) return false;
-        if (incoming.tv.equals(tv) && incoming.seq > vector.getOrDefault(tv, 0L)) return false;
-        if ((incoming.clock >> COUNTER_BITS) > nowMs + MAX_AHEAD_MS) return false;
-        if (incoming.seq > vector.getOrDefault(incoming.tv, 0L)) vector.put(incoming.tv, incoming.seq);
+        if (!count(incoming, nowMs)) return false;
         lastClock = Math.max(lastClock, incoming.clock);
         HouseholdEntry existing = entries.get(incoming.id());
         if (existing != null && isFinal(existing)) return false;
         if (existing != null && !isFinal(incoming) && !incoming.beats(existing)) return false;
         entries.put(incoming.id(), incoming);
+        return true;
+    }
+
+    /**
+     * Counts an entry from another TV in the version vector without taking it (one refused: it isn't asked for
+     * again). False, and not counted, when merge would refuse it outright (see {@link #merge}).
+     */
+    boolean count(HouseholdEntry incoming, long nowMs) {
+        if (incoming == null) return false;
+        if (incoming.tv.equals(tv) && incoming.seq > vector.getOrDefault(tv, 0L)) return false;
+        if ((incoming.clock >> COUNTER_BITS) > nowMs + MAX_AHEAD_MS) return false;
+        if (incoming.seq > vector.getOrDefault(incoming.tv, 0L)) vector.put(incoming.tv, incoming.seq);
         return true;
     }
 

@@ -29,14 +29,16 @@ public class HouseholdJoinTest {
     private static final class Asked {
         final AtomicReference<String> name = new AtomicReference<>();
         final AtomicReference<String> code = new AtomicReference<>();
+        final java.util.concurrent.atomic.AtomicBoolean wantsHa = new java.util.concurrent.atomic.AtomicBoolean();
     }
 
     private static HouseholdJoin.Host host(HouseholdTvs.Tv tv, boolean allow, Asked asked) {
         return new HouseholdJoin.Host() {
             @Override
-            public boolean approve(String name, String code) {
+            public boolean approve(String name, String code, boolean wantsHa) {
                 asked.name.set(name);
                 asked.code.set(code);
+                asked.wantsHa.set(wantsHa);
                 return allow;
             }
 
@@ -99,6 +101,8 @@ public class HouseholdJoinTest {
         assertEquals("Kitchen", asked.name.get());
         assertEquals(got[0], asked.code.get());
         assertTrue(got[0].matches("[0-9]{6}"));
+        // it said it has no Home Assistant connection: the household TV asks about giving it one, separately
+        assertTrue(asked.wantsHa.get());
         JSONObject payload = new JSONObject(got[1]);
         assertEquals("http://192.0.2.10:8123", payload.getJSONObject("ha").getString("url"));
         HouseholdTvs.Tv joining = new HouseholdTvs.Tv();

@@ -193,19 +193,48 @@ final class HouseholdSync {
         JSONArray array = new JSONArray(incoming);
         if (array.length() > MAX_ENTRIES) throw new SyncException("Too many entries");
         List<HouseholdEntry> applied = new ArrayList<>();
+        List<HouseholdEntry> checked = new ArrayList<>();
         int received = 0;
         for (int i = 0; i < array.length(); i++) {
             HouseholdEntry entry = HouseholdEntry.fromJson(array.getString(i));
             if (entry == null) continue;
             received++;
-            if (store.log().merge(entry, now)) applied.add(entry);
+            if (HouseholdMembers.signs(entry.kind)) {
+                checked.add(entry);
+            } else if (store.log().merge(entry, now)) {
+                applied.add(entry);
+            }
         }
+        mergeChecked(checked, applied);
         // 5. the pictures the entries name that a side lacks
         int took = tradePictures();
 
         // The TV that invited this one has listed it: the invitation is spent
         if (store.joinProofFor(peer) != null) store.joinProofUsed();
         return new Result(peer, peerName, toSend.size(), received, applied, false, false, took);
+    }
+
+    /**
+     * Merges the member, removal and Parent PIN entries that came, each only if HouseholdMembers.accepts it against
+     * the member list as it stands, oldest first and again until none more is taken, so a TV listed by an entry of
+     * the same exchange can have its own entries taken too. One refused is still counted as seen, so it isn't sent
+     * again and again (a TV that joined holds an entry for the TV that let it in, in that TV's name, which only it
+     * needs).
+     */
+    private void mergeChecked(List<HouseholdEntry> checked, List<HouseholdEntry> applied) {
+        checked.sort((a, b) -> Long.compare(a.clock, b.clock));
+        boolean progress = true;
+        while (progress && !checked.isEmpty()) {
+            progress = false;
+            for (java.util.Iterator<HouseholdEntry> it = checked.iterator(); it.hasNext();) {
+                HouseholdEntry entry = it.next();
+                if (!HouseholdMembers.accepts(store.log(), entry)) continue;
+                it.remove();
+                progress = true;
+                if (store.log().merge(entry, now)) applied.add(entry);
+            }
+        }
+        for (HouseholdEntry refused : checked) store.log().count(refused, now);
     }
 
     /**
@@ -356,7 +385,9 @@ final class HouseholdSync {
         JSONObject auth = new JSONObject()
                 .put("key", b64.encodeToString(store.publicKey()))
                 .put("sig", b64.encodeToString(store.identity().sign(signed(initiator, ""))))
-                .put("name", name == null ? "" : name);
+                .put("name", name == null ? "" : name)
+                // This TV signs its member, removal and Parent PIN entries: a TV that lists it refuses unsigned ones
+                .put("signs", true);
         byte[] v1 = store.v1AdmitKey(now);
         if (v1 != null) auth.put("v1", b64.encodeToString(ShareCrypto.hkdfExtract(v1, signed(initiator, "v1"))));
         byte[] invite = store.joinProofFor(peer);
@@ -387,12 +418,12 @@ final class HouseholdSync {
         String v1Mac = auth.optString("v1", "");
         if (v1 != null && !v1Mac.isEmpty()
                 && MessageDigest.isEqual(ShareCrypto.hkdfExtract(v1, signed(ofInitiator, "v1")), b64.decode(v1Mac))) {
-            store.admit(peer, key, peerName, now);
+            store.admit(peer, key, peerName, auth.optBoolean("signs", false), now);
             return HouseholdMembers.Standing.MEMBER;
         }
         String inviteMac = auth.optString("invite", "");
         if (!inviteMac.isEmpty() && store.useInvite(signed(ofInitiator, "invite"), b64.decode(inviteMac), now)) {
-            store.admit(peer, key, peerName, now);
+            store.admit(peer, key, peerName, auth.optBoolean("signs", false), now);
             return HouseholdMembers.Standing.MEMBER;
         }
         throw new SyncException("The other TV is not in this household");

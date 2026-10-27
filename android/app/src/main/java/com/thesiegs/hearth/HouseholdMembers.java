@@ -64,13 +64,70 @@ final class HouseholdMembers {
 
     /** A member entry's value: the TV's name, its public key, and the TV that added it. */
     static String value(String name, byte[] publicKey, String addedBy) {
+        return value(name, publicKey, addedBy, false);
+    }
+
+    /**
+     * As {@link #value(String, byte[], String)}; {@code signing}: the TV signs its member, removal and Parent PIN
+     * entries (it runs a build that does), so an unsigned one in its name is refused.
+     */
+    static String value(String name, byte[] publicKey, String addedBy, boolean signing) {
         try {
-            return new JSONObject().put("name", name == null ? "" : name)
+            JSONObject o = new JSONObject().put("name", name == null ? "" : name)
                     .put("key", Base64.getEncoder().encodeToString(publicKey))
-                    .put("by", addedBy == null ? "" : addedBy).toString();
+                    .put("by", addedBy == null ? "" : addedBy);
+            if (signing) o.put("s", true);
+            return o.toString();
         } catch (JSONException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /** Whether a member entry says its TV signs its entries. */
+    static boolean signingOf(String value) {
+        try {
+            return new JSONObject(value).optBoolean("s", false);
+        } catch (JSONException e) {
+            return false;
+        }
+    }
+
+    /** The kinds whose entries carry their writer's signature: the member list (removals too) and the Parent PIN. */
+    static boolean signs(String kind) {
+        return KIND.equals(kind) || HouseholdBridge.PARENT_PIN.equals(kind);
+    }
+
+    /**
+     * Whether an entry from another TV may be taken (docs/household-sync.md, "What's checked"). Only the kinds that
+     * carry a signature ({@link #signs}) are checked: their writer must be on this TV's member list now (a TV not
+     * listed, or removed, writes nothing for the household), and the entry signed with that writer's listed key. An
+     * entry without a signature is taken only from a TV whose entry doesn't say it signs (one on a build from before
+     * signing), and never says so itself. A member entry must also hold a key its id was made from; one for another TV
+     * (an admission) must name its writer as the TV that added it; and one can't take back that a TV signs.
+     */
+    static boolean accepts(HouseholdLog log, HouseholdEntry e) {
+        if (!signs(e.kind)) return true;
+        byte[] writerKey = keyFor(log, e.tv);
+        if (writerKey == null) return false;
+        boolean writerSigns = signingOf(log.get(KIND, HouseholdBridge.SHARED, e.tv).value);
+        if (e.sig.isEmpty()) {
+            if (writerSigns || (KIND.equals(e.kind) && !e.deleted && signingOf(e.value))) return false;
+        } else {
+            byte[] sig;
+            try {
+                sig = Base64.getDecoder().decode(e.sig);
+            } catch (IllegalArgumentException bad) {
+                return false;
+            }
+            if (!HouseholdIdentity.verify(writerKey, e.signedBytes(), sig)) return false;
+        }
+        if (!KIND.equals(e.kind) || e.deleted) return true;
+        if (!HouseholdBridge.SHARED.equals(e.profile)) return false;
+        byte[] key = keyOf(e.value);
+        if (key == null || !HouseholdIdentity.tvIdOf(key).equals(e.item)) return false;
+        if (!e.item.equals(e.tv) && !e.tv.equals(byOf(e.value, ""))) return false;
+        HouseholdEntry had = log.get(KIND, HouseholdBridge.SHARED, e.item);
+        return had == null || !signingOf(had.value) || signingOf(e.value);
     }
 
     /** The name a member entry carries, or null. */
@@ -120,11 +177,14 @@ final class HouseholdMembers {
         return key != null && HouseholdIdentity.tvIdOf(key).equals(tvId) ? key : null;
     }
 
-    /** Whether this TV's own entry needs writing: missing, another name or key, or older than {@link #REFRESH_MS}. */
+    /**
+     * Whether this TV's own entry needs writing: missing, another name or key, not yet saying this TV signs, or older
+     * than {@link #REFRESH_MS}.
+     */
     static boolean selfNeedsWrite(HouseholdLog log, String tvId, String name, byte[] publicKey, long nowMs) {
         if (log.isRemoved(KIND, HouseholdBridge.SHARED, tvId)) return false;
         HouseholdEntry have = log.get(KIND, HouseholdBridge.SHARED, tvId);
-        if (have == null) return true;
+        if (have == null || !signingOf(have.value)) return true;
         String had = nameOf(have.value);
         if (had == null ? name != null : !had.equals(name)) return true;
         if (!Arrays.equals(keyOf(have.value), publicKey)) return true;

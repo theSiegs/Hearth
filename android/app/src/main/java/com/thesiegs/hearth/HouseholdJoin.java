@@ -15,10 +15,11 @@ import java.security.GeneralSecurityException;
  * A TV asking a TV of a household to let it join (docs/household-sync.md, "Joining"), over any pair of streams. The new
  * TV connects to the household TV's sync port and says {@link #MAGIC}, its name and whether it wants the Home Assistant
  * settings. Then the two run ShareSession's key exchange (each commits to its key before seeing the other's), and both
- * show the same six digits: the new TV on its screen, the household TV in the request it sends a parent. On the
- * parent's Allow the household TV sends an invitation (HouseholdStore.Invitation) over the sealed session, and the new
- * TV joins with it; the first sync then lists it. Deny, or no answer, ends it with nothing sent. Nothing secret moves
- * before the parent allows, and no PIN is ever sent.
+ * show the same six digits: the new TV on its screen, the household TV in the request it puts in the Bell, for the
+ * adult to compare. On Allow the household TV sends an invitation (HouseholdStore.Invitation) over the sealed session,
+ * and the Home Assistant connection only when the adult also chose to give it; the new TV joins with it, and the first
+ * sync then lists it. Deny, or no answer, ends it with nothing sent. Nothing secret moves before Allow, and no PIN is
+ * ever sent.
  */
 final class HouseholdJoin {
     static final byte[] MAGIC = {'H', 'H', 'J', '1'};
@@ -29,10 +30,16 @@ final class HouseholdJoin {
 
     /** The household TV's side: who decides, and what it gives. */
     interface Host {
-        /** Asks a parent whether the TV called {@code name}, showing {@code code}, may join. Blocks. */
-        boolean approve(String name, String code) throws InterruptedException;
+        /**
+         * Asks an adult whether the TV called {@code name}, showing {@code code}, may join; {@code wantsHa}: it has no
+         * Home Assistant connection and asks for one (the host asks about that separately). Blocks.
+         */
+        boolean approve(String name, String code, boolean wantsHa) throws InterruptedException;
 
-        /** What the new TV gets once allowed ({"invitation": …, "ha": {url, token}}); null when there's nothing. */
+        /**
+         * What the new TV gets once allowed ({"invitation": …, "ha": {url, token}}, the connection only when it asked
+         * and the adult chose to give it); null when there's nothing.
+         */
         String payload(String name, boolean wantsHa);
     }
 
@@ -65,7 +72,7 @@ final class HouseholdJoin {
         }
         ShareSession session = ShareSession.sender(in, out);
         String code = session.handshake();
-        if (!host.approve(name, code)) {
+        if (!host.approve(name, code, wantsHa)) {
             refuse(session, in);
             return false;
         }
