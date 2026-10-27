@@ -118,7 +118,11 @@
       },
       "people": {
         "title": "Who's who on the TVs",
-        "description": "Each Google TV profile the household's TVs have reported, and the person it is. Leave a guest or shared profile empty: its time counts for nobody."
+        "description": "Each Google TV profile the household's TVs have reported, and the person it is. Leave a guest or shared profile empty: its time counts for nobody. A profile not listed (nobody used it today) can be added below by its id, as the TV's Hearth shows it (user:11).",
+        "data": {
+          "profile_id": "Another profile's id",
+          "profile_person": "Its person"
+        }
       },
       "add_group": {
         "title": "Add a group",
@@ -189,7 +193,8 @@
     },
     "error": {
       "name_taken": "That name is taken.",
-      "already_added": "That sensor is a source already."
+      "already_added": "That sensor is a source already.",
+      "bad_profile_id": "Give an id like user:11, and its person."
     },
     "abort": {
       "no_profiles": "No TV has reported its profiles yet. Pair a TV and let it post its status first.",

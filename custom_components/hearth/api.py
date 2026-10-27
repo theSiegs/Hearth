@@ -24,6 +24,7 @@ from homeassistant.util.network import is_local
 
 from .const import DOMAIN, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
 from .hub import HearthHub, collect_secret, find_pairing
+from .notifications import notify_pairing
 from .status import clean_status, text
 
 HEADER_SECRET = "X-Hearth-Secret"
@@ -104,6 +105,7 @@ class PairStartView(HomeAssistantView):
         )
         if pairing is None:
             return _error(HTTPStatus.TOO_MANY_REQUESTS, "try_later")
+        notify_pairing(hass, pairing.pairing_id, pairing.name)
         hass.async_create_task(
             hass.config_entries.flow.async_init(
                 DOMAIN,

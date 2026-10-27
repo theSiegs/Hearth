@@ -227,3 +227,41 @@ async def test_the_bonus_ends_at_midnight(
     assert hass.states.get("number.hearth_sam_games_bonus_today").state == "0"
     # Yesterday's TV counts are yesterday's
     assert hass.states.get("sensor.hearth_sam_screen_time_today").state == "0"
+
+
+async def test_a_profile_not_seen_yet_can_be_mapped_by_its_id(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    await _household_with_sam(hass, hass_client_no_auth)
+    hass.states.async_set("person.alex", "home", {"friendly_name": "Alex"})
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"next_step_id": "people"})
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"Sam (user:10)": "person.sam", "profile_id": "nonsense", "profile_person": "person.alex"}
+    )
+    assert result["errors"] == {"profile_id": "bad_profile_id"}
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"Sam (user:10)": "person.sam", "profile_id": "user:11", "profile_person": "person.alex"}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options["profiles"] == {KID: "person.sam", "user:11": "person.alex"}
+
+
+async def test_asking_to_pair_puts_a_notification_in_the_bell(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    from homeassistant.components import persistent_notification
+
+    from test_init import NONCE, TV_ID
+
+    await _set_up(hass)
+    client = await hass_client_no_auth()
+    await client.post("/api/hearth/pair", json={"device_id": TV_ID, "name": "Kitchen", "nonce": NONCE})
+    await hass.async_block_till_done()
+    notes = persistent_notification._async_get_or_create_notifications(hass)
+    assert any("Kitchen" in n["message"] for n in notes.values())
+    flow = hass.config_entries.flow.async_progress_by_handler(DOMAIN)[0]
+    await hass.config_entries.flow.async_configure(flow["flow_id"], {})
+    await hass.async_block_till_done()
+    assert not any("Kitchen" in n["message"] for n in persistent_notification._async_get_or_create_notifications(hass).values())

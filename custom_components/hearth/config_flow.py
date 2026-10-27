@@ -9,12 +9,14 @@ webhook ID is typed anywhere.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_NAME
+from homeassistant.components import persistent_notification
 from homeassistant.core import callback
 from homeassistant.helpers.selector import (
     EntitySelector,
@@ -27,6 +29,7 @@ from homeassistant.helpers.selector import (
 
 from .const import CONF_GROUP_APPS, CONF_GROUPS, CONF_LOCKS, CONF_PERSON, CONF_PROFILES, DOMAIN, KIND_MOBILE
 from .limits import BUILTIN_GROUPS, GAMES, VIDEO, slug
+from .notifications import pairing_notification_id
 from .sources import CONF_SOURCES, CONF_TITLES
 
 PERSON_SELECTOR = EntitySelector(EntitySelectorConfig(domain="person"))
@@ -75,6 +78,7 @@ class HearthConfigFlow(ConfigFlow, domain=DOMAIN):
             hub = _loaded_hub(self.hass)
             if hub is None or not await hub.async_approve(self._pairing_id, user_input.get(CONF_PERSON)):
                 return self.async_abort(reason="expired")
+            persistent_notification.async_dismiss(self.hass, pairing_notification_id(self._pairing_id))
             return self.async_abort(reason="paired", description_placeholders={"name": pairing.name})
         # A phone is one person's: say whose (a TV's profiles are mapped in the options)
         schema = (
@@ -134,18 +138,25 @@ class HearthOptionsFlow(OptionsFlow):
         for profile_id in mapped:
             seen.setdefault(profile_id, None)
         labels = {f"{name or 'Profile'} ({profile_id})": profile_id for profile_id, name in sorted(seen.items())}
-        if not labels:
-            return self.async_abort(reason="no_profiles")
+        errors: dict[str, str] = {}
         if user_input is not None:
             profiles = {labels[label]: person for label, person in user_input.items() if label in labels and person}
-            return self.async_create_entry(data={**options, CONF_PROFILES: profiles})
-        schema = vol.Schema(
-            {
-                vol.Optional(label, description={"suggested_value": mapped.get(profile_id)}): PERSON_SELECTOR
-                for label, profile_id in labels.items()
-            }
-        )
-        return self.async_show_form(step_id="people", data_schema=schema)
+            # A profile no TV has reported yet (nobody used it today): its id typed in, as Hearth shows it
+            extra_id = (user_input.get("profile_id") or "").strip()
+            if extra_id:
+                if not re.fullmatch(r"user:\d+(:[a-z0-9._-]+)?", extra_id) or not user_input.get("profile_person"):
+                    errors["profile_id"] = "bad_profile_id"
+                else:
+                    profiles[extra_id] = user_input["profile_person"]
+            if not errors:
+                return self.async_create_entry(data={**options, CONF_PROFILES: profiles})
+        fields: dict[Any, Any] = {
+            vol.Optional(label, description={"suggested_value": mapped.get(profile_id)}): PERSON_SELECTOR
+            for label, profile_id in labels.items()
+        }
+        fields[vol.Optional("profile_id")] = TextSelector()
+        fields[vol.Optional("profile_person")] = PERSON_SELECTOR
+        return self.async_show_form(step_id="people", data_schema=vol.Schema(fields), errors=errors)
 
     async def async_step_add_group(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """A group of one's own (YouTube: YouTube and HearthTube on every device)."""
