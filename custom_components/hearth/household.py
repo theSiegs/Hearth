@@ -98,6 +98,10 @@ class Household:
         self.school.configure(dict(hub.entry.options))
         self.enforcement = Enforcement(hass, hub.entry.entry_id)
         self.days: dict[str, PersonDay] = {}
+        # The day [days] is of
+        self.today: date | None = None
+        # Each totals source's last reading today, which counts while its sensor has no number (unavailable)
+        self._last_totals: dict[str, tuple[date, Reading]] = {}
         self.groups: list[Group] = []
         self.sources: list[Source] = []
         self.titles: list[Title] = []
@@ -285,6 +289,10 @@ class Household:
             else:
                 reading = totals_reading(self.hass, source)
                 if reading is not None:
+                    self._last_totals[source.id] = (today, reading)
+                elif (last := self._last_totals.get(source.id)) is not None and last[0] == today:
+                    reading = last[1]
+                if reading is not None:
                     add(source.person, device, reading)
 
         started, ended = self.live.look(now, today, observations)
@@ -325,12 +333,15 @@ class Household:
                     self.limits.clear_reached(person, group.id)
             days[person] = day
         self.days = days
+        self.today = today
         groups_by_id = {g.id: g for g in self.groups}
-        self.enforcement.update(
-            enforcers_from_options(options),
-            days,
-            lambda group_id: self._group_apps(groups_by_id[group_id], membership) if group_id in groups_by_id else [],
-        )
+
+        def apps_of(group_id: str, person: str) -> list[str]:
+            if group_id == ALL:
+                return self._person_apps(days.get(person), membership)
+            return self._group_apps(groups_by_id[group_id], membership) if group_id in groups_by_id else []
+
+        self.enforcement.update(enforcers_from_options(options), days, apps_of)
         for together, what in [(t, "started") for t in started] + [(t, "ended") for t in ended]:
             self.hass.bus.async_fire(EVENT_PLAYING_TOGETHER, self._together_event(together, what))
         async_dispatcher_send(self.hass, SIGNAL_PEOPLE, new_day)
@@ -426,6 +437,22 @@ class Household:
             for candidate in (title.raw if title else (item,)):
                 if "." in candidate and " " not in candidate:
                     found.add(candidate)
+        return sorted(found)
+
+    def _person_apps(self, day: PersonDay | None, membership) -> list[str]:
+        """Every app of a person's Hearth knows, for holding All screen time: the apps of every group, and those in
+        their usage today on any device and from any source (a title's packages)."""
+        found: set[str] = set()
+        for group in self.groups:
+            if group.id != ALL:
+                found |= set(self._group_apps(group, membership))
+        titles = {f"title:{t.id}": t for t in self.titles}
+        for usage in (day.devices.values() if day else ()):
+            for item in usage.items:
+                title = titles.get(item)
+                for candidate in (title.raw if title else (item,)):
+                    if "." in candidate and " " not in candidate:
+                        found.add(candidate)
         return sorted(found)
 
     def _person_document(self, person: str) -> dict[str, Any]:

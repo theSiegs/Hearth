@@ -18,6 +18,7 @@ from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResu
 from homeassistant.const import CONF_NAME
 from homeassistant.components import persistent_notification
 from homeassistant.core import callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
     DateSelector,
     EntitySelector,
@@ -32,7 +33,16 @@ from homeassistant.helpers.selector import (
 from .const import CONF_GROUP_APPS, CONF_GROUPS, CONF_LOCKS, CONF_PERSON, CONF_PROFILES, DOMAIN, KIND_MOBILE
 from .limits import BUILTIN_GROUPS, GAMES, VIDEO, slug
 from .apps import CONF_APP_WATCH, CONF_ASK_NOTIFY, OTHER, options_with_app_in_group, update_notification
-from .enforce import CONF_ENFORCE, DEFAULT_FS_GROUPS, FAMILY_LINK, FAMILY_SAFETY, PLATFORMS
+from .enforce import (
+    CONF_ENFORCE,
+    DEFAULT_FS_GROUPS,
+    DEFAULT_NINTENDO_GROUPS,
+    FAMILY_LINK,
+    FAMILY_SAFETY,
+    NINTENDO,
+    NINTENDO_DOMAIN,
+    PLATFORMS,
+)
 from .notifications import pairing_notification_id
 from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
@@ -265,7 +275,7 @@ class HearthOptionsFlow(OptionsFlow):
                         "name": name,
                         "live": user_input.get("live", False),
                         "same_as": user_input.get("same_as") or None,
-                        "group": user_input.get("group") or None,
+                        "group": user_input.get("group") or self._source_group(entity_id),
                     }
                 )
                 return self.async_create_entry(data={**options, CONF_SOURCES: sources})
@@ -286,6 +296,11 @@ class HearthOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="add_source", data_schema=schema, errors=errors)
+
+    def _source_group(self, entity_id: str) -> str | None:
+        """The group a source's time is in when none was chosen: a Switch's (Nintendo's sensors) is games."""
+        entry = er.async_get(self.hass).async_get(entity_id)
+        return GAMES if entry is not None and entry.platform == NINTENDO_DOMAIN else None
 
     async def async_step_remove_source(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         return self._remove_from(CONF_SOURCES, "remove_source", user_input)
@@ -334,7 +349,7 @@ class HearthOptionsFlow(OptionsFlow):
 
     async def async_step_enforce(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """The other parental controls that hold a person's apps when a group is out of time (see enforce.py).
-        Choosing a person again replaces theirs; leaving both empty stops it, and what was held is let go."""
+        Choosing a person again replaces theirs; leaving them all empty stops it, and what was held is let go."""
         options = self._options()
         enforce: list[dict[str, Any]] = list(options.get(CONF_ENFORCE, []))
         if user_input is not None:
@@ -352,6 +367,15 @@ class HearthOptionsFlow(OptionsFlow):
                         "groups": list(user_input.get("groups") or DEFAULT_FS_GROUPS),
                     }
                 )
+            if user_input.get("nintendo"):
+                kept.append(
+                    {
+                        "kind": NINTENDO,
+                        "person": person,
+                        "entity_id": user_input["nintendo"],
+                        "groups": list(user_input.get("nintendo_groups") or DEFAULT_NINTENDO_GROUPS),
+                    }
+                )
             return self.async_create_entry(data={**options, CONF_ENFORCE: kept})
         groups = [SelectOptionDict(value=g.id, label=g.name) for g in self._household().groups]
         schema = vol.Schema(
@@ -365,6 +389,12 @@ class HearthOptionsFlow(OptionsFlow):
                     SelectSelectorConfig(options=list(PLATFORMS), multiple=True)
                 ),
                 vol.Optional("groups", default=list(DEFAULT_FS_GROUPS)): SelectSelector(
+                    SelectSelectorConfig(options=groups, multiple=True)
+                ),
+                vol.Optional("nintendo"): EntitySelector(
+                    EntitySelectorConfig(integration=NINTENDO_DOMAIN, domain="number")
+                ),
+                vol.Optional("nintendo_groups", default=list(DEFAULT_NINTENDO_GROUPS)): SelectSelector(
                     SelectSelectorConfig(options=groups, multiple=True)
                 ),
             }

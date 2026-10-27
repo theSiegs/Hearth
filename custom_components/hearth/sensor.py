@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -16,6 +17,8 @@ from homeassistant.components.sensor import (
 from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.util import dt as dt_util
 
 from . import HearthConfigEntry
 from .const import KIND_MOBILE, KIND_TV, TV_STATES
@@ -133,17 +136,47 @@ def _minutes(seconds: float) -> int:
     return int(seconds // 60)
 
 
-class PersonScreenTime(HearthPersonEntity, SensorEntity):
-    """All of the person's screen time today, each minute counted once."""
+class _TodaySoFar(HearthPersonEntity, SensorEntity, RestoreEntity):
+    """A time today that only goes up until midnight (total increasing): the count itself can dip a minute (a
+    source's number corrected down, one device's sources taking turns at the larger), which the recorder would read as
+    a reset. The highest shown today is shown until the count passes it; a new day starts again from the count.
+    Restored after a restart on the same day."""
 
-    _attr_translation_key = "person_screen_time_today"
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
-    _unrecorded_attributes = frozenset({"devices", "groups"})
+    _high: tuple[date, int] | None = None
+
+    def _count(self) -> int:
+        raise NotImplementedError
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        last = await self.async_get_last_state()
+        try:
+            minutes = int(float(last.state)) if last is not None else None
+        except ValueError:
+            minutes = None
+        if last is not None and minutes is not None and minutes >= 0:
+            self._high = (dt_util.as_local(last.last_updated).date(), minutes)
 
     @property
     def native_value(self) -> int:
+        count = self._count()
+        today = self.hub.household.today or dt_util.now().date()
+        if self._high is not None and self._high[0] == today and self._high[1] > count:
+            return self._high[1]
+        self._high = (today, count)
+        return count
+
+
+class PersonScreenTime(_TodaySoFar):
+    """All of the person's screen time today, each minute counted once."""
+
+    _attr_translation_key = "person_screen_time_today"
+    _unrecorded_attributes = frozenset({"devices", "groups"})
+
+    def _count(self) -> int:
         return _minutes(self.day.total_s) if self.day else 0
 
     @property
@@ -165,16 +198,12 @@ class PersonScreenTime(HearthPersonEntity, SensorEntity):
         }
 
 
-class PersonGroupToday(HearthPersonEntity, SensorEntity):
+class PersonGroupToday(_TodaySoFar):
     """The person's time today in one group (Video, Games, YouTube)."""
 
     _attr_translation_key = "person_group_today"
-    _attr_device_class = SensorDeviceClass.DURATION
-    _attr_state_class = SensorStateClass.TOTAL_INCREASING
-    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
 
-    @property
-    def native_value(self) -> int:
+    def _count(self) -> int:
         return _minutes(self.day.groups.get(self.budget_group.id, 0.0)) if self.day else 0
 
 

@@ -112,7 +112,7 @@ entities; it never signs in to those services itself.
 | Hearth Mobile | this one | seconds today and per app on that phone | seconds to minutes |
 | Phones, tablets, Google TV kids profiles | [HAFamilyLink, theSiegs fork](https://github.com/theSiegs/HAFamilyLink) (branch `ha/combined`) | per child: Daily Screen Time (with usage totals) and Screen Time Remaining; per device: Daily Screen Time (per-app seconds in `apps`) and per-app usage sensors | polled every 60 s, but Google's numbers lag: seconds to about 40 minutes, for a TV profile sometimes until it next starts |
 | Xbox, Windows | [Microsoft Family Safety](https://github.com/noiwid/HAFamilySafety) (HACS) | `sensor.<child>_screen_time` (minutes today, the whole account) and `sensor.<device>_screen_time` per device | polled, 5 minutes by default (30 s to an hour) |
-| Nintendo Switch | [Nintendo Switch parental controls](https://www.home-assistant.io/integrations/nintendo_parental_controls) (built in) | Used screen time and Time remaining per Switch (minutes); per app through its usage report | polled every 60 s; the Switch must be online |
+| Nintendo Switch | [Nintendo Switch parental controls](https://www.home-assistant.io/integrations/nintendo_parental_controls) (built in) | Used screen time and Screen time remaining per Switch (minutes; added as a source, its time is games unless chosen otherwise); per app through its usage report | polled every 60 s; the Switch must be online |
 | Nintendo Switch, live | Switch friend presence: HACS [Nintendo-Switch-Presence](https://github.com/itsfatlum/Nintendo-Switch-Presence), fed by a self-hosted [nxapi](https://github.com/samuelthomas2774/nxapi) presence server and a watcher account | what each kid's Switch is playing now | 30-60 s |
 | Xbox, live | Home Assistant's Xbox integration | now playing per gamer | about a minute |
 
@@ -163,7 +163,10 @@ sum; the breakdown keeps every source's number. So:
 
 Days start at local midnight. A source that resets at its own midnight (another time zone) is read as dropping to
 zero: a drop is a new day for that source. A source that stops changing is shown as stale in the breakdown; its last
-count still counts.
+count still counts, and so does its last number today while its sensor has none (unavailable). A person's Screen time
+today and group sensors (total increasing, for Home Assistant's statistics) never go down during the day: when the count
+dips (a source's number corrected down a minute), they keep the highest shown today until the count passes it, after
+a restart too; the count itself, which the budgets use, is in the attributes.
 
 ### Games and titles
 
@@ -266,12 +269,20 @@ until the group has time again (a bonus, a higher budget, a new day):
 - **Other parental controls**, per person (Configure > Enforce):
   - **Family Link** pauses the group's Android apps (`familylink.pause_app`: a 1 minute daily limit, the app stays
     installed) and resumes them (`resume_app` puts back the setting they had). Google TV ignores Family Link's app
-    limits, which is why a TV is held by Hearth. Calls, texts, the system and the parental controls' own apps are never
-    paused.
+    limits, which is why a TV is held by Hearth. All screen time out of time pauses every app of the person's Hearth
+    knows: those in any group, and those in their usage today on any device or source (at most 150). Calls, texts, the
+    system and the parental controls' own apps are never paused.
   - **Microsoft Family Safety** locks the chosen platforms (Xbox by default) until midnight while one of the chosen
     groups (Games and All screen time by default) is out of time (`lock_platform`), and unlocks them when none is.
-  - **Nintendo**: the same, once there's an integration for its parental controls (Suspend software, or today's play
-    time set to what was played).
+  - **Nintendo** (the built-in [Nintendo Switch parental controls](https://www.home-assistant.io/integrations/nintendo_parental_controls)
+    integration; the person's Switch is chosen by its **Max screentime today** number): while one of the chosen groups
+    (Games and All screen time by default) is out of time, Max screentime today is set to 0 with **Suspend software**
+    on, so the game is suspended (as with Nintendo's own limit, a game may close without saving). The limit and Suspend
+    software it had are kept with what's held and put back when none is out of time. That limit is a setting of the
+    Switch's (of every day, or of this weekday when it has a limit per weekday), not of today only, so it's put back 2
+    minutes before midnight; if Home Assistant was off over midnight and the Switch has a limit per weekday, it's left
+    for an adult to check in the Nintendo app (a warning in the log says so). The change goes through Nintendo's cloud and
+    reaches the Switch while it's online (how soon hasn't been measured yet).
 - What's held is kept across restarts, so only what Hearth held is let go. For a few minutes after Home Assistant
   starts nothing is let go (the sources report in first). A failed call shows on the person's **Held by parental
   controls** sensor and is tried again 5 minutes later. Each change fires `hearth_enforced` (person, by, held, let go).
