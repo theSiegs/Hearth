@@ -159,4 +159,15 @@ public class ParentChannelTest {
         assertTrue(ParentBlocks.fromDocument(new JSONObject("{\"profiles\":{\"user:10\":{}}}")).isEmpty());
         assertTrue(ParentBlocks.fromDocument(null).isEmpty());
     }
+
+    @Test
+    public void theMapOfEveryMappedProfileComesFirst() throws Exception {
+        java.util.Map<String, ParentBlocks.Lists> lists = ParentBlocks.fromDocument(new JSONObject(
+                "{\"profiles\":{\"user:10\":{\"youtube_blocks\":{\"words\":[\"old\"]}}},"
+                        + "\"youtube_blocks\":{\"user:10\":{\"words\":[\"new\"]},\"user:12\":{\"videos\":[\"video1\"]}}}"));
+
+        assertEquals(2, lists.size());
+        assertEquals("[new]", lists.get("user:10").words.toString());
+        assertEquals("[video1]", lists.get("user:12").videos.toString());
+    }
 }

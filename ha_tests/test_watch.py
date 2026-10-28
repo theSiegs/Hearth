@@ -135,6 +135,8 @@ async def test_blocks_go_down_in_the_state_document(
         "labels": {VIDEO: "A video"},
     }
     assert body["state"]["version"] != version
+    # Every mapped profile's, also one not on this TV today
+    assert body["state"]["youtube_blocks"][KID]["words"] == ["prank"]
 
     await hass.services.async_call(DOMAIN, "unblock_word", {"person": "person.sam", "word": "prank"}, blocking=True)
     body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()

@@ -152,12 +152,22 @@ final class ParentBlocks {
     }
 
     /**
-     * Home Assistant's lists per profile from the integration's state document ({"profiles": {"user:10": {...,
-     * "youtube_blocks": {"videos", "channels", "words", "labels"}}}}). Only the profiles it speaks of: one it leaves
-     * out (not on this TV today), or an integration too old to send any, leaves what Hearth has as it is.
+     * Home Assistant's lists per profile from the integration's state document: its "youtube_blocks" map (every
+     * mapped profile), else each of "profiles" with its own "youtube_blocks" ({"videos", "channels", "words",
+     * "labels"}). Only the profiles it speaks of: one it leaves out, or an integration too old to send any, leaves
+     * what Hearth has as it is.
      */
     static Map<String, Lists> fromDocument(JSONObject state) {
         Map<String, Lists> out = new LinkedHashMap<>();
+        // Every mapped profile's, also one not on this TV today ({"youtube_blocks": {"user:10": {...}}})
+        JSONObject all = state != null ? state.optJSONObject("youtube_blocks") : null;
+        for (java.util.Iterator<String> keys = all != null ? all.keys() : null; keys != null && keys.hasNext(); ) {
+            String profile = keys.next();
+            JSONObject blocks = all.optJSONObject(profile);
+            if (blocks != null && userKey(profile) != null) out.put(profile, parse(blocks));
+        }
+        if (all != null) return out;
+        // An integration that sends them only with today's profiles
         JSONObject profiles = state != null ? state.optJSONObject("profiles") : null;
         if (profiles == null) return out;
         for (java.util.Iterator<String> keys = profiles.keys(); keys.hasNext(); ) {

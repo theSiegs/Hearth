@@ -510,7 +510,14 @@ class Household:
                     profile_id: self._person_document(profiles[profile_id])
                     for profile_id in sorted(profile_ids)
                     if profiles.get(profile_id)
-                }
+                },
+                # Every mapped profile's YouTube blocks, not only today's: a kid who hasn't used this TV today is held
+                # to them from the first moment (their limits come with their first post, as before)
+                "youtube_blocks": {
+                    profile_id: self.watch.blocks_document(person)
+                    for profile_id, person in sorted(profiles.items())
+                    if person
+                },
             }
         else:
             person = device.get(CONF_PERSON)
