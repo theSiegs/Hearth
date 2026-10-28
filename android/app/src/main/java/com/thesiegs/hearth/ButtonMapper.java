@@ -107,7 +107,14 @@ final class ButtonMapper {
     }
 
     static synchronized void setJson(Context context, String json) throws JSONException {
-        // Validate, and drop any key that isn't allowed
+        JSONObject cleaned = cleaned(json);
+        context.getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, Context.MODE_PRIVATE)
+                .edit().putString(MAPPINGS_KEY, cleaned.toString()).apply();
+        sMappings = null;
+    }
+
+    /** The mappings Dart sent, validated, without any key that isn't allowed. Throws on JSON that isn't mappings. */
+    static JSONObject cleaned(String json) throws JSONException {
         JSONObject parsed = new JSONObject(json);
         Iterator<String> keys = parsed.keys();
         JSONObject cleaned = new JSONObject();
@@ -117,9 +124,7 @@ final class ButtonMapper {
                 cleaned.put(key, parsed.getJSONObject(key));
             }
         }
-        context.getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, Context.MODE_PRIVATE)
-                .edit().putString(MAPPINGS_KEY, cleaned.toString()).apply();
-        sMappings = null;
+        return cleaned;
     }
 
     /** The button is remapped only on Hearth's own screens; elsewhere (in an app) it does its normal job. */
@@ -130,7 +135,11 @@ final class ButtonMapper {
 
     /** {"short": action?, "long": action?} for this key, or null when it isn't remapped. */
     static Map<String, JSONObject> forKey(Context context, int keyCode) {
-        JSONObject entry = load(context).optJSONObject(String.valueOf(keyCode));
+        return actions(load(context).optJSONObject(String.valueOf(keyCode)));
+    }
+
+    /** A stored entry's press actions, or null when it has none. */
+    static Map<String, JSONObject> actions(JSONObject entry) {
         if (entry == null) return null;
         Map<String, JSONObject> result = new HashMap<>();
         if (entry.optJSONObject(PRESS_SHORT) != null) result.put(PRESS_SHORT, entry.optJSONObject(PRESS_SHORT));
@@ -201,9 +210,8 @@ final class ButtonMapper {
             }
             case "ha": {
                 // A Home Assistant entity: toggled, or turned on for scenes and scripts
-                String haService = HaApi.serviceFor(target.contains(".") ? target.substring(0, target.indexOf('.')) : "");
-                if (haService == null) return;
-                String[] parts = haService.split("\\.", 2);
+                String[] parts = haCall(target);
+                if (parts == null) return;
                 HaApi.EXECUTOR.execute(() -> {
                     try {
                         HaApi.callService(service, parts[0], parts[1], new JSONObject().put("entity_id", target));
@@ -222,6 +230,13 @@ final class ButtonMapper {
         } catch (Exception e) {
             Log.w(TAG, "Couldn't start the mapped action " + type, e);
         }
+    }
+
+    /** {domain, service} a button calls for this Home Assistant entity, or null when it can't act on it. */
+    static String[] haCall(String entityId) {
+        String haService = HaApi.serviceFor(entityId.contains(".") ? entityId.substring(0, entityId.indexOf('.')) : "");
+        if (haService == null) return null;
+        return haService.split("\\.", 2);
     }
 
     static String keyName(int keyCode) {

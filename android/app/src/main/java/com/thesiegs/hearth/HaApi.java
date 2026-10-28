@@ -65,11 +65,16 @@ final class HaApi {
 
     /** [{entity_id, name, domain}] for entities a remote button can act on, sorted by name. */
     static JSONArray actionableEntities(Context context) {
-        JSONArray result = new JSONArray();
         byte[] raw = request(context, "GET", "/api/states", null);
-        if (raw == null) return result;
+        if (raw == null) return new JSONArray();
+        return actionable(new String(raw, StandardCharsets.UTF_8));
+    }
+
+    /** actionableEntities from Home Assistant's /api/states answer; empty when it can't be read. */
+    static JSONArray actionable(String statesJson) {
+        JSONArray result = new JSONArray();
         try {
-            JSONArray states = new JSONArray(new String(raw, StandardCharsets.UTF_8));
+            JSONArray states = new JSONArray(statesJson);
             List<JSONObject> list = new ArrayList<>();
             for (int i = 0; i < states.length(); i++) {
                 JSONObject state = states.getJSONObject(i);

@@ -66,74 +66,81 @@ final class WatchNextRows {
             if (cursor == null) {
                 return list;
             }
-
-            int row = 0;
-            while (row < MAX_ROWS && cursor.moveToNext()) {
-                row++;
-
-                long time = 0;
-                int timeCol = cursor.getColumnIndex(TvContract.WatchNextPrograms.COLUMN_LAST_ENGAGEMENT_TIME_UTC_MILLIS);
-                if (timeCol != -1 && !cursor.isNull(timeCol)) {
-                    time = cursor.getLong(timeCol);
-                    if (time > 0 && time < SECONDS_CUTOFF) {
-                        time *= 1000L;
-                    }
-                }
-
-                String poster = cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_POSTER_ART_URI);
-                if (poster.isEmpty()) {
-                    poster = cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_THUMBNAIL_URI);
-                }
-
-                String title = cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_TITLE);
-                String episodeTitle = cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_EPISODE_TITLE);
-                if (title.isEmpty() && !episodeTitle.isEmpty()) {
-                    title = episodeTitle;
-                }
-
-                String shortDesc = cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_SHORT_DESCRIPTION);
-                String longDesc = cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_LONG_DESCRIPTION);
-
-                String description = shortDesc;
-                if (description.isEmpty() || description.trim().equalsIgnoreCase(title.trim())) {
-                    if (!longDesc.isEmpty() && !longDesc.trim().equalsIgnoreCase(title.trim())) {
-                        description = longDesc;
-                    } else if (!episodeTitle.isEmpty() && !episodeTitle.trim().equalsIgnoreCase(title.trim())) {
-                        description = episodeTitle;
-                    }
-                }
-
-                Map<String, Object> map = new HashMap<>();
-                map.put("id", cursor.getLong(cursor.getColumnIndexOrThrow(TvContract.WatchNextPrograms._ID)));
-                map.put("packageName", cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_PACKAGE_NAME));
-                map.put("title", title);
-                map.put("description", description);
-                map.put("watchNextType", cursor.getInt(cursor.getColumnIndexOrThrow(TvContract.WatchNextPrograms.COLUMN_WATCH_NEXT_TYPE)));
-                map.put("lastEngagementTime", time);
-                map.put("playbackPosition", cursor.getLong(cursor.getColumnIndexOrThrow(TvContract.WatchNextPrograms.COLUMN_LAST_PLAYBACK_POSITION_MILLIS)));
-                map.put("duration", cursor.getLong(cursor.getColumnIndexOrThrow(TvContract.WatchNextPrograms.COLUMN_DURATION_MILLIS)));
-                map.put("intentUri", cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_INTENT_URI));
-                map.put("posterArtUri", poster);
-                // The app's own id for it: the same entry when the app writes it again
-                map.put("internalId", cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_INTERNAL_PROVIDER_ID));
-                list.add(map);
-            }
-
-            // Re-sort: some times were converted from seconds above; ties go to the newer id.
-            list.sort((a, b) -> {
-                long timeA = (Long) a.get("lastEngagementTime");
-                long timeB = (Long) b.get("lastEngagementTime");
-                if (timeA != timeB) {
-                    return Long.compare(timeB, timeA);
-                }
-                long idA = (Long) a.get("id");
-                long idB = (Long) b.get("id");
-                return Long.compare(idB, idA);
-            });
+            addRows(cursor, list);
         } catch (Exception e) {
             Log.w(TAG, "Couldn't read Watch Next", e);
         }
 
         return list;
+    }
+
+    /**
+     * Adds the cursor's rows to list (the first MAX_ROWS), as maps for Flutter, then sorts it: newest engagement first,
+     * ties to the newer id. What was added before a failing row stays.
+     */
+    static void addRows(Cursor cursor, List<Map<String, Object>> list) {
+        int row = 0;
+        while (row < MAX_ROWS && cursor.moveToNext()) {
+            row++;
+
+            long time = 0;
+            int timeCol = cursor.getColumnIndex(TvContract.WatchNextPrograms.COLUMN_LAST_ENGAGEMENT_TIME_UTC_MILLIS);
+            if (timeCol != -1 && !cursor.isNull(timeCol)) {
+                time = cursor.getLong(timeCol);
+                if (time > 0 && time < SECONDS_CUTOFF) {
+                    time *= 1000L;
+                }
+            }
+
+            String poster = cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_POSTER_ART_URI);
+            if (poster.isEmpty()) {
+                poster = cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_THUMBNAIL_URI);
+            }
+
+            String title = cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_TITLE);
+            String episodeTitle = cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_EPISODE_TITLE);
+            if (title.isEmpty() && !episodeTitle.isEmpty()) {
+                title = episodeTitle;
+            }
+
+            String shortDesc = cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_SHORT_DESCRIPTION);
+            String longDesc = cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_LONG_DESCRIPTION);
+
+            String description = shortDesc;
+            if (description.isEmpty() || description.trim().equalsIgnoreCase(title.trim())) {
+                if (!longDesc.isEmpty() && !longDesc.trim().equalsIgnoreCase(title.trim())) {
+                    description = longDesc;
+                } else if (!episodeTitle.isEmpty() && !episodeTitle.trim().equalsIgnoreCase(title.trim())) {
+                    description = episodeTitle;
+                }
+            }
+
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", cursor.getLong(cursor.getColumnIndexOrThrow(TvContract.WatchNextPrograms._ID)));
+            map.put("packageName", cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_PACKAGE_NAME));
+            map.put("title", title);
+            map.put("description", description);
+            map.put("watchNextType", cursor.getInt(cursor.getColumnIndexOrThrow(TvContract.WatchNextPrograms.COLUMN_WATCH_NEXT_TYPE)));
+            map.put("lastEngagementTime", time);
+            map.put("playbackPosition", cursor.getLong(cursor.getColumnIndexOrThrow(TvContract.WatchNextPrograms.COLUMN_LAST_PLAYBACK_POSITION_MILLIS)));
+            map.put("duration", cursor.getLong(cursor.getColumnIndexOrThrow(TvContract.WatchNextPrograms.COLUMN_DURATION_MILLIS)));
+            map.put("intentUri", cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_INTENT_URI));
+            map.put("posterArtUri", poster);
+            // The app's own id for it: the same entry when the app writes it again
+            map.put("internalId", cursorStringOrEmpty(cursor, TvContract.WatchNextPrograms.COLUMN_INTERNAL_PROVIDER_ID));
+            list.add(map);
+        }
+
+        // Re-sort: some times were converted from seconds above; ties go to the newer id.
+        list.sort((a, b) -> {
+            long timeA = (Long) a.get("lastEngagementTime");
+            long timeB = (Long) b.get("lastEngagementTime");
+            if (timeA != timeB) {
+                return Long.compare(timeB, timeA);
+            }
+            long idA = (Long) a.get("id");
+            long idB = (Long) b.get("id");
+            return Long.compare(idB, idA);
+        });
     }
 }
