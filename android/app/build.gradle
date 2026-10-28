@@ -66,6 +66,12 @@ android {
     // JVM unit tests (PIN entry logic) touch Android classes only in passing; stubs return defaults there
     testOptions {
         unitTests.returnDefaultValues = true
+        // The PIN recipe tests read Hearth's own recipes and the repository's copy from disk: a change to either
+        // must run them again (not come back from the build cache)
+        unitTests.all {
+            inputs.file("src/main/assets/pin-recipes.json")
+            inputs.file("../../pin-entry/recipes.json")
+        }
     }
     dependenciesInfo {
         // Disables dependency metadata when building APKs (for IzzyOnDroid/F-Droid)

@@ -54,7 +54,7 @@ shows what's off). Reinstalling or force-stopping Hearth switches its accessibil
 | `lib/flauncher_channel.dart` | The method channel to the Android side |
 | `lib/l10n/` | Strings (English only: `app_en.arb`) |
 | `android/.../LauncherAccessibilityService.java` | Home Button Fix, profile tracking, screen time, remote remaps, idle sleep |
-| `android/.../ProfilePairing*.java`, `*PinRecipe.java` | Profile Pairing and PIN entry for streaming apps |
+| `android/.../ProfilePairing*.java`, `PinRecipe*.java`, `DataPinRecipe.java` | Profile Pairing and PIN entry for streaming apps (recipes: `android/app/src/main/assets/pin-recipes.json`) |
 | `android/.../Ha*.java` | Home Assistant notifications server, panel, status webhook, phone setup |
 | `android/.../ProfileUsers.java`, `GoogleTvAccount.java`, `AppWatchers.java`, `Agent*.java`, `KidsProfiles.java`, `ProfileAppAccess.java` | Google TV profiles: kids' as Android users, adults' as accounts in the owner's user (whose is on, from Google TV's home); whose Continue Watching entry is; Hearth on the kids profiles |
 | `android/.../ProfileProvider.java` | The provider HearthTube reads ([contract](provider-contract.md)) |
@@ -123,6 +123,10 @@ push. CodeQL scans every push too.
 
 **Turning a streaming app version's PIN entry off for everyone:** list it in `pin-entry/disabled.json` on `master`
 (see `pin-entry/README.md`). Installed copies read it at most every 12 hours while a PIN is saved.
+
+**Fixing a streaming app's PIN recipe without a release:** raise the recipe's `version` in `pin-entry/recipes.json`
+on `master` (see [PIN recipes](pin-recipes.md)); installed copies read it on the same schedule. PIN typing must be
+tried on a TV before a recipe change goes to `master`.
 
 ## Conventions
 

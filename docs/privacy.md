@@ -22,7 +22,7 @@ Only for the features below, and only when they're on.
 | Continue Watching artwork | The image hosts the streaming apps name | Requests for those images, with no cookies or referrer, over https (http only on your home network); cached for 30 days |
 | Continue Watching artwork, when a card has none Hearth can read | `www.wikidata.org`, `api.themoviedb.org`, `image.tmdb.org` | The card's title (not for YouTube or HearthTube videos); each title once, the answer kept on the TV |
 | Updates | `api.github.com`, GitHub release downloads | A check for new releases of Hearth and HearthTube |
-| Streaming app PINs | `raw.githubusercontent.com` (Hearth's repository) | A request for the list of app versions Hearth doesn't type PINs in, at most twice a day while a PIN is saved |
+| Streaming app PINs | `raw.githubusercontent.com` (Hearth's repository) | Requests for the list of app versions Hearth doesn't type PINs in and for the PIN screen recipes, at most twice a day while a PIN is saved |
 | Approve switches from my phone | Your Home Assistant | While Google TV's PIN screen waits for an answer: a notification to the phone you chose (whose profile, Allow and Deny), and a listen for its answer |
 | Home Assistant map (people) | `tile.openstreetmap.org` | Requests for the map tiles around your home zone (about 17 km across), once, then kept on the TV; never a person's position |
 | Home Assistant | The address you enter | Notifications' button actions, the dashboard, and TV status (see [Home Assistant](home-assistant.md)) |

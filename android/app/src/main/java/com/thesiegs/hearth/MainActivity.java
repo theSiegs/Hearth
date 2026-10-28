@@ -241,7 +241,7 @@ public class MainActivity extends FlutterActivity {
                 mPendingProfilePins = null;
                 result.success(pending);
             }
-            case "profilePinEntrySupported" -> result.success(PinRecipes.supports(call.arguments()));
+            case "profilePinEntrySupported" -> result.success(PinRecipes.supports(this, call.arguments()));
             // A profile PIN is the Google TV profile's that saved it: the one on now, unless Settings names another
             case "getProfilePinStatus" -> result.success(PinVault.status(this, pinOwner(call),
                     call.argument("packageName"), call.argument("appProfile")));
