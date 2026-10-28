@@ -9,8 +9,8 @@ installs, and the Watch Next provider.
 
 ## Requirements
 
-- Flutter **3.24.5** (pinned in `pubspec.yaml`)
-- JDK 21 and the Android SDK (compile and target SDK 35)
+- Flutter **3.47.8** (pinned in `pubspec.yaml`)
+- JDK 21 and the Android SDK (compile SDK 36, target SDK 35) with the NDK Flutter asks for (it installs it on the first build)
 - A Google TV device or emulator. Profile features need Google TV; the Google TV emulator images work for most of it
   (see [Testing profiles](#testing-profiles)).
 
@@ -18,7 +18,7 @@ installs, and the Watch Next provider.
 
 ```sh
 flutter pub get
-flutter pub run build_runner build --delete-conflicting-outputs     # mocks and Drift code
+dart run build_runner build                                         # mocks and Drift code
 dart run drift_dev schema generate drift_schemas/ test/generated_migrations/
 flutter analyze
 flutter test
@@ -26,8 +26,8 @@ node test/js/phone_seal_test.js                                     # the phone 
 cd android && ./gradlew :app:testDebugUnitTest                      # the Java side's unit tests
 ```
 
-On Windows, the database tests need SQLite: run `tool/fetch_sqlite_windows.ps1` once (it downloads `sqlite3.dll`
-into `tool/windows/`, which git ignores).
+SQLite comes with the `sqlite3` package: its build hook downloads a prebuilt, checksummed library for the app and for
+`flutter test` on the computer, so there's nothing to install (the first build needs network access to GitHub).
 
 ```sh
 flutter build apk --debug          # installs as com.thesiegs.hearth.debug, next to a release build

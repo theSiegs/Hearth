@@ -21,7 +21,7 @@ Future<void> _open(WidgetTester tester, MockTvInputsService inputs) async {
         builder: (context) => TextButton(
           onPressed: () => Navigator.of(context).push(PageRouteBuilder(
             opaque: false,
-            pageBuilder: (_, __, ___) => const InputsPanel(),
+            pageBuilder: (_, _, _) => const InputsPanel(),
           )),
           child: const Text("open"),
         ),

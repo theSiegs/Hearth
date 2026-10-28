@@ -36,8 +36,8 @@ class SearchGridPage extends StatefulWidget {
   /// Opens the page; true when it closed because a title opened (not Back).
   static Future<bool?> open(BuildContext context) => Navigator.of(context).push<bool>(PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 150),
-        pageBuilder: (_, __, ___) => const SearchGridPage(),
-        transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
+        pageBuilder: (_, _, _) => const SearchGridPage(),
+        transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
       ));
 
   @override
@@ -100,7 +100,7 @@ class _SearchGridPageState extends State<SearchGridPage> {
             Row(children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(26)),
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(26)),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   const Icon(Icons.search, size: 22),
                   const SizedBox(width: 10),

@@ -33,7 +33,7 @@ void main() {
         providers: [
           ChangeNotifierProvider<AppsService>.value(value: appsService),
         ],
-        builder: (_, __) => MaterialApp(
+        builder: (_, _) => MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           // Stands in for the Settings panel, whose Left goes back to the page before

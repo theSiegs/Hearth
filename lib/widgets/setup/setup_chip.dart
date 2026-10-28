@@ -180,9 +180,9 @@ class _SetupChipState extends State<SetupChip> with WidgetsBindingObserver {
           builder: (context, focused) => Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
-              color: focused ? accent : Colors.black.withOpacity(TitlePill.opacityOf(context)),
+              color: focused ? accent : Colors.black.withValues(alpha: TitlePill.opacityOf(context)),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: focused ? Colors.white : Colors.white.withOpacity(0.12), width: focused ? 2 : 1),
+              border: Border.all(color: focused ? Colors.white : Colors.white.withValues(alpha: 0.12), width: focused ? 2 : 1),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(_fix ? Icons.warning_amber_rounded : (news ? Icons.auto_awesome : Icons.settings_suggest_outlined),

@@ -86,7 +86,7 @@ class _FocusHighlightState extends State<FocusHighlight> with SingleTickerProvid
       animation: _pulse,
       builder: (context, _) {
         final opacity = 0.4 + (_pulse.value * 0.6);
-        return _twoTone(widget.accentColor.withOpacity(opacity), Colors.black.withOpacity(opacity));
+        return _twoTone(widget.accentColor.withValues(alpha: opacity), Colors.black.withValues(alpha: opacity));
       },
     );
   }

@@ -390,7 +390,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
           alignment: alignment,
           child: Ink(
             decoration: ShapeDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.8),
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.8),
               shape: const CircleBorder()
             ),
             child: SizedBox(

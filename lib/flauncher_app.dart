@@ -84,7 +84,6 @@ class FLauncherApp extends StatelessWidget
             ),
             cardColor: _surfaceColor,
             canvasColor: _backgroundColor,
-            dialogBackgroundColor: _surfaceColor,
             scaffoldBackgroundColor: _backgroundColor,
             splashFactory: NoSplash.splashFactory,
             highlightColor: Colors.transparent,
@@ -96,7 +95,7 @@ class FLauncherApp extends StatelessWidget
                 splashFactory: NoSplash.splashFactory,
               ),
             ),
-            dialogTheme: DialogTheme(
+            dialogTheme: DialogThemeData(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               backgroundColor: _surfaceColor,
               titleTextStyle: _typography.white.titleLarge,
@@ -110,19 +109,18 @@ class FLauncherApp extends StatelessWidget
             ),
             textSelectionTheme: TextSelectionThemeData(
               cursorColor: accentColor,
-              selectionColor: accentColor.withOpacity(0.4),
+              selectionColor: accentColor.withValues(alpha: 0.4),
               selectionHandleColor: accentColor,
             ),
-            indicatorColor: accentColor,
             progressIndicatorTheme: ProgressIndicatorThemeData(color: accentColor),
             sliderTheme: SliderThemeData(
               activeTrackColor: accentColor,
               thumbColor: accentColor,
-              inactiveTrackColor: accentColor.withOpacity(0.3),
+              inactiveTrackColor: accentColor.withValues(alpha: 0.3),
             ),
             toggleButtonsTheme: ToggleButtonsThemeData(
               selectedColor: accentColor,
-              fillColor: accentColor.withOpacity(0.1),
+              fillColor: accentColor.withValues(alpha: 0.1),
             ),
             switchTheme: SwitchThemeData(
               thumbColor: WidgetStateProperty.resolveWith((states) {
@@ -130,10 +128,11 @@ class FLauncherApp extends StatelessWidget
                 return null;
               }),
               trackColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) return accentColor.withOpacity(0.5);
+                if (states.contains(WidgetState.selected)) return accentColor.withValues(alpha: 0.5);
                 return null;
               }),
             ),
+            tabBarTheme: TabBarThemeData(indicatorColor: accentColor),
           ),
           home: Builder(
             builder: (context) => PopScope(

@@ -3,6 +3,7 @@ import 'package:flauncher/providers/backup_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:share_plus/share_plus.dart';
@@ -46,7 +47,7 @@ class BackupRestorePage extends StatelessWidget {
     try {
       final settingsService = context.read<SettingsService>();
       final pathStr = await context.read<BackupService>().exportBackup(settingsService);
-      await Share.shareXFiles([XFile(pathStr)], text: localizations.backupShareText);
+      await SharePlus.instance.share(ShareParams(files: [XFile(pathStr)], text: localizations.backupShareText));
     } catch (e) {
       if (context.mounted) {
         showMessageDialog(context,
@@ -125,7 +126,7 @@ class BackupRestorePage extends StatelessWidget {
                 }
                 return ListView.builder(
                   shrinkWrap: true,
-                  cacheExtent: 1000,
+                  scrollCacheExtent: const ScrollCacheExtent.pixels(1000),
                   itemCount: entries.length,
                   itemBuilder: (itemContext, index) {
                     final entry = entries[index];

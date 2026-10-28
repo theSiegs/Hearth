@@ -1,5 +1,5 @@
+// ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -60,7 +60,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dialogOptionBackButtonActionShowClock => 'Show clock';
 
   @override
-  String get dialogTextNoFileExplorer => 'Please install a file explorer in order to pick a picture.';
+  String get dialogTextNoFileExplorer =>
+      'Please install a file explorer in order to pick a picture.';
 
   @override
   String disambiguateCategoryTitle(String title) {
@@ -148,10 +149,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get showCategoryAppCount => 'Show app count in categories';
 
   @override
-  String get hideHighlightOutlineOnHomescreen => 'Hide highlight outline on homescreen';
+  String get hideHighlightOutlineOnHomescreen =>
+      'Hide highlight outline on homescreen';
 
   @override
-  String get appSelectorTransitionAnimation => 'App selector transition animation';
+  String get appSelectorTransitionAnimation =>
+      'App selector transition animation';
 
   @override
   String get sort => 'Sort';
@@ -199,7 +202,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdTitle => 'Household sync';
 
   @override
-  String get householdIntro => 'TVs in a household keep every profile in step over your home network: its look, home layout, wallpaper, Profile Pairing and saved PINs. The latest change wins, whichever TV it was made on.';
+  String get householdIntro =>
+      'TVs in a household keep every profile in step over your home network: its look, home layout, wallpaper, Profile Pairing and saved PINs. The latest change wins, whichever TV it was made on.';
 
   @override
   String get householdNone => 'This TV isn\'t in a household.';
@@ -217,10 +221,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdLeave => 'Leave the household';
 
   @override
-  String get householdLost => 'This TV was in a household but can\'t open its key any more. Join again from another TV.';
+  String get householdLost =>
+      'This TV was in a household but can\'t open its key any more. Join again from another TV.';
 
   @override
-  String get householdRemoved => 'This TV was removed from the household on another TV. Join again to keep it in step.';
+  String get householdRemoved =>
+      'This TV was removed from the household on another TV. Join again to keep it in step.';
 
   @override
   String householdRemoveTitle(String name) {
@@ -228,13 +234,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get householdRemoveBody => 'It stops syncing with your other TVs. To bring it back, join the household again from that TV.';
+  String get householdRemoveBody =>
+      'It stops syncing with your other TVs. To bring it back, join the household again from that TV.';
 
   @override
-  String get householdRemoveFailed => 'That TV couldn\'t be removed. Try again.';
+  String get householdRemoveFailed =>
+      'That TV couldn\'t be removed. Try again.';
 
   @override
-  String get householdAddHint => 'To add a TV: on that TV, open Settings > Family > Household sync and choose Join the household.';
+  String get householdAddHint =>
+      'To add a TV: on that TV, open Settings > Family > Household sync and choose Join the household.';
 
   @override
   String get householdMembers => 'TVs in this household';
@@ -272,7 +281,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get householdFound => 'Your other TVs have a household. Join it so this TV keeps in step with them.';
+  String get householdFound =>
+      'Your other TVs have a household. Join it so this TV keeps in step with them.';
 
   @override
   String get householdNearby => 'Household on your network';
@@ -281,7 +291,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdAsking => 'Asking to join';
 
   @override
-  String get householdAskingHint => 'Allow it or not from the notification Bell';
+  String get householdAskingHint =>
+      'Allow it or not from the notification Bell';
 
   @override
   String get householdRemoveTv => 'Remove from household';
@@ -310,7 +321,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdJoin => 'Join the household';
 
   @override
-  String get householdJoinHint => 'Choose Join, then allow it in the notification Bell on one of those TVs, on an adult\'s profile.';
+  String get householdJoinHint =>
+      'Choose Join, then allow it in the notification Bell on one of those TVs, on an adult\'s profile.';
 
   @override
   String householdJoinWaitTitle(String tv) {
@@ -326,7 +338,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdJoinCode => 'Join code';
 
   @override
-  String get householdJoinCodeHint => 'The request in the Bell shows a code too. Choose Allow only when it\'s this one.';
+  String get householdJoinCodeHint =>
+      'The request in the Bell shows a code too. Choose Allow only when it\'s this one.';
 
   @override
   String get householdJoinViaAny => 'one of your other TVs';
@@ -341,10 +354,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdJoinDone => 'This TV is in the household now.';
 
   @override
-  String get householdJoinDenied => 'It wasn\'t allowed, or no one answered in time.';
+  String get householdJoinDenied =>
+      'It wasn\'t allowed, or no one answered in time.';
 
   @override
-  String get householdJoinFailed => 'That didn\'t work. Check that one of your other TVs is on, then try again.';
+  String get householdJoinFailed =>
+      'That didn\'t work. Check that one of your other TVs is on, then try again.';
 
   @override
   String get householdReviewTitle => 'Before this TV joins';
@@ -353,7 +368,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdReviewWaiting => 'Getting your other TVs\' settings…';
 
   @override
-  String get householdReviewNotYet => 'Your other TVs\' settings haven\'t arrived yet. Keep the TV that let this one in turned on, or finish later in Household sync.';
+  String get householdReviewNotYet =>
+      'Your other TVs\' settings haven\'t arrived yet. Keep the TV that let this one in turned on, or finish later in Household sync.';
 
   @override
   String get householdReviewChanges => 'These will change on this TV:';
@@ -417,7 +433,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdReviewParentPin => 'The Parent PIN';
 
   @override
-  String get householdReviewKept => 'A copy of this TV\'s settings is kept for 14 days. You can put them back in Settings > Family > Household sync.';
+  String get householdReviewKept =>
+      'A copy of this TV\'s settings is kept for 14 days. You can put them back in Settings > Family > Household sync.';
 
   @override
   String get householdReviewUse => 'Join and use these';
@@ -429,16 +446,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get householdReviewLater => 'Later';
 
   @override
-  String get householdReviewFailed => 'This TV\'s settings couldn\'t be copied, so nothing was changed. Try again.';
+  String get householdReviewFailed =>
+      'This TV\'s settings couldn\'t be copied, so nothing was changed. Try again.';
 
   @override
   String get householdReviewPending => 'Finish joining';
 
   @override
-  String get householdReviewPendingHint => 'See what changes on this TV before it takes your other TVs\' settings';
+  String get householdReviewPendingHint =>
+      'See what changes on this TV before it takes your other TVs\' settings';
 
   @override
-  String get householdRestore => 'Put back this TV\'s settings from before it joined';
+  String get householdRestore =>
+      'Put back this TV\'s settings from before it joined';
 
   @override
   String householdRestoreHint(String date) {
@@ -446,13 +466,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get householdRestoreBody => 'The looks, home layouts, wallpapers, streaming profiles and saved PINs this TV had before it joined come back. They\'re the newest now, so your other TVs take them too, for the same people.';
+  String get householdRestoreBody =>
+      'The looks, home layouts, wallpapers, streaming profiles and saved PINs this TV had before it joined come back. They\'re the newest now, so your other TVs take them too, for the same people.';
 
   @override
   String get householdRestoreConfirm => 'Put back';
 
   @override
-  String get householdRestoreDone => 'This TV\'s settings from before it joined are back';
+  String get householdRestoreDone =>
+      'This TV\'s settings from before it joined are back';
 
   @override
   String get householdRestoreFailed => 'The settings couldn\'t be put back';
@@ -483,7 +505,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importSuccess => 'Backup imported successfully';
 
   @override
-  String get importConfirm => 'Are you sure you want to import the backup? This will overwrite your current settings and layout.';
+  String get importConfirm =>
+      'Are you sure you want to import the backup? This will overwrite your current settings and layout.';
 
   @override
   String importError(String error) {
@@ -511,7 +534,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get showContinueWatchingOnHome => 'Show Continue Watching on Home';
 
   @override
-  String get permissionDeniedContinueWatching => 'Permission required to show Continue Watching';
+  String get permissionDeniedContinueWatching =>
+      'Permission required to show Continue Watching';
 
   @override
   String get system => 'System';
@@ -589,13 +613,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notifications => 'Notifications';
 
   @override
-  String get continueWatchingDescription => 'Show recently watched movies and TV shows from supported apps on your home screen';
+  String get continueWatchingDescription =>
+      'Show recently watched movies and TV shows from supported apps on your home screen';
 
   @override
   String get dismiss => 'Dismiss';
 
   @override
-  String get noBlockedAppsDesc => 'All applications are currently allowed to show notifications';
+  String get noBlockedAppsDesc =>
+      'All applications are currently allowed to show notifications';
 
   @override
   String get notificationsAllowed => 'Notifications Allowed';
@@ -669,64 +695,78 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kidsProfilesHearthTubeMissing => 'HearthTube isn\'t on it';
 
   @override
-  String get kidsProfilesNotKept => 'Not protected: Google TV will remove Hearth\'s apps when this profile next starts';
+  String get kidsProfilesNotKept =>
+      'Not protected: Google TV will remove Hearth\'s apps when this profile next starts';
 
   @override
   String get kidsProfilesFix => 'Fix';
 
   @override
-  String get kidsProfilesFixBody => 'Puts Hearth and HearthTube back where they\'re missing. Each kid they\'re added for gets one Family Link notice.';
+  String get kidsProfilesFixBody =>
+      'Puts Hearth and HearthTube back where they\'re missing. Each kid they\'re added for gets one Family Link notice.';
 
   @override
   String get kidsProfilesNone => 'There are no kids profiles on this TV.';
 
   @override
-  String get kidsProfilesAutoOn => 'Hearth also puts itself on new kids profiles.';
+  String get kidsProfilesAutoOn =>
+      'Hearth also puts itself on new kids profiles.';
 
   @override
-  String get kidsProfilesApproval => 'The first time, the TV asks \"Allow debugging?\" — choose Always allow; that\'s what lets Hearth do the setup.';
+  String get kidsProfilesApproval =>
+      'The first time, the TV asks \"Allow debugging?\" — choose Always allow; that\'s what lets Hearth do the setup.';
 
   @override
   String get kidsProfilesRemoveTitle => 'Remove Hearth from kids profiles';
 
   @override
-  String get kidsProfilesRemoveBody => 'This takes Hearth and HearthTube off your kids profiles, and Hearth stops adding itself to new ones. Hearth stays on your profile.';
+  String get kidsProfilesRemoveBody =>
+      'This takes Hearth and HearthTube off your kids profiles, and Hearth stops adding itself to new ones. Hearth stays on your profile.';
 
   @override
   String get uninstallHearthTitle => 'Uninstall Hearth';
 
   @override
-  String get uninstallHearthBody => 'This uninstalls Hearth from this TV. It first takes Hearth and HearthTube off your kids profiles.';
+  String get uninstallHearthBody =>
+      'This uninstalls Hearth from this TV. It first takes Hearth and HearthTube off your kids profiles.';
 
   @override
-  String get uninstallHearthWhyHere => 'Uninstalling here — rather than from Android\'s settings — makes sure nothing is left behind on the kids profiles.';
+  String get uninstallHearthWhyHere =>
+      'Uninstalling here — rather than from Android\'s settings — makes sure nothing is left behind on the kids profiles.';
 
   @override
-  String get uninstallHearthApprovalFirstTitle => 'Finish the one-time approval first';
+  String get uninstallHearthApprovalFirstTitle =>
+      'Finish the one-time approval first';
 
   @override
-  String get uninstallHearthApprovalFirstBody => 'Hearth couldn\'t take itself off the kids profiles yet: it needs the one-time \"Allow debugging?\" approval on the TV.';
+  String get uninstallHearthApprovalFirstBody =>
+      'Hearth couldn\'t take itself off the kids profiles yet: it needs the one-time \"Allow debugging?\" approval on the TV.';
 
   @override
-  String get uninstallHearthApprovalFirstRetry => 'Approve it, then try Uninstall again, so nothing is left on the kids profiles.';
+  String get uninstallHearthApprovalFirstRetry =>
+      'Approve it, then try Uninstall again, so nothing is left on the kids profiles.';
 
   @override
   String get kidsProfilesFailedTitle => 'Couldn\'t change the kids profiles';
 
   @override
-  String get kidsProfilesFailedBody => 'Hearth needs a one-time approval on the TV before it can change the kids profiles.';
+  String get kidsProfilesFailedBody =>
+      'Hearth needs a one-time approval on the TV before it can change the kids profiles.';
 
   @override
-  String get kidsProfilesFailedRetry => 'On the TV, choose Always allow when it asks to \"Allow debugging?\", then try again.';
+  String get kidsProfilesFailedRetry =>
+      'On the TV, choose Always allow when it asks to \"Allow debugging?\", then try again.';
 
   @override
-  String get kidProfileHint => 'Everything here is this kid\'s own. You can change it from here without switching to their profile.';
+  String get kidProfileHint =>
+      'Everything here is this kid\'s own. You can change it from here without switching to their profile.';
 
   @override
   String get kidWatchLog => 'Videos started';
 
   @override
-  String get kidWatchLogBody => 'What this kid opened in HearthTube, newest first. Choose one to block it or its channel.';
+  String get kidWatchLogBody =>
+      'What this kid opened in HearthTube, newest first. Choose one to block it or its channel.';
 
   @override
   String get kidWatchLogEmpty => 'Nothing started yet.';
@@ -749,7 +789,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kidBlocks => 'Blocked on YouTube';
 
   @override
-  String get kidBlocksBody => 'HearthTube won\'t show or play these for this kid, and the kid can\'t undo them.';
+  String get kidBlocksBody =>
+      'HearthTube won\'t show or play these for this kid, and the kid can\'t undo them.';
 
   @override
   String get kidBlocksAddWord => 'Block a word';
@@ -773,7 +814,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kidOwnBlocks => 'Hidden by them';
 
   @override
-  String get kidOwnBlocksBody => 'What they hid or blocked themselves in HearthTube. Select one to show it to them again.';
+  String get kidOwnBlocksBody =>
+      'What they hid or blocked themselves in HearthTube. Select one to show it to them again.';
 
   @override
   String get kidBlocksNone => 'Nothing is blocked.';
@@ -787,7 +829,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kidProfileGetHearthTube => 'Get HearthTube';
 
   @override
-  String get kidProfileGetHearthTubeBody => 'Installs it on this TV, then on this profile.';
+  String get kidProfileGetHearthTubeBody =>
+      'Installs it on this TV, then on this profile.';
 
   @override
   String get kidProfileHearthTubeSettings => 'HearthTube settings';
@@ -936,46 +979,40 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String weatherWidgetTemperatureWithWarning(String temperature, String warning) {
+  String weatherWidgetTemperatureWithWarning(
+    String temperature,
+    String warning,
+  ) {
     return '$temperature • $warning';
   }
 
   @override
   String weatherTextRain(String when, String day) {
-    String _temp0 = intl.Intl.selectLogic(
-      when,
-      {
-        'today': 'Rain today',
-        'tomorrow': 'Rain tomorrow',
-        'other': 'Rain on $day',
-      },
-    );
+    String _temp0 = intl.Intl.selectLogic(when, {
+      'today': 'Rain today',
+      'tomorrow': 'Rain tomorrow',
+      'other': 'Rain on $day',
+    });
     return '$_temp0';
   }
 
   @override
   String weatherTextSnow(String when, String day) {
-    String _temp0 = intl.Intl.selectLogic(
-      when,
-      {
-        'today': 'Snow today',
-        'tomorrow': 'Snow tomorrow',
-        'other': 'Snow on $day',
-      },
-    );
+    String _temp0 = intl.Intl.selectLogic(when, {
+      'today': 'Snow today',
+      'tomorrow': 'Snow tomorrow',
+      'other': 'Snow on $day',
+    });
     return '$_temp0';
   }
 
   @override
   String weatherTextStorm(String when, String day) {
-    String _temp0 = intl.Intl.selectLogic(
-      when,
-      {
-        'today': 'Storm today',
-        'tomorrow': 'Storm tomorrow',
-        'other': 'Storm on $day',
-      },
-    );
+    String _temp0 = intl.Intl.selectLogic(when, {
+      'today': 'Storm today',
+      'tomorrow': 'Storm tomorrow',
+      'other': 'Storm on $day',
+    });
     return '$_temp0';
   }
 
@@ -1004,7 +1041,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchHint => 'Search films and shows';
 
   @override
-  String get searchEntryHelp => 'Type, use the mic, or type on your phone with the Google TV app.';
+  String get searchEntryHelp =>
+      'Type, use the mic, or type on your phone with the Google TV app.';
 
   @override
   String get searchTabWatchNow => 'Watch now';
@@ -1045,7 +1083,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get searchGridTmdbNotice => 'Where to watch from TMDB (via JustWatch). This product uses the TMDB API but is not endorsed or certified by TMDB.';
+  String get searchGridTmdbNotice =>
+      'Where to watch from TMDB (via JustWatch). This product uses the TMDB API but is not endorsed or certified by TMDB.';
 
   @override
   String searchAppsOr(String apps, String last) {
@@ -1061,7 +1100,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get searchAskGoogleDetail => 'For questions, the weather and anything else that isn\'t a show';
+  String get searchAskGoogleDetail =>
+      'For questions, the weather and anything else that isn\'t a show';
 
   @override
   String searchSearchingFor(String query) {
@@ -1069,7 +1109,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get searchFailed => 'Couldn\'t search right now. Check the internet connection.';
+  String get searchFailed =>
+      'Couldn\'t search right now. Check the internet connection.';
 
   @override
   String searchNothingFound(String query) {
@@ -1082,7 +1123,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get searchSeeMoreResults => 'See where else it\'s available in More results.';
+  String get searchSeeMoreResults =>
+      'See where else it\'s available in More results.';
 
   @override
   String get searchMoreResults => 'More results';
@@ -1155,7 +1197,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateErrorDownloadFailed => 'Couldn\'t download the update';
 
   @override
-  String get serviceHearthTubeDescription => 'YouTube for Hearth; follows your Hearth profile';
+  String get serviceHearthTubeDescription =>
+      'YouTube for Hearth; follows your Hearth profile';
 
   @override
   String get haSummaryOn => 'On';
@@ -1192,7 +1235,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get haPanelSavedNoToken => 'Saved. Add an access token to sign in.';
 
   @override
-  String get haPanelReceived => 'Received the address and token from your phone';
+  String get haPanelReceived =>
+      'Received the address and token from your phone';
 
   @override
   String get haPanelRightEdge => 'Right at the right edge opens the panel';
@@ -1230,16 +1274,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get haStatusNowPlayingOn => 'Now playing: on';
 
   @override
-  String get haStatusNowPlayingOff => 'Now playing: turn on notification access';
+  String get haStatusNowPlayingOff =>
+      'Now playing: turn on notification access';
 
   @override
-  String get haStatusHelp => 'The TV sends Home Assistant what\'s on: the app, what\'s playing, the Google TV profile, and kids screen time. It only sends to the address above, as changes happen. The create button needs an administrator\'s token (send it from your phone: Dashboard panel, Set up from your phone); it is only used for that, so delete the token in Home Assistant afterward.';
+  String get haStatusHelp =>
+      'The TV sends Home Assistant what\'s on: the app, what\'s playing, the Google TV profile, and kids screen time. It only sends to the address above, as changes happen. The create button needs an administrator\'s token (send it from your phone: Dashboard panel, Set up from your phone); it is only used for that, so delete the token in Home Assistant afterward.';
 
   @override
-  String get haPhoneSetupNoNetwork => 'This TV isn\'t on the home network, so the phone can\'t reach it.';
+  String get haPhoneSetupNoNetwork =>
+      'This TV isn\'t on the home network, so the phone can\'t reach it.';
 
   @override
-  String get haPhoneSetupScan => 'Scan with a phone on the same Wi-Fi, paste the Home Assistant address and access token, and tap Send. The page only works while this is open.';
+  String get haPhoneSetupScan =>
+      'Scan with a phone on the same Wi-Fi, paste the Home Assistant address and access token, and tap Send. The page only works while this is open.';
 
   @override
   String get profilesSwitchProfile => 'Switch profile';
@@ -1266,7 +1314,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get parentPinNew => 'New parent PIN';
 
   @override
-  String get parentPinNewSubtitle => 'Needed to change the launcher in Google TV kids profiles';
+  String get parentPinNewSubtitle =>
+      'Needed to change the launcher in Google TV kids profiles';
 
   @override
   String get parentPinHouseholdUse => 'Use your other TVs\' Parent PIN';
@@ -1275,7 +1324,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get parentPinHouseholdTitle => 'Your other TVs\' Parent PIN';
 
   @override
-  String get parentPinHouseholdSubtitle => 'Enter the Parent PIN your other TVs use, and this TV uses it too';
+  String get parentPinHouseholdSubtitle =>
+      'Enter the Parent PIN your other TVs use, and this TV uses it too';
 
   @override
   String get parentPinConfirm => 'Enter the PIN again';
@@ -1289,7 +1339,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get parentPinKidsSubtitle => 'Kids profile: enter the parent PIN to change the launcher';
+  String get parentPinKidsSubtitle =>
+      'Kids profile: enter the parent PIN to change the launcher';
 
   @override
   String get haStatusCreate => 'Create it in Home Assistant for me';
@@ -1303,19 +1354,24 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get haStatusNotAdmin => 'Home Assistant wouldn\'t let this TV\'s token make them. Use an administrator\'s token (Home Assistant address and token), or make the automation yourself and enter its webhook ID.';
+  String get haStatusNotAdmin =>
+      'Home Assistant wouldn\'t let this TV\'s token make them. Use an administrator\'s token (Home Assistant address and token), or make the automation yourself and enter its webhook ID.';
 
   @override
-  String get haStatusNotSetUp => 'Add Home Assistant\'s address and token first (Set up from phone), then try again.';
+  String get haStatusNotSetUp =>
+      'Add Home Assistant\'s address and token first (Set up from phone), then try again.';
 
   @override
-  String get haStatusCreateFailed => 'Couldn\'t set it up in Home Assistant. Check its address and token, or enter a webhook ID by hand.';
+  String get haStatusCreateFailed =>
+      'Couldn\'t set it up in Home Assistant. Check its address and token, or enter a webhook ID by hand.';
 
   @override
-  String get parentPinPhoneAsked => 'Asked a parent\'s phone. Allow it there, or enter the PIN here.';
+  String get parentPinPhoneAsked =>
+      'Asked a parent\'s phone. Allow it there, or enter the PIN here.';
 
   @override
-  String get parentPinPhoneDenied => 'Not allowed from the phone. Enter the PIN here.';
+  String get parentPinPhoneDenied =>
+      'Not allowed from the phone. Enter the PIN here.';
 
   @override
   String parentPinLocked(int seconds) {
@@ -1370,7 +1426,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pairingAppOff => 'Off: the app\'s own picker shows';
 
   @override
-  String get pairingAppNotSeen => 'Open it once from Hearth so Hearth can learn its profiles';
+  String get pairingAppNotSeen =>
+      'Open it once from Hearth so Hearth can learn its profiles';
 
   @override
   String pairingAppProfilesFound(int count) {
@@ -1402,7 +1459,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get pairingAppNotSeenFooter => 'Hearth hasn\'t seen this app\'s profiles yet. Open it once from Hearth, then come back.';
+  String get pairingAppNotSeenFooter =>
+      'Hearth hasn\'t seen this app\'s profiles yet. Open it once from Hearth, then come back.';
 
   @override
   String pairingAppProfilesFooter(String profiles) {
@@ -1423,22 +1481,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupDefaultLauncherTitle => 'Hearth as the home app';
 
   @override
-  String get setupDefaultLauncherWhy => 'Keeps kids profiles from blocking Hearth.';
+  String get setupDefaultLauncherWhy =>
+      'Keeps kids profiles from blocking Hearth.';
 
   @override
-  String get setupDefaultLauncherInstructions => 'On the next screen, choose Hearth.';
+  String get setupDefaultLauncherInstructions =>
+      'On the next screen, choose Hearth.';
 
   @override
   String get setupHomeFixTitle => 'Home Button Fix';
 
   @override
-  String get setupHomeFixWhy => 'The Home button opens Hearth instead of Google TV.';
+  String get setupHomeFixWhy =>
+      'The Home button opens Hearth instead of Google TV.';
 
   @override
   String get setupNotificationsTitle => 'Notification access';
 
   @override
-  String get setupNotificationsWhy => 'Shows notifications and what\'s playing.';
+  String get setupNotificationsWhy =>
+      'Shows notifications and what\'s playing.';
 
   @override
   String setupNotificationsInstructions(String service) {
@@ -1449,19 +1511,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupInstallTitle => 'Installing updates';
 
   @override
-  String get setupInstallWhy => 'Lets Hearth update itself and install companion apps.';
+  String get setupInstallWhy =>
+      'Lets Hearth update itself and install companion apps.';
 
   @override
   String get setupInstallInstructions => 'On the next screen, turn on Hearth.';
 
   @override
-  String get setupPairingWhy => 'Picks your profile in Netflix, Disney+, Apple TV, HBO Max and Paramount+.';
+  String get setupPairingWhy =>
+      'Picks your profile in Netflix, Disney+, Apple TV, HBO Max and Paramount+.';
 
   @override
   String get setupVoiceTitle => 'Hearth voice';
 
   @override
-  String get setupVoiceWhy => 'Lets Profile Pairing hear Netflix\'s profile screen. Other apps keep Google\'s voice.';
+  String get setupVoiceWhy =>
+      'Lets Profile Pairing hear Netflix\'s profile screen. Other apps keep Google\'s voice.';
 
   @override
   String setupVoiceInstructions(String engine) {
@@ -1472,7 +1537,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupOpenSettings => 'Open Settings';
 
   @override
-  String get setupAdbFallback => 'This TV wouldn\'t open that Settings screen. Run this once from a computer instead:';
+  String get setupAdbFallback =>
+      'This TV wouldn\'t open that Settings screen. Run this once from a computer instead:';
 
   @override
   String setupProgress(int done, int total) {
@@ -1494,7 +1560,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get remoteButtonsCaptureTitle => 'Press a remote button';
 
   @override
-  String get remoteButtonsCaptureBody => 'Press the button you want to remap. Press Back to cancel.';
+  String get remoteButtonsCaptureBody =>
+      'Press the button you want to remap. Press Back to cancel.';
 
   @override
   String get remoteButtonsNeedsFixTitle => 'Turn on Home Button Fix first';
@@ -1508,7 +1575,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get remoteButtonsCantRemapTitle => 'Can\'t remap that button';
 
   @override
-  String get remoteButtonsCantRemapBody => 'The arrows, OK, Back, Home and power keep their normal job.';
+  String get remoteButtonsCantRemapBody =>
+      'The arrows, OK, Back, Home and power keep their normal job.';
 
   @override
   String remoteButtonsPressOption(String action) {
@@ -1524,7 +1592,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adSandboxTitle => 'Ad tracking';
 
   @override
-  String get adSandboxIntro => 'Google can learn what you like from the apps you use on this TV and use it for ads. Hearth turns that off for everyone on this TV, kids profiles included, and keeps it off.';
+  String get adSandboxIntro =>
+      'Google can learn what you like from the apps you use on this TV and use it for ads. Hearth turns that off for everyone on this TV, kids profiles included, and keeps it off.';
 
   @override
   String get adSandboxKeepOff => 'Keep ad tracking off';
@@ -1533,31 +1602,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adSandboxStatusOff => 'Off on this TV.';
 
   @override
-  String get adSandboxStatusOn => 'Still on on this TV. Choose Turn it off now.';
+  String get adSandboxStatusOn =>
+      'Still on on this TV. Choose Turn it off now.';
 
   @override
   String get adSandboxTurnOffNow => 'Turn it off now';
 
   @override
-  String get adSandboxStatusAllowed => 'On. Turn on Keep ad tracking off to stop it.';
+  String get adSandboxStatusAllowed =>
+      'On. Turn on Keep ad tracking off to stop it.';
 
   @override
   String get adSandboxNone => 'This TV doesn\'t have Google\'s ad tracking.';
 
   @override
-  String get adSandboxNote => 'Your apps, the Play Store, voice search and casting all keep working.';
+  String get adSandboxNote =>
+      'Your apps, the Play Store, voice search and casting all keep working.';
 
   @override
-  String get adSandboxConfirmApproval => 'The first time, the TV asks \"Allow debugging?\". Choose Always allow.';
+  String get adSandboxConfirmApproval =>
+      'The first time, the TV asks \"Allow debugging?\". Choose Always allow.';
 
   @override
-  String get remoteButtonsYouTubeOpensHearthTube => 'YouTube button opens HearthTube';
+  String get remoteButtonsYouTubeOpensHearthTube =>
+      'YouTube button opens HearthTube';
 
   @override
   String get remoteButtonsYouTubeButton => 'YouTube button';
 
   @override
-  String get remoteButtonsSearchPreset => 'Tap for Hearth search, hold for Google';
+  String get remoteButtonsSearchPreset =>
+      'Tap for Hearth search, hold for Google';
 
   @override
   String get remoteButtonsHomeOnlyOn => 'Only on Hearth\'s home screen: On';
@@ -1635,7 +1710,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String remoteButtonsRowSummaryHomeOnly(String button, String press, String hold) {
+  String remoteButtonsRowSummaryHomeOnly(
+    String button,
+    String press,
+    String hold,
+  ) {
     return '$button\nPress: $press  ·  Hold: $hold  ·  Home screen only';
   }
 
@@ -1648,7 +1727,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tvPowerScreensaver => 'Screensaver (Google Photos)';
 
   @override
-  String get tvPowerScreensaverNote => 'Hearth uses Google TV\'s screensaver. Choose Google Photos (and which albums) or another source there.';
+  String get tvPowerScreensaverNote =>
+      'Hearth uses Google TV\'s screensaver. Choose Google Photos (and which albums) or another source there.';
 
   @override
   String get tvPowerSleepWhenIdle => 'Sleep when idle';
@@ -1750,7 +1830,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dockFavoritesDock => 'Favorites dock';
 
   @override
-  String get dockFavoritesDockDescription => 'Shows Favorites as a bar along the bottom of the home screen, with Continue Watching above it and your other sections below. Its corners follow the theme.';
+  String get dockFavoritesDockDescription =>
+      'Shows Favorites as a bar along the bottom of the home screen, with Continue Watching above it and your other sections below. Its corners follow the theme.';
 
   @override
   String get dockFrosted => 'Frosted dock';
@@ -1774,7 +1855,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wallpaperRefreshNow => 'Refresh Now';
 
   @override
-  String get wallpaperBingError => 'Couldn\'t reach Bing. Check your network connection.';
+  String get wallpaperBingError =>
+      'Couldn\'t reach Bing. Check your network connection.';
 
   @override
   String statusBarTemperatureUnitValue(String unit) {
@@ -1790,10 +1872,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get statusBarWeatherLoadFailed => 'Couldn\'t load the weather. It will retry automatically.';
+  String get statusBarWeatherLoadFailed =>
+      'Couldn\'t load the weather. It will retry automatically.';
 
   @override
-  String get statusBarWeatherSourceHint => 'Choose a weather location above (weather from Open-Meteo, free, no account). Without one, weather comes from the Breezy Weather app if it\'s installed with Gadgetbridge sharing on.';
+  String get statusBarWeatherSourceHint =>
+      'Choose a weather location above (weather from Open-Meteo, free, no account). Without one, weather comes from the Breezy Weather app if it\'s installed with Gadgetbridge sharing on.';
 
   @override
   String get weatherLocationTitle => 'Weather location';
@@ -1805,10 +1889,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get weatherLocationNoResults => 'No places found';
 
   @override
-  String get weatherLocationSearchError => 'Couldn\'t reach the weather service. Check the network connection.';
+  String get weatherLocationSearchError =>
+      'Couldn\'t reach the weather service. Check the network connection.';
 
   @override
-  String get weatherLocationPrivacyNote => 'Weather by Open-Meteo.com: free, no account. Only the chosen place\'s coordinates are sent.';
+  String get weatherLocationPrivacyNote =>
+      'Weather by Open-Meteo.com: free, no account. Only the chosen place\'s coordinates are sent.';
 
   @override
   String get weatherLocationSearch => 'Search';
@@ -1834,7 +1920,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get cwAppsBlockedFromContinueWatching => 'Blocked from Continue Watching';
+  String get cwAppsBlockedFromContinueWatching =>
+      'Blocked from Continue Watching';
 
   @override
   String get cwAppsUnblock => 'Unblock';
@@ -1846,16 +1933,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cwAppsNoBlockedApps => 'No Blocked Apps';
 
   @override
-  String get cwAppsNoBlockedAppsMessage => 'All supported apps can show items in Continue Watching.';
+  String get cwAppsNoBlockedAppsMessage =>
+      'All supported apps can show items in Continue Watching.';
 
   @override
   String get cwAppsWithContinueWatching => 'Apps with Continue Watching';
 
   @override
-  String get cwAppsWithContinueWatchingHint => 'Apps currently providing Watch Next items on your home screen';
+  String get cwAppsWithContinueWatchingHint =>
+      'Apps currently providing Watch Next items on your home screen';
 
   @override
-  String get cwAppsNoActiveApps => 'No apps are currently providing Continue Watching items.\nWhen supported apps (such as SmartTube or streaming services) add items, they will appear here.';
+  String get cwAppsNoActiveApps =>
+      'No apps are currently providing Continue Watching items.\nWhen supported apps (such as SmartTube or streaming services) add items, they will appear here.';
 
   @override
   String cwAppsActiveItems(int count) {
@@ -1872,7 +1962,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cwAppsAllInstalledApps => 'All Installed Apps';
 
   @override
-  String get cwAppsAllInstalledAppsHint => 'Toggle off to block any app from adding items to Continue Watching';
+  String get cwAppsAllInstalledAppsHint =>
+      'Toggle off to block any app from adding items to Continue Watching';
 
   @override
   String get cwAppsBlocked => 'Blocked';
@@ -2027,7 +2118,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cwWatchNextAdbTitle => 'Watch Next Access (ADB Required)';
 
   @override
-  String get cwWatchNextAdbMessage => 'Android TV requires the READ_WRITE_WATCH_NEXT_PROGRAMS permission for launchers to read and display Continue Watching rows from installed apps.\n\nTo grant this permission, connect your TV via ADB and run:';
+  String get cwWatchNextAdbMessage =>
+      'Android TV requires the READ_WRITE_WATCH_NEXT_PROGRAMS permission for launchers to read and display Continue Watching rows from installed apps.\n\nTo grant this permission, connect your TV via ADB and run:';
 
   @override
   String get appsNoApplicationsFound => 'No applications found';
@@ -2054,7 +2146,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectionsSortLastUsed => 'Last Used';
 
   @override
-  String get sectionsReorderHint => 'Select with ◄ / ► then use ▲ / ▼ to reorder';
+  String get sectionsReorderHint =>
+      'Select with ◄ / ► then use ▲ / ▼ to reorder';
 
   @override
   String get inputsNoneDetected => 'No inputs detected';
@@ -2079,7 +2172,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notifAccessAdbTitle => 'Notification Access (ADB Required)';
 
   @override
-  String get notifAccessAdbMessage => 'Android TV does not provide a system settings screen for \"Notification Access\" (listening to notifications from other apps).\n\nNote: Enabling \"Show notifications\" in TV App Settings only controls outgoing notifications from this app, not Notification Access.\n\nTo grant Notification Access, connect your TV via ADB and run:';
+  String get notifAccessAdbMessage =>
+      'Android TV does not provide a system settings screen for \"Notification Access\" (listening to notifications from other apps).\n\nNote: Enabling \"Show notifications\" in TV App Settings only controls outgoing notifications from this app, not Notification Access.\n\nTo grant Notification Access, connect your TV via ADB and run:';
 
   @override
   String get notifOpenAppInfo => 'Open App Info';
@@ -2088,7 +2182,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notifOverlayPermissionTitle => 'Overlay Permission';
 
   @override
-  String get notifOverlayAdbMessage => 'On this device, the Overlay Permission settings screen could not be opened automatically.\n\nTo enable overlay popups, grant permission manually via ADB from a computer connected to the TV:';
+  String get notifOverlayAdbMessage =>
+      'On this device, the Overlay Permission settings screen could not be opened automatically.\n\nTo enable overlay popups, grant permission manually via ADB from a computer connected to the TV:';
 
   @override
   String blockedNotificationsHeading(int count) {
@@ -2174,7 +2269,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get updateDownloadedHint => 'Downloaded. If the installer didn\'t open, your device may need\n\"Install unknown apps\" permission granted for Hearth.';
+  String get updateDownloadedHint =>
+      'Downloaded. If the installer didn\'t open, your device may need\n\"Install unknown apps\" permission granted for Hearth.';
 
   @override
   String get updateSomethingWentWrong => 'Something went wrong';
@@ -2192,7 +2288,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updatesInstallPermissionTitle => 'Allow Hearth to install apps';
 
   @override
-  String get updatesInstallPermissionMessage => 'On the next screen, find Hearth and turn it on, then press Back. The install continues when you\'re back here.';
+  String get updatesInstallPermissionMessage =>
+      'On the next screen, find Hearth and turn it on, then press Back. The install continues when you\'re back here.';
 
   @override
   String get updatesOpenSettings => 'Open Settings';
@@ -2210,16 +2307,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updatesAutoUpdate => 'Update automatically';
 
   @override
-  String get updatesAutoUpdateDescription => 'Hearth checks daily and installs updates to apps it installed, when they\'re not in use, and to itself while the TV is off';
+  String get updatesAutoUpdateDescription =>
+      'Hearth checks daily and installs updates to apps it installed, when they\'re not in use, and to itself while the TV is off';
 
   @override
   String get updatesIncludePrereleases => 'Include pre-releases';
 
   @override
-  String get updatesIncludePrereleasesDescription => 'Early test builds of Hearth and HearthTube. They may be unfinished.';
+  String get updatesIncludePrereleasesDescription =>
+      'Early test builds of Hearth and HearthTube. They may be unfinished.';
 
   @override
-  String get updatesFooter => 'Installed from each app\'s GitHub releases. After Hearth installs or updates an app once, its updates install without asking, and the app leaves updating to Hearth.';
+  String get updatesFooter =>
+      'Installed from each app\'s GitHub releases. After Hearth installs or updates an app once, its updates install without asking, and the app leaves updating to Hearth.';
 
   @override
   String get updatesChecking => 'Checking…';
@@ -2252,13 +2352,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get aboutDescription => 'A private, family-friendly launcher for Google TV, with Google TV profiles and Home Assistant built in. Ad-free and tracker-free.';
+  String get aboutDescription =>
+      'A private, family-friendly launcher for Google TV, with Google TV profiles and Home Assistant built in. Ad-free and tracker-free.';
 
   @override
   String get aboutHearthOnGitHub => 'Hearth on GitHub';
 
   @override
-  String get aboutLicense => 'Free software under the GNU GPL v3, like the projects it builds on.';
+  String get aboutLicense =>
+      'Free software under the GNU GPL v3, like the projects it builds on.';
 
   @override
   String aboutIncludesCode(String projects) {
@@ -2331,7 +2433,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pinPhoneSetupRow => 'Set up PINs on your phone';
 
   @override
-  String get pinPhoneSetupScan => 'Scan with a phone on the same Wi-Fi and type the PINs there. They’re encrypted on the phone; the page only works while this is open.';
+  String get pinPhoneSetupScan =>
+      'Scan with a phone on the same Wi-Fi and type the PINs there. They’re encrypted on the phone; the page only works while this is open.';
 
   @override
   String get approvalTitle => 'Unlock from my phone';
@@ -2346,10 +2449,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get approvalNeedsHa => 'Needs Home Assistant';
 
   @override
-  String get approvalNeedsHaBody => 'Your phone asks you to allow a switch to your profile through Home Assistant’s phone app. Set up Home Assistant in Settings first, with its phone app on your phone.';
+  String get approvalNeedsHaBody =>
+      'Your phone asks you to allow a switch to your profile through Home Assistant’s phone app. Set up Home Assistant in Settings first, with its phone app on your phone.';
 
   @override
-  String get approvalSwitch => 'Ask my phone when someone switches to my profile';
+  String get approvalSwitch =>
+      'Ask my phone when someone switches to my profile';
 
   @override
   String get approvalPhone => 'Phone';
@@ -2361,13 +2466,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get approvalPhonePick => 'Which phone asks?';
 
   @override
-  String get approvalNoPhones => 'Home Assistant has no phone with its app signed in yet.';
+  String get approvalNoPhones =>
+      'Home Assistant has no phone with its app signed in yet.';
 
   @override
   String get approvalPin => 'My Google TV PIN';
 
   @override
-  String get approvalPinSubtitle => 'Hearth enters it on Google TV’s PIN screen once you allow it on your phone. It stays on this TV, encrypted.';
+  String get approvalPinSubtitle =>
+      'Hearth enters it on Google TV’s PIN screen once you allow it on your phone. It stays on this TV, encrypted.';
 
   @override
   String get approvalTest => 'Send a test notification';
@@ -2376,10 +2483,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get approvalTestSent => 'Sent. Check the phone.';
 
   @override
-  String get approvalTestFailed => 'Couldn’t send it: check that Home Assistant is reachable.';
+  String get approvalTestFailed =>
+      'Couldn’t send it: check that Home Assistant is reachable.';
 
   @override
-  String get approvalFooter => 'When Google TV asks for your PIN to open your profile, your phone gets Allow and Deny. Allow, and Hearth enters the PIN; the PIN can always be typed with the remote too. Turn the Google TV PIN on for your profile first.';
+  String get approvalFooter =>
+      'When Google TV asks for your PIN to open your profile, your phone gets Allow and Deny. Allow, and Hearth enters the PIN; the PIN can always be typed with the remote too. Turn the Google TV PIN on for your profile first.';
 
   @override
   String profilePinUnsupported(String app) {
@@ -2397,7 +2506,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String profilePinNeedsParentPin(String settings, String profiles, String parentPin) {
+  String profilePinNeedsParentPin(
+    String settings,
+    String profiles,
+    String parentPin,
+  ) {
     return 'Set a parent PIN first ($settings → $profiles → $parentPin): saving a profile’s PIN needs it.';
   }
 
@@ -2408,10 +2521,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get streamingPinsTitle => 'Streaming app PINs';
 
   @override
-  String get streamingPinsFooter => 'Only this profile\'s PINs are here. When one of these apps asks for this profile\'s PIN, Hearth types it for you. Setting a PIN pairs this profile with that app profile for good.';
+  String get streamingPinsFooter =>
+      'Only this profile\'s PINs are here. When one of these apps asks for this profile\'s PIN, Hearth types it for you. Setting a PIN pairs this profile with that app profile for good.';
 
   @override
-  String get streamingPinsNone => 'None of the apps Hearth can type PINs in is installed.';
+  String get streamingPinsNone =>
+      'None of the apps Hearth can type PINs in is installed.';
 
   @override
   String get profileLockNow => 'Lock now';
@@ -2428,7 +2543,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get profileLockNeedsGoogleLock => 'Opens Google TV\'s profile chooser when the TV wakes, so a profile with a PIN asks for it before it opens. Kids profiles are left alone.';
+  String get profileLockNeedsGoogleLock =>
+      'Opens Google TV\'s profile chooser when the TV wakes, so a profile with a PIN asks for it before it opens. Kids profiles are left alone.';
 
   @override
   String aboutTvName(String name) {
@@ -2439,7 +2555,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutWallpaperPhoto => 'WALLPAPER PHOTO';
 
   @override
-  String get updateErrorWrongApp => 'This download isn\'t an update for this Hearth';
+  String get updateErrorWrongApp =>
+      'This download isn\'t an update for this Hearth';
 
   @override
   String get notifOpen => 'Open';
@@ -2451,7 +2568,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tvPowerGoogleTvHome => 'Use Google TV\'s home';
 
   @override
-  String get tvPowerGoogleTvHomeNote => 'Hearth stays out of the way until you press the Home button, which opens Hearth and turns this off, or you turn it off here.';
+  String get tvPowerGoogleTvHomeNote =>
+      'Hearth stays out of the way until you press the Home button, which opens Hearth and turns this off, or you turn it off here.';
 
   @override
   String get setupFlowFinishLater => 'Finish later';
@@ -2463,7 +2581,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowWelcomeTitle => 'Welcome to Hearth';
 
   @override
-  String get setupFlowWelcomeBody => 'A home screen for the whole family: your apps, what you were watching, and the right profile in every streaming app.';
+  String get setupFlowWelcomeBody =>
+      'A home screen for the whole family: your apps, what you were watching, and the right profile in every streaming app.';
 
   @override
   String get setupFlowWelcomeTime => 'Takes about 5 minutes. Skip anything.';
@@ -2481,13 +2600,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowHomeButtonTitle => 'Make the Home button open Hearth';
 
   @override
-  String get setupFlowHomeButtonBody => 'Google TV keeps its own home on the Home button. One switch in Android\'s settings fixes that, and also lets Hearth:';
+  String get setupFlowHomeButtonBody =>
+      'Google TV keeps its own home on the Home button. One switch in Android\'s settings fixes that, and also lets Hearth:';
 
   @override
-  String get setupFlowHomeButtonPoint1 => 'follow profile switches and kids\' bedtime';
+  String get setupFlowHomeButtonPoint1 =>
+      'follow profile switches and kids\' bedtime';
 
   @override
-  String get setupFlowHomeButtonPoint2 => 'show pop-ups and turn the TV off when idle';
+  String get setupFlowHomeButtonPoint2 =>
+      'show pop-ups and turn the TV off when idle';
 
   @override
   String get setupFlowOnNextScreen => 'On the next screen:';
@@ -2504,7 +2626,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowStepEnable => 'Turn on Enable, then OK';
 
   @override
-  String get setupFlowComesBack => 'Hearth comes back by itself when it\'s on. If Google TV asks who\'s watching, choose yourself.';
+  String get setupFlowComesBack =>
+      'Hearth comes back by itself when it\'s on. If Google TV asks who\'s watching, choose yourself.';
 
   @override
   String get setupFlowOpenAccessibility => 'Open Accessibility';
@@ -2516,19 +2639,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowNotOnYetTitle => 'It\'s not on yet';
 
   @override
-  String get setupFlowNotOnYetBody => 'Try again, or skip and do it later in Settings.';
+  String get setupFlowNotOnYetBody =>
+      'Try again, or skip and do it later in Settings.';
 
   @override
   String get setupFlowStuckTitle => 'It\'s on but not running';
 
   @override
-  String get setupFlowStuckBody => 'Android lists it as on, but it isn\'t running. Turn it off and on again.';
+  String get setupFlowStuckBody =>
+      'Android lists it as on, but it isn\'t running. Turn it off and on again.';
 
   @override
   String get setupFlowSkipHomeButtonTitle => 'Skip the Home button?';
 
   @override
-  String get setupFlowSkipHomeButtonBody => 'Without it, the Home button opens Google TV, and Hearth can\'t tell when a kids profile is in use.';
+  String get setupFlowSkipHomeButtonBody =>
+      'Without it, the Home button opens Google TV, and Hearth can\'t tell when a kids profile is in use.';
 
   @override
   String get setupFlowSkipAnyway => 'Skip anyway';
@@ -2543,55 +2669,65 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowLostTitle => 'The update turned the Home button off';
 
   @override
-  String get setupFlowLostBody => 'Android switches it off after some updates. Turn it back on in one step.';
+  String get setupFlowLostBody =>
+      'Android switches it off after some updates. Turn it back on in one step.';
 
   @override
   String get setupFlowBlockedTitle => 'Android blocked this switch';
 
   @override
-  String get setupFlowBlockedBody => 'If the switch was grey, it\'s because Hearth was installed from a downloaded file. The TV has no setting to allow it.';
+  String get setupFlowBlockedBody =>
+      'If the switch was grey, it\'s because Hearth was installed from a downloaded file. The TV has no setting to allow it.';
 
   @override
   String get setupFlowBlockedComputer => 'With a computer:';
 
   @override
-  String get setupFlowBlockedComputerThen => 'Then turn the switch on. Hearth notices on its own.';
+  String get setupFlowBlockedComputerThen =>
+      'Then turn the switch on. Hearth notices on its own.';
 
   @override
-  String get setupFlowBlockedSelfFixBody => 'Debugging is on, so Hearth can fix it itself. The TV will ask \"Allow debugging?\": choose Always allow, and Hearth will unblock its switch and turn it on.';
+  String get setupFlowBlockedSelfFixBody =>
+      'Debugging is on, so Hearth can fix it itself. The TV will ask \"Allow debugging?\": choose Always allow, and Hearth will unblock its switch and turn it on.';
 
   @override
   String get setupFlowSkipForNow => 'Skip for now';
 
   @override
-  String get setupFlowBlockedSkipLine => 'Apps, search and Continue Watching still work. The Home button, profiles, pop-ups and the sleep timer don\'t.';
+  String get setupFlowBlockedSkipLine =>
+      'Apps, search and Continue Watching still work. The Home button, profiles, pop-ups and the sleep timer don\'t.';
 
   @override
   String get setupFlowLetHearthFix => 'Let Hearth fix it';
 
   @override
-  String get setupFlowFixConfirmBody => 'Hearth will run this on the TV, through its own debugging connection:';
+  String get setupFlowFixConfirmBody =>
+      'Hearth will run this on the TV, through its own debugging connection:';
 
   @override
-  String get setupFlowFixConfirmApproval => 'The first time, the TV asks \"Allow debugging?\". Choose Always allow. It only changes Hearth\'s own permissions.';
+  String get setupFlowFixConfirmApproval =>
+      'The first time, the TV asks \"Allow debugging?\". Choose Always allow. It only changes Hearth\'s own permissions.';
 
   @override
   String get setupFlowFixRun => 'Run it';
 
   @override
-  String get setupFlowFixWaiting => 'Working on it. If the TV asks \"Allow debugging?\", choose Always allow.';
+  String get setupFlowFixWaiting =>
+      'Working on it. If the TV asks \"Allow debugging?\", choose Always allow.';
 
   @override
   String get setupFlowFixFailedTitle => 'Hearth couldn\'t do it';
 
   @override
-  String get setupFlowFixFailedBody => 'Hearth couldn\'t reach the TV\'s debugging. If the TV asked \"Allow debugging?\", choose Always allow and try again. Debugging must stay on in Developer options.';
+  String get setupFlowFixFailedBody =>
+      'Hearth couldn\'t reach the TV\'s debugging. If the TV asked \"Allow debugging?\", choose Always allow and try again. Debugging must stay on in Developer options.';
 
   @override
   String get setupFlowHomeAppTitle => 'Make Hearth your home app';
 
   @override
-  String get setupFlowHomeAppBody => 'Android will show a list of home apps. Choose Hearth. It keeps kids profiles from blocking Hearth.';
+  String get setupFlowHomeAppBody =>
+      'Android will show a list of home apps. Choose Hearth. It keeps kids profiles from blocking Hearth.';
 
   @override
   String get setupFlowChooseHearth => 'Choose Hearth';
@@ -2617,7 +2753,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowFinishLaterHeading => 'Set up later, in Settings';
 
   @override
-  String get setupFlowFinishMore => 'More in Settings: remote buttons, sections, notifications and backup.';
+  String get setupFlowFinishMore =>
+      'More in Settings: remote buttons, sections, notifications and backup.';
 
   @override
   String get setupFlowGoHome => 'Go to my home';
@@ -2672,19 +2809,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowNeedsAboutAMinute => 'About a minute';
 
   @override
-  String get setupFlowWatchingBenefit => 'Pick up where you left off, and see what\'s playing.';
+  String get setupFlowWatchingBenefit =>
+      'Pick up where you left off, and see what\'s playing.';
 
   @override
-  String get setupFlowWatchingIncluded1 => 'Continue Watching on the home screen';
+  String get setupFlowWatchingIncluded1 =>
+      'Continue Watching on the home screen';
 
   @override
   String get setupFlowWatchingIncluded2 => 'Notifications and what\'s playing';
 
   @override
-  String get setupFlowSearchWorks => 'Search already works: press Search on the home screen.';
+  String get setupFlowSearchWorks =>
+      'Search already works: press Search on the home screen.';
 
   @override
-  String get setupFlowContinueBody => 'Show what you were watching in your apps on the home screen. Android will ask once; choose Allow.';
+  String get setupFlowContinueBody =>
+      'Show what you were watching in your apps on the home screen. Android will ask once; choose Allow.';
 
   @override
   String get setupFlowContinueDone => 'Continue Watching is on';
@@ -2712,10 +2853,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowTvTitle => 'Turn the TV off when nobody\'s watching?';
 
   @override
-  String get setupFlowTvBody => 'After this long with no remote presses. Playing video or music counts as watching.';
+  String get setupFlowTvBody =>
+      'After this long with no remote presses. Playing video or music counts as watching.';
 
   @override
-  String get setupFlowTvNeedsHomeButton => 'This needs the Home button switch from the first steps: without it Hearth can\'t tell when the remote is used.';
+  String get setupFlowTvNeedsHomeButton =>
+      'This needs the Home button switch from the first steps: without it Hearth can\'t tell when the remote is used.';
 
   @override
   String get setupFlowStartOnBoot => 'Start Hearth when the TV starts';
@@ -2724,19 +2867,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowScreensaver => 'Choose screensaver photos';
 
   @override
-  String get setupFlowUpdatesBenefit => 'Hearth keeps itself and its companion apps up to date.';
+  String get setupFlowUpdatesBenefit =>
+      'Hearth keeps itself and its companion apps up to date.';
 
   @override
   String get setupFlowUpdatesIncluded1 => 'Hearth updates itself';
 
   @override
-  String get setupFlowUpdatesIncluded2 => 'HearthTube, a YouTube app made for Hearth';
+  String get setupFlowUpdatesIncluded2 =>
+      'HearthTube, a YouTube app made for Hearth';
 
   @override
   String get setupFlowInstallTitle => 'Allow Hearth to install updates';
 
   @override
-  String get setupFlowInstallBody => 'On the next screen, find Hearth and turn it on, then press Back.';
+  String get setupFlowInstallBody =>
+      'On the next screen, find Hearth and turn it on, then press Back.';
 
   @override
   String get setupFlowInstallDone => 'Hearth can install updates';
@@ -2745,7 +2891,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowTubeTitle => 'Install HearthTube?';
 
   @override
-  String get setupFlowTubeBody => 'A YouTube app made for Hearth: it follows your profiles, the clock style and kids\' bedtime.';
+  String get setupFlowTubeBody =>
+      'A YouTube app made for Hearth: it follows your profiles, the clock style and kids\' bedtime.';
 
   @override
   String get setupFlowTubeInstalled => 'HearthTube is installed';
@@ -2765,7 +2912,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowLookOtherTitle => 'Pick a look for your home';
 
   @override
-  String get setupFlowLookOtherBody => 'Each profile has its own home. Choose how yours looks.';
+  String get setupFlowLookOtherBody =>
+      'Each profile has its own home. Choose how yours looks.';
 
   @override
   String get setupLookHearth => 'Hearth';
@@ -2795,7 +2943,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowWeatherTitle => 'Show the weather?';
 
   @override
-  String get setupFlowWeatherBody => 'Choose your town. Only its location is sent, to Open-Meteo; no account.';
+  String get setupFlowWeatherBody =>
+      'Choose your town. Only its location is sent, to Open-Meteo; no account.';
 
   @override
   String get setupFlowWeatherChoose => 'Choose town';
@@ -2804,13 +2953,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowWeatherDone => 'The weather shows in the top bar';
 
   @override
-  String get setupFlowFamilyBenefit => 'Streaming apps open on the right person, and kids can\'t change Hearth.';
+  String get setupFlowFamilyBenefit =>
+      'Streaming apps open on the right person, and kids can\'t change Hearth.';
 
   @override
-  String get setupFlowFamilyIncluded1 => 'A parent PIN, so kids can\'t change Hearth';
+  String get setupFlowFamilyIncluded1 =>
+      'A parent PIN, so kids can\'t change Hearth';
 
   @override
-  String get setupFlowFamilyIncluded2 => 'The right profile in Netflix, Disney+, Apple TV, Max and Paramount+';
+  String get setupFlowFamilyIncluded2 =>
+      'The right profile in Netflix, Disney+, Apple TV, Max and Paramount+';
 
   @override
   String get setupFlowFamilyIncluded3 => 'Hearth kept on your kids profiles';
@@ -2825,7 +2977,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowPinTitle => 'Choose a parent PIN';
 
   @override
-  String get setupFlowPinBody => 'Kids need it to change Hearth. Pick four digits a child won\'t guess.';
+  String get setupFlowPinBody =>
+      'Kids need it to change Hearth. Pick four digits a child won\'t guess.';
 
   @override
   String get setupFlowPinChoose => 'Choose PIN';
@@ -2834,7 +2987,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowPinDone => 'The parent PIN is set';
 
   @override
-  String get setupFlowPairingTitle => 'Pick the right profile in streaming apps';
+  String get setupFlowPairingTitle =>
+      'Pick the right profile in streaming apps';
 
   @override
   String setupFlowPairingBody(String name) {
@@ -2845,7 +2999,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowPairingDone => 'Profile Pairing is on';
 
   @override
-  String get setupFlowPairingDoneBody => 'Hearth matches names by itself: \"Alex\" goes with \"Alex Morgan\". Each app\'s profiles appear after its \"Who\'s watching?\" screen has shown once.';
+  String get setupFlowPairingDoneBody =>
+      'Hearth matches names by itself: \"Alex\" goes with \"Alex Morgan\". Each app\'s profiles appear after its \"Who\'s watching?\" screen has shown once.';
 
   @override
   String get setupFlowCheckPairings => 'Check pairings';
@@ -2865,13 +3020,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowHouseholdTitle => 'Sync with your other TVs';
 
   @override
-  String get setupFlowHouseholdBody => 'TVs in a household keep everyone\'s looks, home layouts, streaming profiles and saved PINs in step, so anyone who switches TVs picks up where they left off. They talk over your home network, encrypted. Start one here; each TV you set up later offers to join it.';
+  String get setupFlowHouseholdBody =>
+      'TVs in a household keep everyone\'s looks, home layouts, streaming profiles and saved PINs in step, so anyone who switches TVs picks up where they left off. They talk over your home network, encrypted. Start one here; each TV you set up later offers to join it.';
 
   @override
   String get setupFlowHouseholdStart => 'Start a household';
 
   @override
-  String get setupFlowHouseholdDone => 'This TV has a household. Each TV you set up later offers to join it, or on one you have already, open Settings > Family > Household sync and choose Join the household.';
+  String get setupFlowHouseholdDone =>
+      'This TV has a household. Each TV you set up later offers to join it, or on one you have already, open Settings > Family > Household sync and choose Join the household.';
 
   @override
   String setupFlowHouseholdFound(String names) {
@@ -2885,31 +3042,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowFinishHousehold => 'In step with your other TVs';
 
   @override
-  String get setupFlowAdSandboxDebug => 'Hearth needs the TV\'s debugging switch to do it. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on, so Hearth can keep ad tracking off.';
+  String get setupFlowAdSandboxDebug =>
+      'Hearth needs the TV\'s debugging switch to do it. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on, so Hearth can keep ad tracking off.';
 
   @override
-  String get setupFlowAdSandboxDebugUsb => 'Hearth needs the TV\'s USB debugging switch to do it. On the next screen, turn on USB debugging, and come back. Leave it on, so Hearth can keep ad tracking off.';
+  String get setupFlowAdSandboxDebugUsb =>
+      'Hearth needs the TV\'s USB debugging switch to do it. On the next screen, turn on USB debugging, and come back. Leave it on, so Hearth can keep ad tracking off.';
 
   @override
   String get setupFlowHouseholdJoinTitle => 'Join your other TVs';
 
   @override
-  String get setupFlowHouseholdJoined => 'This TV is in the household now. Everyone\'s looks and settings arrive from your other TVs in a moment.';
+  String get setupFlowHouseholdJoined =>
+      'This TV is in the household now. Everyone\'s looks and settings arrive from your other TVs in a moment.';
 
   @override
-  String get setupFlowAdSandboxBody => 'Google can learn what you like from the apps you use on this TV and use it for ads. Hearth turns that off for everyone on this TV and keeps it off. You can change this in Settings > System.';
+  String get setupFlowAdSandboxBody =>
+      'Google can learn what you like from the apps you use on this TV and use it for ads. Hearth turns that off for everyone on this TV and keeps it off. You can change this in Settings > System.';
 
   @override
-  String get setupFlowAdSandboxDone => 'Ad tracking is off, and Hearth keeps it off.';
+  String get setupFlowAdSandboxDone =>
+      'Ad tracking is off, and Hearth keeps it off.';
 
   @override
   String get setupFlowKidsTitle => 'Keep Hearth on your kids profiles';
 
   @override
-  String get setupFlowKidsBody => 'Google TV removes apps it didn\'t install from kids profiles each time they start. Hearth can protect itself and HearthTube there. Each child gets one Family Link \"app added\" notice; undo anytime in Settings.';
+  String get setupFlowKidsBody =>
+      'Google TV removes apps it didn\'t install from kids profiles each time they start. Hearth can protect itself and HearthTube there. Each child gets one Family Link \"app added\" notice; undo anytime in Settings.';
 
   @override
-  String get setupFlowKidsApprove => 'The TV will ask \"Allow debugging?\". Tick Always allow, then Allow. You only do this once.';
+  String get setupFlowKidsApprove =>
+      'The TV will ask \"Allow debugging?\". Tick Always allow, then Allow. You only do this once.';
 
   @override
   String get setupFlowKidsAdd => 'Add to their profiles';
@@ -2918,19 +3082,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowKidsDone => 'Hearth is on your kids profiles';
 
   @override
-  String get setupFlowKidsKeepDebugging => 'Leave debugging on: Hearth needs it again for a new kids profile, and to take itself off them later.';
+  String get setupFlowKidsKeepDebugging =>
+      'Leave debugging on: Hearth needs it again for a new kids profile, and to take itself off them later.';
 
   @override
   String get setupFlowDebugTitle => 'Turn on debugging first';
 
   @override
-  String get setupFlowDebugBody => 'Hearth needs the TV\'s debugging switch to set up the kids profiles. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids profile.';
+  String get setupFlowDebugBody =>
+      'Hearth needs the TV\'s debugging switch to set up the kids profiles. On the next screen, select \"Android TV OS build\" seven times. Then in Settings > System > Developer options, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids profile.';
 
   @override
   String get setupFlowDebugOpen => 'Open About';
 
   @override
-  String get setupFlowDebugUsbBody => 'Developer options are on, but the USB debugging switch is off. Hearth needs it to set up the kids profiles, and Wireless debugging alone isn\'t enough. On the next screen, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids profile.';
+  String get setupFlowDebugUsbBody =>
+      'Developer options are on, but the USB debugging switch is off. Hearth needs it to set up the kids profiles, and Wireless debugging alone isn\'t enough. On the next screen, turn on USB debugging, and come back. Leave it on: Hearth needs it again for a new kids profile.';
 
   @override
   String get setupFlowDebugUsbOpen => 'Open Developer options';
@@ -2939,7 +3106,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupCardSmartHome => 'Smart home';
 
   @override
-  String get setupFlowHaBenefit => 'Doorbell and other alerts on the TV, and your Home Assistant dashboard one press away.';
+  String get setupFlowHaBenefit =>
+      'Doorbell and other alerts on the TV, and your Home Assistant dashboard one press away.';
 
   @override
   String get setupFlowHaIncluded1 => 'Doorbell and other alerts over any app';
@@ -2974,7 +3142,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowHaDashboardTitle => 'Your dashboard on the TV';
 
   @override
-  String get setupFlowHaDashboardBody => 'Scan with your phone, paste your Home Assistant address and a token, then Send. Use a Home Assistant user made for the TV, not an admin.';
+  String get setupFlowHaDashboardBody =>
+      'Scan with your phone, paste your Home Assistant address and a token, then Send. Use a Home Assistant user made for the TV, not an admin.';
 
   @override
   String get setupFlowHaDashboardDone => 'Your dashboard is set up';
@@ -2983,10 +3152,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowHaStatusTitle => 'Tell Home Assistant what\'s on';
 
   @override
-  String get setupFlowHaStatusBody => 'The TV can send what\'s playing and the active profile to Home Assistant. On the same phone page, add the ID of a webhook automation from Home Assistant.';
+  String get setupFlowHaStatusBody =>
+      'The TV can send what\'s playing and the active profile to Home Assistant. On the same phone page, add the ID of a webhook automation from Home Assistant.';
 
   @override
-  String get setupFlowHaStatusNoWebhook => 'The phone didn\'t send a webhook ID. Fill in the last box on the page.';
+  String get setupFlowHaStatusNoWebhook =>
+      'The phone didn\'t send a webhook ID. Fill in the last box on the page.';
 
   @override
   String get setupFlowHaStatusDone => 'The TV tells Home Assistant what\'s on';
@@ -3052,7 +3223,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get youTubeLimitHint => 'For this profile, in HearthTube. With Home Assistant set up, a limit it shares with your other devices counts too.';
+  String get youTubeLimitHint =>
+      'For this profile, in HearthTube. With Home Assistant set up, a limit it shares with your other devices counts too.';
 
   @override
   String get haPanelProfileDashboard => 'Dashboard for this profile';
@@ -3072,7 +3244,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get haPanelFirstView => 'Its first view';
 
   @override
-  String get haPanelDashboardsError => 'Couldn\'t get the dashboards from Home Assistant. Check the address and token below.';
+  String get haPanelDashboardsError =>
+      'Couldn\'t get the dashboards from Home Assistant. Check the address and token below.';
 
   @override
   String get calendar => 'Calendar';
@@ -3122,7 +3295,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarsTitle => 'Calendars';
 
   @override
-  String get calendarsHelp => 'The calendars turned on here show when the date and time at the top right have focus: what\'s left of today, and OK for the next 7 days. Each profile chooses its own.';
+  String get calendarsHelp =>
+      'The calendars turned on here show when the date and time at the top right have focus: what\'s left of today, and OK for the next 7 days. Each profile chooses its own.';
 
   @override
   String get calendarsLoading => 'Reading the calendars…';
@@ -3131,7 +3305,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarsAllow => 'Allow calendar access';
 
   @override
-  String get calendarsAccessHelp => 'Hearth can show this profile\'s Google calendars that are synced to the TV. It only reads them, and nothing leaves the TV.';
+  String get calendarsAccessHelp =>
+      'Hearth can show this profile\'s Google calendars that are synced to the TV. It only reads them, and nothing leaves the TV.';
 
   @override
   String calendarsKidsAccess(String place) {
@@ -3139,13 +3314,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get calendarsDenied => 'Calendar access is turned off. Allow it in Android\'s settings: Apps > Hearth > Permissions.';
+  String get calendarsDenied =>
+      'Calendar access is turned off. Allow it in Android\'s settings: Apps > Hearth > Permissions.';
 
   @override
   String get calendarsWaiting => 'Waiting for this profile\'s calendars…';
 
   @override
-  String get calendarsNone => 'This profile has no Google calendars synced to the TV.';
+  String get calendarsNone =>
+      'This profile has no Google calendars synced to the TV.';
 
   @override
   String get haCalendarsTitle => 'Calendars';
@@ -3159,13 +3336,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get haCalendarsError => 'Couldn\'t get the calendars from Home Assistant. Check its address and token.';
+  String get haCalendarsError =>
+      'Couldn\'t get the calendars from Home Assistant. Check its address and token.';
 
   @override
   String get haCalendarsNone => 'Home Assistant has no calendars.';
 
   @override
-  String get haCalendarsHelp => 'The calendars turned on here show when the date and time at the top right have focus: what\'s left of today, and OK for the next 7 days. Each profile chooses its own.';
+  String get haCalendarsHelp =>
+      'The calendars turned on here show when the date and time at the top right have focus: what\'s left of today, and OK for the next 7 days. Each profile chooses its own.';
 
   @override
   String get dataUsageToday => 'Today';
@@ -3218,7 +3397,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dataUsageVpnOn => 'VPN on';
 
   @override
-  String get dataUsageEthernetNotCounted => 'Android doesn\'t count data over Ethernet';
+  String get dataUsageEthernetNotCounted =>
+      'Android doesn\'t count data over Ethernet';
 
   @override
   String get haNativeNotSetUp => 'Home Assistant panel isn\'t set up';
@@ -3305,7 +3485,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get haPanelFullDashboard => 'Show the full dashboard instead';
 
   @override
-  String get haPanelFullDashboardDetail => 'Home Assistant\'s own page. The remote can\'t reach its controls.';
+  String get haPanelFullDashboardDetail =>
+      'Home Assistant\'s own page. The remote can\'t reach its controls.';
 
   @override
   String get weatherSummaryTonight => 'Tonight';
@@ -3368,7 +3549,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get contentPinRowHint => 'Typed only in adults’ profiles that have a Google TV PIN lock';
+  String get contentPinRowHint =>
+      'Typed only in adults’ profiles that have a Google TV PIN lock';
 
   @override
   String contentPinEnterSubtitle(String app) {
@@ -3376,10 +3558,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get setupFlowHaNowPlayingTitle => 'Share what\'s playing in HearthTube?';
+  String get setupFlowHaNowPlayingTitle =>
+      'Share what\'s playing in HearthTube?';
 
   @override
-  String get setupFlowHaNowPlayingBody => 'HearthTube can tell Home Assistant the title and channel of the video playing, for your automations and dashboards. Without it, Home Assistant still knows that YouTube is playing, not what.';
+  String get setupFlowHaNowPlayingBody =>
+      'HearthTube can tell Home Assistant the title and channel of the video playing, for your automations and dashboards. Without it, Home Assistant still knows that YouTube is playing, not what.';
 
   @override
   String get setupFlowHaNowPlayingYes => 'Share';
@@ -3391,7 +3575,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get haShareNowPlaying => 'Share what\'s playing in HearthTube';
 
   @override
-  String get haShareNowPlayingDetail => 'The video\'s title and channel, to Home Assistant';
+  String get haShareNowPlayingDetail =>
+      'The video\'s title and channel, to Home Assistant';
 
   @override
   String get haPairTitle => 'Pair with Home Assistant';
@@ -3403,16 +3588,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get haPairNotPaired => 'Not paired';
 
   @override
-  String get haPairIntro => 'With the Hearth integration in Home Assistant, this TV reports what it\'s doing and gets each profile\'s time limits, with no token or webhook. Install the integration and add it in Home Assistant first (Settings > Devices & services > Add integration > Hearth).';
+  String get haPairIntro =>
+      'With the Hearth integration in Home Assistant, this TV reports what it\'s doing and gets each profile\'s time limits, with no token or webhook. Install the integration and add it in Home Assistant first (Settings > Devices & services > Add integration > Hearth).';
 
   @override
   String get haPairStart => 'Pair';
 
   @override
-  String get haPairCode => 'In Home Assistant, open Settings > Devices & services. Under Discovered, open this TV, check it shows the same code, and confirm.';
+  String get haPairCode =>
+      'In Home Assistant, open Settings > Devices & services. Under Discovered, open this TV, check it shows the same code, and confirm.';
 
   @override
-  String get haPairDone => 'Paired. This TV reports to Home Assistant\'s Hearth integration now, and gets its time limits from it.';
+  String get haPairDone =>
+      'Paired. This TV reports to Home Assistant\'s Hearth integration now, and gets its time limits from it.';
 
   @override
   String haPairIsPaired(String url) {
@@ -3423,25 +3611,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get haPairUnpair => 'Unpair';
 
   @override
-  String get haPairUnpaired => 'Unpaired. To remove the TV from Home Assistant too, delete its device there.';
+  String get haPairUnpaired =>
+      'Unpaired. To remove the TV from Home Assistant too, delete its device there.';
 
   @override
   String get haPairNoAddress => 'Enter Home Assistant\'s address first.';
 
   @override
-  String get haPairNotSetUp => 'Home Assistant has the Hearth integration but no household yet. Add it there first (Settings > Devices & services > Add integration > Hearth).';
+  String get haPairNotSetUp =>
+      'Home Assistant has the Hearth integration but no household yet. Add it there first (Settings > Devices & services > Add integration > Hearth).';
 
   @override
-  String get haPairNoIntegration => 'Home Assistant answered, but the Hearth integration isn\'t installed there.';
+  String get haPairNoIntegration =>
+      'Home Assistant answered, but the Hearth integration isn\'t installed there.';
 
   @override
-  String get haPairUnreachable => 'Couldn\'t reach Home Assistant at that address.';
+  String get haPairUnreachable =>
+      'Couldn\'t reach Home Assistant at that address.';
 
   @override
-  String get haPairTryLater => 'Home Assistant has other requests waiting. Try again in a minute.';
+  String get haPairTryLater =>
+      'Home Assistant has other requests waiting. Try again in a minute.';
 
   @override
-  String get haPairNotLocal => 'Home Assistant only pairs TVs on the home network.';
+  String get haPairNotLocal =>
+      'Home Assistant only pairs TVs on the home network.';
 
   @override
   String get haPairFailed => 'Pairing didn\'t work. Try again.';
@@ -3450,5 +3644,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get haPairDenied => 'Home Assistant turned the request down.';
 
   @override
-  String get haPairEnded => 'The request ended before it was confirmed. Try again.';
+  String get haPairEnded =>
+      'The request ended before it was confirmed. Try again.';
 }

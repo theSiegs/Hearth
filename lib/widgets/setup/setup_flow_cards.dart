@@ -435,7 +435,7 @@ extension _CardScreens on _SetupFlowPageState {
           content: [picture],
           buttons: [
             skip,
-            if (selfFix != null) selfFix,
+            ?selfFix,
             SetupButton(
               label: l.tryAgain,
               focusNode: _primary,

@@ -115,8 +115,8 @@ class SetupFlowPage extends StatefulWidget {
       Navigator.of(context, rootNavigator: true).push<SetupFlowResult>(PageRouteBuilder(
         opaque: false,
         settings: const RouteSettings(name: routeName),
-        pageBuilder: (_, __, ___) => SetupFlowPage(mode: mode, startAt: startAt, resumed: resumed),
-        transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
+        pageBuilder: (_, _, _) => SetupFlowPage(mode: mode, startAt: startAt, resumed: resumed),
+        transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
       ));
 
   /// The screen a card starts on, by name (to open the flow there).
@@ -811,7 +811,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Image.asset("assets/logo.png", height: 72, errorBuilder: (_, __, ___) => const SizedBox(height: 72)),
+        Image.asset("assets/logo.png", height: 72, errorBuilder: (_, _, _) => const SizedBox(height: 72)),
         const SizedBox(height: 16),
         Text(l.setupFlowWelcomeTitle,
             textAlign: TextAlign.center,
@@ -900,14 +900,14 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
           title: l.setupFlowNotOnYetTitle,
           body: l.setupFlowNotOnYetBody,
           content: [_homeButtonPicture(l)],
-          buttons: [skip, if (selfFix != null) selfFix, tryAgain],
+          buttons: [skip, ?selfFix, tryAgain],
         ),
       SetupStepState.stuck => SetupScreenBody(
           icon: Icons.warning_amber_rounded,
           iconColor: Colors.amber,
           title: l.setupFlowStuckTitle,
           body: l.setupFlowStuckBody,
-          buttons: [skip, if (selfFix != null) selfFix, open],
+          buttons: [skip, ?selfFix, open],
         ),
       SetupStepState.confirmSkip => SetupScreenBody(
           icon: Icons.help_outline,

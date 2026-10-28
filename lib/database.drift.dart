@@ -1,3 +1,4 @@
+// dart format width=80
 // ignore_for_file: type=lint
 part of 'database.dart';
 
@@ -6,80 +7,123 @@ class $AppsTable extends Apps with TableInfo<$AppsTable, App> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $AppsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _packageNameMeta =
-      const VerificationMeta('packageName');
+  static const VerificationMeta _packageNameMeta = const VerificationMeta(
+    'packageName',
+  );
   @override
   late final GeneratedColumn<String> packageName = GeneratedColumn<String>(
-      'package_name', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+    'package_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
-      'name', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _versionMeta =
-      const VerificationMeta('version');
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
   @override
   late final GeneratedColumn<String> version = GeneratedColumn<String>(
-      'version', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _hiddenMeta = const VerificationMeta('hidden');
   @override
   late final GeneratedColumn<bool> hidden = GeneratedColumn<bool>(
-      'hidden', aliasedName, false,
-      type: DriftSqlType.bool,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('CHECK ("hidden" IN (0, 1))'),
-      defaultValue: const Constant(false));
-  static const VerificationMeta _lastLaunchedAtMeta =
-      const VerificationMeta('lastLaunchedAt');
+    'hidden',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("hidden" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _lastLaunchedAtMeta = const VerificationMeta(
+    'lastLaunchedAt',
+  );
   @override
   late final GeneratedColumn<DateTime> lastLaunchedAt =
-      GeneratedColumn<DateTime>('last_launched_at', aliasedName, true,
-          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+      GeneratedColumn<DateTime>(
+        'last_launched_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
-  List<GeneratedColumn> get $columns =>
-      [packageName, name, version, hidden, lastLaunchedAt];
+  List<GeneratedColumn> get $columns => [
+    packageName,
+    name,
+    version,
+    hidden,
+    lastLaunchedAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'apps';
   @override
-  VerificationContext validateIntegrity(Insertable<App> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<App> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('package_name')) {
       context.handle(
+        _packageNameMeta,
+        packageName.isAcceptableOrUnknown(
+          data['package_name']!,
           _packageNameMeta,
-          packageName.isAcceptableOrUnknown(
-              data['package_name']!, _packageNameMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_packageNameMeta);
     }
     if (data.containsKey('name')) {
       context.handle(
-          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
     if (data.containsKey('version')) {
-      context.handle(_versionMeta,
-          version.isAcceptableOrUnknown(data['version']!, _versionMeta));
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
     } else if (isInserting) {
       context.missing(_versionMeta);
     }
     if (data.containsKey('hidden')) {
-      context.handle(_hiddenMeta,
-          hidden.isAcceptableOrUnknown(data['hidden']!, _hiddenMeta));
+      context.handle(
+        _hiddenMeta,
+        hidden.isAcceptableOrUnknown(data['hidden']!, _hiddenMeta),
+      );
     }
     if (data.containsKey('last_launched_at')) {
       context.handle(
+        _lastLaunchedAtMeta,
+        lastLaunchedAt.isAcceptableOrUnknown(
+          data['last_launched_at']!,
           _lastLaunchedAtMeta,
-          lastLaunchedAt.isAcceptableOrUnknown(
-              data['last_launched_at']!, _lastLaunchedAtMeta));
+        ),
+      );
     }
     return context;
   }
@@ -90,14 +134,22 @@ class $AppsTable extends Apps with TableInfo<$AppsTable, App> {
   App map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return App(
-      packageName: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}package_name'])!,
-      name: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
-      version: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}version'])!,
-      hidden: attachedDatabase.typeMapping
-          .read(DriftSqlType.bool, data['${effectivePrefix}hidden'])!,
+      packageName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}package_name'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}version'],
+      )!,
+      hidden: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}hidden'],
+      )!,
     );
   }
 
@@ -129,9 +181,9 @@ class AppsCompanion extends UpdateCompanion<App> {
     this.hidden = const Value.absent(),
     this.lastLaunchedAt = const Value.absent(),
     this.rowid = const Value.absent(),
-  })  : packageName = Value(packageName),
-        name = Value(name),
-        version = Value(version);
+  }) : packageName = Value(packageName),
+       name = Value(name),
+       version = Value(version);
   static Insertable<App> custom({
     Expression<String>? packageName,
     Expression<String>? name,
@@ -150,13 +202,14 @@ class AppsCompanion extends UpdateCompanion<App> {
     });
   }
 
-  AppsCompanion copyWith(
-      {Value<String>? packageName,
-      Value<String>? name,
-      Value<String>? version,
-      Value<bool>? hidden,
-      Value<DateTime?>? lastLaunchedAt,
-      Value<int>? rowid}) {
+  AppsCompanion copyWith({
+    Value<String>? packageName,
+    Value<String>? name,
+    Value<String>? version,
+    Value<bool>? hidden,
+    Value<DateTime?>? lastLaunchedAt,
+    Value<int>? rowid,
+  }) {
     return AppsCompanion(
       packageName: packageName ?? this.packageName,
       name: name ?? this.name,
@@ -214,65 +267,98 @@ class $CategoriesTable extends Categories
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
-      'id', aliasedName, false,
-      hasAutoIncrement: true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
-      'name', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _sortMeta = const VerificationMeta('sort');
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   @override
   late final GeneratedColumnWithTypeConverter<CategorySort, int> sort =
-      GeneratedColumn<int>('sort', aliasedName, false,
-              type: DriftSqlType.int,
-              requiredDuringInsert: false,
-              defaultValue: const Constant(0))
-          .withConverter<CategorySort>($CategoriesTable.$convertersort);
-  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+      GeneratedColumn<int>(
+        'sort',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0),
+      ).withConverter<CategorySort>($CategoriesTable.$convertersort);
   @override
   late final GeneratedColumnWithTypeConverter<CategoryType, int> type =
-      GeneratedColumn<int>('type', aliasedName, false,
-              type: DriftSqlType.int,
-              requiredDuringInsert: false,
-              defaultValue: const Constant(0))
-          .withConverter<CategoryType>($CategoriesTable.$convertertype);
-  static const VerificationMeta _rowHeightMeta =
-      const VerificationMeta('rowHeight');
+      GeneratedColumn<int>(
+        'type',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0),
+      ).withConverter<CategoryType>($CategoriesTable.$convertertype);
+  static const VerificationMeta _rowHeightMeta = const VerificationMeta(
+    'rowHeight',
+  );
   @override
   late final GeneratedColumn<int> rowHeight = GeneratedColumn<int>(
-      'row_height', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultValue: const Constant(110));
-  static const VerificationMeta _columnsCountMeta =
-      const VerificationMeta('columnsCount');
+    'row_height',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(110),
+  );
+  static const VerificationMeta _columnsCountMeta = const VerificationMeta(
+    'columnsCount',
+  );
   @override
   late final GeneratedColumn<int> columnsCount = GeneratedColumn<int>(
-      'columns_count', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultValue: const Constant(6));
+    'columns_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(6),
+  );
   static const VerificationMeta _orderMeta = const VerificationMeta('order');
   @override
   late final GeneratedColumn<int> order = GeneratedColumn<int>(
-      'order', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
+    'order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, name, sort, type, rowHeight, columnsCount, order];
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    sort,
+    type,
+    rowHeight,
+    columnsCount,
+    order,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'categories';
   @override
-  VerificationContext validateIntegrity(Insertable<Category> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<Category> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
@@ -280,25 +366,32 @@ class $CategoriesTable extends Categories
     }
     if (data.containsKey('name')) {
       context.handle(
-          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
-    context.handle(_sortMeta, const VerificationResult.success());
-    context.handle(_typeMeta, const VerificationResult.success());
     if (data.containsKey('row_height')) {
-      context.handle(_rowHeightMeta,
-          rowHeight.isAcceptableOrUnknown(data['row_height']!, _rowHeightMeta));
+      context.handle(
+        _rowHeightMeta,
+        rowHeight.isAcceptableOrUnknown(data['row_height']!, _rowHeightMeta),
+      );
     }
     if (data.containsKey('columns_count')) {
       context.handle(
+        _columnsCountMeta,
+        columnsCount.isAcceptableOrUnknown(
+          data['columns_count']!,
           _columnsCountMeta,
-          columnsCount.isAcceptableOrUnknown(
-              data['columns_count']!, _columnsCountMeta));
+        ),
+      );
     }
     if (data.containsKey('order')) {
       context.handle(
-          _orderMeta, order.isAcceptableOrUnknown(data['order']!, _orderMeta));
+        _orderMeta,
+        order.isAcceptableOrUnknown(data['order']!, _orderMeta),
+      );
     } else if (isInserting) {
       context.missing(_orderMeta);
     }
@@ -311,20 +404,38 @@ class $CategoriesTable extends Categories
   Category map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Category(
-      name: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      order: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}order'])!,
-      columnsCount: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}columns_count'])!,
-      rowHeight: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}row_height'])!,
-      sort: $CategoriesTable.$convertersort.fromSql(attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}sort'])!),
-      type: $CategoriesTable.$convertertype.fromSql(attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}type'])!),
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      order: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}order'],
+      )!,
+      columnsCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}columns_count'],
+      )!,
+      rowHeight: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}row_height'],
+      )!,
+      sort: $CategoriesTable.$convertersort.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}sort'],
+        )!,
+      ),
+      type: $CategoriesTable.$convertertype.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}type'],
+        )!,
+      ),
     );
   }
 
@@ -364,8 +475,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.rowHeight = const Value.absent(),
     this.columnsCount = const Value.absent(),
     required int order,
-  })  : name = Value(name),
-        order = Value(order);
+  }) : name = Value(name),
+       order = Value(order);
   static Insertable<Category> custom({
     Expression<int>? id,
     Expression<String>? name,
@@ -386,14 +497,15 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     });
   }
 
-  CategoriesCompanion copyWith(
-      {Value<int>? id,
-      Value<String>? name,
-      Value<CategorySort>? sort,
-      Value<CategoryType>? type,
-      Value<int>? rowHeight,
-      Value<int>? columnsCount,
-      Value<int>? order}) {
+  CategoriesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<CategorySort>? sort,
+    Value<CategoryType>? type,
+    Value<int>? rowHeight,
+    Value<int>? columnsCount,
+    Value<int>? order,
+  }) {
     return CategoriesCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
@@ -415,12 +527,14 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       map['name'] = Variable<String>(name.value);
     }
     if (sort.present) {
-      map['sort'] =
-          Variable<int>($CategoriesTable.$convertersort.toSql(sort.value));
+      map['sort'] = Variable<int>(
+        $CategoriesTable.$convertersort.toSql(sort.value),
+      );
     }
     if (type.present) {
-      map['type'] =
-          Variable<int>($CategoriesTable.$convertertype.toSql(type.value));
+      map['type'] = Variable<int>(
+        $CategoriesTable.$convertertype.toSql(type.value),
+      );
     }
     if (rowHeight.present) {
       map['row_height'] = Variable<int>(rowHeight.value);
@@ -455,27 +569,39 @@ class $AppsCategoriesTable extends AppsCategories
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $AppsCategoriesTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _categoryIdMeta =
-      const VerificationMeta('categoryId');
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
+  );
   @override
   late final GeneratedColumn<int> categoryId = GeneratedColumn<int>(
-      'category_id', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'REFERENCES categories(id) ON DELETE CASCADE');
-  static const VerificationMeta _appPackageNameMeta =
-      const VerificationMeta('appPackageName');
+    'category_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'REFERENCES categories(id) ON DELETE CASCADE',
+  );
+  static const VerificationMeta _appPackageNameMeta = const VerificationMeta(
+    'appPackageName',
+  );
   @override
   late final GeneratedColumn<String> appPackageName = GeneratedColumn<String>(
-      'app_package_name', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'REFERENCES apps(package_name) ON DELETE CASCADE');
+    'app_package_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'REFERENCES apps(package_name) ON DELETE CASCADE',
+  );
   static const VerificationMeta _orderMeta = const VerificationMeta('order');
   @override
   late final GeneratedColumn<int> order = GeneratedColumn<int>(
-      'order', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
+    'order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
   @override
   List<GeneratedColumn> get $columns => [categoryId, appPackageName, order];
   @override
@@ -484,29 +610,36 @@ class $AppsCategoriesTable extends AppsCategories
   String get actualTableName => $name;
   static const String $name = 'apps_categories';
   @override
-  VerificationContext validateIntegrity(Insertable<AppCategory> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<AppCategory> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('category_id')) {
       context.handle(
-          _categoryIdMeta,
-          categoryId.isAcceptableOrUnknown(
-              data['category_id']!, _categoryIdMeta));
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_categoryIdMeta);
     }
     if (data.containsKey('app_package_name')) {
       context.handle(
+        _appPackageNameMeta,
+        appPackageName.isAcceptableOrUnknown(
+          data['app_package_name']!,
           _appPackageNameMeta,
-          appPackageName.isAcceptableOrUnknown(
-              data['app_package_name']!, _appPackageNameMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_appPackageNameMeta);
     }
     if (data.containsKey('order')) {
       context.handle(
-          _orderMeta, order.isAcceptableOrUnknown(data['order']!, _orderMeta));
+        _orderMeta,
+        order.isAcceptableOrUnknown(data['order']!, _orderMeta),
+      );
     } else if (isInserting) {
       context.missing(_orderMeta);
     }
@@ -519,12 +652,18 @@ class $AppsCategoriesTable extends AppsCategories
   AppCategory map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return AppCategory(
-      categoryId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}category_id'])!,
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}category_id'],
+      )!,
       appPackageName: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}app_package_name'])!,
-      order: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}order'])!,
+        DriftSqlType.string,
+        data['${effectivePrefix}app_package_name'],
+      )!,
+      order: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}order'],
+      )!,
     );
   }
 
@@ -538,10 +677,11 @@ class AppCategory extends DataClass implements Insertable<AppCategory> {
   final int categoryId;
   final String appPackageName;
   final int order;
-  const AppCategory(
-      {required this.categoryId,
-      required this.appPackageName,
-      required this.order});
+  const AppCategory({
+    required this.categoryId,
+    required this.appPackageName,
+    required this.order,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -559,8 +699,10 @@ class AppCategory extends DataClass implements Insertable<AppCategory> {
     );
   }
 
-  factory AppCategory.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory AppCategory.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return AppCategory(
       categoryId: serializer.fromJson<int>(json['categoryId']),
@@ -586,8 +728,9 @@ class AppCategory extends DataClass implements Insertable<AppCategory> {
       );
   AppCategory copyWithCompanion(AppsCategoriesCompanion data) {
     return AppCategory(
-      categoryId:
-          data.categoryId.present ? data.categoryId.value : this.categoryId,
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
       appPackageName: data.appPackageName.present
           ? data.appPackageName.value
           : this.appPackageName,
@@ -632,9 +775,9 @@ class AppsCategoriesCompanion extends UpdateCompanion<AppCategory> {
     required String appPackageName,
     required int order,
     this.rowid = const Value.absent(),
-  })  : categoryId = Value(categoryId),
-        appPackageName = Value(appPackageName),
-        order = Value(order);
+  }) : categoryId = Value(categoryId),
+       appPackageName = Value(appPackageName),
+       order = Value(order);
   static Insertable<AppCategory> custom({
     Expression<int>? categoryId,
     Expression<String>? appPackageName,
@@ -649,11 +792,12 @@ class AppsCategoriesCompanion extends UpdateCompanion<AppCategory> {
     });
   }
 
-  AppsCategoriesCompanion copyWith(
-      {Value<int>? categoryId,
-      Value<String>? appPackageName,
-      Value<int>? order,
-      Value<int>? rowid}) {
+  AppsCategoriesCompanion copyWith({
+    Value<int>? categoryId,
+    Value<String>? appPackageName,
+    Value<int>? order,
+    Value<int>? rowid,
+  }) {
     return AppsCategoriesCompanion(
       categoryId: categoryId ?? this.categoryId,
       appPackageName: appPackageName ?? this.appPackageName,
@@ -701,22 +845,34 @@ class $LauncherSpacersTable extends LauncherSpacers
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
-      'id', aliasedName, false,
-      hasAutoIncrement: true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
   static const VerificationMeta _heightMeta = const VerificationMeta('height');
   @override
   late final GeneratedColumn<int> height = GeneratedColumn<int>(
-      'height', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
+    'height',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _orderMeta = const VerificationMeta('order');
   @override
   late final GeneratedColumn<int> order = GeneratedColumn<int>(
-      'order', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
+    'order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
   @override
   List<GeneratedColumn> get $columns => [id, height, order];
   @override
@@ -725,22 +881,28 @@ class $LauncherSpacersTable extends LauncherSpacers
   String get actualTableName => $name;
   static const String $name = 'launcher_spacers';
   @override
-  VerificationContext validateIntegrity(Insertable<LauncherSpacer> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<LauncherSpacer> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
     if (data.containsKey('height')) {
-      context.handle(_heightMeta,
-          height.isAcceptableOrUnknown(data['height']!, _heightMeta));
+      context.handle(
+        _heightMeta,
+        height.isAcceptableOrUnknown(data['height']!, _heightMeta),
+      );
     } else if (isInserting) {
       context.missing(_heightMeta);
     }
     if (data.containsKey('order')) {
       context.handle(
-          _orderMeta, order.isAcceptableOrUnknown(data['order']!, _orderMeta));
+        _orderMeta,
+        order.isAcceptableOrUnknown(data['order']!, _orderMeta),
+      );
     } else if (isInserting) {
       context.missing(_orderMeta);
     }
@@ -753,12 +915,18 @@ class $LauncherSpacersTable extends LauncherSpacers
   LauncherSpacer map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return LauncherSpacer(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
-      order: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}order'])!,
-      height: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}height'])!,
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      order: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}order'],
+      )!,
+      height: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}height'],
+      )!,
     );
   }
 
@@ -781,8 +949,8 @@ class LauncherSpacersCompanion extends UpdateCompanion<LauncherSpacer> {
     this.id = const Value.absent(),
     required int height,
     required int order,
-  })  : height = Value(height),
-        order = Value(order);
+  }) : height = Value(height),
+       order = Value(order);
   static Insertable<LauncherSpacer> custom({
     Expression<int>? id,
     Expression<int>? height,
@@ -795,8 +963,11 @@ class LauncherSpacersCompanion extends UpdateCompanion<LauncherSpacer> {
     });
   }
 
-  LauncherSpacersCompanion copyWith(
-      {Value<int>? id, Value<int>? height, Value<int>? order}) {
+  LauncherSpacersCompanion copyWith({
+    Value<int>? id,
+    Value<int>? height,
+    Value<int>? order,
+  }) {
     return LauncherSpacersCompanion(
       id: id ?? this.id,
       height: height ?? this.height,
@@ -836,558 +1007,1241 @@ abstract class _$FLauncherDatabase extends GeneratedDatabase {
   late final $AppsTable apps = $AppsTable(this);
   late final $CategoriesTable categories = $CategoriesTable(this);
   late final $AppsCategoriesTable appsCategories = $AppsCategoriesTable(this);
-  late final $LauncherSpacersTable launcherSpacers =
-      $LauncherSpacersTable(this);
+  late final $LauncherSpacersTable launcherSpacers = $LauncherSpacersTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [apps, categories, appsCategories, launcherSpacers];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    apps,
+    categories,
+    appsCategories,
+    launcherSpacers,
+  ];
   @override
-  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
-        [
-          WritePropagation(
-            on: TableUpdateQuery.onTableName('categories',
-                limitUpdateKind: UpdateKind.delete),
-            result: [
-              TableUpdate('apps_categories', kind: UpdateKind.delete),
-            ],
-          ),
-          WritePropagation(
-            on: TableUpdateQuery.onTableName('apps',
-                limitUpdateKind: UpdateKind.delete),
-            result: [
-              TableUpdate('apps_categories', kind: UpdateKind.delete),
-            ],
-          ),
-        ],
-      );
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'categories',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('apps_categories', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'apps',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('apps_categories', kind: UpdateKind.delete)],
+    ),
+  ]);
 }
 
-typedef $$AppsTableCreateCompanionBuilder = AppsCompanion Function({
-  required String packageName,
-  required String name,
-  required String version,
-  Value<bool> hidden,
-  Value<DateTime?> lastLaunchedAt,
-  Value<int> rowid,
-});
-typedef $$AppsTableUpdateCompanionBuilder = AppsCompanion Function({
-  Value<String> packageName,
-  Value<String> name,
-  Value<String> version,
-  Value<bool> hidden,
-  Value<DateTime?> lastLaunchedAt,
-  Value<int> rowid,
-});
+typedef $$AppsTableCreateCompanionBuilder =
+    AppsCompanion Function({
+      required String packageName,
+      required String name,
+      required String version,
+      Value<bool> hidden,
+      Value<DateTime?> lastLaunchedAt,
+      Value<int> rowid,
+    });
+typedef $$AppsTableUpdateCompanionBuilder =
+    AppsCompanion Function({
+      Value<String> packageName,
+      Value<String> name,
+      Value<String> version,
+      Value<bool> hidden,
+      Value<DateTime?> lastLaunchedAt,
+      Value<int> rowid,
+    });
 
-class $$AppsTableTableManager extends RootTableManager<
-    _$FLauncherDatabase,
-    $AppsTable,
-    App,
-    $$AppsTableFilterComposer,
-    $$AppsTableOrderingComposer,
-    $$AppsTableCreateCompanionBuilder,
-    $$AppsTableUpdateCompanionBuilder> {
-  $$AppsTableTableManager(_$FLauncherDatabase db, $AppsTable table)
-      : super(TableManagerState(
-          db: db,
-          table: table,
-          filteringComposer:
-              $$AppsTableFilterComposer(ComposerState(db, table)),
-          orderingComposer:
-              $$AppsTableOrderingComposer(ComposerState(db, table)),
-          updateCompanionCallback: ({
-            Value<String> packageName = const Value.absent(),
-            Value<String> name = const Value.absent(),
-            Value<String> version = const Value.absent(),
-            Value<bool> hidden = const Value.absent(),
-            Value<DateTime?> lastLaunchedAt = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              AppsCompanion(
-            packageName: packageName,
-            name: name,
-            version: version,
-            hidden: hidden,
-            lastLaunchedAt: lastLaunchedAt,
-            rowid: rowid,
+final class $$AppsTableReferences
+    extends BaseReferences<_$FLauncherDatabase, $AppsTable, App> {
+  $$AppsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$AppsCategoriesTable, List<AppCategory>>
+  _appsCategoriesRefsTable(_$FLauncherDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.appsCategories,
+        aliasName: 'apps__package_name__apps_categories__app_package_name',
+      );
+
+  $$AppsCategoriesTableProcessedTableManager get appsCategoriesRefs {
+    final manager = $$AppsCategoriesTableTableManager($_db, $_db.appsCategories)
+        .filter(
+          (f) => f.appPackageName.packageName.sqlEquals(
+            $_itemColumn<String>('package_name')!,
           ),
-          createCompanionCallback: ({
-            required String packageName,
-            required String name,
-            required String version,
-            Value<bool> hidden = const Value.absent(),
-            Value<DateTime?> lastLaunchedAt = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              AppsCompanion.insert(
-            packageName: packageName,
-            name: name,
-            version: version,
-            hidden: hidden,
-            lastLaunchedAt: lastLaunchedAt,
-            rowid: rowid,
-          ),
-        ));
+        );
+
+    final cache = $_typedResult.readTableOrNull(_appsCategoriesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$AppsTableFilterComposer
-    extends FilterComposer<_$FLauncherDatabase, $AppsTable> {
-  $$AppsTableFilterComposer(super.$state);
-  ColumnFilters<String> get packageName => $state.composableBuilder(
-      column: $state.table.packageName,
-      builder: (column, joinBuilders) =>
-          ColumnFilters(column, joinBuilders: joinBuilders));
+    extends Composer<_$FLauncherDatabase, $AppsTable> {
+  $$AppsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get packageName => $composableBuilder(
+    column: $table.packageName,
+    builder: (column) => ColumnFilters(column),
+  );
 
-  ColumnFilters<String> get name => $state.composableBuilder(
-      column: $state.table.name,
-      builder: (column, joinBuilders) =>
-          ColumnFilters(column, joinBuilders: joinBuilders));
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
 
-  ColumnFilters<String> get version => $state.composableBuilder(
-      column: $state.table.version,
-      builder: (column, joinBuilders) =>
-          ColumnFilters(column, joinBuilders: joinBuilders));
+  ColumnFilters<String> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
 
-  ColumnFilters<bool> get hidden => $state.composableBuilder(
-      column: $state.table.hidden,
-      builder: (column, joinBuilders) =>
-          ColumnFilters(column, joinBuilders: joinBuilders));
+  ColumnFilters<bool> get hidden => $composableBuilder(
+    column: $table.hidden,
+    builder: (column) => ColumnFilters(column),
+  );
 
-  ColumnFilters<DateTime> get lastLaunchedAt => $state.composableBuilder(
-      column: $state.table.lastLaunchedAt,
-      builder: (column, joinBuilders) =>
-          ColumnFilters(column, joinBuilders: joinBuilders));
+  ColumnFilters<DateTime> get lastLaunchedAt => $composableBuilder(
+    column: $table.lastLaunchedAt,
+    builder: (column) => ColumnFilters(column),
+  );
 
-  ComposableFilter appsCategoriesRefs(
-      ComposableFilter Function($$AppsCategoriesTableFilterComposer f) f) {
-    final $$AppsCategoriesTableFilterComposer composer = $state.composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.packageName,
-        referencedTable: $state.db.appsCategories,
-        getReferencedColumn: (t) => t.appPackageName,
-        builder: (joinBuilder, parentComposers) =>
-            $$AppsCategoriesTableFilterComposer(ComposerState($state.db,
-                $state.db.appsCategories, joinBuilder, parentComposers)));
+  Expression<bool> appsCategoriesRefs(
+    Expression<bool> Function($$AppsCategoriesTableFilterComposer f) f,
+  ) {
+    final $$AppsCategoriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.packageName,
+      referencedTable: $db.appsCategories,
+      getReferencedColumn: (t) => t.appPackageName,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AppsCategoriesTableFilterComposer(
+            $db: $db,
+            $table: $db.appsCategories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
 
 class $$AppsTableOrderingComposer
-    extends OrderingComposer<_$FLauncherDatabase, $AppsTable> {
-  $$AppsTableOrderingComposer(super.$state);
-  ColumnOrderings<String> get packageName => $state.composableBuilder(
-      column: $state.table.packageName,
-      builder: (column, joinBuilders) =>
-          ColumnOrderings(column, joinBuilders: joinBuilders));
+    extends Composer<_$FLauncherDatabase, $AppsTable> {
+  $$AppsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get packageName => $composableBuilder(
+    column: $table.packageName,
+    builder: (column) => ColumnOrderings(column),
+  );
 
-  ColumnOrderings<String> get name => $state.composableBuilder(
-      column: $state.table.name,
-      builder: (column, joinBuilders) =>
-          ColumnOrderings(column, joinBuilders: joinBuilders));
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
 
-  ColumnOrderings<String> get version => $state.composableBuilder(
-      column: $state.table.version,
-      builder: (column, joinBuilders) =>
-          ColumnOrderings(column, joinBuilders: joinBuilders));
+  ColumnOrderings<String> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
 
-  ColumnOrderings<bool> get hidden => $state.composableBuilder(
-      column: $state.table.hidden,
-      builder: (column, joinBuilders) =>
-          ColumnOrderings(column, joinBuilders: joinBuilders));
+  ColumnOrderings<bool> get hidden => $composableBuilder(
+    column: $table.hidden,
+    builder: (column) => ColumnOrderings(column),
+  );
 
-  ColumnOrderings<DateTime> get lastLaunchedAt => $state.composableBuilder(
-      column: $state.table.lastLaunchedAt,
-      builder: (column, joinBuilders) =>
-          ColumnOrderings(column, joinBuilders: joinBuilders));
+  ColumnOrderings<DateTime> get lastLaunchedAt => $composableBuilder(
+    column: $table.lastLaunchedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
-typedef $$CategoriesTableCreateCompanionBuilder = CategoriesCompanion Function({
-  Value<int> id,
-  required String name,
-  Value<CategorySort> sort,
-  Value<CategoryType> type,
-  Value<int> rowHeight,
-  Value<int> columnsCount,
-  required int order,
-});
-typedef $$CategoriesTableUpdateCompanionBuilder = CategoriesCompanion Function({
-  Value<int> id,
-  Value<String> name,
-  Value<CategorySort> sort,
-  Value<CategoryType> type,
-  Value<int> rowHeight,
-  Value<int> columnsCount,
-  Value<int> order,
-});
+class $$AppsTableAnnotationComposer
+    extends Composer<_$FLauncherDatabase, $AppsTable> {
+  $$AppsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get packageName => $composableBuilder(
+    column: $table.packageName,
+    builder: (column) => column,
+  );
 
-class $$CategoriesTableTableManager extends RootTableManager<
-    _$FLauncherDatabase,
-    $CategoriesTable,
-    Category,
-    $$CategoriesTableFilterComposer,
-    $$CategoriesTableOrderingComposer,
-    $$CategoriesTableCreateCompanionBuilder,
-    $$CategoriesTableUpdateCompanionBuilder> {
-  $$CategoriesTableTableManager(_$FLauncherDatabase db, $CategoriesTable table)
-      : super(TableManagerState(
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<bool> get hidden =>
+      $composableBuilder(column: $table.hidden, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastLaunchedAt => $composableBuilder(
+    column: $table.lastLaunchedAt,
+    builder: (column) => column,
+  );
+
+  Expression<T> appsCategoriesRefs<T extends Object>(
+    Expression<T> Function($$AppsCategoriesTableAnnotationComposer a) f,
+  ) {
+    final $$AppsCategoriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.packageName,
+      referencedTable: $db.appsCategories,
+      getReferencedColumn: (t) => t.appPackageName,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AppsCategoriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.appsCategories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$AppsTableTableManager
+    extends
+        RootTableManager<
+          _$FLauncherDatabase,
+          $AppsTable,
+          App,
+          $$AppsTableFilterComposer,
+          $$AppsTableOrderingComposer,
+          $$AppsTableAnnotationComposer,
+          $$AppsTableCreateCompanionBuilder,
+          $$AppsTableUpdateCompanionBuilder,
+          (App, $$AppsTableReferences),
+          App,
+          PrefetchHooks Function({bool appsCategoriesRefs})
+        > {
+  $$AppsTableTableManager(_$FLauncherDatabase db, $AppsTable table)
+    : super(
+        TableManagerState(
           db: db,
           table: table,
-          filteringComposer:
-              $$CategoriesTableFilterComposer(ComposerState(db, table)),
-          orderingComposer:
-              $$CategoriesTableOrderingComposer(ComposerState(db, table)),
-          updateCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            Value<String> name = const Value.absent(),
-            Value<CategorySort> sort = const Value.absent(),
-            Value<CategoryType> type = const Value.absent(),
-            Value<int> rowHeight = const Value.absent(),
-            Value<int> columnsCount = const Value.absent(),
-            Value<int> order = const Value.absent(),
-          }) =>
-              CategoriesCompanion(
-            id: id,
-            name: name,
-            sort: sort,
-            type: type,
-            rowHeight: rowHeight,
-            columnsCount: columnsCount,
-            order: order,
-          ),
-          createCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            required String name,
-            Value<CategorySort> sort = const Value.absent(),
-            Value<CategoryType> type = const Value.absent(),
-            Value<int> rowHeight = const Value.absent(),
-            Value<int> columnsCount = const Value.absent(),
-            required int order,
-          }) =>
-              CategoriesCompanion.insert(
-            id: id,
-            name: name,
-            sort: sort,
-            type: type,
-            rowHeight: rowHeight,
-            columnsCount: columnsCount,
-            order: order,
-          ),
-        ));
+          createFilteringComposer: () =>
+              $$AppsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AppsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AppsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> packageName = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> version = const Value.absent(),
+                Value<bool> hidden = const Value.absent(),
+                Value<DateTime?> lastLaunchedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AppsCompanion(
+                packageName: packageName,
+                name: name,
+                version: version,
+                hidden: hidden,
+                lastLaunchedAt: lastLaunchedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String packageName,
+                required String name,
+                required String version,
+                Value<bool> hidden = const Value.absent(),
+                Value<DateTime?> lastLaunchedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AppsCompanion.insert(
+                packageName: packageName,
+                name: name,
+                version: version,
+                hidden: hidden,
+                lastLaunchedAt: lastLaunchedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$AppsTable, App>(table),
+                  $$AppsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({appsCategoriesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (appsCategoriesRefs) db.appsCategories,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (appsCategoriesRefs)
+                    await $_getPrefetchedDataByColumns<
+                      App,
+                      $AppsTable,
+                      AppCategory,
+                      $AppsCategoriesTable
+                    >(
+                      currentTable: table,
+                      referencedTable: $$AppsTableReferences
+                          ._appsCategoriesRefsTable(db),
+                      managerFromTypedResult: (p0) => $$AppsTableReferences(
+                        db,
+                        table,
+                        p0,
+                      ).appsCategoriesRefs,
+                      currentColumn: 'package_name',
+                      referencedColumn: 'app_package_name',
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$AppsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$FLauncherDatabase,
+      $AppsTable,
+      App,
+      $$AppsTableFilterComposer,
+      $$AppsTableOrderingComposer,
+      $$AppsTableAnnotationComposer,
+      $$AppsTableCreateCompanionBuilder,
+      $$AppsTableUpdateCompanionBuilder,
+      (App, $$AppsTableReferences),
+      App,
+      PrefetchHooks Function({bool appsCategoriesRefs})
+    >;
+typedef $$CategoriesTableCreateCompanionBuilder =
+    CategoriesCompanion Function({
+      Value<int> id,
+      required String name,
+      Value<CategorySort> sort,
+      Value<CategoryType> type,
+      Value<int> rowHeight,
+      Value<int> columnsCount,
+      required int order,
+    });
+typedef $$CategoriesTableUpdateCompanionBuilder =
+    CategoriesCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<CategorySort> sort,
+      Value<CategoryType> type,
+      Value<int> rowHeight,
+      Value<int> columnsCount,
+      Value<int> order,
+    });
+
+final class $$CategoriesTableReferences
+    extends BaseReferences<_$FLauncherDatabase, $CategoriesTable, Category> {
+  $$CategoriesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$AppsCategoriesTable, List<AppCategory>>
+  _appsCategoriesRefsTable(_$FLauncherDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.appsCategories,
+        aliasName: 'categories__id__apps_categories__category_id',
+      );
+
+  $$AppsCategoriesTableProcessedTableManager get appsCategoriesRefs {
+    final manager = $$AppsCategoriesTableTableManager(
+      $_db,
+      $_db.appsCategories,
+    ).filter((f) => f.categoryId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_appsCategoriesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$CategoriesTableFilterComposer
-    extends FilterComposer<_$FLauncherDatabase, $CategoriesTable> {
-  $$CategoriesTableFilterComposer(super.$state);
-  ColumnFilters<int> get id => $state.composableBuilder(
-      column: $state.table.id,
-      builder: (column, joinBuilders) =>
-          ColumnFilters(column, joinBuilders: joinBuilders));
+    extends Composer<_$FLauncherDatabase, $CategoriesTable> {
+  $$CategoriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
 
-  ColumnFilters<String> get name => $state.composableBuilder(
-      column: $state.table.name,
-      builder: (column, joinBuilders) =>
-          ColumnFilters(column, joinBuilders: joinBuilders));
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnWithTypeConverterFilters<CategorySort, CategorySort, int> get sort =>
-      $state.composableBuilder(
-          column: $state.table.sort,
-          builder: (column, joinBuilders) => ColumnWithTypeConverterFilters(
-              column,
-              joinBuilders: joinBuilders));
+      $composableBuilder(
+        column: $table.sort,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnWithTypeConverterFilters<CategoryType, CategoryType, int> get type =>
-      $state.composableBuilder(
-          column: $state.table.type,
-          builder: (column, joinBuilders) => ColumnWithTypeConverterFilters(
-              column,
-              joinBuilders: joinBuilders));
+      $composableBuilder(
+        column: $table.type,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
-  ColumnFilters<int> get rowHeight => $state.composableBuilder(
-      column: $state.table.rowHeight,
-      builder: (column, joinBuilders) =>
-          ColumnFilters(column, joinBuilders: joinBuilders));
+  ColumnFilters<int> get rowHeight => $composableBuilder(
+    column: $table.rowHeight,
+    builder: (column) => ColumnFilters(column),
+  );
 
-  ColumnFilters<int> get columnsCount => $state.composableBuilder(
-      column: $state.table.columnsCount,
-      builder: (column, joinBuilders) =>
-          ColumnFilters(column, joinBuilders: joinBuilders));
+  ColumnFilters<int> get columnsCount => $composableBuilder(
+    column: $table.columnsCount,
+    builder: (column) => ColumnFilters(column),
+  );
 
-  ColumnFilters<int> get order => $state.composableBuilder(
-      column: $state.table.order,
-      builder: (column, joinBuilders) =>
-          ColumnFilters(column, joinBuilders: joinBuilders));
+  ColumnFilters<int> get order => $composableBuilder(
+    column: $table.order,
+    builder: (column) => ColumnFilters(column),
+  );
 
-  ComposableFilter appsCategoriesRefs(
-      ComposableFilter Function($$AppsCategoriesTableFilterComposer f) f) {
-    final $$AppsCategoriesTableFilterComposer composer = $state.composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $state.db.appsCategories,
-        getReferencedColumn: (t) => t.categoryId,
-        builder: (joinBuilder, parentComposers) =>
-            $$AppsCategoriesTableFilterComposer(ComposerState($state.db,
-                $state.db.appsCategories, joinBuilder, parentComposers)));
+  Expression<bool> appsCategoriesRefs(
+    Expression<bool> Function($$AppsCategoriesTableFilterComposer f) f,
+  ) {
+    final $$AppsCategoriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.appsCategories,
+      getReferencedColumn: (t) => t.categoryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AppsCategoriesTableFilterComposer(
+            $db: $db,
+            $table: $db.appsCategories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
 
 class $$CategoriesTableOrderingComposer
-    extends OrderingComposer<_$FLauncherDatabase, $CategoriesTable> {
-  $$CategoriesTableOrderingComposer(super.$state);
-  ColumnOrderings<int> get id => $state.composableBuilder(
-      column: $state.table.id,
-      builder: (column, joinBuilders) =>
-          ColumnOrderings(column, joinBuilders: joinBuilders));
+    extends Composer<_$FLauncherDatabase, $CategoriesTable> {
+  $$CategoriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
 
-  ColumnOrderings<String> get name => $state.composableBuilder(
-      column: $state.table.name,
-      builder: (column, joinBuilders) =>
-          ColumnOrderings(column, joinBuilders: joinBuilders));
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
 
-  ColumnOrderings<int> get sort => $state.composableBuilder(
-      column: $state.table.sort,
-      builder: (column, joinBuilders) =>
-          ColumnOrderings(column, joinBuilders: joinBuilders));
+  ColumnOrderings<int> get sort => $composableBuilder(
+    column: $table.sort,
+    builder: (column) => ColumnOrderings(column),
+  );
 
-  ColumnOrderings<int> get type => $state.composableBuilder(
-      column: $state.table.type,
-      builder: (column, joinBuilders) =>
-          ColumnOrderings(column, joinBuilders: joinBuilders));
+  ColumnOrderings<int> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
 
-  ColumnOrderings<int> get rowHeight => $state.composableBuilder(
-      column: $state.table.rowHeight,
-      builder: (column, joinBuilders) =>
-          ColumnOrderings(column, joinBuilders: joinBuilders));
+  ColumnOrderings<int> get rowHeight => $composableBuilder(
+    column: $table.rowHeight,
+    builder: (column) => ColumnOrderings(column),
+  );
 
-  ColumnOrderings<int> get columnsCount => $state.composableBuilder(
-      column: $state.table.columnsCount,
-      builder: (column, joinBuilders) =>
-          ColumnOrderings(column, joinBuilders: joinBuilders));
+  ColumnOrderings<int> get columnsCount => $composableBuilder(
+    column: $table.columnsCount,
+    builder: (column) => ColumnOrderings(column),
+  );
 
-  ColumnOrderings<int> get order => $state.composableBuilder(
-      column: $state.table.order,
-      builder: (column, joinBuilders) =>
-          ColumnOrderings(column, joinBuilders: joinBuilders));
+  ColumnOrderings<int> get order => $composableBuilder(
+    column: $table.order,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
-typedef $$AppsCategoriesTableCreateCompanionBuilder = AppsCategoriesCompanion
-    Function({
-  required int categoryId,
-  required String appPackageName,
-  required int order,
-  Value<int> rowid,
-});
-typedef $$AppsCategoriesTableUpdateCompanionBuilder = AppsCategoriesCompanion
-    Function({
-  Value<int> categoryId,
-  Value<String> appPackageName,
-  Value<int> order,
-  Value<int> rowid,
-});
+class $$CategoriesTableAnnotationComposer
+    extends Composer<_$FLauncherDatabase, $CategoriesTable> {
+  $$CategoriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
 
-class $$AppsCategoriesTableTableManager extends RootTableManager<
-    _$FLauncherDatabase,
-    $AppsCategoriesTable,
-    AppCategory,
-    $$AppsCategoriesTableFilterComposer,
-    $$AppsCategoriesTableOrderingComposer,
-    $$AppsCategoriesTableCreateCompanionBuilder,
-    $$AppsCategoriesTableUpdateCompanionBuilder> {
-  $$AppsCategoriesTableTableManager(
-      _$FLauncherDatabase db, $AppsCategoriesTable table)
-      : super(TableManagerState(
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<CategorySort, int> get sort =>
+      $composableBuilder(column: $table.sort, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<CategoryType, int> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<int> get rowHeight =>
+      $composableBuilder(column: $table.rowHeight, builder: (column) => column);
+
+  GeneratedColumn<int> get columnsCount => $composableBuilder(
+    column: $table.columnsCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get order =>
+      $composableBuilder(column: $table.order, builder: (column) => column);
+
+  Expression<T> appsCategoriesRefs<T extends Object>(
+    Expression<T> Function($$AppsCategoriesTableAnnotationComposer a) f,
+  ) {
+    final $$AppsCategoriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.appsCategories,
+      getReferencedColumn: (t) => t.categoryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AppsCategoriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.appsCategories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$CategoriesTableTableManager
+    extends
+        RootTableManager<
+          _$FLauncherDatabase,
+          $CategoriesTable,
+          Category,
+          $$CategoriesTableFilterComposer,
+          $$CategoriesTableOrderingComposer,
+          $$CategoriesTableAnnotationComposer,
+          $$CategoriesTableCreateCompanionBuilder,
+          $$CategoriesTableUpdateCompanionBuilder,
+          (Category, $$CategoriesTableReferences),
+          Category,
+          PrefetchHooks Function({bool appsCategoriesRefs})
+        > {
+  $$CategoriesTableTableManager(_$FLauncherDatabase db, $CategoriesTable table)
+    : super(
+        TableManagerState(
           db: db,
           table: table,
-          filteringComposer:
-              $$AppsCategoriesTableFilterComposer(ComposerState(db, table)),
-          orderingComposer:
-              $$AppsCategoriesTableOrderingComposer(ComposerState(db, table)),
-          updateCompanionCallback: ({
-            Value<int> categoryId = const Value.absent(),
-            Value<String> appPackageName = const Value.absent(),
-            Value<int> order = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              AppsCategoriesCompanion(
-            categoryId: categoryId,
-            appPackageName: appPackageName,
-            order: order,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required int categoryId,
-            required String appPackageName,
-            required int order,
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              AppsCategoriesCompanion.insert(
-            categoryId: categoryId,
-            appPackageName: appPackageName,
-            order: order,
-            rowid: rowid,
-          ),
-        ));
+          createFilteringComposer: () =>
+              $$CategoriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CategoriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CategoriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<CategorySort> sort = const Value.absent(),
+                Value<CategoryType> type = const Value.absent(),
+                Value<int> rowHeight = const Value.absent(),
+                Value<int> columnsCount = const Value.absent(),
+                Value<int> order = const Value.absent(),
+              }) => CategoriesCompanion(
+                id: id,
+                name: name,
+                sort: sort,
+                type: type,
+                rowHeight: rowHeight,
+                columnsCount: columnsCount,
+                order: order,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                Value<CategorySort> sort = const Value.absent(),
+                Value<CategoryType> type = const Value.absent(),
+                Value<int> rowHeight = const Value.absent(),
+                Value<int> columnsCount = const Value.absent(),
+                required int order,
+              }) => CategoriesCompanion.insert(
+                id: id,
+                name: name,
+                sort: sort,
+                type: type,
+                rowHeight: rowHeight,
+                columnsCount: columnsCount,
+                order: order,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CategoriesTable, Category>(table),
+                  $$CategoriesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({appsCategoriesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (appsCategoriesRefs) db.appsCategories,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (appsCategoriesRefs)
+                    await $_getPrefetchedDataByColumns<
+                      Category,
+                      $CategoriesTable,
+                      AppCategory,
+                      $AppsCategoriesTable
+                    >(
+                      currentTable: table,
+                      referencedTable: $$CategoriesTableReferences
+                          ._appsCategoriesRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$CategoriesTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).appsCategoriesRefs,
+                      currentColumn: 'id',
+                      referencedColumn: 'category_id',
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CategoriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$FLauncherDatabase,
+      $CategoriesTable,
+      Category,
+      $$CategoriesTableFilterComposer,
+      $$CategoriesTableOrderingComposer,
+      $$CategoriesTableAnnotationComposer,
+      $$CategoriesTableCreateCompanionBuilder,
+      $$CategoriesTableUpdateCompanionBuilder,
+      (Category, $$CategoriesTableReferences),
+      Category,
+      PrefetchHooks Function({bool appsCategoriesRefs})
+    >;
+typedef $$AppsCategoriesTableCreateCompanionBuilder =
+    AppsCategoriesCompanion Function({
+      required int categoryId,
+      required String appPackageName,
+      required int order,
+      Value<int> rowid,
+    });
+typedef $$AppsCategoriesTableUpdateCompanionBuilder =
+    AppsCategoriesCompanion Function({
+      Value<int> categoryId,
+      Value<String> appPackageName,
+      Value<int> order,
+      Value<int> rowid,
+    });
+
+final class $$AppsCategoriesTableReferences
+    extends
+        BaseReferences<_$FLauncherDatabase, $AppsCategoriesTable, AppCategory> {
+  $$AppsCategoriesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $CategoriesTable _categoryIdTable(_$FLauncherDatabase db) =>
+      db.categories.createAlias('apps_categories__category_id__categories__id');
+
+  $$CategoriesTableProcessedTableManager get categoryId {
+    final $_column = $_itemColumn<int>('category_id')!;
+
+    final manager = $$CategoriesTableTableManager(
+      $_db,
+      $_db.categories,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_categoryIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $AppsTable _appPackageNameTable(_$FLauncherDatabase db) => db.apps
+      .createAlias('apps_categories__app_package_name__apps__package_name');
+
+  $$AppsTableProcessedTableManager get appPackageName {
+    final $_column = $_itemColumn<String>('app_package_name')!;
+
+    final manager = $$AppsTableTableManager(
+      $_db,
+      $_db.apps,
+    ).filter((f) => f.packageName.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_appPackageNameTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
 }
 
 class $$AppsCategoriesTableFilterComposer
-    extends FilterComposer<_$FLauncherDatabase, $AppsCategoriesTable> {
-  $$AppsCategoriesTableFilterComposer(super.$state);
-  ColumnFilters<int> get order => $state.composableBuilder(
-      column: $state.table.order,
-      builder: (column, joinBuilders) =>
-          ColumnFilters(column, joinBuilders: joinBuilders));
+    extends Composer<_$FLauncherDatabase, $AppsCategoriesTable> {
+  $$AppsCategoriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get order => $composableBuilder(
+    column: $table.order,
+    builder: (column) => ColumnFilters(column),
+  );
 
   $$CategoriesTableFilterComposer get categoryId {
-    final $$CategoriesTableFilterComposer composer = $state.composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.categoryId,
-        referencedTable: $state.db.categories,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder, parentComposers) =>
-            $$CategoriesTableFilterComposer(ComposerState($state.db,
-                $state.db.categories, joinBuilder, parentComposers)));
+    final $$CategoriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableFilterComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 
   $$AppsTableFilterComposer get appPackageName {
-    final $$AppsTableFilterComposer composer = $state.composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.appPackageName,
-        referencedTable: $state.db.apps,
-        getReferencedColumn: (t) => t.packageName,
-        builder: (joinBuilder, parentComposers) => $$AppsTableFilterComposer(
-            ComposerState(
-                $state.db, $state.db.apps, joinBuilder, parentComposers)));
+    final $$AppsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.appPackageName,
+      referencedTable: $db.apps,
+      getReferencedColumn: (t) => t.packageName,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AppsTableFilterComposer(
+            $db: $db,
+            $table: $db.apps,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
 
 class $$AppsCategoriesTableOrderingComposer
-    extends OrderingComposer<_$FLauncherDatabase, $AppsCategoriesTable> {
-  $$AppsCategoriesTableOrderingComposer(super.$state);
-  ColumnOrderings<int> get order => $state.composableBuilder(
-      column: $state.table.order,
-      builder: (column, joinBuilders) =>
-          ColumnOrderings(column, joinBuilders: joinBuilders));
+    extends Composer<_$FLauncherDatabase, $AppsCategoriesTable> {
+  $$AppsCategoriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get order => $composableBuilder(
+    column: $table.order,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   $$CategoriesTableOrderingComposer get categoryId {
-    final $$CategoriesTableOrderingComposer composer = $state.composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.categoryId,
-        referencedTable: $state.db.categories,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder, parentComposers) =>
-            $$CategoriesTableOrderingComposer(ComposerState($state.db,
-                $state.db.categories, joinBuilder, parentComposers)));
+    final $$CategoriesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableOrderingComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 
   $$AppsTableOrderingComposer get appPackageName {
-    final $$AppsTableOrderingComposer composer = $state.composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.appPackageName,
-        referencedTable: $state.db.apps,
-        getReferencedColumn: (t) => t.packageName,
-        builder: (joinBuilder, parentComposers) => $$AppsTableOrderingComposer(
-            ComposerState(
-                $state.db, $state.db.apps, joinBuilder, parentComposers)));
+    final $$AppsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.appPackageName,
+      referencedTable: $db.apps,
+      getReferencedColumn: (t) => t.packageName,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AppsTableOrderingComposer(
+            $db: $db,
+            $table: $db.apps,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
 
-typedef $$LauncherSpacersTableCreateCompanionBuilder = LauncherSpacersCompanion
-    Function({
-  Value<int> id,
-  required int height,
-  required int order,
-});
-typedef $$LauncherSpacersTableUpdateCompanionBuilder = LauncherSpacersCompanion
-    Function({
-  Value<int> id,
-  Value<int> height,
-  Value<int> order,
-});
+class $$AppsCategoriesTableAnnotationComposer
+    extends Composer<_$FLauncherDatabase, $AppsCategoriesTable> {
+  $$AppsCategoriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get order =>
+      $composableBuilder(column: $table.order, builder: (column) => column);
 
-class $$LauncherSpacersTableTableManager extends RootTableManager<
-    _$FLauncherDatabase,
-    $LauncherSpacersTable,
-    LauncherSpacer,
-    $$LauncherSpacersTableFilterComposer,
-    $$LauncherSpacersTableOrderingComposer,
-    $$LauncherSpacersTableCreateCompanionBuilder,
-    $$LauncherSpacersTableUpdateCompanionBuilder> {
-  $$LauncherSpacersTableTableManager(
-      _$FLauncherDatabase db, $LauncherSpacersTable table)
-      : super(TableManagerState(
-          db: db,
-          table: table,
-          filteringComposer:
-              $$LauncherSpacersTableFilterComposer(ComposerState(db, table)),
-          orderingComposer:
-              $$LauncherSpacersTableOrderingComposer(ComposerState(db, table)),
-          updateCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            Value<int> height = const Value.absent(),
-            Value<int> order = const Value.absent(),
-          }) =>
-              LauncherSpacersCompanion(
-            id: id,
-            height: height,
-            order: order,
+  $$CategoriesTableAnnotationComposer get categoryId {
+    final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
           ),
-          createCompanionCallback: ({
-            Value<int> id = const Value.absent(),
-            required int height,
-            required int order,
-          }) =>
-              LauncherSpacersCompanion.insert(
-            id: id,
-            height: height,
-            order: order,
+    );
+    return composer;
+  }
+
+  $$AppsTableAnnotationComposer get appPackageName {
+    final $$AppsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.appPackageName,
+      referencedTable: $db.apps,
+      getReferencedColumn: (t) => t.packageName,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AppsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.apps,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
           ),
-        ));
+    );
+    return composer;
+  }
 }
 
+class $$AppsCategoriesTableTableManager
+    extends
+        RootTableManager<
+          _$FLauncherDatabase,
+          $AppsCategoriesTable,
+          AppCategory,
+          $$AppsCategoriesTableFilterComposer,
+          $$AppsCategoriesTableOrderingComposer,
+          $$AppsCategoriesTableAnnotationComposer,
+          $$AppsCategoriesTableCreateCompanionBuilder,
+          $$AppsCategoriesTableUpdateCompanionBuilder,
+          (AppCategory, $$AppsCategoriesTableReferences),
+          AppCategory,
+          PrefetchHooks Function({bool categoryId, bool appPackageName})
+        > {
+  $$AppsCategoriesTableTableManager(
+    _$FLauncherDatabase db,
+    $AppsCategoriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AppsCategoriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AppsCategoriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AppsCategoriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> categoryId = const Value.absent(),
+                Value<String> appPackageName = const Value.absent(),
+                Value<int> order = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AppsCategoriesCompanion(
+                categoryId: categoryId,
+                appPackageName: appPackageName,
+                order: order,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int categoryId,
+                required String appPackageName,
+                required int order,
+                Value<int> rowid = const Value.absent(),
+              }) => AppsCategoriesCompanion.insert(
+                categoryId: categoryId,
+                appPackageName: appPackageName,
+                order: order,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$AppsCategoriesTable, AppCategory>(table),
+                  $$AppsCategoriesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({categoryId = false, appPackageName = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (categoryId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.categoryId,
+                                    referencedTable:
+                                        $$AppsCategoriesTableReferences
+                                            ._categoryIdTable(db),
+                                    referencedColumn:
+                                        $$AppsCategoriesTableReferences
+                                            ._categoryIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (appPackageName) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.appPackageName,
+                                    referencedTable:
+                                        $$AppsCategoriesTableReferences
+                                            ._appPackageNameTable(db),
+                                    referencedColumn:
+                                        $$AppsCategoriesTableReferences
+                                            ._appPackageNameTable(db)
+                                            .packageName,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$AppsCategoriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$FLauncherDatabase,
+      $AppsCategoriesTable,
+      AppCategory,
+      $$AppsCategoriesTableFilterComposer,
+      $$AppsCategoriesTableOrderingComposer,
+      $$AppsCategoriesTableAnnotationComposer,
+      $$AppsCategoriesTableCreateCompanionBuilder,
+      $$AppsCategoriesTableUpdateCompanionBuilder,
+      (AppCategory, $$AppsCategoriesTableReferences),
+      AppCategory,
+      PrefetchHooks Function({bool categoryId, bool appPackageName})
+    >;
+typedef $$LauncherSpacersTableCreateCompanionBuilder =
+    LauncherSpacersCompanion Function({
+      Value<int> id,
+      required int height,
+      required int order,
+    });
+typedef $$LauncherSpacersTableUpdateCompanionBuilder =
+    LauncherSpacersCompanion Function({
+      Value<int> id,
+      Value<int> height,
+      Value<int> order,
+    });
+
 class $$LauncherSpacersTableFilterComposer
-    extends FilterComposer<_$FLauncherDatabase, $LauncherSpacersTable> {
-  $$LauncherSpacersTableFilterComposer(super.$state);
-  ColumnFilters<int> get id => $state.composableBuilder(
-      column: $state.table.id,
-      builder: (column, joinBuilders) =>
-          ColumnFilters(column, joinBuilders: joinBuilders));
+    extends Composer<_$FLauncherDatabase, $LauncherSpacersTable> {
+  $$LauncherSpacersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
 
-  ColumnFilters<int> get height => $state.composableBuilder(
-      column: $state.table.height,
-      builder: (column, joinBuilders) =>
-          ColumnFilters(column, joinBuilders: joinBuilders));
+  ColumnFilters<int> get height => $composableBuilder(
+    column: $table.height,
+    builder: (column) => ColumnFilters(column),
+  );
 
-  ColumnFilters<int> get order => $state.composableBuilder(
-      column: $state.table.order,
-      builder: (column, joinBuilders) =>
-          ColumnFilters(column, joinBuilders: joinBuilders));
+  ColumnFilters<int> get order => $composableBuilder(
+    column: $table.order,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$LauncherSpacersTableOrderingComposer
-    extends OrderingComposer<_$FLauncherDatabase, $LauncherSpacersTable> {
-  $$LauncherSpacersTableOrderingComposer(super.$state);
-  ColumnOrderings<int> get id => $state.composableBuilder(
-      column: $state.table.id,
-      builder: (column, joinBuilders) =>
-          ColumnOrderings(column, joinBuilders: joinBuilders));
+    extends Composer<_$FLauncherDatabase, $LauncherSpacersTable> {
+  $$LauncherSpacersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
 
-  ColumnOrderings<int> get height => $state.composableBuilder(
-      column: $state.table.height,
-      builder: (column, joinBuilders) =>
-          ColumnOrderings(column, joinBuilders: joinBuilders));
+  ColumnOrderings<int> get height => $composableBuilder(
+    column: $table.height,
+    builder: (column) => ColumnOrderings(column),
+  );
 
-  ColumnOrderings<int> get order => $state.composableBuilder(
-      column: $state.table.order,
-      builder: (column, joinBuilders) =>
-          ColumnOrderings(column, joinBuilders: joinBuilders));
+  ColumnOrderings<int> get order => $composableBuilder(
+    column: $table.order,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
+
+class $$LauncherSpacersTableAnnotationComposer
+    extends Composer<_$FLauncherDatabase, $LauncherSpacersTable> {
+  $$LauncherSpacersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get height =>
+      $composableBuilder(column: $table.height, builder: (column) => column);
+
+  GeneratedColumn<int> get order =>
+      $composableBuilder(column: $table.order, builder: (column) => column);
+}
+
+class $$LauncherSpacersTableTableManager
+    extends
+        RootTableManager<
+          _$FLauncherDatabase,
+          $LauncherSpacersTable,
+          LauncherSpacer,
+          $$LauncherSpacersTableFilterComposer,
+          $$LauncherSpacersTableOrderingComposer,
+          $$LauncherSpacersTableAnnotationComposer,
+          $$LauncherSpacersTableCreateCompanionBuilder,
+          $$LauncherSpacersTableUpdateCompanionBuilder,
+          (
+            LauncherSpacer,
+            BaseReferences<
+              _$FLauncherDatabase,
+              $LauncherSpacersTable,
+              LauncherSpacer
+            >,
+          ),
+          LauncherSpacer,
+          PrefetchHooks Function()
+        > {
+  $$LauncherSpacersTableTableManager(
+    _$FLauncherDatabase db,
+    $LauncherSpacersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LauncherSpacersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LauncherSpacersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LauncherSpacersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> height = const Value.absent(),
+                Value<int> order = const Value.absent(),
+              }) => LauncherSpacersCompanion(
+                id: id,
+                height: height,
+                order: order,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int height,
+                required int order,
+              }) => LauncherSpacersCompanion.insert(
+                id: id,
+                height: height,
+                order: order,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$LauncherSpacersTable, LauncherSpacer>(table),
+                  BaseReferences<
+                    _$FLauncherDatabase,
+                    $LauncherSpacersTable,
+                    LauncherSpacer
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LauncherSpacersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$FLauncherDatabase,
+      $LauncherSpacersTable,
+      LauncherSpacer,
+      $$LauncherSpacersTableFilterComposer,
+      $$LauncherSpacersTableOrderingComposer,
+      $$LauncherSpacersTableAnnotationComposer,
+      $$LauncherSpacersTableCreateCompanionBuilder,
+      $$LauncherSpacersTableUpdateCompanionBuilder,
+      (
+        LauncherSpacer,
+        BaseReferences<
+          _$FLauncherDatabase,
+          $LauncherSpacersTable,
+          LauncherSpacer
+        >,
+      ),
+      LauncherSpacer,
+      PrefetchHooks Function()
+    >;
 
 class $FLauncherDatabaseManager {
   final _$FLauncherDatabase _db;

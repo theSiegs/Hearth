@@ -11,7 +11,7 @@ import '../providers/watch_next_service.dart';
 import 'package:flauncher/quiet_failure.dart';
 
 /// The welcome card shown over the home while it catches up with a profile switch: the profile's photo and
-/// "Hi <name>" ("Setting up this profile…" before Hearth knows its name), with a line that fills as each step
+/// "Hi `<name>`" ("Setting up this profile…" before Hearth knows its name), with a line that fills as each step
 /// lands. It goes once the profile's layout is restored, its native data is in (another profile's agent has
 /// reported), Continue Watching has been read for it and its first posters are in, or after [maxWait] at the
 /// latest, so a slow step never keeps anyone out. Remote presses wait meanwhile.
@@ -189,7 +189,7 @@ class _ProfileTransitionOverlayState extends State<ProfileTransitionOverlay> {
     return Focus(
       focusNode: _focusNode,
       // The home underneath is still the last profile's: nothing moves until it's this one's
-      onKeyEvent: (_, __) => KeyEventResult.handled,
+      onKeyEvent: (_, _) => KeyEventResult.handled,
       child: Container(
         // Solid: the home rearranges itself behind the card (the profile's layout, its apps) and mustn't show through
         color: const Color(0xFF101114),

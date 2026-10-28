@@ -35,8 +35,8 @@ class ContinueWatchingGridPage extends StatefulWidget {
   static Future<void> open(BuildContext context, List<WatchNextProgram> programs) =>
       Navigator.of(context).push(PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 150),
-        pageBuilder: (_, __, ___) => ContinueWatchingGridPage(programs: programs),
-        transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
+        pageBuilder: (_, _, _) => ContinueWatchingGridPage(programs: programs),
+        transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
       ));
 
   @override

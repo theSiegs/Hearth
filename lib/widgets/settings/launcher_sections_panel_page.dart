@@ -24,6 +24,7 @@ import 'package:flauncher/widgets/settings/launcher_section_panel_page.dart';
 import 'package:flauncher/widgets/settings/settings_hint.dart';
 import 'package:flauncher/widgets/settings/settings_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
@@ -84,13 +85,13 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
       body: Column(
         children: [
           Consumer<AppsService>(
-            builder: (_, service, __) {
+            builder: (_, service, _) {
               final displaySections = _getDisplaySections(service.launcherSections, settingsService);
 
               return Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.only(bottom: 80),
-                  cacheExtent: 1000,
+                  scrollCacheExtent: const ScrollCacheExtent.pixels(1000),
                   itemCount: displaySections.length,
                   itemBuilder: (context, index) {
                     final section = displaySections[index];

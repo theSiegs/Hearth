@@ -1003,7 +1003,9 @@ class AppsService extends ChangeNotifier {
     if (oldIndex < 0 ||
         oldIndex >= _launcherSections.length ||
         newIndex < 0 ||
-        newIndex >= _launcherSections.length) return;
+        newIndex >= _launcherSections.length) {
+      return;
+    }
 
     final section = _launcherSections.removeAt(oldIndex);
     _launcherSections.insert(newIndex, section);

@@ -36,7 +36,7 @@ class HaFakeServer {
   String Function(String template) renderTemplate = (t) => t;
 
   /// weather/subscribe_forecast's forecast for an entity.
-  List<Map<String, Object?>> Function(String entityId, String type) forecast = (_, __) => const [];
+  List<Map<String, Object?>> Function(String entityId, String type) forecast = (_, _) => const [];
 
   /// The REST API's answer for a request (as JSON), or null for {}.
   Object? Function(String method, Uri uri)? rest;

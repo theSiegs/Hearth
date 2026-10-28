@@ -125,7 +125,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                 constraints: const BoxConstraints(maxHeight: 160),
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: SingleChildScrollView(
@@ -141,7 +141,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
             LinearProgressIndicator(
               value: service.downloadProgress > 0 ? service.downloadProgress : null,
               color: accentColor,
-              backgroundColor: Colors.white.withOpacity(0.1),
+              backgroundColor: Colors.white.withValues(alpha: 0.1),
             ),
             const SizedBox(height: 8),
             Text(localizations.updateDownloading((service.downloadProgress * 100).toStringAsFixed(0)),

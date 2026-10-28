@@ -153,7 +153,7 @@ class HouseholdLooks {
   static const String calendarItemPrefix = "calendar:";
 
   /// A look's items: each setting by its key, its value as text (a setting at its default isn't there), except the
-  /// hidden calendars, each of which is an item of its own ("calendar:<key>"), so hiding one on a TV and another on
+  /// hidden calendars, each of which is an item of its own (`"calendar:<key>"`), so hiding one on a TV and another on
   /// another keeps both.
   static Map<String, String> lookItems(Map<String, Object> settings) => {
         for (final entry in settings.entries)
@@ -163,7 +163,7 @@ class HouseholdLooks {
       };
 
   /// A layout's items, each one thing a person changes on its own: "rows" (the rows and spacers, their order and how
-  /// each looks), "row:<id>" (the apps in that row and their order; the dock is a row) and "app:<package>" (whether it
+  /// each looks), `"row:<id>"` (the apps in that row and their order; the dock is a row) and `"app:<package>"` (whether it
   /// is hidden). With [installed], only those apps count (a TV can't tell what another TV did with an app it lacks).
   static Map<String, String> layoutItems(SharedLayout layout, [Set<String>? installed]) {
     final decoded = jsonDecode(_layoutText(layout)) as Map;

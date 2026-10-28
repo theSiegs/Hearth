@@ -50,7 +50,7 @@ class HearthDialogFrame extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFF0F0F0F),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.12), width: 1),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1),
           ),
           child: SingleChildScrollView(child: child),
         ),
@@ -112,7 +112,7 @@ class _FocusableDialogButtonState extends State<FocusableDialogButton> {
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 14, vertical: verticalPadding),
             decoration: BoxDecoration(
-              color: _focused ? accentColor.withOpacity(tint) : Colors.white.withOpacity(0.06),
+              color: _focused ? accentColor.withValues(alpha: tint) : Colors.white.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(radius),
               border: Border.all(
                 color: _focused ? Colors.white : Colors.transparent,

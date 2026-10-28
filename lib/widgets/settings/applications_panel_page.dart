@@ -196,8 +196,8 @@ class _ApplicationsPanelPageState extends State<ApplicationsPanelPage> {
         height: 48,
         decoration: BoxDecoration(
           color: selected
-              ? Colors.white.withOpacity(0.15)
-              : (focused ? Colors.white.withOpacity(0.1) : Colors.transparent),
+              ? Colors.white.withValues(alpha: 0.15)
+              : (focused ? Colors.white.withValues(alpha: 0.1) : Colors.transparent),
           borderRadius: BorderRadius.circular(12),
           border: focused ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2) : null,
         ),
@@ -406,7 +406,7 @@ class _AppListItemState extends State<_AppListItem> {
               final primaryColor = Theme.of(context).colorScheme.primary;
               return Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: focused
                       ? Border.all(color: primaryColor, width: 2)

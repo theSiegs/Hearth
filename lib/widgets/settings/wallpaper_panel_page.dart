@@ -37,7 +37,7 @@ class WallpaperPanelPage extends StatelessWidget {
     AppLocalizations localizations = AppLocalizations.of(context)!;
 
     return Consumer2<SettingsService, WallpaperService>(
-      builder: (_, settings, wallpaperService, __) => SettingsPage(
+      builder: (_, settings, wallpaperService, _) => SettingsPage(
         title: localizations.wallpaper,
         children: [
           RoundedSwitchListTile(

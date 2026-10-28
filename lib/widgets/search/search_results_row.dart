@@ -134,7 +134,7 @@ class _SearchResultsRowState extends State<SearchResultsRow> {
                           width: 240,
                           margin: const EdgeInsets.symmetric(horizontal: 8),
                           decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.08), borderRadius: BorderRadius.circular(12)),
+                              color: Colors.white.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
                         ),
                     ],
                   )

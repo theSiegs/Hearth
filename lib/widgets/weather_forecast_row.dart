@@ -164,9 +164,9 @@ class _ForecastTile extends StatelessWidget {
       width: 112,
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.35),
+        color: Colors.black.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -229,9 +229,9 @@ class _SummaryCard extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 420, maxWidth: 640),
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.35),
+        color: Colors.black.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

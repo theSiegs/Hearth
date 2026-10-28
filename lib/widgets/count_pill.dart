@@ -49,14 +49,14 @@ class CountPill extends StatelessWidget {
       builder: (context, focused) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
         decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.white.withOpacity(0.10),
+          color: selected ? Colors.white : Colors.white.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: focused ? accent : Colors.white.withOpacity(0.15), width: focused ? 3 : 1),
+          border: Border.all(color: focused ? accent : Colors.white.withValues(alpha: 0.15), width: focused ? 3 : 1),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Text(label, style: TextStyle(color: fg, fontSize: 17, fontWeight: FontWeight.w500)),
           const SizedBox(width: 8),
-          Text("$count", style: TextStyle(color: fg.withOpacity(0.6), fontSize: 14)),
+          Text("$count", style: TextStyle(color: fg.withValues(alpha: 0.6), fontSize: 14)),
         ]),
       ),
     );

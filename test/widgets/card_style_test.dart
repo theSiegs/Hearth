@@ -32,7 +32,7 @@ void main() {
 
     test('only the glow style colours the shadow', () {
       const accent = Color(0xFF00FF00);
-      expect(CardStyle.of('glow').focusShadowColor(accent), accent.withOpacity(0.85));
+      expect(CardStyle.of('glow').focusShadowColor(accent), accent.withValues(alpha: 0.85));
       expect(CardStyle.of('modern').focusShadowColor(accent), Colors.black);
     });
   });
@@ -71,11 +71,11 @@ void main() {
     testWidgets('keeps pulsing the same way through rebuilds', (tester) async {
       await tester.pumpWidget(highlight('modern'));
       await tester.pump(const Duration(milliseconds: 1500)); // past the top, fading again
-      final double fading = borders(tester).first.top.color.opacity;
+      final double fading = borders(tester).first.top.color.a;
 
       await tester.pumpWidget(highlight('modern', accent: Colors.red.shade400));
       await tester.pump(const Duration(milliseconds: 100));
-      expect(borders(tester).first.top.color.opacity, lessThan(fading));
+      expect(borders(tester).first.top.color.a, lessThan(fading));
     });
   });
 

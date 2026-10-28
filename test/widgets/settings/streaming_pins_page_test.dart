@@ -52,7 +52,7 @@ class _PinsChannel extends FLauncherChannel {
   /// App profile -> saved PIN.
   final Map<String, String> pins = {"Alex M": "1111"};
 
-  /// What was changed, in order: pairings ("pair <Google TV profile> <app profile>"), saves and removals.
+  /// What was changed, in order: pairings (`"pair <Google TV profile> <app profile>"`), saves and removals.
   final List<String> events = [];
 
   @override

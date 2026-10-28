@@ -30,7 +30,7 @@ import 'package:flutter/material.dart';
 /// How the panel's focus stops look: a big outline in the accent colour while focused.
 BoxDecoration haFocusDecoration(BuildContext context, bool focused, {double radius = 16, bool filled = true}) =>
     BoxDecoration(
-      color: focused ? Colors.white.withOpacity(0.14) : (filled ? Colors.white.withOpacity(0.06) : Colors.transparent),
+      color: focused ? Colors.white.withValues(alpha: 0.14) : (filled ? Colors.white.withValues(alpha: 0.06) : Colors.transparent),
       borderRadius: BorderRadius.circular(radius),
       border: Border.all(color: focused ? Theme.of(context).colorScheme.primary : Colors.transparent, width: 3),
     );
@@ -99,7 +99,7 @@ class HaTile extends StatelessWidget {
   Widget _frame(Widget child) => Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.06),
+          color: Colors.white.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(16),
         ),
         child: child,
@@ -262,7 +262,7 @@ class HaTile extends StatelessWidget {
       width: 36,
       height: 36,
       decoration: BoxDecoration(
-        color: (active ?? Colors.white).withOpacity(active == null ? 0.08 : 0.22),
+        color: (active ?? Colors.white).withValues(alpha: active == null ? 0.08 : 0.22),
         shape: BoxShape.circle,
       ),
       child:
@@ -284,7 +284,7 @@ class HaTile extends StatelessWidget {
               height: 36,
               fit: BoxFit.cover,
               filterQuality: FilterQuality.medium,
-              errorBuilder: (_, __, ___) => icon,
+              errorBuilder: (_, _, _) => icon,
             ),
           ),
         const SizedBox(width: 10),

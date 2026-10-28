@@ -76,7 +76,7 @@ android {
 
     defaultConfig {
         applicationId hearthAppId
-        compileSdk 35
+        compileSdk 36 // what the Flutter embedding's androidx libraries need; targetSdk (runtime behaviour) stays 35
         minSdkVersion 28 // Google TV and Android TV 9+; the code uses API 28 calls (e.g. getLongVersionCode) unguarded
         targetSdk 35
         versionCode flutterVersionCode.toInteger()
@@ -115,7 +115,9 @@ android {
         release {
             minifyEnabled true
             shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // AGP 9 only offers the optimizing defaults; proguard-rules.pro turns optimization off again (-dontoptimize),
+            // as the old proguard-android.txt did
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             if (hasKeystore) {
                 signingConfig signingConfigs.release
             }

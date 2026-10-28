@@ -428,7 +428,7 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
                 cacheWidth: (cardWidth * MediaQuery.devicePixelRatioOf(context)).round(),
                 filterQuality: FilterQuality.medium,
                 gaplessPlayback: true,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
               ),
             // Card surface: a dark gradient, or a scrim over the poster so the text stays readable
             Container(
@@ -440,10 +440,10 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
                         end: Alignment.bottomCenter,
                         stops: const [0.0, 0.3, 0.55, 1.0],
                         colors: [
-                          Colors.black.withOpacity(0.35),
-                          Colors.black.withOpacity(0.05),
-                          Colors.black.withOpacity(0.45),
-                          Colors.black.withOpacity(0.92),
+                          Colors.black.withValues(alpha: 0.35),
+                          Colors.black.withValues(alpha: 0.05),
+                          Colors.black.withValues(alpha: 0.45),
+                          Colors.black.withValues(alpha: 0.92),
                         ],
                       )
                     : const LinearGradient(
@@ -455,7 +455,7 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
                         ],
                       ),
                 border: Border.all(
-                  color: shouldHighlight ? Colors.transparent : Colors.white.withOpacity(0.06),
+                  color: shouldHighlight ? Colors.transparent : Colors.white.withValues(alpha: 0.06),
                   width: 1,
                 ),
               ),
@@ -489,7 +489,7 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
                               : EdgeInsets.zero,
                           decoration: hasPoster
                               ? BoxDecoration(
-                                  color: Colors.black.withOpacity(0.7),
+                                  color: Colors.black.withValues(alpha: 0.7),
                                   borderRadius: BorderRadius.circular(6),
                                 )
                               : null,
@@ -535,7 +535,7 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
                       borderRadius: BorderRadius.circular(2),
                       child: LinearProgressIndicator(
                         value: progress,
-                        backgroundColor: Colors.white.withOpacity(0.12),
+                        backgroundColor: Colors.white.withValues(alpha: 0.12),
                         valueColor: AlwaysStoppedAnimation<Color>(accentColor),
                         minHeight: 3.5,
                       ),

@@ -438,7 +438,7 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
 
     final transform = gradient.transform;
     final description = <String, Object?>{
-      "colors": [for (final c in gradient.colors) "#${c.value.toRadixString(16).padLeft(8, '0').toUpperCase()}"],
+      "colors": [for (final c in gradient.colors) "#${c.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}"],
       "stops": gradient.stops,
       "rotation": transform is GradientRotation ? transform.radians : 0.0,
       "brightness": brightness,

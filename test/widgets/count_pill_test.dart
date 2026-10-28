@@ -11,7 +11,7 @@ void main() {
         home: CountPill(label: "Netflix", count: 3, selected: false, onSelected: () {})));
     expect(find.text("Netflix"), findsOneWidget);
     expect(find.text("3"), findsOneWidget);
-    expect(fill(tester), Colors.white.withOpacity(0.10));
+    expect(fill(tester), Colors.white.withValues(alpha: 0.10));
 
     await tester.pumpWidget(MaterialApp(
         home: CountPill(label: "Netflix", count: 3, selected: true, onSelected: () {})));

@@ -49,7 +49,7 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         children: [
           Text(title, style: Theme.of(context).textTheme.titleLarge),
-          if (subtitle != null) subtitle!,
+          ?subtitle,
           const Divider(),
           Expanded(
             child: body ??

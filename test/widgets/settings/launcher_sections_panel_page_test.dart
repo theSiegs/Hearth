@@ -198,7 +198,7 @@ Future<void> _pumpWidgetWithProviders(
         ChangeNotifierProvider<AppsService>.value(value: appsService),
         ChangeNotifierProvider<SettingsService>.value(value: settingsService),
       ],
-      builder: (_, __) => MaterialApp(
+      builder: (_, _) => MaterialApp(
         localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
