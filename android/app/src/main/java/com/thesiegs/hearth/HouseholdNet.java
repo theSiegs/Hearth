@@ -76,6 +76,7 @@ final class HouseholdNet {
         void accepted(Socket socket);
     }
 
+    // Every s* field here is guarded by HouseholdNet.class (the NSD callbacks take it too).
     private static NsdManager sManager;
     private static NsdManager.RegistrationListener sRegistration;
     private static NsdManager.DiscoveryListener sDiscovery;

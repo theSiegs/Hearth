@@ -144,7 +144,7 @@ services, and save their Google TV PIN.
 When Google TV's PIN screen comes up for that profile, Hearth:
 
 1. listens on Home Assistant's WebSocket API for `mobile_app_notification_action` events, only while it waits (two
-   minutes at most);
+   minutes at most; one connection for every request that waits, made again if Home Assistant restarts meanwhile);
 2. calls the phone's notify service with an actionable notification (Allow and Deny, a one-time action id, `tag`
    `hearth-approval-…`, high priority; tapping the notification itself does nothing and leaves it up, so only the
    buttons answer), and creates the same request as a Home Assistant notification (`persistent_notification.create`,

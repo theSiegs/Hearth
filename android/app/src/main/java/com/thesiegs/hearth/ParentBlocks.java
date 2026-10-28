@@ -152,6 +152,51 @@ final class ParentBlocks {
     }
 
     /**
+     * Home Assistant's lists per profile from the integration's state document: its "youtube_blocks" map (every
+     * mapped profile), else each of "profiles" with its own "youtube_blocks" ({"videos", "channels", "words",
+     * "labels"}). Only the profiles it speaks of: one it leaves out, or an integration too old to send any, leaves
+     * what Hearth has as it is.
+     */
+    static Map<String, Lists> fromDocument(JSONObject state) {
+        Map<String, Lists> out = new LinkedHashMap<>();
+        // Every mapped profile's, also one not on this TV today ({"youtube_blocks": {"user:10": {...}}})
+        JSONObject all = state != null ? state.optJSONObject("youtube_blocks") : null;
+        for (java.util.Iterator<String> keys = all != null ? all.keys() : null; keys != null && keys.hasNext(); ) {
+            String profile = keys.next();
+            JSONObject blocks = all.optJSONObject(profile);
+            if (blocks != null && userKey(profile) != null) out.put(profile, parse(blocks));
+        }
+        if (all != null) return out;
+        // An integration that sends them only with today's profiles
+        JSONObject profiles = state != null ? state.optJSONObject("profiles") : null;
+        if (profiles == null) return out;
+        for (java.util.Iterator<String> keys = profiles.keys(); keys.hasNext(); ) {
+            String profile = keys.next();
+            JSONObject person = profiles.optJSONObject(profile);
+            JSONObject blocks = person != null ? person.optJSONObject("youtube_blocks") : null;
+            if (blocks != null && userKey(profile) != null) out.put(profile, parse(blocks));
+        }
+        return out;
+    }
+
+    /** Keeps Home Assistant's lists from its state document; true when what HearthTube is handed changed. */
+    static boolean applyDocument(Context context, JSONObject state) {
+        boolean changed = false;
+        for (Map.Entry<String, Lists> entry : fromDocument(state).entrySet()) {
+            changed |= setFromHomeAssistant(context, entry.getKey(), entry.getValue());
+        }
+        return changed;
+    }
+
+    /** Forgets every profile's lists from Home Assistant (the TV left it); Hearth's own stay. */
+    static synchronized void clearHomeAssistant(Context context) {
+        SharedPreferences prefs = prefs(context);
+        for (String key : new ArrayList<>(prefs.getAll().keySet())) {
+            if (key.startsWith("ha|")) setFromHomeAssistant(context, key.substring(3), new Lists());
+        }
+    }
+
+    /**
      * A profile's lists are kept under its user ("user:10"): a kids profile is one profile in an Android user, and the
      * key Hearth's screens use for it has no account part.
      */

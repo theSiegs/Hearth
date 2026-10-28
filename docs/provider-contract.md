@@ -4,7 +4,7 @@ Hearth shares its state with other apps (today: HearthTube) through one content 
 contract: what each column means, when it changes, and what callers may rely on. The provider's `contract_version`
 column says which version of this page it implements.
 
-**Current version: 8** (`ProfileProvider.CONTRACT_VERSION`).
+**Current version: 9** (`ProfileProvider.CONTRACT_VERSION`).
 
 Change rules: adding, removing or changing the meaning of a column or call bumps the version and gets a line in
 the history below. A reader that sees a newer version than it knows keeps using the columns it understands; columns
@@ -15,7 +15,9 @@ are never reused for a different meaning.
 - Authority: `com.thesiegs.hearth.profile` (debug builds: `com.thesiegs.hearth.debug.profile`). Hearth up to
   2026.10.x answered the same contract at `com.leanbitlab.ltvL.profile`; a client that still accepts it is harmless
 .
-- `content://com.thesiegs.hearth.profile/active`: one row, the columns below.
+- `content://com.thesiegs.hearth.profile/active`: one row, the columns below. Since version 9 only for
+  `com.thesiegs.hearthtube` signed with one of the certificates below (the row says who is on and whether it's a
+  kid); anyone else gets the columns with no row.
 - `content://com.thesiegs.hearth.profile/wallpaper`: Hearth's current wallpaper picture, read-only
   (`FileNotFoundException` when Hearth shows a gradient instead). Since version 5 only for `com.thesiegs.hearthtube`
   signed with one of the certificates below (a picked wallpaper may be a family photo); anyone else gets
@@ -79,6 +81,7 @@ answer within a few seconds. Without an agent, a Hearth installed there answers 
 | `ha_share_now_playing` | 0/1 or null | Whether HearthTube may tell Home Assistant what's playing (the video's title and channel, through its media session): Hearth asks it in Home Assistant's setup and in Settings → Home Assistant. Null when it was never asked; HearthTube then keeps its own default (on). A change in HearthTube's own settings stands until this value changes. |
 | `parent_blocks` | text (JSON) or null | What a parent has blocked in HearthTube for the active profile: `{"videos": ["<video id>", ...], "channels": ["<channel id>", ...], "words": ["<lower case word>", ...]}`. The union of what is set in Hearth itself and what Home Assistant's integration says (when it's set up); null when nothing is blocked. HearthTube applies them in a kids profile and doesn't let the kid undo them. In a profile's agent, as Hearth last sent it. |
 | `parent_blocks_version` | integer | Goes up whenever `parent_blocks` changes for any profile (0 before the first change). Observers on `/active` are notified. |
+| `kid_unblocks` | text (JSON) or null | What a parent took back in Hearth of what the active kids profile hid or blocked itself: `{"videos": [keys], "channels": [keys], "words": [...]}` (a channel's key is its id, or its name when it was blocked without one). HearthTube takes each back from its own lists (never the parent's); once its next `report_kid_blocks` no longer has one, Hearth drops it. Null when there is nothing to take back. Observers on `/active` are notified when a parent takes one back. |
 | `contract_version` | integer | This page's version (8). Missing on Hearth builds from before version 2. |
 
 None of these are secret: everything is on screen in Hearth.
@@ -104,8 +107,20 @@ read, and sends it to Home Assistant when that is set up. Hearth works without H
 (no time, an id that isn't a video id). In a profile's agent it's passed on to Hearth and returns null when it couldn't be
 (Hearth not connected): HearthTube keeps the entry and sends it again later.
 
+`call(uri /active, "report_kid_blocks", null, extras {"blocks": string})`: what a kids profile hid or blocked itself in
+HearthTube (Not interested, Don't show this creator, its own blocked words), the whole of it each time it changes:
+`{"videos": [{"key", "label"}], "channels": [{"key", "id", "label"}], "words": [...]}`, each list at most 500, the JSON
+at most 256 KB. Hearth keeps the latest per profile for a parent to see in its settings, and to take one back
+(`kid_unblocks`). Same callers as above; returns a Bundle with `ok` true, null when it isn't JSON or is too big. In a
+profile's agent it's passed on to Hearth and returns null when it couldn't be (Hearth not connected): send it again later.
+
 ## History
 
+- **10** (2026-10-28): added `kid_unblocks` and the `report_kid_blocks` call (a kids profile's own hides up, a parent's
+  "show it again" down). Also in a profile's agent, as Hearth sends it.
+
+- **9** (2026-10-28): no column changes. `/active` answers only HearthTube (signed as below), like `/wallpaper`
+  and the calls; any other app gets no row.
 - **8** (2026-10-27): added `parent_blocks`, `parent_blocks_version` and the `report_started` call (a kids profile's
   started videos up, the parent's blocked videos, channels and words down). Also in a profile's agent, as Hearth sends it.
 - **7** (2026-10-14): added `ha_share_now_playing` (Home Assistant's setup question for HearthTube's now playing).

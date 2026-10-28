@@ -50,7 +50,8 @@ final class PhoneApproval {
         final String name;
         final String nonce;
         final long at = SystemClock.elapsedRealtime();
-        volatile HaEvents events;
+        /** Its wait for the phone's answer (main thread). */
+        HaEventSession.Waiter waiter;
 
         Request(String key, String name, String nonce) {
             this.key = key;
@@ -181,7 +182,7 @@ final class PhoneApproval {
         Request pending = sPending;
         // The same profile's screen again (Google redraws it): still the same request
         if (pending != null && pending.key.equals(key) && SystemClock.elapsedRealtime() - pending.at < ANSWER_MS) return;
-        if (pending != null && pending.events != null) pending.events.close();
+        if (pending != null && pending.waiter != null) pending.waiter.close();
         byte[] bytes = new byte[8];
         RANDOM.nextBytes(bytes);
         Request request = new Request(key, name, AgentAuth.hex(bytes));
@@ -189,30 +190,33 @@ final class PhoneApproval {
         String service = notifyService(context, key);
         Toast.makeText(context, context.getString(R.string.approval_asked, name), Toast.LENGTH_LONG).show();
         Log.i(TAG, "Asking " + LogNames.key(key) + "'s phone to allow the switch");
-        WORKER.execute(() -> {
-            boolean listened = HaEvents.listen(context, EVENT, ANSWER_MS, data -> {
-                String action = data != null ? data.optString("action") : "";
-                if (action.equals(ACTION_PREFIX + "ALLOW_" + request.nonce)) {
-                    MAIN.post(() -> onAnswer(context, request, true));
-                } else if (action.equals(ACTION_PREFIX + "DENY_" + request.nonce)) {
-                    MAIN.post(() -> onAnswer(context, request, false));
-                }
-            }, events -> {
-                request.events = events;
+        request.waiter = HaBridgeService.events(context).await(ANSWER_MS, new HaEventSession.Listener() {
+            @Override
+            public void onOpen(HaEventSession.Waiter waiter) {
                 if (sendRequest(context, service, request)) {
                     Log.i(TAG, "Home Assistant took the request for " + LogNames.of(service));
                 } else {
                     Log.i(TAG, "Couldn't send the request to the phone");
-                    events.close();
+                    waiter.close();
                 }
-            });
-            if (!listened) Log.i(TAG, "Couldn't listen for the phone's answer");
-            MAIN.post(() -> {
-                if (sPending == request) {
-                    sPending = null;
-                    clearOnPhone(context, service, request);
-                }
-            });
+            }
+
+            @Override
+            public void onEvent(JSONObject data) {
+                Boolean allowed = HaEvents.answer(data, ACTION_PREFIX, request.nonce);
+                if (allowed != null) MAIN.post(() -> onAnswer(context, request, allowed));
+            }
+
+            @Override
+            public void onEnd(boolean listened) {
+                if (!listened) Log.i(TAG, "Couldn't listen for the phone's answer");
+                MAIN.post(() -> {
+                    if (sPending == request) {
+                        sPending = null;
+                        clearOnPhone(context, service, request);
+                    }
+                });
+            }
         });
     }
 
@@ -276,7 +280,7 @@ final class PhoneApproval {
         Request request = sPending;
         if (request == null || !isPinScreenKey(keyCode, repeatCount)) return;
         sPending = null;
-        if (request.events != null) request.events.close();
+        if (request.waiter != null) request.waiter.close();
         Log.i(TAG, "The remote is in use on the PIN screen (key " + android.view.KeyEvent.keyCodeToString(keyCode)
                 + " from " + device + "): no longer asking the phone");
         clearOnPhone(context, notifyService(context, request.key), request);
@@ -319,7 +323,7 @@ final class PhoneApproval {
     private static void onAnswer(Context context, Request request, boolean allowed) {
         if (sPending != request) return;
         sPending = null;
-        if (request.events != null) request.events.close();
+        if (request.waiter != null) request.waiter.close();
         clearOnPhone(context, notifyService(context, request.key), request);
         if (!allowed) {
             Log.i(TAG, LogNames.key(request.key) + " didn't allow the switch");

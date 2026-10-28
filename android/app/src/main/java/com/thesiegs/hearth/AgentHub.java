@@ -55,7 +55,8 @@ import java.util.regex.Pattern;
  * {"type":"played","package":"…","title":"…","subtitle":"…","duration":ms,"position":ms} (what plays there, for the
  * profile's watch history),
  * {"type":"started","t":ms,"v":"id","title":"…","ch":"…","cid":"…"} (a video HearthTube started there, for the
- * parent's log: StartedLog), {"type":"opened","ok":bool}, {"type":"speech","package":"…","text":"…"} (what an app said through
+ * parent's log: StartedLog), {"type":"kid_blocks","blocks":"{…}"} (what HearthTube there hid or blocked itself, the
+ * whole list: KidBlocks), {"type":"opened","ok":bool}, {"type":"speech","package":"…","text":"…"} (what an app said through
  * Hearth's voice there, for Profile Pairing), {"type":"calendar","access":bool,"calendars":[…],"events":[…]} (the
  * Google calendars synced to that profile's user and their coming days' events, TvCalendars' maps). Hearth to agent: {"type":"welcome"}, {"type":"open","intent":"intent:…"},
  * {"type":"listen","package":"…" or null} (the app Profile Pairing is handling, whose speech to relay),
@@ -66,13 +67,16 @@ import java.util.regex.Pattern;
  */
 final class AgentHub {
     static final int PORT = 47474;
+    private static final int HANDSHAKE_TIMEOUT_MS = 10_000;
     private static final String TAG = "HearthAgent";
     private static final String PREFS = "ltv_agents";
     private static final String KEY_PREFIX = "key|";
     /** Program ids from an agent are offset by its serial, so they never match the owner's own rows. */
     private static final long ID_OFFSET = 1_000_000_000L;
 
-    private static Context sContext;
+    /** The application context, set by start; read on the connections' threads. */
+    private static volatile Context sContext;
+    /** Guarded by AgentHub.class. */
     private static boolean sStarted;
     private static final Map<Long, Connection> sConnections = new ConcurrentHashMap<>();
     /** When ensureAgent last started each profile's agent (elapsed realtime). */
@@ -170,6 +174,8 @@ final class AgentHub {
     private static void handle(Socket socket) {
         Connection connection = null;
         try {
+            // A connection that never finishes the handshake doesn't hold its thread for good
+            socket.setSoTimeout(HANDSHAKE_TIMEOUT_MS);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             JSONObject hello = new JSONObject(in.readLine());
@@ -195,6 +201,8 @@ final class AgentHub {
                 socket.close();
                 return;
             }
+            // A proven agent stays connected, quiet for as long as nothing changes
+            socket.setSoTimeout(0);
             connection = new Connection(serial, socket, out, hello.optLong("wallpaperVersion"));
             Connection old = sConnections.put(serial, connection);
             if (old != null) closeQuietly(old.socket);
@@ -243,6 +251,14 @@ final class AgentHub {
                         HISTORY.execute(() -> StartedLog.record(sContext, profile, message.optLong("t"),
                                 message.optString("v", null), message.optString("title", ""),
                                 message.optString("ch", ""), message.optString("cid", "")));
+                        break;
+                    }
+                    case "kid_blocks": {
+                        // What HearthTube in this profile's user hid or blocked itself (a kid's only)
+                        if (serial == ProfileUsers.ownerSerial(sContext)) break;
+                        String profile = ProfileUsers.profileKey(sContext, serial);
+                        String blocks = message.optString("blocks", null);
+                        HISTORY.execute(() -> KidBlocks.record(sContext, profile, blocks));
                         break;
                     }
                     case "played": {

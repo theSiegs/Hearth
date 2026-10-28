@@ -250,6 +250,7 @@
             </intent-filter>
         </receiver>
 
+        <!-- Exported for Breezy Weather and Gadgetbridge-style weather apps, which send with no permission -->
         <receiver
             android:name=".WeatherReceiver"
             android:exported="true">

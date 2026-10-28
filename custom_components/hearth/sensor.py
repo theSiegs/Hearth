@@ -16,12 +16,13 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
 from . import HearthConfigEntry
-from .const import KIND_MOBILE, KIND_TV, TV_STATES
+from .const import KIND_MOBILE, KIND_TV, SIGNAL_WATCH, TV_STATES
 from .counting import ALL
 from .entity import HearthEntity, HearthPersonEntity, async_add_device_entities
 
@@ -112,6 +113,8 @@ async def async_setup_entry(
             if group.id != ALL:
                 people.append(PersonGroupToday(hub, person, "group_today", group))
             people.append(PersonMinutesLeft(hub, person, "minutes_left", group))
+    for person in household.youtube_people():
+        people.append(PersonLastVideoStarted(hub, person, "last_video_started"))
     async_add_entities(people)
     async_add_entities([AppsToSort(hub)])
 
@@ -272,6 +275,37 @@ class PersonHeld(HearthPersonEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         return self.hub.household.enforcement.held_for(self.person)
+
+
+class PersonLastVideoStarted(HearthPersonEntity, SensorEntity):
+    """The last YouTube video the person started in HearthTube, in a kids profile; the newest 50 and what a parent
+    blocked are in its attributes, for a dashboard and for an agent reading Home Assistant."""
+
+    _attr_translation_key = "person_last_video_started"
+    # The list changes with every video: kept in the state machine, not in history (get_watch_log has it all)
+    _unrecorded_attributes = frozenset({"recent", "blocked"})
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_WATCH, self.async_write_ha_state))
+
+    @property
+    def native_value(self) -> str | None:
+        latest = self.hub.household.watch.latest(self.person)
+        return latest["title"][:255] or latest["video_id"] if latest else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        watch = self.hub.household.watch
+        latest = watch.latest(self.person) or {}
+        return {
+            "video_id": latest.get("video_id"),
+            "channel": latest.get("channel"),
+            "url": latest.get("url"),
+            "time": latest.get("time"),
+            "recent": watch.recent(self.person),
+            "blocked": watch.blocked(self.person),
+        }
 
 
 class AppsToSort(SensorEntity):

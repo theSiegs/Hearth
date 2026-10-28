@@ -476,6 +476,10 @@
     "@tvPowerTitle": {
         "description": "Settings page title, also its row in the page that opens it"
     },
+    "networkTitle": "Network",
+    "@networkTitle": {
+        "description": "Settings > TV & power: the row that opens the TV's Wi-Fi and Ethernet settings; how it's connected shows beside it"
+    },
     "updatesTitle": "Updates",
     "@updatesTitle": {
         "description": "Settings page title, also its row in the page that opens it"
@@ -657,6 +661,14 @@
     "kidBlocksFromHa": "Home Assistant",
     "@kidBlocksFromHa": {
         "description": "Next to a block that Home Assistant set; it is taken back there"
+    },
+    "kidOwnBlocks": "Hidden by them",
+    "@kidOwnBlocks": {
+        "description": "Heading of what the kid hid or blocked themselves in HearthTube (Not interested, Don't show this creator, their own words)"
+    },
+    "kidOwnBlocksBody": "What they hid or blocked themselves in HearthTube. Select one to show it to them again.",
+    "@kidOwnBlocksBody": {
+        "description": "Under the heading of what the kid hid themselves"
     },
     "kidBlocksNone": "Nothing is blocked.",
     "@kidBlocksNone": {

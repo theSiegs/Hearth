@@ -1174,6 +1174,12 @@ abstract class AppLocalizations {
   /// **'TV & power'**
   String get tvPowerTitle;
 
+  /// Settings > TV & power: the row that opens the TV's Wi-Fi and Ethernet settings; how it's connected shows beside it
+  ///
+  /// In en, this message translates to:
+  /// **'Network'**
+  String get networkTitle;
+
   /// Settings page title, also its row in the page that opens it
   ///
   /// In en, this message translates to:
@@ -1431,6 +1437,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Home Assistant'**
   String get kidBlocksFromHa;
+
+  /// Heading of what the kid hid or blocked themselves in HearthTube (Not interested, Don't show this creator, their own words)
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden by them'**
+  String get kidOwnBlocks;
+
+  /// Under the heading of what the kid hid themselves
+  ///
+  /// In en, this message translates to:
+  /// **'What they hid or blocked themselves in HearthTube. Select one to show it to them again.'**
+  String get kidOwnBlocksBody;
 
   /// Nothing a parent blocked for this kid
   ///

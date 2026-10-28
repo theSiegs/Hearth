@@ -75,6 +75,9 @@
       },
       "person_held": {
         "name": "Held by parental controls"
+      },
+      "person_last_video_started": {
+        "name": "Last video started"
       }
     },
     "binary_sensor": {
@@ -301,6 +304,130 @@
         "days": {
           "name": "Days",
           "description": "school_days, other_days, or both (weekday and weekend are older names for the first two)."
+        }
+      }
+    },
+    "get_watch_log": {
+      "name": "Get the videos started",
+      "description": "The YouTube videos a person started in HearthTube in a kids profile, newest first, and what a parent blocked for them.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Whose videos (a person with a TV profile)."
+        },
+        "days": {
+          "name": "Days",
+          "description": "Only the last this many days (leave empty for all that is kept, up to 2,000)."
+        },
+        "limit": {
+          "name": "Limit",
+          "description": "At most this many entries."
+        }
+      }
+    },
+    "watch_digest": {
+      "name": "Watch digest",
+      "description": "One document for the last days: per kid, the videos started, counts per channel and per day, what was blocked, and a short readable summary.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Whose (leave empty for everyone with a TV profile)."
+        },
+        "days": {
+          "name": "Days",
+          "description": "How many days back (7: a week)."
+        }
+      }
+    },
+    "block_video": {
+      "name": "Block a video on YouTube",
+      "description": "Blocks a video in HearthTube for a person's kids profiles. The kid can't undo it; the TV gets it with its next status (within a few minutes).",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "For whom (a person with a TV profile)."
+        },
+        "video": {
+          "name": "Video",
+          "description": "A video id or a YouTube link."
+        },
+        "label": {
+          "name": "Label",
+          "description": "What to show for it (a title, a name). Optional."
+        }
+      }
+    },
+    "unblock_video": {
+      "name": "Unblock a video on YouTube",
+      "description": "Takes back a video blocked here.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "For whom."
+        },
+        "video": {
+          "name": "Video",
+          "description": "A video id or a YouTube link."
+        }
+      }
+    },
+    "block_channel": {
+      "name": "Block a channel on YouTube",
+      "description": "Blocks a channel in HearthTube for a person's kids profiles. The kid can't undo it; the TV gets it with its next status (within a few minutes).",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "For whom (a person with a TV profile)."
+        },
+        "channel": {
+          "name": "Channel",
+          "description": "A channel id (UC...) or a youtube.com/channel/ link; a handle (@name) won't do."
+        },
+        "label": {
+          "name": "Label",
+          "description": "What to show for it (a title, a name). Optional."
+        }
+      }
+    },
+    "unblock_channel": {
+      "name": "Unblock a channel on YouTube",
+      "description": "Takes back a channel blocked here.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "For whom."
+        },
+        "channel": {
+          "name": "Channel",
+          "description": "A channel id (UC...) or a youtube.com/channel/ link; a handle (@name) won't do."
+        }
+      }
+    },
+    "block_word": {
+      "name": "Block a word on YouTube",
+      "description": "Blocks a word in HearthTube for a person's kids profiles. The kid can't undo it; the TV gets it with its next status (within a few minutes).",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "For whom (a person with a TV profile)."
+        },
+        "word": {
+          "name": "Word",
+          "description": "A word or words; videos whose title has it are hidden (titles only)."
+        }
+      }
+    },
+    "unblock_word": {
+      "name": "Unblock a word on YouTube",
+      "description": "Takes back a word blocked here.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "For whom."
+        },
+        "word": {
+          "name": "Word",
+          "description": "A word or words; videos whose title has it are hidden (titles only)."
         }
       }
     }

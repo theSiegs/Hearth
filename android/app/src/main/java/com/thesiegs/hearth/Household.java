@@ -91,15 +91,18 @@ final class Household {
     /** How long that copy is kept. */
     static final long JOIN_BACKUP_MS = 14L * 24 * 60 * 60_000;
 
-    private static Context sContext;
+    /** The application context, set by every entry point; read on the household threads. */
+    private static volatile Context sContext;
+    // The next five are guarded by Household.class.
     /** Goes up whenever a look, layout or wallpaper changed here (from another TV or published): the app checks it. */
     private static long sLooksVersion = 1;
     private static HouseholdStore sStore;
     private static boolean sSyncQueued;
     private static boolean sWatchQueued;
     private static boolean sPeriodicScheduled;
-    private static long sLastSyncAt;
-    private static String sLastResult;
+    /** The last exchange, for the settings screen: written on the household threads, read on another. */
+    private static volatile long sLastSyncAt;
+    private static volatile String sLastResult;
 
     private Household() {
     }
@@ -618,6 +621,7 @@ final class Household {
 
     /** At most this often does a TV not on the list (yet) make this TV sync with the others. */
     private static final long NEWCOMER_SYNC_MS = 30_000;
+    /** Guarded by Household.class. */
     private static long sNewcomerSyncAt;
 
     /** A TV not on this TV's list opened an exchange: the others are asked soon, in case one just let it in. */
@@ -812,6 +816,7 @@ final class Household {
         }
     }
 
+    /** Guarded by Household.class. */
     private static boolean sBackupExpiryScheduled;
 
     /**
@@ -1237,12 +1242,22 @@ final class Household {
      */
     private static final String LOCAL_NOTICES_TV = "this-tv";
     private static final HouseholdLog LOCAL_NOTICES = new HouseholdLog(LOCAL_NOTICES_TV);
-    /** What the Bell shows the profile on screen, newest first; made on the household thread. */
-    private static volatile List<HouseholdNotices.Notice> sNotices = new ArrayList<>();
-    /** The profile {@link #sNotices} is for (its key). */
-    private static volatile String sNoticesFor;
+    /** What the Bell shows a profile, newest first, with the profile it is for: one object, read and replaced whole. */
+    private static final class Notices {
+        final String forKey;
+        final List<HouseholdNotices.Notice> list;
+
+        Notices(String forKey, List<HouseholdNotices.Notice> list) {
+            this.forKey = forKey;
+            this.list = list;
+        }
+    }
+
+    /** The profile on screen's notifications; made on the household thread. */
+    private static volatile Notices sNotices = new Notices(null, new ArrayList<>());
     /** The notifications (item and time) already popped up, or there before Hearth started: each pops up once. */
     private static final Set<String> sPopped = new HashSet<>();
+    /** Guarded by sPopped. */
     private static boolean sNoticesRead;
 
     /**
@@ -1250,9 +1265,9 @@ final class Household {
      * they're worked out for the profile that came on, so one profile's never show to another.
      */
     static List<HouseholdNotices.Notice> notices(Context context) {
-        List<HouseholdNotices.Notice> notices = sNotices;
+        Notices notices = sNotices;
         String key = LauncherAccessibilityService.getActiveProfileKey(context);
-        return key != null && key.equals(sNoticesFor) ? notices : new ArrayList<>();
+        return key != null && key.equals(notices.forKey) ? notices.list : new ArrayList<>();
     }
 
     /** Where notifications are kept: the household's log while this TV is a member, else this TV's own. */
@@ -1406,9 +1421,7 @@ final class Household {
         String key = LauncherAccessibilityService.getActiveProfileKey(context);
         List<HouseholdNotices.Notice> visible = HouseholdNotices.visible(log.all(), personOf(context, key),
                 ProfileUsers.isKids(context), ownTv, now);
-        sNoticesFor = null;
-        sNotices = visible;
-        sNoticesFor = key;
+        sNotices = new Notices(key, visible);
         List<HouseholdNotices.Notice> popUp = new ArrayList<>();
         synchronized (sPopped) {
             if (sPopped.size() > 1000) sPopped.clear();
@@ -1442,7 +1455,7 @@ final class Household {
             HouseholdLog log = noticeLog(app);
             long now = System.currentTimeMillis();
             int cleared = 0;
-            for (HouseholdNotices.Notice n : sNotices) {
+            for (HouseholdNotices.Notice n : notices(app)) {
                 if (n.isJoin() || log.get(HouseholdNotices.KIND, n.person, n.item) == null) continue;
                 log.delete(HouseholdNotices.KIND, n.person, n.item, now);
                 cleared++;
@@ -1457,7 +1470,7 @@ final class Household {
      */
     static boolean pressNotice(Context context, String person, String item, int index) {
         HouseholdNotices.Notice listed = null;
-        for (HouseholdNotices.Notice n : sNotices) {
+        for (HouseholdNotices.Notice n : notices(context)) {
             if (!n.isJoin() && n.item.equals(item) && n.person.equals(person)) listed = n;
         }
         if (listed == null || index < 0 || index >= listed.actions.size()) return false;
@@ -1541,7 +1554,7 @@ final class Household {
      */
     static boolean answerJoin(Context context, String item, boolean allow, boolean giveHa) {
         boolean listed = false;
-        for (HouseholdNotices.Notice n : sNotices) listed |= n.isJoin() && n.item.equals(item);
+        for (HouseholdNotices.Notice n : notices(context)) listed |= n.isJoin() && n.item.equals(item);
         if (!listed) return false;
         Context app = context.getApplicationContext();
         sContext = app;

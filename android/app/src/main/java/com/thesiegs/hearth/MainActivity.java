@@ -104,7 +104,8 @@ public class MainActivity extends FlutterActivity {
     // The app list's PackageManager lookups, in parallel. Separate from sAppsLoader, which waits on them.
     private static final ExecutorService sAppsExecutor = Executors.newFixedThreadPool(4);
 
-    private static WeakReference<MethodChannel> sMethodChannel;
+    /** The engine's channel, for the notify* calls (some come off the main thread). Set in configureFlutterEngine. */
+    private static volatile WeakReference<MethodChannel> sMethodChannel;
     /** Whether Hearth is the screen in front (between onResume and onPause). */
     private static volatile boolean sInFront;
 
@@ -154,6 +155,11 @@ public class MainActivity extends FlutterActivity {
             case "openUrl" -> result.success(openUrl(call.arguments()));
             case "openSettings" -> result.success(openSettings());
             case "openScreensaverSettings" -> result.success(openScreensaverSettings());
+            // Google TV's Network & Internet (Wi-Fi, Ethernet, proxy); it has no VPN screen of its own, a VPN is an app
+            case "openNetworkSettings" -> result.success(startFirst(
+                    new Intent(Settings.ACTION_WIFI_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    new Intent(Settings.ACTION_WIRELESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
             case "openAppInfo" -> result.success(openAppInfo(call.arguments()));
             case "uninstallApp" -> result.success(uninstallApp(call.arguments()));
             case "isDefaultLauncher" -> result.success(isDefaultLauncher());
@@ -208,6 +214,13 @@ public class MainActivity extends FlutterActivity {
             case "setParentBlock" -> answerFrom(sIoExecutor, result, () -> ParentChannelApi.setBlock(this,
                     call.argument("profileKey"), call.argument("kind"), call.argument("id"), call.argument("label"),
                     Boolean.TRUE.equals(call.argument("on"))));
+            // What the kid hid or blocked itself (contract 10), and a parent taking one back
+            case "getKidOwnBlocks" -> {
+                String profile = call.arguments();
+                answerFrom(sIoExecutor, result, () -> ParentChannelApi.kidBlocks(this, profile));
+            }
+            case "undoKidOwnBlock" -> answerFrom(sIoExecutor, result, () -> ParentChannelApi.undoKidBlock(this,
+                    call.argument("profileKey"), call.argument("kind"), call.argument("id")));
             case "removeHearthFromKidsProfiles" -> runSelfAdb(result, () -> KidsProfiles.remove(this));
             case "uninstallHearth" -> result.success(uninstallSelf());
             case "openGoogleTvHome" -> result.success(openGoogleTvHome());

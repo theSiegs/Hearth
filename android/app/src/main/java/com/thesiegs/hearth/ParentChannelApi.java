@@ -47,6 +47,26 @@ final class ParentChannelApi {
         return result;
     }
 
+    /**
+     * What the kid hid or blocked itself (contract 10), less what a parent is taking back: {"videos": [{id, label}],
+     * "channels": [{id, label}], "words": [word]} (a channel's id is its key: its id, or its name).
+     */
+    static Map<String, Object> kidBlocks(Context context, String profile) {
+        KidBlocks.Lists lists = KidBlocks.read(context, profile);
+        Map<String, Object> map = new HashMap<>();
+        map.put("videos", withLabels(lists.videos.keySet(), lists.videos));
+        map.put("channels", withLabels(lists.channels.keySet(), lists.channels));
+        map.put("words", new ArrayList<>(lists.words.keySet()));
+        return map;
+    }
+
+    /** A parent takes back one of the kid's own: the kid's HearthTube is told the next time Hearth sends its row. */
+    static boolean undoKidBlock(Context context, String profile, String kind, String key) {
+        if (!KidBlocks.undo(context, profile, kind, key)) return false;
+        ProfileProvider.notifyChanged(context);
+        return true;
+    }
+
     private static Map<String, Object> describe(ParentBlocks.Lists lists) {
         Map<String, Object> map = new HashMap<>();
         map.put("videos", withLabels(lists.videos, lists.labels));
