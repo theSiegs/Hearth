@@ -113,7 +113,8 @@ final class HouseholdMembers {
      * As {@link #accepts(HouseholdLog, HouseholdEntry)}; {@code fromInviter}: the entry came from the TV that let this
      * one join, in their first exchange, which also takes a TV's own entry for a TV this one doesn't know yet
      * ({@link #introduces}). A TV writes its own entry again when renamed and once a day, and that replaces the entry of
-     * the member that added it, so a TV that joins later would otherwise never list it (nor sync with it).
+     * the member that added it, so a TV that joins later would otherwise never list it (nor sync with it). It also
+     * takes the inviter's own entry for a TV the inviter didn't add (the one that let the inviter in).
      */
     static boolean accepts(HouseholdLog log, HouseholdEntry e, boolean fromInviter) {
         if (!signs(e.kind)) return true;
@@ -142,7 +143,9 @@ final class HouseholdMembers {
         if (!HouseholdBridge.SHARED.equals(e.profile)) return false;
         byte[] key = keyOf(e.value);
         if (key == null || !HouseholdIdentity.tvIdOf(key).equals(e.item)) return false;
-        if (!e.item.equals(e.tv) && !e.tv.equals(byOf(e.value, ""))) return false;
+        // From the TV that let this one in, also its copy of a TV it didn't add: the one it was let in by, which it
+        // listed when it joined, newer than that TV's own entry until the day's refresh
+        if (!fromInviter && !e.item.equals(e.tv) && !e.tv.equals(byOf(e.value, ""))) return false;
         HouseholdEntry had = log.get(KIND, HouseholdBridge.SHARED, e.item);
         return had == null || !signingOf(had.value) || signingOf(e.value);
     }

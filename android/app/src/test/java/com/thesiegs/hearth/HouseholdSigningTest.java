@@ -264,4 +264,22 @@ public class HouseholdSigningTest {
         assertEquals(3, HouseholdMembers.list(c.store.log().all(), new java.util.HashMap<>(), new java.util.HashMap<>(),
                 c.store.tvId(), "Attic", day + 500).size());
     }
+
+    @Test
+    public void aTvLetInByATvThatJoinedListsTheTvThatLetThatOneIn() throws Exception {
+        HouseholdTvs.Tv a = new HouseholdTvs.Tv();
+        a.store.create("Office", T0);
+        HouseholdTvs.Tv c = new HouseholdTvs.Tv();
+        assertTrue(c.store.join(a.store.invite("Office", T0 + 10), "Attic", T0 + 10));
+        HouseholdSyncExchangeTest.exchange(c.store, a.store, null, T0 + 100);
+        // A new TV, let in by c (not the TV that made the household), before a's entry is a day old
+        HouseholdTvs.Tv n = new HouseholdTvs.Tv();
+        assertTrue(n.store.join(c.store.invite("Attic", T0 + 200), "Kitchen", T0 + 200));
+        HouseholdSyncExchangeTest.exchange(n.store, c.store, null, T0 + 300);
+        assertEquals(HouseholdMembers.Standing.MEMBER, HouseholdMembers.standing(n.store.log(), a.store.tvId()));
+        HouseholdSyncExchangeTest.exchange(a.store, c.store, null, T0 + 400);
+        HouseholdSyncExchangeTest.exchange(n.store, a.store, null, T0 + 500);
+        assertEquals(3, HouseholdMembers.list(a.store.log().all(), new java.util.HashMap<>(), new java.util.HashMap<>(),
+                a.store.tvId(), "Office", T0 + 500).size());
+    }
 }

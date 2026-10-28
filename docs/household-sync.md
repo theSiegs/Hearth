@@ -537,7 +537,10 @@ What a TV checks before it takes part or takes something, and what that guards a
   written by a TV it doesn't list yet, refuse it, and neither list that TV nor sync with it. In the first exchange
   with the TV that let it in (whom it trusts with the whole household already), a joining TV also takes a TV's own
   entry for a TV it holds nothing of: signed with the key the entry carries (the key its id was made from), and saying
-  it signs. From any other TV, or once that first exchange is done, the rule above holds.
+  it signs. It also takes the inviting TV's own copy of a TV it didn't add: a TV that joined lists the TV that let it
+  in with an entry of its own, newer than that TV's entry until the day's refresh, so a TV it lets in later would
+  otherwise refuse the TV that made the household. From any other TV, or once that first exchange is done, the rule
+  above holds.
 - **An entry refused** is still counted as seen, so it isn't sent again and again; it never changes anything.
 - **Sequences in another TV's name.** Entries travel through any member, so a TV takes entries written by TVs it isn't
   talking to, and counts each one's sequence in its version vector. A member could hand on an entry in another TV's
