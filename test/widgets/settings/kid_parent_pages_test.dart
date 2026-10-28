@@ -38,6 +38,19 @@ class _ParentChannel extends FLauncherChannel {
   @override
   Future<Map<dynamic, dynamic>> getParentBlocks(String profileKey) async => blocks;
 
+  /// What the kid hid themselves (contract 10), and what a parent took back
+  Map<String, dynamic> kidOwn = {};
+  final List<Map<String, Object?>> undone = [];
+
+  @override
+  Future<Map<dynamic, dynamic>> getKidOwnBlocks(String profileKey) async => kidOwn;
+
+  @override
+  Future<bool> undoKidOwnBlock({required String profileKey, required String kind, required String id}) async {
+    undone.add({"profileKey": profileKey, "kind": kind, "id": id});
+    return true;
+  }
+
   @override
   Future<bool> setParentBlock({
     required String profileKey,
@@ -177,6 +190,29 @@ void main() {
       await show(tester, _ParentChannel(), const KidBlocksPage(profileKey: "user:11"));
 
       expect(find.text("Nothing is blocked."), findsOneWidget);
+    });
+
+    testWidgets('what the kid hid themselves can be shown to them again', (tester) async {
+      final channel = _ParentChannel()
+        ..kidOwn = {
+          "videos": [
+            {"id": "vid12345", "label": "Hidden by the kid"}
+          ],
+          "channels": [],
+          "words": ["silly"],
+        };
+      await show(tester, channel, const KidBlocksPage(profileKey: "user:11"));
+
+      expect(find.text("Hidden by them"), findsOneWidget);
+      expect(find.text("silly"), findsOneWidget);
+      await tester.tap(find.text("Hidden by the kid"));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text("Remove"));
+      await tester.pumpAndSettle();
+
+      expect(channel.undone.single, {"profileKey": "user:11", "kind": "video", "id": "vid12345"});
+      // The parent's own lists aren't touched
+      expect(channel.calls, isEmpty);
     });
   });
 }

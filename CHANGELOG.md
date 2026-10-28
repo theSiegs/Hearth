@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+## 2026.10.85 (pre-release)
+
 - **Network in Settings.** **Settings > TV & power > Network** opens the TV's Wi-Fi and Ethernet settings, and shows how the TV is connected (Wi-Fi, Ethernet, no internet, VPN on). Google TV has no VPN settings of its own: a VPN is an app.
 - **Who is on stays between Hearth and HearthTube (provider contract 9).** Hearth's profile provider now answers only HearthTube (signed with Hearth's key): another app on the TV can no longer read the active profile's name, whether it's a kids profile, its YouTube minutes or its bedtime lock.
 - **Parent PIN**: five wrong tries in HearthTube lock the check for a minute even if Hearth restarts meanwhile; before, a restart gave five fresh tries.

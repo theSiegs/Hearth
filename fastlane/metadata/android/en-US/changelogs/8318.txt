@@ -1,0 +1,1 @@
+Household sync across your TVs (notifications, buttons, joining with a code), the Hearth integration for Home Assistant, a parent's YouTube channel to HearthTube, Network in Settings > TV & power, and safer approvals and Parent PIN checks.
