@@ -14,7 +14,7 @@ class CompanionApp {
   final String description;
   final String repo;
 
-  /// Release asset listing versions as {"<versionName>": {"versionCode": n}, ...}; without one, the release
+  /// Release asset listing versions as `{"<versionName>": {"versionCode": n}, ...}`; without one, the release
   /// name or tag is compared with the installed version name.
   final String? versionManifest;
 

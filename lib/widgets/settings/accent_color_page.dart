@@ -93,7 +93,7 @@ class AccentColorPage extends StatelessWidget {
                     color: Colors.black26,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: currentColor.withOpacity(0.5),
+                      color: currentColor.withValues(alpha: 0.5),
                       width: 1.5,
                     ),
                   ),
@@ -154,13 +154,13 @@ class _ColorTile extends StatelessWidget {
       onPressed: onTap,
       builder: (context, focused) => Container(
         decoration: BoxDecoration(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: focused ? Colors.white : (isSelected ? color : Colors.transparent),
             width: focused ? 2.5 : (isSelected ? 2 : 0),
           ),
-          boxShadow: focused ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 8)] : null,
+          boxShadow: focused ? [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 8)] : null,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

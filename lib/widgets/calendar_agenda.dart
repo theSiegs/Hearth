@@ -192,9 +192,9 @@ class _EventTile extends StatelessWidget {
       height: 128,
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.35),
+        color: Colors.black.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: now ? color.withOpacity(0.8) : Colors.white.withOpacity(0.12)),
+        border: Border.all(color: now ? color.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.12)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,9 +233,9 @@ class _MoreTile extends StatelessWidget {
         height: 128,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.35),
+          color: Colors.black.withValues(alpha: 0.35),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.12)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
         ),
         child: Text(text, style: Theme.of(context).textTheme.titleMedium!.copyWith(color: Colors.white70)),
       );
@@ -250,11 +250,11 @@ class CalendarAgendaPage extends StatelessWidget {
 
   static Future<void> open(BuildContext context) => Navigator.of(context).push(PageRouteBuilder(
         opaque: false,
-        barrierColor: Colors.black.withOpacity(0.8),
+        barrierColor: Colors.black.withValues(alpha: 0.8),
         transitionDuration: const Duration(milliseconds: 150),
         reverseTransitionDuration: const Duration(milliseconds: 150),
-        pageBuilder: (_, __, ___) => const CalendarAgendaPage(),
-        transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
+        pageBuilder: (_, _, _) => const CalendarAgendaPage(),
+        transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
       ));
 
   @override
@@ -268,7 +268,7 @@ class CalendarAgendaPage extends StatelessWidget {
     return Actions(
       actions: {BackIntent: BackAction(context)},
       child: Scaffold(
-        backgroundColor: Colors.black.withOpacity(0.35),
+        backgroundColor: Colors.black.withValues(alpha: 0.35),
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(48, 28, 48, 0),
@@ -356,9 +356,9 @@ class _AgendaRow extends StatelessWidget {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: focused ? Colors.white.withOpacity(0.12) : Colors.black.withOpacity(0.35),
+            color: focused ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.35),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: focused ? theme.colorScheme.primary : Colors.white.withOpacity(0.12)),
+            border: Border.all(color: focused ? theme.colorScheme.primary : Colors.white.withValues(alpha: 0.12)),
           ),
           child: Row(
             children: [

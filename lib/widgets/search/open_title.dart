@@ -44,7 +44,7 @@ String titleMeta(AppLocalizations localizations, TitleMatch match) {
   final kind = result.tmdbId == null
       ? null
       : (result.tmdbIsMovie ? localizations.searchKindFilm : localizations.searchKindSeries);
-  return [if (result.year != null) "${result.year}", if (kind != null) kind].join(" · ");
+  return [if (result.year != null) "${result.year}", ?kind].join(" · ");
 }
 
 /// Opens [match] in [app]: its page there when Wikidata links one, else the app's own search for the title, else

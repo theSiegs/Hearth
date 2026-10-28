@@ -208,9 +208,9 @@ class _UsageTile extends StatelessWidget {
       margin: const EdgeInsets.only(right: 12),
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.35),
+        color: Colors.black.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -227,7 +227,7 @@ class _UsageTile extends StatelessWidget {
             child: LinearProgressIndicator(
               value: share.clamp(0.0, 1.0),
               minHeight: 4,
-              backgroundColor: Colors.white.withOpacity(0.15),
+              backgroundColor: Colors.white.withValues(alpha: 0.15),
               valueColor: AlwaysStoppedAnimation(Theme.of(context).colorScheme.primary),
             ),
           ),

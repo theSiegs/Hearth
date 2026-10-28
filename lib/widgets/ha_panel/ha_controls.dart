@@ -53,7 +53,7 @@ class HaRoundButton extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color:
-                selected ? accent.withOpacity(focused ? 0.55 : 0.35) : Colors.white.withOpacity(focused ? 0.2 : 0.08),
+                selected ? accent.withValues(alpha: focused ? 0.55 : 0.35) : Colors.white.withValues(alpha: focused ? 0.2 : 0.08),
             border: Border.all(color: focused ? accent : Colors.transparent, width: 3),
           ),
           child: Icon(icon, size: size * 0.5, color: Colors.white),
@@ -154,7 +154,7 @@ class _HaSliderState extends State<HaSlider> {
                   child: LinearProgressIndicator(
                     value: _value / 100,
                     minHeight: _focused ? 12 : 8,
-                    backgroundColor: Colors.white.withOpacity(0.12),
+                    backgroundColor: Colors.white.withValues(alpha: 0.12),
                     valueColor: AlwaysStoppedAnimation(_focused ? accent : Colors.white70),
                   ),
                 ),
@@ -277,7 +277,7 @@ class HaBarGauge extends StatelessWidget {
         child: LinearProgressIndicator(
           value: fraction.clamp(0, 1),
           minHeight: 10,
-          backgroundColor: Colors.white.withOpacity(0.12),
+          backgroundColor: Colors.white.withValues(alpha: 0.12),
           valueColor: AlwaysStoppedAnimation(Theme.of(context).colorScheme.primary),
         ),
       );

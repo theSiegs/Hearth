@@ -51,7 +51,7 @@ class FrostedGlass extends StatelessWidget {
     final blur = _BlurredWallpaper.of(wallpaper, screen, MediaQuery.devicePixelRatioOf(context), sigma);
     return ValueListenableBuilder<ui.Image?>(
       valueListenable: blur.image,
-      builder: (_, image, __) => image == null ? live : _GlassWindow(image: image, screen: screen, child: child),
+      builder: (_, image, _) => image == null ? live : _GlassWindow(image: image, screen: screen, child: child),
     );
   }
 }

@@ -79,7 +79,7 @@ class _ApplicationInfoPanelState extends State<ApplicationInfoPanel>
                   Image(
                     image: widget.image!,
                     width: 50,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported_outlined),
+                    errorBuilder: (_, _, _) => const Icon(Icons.image_not_supported_outlined),
                   )
                 else
                   const Icon(Icons.image_not_supported_outlined),

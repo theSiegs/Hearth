@@ -75,7 +75,7 @@ void main() {
     final container = tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
     final boxDecoration = container.decoration as BoxDecoration;
     final border = boxDecoration.border as Border;
-    expect(border.top.color, Colors.white.withOpacity(0.12));
+    expect(border.top.color, Colors.white.withValues(alpha: 0.12));
     expect(border.top.width, 1.0);
   });
 
@@ -100,7 +100,7 @@ void main() {
     final container = tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
     final boxDecoration = container.decoration as BoxDecoration;
     final border = boxDecoration.border as Border;
-    expect(border.top.color, Colors.white.withOpacity(0.12));
+    expect(border.top.color, Colors.white.withValues(alpha: 0.12));
     expect(border.top.width, 1.0);
   });
 

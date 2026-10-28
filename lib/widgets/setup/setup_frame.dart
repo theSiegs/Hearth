@@ -69,7 +69,7 @@ class SetupFrame extends StatelessWidget {
           Positioned.fill(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 250),
-              color: Colors.black.withOpacity(preview ? 0.15 : 0.55),
+              color: Colors.black.withValues(alpha: preview ? 0.15 : 0.55),
             ),
           ),
           // While previewing, the home's own top bar would show through under the strip
@@ -113,7 +113,7 @@ class SetupFrame extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xFF0F0F0F),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white.withOpacity(0.10)),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
                         boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 32)],
                       ),
                       child: SingleChildScrollView(
@@ -168,7 +168,7 @@ class SetupProgressStrip extends StatelessWidget {
     if (dot == SetupDot.done) return Icon(Icons.check_circle, size: 13, color: accent);
     if (dot == SetupDot.partial) return Icon(Icons.incomplete_circle, size: 12, color: accent);
     final (Color fill, Color border) = switch (dot) {
-      SetupDot.here => (accent.withOpacity(0.35), Colors.white),
+      SetupDot.here => (accent.withValues(alpha: 0.35), Colors.white),
       SetupDot.skipped => (Colors.transparent, Colors.white38),
       _ => (Colors.transparent, Colors.white70),
     };
@@ -236,7 +236,7 @@ class _SetupButtonState extends State<SetupButton> {
             duration: const Duration(milliseconds: 120),
             padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 20, vertical: compact ? 6 : 10),
             decoration: BoxDecoration(
-              color: _focused ? accent : Colors.white.withOpacity(0.08),
+              color: _focused ? accent : Colors.white.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(compact ? 8 : 12),
               border: Border.all(color: _focused ? Colors.white : Colors.transparent, width: 2),
             ),
@@ -350,7 +350,7 @@ class SetupStepsPicture extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 6),
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
+                    color: Colors.white.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.white12),
                   ),
@@ -529,7 +529,7 @@ class _SetupSwitchState extends State<SetupSwitch> {
             duration: const Duration(milliseconds: 120),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: _focused ? Colors.white.withOpacity(0.08) : Colors.transparent,
+              color: _focused ? Colors.white.withValues(alpha: 0.08) : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: _focused ? accent : Colors.transparent, width: 2),
             ),
@@ -647,7 +647,7 @@ class _SetupLookTileState extends State<SetupLookTile> {
                                     aspectRatio: 16 / 9,
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.45),
+                                        color: Colors.black.withValues(alpha: 0.45),
                                         borderRadius: BorderRadius.circular(4),
                                         border: i == 0 ? Border.all(color: widget.accent, width: 2) : null,
                                       ),

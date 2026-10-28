@@ -222,7 +222,7 @@ Future<void> _pumpWidgetWithProviders(
         ChangeNotifierProvider<AppsService>.value(value: appsService),
         if (profiles != null) ChangeNotifierProvider<ProfileService>.value(value: profiles),
       ],
-      builder: (_, __) => MaterialApp(
+      builder: (_, _) => MaterialApp(
         localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,

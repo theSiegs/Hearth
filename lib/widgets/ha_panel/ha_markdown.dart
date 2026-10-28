@@ -277,7 +277,7 @@ class HaMarkdownView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
-    final body = theme.bodyMedium!.copyWith(color: Colors.white.withOpacity(0.85));
+    final body = theme.bodyMedium!.copyWith(color: Colors.white.withValues(alpha: 0.85));
     final children = <Widget>[];
     for (final block in HaMarkdown.parse(text)) {
       switch (block) {
@@ -343,7 +343,7 @@ class HaMarkdownView extends StatelessWidget {
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
       children: [
         TableRow(
-          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.15)))),
+          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.15)))),
           children: [for (var c = 0; c < table.header.length; c++) cell(table.header[c], header, table.align[c])],
         ),
         for (final row in table.rows)
@@ -389,7 +389,7 @@ class HaInlineImage extends StatelessWidget {
         height: size.height,
         fit: BoxFit.contain,
         filterQuality: FilterQuality.medium,
-        errorBuilder: (_, __, ___) => Icon(Icons.apps, size: size.height, color: style.color),
+        errorBuilder: (_, _, _) => Icon(Icons.apps, size: size.height, color: style.color),
       ),
     );
   }

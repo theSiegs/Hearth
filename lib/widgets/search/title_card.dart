@@ -105,8 +105,8 @@ class _TitleCardState extends State<TitleCard> {
           decoration: BoxDecoration(
             color: const Color(0xFF2A2D33),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: focused ? accent : Colors.white.withOpacity(0.08), width: focused ? 3 : 1),
-            boxShadow: focused ? [BoxShadow(color: accent.withOpacity(0.35), blurRadius: 16)] : null,
+            border: Border.all(color: focused ? accent : Colors.white.withValues(alpha: 0.08), width: focused ? 3 : 1),
+            boxShadow: focused ? [BoxShadow(color: accent.withValues(alpha: 0.35), blurRadius: 16)] : null,
           ),
           clipBehavior: Clip.antiAlias,
           child: Stack(
@@ -116,7 +116,7 @@ class _TitleCardState extends State<TitleCard> {
                 Image.network(widget.imageUrl!,
                     fit: BoxFit.cover,
                     cacheWidth: (widget.width * MediaQuery.devicePixelRatioOf(context)).round(),
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink())
+                    errorBuilder: (_, _, _) => const SizedBox.shrink())
               else
                 const Center(child: Icon(Icons.movie_outlined, size: 40, color: Colors.white24)),
               if (_icon != null)
@@ -134,7 +134,7 @@ class _TitleCardState extends State<TitleCard> {
                 bottom: 0,
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-                  color: Colors.black.withOpacity(0.65),
+                  color: Colors.black.withValues(alpha: 0.65),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -206,9 +206,9 @@ class MoreCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           height: height,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(focused ? 0.18 : 0.12),
+            color: Colors.white.withValues(alpha: focused ? 0.18 : 0.12),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: focused ? accent : Colors.white.withOpacity(0.2), width: focused ? 3 : 1),
+            border: Border.all(color: focused ? accent : Colors.white.withValues(alpha: 0.2), width: focused ? 3 : 1),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

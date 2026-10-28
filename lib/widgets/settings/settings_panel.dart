@@ -286,7 +286,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
 class _FastPageRoute<T> extends PageRouteBuilder<T> {
   _FastPageRoute({required Widget Function(BuildContext) builder})
       : super(
-          pageBuilder: (context, _, __) => builder(context),
+          pageBuilder: (context, _, _) => builder(context),
           transitionDuration: Duration.zero,
           reverseTransitionDuration: Duration.zero,
         );

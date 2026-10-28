@@ -26,8 +26,8 @@ void main() {
       HaFormat(AppLocalizationsEn(), (key) => key.endsWith(".not_home") ? "Away" : null, now, temperatureUnit: "°F");
 
   HaEntity sensor(String state, {String? unit, String? deviceClass}) => HaEntity("sensor.a", state, attributes: {
-        if (unit != null) "unit_of_measurement": unit,
-        if (deviceClass != null) "device_class": deviceClass,
+        "unit_of_measurement": ?unit,
+        "device_class": ?deviceClass,
       });
 
   group("Durations: hours and minutes, no seconds", () {

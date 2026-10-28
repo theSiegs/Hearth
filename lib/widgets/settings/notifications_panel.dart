@@ -7,6 +7,7 @@ import 'package:flauncher/widgets/settings/app_icon.dart';
 import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
 import 'package:flauncher/widgets/settings/side_panel_overlay.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -75,7 +76,7 @@ class NotificationsPanel extends StatelessWidget {
                               ),
                               backgroundColor: WidgetStateProperty.resolveWith(
                                 (states) => states.contains(WidgetState.focused)
-                                    ? theme.colorScheme.primary.withOpacity(0.3)
+                                    ? theme.colorScheme.primary.withValues(alpha: 0.3)
                                     : Colors.transparent,
                               ),
                               side: WidgetStateProperty.resolveWith(
@@ -104,7 +105,7 @@ class NotificationsPanel extends StatelessWidget {
                             Icon(
                               Icons.notifications_off_outlined,
                               size: 64,
-                              color: theme.hintColor.withOpacity(0.3),
+                              color: theme.hintColor.withValues(alpha: 0.3),
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -117,7 +118,7 @@ class NotificationsPanel extends StatelessWidget {
                         ),
                       )
                     : ListView.builder(
-                        cacheExtent: 1000,
+                        scrollCacheExtent: const ScrollCacheExtent.pixels(1000),
                         itemCount: notifications.length,
                         itemBuilder: (context, index) {
                           final notification = notifications[index];
@@ -132,7 +133,7 @@ class NotificationsPanel extends StatelessWidget {
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
                             child: Material(
-                              color: theme.cardColor.withOpacity(0.5),
+                              color: theme.cardColor.withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(12),
                               clipBehavior: Clip.antiAlias,
                               child: Focus(

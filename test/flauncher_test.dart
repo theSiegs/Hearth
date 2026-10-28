@@ -1585,7 +1585,7 @@ Future<void> _pumpWidgetWithProviders(
         if (profileService != null) ChangeNotifierProvider<ProfileService>.value(value: profileService),
         if (homeSearch != null) ChangeNotifierProvider<HomeSearch>.value(value: homeSearch),
       ],
-      builder: (_, __) => MaterialApp(
+      builder: (_, _) => MaterialApp(
         localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,

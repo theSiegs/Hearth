@@ -209,7 +209,7 @@ class HaPersonMap extends StatelessWidget {
                 image: HaDiskImage(HaMapTiles.url(x, y)),
                 fit: BoxFit.fill,
                 gaplessPlayback: true,
-                errorBuilder: (_, __, ___) => const ColoredBox(color: Color(0xFF2A2F38)),
+                errorBuilder: (_, _, _) => const ColoredBox(color: Color(0xFF2A2F38)),
               ),
             ),
         if (window.contains(homePixel))
@@ -228,8 +228,8 @@ class HaPersonMap extends StatelessWidget {
               height: accuracyPixels * 2,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: colour.withOpacity(0.15),
-                border: Border.all(color: colour.withOpacity(0.5)),
+                color: colour.withValues(alpha: 0.15),
+                border: Border.all(color: colour.withValues(alpha: 0.5)),
               ),
             ),
           ),

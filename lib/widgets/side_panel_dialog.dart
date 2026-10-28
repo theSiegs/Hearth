@@ -29,7 +29,7 @@ class SidePanelDialog extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: borderRadius,
             border: Border.all(
-              color: Colors.white.withOpacity(0.08),
+              color: Colors.white.withValues(alpha: 0.08),
               width: 1,
             ),
           ),

@@ -77,5 +77,5 @@ class CardStyle {
   double focusScaleFor(double width) => width > 0 ? min(focusScale, 1.0 + 28.0 / width) : focusScale;
 
   /// The focused card's shadow colour.
-  Color focusShadowColor(Color accentColor) => glow ? accentColor.withOpacity(0.85) : Colors.black;
+  Color focusShadowColor(Color accentColor) => glow ? accentColor.withValues(alpha: 0.85) : Colors.black;
 }

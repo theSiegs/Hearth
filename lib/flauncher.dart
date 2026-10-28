@@ -640,13 +640,13 @@ class _FLauncherState extends State<FLauncher> {
             child: Stack(children: [
               RepaintBoundary(
                 child: Consumer<WallpaperService>(
-                    builder: (_, wallpaperService, __) => _wallpaper(context, wallpaperService)),
+                    builder: (_, wallpaperService, _) => _wallpaper(context, wallpaperService)),
               ),
               // Below the dock, the wallpaper blurs so the rows of apps stand out.
               Selector2<SettingsService, WallpaperService, bool>(
                 selector: (_, settings, wallpaper) =>
                     settings.blurWallpaperBelowDock && wallpaper.focusedAppColor == null,
-                builder: (_, blurEnabled, __) => Positioned.fill(
+                builder: (_, blurEnabled, _) => Positioned.fill(
                   child: IgnorePointer(
                     child: AnimatedOpacity(
                       key: const Key("below_dock_blur"),
@@ -662,7 +662,7 @@ class _FLauncherState extends State<FLauncher> {
               Positioned.fill(
                 child: ValueListenableBuilder<bool>(
                   valueListenable: _detailsScrimVisible,
-                  builder: (_, visible, __) => DetailsScrim(visible: visible),
+                  builder: (_, visible, _) => DetailsScrim(visible: visible),
                 ),
               ),
               Consumer<LauncherState>(
@@ -681,7 +681,7 @@ class _FLauncherState extends State<FLauncher> {
               if (_searchTyping)
                 Positioned.fill(
                   child: Container(
-                    color: Colors.black.withOpacity(0.55),
+                    color: Colors.black.withValues(alpha: 0.55),
                     child: SearchEntry(
                       key: ValueKey(_searchVoice),
                       initialText: _homeSearch?.query ?? "",
@@ -934,7 +934,7 @@ class _FLauncherState extends State<FLauncher> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 28),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.55),
+            color: Colors.black.withValues(alpha: 0.55),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(

@@ -31,7 +31,7 @@ class TitlePill extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(opacityOf(context)),
+        color: Colors.black.withValues(alpha: opacityOf(context)),
         borderRadius: BorderRadius.circular(100),
       ),
       child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4), child: child),
@@ -57,10 +57,10 @@ class StatusPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(TitlePill.opacityOf(context)),
+        color: Colors.black.withValues(alpha: TitlePill.opacityOf(context)),
         borderRadius: BorderRadius.circular(height / 2),
         border: Border.all(
-          color: focused ? Theme.of(context).colorScheme.primary : Colors.white.withOpacity(0.12),
+          color: focused ? Theme.of(context).colorScheme.primary : Colors.white.withValues(alpha: 0.12),
           width: 1,
         ),
         boxShadow: focused ? const [BoxShadow(color: Colors.black54, blurRadius: 8, spreadRadius: 1)] : null,
@@ -98,7 +98,7 @@ class DetailsScrim extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
-              colors: [Colors.black.withOpacity(a), Colors.black.withOpacity(a * 0.78), Colors.transparent],
+              colors: [Colors.black.withValues(alpha: a), Colors.black.withValues(alpha: a * 0.78), Colors.transparent],
               stops: const [0, 0.38, 0.62],
             ),
           ),

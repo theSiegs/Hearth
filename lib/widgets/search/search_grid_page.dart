@@ -36,8 +36,8 @@ class SearchGridPage extends StatefulWidget {
   /// Opens the page; true when it closed because a title opened (not Back).
   static Future<bool?> open(BuildContext context) => Navigator.of(context).push<bool>(PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 150),
-        pageBuilder: (_, __, ___) => const SearchGridPage(),
-        transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
+        pageBuilder: (_, _, _) => const SearchGridPage(),
+        transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
       ));
 
   @override
@@ -100,7 +100,7 @@ class _SearchGridPageState extends State<SearchGridPage> {
             Row(children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(26)),
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(26)),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   const Icon(Icons.search, size: 22),
                   const SizedBox(width: 10),
@@ -202,14 +202,14 @@ class _Pill extends StatelessWidget {
       builder: (context, focused) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
         decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.white.withOpacity(0.10),
+          color: selected ? Colors.white : Colors.white.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: focused ? accent : Colors.white.withOpacity(0.15), width: focused ? 3 : 1),
+          border: Border.all(color: focused ? accent : Colors.white.withValues(alpha: 0.15), width: focused ? 3 : 1),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Text(label, style: TextStyle(color: fg, fontSize: 17, fontWeight: FontWeight.w500)),
           const SizedBox(width: 8),
-          Text("$count", style: TextStyle(color: fg.withOpacity(0.6), fontSize: 14)),
+          Text("$count", style: TextStyle(color: fg.withValues(alpha: 0.6), fontSize: 14)),
         ]),
       ),
     );

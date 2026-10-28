@@ -70,7 +70,7 @@ class HaImageCache {
       headers.forEach(request.headers.set);
       final response = await request.close().timeout(const Duration(seconds: 15));
       if (response.statusCode != HttpStatus.ok) throw HttpException("HTTP ${response.statusCode}", uri: uri);
-      return consolidateHttpClientResponseBytes(response);
+      return await consolidateHttpClientResponseBytes(response);
     } finally {
       client.close();
     }

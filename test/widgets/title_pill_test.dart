@@ -12,7 +12,7 @@ void main() {
   testWidgets("without a wallpaper service it shows a middle pill", (tester) async {
     await tester.pumpWidget(const MaterialApp(home: TitlePill(child: Text("Favorites"))));
     final box = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first);
-    expect((box.decoration as BoxDecoration).color!.opacity, closeTo(TitlePill.opacityFor(0.5), 0.01));
+    expect((box.decoration as BoxDecoration).color!.a, closeTo(TitlePill.opacityFor(0.5), 0.01));
     expect(find.text("Favorites"), findsOneWidget);
   });
 

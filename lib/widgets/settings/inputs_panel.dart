@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:provider/provider.dart';
 import 'package:flauncher/widgets/settings/side_panel_overlay.dart';
 import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
@@ -40,7 +41,7 @@ class InputsPanel extends StatelessWidget {
                         ),
                       )
                     : ListView.builder(
-                        cacheExtent: 1000,
+                        scrollCacheExtent: const ScrollCacheExtent.pixels(1000),
                         itemCount: inputs.length,
                         itemBuilder: (context, index) {
                           final input = inputs[index];
