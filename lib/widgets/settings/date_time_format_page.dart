@@ -39,7 +39,7 @@ const List<(String format, String example)> dateFormatPresets = [
 
 // Time format presets (using 3:45 PM / 15:45 for clear 12h/24h distinction)
 const List<(String format, String example)> timeFormatPresets = [
-  ('H:mm', '3:45'),
+  ('h:mm', '3:45'),
   ('hh:mm', '03:45'),
   ('h:mm a', '3:45 PM'),
   ('hh:mm a', '03:45 PM'),

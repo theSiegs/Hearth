@@ -35,18 +35,14 @@ void main() {
       expect(DateFormat("hh:mm a", "en").format(_afternoon), "03:45 PM");
       expect(DateFormat("HH:mm", "en").format(_afternoon), "15:45");
       for (final (format, example) in timeFormatPresets) {
-        if (format == "H:mm") continue; // see the skipped test below
         expect(DateFormat(format, "en").format(_afternoon), example, reason: format);
       }
     });
 
-    test("the H:mm preset's example is what it shows at 3:45 PM", () {
-      final example = timeFormatPresets.firstWhere((p) => p.$1 == "H:mm").$2;
-      // H is the 24-hour clock: at 3:45 PM it shows 15:45, the same as HH:mm, not "3:45"
-      expect(DateFormat("H:mm", "en").format(_afternoon), example);
-    },
-        skip: "Bug: the 'H:mm' preset is labelled '3:45' but shows 15:45 in the afternoon (24-hour, like 'HH:mm'); "
-            "a 12-hour clock without AM/PM would be 'h:mm'. Reported, not fixed here.");
+    test("the 12-hour preset without AM/PM shows 3:45 at 3:45 PM", () {
+      expect(timeFormatPresets.map((p) => p.$1), contains("h:mm"));
+      expect(DateFormat("h:mm", "en").format(_afternoon), "3:45");
+    });
 
     test("formats are not offered twice", () {
       expect(dateFormatPresets.map((p) => p.$1).toSet(), hasLength(dateFormatPresets.length));
