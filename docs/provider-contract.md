@@ -4,7 +4,7 @@ Hearth shares its state with other apps (today: HearthTube) through one content 
 contract: what each column means, when it changes, and what callers may rely on. The provider's `contract_version`
 column says which version of this page it implements.
 
-**Current version: 8** (`ProfileProvider.CONTRACT_VERSION`).
+**Current version: 9** (`ProfileProvider.CONTRACT_VERSION`).
 
 Change rules: adding, removing or changing the meaning of a column or call bumps the version and gets a line in
 the history below. A reader that sees a newer version than it knows keeps using the columns it understands; columns
@@ -15,7 +15,9 @@ are never reused for a different meaning.
 - Authority: `com.thesiegs.hearth.profile` (debug builds: `com.thesiegs.hearth.debug.profile`). Hearth up to
   2026.10.x answered the same contract at `com.leanbitlab.ltvL.profile`; a client that still accepts it is harmless
 .
-- `content://com.thesiegs.hearth.profile/active`: one row, the columns below.
+- `content://com.thesiegs.hearth.profile/active`: one row, the columns below. Since version 9 only for
+  `com.thesiegs.hearthtube` signed with one of the certificates below (the row says who is on and whether it's a
+  kid); anyone else gets the columns with no row.
 - `content://com.thesiegs.hearth.profile/wallpaper`: Hearth's current wallpaper picture, read-only
   (`FileNotFoundException` when Hearth shows a gradient instead). Since version 5 only for `com.thesiegs.hearthtube`
   signed with one of the certificates below (a picked wallpaper may be a family photo); anyone else gets
@@ -106,6 +108,8 @@ read, and sends it to Home Assistant when that is set up. Hearth works without H
 
 ## History
 
+- **9** (2026-10-28): no column changes. `/active` answers only HearthTube (signed as below), like `/wallpaper`
+  and the calls; any other app gets no row.
 - **8** (2026-10-27): added `parent_blocks`, `parent_blocks_version` and the `report_started` call (a kids profile's
   started videos up, the parent's blocked videos, channels and words down). Also in a profile's agent, as Hearth sends it.
 - **7** (2026-10-14): added `ha_share_now_playing` (Home Assistant's setup question for HearthTube's now playing).

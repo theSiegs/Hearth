@@ -3,6 +3,7 @@ package com.thesiegs.hearth;
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.content.pm.SigningInfo;
@@ -12,7 +13,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
-import android.os.SystemClock;
 import android.util.Log;
 
 import java.io.File;
@@ -38,7 +38,7 @@ public class ProfileProvider extends ContentProvider {
             "youtube_minutes_left", "schedule_locked", "allowance_message", "allowance_checked_at", "allowance_source",
             "ha_share_now_playing", "parent_blocks", "parent_blocks_version"};
     /** docs/provider-contract.md: bumped when a column's meaning changes or one is added or removed. */
-    static final int CONTRACT_VERSION = 8;
+    static final int CONTRACT_VERSION = 9;
     private static final String SHARE_NOW_PLAYING_KEY = "ha_share_now_playing";
 
     /**
@@ -67,9 +67,10 @@ public class ProfileProvider extends ContentProvider {
     private static final Set<String> TRUSTED_CERTS = new HashSet<>(Arrays.asList(
             "243bf074648ab3bfebb260d129e7c8203b407ca7677507ce93dbe72b02396d4c"));
 
-    // One lockout for every way in (HearthTube here, or a kid's HearthTube through that profile's agent)
-    private static int sWrongPins;
-    private static long sPinLockedUntil;
+    // One lockout for every way in (HearthTube here, or a kid's HearthTube through that profile's agent), kept in the
+    // device prefs so a restarted Hearth doesn't hand out five fresh tries
+    private static final String PREF_WRONG_PINS = "parent_pin_wrong_tries";
+    private static final String PREF_PIN_LOCKED_UNTIL = "parent_pin_locked_until";
 
     /** content://<package>.profile/active (debug builds have a ".debug" package suffix). */
     static Uri activeUri(Context context) {
@@ -92,6 +93,8 @@ public class ProfileProvider extends ContentProvider {
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
         Context context = getContext();
         MatrixCursor cursor = new MatrixCursor(COLUMNS, 1);
+        // The row says who is on and whether it's a kid, so only HearthTube gets it; anyone else an empty cursor
+        if (!CompanionApps.HEARTHTUBE.equals(getCallingPackage()) || !isTrustedHearthTube(context)) return cursor;
         // In another profile's user Hearth is that profile's agent: it answers with Hearth's own row, as Hearth last
         // sent it (a kid's HearthTube there can't reach Hearth's provider in the owner's user)
         cursor.addRow(AgentService.isAgent(context) ? AgentService.mirroredRow(context) : row(context));
@@ -263,11 +266,15 @@ public class ProfileProvider extends ContentProvider {
     /** Checks a PIN against Hearth's parent PIN (in the owner's user), with the shared lockout. */
     static synchronized Bundle verifyParentPin(Context context, String pin) {
         Bundle result = new Bundle();
-        long now = SystemClock.elapsedRealtime();
+        SharedPreferences prefs = context.getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS,
+                Context.MODE_PRIVATE);
+        // Wall-clock time, so the lock outlives a restart or a reboot; a clock set back never stretches the wait
+        long now = System.currentTimeMillis();
+        long lockedUntil = Math.min(prefs.getLong(PREF_PIN_LOCKED_UNTIL, 0), now + PIN_LOCKOUT_MS);
 
-        if (now < sPinLockedUntil) {
+        if (now < lockedUntil) {
             result.putBoolean("ok", false);
-            result.putInt("wait_seconds", (int) ((sPinLockedUntil - now + 999) / 1000));
+            result.putInt("wait_seconds", (int) ((lockedUntil - now + 999) / 1000));
             return result;
         }
 
@@ -275,12 +282,13 @@ public class ProfileProvider extends ContentProvider {
         // Either form the app keeps (ParentPinHash): the salted one, or the old one
         boolean ok = ParentPinHash.verify(pin, hash);
 
-        if (ok) {
-            sWrongPins = 0;
-        } else if (++sWrongPins >= MAX_PIN_TRIES) {
-            sWrongPins = 0;
-            sPinLockedUntil = now + PIN_LOCKOUT_MS;
+        int wrong = ok ? 0 : prefs.getInt(PREF_WRONG_PINS, 0) + 1;
+        SharedPreferences.Editor editor = prefs.edit();
+        if (wrong >= MAX_PIN_TRIES) {
+            wrong = 0;
+            editor.putLong(PREF_PIN_LOCKED_UNTIL, now + PIN_LOCKOUT_MS);
         }
+        editor.putInt(PREF_WRONG_PINS, wrong).commit();
 
         result.putBoolean("ok", ok);
         return result;
