@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.Socket;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -11,8 +12,8 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * The bit of HTTP/1.1 that Hearth's own small servers need (HaNotificationServer, HaSetupServer): one request per
- * connection, a body only by Content-Length, and every response closes the connection.
+ * The bit of HTTP/1.1 that Hearth's own small servers need (HaNotificationServer, SecretLinkServer): one request
+ * per connection, a body only by Content-Length, and every response closes the connection.
  */
 final class MiniHttp {
     private static final int MAX_LINE_BYTES = 8192;
@@ -58,6 +59,28 @@ final class MiniHttp {
         String target = parts.length > 1 ? parts[1] : "";
         int query = target.indexOf('?');
         return new Request(method, query >= 0 ? target.substring(0, query) : target, headers);
+    }
+
+    /**
+     * Reads a request from the home network (see {@link #read}); one from anywhere else gets a 403 and null, and
+     * nothing of it is read.
+     */
+    static Request readLocal(Socket socket) throws IOException {
+        if (!LocalNet.isLocal(socket.getInetAddress())) {
+            respond(socket.getOutputStream(), 403, "Forbidden");
+            return null;
+        }
+        return read(socket.getInputStream());
+    }
+
+    /**
+     * The body of a request whose Content-Length is 1 to {@code maxBytes}; null for any other (or no) length, and then
+     * nothing is read. Throws when the client sends fewer bytes than it said.
+     */
+    static byte[] readBody(InputStream in, Request request, int maxBytes) throws IOException {
+        int length = request.contentLength();
+        if (length <= 0 || length > maxBytes) return null;
+        return readBody(in, length);
     }
 
     /** Exactly {@code length} bytes of body; throws when the client sends fewer. */

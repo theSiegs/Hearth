@@ -2,19 +2,12 @@ package com.thesiegs.hearth;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.util.Base64;
 import android.util.Log;
 
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
-import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -27,11 +20,9 @@ import java.util.List;
  * Settings would (PinVault, pairing a name match for good). Stops after one save, when Settings closes it, or after
  * ten minutes, like the Home Assistant page (HaSetupServer).
  */
-final class PinSetupServer {
+final class PinSetupServer extends SecretLinkServer<Integer> {
     private static final String TAG = "HearthPinSetup";
-    private static final int[] PORTS = {8765, 8766, 8767, 8768, 8769};
     private static final int MAX_BODY_BYTES = 8 * 1024;
-    private static final long LIFETIME_MS = 10 * 60 * 1000;
 
     /** The page running now: start sets it, stop clears it. Both guarded by PinSetupServer.class. */
     private static PinSetupServer sCurrent;
@@ -65,29 +56,19 @@ final class PinSetupServer {
         }
     }
 
-    private final Context mContext;
     private final String mOwner;
     private final String mOwnerName;
     private final List<Row> mRows;
     /** Apps Hearth can type in that it hasn't seen this profile's app profiles in yet. */
     private final List<String> mNotSeen;
-    private final String mSecret;
-    private final String mKey;
-    private ServerSocket mServerSocket;
-    private volatile boolean mDone;
-    private long mStartedAt;
 
     private PinSetupServer(Context context, String owner) {
-        mContext = context.getApplicationContext();
+        super(context, TAG, MAX_BODY_BYTES);
         mOwner = owner;
         mOwnerName = ProfileUsers.displayName(mContext, owner);
         mRows = new ArrayList<>();
         mNotSeen = new ArrayList<>();
         readRows();
-        byte[] bytes = new byte[16];
-        new SecureRandom().nextBytes(bytes);
-        mSecret = Base64.encodeToString(bytes, Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_WRAP);
-        mKey = PhoneSeal.newKey();
     }
 
     private void readRows() {
@@ -133,29 +114,16 @@ final class PinSetupServer {
         String ip = LocalNet.ipv4Address();
         if (ip == null) return null;
         PinSetupServer server = new PinSetupServer(context, owner);
-        for (int port : PORTS) {
-            try {
-                server.mServerSocket = new ServerSocket(port);
-                break;
-            } catch (IOException ignored) {
-            }
-        }
-        if (server.mServerSocket == null) return null;
-        server.mStartedAt = System.currentTimeMillis();
+        if (!server.bind()) return null;
         sLastSaved = -1;
-        Thread thread = new Thread(server::run, "HearthPinSetup");
-        thread.setDaemon(true);
-        thread.start();
+        server.serve();
         sCurrent = server;
-        return "http://" + ip + ":" + server.mServerSocket.getLocalPort() + "/" + server.mSecret + "#" + server.mKey;
+        return server.link(ip);
     }
 
     static synchronized void stop() {
         if (sCurrent != null) {
-            try {
-                sCurrent.mServerSocket.close();
-            } catch (IOException ignored) {
-            }
+            sCurrent.close();
             sCurrent = null;
         }
     }
@@ -165,60 +133,14 @@ final class PinSetupServer {
         return sLastSaved;
     }
 
-    private void run() {
-        ServerSocket server = mServerSocket;
-        try {
-            server.setSoTimeout(30_000);
-        } catch (IOException ignored) {
-        }
-        while (!server.isClosed() && !mDone && System.currentTimeMillis() - mStartedAt < LIFETIME_MS) {
-            try (Socket socket = server.accept()) {
-                socket.setSoTimeout(10_000);
-                handle(socket);
-            } catch (SocketTimeoutException ignored) {
-            } catch (IOException | RuntimeException e) {
-                if (!server.isClosed()) Log.w(TAG, "Request failed: " + e.getClass().getSimpleName());
-            }
-        }
-        try {
-            server.close();
-        } catch (IOException ignored) {
-        }
+    @Override
+    Integer read(String opened) throws Exception {
+        return save(opened);
     }
 
-    private void handle(Socket socket) throws IOException {
-        OutputStream out = socket.getOutputStream();
-        if (!LocalNet.isLocal(socket.getInetAddress())) {
-            MiniHttp.respond(out, 403, "Forbidden");
-            return;
-        }
-        InputStream in = socket.getInputStream();
-        MiniHttp.Request request = MiniHttp.read(in);
-        if (request == null) return;
-        String path = "/" + mSecret;
-        if (!path.equals(request.path)) {
-            MiniHttp.respond(out, 404, "Not found");
-            return;
-        }
-        if (!"POST".equals(request.method)) {
-            MiniHttp.respondHtml(out, page());
-            return;
-        }
-        int length = request.contentLength();
-        if (length <= 0 || length > MAX_BODY_BYTES) {
-            MiniHttp.respond(out, 400, "Bad request");
-            return;
-        }
-        String body = new String(MiniHttp.readBody(in, length), StandardCharsets.UTF_8);
-        int saved;
-        try {
-            saved = save(PhoneSeal.open(mKey, path, body));
-        } catch (Exception e) {
-            Log.i(TAG, "A sent page didn't open: " + e.getClass().getSimpleName());
-            MiniHttp.respond(out, 400, "Bad request");
-            return;
-        }
-        mDone = true;
+    @Override
+    void answer(Integer saved, OutputStream out) throws IOException {
+        finish();
         synchronized (PinSetupServer.class) {
             sLastSaved = saved;
         }
@@ -275,7 +197,8 @@ final class PinSetupServer {
         return escape(mContext.getString(id, args));
     }
 
-    private String page() {
+    @Override
+    String page() {
         StringBuilder body = new StringBuilder();
         body.append("<p class='help'>").append(text(R.string.pin_phone_intro)).append("</p>");
         if (mRows.isEmpty()) body.append("<p>").append(text(R.string.pin_phone_none)).append("</p>");
@@ -341,26 +264,9 @@ final class PinSetupServer {
             + ".then(function(r){if(!r.ok)throw r;f.hidden=true;document.getElementById('done').hidden=false;})"
             + ".catch(function(){err.textContent=M.failed;});});";
 
-    private String raw(int id) {
-        try (InputStream in = mContext.getResources().openRawResource(id)) {
-            byte[] buffer = new byte[16 * 1024];
-            java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
-            int n;
-            while ((n = in.read(buffer)) > 0) bytes.write(buffer, 0, n);
-            return bytes.toString("UTF-8");
-        } catch (IOException e) {
-            return "";
-        }
-    }
-
     /** A string resource for a single-quoted JavaScript string; %1$d becomes %d for the script to fill. */
     private String js(int id) {
         return mContext.getString(id).replace("%1$d", "%d").replace("\\", "\\\\").replace("'", "\\'")
                 .replace("<", "\\x3c").replace("\n", " ");
-    }
-
-    private static String escape(String s) {
-        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("'", "&#39;")
-                .replace("\"", "&quot;");
     }
 }
