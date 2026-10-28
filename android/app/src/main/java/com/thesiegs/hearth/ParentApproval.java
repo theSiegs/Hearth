@@ -11,8 +11,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * A parent allows what asks for the Parent PIN from their phone, instead of the PIN being typed with the remote. When
@@ -36,7 +34,6 @@ final class ParentApproval {
     static final String EXPIRED = "expired";
     private static final String ACTION_PREFIX = "HEARTH_PARENT_";
     private static final String TAG_PREFIX = "hearth-parent-";
-    private static final ExecutorService WORKER = Executors.newCachedThreadPool();
     private static final SecureRandom RANDOM = new SecureRandom();
 
     /** The Parent PIN dialog's request; null when none. */
@@ -51,7 +48,7 @@ final class ParentApproval {
         private final String nonce;
         private final List<String> services;
         private String state = PENDING;
-        private HaEvents events;
+        private HaEventSession.Waiter waiter;
 
         private Request(Context context, String nonce, List<String> services) {
             this.context = context;
@@ -65,11 +62,11 @@ final class ParentApproval {
         }
 
         private void answer(String answer) {
-            HaEvents listening;
+            HaEventSession.Waiter listening;
             synchronized (this) {
                 if (!PENDING.equals(state)) return;
                 state = answer;
-                listening = events;
+                listening = waiter;
             }
             Log.i(TAG, "A parent phone answered: " + answer);
             if (listening != null) listening.close();
@@ -77,11 +74,11 @@ final class ParentApproval {
 
         /** Ends it if it still waits, and takes its notification off the phones. */
         void cancel() {
-            HaEvents listening;
+            HaEventSession.Waiter listening;
             synchronized (this) {
                 if (!PENDING.equals(state)) return;
                 state = EXPIRED;
-                listening = events;
+                listening = waiter;
             }
             if (listening != null) listening.close();
             clearOnPhones(context, nonce, services);
@@ -127,41 +124,52 @@ final class ParentApproval {
         Request request = new Request(context, AgentAuth.hex(bytes), services);
         String nonce = request.nonce;
         Log.i(TAG, "Asking " + services.size() + " parent phone(s): " + title);
-        WORKER.execute(() -> {
-            boolean listened = HaEvents.listen(context, PhoneApproval.EVENT, PhoneApproval.ANSWER_MS, data -> {
-                String action = data != null ? data.optString("action") : "";
-                if (action.equals(ACTION_PREFIX + "ALLOW_" + nonce)) {
-                    request.answer(ALLOWED);
-                } else if (action.equals(ACTION_PREFIX + "DENY_" + nonce)) {
-                    request.answer(DENIED);
-                }
-            }, events -> {
-                boolean waiting;
-                synchronized (request) {
-                    waiting = PENDING.equals(request.state);
-                    if (waiting) request.events = events;
-                }
-                if (!waiting) {
-                    events.close();
-                    return;
-                }
-                int sent = 0;
-                for (String service : services) {
-                    if (send(context, service, nonce, title, message)) sent++;
-                }
-                if (sent == 0) {
-                    Log.i(TAG, "Couldn't send the request to a parent phone");
-                    events.close();
-                } else {
-                    postPersistent(context, nonce, title, haMessage);
-                }
-            });
-            if (!listened) Log.i(TAG, "Couldn't listen for a parent phone's answer");
-            synchronized (request) {
-                if (PENDING.equals(request.state)) request.state = EXPIRED;
-            }
-            clearOnPhones(context, nonce, services);
-        });
+        HaEventSession.Waiter waiter = HaBridgeService.events(context).await(PhoneApproval.ANSWER_MS,
+                new HaEventSession.Listener() {
+                    @Override
+                    public void onOpen(HaEventSession.Waiter waiter) {
+                        boolean waiting;
+                        synchronized (request) {
+                            waiting = PENDING.equals(request.state);
+                        }
+                        if (!waiting) {
+                            waiter.close();
+                            return;
+                        }
+                        int sent = 0;
+                        for (String service : services) {
+                            if (send(context, service, nonce, title, message)) sent++;
+                        }
+                        if (sent == 0) {
+                            Log.i(TAG, "Couldn't send the request to a parent phone");
+                            waiter.close();
+                        } else {
+                            postPersistent(context, nonce, title, haMessage);
+                        }
+                    }
+
+                    @Override
+                    public void onEvent(JSONObject data) {
+                        Boolean allowed = HaEvents.answer(data, ACTION_PREFIX, nonce);
+                        if (allowed != null) request.answer(allowed ? ALLOWED : DENIED);
+                    }
+
+                    @Override
+                    public void onEnd(boolean listened) {
+                        if (!listened) Log.i(TAG, "Couldn't listen for a parent phone's answer");
+                        synchronized (request) {
+                            if (PENDING.equals(request.state)) request.state = EXPIRED;
+                        }
+                        clearOnPhones(context, nonce, services);
+                    }
+                });
+        boolean waiting;
+        synchronized (request) {
+            waiting = PENDING.equals(request.state);
+            request.waiter = waiter;
+        }
+        // Cancelled (or ended) before the waiter was kept: it isn't needed
+        if (!waiting) waiter.close();
         return request;
     }
 

@@ -15,73 +15,94 @@ import java.net.Socket;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.util.function.Consumer;
 
 import javax.net.ssl.SSLSocketFactory;
 
 /**
- * Listens to one kind of Home Assistant event for a while, over its WebSocket API (/api/websocket) with the panel's
- * token: Hearth hears a phone's answer to an actionable notification (mobile_app_notification_action) this way, since
- * Home Assistant's REST API has no events. A small client of its own: one text frame per message, the server's frames
- * never masked, the client's always (RFC 6455). Blocks: run it off the main thread.
+ * A small client of Home Assistant's WebSocket API (/api/websocket) with the panel's token: one text frame per message,
+ * the server's frames never masked, the client's always (RFC 6455). Commands go over a connection of their own
+ * ({@link #connect}, {@link #mintToken}). Events (a phone's answer to an actionable notification,
+ * mobile_app_notification_action, since Home Assistant's REST API has no events) are heard through the one session
+ * HaBridgeService keeps while something waits ({@link HaEventSession}), which connects through {@link #dialer}.
+ * Blocks: run it off the main thread.
  */
-final class HaEvents {
+final class HaEvents implements HaEventSession.Link {
     private static final String TAG = "HearthHaEvents";
     private static final int MAX_FRAME_BYTES = 1024 * 1024;
 
     private final Socket mSocket;
     private final InputStream mIn;
     private final OutputStream mOut;
+    private final String mToken;
     private final SecureRandom mRandom = new SecureRandom();
-    private volatile boolean mClosed;
 
-    private HaEvents(Socket socket) throws IOException {
+    private HaEvents(Socket socket, String token) throws IOException {
         mSocket = socket;
         mIn = socket.getInputStream();
         mOut = socket.getOutputStream();
+        mToken = token;
+    }
+
+    /** Which address and token are set, without opening the token; null when either is missing. */
+    static String settings(Context context) {
+        String base = HaConfig.baseUrl(context);
+        String token = HaConfig.tokenStamp(context);
+        return base == null || token == null ? null : base + " " + token;
+    }
+
+    /** What the event session connects with: this TV's Home Assistant settings, read again for every connection. */
+    static HaEventSession.Dialer dialer(Context context) {
+        Context app = context.getApplicationContext();
+        return new HaEventSession.Dialer() {
+            @Override
+            public String settings() {
+                return HaEvents.settings(app);
+            }
+
+            @Override
+            public HaEventSession.Link dial() throws Exception {
+                return HaEvents.dial(app);
+            }
+        };
     }
 
     /**
-     * Connects, signs in and subscribes to {@code eventType}; then hands each event's data to {@code onEvent} (on
-     * this thread) until {@link #close}, the time is up or the connection ends. False when it couldn't subscribe.
+     * An answer to an actionable notification: true for {@code prefix + "ALLOW_" + nonce}, false for its DENY, null
+     * for anything else (another request's buttons, another notification).
      */
-    static boolean listen(Context context, String eventType, long forMs, Consumer<JSONObject> onEvent,
-            Consumer<HaEvents> onOpen) {
-        HaEvents events = null;
-        try {
-            events = open(context);
-            if (events == null) return false;
-            Socket socket = events.mSocket;
-            events.send(new JSONObject().put("id", 1).put("type", "subscribe_events").put("event_type", eventType));
-            JSONObject result = events.readJson();
-            if (!result.optBoolean("success")) return false;
-            if (onOpen != null) onOpen.accept(events);
-            long until = System.currentTimeMillis() + forMs;
-            socket.setSoTimeout(1_000);
-            while (!events.mClosed && System.currentTimeMillis() < until) {
-                JSONObject message;
-                try {
-                    message = events.readJson();
-                } catch (java.net.SocketTimeoutException e) {
-                    continue;
-                }
-                if (message == null) break;
-                if ("event".equals(message.optString("type"))) {
-                    JSONObject event = message.optJSONObject("event");
-                    if (event != null) onEvent.accept(event.optJSONObject("data"));
-                }
-            }
-            return true;
-        } catch (Exception e) {
-            Log.i(TAG, "Home Assistant events ended: " + e.getClass().getSimpleName());
-            return events != null && events.mClosed;
-        } finally {
-            if (events != null) events.closeSocket();
-        }
+    static Boolean answer(JSONObject data, String prefix, String nonce) {
+        String action = data != null ? data.optString("action") : "";
+        if (action.equals(prefix + "ALLOW_" + nonce)) return Boolean.TRUE;
+        if (action.equals(prefix + "DENY_" + nonce)) return Boolean.FALSE;
+        return null;
     }
 
     /** Connected and signed in with the panel's token, or null (nothing set up, plain HTTP off the home network, refused). */
     private static HaEvents open(Context context) throws Exception {
+        HaEvents events = dial(context);
+        if (events == null) return null;
+        try {
+            JSONObject first = events.readJson();
+            if (first == null || !"auth_required".equals(first.optString("type"))) {
+                events.closeSocket();
+                return null;
+            }
+            events.send(new JSONObject().put("type", "auth").put("access_token", events.mToken));
+            JSONObject second = events.readJson();
+            if (second == null || !"auth_ok".equals(second.optString("type"))) {
+                Log.w(TAG, "Home Assistant refused the token");
+                events.closeSocket();
+                return null;
+            }
+            return events;
+        } catch (Exception e) {
+            events.closeSocket();
+            throw e;
+        }
+    }
+
+    /** Connected and upgraded to a WebSocket, not signed in; null when nothing is set up or the address is refused. */
+    private static HaEvents dial(Context context) throws Exception {
         String base = HaConfig.baseUrl(context);
         String token = HaConfig.token(context);
         if (base == null || token == null) return null;
@@ -107,21 +128,9 @@ final class HaEvents {
                 socket = secure;
             }
             socket.setSoTimeout(5_000);
-            events = new HaEvents(socket);
+            events = new HaEvents(socket, token);
             String path = (url.getPath() == null ? "" : url.getPath().replaceAll("/+$", "")) + "/api/websocket";
             events.handshake(url.getHost() + (url.getPort() > 0 ? ":" + url.getPort() : ""), path);
-            JSONObject first = events.readJson();
-            if (first == null || !"auth_required".equals(first.optString("type"))) {
-                events.closeSocket();
-                return null;
-            }
-            events.send(new JSONObject().put("type", "auth").put("access_token", token));
-            JSONObject second = events.readJson();
-            if (second == null || !"auth_ok".equals(second.optString("type"))) {
-                Log.w(TAG, "Home Assistant refused the token");
-                events.closeSocket();
-                return null;
-            }
             return events;
         } catch (Exception e) {
             if (events != null) events.closeSocket();
@@ -192,9 +201,26 @@ final class HaEvents {
         closeSocket();
     }
 
-    /** Stops listening (from any thread). */
-    void close() {
-        mClosed = true;
+    // --- The event session's link ---
+
+    @Override
+    public String token() {
+        return mToken;
+    }
+
+    @Override
+    public JSONObject read() throws Exception {
+        return readJson();
+    }
+
+    @Override
+    public void setReadTimeout(int ms) throws IOException {
+        mSocket.setSoTimeout(ms);
+    }
+
+    @Override
+    public void close() {
+        closeSocket();
     }
 
     private void closeSocket() {
@@ -230,7 +256,8 @@ final class HaEvents {
         return c < 0 && line.size() == 0 ? null : line.toString("UTF-8");
     }
 
-    private void send(JSONObject message) throws IOException {
+    @Override
+    public void send(JSONObject message) throws IOException {
         sendFrame(0x1, message.toString().getBytes(StandardCharsets.UTF_8));
     }
 
