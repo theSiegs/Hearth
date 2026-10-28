@@ -170,4 +170,28 @@ public class ParentChannelTest {
         assertEquals("[new]", lists.get("user:10").words.toString());
         assertEquals("[video1]", lists.get("user:12").videos.toString());
     }
+
+    @Test
+    public void theKidsOwnListsAreReadAndAnUndoEndsOnceTheyNoLongerHaveIt() throws Exception {
+        KidBlocks.Lists kid = KidBlocks.parse(new JSONObject(
+                "{\"videos\":[{\"key\":\"video1\",\"label\":\"A title\"},{\"label\":\"no key\"}],"
+                        + "\"channels\":[{\"key\":\"Some Name\"}],\"words\":[\"prank\",\"\"]}"));
+        assertEquals("A title", kid.videos.get("video1"));
+        assertEquals(1, kid.videos.size());
+        // A channel blocked by its name only is shown by it
+        assertEquals("Some Name", kid.channels.get("Some Name"));
+        assertEquals("[prank]", kid.words.keySet().toString());
+
+        java.util.Map<String, java.util.Set<String>> undo = KidBlocks.parseUndo(new JSONObject(
+                "{\"videos\":[\"video1\",\"video9\"],\"words\":[\"prank\"]}"));
+        java.util.Map<String, java.util.Set<String>> left = KidBlocks.stillToUndo(undo, kid);
+        // video9 is no longer the kid's: done
+        assertEquals("[video1]", left.get(KidBlocks.VIDEOS).toString());
+        assertEquals("[prank]", left.get(KidBlocks.WORDS).toString());
+        assertTrue(left.get(KidBlocks.CHANNELS).isEmpty());
+        // And the kid's next list without them ends both
+        KidBlocks.Lists after = KidBlocks.parse(new JSONObject("{\"channels\":[{\"key\":\"Some Name\"}]}"));
+        assertTrue(KidBlocks.stillToUndo(left, after).get(KidBlocks.VIDEOS).isEmpty());
+        assertTrue(KidBlocks.stillToUndo(left, after).get(KidBlocks.WORDS).isEmpty());
+    }
 }

@@ -55,7 +55,8 @@ import java.util.regex.Pattern;
  * {"type":"played","package":"…","title":"…","subtitle":"…","duration":ms,"position":ms} (what plays there, for the
  * profile's watch history),
  * {"type":"started","t":ms,"v":"id","title":"…","ch":"…","cid":"…"} (a video HearthTube started there, for the
- * parent's log: StartedLog), {"type":"opened","ok":bool}, {"type":"speech","package":"…","text":"…"} (what an app said through
+ * parent's log: StartedLog), {"type":"kid_blocks","blocks":"{…}"} (what HearthTube there hid or blocked itself, the
+ * whole list: KidBlocks), {"type":"opened","ok":bool}, {"type":"speech","package":"…","text":"…"} (what an app said through
  * Hearth's voice there, for Profile Pairing), {"type":"calendar","access":bool,"calendars":[…],"events":[…]} (the
  * Google calendars synced to that profile's user and their coming days' events, TvCalendars' maps). Hearth to agent: {"type":"welcome"}, {"type":"open","intent":"intent:…"},
  * {"type":"listen","package":"…" or null} (the app Profile Pairing is handling, whose speech to relay),
@@ -250,6 +251,14 @@ final class AgentHub {
                         HISTORY.execute(() -> StartedLog.record(sContext, profile, message.optLong("t"),
                                 message.optString("v", null), message.optString("title", ""),
                                 message.optString("ch", ""), message.optString("cid", "")));
+                        break;
+                    }
+                    case "kid_blocks": {
+                        // What HearthTube in this profile's user hid or blocked itself (a kid's only)
+                        if (serial == ProfileUsers.ownerSerial(sContext)) break;
+                        String profile = ProfileUsers.profileKey(sContext, serial);
+                        String blocks = message.optString("blocks", null);
+                        HISTORY.execute(() -> KidBlocks.record(sContext, profile, blocks));
                         break;
                     }
                     case "played": {

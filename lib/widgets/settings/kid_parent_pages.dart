@@ -158,6 +158,7 @@ class _KidWatchLogPageState extends State<KidWatchLogPage> {
 
 /// What a parent blocked in a kid's HearthTube (contract 8, `parent_blocks`): words, channels and videos, set here. What
 /// Home Assistant sends is listed too, and taken back there. HearthTube applies both and doesn't let the kid undo them.
+/// Below, what the kid hid or blocked themselves (contract 10), which a parent can show to them again.
 class KidBlocksPage extends StatefulWidget {
   static const String routeName = "kid_blocks";
 
@@ -172,6 +173,7 @@ class KidBlocksPage extends StatefulWidget {
 class _KidBlocksPageState extends State<KidBlocksPage> {
   late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   ParentBlocks? _blocks;
+  KidOwnBlocks _kidOwn = KidOwnBlocks.empty;
 
   @override
   void initState() {
@@ -182,11 +184,61 @@ class _KidBlocksPageState extends State<KidBlocksPage> {
   Future<void> _load() async {
     try {
       final blocks = ParentBlocks.fromMap(await _channel.getParentBlocks(widget.profileKey));
-      if (mounted) setState(() => _blocks = blocks);
+      final kidOwn = KidOwnBlocks.fromMap(await _channel.getKidOwnBlocks(widget.profileKey));
+      if (mounted) {
+        setState(() {
+          _blocks = blocks;
+          _kidOwn = kidOwn;
+        });
+      }
     } catch (err) {
       noteFailure('kid_blocks', err);
       if (mounted) setState(() => _blocks = ParentBlocks.empty);
     }
+  }
+
+  /// Shows one of the kid's own hides or blocks to them again: HearthTube takes it back when it next hears from Hearth.
+  Future<void> _undoKidOwn(String kind, BlockedThing item) async {
+    final l = AppLocalizations.of(context)!;
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l.kidBlocksRemove(item.label)),
+        actions: [
+          TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(false), child: Text(l.cancel)),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l.remove)),
+        ],
+      ),
+    );
+    if (yes != true) return;
+    await _channel.undoKidOwnBlock(profileKey: widget.profileKey, kind: kind, id: item.id);
+    await _load();
+  }
+
+  List<Widget> _kidOwnSection(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final textTheme = Theme.of(context).textTheme;
+    final kidOwn = _kidOwn;
+    if (kidOwn.isEmpty) return const [];
+    Widget tile(String kind, IconData icon, BlockedThing item) => FocusableSettingsTile(
+          leading: Icon(icon, color: Colors.white54),
+          title: Text(item.label, maxLines: 2, overflow: TextOverflow.ellipsis, style: textTheme.bodyMedium),
+          trailing: const Icon(Icons.undo, color: Colors.white54),
+          onPressed: () => _undoKidOwn(kind, item),
+        );
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        child: Text(l.kidOwnBlocks, style: textTheme.titleSmall),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(24, 2, 24, 4),
+        child: Text(l.kidOwnBlocksBody, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
+      ),
+      for (final item in kidOwn.words) tile("word", Icons.text_fields, item),
+      for (final item in kidOwn.channels) tile("channel", Icons.person_off_outlined, item),
+      for (final item in kidOwn.videos) tile("video", Icons.visibility_off_outlined, item),
+    ];
   }
 
   Future<void> _addWord() async {
@@ -287,6 +339,7 @@ class _KidBlocksPageState extends State<KidBlocksPage> {
               padding: const EdgeInsets.all(24),
               child: Text(l.kidBlocksNone, style: textTheme.bodyMedium),
             ),
+          ..._kidOwnSection(context),
         ],
       ],
     );

@@ -214,6 +214,13 @@ public class MainActivity extends FlutterActivity {
             case "setParentBlock" -> answerFrom(sIoExecutor, result, () -> ParentChannelApi.setBlock(this,
                     call.argument("profileKey"), call.argument("kind"), call.argument("id"), call.argument("label"),
                     Boolean.TRUE.equals(call.argument("on"))));
+            // What the kid hid or blocked itself (contract 10), and a parent taking one back
+            case "getKidOwnBlocks" -> {
+                String profile = call.arguments();
+                answerFrom(sIoExecutor, result, () -> ParentChannelApi.kidBlocks(this, profile));
+            }
+            case "undoKidOwnBlock" -> answerFrom(sIoExecutor, result, () -> ParentChannelApi.undoKidBlock(this,
+                    call.argument("profileKey"), call.argument("kind"), call.argument("id")));
             case "removeHearthFromKidsProfiles" -> runSelfAdb(result, () -> KidsProfiles.remove(this));
             case "uninstallHearth" -> result.success(uninstallSelf());
             case "openGoogleTvHome" -> result.success(openGoogleTvHome());

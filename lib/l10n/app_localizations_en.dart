@@ -770,6 +770,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kidBlocksFromHa => 'Home Assistant';
 
   @override
+  String get kidOwnBlocks => 'Hidden by them';
+
+  @override
+  String get kidOwnBlocksBody => 'What they hid or blocked themselves in HearthTube. Select one to show it to them again.';
+
+  @override
   String get kidBlocksNone => 'Nothing is blocked.';
 
   @override

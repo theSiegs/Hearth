@@ -203,6 +203,17 @@ public class AgentService extends Service {
         return true;
     }
 
+    /**
+     * What a kids profile hid or blocked itself in HearthTube (the whole list): Hearth keeps it for the parent. False
+     * when Hearth isn't connected; HearthTube sends it again later.
+     */
+    static boolean relayKidBlocks(String blocks) {
+        AgentService service = sInstance;
+        if (service == null || !sConnected) return false;
+        service.send(json("type", "kid_blocks", "blocks", blocks));
+        return true;
+    }
+
     /** Checks a PIN with Hearth (it stays there); null when Hearth doesn't answer within a few seconds. */
     static Bundle verifyPinWithHearth(String pin) {
         AgentService service = sInstance;
