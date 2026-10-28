@@ -135,8 +135,5 @@ void main() {
     // In Roboto, "Unblock Notifications" at 11 px bold is about 107 px; with the lock icon and the badge's padding
     // the badge needs about 148 px, but FocusableSettingsTile gives a trailing widget at most 120
     expect(tester.takeException(), isNull);
-  },
-      skip: true); // Bug: BlockedAppsSection's unblock badge (a Row with a Text that can't wrap) overflows the 120 px
-  // trailing slot of FocusableSettingsTile by about 28 px in English with Roboto, more in longer languages.
-  // Reported, not fixed here.
+  });
 }
