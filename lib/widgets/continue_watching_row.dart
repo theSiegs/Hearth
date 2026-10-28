@@ -380,15 +380,11 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
     final theme = Theme.of(context);
     final CardStyle style = CardStyle.of(context.select<SettingsService, String>((s) => s.themes));
     final Color accentColor = context.select<SettingsService, Color>((s) => s.accentColor);
-    final bool appHighlightAnimationEnabled = context.select<SettingsService, bool>((s) => s.appHighlightAnimationEnabled);
-    final bool hideHighlightOutlineOnHomescreen = context.select<SettingsService, bool>((s) => s.hideHighlightOutlineOnHomescreen);
-    final bool appSelectorTransitionAnimationEnabled = context.select<SettingsService, bool>((s) => s.appSelectorTransitionAnimationEnabled);
     final double cardHeight = context.select<SettingsService, int>((s) => s.continueWatchingCardHeight).toDouble();
     final double cardWidth = (cardHeight * 16 / 9).roundToDouble();
     final bool showProgress = context.select<SettingsService, bool>((s) => s.continueWatchingShowProgress);
     final bool showPercentage = context.select<SettingsService, bool>((s) => s.continueWatchingShowPercentage);
     final bool showDescription = context.select<SettingsService, bool>((s) => s.continueWatchingShowDescription);
-    final Duration focusDuration = appSelectorTransitionAnimationEnabled ? const Duration(milliseconds: 200) : Duration.zero;
 
     final bool shouldHighlight = _shouldHighlight();
     final double scale = shouldHighlight ? style.focusScaleFor(cardWidth) : 1.0;
@@ -417,168 +413,139 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
         highlightColor: Colors.transparent,
         onTap: _launch,
         onLongPress: _showPanel,
-        child: pressable(AnimatedContainer(
-          duration: focusDuration,
-          curve: Curves.easeOutBack,
+        child: pressable(FocusCardFrame(
+          highlighted: shouldHighlight,
+          scale: scale,
           width: cardWidth,
           height: cardHeight,
-          transform: Matrix4.diagonal3Values(scale, scale, 1.0),
-          transformAlignment: Alignment.center,
-          child: Material(
-            borderRadius: style.borderRadius,
-            clipBehavior: Clip.antiAlias,
-            elevation: shouldHighlight ? style.focusElevation : 0,
-            shadowColor: shouldHighlight ? style.focusShadowColor(accentColor) : Colors.black,
-            color: Colors.transparent,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (hasPoster)
-                  Image.memory(
-                    widget.program.posterBytes!,
-                    fit: BoxFit.cover,
-                    cacheWidth: (cardWidth * MediaQuery.devicePixelRatioOf(context)).round(),
-                    filterQuality: FilterQuality.medium,
-                    gaplessPlayback: true,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                  ),
-                // Card surface: a dark gradient, or a scrim over the poster so the text stays readable
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: style.borderRadius,
-                    gradient: hasPoster
-                        ? LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            stops: const [0.0, 0.3, 0.55, 1.0],
-                            colors: [
-                              Colors.black.withOpacity(0.35),
-                              Colors.black.withOpacity(0.05),
-                              Colors.black.withOpacity(0.45),
-                              Colors.black.withOpacity(0.92),
-                            ],
-                          )
-                        : const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Color(0xFF141517),
-                              Color(0xFF090A0B),
-                            ],
-                          ),
-                    border: Border.all(
-                      color: shouldHighlight ? Colors.transparent : Colors.white.withOpacity(0.06),
-                      width: 1,
-                    ),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // App icon and progress badge
-                      Row(
-                        children: [
-                          if (_appIconBytes != null)
-                            Container(
-                              width: 24,
-                              height: 24,
-                              margin: const EdgeInsets.only(right: 8),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(5),
-                                child: Image.memory(
-                                  _appIconBytes!,
-                                  fit: BoxFit.contain,
-                                  filterQuality: FilterQuality.low,
-                                ),
-                              ),
-                            ),
-                          const Spacer(),
-                          if (showPercentage && progress > 0)
-                            Container(
-                              // Over poster art the badge needs its own backing to stay readable.
-                              padding: hasPoster
-                                  ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2)
-                                  : EdgeInsets.zero,
-                              decoration: hasPoster
-                                  ? BoxDecoration(
-                                      color: Colors.black.withOpacity(0.7),
-                                      borderRadius: BorderRadius.circular(6),
-                                    )
-                                  : null,
-                              child: Text(
-                                '${(progress * 100).round()}%',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: accentColor,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
+          color: Colors.transparent,
+          roundedDim: true,
+          children: [
+            if (hasPoster)
+              Image.memory(
+                widget.program.posterBytes!,
+                fit: BoxFit.cover,
+                cacheWidth: (cardWidth * MediaQuery.devicePixelRatioOf(context)).round(),
+                filterQuality: FilterQuality.medium,
+                gaplessPlayback: true,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            // Card surface: a dark gradient, or a scrim over the poster so the text stays readable
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: style.borderRadius,
+                gradient: hasPoster
+                    ? LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        stops: const [0.0, 0.3, 0.55, 1.0],
+                        colors: [
+                          Colors.black.withOpacity(0.35),
+                          Colors.black.withOpacity(0.05),
+                          Colors.black.withOpacity(0.45),
+                          Colors.black.withOpacity(0.92),
+                        ],
+                      )
+                    : const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFF141517),
+                          Color(0xFF090A0B),
                         ],
                       ),
+                border: Border.all(
+                  color: shouldHighlight ? Colors.transparent : Colors.white.withOpacity(0.06),
+                  width: 1,
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // App icon and progress badge
+                  Row(
+                    children: [
+                      if (_appIconBytes != null)
+                        Container(
+                          width: 24,
+                          height: 24,
+                          margin: const EdgeInsets.only(right: 8),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(5),
+                            child: Image.memory(
+                              _appIconBytes!,
+                              fit: BoxFit.contain,
+                              filterQuality: FilterQuality.low,
+                            ),
+                          ),
+                        ),
                       const Spacer(),
-                      Text(
-                        title,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          height: 1.25,
-                        ),
-                        maxLines: showsDescription ? 2 : 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (showsDescription) ...[
-                        const SizedBox(height: 3),
-                        Text(
-                          description,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: Colors.white60,
-                            fontSize: 13,
+                      if (showPercentage && progress > 0)
+                        Container(
+                          // Over poster art the badge needs its own backing to stay readable.
+                          padding: hasPoster
+                              ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2)
+                              : EdgeInsets.zero,
+                          decoration: hasPoster
+                              ? BoxDecoration(
+                                  color: Colors.black.withOpacity(0.7),
+                                  borderRadius: BorderRadius.circular(6),
+                                )
+                              : null,
+                          child: Text(
+                            '${(progress * 100).round()}%',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: accentColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
-                      // With a poster the text sits at the bottom, clear of any title logo in the art.
-                      if (hasPoster) const SizedBox(height: 8) else const Spacer(),
-                      if (showProgress && progress > 0)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(2),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            backgroundColor: Colors.white.withOpacity(0.12),
-                            valueColor: AlwaysStoppedAnimation<Color>(accentColor),
-                            minHeight: 3.5,
-                          ),
-                        )
-                      else
-                        const SizedBox(height: 3.5),
                     ],
                   ),
-                ),
-                IgnorePointer(
-                  child: AnimatedOpacity(
-                    duration: focusDuration,
-                    curve: Curves.easeInOut,
-                    opacity: shouldHighlight ? 0 : 0.10,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: style.borderRadius,
-                        color: Colors.black,
-                      ),
+                  const Spacer(),
+                  Text(
+                    title,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      height: 1.25,
                     ),
+                    maxLines: showsDescription ? 2 : 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                if (shouldHighlight && !hideHighlightOutlineOnHomescreen)
-                  FocusHighlight(
-                    style: style,
-                    accentColor: accentColor,
-                    animate: appHighlightAnimationEnabled,
-                  ),
-              ],
+                  if (showsDescription) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      description,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white60,
+                        fontSize: 13,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  // With a poster the text sits at the bottom, clear of any title logo in the art.
+                  if (hasPoster) const SizedBox(height: 8) else const Spacer(),
+                  if (showProgress && progress > 0)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(2),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.white.withOpacity(0.12),
+                        valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+                        minHeight: 3.5,
+                      ),
+                    )
+                  else
+                    const SizedBox(height: 3.5),
+                ],
+              ),
             ),
-          ),
+          ],
         )),
       )),
     );
