@@ -91,7 +91,7 @@ final class PinSetupServer extends SecretLinkServer<Integer> {
                         !PinVault.STATUS_NONE.equals(PinVault.statusOf(mContext, PinVault.SHARED, pkg,
                                 ContentPin.VAULT_PROFILE)), true));
             }
-            PinRecipe recipe = PinRecipes.forPackage(pkg);
+            PinRecipe recipe = PinRecipes.forPackage(mContext, pkg);
             if (recipe == null || !ProfilePairing.isAppEnabled(mContext, pkg)) continue;
             String mode = ProfilePairing.getMode(mContext, pkg, mOwner);
             String appProfile = ProfilePairing.MODE_PROFILE.equals(mode)

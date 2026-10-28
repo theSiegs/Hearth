@@ -11,7 +11,7 @@ import java.util.Locale;
  * is itself PIN-locked in Google TV: otherwise a kid could switch to an unlocked adult's profile and have Hearth
  * type the PIN for them. A kids profile never gets it typed.
  *
- * Pure logic here (tested without a TV); {@link ParamountContentPinRecipe} reads the dialog and types, and
+ * Pure logic here (tested without a TV); its recipe (PinRecipes.contentPin, slot "content") reads the dialog and types, and
  * ProfilePairingService runs the entry.
  */
 final class ContentPin {

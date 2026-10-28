@@ -937,7 +937,7 @@ public class ProfilePairingService extends AccessibilityService {
 
     private boolean startPinEntry(Session s) {
         String appProfile = s.pickedName;
-        PinRecipe recipe = PinRecipes.forPackage(s.pkg);
+        PinRecipe recipe = PinRecipes.forPackage(this, s.pkg);
         // Kids profiles too: a kid's app profile can have a PIN, which their parent saved for that profile only
         if (recipe == null || appProfile == null || mCover == null) return false;
         if (!appProfile.equals(ProfilePairing.getChosenProfile(this, s.pkg, s.key))) return false;
@@ -975,6 +975,7 @@ public class ProfilePairingService extends AccessibilityService {
      */
     private String whyNoTyping(String pkg) {
         PinSafety.refreshIfDue(this);
+        PinRecipes.refreshIfDue(this);
         if (!PinSafety.isTypingOn(this)) return "PIN typing is turned off";
         return PinSafety.disabledFor(this, pkg, PinSafety.versionCodeOf(this, pkg));
     }
@@ -1029,7 +1030,8 @@ public class ProfilePairingService extends AccessibilityService {
             Log.i(TAG, "Content PIN not typed: " + why);
             return;
         }
-        PinRecipe recipe = new ParamountContentPinRecipe();
+        PinRecipe recipe = PinRecipes.contentPin(this);
+        if (recipe == null) return;
         char[] pin = PinVault.open(this, PinVault.SHARED, pkg, ContentPin.VAULT_PROFILE);
         if (pin == null) return;
         if (pin.length != recipe.pinLength()) {
@@ -1073,7 +1075,8 @@ public class ProfilePairingService extends AccessibilityService {
             Log.i(TAG, "Google TV PIN not typed: none saved, or the saved one was refused");
             return;
         }
-        PinRecipe recipe = new GooglePinRecipe();
+        PinRecipe recipe = PinRecipes.googleTv(this);
+        if (recipe == null) return;
         char[] pin = PinVault.open(this, profileKey, pkg, vault);
         if (pin == null) return;
         if (pin.length != recipe.pinLength()) {

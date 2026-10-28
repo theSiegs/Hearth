@@ -260,7 +260,7 @@ final class PhoneApproval {
     /** Whether Google TV's PIN screen is what's in front, for this profile's account (main thread). */
     private static boolean pinScreenUpFor(Context context, String key) {
         AccessibilityNodeInfo root = LauncherAccessibilityService.activeRoot();
-        if (root == null || GooglePinRecipe.keys(root) == null
+        if (root == null || !GooglePinRecipe.keypadUp(context, root)
                 || !LauncherAccessibilityService.GOOGLE_TV_PACKAGE.contentEquals(root.getPackageName())) {
             return false;
         }

@@ -1,0 +1,174 @@
+{
+  "schema": 1,
+  "recipes": [
+    {
+      "slot": "profile",
+      "package": "com.disney.disneyplus",
+      "version": 1,
+      "engine": 1,
+      "pinLength": 4,
+      "nodes": {
+        "pinScreen": {"id": "enterPinRootView"},
+        "keyboard": {"id": "pinCodeKeyboard"},
+        "field": {"id": "pinCodeEditText"},
+        "error": {"id": "pinCodeErrorTextView"}
+      },
+      "keys": {"find": {"id": "digitKey"}, "label": "text", "press": "clickableAncestor", "otherwise": "fail"},
+      "screen": [
+        {"when": [{"node": "pinScreen"}, {"node": "keyboard"}, {"node": "field"}, {"keys": "all"}], "is": "MATCH"},
+        {"when": [{"node": "pinScreen"}], "is": "CHANGED"}
+      ],
+      "typing": {"by": "click"},
+      "confirm": {
+        "by": "count", "node": "field", "countAs": "length", "pollMs": 100, "waitMs": 1500,
+        "orOnLastDigit": [[{"noNode": "pinScreen"}], [{"nodeShowsText": "error"}]]
+      },
+      "outcome": [
+        {"when": [{"noNode": "pinScreen"}], "is": "ACCEPTED"},
+        {"when": [{"nodeShowsText": "error"}], "is": "REJECTED"}
+      ]
+    },
+    {
+      "slot": "profile",
+      "package": "com.apple.atve.androidtv.appletv",
+      "version": 1,
+      "engine": 1,
+      "pinLength": 4,
+      "keys": {
+        "find": {"walk": 30}, "only": ["clickable"], "label": "descriptionAfterLastComma", "extra": ["Delete"]
+      },
+      "speech": [
+        {"when": [{"contains": "{n} of {n} values entered"}], "do": [{"count": true}]}
+      ],
+      "focusFromEvents": "descriptionAfterLastComma",
+      "screen": [
+        {"when": [{"keys": "all"}], "is": "MATCH"},
+        {"when": [{"keys": "some"}], "is": "CHANGED"}
+      ],
+      "typing": {"by": "dpad", "layout": [["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]]},
+      "confirm": {"by": "spokenCount", "pollMs": 50, "waitMs": 1500},
+      "outcome": [
+        {"when": [{"keys": "notAll"}], "is": "ACCEPTED"},
+        {"when": [{"sinceLastDigitMs": 3000}], "is": "REJECTED"}
+      ]
+    },
+    {
+      "slot": "profile",
+      "package": "com.netflix.ninja",
+      "version": 1,
+      "engine": 1,
+      "pinLength": 4,
+      "speech": [
+        {"when": [{"equals": "{d}"}], "do": [{"focus": true}]},
+        {"when": [{"equals": "delete"}], "do": [{"focus": true}]},
+        {"when": [{"contains": "on the pin entry screen"}], "do": [{"set": "pinScreen"}]},
+        {"when": [{"contains": "in the pin number keyboard"}], "do": [{"set": "pinScreen"}]},
+        {
+          "when": [
+            {"contains": "in the numeric keyboard"},
+            {"contains": "this is a keyboard with 4 rows and 3 columns. the last row contains 0 and delete keys"}
+          ],
+          "do": [{"set": "keyboardKnown"}]
+        },
+        {"when": [{"contains": "in the numeric keyboard"}], "do": [{"set": "keyboardOther"}]},
+        {"when": [{"contains": "too many"}], "do": [{"set": "lockedOut"}]},
+        {"when": [{"contains": "wrong pin"}], "do": [{"outcome": "REJECTED"}]},
+        {"when": [{"startsWith": "on the browse screen"}], "do": [{"outcome": "ACCEPTED"}]},
+        {"when": [{"startsWith": "on the home screen"}], "do": [{"outcome": "ACCEPTED"}]}
+      ],
+      "screen": [
+        {"when": [{"flag": "lockedOut"}], "is": "LOCKED_OUT"},
+        {"when": [{"flag": "pinScreen"}, {"flag": "keyboardKnown"}], "is": "MATCH"},
+        {"when": [{"flag": "pinScreen"}, {"flag": "keyboardOther"}], "is": "CHANGED"}
+      ],
+      "typing": {"by": "dpad", "layout": [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], ["0"]]},
+      "confirm": {"by": "settle", "settleMs": 400},
+      "outcome": [
+        {"when": [{"flag": "lockedOut"}], "is": "LOCKED_OUT"},
+        {"when": [{"heard": true}], "is": "HEARD"}
+      ]
+    },
+    {
+      "slot": "profile",
+      "package": "com.wbd.stream",
+      "version": 1,
+      "engine": 1,
+      "pinLength": 4,
+      "speech": [
+        {"when": [{"equals": "{d}"}], "do": [{"echo": true}]},
+        {"when": [{"equals": "{d},"}], "do": [{"echo": true}]},
+        {"when": [{"contains": "enter your profile pin"}], "do": [{"set": "pinScreen"}], "stop": false},
+        {
+          "when": [{"contains": "numeric keyboard, {field}, button"}],
+          "do": [{"set": "keyboard"}, {"focus": true}],
+          "stop": false
+        },
+        {"when": [{"contains": "too many"}], "do": [{"set": "lockedOut"}]},
+        {"when": [{"contains": "look right"}], "do": [{"outcome": "REJECTED"}]},
+        {"when": [{"startsWith": "h b o max home"}], "do": [{"outcome": "ACCEPTED"}]},
+        {"when": [{"startsWith": "hbo max home"}], "do": [{"outcome": "ACCEPTED"}]}
+      ],
+      "screen": [
+        {"when": [{"flag": "lockedOut"}], "is": "LOCKED_OUT"},
+        {"when": [{"flag": "pinScreen"}, {"flag": "keyboard"}], "is": "MATCH"}
+      ],
+      "typing": {"by": "dpad", "layout": [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], ["", "0"]]},
+      "confirm": {"by": "echo", "pollMs": 50, "waitMs": 1500, "orOnLastDigit": [[{"heard": true}]]},
+      "outcome": [
+        {"when": [{"flag": "lockedOut"}], "is": "LOCKED_OUT"},
+        {"when": [{"heard": true}], "is": "HEARD"}
+      ]
+    },
+    {
+      "slot": "content",
+      "package": "com.cbs.ott",
+      "version": 1,
+      "engine": 1,
+      "pinLength": 4,
+      "nodes": {
+        "field": {"id": "pinEdit"},
+        "keyboard": {"id": "tvPinKeyboard"}
+      },
+      "keys": {
+        "find": {"walk": 6, "in": "keyboard"}, "label": "text", "stopAtKey": true, "duplicates": "first",
+        "press": "clickableAncestor", "maxUp": 3, "otherwise": "self"
+      },
+      "screen": [
+        {"when": [{"node": "field"}, {"node": "keyboard"}, {"keys": "all"}], "is": "MATCH"},
+        {"when": [{"node": "field"}], "is": "CHANGED"},
+        {"when": [{"node": "keyboard"}], "is": "CHANGED"},
+        {"when": [{"text": "Enter your PIN to watch"}], "is": "CHANGED"}
+      ],
+      "typing": {"by": "click", "setTextFallback": "field"},
+      "confirm": {
+        "by": "count", "node": "field", "countAs": "dots", "pollMs": 100, "waitMs": 1500,
+        "orOnLastDigit": [[{"noNode": "field"}, {"noNode": "keyboard"}], [{"countDropped": true}]]
+      },
+      "outcome": [
+        {"when": [{"noNode": "field"}, {"noNode": "keyboard"}], "is": "ACCEPTED"},
+        {"when": [{"sinceLastDigitMs": 2500}], "is": "REJECTED"}
+      ]
+    },
+    {
+      "slot": "google-tv",
+      "package": "com.google.android.apps.tv.launcherx",
+      "version": 1,
+      "engine": 1,
+      "pinLength": 4,
+      "outcomeTimeoutMs": 4000,
+      "keys": {
+        "find": {"walk": 25}, "only": ["visible"], "label": "text", "mustBeClickable": true, "duplicates": "fail"
+      },
+      "screen": [
+        {"when": [{"inApp": true}, {"keys": "all"}], "is": "MATCH"}
+      ],
+      "typing": {"by": "click"},
+      "confirm": {"by": "click"},
+      "outcome": [
+        {"when": [{"inApp": false}], "is": "ACCEPTED"},
+        {"when": [{"keys": "notAll"}], "is": "ACCEPTED"},
+        {"when": [{"sinceLastDigitMs": 2500}], "is": "REJECTED"}
+      ]
+    }
+  ]
+}
