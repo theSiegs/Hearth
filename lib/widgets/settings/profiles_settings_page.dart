@@ -23,6 +23,7 @@ import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
 import 'phone_approval_page.dart';
+import 'settings_choice_tile.dart';
 import 'settings_lock.dart';
 import 'settings_page.dart';
 import 'streaming_pins_page.dart';
@@ -108,32 +109,14 @@ class _LockOnSleepTileState extends State<_LockOnSleepTile> {
 
   Future<void> _choose() async {
     final l = AppLocalizations.of(context)!;
-    final int? picked = await showDialog<int>(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: Text(l.profileLockOnSleep),
-        children: [
-          for (final option in _options)
-            SimpleDialogOption(
-              child: TextButton(
-                autofocus: option == _minutes,
-                onPressed: () => Navigator.of(context).pop(option),
-                child: Row(
-                  children: [
-                    Icon(option == _minutes ? Icons.radio_button_checked : Icons.radio_button_unchecked, size: 20),
-                    const SizedBox(width: 12),
-                    Flexible(child: Text(_label(l, option), style: Theme.of(context).textTheme.bodyMedium)),
-                  ],
-                ),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-            child: Text(l.profileLockNeedsGoogleLock,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54)),
-          ),
-        ],
-      ),
+    final int? picked = await showChoiceDialog<int>(
+      context,
+      title: l.profileLockOnSleep,
+      options: _options,
+      isCurrent: (option) => option == _minutes,
+      label: (option) => _label(l, option),
+      labelStyle: Theme.of(context).textTheme.bodyMedium,
+      note: l.profileLockNeedsGoogleLock,
     );
     if (picked == null) return;
     await _channel?.setLockOnSleepMinutes(picked);
@@ -184,32 +167,14 @@ class _YouTubeLimitTileState extends State<YouTubeLimitTile> {
 
   Future<void> _choose() async {
     final l = AppLocalizations.of(context)!;
-    final int? picked = await showDialog<int>(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: Text(l.youTubeLimitTitle),
-        children: [
-          for (final option in _options)
-            SimpleDialogOption(
-              child: TextButton(
-                autofocus: option == _minutes,
-                onPressed: () => Navigator.of(context).pop(option),
-                child: Row(
-                  children: [
-                    Icon(option == _minutes ? Icons.radio_button_checked : Icons.radio_button_unchecked, size: 20),
-                    const SizedBox(width: 12),
-                    Flexible(child: Text(_label(l, option), style: Theme.of(context).textTheme.bodyMedium)),
-                  ],
-                ),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-            child: Text(l.youTubeLimitHint,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54)),
-          ),
-        ],
-      ),
+    final int? picked = await showChoiceDialog<int>(
+      context,
+      title: l.youTubeLimitTitle,
+      options: _options,
+      isCurrent: (option) => option == _minutes,
+      label: (option) => _label(l, option),
+      labelStyle: Theme.of(context).textTheme.bodyMedium,
+      note: l.youTubeLimitHint,
     );
     if (picked == null) return;
     await _channel?.setYouTubeDailyMinutes(picked, profileKey: widget.profileKey);

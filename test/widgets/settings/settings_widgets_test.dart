@@ -62,6 +62,28 @@ void main() {
     });
   });
 
+  group("showChoiceDialog", () {
+    testWidgets("marks and focuses the current option, shows the note and returns the one picked", (tester) async {
+      late BuildContext context;
+      await tester.pumpWidget(MaterialApp(home: Builder(builder: (c) {
+        context = c;
+        return const SizedBox();
+      })));
+      final picked = showChoiceDialog<int>(context,
+          title: "Sleep", options: [0, 15, 30], isCurrent: (m) => m == 15, label: (m) => "$m min", note: "A note");
+      await tester.pumpAndSettle();
+
+      expect(find.text("Sleep"), findsOneWidget);
+      expect(find.text("A note"), findsOneWidget);
+      expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
+      expect(Focus.of(tester.element(find.text("15 min"))).hasFocus, isTrue);
+
+      await tester.tap(find.text("30 min"));
+      await tester.pumpAndSettle();
+      expect(await picked, 30);
+    });
+  });
+
   group("RoundedSwitchListTile", () {
     testWidgets("a press flips the value, and the subtitle sits under the title", (tester) async {
       final changes = <bool>[];

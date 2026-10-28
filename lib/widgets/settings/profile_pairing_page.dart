@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
 import 'message_dialog.dart';
+import 'settings_choice_tile.dart';
 import 'setup_checklist_page.dart';
 import 'settings_page.dart';
 
@@ -414,27 +415,12 @@ class _ProfilePairingAppPageState extends State<ProfilePairingAppPage> {
         option.$1 == choice.mode && (option.$1 != "profile" || option.$2 == choice.chosenProfile);
 
     if (!mounted) return;
-    final picked = await showDialog<(String, String?, String)>(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: Text(l.pairingProfileInApp(choice.displayName, label)),
-        children: [
-          for (final option in options)
-            SimpleDialogOption(
-              child: TextButton(
-                autofocus: isCurrent(option),
-                onPressed: () => Navigator.of(context).pop(option),
-                child: Row(
-                  children: [
-                    Icon(isCurrent(option) ? Icons.radio_button_checked : Icons.radio_button_unchecked, size: 20),
-                    const SizedBox(width: 12),
-                    Flexible(child: Text(option.$3)),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
+    final picked = await showChoiceDialog<(String, String?, String)>(
+      context,
+      title: l.pairingProfileInApp(choice.displayName, label),
+      options: options,
+      isCurrent: isCurrent,
+      label: (option) => option.$3,
     );
     if (picked == null) return;
     await _channel.setProfilePairingChoice(_packageName, choice.hearthProfile, picked.$1, picked.$2);
