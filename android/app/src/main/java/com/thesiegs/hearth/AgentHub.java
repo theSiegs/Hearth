@@ -73,7 +73,9 @@ final class AgentHub {
     /** Program ids from an agent are offset by its serial, so they never match the owner's own rows. */
     private static final long ID_OFFSET = 1_000_000_000L;
 
-    private static Context sContext;
+    /** The application context, set by start; read on the connections' threads. */
+    private static volatile Context sContext;
+    /** Guarded by AgentHub.class. */
     private static boolean sStarted;
     private static final Map<Long, Connection> sConnections = new ConcurrentHashMap<>();
     /** When ensureAgent last started each profile's agent (elapsed realtime). */

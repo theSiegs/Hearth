@@ -42,6 +42,7 @@ final class HaAllowance {
     /** After a failed read (no entity yet, Home Assistant away), the next one waits this long. */
     private static final long RETRY_AFTER_FAILURE_MS = 10 * 60_000;
 
+    /** Guarded by HaAllowance.class. */
     private static long sNextReadAt;
 
     /** The integration's group of every app: its time up holds every app (but these). */

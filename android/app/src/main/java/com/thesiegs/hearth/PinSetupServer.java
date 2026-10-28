@@ -33,6 +33,7 @@ final class PinSetupServer {
     private static final int MAX_BODY_BYTES = 8 * 1024;
     private static final long LIFETIME_MS = 10 * 60 * 1000;
 
+    /** The page running now: start sets it, stop clears it. Both guarded by PinSetupServer.class. */
     private static PinSetupServer sCurrent;
     private static int sLastSaved = -1;
 

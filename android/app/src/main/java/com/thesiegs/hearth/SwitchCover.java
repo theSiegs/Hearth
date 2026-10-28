@@ -36,6 +36,10 @@ final class SwitchCover {
     private static View sCover;
     private static final Runnable sTimeout = SwitchCover::hideNow;
     private static android.os.Handler sHandler;
+    /**
+     * The accessibility service that put the card up (its overlay needs that service's window manager); held only
+     * while the card shows.
+     */
     private static Context sContext;
 
     private SwitchCover() {

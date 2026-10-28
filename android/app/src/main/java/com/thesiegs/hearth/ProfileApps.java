@@ -34,6 +34,7 @@ final class ProfileApps {
 
     private static final String TAG = "HearthProfileApps";
     private static final long CACHE_MS = 2_000;
+    // Guarded by ProfileApps.class (apps).
     private static UserHandle sCachedUser;
     private static Map<String, LauncherActivityInfo> sCachedApps;
     private static long sCachedAt;
