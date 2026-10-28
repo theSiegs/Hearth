@@ -131,6 +131,8 @@ final class HouseholdStore {
      */
     private volatile HouseholdLog saved;
     private boolean lost;
+    /** This TV wrote its own member entry and couldn't sign it: not tried again until the app starts again. */
+    private boolean unsignedSelfWritten;
 
     private HouseholdStore(Backing backing, SecretBox.Keys keys, HouseholdIdentity.Keys identities) {
         this.backing = backing;
@@ -455,15 +457,34 @@ final class HouseholdStore {
         }
     }
 
-    /** Writes this TV's own member entry when it's missing, renamed or a day old; true when it wrote. */
+    /**
+     * Writes this TV's own member entry when it's missing, renamed, a day old or unsigned; true when it wrote. An
+     * unsigned one (written by a build that didn't sign) is refused by a TV that joins later, which then never lists
+     * this TV; it is written again signed, once per start if signing fails here.
+     */
     boolean publishSelf(String name, long nowMs) {
-        if (!joined()) return false;
+        if (!joined() || log.isRemoved(HouseholdMembers.KIND, HouseholdBridge.SHARED, tvId)) return false;
+        boolean wroteAny = false;
+        if (!unsignedSelfWritten) {
+            // The Parent PIN this TV set before it signed: the TVs that join later refuse it unsigned too
+            for (HouseholdEntry e : log.all()) {
+                if (!e.tv.equals(tvId) || e.deleted || !e.sig.isEmpty() || !HouseholdMembers.signs(e.kind)) continue;
+                if (HouseholdMembers.KIND.equals(e.kind)) continue;
+                HouseholdEntry wrote = log.put(e.kind, e.profile, e.item, e.value, nowMs);
+                if (wrote == null) continue;
+                wroteAny = true;
+                if (wrote.sig.isEmpty()) unsignedSelfWritten = true;
+            }
+        }
         byte[] key = identity.publicKey();
-        if (!HouseholdMembers.selfNeedsWrite(log, tvId, name, key, nowMs)) return false;
         HouseholdEntry had = log.get(HouseholdMembers.KIND, HouseholdBridge.SHARED, tvId);
+        boolean unsigned = had != null && !had.deleted && had.sig.isEmpty() && !unsignedSelfWritten;
+        if (!unsigned && !HouseholdMembers.selfNeedsWrite(log, tvId, name, key, nowMs)) return wroteAny;
         String by = had == null ? tvId : HouseholdMembers.byOf(had.value, tvId);
-        return log.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, tvId, HouseholdMembers.value(name, key, by, true), nowMs)
-                != null;
+        HouseholdEntry wrote = log.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, tvId,
+                HouseholdMembers.value(name, key, by, true), nowMs);
+        if (wrote != null && wrote.sig.isEmpty()) unsignedSelfWritten = true;
+        return wroteAny || wrote != null;
     }
 
     /**

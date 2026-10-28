@@ -541,6 +541,10 @@ What a TV checks before it takes part or takes something, and what that guards a
   in with an entry of its own, newer than that TV's entry until the day's refresh, so a TV it lets in later would
   otherwise refuse the TV that made the household. From any other TV, or once that first exchange is done, the rule
   above holds.
+- **Entries a TV wrote before it signed.** A TV that finds its own member or Parent PIN entry unsigned (written by a
+  build from before signing, and taken then by TVs that didn't check) writes it again, signed, at once rather than at
+  the day's refresh: a TV that joins later refuses it unsigned, and so would never list that TV. If signing fails, it
+  tries again only once the app starts again. Each refused entry is logged with why.
 - **An entry refused** is still counted as seen, so it isn't sent again and again; it never changes anything.
 - **Sequences in another TV's name.** Entries travel through any member, so a TV takes entries written by TVs it isn't
   talking to, and counts each one's sequence in its version vector. A member could hand on an entry in another TV's

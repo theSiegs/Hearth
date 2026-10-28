@@ -69,6 +69,8 @@ final class HouseholdSync {
         final int pictures;
         /** The other TV wasn't listed here and proved an invitation (or the version 1 key): this TV listed it. */
         final boolean admitted;
+        /** The member, removal and Parent PIN entries refused, each with why. */
+        List<String> refusals = new ArrayList<>();
 
         Result(String peer, String peerName, int sent, int received, List<HouseholdEntry> applied, boolean peerRemoved,
                 boolean removedHere, int pictures, boolean admitted) {
@@ -134,6 +136,8 @@ final class HouseholdSync {
     private String peerName;
     /** This exchange listed the other TV ({@link #standing}). */
     private boolean admitted;
+    /** The member, removal and Parent PIN entries refused, each with why, for the log. */
+    private final List<String> refusals = new ArrayList<>();
 
     private HouseholdSync(InputStream in, OutputStream out, boolean initiator, String selfId, String householdId) {
         this.in = new DataInputStream(in);
@@ -317,7 +321,9 @@ final class HouseholdSync {
 
         // The TV that invited this one has listed it: the invitation is spent
         if (store.joinProofFor(peer) != null) store.joinProofUsed();
-        return new Result(peer, peerName, toSend.size(), received, applied, false, false, took, admitted);
+        Result result = new Result(peer, peerName, toSend.size(), received, applied, false, false, took, admitted);
+        result.refusals = refusals;
+        return result;
     }
 
     /**
@@ -342,7 +348,11 @@ final class HouseholdSync {
                 if (store.log().merge(entry, now)) applied.add(entry);
             }
         }
-        for (HouseholdEntry refused : checked) store.log().count(refused, now);
+        for (HouseholdEntry refused : checked) {
+            store.log().count(refused, now);
+            refusals.add(refused.kind + " " + refused.item + " by " + refused.tv + ": "
+                    + HouseholdMembers.refusal(store.log(), refused, fromInviter));
+        }
     }
 
     /**

@@ -117,7 +117,12 @@ final class HouseholdMembers {
      * takes the inviter's own entry for a TV the inviter didn't add (the one that let the inviter in).
      */
     static boolean accepts(HouseholdLog log, HouseholdEntry e, boolean fromInviter) {
-        if (!signs(e.kind)) return true;
+        return refusal(log, e, fromInviter) == null;
+    }
+
+    /** Why {@link #accepts(HouseholdLog, HouseholdEntry, boolean)} refuses {@code e}, for the log; null when it takes it. */
+    static String refusal(HouseholdLog log, HouseholdEntry e, boolean fromInviter) {
+        if (!signs(e.kind)) return null;
         byte[] writerKey = keyFor(log, e.tv);
         boolean writerSigns;
         if (writerKey != null) {
@@ -126,28 +131,34 @@ final class HouseholdMembers {
             writerKey = keyOf(e.value);
             writerSigns = true;
         } else {
-            return false;
+            if (!fromInviter) return "writer not listed";
+            boolean own = KIND.equals(e.kind) && e.item.equals(e.tv);
+            byte[] carried = own ? keyOf(e.value) : null;
+            return "writer not listed (own " + own + ", signed " + !e.sig.isEmpty() + ", says it signs "
+                    + (own && signingOf(e.value)) + ", held " + log.hasEntry(KIND, HouseholdBridge.SHARED, e.item)
+                    + ", key " + (carried != null && HouseholdIdentity.tvIdOf(carried).equals(e.item)) + ")";
         }
         if (e.sig.isEmpty()) {
-            if (writerSigns || (KIND.equals(e.kind) && !e.deleted && signingOf(e.value))) return false;
+            if (writerSigns) return "unsigned, writer signs";
+            if (KIND.equals(e.kind) && !e.deleted && signingOf(e.value)) return "unsigned, says it signs";
         } else {
             byte[] sig;
             try {
                 sig = Base64.getDecoder().decode(e.sig);
             } catch (IllegalArgumentException bad) {
-                return false;
+                return "bad signature";
             }
-            if (!HouseholdIdentity.verify(writerKey, e.signedBytes(), sig)) return false;
+            if (!HouseholdIdentity.verify(writerKey, e.signedBytes(), sig)) return "bad signature";
         }
-        if (!KIND.equals(e.kind) || e.deleted) return true;
-        if (!HouseholdBridge.SHARED.equals(e.profile)) return false;
+        if (!KIND.equals(e.kind) || e.deleted) return null;
+        if (!HouseholdBridge.SHARED.equals(e.profile)) return "not shared";
         byte[] key = keyOf(e.value);
-        if (key == null || !HouseholdIdentity.tvIdOf(key).equals(e.item)) return false;
+        if (key == null || !HouseholdIdentity.tvIdOf(key).equals(e.item)) return "key not the TV's";
         // From the TV that let this one in, also its copy of a TV it didn't add: the one it was let in by, which it
         // listed when it joined, newer than that TV's own entry until the day's refresh
-        if (!fromInviter && !e.item.equals(e.tv) && !e.tv.equals(byOf(e.value, ""))) return false;
+        if (!fromInviter && !e.item.equals(e.tv) && !e.tv.equals(byOf(e.value, ""))) return "writer didn't add it";
         HouseholdEntry had = log.get(KIND, HouseholdBridge.SHARED, e.item);
-        return had == null || !signingOf(had.value) || signingOf(e.value);
+        return had == null || !signingOf(had.value) || signingOf(e.value) ? null : "takes back signing";
     }
 
     /**

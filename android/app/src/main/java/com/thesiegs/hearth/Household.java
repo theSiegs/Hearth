@@ -670,6 +670,7 @@ final class Household {
         sLastResult = "sent " + result.sent + ", took " + result.received;
         Log.i(TAG, "Synced " + how + ": sent " + result.sent + ", took " + result.received + ", changed "
                 + result.applied.size() + (result.admitted ? ", and listed that TV" : ""));
+        for (String refused : result.refusals) Log.i(TAG, "Refused " + refused);
         // What came, or the TV just listed, goes on to the household's other TVs on now, rather than at the next
         // change or check: a TV that just joined is refused by the others until its entry reaches them
         if ((result.admitted || !result.applied.isEmpty()) && othersOnNow(result.peer)) syncSoon();

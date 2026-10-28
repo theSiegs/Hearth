@@ -266,6 +266,44 @@ public class HouseholdSigningTest {
     }
 
     @Test
+    public void aTvSignsAgainItsOwnEntriesWrittenUnsignedSoATvThatJoinsLaterListsIt() throws Exception {
+        HouseholdTvs.Tv a = new HouseholdTvs.Tv();
+        a.store.create("Office", T0);
+        a.store.log().put(HouseholdBridge.PARENT_PIN, HouseholdBridge.SHARED, "", "hash", T0 + 1);
+        HouseholdTvs.Tv c = new HouseholdTvs.Tv();
+        assertTrue(c.store.join(a.store.invite("Office", T0 + 10), "Attic", T0 + 10));
+        HouseholdSyncExchangeTest.exchange(c.store, a.store, null, T0 + 100);
+        // a writes its entry again (renamed), newer than the one c wrote for it when it joined
+        assertTrue(a.store.publishSelf("Study", T0 + 150));
+        HouseholdSyncExchangeTest.exchange(c.store, a.store, null, T0 + 160);
+        // As a build from before signing left them: a's member entry says it signs, but neither carries a signature
+        java.util.List<HouseholdEntry> entries = new java.util.ArrayList<>();
+        for (HouseholdEntry e : a.store.log().all()) {
+            entries.add(e.tv.equals(a.store.tvId()) && HouseholdMembers.signs(e.kind) ? e.signed("") : e);
+        }
+        a.store.log().restore(entries, a.store.log().vector());
+        c.store.log().restore(c.store.log().all().stream()
+                .map(e -> e.tv.equals(a.store.tvId()) && HouseholdMembers.signs(e.kind) ? e.signed("") : e)
+                .collect(java.util.stream.Collectors.toList()), c.store.log().vector());
+        // A TV let in by c refuses them as they are
+        HouseholdTvs.Tv early = new HouseholdTvs.Tv();
+        assertTrue(early.store.join(c.store.invite("Attic", T0 + 200), "Hall", T0 + 200));
+        HouseholdSyncExchangeTest.exchange(early.store, c.store, null, T0 + 300);
+        assertEquals(HouseholdMembers.Standing.UNKNOWN, HouseholdMembers.standing(early.store.log(), a.store.tvId()));
+        // a signs them again (not waiting for the day's refresh), and c takes them from a
+        assertTrue(a.store.publishSelf("Office", T0 + 400));
+        assertFalse(a.store.log().get(HouseholdMembers.KIND, HouseholdBridge.SHARED, a.store.tvId()).sig.isEmpty());
+        assertFalse(a.store.log().get(HouseholdBridge.PARENT_PIN, HouseholdBridge.SHARED, "").sig.isEmpty());
+        assertFalse(a.store.publishSelf("Office", T0 + 450));
+        HouseholdSyncExchangeTest.exchange(c.store, a.store, null, T0 + 500);
+        HouseholdTvs.Tv n = new HouseholdTvs.Tv();
+        assertTrue(n.store.join(c.store.invite("Attic", T0 + 600), "Kitchen", T0 + 600));
+        HouseholdSyncExchangeTest.exchange(n.store, c.store, null, T0 + 700);
+        assertEquals(HouseholdMembers.Standing.MEMBER, HouseholdMembers.standing(n.store.log(), a.store.tvId()));
+        assertEquals("hash", n.store.log().get(HouseholdBridge.PARENT_PIN, HouseholdBridge.SHARED, "").value);
+    }
+
+    @Test
     public void aTvLetInByATvThatJoinedListsTheTvThatLetThatOneIn() throws Exception {
         HouseholdTvs.Tv a = new HouseholdTvs.Tv();
         a.store.create("Office", T0);
