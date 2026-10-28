@@ -5,9 +5,12 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Base64;
 import android.util.Log;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -19,6 +22,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.List;
 
 /**
  * Hearth's side of the Hearth integration for Home Assistant (custom_components/hearth, see
@@ -34,6 +38,9 @@ final class HaIntegration {
     static final String HEADER_SECRET = "X-Hearth-Secret";
     static final String HEADER_NONCE = "X-Hearth-Nonce";
     private static final int MAX_ANSWER_BYTES = 256 * 1024;
+    /** The integration takes at most 50 started videos a post, and 10 posts a minute */
+    static final int EVENTS_PER_POST = 50;
+    private static final int MAX_EVENT_POSTS = 4;
     private static final String REFUSED_SINCE_KEY = "ha_integration_refused_since";
     // Refusals for this long, not one: Home Assistant answers 401 for a moment while it restarts or reloads
     static final long UNPAIR_AFTER_REFUSALS_MS = 10 * 60_000L;
@@ -169,7 +176,56 @@ final class HaIntegration {
     /** Forgets the pairing on this TV (Home Assistant keeps the device until it's deleted there). */
     static void unpair(Context context) {
         setSecret(context, null);
+        forgetHomeAssistantBlocks(context);
         HaBridgeService.sync(context);
+    }
+
+    /** A TV that left Home Assistant no longer holds kids to the YouTube blocks set there (Hearth's own stay). */
+    private static void forgetHomeAssistantBlocks(Context context) {
+        ParentBlocks.clearHomeAssistant(context);
+        new Handler(Looper.getMainLooper()).post(() -> ProfileProvider.notifyChanged(context));
+    }
+
+    static String eventsUrl(Context context) {
+        String base = HaConfig.baseUrl(context);
+        return base == null ? null : base + "/api/hearth/device/" + deviceId(context) + "/events";
+    }
+
+    /**
+     * Sends Home Assistant the videos kids profiles started that it hasn't had (blocking; after a status post), up to
+     * {@link #EVENTS_PER_POST} a post and a few posts a time; what is left goes with the next status. Entries more
+     * than a day old stay in Hearth's log only. Home Assistant drops a profile mapped to no one, and a resend is
+     * harmless, so a profile's mark moves on with every answered post.
+     */
+    static void sendStartedLog(Context context) {
+        String url = eventsUrl(context);
+        String secret = secret(context);
+        if (url == null || secret == null) return;
+        long now = System.currentTimeMillis();
+        int posts = 0;
+        for (String profile : StartedLog.profiles(context)) {
+            while (posts < MAX_EVENT_POSTS) {
+                List<StartedLog.Entry> batch = StartedLog.unsent(StartedLog.read(context, profile),
+                        StartedLog.sentUpTo(context, profile), now, EVENTS_PER_POST);
+                if (batch.isEmpty()) break;
+                JSONArray events = new JSONArray();
+                try {
+                    for (StartedLog.Entry entry : batch) {
+                        events.put(entry.toJson().put("type", "video_started").put("profile_id", profile));
+                    }
+                    posts++;
+                    Answer answer = request(url, "POST", new JSONObject().put("events", events), null, secret);
+                    if (answer.code != 200) {
+                        // An integration without the endpoint (404), or busy: the next status tries again
+                        Log.d(TAG, "Videos started not sent: Home Assistant answered " + answer.code);
+                        return;
+                    }
+                } catch (JSONException e) {
+                    return;
+                }
+                StartedLog.setSentUpTo(context, profile, batch.get(batch.size() - 1).timeMs);
+            }
+        }
     }
 
     /** Posts the status (blocking); 401s for 10 minutes mean Home Assistant removed this TV, and the TV is unpaired. */
@@ -191,6 +247,7 @@ final class HaIntegration {
                 Log.w(TAG, "Home Assistant no longer knows this TV: unpaired");
                 prefs.edit().remove(REFUSED_SINCE_KEY).remove(REFUSED_LAST_KEY).apply();
                 setSecret(context, null);
+                forgetHomeAssistantBlocks(context);
             } else {
                 prefs.edit().putLong(REFUSED_SINCE_KEY, since).putLong(REFUSED_LAST_KEY, now).apply();
             }

@@ -193,10 +193,18 @@ class WatchLog:
         self.changed()
         return True
 
-    def blocks_document(self, person: str) -> dict[str, list[str]]:
-        """What a TV is told for the person's profiles: the three lists, in the order they were blocked."""
+    def blocks_document(self, person: str) -> dict[str, Any]:
+        """What a TV is told for the person's profiles: the three lists, in the order they were blocked, and what to
+        show for a video or channel in Hearth's settings (HearthTube is handed the lists only)."""
         mine = self.blocks.get(person, {})
-        return {kind: list(mine.get(kind, {})) for kind in KINDS}
+        document: dict[str, Any] = {kind: list(mine.get(kind, {})) for kind in KINDS}
+        document["labels"] = {
+            item: info["label"]
+            for kind in (VIDEOS, CHANNELS)
+            for item, info in mine.get(kind, {}).items()
+            if info.get("label")
+        }
+        return document
 
     def blocked(self, person: str) -> dict[str, list[dict[str, Any]]]:
         """The person's lists with labels and when, for services and the dashboard."""

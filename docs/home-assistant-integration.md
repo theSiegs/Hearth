@@ -90,6 +90,29 @@ it (`screen`, `app`, `app_package`, `media_*`, `day`, `seconds_today`, `app_seco
 The integration keeps only known fields, cleaned, and keeps the last status across restarts. **Connected** turns off
 after 15 minutes without a post; the device's other entities show unavailable then.
 
+### A kids profile's YouTube
+
+What a kids profile started in HearthTube comes up, and what a parent blocks here goes down to it (the design is
+HearthTube's `docs/parent-channel.md`). Home Assistant is the second place for it: Hearth keeps the log and its own
+lists without it (Settings > Family > Kids profiles > the kid).
+
+- **Up**: after each status post, a TV posts the started videos Home Assistant hasn't had to
+  `/api/hearth/device/<id>/events` (see [The device's side of the API](#the-devices-side-of-the-api)), only from the
+  last day. They're kept per person (a kid on two TVs is one log, the newest 2,000), and each new one fires
+  `hearth_video_started` (person, time, video_id, title, channel, channel_id, url, device).
+- **Read**: the person's **Last video started** sensor (its attributes hold the newest 50 and the blocked lists, kept
+  out of history); `hearth.get_watch_log` (person, days, limit) answers the entries and lists; `hearth.watch_digest`
+  (person or everyone, days, default 7) answers one document per kid: every entry, counts per channel and per day,
+  what was blocked in that time, and a readable `summary`.
+- **Weekly digest**: the blueprint `blueprints/automation/hearth/weekly_watch_digest.yaml` sends the summary (to the
+  parents' phones, say) and hands the whole document, as JSON, to a reviewer (a conversation agent, say).
+- **Down**: `hearth.block_video` (an id or a YouTube link), `hearth.block_channel` (a `UC...` id or a `/channel/` link;
+  a handle can't be looked up here), `hearth.block_word` (matched against titles only, as HearthTube's own words are),
+  and their `unblock_` twins; optional `label` for what to show. Each profile's state document carries
+  `youtube_blocks` `{"videos", "channels", "words", "labels"}`; the TV takes it with its next status (within 2 minutes
+  while something plays, 10 otherwise) and hands HearthTube its own lists and these together. The kid can't undo
+  them; they're taken back here only. A TV that leaves Home Assistant forgets these lists (Hearth's own stay).
+
 ### Requests and events from a device (later)
 
 Posted to the same device endpoint family, each turned into a Home Assistant event and, where it fits, a
@@ -388,7 +411,11 @@ Per household: **Playing together** (binary sensor), **Shared budgets** (their m
 Events: `hearth_budget_reached` (person, group or title), `hearth_more_time_requested` (person, device, group or
 title), `hearth_more_time_answered`, `hearth_playing_together` (title, people, started or ended).
 
-Services: `hearth.add_bonus`, `hearth.set_budget`, `hearth.notify`, `hearth.pause`, `hearth.resume`.
+Per person with a TV profile: **Last video started** (see [A kids profile's YouTube](#a-kids-profiles-youtube)).
+
+Services: `hearth.add_bonus`, `hearth.set_budget`, `hearth.notify`, `hearth.pause`, `hearth.resume`;
+`hearth.get_watch_log`, `hearth.watch_digest`, `hearth.block_video`, `hearth.block_channel`, `hearth.block_word` and
+their `unblock_` twins. Event `hearth_video_started`.
 
 ## The device's side of the API
 
@@ -418,6 +445,14 @@ Assistant's IP ban. The 200 answer carries the device's state document, `{"ok": 
 [What a device gets](#what-a-device-gets); for now only `groups` per profile or person, and `version`). A device may
 also send `app_categories`, `{"<package>": "game" | "video" | ...}` (Android's category, lower case), which puts its
 apps in Video and Games.
+
+**Events** (a TV only). `POST /api/hearth/device/<device_id>/events` with the same header and
+`{"events": [...]}`, at most 50, each `{"type": "video_started", "profile_id", "t" (ms), "v" (video id), "title",
+"ch" (channel name), "cid" (channel id)}`. `profile_id` is the profile's user (`user:10`), which matches a mapping of
+that user with its account (`user:10:sam`) when there is only one. 200 `{"ok": true, "added": n}` once all are taken:
+an entry of a profile mapped to no one, or one that isn't valid, is dropped, and a resend is harmless, so the TV marks
+them all sent. 403 `not_a_tv` from a phone; 429 `too_often` past 10 posts a minute; 400 for more than 50 or a
+malformed body.
 
 **Entities**, per device, by kind as in [Kinds](#kinds). Screen time today is in seconds (shown in minutes), with
 per-app, playing and (on a TV) per-profile attributes kept out of history. All but Connected are unavailable until the
@@ -463,8 +498,8 @@ device removes it from the household.
   expiry), entities by kind, a removed device refused, oversized or malformed posts, rate limits, restart persistence,
   a device going quiet. Later: sources and counting-once rules, budgets and events, approvals, the mailbox's quota.
 - Running them: Home Assistant's test tools need Linux. On Windows, a container: `docker run --rm -v <repo>:/src:ro
-  python:3.14-slim`, then `pip install pytest-homeassistant-custom-component`, copy `custom_components` and
-  `ha_tests` out of `/src`, and run `python -m pytest` in `ha_tests`.
+  python:3.14-slim`, then `pip install pytest-homeassistant-custom-component`, copy `custom_components`, `ha_tests`
+  and `blueprints` out of `/src`, and run `python -m pytest` in `ha_tests`.
 - One status fixture shared with Hearth's own tests, so the two sides can't drift.
 - Manual: a real Home Assistant, a real TV, a phone, approval end to end.
 

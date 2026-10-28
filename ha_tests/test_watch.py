@@ -116,7 +116,7 @@ async def test_blocks_go_down_in_the_state_document(
 ) -> None:
     client, secret = await _household_with_sam(hass, hass_client_no_auth)
     body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
-    assert body["state"]["profiles"][KID]["youtube_blocks"] == {"videos": [], "channels": [], "words": []}
+    assert body["state"]["profiles"][KID]["youtube_blocks"] == {"videos": [], "channels": [], "words": [], "labels": {}}
     version = body["state"]["version"]
 
     await hass.services.async_call(
@@ -132,6 +132,7 @@ async def test_blocks_go_down_in_the_state_document(
         "videos": [VIDEO],
         "channels": [CHANNEL],
         "words": ["prank"],
+        "labels": {VIDEO: "A video"},
     }
     assert body["state"]["version"] != version
 
@@ -189,3 +190,41 @@ async def test_the_log_survives_a_restart(hass: HomeAssistant, hass_client_no_au
         DOMAIN, "get_watch_log", {"person": "person.sam"}, blocking=True, return_response=True
     )
     assert log["blocked"]["words"][0]["word"] == "prank"
+
+
+async def test_the_weekly_digest_blueprint(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
+    """The blueprint (blueprints/automation/hearth) loads, and run sends the summary."""
+    import shutil
+    from pathlib import Path
+
+    from homeassistant.setup import async_setup_component
+
+    assert await async_setup_component(hass, "persistent_notification", {})
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    await _events(client, secret, [_started(int(time.time() * 1000))])
+    source = Path(__file__).resolve().parent.parent / "blueprints" / "automation" / "hearth" / "weekly_watch_digest.yaml"
+    target = Path(hass.config.path("blueprints", "automation", "hearth"))
+    await hass.async_add_executor_job(lambda: (target.mkdir(parents=True, exist_ok=True), shutil.copy(source, target)))
+    assert await async_setup_component(
+        hass,
+        "automation",
+        {
+            "automation": {
+                "id": "digest",
+                "alias": "Digest",
+                "use_blueprint": {"path": "hearth/weekly_watch_digest.yaml", "input": {}},
+            }
+        },
+    )
+    await hass.async_block_till_done()
+    assert hass.states.get("automation.digest").state == "on"
+    await hass.services.async_call(
+        "automation", "trigger", {"entity_id": "automation.digest", "skip_condition": True}, blocking=True
+    )
+    await hass.async_block_till_done()
+    from homeassistant.components import persistent_notification
+
+    shown = persistent_notification._async_get_or_create_notifications(hass)
+    assert any("1 YouTube video started" in n["message"] for n in shown.values())
+    # Its weekly trigger goes with it
+    await hass.services.async_call("automation", "turn_off", {"entity_id": "automation.digest"}, blocking=True)

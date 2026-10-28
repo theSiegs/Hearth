@@ -440,8 +440,13 @@ final class HaStatusReporter {
         HaIntegration.Answer answer = HaIntegration.postStatus(mContext, body);
         Log.d(TAG, "Status sent, the Hearth integration answered " + answer.code);
         if (answer.code == 200 && answer.body != null) {
-            HaAllowance.fromDocument(mContext, answer.body.optJSONObject("state"));
+            JSONObject state = answer.body.optJSONObject("state");
+            HaAllowance.fromDocument(mContext, state);
+            // A parent's YouTube blocks set in Home Assistant, for HearthTube in the kids profiles
+            ParentBlocks.applyDocument(mContext, state);
             mHandler.post(() -> ProfileProvider.notifyChanged(mContext));
+            // And up: what kids profiles started since
+            HaIntegration.sendStartedLog(mContext);
             return;
         }
         // Retry with the next change or heartbeat

@@ -9,6 +9,8 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * The videos a kids profile started in HearthTube (provider contract 8, {@code report_started}), kept per profile for
@@ -20,6 +22,10 @@ final class StartedLog {
     private static final String PREFS = "ltv_started_log";
     static final int MAX = 2000;
     private static final int FIELD_MAX = 300;
+    /** Home Assistant's mark per profile: the newest time it has had */
+    private static final String SENT_PREFS = "ltv_started_log_sent";
+    /** Entries Home Assistant couldn't be sent for this long aren't sent any more */
+    static final long SEND_UP_WITHIN_MS = 24 * 60 * 60_000L;
 
     private StartedLog() {
     }
@@ -87,6 +93,35 @@ final class StartedLog {
         if (!add(entries, new Entry(timeMs, videoId, title, channel, channelId))) return true;
         write(context, profile, entries);
         return true;
+    }
+
+    /** The profiles that have a log (their user keys). */
+    static synchronized Set<String> profiles(Context context) {
+        return new TreeSet<>(prefs(context).getAll().keySet());
+    }
+
+    /**
+     * What to send Home Assistant next from an oldest-first list: the entries after {@code sentUpTo} (the newest time
+     * it has had), at most {@code max}, and none older than {@link #SEND_UP_WITHIN_MS}: what can't be posted for a day
+     * stays in Hearth's log only.
+     */
+    static List<Entry> unsent(List<Entry> entries, long sentUpTo, long now, int max) {
+        long after = Math.max(sentUpTo, now - SEND_UP_WITHIN_MS);
+        List<Entry> out = new ArrayList<>();
+        for (Entry entry : entries) {
+            if (out.size() >= max) break;
+            if (entry.timeMs > after) out.add(entry);
+        }
+        return out;
+    }
+
+    /** The newest time Home Assistant has had of the profile's log (0: none yet). */
+    static long sentUpTo(Context context, String profile) {
+        return context.getSharedPreferences(SENT_PREFS, Context.MODE_PRIVATE).getLong(profile, 0);
+    }
+
+    static void setSentUpTo(Context context, String profile, long timeMs) {
+        context.getSharedPreferences(SENT_PREFS, Context.MODE_PRIVATE).edit().putLong(profile, timeMs).apply();
     }
 
     /** The profile's entries, oldest first. */

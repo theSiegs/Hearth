@@ -1,0 +1,79 @@
+blueprint:
+  name: Hearth weekly YouTube digest
+  description: >-
+    Once a week, what each kid started in HearthTube (in a kids profile on a Hearth TV): a short summary for the
+    parents' phones, and the whole document (every video, counts per channel and per day, what was blocked) for a
+    reviewer, such as a conversation agent. Uses hearth.watch_digest; nothing is sent per video.
+  domain: automation
+  source_url: https://github.com/theSiegs/Hearth/blob/master/blueprints/automation/hearth/weekly_watch_digest.yaml
+  input:
+    weekdays:
+      name: Day
+      description: The day (or days) to send it.
+      default: [sun]
+      selector:
+        select:
+          multiple: true
+          options:
+            - { label: Monday, value: mon }
+            - { label: Tuesday, value: tue }
+            - { label: Wednesday, value: wed }
+            - { label: Thursday, value: thu }
+            - { label: Friday, value: fri }
+            - { label: Saturday, value: sat }
+            - { label: Sunday, value: sun }
+    at:
+      name: Time
+      default: "18:00:00"
+      selector:
+        time:
+    days:
+      name: Days back
+      description: How many days the digest covers.
+      default: 7
+      selector:
+        number:
+          min: 1
+          max: 31
+          mode: box
+    notify:
+      name: Send the summary
+      description: >-
+        What to do with the readable summary, in the variable digest_summary (for example a notify action to the
+        parents' phones, with message "{{ digest_summary }}").
+      default:
+        - action: persistent_notification.create
+          data:
+            title: YouTube this week
+            message: "{{ digest_summary }}"
+      selector:
+        action:
+    review:
+      name: Review the whole document
+      description: >-
+        Optional: what to do with the whole digest, in the variable digest_json (for example conversation.process
+        with an agent asked to look for anything unsuitable for the kids' ages).
+      default: []
+      selector:
+        action:
+
+mode: single
+
+triggers:
+  - trigger: time
+    at: !input at
+
+conditions:
+  - condition: time
+    weekday: !input weekdays
+
+actions:
+  - action: hearth.watch_digest
+    data:
+      days: !input days
+    response_variable: digest
+  - variables:
+      digest_summary: "{{ digest.summary }}"
+      digest_json: "{{ digest | to_json }}"
+  - sequence: !input notify
+  - sequence: !input review
