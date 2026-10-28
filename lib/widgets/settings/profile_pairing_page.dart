@@ -93,50 +93,19 @@ Future<bool> editProfilePin(
 }) async {
   final l = AppLocalizations.of(context)!;
   final channel = context.read<FLauncherChannel>();
-  if (!await requireParentPin(context)) return false;
-  if (!context.mounted) return false;
-  if (saved) {
-    final remove = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l.profilePinEnterTitle(appProfile, appLabel)),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(l.parentPinRemove)),
-          TextButton(
-              autofocus: true, onPressed: () => Navigator.of(context).pop(false), child: Text(l.parentPinChange)),
-        ],
-      ),
-    );
-    if (remove == null || !context.mounted) return false;
-    if (remove) {
-      await channel.removeProfilePin(packageName, appProfile);
-      return true;
-    }
-  }
-  if (!await confirmPinConsent(context, appLabel)) return false;
-  if (!context.mounted) return false;
-  final first = await showDialog<String>(
-    context: context,
-    builder: (_) => ParentPinDialog(
-      title: l.profilePinEnterTitle(appProfile, appLabel),
-      subtitle: l.profilePinEnterSubtitle(appLabel),
-      length: ProfilePairingAppPage.pinLength,
-    ),
+  return _editPin(
+    context,
+    appLabel: appLabel,
+    saved: saved,
+    title: l.profilePinEnterTitle(appProfile, appLabel),
+    subtitle: l.profilePinEnterSubtitle(appLabel),
+    failedTitle: l.profilePinRow,
+    remove: () => channel.removeProfilePin(packageName, appProfile),
+    save: (pin) async {
+      await beforeSave?.call();
+      return channel.saveProfilePin(packageName, appProfile, pin);
+    },
   );
-  if (first == null || !context.mounted) return false;
-  final second = await showDialog<String>(
-    context: context,
-    builder: (_) => ParentPinDialog(
-      title: l.parentPinConfirm,
-      verify: (pin) => pin == first,
-      length: ProfilePairingAppPage.pinLength,
-    ),
-  );
-  if (second == null || !context.mounted) return false;
-  await beforeSave?.call();
-  final ok = await channel.saveProfilePin(packageName, appProfile, first);
-  if (!ok && context.mounted) await showMessageDialog(context, title: l.profilePinRow, message: l.profilePinSaveFailed);
-  return true;
 }
 
 /// An app's account-wide content PIN (Paramount+'s, asked for when a title starts): the parent PIN first, then the
@@ -150,11 +119,35 @@ Future<bool> editContentPin(
 }) async {
   final l = AppLocalizations.of(context)!;
   final channel = context.read<FLauncherChannel>();
+  final title = l.contentPinRow(appLabel);
+  return _editPin(
+    context,
+    appLabel: appLabel,
+    saved: saved,
+    title: title,
+    subtitle: l.contentPinEnterSubtitle(appLabel),
+    failedTitle: title,
+    remove: () => channel.removeContentPin(packageName),
+    save: (pin) => channel.saveContentPin(packageName, pin),
+  );
+}
+
+/// What both PIN editors do: the parent PIN, Change or Remove for a saved PIN, consent, then the PIN twice.
+Future<bool> _editPin(
+  BuildContext context, {
+  required String appLabel,
+  required bool saved,
+  required String title,
+  required String subtitle,
+  required String failedTitle,
+  required Future<void> Function() remove,
+  required Future<bool> Function(String pin) save,
+}) async {
+  final l = AppLocalizations.of(context)!;
   if (!await requireParentPin(context)) return false;
   if (!context.mounted) return false;
-  final title = l.contentPinRow(appLabel);
   if (saved) {
-    final remove = await showDialog<bool>(
+    final removing = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title),
@@ -165,9 +158,9 @@ Future<bool> editContentPin(
         ],
       ),
     );
-    if (remove == null || !context.mounted) return false;
-    if (remove) {
-      await channel.removeContentPin(packageName);
+    if (removing == null || !context.mounted) return false;
+    if (removing) {
+      await remove();
       return true;
     }
   }
@@ -177,7 +170,7 @@ Future<bool> editContentPin(
     context: context,
     builder: (_) => ParentPinDialog(
       title: title,
-      subtitle: l.contentPinEnterSubtitle(appLabel),
+      subtitle: subtitle,
       length: ProfilePairingAppPage.pinLength,
     ),
   );
@@ -191,8 +184,8 @@ Future<bool> editContentPin(
     ),
   );
   if (second == null || !context.mounted) return false;
-  final ok = await channel.saveContentPin(packageName, first);
-  if (!ok && context.mounted) await showMessageDialog(context, title: title, message: l.profilePinSaveFailed);
+  final ok = await save(first);
+  if (!ok && context.mounted) await showMessageDialog(context, title: failedTitle, message: l.profilePinSaveFailed);
   return true;
 }
 
