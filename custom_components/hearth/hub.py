@@ -25,6 +25,7 @@ from .const import (
     CONF_SECRET_HASH,
     CONF_SW_VERSION,
     CONNECTED_WITHIN,
+    MAX_EVENT_POSTS,
     MAX_PENDING_PAIRINGS,
     MAX_STATUS_POSTS,
     PAIRING_EXPIRES,
@@ -93,6 +94,7 @@ class DeviceState:
     status: dict[str, Any] | None = None
     seen: datetime | None = None
     posts: list[datetime] = field(default_factory=list)
+    event_posts: list[datetime] = field(default_factory=list)
 
 
 class HearthHub:
@@ -152,6 +154,16 @@ class HearthHub:
         if len(state.posts) >= MAX_STATUS_POSTS:
             return True
         state.posts.append(now)
+        return False
+
+    def too_many_events(self, device_id: str) -> bool:
+        """The same for its events posts, counted on their own."""
+        now = dt_util.utcnow()
+        state = self.state(device_id)
+        state.event_posts = [t for t in state.event_posts if now - t < STATUS_WINDOW]
+        if len(state.event_posts) >= MAX_EVENT_POSTS:
+            return True
+        state.event_posts.append(now)
         return False
 
     @callback

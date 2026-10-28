@@ -11,7 +11,7 @@ import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceCall, callback
+from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
@@ -20,12 +20,14 @@ from homeassistant.helpers.event import (
     async_track_time_change,
     async_track_time_interval,
 )
+from homeassistant.util import dt as dt_util
 
 from .api import async_register_views
 from .apps import ACTION_PREFIX
 from .const import DOMAIN
 from .hub import HearthHub
 from .limits import DAY_TYPES
+from .watch import CHANNELS, MAX_BLOCKS, MAX_LOG, VIDEOS, WORDS, channel_id_of, clean_word, video_id_of
 
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.NUMBER, Platform.SENSOR]
 
@@ -52,6 +54,19 @@ SET_BUDGET_SCHEMA = vol.Schema(
         vol.Required("minutes"): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=0, max=1440))),
         # School days and other days (weekday and weekend are their older names)
         vol.Optional("days", default="both"): vol.In(["school_days", "other_days", "weekday", "weekend", "both"]),
+    }
+)
+GET_WATCH_LOG_SCHEMA = vol.Schema(
+    {
+        vol.Required("person"): cv.entity_id,
+        vol.Optional("days"): vol.All(vol.Coerce(int), vol.Range(min=1, max=366)),
+        vol.Optional("limit", default=200): vol.All(vol.Coerce(int), vol.Range(min=1, max=MAX_LOG)),
+    }
+)
+WATCH_DIGEST_SCHEMA = vol.Schema(
+    {
+        vol.Optional("person"): cv.entity_id,
+        vol.Optional("days", default=7): vol.All(vol.Coerce(int), vol.Range(min=1, max=31)),
     }
 )
 
@@ -83,7 +98,84 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     hass.services.async_register(DOMAIN, SERVICE_ADD_BONUS, add_bonus, schema=ADD_BONUS_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_SET_BUDGET, set_budget, schema=SET_BUDGET_SCHEMA)
+    _register_watch_services(hass)
     return True
+
+
+def _register_watch_services(hass: HomeAssistant) -> None:
+    """A kids profile's YouTube: its started videos, the weekly digest, and the parent's blocks (watch.py)."""
+
+    def household_of(person: str | None):
+        entries = hass.config_entries.async_loaded_entries(DOMAIN)
+        if not entries:
+            raise ServiceValidationError("Hearth isn't set up")
+        household = entries[0].runtime_data.household
+        if person is not None and person not in household.youtube_people():
+            raise ServiceValidationError(f"{person} has no TV profile in Hearth")
+        return household
+
+    @callback
+    def get_watch_log(call: ServiceCall) -> ServiceResponse:
+        person = call.data["person"]
+        household = household_of(person)
+        days = call.data.get("days")
+        since = dt_util.now() - timedelta(days=days) if days else None
+        return {
+            "person": person,
+            "entries": household.watch.recent(person, call.data["limit"], since),
+            "blocked": household.watch.blocked(person),
+        }
+
+    @callback
+    def watch_digest(call: ServiceCall) -> ServiceResponse:
+        person = call.data.get("person")
+        household = household_of(person)
+        people = [person] if person else household.youtube_people()
+        digests = [household.watch.digest(p, household.person_name(p), call.data["days"]) for p in people]
+        return {
+            "days": call.data["days"],
+            "people": digests,
+            "summary": "\n\n".join(d["summary"] for d in digests) or "No one has a TV profile in Hearth.",
+        }
+
+    def blocking(kind: str, field: str, parse, add: bool):
+        @callback
+        def handle(call: ServiceCall) -> None:
+            household = household_of(call.data["person"])
+            item = parse(call.data[field])
+            if item is None:
+                raise ServiceValidationError(f"Not a YouTube {field.replace('_', ' ')}: {call.data[field]}")
+            if add:
+                if not household.watch.block(call.data["person"], kind, item, call.data.get("label")):
+                    if len(household.watch.blocked(call.data["person"])[kind]) >= MAX_BLOCKS:
+                        raise ServiceValidationError(f"The list is full ({MAX_BLOCKS})")
+            else:
+                household.watch.unblock(call.data["person"], kind, item)
+
+        return handle
+
+    hass.services.async_register(
+        DOMAIN, "get_watch_log", get_watch_log, schema=GET_WATCH_LOG_SCHEMA, supports_response=SupportsResponse.ONLY
+    )
+    hass.services.async_register(
+        DOMAIN, "watch_digest", watch_digest, schema=WATCH_DIGEST_SCHEMA, supports_response=SupportsResponse.ONLY
+    )
+    for kind, field, parse in (
+        (VIDEOS, "video", video_id_of),
+        (CHANNELS, "channel", channel_id_of),
+        (WORDS, "word", clean_word),
+    ):
+        name = kind.rstrip("s")
+        schema = vol.Schema(
+            {
+                vol.Required("person"): cv.entity_id,
+                vol.Required(field): cv.string,
+                **({vol.Optional("label"): cv.string} if kind != WORDS else {}),
+            }
+        )
+        unschema = vol.Schema({vol.Required("person"): cv.entity_id, vol.Required(field): cv.string})
+        hass.services.async_register(DOMAIN, f"block_{name}", blocking(kind, field, parse, True), schema=schema)
+        hass.services.async_register(DOMAIN, f"unblock_{name}", blocking(kind, field, parse, False), schema=unschema)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bool:

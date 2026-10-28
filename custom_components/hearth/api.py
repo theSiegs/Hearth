@@ -20,12 +20,14 @@ from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 from homeassistant.util.network import is_local
 
 from .const import DOMAIN, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
 from .hub import HearthHub, collect_secret, find_pairing
 from .notifications import notify_pairing
 from .status import clean_status, text
+from .watch import MAX_EVENTS, clean_started
 
 HEADER_SECRET = "X-Hearth-Secret"
 HEADER_NONCE = "X-Hearth-Nonce"
@@ -173,6 +175,47 @@ class StatusView(HomeAssistantView):
         return web.json_response({"ok": True, "state": hub.household.document_for(device_id)})
 
 
+class EventsView(HomeAssistantView):
+    """POST /api/hearth/device/{device_id}/events (header X-Hearth-Secret): {"events": [...]}, at most 50, each
+    {"type": "video_started", "profile_id", "t" (ms), "v" (video id), "title", "ch" (channel), "cid" (channel id)}:
+    what a kids profile started in HearthTube. A TV only. Answers {"ok": true, "added": n} once all are taken (a
+    resend is harmless, and an entry of a profile mapped to no one, or one that isn't valid, is dropped), so the TV
+    can mark them sent."""
+
+    url = "/api/hearth/device/{device_id}/events"
+    name = "api:hearth:device:events"
+    requires_auth = False
+
+    async def post(self, request: web.Request, device_id: str) -> web.Response:
+        hass: HomeAssistant = request.app["hass"]
+        if not _local(request):
+            return _error(HTTPStatus.FORBIDDEN, "not_local")
+        hub = _hub(hass)
+        if hub is None:
+            return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
+        if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
+            return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
+        if hub.kind(device_id) != KIND_TV:
+            return _error(HTTPStatus.FORBIDDEN, "not_a_tv")
+        if hub.too_many_events(device_id):
+            return _error(HTTPStatus.TOO_MANY_REQUESTS, "too_often")
+        body = await _json_body(request)
+        events = body.get("events") if isinstance(body, dict) else None
+        if not isinstance(events, list) or len(events) > MAX_EVENTS:
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        household = hub.household
+        now_ms = int(dt_util.utcnow().timestamp() * 1000)
+        added = 0
+        for raw in events:
+            entry = clean_started(raw, now_ms)
+            person = household.profile_person(entry["profile_id"]) if entry else None
+            if entry and person and household.watch.add_started(person, entry, device_id):
+                added += 1
+        if added:
+            household.watch.changed()
+        return web.json_response({"ok": True, "added": added})
+
+
 def async_register_views(hass: HomeAssistant) -> None:
-    for view in (PairStartView, PairStatusView, StatusView):
+    for view in (PairStartView, PairStatusView, StatusView, EventsView):
         hass.http.register_view(view())
