@@ -116,10 +116,15 @@ final class SetupFixes {
         String component = new ComponentName(context, service).flattenToString();
         String current = Settings.Secure.getString(context.getContentResolver(),
                 Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
-        List<String> services = new ArrayList<>();
-        if (current != null && !current.isEmpty()) services.addAll(Arrays.asList(current.split(":")));
         // Android may list Hearth's own services by their short name (".LauncherAccessibilityService")
         String shortName = new ComponentName(context, service).flattenToShortString();
+        return accessibilityCommands(current, component, shortName);
+    }
+
+    /** accessibilityCommands for the setting's current list and the service's full and short component names. */
+    static List<String> accessibilityCommands(String current, String component, String shortName) {
+        List<String> services = new ArrayList<>();
+        if (current != null && !current.isEmpty()) services.addAll(Arrays.asList(current.split(":")));
         if (!services.contains(component) && !services.contains(shortName)) services.add(component);
         String list = String.join(":", services);
         if (!SAFE_COMPONENTS.matcher(list).matches()) return null;
