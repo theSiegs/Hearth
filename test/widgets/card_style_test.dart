@@ -1,7 +1,12 @@
+import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/card_style.dart';
 import 'package:flauncher/widgets/focus_highlight.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
+import 'package:provider/provider.dart';
+
+import '../mocks.mocks.dart';
 
 void main() {
   group('CardStyle', () {
@@ -71,6 +76,50 @@ void main() {
       await tester.pumpWidget(highlight('modern', accent: Colors.red.shade400));
       await tester.pump(const Duration(milliseconds: 100));
       expect(borders(tester).first.top.color.a, lessThan(fading));
+    });
+  });
+
+  group('FocusCardFrame', () {
+    Future<void> frame(WidgetTester tester, {required bool highlighted, bool hideOutline = false}) {
+      final settings = MockSettingsService();
+      when(settings.themes).thenReturn('classic');
+      when(settings.accentColor).thenReturn(Colors.red);
+      when(settings.hideHighlightOutlineOnHomescreen).thenReturn(hideOutline);
+      when(settings.appHighlightAnimationEnabled).thenReturn(false);
+      when(settings.appSelectorTransitionAnimationEnabled).thenReturn(false);
+      return tester.pumpWidget(ChangeNotifierProvider<SettingsService>.value(
+        value: settings,
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: Center(
+            child: FocusCardFrame(
+                highlighted: highlighted, scale: highlighted ? 1.1 : 1.0, width: 160, height: 90, children: const []),
+          ),
+        ),
+      ));
+    }
+
+    double dim(WidgetTester tester) => tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity)).opacity;
+
+    testWidgets('a focused card grows, lifts, drops its dimming and gets the outline', (tester) async {
+      await frame(tester, highlighted: true);
+      final container = tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
+      expect(container.transform!.getMaxScaleOnAxis(), closeTo(1.1, 0.0001));
+      expect(tester.widget<Material>(find.byType(Material)).elevation, CardStyle.of('classic').focusElevation);
+      expect(dim(tester), 0);
+      expect(find.byType(FocusHighlight), findsOneWidget);
+    });
+
+    testWidgets('an unfocused card is dimmed, flat and has no outline', (tester) async {
+      await frame(tester, highlighted: false);
+      expect(tester.widget<Material>(find.byType(Material)).elevation, 0);
+      expect(dim(tester), 0.10);
+      expect(find.byType(FocusHighlight), findsNothing);
+    });
+
+    testWidgets('the outline stays off when the setting hides it', (tester) async {
+      await frame(tester, highlighted: true, hideOutline: true);
+      expect(find.byType(FocusHighlight), findsNothing);
     });
   });
 }

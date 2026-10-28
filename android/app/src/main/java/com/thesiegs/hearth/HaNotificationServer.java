@@ -7,7 +7,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -126,26 +125,20 @@ final class HaNotificationServer {
     }
 
     private void handle(Socket socket) throws IOException {
-        OutputStream out = socket.getOutputStream();
-        if (!LocalNet.isLocal(socket.getInetAddress())) {
-            MiniHttp.respond(out, 403, "Forbidden");
-            return;
-        }
-        InputStream in = socket.getInputStream();
-        MiniHttp.Request request = MiniHttp.read(in);
+        MiniHttp.Request request = MiniHttp.readLocal(socket);
         if (request == null) return;
+        OutputStream out = socket.getOutputStream();
         if (!"POST".equals(request.method)) {
             // Home Assistant's connection test
             MiniHttp.respond(out, 200, "Hearth");
             return;
         }
 
-        int length = request.contentLength();
-        if (length <= 0 || length > MAX_BODY_BYTES) {
+        byte[] body = MiniHttp.readBody(socket.getInputStream(), request, MAX_BODY_BYTES);
+        if (body == null) {
             MiniHttp.respond(out, 400, "Bad Request");
             return;
         }
-        byte[] body = MiniHttp.readBody(in, length);
         Notification notification = parse(request.headers.getOrDefault("content-type", ""), body);
         if (notification == null
                 || (isBlank(notification.message) && isBlank(notification.title) && isBlank(notification.camera))) {

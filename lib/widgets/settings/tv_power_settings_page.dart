@@ -26,6 +26,7 @@ import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'focusable_settings_tile.dart';
 import 'remote_search_settings_page.dart';
 import 'setup_checklist_page.dart';
+import 'settings_choice_tile.dart';
 import 'settings_page.dart';
 
 /// TV & power: the screensaver, sleeping when idle, the network, and Android's own settings.
@@ -170,33 +171,14 @@ class _IdleStandbyTileState extends State<_IdleStandbyTile> {
 
   Future<void> _choose() async {
     final l = AppLocalizations.of(context)!;
-    final int? picked = await showDialog<int>(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: Text(l.tvPowerSleepWhenIdle),
-        children: [
-          // The current value is marked and selected as the dialog opens
-          for (final option in _options)
-            SimpleDialogOption(
-              child: TextButton(
-                autofocus: option == _minutes,
-                onPressed: () => Navigator.of(context).pop(option),
-                child: Row(
-                  children: [
-                    Icon(option == _minutes ? Icons.radio_button_checked : Icons.radio_button_unchecked, size: 20),
-                    const SizedBox(width: 12),
-                    Flexible(child: Text(_label(l, option), style: Theme.of(context).textTheme.bodyMedium)),
-                  ],
-                ),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-            child: Text(l.tvPowerSleepNote(SetupChecklistPage.breadcrumb(l)),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54)),
-          ),
-        ],
-      ),
+    final int? picked = await showChoiceDialog<int>(
+      context,
+      title: l.tvPowerSleepWhenIdle,
+      options: _options,
+      isCurrent: (option) => option == _minutes,
+      label: (option) => _label(l, option),
+      labelStyle: Theme.of(context).textTheme.bodyMedium,
+      note: l.tvPowerSleepNote(SetupChecklistPage.breadcrumb(l)),
     );
     if (picked == null) return;
     await _channel.setIdleStandbyMinutes(picked);

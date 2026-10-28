@@ -165,12 +165,17 @@ class BlockedAppsSection extends StatelessWidget {
             children: [
               const Icon(Icons.lock_open, size: 14, color: Colors.redAccent),
               const SizedBox(width: 4),
-              Text(
-                unblockLabel,
-                style: const TextStyle(
-                  color: Colors.redAccent,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
+              // The tile gives its trailing badge 120 px at most: a longer label (or language) wraps
+              Flexible(
+                child: Text(
+                  unblockLabel,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.redAccent,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],

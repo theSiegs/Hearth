@@ -5,6 +5,9 @@
 
 ## Unreleased
 
+- **Time format**: the 12-hour choice without AM/PM (3:45) now shows 3:45 in the afternoon; it showed 15:45, like the 24-hour one.
+- **Blocked notifications**: an app's **Unblock Notifications** badge wraps instead of running past the edge of its row.
+
 ## 2026.10.85 (pre-release)
 
 - **Network in Settings.** **Settings > TV & power > Network** opens the TV's Wi-Fi and Ethernet settings, and shows how the TV is connected (Wi-Fi, Ethernet, no internet, VPN on). Google TV has no VPN settings of its own: a VPN is an app.

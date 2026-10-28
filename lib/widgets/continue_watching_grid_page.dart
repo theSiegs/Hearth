@@ -23,7 +23,7 @@ import '../models/watch_next_program.dart';
 import '../providers/apps_service.dart';
 import '../providers/watch_next_service.dart';
 import 'continue_watching_row.dart';
-import 'focusable_tap.dart';
+import 'count_pill.dart';
 
 /// Continue Watching's "See all": every program in progress as a grid of the row's own cards, with a pill per app
 /// (as search's grid and HearthTube have) to narrow it down.
@@ -74,14 +74,14 @@ class _ContinueWatchingGridPageState extends State<ContinueWatchingGridPage> {
               scrollDirection: Axis.horizontal,
               clipBehavior: Clip.none,
               child: Row(children: [
-                _AppPill(
+                CountPill(
                     label: localizations.cwGridAll,
                     count: widget.programs.length,
                     selected: _app == null,
                     onSelected: () => setState(() => _app = null)),
                 for (final pkg in packages) ...[
                   const SizedBox(width: 12),
-                  _AppPill(
+                  CountPill(
                     label: appName(pkg),
                     count: widget.programs.where((p) => p.packageName == pkg).length,
                     selected: _app == pkg,
@@ -114,41 +114,6 @@ class _ContinueWatchingGridPageState extends State<ContinueWatchingGridPage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// A HearthTube-style pill: white when selected; focusing it selects it.
-class _AppPill extends StatelessWidget {
-  final String label;
-  final int count;
-  final bool selected;
-  final VoidCallback onSelected;
-
-  const _AppPill({required this.label, required this.count, required this.selected, required this.onSelected});
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
-    final fg = selected ? Colors.black : Colors.white;
-    return FocusableTap(
-      onPressed: onSelected,
-      onFocusChange: (focused) {
-        if (focused) onSelected();
-      },
-      builder: (context, focused) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
-        decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.white.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: focused ? accent : Colors.white.withValues(alpha: 0.15), width: focused ? 3 : 1),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Text(label, style: TextStyle(color: fg, fontSize: 17, fontWeight: FontWeight.w500)),
-          const SizedBox(width: 8),
-          Text("$count", style: TextStyle(color: fg.withValues(alpha: 0.6), fontSize: 14)),
-        ]),
       ),
     );
   }

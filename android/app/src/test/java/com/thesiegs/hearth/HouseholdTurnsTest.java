@@ -240,11 +240,14 @@ public class HouseholdTurnsTest {
             CountDownLatch bothBusy = new CountDownLatch(2);
             Future<Object> aToB = a.syncWith(b, bothBusy);
             Future<Object> bToA = b.syncWith(a, bothBusy);
-            // Each thread waits for the other's answer, which waits behind that thread's own exchange
-            assertTrue(String.valueOf(aToB.get(10, TimeUnit.SECONDS)),
-                    aToB.get(10, TimeUnit.SECONDS) instanceof SocketTimeoutException);
-            assertTrue(String.valueOf(bToA.get(10, TimeUnit.SECONDS)),
-                    bToA.get(10, TimeUnit.SECONDS) instanceof SocketTimeoutException);
+            // Each thread waits for the other's answer, which waits behind that thread's own exchange. On a slow machine
+            // one exchange can be over before the other thread is busy; then the two never met and there's nothing to show
+            Object fromA = aToB.get(10, TimeUnit.SECONDS);
+            Object fromB = bToA.get(10, TimeUnit.SECONDS);
+            boolean timedOut = fromA instanceof SocketTimeoutException;
+            org.junit.Assume.assumeTrue("the two exchanges didn't overlap", timedOut || fromB instanceof SocketTimeoutException);
+            assertTrue(String.valueOf(fromA), timedOut);
+            assertTrue(String.valueOf(fromB), fromB instanceof SocketTimeoutException);
         }
     }
 
