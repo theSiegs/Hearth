@@ -613,6 +613,9 @@ class FLauncherChannel {
   Future<bool> openScreensaverSettings() async =>
       await _methodChannel.invokeMethod<bool>("openScreensaverSettings") ?? false;
 
+  /// The TV's network settings (Wi-Fi and Ethernet), or Android's main settings. False when none would open.
+  Future<bool> openNetworkSettings() async => await _methodChannel.invokeMethod<bool>("openNetworkSettings") ?? false;
+
   Future<int> getIdleStandbyMinutes() async => await _methodChannel.invokeMethod<int>("getIdleStandbyMinutes") ?? 0;
 
   Future<void> setIdleStandbyMinutes(int minutes) async =>

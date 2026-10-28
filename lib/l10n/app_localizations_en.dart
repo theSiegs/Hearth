@@ -628,6 +628,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tvPowerTitle => 'TV & power';
 
   @override
+  String get networkTitle => 'Network';
+
+  @override
   String get updatesTitle => 'Updates';
 
   @override

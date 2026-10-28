@@ -18,6 +18,7 @@
 
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/apps_service.dart';
+import 'package:flauncher/providers/network_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/widgets/settings/applications_panel_page.dart';
@@ -177,6 +178,25 @@ void main() {
     verify(appsService.openSettings());
   });
 
+  testWidgets("TV & power's Network row shows the connection and opens the network settings", (tester) async {
+    const channel = MethodChannel('me.efesser.flauncher/method');
+    final calls = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call.method);
+      return true;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null));
+    await _pumpWidgetWithProviders(tester, _settings(), _apps(),
+        home: const TvPowerSettingsPage(), network: _network(vpn: true, offline: true));
+
+    expect(find.text("Wi-Fi · No internet · VPN on"), findsOneWidget);
+    await tester.ensureVisible(find.text("Network"));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text("Network"));
+    await tester.pumpAndSettle();
+    expect(calls, contains("openNetworkSettings"));
+  });
+
   testWidgets("TV & power's screensaver row opens the screensaver settings", (tester) async {
     const channel = MethodChannel('me.efesser.flauncher/method');
     final calls = <String>[];
@@ -191,6 +211,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(calls, contains("openScreensaverSettings"));
   });
+}
+
+MockNetworkService _network({NetworkType type = NetworkType.wifi, bool vpn = false, bool offline = false}) {
+  final network = MockNetworkService();
+  when(network.networkType).thenReturn(type);
+  when(network.vpnActive).thenReturn(vpn);
+  when(network.offline).thenReturn(offline);
+  return network;
 }
 
 MockSettingsService _settings() {
@@ -212,6 +240,7 @@ Future<void> _pumpWidgetWithProviders(
   AppsService appsService, {
   Widget? home,
   ProfileService? profiles,
+  NetworkService? network,
 }) async {
   when(settingsService.hasParentPin).thenReturn(false);
   await tester.pumpWidget(
@@ -220,6 +249,7 @@ Future<void> _pumpWidgetWithProviders(
         Provider<FLauncherChannel>.value(value: FLauncherChannel()),
         ChangeNotifierProvider<SettingsService>.value(value: settingsService),
         ChangeNotifierProvider<AppsService>.value(value: appsService),
+        ChangeNotifierProvider<NetworkService>.value(value: network ?? _network()),
         if (profiles != null) ChangeNotifierProvider<ProfileService>.value(value: profiles),
       ],
       builder: (_, __) => MaterialApp(

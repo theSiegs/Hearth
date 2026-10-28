@@ -59,7 +59,8 @@ only ever in their own row), with their cover art, and one taken out or finished
 
 **Sections.** Arrange apps into sections (rows or grids), rename, reorder and hide them in
 **Settings → Home screen → Sections**. Google TV's own Settings app is hidden by default; Hearth's
-**Settings → TV & power → Google TV settings** opens it.
+**Settings → TV & power → Google TV settings** opens it, and **Network** there opens its Wi-Fi and
+Ethernet settings, with how the TV is connected now beside it.
 
 **Wallpaper.** Bing's photo of the day, your own pictures, a gradient, or black. Each profile has its own. The
 photo's title and credit are in **About Hearth**.

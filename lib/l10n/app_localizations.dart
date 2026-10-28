@@ -1173,6 +1173,12 @@ abstract class AppLocalizations {
   /// **'TV & power'**
   String get tvPowerTitle;
 
+  /// Settings > TV & power: the row that opens the TV's Wi-Fi and Ethernet settings; how it's connected shows beside it
+  ///
+  /// In en, this message translates to:
+  /// **'Network'**
+  String get networkTitle;
+
   /// Settings page title, also its row in the page that opens it
   ///
   /// In en, this message translates to:

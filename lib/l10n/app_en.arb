@@ -476,6 +476,10 @@
     "@tvPowerTitle": {
         "description": "Settings page title, also its row in the page that opens it"
     },
+    "networkTitle": "Network",
+    "@networkTitle": {
+        "description": "Settings > TV & power: the row that opens the TV's Wi-Fi and Ethernet settings; how it's connected shows beside it"
+    },
     "updatesTitle": "Updates",
     "@updatesTitle": {
         "description": "Settings page title, also its row in the page that opens it"

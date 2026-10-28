@@ -5,6 +5,7 @@
 
 ## Unreleased
 
+- **Network in Settings.** **Settings > TV & power > Network** opens the TV's Wi-Fi and Ethernet settings, and shows how the TV is connected (Wi-Fi, Ethernet, no internet, VPN on). Google TV has no VPN settings of its own: a VPN is an app.
 - **Who is on stays between Hearth and HearthTube (provider contract 9).** Hearth's profile provider now answers only HearthTube (signed with Hearth's key): another app on the TV can no longer read the active profile's name, whether it's a kids profile, its YouTube minutes or its bedtime lock.
 - **Parent PIN**: five wrong tries in HearthTube lock the check for a minute even if Hearth restarts meanwhile; before, a restart gave five fresh tries.
 - **A parent's channel to a kid's HearthTube (provider contract 8).** HearthTube tells Hearth each video a kids profile starts, and Hearth keeps the log per kid; the parent's blocked videos, channels and words go the other way and HearthTube applies them, locked against the kid. Read the log and edit the lists in **Settings > Family > Kids profiles > the kid** (**Videos started**, **Blocked on YouTube**), no Home Assistant needed; Home Assistant's own side is still to come.

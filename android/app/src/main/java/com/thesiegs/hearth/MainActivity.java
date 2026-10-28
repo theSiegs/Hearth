@@ -154,6 +154,11 @@ public class MainActivity extends FlutterActivity {
             case "openUrl" -> result.success(openUrl(call.arguments()));
             case "openSettings" -> result.success(openSettings());
             case "openScreensaverSettings" -> result.success(openScreensaverSettings());
+            // Google TV's Network & Internet (Wi-Fi, Ethernet, proxy); it has no VPN screen of its own, a VPN is an app
+            case "openNetworkSettings" -> result.success(startFirst(
+                    new Intent(Settings.ACTION_WIFI_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    new Intent(Settings.ACTION_WIRELESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
             case "openAppInfo" -> result.success(openAppInfo(call.arguments()));
             case "uninstallApp" -> result.success(uninstallApp(call.arguments()));
             case "isDefaultLauncher" -> result.success(isDefaultLauncher());

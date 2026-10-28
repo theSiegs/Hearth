@@ -20,6 +20,7 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flauncher/providers/apps_service.dart';
+import 'package:flauncher/providers/network_service.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'focusable_settings_tile.dart';
@@ -27,7 +28,7 @@ import 'remote_search_settings_page.dart';
 import 'setup_checklist_page.dart';
 import 'settings_page.dart';
 
-/// TV & power: the screensaver, sleeping when idle, and Android's own settings.
+/// TV & power: the screensaver, sleeping when idle, the network, and Android's own settings.
 class TvPowerSettingsPage extends StatelessWidget {
   static const String routeName = "display_settings_panel";
 
@@ -62,6 +63,7 @@ class TvPowerSettingsPage extends StatelessWidget {
           trailing: const Icon(Icons.chevron_right, color: Colors.white54),
           onPressed: () => Navigator.of(context).pushNamed(RemoteSearchSettingsPage.routeName),
         ),
+        const _NetworkTile(),
         FocusableSettingsTile(
           leading: const Icon(Icons.settings_outlined),
           title: Text(localizations.systemSettings, style: Theme.of(context).textTheme.bodyMedium),
@@ -69,6 +71,33 @@ class TvPowerSettingsPage extends StatelessWidget {
         ),
         const _GoogleTvHomeTile(),
       ],
+    );
+  }
+}
+
+/// The TV's network settings, with how it's connected now ("Wi-Fi · VPN on", "No internet").
+class _NetworkTile extends StatelessWidget {
+  const _NetworkTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final network = context.watch<NetworkService>();
+    final connection = [
+      switch (network.networkType) {
+        NetworkType.wifi => l.dataUsageWifi,
+        NetworkType.wired => l.dataUsageEthernet,
+        NetworkType.cellular => l.dataUsageMobile,
+        NetworkType.none => l.dataUsageNotConnected,
+      },
+      if (network.offline && network.networkType != NetworkType.none) l.dataUsageNoInternet,
+      if (network.vpnActive) l.dataUsageVpnOn,
+    ].join(" · ");
+    return FocusableSettingsTile(
+      leading: Icon(network.networkType == NetworkType.wired ? Icons.settings_ethernet : Icons.wifi),
+      title: Text(l.networkTitle, style: Theme.of(context).textTheme.bodyMedium),
+      trailing: Text(connection, style: Theme.of(context).textTheme.bodySmall),
+      onPressed: () => context.read<FLauncherChannel>().openNetworkSettings(),
     );
   }
 }
