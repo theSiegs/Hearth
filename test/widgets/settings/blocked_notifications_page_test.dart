@@ -46,10 +46,12 @@ Future<bool> _loadRoboto(WidgetTester tester) async {
   final root = Platform.environment["FLUTTER_ROOT"];
   if (root == null) return false;
   final dir = Directory("$root/bin/cache/artifacts/material_fonts");
-  if (!dir.existsSync()) return false;
+  final names = ["roboto-regular.ttf", "roboto-bold.ttf"];
+  // Not every SDK has the Material fonts downloaded (CI's doesn't): then there's nothing to measure with
+  if (!names.every((name) => File("${dir.path}/$name").existsSync())) return false;
   await tester.runAsync(() async {
     final loader = FontLoader("Roboto");
-    for (final name in ["roboto-regular.ttf", "roboto-bold.ttf"]) {
+    for (final name in names) {
       loader.addFont(Future.value(ByteData.sublistView(File("${dir.path}/$name").readAsBytesSync())));
     }
     await loader.load();
