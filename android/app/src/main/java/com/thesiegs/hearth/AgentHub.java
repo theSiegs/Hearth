@@ -66,6 +66,7 @@ import java.util.regex.Pattern;
  */
 final class AgentHub {
     static final int PORT = 47474;
+    private static final int HANDSHAKE_TIMEOUT_MS = 10_000;
     private static final String TAG = "HearthAgent";
     private static final String PREFS = "ltv_agents";
     private static final String KEY_PREFIX = "key|";
@@ -170,6 +171,8 @@ final class AgentHub {
     private static void handle(Socket socket) {
         Connection connection = null;
         try {
+            // A connection that never finishes the handshake doesn't hold its thread for good
+            socket.setSoTimeout(HANDSHAKE_TIMEOUT_MS);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             JSONObject hello = new JSONObject(in.readLine());
@@ -195,6 +198,8 @@ final class AgentHub {
                 socket.close();
                 return;
             }
+            // A proven agent stays connected, quiet for as long as nothing changes
+            socket.setSoTimeout(0);
             connection = new Connection(serial, socket, out, hello.optLong("wallpaperVersion"));
             Connection old = sConnections.put(serial, connection);
             if (old != null) closeQuietly(old.socket);
