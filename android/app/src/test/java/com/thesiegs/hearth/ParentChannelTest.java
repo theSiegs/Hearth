@@ -122,4 +122,41 @@ public class ParentChannelTest {
         assertEquals("[one]", all.words.toString());
         assertEquals(all, ha.union(own).union(own));
     }
+
+    @Test
+    public void homeAssistantIsSentWhatItHasntHadFromTheLastDay() {
+        long now = 10 * StartedLog.SEND_UP_WITHIN_MS;
+        List<StartedLog.Entry> entries = new ArrayList<>();
+        StartedLog.add(entries, entry(now - StartedLog.SEND_UP_WITHIN_MS - 1, "tooOld1"));
+        StartedLog.add(entries, entry(now - 3_000, "video1"));
+        StartedLog.add(entries, entry(now - 2_000, "video2"));
+        StartedLog.add(entries, entry(now - 1_000, "video3"));
+
+        // Nothing sent yet: the last day's, oldest first
+        List<StartedLog.Entry> unsent = StartedLog.unsent(entries, 0, now, 50);
+        assertEquals(3, unsent.size());
+        assertEquals("video1", unsent.get(0).videoId);
+        // After the mark, at most [max]
+        unsent = StartedLog.unsent(entries, now - 3_000, now, 1);
+        assertEquals(1, unsent.size());
+        assertEquals("video2", unsent.get(0).videoId);
+        assertTrue(StartedLog.unsent(entries, now - 1_000, now, 50).isEmpty());
+    }
+
+    @Test
+    public void homeAssistantsListsComeFromTheProfilesItSpeaksOf() throws Exception {
+        java.util.Map<String, ParentBlocks.Lists> lists = ParentBlocks.fromDocument(new JSONObject(
+                "{\"profiles\":{\"user:10\":{\"groups\":[],\"youtube_blocks\":{\"videos\":[\"video1\"],"
+                        + "\"channels\":[],\"words\":[\"Prank\"],\"labels\":{\"video1\":\"A title\"}}},"
+                        + "\"user:11\":{\"groups\":[]}},\"version\":\"x\"}"));
+
+        assertEquals(1, lists.size());
+        ParentBlocks.Lists ten = lists.get("user:10");
+        assertEquals("[video1]", ten.videos.toString());
+        assertEquals("[prank]", ten.words.toString());
+        assertEquals("A title", ten.labels.get("video1"));
+        // An older integration, or no document: nothing to change
+        assertTrue(ParentBlocks.fromDocument(new JSONObject("{\"profiles\":{\"user:10\":{}}}")).isEmpty());
+        assertTrue(ParentBlocks.fromDocument(null).isEmpty());
+    }
 }

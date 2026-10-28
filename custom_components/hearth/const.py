@@ -52,6 +52,12 @@ SIGNAL_PEOPLE = "hearth_people"
 
 EVENT_BUDGET_REACHED = "hearth_budget_reached"
 EVENT_PLAYING_TOGETHER = "hearth_playing_together"
+EVENT_VIDEO_STARTED = "hearth_video_started"
+
+# A kids profile's started videos, or a parent's YouTube blocks, changed
+SIGNAL_WATCH = "hearth_watch"
+# A device may post its events this many times in STATUS_WINDOW (each post carries at most 50)
+MAX_EVENT_POSTS = 10
 
 # Android app categories a device may report for its apps (ApplicationInfo.category, lower case)
 APP_CATEGORIES = ("game", "video", "audio", "image", "social", "news", "maps", "productivity", "accessibility")

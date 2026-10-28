@@ -43,6 +43,7 @@ from .apps import (
 from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
 from .limits import OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
 from .enforce import Enforcement, enforcers_from_options
+from .watch import WatchLog
 from .schooldays import SchoolDays
 from .live import LiveTracker, Observation, Together
 from .sources import (
@@ -97,6 +98,7 @@ class Household:
         self.school = SchoolDays(hass)
         self.school.configure(dict(hub.entry.options))
         self.enforcement = Enforcement(hass, hub.entry.entry_id)
+        self.watch = WatchLog(hass, hub.entry.entry_id)
         self.days: dict[str, PersonDay] = {}
         # The day [days] is of
         self.today: date | None = None
@@ -114,11 +116,13 @@ class Household:
         await self.live.async_load()
         await self.apps.async_load()
         await self.enforcement.async_load()
+        await self.watch.async_load()
 
     async def async_flush(self) -> None:
         await self.limits.async_flush()
         await self.live.async_flush()
         await self.enforcement.async_flush()
+        await self.watch.async_flush()
 
     # The mapping
 
@@ -128,6 +132,19 @@ class Household:
 
     def profile_people(self) -> dict[str, str]:
         return dict(self.options.get(CONF_PROFILES, {}))
+
+    def profile_person(self, profile_id: str) -> str | None:
+        """The person a TV profile is mapped to. Hearth keeps a kids profile's log under its user ("user:10"), which
+        matches a mapping of the same user with its account ("user:10:sam") when there is only one."""
+        profiles = self.profile_people()
+        if profiles.get(profile_id):
+            return profiles[profile_id]
+        found = {person for key, person in profiles.items() if person and key.startswith(f"{profile_id}:")}
+        return found.pop() if len(found) == 1 else None
+
+    def youtube_people(self) -> list[str]:
+        """The people with a TV profile: whose videos started can come up, and who can have YouTube blocks."""
+        return sorted({p for p in self.profile_people().values() if p})
 
     def device_person(self, device_id: str) -> str | None:
         return self.hub.devices.get(device_id, {}).get(CONF_PERSON)
@@ -471,7 +488,13 @@ class Household:
                     "apps": self._group_apps(group, membership),
                 }
             )
-        return {"person": person, "groups": groups, "locked": bool(day and day.locked)}
+        return {
+            "person": person,
+            "groups": groups,
+            "locked": bool(day and day.locked),
+            # What a parent blocked here, for HearthTube in the person's kids profiles (a TV's Hearth passes it on)
+            "youtube_blocks": self.watch.blocks_document(person),
+        }
 
     def document_for(self, device_id: str) -> dict[str, Any]:
         """The device's state document: per TV profile (or, for a phone, its person) what's left today."""

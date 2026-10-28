@@ -51,3 +51,123 @@ set_budget:
             - both
             - school_days
             - other_days
+
+get_watch_log:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    days:
+      example: 7
+      selector:
+        number:
+          min: 1
+          max: 366
+          mode: box
+    limit:
+      default: 200
+      selector:
+        number:
+          min: 1
+          max: 2000
+          mode: box
+
+watch_digest:
+  fields:
+    person:
+      selector:
+        entity:
+          domain: person
+    days:
+      default: 7
+      selector:
+        number:
+          min: 1
+          max: 31
+          mode: box
+
+block_video:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    video:
+      required: true
+      example: "https://youtu.be/aBcDeFgHiJk"
+      selector:
+        text:
+    label:
+      selector:
+        text:
+
+unblock_video:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    video:
+      required: true
+      example: "https://youtu.be/aBcDeFgHiJk"
+      selector:
+        text:
+
+block_channel:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    channel:
+      required: true
+      example: "UCxxxxxxxxxxxxxxxxxxxxxx"
+      selector:
+        text:
+    label:
+      selector:
+        text:
+
+unblock_channel:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    channel:
+      required: true
+      example: "UCxxxxxxxxxxxxxxxxxxxxxx"
+      selector:
+        text:
+
+block_word:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    word:
+      required: true
+      example: "prank"
+      selector:
+        text:
+
+unblock_word:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    word:
+      required: true
+      example: "prank"
+      selector:
+        text:
