@@ -463,7 +463,17 @@ class HouseholdLooksService implements HouseholdJoinReviewer {
         .writeAsString(jsonEncode({"at": _now(), "profiles": kept}), flush: true);
   }
 
-  Future<Map<String, dynamic>?> _joinBackupMeta() async {
+  // Reads of the copy take turns: two at once (a round's daily check and the Household page) could both delete an
+  // expired copy, and on some file systems two deletes of one folder both fail and leave it
+  static Future<void> _joinBackupTurn = Future.value();
+
+  Future<Map<String, dynamic>?> _joinBackupMeta() {
+    final read = _joinBackupTurn.then((_) => _readJoinBackupMeta());
+    _joinBackupTurn = read.then((_) {}, onError: (Object _) {});
+    return read;
+  }
+
+  Future<Map<String, dynamic>?> _readJoinBackupMeta() async {
     final folder = await _joinBackupFolder();
     final meta = File("${folder.path}/meta.json");
     if (!await meta.exists()) return null;
@@ -472,7 +482,11 @@ class HouseholdLooksService implements HouseholdJoinReviewer {
       if (decoded is! Map || decoded["at"] is! int || decoded["profiles"] is! Map) return null;
       final at = decoded["at"] as int;
       if (_now() - at > HouseholdJoinReviewer.keptFor.inMilliseconds) {
-        await folder.delete(recursive: true);
+        try {
+          await folder.delete(recursive: true);
+        } on FileSystemException {
+          // A round running at the same time deleted it first
+        }
         return null;
       }
       return Map<String, dynamic>.from(decoded);
