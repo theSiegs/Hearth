@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- local.properties is written by the flutter tool (unescaped Windows paths) and git ignores it -->
+    <issue id="PropertyEscape">
+        <ignore regexp="local\.properties" />
+    </issue>
+</lint>

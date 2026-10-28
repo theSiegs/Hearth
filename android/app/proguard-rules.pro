@@ -1,3 +1,7 @@
+## R8 shrinks and obfuscates but doesn't optimize, as with the proguard-android.txt defaults Hearth used before AGP 9
+## (which dropped them): optimizing is a separate change that needs its own TV testing.
+-dontoptimize
+
 ## Flutter wrapper
 -keep class io.flutter.app.** { *; }
 -keep class io.flutter.plugin.**  { *; }
