@@ -27,6 +27,7 @@ import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
 import 'kid_profile_page.dart';
+import 'message_dialog.dart';
 import 'settings_page.dart';
 
 /// Settings > Family > Kids profiles: whether Hearth (and HearthTube, when the owner has it) is on each kids'
@@ -191,67 +192,20 @@ class _KidsProfilesPageState extends State<KidsProfilesPage> with WidgetsBinding
     } catch (err) { noteFailure('kids_profiles_page', err); }
   }
 
-  Future<bool?> _confirm({required String title, required List<String> lines, required String action}) {
-    final textTheme = Theme.of(context).textTheme;
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: SizedBox(
-          width: 460,
-          // Longer languages can run past the screen's height
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final line in lines) ...[
-                  Text(line, style: textTheme.bodyMedium),
-                  const SizedBox(height: 10),
-                ],
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(context).pop(false), child: Text(AppLocalizations.of(context)!.notNow)),
-          TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(true), child: Text(action)),
-        ],
-      ),
-    );
-  }
+  Future<bool?> _confirm({required String title, required List<String> lines, required String action}) =>
+      showLinesDialog<bool>(context, title: title, lines: lines, actions: (context) => [
+            TextButton(
+                onPressed: () => Navigator.of(context).pop(false), child: Text(AppLocalizations.of(context)!.notNow)),
+            TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(true), child: Text(action)),
+          ]);
 
-  Future<void> _showMessage(String title, List<String> lines) {
-    final textTheme = Theme.of(context).textTheme;
-    return showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: SizedBox(
-          width: 460,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final line in lines) ...[
-                  Text(line, style: textTheme.bodyMedium),
-                  const SizedBox(height: 10),
-                ],
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-              autofocus: true,
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(AppLocalizations.of(context)!.ok)),
-        ],
-      ),
-    );
-  }
+  Future<void> _showMessage(String title, List<String> lines) =>
+      showLinesDialog<void>(context, title: title, lines: lines, actions: (context) => [
+            TextButton(
+                autofocus: true,
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(AppLocalizations.of(context)!.ok)),
+          ]);
 
   @override
   Widget build(BuildContext context) {

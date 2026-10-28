@@ -19,6 +19,7 @@ import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flauncher/widgets/settings/app_icon.dart';
 import 'package:flauncher/widgets/settings/blocked_apps_section.dart';
+import 'package:flauncher/widgets/settings/message_dialog.dart';
 import 'package:flauncher/widgets/settings/settings_choice_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -81,6 +82,29 @@ void main() {
       await tester.tap(find.text("30 min"));
       await tester.pumpAndSettle();
       expect(await picked, 30);
+    });
+  });
+
+  group("showLinesDialog", () {
+    testWidgets("shows each line under the title and returns what a button closes it with", (tester) async {
+      late BuildContext context;
+      await tester.pumpWidget(MaterialApp(home: Builder(builder: (c) {
+        context = c;
+        return const SizedBox();
+      })));
+      final answer = showLinesDialog<bool>(context,
+          title: "Remove?",
+          lines: ["First", "Second"],
+          actions: (context) => [
+                TextButton(autofocus: true, onPressed: () => Navigator.of(context).pop(true), child: const Text("Yes")),
+              ]);
+      await tester.pumpAndSettle();
+
+      expect(find.text("Remove?"), findsOneWidget);
+      expect(tester.getTopLeft(find.text("First")).dy, lessThan(tester.getTopLeft(find.text("Second")).dy));
+      await tester.tap(find.text("Yes"));
+      await tester.pumpAndSettle();
+      expect(await answer, isTrue);
     });
   });
 
