@@ -59,13 +59,18 @@ final class HaPanelPage {
             + "})();";
 
     private static final Handler sMain = new Handler(Looper.getMainLooper());
+    /**
+     * Kept in a static on purpose (StaticFieldLeak): the page outlives the panel. Its context is the application's
+     * while no panel shows it, and the panel's while one does (giveBack swaps it back).
+     */
     private static WebView sWebView;
     private static MutableContextWrapper sContext;
     /** What the page was loaded with: a change to any of them means loading it again. */
     private static String sUrl;
-    private static String sToken;
+    /** Also read on the page's JavaScript thread (getExternalAuth). */
+    private static volatile String sToken;
     private static boolean sFailed;
-    /** The panel showing the page now, if any. */
+    /** The panel showing the page now, if any: set by take, cleared by giveBack. */
     private static HaPanelActivity sHost;
 
     private HaPanelPage() {

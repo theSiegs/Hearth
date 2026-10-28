@@ -104,7 +104,8 @@ public class MainActivity extends FlutterActivity {
     // The app list's PackageManager lookups, in parallel. Separate from sAppsLoader, which waits on them.
     private static final ExecutorService sAppsExecutor = Executors.newFixedThreadPool(4);
 
-    private static WeakReference<MethodChannel> sMethodChannel;
+    /** The engine's channel, for the notify* calls (some come off the main thread). Set in configureFlutterEngine. */
+    private static volatile WeakReference<MethodChannel> sMethodChannel;
     /** Whether Hearth is the screen in front (between onResume and onPause). */
     private static volatile boolean sInFront;
 

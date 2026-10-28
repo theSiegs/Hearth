@@ -41,6 +41,8 @@ final class HouseholdJoining {
         return thread;
     });
 
+    // Every s* field here is guarded by HouseholdJoining.class.
+
     // The household TV: the request being answered
     private static boolean sServing;
     private static long sServedUntil;
@@ -521,6 +523,7 @@ final class HouseholdJoining {
         return out;
     }
 
+    /** Called holding HouseholdJoining.class. */
     private static boolean current(int generation) {
         return generation == sJoinGeneration && (CONNECTING.equals(sJoinState) || WAITING.equals(sJoinState));
     }

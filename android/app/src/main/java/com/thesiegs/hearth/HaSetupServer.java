@@ -38,6 +38,7 @@ final class HaSetupServer {
     /** What a webhook id may hold: it goes into the URL Hearth posts the TV's status to. */
     private static final java.util.regex.Pattern WEBHOOK_ID = java.util.regex.Pattern.compile("[A-Za-z0-9_-]{1,128}");
 
+    /** The server running now: start sets it, stop clears it. Both guarded by HaSetupServer.class. */
     private static HaSetupServer sCurrent;
     private static boolean sLastReceived;
 

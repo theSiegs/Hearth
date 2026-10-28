@@ -116,12 +116,13 @@ public class HaPanelActivity extends Activity {
         return super.dispatchKeyEvent(event);
     }
 
-    /** The panel that's open, if any: the Home button closes it. */
-    private static java.lang.ref.WeakReference<HaPanelActivity> sOpen;
+    /** The panel that's open, if any: the Home button closes it. Set in onCreate, cleared in onDestroy. */
+    private static volatile java.lang.ref.WeakReference<HaPanelActivity> sOpen;
 
     /** Closes the panel if it's open (the Home button). */
     static void closeIfOpen() {
-        HaPanelActivity open = sOpen != null ? sOpen.get() : null;
+        java.lang.ref.WeakReference<HaPanelActivity> ref = sOpen;
+        HaPanelActivity open = ref != null ? ref.get() : null;
         if (open != null) open.runOnUiThread(open::finish);
     }
 

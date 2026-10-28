@@ -17,6 +17,7 @@ public class WeatherReceiver extends BroadcastReceiver {
         void onWeatherUpdated(String weatherJson);
     }
 
+    /** The activity's weather channel while Flutter listens (WeatherEventStreamHandler). Main thread, as onReceive. */
     private static WeatherListener sListener;
 
     public static void setListener(WeatherListener listener) {

@@ -34,8 +34,10 @@ public class LauncherNotificationListenerService extends NotificationListenerSer
         void onNotificationChanged();
     }
 
+    /** Guarded by itself. */
     private static final List<NotificationListener> listeners = new ArrayList<>();
-    private static LauncherNotificationListenerService instance = null;
+    /** The service while it runs: set in onCreate, cleared in onDestroy; read from any thread. */
+    private static volatile LauncherNotificationListenerService instance = null;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
