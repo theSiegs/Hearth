@@ -184,16 +184,17 @@ class _KidBlocksPageState extends State<KidBlocksPage> {
   Future<void> _load() async {
     try {
       final blocks = ParentBlocks.fromMap(await _channel.getParentBlocks(widget.profileKey));
-      final kidOwn = KidOwnBlocks.fromMap(await _channel.getKidOwnBlocks(widget.profileKey));
-      if (mounted) {
-        setState(() {
-          _blocks = blocks;
-          _kidOwn = kidOwn;
-        });
-      }
+      if (mounted) setState(() => _blocks = blocks);
     } catch (err) {
       noteFailure('kid_blocks', err);
       if (mounted) setState(() => _blocks = ParentBlocks.empty);
+    }
+    // The kid's own come after, so the parent's list never waits on them
+    try {
+      final kidOwn = KidOwnBlocks.fromMap(await _channel.getKidOwnBlocks(widget.profileKey));
+      if (mounted) setState(() => _kidOwn = kidOwn);
+    } catch (err) {
+      noteFailure('kid_own_blocks', err);
     }
   }
 
