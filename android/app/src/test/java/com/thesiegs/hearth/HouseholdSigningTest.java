@@ -304,6 +304,21 @@ public class HouseholdSigningTest {
     }
 
     @Test
+    public void aTvWritesItsOwnEntryAgainOnceAStartWhenItIsAnHourOld() throws Exception {
+        HouseholdTvs.Tv a = new HouseholdTvs.Tv();
+        a.store.create("Office", T0);
+        a.store.save();
+        long hour = T0 + HouseholdMembers.START_REFRESH_MS + 1000;
+        a.reopen();
+        assertFalse(a.store.publishSelf("Office", T0 + 1000));
+        assertTrue(a.store.publishSelf("Office", hour));
+        assertFalse(a.store.publishSelf("Office", hour + HouseholdMembers.START_REFRESH_MS + 1000));
+        a.store.save();
+        a.reopen();
+        assertTrue(a.store.publishSelf("Office", hour + HouseholdMembers.START_REFRESH_MS + 2000));
+    }
+
+    @Test
     public void aTvLetInByATvThatJoinedListsTheTvThatLetThatOneIn() throws Exception {
         HouseholdTvs.Tv a = new HouseholdTvs.Tv();
         a.store.create("Office", T0);

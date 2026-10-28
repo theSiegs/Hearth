@@ -133,6 +133,8 @@ final class HouseholdStore {
     private boolean lost;
     /** This TV wrote its own member entry and couldn't sign it: not tried again until the app starts again. */
     private boolean unsignedSelfWritten;
+    /** This TV's own member entry was written since the app started. */
+    private boolean selfWrittenThisStart;
 
     private HouseholdStore(Backing backing, SecretBox.Keys keys, HouseholdIdentity.Keys identities) {
         this.backing = backing;
@@ -479,11 +481,15 @@ final class HouseholdStore {
         byte[] key = identity.publicKey();
         HouseholdEntry had = log.get(HouseholdMembers.KIND, HouseholdBridge.SHARED, tvId);
         boolean unsigned = had != null && !had.deleted && had.sig.isEmpty() && !unsignedSelfWritten;
-        if (!unsigned && !HouseholdMembers.selfNeedsWrite(log, tvId, name, key, nowMs)) return wroteAny;
+        // Once a start, so a copy another TV holds (one unsigned, from before this TV signed) is never the newest
+        boolean startRefresh = !selfWrittenThisStart && had != null && !had.deleted
+                && nowMs - HouseholdMembers.wallClock(had) >= HouseholdMembers.START_REFRESH_MS;
+        if (!unsigned && !startRefresh && !HouseholdMembers.selfNeedsWrite(log, tvId, name, key, nowMs)) return wroteAny;
         String by = had == null ? tvId : HouseholdMembers.byOf(had.value, tvId);
         HouseholdEntry wrote = log.put(HouseholdMembers.KIND, HouseholdBridge.SHARED, tvId,
                 HouseholdMembers.value(name, key, by, true), nowMs);
         if (wrote != null && wrote.sig.isEmpty()) unsignedSelfWritten = true;
+        if (wrote != null) selfWrittenThisStart = true;
         return wroteAny || wrote != null;
     }
 

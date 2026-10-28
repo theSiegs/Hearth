@@ -23,6 +23,8 @@ final class HouseholdMembers {
     static final String KIND = "member";
     /** A TV's own entry is written again after this long, so its time shows when it was last on. */
     static final long REFRESH_MS = 24L * 60 * 60 * 1000;
+    /** And once each time the app starts, when older than this: a copy of it held elsewhere is then never the newest. */
+    static final long START_REFRESH_MS = 60L * 60 * 1000;
     private static final int CLOCK_COUNTER_BITS = 16;
 
     /** Where a TV stands on this TV's list. */
@@ -287,7 +289,7 @@ final class HouseholdMembers {
         return out;
     }
 
-    private static long wallClock(HouseholdEntry entry) {
+    static long wallClock(HouseholdEntry entry) {
         return entry.clock >> CLOCK_COUNTER_BITS;
     }
 }
