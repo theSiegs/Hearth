@@ -5,6 +5,13 @@
 
 ## Unreleased
 
+## 2026.10.86 (pre-release)
+
+- **Streaming app PINs**: the steps Hearth follows to type a saved PIN (Disney+, Netflix, Max, Apple TV, Paramount+'s content PIN, Google TV's PIN screen) are now a recipe file. Hearth carries its own and checks this repository for newer ones at most every 12 hours, so a fix after an app update reaches the TVs without a Hearth release. A fetched recipe can only do what the built-in ones can (press digit keys of that app's own keypad, move and press OK), and anything wrong with the file means Hearth's own are used. Keys are now pressed only in the app's own window and only on a complete keypad.
+- **Phone approval and Parent PIN by phone** share one connection to Home Assistant while a request waits, and it reconnects if Home Assistant restarts meanwhile: an Allow pressed after the restart still counts.
+- **Built on Flutter 3.47** (from 3.24), with current libraries: the database library moved off its end-of-life package. Nothing should look or work differently. Home Assistant panel images no longer fail now and then (the connection was closed before the picture was read).
+- Many screens now share one implementation (cards' focus glow, choice dialogs, count pills, the phone setup pages' server), and a lot more of Hearth is covered by tests.
+
 - **Time format**: the 12-hour choice without AM/PM (3:45) now shows 3:45 in the afternoon; it showed 15:45, like the 24-hour one.
 - **Blocked notifications**: an app's **Unblock Notifications** badge wraps instead of running past the edge of its row.
 

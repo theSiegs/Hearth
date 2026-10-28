@@ -1,0 +1,1 @@
+Streaming app PIN recipes can be fixed without a Hearth update, phone approvals survive a Home Assistant restart, and Hearth is built on Flutter 3.47. Also small fixes to the time format and blocked notifications.
