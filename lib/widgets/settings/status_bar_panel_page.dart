@@ -29,6 +29,7 @@ import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 
 import '../../providers/settings_service.dart';
+import 'package:flauncher/widgets/settings/settings_hint.dart';
 import 'package:flauncher/widgets/settings/settings_page.dart';
 
 class StatusBarPanelPage extends StatelessWidget {
@@ -176,9 +177,9 @@ class WeatherSettingsPage extends StatelessWidget {
                     },
                   ),
                   if (place != null && weatherService.builtInError)
-                    _weatherHint(context, localizations.statusBarWeatherLoadFailed),
+                    SettingsHint(localizations.statusBarWeatherLoadFailed),
                   if (place == null && !weatherService.hasWeather)
-                    _weatherHint(context, localizations.statusBarWeatherSourceHint),
+                    SettingsHint(localizations.statusBarWeatherSourceHint),
                 ],
               );
             },
@@ -187,24 +188,4 @@ class WeatherSettingsPage extends StatelessWidget {
       ],
     );
   }
-
-  Widget _weatherHint(BuildContext context, String text) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.info_outline, size: 20, color: Colors.white70),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(text, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70)),
-              ),
-            ],
-          ),
-        ),
-      );
 }

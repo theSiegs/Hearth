@@ -21,6 +21,7 @@ import 'package:flauncher/widgets/settings/app_icon.dart';
 import 'package:flauncher/widgets/settings/blocked_apps_section.dart';
 import 'package:flauncher/widgets/settings/message_dialog.dart';
 import 'package:flauncher/widgets/settings/settings_choice_tile.dart';
+import 'package:flauncher/widgets/settings/settings_hint.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
@@ -82,6 +83,14 @@ void main() {
       await tester.tap(find.text("30 min"));
       await tester.pumpAndSettle();
       expect(await picked, 30);
+    });
+  });
+
+  group("SettingsHint", () {
+    testWidgets("shows its text by an info icon", (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: SettingsHint("Long-press to move"))));
+      expect(find.text("Long-press to move"), findsOneWidget);
+      expect(find.byIcon(Icons.info_outline), findsOneWidget);
     });
   });
 
