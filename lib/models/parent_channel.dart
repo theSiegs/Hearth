@@ -111,3 +111,31 @@ class ParentBlocks {
     );
   }
 }
+
+/// What a kid hid or blocked themselves in HearthTube (provider contract 10): a parent sees it and can take one back.
+class KidOwnBlocks {
+  final List<BlockedThing> videos;
+  final List<BlockedThing> channels;
+  final List<BlockedThing> words;
+
+  const KidOwnBlocks({this.videos = const [], this.channels = const [], this.words = const []});
+
+  static const KidOwnBlocks empty = KidOwnBlocks();
+
+  bool get isEmpty => videos.isEmpty && channels.isEmpty && words.isEmpty;
+
+  static KidOwnBlocks fromMap(Map<dynamic, dynamic> map) {
+    List<BlockedThing> things(Object? list) {
+      if (list is! List) return const [];
+      return [
+        for (final item in list)
+          if (item is String)
+            BlockedThing(item, item)
+          else if (item is Map && item["id"] is String)
+            BlockedThing(item["id"] as String, (item["label"] as String?) ?? item["id"] as String),
+      ];
+    }
+
+    return KidOwnBlocks(videos: things(map["videos"]), channels: things(map["channels"]), words: things(map["words"]));
+  }
+}

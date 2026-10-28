@@ -658,6 +658,14 @@
     "@kidBlocksFromHa": {
         "description": "Next to a block that Home Assistant set; it is taken back there"
     },
+    "kidOwnBlocks": "Hidden by them",
+    "@kidOwnBlocks": {
+        "description": "Heading of what the kid hid or blocked themselves in HearthTube (Not interested, Don't show this creator, their own words)"
+    },
+    "kidOwnBlocksBody": "What they hid or blocked themselves in HearthTube. Select one to show it to them again.",
+    "@kidOwnBlocksBody": {
+        "description": "Under the heading of what the kid hid themselves"
+    },
     "kidBlocksNone": "Nothing is blocked.",
     "@kidBlocksNone": {
         "description": "Nothing a parent blocked for this kid"

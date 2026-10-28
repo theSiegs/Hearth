@@ -362,6 +362,17 @@ class FLauncherChannel {
           "setParentBlock", {"profileKey": profileKey, "kind": kind, "id": id, "label": label, "on": on}) ??
       false;
 
+  /// What the kid hid or blocked themselves in HearthTube (provider contract 10): "videos" and "channels" (id and
+  /// label) and "words", less what a parent is taking back.
+  Future<Map<dynamic, dynamic>> getKidOwnBlocks(String profileKey) async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getKidOwnBlocks", profileKey) ?? {};
+
+  /// Takes back one of the kid's own hides or blocks ([kind]: "video", "channel" or "word"); HearthTube takes it back
+  /// the next time it hears from Hearth. False when the kid's list doesn't have it.
+  Future<bool> undoKidOwnBlock({required String profileKey, required String kind, required String id}) async =>
+      await _methodChannel.invokeMethod<bool>("undoKidOwnBlock", {"profileKey": profileKey, "kind": kind, "id": id}) ??
+      false;
+
   /// A profile's daily YouTube limit in HearthTube, in minutes; 0 for none. [profileKey]: a kids profile's
   /// ("user:11", from [getKidsProfilesState]); without it, the profile on now.
   Future<int> getYouTubeDailyMinutes({String? profileKey}) async =>

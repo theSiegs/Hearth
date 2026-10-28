@@ -1431,6 +1431,18 @@ abstract class AppLocalizations {
   /// **'Home Assistant'**
   String get kidBlocksFromHa;
 
+  /// Heading of what the kid hid or blocked themselves in HearthTube (Not interested, Don't show this creator, their own words)
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden by them'**
+  String get kidOwnBlocks;
+
+  /// Under the heading of what the kid hid themselves
+  ///
+  /// In en, this message translates to:
+  /// **'What they hid or blocked themselves in HearthTube. Select one to show it to them again.'**
+  String get kidOwnBlocksBody;
+
   /// Nothing a parent blocked for this kid
   ///
   /// In en, this message translates to:
