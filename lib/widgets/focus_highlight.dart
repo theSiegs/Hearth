@@ -15,8 +15,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/card_style.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 /// The outline round a focused card, in its card style. Show it only while the card is focused;
 /// the two-tone outline pulses while [animate] is on.
@@ -108,4 +110,79 @@ class _FocusHighlightState extends State<FocusHighlight> with SingleTickerProvid
           border: Border.all(color: color, width: width),
         ),
       );
+}
+
+/// A card's focus look, shared by the app cards and Continue Watching's: while [highlighted] it grows by [scale],
+/// lifts with a glow in the accent colour and loses its dimming, and the card style's outline goes over [children].
+class FocusCardFrame extends StatelessWidget {
+  final bool highlighted;
+  final double scale;
+  final double? width;
+  final double? height;
+
+  /// The card's fill under [children]; null for the theme's.
+  final Color? color;
+
+  /// Rounds the dimming layer's corners too.
+  final bool roundedDim;
+  final List<Widget> children;
+
+  const FocusCardFrame({
+    super.key,
+    required this.highlighted,
+    required this.scale,
+    this.width,
+    this.height,
+    this.color,
+    this.roundedDim = false,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final CardStyle style = CardStyle.of(context.select<SettingsService, String>((s) => s.themes));
+    final Color accentColor = context.select<SettingsService, Color>((s) => s.accentColor);
+    final bool hideHighlightOutlineOnHomescreen = context.select<SettingsService, bool>((s) => s.hideHighlightOutlineOnHomescreen);
+    final bool appHighlightAnimationEnabled = context.select<SettingsService, bool>((s) => s.appHighlightAnimationEnabled);
+    final bool appSelectorTransitionAnimationEnabled = context.select<SettingsService, bool>((s) => s.appSelectorTransitionAnimationEnabled);
+    final Duration focusDuration = appSelectorTransitionAnimationEnabled ? const Duration(milliseconds: 200) : Duration.zero;
+
+    return AnimatedContainer(
+      duration: focusDuration,
+      curve: Curves.easeOutBack,
+      width: width,
+      height: height,
+      transform: Matrix4.diagonal3Values(scale, scale, 1.0),
+      transformAlignment: Alignment.center,
+      child: Material(
+        borderRadius: style.borderRadius,
+        clipBehavior: Clip.antiAlias,
+        elevation: highlighted ? style.focusElevation : 0,
+        shadowColor: highlighted ? style.focusShadowColor(accentColor) : Colors.black,
+        color: color,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ...children,
+            IgnorePointer(
+              child: AnimatedOpacity(
+                duration: focusDuration,
+                curve: Curves.easeInOut,
+                opacity: highlighted ? 0 : 0.10,
+                child: roundedDim
+                    ? Container(decoration: BoxDecoration(borderRadius: style.borderRadius, color: Colors.black))
+                    : Container(color: Colors.black),
+              ),
+            ),
+            if (highlighted && !hideHighlightOutlineOnHomescreen)
+              FocusHighlight(
+                style: style,
+                accentColor: accentColor,
+                animate: appHighlightAnimationEnabled,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }

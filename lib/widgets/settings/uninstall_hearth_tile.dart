@@ -23,6 +23,7 @@ import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
 import 'kids_profiles_page.dart';
+import 'message_dialog.dart';
 
 /// Settings > System > Uninstall Hearth, the safe way: take it off the kids profiles first (so nothing is left behind
 /// there), then open Android's uninstall screen for Hearth itself. If that can't run yet, stop and ask for the
@@ -66,32 +67,8 @@ class _UninstallHearthTileState extends State<UninstallHearthTile> {
     await channel.uninstallHearth();
   }
 
-  Future<T?> _dialog<T>(String title, List<String> lines, List<Widget> actions) {
-    final textTheme = Theme.of(context).textTheme;
-    return showDialog<T>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: SizedBox(
-          width: 460,
-          // Longer languages can run past the screen's height
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final line in lines) ...[
-                  Text(line, style: textTheme.bodyMedium),
-                  const SizedBox(height: 10),
-                ],
-              ],
-            ),
-          ),
-        ),
-        actions: actions,
-      ),
-    );
-  }
+  Future<T?> _dialog<T>(String title, List<String> lines, List<Widget> actions) =>
+      showLinesDialog<T>(context, title: title, lines: lines, actions: (_) => actions);
 
   @override
   Widget build(BuildContext context) => FocusableSettingsTile(

@@ -134,11 +134,6 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
     }
     final bool showAppNames = context.select<SettingsService, bool>((s) => s.showAppNamesBelowIcons);
     final CardStyle style = CardStyle.of(context.select<SettingsService, String>((s) => s.themes));
-    final Color accentColor = context.select<SettingsService, Color>((s) => s.accentColor);
-    final bool hideHighlightOutlineOnHomescreen = context.select<SettingsService, bool>((s) => s.hideHighlightOutlineOnHomescreen);
-    final bool appHighlightAnimationEnabled = context.select<SettingsService, bool>((s) => s.appHighlightAnimationEnabled);
-    final bool appSelectorTransitionAnimationEnabled = context.select<SettingsService, bool>((s) => s.appSelectorTransitionAnimationEnabled);
-    final Duration focusDuration = appSelectorTransitionAnimationEnabled ? const Duration(milliseconds: 200) : Duration.zero;
 
     return FocusKeyboardListener(
       onPressed: (key) => _onPressed(context, key),
@@ -154,39 +149,14 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
                 aspectRatio: 16 / 9,
                 child: RepaintBoundary(
                   child: LayoutBuilder(
-                    builder: (context, constraints) => AnimatedContainer(
-                      duration: focusDuration,
-                      curve: Curves.easeOutBack,
-                      transformAlignment: Alignment.center,
-                      transform: _scaleTransform(style, shouldHighlight, constraints.maxWidth),
-                      child: Material(
-                        borderRadius: style.borderRadius,
-                        clipBehavior: Clip.antiAlias,
-                        elevation: shouldHighlight ? style.focusElevation : 0,
-                        shadowColor: shouldHighlight ? style.focusShadowColor(accentColor) : Colors.black,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            _notificationBadge(),
-                            _tapTarget(context),
-                            if (_moving) ..._arrows(),
-                            IgnorePointer(
-                              child: AnimatedOpacity(
-                                duration: focusDuration,
-                                curve: Curves.easeInOut,
-                                opacity: shouldHighlight ? 0 : 0.10,
-                                child: Container(color: Colors.black),
-                              ),
-                            ),
-                            if (shouldHighlight && !hideHighlightOutlineOnHomescreen)
-                              FocusHighlight(
-                                style: style,
-                                accentColor: accentColor,
-                                animate: appHighlightAnimationEnabled,
-                              ),
-                          ],
-                        ),
-                      ),
+                    builder: (context, constraints) => FocusCardFrame(
+                      highlighted: shouldHighlight,
+                      scale: shouldHighlight && !_moving ? style.focusScaleFor(constraints.maxWidth) : 1.0,
+                      children: [
+                        _notificationBadge(),
+                        _tapTarget(context),
+                        if (_moving) ..._arrows(),
+                      ],
                     ),
                   ),
                 ),
@@ -389,11 +359,6 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
   bool _shouldHighlight(BuildContext context)
   {
     return FocusManager.instance.highlightMode == FocusHighlightMode.traditional && Focus.of(context).hasFocus;
-  }
-
-  Matrix4 _scaleTransform(CardStyle style, bool highlighted, double maxWidth) {
-    final double scale = highlighted && !_moving ? style.focusScaleFor(maxWidth) : 1.0;
-    return Matrix4.diagonal3Values(scale, scale, 1.0);
   }
 
   List<Widget> _arrows() {

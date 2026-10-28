@@ -22,7 +22,7 @@ import '../../flauncher_channel.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/home_search.dart';
 import '../../providers/search_service.dart';
-import '../focusable_tap.dart';
+import '../count_pill.dart';
 import 'open_title.dart';
 import 'title_card.dart';
 
@@ -114,7 +114,7 @@ class _SearchGridPageState extends State<SearchGridPage> {
             const SizedBox(height: 18),
             Row(children: [
               for (final t in _Tab.values) ...[
-                _Pill(
+                CountPill(
                   label: labels[t]!,
                   count: counts[t]!,
                   selected: t == tab,
@@ -169,48 +169,6 @@ class _SearchGridPageState extends State<SearchGridPage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// A HearthTube-style pill: white when selected, see-through otherwise; focusing it selects it.
-class _Pill extends StatelessWidget {
-  final String label;
-  final int count;
-  final bool selected;
-  final bool autofocus;
-  final VoidCallback onSelected;
-
-  const _Pill(
-      {required this.label,
-      required this.count,
-      required this.selected,
-      required this.onSelected,
-      this.autofocus = false});
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
-    final fg = selected ? Colors.black : Colors.white;
-    return FocusableTap(
-      autofocus: autofocus,
-      onPressed: onSelected,
-      onFocusChange: (focused) {
-        if (focused) onSelected();
-      },
-      builder: (context, focused) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
-        decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.white.withOpacity(0.10),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: focused ? accent : Colors.white.withOpacity(0.15), width: focused ? 3 : 1),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Text(label, style: TextStyle(color: fg, fontSize: 17, fontWeight: FontWeight.w500)),
-          const SizedBox(width: 8),
-          Text("$count", style: TextStyle(color: fg.withOpacity(0.6), fontSize: 14)),
-        ]),
       ),
     );
   }

@@ -4,21 +4,12 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Base64;
-import android.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
-import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
 
 /**
  * Hands the Home Assistant address and access token to the TV from a phone, so nobody types a 180-character token
@@ -30,11 +21,9 @@ import java.security.SecureRandom;
  * when Settings closes it, or after ten minutes. The same page takes the webhook id for TV status (HaStatusReporter),
  * so that needs no typing on the TV either.
  */
-final class HaSetupServer {
+final class HaSetupServer extends SecretLinkServer<HaSetupServer.Sent> {
     private static final String TAG = "HearthHaSetup";
-    private static final int[] PORTS = {8765, 8766, 8767, 8768, 8769};
     private static final int MAX_BODY_BYTES = 16 * 1024;
-    private static final long LIFETIME_MS = 10 * 60 * 1000;
     /** What a webhook id may hold: it goes into the URL Hearth posts the TV's status to. */
     private static final java.util.regex.Pattern WEBHOOK_ID = java.util.regex.Pattern.compile("[A-Za-z0-9_-]{1,128}");
 
@@ -42,19 +31,8 @@ final class HaSetupServer {
     private static HaSetupServer sCurrent;
     private static boolean sLastReceived;
 
-    private final Context mContext;
-    private final String mSecret;
-    private final String mKey;
-    private ServerSocket mServerSocket;
-    private volatile boolean mReceived;
-    private long mStartedAt;
-
     private HaSetupServer(Context context) {
-        mContext = context.getApplicationContext();
-        byte[] bytes = new byte[16];
-        new SecureRandom().nextBytes(bytes);
-        mSecret = Base64.encodeToString(bytes, Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_WRAP);
-        mKey = PhoneSeal.newKey();
+        super(context, TAG, MAX_BODY_BYTES);
     }
 
     /** Starts a fresh server (replacing any running one) and returns the link for the QR code, or null. */
@@ -64,29 +42,16 @@ final class HaSetupServer {
         String ip = LocalNet.ipv4Address();
         if (ip == null) return null;
         HaSetupServer server = new HaSetupServer(context);
-        for (int port : PORTS) {
-            try {
-                server.mServerSocket = new ServerSocket(port);
-                break;
-            } catch (IOException ignored) {
-            }
-        }
-        if (server.mServerSocket == null) return null;
-        server.mStartedAt = System.currentTimeMillis();
+        if (!server.bind()) return null;
         sLastReceived = false;
-        Thread thread = new Thread(server::run, "HearthHaSetup");
-        thread.setDaemon(true);
-        thread.start();
+        server.serve();
         sCurrent = server;
-        return "http://" + ip + ":" + server.mServerSocket.getLocalPort() + "/" + server.mSecret + "#" + server.mKey;
+        return server.link(ip);
     }
 
     static synchronized void stop() {
         if (sCurrent != null) {
-            try {
-                sCurrent.mServerSocket.close();
-            } catch (IOException ignored) {
-            }
+            sCurrent.close();
             sCurrent = null;
         }
     }
@@ -96,62 +61,19 @@ final class HaSetupServer {
         return sLastReceived;
     }
 
-    private void run() {
-        ServerSocket server = mServerSocket;
-        try {
-            server.setSoTimeout(30_000);
-        } catch (IOException ignored) {
-        }
-        while (!server.isClosed() && !mReceived && System.currentTimeMillis() - mStartedAt < LIFETIME_MS) {
-            try (Socket socket = server.accept()) {
-                socket.setSoTimeout(10_000);
-                handle(socket);
-            } catch (SocketTimeoutException ignored) {
-            } catch (IOException | RuntimeException e) {
-                // A malformed request from the network must not take the server (or Hearth) down
-                if (!server.isClosed()) Log.w(TAG, "Request failed: " + e.getClass().getSimpleName());
-            }
-        }
-        try {
-            server.close();
-        } catch (IOException ignored) {
-        }
+    @Override
+    String page() {
+        // Only the address is filled in: the webhook id is a secret, and this page isn't sealed on its way out
+        return formPage(HaConfig.prefs(mContext).getString(HaConfig.URL_KEY, ""));
     }
 
-    private void handle(Socket socket) throws IOException {
-        OutputStream out = socket.getOutputStream();
-        if (!LocalNet.isLocal(socket.getInetAddress())) {
-            MiniHttp.respond(out, 403, "Forbidden");
-            return;
-        }
-        InputStream in = socket.getInputStream();
-        MiniHttp.Request request = MiniHttp.read(in);
-        if (request == null) return;
-        String path = "/" + mSecret;
-        if (!path.equals(request.path)) {
-            MiniHttp.respond(out, 404, "Not found");
-            return;
-        }
-        if (!"POST".equals(request.method)) {
-            // Only the address is filled in: the webhook id is a secret, and this page isn't sealed on its way out
-            MiniHttp.respondHtml(out, formPage(HaConfig.prefs(mContext).getString(HaConfig.URL_KEY, "")));
-            return;
-        }
+    @Override
+    Sent read(String opened) throws JSONException {
+        return parse(opened);
+    }
 
-        int length = request.contentLength();
-        if (length <= 0 || length > MAX_BODY_BYTES) {
-            MiniHttp.respond(out, 400, "Bad request");
-            return;
-        }
-        String body = new String(MiniHttp.readBody(in, length), StandardCharsets.UTF_8);
-        Sent sent;
-        try {
-            sent = parse(PhoneSeal.open(mKey, path, body));
-        } catch (Exception e) {
-            Log.i(TAG, "A sent page didn't open: " + e.getClass().getSimpleName());
-            MiniHttp.respond(out, 400, "Bad request");
-            return;
-        }
+    @Override
+    void answer(Sent sent, OutputStream out) throws IOException {
         if (sent == null) {
             // It opened, but the address, token or webhook id isn't usable: the page says so
             MiniHttp.respond(out, 422, "Missing");
@@ -171,7 +93,7 @@ final class HaSetupServer {
         // An administrator's token lets Hearth make the TV status automation itself: nobody has to find a webhook id
         String state = sent.create ? HaProvision.setUp(mContext, ShareDiscovery.deviceName(mContext)).get("state").toString()
                 : "saved";
-        mReceived = true;
+        finish();
         synchronized (HaSetupServer.class) {
             sLastReceived = true;
         }
@@ -264,18 +186,6 @@ final class HaSetupServer {
             + "else if(t==='failed'||t==='not_set_up')document.getElementById('more').textContent=M.nope;})"
             + ".catch(function(){err.textContent=M.failed;});});";
 
-    private String raw(int id) {
-        try (InputStream in = mContext.getResources().openRawResource(id)) {
-            byte[] buffer = new byte[16 * 1024];
-            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-            int n;
-            while ((n = in.read(buffer)) > 0) bytes.write(buffer, 0, n);
-            return bytes.toString("UTF-8");
-        } catch (IOException e) {
-            return "";
-        }
-    }
-
     /** A string resource for a single-quoted JavaScript string. */
     private String js(int id) {
         return mContext.getString(id).replace("\\", "\\\\").replace("'", "\\'").replace("<", "\\x3c")
@@ -301,9 +211,5 @@ final class HaSetupServer {
                 + "summary{color:#bbb;margin-top:16px}"
                 + "</style></head><body><div class='c'><h2>" + escape(title) + "</h2>" + body + "</div>" + script
                 + "</body></html>";
-    }
-
-    private static String escape(String s) {
-        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("'", "&#39;").replace("\"", "&quot;");
     }
 }

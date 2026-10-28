@@ -66,3 +66,42 @@ class SettingsChoiceTile<T> extends StatelessWidget {
     );
   }
 }
+
+/// A "pick one" dialog: a radio mark and a label per option, and an optional note under them. The current option is
+/// marked and takes focus as the dialog opens. Returns the option picked, or null on Back.
+Future<T?> showChoiceDialog<T>(
+  BuildContext context, {
+  required String title,
+  required List<T> options,
+  required bool Function(T option) isCurrent,
+  required String Function(T option) label,
+  TextStyle? labelStyle,
+  String? note,
+}) =>
+    showDialog<T>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(title),
+        children: [
+          for (final option in options)
+            SimpleDialogOption(
+              child: TextButton(
+                autofocus: isCurrent(option),
+                onPressed: () => Navigator.of(context).pop(option),
+                child: Row(
+                  children: [
+                    Icon(isCurrent(option) ? Icons.radio_button_checked : Icons.radio_button_unchecked, size: 20),
+                    const SizedBox(width: 12),
+                    Flexible(child: Text(label(option), style: labelStyle)),
+                  ],
+                ),
+              ),
+            ),
+          if (note != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+              child: Text(note, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54)),
+            ),
+        ],
+      ),
+    );

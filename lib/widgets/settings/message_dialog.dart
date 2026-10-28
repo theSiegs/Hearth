@@ -38,3 +38,36 @@ Future<bool> showMessageDialog(BuildContext context, {required String title, req
   );
   return ok ?? false;
 }
+
+/// A title, [lines] of text one under another and the [actions] (built with the dialog's context, to close it).
+Future<T?> showLinesDialog<T>(
+  BuildContext context, {
+  required String title,
+  required List<String> lines,
+  required List<Widget> Function(BuildContext dialogContext) actions,
+}) {
+  final textTheme = Theme.of(context).textTheme;
+  return showDialog<T>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: SizedBox(
+        width: 460,
+        // Longer languages can run past the screen's height
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final line in lines) ...[
+                Text(line, style: textTheme.bodyMedium),
+                const SizedBox(height: 10),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: actions(context),
+    ),
+  );
+}

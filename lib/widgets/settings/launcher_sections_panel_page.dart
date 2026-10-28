@@ -21,6 +21,7 @@ import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/settings/continue_watching_settings_page.dart';
 import 'package:flauncher/widgets/settings/focusable_settings_tile.dart';
 import 'package:flauncher/widgets/settings/launcher_section_panel_page.dart';
+import 'package:flauncher/widgets/settings/settings_hint.dart';
 import 'package:flauncher/widgets/settings/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -107,30 +108,8 @@ class _LauncherSectionsPanelPageState extends State<LauncherSectionsPanelPage> {
               Navigator.pushNamed(context, LauncherSectionPanelPage.routeName);
             },
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline, size: 20, color: Colors.white70),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      localizations.sectionsReorderHint,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.white70,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          SettingsHint(localizations.sectionsReorderHint,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
         ],
       ),
     );
