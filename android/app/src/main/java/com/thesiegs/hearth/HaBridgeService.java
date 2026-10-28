@@ -34,6 +34,7 @@ public class HaBridgeService extends Service {
     // What the accessibility service last said, replayed to a reporter that starts after it
     private static volatile String sForegroundPackage;
     private static volatile boolean sScreenTimeLock;
+    private static volatile HaEventSession sEvents;
 
     private HaStatusReporter mStatus;
     private HaNotificationServer mServer;
@@ -77,6 +78,9 @@ public class HaBridgeService extends Service {
      */
     static void sync(Context context) {
         Context app = context.getApplicationContext();
+        // A new address or token: a phone's answer that is being waited for is heard with the new ones
+        HaEventSession events = sEvents;
+        if (events != null) events.settingsChanged();
         Intent intent = new Intent(app, HaBridgeService.class);
         if (!needed(HaStatusReporter.isConfigured(app), LauncherAccessibilityService.isHaNotificationsEnabled(app),
                 AgentService.isAgent(app))) {
@@ -92,6 +96,23 @@ public class HaBridgeService extends Service {
         } catch (RuntimeException e) {
             // Android refuses a foreground start from the background; the next time Hearth is opened tries again
             Log.w(TAG, "Couldn't start the Home Assistant link: " + e.getClass().getSimpleName());
+        }
+    }
+
+    /**
+     * The one Home Assistant events session (a phone's answers to approval requests), made on first use. It belongs
+     * to the bridge but not to the service's lifetime: the requests come from the accessibility service and the
+     * Parent PIN dialog, also in a profile user and while the bridge has nothing else to do and isn't running, so it
+     * lives in the process. It holds no connection and no thread while nothing waits.
+     */
+    static HaEventSession events(Context context) {
+        HaEventSession events = sEvents;
+        if (events != null) return events;
+        synchronized (HaBridgeService.class) {
+            if (sEvents == null) {
+                sEvents = HaEventSession.standard(PhoneApproval.EVENT, HaEvents.dialer(context));
+            }
+            return sEvents;
         }
     }
 
