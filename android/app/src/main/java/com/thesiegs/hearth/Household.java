@@ -1455,7 +1455,7 @@ final class Household {
             HouseholdLog log = noticeLog(app);
             long now = System.currentTimeMillis();
             int cleared = 0;
-            for (HouseholdNotices.Notice n : sNotices.list) {
+            for (HouseholdNotices.Notice n : notices(app)) {
                 if (n.isJoin() || log.get(HouseholdNotices.KIND, n.person, n.item) == null) continue;
                 log.delete(HouseholdNotices.KIND, n.person, n.item, now);
                 cleared++;
@@ -1470,7 +1470,7 @@ final class Household {
      */
     static boolean pressNotice(Context context, String person, String item, int index) {
         HouseholdNotices.Notice listed = null;
-        for (HouseholdNotices.Notice n : sNotices.list) {
+        for (HouseholdNotices.Notice n : notices(context)) {
             if (!n.isJoin() && n.item.equals(item) && n.person.equals(person)) listed = n;
         }
         if (listed == null || index < 0 || index >= listed.actions.size()) return false;
@@ -1554,7 +1554,7 @@ final class Household {
      */
     static boolean answerJoin(Context context, String item, boolean allow, boolean giveHa) {
         boolean listed = false;
-        for (HouseholdNotices.Notice n : sNotices.list) listed |= n.isJoin() && n.item.equals(item);
+        for (HouseholdNotices.Notice n : notices(context)) listed |= n.isJoin() && n.item.equals(item);
         if (!listed) return false;
         Context app = context.getApplicationContext();
         sContext = app;
