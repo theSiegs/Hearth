@@ -3039,10 +3039,6 @@
     "@streamingPinsTitle": {
         "description": "Settings > Profiles: the page (and its row) with each streaming app's profile PINs"
     },
-    "streamingPinsFooter": "Only this profile's PINs are here. When one of these apps asks for this profile's PIN, Hearth types it for you. Setting a PIN pairs this profile with that app profile for good.",
-    "@streamingPinsFooter": {
-        "description": "Streaming app PINs page: footer"
-    },
     "streamingPinsNone": "None of the apps Hearth can type PINs in is installed.",
     "@streamingPinsNone": {
         "description": "Streaming app PINs page: when none of the apps it supports is installed"

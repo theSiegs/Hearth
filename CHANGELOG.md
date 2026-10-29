@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+- **Streaming app PINs**: Recent PIN entries names Google TV's PIN screen "Google TV" instead of its package, and the remote can scroll down through every entry. The note about whose PINs are on the page is gone.
+
 ## 2026.10.86 (pre-release)
 
 - **Streaming app PINs**: the steps Hearth follows to type a saved PIN (Disney+, Netflix, Max, Apple TV, Paramount+'s content PIN, Google TV's PIN screen) are now a recipe file. Hearth carries its own and checks this repository for newer ones at most every 12 hours, so a fix after an app update reaches the TVs without a Hearth release. A fetched recipe can only do what the built-in ones can (press digit keys of that app's own keypad, move and press OK), and anything wrong with the file means Hearth's own are used. Keys are now pressed only in the app's own window and only on a complete keypad.

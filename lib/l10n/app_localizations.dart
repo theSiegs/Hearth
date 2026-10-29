@@ -4161,12 +4161,6 @@ abstract class AppLocalizations {
   /// **'Streaming app PINs'**
   String get streamingPinsTitle;
 
-  /// Streaming app PINs page: footer
-  ///
-  /// In en, this message translates to:
-  /// **'Only this profile\'s PINs are here. When one of these apps asks for this profile\'s PIN, Hearth types it for you. Setting a PIN pairs this profile with that app profile for good.'**
-  String get streamingPinsFooter;
-
   /// Streaming app PINs page: when none of the apps it supports is installed
   ///
   /// In en, this message translates to:

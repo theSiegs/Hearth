@@ -182,10 +182,13 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
         _ => result ?? "?",
       };
 
+  /// Apps whose PIN Hearth types that aren't streaming apps on this page: Google TV's own PIN screen (phone approval).
+  static const _otherLabels = {"com.google.android.apps.tv.launcherx": "Google TV"};
+
   /// "Netflix · Oct 13, 8:04 PM · Accepted" (the content PIN's row names it as such).
   String _logLine(AppLocalizations l, Map<dynamic, dynamic> entry) {
     final pkg = entry["package"] as String? ?? "?";
-    final label = _appLabels[pkg] ?? pkg;
+    final label = _appLabels[pkg] ?? _otherLabels[pkg] ?? pkg;
     final app = entry["content"] == true ? l.contentPinRow(label) : label;
     final at = DateTime.fromMillisecondsSinceEpoch(entry["at"] as int? ?? 0);
     final locale = Localizations.localeOf(context).toString();
@@ -355,11 +358,7 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
               if (mounted) _load();
             },
           ),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(l.streamingPinsFooter, style: small, textAlign: TextAlign.center),
-        ),
+        const SizedBox(height: 8),
         const Divider(),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 4),
@@ -370,12 +369,41 @@ class _StreamingPinsPageState extends State<StreamingPinsPage> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
             child: Text(l.pinLogEmpty, style: small),
           ),
-        for (final entry in _log)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
-            child: Text(_logLine(l, entry), style: small),
-          ),
+        // Focusable, so the remote can scroll the page down to the older ones
+        for (final entry in _log) _LogRow(text: _logLine(l, entry), style: small),
       ],
     );
   }
+}
+
+/// One line of the recent PIN entries: nothing happens on OK, but it takes focus so the page scrolls to it.
+class _LogRow extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+
+  const _LogRow({required this.text, this.style});
+
+  @override
+  State<_LogRow> createState() => _LogRowState();
+}
+
+class _LogRowState extends State<_LogRow> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) => Focus(
+        onFocusChange: (hasFocus) {
+          setState(() => _focused = hasFocus);
+          if (hasFocus) Scrollable.ensureVisible(context, alignment: 0.5, duration: const Duration(milliseconds: 100));
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: _focused ? Theme.of(context).colorScheme.primary : Colors.transparent, width: 2),
+          ),
+          child: Text(widget.text, style: widget.style),
+        ),
+      );
 }

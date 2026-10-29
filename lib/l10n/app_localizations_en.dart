@@ -2521,10 +2521,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get streamingPinsTitle => 'Streaming app PINs';
 
   @override
-  String get streamingPinsFooter =>
-      'Only this profile\'s PINs are here. When one of these apps asks for this profile\'s PIN, Hearth types it for you. Setting a PIN pairs this profile with that app profile for good.';
-
-  @override
   String get streamingPinsNone =>
       'None of the apps Hearth can type PINs in is installed.';
 
