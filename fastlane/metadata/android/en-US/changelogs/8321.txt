@@ -1,0 +1,1 @@
+Streaming app PINs: recent entries name Google TV and scroll with the remote; the 12-hour time format and the blocked notifications badge are fixed.

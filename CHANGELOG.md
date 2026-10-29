@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+## 2026.10.87 (pre-release)
+
 - **Streaming app PINs**: Recent PIN entries names Google TV's PIN screen "Google TV" instead of its package, and the remote can scroll down through every entry. The note about whose PINs are on the page is gone.
 
 ## 2026.10.86 (pre-release)
