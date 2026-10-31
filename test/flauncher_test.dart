@@ -42,6 +42,8 @@ import 'package:flauncher/widgets/category_row.dart';
 import 'package:flauncher/widgets/app_card.dart';
 import 'package:flauncher/widgets/focus_aware_app_bar.dart';
 import 'package:flauncher/widgets/home_dock.dart';
+import 'package:flauncher/widgets/glint/glint_home.dart';
+import 'package:flauncher/widgets/glint/glint_tile.dart';
 import 'package:flauncher/widgets/continue_watching_row.dart';
 import 'package:flauncher/widgets/search/search_entry.dart';
 import 'package:flauncher/widgets/search/search_grid_page.dart';
@@ -118,6 +120,39 @@ void main() {
     expect(find.byType(CategoryRow), findsOneWidget);
     expect(find.byType(AppsGrid), findsOneWidget);
     expect(find.text("This category is empty."), findsNWidgets(2));
+  });
+
+  testWidgets("The Glint home shows live tiles in place of the top bar, the dock and the rows", (tester) async {
+    final appsService = mkAppService();
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    final applicationsCategory = fakeCategory(name: "Applications", order: 1);
+    final app = fakeApp(packageName: "me.efesser.flauncher.1", name: "FLauncher 1");
+    favoritesCategory.applications.add(app);
+    applicationsCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.2", name: "FLauncher 2"));
+    when(appsService.launcherSections).thenReturn([favoritesCategory, applicationsCategory]);
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+    when(settingsService.glintHome).thenReturn(true);
+
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+
+    expect(find.byType(GlintHome), findsOneWidget);
+    expect(find.byType(FocusAwareAppBar), findsNothing);
+    expect(find.byType(HomeDock), findsNothing);
+    // Favorites as tiles; the other sections' apps are in All apps, not on the home
+    expect(find.text("FLauncher 1"), findsOneWidget);
+    expect(find.text("FLauncher 2"), findsNothing);
+    expect(find.text("All apps"), findsOneWidget);
+    expect(find.text("Settings"), findsOneWidget);
+
+    // Select on an app's tile opens it
+    final tile = find.ancestor(of: find.text("FLauncher 1"), matching: find.byType(GlintTile));
+    Focus.of(tester.element(find.text("FLauncher 1"))).requestFocus();
+    await tester.pump();
+    expect(tester.widget<GlintTile>(tile.first).onPressed, isNotNull);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pump();
+    verify(appsService.launchApp(app)).called(1);
   });
 
   testWidgets("Dock shows Favorites along the bottom of the first screen", (tester) async {
@@ -1484,6 +1519,7 @@ SettingsService mkSettingsService([MockSettingsService? mock]) {
   when(settingsService.showContinueWatching).thenReturn(false);
   when(settingsService.continueWatchingOrder).thenReturn(0);
   when(settingsService.dockEnabled).thenReturn(false);
+  when(settingsService.glintHome).thenReturn(false);
   when(settingsService.dockBlurEnabled).thenReturn(true);
   when(settingsService.dockDarkBackground).thenReturn(false);
   when(settingsService.dockShadowEnabled).thenReturn(true);
@@ -1504,6 +1540,7 @@ WallpaperService mkWallpaperService([bool wallpaper = true]) {
   when(wallpaperService.focusedAppColor).thenReturn(null);
   when(wallpaperService.wallpaper).thenReturn(wallpaper ? Image.asset('assets/icon.png').image : null);
   when(wallpaperService.version).thenReturn(0);
+  when(wallpaperService.appColor(any)).thenAnswer((_) async => null);
   return wallpaperService;
 }
 

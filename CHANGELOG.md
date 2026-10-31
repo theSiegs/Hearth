@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+- **Glint home** (test, Settings > Home screen > Look > Glint home): the home screen as live tiles of frosted glass over the picture, in the design language of Glint, the household's phone launcher. Three rows of tiles run on to the right: the clock, what you were watching (its poster, the title and how far you got), the weather, today's next event, the newest notifications, who's watching, the Favorites apps, then All apps (an A to Z list), Search, the Home Assistant panel and Settings. An app's colour shows as a strip down its tile's left edge. Live tiles turn to their next item slowly, one tile at a time and never the selected one. Left alone for 45 seconds, the glass goes clear and the picture shows through; the next key brings it back. Hold OK on an app for its menu. Off by default; the classic home is unchanged.
+
 ## 2026.10.87 (pre-release)
 
 - **Streaming app PINs**: Recent PIN entries names Google TV's PIN screen "Google TV" instead of its package, and the remote can scroll down through every entry. The note about whose PINs are on the page is gone.

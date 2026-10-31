@@ -17,6 +17,7 @@
 
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -73,6 +74,13 @@ class LookSettingsPage extends StatelessWidget {
           leading: const Icon(Icons.animation),
           title: Text(AppLocalizations.of(context)!.animationsSoundTitle, style: textTheme.bodyMedium),
           onPressed: () => Navigator.of(context).pushNamed(AnimationsSoundPage.routeName),
+        ),
+        RoundedSwitchListTile(
+          value: context.select<SettingsService, bool>((s) => s.glintHome),
+          onChanged: (value) => context.read<SettingsService>().setGlintHome(value),
+          title: Text(localizations.glintHome, style: textTheme.bodyMedium),
+          subtitle: Text(localizations.glintHomeDescription, style: textTheme.bodySmall),
+          secondary: const Icon(Icons.dashboard_outlined),
         ),
       ],
     );

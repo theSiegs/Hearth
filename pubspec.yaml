@@ -55,3 +55,14 @@ flutter:
     - assets/logo.png
     # TMDB's approved logo (themoviedb.org/about/logos-attribution), shown in About as its terms require
     - assets/tmdb_logo.svg
+  # Selawik (SIL OFL 1.1, assets/fonts/SELAWIK-OFL.txt): Microsoft's open Segoe UI stand-in, for the Glint home's
+  # Windows Phone pieces (the clock's numerals, the app list's letters and names)
+  fonts:
+    - family: Selawik
+      fonts:
+        - asset: assets/fonts/selawik_light.ttf
+          weight: 300
+        - asset: assets/fonts/selawik_regular.ttf
+          weight: 400
+        - asset: assets/fonts/selawik_semibold.ttf
+          weight: 600

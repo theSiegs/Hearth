@@ -25,7 +25,8 @@ void main() {
       AnimationsSoundPage.routeName,
     ]);
 
-    testWidgets("lists its four pages, starting on Card style with the style chosen now", (tester) async {
+    testWidgets("lists its four pages and the Glint home switch, starting on Card style with the style chosen now",
+        (tester) async {
       final settings = await freshSettings();
       await settings.setThemes("glow");
       await tester.pumpWidget(settingsTestApp(settings, const LookSettingsPage(), routes: routes));
@@ -36,7 +37,19 @@ void main() {
       expect(find.text("Dock & labels"), findsOneWidget);
       expect(find.text("Animations & sound"), findsOneWidget);
       expect(find.text("Glow"), findsOneWidget);
+      expect(find.text("Glint home"), findsOneWidget);
       expect(hasFocusOn(tester, "Card style"), isTrue);
+    });
+
+    testWidgets("the Glint home switch turns the Glint home on and off", (tester) async {
+      final settings = await freshSettings();
+      await tester.pumpWidget(settingsTestApp(settings, const LookSettingsPage(), routes: routes));
+      await tester.pumpAndSettle();
+      expect(settings.glintHome, isFalse);
+
+      await tester.tap(find.text("Glint home"));
+      await tester.pumpAndSettle();
+      expect(settings.glintHome, isTrue);
     });
 
     testWidgets("the trailing style name follows the setting", (tester) async {

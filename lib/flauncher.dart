@@ -35,6 +35,7 @@ import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flauncher/providers/wallpaper_service.dart';
 import 'package:flauncher/widgets/apps_grid.dart';
 import 'package:flauncher/widgets/frosted_glass.dart';
+import 'package:flauncher/widgets/glint/glint_home.dart';
 import 'package:flauncher/widgets/painted_once.dart';
 import 'package:flauncher/widgets/category_container_common.dart';
 import 'package:flauncher/widgets/category_row.dart';
@@ -670,13 +671,23 @@ class _FLauncherState extends State<FLauncher> {
                       visible: state.launcherVisible,
                       replacement: const Center(child: AlternativeLauncherView()),
                       child: child!),
-                  child: Scaffold(
-                      backgroundColor: Colors.transparent,
-                      appBar: FocusAwareAppBar(key: _appBarKey),
-                      body: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                          child: Consumer<AppsService>(
-                              builder: (context, appsService, _) => _homeBody(context, appsService))))),
+                  child: Selector<SettingsService, bool>(
+                    selector: (_, settings) => settings.glintHome,
+                    builder: (context, glint, _) => glint
+                        // Glint's live tiles, in place of the top bar, the dock and the rows
+                        ? Consumer<AppsService>(
+                            builder: (context, appsService, _) => appsService.initialized &&
+                                    context.select<ProfileService?, bool>((p) => p?.settledOnce ?? true)
+                                ? GlintHome(focusNode: _appsGridFocusNode)
+                                : _emptyState(context))
+                        : Scaffold(
+                            backgroundColor: Colors.transparent,
+                            appBar: FocusAwareAppBar(key: _appBarKey),
+                            body: Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                child: Consumer<AppsService>(
+                                    builder: (context, appsService, _) => _homeBody(context, appsService)))),
+                  )),
               // Typing or saying a search, over the home
               if (_searchTyping)
                 Positioned.fill(

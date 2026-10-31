@@ -711,6 +711,14 @@
     "@haPanelTitle": {
         "description": "Settings page title, also its row in the page that opens it"
     },
+    "glintHome": "Glint home",
+    "@glintHome": {
+        "description": "Settings switch: the home screen as live tiles over the picture, in the design language of Glint (the household's phone launcher), instead of the dock and rows"
+    },
+    "glintHomeDescription": "Live tiles over the picture, like the Glint phone launcher",
+    "@glintHomeDescription": {
+        "description": "Under the Glint home switch"
+    },
     "lookTitle": "Look",
     "@lookTitle": {
         "description": "Settings page title, also its row in the page that opens it"

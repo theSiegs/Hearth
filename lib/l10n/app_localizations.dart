@@ -1504,6 +1504,18 @@ abstract class AppLocalizations {
   /// **'Dashboard panel'**
   String get haPanelTitle;
 
+  /// Settings switch: the home screen as live tiles over the picture, in the design language of Glint (the household's phone launcher), instead of the dock and rows
+  ///
+  /// In en, this message translates to:
+  /// **'Glint home'**
+  String get glintHome;
+
+  /// Under the Glint home switch
+  ///
+  /// In en, this message translates to:
+  /// **'Live tiles over the picture, like the Glint phone launcher'**
+  String get glintHomeDescription;
+
   /// Settings page title, also its row in the page that opens it
   ///
   /// In en, this message translates to:

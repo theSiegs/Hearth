@@ -848,6 +848,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get haPanelTitle => 'Dashboard panel';
 
   @override
+  String get glintHome => 'Glint home';
+
+  @override
+  String get glintHomeDescription =>
+      'Live tiles over the picture, like the Glint phone launcher';
+
+  @override
   String get lookTitle => 'Look';
 
   @override
