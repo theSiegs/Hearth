@@ -15,6 +15,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:typed_data';
+
 import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:flauncher/providers/apps_service.dart';
@@ -103,7 +105,7 @@ class GlintAppsPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("apps", style: GlintLook.display(48).copyWith(shadows: const [])),
+                const Text("apps", style: GlintLook.wpTitle),
                 const SizedBox(height: 4),
                 Expanded(
                   child: FocusTraversalGroup(
@@ -130,6 +132,15 @@ class _AppRow extends StatefulWidget {
 
 class _AppRowState extends State<_AppRow> {
   bool _focused = false;
+  late Future<Uint8List> _icon = context.read<AppsService>().getAppIcon(widget.app.packageName);
+
+  @override
+  void didUpdateWidget(_AppRow old) {
+    super.didUpdateWidget(old);
+    if (old.app.packageName != widget.app.packageName) {
+      _icon = context.read<AppsService>().getAppIcon(widget.app.packageName);
+    }
+  }
 
   void _open() {
     Navigator.of(context).pop();
@@ -159,16 +170,45 @@ class _AppRowState extends State<_AppRow> {
         color: _focused ? Colors.white.withValues(alpha: 0.14) : Colors.transparent,
         border: Border.all(color: _focused ? Colors.white : Colors.transparent, width: 2),
       ),
-      child: Text(
-        widget.app.name,
-        style: const TextStyle(
-          fontFamily: GlintLook.wpFont,
-          fontSize: 22,
-          fontWeight: FontWeight.w400,
-          color: Colors.white,
+      child: Row(
+        children: [
+          _square(),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              widget.app.name,
+              style: const TextStyle(
+                fontFamily: GlintLook.wpFont,
+                fontSize: 22,
+                height: 26 / 22,
+                fontWeight: FontWeight.w300,
+                color: Colors.white,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  /// Glint's app list square: the accent, with the app's own full-colour icon on a plate inside it.
+  Widget _square() => Container(
+    width: 44,
+    height: 44,
+    padding: const EdgeInsets.all(5),
+    decoration: BoxDecoration(color: GlintLook.ember, borderRadius: BorderRadius.circular(2)),
+    child: DecoratedBox(
+      decoration: BoxDecoration(color: const Color(0xF2FFFFFF), borderRadius: BorderRadius.circular(4)),
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: FutureBuilder<Uint8List>(
+          future: _icon,
+          builder: (context, snapshot) => snapshot.hasData && snapshot.data!.isNotEmpty
+              ? Image.memory(snapshot.data!, fit: BoxFit.contain, gaplessPlayback: true)
+              : const SizedBox.expand(),
         ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
       ),
     ),
   );

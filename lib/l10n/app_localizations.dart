@@ -1516,6 +1516,36 @@ abstract class AppLocalizations {
   /// **'Live tiles over the picture, like the Glint phone launcher'**
   String get glintHomeDescription;
 
+  /// Settings row, shown while the Glint home is on: how much its live tiles move. Select steps through the levels
+  ///
+  /// In en, this message translates to:
+  /// **'Glint motion'**
+  String get glintMotion;
+
+  /// Glint motion level: tiles turn often
+  ///
+  /// In en, this message translates to:
+  /// **'Lively'**
+  String get glintMotionLively;
+
+  /// Glint motion level: tiles turn now and then, one at a time (the default)
+  ///
+  /// In en, this message translates to:
+  /// **'Easy'**
+  String get glintMotionEasy;
+
+  /// Glint motion level: nothing turns while you look; tiles change between visits
+  ///
+  /// In en, this message translates to:
+  /// **'Calm'**
+  String get glintMotionCalm;
+
+  /// Glint motion level: nothing moves
+  ///
+  /// In en, this message translates to:
+  /// **'Still'**
+  String get glintMotionStill;
+
   /// Settings page title, also its row in the page that opens it
   ///
   /// In en, this message translates to:

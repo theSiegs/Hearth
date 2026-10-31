@@ -855,6 +855,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'Live tiles over the picture, like the Glint phone launcher';
 
   @override
+  String get glintMotion => 'Glint motion';
+
+  @override
+  String get glintMotionLively => 'Lively';
+
+  @override
+  String get glintMotionEasy => 'Easy';
+
+  @override
+  String get glintMotionCalm => 'Calm';
+
+  @override
+  String get glintMotionStill => 'Still';
+
+  @override
   String get lookTitle => 'Look';
 
   @override

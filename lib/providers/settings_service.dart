@@ -50,6 +50,7 @@ const String _bingWallpaperEnabledKey = "bing_wallpaper_enabled";
 const String _matchSelectedAppBackgroundKey = "match_selected_app_background";
 const String _dockEnabledKey = "dock_enabled";
 const String _glintHomeKey = "glint_home";
+const String _glintMotionKey = "glint_motion";
 const String _dockBlurEnabledKey = "dock_blur_enabled";
 const String _dockDarkBackgroundKey = "dock_dark_background";
 const String _dockShadowEnabledKey = "dock_shadow_enabled";
@@ -173,6 +174,7 @@ class SettingsService extends ChangeNotifier {
     _matchSelectedAppBackgroundKey,
     _dockEnabledKey,
     _glintHomeKey,
+    _glintMotionKey,
     _dockBlurEnabledKey,
     _dockDarkBackgroundKey,
     _dockShadowEnabledKey,
@@ -525,6 +527,11 @@ class SettingsService extends ChangeNotifier {
   bool get glintHome => _bool(_glintHomeKey, const bool.fromEnvironment("GLINT_HOME_DEFAULT"));
 
   Future<void> setGlintHome(bool enabled) => _setBool(_glintHomeKey, enabled);
+
+  /// How much the Glint home moves: a [GlintMotion] name (lively, easy, calm, still); Easy unless chosen.
+  String get glintMotion => _string(_glintMotionKey, "easy");
+
+  Future<void> setGlintMotion(String motion) => _setString(_glintMotionKey, motion);
 
   bool get dockBlurEnabled => _bool(_dockBlurEnabledKey, true);
 

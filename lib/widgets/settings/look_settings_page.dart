@@ -17,6 +17,7 @@
 
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/widgets/glint/glint_look.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -41,6 +42,14 @@ class LookSettingsPage extends StatelessWidget {
         "classic": localizations.cardStyleClassic,
         "minimal": localizations.cardStyleMinimal,
         "capsule": localizations.cardStyleCapsule,
+      };
+
+  /// The Glint home's motion levels, with their names in the current language.
+  static Map<GlintMotion, String> glintMotions(AppLocalizations localizations) => {
+        GlintMotion.lively: localizations.glintMotionLively,
+        GlintMotion.easy: localizations.glintMotionEasy,
+        GlintMotion.calm: localizations.glintMotionCalm,
+        GlintMotion.still: localizations.glintMotionStill,
       };
 
   const LookSettingsPage({super.key});
@@ -82,6 +91,21 @@ class LookSettingsPage extends StatelessWidget {
           subtitle: Text(localizations.glintHomeDescription, style: textTheme.bodySmall),
           secondary: const Icon(Icons.dashboard_outlined),
         ),
+        if (context.select<SettingsService, bool>((s) => s.glintHome))
+          FocusableSettingsTile(
+            leading: const Icon(Icons.motion_photos_on_outlined),
+            title: Text(localizations.glintMotion, style: textTheme.bodyMedium),
+            trailing: Text(
+              glintMotions(localizations)[GlintMotion.fromName(context.select<SettingsService, String>((s) => s.glintMotion))]!,
+              style: textTheme.bodySmall,
+            ),
+            // Select steps to the next level, round from Still to Lively
+            onPressed: () {
+              final settings = context.read<SettingsService>();
+              final now = GlintMotion.fromName(settings.glintMotion);
+              settings.setGlintMotion(GlintMotion.values[(now.index + 1) % GlintMotion.values.length].name);
+            },
+          ),
       ],
     );
   }

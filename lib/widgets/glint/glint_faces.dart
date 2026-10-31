@@ -52,6 +52,7 @@ class _LiveTile extends StatefulWidget {
   final void Function(int index)? onPressed;
   final Color? Function(int index)? colourEdge;
   final ImageProvider? Function(int index)? picture;
+  final Object? fresh;
 
   const _LiveTile({
     required this.id,
@@ -61,6 +62,7 @@ class _LiveTile extends StatefulWidget {
     this.onPressed,
     this.colourEdge,
     this.picture,
+    this.fresh,
   });
 
   @override
@@ -108,6 +110,7 @@ class _LiveTileState extends State<_LiveTile> {
           onFocusChange: (focused) => _ticker?.hold(widget.id, focused),
           colourEdge: widget.colourEdge?.call(shown),
           picture: widget.picture?.call(shown),
+          fresh: widget.fresh,
           child: GlintFlip(index: shown, builder: widget.builder),
         );
       },
@@ -516,10 +519,13 @@ class NotificationsFace extends StatelessWidget {
     final shown = items.take(3).toList();
     void open() =>
         showDialog(context: context, barrierColor: Colors.transparent, builder: (_) => const NotificationsPanel());
+    // A live tile even when empty, so it's the same tile when the first one arrives, and lights for it
     if (shown.isEmpty) {
-      return GlintTile(
-        onPressed: open,
-        child: Column(
+      return _LiveTile(
+        id: "notifications",
+        faces: 1,
+        onPressed: (_) => open(),
+        builder: (context, _) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
@@ -533,6 +539,7 @@ class NotificationsFace extends StatelessWidget {
     return _LiveTile(
       id: "notifications",
       faces: shown.length,
+      fresh: shown.first.key,
       pace: const Duration(seconds: 30),
       onPressed: (_) => open(),
       builder: (context, i) {
@@ -617,6 +624,7 @@ class HouseFace extends StatelessWidget {
   Widget build(BuildContext context) => _LiveTile(
     id: "house",
     faces: items.length,
+    fresh: Object.hashAll(items),
     pace: const Duration(seconds: 25),
     builder: (context, i) {
       final item = items[i];

@@ -21,17 +21,36 @@ import 'dart:math' as math;
 import 'package:flauncher/widgets/glint/glint_look.dart';
 import 'package:flutter/material.dart';
 
-/// Decides when the Glint home's live tiles turn to their next face: one tile at a time, [GlintLook.flipSpacing]
-/// apart, each no sooner than its own pace, never the selected one (what select opens doesn't change under it) and
-/// never while the home rests. Glint's Calm motion, at ten feet.
+/// Decides when the Glint home's live tiles turn to their next face, at the home's [GlintMotion]: Lively and Easy turn
+/// one tile every so often ([GlintPace.drawGap]), the one that has waited longest past its own pace; Calm and Still
+/// never turn while shown, and a tile shows its next face on a fresh view of the home ([freshView]). Never the
+/// selected tile (what select opens doesn't change under it), never while the home rests.
 class GlintTicker {
-  final Duration spacing;
   final Map<Object, _Turning> _tiles = {};
   Timer? _timer;
   bool _paused = false;
+  GlintMotion _motion;
+  DateTime? _lastTurn;
   final DateTime Function() _now;
+  final math.Random _random;
 
-  GlintTicker({this.spacing = GlintLook.flipSpacing, DateTime Function()? now}) : _now = now ?? DateTime.now;
+  /// [autoStart] false leaves the turning to [step], for tests.
+  GlintTicker({GlintMotion motion = GlintMotion.fallback, DateTime Function()? now, math.Random? random, this.autoStart = true})
+    : _motion = motion,
+      _now = now ?? DateTime.now,
+      _random = random ?? math.Random();
+
+  final bool autoStart;
+
+  GlintMotion get motion => _motion;
+
+  set motion(GlintMotion value) {
+    if (value == _motion) return;
+    _motion = value;
+    _timer?.cancel();
+    _timer = null;
+    _schedule();
+  }
 
   /// A tile with [faces] faces that turns no more often than every [pace]; [index] is the face it shows.
   ValueNotifier<int> join(Object id, {required int faces, required Duration pace}) {
@@ -40,7 +59,7 @@ class GlintTicker {
       ..faces = faces
       ..pace = pace;
     if (tile.index.value >= faces) tile.index.value = 0;
-    _timer ??= Timer.periodic(spacing, (_) => step());
+    _schedule();
     return tile.index;
   }
 
@@ -57,10 +76,23 @@ class GlintTicker {
 
   set paused(bool value) => _paused = value;
 
-  /// Turns the tile that has waited longest past its pace, if any.
+  void _schedule() {
+    final gap = _motion.pace.drawGap;
+    if (!autoStart || _timer != null || gap == null || _tiles.isEmpty) return;
+    final (low, high) = gap;
+    final wait = low + Duration(milliseconds: _random.nextInt(high.inMilliseconds - low.inMilliseconds + 1));
+    _timer = Timer(wait, () {
+      _timer = null;
+      step();
+      _schedule();
+    });
+  }
+
+  /// Turns the tile that has waited longest past its pace, if any (Lively and Easy only).
   void step() {
-    if (_paused) return;
+    if (_paused || !_motion.pace.draws) return;
     final now = _now();
+    if (_lastTurn != null && now.difference(_lastTurn!) < _motion.pace.spacing) return;
     _Turning? next;
     for (final tile in _tiles.values) {
       if (tile.faces < 2 || tile.held) continue;
@@ -68,8 +100,21 @@ class GlintTicker {
       if (next == null || tile.turnedAt.isBefore(next.turnedAt)) next = tile;
     }
     if (next == null) return;
+    _lastTurn = now;
     next.turnedAt = now;
     next.index.value = (next.index.value + 1) % next.faces;
+  }
+
+  /// The home is seen afresh (back from an app, awake from rest): at Calm and Still, each tile with more than one face
+  /// shows its next, changed while nobody watched.
+  void freshView() {
+    if (_motion.pace.draws) return;
+    final now = _now();
+    for (final tile in _tiles.values) {
+      if (tile.faces < 2 || tile.held) continue;
+      tile.turnedAt = now;
+      tile.index.value = (tile.index.value + 1) % tile.faces;
+    }
   }
 
   void dispose() {
@@ -122,7 +167,13 @@ class _GlintFlipState extends State<GlintFlip> with SingleTickerProviderStateMix
   @override
   void didUpdateWidget(GlintFlip old) {
     super.didUpdateWidget(old);
-    if (widget.index != _shown && !_controller.isAnimating) _turn();
+    if (widget.index == _shown || _controller.isAnimating) return;
+    // Calm and Still change a face only while nobody's looking: no flip, just the new face
+    if (GlintTickerScope.of(context)?.motion.pace.draws ?? true) {
+      _turn();
+    } else {
+      _shown = widget.index;
+    }
   }
 
   Future<void> _turn() async {

@@ -16,9 +16,11 @@
  */
 
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flauncher/widgets/frosted_glass.dart';
+import 'package:flauncher/widgets/glint/glint_flip.dart';
 import 'package:flauncher/widgets/glint/glint_look.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -46,6 +48,11 @@ class GlintTile extends StatefulWidget {
   final ValueChanged<bool>? onFocusChange;
   final EdgeInsets padding;
 
+  /// What's new on the face (the newest notification's key, what's going on around the house). When it changes from
+  /// what was there when the tile was last selected, the tile shows Glint's new-content cue: a lit accent edge, and one
+  /// comet round it as it lights (just the lit edge at Still). Selecting the tile sees it. Null: never new.
+  final Object? fresh;
+
   const GlintTile({
     super.key,
     required this.child,
@@ -56,6 +63,7 @@ class GlintTile extends StatefulWidget {
     this.focusNode,
     this.onFocusChange,
     this.padding = const EdgeInsets.fromLTRB(14, 12, 14, 10),
+    this.fresh,
   });
 
   /// Held this long, select is a long press.
@@ -72,11 +80,37 @@ class GlintTile extends StatefulWidget {
   State<GlintTile> createState() => _GlintTileState();
 }
 
-class _GlintTileState extends State<GlintTile> {
+class _GlintTileState extends State<GlintTile> with SingleTickerProviderStateMixin {
   bool _focused = false;
 
+  /// What was new the last time the tile was selected (at first, what it showed then: nothing glows on arrival).
+  late Object? _seen = widget.fresh;
+  late final AnimationController _comet = AnimationController(vsync: this, duration: GlintLook.cometLap);
+
+  bool get _isNew => widget.fresh != null && widget.fresh != _seen;
+
+  @override
+  void didUpdateWidget(GlintTile old) {
+    super.didUpdateWidget(old);
+    if (_focused) {
+      _seen = widget.fresh;
+    } else if (widget.fresh != old.fresh && _isNew) {
+      final moves = GlintTickerScope.of(context)?.motion.pace.moves ?? true;
+      if (moves) _comet.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _comet.dispose();
+    super.dispose();
+  }
+
   void _focusChanged(bool focused) {
-    setState(() => _focused = focused);
+    setState(() {
+      _focused = focused;
+      if (focused) _seen = widget.fresh;
+    });
     if (focused) {
       Scrollable.ensureVisible(
         context,
@@ -159,6 +193,10 @@ class _GlintTileState extends State<GlintTile> {
                 IgnorePointer(
                   child: CustomPaint(painter: _EdgePainter(radius: GlintLook.corner)),
                 ),
+                if (_isNew && !_focused)
+                  IgnorePointer(
+                    child: CustomPaint(painter: _CuePainter(radius: GlintLook.corner, comet: _comet)),
+                  ),
               ],
             ),
           ),
@@ -203,6 +241,51 @@ class _EdgePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_EdgePainter old) => old.radius != radius;
+}
+
+/// Glint's new-content cue: the edge lit in the accent and, while [comet] runs, one bright comet travelling round it.
+class _CuePainter extends CustomPainter {
+  final double radius;
+  final Animation<double> comet;
+  _CuePainter({required this.radius, required this.comet}) : super(repaint: comet);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final inset = GlintLook.cueWidth / 2;
+    final rrect = RRect.fromRectAndRadius((Offset.zero & size).deflate(inset), Radius.circular(radius - inset));
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = GlintLook.cueWidth
+        ..color = GlintLook.ember.withValues(alpha: 0.85),
+    );
+    final t = comet.value;
+    if (t <= 0 || t >= 1) return;
+    final metric = (Path()..addRRect(rrect)).computeMetrics().first;
+    final tail = metric.length * 0.18;
+    final head = metric.length * t;
+    // The comet fades in and out over its lap, brightest at the head
+    final strength = math.sin(t * math.pi);
+    const pieces = 12;
+    for (var i = 0; i < pieces; i++) {
+      final from = head - tail * (i + 1) / pieces, to = head - tail * i / pieces;
+      final segment = from >= 0
+          ? metric.extractPath(from, to)
+          : (metric.extractPath(metric.length + from, metric.length)..addPath(metric.extractPath(0, math.max(0, to)), Offset.zero));
+      canvas.drawPath(
+        segment,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = GlintLook.cueWidth + 1.5
+          ..strokeCap = StrokeCap.round
+          ..color = Color.lerp(Colors.white, GlintLook.ember, i / pieces)!.withValues(alpha: strength * (1 - i / pieces)),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CuePainter old) => old.radius != radius || old.comet != comet;
 }
 
 /// One stop for the D-pad that tells a press of select from a hold, as [GlintTile] does, around any [child].

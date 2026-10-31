@@ -42,7 +42,7 @@ void main() {
     final apps = MockAppsService();
     when(apps.getApp(any)).thenReturn(fakeApp(packageName: "com.example.tv", name: "Example TV"));
     final watchNext = MockWatchNextService();
-    final ticker = GlintTicker(spacing: const Duration(days: 1));
+    final ticker = GlintTicker(autoStart: false);
     addTearDown(ticker.dispose);
 
     final program = WatchNextProgram(

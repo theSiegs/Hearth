@@ -52,6 +52,28 @@ void main() {
       expect(settings.glintHome, isTrue);
     });
 
+    testWidgets("with the Glint home on, Glint motion shows its level and select steps through them", (tester) async {
+      final settings = await freshSettings();
+      await tester.pumpWidget(settingsTestApp(settings, const LookSettingsPage(), routes: routes));
+      await tester.pumpAndSettle();
+      expect(find.text("Glint motion"), findsNothing);
+
+      await settings.setGlintHome(true);
+      await tester.pumpAndSettle();
+      expect(find.text("Glint motion"), findsOneWidget);
+      expect(find.text("Easy"), findsOneWidget);
+
+      await tester.tap(find.text("Glint motion"));
+      await tester.pumpAndSettle();
+      expect(settings.glintMotion, "calm");
+      expect(find.text("Calm"), findsOneWidget);
+
+      await settings.setGlintMotion("still");
+      await tester.tap(find.text("Glint motion"));
+      await tester.pumpAndSettle();
+      expect(settings.glintMotion, "lively");
+    });
+
     testWidgets("the trailing style name follows the setting", (tester) async {
       final settings = await freshSettings();
       await tester.pumpWidget(settingsTestApp(settings, const LookSettingsPage(), routes: routes));

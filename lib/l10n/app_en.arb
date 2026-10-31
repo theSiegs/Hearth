@@ -719,6 +719,26 @@
     "@glintHomeDescription": {
         "description": "Under the Glint home switch"
     },
+    "glintMotion": "Glint motion",
+    "@glintMotion": {
+        "description": "Settings row, shown while the Glint home is on: how much its live tiles move. Select steps through the levels"
+    },
+    "glintMotionLively": "Lively",
+    "@glintMotionLively": {
+        "description": "Glint motion level: tiles turn often"
+    },
+    "glintMotionEasy": "Easy",
+    "@glintMotionEasy": {
+        "description": "Glint motion level: tiles turn now and then, one at a time (the default)"
+    },
+    "glintMotionCalm": "Calm",
+    "@glintMotionCalm": {
+        "description": "Glint motion level: nothing turns while you look; tiles change between visits"
+    },
+    "glintMotionStill": "Still",
+    "@glintMotionStill": {
+        "description": "Glint motion level: nothing moves"
+    },
     "lookTitle": "Look",
     "@lookTitle": {
         "description": "Settings page title, also its row in the page that opens it"

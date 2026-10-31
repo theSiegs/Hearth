@@ -74,28 +74,79 @@ class GlintLook {
   );
   static const TextStyle label = TextStyle(
     color: secondary,
-    fontSize: 10.5,
+    fontSize: 12,
     fontWeight: FontWeight.w600,
-    letterSpacing: 1.1,
+    letterSpacing: 1.2,
     shadows: textShadow,
   );
 
-  /// The big light numerals and words on tiles: the clock, the temperature, "2 h 10 min".
+  /// The smallest text the home draws (Glint's floor): a face that needs smaller type gets more room instead.
+  static const double minTextSize = 12;
+
+  /// The big light numerals and words on tiles: the clock, the temperature, "2 h 10 min". The system sans, light;
+  /// Selawik is only for the Windows Phone pages.
   static TextStyle display(double size) => TextStyle(
     color: content,
-    fontFamily: wpFont,
     fontSize: size,
     fontWeight: FontWeight.w300,
     height: 1.0,
     shadows: textShadow,
   );
 
-  /// How long a face takes to flip over its top edge, and the pause between one tile's flip and the next's (only one
-  /// tile moves at a time, as Glint's Calm motion has it).
+  /// A Windows Phone page's title: big, light, lower case ("apps").
+  static const TextStyle wpTitle = TextStyle(
+    color: content,
+    fontFamily: wpFont,
+    fontSize: 44,
+    height: 48 / 44,
+    fontWeight: FontWeight.w300,
+  );
+
+  /// How long a face takes to flip over its top edge.
   static const Duration flip = Duration(milliseconds: 650);
-  static const Duration flipSpacing = Duration(seconds: 4);
+
+  /// The lit edge on a tile with something new, and the one comet round it when it lights.
+  static const double cueWidth = 2;
+  static const Duration cometLap = Duration(milliseconds: 1800);
 
   /// Idle this long, the home rests: the glass goes clear and the picture shows through.
   static const Duration restAfter = Duration(seconds: 45);
   static const Duration restFade = Duration(milliseconds: 1600);
+}
+
+/// How much the Glint home moves, most to least (Glint's Motion, one row each of [GlintPace]): Lively, Easy (Lively's
+/// moves at half its rate, the TV's default), Calm (nothing turns while you look; a tile shows its next face on a fresh
+/// view of the home) and Still (nothing moves at all). Saved by name.
+enum GlintMotion {
+  lively(GlintPace(drawGap: (Duration(seconds: 2), Duration(seconds: 5)), spacing: Duration(milliseconds: 1500))),
+  easy(GlintPace(drawGap: (Duration(seconds: 4), Duration(seconds: 10)), spacing: Duration(seconds: 3))),
+  calm(GlintPace()),
+  still(GlintPace(moves: false));
+
+  final GlintPace pace;
+  const GlintMotion(this.pace);
+
+  static const GlintMotion fallback = easy;
+
+  /// From its saved name, any case; unknown or missing is [fallback].
+  static GlintMotion fromName(String? name) =>
+      values.where((m) => m.name == name?.trim().toLowerCase()).firstOrNull ?? fallback;
+}
+
+/// One Motion level's numbers, from Glint's MotionPace table.
+class GlintPace {
+  /// Anything moves at all (not Still).
+  final bool moves;
+
+  /// The ticker turns a tile every so often, a random time in this range (null: no turning while shown, Calm and
+  /// Still). Each draw turns one tile, so one tile moves at a time.
+  final (Duration, Duration)? drawGap;
+
+  /// Two turns are never closer than this, so neighbours don't move together.
+  final Duration spacing;
+
+  const GlintPace({this.moves = true, this.drawGap, this.spacing = Duration.zero});
+
+  /// Faces turn while the home is shown (Lively and Easy flip; Calm and Still change only on a fresh view).
+  bool get draws => drawGap != null;
 }

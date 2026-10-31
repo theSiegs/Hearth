@@ -107,6 +107,7 @@ class _GlintHomeState extends State<GlintHome> with SingleTickerProviderStateMix
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _rest.value = 0;
+      _ticker.freshView();
       _awake();
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
       _idle?.cancel();
@@ -116,6 +117,7 @@ class _GlintHomeState extends State<GlintHome> with SingleTickerProviderStateMix
   /// Any key wakes the home. The first press out of a deep rest only wakes it, so nothing moves or opens unseen.
   bool _onAnyKey(KeyEvent event) {
     final wasResting = _rest.value > 0.5;
+    if (wasResting) _ticker.freshView();
     _awake();
     return wasResting && event is KeyDownEvent && mounted && (ModalRoute.of(context)?.isCurrent ?? true);
   }
@@ -132,6 +134,7 @@ class _GlintHomeState extends State<GlintHome> with SingleTickerProviderStateMix
   Widget build(BuildContext context) {
     final apps = context.watch<AppsService>();
     final settings = context.watch<SettingsService>();
+    _ticker.motion = GlintMotion.fromName(settings.glintMotion);
     final watchNext = context.watch<WatchNextService?>();
     final weather = context.watch<WeatherService?>()?.weatherData;
     final calendar = context.watch<CalendarService?>();

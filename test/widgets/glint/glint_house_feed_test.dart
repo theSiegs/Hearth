@@ -3,7 +3,7 @@ import 'package:flauncher/widgets/glint/glint_house_feed.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 HaEntity _e(String id, String state, [String? name]) =>
-    HaEntity(id, state, attributes: {if (name != null) "friendly_name": name});
+    HaEntity(id, state, attributes: {"friendly_name": ?name});
 
 Map<String, HaEntity> _all(List<HaEntity> entities) => {for (final e in entities) e.entityId: e};
 
