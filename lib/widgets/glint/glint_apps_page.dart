@@ -193,16 +193,18 @@ class _AppRowState extends State<_AppRow> {
     ),
   );
 
-  /// Glint's app list square: the accent, with the app's own full-colour icon on a plate inside it.
+  /// Glint's app list square: the accent mat with the app's own full-colour icon on it, 0.70 of the square, cut to
+  /// Glint's 2 dp corners (an adaptive icon arrives with its background and foreground drawn together; a round legacy
+  /// icon sits straight on the accent).
   Widget _square() => Container(
     width: 44,
     height: 44,
-    padding: const EdgeInsets.all(5),
+    alignment: Alignment.center,
     decoration: BoxDecoration(color: GlintLook.ember, borderRadius: BorderRadius.circular(2)),
-    child: DecoratedBox(
-      decoration: BoxDecoration(color: const Color(0xF2FFFFFF), borderRadius: BorderRadius.circular(4)),
-      child: Padding(
-        padding: const EdgeInsets.all(3),
+    child: SizedBox.square(
+      dimension: 44 * 0.70,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(2),
         child: FutureBuilder<Uint8List>(
           future: _icon,
           builder: (context, snapshot) => snapshot.hasData && snapshot.data!.isNotEmpty
