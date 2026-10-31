@@ -19,97 +19,157 @@ import 'package:flutter/material.dart';
 
 /// The Glint home's look, taken from Glint (the phone launcher) so the two read as one family: glass tiles over the
 /// picture, one thing per face in big type, an ember accent and a warm shine along each tile's top edge.
+///
+/// The numbers are Glint's design tokens (a copy of Glint's glint-tokens.json is in test/widgets/glint, and
+/// glint_tokens_test.dart fails when these drift from it). Where the TV differs on purpose, it says so here and in
+/// that test: type is Glint's phone scale times [tvScale], the home rests later, and Easy is the default motion.
 class GlintLook {
   GlintLook._();
 
-  /// Glint's accent.
+  /// The version of Glint's token file these numbers follow.
+  static const int tokensVersion = 2;
+
+  /// Glint's accent (colors.accent.default).
   static const Color ember = Color(0xFFF0955A);
 
-  /// The glass's tint over the blurred picture.
+  /// The glass's dark tint over the blurred picture (glass.dark).
   static const Color tint = Color(0xFF0E1016);
 
-  /// The tint's strength: Glint's at its default clarity (40), and at rest, when the glass goes nearly clear.
-  static const double tintAlpha = 0.38;
-  static const double restTintAlpha = 0.10;
+  /// Glint's glass at a clarity (0 clear … 100 frosted), the Smoke way (Auto over a dark picture, which the TV's
+  /// pictures nearly always are): strengthBase + strengthFrost × frosted + smoke.extra.
+  static const double strengthBase = 0.06;
+  static const double strengthFrost = 0.49;
+  static const double smokeExtra = 0.12;
+  static const int clarity = 40;
+  static const int restClarity = 8;
 
-  /// How strongly the picture under a tile is blurred.
+  /// The tint's strength at Glint's default clarity, and at rest, when the glass goes nearly clear.
+  static const double tintAlpha = strengthBase + strengthFrost * clarity / 100 + smokeExtra;
+  static const double restTintAlpha = strengthBase + strengthFrost * restClarity / 100 + smokeExtra;
+
+  /// How strongly the picture under a tile is blurred (Glint makes its frosted copy its own way: glass.frostBlur is
+  /// Android only).
   static const double blurSigma = 18;
 
-  /// The hairline round each tile, and the shine along its top edge (white warmed toward amber).
-  static const Color line = Color(0x29FFFFFF);
-  static const Color shine = Color(0xFFFFEFE3);
+  /// The hairline round each tile (glass.hairline, on dark).
+  static const double hairlineAlpha = 0.16;
+  static const double hairlineWidth = 1;
+  static const Color line = Color.fromRGBO(255, 255, 255, hairlineAlpha);
+
+  /// The shine along a tile's top edge: white warmed [shineWarmMix] of the way toward [shineWarm] (glass.shine).
+  static const Color shineWarm = Color(0xFFFFB27A);
+  static const double shineWarmMix = 0.15;
+  static final Color shine = Color.lerp(Colors.white, shineWarm, shineWarmMix)!;
   static const double shineAlpha = 0.16;
   static const double shineHeight = 2.5;
 
-  /// An app's colour shows only as a strip down the tile's left edge, never as a fill.
+  /// An app's colour shows only as a strip down the tile's left edge, never as a fill (glass.tileTint, Faint).
   static const double colourEdge = 4;
 
   static const double corner = 12;
   static const double gap = 8;
 
-  /// White text, and the quieter secondary lines.
+  /// White text, and the quieter secondary lines (colors.ink.onDark).
   static const Color content = Colors.white;
-  static const Color secondary = Color(0xB8FFFFFF);
+  static const double secondaryAlpha = 0.72;
+  static const Color secondary = Color.fromRGBO(255, 255, 255, secondaryAlpha);
 
   /// A shadow that keeps text readable on the clear glass of a resting tile, or over a picture.
   static const List<Shadow> textShadow = [Shadow(color: Color(0x73000000), blurRadius: 6)];
 
-  /// The Windows Phone pieces: the clock's numerals, the app list's letters and names.
+  /// The Windows Phone pieces: the app list's title, letters and names.
   static const String wpFont = "Selawik";
 
-  /// A face's primary line, its secondary lines and the small tracked caps over it (Glint's scale, at TV size).
+  /// Glint's type is sized for a phone in the hand; on a TV across the room every size is this much bigger.
+  static const double tvScale = 1.15;
+
+  /// Glint's type scale (type.styles), before [tvScale].
+  static const double labelSize = 12, labelTracking = 1.2;
+  static const double primarySize = 15;
+  static const double secondarySize = 13;
+  static const double wpTitleSize = 44, wpTitleLine = 48;
+  static const double wpItemSize = 22, wpItemLine = 26;
+
+  /// The smallest text the home draws (Glint's floor, type.minSizeSp, at TV size): a face that needs smaller type gets
+  /// more room instead.
+  static const double minTextSize = 12 * tvScale;
+
+  /// A face's primary line, its secondary lines and the small tracked caps over it.
   static const TextStyle primary = TextStyle(
     color: content,
-    fontSize: 17,
+    fontSize: primarySize * tvScale,
     fontWeight: FontWeight.w500,
     height: 1.15,
     shadows: textShadow,
   );
   static const TextStyle secondaryText = TextStyle(
     color: secondary,
-    fontSize: 13,
+    fontSize: secondarySize * tvScale,
     fontWeight: FontWeight.w400,
     height: 1.2,
     shadows: textShadow,
   );
   static const TextStyle label = TextStyle(
     color: secondary,
-    fontSize: 12,
+    fontSize: labelSize * tvScale,
     fontWeight: FontWeight.w600,
-    letterSpacing: 1.2,
+    letterSpacing: labelTracking * tvScale,
     shadows: textShadow,
   );
 
-  /// The smallest text the home draws (Glint's floor): a face that needs smaller type gets more room instead.
-  static const double minTextSize = 12;
-
-  /// The big light numerals and words on tiles: the clock, the temperature, "2 h 10 min". The system sans, light;
-  /// Selawik is only for the Windows Phone pages.
+  /// The big light numerals and words on tiles: the clock, the temperature, "2 h 10 min" (type.displayWeight). The
+  /// system sans; Selawik is only for the Windows Phone pages. Sizes stay with each face.
+  static const FontWeight displayWeight = FontWeight.w300;
   static TextStyle display(double size) => TextStyle(
     color: content,
     fontSize: size,
-    fontWeight: FontWeight.w300,
+    fontWeight: displayWeight,
     height: 1.0,
     shadows: textShadow,
   );
 
-  /// A Windows Phone page's title: big, light, lower case ("apps").
+  /// A Windows Phone page's title: big, light, lower case ("apps"); and a row's name in its list.
   static const TextStyle wpTitle = TextStyle(
     color: content,
     fontFamily: wpFont,
-    fontSize: 44,
-    height: 48 / 44,
+    fontSize: wpTitleSize * tvScale,
+    height: wpTitleLine / wpTitleSize,
+    fontWeight: FontWeight.w300,
+  );
+  static const TextStyle wpItem = TextStyle(
+    color: content,
+    fontFamily: wpFont,
+    fontSize: wpItemSize * tvScale,
+    height: wpItemLine / wpItemSize,
     fontWeight: FontWeight.w300,
   );
 
-  /// How long a face takes to flip over its top edge.
+  /// How long a face takes to flip over its top edge (motion.flip; its halves run on Curves.easeIn and easeOut, which
+  /// are Glint's beziers).
   static const Duration flip = Duration(milliseconds: 650);
 
-  /// The lit edge on a tile with something new, and the one comet round it when it lights.
-  static const double cueWidth = 2;
-  static const Duration cometLap = Duration(milliseconds: 1800);
+  /// Glint's new-content cue, Glow (motion.newContentCue.glow): the edge lights for [cueLit], fading in and out over
+  /// [cueFade], and one comet runs round once ([cometSoft] at Calm, played at [cueCalmStrength]); at Still the edge
+  /// lights with no fades and no comet.
+  static const Duration cueFade = Duration(milliseconds: 500);
+  static const Duration cueLit = Duration(milliseconds: 1300);
+  static const Duration comet = Duration(milliseconds: 1300);
+  static const Duration cometSoft = Duration(milliseconds: 1700);
+  static const double cueCalmStrength = 0.6;
+  static const double cometLength = 0.26;
+  static const Cubic cometEase = Cubic(0.1, 0.9, 0.2, 1);
+  static const double cueEdgeWidth = 2;
+  static const double cueEdgeAlpha = 0.95;
+  static const Color cueTopLine = Color(0xFFFFEEDC);
+  static const double cueGlowWidth = 22;
+  static const double cueGlowAlpha = 0.35;
+  static const double cometWidth = 3;
+  static const double cometHaloTimes = 4;
+  static const double cometHaloAlpha = 0.55;
+  static const Color cometHead = Color(0xFFFFE3CC);
 
-  /// Idle this long, the home rests: the glass goes clear and the picture shows through.
+  /// Idle this long, the home rests: the glass goes clear and the picture shows through. Glint rests after 20 s; a TV
+  /// is looked at from across the room and left alone longer, so it waits 45 s.
   static const Duration restAfter = Duration(seconds: 45);
   static const Duration restFade = Duration(milliseconds: 1600);
 }

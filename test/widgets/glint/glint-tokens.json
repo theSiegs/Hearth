@@ -1,0 +1,226 @@
+{
+  "version": 2,
+  "about": "Glint's design tokens, mirrored from the Kotlin look (glint-look, glint-tiles). Kotlin is the source of truth; GlintTokensTest in :glint-tiles fails when this file and the Kotlin drift apart. Colors are #AARRGGBB; Dp, sp, px and ms are in the key's suffix. Keys starting with _ are notes, not tokens. See README.md.",
+
+  "colors": {
+    "accent": {
+      "_source": "PictureColors (LookTokens.kt), GlassColors.lit (LitGlass.kt)",
+      "default": "#FFF0955A",
+      "emberOnLight": "#FFB4561F",
+      "set": ["#FFF0955A", "#FF0050EF", "#FF00ABA9", "#FF008A00", "#FFA4C400", "#FFF0A30A", "#FFA20025", "#FFD80073", "#FFAA00FF"],
+      "litEmber": { "top": "#FFF8AF7F", "bottom": "#FFEC894C", "edge": "#F2FFF6EC" },
+      "_lit": "Any other accent: top = accent mixed litTowardWhite toward white, bottom = accent mixed litTowardBlack toward black, edge as litEmber.edge.",
+      "litTowardWhite": 0.22,
+      "litTowardBlack": 0.04
+    },
+    "ink": {
+      "_source": "TileColors (LookTokens.kt), HubDefaults.FAINT, GlassColors.OnLit, AccentInk (MetroLogic.kt)",
+      "onDark": { "content": "#FFFFFFFF", "secondaryAlpha": 0.72 },
+      "onLight": { "content": "#FF15171C", "secondaryAlpha": 0.66 },
+      "faintAlpha": 0.38,
+      "onLit": "#FF1A1208",
+      "onAccent": {
+        "_rule": "Ink on a solid accent fill (a lit button, a pressed one): light when its WCAG contrast with the accent is at least minContrast or higher than dark's, else dark. onLit is the dark ink.",
+        "dark": "#FF1A1208", "light": "#FFFFFFFF", "minContrast": 4.5
+      }
+    }
+  },
+
+  "glass": {
+    "_source": "SurfaceGlass, PictureRest, FrostBlur (SurfaceTokens.kt); drawn by Glint's Modifier.glass",
+    "_formula": "frosted = clarity / 100. Over the frosted picture: Smoke (and Auto on a dark picture) = dark at strengthBase + strengthFrost*frosted + smoke.extra; Auto on a light picture = white at autoLight.base + autoLight.frost*frosted; Fog = white at fog.base + fog.frost*frosted + fog.lift; Tinted = dark at the strength, then the accent at tinted.accentAlpha; Gradient = the picture's two colors (gradient.fallbackStart -> accent) at gradient.alpha; Solid = the app's color (else the accent), no picture; Picture = no tint. The sharp picture shows at (1 - frosted/sharp.until) * sharp.max. Then the app's color wash, the hairline and the shine.",
+    "surfaces": ["Auto", "Smoke", "Fog", "Tinted", "Gradient", "Solid", "Picture"],
+    "clarity": { "default": 40, "clear": 15, "glass": 40, "frosted": 70, "fog": 95 },
+    "dark": "#FF0E1016",
+    "strengthBase": 0.06,
+    "strengthFrost": 0.49,
+    "smoke": { "extra": 0.12 },
+    "autoLight": { "base": 0.18, "frost": 0.35, "lightAboveLuminance": 0.64, "darkBelowLuminance": 0.56 },
+    "fog": { "base": 0.10, "frost": 0.40, "lift": 0.1 },
+    "tinted": { "accentAlpha": 0.35 },
+    "gradient": { "alpha": 0.78, "fallbackStart": "#FF3B2A4A" },
+    "noPicture": { "color": "#FF2A2233", "alpha": 0.55 },
+    "sharp": { "until": 0.7, "max": 0.85 },
+    "warmth": { "color": "#FFFF9A50", "alpha": 0.05 },
+    "hairline": { "onDark": 0.16, "onLight": 0.55, "widthDp": 1 },
+    "shine": { "warm": "#FFFFB27A", "warmMix": 0.15, "onDark": 0.16, "onLight": 0.35, "heightDp": 2.5 },
+    "emphasisWidthDp": 2,
+    "tileTint": {
+      "_source": "TileTint (LookTokens.kt), GlassFirst (GlassFirst.kt)",
+      "offWash": 0, "faintWash": 0, "fullWash": 0.22,
+      "maxWash": 0.35,
+      "colorStripWidthDp": 4
+    },
+    "rest": { "afterMs": 20000, "easeMs": 1600, "clarity": 8 },
+    "frostBlur": {
+      "_androidOnly": "How Glint makes its frosted copy (shrink, then box blurs). Another renderer may blur its own way.",
+      "widthPx": 120, "radiusPx": 3, "passes": 3
+    }
+  },
+
+  "litGlass": {
+    "_source": "GlassColors (LitGlass.kt): the lit edge glass tiles, glances and panels still use",
+    "edge": "#B3FFD6B2", "rim": "#12FFFFFF",
+    "restTop": "#3DFFFFFF", "restBottom": "#1AFFFFFF",
+    "pressedTop": "#42FFFFFF", "pressedEdge": "#99FFD6B2", "pressedRim": "#4DFFD6B2",
+    "disabled": "#0FFFFFFF",
+    "stopTop": "#FFEE625A", "stopBottom": "#FFD43E3B", "stopEdge": "#D9FFCDC3",
+    "tileTop": "#29FFFFFF", "tileBottom": "#14FFFFFF", "tileEdge": "#99FFD6B2", "tileRim": "#14FFFFFF",
+    "panel": "#E610131A", "pill": "#F0161920",
+    "shine": "#FFFFE3CC"
+  },
+
+  "flatButton": {
+    "_source": "FlatGlass (LitGlass.kt), PressTiltMath (glint-look motion)",
+    "fill": "#17FFFFFF", "rim": "#42FFFFFF",
+    "primaryFill": "#29FFFFFF", "primaryBorderDp": 2, "primaryStripDp": 4,
+    "outlineDp": 2,
+    "stop": "#FFD9443F",
+    "_stop": "The one stop red in both apps (ignore, end call, end bar, timer stop); CallColors.EndRed is this color.",
+    "fillMs": 120, "releaseMs": 160,
+    "litPressDarken": 0.12, "stopPressLighten": 0.15,
+    "disabledInkAlpha": 0.4,
+    "pressTiltDeg": 7, "pressScale": 0.96,
+    "metroRowPlateAlpha": 0.16
+  },
+
+  "edges": {
+    "dealtTile": {
+      "_source": "DynamicEdge (SurfaceTokens.kt): the glow outline a dealt tile wears",
+      "hue": "#FFA8D8FF",
+      "lineOnDark": 0.55, "lineOnLight": 0.95, "lineWidthDp": 1.25,
+      "glowWidthsDp": [5, 3, 1.5], "glowAlphas": [0.07, 0.09, 0.12],
+      "dashAlpha": 0.7, "dashWidthDp": 1.5
+    },
+    "deck": {
+      "_source": "DeckEdge (DeckEdge.kt): a stack's two tile edges peeking out bottom right",
+      "edges": 2,
+      "stepDp": { "small": 2, "mid": 2.5, "large": 3 },
+      "_step": "small: short side 1 cell; mid: 2 to 3 cells; large: 4 or more",
+      "fillAlpha": { "plain": 0.28, "accent": 0.70 },
+      "rimAlpha": { "plain": 0.55, "accent": 1.0 },
+      "backFade": 0.6,
+      "glassOnDark": "#FFFFFFFF", "glassOnLight": "#FF000000"
+    }
+  },
+
+  "shape": {
+    "_source": "StartGrid (SurfaceTokens.kt), LookSettings.corner, FlatGlass.Corner",
+    "tileCorner": { "defaultDp": 12, "squareDp": 4, "softDp": 12, "roundDp": 24 },
+    "buttonCornerDp": 2
+  },
+
+  "spacing": {
+    "_source": "StartGrid (SurfaceTokens.kt), HubMargin (HubBlocks.kt), MetroRows",
+    "tileGapDp": 8,
+    "paneGutterDp": 14,
+    "hubMarginDp": 20,
+    "barGapDp": 6,
+    "metroRowMinHeightDp": 56,
+    "metroRowBleedDp": 8
+  },
+
+  "type": {
+    "_source": "GlintType (GlintType.kt), MetroRows, HubDefaults.AppTitle, GlassType",
+    "families": {
+      "selawik": { "_license": "SIL OFL, glint-look/SELAWIK-OFL.txt", "light": 300, "semilight": 350, "regular": 400, "semibold": 600 },
+      "_system": "Styles with family system use the platform sans (no family set)."
+    },
+    "minSizeSp": 12,
+    "displayWeight": 300,
+    "case": { "label": "upper", "wp": "lower", "buttonWords": "lower" },
+    "styles": {
+      "label":        { "family": "system",  "sizeSp": 12, "weight": 600, "letterSpacingSp": 1.2 },
+      "title":        { "family": "system",  "sizeSp": 24, "weight": 500 },
+      "primary":      { "family": "system",  "sizeSp": 15, "weight": 500 },
+      "primaryLarge": { "family": "system",  "sizeSp": 16, "weight": 500 },
+      "body":         { "family": "system",  "sizeSp": 15, "weight": 400, "lineHeightSp": 21 },
+      "secondary":    { "family": "system",  "sizeSp": 13, "weight": 400 },
+      "caption":      { "family": "system",  "sizeSp": 12, "weight": 400 },
+      "wpTitle":      { "family": "selawik", "sizeSp": 44, "weight": 300, "lineHeightSp": 48 },
+      "wpPivot":      { "family": "selawik", "sizeSp": 30, "weight": 300, "lineHeightSp": 36 },
+      "wpItem":       { "family": "selawik", "sizeSp": 22, "weight": 300, "lineHeightSp": 26 },
+      "wpSub":        { "family": "selawik", "sizeSp": 14, "weight": 400, "lineHeightSp": 18 },
+      "wpGroup":      { "family": "selawik", "sizeSp": 17, "weight": 350, "lineHeightSp": 22 },
+      "rowTitle":     { "family": "selawik", "sizeSp": 22, "weight": 350, "lineHeightSp": 26 },
+      "rowHint":      { "family": "selawik", "sizeSp": 13, "lineHeightSp": 17 },
+      "rowState":     { "family": "selawik", "sizeSp": 24, "weight": 300, "lineHeightSp": 28 },
+      "rowChoice":    { "family": "selawik", "sizeSp": 17, "lineHeightSp": 22 },
+      "hubAppTitle":  { "family": "selawik", "sizeSp": 12, "weight": 600, "letterSpacingSp": 1.7 },
+      "buttonWord":   { "family": "selawik", "sizeSp": 14 }
+    }
+  },
+
+  "motion": {
+    "_source": "Motion, MotionPace (glint-look); FlippingTile, TileTicker, ArrivalCue, TileTurn (glint-tiles)",
+    "levels": ["Lively", "Easy", "Calm", "Still"],
+    "default": "Calm",
+    "crowd": 16,
+    "_pace": "Ranges are [min, max] ms inclusive; null means the level never does it.",
+    "pace": {
+      "Lively": {
+        "moves": true, "livelyStyle": true,
+        "drawGapMs": [2000, 5000], "maxTurning": 2, "maxTurningCrowded": 3, "spacingMs": 1500,
+        "photoMs": [5000, 8000], "musicMs": [5000, 8000],
+        "nicknameMs": [45000, 90000], "headerMs": [8000, 10000], "previewMs": 3000
+      },
+      "Easy": {
+        "moves": true, "livelyStyle": true,
+        "drawGapMs": [4000, 10000], "maxTurning": 1, "maxTurningCrowded": 2, "spacingMs": 3000,
+        "photoMs": [10000, 16000], "musicMs": [10000, 16000],
+        "nicknameMs": [90000, 180000], "headerMs": [16000, 20000], "previewMs": 6000
+      },
+      "Calm": {
+        "moves": true, "livelyStyle": false,
+        "drawGapMs": null, "maxTurning": 0, "maxTurningCrowded": 0, "spacingMs": 0,
+        "photoMs": [15000, 25000], "musicMs": [30000, 60000],
+        "nicknameMs": null, "headerMs": [24000, 30000], "previewMs": 9000
+      },
+      "Still": {
+        "moves": false, "livelyStyle": false,
+        "drawGapMs": null, "maxTurning": 0, "maxTurningCrowded": 0, "spacingMs": 0,
+        "photoMs": null, "musicMs": null,
+        "nicknameMs": null, "headerMs": null, "previewMs": 0
+      }
+    },
+    "flip": {
+      "flipMs": 650, "turnMs": 700, "slideMs": 500,
+      "_easing": "Cubic bezier control points [x1, y1, x2, y2]. A flip or turn runs its first half (to 90 degrees) on easeIn and its second on easeOut.",
+      "easeIn": [0.42, 0, 1, 1],
+      "easeOut": [0, 0, 0.58, 1],
+      "slideEase": [0.4, 0, 0.2, 1],
+      "mixedSlideEvery": 3,
+      "cameraSides": 4,
+      "_cameraSides": "The camera sits this many of the tile's longer side in front of it."
+    },
+    "ticker": {
+      "settleMs": 3000,
+      "idleCheckMs": 5000,
+      "handHoldMs": 8000,
+      "pacedRestMs": 60000,
+      "calmRetryMs": 5000
+    },
+    "press": {
+      "tiltMaxDeg": 6, "sink": 0.03,
+      "strength": { "Lively": 1, "Easy": 1, "Calm": 0.6, "Still": 0 }
+    },
+    "newContentCue": {
+      "_source": "NewContentCue (LookTokens.kt), ArrivalMath (ArrivalCue.kt)",
+      "options": ["Glow", "Plain"],
+      "default": "Glow",
+      "glow": {
+        "_about": "The edge lights for litMs (fading in and out over fadeMs) and one comet runs round once. Calm plays it at calmStrength with the slower comet; Still lights the edge only, no fades, no comet.",
+        "fadeMs": 500, "litMs": 1300,
+        "cometMs": 1300, "cometSoftMs": 1700, "calmStrength": 0.6,
+        "cometLength": 0.26, "cometEase": [0.1, 0.9, 0.2, 1],
+        "edgeDp": 2, "edgeAlpha": 0.95, "topLine": "#FFFFEEDC",
+        "glowDp": 22, "glowAlpha": 0.35,
+        "cometDp": 3, "haloTimes": 4, "haloAlpha": 0.55, "cometHead": "#FFFFE3CC"
+      },
+      "plain": {
+        "_about": "A still accent border while an urgent face is unseen; nothing moves.",
+        "edgeDp": 2
+      }
+    }
+  }
+}

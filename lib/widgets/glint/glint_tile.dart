@@ -80,14 +80,24 @@ class GlintTile extends StatefulWidget {
   State<GlintTile> createState() => _GlintTileState();
 }
 
-class _GlintTileState extends State<GlintTile> with SingleTickerProviderStateMixin {
+class _GlintTileState extends State<GlintTile> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   bool _focused = false;
 
   /// What was new the last time the tile was selected (at first, what it showed then: nothing glows on arrival).
   late Object? _seen = widget.fresh;
-  late final AnimationController _comet = AnimationController(vsync: this, duration: GlintLook.cometLap);
+  late final AnimationController _cue = AnimationController(vsync: this)
+    ..addStatusListener((_) {
+      if (mounted) setState(() {});
+    });
+  GlintMotion _cueMotion = GlintMotion.fallback;
 
   bool get _isNew => widget.fresh != null && widget.fresh != _seen;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   @override
   void didUpdateWidget(GlintTile old) {
@@ -95,14 +105,26 @@ class _GlintTileState extends State<GlintTile> with SingleTickerProviderStateMix
     if (_focused) {
       _seen = widget.fresh;
     } else if (widget.fresh != old.fresh && _isNew) {
-      final moves = GlintTickerScope.of(context)?.motion.pace.moves ?? true;
-      if (moves) _comet.forward(from: 0);
+      _playCue();
     }
+  }
+
+  /// Back on the home with something still unseen (it arrived while an app was in front): the cue plays again.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _isNew && !_focused) _playCue();
+  }
+
+  void _playCue() {
+    _cueMotion = GlintTickerScope.of(context)?.motion ?? GlintMotion.fallback;
+    _cue.duration = _CuePainter.length(_cueMotion);
+    _cue.forward(from: 0);
   }
 
   @override
   void dispose() {
-    _comet.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _cue.dispose();
     super.dispose();
   }
 
@@ -149,7 +171,11 @@ class _GlintTileState extends State<GlintTile> with SingleTickerProviderStateMix
                   border: Border.all(color: Colors.white, width: 2.5),
                 )
               : null,
-          child: ClipRRect(
+          child: CustomPaint(
+            foregroundPainter: _cue.isAnimating && !_focused
+                ? _CuePainter(radius: GlintLook.corner, cue: _cue, motion: _cueMotion)
+                : null,
+            child: ClipRRect(
             borderRadius: radius,
             child: Stack(
               fit: StackFit.expand,
@@ -193,12 +219,9 @@ class _GlintTileState extends State<GlintTile> with SingleTickerProviderStateMix
                 IgnorePointer(
                   child: CustomPaint(painter: _EdgePainter(radius: GlintLook.corner)),
                 ),
-                if (_isNew && !_focused)
-                  IgnorePointer(
-                    child: CustomPaint(painter: _CuePainter(radius: GlintLook.corner, comet: _comet)),
-                  ),
               ],
             ),
+          ),
           ),
         ),
       ),
@@ -219,7 +242,7 @@ class _EdgePainter extends CustomPainter {
       rrect,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
+        ..strokeWidth = GlintLook.hairlineWidth
         ..color = GlintLook.line,
     );
     canvas.save();
@@ -243,49 +266,97 @@ class _EdgePainter extends CustomPainter {
   bool shouldRepaint(_EdgePainter old) => old.radius != radius;
 }
 
-/// Glint's new-content cue: the edge lit in the accent and, while [comet] runs, one bright comet travelling round it.
+/// Glint's new-content cue, Glow: the edge lights in the accent with a soft glow outside it, fading in and out, while
+/// one comet runs round it once. Calm plays it softer with a slower comet; Still lights the edge only, no fades.
 class _CuePainter extends CustomPainter {
   final double radius;
-  final Animation<double> comet;
-  _CuePainter({required this.radius, required this.comet}) : super(repaint: comet);
+  final Animation<double> cue;
+  final GlintMotion motion;
+  _CuePainter({required this.radius, required this.cue, required this.motion}) : super(repaint: cue);
+
+  /// How long the cue lasts at [motion].
+  static Duration length(GlintMotion motion) =>
+      motion.pace.moves ? GlintLook.cueFade * 2 + GlintLook.cueLit : GlintLook.cueLit;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final inset = GlintLook.cueWidth / 2;
+    final ms = cue.value * length(motion).inMilliseconds;
+    final moves = motion.pace.moves;
+    final strength = motion == GlintMotion.calm ? GlintLook.cueCalmStrength : 1.0;
+    final fade = GlintLook.cueFade.inMilliseconds, lit = GlintLook.cueLit.inMilliseconds;
+    final edge = !moves
+        ? 1.0
+        : ms < fade
+        ? ms / fade
+        : ms < fade + lit
+        ? 1.0
+        : ((2 * fade + lit - ms) / fade).clamp(0.0, 1.0);
+    final inset = GlintLook.cueEdgeWidth / 2;
     final rrect = RRect.fromRectAndRadius((Offset.zero & size).deflate(inset), Radius.circular(radius - inset));
+    final accent = GlintLook.ember;
+
     canvas.drawRRect(
       rrect,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = GlintLook.cueWidth
-        ..color = GlintLook.ember.withValues(alpha: 0.85),
+        ..strokeWidth = GlintLook.cueGlowWidth / 2
+        ..maskFilter = const MaskFilter.blur(BlurStyle.outer, GlintLook.cueGlowWidth / 2)
+        ..color = accent.withValues(alpha: GlintLook.cueGlowAlpha * edge * strength),
     );
-    final t = comet.value;
-    if (t <= 0 || t >= 1) return;
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = GlintLook.cueEdgeWidth
+        ..color = accent.withValues(alpha: GlintLook.cueEdgeAlpha * edge * strength),
+    );
+    // A paler line along the top edge, between the corners
+    canvas.drawLine(
+      Offset(radius, inset),
+      Offset(size.width - radius, inset),
+      Paint()
+        ..strokeWidth = 1
+        ..color = GlintLook.cueTopLine.withValues(alpha: edge * strength),
+    );
+
+    if (!moves) return;
+    final lap = (motion == GlintMotion.calm ? GlintLook.cometSoft : GlintLook.comet).inMilliseconds;
+    if (ms >= lap) return;
     final metric = (Path()..addRRect(rrect)).computeMetrics().first;
-    final tail = metric.length * 0.18;
-    final head = metric.length * t;
-    // The comet fades in and out over its lap, brightest at the head
-    final strength = math.sin(t * math.pi);
+    final head = metric.length * GlintLook.cometEase.transform(ms / lap);
+    final tail = metric.length * GlintLook.cometLength;
+    // Fades in as it sets off and out as it comes home
+    final fadeInOut = math.sin(math.pi * ms / lap).clamp(0.0, 1.0);
+    Path piece(double from, double to) => from >= 0
+        ? metric.extractPath(from, to)
+        : (metric.extractPath(metric.length + from, metric.length)
+            ..addPath(metric.extractPath(0, math.max(0, to)), Offset.zero));
+    canvas.drawPath(
+      piece(head - tail / 2, head),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = GlintLook.cometWidth * GlintLook.cometHaloTimes
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, GlintLook.cometWidth * 1.5)
+        ..color = accent.withValues(alpha: GlintLook.cometHaloAlpha * fadeInOut * strength),
+    );
     const pieces = 12;
     for (var i = 0; i < pieces; i++) {
-      final from = head - tail * (i + 1) / pieces, to = head - tail * i / pieces;
-      final segment = from >= 0
-          ? metric.extractPath(from, to)
-          : (metric.extractPath(metric.length + from, metric.length)..addPath(metric.extractPath(0, math.max(0, to)), Offset.zero));
+      final along = i / pieces;
       canvas.drawPath(
-        segment,
+        piece(head - tail * (i + 1) / pieces, head - tail * i / pieces),
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = GlintLook.cueWidth + 1.5
+          ..strokeWidth = GlintLook.cometWidth
           ..strokeCap = StrokeCap.round
-          ..color = Color.lerp(Colors.white, GlintLook.ember, i / pieces)!.withValues(alpha: strength * (1 - i / pieces)),
+          ..color = Color.lerp(GlintLook.cometHead, accent, along)!
+              .withValues(alpha: (1 - along) * fadeInOut * strength),
       );
     }
   }
 
   @override
-  bool shouldRepaint(_CuePainter old) => old.radius != radius || old.comet != comet;
+  bool shouldRepaint(_CuePainter old) => old.radius != radius || old.cue != cue || old.motion != motion;
 }
 
 /// One stop for the D-pad that tells a press of select from a hold, as [GlintTile] does, around any [child].

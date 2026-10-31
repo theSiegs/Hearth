@@ -177,13 +177,7 @@ class _AppRowState extends State<_AppRow> {
           Expanded(
             child: Text(
               widget.app.name,
-              style: const TextStyle(
-                fontFamily: GlintLook.wpFont,
-                fontSize: 22,
-                height: 26 / 22,
-                fontWeight: FontWeight.w300,
-                color: Colors.white,
-              ),
+              style: GlintLook.wpItem,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
