@@ -29,7 +29,9 @@ import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/widgets/glint/glint_faces.dart';
+import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/widgets/glint/glint_flip.dart';
+import 'package:flauncher/widgets/glint/glint_house_feed.dart';
 import 'package:flauncher/widgets/glint/glint_layout.dart';
 import 'package:flauncher/widgets/glint/glint_look.dart';
 import 'package:flauncher/widgets/glint/glint_tile.dart';
@@ -53,20 +55,27 @@ class GlintHome extends StatefulWidget {
   State<GlintHome> createState() => _GlintHomeState();
 }
 
-class _GlintHomeState extends State<GlintHome> with SingleTickerProviderStateMixin {
+class _GlintHomeState extends State<GlintHome> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _rest = AnimationController(vsync: this, duration: GlintLook.restFade);
   final GlintTicker _ticker = GlintTicker();
   final ScrollController _scroll = ScrollController();
+  late final GlintHouseFeed _house;
   Timer? _idle;
 
   @override
   void initState() {
     super.initState();
+    _house = GlintHouseFeed(context.read<FLauncherChannel>().getHaConnection)..addListener(_houseChanged);
     HardwareKeyboard.instance.addHandler(_onAnyKey);
+    WidgetsBinding.instance.addObserver(this);
     _rest.addListener(() => _ticker.paused = _rest.value > 0);
     _awake();
     // Arriving with nothing selected (the first start, the classic home switched off): the first tile
     WidgetsBinding.instance.addPostFrameCallback((_) => _selectFirstIfNothing());
+  }
+
+  void _houseChanged() {
+    if (mounted) setState(() {});
   }
 
   void _selectFirstIfNothing() {
@@ -81,11 +90,27 @@ class _GlintHomeState extends State<GlintHome> with SingleTickerProviderStateMix
   @override
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_onAnyKey);
+    WidgetsBinding.instance.removeObserver(this);
+    _house
+      ..removeListener(_houseChanged)
+      ..dispose();
     _idle?.cancel();
     _rest.dispose();
     _ticker.dispose();
     _scroll.dispose();
     super.dispose();
+  }
+
+  /// Away (an app in front, the TV asleep), the home neither rests nor counts down to it; back, it's awake at once,
+  /// so the first key moves the selection instead of only waking it.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _rest.value = 0;
+      _awake();
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      _idle?.cancel();
+    }
   }
 
   /// Any key wakes the home. The first press out of a deep rest only wakes it, so nothing moves or opens unseen.
@@ -125,6 +150,10 @@ class _GlintHomeState extends State<GlintHome> with SingleTickerProviderStateMix
     }
     final events = calendar?.today().take(3).toList() ?? const <CalendarEvent>[];
     if (events.isNotEmpty) tiles.add(_Tile("calendar", GlintSize.wide, (_) => CalendarFace(events: events)));
+
+    if (_house.items.isNotEmpty) {
+      tiles.add(_Tile("house", GlintSize.wide, (_) => HouseFace(items: _house.items)));
+    }
 
     final notifications = context.watch<NotificationsService?>();
     if (notifications != null && notifications.hasPermission && settings.showNotificationsWidgetInStatusBar) {

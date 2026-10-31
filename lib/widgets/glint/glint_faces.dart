@@ -33,6 +33,7 @@ import 'package:flauncher/providers/watch_next_service.dart';
 import 'package:flauncher/widgets/application_info_panel.dart';
 import 'package:flauncher/widgets/glint/glint_apps_page.dart';
 import 'package:flauncher/widgets/glint/glint_flip.dart';
+import 'package:flauncher/widgets/glint/glint_house_feed.dart';
 import 'package:flauncher/widgets/glint/glint_look.dart';
 import 'package:flauncher/widgets/glint/glint_tile.dart';
 import 'package:flauncher/widgets/settings/notifications_panel.dart';
@@ -604,5 +605,37 @@ class HomeAssistantFace extends StatelessWidget {
     icon: Icons.home_outlined,
     name: "Home",
     onPressed: () => Actions.maybeInvoke(context, const OpenHaPanelIntent()),
+  );
+}
+
+/// Around the house, one thing at a time: another TV playing something ("Den TV · Sam · Bluey"), someone in a car.
+class HouseFace extends StatelessWidget {
+  final List<GlintHouseItem> items;
+  const HouseFace({super.key, required this.items});
+
+  @override
+  Widget build(BuildContext context) => _LiveTile(
+    id: "house",
+    faces: items.length,
+    pace: const Duration(seconds: 25),
+    builder: (context, i) {
+      final item = items[i];
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          _label(item.label),
+          const SizedBox(height: 4),
+          Text(
+            item.line,
+            style: GlintLook.primary.copyWith(fontSize: 19),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (item.detail != null)
+            Text(item.detail!, style: GlintLook.secondaryText, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ],
+      );
+    },
   );
 }
