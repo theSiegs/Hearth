@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "about": "Glint's design tokens, mirrored from the Kotlin look (glint-look, glint-tiles). Kotlin is the source of truth; GlintTokensTest in :glint-tiles fails when this file and the Kotlin drift apart. Colors are #AARRGGBB; Dp, sp, px and ms are in the key's suffix. Keys starting with _ are notes, not tokens. See README.md.",
 
   "colors": {
@@ -77,6 +77,15 @@
     "outlineDp": 2,
     "stop": "#FFD9443F",
     "_stop": "The one stop red in both apps (ignore, end call, end bar, timer stop); CallColors.EndRed is this color.",
+    "urgent": {
+      "_source": "Glass.Urgent, FlatGlass.UrgentBorder (LitGlass.kt), UrgentInk (MetroLogic.kt)",
+      "_rule": "Urgent = the one act-now positive action on a surface (answer). Never for on/off state. At rest: a solid fill (the accent, or nearStop.fill when the accent is near stop) with a borderDp border in border; ink = colors.ink.onAccent on the fill. Pressed: clear glass (flatButton.fill) with an outlineDp outline in the fill color and white ink, held until release (no animated fill). No ring lap on the square.",
+      "border": "#FFFFFFFF", "borderDp": 2,
+      "nearStop": {
+        "_rule": "Near stop when CIE76 deltaE (CIELAB, D65) to flatButton.stop is at most deltaE, or the CIELAB LCh chroma is at least minChroma and the LCh hue is within hueDeg of stop's.",
+        "hueDeg": 20, "minChroma": 40, "deltaE": 30, "fill": "#FFFFFFFF"
+      }
+    },
     "fillMs": 120, "releaseMs": 160,
     "litPressDarken": 0.12, "stopPressLighten": 0.15,
     "disabledInkAlpha": 0.4,

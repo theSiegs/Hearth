@@ -27,7 +27,7 @@ class GlintLook {
   GlintLook._();
 
   /// The version of Glint's token file these numbers follow.
-  static const int tokensVersion = 2;
+  static const int tokensVersion = 3;
 
   /// Glint's accent (colors.accent.default).
   static const Color ember = Color(0xFFF0955A);
