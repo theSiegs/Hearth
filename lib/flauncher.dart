@@ -35,6 +35,7 @@ import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flauncher/providers/wallpaper_service.dart';
 import 'package:flauncher/widgets/apps_grid.dart';
 import 'package:flauncher/widgets/frosted_glass.dart';
+import 'package:flauncher/widgets/glint/glance.dart';
 import 'package:flauncher/widgets/glint/glint_home.dart';
 import 'package:flauncher/widgets/painted_once.dart';
 import 'package:flauncher/widgets/category_container_common.dart';
@@ -815,6 +816,11 @@ class _FLauncherState extends State<FLauncher> {
     final List<LauncherSection> belowDock =
         sections.where((s) => s != favorites && !(s is Category && s.applications.isEmpty)).toList();
 
+    final glance = GlancePlace.fromName(context.watch<SettingsService>().glance);
+    final bool dockShown = !showRecents && !showSearch && !_topBarFocused;
+    // Up on the top bar is a look at what's going on: the glance stays (it gives way to the rows the top bar opens)
+    final bool glanceShown = !showRecents && !showSearch && !showOverlay;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -824,6 +830,29 @@ class _FLauncherState extends State<FLauncher> {
           child: Stack(
             alignment: Alignment.bottomCenter,
             children: [
+              // The glance as lines of text on the picture, at the top left, while the dock is up
+              if (glance == GlancePlace.headline)
+                Positioned(
+                  top: 24,
+                  left: 40,
+                  right: 360,
+                  child: _swapAnimation(
+                    visible: glanceShown,
+                    hiddenOffset: const Offset(-0.05, 0),
+                    child: const Align(alignment: Alignment.topLeft, child: Glance(place: GlancePlace.headline)),
+                  ),
+                ),
+              // The glance tiles at the top right, under the top bar's clock, while the dock is up
+              if (glance == GlancePlace.column)
+                Positioned(
+                  top: 8,
+                  right: 16,
+                  child: _swapAnimation(
+                    visible: glanceShown,
+                    hiddenOffset: const Offset(0.15, 0),
+                    child: const Glance(place: GlancePlace.column),
+                  ),
+                ),
               Focus(
             focusNode: _firstScreenFocusNode,
             child: Stack(
@@ -906,18 +935,26 @@ class _FLauncherState extends State<FLauncher> {
                         ? _searchUpFromDock
                         : (continueWatchingActive ? _recentsUpFromDock : null),
                     child: _swapAnimation(
-                      visible: !showRecents && !showSearch && !_topBarFocused,
+                      visible: dockShown,
                       // Slide fully off-screen without fading: a fade would freeze the frosted backdrop's
                       // off-screen sample.
                       hiddenOffset: const Offset(0, 1.6),
                       fade: false,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 8, bottom: 24),
-                        child: HomeDock(
-                          key: Key(favorites.id.toString()),
-                          category: favorites,
-                          isFirstSection: !continueWatchingActive,
-                        ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // The glance tiles ride with the dock, so they leave with it
+                          if (glance == GlancePlace.row)
+                            const Padding(padding: EdgeInsets.only(top: 8), child: Glance(place: GlancePlace.row)),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8, bottom: 24),
+                            child: HomeDock(
+                              key: Key(favorites.id.toString()),
+                              category: favorites,
+                              isFirstSection: !continueWatchingActive,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

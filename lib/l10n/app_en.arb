@@ -739,6 +739,26 @@
     "@glintMotionStill": {
         "description": "Glint motion level: nothing moves"
     },
+    "glance": "Glance tiles",
+    "@glance": {
+        "description": "Settings row on the dock home: live tiles (weather, next event, notifications, the house) that show what's going on without being selected. Select steps through Off, Above the dock and Top right"
+    },
+    "glanceOff": "Off",
+    "@glanceOff": {
+        "description": "Glance tiles: none"
+    },
+    "glanceRow": "Above the dock",
+    "@glanceRow": {
+        "description": "Glance tiles: a row just above the dock"
+    },
+    "glanceColumn": "Top right",
+    "@glanceColumn": {
+        "description": "Glance tiles: a column at the top right, under the clock"
+    },
+    "glanceHeadline": "Headlines",
+    "@glanceHeadline": {
+        "description": "Glance: no tiles, lines of text on the picture at the top left"
+    },
     "lookTitle": "Look",
     "@lookTitle": {
         "description": "Settings page title, also its row in the page that opens it"

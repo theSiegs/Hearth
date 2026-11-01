@@ -51,6 +51,7 @@ const String _matchSelectedAppBackgroundKey = "match_selected_app_background";
 const String _dockEnabledKey = "dock_enabled";
 const String _glintHomeKey = "glint_home";
 const String _glintMotionKey = "glint_motion";
+const String _glanceKey = "glance";
 const String _dockBlurEnabledKey = "dock_blur_enabled";
 const String _dockDarkBackgroundKey = "dock_dark_background";
 const String _dockShadowEnabledKey = "dock_shadow_enabled";
@@ -175,6 +176,7 @@ class SettingsService extends ChangeNotifier {
     _dockEnabledKey,
     _glintHomeKey,
     _glintMotionKey,
+    _glanceKey,
     _dockBlurEnabledKey,
     _dockDarkBackgroundKey,
     _dockShadowEnabledKey,
@@ -532,6 +534,13 @@ class SettingsService extends ChangeNotifier {
   String get glintMotion => _string(_glintMotionKey, "easy");
 
   Future<void> setGlintMotion(String motion) => _setString(_glintMotionKey, motion);
+
+  /// Glance tiles on the dock home: live glass tiles (the weather, today's next event, notifications, the house) that
+  /// show what's going on without taking the selection. "off", "row" (above the dock) or "column" (top right); off
+  /// unless the build says otherwise (a test build: `--dart-define=GLANCE_DEFAULT=row`).
+  String get glance => _string(_glanceKey, const String.fromEnvironment("GLANCE_DEFAULT", defaultValue: "off"));
+
+  Future<void> setGlance(String place) => _setString(_glanceKey, place);
 
   bool get dockBlurEnabled => _bool(_dockBlurEnabledKey, true);
 

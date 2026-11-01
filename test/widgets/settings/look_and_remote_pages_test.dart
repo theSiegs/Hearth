@@ -13,8 +13,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'settings_test_app.dart';
 
 /// A stand-in page per route, saying which one was opened.
-Map<String, WidgetBuilder> _stubRoutes(List<String> names) =>
-    {for (final name in names) name: (_) => Scaffold(body: Text("opened $name"))};
+Map<String, WidgetBuilder> _stubRoutes(List<String> names) => {
+  for (final name in names) name: (_) => Scaffold(body: Text("opened $name")),
+};
 
 void main() {
   group("LookSettingsPage", () {
@@ -25,8 +26,9 @@ void main() {
       AnimationsSoundPage.routeName,
     ]);
 
-    testWidgets("lists its four pages and the Glint home switch, starting on Card style with the style chosen now",
-        (tester) async {
+    testWidgets("lists its four pages and the Glint home switch, starting on Card style with the style chosen now", (
+      tester,
+    ) async {
       final settings = await freshSettings();
       await settings.setThemes("glow");
       await tester.pumpWidget(settingsTestApp(settings, const LookSettingsPage(), routes: routes));
@@ -72,6 +74,30 @@ void main() {
       await tester.tap(find.text("Glint motion"));
       await tester.pumpAndSettle();
       expect(settings.glintMotion, "lively");
+    });
+
+    testWidgets("Glance tiles show their place, select steps through them, and they go with the Glint home", (
+      tester,
+    ) async {
+      final settings = await freshSettings();
+      await tester.pumpWidget(settingsTestApp(settings, const LookSettingsPage(), routes: routes));
+      await tester.pumpAndSettle();
+      expect(find.text("Glance tiles"), findsOneWidget);
+
+      await tester.tap(find.text("Glance tiles"));
+      await tester.pumpAndSettle();
+      expect(settings.glance, "row");
+      expect(find.text("Above the dock"), findsOneWidget);
+
+      await settings.setGlance("headline");
+      await tester.tap(find.text("Glance tiles"));
+      await tester.pumpAndSettle();
+      expect(settings.glance, "off");
+
+      // The Glint home has no dock to sit over
+      await settings.setGlintHome(true);
+      await tester.pumpAndSettle();
+      expect(find.text("Glance tiles"), findsNothing);
     });
 
     testWidgets("the trailing style name follows the setting", (tester) async {

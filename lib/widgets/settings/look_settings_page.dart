@@ -17,6 +17,7 @@
 
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/widgets/glint/glance.dart';
 import 'package:flauncher/widgets/glint/glint_look.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
@@ -45,6 +46,13 @@ class LookSettingsPage extends StatelessWidget {
       };
 
   /// The Glint home's motion levels, with their names in the current language.
+  static Map<GlancePlace, String> glancePlaces(AppLocalizations localizations) => {
+        GlancePlace.off: localizations.glanceOff,
+        GlancePlace.row: localizations.glanceRow,
+        GlancePlace.column: localizations.glanceColumn,
+        GlancePlace.headline: localizations.glanceHeadline,
+      };
+
   static Map<GlintMotion, String> glintMotions(AppLocalizations localizations) => {
         GlintMotion.lively: localizations.glintMotionLively,
         GlintMotion.easy: localizations.glintMotionEasy,
@@ -84,6 +92,19 @@ class LookSettingsPage extends StatelessWidget {
           title: Text(AppLocalizations.of(context)!.animationsSoundTitle, style: textTheme.bodyMedium),
           onPressed: () => Navigator.of(context).pushNamed(AnimationsSoundPage.routeName),
         ),
+        if (!context.select<SettingsService, bool>((s) => s.glintHome))
+          FocusableSettingsTile(
+            leading: const Icon(Icons.view_quilt_outlined),
+            title: Text(localizations.glance, style: textTheme.bodyMedium),
+            trailing: Text(glancePlaces(localizations)[GlancePlace.fromName(
+                context.select<SettingsService, String>((s) => s.glance))]!, style: textTheme.bodySmall),
+            // Select steps to the next place, round from Top right to Off
+            onPressed: () {
+              final settings = context.read<SettingsService>();
+              final now = GlancePlace.fromName(settings.glance);
+              settings.setGlance(GlancePlace.values[(now.index + 1) % GlancePlace.values.length].name);
+            },
+          ),
         RoundedSwitchListTile(
           value: context.select<SettingsService, bool>((s) => s.glintHome),
           onChanged: (value) => context.read<SettingsService>().setGlintHome(value),

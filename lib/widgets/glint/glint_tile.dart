@@ -33,6 +33,25 @@ class GlintRest extends InheritedNotifier<Animation<double>> {
       context.dependOnInheritedWidgetOfExactType<GlintRest>()?.notifier?.value ?? 0;
 }
 
+/// Tiles under this are for looking at, never selected (the glance tiles over the dock home): they take no focus, and
+/// something new on one glows once, then counts as seen.
+class GlintGlance extends StatelessWidget {
+  final Widget child;
+  const GlintGlance({super.key, required this.child});
+
+  static bool of(BuildContext context) => context.getInheritedWidgetOfExactType<_GlanceMarker>() != null;
+
+  @override
+  Widget build(BuildContext context) => _GlanceMarker(child: ExcludeFocus(child: child));
+}
+
+class _GlanceMarker extends InheritedWidget {
+  const _GlanceMarker({required super.child});
+
+  @override
+  bool updateShouldNotify(_GlanceMarker old) => false;
+}
+
 /// One tile on the Glint home: frosted glass over the picture with Glint's hairline and warm top shine, an app's colour
 /// as a strip down the left edge, or a full-bleed [picture] when the face is a real picture (a poster, a photo).
 ///
@@ -86,8 +105,11 @@ class _GlintTileState extends State<GlintTile> with SingleTickerProviderStateMix
   /// What was new the last time the tile was selected (at first, what it showed then: nothing glows on arrival).
   late Object? _seen = widget.fresh;
   late final AnimationController _cue = AnimationController(vsync: this)
-    ..addStatusListener((_) {
-      if (mounted) setState(() {});
+    ..addStatusListener((status) {
+      if (!mounted) return;
+      // A glance tile is never selected: what it lit up for counts as seen once the cue has played
+      if (status == AnimationStatus.completed && GlintGlance.of(context)) _seen = widget.fresh;
+      setState(() {});
     });
   GlintMotion _cueMotion = GlintMotion.fallback;
 

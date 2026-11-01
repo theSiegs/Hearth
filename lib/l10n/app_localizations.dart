@@ -1546,6 +1546,36 @@ abstract class AppLocalizations {
   /// **'Still'**
   String get glintMotionStill;
 
+  /// Settings row on the dock home: live tiles (weather, next event, notifications, the house) that show what's going on without being selected. Select steps through Off, Above the dock and Top right
+  ///
+  /// In en, this message translates to:
+  /// **'Glance tiles'**
+  String get glance;
+
+  /// Glance tiles: none
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get glanceOff;
+
+  /// Glance tiles: a row just above the dock
+  ///
+  /// In en, this message translates to:
+  /// **'Above the dock'**
+  String get glanceRow;
+
+  /// Glance tiles: a column at the top right, under the clock
+  ///
+  /// In en, this message translates to:
+  /// **'Top right'**
+  String get glanceColumn;
+
+  /// Glance: no tiles, lines of text on the picture at the top left
+  ///
+  /// In en, this message translates to:
+  /// **'Headlines'**
+  String get glanceHeadline;
+
   /// Settings page title, also its row in the page that opens it
   ///
   /// In en, this message translates to:
