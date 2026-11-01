@@ -300,55 +300,59 @@ List<PeekThing> peekThings(PeekData data, {required String Function(DateTime) ti
   ];
 }
 
-/// The peek as Metro text on the picture: one line per thing, a small ember label over big light type, no glass, on
-/// a soft shade so it reads over a bright picture. Each line is one thing only, the first of each tile's faces.
+/// The peek as Metro text on the picture: one line per thing, a small ember label over big light type, no glass,
+/// shaded so it reads over a busy picture. Each line is one thing only, the first of each tile's faces.
 class PeekHeadline extends StatelessWidget {
   final List<PeekThing> things;
   const PeekHeadline({super.key, required this.things});
 
+  /// A close dark edge round each letter and a wide soft one under the line: no box, so nothing to see but the words,
+  /// and they read over a busy picture.
+  static const _shade = [
+    Shadow(color: Color(0xB3000000), blurRadius: 4),
+    Shadow(color: Color(0x99000000), blurRadius: 24),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final lines = things.take(GlintLook.headlineLines).map((t) => t.items.first).toList();
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(colors: [Color(0x66000000), Color(0x00000000)], stops: [0.3, 1]),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 96, 4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final l in lines)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l.label.toLowerCase(),
-                      style: GlintLook.label.copyWith(color: GlintLook.ember, letterSpacing: 0.6),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final l in lines)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l.label.toLowerCase(),
+                    style: GlintLook.label.copyWith(color: GlintLook.ember, letterSpacing: 0.6, shadows: _shade),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: l.line),
+                        if (l.small != null)
+                          TextSpan(
+                            text: "  ${l.small}",
+                            style: GlintLook.secondaryText.copyWith(fontSize: 18, shadows: _shade),
+                          ),
+                      ],
                     ),
-                    Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(text: l.line),
-                          if (l.small != null)
-                            TextSpan(text: "  ${l.small}", style: GlintLook.secondaryText.copyWith(fontSize: 18)),
-                        ],
-                      ),
-                      style: GlintLook.display(GlintLook.headlineSize),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
+                    style: GlintLook.display(GlintLook.headlineSize).copyWith(shadows: _shade),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
