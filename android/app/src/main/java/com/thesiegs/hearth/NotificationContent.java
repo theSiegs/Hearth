@@ -59,6 +59,34 @@ final class NotificationContent {
     }
 
     /**
+     * Who a message from a person is from (a messaging app's notification: its category is a message, or it carries
+     * messages): the last message's sender, else the conversation's name, else the title. Empty for anything else.
+     * The peek tiles show only this and a count for such a notification, never its words: the TV's screen is shared.
+     */
+    static String sender(Notification notification) {
+        Bundle extras = notification.extras;
+        boolean message = Notification.CATEGORY_MESSAGE.equals(notification.category);
+        Parcelable[] messages = null;
+        try {
+            if (extras != null) messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES);
+        } catch (RuntimeException e) {
+            messages = null;
+        }
+        if (!message && (messages == null || messages.length == 0)) return "";
+        String fromLast = "";
+        if (messages != null && messages.length > 0 && messages[messages.length - 1] instanceof Bundle) {
+            try {
+                fromLast = firstText(((Bundle) messages[messages.length - 1]).getCharSequence("sender"));
+            } catch (RuntimeException e) {
+                fromLast = "";
+            }
+        }
+        if (!fromLast.isEmpty()) return fromLast;
+        if (extras == null) return "";
+        return firstText(safeText(extras, Notification.EXTRA_CONVERSATION_TITLE), safeText(extras, Notification.EXTRA_TITLE));
+    }
+
+    /**
      * The text: big text, else the plain text, else a messaging style's last message ("Sam: text"), else an inbox
      * style's first lines, else the sub text or ticker.
      */

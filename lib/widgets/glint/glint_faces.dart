@@ -647,3 +647,57 @@ class HouseFace extends StatelessWidget {
     },
   );
 }
+
+/// One thing on a peek tile's face: small caps over one big line, and maybe one small line under it.
+class PeekItem {
+  final String label;
+  final String line;
+  final String? small;
+  final Color? colourEdge;
+  const PeekItem(this.label, this.line, {this.small, this.colourEdge});
+}
+
+/// A peek tile (looked at, never selected): one compact row, one thing per face, turning through [items]. [fresh]
+/// changes when there's something new that wants a person (a notification, someone arriving), and the tile glows for
+/// it; ambient things (the weather, the next event rolling on) pass none.
+class PeekFace extends StatelessWidget {
+  final Object id;
+  final List<PeekItem> items;
+  final Object? fresh;
+  final Duration pace;
+  const PeekFace({
+    super.key,
+    required this.id,
+    required this.items,
+    this.fresh,
+    this.pace = const Duration(seconds: 30),
+  });
+
+  @override
+  Widget build(BuildContext context) => _LiveTile(
+    id: id,
+    faces: items.length,
+    fresh: fresh,
+    pace: pace,
+    colourEdge: (i) => items[i].colourEdge,
+    builder: (context, i) {
+      final item = items[i];
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _label(item.label),
+          const SizedBox(height: 2),
+          Text(
+            item.line,
+            style: GlintLook.primary.copyWith(fontSize: 19),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (item.small != null)
+            Text(item.small!, style: GlintLook.secondaryText, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ],
+      );
+    },
+  );
+}

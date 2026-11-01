@@ -120,13 +120,8 @@ class GlintLook {
   /// The big light numerals and words on tiles: the clock, the temperature, "2 h 10 min" (type.displayWeight). The
   /// system sans; Selawik is only for the Windows Phone pages. Sizes stay with each face.
   static const FontWeight displayWeight = FontWeight.w300;
-  static TextStyle display(double size) => TextStyle(
-    color: content,
-    fontSize: size,
-    fontWeight: displayWeight,
-    height: 1.0,
-    shadows: textShadow,
-  );
+  static TextStyle display(double size) =>
+      TextStyle(color: content, fontSize: size, fontWeight: displayWeight, height: 1.0, shadows: textShadow);
 
   /// A Windows Phone page's title: big, light, lower case ("apps"); and a row's name in its list.
   static const TextStyle wpTitle = TextStyle(
@@ -167,6 +162,13 @@ class GlintLook {
   static const double cometHaloTimes = 4;
   static const double cometHaloAlpha = 0.55;
   static const Color cometHead = Color(0xFFFFE3CC);
+
+  /// Peek tiles (looked at, never selected, over the dock home; Hearth's own, not yet in Glint's tokens): Still glass
+  /// this far toward rest, one compact row tall, and the headlines' line size and how many lines they show.
+  static const double peekRest = 0.5;
+  static const double peekHeight = 84;
+  static const double headlineSize = 30;
+  static const int headlineLines = 3;
 
   /// Idle this long, the home rests: the glass goes clear and the picture shows through. Glint rests after 20 s; a TV
   /// is looked at from across the room and left alone longer, so it waits 45 s.

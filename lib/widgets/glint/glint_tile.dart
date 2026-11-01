@@ -33,23 +33,29 @@ class GlintRest extends InheritedNotifier<Animation<double>> {
       context.dependOnInheritedWidgetOfExactType<GlintRest>()?.notifier?.value ?? 0;
 }
 
-/// Tiles under this are for looking at, never selected (the glance tiles over the dock home): they take no focus, and
-/// something new on one glows once, then counts as seen.
-class GlintGlance extends StatelessWidget {
+/// Tiles under this are for looking at, never selected (the peek tiles over the dock home): they take no focus, their
+/// glass is Glint's Still glass (between awake and resting), and something new on one glows until someone is there to
+/// see it (a key pressed while it shows).
+class GlintPeek extends StatelessWidget {
   final Widget child;
-  const GlintGlance({super.key, required this.child});
+  const GlintPeek({super.key, required this.child});
 
-  static bool of(BuildContext context) => context.getInheritedWidgetOfExactType<_GlanceMarker>() != null;
+  static bool of(BuildContext context) => context.getInheritedWidgetOfExactType<_PeekMarker>() != null;
 
   @override
-  Widget build(BuildContext context) => _GlanceMarker(child: ExcludeFocus(child: child));
+  Widget build(BuildContext context) => _PeekMarker(
+    child: GlintRest(
+      rest: const AlwaysStoppedAnimation(GlintLook.peekRest),
+      child: ExcludeFocus(child: child),
+    ),
+  );
 }
 
-class _GlanceMarker extends InheritedWidget {
-  const _GlanceMarker({required super.child});
+class _PeekMarker extends InheritedWidget {
+  const _PeekMarker({required super.child});
 
   @override
-  bool updateShouldNotify(_GlanceMarker old) => false;
+  bool updateShouldNotify(_PeekMarker old) => false;
 }
 
 /// One tile on the Glint home: frosted glass over the picture with Glint's hairline and warm top shine, an app's colour
@@ -105,11 +111,8 @@ class _GlintTileState extends State<GlintTile> with SingleTickerProviderStateMix
   /// What was new the last time the tile was selected (at first, what it showed then: nothing glows on arrival).
   late Object? _seen = widget.fresh;
   late final AnimationController _cue = AnimationController(vsync: this)
-    ..addStatusListener((status) {
-      if (!mounted) return;
-      // A glance tile is never selected: what it lit up for counts as seen once the cue has played
-      if (status == AnimationStatus.completed && GlintGlance.of(context)) _seen = widget.fresh;
-      setState(() {});
+    ..addStatusListener((_) {
+      if (mounted) setState(() {});
     });
   GlintMotion _cueMotion = GlintMotion.fallback;
 
@@ -119,6 +122,16 @@ class _GlintTileState extends State<GlintTile> with SingleTickerProviderStateMix
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    HardwareKeyboard.instance.addHandler(_onAnyKey);
+  }
+
+  /// A peek tile is never selected, and its cue may play to an empty room: what's new on it counts as seen when a key
+  /// is pressed while it shows (someone is there, using the home).
+  bool _onAnyKey(KeyEvent event) {
+    if (event is KeyDownEvent && _isNew && mounted && GlintPeek.of(context)) {
+      _seen = widget.fresh;
+    }
+    return false;
   }
 
   @override
@@ -146,6 +159,7 @@ class _GlintTileState extends State<GlintTile> with SingleTickerProviderStateMix
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    HardwareKeyboard.instance.removeHandler(_onAnyKey);
     _cue.dispose();
     super.dispose();
   }
@@ -198,52 +212,52 @@ class _GlintTileState extends State<GlintTile> with SingleTickerProviderStateMix
                 ? _CuePainter(radius: GlintLook.corner, cue: _cue, motion: _cueMotion)
                 : null,
             child: ClipRRect(
-            borderRadius: radius,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (widget.picture == null) ...[
-                  // The glass clears as the home rests; the selected tile stays frosted so it reads
-                  Opacity(
-                    opacity: _focused ? 1 : 1 - rest * 0.8,
-                    child: const FrostedGlass(sigma: GlintLook.blurSigma, child: SizedBox.expand()),
-                  ),
-                  ColoredBox(
-                    color: GlintLook.tint.withValues(
-                      alpha: _focused
-                          ? GlintLook.tintAlpha
-                          : lerpDouble(GlintLook.tintAlpha, GlintLook.restTintAlpha, rest)!,
+              borderRadius: radius,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (widget.picture == null) ...[
+                    // The glass clears as the home rests; the selected tile stays frosted so it reads
+                    Opacity(
+                      opacity: _focused ? 1 : 1 - rest * 0.8,
+                      child: const FrostedGlass(sigma: GlintLook.blurSigma, child: SizedBox.expand()),
                     ),
-                  ),
-                ] else ...[
-                  Image(image: widget.picture!, fit: BoxFit.cover, gaplessPlayback: true),
-                  // Under the text along the bottom, so it reads on any picture
-                  const DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        stops: [0.35, 1],
-                        colors: [Color(0x00000000), Color(0xC0000000)],
+                    ColoredBox(
+                      color: GlintLook.tint.withValues(
+                        alpha: _focused
+                            ? GlintLook.tintAlpha
+                            : lerpDouble(GlintLook.tintAlpha, GlintLook.restTintAlpha, rest)!,
                       ),
                     ),
+                  ] else ...[
+                    Image(image: widget.picture!, fit: BoxFit.cover, gaplessPlayback: true),
+                    // Under the text along the bottom, so it reads on any picture
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          stops: [0.35, 1],
+                          colors: [Color(0x00000000), Color(0xC0000000)],
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (widget.colourEdge != null)
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: GlintLook.colourEdge,
+                      child: ColoredBox(color: widget.colourEdge!),
+                    ),
+                  Padding(padding: widget.padding, child: widget.child),
+                  IgnorePointer(
+                    child: CustomPaint(painter: _EdgePainter(radius: GlintLook.corner)),
                   ),
                 ],
-                if (widget.colourEdge != null)
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: GlintLook.colourEdge,
-                    child: ColoredBox(color: widget.colourEdge!),
-                  ),
-                Padding(padding: widget.padding, child: widget.child),
-                IgnorePointer(
-                  child: CustomPaint(painter: _EdgePainter(radius: GlintLook.corner)),
-                ),
-              ],
+              ),
             ),
-          ),
           ),
         ),
       ),
@@ -371,8 +385,11 @@ class _CuePainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = GlintLook.cometWidth
           ..strokeCap = StrokeCap.round
-          ..color = Color.lerp(GlintLook.cometHead, accent, along)!
-              .withValues(alpha: (1 - along) * fadeInOut * strength),
+          ..color = Color.lerp(
+            GlintLook.cometHead,
+            accent,
+            along,
+          )!.withValues(alpha: (1 - along) * fadeInOut * strength),
       );
     }
   }

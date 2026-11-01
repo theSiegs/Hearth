@@ -1549,32 +1549,32 @@ abstract class AppLocalizations {
   /// Settings row on the dock home: live tiles (weather, next event, notifications, the house) that show what's going on without being selected. Select steps through Off, Above the dock and Top right
   ///
   /// In en, this message translates to:
-  /// **'Glance tiles'**
-  String get glance;
+  /// **'Peek tiles'**
+  String get peek;
 
-  /// Glance tiles: none
+  /// Peek tiles: none
   ///
   /// In en, this message translates to:
   /// **'Off'**
-  String get glanceOff;
+  String get peekOff;
 
-  /// Glance tiles: a row just above the dock
+  /// Peek tiles: a row just above the dock
   ///
   /// In en, this message translates to:
   /// **'Above the dock'**
-  String get glanceRow;
+  String get peekRow;
 
-  /// Glance tiles: a column at the top right, under the clock
+  /// Peek tiles: a column at the top right, under the clock
   ///
   /// In en, this message translates to:
   /// **'Top right'**
-  String get glanceColumn;
+  String get peekColumn;
 
-  /// Glance: no tiles, lines of text on the picture at the top left
+  /// Peek tiles: no tiles, lines of text on the picture at the top left
   ///
   /// In en, this message translates to:
   /// **'Headlines'**
-  String get glanceHeadline;
+  String get peekHeadline;
 
   /// Settings page title, also its row in the page that opens it
   ///

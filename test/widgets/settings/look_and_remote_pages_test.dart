@@ -76,28 +76,28 @@ void main() {
       expect(settings.glintMotion, "lively");
     });
 
-    testWidgets("Glance tiles show their place, select steps through them, and they go with the Glint home", (
+    testWidgets("Peek tiles show their place, select steps through them, and they go with the Glint home", (
       tester,
     ) async {
       final settings = await freshSettings();
       await tester.pumpWidget(settingsTestApp(settings, const LookSettingsPage(), routes: routes));
       await tester.pumpAndSettle();
-      expect(find.text("Glance tiles"), findsOneWidget);
+      expect(find.text("Peek tiles"), findsOneWidget);
 
-      await tester.tap(find.text("Glance tiles"));
+      await tester.tap(find.text("Peek tiles"));
       await tester.pumpAndSettle();
-      expect(settings.glance, "row");
+      expect(settings.peek, "row");
       expect(find.text("Above the dock"), findsOneWidget);
 
-      await settings.setGlance("headline");
-      await tester.tap(find.text("Glance tiles"));
+      await settings.setPeek("headline");
+      await tester.tap(find.text("Peek tiles"));
       await tester.pumpAndSettle();
-      expect(settings.glance, "off");
+      expect(settings.peek, "off");
 
       // The Glint home has no dock to sit over
       await settings.setGlintHome(true);
       await tester.pumpAndSettle();
-      expect(find.text("Glance tiles"), findsNothing);
+      expect(find.text("Peek tiles"), findsNothing);
     });
 
     testWidgets("the trailing style name follows the setting", (tester) async {

@@ -35,7 +35,7 @@ import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flauncher/providers/wallpaper_service.dart';
 import 'package:flauncher/widgets/apps_grid.dart';
 import 'package:flauncher/widgets/frosted_glass.dart';
-import 'package:flauncher/widgets/glint/glance.dart';
+import 'package:flauncher/widgets/glint/peek.dart';
 import 'package:flauncher/widgets/glint/glint_home.dart';
 import 'package:flauncher/widgets/painted_once.dart';
 import 'package:flauncher/widgets/category_container_common.dart';
@@ -816,10 +816,10 @@ class _FLauncherState extends State<FLauncher> {
     final List<LauncherSection> belowDock =
         sections.where((s) => s != favorites && !(s is Category && s.applications.isEmpty)).toList();
 
-    final glance = GlancePlace.fromName(context.watch<SettingsService>().glance);
+    final peek = PeekPlace.fromName(context.watch<SettingsService>().peek);
     final bool dockShown = !showRecents && !showSearch && !_topBarFocused;
-    // Up on the top bar is a look at what's going on: the glance stays (it gives way to the rows the top bar opens)
-    final bool glanceShown = !showRecents && !showSearch && !showOverlay;
+    // Up on the top bar is a look at what's going on: the peek stays (it gives way to the rows the top bar opens)
+    final bool peekShown = !showRecents && !showSearch && !showOverlay;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -830,27 +830,27 @@ class _FLauncherState extends State<FLauncher> {
           child: Stack(
             alignment: Alignment.bottomCenter,
             children: [
-              // The glance as lines of text on the picture, at the top left, while the dock is up
-              if (glance == GlancePlace.headline)
+              // The peek as lines of text on the picture, at the top left, while the dock is up
+              if (peek == PeekPlace.headline)
                 Positioned(
-                  top: 24,
-                  left: 40,
+                  top: 8,
+                  left: 16,
                   right: 360,
                   child: _swapAnimation(
-                    visible: glanceShown,
+                    visible: peekShown,
                     hiddenOffset: const Offset(-0.05, 0),
-                    child: const Align(alignment: Alignment.topLeft, child: Glance(place: GlancePlace.headline)),
+                    child: const Align(alignment: Alignment.topLeft, child: Peek(place: PeekPlace.headline)),
                   ),
                 ),
-              // The glance tiles at the top right, under the top bar's clock, while the dock is up
-              if (glance == GlancePlace.column)
+              // The peek tiles at the top right, under the top bar's clock, while the dock is up
+              if (peek == PeekPlace.column)
                 Positioned(
                   top: 8,
                   right: 16,
                   child: _swapAnimation(
-                    visible: glanceShown,
+                    visible: peekShown,
                     hiddenOffset: const Offset(0.15, 0),
-                    child: const Glance(place: GlancePlace.column),
+                    child: const Peek(place: PeekPlace.column),
                   ),
                 ),
               Focus(
@@ -943,9 +943,9 @@ class _FLauncherState extends State<FLauncher> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // The glance tiles ride with the dock, so they leave with it
-                          if (glance == GlancePlace.row)
-                            const Padding(padding: EdgeInsets.only(top: 8), child: Glance(place: GlancePlace.row)),
+                          // The peek tiles ride with the dock, so they leave with it
+                          if (peek == PeekPlace.row)
+                            const Padding(padding: EdgeInsets.only(top: 8), child: Peek(place: PeekPlace.row)),
                           Padding(
                             padding: const EdgeInsets.only(top: 8, bottom: 24),
                             child: HomeDock(

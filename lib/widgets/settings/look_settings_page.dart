@@ -17,7 +17,7 @@
 
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
-import 'package:flauncher/widgets/glint/glance.dart';
+import 'package:flauncher/widgets/glint/peek.dart';
 import 'package:flauncher/widgets/glint/glint_look.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
@@ -46,11 +46,11 @@ class LookSettingsPage extends StatelessWidget {
       };
 
   /// The Glint home's motion levels, with their names in the current language.
-  static Map<GlancePlace, String> glancePlaces(AppLocalizations localizations) => {
-        GlancePlace.off: localizations.glanceOff,
-        GlancePlace.row: localizations.glanceRow,
-        GlancePlace.column: localizations.glanceColumn,
-        GlancePlace.headline: localizations.glanceHeadline,
+  static Map<PeekPlace, String> peekPlaces(AppLocalizations localizations) => {
+        PeekPlace.off: localizations.peekOff,
+        PeekPlace.row: localizations.peekRow,
+        PeekPlace.column: localizations.peekColumn,
+        PeekPlace.headline: localizations.peekHeadline,
       };
 
   static Map<GlintMotion, String> glintMotions(AppLocalizations localizations) => {
@@ -95,14 +95,14 @@ class LookSettingsPage extends StatelessWidget {
         if (!context.select<SettingsService, bool>((s) => s.glintHome))
           FocusableSettingsTile(
             leading: const Icon(Icons.view_quilt_outlined),
-            title: Text(localizations.glance, style: textTheme.bodyMedium),
-            trailing: Text(glancePlaces(localizations)[GlancePlace.fromName(
-                context.select<SettingsService, String>((s) => s.glance))]!, style: textTheme.bodySmall),
+            title: Text(localizations.peek, style: textTheme.bodyMedium),
+            trailing: Text(peekPlaces(localizations)[PeekPlace.fromName(
+                context.select<SettingsService, String>((s) => s.peek))]!, style: textTheme.bodySmall),
             // Select steps to the next place, round from Top right to Off
             onPressed: () {
               final settings = context.read<SettingsService>();
-              final now = GlancePlace.fromName(settings.glance);
-              settings.setGlance(GlancePlace.values[(now.index + 1) % GlancePlace.values.length].name);
+              final now = PeekPlace.fromName(settings.peek);
+              settings.setPeek(PeekPlace.values[(now.index + 1) % PeekPlace.values.length].name);
             },
           ),
         RoundedSwitchListTile(

@@ -870,19 +870,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get glintMotionStill => 'Still';
 
   @override
-  String get glance => 'Glance tiles';
+  String get peek => 'Peek tiles';
 
   @override
-  String get glanceOff => 'Off';
+  String get peekOff => 'Off';
 
   @override
-  String get glanceRow => 'Above the dock';
+  String get peekRow => 'Above the dock';
 
   @override
-  String get glanceColumn => 'Top right';
+  String get peekColumn => 'Top right';
 
   @override
-  String get glanceHeadline => 'Headlines';
+  String get peekHeadline => 'Headlines';
 
   @override
   String get lookTitle => 'Look';
