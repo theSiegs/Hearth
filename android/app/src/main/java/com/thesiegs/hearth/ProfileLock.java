@@ -30,6 +30,8 @@ final class ProfileLock {
     private static final String OFF_AT_KEY = "screen_off_at";
     /** "Log out when the TV sleeps" is off. */
     static final int OFF = -1;
+    /** Until someone chooses: log out on every sleep. */
+    static final int DEFAULT_MINUTES = 0;
     private static final Handler HANDLER = new Handler(Looper.getMainLooper());
     private static Runnable sPending;
 
@@ -58,9 +60,9 @@ final class ProfileLock {
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    /** Minutes the TV must sleep before it locks on waking (0: any sleep), or {@link #OFF}. */
+    /** Minutes the TV must sleep before it logs out (0: any sleep), or {@link #OFF}. */
     static int lockOnSleepMinutes(Context context) {
-        return prefs(context).getInt(ON_SLEEP_KEY, OFF);
+        return prefs(context).getInt(ON_SLEEP_KEY, DEFAULT_MINUTES);
     }
 
     static void setLockOnSleepMinutes(Context context, int minutes) {

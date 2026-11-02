@@ -133,7 +133,7 @@ profile's PIN to come back. Turn the PIN on for your account in Google TV first.
 - set **Log out when the TV sleeps** (every time, or after some minutes asleep): Hearth opens Google TV's profile
   chooser as the TV goes to sleep (or once it has slept that long), so whoever turns it on next picks who's watching,
   and a profile with a PIN asks for it before it opens. It works from kids profiles too; leaving one is still up to
-  Google TV's kids lock. It is off until you turn it on.
+  Google TV's kids lock. It is on (every time) until you choose otherwise.
 
 **Approve switches from my phone** (**Settings → Profiles**, in your own profile; needs Home Assistant and its phone
 app). When Google TV asks for your PIN to open your profile, your phone gets a notification with Allow and Deny.
