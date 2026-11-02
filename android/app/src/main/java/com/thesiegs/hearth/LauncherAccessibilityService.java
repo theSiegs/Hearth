@@ -425,7 +425,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             mInteractive = on;
             restartFront();
             HaBridgeService.setScreenOn(on);
-            // "Lock when the TV wakes": Google TV's profile chooser on waking after long enough asleep
+            // "Log out when the TV sleeps": Google TV's profile chooser as the TV sleeps (or on waking, if its timer never ran)
             if (on) {
                 ProfileLock.onScreenOn(context);
                 AdSandbox.check(context);

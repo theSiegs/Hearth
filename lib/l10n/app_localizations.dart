@@ -4176,7 +4176,7 @@ abstract class AppLocalizations {
   /// Settings > Profiles: locking an adult profile with Google TV's profile lock
   ///
   /// In en, this message translates to:
-  /// **'Lock when the TV wakes'**
+  /// **'Log out when the TV sleeps'**
   String get profileLockOnSleep;
 
   /// Settings > Profiles: locking an adult profile with Google TV's profile lock
@@ -4194,7 +4194,7 @@ abstract class AppLocalizations {
   /// Settings > Profiles: locking an adult profile with Google TV's profile lock
   ///
   /// In en, this message translates to:
-  /// **'Opens Google TV\'s profile chooser when the TV wakes, so a profile with a PIN asks for it before it opens. Kids profiles are left alone.'**
+  /// **'Opens Google TV\'s profile chooser as the TV goes to sleep, kids profiles too, so whoever turns it on next picks who\'s watching and a profile with a PIN asks for it. Leaving a kids profile is still up to Google TV\'s kids lock.'**
   String get profileLockNeedsGoogleLock;
 
   /// About: the TV's own name (Google TV's device name), under Hearth's version

@@ -2528,7 +2528,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileLockNow => 'Lock now';
 
   @override
-  String get profileLockOnSleep => 'Lock when the TV wakes';
+  String get profileLockOnSleep => 'Log out when the TV sleeps';
 
   @override
   String get profileLockEveryTime => 'Every time';
@@ -2540,7 +2540,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileLockNeedsGoogleLock =>
-      'Opens Google TV\'s profile chooser when the TV wakes, so a profile with a PIN asks for it before it opens. Kids profiles are left alone.';
+      'Opens Google TV\'s profile chooser as the TV goes to sleep, kids profiles too, so whoever turns it on next picks who\'s watching and a profile with a PIN asks for it. Leaving a kids profile is still up to Google TV\'s kids lock.';
 
   @override
   String aboutTvName(String name) {
