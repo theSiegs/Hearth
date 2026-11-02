@@ -1,0 +1,1 @@
+Log out when the TV sleeps is now on by default, every time the TV sleeps, unless it was set otherwise.

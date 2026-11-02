@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+## 2026.11.02 (pre-release)
+
 - **Log out when the TV sleeps** is now on by default (every time the TV sleeps) on TVs where it was never set; a TV where it was chosen, or turned off, keeps that choice.
 
 ## 2026.11.01 (pre-release)
