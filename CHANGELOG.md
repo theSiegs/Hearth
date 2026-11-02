@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+## 2026.11.01 (pre-release)
+
 - **Log out when the TV sleeps** (was Lock when the TV wakes): the profile chooser now opens as the TV goes to sleep, or once it has slept the chosen time, so the next person never sees the last profile's home. It now logs out of kids profiles too; before, a TV left in a kid's profile woke straight into it.
 
 ## 2026.10.87 (pre-release)
