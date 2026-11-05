@@ -294,6 +294,23 @@ async def test_nintendo_lets_go_just_before_midnight(
     assert set_value[-1].data["value"] == 120
 
 
+def test_a_weekday_held_past_midnight_is_put_back_with_its_bedtime():
+    from custom_components.hearth.enforce import _held_weekday_call
+
+    restore = {"device_id": "dev1", "weekday": "friday", "bedtime_alarm": "21:00:00", "bedtime_end_time": "07:00:00"}
+    assert _held_weekday_call(restore, 90) == {
+        "device_id": "dev1",
+        "day_of_week": "friday",
+        "max_play_time": 90,
+        "bedtime_start": "21:00:00",
+        "bedtime_end": "07:00:00",
+    }
+    # No limit (-1) and bedtime off (00:00): both left out, as the service reads them
+    off = {**restore, "bedtime_alarm": "00:00:00"}
+    assert _held_weekday_call(off, -1) == {"device_id": "dev1", "day_of_week": "friday"}
+    assert _held_weekday_call({"weekday": "friday"}, 90) is None
+
+
 async def test_a_failed_nintendo_hold_keeps_the_limit_it_found_first(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, monkeypatch
 ) -> None:

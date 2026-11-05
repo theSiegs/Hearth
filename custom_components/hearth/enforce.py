@@ -447,11 +447,21 @@ class Enforcement:
                 raise ValueError(f"{entity_id} has no limit to keep")
             suspend = self._switch_entity(entity_id, "switch", "suspend_software")
             suspend_state = self.hass.states.get(suspend) if suspend else None
+            # The day's bedtime too: putting a weekday's limit back after midnight sets its bedtime with it
+            bedtime = {}
+            for key in ("bedtime_alarm", "bedtime_end_time"):
+                time_entity = self._switch_entity(entity_id, "time", key)
+                time_state = self.hass.states.get(time_entity) if time_entity else None
+                bedtime[key] = time_state.state if time_state else None
+            entry = er.async_get(self.hass).async_get(entity_id)
             held.restore = {
                 "max": int(limit),
                 "suspend": suspend,
                 "suspend_was": suspend_state.state if suspend_state else None,
                 "day": dt_util.now().date().isoformat(),
+                "weekday": WEEKDAYS[dt_util.now().weekday()],
+                "device_id": entry.device_id if entry else None,
+                **bedtime,
             }
             self._save()
         suspend = held.restore.get("suspend")
@@ -460,6 +470,16 @@ class Enforcement:
         await self.hass.services.async_call(
             "number", "set_value", {"entity_id": entity_id, "value": 0}, blocking=True
         )
+
+    async def _put_back_weekday(self, entity_id: str, restore: dict[str, Any], limit: int | None) -> None:
+        data = _held_weekday_call(restore, limit)
+        if data is None or not self.hass.services.has_service(NINTENDO_DOMAIN, "update_daily_restrictions"):
+            _LOGGER.warning(
+                "Hearth held %s past midnight; its limit of %s minutes for %s wasn't put back (check it in the "
+                "Nintendo app)", entity_id, limit, restore.get("day")
+            )
+            return
+        await self.hass.services.async_call(NINTENDO_DOMAIN, "update_daily_restrictions", data, blocking=True)
 
     async def _let_go_switch(self, entity_id: str, held: Held) -> None:
         """The limit and Suspend software back as they were. On a later day (Home Assistant was off over midnight),
@@ -471,10 +491,9 @@ class Enforcement:
         if restore.get("day") not in (None, dt_util.now().date().isoformat()) and (
             mode_state is not None and mode_state.state == NINTENDO_EACH_DAY
         ):
-            _LOGGER.warning(
-                "Hearth held %s past midnight; its limit of %s minutes for %s wasn't put back (check it in the "
-                "Nintendo app)", entity_id, limit, restore.get("day")
-            )
+            # Held past midnight (Home Assistant was off): today's limit is another weekday's now, so the held
+            # weekday's own is put back, with its bedtime
+            await self._put_back_weekday(entity_id, restore, limit)
         elif limit is None:
             _LOGGER.warning("Hearth had no limit kept for %s: left as it is (check it in the Nintendo app)", entity_id)
         else:
@@ -485,6 +504,28 @@ class Enforcement:
         if suspend and restore.get("suspend_was") == "off":
             await self.hass.services.async_call("switch", "turn_off", {"entity_id": suspend}, blocking=True)
         held.restore = {}
+
+
+def _clock(value: Any) -> str | None:
+    """A time entity's state as HH:MM:SS, or None when it's not a time or bedtime is off (00:00)."""
+    if not isinstance(value, str) or len(value) < 5 or not value[:2].isdigit():
+        return None
+    text = value if len(value) == 8 else f"{value[:5]}:00"
+    return None if text.startswith("00:00") else text
+
+
+def _held_weekday_call(restore: dict[str, Any], limit: int | None) -> dict[str, Any] | None:
+    """The update_daily_restrictions call that puts a held weekday back as it was (None without a device or day)."""
+    if not restore.get("device_id") or restore.get("weekday") not in WEEKDAYS:
+        return None
+    data: dict[str, Any] = {"device_id": restore["device_id"], "day_of_week": restore["weekday"]}
+    # No limit (-1) is left out: that's "no limit" to the service
+    if limit is not None and 0 <= limit <= 360:
+        data["max_play_time"] = int(limit)
+    start, end = _clock(restore.get("bedtime_alarm")), _clock(restore.get("bedtime_end_time"))
+    if start and end:
+        data["bedtime_start"], data["bedtime_end"] = start, end
+    return data
 
 
 def _holding(held: Held) -> set[str]:
