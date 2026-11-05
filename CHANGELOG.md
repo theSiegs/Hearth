@@ -5,6 +5,13 @@
 
 ## Unreleased
 
+## 2026.11.04 (pre-release)
+
+- **A parent PIN for each adult, from Home Assistant.** Each adult's own 4-digit parent PIN is set in Home Assistant (Hearth > Configure > Parent PINs). A connected TV takes them in place of its own Parent PIN, accepts any adult's (HearthTube's PIN checks too), and shows **Set in Home Assistant** in Settings > Family. The TV keeps them, so they work with Home Assistant down; disconnected, it keeps the last ones until a PIN is set on the TV. Each lockout after wrong guesses is reported, and Home Assistant fires an event for it. A TV without the integration keeps its own PIN as before.
+- **Home Assistant: phones check the parent PIN.** A paired phone asks Home Assistant whether a PIN is an adult's (`verify_pin`) and is told whose; it never gets a PIN. Wrong guesses lock it out for longer each time.
+- **Home Assistant: tile exchange sharing.** A parent chooses whose phone may share with the launcher's tile exchange (Configure > Tile exchange sharing); the person's state says `tile_exchange_share`.
+- **Home Assistant:** the Glint launcher and HearthTube Mobile are never paused.
+
 ## 2026.11.03 (pre-release)
 
 - **Home Assistant: Not screen time.** A group (music, say) can be left out of All screen time (Configure > Not screen time): its minutes count only in the group, and its apps stay usable when All screen time runs out, on the TVs too. The Screen time today sensor lists each group's packages (`groups_apps`).
