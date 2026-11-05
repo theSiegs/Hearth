@@ -267,12 +267,15 @@ class Enforcement:
             if not (hold or let_go) or entity_id is None:
                 continue
             # Kept before the calls: a half-done hold is let go through it if the enforcer is removed meanwhile
-            held.entity_id = entity_id
+            if not _holding(held) or held.entity_id is None:
+                held.entity_id = entity_id
             try:
                 if let_go:
-                    await self._call(kind, entity_id, let_go, False, held)
+                    # Through what held it: a Switch changed meanwhile gets the hold, the old one its limit back
+                    await self._call(kind, held.entity_id or entity_id, let_go, False, held)
                     held.items -= let_go
                 if hold:
+                    held.entity_id = entity_id
                     await self._call(kind, entity_id, hold, True, held)
                     held.items |= hold
                 held.error, held.failed_at = None, None
@@ -430,6 +433,13 @@ class Enforcement:
     async def _hold_switch(self, entity_id: str, held: Held) -> None:
         """Max screentime today to 0 with Suspend software on: the game is suspended. What they were is kept first
         (once: a retry after a half-done hold mustn't keep the 0)."""
+        # Bonus time given in the Nintendo app: the Switch refuses a new limit until it's over (said, not retried blind)
+        extended = self._switch_entity(entity_id, "sensor", "time_extended") or self._switch_entity(
+            entity_id, "binary_sensor", "time_extended"
+        )
+        extended_state = self.hass.states.get(extended) if extended else None
+        if extended_state is not None and extended_state.state not in ("0", "0.0", "off", "unknown", "unavailable", ""):
+            raise ValueError("bonus time is active on the Switch; held when it's over")
         if not held.restore:
             state = self.hass.states.get(entity_id)
             limit = _number(state.state if state else None)
@@ -455,7 +465,7 @@ class Enforcement:
         """The limit and Suspend software back as they were. On a later day (Home Assistant was off over midnight),
         a Switch with a limit per weekday shows another day's now: that one is left alone, and said so."""
         restore = held.restore
-        limit = restore.get("max", -1)
+        limit = restore.get("max")
         mode = self._switch_entity(entity_id, "select", "timer_mode")
         mode_state = self.hass.states.get(mode) if mode else None
         if restore.get("day") not in (None, dt_util.now().date().isoformat()) and (
@@ -465,6 +475,8 @@ class Enforcement:
                 "Hearth held %s past midnight; its limit of %s minutes for %s wasn't put back (check it in the "
                 "Nintendo app)", entity_id, limit, restore.get("day")
             )
+        elif limit is None:
+            _LOGGER.warning("Hearth had no limit kept for %s: left as it is (check it in the Nintendo app)", entity_id)
         else:
             await self.hass.services.async_call(
                 "number", "set_value", {"entity_id": entity_id, "value": limit}, blocking=True

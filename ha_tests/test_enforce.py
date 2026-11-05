@@ -225,6 +225,22 @@ async def test_nintendo_suspends_the_switch_while_games_are_out_of_time(
     assert hass.states.get("sensor.hearth_sam_held_by_parental_controls").state == "0"
 
 
+async def test_nintendo_waits_out_bonus_time_given_in_the_nintendo_app(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """The Switch refuses a new limit while bonus time runs: no calls then, and a clear reason."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0))
+    _nintendo_switch(hass)
+    hass.states.async_set("sensor.sam_s_switch_time_extended", "15")
+    await _household_with_sam(hass, hass_client_no_auth)
+    set_value, turned_on, _ = _nintendo_services(hass)
+    await _option(hass, "enforce", {"person": "person.sam", "nintendo": NINTENDO_LIMIT})
+    await _budget(hass, "games", 5)
+    assert set_value == [] and turned_on == []
+    held = hass.states.get("sensor.hearth_sam_held_by_parental_controls")
+    assert "bonus time" in held.attributes["nintendo"]["error"]
+
+
 async def test_nintendo_leaves_suspend_software_on_when_it_was(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
