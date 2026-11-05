@@ -375,6 +375,22 @@ sealed blobs the integration can't read (it never has the household key), kept w
 they survive restarts, 2 MB per household, oldest dropped first. Pictures don't go through it. Devices still exchange
 directly on the home network; the mailbox is for devices that are rarely on at the same time.
 
+### Household summary
+
+For an adult's app on Home Assistant's own WebSocket (administrators only; no device secret, nothing extra for the
+entities and services). `{"type": "hearth/household"}` answers once; `{"type": "hearth/household/subscribe"}` answers,
+then sends the same object as an event whenever it changes, at most every 2 seconds (unsubscribe as usual). It holds:
+
+- `people`: `id`, `name`, `kind` (`adult`: has a parent PIN; `kid`: has limits; else `person`), `tv_profiles`, `all`
+  (the shared pool: All screen time's `used_minutes` and `minutes_left`), `groups` (each with a budget or use today),
+  `locked` and `locked_by`, `playing`.
+- `devices`: each Hearth TV and phone: `id`, `name`, `kind`, `connected`, `screen`, `app`, `media_title`, `media_app`,
+  `profile` (a TV's) and `person`.
+- `approvals`: devices waiting to pair (`device_name`, `device_kind`, `code`, `expires`).
+- `not_screen_time`, and `version` (changes with any of it).
+
+Asks for more time and chore claims will join it when they exist.
+
 ## Away from home
 
 TVs stay on the home network. A phone isn't always there, so `mobile` devices also get a **webhook** the integration

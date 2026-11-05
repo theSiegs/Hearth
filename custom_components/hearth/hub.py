@@ -31,6 +31,7 @@ from .const import (
     PAIRING_EXPIRES,
     PAIRING_INTERVAL_PER_ADDRESS,
     SIGNAL_DEVICE_ADDED,
+    SIGNAL_PAIRINGS,
     SIGNAL_STATUS,
     STATUS_WINDOW,
     STORAGE_KEY,
@@ -249,7 +250,13 @@ class HearthHub:
             expires=now + PAIRING_EXPIRES,
         )
         self._pairings[pairing.pairing_id] = pairing
+        async_dispatcher_send(self.hass, SIGNAL_PAIRINGS)
         return pairing
+
+    def pending_pairings(self) -> list[Pairing]:
+        """The devices waiting for an administrator to check their code."""
+        self._drop_expired()
+        return [p for p in self._pairings.values() if p.secret is None and not p.denied]
 
     def pairing(self, pairing_id: str) -> Pairing | None:
         self._drop_expired()
@@ -283,12 +290,14 @@ class HearthHub:
         pairing.secret = secret
         pairing.expires = dt_util.utcnow() + APPROVED_EXPIRES
         async_dispatcher_send(self.hass, SIGNAL_DEVICE_ADDED, pairing.device_id)
+        async_dispatcher_send(self.hass, SIGNAL_PAIRINGS)
         return True
 
     def deny(self, pairing_id: str) -> None:
         pairing = self.pairing(pairing_id)
         if pairing is not None:
             pairing.denied = True
+            async_dispatcher_send(self.hass, SIGNAL_PAIRINGS)
 
     def collect(self, pairing: Pairing) -> str | None:
         """The approved secret, once: the pairing ends with it."""

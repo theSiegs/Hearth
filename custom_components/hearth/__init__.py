@@ -23,6 +23,7 @@ from homeassistant.helpers.event import (
 from homeassistant.util import dt as dt_util
 
 from .api import async_register_views
+from .websocket import async_register_commands
 from .apps import ACTION_PREFIX
 from .const import DOMAIN
 from .hub import HearthHub
@@ -188,6 +189,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     # loaded they answer that Hearth isn't set up
     if not hass.data.get(_VIEWS_REGISTERED):
         async_register_views(hass)
+        async_register_commands(hass)
         hass.data[_VIEWS_REGISTERED] = True
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

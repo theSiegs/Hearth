@@ -53,6 +53,8 @@ CONF_TILE_EXCHANGE = "tile_exchange_share"
 CONF_LOCKS = "locks"
 
 SIGNAL_PEOPLE = "hearth_people"
+# A device asked to pair, or its pairing was answered
+SIGNAL_PAIRINGS = "hearth_pairings"
 
 EVENT_BUDGET_REACHED = "hearth_budget_reached"
 EVENT_PLAYING_TOGETHER = "hearth_playing_together"
