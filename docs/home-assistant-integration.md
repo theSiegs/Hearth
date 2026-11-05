@@ -416,7 +416,12 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   `profile` (a TV's) and `person`.
 - `approvals`: requests for more time (`type: "more_time"`, as the event above) and devices waiting to pair
   (`type: "pairing"`, `device_name`, `device_kind`, `code`, `expires`).
-- each person also has `pause`, `lock` and `next_lock` as in their state document.
+- each person also has `pause`, `lock` and `next_lock` as in their state document, and `held` / `held_by` (the
+  other parental controls holding something of theirs now: `family_link`, `family_safety`, `nintendo`); each group
+  also has `budget` (today's, null for none) and `bonus` (extra time given today).
+
+Hearth's page opens on a tab from its link: `/hearth#today`, `#kids`, `#devices`, `#apps`, `#family`, and
+`#approvals` (Today, where requests for more time and devices waiting to pair are shown first).
 - `not_screen_time`, and `version` (changes with any of it).
 
 Asks for more time and chore claims will join it when they exist.

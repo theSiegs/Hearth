@@ -24,7 +24,7 @@ from homeassistant.util import dt as dt_util
 from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.util.network import is_local
 
-from .const import DOMAIN, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
+from .const import CONF_ROLES, DOMAIN, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
 from .hub import HearthHub, collect_secret, find_pairing
 from .notifications import notify_pairing
 from . import parent_pin
@@ -129,7 +129,8 @@ class PairStartView(HomeAssistantView):
 
 class PairStatusView(HomeAssistantView):
     """GET /api/hearth/pair/{pairing_id} (header X-Hearth-Nonce) -> {"status": "pending" | "denied"} or, once,
-    {"status": "approved", "device_id", "secret", "urls": {"internal", "external"}}: where Home Assistant answers, at
+    {"status": "approved", "device_id", "secret", "person", "role": "kid" | "adult" | null, "urls": {"internal",
+    "external"}}: whose phone it is, and where Home Assistant answers, at
     home and away (Home Assistant Cloud's when it's set up), either null when not known; a phone's app signs in there
     with Home Assistant's own login. An unknown or expired pairing is 404."""
 
@@ -150,8 +151,17 @@ class PairStatusView(HomeAssistantView):
         secret = collect_secret(hass, pairing)
         if secret is None:
             return web.json_response({"status": "pending"})
+        # Whose phone it is, and whether they're a kid or an adult (as set on Hearth's page; null when not set)
+        roles = hub.entry.options.get(CONF_ROLES, {}) if (hub := _hub(hass)) else {}
         return web.json_response(
-            {"status": "approved", "device_id": pairing.device_id, "secret": secret, "urls": _urls(hass)}
+            {
+                "status": "approved",
+                "device_id": pairing.device_id,
+                "secret": secret,
+                "urls": _urls(hass),
+                "person": pairing.person,
+                "role": roles.get(pairing.person) if pairing.person else None,
+            }
         )
 
 

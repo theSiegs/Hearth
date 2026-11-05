@@ -78,6 +78,8 @@ async def _pair(hass: HomeAssistant, client, device_id: str = TV_ID, kind: str =
     assert body["device_id"] == device_id
     # Where Home Assistant answers, for a phone's own sign-in (none known in a test)
     assert set(body["urls"]) == {"internal", "external"}
+    # A TV is nobody's
+    assert body["person"] is None and body["role"] is None
     # Handed over once
     again = await client.get(f"/api/hearth/pair/{started['pairing_id']}", headers={"X-Hearth-Nonce": NONCE})
     assert again.status == 404

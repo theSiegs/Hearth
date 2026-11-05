@@ -30,6 +30,8 @@ async def test_the_household_at_a_glance(
     assert sam["name"] == "Sam"
     assert sam["tv_profiles"] == ["user:10"]
     assert sam["all"]["used_minutes"] == 15
+    assert sam["all"]["budget"] is None and sam["all"]["bonus"] == 0
+    assert sam["held"] is False and sam["held_by"] == []
     [tv] = body["devices"]
     assert tv["id"] == TV_ID and tv["kind"] == "tv" and tv["connected"] is True
     assert body["approvals"] == []

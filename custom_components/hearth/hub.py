@@ -290,6 +290,7 @@ class HearthHub:
         }
         self.hass.config_entries.async_update_entry(self.entry, data={**self.entry.data, CONF_DEVICES: devices})
         pairing.secret = secret
+        pairing.person = person
         pairing.expires = dt_util.utcnow() + APPROVED_EXPIRES
         async_dispatcher_send(self.hass, SIGNAL_DEVICE_ADDED, pairing.device_id)
         async_dispatcher_send(self.hass, SIGNAL_PAIRINGS)

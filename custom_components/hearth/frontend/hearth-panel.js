@@ -105,6 +105,10 @@ class HearthPanel extends HTMLElement {
     } catch (_err) {
       // A private window: the first tab
     }
+    // A link to a tab (/hearth#kids); #approvals is Today, where requests and pairings wait
+    const hash = (window.location.hash || "").replace("#", "");
+    if (hash === "approvals") this._tab = "today";
+    else if (TABS.some((t) => t.id === hash)) this._tab = hash;
     if (this._hass && !this._unsub) this._start();
   }
 

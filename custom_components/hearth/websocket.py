@@ -52,6 +52,9 @@ def summary(hub) -> dict[str, Any]:
                     "name": group.name,
                     "used_minutes": _minutes(used),
                     "minutes_left": state.minutes_left if state else None,
+                    # Today's budget (null: no limit) and the extra time given today, apart
+                    "budget": state.budget_min if state else None,
+                    "bonus": state.bonus_min if state else 0,
                 }
             )
         limited = any(g["minutes_left"] is not None for g in groups)
@@ -67,6 +70,9 @@ def summary(hub) -> dict[str, Any]:
                 "groups": groups,
                 "locked": bool(day and day.locked),
                 "locked_by": list(day.locked_by) if day else [],
+                # What other parental controls hold of theirs now (family_link, family_safety, nintendo)
+                "held": bool(held := household.enforcement.held_for(person)),
+                "held_by": sorted(k for k, v in held.items() if v.get("held")),
                 # pause, lock {by, until}, next_lock {at, by, kind}: as in the person's state document
                 **household._locks_document(person, day),
                 "playing": [
