@@ -60,6 +60,7 @@ async def test_a_kid_asks_and_the_first_adult_answers(
     body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
     told = body["state"]["profiles"][KID]["request"]
     assert told["id"] == request["id"] and told["status"] == "approved" and told["minutes"] == 45
+    assert told["answered"] is not None
 
 
 async def test_not_now_starts_a_cooldown_and_a_phone_button_answers(

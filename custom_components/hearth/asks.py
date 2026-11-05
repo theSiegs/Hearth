@@ -68,6 +68,8 @@ class Ask:
             "asked_minutes": self.minutes,
             "group": self.group,
             "expires": self.expires.isoformat(),
+            # When it was answered (or expired); null while pending
+            "answered": self.answered.isoformat() if self.answered else None,
         }
 
     def approval_view(self, names) -> dict[str, Any]:

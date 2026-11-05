@@ -402,14 +402,15 @@ once: from that phone, Hearth's page, or `{"type": "hearth/approvals/answer", "r
 "deny": true}` on the WebSocket (administrators). More time is extra time today (as `add_bonus`); the answer fires
 `hearth_more_time_answered` (`id`, `person`, `status`, `minutes`, `by`: the user). The asking device sees it in the
 person's state document: `request` {id, status: pending | approved | denied | expired, minutes (granted when
-approved), asked_minutes, group, expires}, for two hours after.
+approved), asked_minutes, group, expires, answered (when it was answered or expired, null while pending)}, for two hours after.
 
 ### Pause and locks
 
 `hearth.pause` (`minutes`, or `until` a time or date-time; `reason`; `people`, everyone by default) holds the people
 until it ends or `hearth.pause_end` (`people`, everyone by default). A paused person is locked, so a Hearth TV holds
 their apps as for bedtime, and their state document says `pause` {until, reason}. Every person's document also says,
-while they're locked, `lock` {by: the lock entities and/or "pause", until: when it ends, if known}, and `next_lock`
+while they're locked, `lock` {by: the lock entities and/or "pause", kind: bedtime | school_time | pause | other
+(the first that applies), kinds: all of them, until: when it ends, if known}, and `next_lock`
 {at, by, kind: bedtime | school_time} for the next bedtime or school time today, from the lock entities' own
 `bedtime_start`/`bedtime_end`/`schooltime_start`/`schooltime_end` (Family Link's), so a device can wind down. Without
 a push, a device learns of a pause with its next status answer: a TV within 2 minutes (it posts at least that often

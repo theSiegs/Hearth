@@ -76,6 +76,26 @@ def lock_until(hass: HomeAssistant, entity_ids: list[str]) -> datetime | None:
     return max(ends) if ends else None
 
 
+def lock_kinds(hass: HomeAssistant, by: list[str]) -> list[str]:
+    """What the locks that are on are: bedtime, school_time, pause, or other (a lock entity that doesn't say)."""
+    kinds: list[str] = []
+    for item in by:
+        if item == PAUSE:
+            kind = PAUSE
+        else:
+            state = hass.states.get(item)
+            attrs = state.attributes if state else {}
+            if "bedtime_end" in attrs or "bedtime_start" in attrs or "bedtime" in item:
+                kind = "bedtime"
+            elif "schooltime_end" in attrs or "schooltime_start" in attrs or "school" in item:
+                kind = "school_time"
+            else:
+                kind = "other"
+        if kind not in kinds:
+            kinds.append(kind)
+    return kinds
+
+
 def next_lock(hass: HomeAssistant, entity_ids: list[str], now: datetime | None = None) -> dict[str, Any] | None:
     """The next lock to start, of those that are off: {at (ISO), by (entity), kind (bedtime / school_time)}."""
     now = now or dt_util.now()

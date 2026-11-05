@@ -47,7 +47,7 @@ from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
 from .limits import CONF_APP_GROUPS, OTHER, OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
 from .enforce import Enforcement, enforcers_from_options
 from .watch import WatchLog
-from .pause import PAUSE, lock_until, next_lock, pause_of
+from .pause import PAUSE, lock_kinds, lock_until, next_lock, pause_of
 from . import parent_pin
 from .schooldays import SchoolDays
 from .live import LiveTracker, Observation, Together
@@ -198,7 +198,14 @@ class Household:
             if pause:
                 ends.append(dt_util.parse_datetime(pause["until"]))
             until = max((e for e in ends if e is not None), default=None)
-            out["lock"] = {"by": list(day.locked_by), "until": dt_util.as_local(until).isoformat() if until else None}
+            kinds = lock_kinds(self.hass, day.locked_by)
+            out["lock"] = {
+                "by": list(day.locked_by),
+                # bedtime, school_time, pause or other: the first of them (bedtime before school time before a pause)
+                "kind": next((k for k in ("bedtime", "school_time", "pause", "other") if k in kinds), "other"),
+                "kinds": kinds,
+                "until": dt_util.as_local(until).isoformat() if until else None,
+            }
         if upcoming := next_lock(self.hass, self._lock_entities(person)):
             out["next_lock"] = upcoming
         return out

@@ -23,6 +23,7 @@ async def test_a_pause_holds_everyone_until_it_ends(
     assert sam["locked"] is True
     assert sam["pause"]["reason"] == "Dinner"
     assert sam["lock"]["by"] == ["pause"] and sam["lock"]["until"] == sam["pause"]["until"]
+    assert sam["lock"]["kind"] == "pause"
 
     ws = await hass_ws_client(hass)
     await ws.send_json({"id": 1, "type": "hearth/household"})
@@ -62,6 +63,6 @@ async def test_bedtime_says_until_when_and_comes_with_a_heads_up(
     await hass.async_block_till_done()
     body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
     sam = body["state"]["profiles"][KID]
-    assert sam["lock"]["by"] == [bedtime]
+    assert sam["lock"]["by"] == [bedtime] and sam["lock"]["kind"] == "bedtime"
     assert dt_util.parse_datetime(sam["lock"]["until"]).hour == 7
     assert "next_lock" not in sam
