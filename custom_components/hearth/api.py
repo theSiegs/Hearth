@@ -28,6 +28,7 @@ from .const import DOMAIN, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
 from .hub import HearthHub, collect_secret, find_pairing
 from .notifications import notify_pairing
 from . import parent_pin
+from .asks import AskError
 from .status import clean_status, text
 from .watch import MAX_EVENTS, clean_started
 
@@ -287,6 +288,55 @@ class VerifyPinView(HomeAssistantView):
         return web.json_response(answer)
 
 
+class AskView(HomeAssistantView):
+    """POST /api/hearth/device/{device_id}/ask (header X-Hearth-Secret): {"minutes": 15|30|45|60, "group": "all" or a
+    group id, "note": short text, "profile_id": a TV's profile (a phone asks for its own person)} -> {"ok": true,
+    "request": {id, status, minutes, asked_minutes, group, expires}}. 409 already_open (with that request), 429 cooldown
+    (with retry_in) after a "not now", 400 for anything else wrong, 404 no_person when the profile is nobody's. The
+    answer comes in the person's state document ("request") with the next status answers."""
+
+    url = "/api/hearth/device/{device_id}/ask"
+    name = "api:hearth:device:ask"
+    requires_auth = False
+
+    async def post(self, request: web.Request, device_id: str) -> web.Response:
+        hass: HomeAssistant = request.app["hass"]
+        if not _local(request):
+            return _error(HTTPStatus.FORBIDDEN, "not_local")
+        hub = _hub(hass)
+        if hub is None:
+            return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
+        if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
+            return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
+        if hub.too_many_events(device_id):
+            return _error(HTTPStatus.TOO_MANY_REQUESTS, "too_often")
+        body = await _json_body(request)
+        if not isinstance(body, dict) or not isinstance(body.get("minutes", 15), int):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        if hub.kind(device_id) == KIND_TV:
+            profile_id = text(body.get("profile_id"), 64) or (hub.state(device_id).status or {}).get("profile_id")
+            person = hub.household.profile_person(profile_id) if profile_id else None
+        else:
+            person = hub.household.device_person(device_id)
+        if not person:
+            return _error(HTTPStatus.NOT_FOUND, "no_person")
+        try:
+            ask = hub.asks.ask(
+                person, body.get("minutes", 15), text(body.get("group"), 64) or "all", text(body.get("note"), 200), device_id
+            )
+        except AskError as err:
+            if err.code == "already_open":
+                return web.json_response(
+                    {"error": "already_open", "request": err.detail.device_view()}, status=HTTPStatus.CONFLICT
+                )
+            if err.code == "cooldown":
+                return web.json_response(
+                    {"error": "cooldown", "retry_in": err.detail}, status=HTTPStatus.TOO_MANY_REQUESTS
+                )
+            return _error(HTTPStatus.BAD_REQUEST, err.code)
+        return web.json_response({"ok": True, "request": ask.device_view()})
+
+
 def async_register_views(hass: HomeAssistant) -> None:
-    for view in (PairStartView, PairStatusView, StatusView, EventsView, VerifyPinView):
+    for view in (PairStartView, PairStatusView, StatusView, EventsView, VerifyPinView, AskView):
         hass.http.register_view(view())

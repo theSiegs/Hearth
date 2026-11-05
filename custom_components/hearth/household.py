@@ -46,6 +46,7 @@ from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
 from .limits import OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
 from .enforce import Enforcement, enforcers_from_options
 from .watch import WatchLog
+from .pause import PAUSE, lock_until, next_lock, pause_of
 from . import parent_pin
 from .schooldays import SchoolDays
 from .live import LiveTracker, Observation, Together
@@ -180,6 +181,26 @@ class Household:
             and (state := self.hass.states.get(lock["entity_id"])) is not None
             and state.state == "on"
         ]
+
+    def _lock_entities(self, person: str) -> list[str]:
+        return [lock["entity_id"] for lock in self.options.get(CONF_LOCKS, []) if lock.get("person") == person]
+
+    def _locks_document(self, person: str, day: PersonDay | None) -> dict[str, Any]:
+        """Why and until when the person is held ("lock" {by, until}), a family pause ("pause" {until, reason}), and
+        the next bedtime or school time ("next_lock" {at, by, kind}), for winding down before it."""
+        out: dict[str, Any] = {}
+        pause = pause_of(self.hass, person)
+        if pause:
+            out["pause"] = pause
+        if day and day.locked:
+            ends = [lock_until(self.hass, [e for e in day.locked_by if e != PAUSE])]
+            if pause:
+                ends.append(dt_util.parse_datetime(pause["until"]))
+            until = max((e for e in ends if e is not None), default=None)
+            out["lock"] = {"by": list(day.locked_by), "until": dt_util.as_local(until).isoformat() if until else None}
+        if upcoming := next_lock(self.hass, self._lock_entities(person)):
+            out["next_lock"] = upcoming
+        return out
 
     def seen_profiles(self) -> dict[str, str | None]:
         """TV profiles the TVs have reported: profile_id -> its name, for the options."""
@@ -340,6 +361,9 @@ class Household:
             devices = {device: merge(r) for device, r in readings.get(person, {}).items()}
             seconds = group_seconds(devices, membership, self.outside_all())
             locked_by = self._locked_by(person)
+            # A family pause holds them as a lock does
+            if pause_of(self.hass, person, now):
+                locked_by.append(PAUSE)
             day = PersonDay(person, devices, seconds, playing=playing.get(person, []),
                             together_s=self.live.together_s.get(person, 0.0), locked=bool(locked_by),
                             locked_by=locked_by)
@@ -520,8 +544,11 @@ class Household:
             "person": person,
             "groups": groups,
             "locked": bool(day and day.locked),
+            **self._locks_document(person, day),
             # A parent let this person's phone share with the launcher's tile exchange (off unless chosen)
             "tile_exchange_share": person in self.options.get(CONF_TILE_EXCHANGE, []),
+            # Their latest request for more time and its answer (asks.py), while it's still news
+            **({"request": ask.device_view()} if (ask := self.hub.asks.latest_for(person)) else {}),
             # What a parent blocked here, for HearthTube in the person's kids profiles (a TV's Hearth passes it on)
             "youtube_blocks": self.watch.blocks_document(person),
         }

@@ -296,6 +296,23 @@
     }
   },
   "services": {
+    "pause": {
+      "name": "Pause",
+      "description": "Holds the people's Hearth devices (dinner time, say) for some minutes or until a time; they stop and show the reason. Everyone in the household when no one is chosen.",
+      "fields": {
+        "minutes": {"name": "Minutes", "description": "How long."},
+        "until": {"name": "Until", "description": "Or until this time (tomorrow's, if it has passed today)."},
+        "reason": {"name": "Reason", "description": "What the devices show, such as Dinner."},
+        "people": {"name": "People", "description": "Who; everyone when empty."}
+      }
+    },
+    "pause_end": {
+      "name": "End the pause",
+      "description": "Lets the people go again (everyone paused when no one is chosen).",
+      "fields": {
+        "people": {"name": "People", "description": "Who; everyone paused when empty."}
+      }
+    },
     "add_bonus": {
       "name": "Add a bonus",
       "description": "Adds minutes to a person's budget for today (a negative number takes them away).",

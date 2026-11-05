@@ -22,6 +22,7 @@ from homeassistant.helpers.event import async_call_later
 from .const import CONF_KIND, CONF_PERSON, CONF_ROLES, DOMAIN, KIND_TV, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_STATUS
 from .counting import ALL
 from . import parent_pin
+from .asks import AskError
 
 SEND_EVERY = timedelta(seconds=2)
 
@@ -66,6 +67,8 @@ def summary(hub) -> dict[str, Any]:
                 "groups": groups,
                 "locked": bool(day and day.locked),
                 "locked_by": list(day.locked_by) if day else [],
+                # pause, lock {by, until}, next_lock {at, by, kind}: as in the person's state document
+                **household._locks_document(person, day),
                 "playing": [
                     {"app": p.app, "package": p.package, "device": p.device, "state": p.state}
                     for p in (day.playing if day else [])
@@ -92,7 +95,7 @@ def summary(hub) -> dict[str, Any]:
                 else device.get(CONF_PERSON),
             }
         )
-    approvals = [
+    approvals = [ask.approval_view(household.person_name) for ask in hub.asks.pending()] + [
         {
             "type": "pairing",
             "device_name": p.name,
@@ -176,7 +179,36 @@ def ws_household_subscribe(
     send()
 
 
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hearth/approvals/answer",
+        # Not "id": that's the WebSocket message's own
+        vol.Required("request_id"): str,
+        vol.Optional("minutes"): vol.All(int, vol.Range(min=1, max=600)),
+        vol.Optional("deny"): bool,
+    }
+)
+@callback
+def ws_answer(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """An adult answers a request for more time: minutes (any amount) or deny. The first answer wins."""
+    hub = _hub(hass)
+    if hub is None:
+        connection.send_error(msg["id"], "not_set_up", "Hearth isn't set up")
+        return
+    if msg.get("deny") == bool(msg.get("minutes")):
+        connection.send_error(msg["id"], "invalid", "Give minutes or deny")
+        return
+    try:
+        ask = hub.asks.answer(msg["request_id"], None if msg.get("deny") else msg["minutes"], connection.user.id)
+    except AskError as err:
+        connection.send_error(msg["id"], err.code, "That request isn't open any more")
+        return
+    connection.send_result(msg["id"], ask.device_view())
+
+
 @callback
 def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_household)
     websocket_api.async_register_command(hass, ws_household_subscribe)
+    websocket_api.async_register_command(hass, ws_answer)

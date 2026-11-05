@@ -5,7 +5,7 @@ See docs/home-assistant-integration.md.
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import voluptuous as vol
 
@@ -24,6 +24,7 @@ from homeassistant.util import dt as dt_util
 
 from .api import async_register_views
 from .websocket import async_register_commands
+from .pause import end_pause, set_pause
 from . import panel
 from .apps import ACTION_PREFIX
 from .const import DOMAIN
@@ -58,6 +59,18 @@ SET_BUDGET_SCHEMA = vol.Schema(
         vol.Optional("days", default="both"): vol.In(["school_days", "other_days", "weekday", "weekend", "both"]),
     }
 )
+PAUSE_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            vol.Exclusive("minutes", "how_long"): vol.All(vol.Coerce(int), vol.Range(min=1, max=720)),
+            vol.Exclusive("until", "how_long"): vol.Any(cv.datetime, cv.time),
+            vol.Optional("reason"): cv.string,
+            vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
+        }
+    ),
+    cv.has_at_least_one_key("minutes", "until"),
+)
+PAUSE_END_SCHEMA = vol.Schema({vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id])})
 GET_WATCH_LOG_SCHEMA = vol.Schema(
     {
         vol.Required("person"): cv.entity_id,
@@ -100,6 +113,48 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     hass.services.async_register(DOMAIN, SERVICE_ADD_BONUS, add_bonus, schema=ADD_BONUS_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_SET_BUDGET, set_budget, schema=SET_BUDGET_SCHEMA)
+
+    def loaded_household():
+        entries = hass.config_entries.async_loaded_entries(DOMAIN)
+        if not entries:
+            raise ServiceValidationError("Hearth isn't set up")
+        return entries[0].runtime_data.household
+
+    @callback
+    def pause(call: ServiceCall) -> None:
+        """Holds the people (everyone by default) for some minutes or until a time (today's, or tomorrow's if it's
+        passed): their Hearth devices stop and say why."""
+        household = loaded_household()
+        now = dt_util.now()
+        if "minutes" in call.data:
+            until = now + timedelta(minutes=call.data["minutes"])
+        elif isinstance(call.data["until"], datetime):
+            until = dt_util.as_local(call.data["until"]) if call.data["until"].tzinfo else call.data["until"].replace(
+                tzinfo=dt_util.get_default_time_zone()
+            )
+        else:
+            until = now.replace(
+                hour=call.data["until"].hour, minute=call.data["until"].minute, second=0, microsecond=0
+            )
+            if until <= now:
+                until += timedelta(days=1)
+        if until <= now:
+            raise ServiceValidationError("That time has passed")
+        people = call.data.get("people") or household.people()
+        unknown = [p for p in people if p not in household.people()]
+        if unknown:
+            raise ServiceValidationError(f"Not the household's: {', '.join(unknown)}")
+        set_pause(hass, people, until, call.data.get("reason"))
+        household.recompute()
+
+    @callback
+    def pause_end(call: ServiceCall) -> None:
+        household = loaded_household()
+        end_pause(hass, call.data.get("people"))
+        household.recompute()
+
+    hass.services.async_register(DOMAIN, "pause", pause, schema=PAUSE_SCHEMA)
+    hass.services.async_register(DOMAIN, "pause_end", pause_end, schema=PAUSE_END_SCHEMA)
     _register_watch_services(hass)
     return True
 
@@ -219,6 +274,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     def phone_answer(event) -> None:
         """A Sort button on a new app's phone notification: HEARTH_APP|<group>|<package>."""
         action = str(event.data.get("action") or "")
+        # A request for more time: the first adult's answer decides
+        if hub.asks.phone_answer(action, event.context.user_id):
+            return
         if not action.startswith(ACTION_PREFIX):
             return
         parts = action.split("|", 2)

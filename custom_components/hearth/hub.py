@@ -37,6 +37,7 @@ from .const import (
     STORAGE_KEY,
     STORAGE_VERSION,
 )
+from .asks import Asks
 from .household import Household
 from .parent_pin import EVENT_PARENT_PIN_LOCKED_OUT
 
@@ -115,6 +116,7 @@ class HearthHub:
         self._pairings: dict[str, Pairing] = shared["pairings"]
         self._asked_at: dict[str, datetime] = shared["asked_at"]
         self.household = Household(hass, self)
+        self.asks = Asks(hass, self)
 
     # The devices
 

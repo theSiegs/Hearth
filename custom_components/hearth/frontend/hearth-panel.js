@@ -295,6 +295,21 @@ class HearthPanel extends HTMLElement {
           `${Number(d.minutes) > 0 ? "Added" : "Took"} ${Math.abs(Number(d.minutes))} min ${Number(d.minutes) > 0 ? "for" : "from"} ${this._personName(d.person)}`
         );
         return;
+      case "answer":
+        await this._ws(
+          d.deny ? { type: "hearth/approvals/answer", request_id: d.request, deny: true } : { type: "hearth/approvals/answer", request_id: d.request, minutes: Number(d.minutes) },
+          d.deny ? "Not now, then" : `Gave ${d.minutes} more minutes`
+        );
+        return;
+      case "pause-start": {
+        const minutes = Number(this._value("#pause-minutes")) || 45;
+        const reason = this._value("#pause-reason");
+        await this._service("pause", reason ? { minutes, reason } : { minutes }, `Paused for ${fmtMinutes(minutes)}`);
+        return;
+      }
+      case "pause-end":
+        await this._service("pause_end", {}, "Pause ended");
+        return;
       case "bonus-custom": {
         const minutes = Number(this._value(`#custom-${CSS.escape(d.person)}`));
         const group = this._value(`#custom-group-${CSS.escape(d.person)}`) || "all";
@@ -656,7 +671,7 @@ class HearthPanel extends HTMLElement {
   _today() {
     const kids = this._kids();
     const devices = this._summary?.devices || [];
-    const parts = [this._pairingCards()];
+    const parts = [this._pauseBar(), this._askCards(), this._pairingCards()];
     if (!kids.length) {
       parts.push(`<div class="card empty"><ha-icon icon="mdi:account-child-outline"></ha-icon>
         <p>No kids in Hearth yet. The guided setup takes a few minutes.</p>
@@ -669,6 +684,41 @@ class HearthPanel extends HTMLElement {
     return parts.join("");
   }
 
+  _askCards() {
+    const asks = (this._summary?.approvals || []).filter((a) => a.type === "more_time");
+    return asks
+      .map(
+        (a) => `<div class="card attention ask">
+        <div class="row">${this._avatar(a.person, 36)}<div class="grow">
+          <div class="strong">${esc(a.person_name)} asks for ${a.minutes} more minutes${a.group && a.group !== "all" ? ` of ${esc(this._groupName(a.group))}` : ""}</div>
+          ${a.note ? `<div class="muted">“${esc(a.note)}”</div>` : ""}</div></div>
+        <div class="actions wrap">
+          <button class="btn" data-action="answer" data-request="${esc(a.id)}" data-deny="1">Not now</button>
+          ${[15, 30, 45, 60]
+            .map((m) => `<button class="btn ${m === a.minutes ? "primary" : ""}" data-action="answer" data-request="${esc(a.id)}" data-minutes="${m}">+${m} min</button>`)
+            .join("")}
+        </div></div>`
+      )
+      .join("");
+  }
+
+  _pauseBar() {
+    const paused = (this._summary?.people || []).filter((p) => p.pause);
+    if (paused.length) {
+      const p = paused[0].pause;
+      const until = new Date(p.until).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      return `<div class="card pause on"><div class="row"><ha-icon icon="mdi:silverware-fork-knife"></ha-icon>
+        <div class="grow"><div class="strong">${esc(p.reason || "Paused")} until ${esc(until)}</div>
+        <div class="muted small">${esc(paused.map((x) => x.name).join(", "))}: their Hearth TVs and phones are on hold.</div></div>
+        <button class="btn primary" data-action="pause-end">End pause</button></div></div>`;
+    }
+    return `<div class="card pause"><div class="row wrap"><ha-icon icon="mdi:pause-circle-outline"></ha-icon>
+      <div class="grow strong">Pause everyone</div>
+      <select id="pause-minutes" aria-label="How long">${[15, 30, 45, 60, 90].map((m) => `<option value="${m}" ${m === 45 ? "selected" : ""}>${fmtMinutes(m)}</option>`).join("")}</select>
+      <input id="pause-reason" placeholder="Reason, e.g. Dinner" value="" data-enter="pause-start">
+      <button class="btn" data-action="pause-start">Pause</button></div></div>`;
+  }
+
   _kidCard(kid) {
     const s = this._summaryPerson(kid.id);
     const all = s?.all;
@@ -678,9 +728,17 @@ class HearthPanel extends HTMLElement {
     const groups = (s?.groups || []).filter((g) => g.id !== "all");
     const playing = (s?.playing || [])[0];
     const chips = [];
-    if (s?.locked) chips.push(`<span class="chip warn"><ha-icon icon="mdi:lock"></ha-icon>Locked${s.locked_by?.length ? `: ${esc(s.locked_by.map((e) => this._entityName(e)).join(", "))}` : ""}</span>`);
+    if (s?.locked && !s.pause)
+      chips.push(`<span class="chip warn"><ha-icon icon="mdi:lock"></ha-icon>Locked${s.locked_by?.length ? `: ${esc(s.locked_by.filter((e) => e !== "pause").map((e) => this._entityName(e)).join(", "))}` : ""}${s.lock?.until ? ` until ${esc(new Date(s.lock.until).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}` : ""}</span>`);
+    if (s?.pause) chips.push(`<span class="chip warn"><ha-icon icon="mdi:pause"></ha-icon>${esc(s.pause.reason || "Paused")}</span>`);
     if (playing) chips.push(`<span class="chip play"><ha-icon icon="mdi:play-circle"></ha-icon>${esc(playing.app || playing.package || "Playing")}${playing.device ? ` · ${esc(playing.device)}` : ""}</span>`);
     if (left === 0) chips.push(`<span class="chip out"><ha-icon icon="mdi:timer-off"></ha-icon>Out of time</span>`);
+    if (s?.next_lock) {
+      const at = new Date(s.next_lock.at);
+      const mins = Math.round((at - Date.now()) / 60000);
+      if (mins >= 0 && mins <= 120)
+        chips.push(`<span class="chip"><ha-icon icon="mdi:${s.next_lock.kind === "bedtime" ? "weather-night" : "school-outline"}"></ha-icon>${s.next_lock.kind === "bedtime" ? "Bedtime" : "School time"} ${mins <= 60 ? `in ${mins} min` : `at ${esc(at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}`}</span>`);
+    }
     const noBudget = budgets.school === null && budgets.other === null;
     return `<div class="card kid">
       <div class="kid-head">
@@ -1130,6 +1188,11 @@ p { margin: 6px 0 12px; line-height: 1.45; }
   box-shadow: var(--ha-card-box-shadow, 0 1px 3px rgba(0,0,0,.12)); border: var(--ha-card-border-width, 1px) solid var(--ha-card-border-color, var(--divider-color, transparent));
   margin-bottom: var(--gap); }
 .card.attention { border-color: var(--warning-color, #ffa600); border-width: 2px; }
+.card.pause { padding: 12px 16px; }
+.card.pause.on { border-color: var(--primary-color); border-width: 2px; }
+.card.pause ha-icon { color: var(--primary-color); }
+.card.pause input { min-width: 160px; flex: 1; }
+.row.wrap { flex-wrap: wrap; }
 .card.empty { text-align: center; padding: 32px 16px; }
 .card.empty ha-icon { --mdc-icon-size: 48px; color: var(--secondary-text-color); }
 .card.dim { opacity: .6; }
