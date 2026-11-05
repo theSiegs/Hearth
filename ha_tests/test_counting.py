@@ -60,3 +60,26 @@ def test_minutes_left():
 def test_day_types():
     assert day_type(date(2026, 10, 24)) == "weekend"  # a Saturday
     assert day_type(date(2026, 10, 26)) == "weekday"
+
+
+def test_a_group_outside_all_screen_time_counts_only_in_itself():
+    options = {
+        "groups": [{"id": "music", "name": "Music", "apps": ["com.example.music"]}],
+        "outside_all": ["music"],
+    }
+    groups = groups_from_options(options)
+    assert [g.id for g in groups if not g.in_all] == ["music"]
+    devices = {
+        "phone": merge([Reading("hearth", 1500, {"com.example.music": 600, "com.thesiegs.hearthtube": 600})]),
+        "speaker": merge([Reading("tablet", 300, {}, rest_group="music")]),
+    }
+    seconds = group_seconds(devices, groups_of(groups, {}), [g.id for g in groups if not g.in_all])
+    # The phone's 300 s not put on an app still counts; the music, on an app or a source's rest, doesn't
+    assert seconds[ALL] == 900
+    assert seconds["music"] == 900
+    assert seconds["video"] == 600
+
+
+def test_all_screen_time_never_goes_outside_itself():
+    groups = groups_from_options({"outside_all": ["all"]})
+    assert all(g.in_all for g in groups)

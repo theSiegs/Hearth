@@ -30,7 +30,17 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
 )
 
-from .const import CONF_GROUP_APPS, CONF_GROUPS, CONF_LOCKS, CONF_PERSON, CONF_PROFILES, DOMAIN, KIND_MOBILE
+from .const import (
+    CONF_GROUP_APPS,
+    CONF_GROUPS,
+    CONF_LOCKS,
+    CONF_OUTSIDE_ALL,
+    CONF_PERSON,
+    CONF_PROFILES,
+    DOMAIN,
+    KIND_MOBILE,
+)
+from .counting import ALL
 from .limits import BUILTIN_GROUPS, GAMES, VIDEO, slug
 from .apps import CONF_APP_WATCH, CONF_ASK_NOTIFY, OTHER, options_with_app_in_group, update_notification
 from .enforce import (
@@ -129,6 +139,7 @@ class HearthOptionsFlow(OptionsFlow):
                 "new_apps",
                 "add_group",
                 "group_apps",
+                "not_screen_time",
                 "remove_group",
             ],
         )
@@ -211,6 +222,24 @@ class HearthOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="group_apps", data_schema=schema)
+
+    async def async_step_not_screen_time(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Groups whose time isn't screen time (music, say): not counted in All screen time, not held when it runs
+        out. Their own budget still applies."""
+        options = self._options()
+        if user_input is not None:
+            return self.async_create_entry(data={**options, CONF_OUTSIDE_ALL: list(user_input.get("groups", []))})
+        groups = [g for g in self._household().groups if g.id != ALL]
+        schema = vol.Schema(
+            {
+                vol.Optional("groups", default=list(options.get(CONF_OUTSIDE_ALL, []))): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[SelectOptionDict(value=g.id, label=g.name) for g in groups], multiple=True
+                    )
+                )
+            }
+        )
+        return self.async_show_form(step_id="not_screen_time", data_schema=schema)
 
     async def async_step_remove_group(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         options = self._options()

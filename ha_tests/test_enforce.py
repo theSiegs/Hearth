@@ -324,29 +324,87 @@ async def test_a_switch_s_used_screen_time_is_games_by_itself(
     assert hass.states.get("sensor.hearth_sam_games_today").state == "45"  # 5 on the TV, 40 on the Switch
 
 
-async def test_all_screen_time_out_pauses_every_app_of_theirs(
+async def test_all_screen_time_knows_every_app_of_theirs(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
-    paused, _resumed = _family_link(hass)
     await _household_with_sam(hass, hass_client_no_auth)
-    # Sam's phone, through Family Link: a chat app no group has, and texts (never paused)
+    # Sam's phone, through Family Link: a chat app no group has
+    hass.states.async_set(
+        FAMILY_LINK, "15", {"unit_of_measurement": "min", "apps": [{"package": "com.example.chat", "minutes": 15}]}
+    )
+    await _option(hass, "add_source", {"entity_id": FAMILY_LINK, "person": "person.sam"})
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    packages = household._person_apps(household.days.get("person.sam"), household.membership())
+    assert {"com.example.chat", "com.example.game", "com.thesiegs.hearthtube"} <= set(packages)
+
+
+async def test_all_screen_time_out_locks_the_family_link_devices(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0))
+    paused, _resumed = _family_link(hass)
+    limits = async_mock_service(hass, "familylink", "set_daily_limit")
+    await _household_with_sam(hass, hass_client_no_auth)
     hass.states.async_set(
         FAMILY_LINK,
         "20",
-        {
-            "unit_of_measurement": "min",
-            "apps": [
-                {"package": "com.example.chat", "minutes": 15},
-                {"package": "com.google.android.apps.messaging", "minutes": 5},
-            ],
-        },
+        {"unit_of_measurement": "min", "child_id": "42", "apps": [{"package": "com.example.chat", "minutes": 20}]},
     )
+    weekday = enforce.WEEKDAYS[dt_util.now().weekday()]
+    hass.states.async_set(f"number.sam_family_link_{weekday}_limit", "120", {"child_id": "42"})
+    hass.states.async_set(f"number.alex_family_link_{weekday}_limit", "60", {"child_id": "7"})
     await _option(hass, "add_source", {"entity_id": FAMILY_LINK, "person": "person.sam"})
     await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
 
     await _budget(hass, "all", 30)  # 15 on the TV, 20 on the phone
+    # The devices are locked (apps with unlimited time still work), not every app paused
+    assert paused == []
+    day = dt_util.now().isoweekday()
+    assert [c.data for c in limits] == [{"child_id": "42", "daily_minutes": 0, "day": day}]
+    held = hass.states.get("sensor.hearth_sam_held_by_parental_controls")
+    assert held.attributes["family_link"]["held"] == ["Devices"]
+
+    # Family Link then says 0 for today: letting go puts back what it was
+    hass.states.async_set(f"number.sam_family_link_{weekday}_limit", "0", {"child_id": "42"})
+    await _bonus(hass, "all", 30)
+    assert limits[-1].data == {"child_id": "42", "daily_minutes": 120, "day": day}
+    assert hass.states.get("sensor.hearth_sam_held_by_parental_controls").state == "0"
+
+
+async def test_a_group_outside_all_screen_time_isn_t_held_by_it(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    await _household_with_sam(hass, hass_client_no_auth)
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    hass.config_entries.async_update_entry(
+        entry,
+        options={
+            **entry.options,
+            "groups": [{"id": "music", "name": "Music", "apps": ["com.example.music"]}],
+            "outside_all": ["music"],
+        },
+    )
+    await hass.async_block_till_done()
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    assert household.outside_all() == {"music"}
+    assert household.group_packages()["music"] == ["com.example.music"]
+    assert "com.example.music" not in household._person_apps(household.days.get("person.sam"), household.membership())
+
+
+async def test_family_link_never_pauses_an_app_with_unlimited_time(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    paused, _resumed = _family_link(hass)
+    await _household_with_sam(hass, hass_client_no_auth)
+    hass.states.async_set(FAMILY_LINK, "0", {"unit_of_measurement": "min", "child_id": "42"})
+    hass.states.async_set(
+        "sensor.sam_family_link_always_allowed_apps",
+        "1",
+        {"child_id": "42", "apps": [{"name": "HearthTube", "package": "com.thesiegs.hearthtube"}]},
+    )
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+
+    await _budget(hass, "video", 10)
     assert len(paused) == 1
-    packages = paused[0].data["packages"]
-    assert {"com.example.chat", "com.example.game", "com.thesiegs.hearthtube"} <= set(packages)
-    assert "com.google.android.apps.messaging" not in packages
-    assert not any(essential(p) for p in packages)
+    assert "com.thesiegs.hearthtube" not in paused[0].data["packages"]

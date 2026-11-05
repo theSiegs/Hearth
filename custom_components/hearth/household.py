@@ -333,7 +333,7 @@ class Household:
         days: dict[str, PersonDay] = {}
         for person in self.people():
             devices = {device: merge(r) for device, r in readings.get(person, {}).items()}
-            seconds = group_seconds(devices, membership)
+            seconds = group_seconds(devices, membership, self.outside_all())
             locked_by = self._locked_by(person)
             day = PersonDay(person, devices, seconds, playing=playing.get(person, []),
                             together_s=self.live.together_s.get(person, 0.0), locked=bool(locked_by),
@@ -456,21 +456,42 @@ class Household:
                     found.add(candidate)
         return sorted(found)
 
-    def _person_apps(self, day: PersonDay | None, membership) -> list[str]:
-        """Every app of a person's Hearth knows, for holding All screen time: the apps of every group, and those in
-        their usage today on any device and from any source (a title's packages)."""
+    def outside_all(self) -> set[str]:
+        """The groups whose time isn't screen time (Configure > Not screen time)."""
+        return {g.id for g in self.groups if not g.in_all and g.id != ALL}
+
+    def _spared(self, membership) -> set[str]:
+        """The packages All screen time never holds: those of the groups outside it."""
         found: set[str] = set()
         for group in self.groups:
-            if group.id != ALL:
+            if group.id in self.outside_all():
+                found |= set(self._group_apps(group, membership))
+        return found
+
+    def group_packages(self) -> dict[str, list[str]]:
+        """Each group's packages (not All's: every app), as devices are held to them."""
+        membership = self.membership()
+        return {g.id: self._group_apps(g, membership) for g in self.groups if g.id != ALL}
+
+    def _person_apps(self, day: PersonDay | None, membership) -> list[str]:
+        """Every app of a person's Hearth knows, for holding All screen time: the apps of every group, and those in
+        their usage today on any device and from any source (a title's packages); never those of a group outside All
+        screen time."""
+        outside = self.outside_all()
+        found: set[str] = set()
+        for group in self.groups:
+            if group.id != ALL and group.id not in outside:
                 found |= set(self._group_apps(group, membership))
         titles = {f"title:{t.id}": t for t in self.titles}
         for usage in (day.devices.values() if day else ()):
             for item in usage.items:
+                if membership(item) & outside:
+                    continue
                 title = titles.get(item)
                 for candidate in (title.raw if title else (item,)):
                     if "." in candidate and " " not in candidate:
                         found.add(candidate)
-        return sorted(found)
+        return sorted(found - self._spared(membership))
 
     def _person_document(self, person: str) -> dict[str, Any]:
         day = self.days.get(person)
@@ -480,14 +501,16 @@ class Household:
             state = day.limits.get(group.id) if day else None
             if state is None or state.budget_min is None:
                 continue
-            groups.append(
-                {
-                    "id": group.id,
-                    "name": group.name,
-                    "minutes_left": state.minutes_left,
-                    "apps": self._group_apps(group, membership),
-                }
-            )
+            entry = {
+                "id": group.id,
+                "name": group.name,
+                "minutes_left": state.minutes_left,
+                "apps": self._group_apps(group, membership),
+            }
+            # All screen time holds every app but these (a group outside it: music, say)
+            if group.id == ALL and (spared := self._spared(membership)):
+                entry["except"] = sorted(spared)
+            groups.append(entry)
         return {
             "person": person,
             "groups": groups,

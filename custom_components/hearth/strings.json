@@ -129,6 +129,7 @@
           "new_apps": "Watch for new apps",
           "add_group": "Add a group",
           "group_apps": "Add apps to Video or Games",
+          "not_screen_time": "Not screen time",
           "remove_group": "Remove a group"
         }
       },
@@ -154,6 +155,13 @@
         "data": {
           "video": "Video",
           "games": "Games"
+        }
+      },
+      "not_screen_time": {
+        "title": "Not screen time",
+        "description": "Groups whose time doesn't count toward All screen time (music, say). Their apps aren't held when All screen time runs out; a budget of their own still applies.",
+        "data": {
+          "groups": "Groups"
         }
       },
       "remove_group": {

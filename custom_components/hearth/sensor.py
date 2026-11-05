@@ -177,7 +177,7 @@ class PersonScreenTime(_TodaySoFar):
     """All of the person's screen time today, each minute counted once."""
 
     _attr_translation_key = "person_screen_time_today"
-    _unrecorded_attributes = frozenset({"devices", "groups"})
+    _unrecorded_attributes = frozenset({"devices", "groups", "groups_apps", "not_screen_time"})
 
     def _count(self) -> int:
         return _minutes(self.day.total_s) if self.day else 0
@@ -198,6 +198,9 @@ class PersonScreenTime(_TodaySoFar):
                 for device_id, usage in day.devices.items()
             },
             "groups": {group: _minutes(seconds) for group, seconds in day.groups.items()},
+            # Each group's packages (All screen time: every app), and the groups whose time isn't in it
+            "groups_apps": self.hub.household.group_packages(),
+            "not_screen_time": sorted(self.hub.household.outside_all()),
         }
 
 

@@ -60,6 +60,8 @@ class Group:
     # Apps whose Android category is this are in it too ("video", "game")
     category: str | None = None
     builtin: bool = False
+    # Its time counts in All screen time, and its apps are held when that runs out (off: music, say)
+    in_all: bool = True
 
 
 BUILTIN_GROUPS = (
@@ -76,11 +78,15 @@ def slug(name: str) -> str:
 def groups_from_options(options: dict[str, Any]) -> list[Group]:
     """The built-in groups (with apps an adult added to them) and the adult's own groups."""
     added: dict[str, list[str]] = options.get("group_apps", {})
+    outside = set(options.get("outside_all", [])) - {ALL}
     groups = [
-        Group(g.id, g.name, g.apps | frozenset(added.get(g.id, [])), g.category, True) for g in BUILTIN_GROUPS
+        Group(g.id, g.name, g.apps | frozenset(added.get(g.id, [])), g.category, True, g.id not in outside)
+        for g in BUILTIN_GROUPS
     ]
     for custom in options.get("groups", []):
-        groups.append(Group(custom["id"], custom["name"], frozenset(custom.get("apps", []))))
+        groups.append(
+            Group(custom["id"], custom["name"], frozenset(custom.get("apps", [])), in_all=custom["id"] not in outside)
+        )
     return groups
 
 

@@ -71,26 +71,37 @@ final class HaAllowance {
         final Map<String, String> outOfTime;
         /** All screen time's name when its time is up today (every app is held), else null. */
         final String allOutOfTime;
+        /** The apps All screen time never holds: a group outside it (music, say). */
+        final Set<String> allExcept;
 
         Values(Integer youtubeMinutesLeft, boolean scheduleLocked, String message, Long checkedAt) {
-            this(youtubeMinutesLeft, scheduleLocked, message, checkedAt, Collections.emptyMap(), null);
+            this(youtubeMinutesLeft, scheduleLocked, message, checkedAt, Collections.emptyMap(), null,
+                    Collections.emptySet());
         }
 
         Values(Integer youtubeMinutesLeft, boolean scheduleLocked, String message, Long checkedAt,
                 Map<String, String> outOfTime, String allOutOfTime) {
+            this(youtubeMinutesLeft, scheduleLocked, message, checkedAt, outOfTime, allOutOfTime,
+                    Collections.emptySet());
+        }
+
+        Values(Integer youtubeMinutesLeft, boolean scheduleLocked, String message, Long checkedAt,
+                Map<String, String> outOfTime, String allOutOfTime, Set<String> allExcept) {
             this.youtubeMinutesLeft = youtubeMinutesLeft;
             this.scheduleLocked = scheduleLocked;
             this.message = message;
             this.checkedAt = checkedAt;
             this.outOfTime = outOfTime;
             this.allOutOfTime = allOutOfTime;
+            this.allExcept = allExcept;
         }
 
         /** The group whose time is up today for this app (null: none, it may open). */
         String timeUpGroup(String packageName) {
             if (packageName == null || NEVER_HELD.contains(packageName)) return null;
             String group = outOfTime.get(packageName);
-            return group != null ? group : allOutOfTime;
+            if (group != null) return group;
+            return allExcept.contains(packageName) ? null : allOutOfTime;
         }
     }
 
@@ -160,6 +171,7 @@ final class HaAllowance {
                 Integer least = null;
                 JSONObject outOfTime = new JSONObject();
                 String allOutOfTime = null;
+                JSONArray allExcept = null;
                 for (int i = 0; groups != null && i < groups.length(); i++) {
                     JSONObject group = groups.optJSONObject(i);
                     if (group == null || group.isNull("minutes_left")) continue;
@@ -168,7 +180,10 @@ final class HaAllowance {
                     if (left == 0) {
                         String name = group.optString("name", "");
                         if (name.trim().isEmpty()) name = group.optString("id", "");
-                        if (ALL_GROUP.equals(group.optString("id"))) allOutOfTime = name;
+                        if (ALL_GROUP.equals(group.optString("id"))) {
+                            allOutOfTime = name;
+                            allExcept = group.optJSONArray("except");
+                        }
                         for (int j = 0; apps != null && j < apps.length(); j++) {
                             String app = apps.optString(j, "");
                             if (!app.isEmpty() && !NEVER_HELD.contains(app) && !outOfTime.has(app)) {
@@ -184,6 +199,7 @@ final class HaAllowance {
                 entry.put("youtube_minutes_left", least == null ? JSONObject.NULL : least);
                 entry.put("out_of_time", outOfTime);
                 if (allOutOfTime != null) entry.put("all_out_of_time", allOutOfTime);
+                if (allOutOfTime != null && allExcept != null) entry.put("all_except", allExcept);
                 entry.put("schedule_locked", person != null && person.optBoolean("locked", false));
                 profiles.put(profileId, entry);
             }
@@ -248,8 +264,11 @@ final class HaAllowance {
             outOfTime.put(app, held.optString(app, ""));
         }
         String all = entry.isNull("all_out_of_time") ? null : entry.optString("all_out_of_time", null);
+        Set<String> except = new HashSet<>();
+        JSONArray spared = entry.optJSONArray("all_except");
+        for (int i = 0; spared != null && i < spared.length(); i++) except.add(spared.optString(i, ""));
         return new Values(minutes, entry.optBoolean("schedule_locked", false),
                 message != null && !message.trim().isEmpty() ? message.trim() : null, checkedAt,
-                Collections.unmodifiableMap(outOfTime), all);
+                Collections.unmodifiableMap(outOfTime), all, Collections.unmodifiableSet(except));
     }
 }

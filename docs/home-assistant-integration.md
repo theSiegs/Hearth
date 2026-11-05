@@ -234,6 +234,12 @@ An adult can add groups: **YouTube** (YouTube and HearthTube, on every device) i
 minute counts toward every group its app or title is in, so a YouTube minute is taken from YouTube, Video and All
 screen time. A device's time is up when **any** group it's playing from is used up.
 
+**Not screen time** (Configure > Not screen time): a group whose minutes don't count toward All screen time, music
+say. Its minutes still count in the group itself (and its own budget, if it has one, still applies), but not in All
+screen time, and its apps stay usable when All screen time runs out: Family Link's lock spares them only if a parent
+gave them unlimited time there, and a TV's Hearth is told them (the All group's `except` list). The person's Screen
+time today sensor lists each group's packages (`groups_apps`) and these groups (`not_screen_time`).
+
 ### Budgets
 
 Per person and group, number entities an adult (or an automation) sets:
@@ -292,9 +298,12 @@ until the group has time again (a bonus, a higher budget, a new day):
 - **Other parental controls**, per person (Configure > Enforce):
   - **Family Link** pauses the group's Android apps (`familylink.pause_app`: a 1 minute daily limit, the app stays
     installed) and resumes them (`resume_app` puts back the setting they had). Google TV ignores Family Link's app
-    limits, which is why a TV is held by Hearth. All screen time out of time pauses every app of the person's Hearth
-    knows: those in any group, and those in their usage today on any device or source (at most 150). Calls, texts, the
-    system and the parental controls' own apps are never paused.
+    limits, which is why a TV is held by Hearth. All screen time out of time **locks** the child's devices instead:
+    today's daily limit goes to 0 (`familylink.set_daily_limit`, every device of the child), so the apps a parent gave
+    unlimited time in Family Link still work, as when Family Link's own limit is reached. The limit they had (the
+    child's weekday limit entity) is kept and put back when there's time again, and just before midnight, since it's
+    the weekday's setting. An app with unlimited time is never paused for a group either. Calls, texts, the system and
+    the parental controls' own apps are never paused.
   - **Microsoft Family Safety** locks the chosen platforms (Xbox by default) until midnight while one of the chosen
     groups (Games and All screen time by default) is out of time (`lock_platform`), and unlocks them when none is.
   - **Nintendo** (the built-in [Nintendo Switch parental controls](https://www.home-assistant.io/integrations/nintendo_parental_controls)

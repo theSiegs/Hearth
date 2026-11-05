@@ -64,6 +64,16 @@ public class HaAllowanceDocumentTest {
     }
 
     @Test
+    public void allScreenTimeSparesTheAppsOfAGroupOutsideIt() throws Exception {
+        JSONObject profiles = HaAllowance.profilesFromDocument(document("{\"user:10\": {\"groups\": ["
+                + "{\"id\": \"all\", \"name\": \"All screen time\", \"minutes_left\": 0, \"apps\": [],"
+                + " \"except\": [\"com.example.music\"]}]}}"));
+        HaAllowance.Values values = HaAllowance.valuesOf(profiles.optJSONObject("user:10"), 1L);
+        assertNull(values.timeUpGroup("com.example.music"));
+        assertEquals("All screen time", values.timeUpGroup("com.example.game"));
+    }
+
+    @Test
     public void aGroupWithNoTimeLeftHoldsItsApps() throws Exception {
         JSONObject profiles = HaAllowance.profilesFromDocument(document("{\"user:10\": {\"groups\": ["
                 + "{\"id\": \"games\", \"name\": \"Games\", \"minutes_left\": 0, \"apps\": [\"com.example.game\"]},"
