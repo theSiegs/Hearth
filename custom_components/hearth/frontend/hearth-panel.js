@@ -81,6 +81,11 @@ class HearthPanel extends HTMLElement {
     this.shadowRoot.addEventListener("change", (e) => this._onChange(e));
     this.shadowRoot.addEventListener("input", (e) => {
       const t = e.target;
+      if (t.id === "app-filter") {
+        this._appFilter = t.value.trim().toLowerCase();
+        clearTimeout(this._filterTimer);
+        this._filterTimer = setTimeout(() => this._render(), 250);
+      }
       if (t.id && !t.dataset.change) this._drafts[t.id] = t.type === "checkbox" ? t.checked : t.value;
     });
     this.shadowRoot.addEventListener(
@@ -431,10 +436,34 @@ class HearthPanel extends HTMLElement {
         return;
       }
       case "outside-all": {
-        const set = new Set(cfg.outside_all || []);
-        if (el.checked) set.delete(d.group);
-        else set.add(d.group);
-        await this._setOption("outside_all", [...set], el.checked ? "Counts as screen time" : "Not screen time now");
+        const outside = new Set(cfg.outside_all || []);
+        const inside = new Set(cfg.inside_all || []);
+        if (el.checked) {
+          outside.delete(d.group);
+          if ((cfg.default_outside_all || []).includes(d.group)) inside.add(d.group);
+        } else {
+          outside.add(d.group);
+          inside.delete(d.group);
+        }
+        await this._ws({ type: "hearth/config/set", key: "inside_all", value: [...inside] });
+        await this._setOption("outside_all", [...outside], el.checked ? "Counts as screen time" : "Not screen time now");
+        return;
+      }
+      case "app-group": {
+        const moved = { ...(cfg.app_groups || {}) };
+        moved[d.app] = el.value;
+        await this._setOption("app_groups", moved, `Moved to ${el.value === "other" ? "Other" : this._groupName(el.value)}`);
+        return;
+      }
+      case "app-filter":
+        this._appFilter = el.value.trim().toLowerCase();
+        this._render();
+        return;
+      case "media-player": {
+        const players = { ...(cfg.media_players || {}) };
+        if (el.value) players[d.device] = el.value;
+        else delete players[d.device];
+        await this._setOption("media_players", players, "Saved");
         return;
       }
       case "app-add": {
@@ -980,6 +1009,7 @@ class HearthPanel extends HTMLElement {
         ${(cfg.devices || []).length ? `<ul class="list">${cfg.devices
           .map((dv) => `<li><ha-icon icon="${dv.kind === "tv" ? "mdi:television" : "mdi:cellphone"}"></ha-icon><div class="grow"><div>${esc(dv.name || dv.id)}</div>
             <div class="muted small">${dv.kind === "tv" ? "TV" : `Phone${dv.person ? ` · ${esc(this._personName(dv.person))}'s` : ""}`} · ${dv.connected ? "connected" : "not heard from lately"}</div></div>
+            ${dv.kind === "tv" ? `<select data-change="media-player" data-device="${esc(dv.id)}" aria-label="Its media player">${this._entityOptions(cfg.choices?.media_player, (cfg.media_players || {})[dv.id] || "", "Its media player…")}</select>` : ""}
             <span class="dot ${dv.connected ? "on" : "off"}"></span></li>`)
           .join("")}</ul>` : `<p class="muted">Nothing paired yet.</p>`}
         <p class="muted small">To remove a device, delete it in Settings → Devices & services → Hearth.</p>
@@ -998,14 +1028,41 @@ class HearthPanel extends HTMLElement {
       </section>`;
   }
 
+  _groupSelect(app, group) {
+    const groups = (this._config.groups || []).filter((g) => g.id !== "all");
+    return `<select data-change="app-group" data-app="${esc(app)}" aria-label="Group">
+      ${groups.map((g) => `<option value="${esc(g.id)}" ${g.id === group ? "selected" : ""}>${esc(g.name)}</option>`).join("")}
+      <option value="other" ${group === "other" ? "selected" : ""}>Other</option></select>`;
+  }
+
+  _appRow(a, extra = "") {
+    return `<li><div class="grow"><div>${esc(a.name || a.package)}${a.moved ? ` <span class="chip small">moved by you</span>` : ""}</div>
+      <div class="muted small">${esc(a.package)}${extra}</div></div>${this._groupSelect(a.package, a.group)}</li>`;
+  }
+
   _appsTab() {
     const cfg = this._config;
     const known = cfg.known_apps || {};
+    const filter = this._appFilter || "";
+    const all = (cfg.apps || []).filter((a) => !filter || a.name.toLowerCase().includes(filter) || a.package.includes(filter));
+    const recent = cfg.recent || [];
+    const appsCards = `
+      <section class="card">
+        <h3><ha-icon icon="mdi:new-box"></ha-icon>Sorted lately</h3>
+        <p class="muted">New apps go to a group on their own: one that lists them, else their kind (games, video, social, messaging…), else Other. If one landed wrong, move it; your choice always wins.</p>
+        ${recent.length ? `<ul class="list compact">${recent.map((a) => this._appRow(a, `${a.who ? ` · ${esc(a.who)}` : ""} · ${esc(new Date(a.seen).toLocaleDateString())}`)).join("")}</ul>` : `<p class="muted small">Nothing new lately.</p>`}
+      </section>
+      <section class="card">
+        <h3><ha-icon icon="mdi:apps"></ha-icon>Every app</h3>
+        <input id="app-filter" class="filter" placeholder="Find an app" value="${esc(this._appFilter || "")}">
+        <ul class="list compact">${all.slice(0, 200).map((a) => this._appRow(a)).join("") || `<li class="muted small">No apps match.</li>`}</ul>
+        ${all.length > 200 ? `<p class="muted small">Showing 200 of ${all.length}: narrow it down above.</p>` : ""}
+      </section>`;
     const datalist = `<datalist id="known-apps">${Object.entries(known)
       .map(([pkg, name]) => `<option value="${esc(pkg)}">${esc(name)}</option>`)
       .join("")}</datalist>`;
     const groups = (cfg.groups || []).filter((g) => g.id !== "all");
-    return `${datalist}
+    return `${datalist}${appsCards}
       <section class="card">
         <h3><ha-icon icon="mdi:shape-plus"></ha-icon>Groups</h3>
         <p class="muted">A group gets its own daily limit (Kids tab). Untick <b>Screen time</b> for things like music: their minutes don't count toward All screen time, and they keep working when it runs out.</p>
@@ -1029,13 +1086,13 @@ class HearthPanel extends HTMLElement {
         )
         .join("")}
       <section class="card">
-        <h3><ha-icon icon="mdi:bell-badge-outline"></ha-icon>New apps</h3>
-        <p class="muted">When a kid gets an app Hearth hasn't seen, an adult's phone is asked which group it belongs in.</p>
+        <h3><ha-icon icon="mdi:bell-badge-outline"></ha-icon>Where new apps are noticed, and requests</h3>
+        <p class="muted">Hearth's TVs and phones report their apps. These lists of a kid's apps (Family Link's) add the rest. Requests for more time go to the phone below.</p>
         <div class="muted small">Watch these lists of a kid's apps:</div>
         <div class="checks">${(cfg.choices?.app_lists || [])
           .map((e) => `<label class="check"><input type="checkbox" data-app-watch value="${esc(e.entity_id)}" ${(cfg.app_watch || []).includes(e.entity_id) ? "checked" : ""}> ${esc(e.name)}</label>`)
           .join("") || `<span class="muted small">No Family Link app lists found.</span>`}</div>
-        <label class="field">Ask on this phone<select id="ask-notify">${this._options((cfg.notify_services || []).map((n) => ({ value: n, label: n.replace("notify.mobile_app_", "") })), cfg.ask_notify || "", "Only in Home Assistant")}</select></label>
+        <label class="field">Phone that gets requests for more time<select id="ask-notify">${this._options((cfg.notify_services || []).map((n) => ({ value: n, label: n.replace("notify.mobile_app_", "") })), cfg.ask_notify || "", "Only in Home Assistant")}</select></label>
         <div class="actions"><button class="btn primary" data-action="new-apps-save">Save</button></div>
       </section>`;
   }
@@ -1261,6 +1318,8 @@ input, select, textarea { font: inherit; font-size: 14px; color: var(--primary-t
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 1px var(--primary-color); }
 table.limits input { width: 96px; }
 .minutes { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.filter { width: 100%; margin-bottom: 8px; }
+ul.list select { max-width: 45%; }
 .inline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
 .inline input { flex: 1; min-width: 160px; }
 .form { display: grid; gap: 12px; margin-top: 10px; }

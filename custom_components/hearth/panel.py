@@ -25,6 +25,7 @@ from .const import (
     CONF_GROUPS,
     CONF_KIND,
     CONF_LOCKS,
+    CONF_MEDIA_PLAYERS,
     CONF_OUTSIDE_ALL,
     CONF_PERSON,
     CONF_PROFILES,
@@ -35,7 +36,16 @@ from .const import (
 )
 from .counting import ALL
 from .enforce import CONF_ENFORCE, FAMILY_LINK, FAMILY_SAFETY, NINTENDO, NINTENDO_DOMAIN, PLATFORMS
-from .limits import BUILTIN_GROUPS, OTHER_DAY, SCHOOL_DAY, slug
+from .limits import (
+    BUILTIN_GROUPS,
+    CONF_APP_GROUPS,
+    CONF_INSIDE_ALL,
+    DEFAULT_OUTSIDE_ALL,
+    OTHER,
+    OTHER_DAY,
+    SCHOOL_DAY,
+    slug,
+)
 from .notifications import pairing_notification_id
 from .schooldays import CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
@@ -91,6 +101,7 @@ def _entity_choices(hass: HomeAssistant) -> dict[str, list[dict[str, Any]]]:
     out: dict[str, list[dict[str, Any]]] = {"screen_time": [], "locks": [], "family_link": [], "family_safety": []}
     out["nintendo"] = []
     out["app_lists"] = []
+    out["media_player"] = []
     for entry in registry.entities.values():
         if entry.disabled_by is not None:
             continue
@@ -116,6 +127,8 @@ def _entity_choices(hass: HomeAssistant) -> dict[str, list[dict[str, Any]]]:
             out["family_safety"].append(item)
         if entry.platform == NINTENDO_DOMAIN and entry.domain == "number":
             out["nintendo"].append(item)
+        if entry.domain == "media_player":
+            out["media_player"].append(item)
     for found in out.values():
         found.sort(key=lambda i: i["name"].lower())
     return out
@@ -183,6 +196,11 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         "enforce": list(options.get(CONF_ENFORCE, [])),
         "platforms": list(PLATFORMS),
         "outside_all": list(options.get(CONF_OUTSIDE_ALL, [])),
+        "inside_all": list(options.get(CONF_INSIDE_ALL, [])),
+        "default_outside_all": sorted(DEFAULT_OUTSIDE_ALL),
+        "app_groups": dict(options.get(CONF_APP_GROUPS, {})),
+        "media_players": dict(options.get(CONF_MEDIA_PLAYERS, {})),
+        **household.apps_overview(),
         "tile_exchange": list(options.get(CONF_TILE_EXCHANGE, [])),
         "parent_pins": sorted(parent_pin.stored_pins(options)),
         "school_days": dict(options.get(CONF_SCHOOL_DAYS) or {}),
@@ -234,6 +252,9 @@ OPTION_SCHEMAS: dict[str, Any] = {
     ],
     CONF_SCHOOL_DAYS: vol.Schema({cv.string: vol.Any(None, cv.string)}),
     CONF_APP_WATCH: [cv.entity_id],
+    CONF_APP_GROUPS: vol.Schema({cv.string: vol.Any(OTHER, _ID)}),
+    CONF_INSIDE_ALL: [_ID],
+    CONF_MEDIA_PLAYERS: vol.Schema({cv.string: cv.entity_domain("media_player")}),
     CONF_ASK_NOTIFY: vol.Any(None, cv.string),
 }
 

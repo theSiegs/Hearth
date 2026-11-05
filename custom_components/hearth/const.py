@@ -54,6 +54,8 @@ CONF_OUTSIDE_ALL = "outside_all"
 CONF_TILE_EXCHANGE = "tile_exchange_share"
 # Options: {person: "kid" | "adult"}, set on Hearth's page
 CONF_ROLES = "roles"
+# Options: {device_id: media_player entity}: a TV's own media player (the androidtv or cast one), for apps' tiles
+CONF_MEDIA_PLAYERS = "media_players"
 # Options: [{"entity_id", "person"}]: the person is locked while any of their lock entities is on
 CONF_LOCKS = "locks"
 
@@ -71,4 +73,6 @@ SIGNAL_WATCH = "hearth_watch"
 MAX_EVENT_POSTS = 10
 
 # Android app categories a device may report for its apps (ApplicationInfo.category, lower case)
-APP_CATEGORIES = ("game", "video", "audio", "image", "social", "news", "maps", "productivity", "accessibility")
+APP_CATEGORIES = (
+    "game", "video", "audio", "image", "social", "messaging", "news", "maps", "productivity", "accessibility"
+)

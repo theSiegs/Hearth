@@ -5,6 +5,9 @@
 
 ## Unreleased
 
+- **Home Assistant: new apps sort themselves.** Nobody is asked any more: a new app goes to a group that lists it, else its kind (games, video, social, messaging; from the app, or a category a Glint phone sends), else Other. Hearth's page shows what was sorted lately and every app with its group, and moving one is a tap; your choice always wins. New built-in groups **Social** and **Messaging**; Messaging doesn't count as screen time unless you tick it.
+- **Home Assistant:** second parents (adults on Hearth's page) can answer requests for more time; each TV can be given its media player on Hearth's page, for Glint's TV tile.
+
 - **Home Assistant: ask for more time.** A kid's TV or phone asks for 15, 30, 45 or 60 more minutes; the adults get a notification (and a card on Hearth's page) with quick answers, the first answer wins, and the device hears it with its next status. One open request per kid, and a short wait after "not now".
 - **Home Assistant: family pause.** `hearth.pause` (for some minutes or until a time, with a reason, everyone by default) holds the kids' Hearth devices; `hearth.pause_end` lets them go. Hearth's page has a Pause everyone bar.
 - **Home Assistant: bedtime heads-up.** Each person's state says when their lock ends and when the next bedtime or school time starts (from Family Link's sensors), for devices to wind down; Hearth's page shows "Bedtime in 15 min".

@@ -19,7 +19,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_call_later
 
-from .const import CONF_KIND, CONF_PERSON, CONF_ROLES, CONTRACT, DOMAIN, SIGNAL_DEVICE_ADDED, KIND_TV, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_STATUS
+from .const import CONF_KIND, CONF_MEDIA_PLAYERS, CONF_PERSON, CONF_ROLES, CONTRACT, DOMAIN, SIGNAL_DEVICE_ADDED, KIND_TV, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_STATUS
 from .counting import ALL
 from . import parent_pin
 from .asks import AskError
@@ -97,6 +97,7 @@ def summary(hub) -> dict[str, Any]:
                 "media_title": status.get("media_title"),
                 "media_app": status.get("media_app"),
                 "profile": status.get("profile") if tv else None,
+                "media_player": hub.entry.options.get(CONF_MEDIA_PLAYERS, {}).get(device_id),
                 "kids_profile": status.get("kids_profile"),
                 "person": household.profile_person(status["profile_id"])
                 if tv and status.get("profile_id")
@@ -216,7 +217,6 @@ def ws_household_subscribe(
     send()
 
 
-@websocket_api.require_admin
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "hearth/approvals/answer",
@@ -228,8 +228,12 @@ def ws_household_subscribe(
 )
 @callback
 def ws_answer(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
-    """An adult answers a request for more time: minutes (any amount) or deny. The first answer wins."""
+    """An adult answers a request for more time: minutes (any amount) or deny. The first answer wins. Administrators and
+    the adults on Hearth's page may."""
     hub = _hub(hass)
+    if hub is not None and not _may_read(hass, hub, connection.user):
+        connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Unauthorized")
+        return
     if hub is None:
         connection.send_error(msg["id"], "not_set_up", "Hearth isn't set up")
         return

@@ -19,6 +19,49 @@ from .counting import ALL
 
 VIDEO = "video"
 GAMES = "games"
+SOCIAL = "social"
+MESSAGING = "messaging"
+# Built-in groups outside All screen time unless an adult puts them in (options "inside_all"): chatting isn't screen
+# time by default
+DEFAULT_OUTSIDE_ALL = frozenset({MESSAGING})
+# Options: {package: group id or "other"}: where an adult moved an app; beats every list and category
+CONF_APP_GROUPS = "app_groups"
+CONF_INSIDE_ALL = "inside_all"
+OTHER = "other"
+
+STARTER_SOCIAL_APPS = frozenset(
+    {
+        "com.instagram.android",
+        "com.instagram.barcelona",
+        "com.zhiliaoapp.musically",
+        "com.ss.android.ugc.trill",
+        "com.snapchat.android",
+        "com.facebook.katana",
+        "com.facebook.lite",
+        "com.reddit.frontpage",
+        "com.pinterest",
+        "com.twitter.android",
+        "com.bereal.ft",
+        "com.tumblr",
+        "tv.twitch.android.app",
+    }
+)
+STARTER_MESSAGING_APPS = frozenset(
+    {
+        "com.whatsapp",
+        "com.facebook.orca",
+        "org.telegram.messenger",
+        "org.thoughtcrime.securesms",
+        "com.discord",
+        "com.google.android.apps.messaging",
+        "com.samsung.android.messaging",
+        "com.google.android.apps.dynamite",
+        "com.microsoft.teams",
+        "jp.naver.line.android",
+        "com.viber.voip",
+        "kik.android",
+    }
+)
 
 # Video apps Android doesn't mark as video, or that TVs and phones commonly have; an adult adds the rest
 STARTER_VIDEO_APPS = frozenset(
@@ -68,6 +111,8 @@ BUILTIN_GROUPS = (
     Group(ALL, "All screen time", builtin=True),
     Group(VIDEO, "Video", STARTER_VIDEO_APPS, "video", builtin=True),
     Group(GAMES, "Games", frozenset(), "game", builtin=True),
+    Group(SOCIAL, "Social", STARTER_SOCIAL_APPS, "social", builtin=True),
+    Group(MESSAGING, "Messaging", STARTER_MESSAGING_APPS, "messaging", builtin=True),
 )
 
 
@@ -78,7 +123,7 @@ def slug(name: str) -> str:
 def groups_from_options(options: dict[str, Any]) -> list[Group]:
     """The built-in groups (with apps an adult added to them) and the adult's own groups."""
     added: dict[str, list[str]] = options.get("group_apps", {})
-    outside = set(options.get("outside_all", [])) - {ALL}
+    outside = (set(options.get("outside_all", [])) | (DEFAULT_OUTSIDE_ALL - set(options.get(CONF_INSIDE_ALL, [])))) - {ALL}
     groups = [
         Group(g.id, g.name, g.apps | frozenset(added.get(g.id, [])), g.category, True, g.id not in outside)
         for g in BUILTIN_GROUPS
@@ -90,10 +135,14 @@ def groups_from_options(options: dict[str, Any]) -> list[Group]:
     return groups
 
 
-def groups_of(groups: list[Group], categories: dict[str, str]):
-    """The function counting needs: an app's groups, from the lists and its Android category."""
+def groups_of(groups: list[Group], categories: dict[str, str], moved: dict[str, str] | None = None):
+    """The function counting needs: an app's groups, from the lists and its category; where an adult moved it
+    ([moved]: package -> group or "other") beats both."""
+    ids = {g.id for g in groups}
 
     def of(item: str) -> set[str]:
+        if moved and item in moved:
+            return {ALL} | ({moved[item]} if moved[item] in ids and moved[item] != ALL else set())
         found = {ALL}
         category = categories.get(item)
         for group in groups:

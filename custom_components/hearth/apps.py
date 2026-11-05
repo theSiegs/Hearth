@@ -1,10 +1,11 @@
-"""New apps: every app the household's kids are given or start using, put in a group by an adult.
+"""New apps: every app the household's kids are given or start using, put in a group on its own.
 
 The integration keeps a catalog of every app it has seen: from the screen time the devices report and from the app
 lists the household chose to watch (Family Link's allowed apps, say). The first time it looks at a source (a device, a
-list), everything already there is taken as known. After that, an app it hasn't seen before is new: it's suggested a group (its Android category, or
-a group that already lists it), and an adult is asked to sort it, in Home Assistant's notifications, on a phone if the
-household chose one, and in the options (Sort new apps). Sorting it adds it to that group's apps.
+list), everything already there is taken as known. After that, an app it hasn't seen before goes, with nobody asked,
+to a group that lists it, else its category's group (its own category, else one a Glint phone sends from a shared
+catalog), else Other; Hearth's page shows the ones sorted lately, and an adult moves one there (options "app_groups",
+which beats every list and category).
 """
 
 from __future__ import annotations
@@ -65,10 +66,9 @@ def suggest(package: str, category: str | None, groups: list[Group]) -> str | No
     for group in groups:
         if group.builtin and group.id != ALL and package in group.apps:
             return group.id
-    if category == "game":
-        return GAMES
-    if category == "video":
-        return VIDEO
+    for group in groups:
+        if group.category is not None and category == group.category:
+            return group.id
     return None
 
 
@@ -123,11 +123,11 @@ class AppCatalog:
             if len(self.apps) >= MAX_APPS:
                 break
             suggested = suggest(package, categories.get(package), groups)
-            listed = any(package in g.apps for g in groups if not g.builtin)
-            state = "known" if first_look else ("sorted" if listed else "new")
-            entry = AppEntry(package, name, now, state, suggested if listed else None, suggested, who)
+            # Sorted on its own: nobody is asked (an adult moves it on Hearth's page if it's wrong)
+            state = "known" if first_look else "auto"
+            entry = AppEntry(package, name, now, state, suggested, suggested, who)
             self.apps[package] = entry
-            if state == "new":
+            if state == "auto":
                 fresh.append(entry)
         if observed or new_sources:
             self.sources |= new_sources

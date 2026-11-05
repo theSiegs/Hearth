@@ -387,7 +387,7 @@ async def test_a_group_outside_all_screen_time_isn_t_held_by_it(
     )
     await hass.async_block_till_done()
     household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
-    assert household.outside_all() == {"music"}
+    assert household.outside_all() == {"music", "messaging"}
     assert household.group_packages()["music"] == ["com.example.music"]
     assert "com.example.music" not in household._person_apps(household.days.get("person.sam"), household.membership())
 

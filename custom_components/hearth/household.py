@@ -44,7 +44,7 @@ from .apps import (
     update_notification,
 )
 from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
-from .limits import OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
+from .limits import CONF_APP_GROUPS, OTHER, OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
 from .enforce import Enforcement, enforcers_from_options
 from .watch import WatchLog
 from .pause import PAUSE, lock_until, next_lock, pause_of
@@ -235,6 +235,10 @@ class Household:
             for item in by_item:
                 if not item.startswith("title:"):
                     apps.setdefault(item, item)
+        # Every app the catalog has seen (a watched list, a device), with its name when one was given
+        for entry in self.apps.apps.values():
+            if apps.get(entry.package, entry.package) == entry.package:
+                apps[entry.package] = entry.name or entry.package
         for title in self.titles:
             apps[f"title:{title.id}"] = f"{title.name} (title)"
         return apps
@@ -250,7 +254,7 @@ class Household:
     def membership(self):
         """An item's groups: from the group lists, Android's category, where its time came from, and for a title
         its apps'."""
-        base = groups_of(self.groups, self.categories)
+        base = groups_of(self.groups, self.categories, self.options.get(CONF_APP_GROUPS, {}))
         hints = self._hints
         titles = {f"title:{t.id}": t for t in self.titles}
 
@@ -278,6 +282,7 @@ class Household:
         playing: dict[str, list[Playing]] = {}
         observations: list[Observation] = []
         categories: dict[str, str] = {}
+        catalog: dict[str, str] = {}
         hints: dict[str, set[str]] = {}
         profiles = self.profile_people()
 
@@ -297,6 +302,7 @@ class Household:
             if status is None:
                 continue
             categories.update(status.get("app_categories") or {})
+            catalog.update(status.get("catalog_categories") or {})
             name = device.get("name") or device_id
             # Yesterday's counts from a device that hasn't posted since midnight don't count today
             fresh = status.get("day") == today.isoformat()
@@ -350,6 +356,9 @@ class Household:
                         if source.group:
                             hints.setdefault(key, set()).add(source.group)
 
+        # An app's own category first, the shared catalog's for the rest
+        for package, category in catalog.items():
+            categories.setdefault(package, category)
         self.categories = categories
         self._hints = hints
         self._look_for_new_apps(categories)
@@ -415,14 +424,15 @@ class Household:
                     status.get("app") or status["app_package"], where, f"hearth:{device_id}"
                 )
         fresh = self.apps.observe(observed, categories, self.groups, sources)
+        # Sorted on their own (a group that lists them, their category, the catalog's, else Other): nobody is asked;
+        # an adult moves one on Hearth's page if it landed wrong
         for entry in fresh:
             self.hass.bus.async_fire(
                 EVENT_NEW_APP,
-                {"package": entry.package, "name": entry.name, "who": entry.who, "suggested": entry.suggested},
+                {"package": entry.package, "name": entry.name, "who": entry.who, "group": entry.group or OTHER},
             )
-            self._ask_on_phone(entry)
         if fresh:
-            update_notification(self.hass, self.apps.new_apps(), self.groups)
+            update_notification(self.hass, [], self.groups)
 
     def _ask_on_phone(self, entry) -> None:
         service = self.options.get(CONF_ASK_NOTIFY)
@@ -447,18 +457,46 @@ class Household:
 
     @callback
     def sort_app(self, package: str, group: str) -> bool:
-        """An adult put an app in a group (or Other: All screen time only)."""
-        if group != "other" and self.group(group) is None:
+        """An adult moved an app to a group (or Other: All screen time only); it beats every automatic source."""
+        if group != OTHER and self.group(group) is None:
             return False
-        entry = self.apps.sort(package, group)
-        if entry is None:
-            return False
-        update_notification(self.hass, self.apps.new_apps(), self.groups)
-        if group != "other":
-            self.hass.config_entries.async_update_entry(
-                self.hub.entry, options=options_with_app_in_group(dict(self.hub.entry.options), package, group)
-            )
+        self.apps.sort(package, group)
+        moved = {**self.options.get(CONF_APP_GROUPS, {}), package: group}
+        self.hass.config_entries.async_update_entry(self.hub.entry, options={**self.hub.entry.options, CONF_APP_GROUPS: moved})
         return True
+
+    def app_group(self, package: str, membership=None) -> str:
+        """Where an app counts now: its first group besides All, or Other."""
+        groups = (membership or self.membership())(package) - {ALL}
+        order = [g.id for g in self.groups]
+        return min(groups, key=order.index) if groups else OTHER
+
+    def apps_overview(self) -> dict[str, Any]:
+        """Every known app with its group (and whether an adult moved it), and the ones sorted lately, newest first."""
+        membership = self.membership()
+        moved = self.options.get(CONF_APP_GROUPS, {})
+        known = self.known_apps()
+        apps = [
+            {"package": p, "name": name, "group": self.app_group(p, membership), "moved": p in moved}
+            for p, name in sorted(known.items(), key=lambda kv: kv[1].lower())
+        ]
+        recent = sorted(
+            (e for e in self.apps.apps.values() if e.state != "known"), key=lambda e: e.seen, reverse=True
+        )[:25]
+        return {
+            "apps": apps,
+            "recent": [
+                {
+                    "package": e.package,
+                    "name": known.get(e.package, e.name),
+                    "who": e.who,
+                    "seen": e.seen,
+                    "group": self.app_group(e.package, membership),
+                    "moved": e.package in moved,
+                }
+                for e in recent
+            ],
+        }
 
     def _label(self, key: str, fallback: str | None) -> str:
         if key.startswith("title:"):

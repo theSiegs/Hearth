@@ -126,6 +126,8 @@ def clean_status(raw: Any) -> dict[str, Any] | None:
     status["playing_seconds_today"] = _seconds_by_app(raw.get("playing_seconds_today"))
     status["usage_today"] = _usage_today(raw.get("usage_today"))
     status["app_categories"] = _categories(raw.get("app_categories"))
+    # Categories from a shared catalog (a Glint phone's), for apps that don't declare one: below the declared ones
+    status["catalog_categories"] = _categories(raw.get("catalog_categories"))
     return status
 
 
