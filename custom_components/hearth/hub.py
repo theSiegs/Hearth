@@ -95,6 +95,9 @@ class DeviceState:
     seen: datetime | None = None
     posts: list[datetime] = field(default_factory=list)
     event_posts: list[datetime] = field(default_factory=list)
+    # Wrong parent PINs in a row, and the lockout they earned (kept until a restart)
+    pin_failures: int = 0
+    pin_locked_until: datetime | None = None
 
 
 class HearthHub:

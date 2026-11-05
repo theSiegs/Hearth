@@ -26,6 +26,7 @@ from homeassistant.util.network import is_local
 from .const import DOMAIN, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
 from .hub import HearthHub, collect_secret, find_pairing
 from .notifications import notify_pairing
+from . import parent_pin
 from .status import clean_status, text
 from .watch import MAX_EVENTS, clean_started
 
@@ -216,6 +217,55 @@ class EventsView(HomeAssistantView):
         return web.json_response({"ok": True, "added": added})
 
 
+class VerifyPinView(HomeAssistantView):
+    """POST /api/hearth/device/{device_id}/verify_pin (header X-Hearth-Secret): {"pin": "1234"} -> {"ok": true|false}.
+
+    Checks the household's parent PIN (Configure > Parent PIN); the device never gets the PIN or its hash. After
+    parent_pin.FREE_TRIES wrong ones in a row the device waits, longer each time: 429 {"error": "locked_out",
+    "retry_in": s}, and a wrong answer says its own "retry_in" once it starts one. 404 "no_pin" when none is set (the
+    device uses its own). Any paired device may ask."""
+
+    url = "/api/hearth/device/{device_id}/verify_pin"
+    name = "api:hearth:device:verify_pin"
+    requires_auth = False
+
+    async def post(self, request: web.Request, device_id: str) -> web.Response:
+        hass: HomeAssistant = request.app["hass"]
+        if not _local(request):
+            return _error(HTTPStatus.FORBIDDEN, "not_local")
+        hub = _hub(hass)
+        if hub is None:
+            return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
+        if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
+            return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
+        stored = hub.entry.options.get(parent_pin.CONF_PARENT_PIN)
+        if not stored:
+            return _error(HTTPStatus.NOT_FOUND, "no_pin")
+        state = hub.state(device_id)
+        now = dt_util.utcnow()
+        if wait := parent_pin.retry_in(state.pin_locked_until, now):
+            return web.json_response({"error": "locked_out", "retry_in": wait}, status=HTTPStatus.TOO_MANY_REQUESTS)
+        body = await _json_body(request)
+        pin = body.get("pin") if isinstance(body, dict) else None
+        if not isinstance(pin, str):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        # Counted before the slow check, so parallel guesses can't all slip in under the free tries
+        state.pin_failures += 1
+        if await hass.async_add_executor_job(parent_pin.matches, stored, pin):
+            state.pin_failures = 0
+            state.pin_locked_until = None
+            return web.json_response({"ok": True})
+        answer: dict[str, Any] = {"ok": False}
+        if wait_for := parent_pin.lockout(state.pin_failures):
+            state.pin_locked_until = dt_util.utcnow() + wait_for
+            answer["retry_in"] = parent_pin.retry_in(state.pin_locked_until, dt_util.utcnow())
+            hass.bus.async_fire(
+                parent_pin.EVENT_PARENT_PIN_LOCKED_OUT,
+                {"device_id": device_id, "failures": state.pin_failures, "retry_in": answer["retry_in"]},
+            )
+        return web.json_response(answer)
+
+
 def async_register_views(hass: HomeAssistant) -> None:
-    for view in (PairStartView, PairStatusView, StatusView, EventsView):
+    for view in (PairStartView, PairStatusView, StatusView, EventsView, VerifyPinView):
         hass.http.register_view(view())

@@ -464,6 +464,15 @@ an entry of a profile mapped to no one, or one that isn't valid, is dropped, and
 them all sent. 403 `not_a_tv` from a phone; 429 `too_often` past 10 posts a minute; 400 for more than 50 or a
 malformed body.
 
+**Parent PIN** (any paired device). `POST /api/hearth/device/<device_id>/verify_pin` with the same header and
+`{"pin": "<digits>"}`: 200 `{"ok": true}` or `{"ok": false}`. The household's PIN is set in Configure > Parent PIN and
+kept as a salted scrypt hash; neither the PIN nor its hash ever goes to a device. After 5 wrong PINs in a row the device
+waits 30 seconds, doubling with each further wrong one up to an hour: the wrong answer that starts a wait says
+`retry_in` (seconds), and until it ends every try is 429 `{"error": "locked_out", "retry_in": s}`, the right PIN
+included. A right PIN clears the count. Each lockout fires `hearth_parent_pin_locked_out` (`device_id`, `failures`,
+`retry_in`) for an automation to tell the adults. 404 `no_pin` when none is set (the device uses its own); 400 for a
+`pin` that isn't a string.
+
 **Entities**, per device, by kind as in [Kinds](#kinds). Screen time today is in seconds (shown in minutes), with
 per-app, playing and (on a TV) per-profile attributes kept out of history. All but Connected are unavailable until the
 first post and once the device has been quiet for 15 minutes; the last status is kept across restarts. Deleting the

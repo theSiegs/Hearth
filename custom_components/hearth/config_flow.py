@@ -20,6 +20,7 @@ from homeassistant.components import persistent_notification
 from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     DateSelector,
     EntitySelector,
     EntitySelectorConfig,
@@ -28,6 +29,7 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
     TextSelector,
     TextSelectorConfig,
+    TextSelectorType,
 )
 
 from .const import (
@@ -57,6 +59,7 @@ from .enforce import (
 from .notifications import pairing_notification_id
 from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
+from . import parent_pin
 
 PERSON_SELECTOR = EntitySelector(EntitySelectorConfig(domain="person"))
 
@@ -143,6 +146,7 @@ class HearthOptionsFlow(OptionsFlow):
                 "not_screen_time",
                 "remove_group",
                 "tile_exchange",
+                "parent_pin",
             ],
         )
 
@@ -257,6 +261,39 @@ class HearthOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="tile_exchange", data_schema=schema)
+
+    async def async_step_parent_pin(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """The household's parent PIN, which paired phones check (kept as a hash; see parent_pin.py). Typed twice;
+        "Remove" clears it."""
+        options = self._options()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            if user_input.get("remove"):
+                return self.async_create_entry(
+                    data={k: v for k, v in options.items() if k != parent_pin.CONF_PARENT_PIN}
+                )
+            pin = (user_input.get("pin") or "").strip()
+            if not parent_pin.PIN.match(pin):
+                errors["pin"] = "bad_pin"
+            elif pin != (user_input.get("pin_again") or "").strip():
+                errors["pin_again"] = "pins_differ"
+            else:
+                stored = await self.hass.async_add_executor_job(parent_pin.make, pin)
+                return self.async_create_entry(data={**options, parent_pin.CONF_PARENT_PIN: stored})
+        password = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
+        schema = vol.Schema(
+            {
+                vol.Optional("pin"): password,
+                vol.Optional("pin_again"): password,
+                vol.Optional("remove", default=False): BooleanSelector(),
+            }
+        )
+        return self.async_show_form(
+            step_id="parent_pin",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={"state": "set" if options.get(parent_pin.CONF_PARENT_PIN) else "not set"},
+        )
 
     async def async_step_remove_group(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         options = self._options()
