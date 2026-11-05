@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+## 2026.11.03 (pre-release)
+
 - **Home Assistant: Not screen time.** A group (music, say) can be left out of All screen time (Configure > Not screen time): its minutes count only in the group, and its apps stay usable when All screen time runs out, on the TVs too. The Screen time today sensor lists each group's packages (`groups_apps`).
 - **Home Assistant: All screen time locks Family Link devices.** When All screen time runs out, Family Link's daily limit for the day goes to 0 instead of pausing every app, so the apps a parent gave unlimited time (YouTube Music, say) still work; the limit is put back when there's time again, and before midnight. Apps with unlimited time are never paused for a group either.
 
