@@ -258,6 +258,29 @@ final class HaIntegration {
     }
 
     /**
+     * Asks the integration whether {@code pin} is an adult's parent PIN (it keeps the lockout). UNKNOWN when it can't
+     * say: unreachable, not paired any more, or it has none set. Quick to give up, as someone waits at the PIN pad.
+     */
+    static HaParentPins.Verdict verifyPin(Context context, String pin) {
+        String base = HaConfig.baseUrl(context);
+        String secret = secret(context);
+        if (base == null || secret == null || pin == null) return HaParentPins.Verdict.UNKNOWN;
+        Answer answer;
+        try {
+            answer = request(base + "/api/hearth/device/" + deviceId(context) + "/verify_pin", "POST",
+                    new JSONObject().put("pin", pin), null, secret, 2_000, 3_000);
+        } catch (JSONException e) {
+            return HaParentPins.Verdict.UNKNOWN;
+        }
+        if (answer.code == 200 && answer.body != null) {
+            return answer.body.optBoolean("ok", false) ? HaParentPins.Verdict.YES : HaParentPins.Verdict.NO;
+        }
+        // Locked out there: no, even for the right PIN, as on a phone
+        if (answer.code == 429) return HaParentPins.Verdict.NO;
+        return HaParentPins.Verdict.UNKNOWN;
+    }
+
+    /**
      * Since when the refusals have lasted, given a refusal now: {@code since} (0: none counted yet) and {@code last},
      * the previous refusal. Refusals more than {@link #REFUSAL_GAP_MS} apart aren't one stretch (the TV was off, or Home
      * Assistant was unreachable meanwhile, which answers nothing either way), so a refusal then starts a new one: a
@@ -309,6 +332,11 @@ final class HaIntegration {
     }
 
     private static Answer request(String url, String method, JSONObject body, String nonce, String secret) {
+        return request(url, method, body, nonce, secret, 5_000, 8_000);
+    }
+
+    private static Answer request(String url, String method, JSONObject body, String nonce, String secret,
+                                  int connectMs, int readMs) {
         HttpURLConnection connection = null;
         try {
             URL target = new URL(url);
@@ -318,8 +346,8 @@ final class HaIntegration {
                 return new Answer(0, null);
             }
             connection = (HttpURLConnection) target.openConnection();
-            connection.setConnectTimeout(5_000);
-            connection.setReadTimeout(8_000);
+            connection.setConnectTimeout(connectMs);
+            connection.setReadTimeout(readMs);
             connection.setRequestMethod(method);
             connection.setInstanceFollowRedirects(false);
             connection.setRequestProperty("Accept", "application/json");

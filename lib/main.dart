@@ -121,7 +121,8 @@ Future<void> main() async {
       providers: [
         Provider<FLauncherChannel>.value(value: fLauncherChannel),
         ChangeNotifierProvider(
-            create: (_) => SettingsService(sharedPreferences),
+            // Home Assistant's parent PINs are checked on the Java side (it asks the integration first)
+            create: (_) => SettingsService(sharedPreferences)..haPinChecker = fLauncherChannel.verifyParentPin,
             lazy: false),
         // Made before the first profile check, which saves a layout: it tells a first start from an existing install
         ChangeNotifierProvider(create: (_) => SetupFlowService(sharedPreferences), lazy: false),

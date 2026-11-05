@@ -106,7 +106,7 @@ class FamilySettingsPage extends StatelessWidget {
     if (settings.hasParentPin) {
       final current = await showDialog<String>(
         context: context,
-        builder: (_) => ParentPinDialog(title: l.parentPinCurrent, verify: settings.verifyParentPin),
+        builder: (_) => ParentPinDialog(title: l.parentPinCurrent, verify: settings.checkParentPin),
       );
       if (current == null || !context.mounted) return;
       final bool? remove = await showDialog<bool>(

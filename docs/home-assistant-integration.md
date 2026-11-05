@@ -499,10 +499,14 @@ up to an hour: the wrong answer that starts a wait says `retry_in` (seconds), an
 `hearth_parent_pin_locked_out` (`device_id`, `failures`, `retry_in`) for an automation to tell the adults. 404 `no_pin`
 when none is set (the device uses its own); 400 for a `pin` that isn't a string. A phone never gets a hash.
 
-A **TV** checks PINs itself, as it must with Home Assistant down: its state document carries `parent_pins`,
-`[{"person", "name", "hash", "profiles"}]` (`profiles`: that adult's TV profiles), which replace the TV's own Parent PIN
-while it's paired. The TV keeps its own lockout and posts `pin_lockouts` (how many it has had, only going up) in its
-status; each rise fires `hearth_parent_pin_locked_out` (`device_id`, `lockouts`).
+A **TV** asks `verify_pin` too, and Home Assistant's answer (its lockout included) is final whenever it's reachable. To
+check PINs with Home Assistant down, its state document carries `parent_pins`, `[{"person", "name", "hash",
+"profiles"}]` (`profiles`: that adult's TV profiles), which replace the TV's own Parent PIN while it's paired; the TV keeps
+them sealed with an Android Keystore key. They're sent only when they changed: the document always says
+`parent_pins_version`, and the TV posts the version it keeps in its status (`parent_pins_version`); a document with the
+version alone means its copy is current, and one with neither means Home Assistant has none (the TV keeps its last
+ones, no longer managed). The TV keeps its own lockout too and posts `pin_lockouts` (how many it has had, only going up)
+in its status; each rise fires `hearth_parent_pin_locked_out` (`device_id`, `lockouts`).
 
 **Entities**, per device, by kind as in [Kinds](#kinds). Screen time today is in seconds (shown in minutes), with
 per-app, playing and (on a TV) per-profile attributes kept out of history. All but Connected are unavailable until the

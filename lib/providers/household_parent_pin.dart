@@ -62,10 +62,9 @@ class HouseholdParentPin {
     try {
       final fromHa = await _channel.getHaParentPins();
       if (fromHa != null) {
-        final hashes = [for (final h in (fromHa["hashes"] as List? ?? const [])) if (h is String) h];
-        await _settings.setHaParentPins(hashes, fromHa["managed"] == true);
+        await _settings.setHaParentPins(kept: fromHa["kept"] == true, managed: fromHa["managed"] == true);
       }
-      if (_settings.haParentPins.isNotEmpty) {
+      if (_settings.haParentPinsKept) {
         await _settings.setHouseholdParentPinOffered(null);
         return;
       }

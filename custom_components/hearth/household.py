@@ -549,10 +549,11 @@ class Household:
                     if person
                 },
             }
-            # The adults' parent PINs (hashes, never a PIN): a paired TV takes them in place of its own, so it checks
-            # PINs with Home Assistant down too. Each says the TV profiles of its adult.
+            # The adults' parent PINs (hashes, never a PIN): a paired TV asks verify_pin, and keeps these (sealed) to
+            # check PINs with Home Assistant down. Sent only when they changed since the TV's copy (its
+            # parent_pins_version); the version alone says its copy is current. Each says the TV profiles of its adult.
             if pins := parent_pin.stored_pins(self.options):
-                body["parent_pins"] = [
+                listed = [
                     {
                         "person": person,
                         "name": self.person_name(person),
@@ -561,6 +562,10 @@ class Household:
                     }
                     for person, stored in sorted(pins.items())
                 ]
+                pins_version = hashlib.sha256(json.dumps(listed, sort_keys=True).encode()).hexdigest()[:16]
+                body["parent_pins_version"] = pins_version
+                if status.get("parent_pins_version") != pins_version:
+                    body["parent_pins"] = listed
         else:
             person = device.get(CONF_PERSON)
             body = {"person": self._person_document(person) if person else None}

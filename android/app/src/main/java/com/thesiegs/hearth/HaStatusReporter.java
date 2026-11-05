@@ -355,6 +355,8 @@ final class HaStatusReporter {
                 : Math.max(0, metadata.getLong(MediaMetadata.METADATA_KEY_DURATION) / 1000));
         status.put("now_playing_available", s.nowPlayingAvailable);
         status.put("pin_lockouts", HaParentPins.lockouts(mContext));
+        // The parent PINs' hashes come in the answer only when they changed since these
+        status.put("parent_pins_version", HaParentPins.version(mContext));
         return status;
     }
 

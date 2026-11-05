@@ -33,6 +33,8 @@ _TEXT_FIELDS = (
     "screen_time_unlocks_at_iso",
     "screen_time_event",
     "day",
+    # The parent PINs a TV keeps (their version): their hashes are sent again only when they changed
+    "parent_pins_version",
 )
 _BOOL_FIELDS = ("now_playing_available", "kids_profile", "screen_time_up")
 _INT_FIELDS = {

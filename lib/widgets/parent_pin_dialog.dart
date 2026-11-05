@@ -55,7 +55,7 @@ Future<bool> requireParent(BuildContext context) async {
     builder: (_) => ParentPinDialog(
       title: l.parentPinTitle,
       subtitle: l.parentPinKidsSubtitle,
-      verify: settings.verifyParentPin,
+      verify: settings.checkParentPin,
       phone: context.read<FLauncherChannel?>(),
     ),
   );
@@ -82,7 +82,7 @@ Future<bool> requireParentPin(BuildContext context) async {
   }
   final String? pin = await showDialog<String>(
     context: context,
-    builder: (_) => ParentPinDialog(title: l.parentPinTitle, verify: settings.verifyParentPin, phone: channel),
+    builder: (_) => ParentPinDialog(title: l.parentPinTitle, verify: settings.checkParentPin, phone: channel),
   );
   if (pin != null && !kids && channel != null) {
     try {
@@ -172,7 +172,8 @@ class PinLockout {
 class ParentPinDialog extends StatefulWidget {
   final String title;
   final String? subtitle;
-  final bool Function(String pin)? verify;
+  /// Checks an entered PIN; may wait (Home Assistant's are checked there).
+  final FutureOr<bool> Function(String pin)? verify;
   static const int digitCount = 4;
 
   /// How many digits the PIN has ([digitCount] for Hearth's own; a streaming app's may differ).
@@ -264,15 +265,29 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
     });
   }
 
-  void _onDigit(String digit) {
-    if (_locked || _entered.length >= widget.length) return;
+  bool _checking = false;
+
+  Future<void> _onDigit(String digit) async {
+    if (_locked || _checking || _entered.length >= widget.length) return;
     setState(() {
       _entered += digit;
       _error = false;
     });
     if (_entered.length < widget.length) return;
 
-    if (widget.verify == null || widget.verify!(_entered)) {
+    var ok = true;
+    if (widget.verify != null) {
+      _checking = true;
+      try {
+        ok = await widget.verify!(_entered);
+      } catch (_) {
+        ok = false;
+      } finally {
+        _checking = false;
+      }
+      if (!mounted) return;
+    }
+    if (ok) {
       if (widget.verify != null) _lockout.clear();
       Navigator.of(context).pop(_entered);
       return;

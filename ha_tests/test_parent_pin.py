@@ -139,6 +139,16 @@ async def test_a_tv_takes_the_adults_pins_and_reports_its_lockouts(
     assert alex["person"] == "person.alex" and parent_pin.matches(alex["hash"], PIN)
     assert isinstance(alex["profiles"], list)
 
-    await _post(client, secret, body={**_tv_status(hearthtube_s=60), "pin_lockouts": 3})
+    version = body["state"]["parent_pins_version"]
+
+    # The TV has them: only the version comes again, until they change
+    status = {**_tv_status(hearthtube_s=60), "pin_lockouts": 3, "parent_pins_version": version}
+    body = await (await _post(client, secret, body=status)).json()
+    assert "parent_pins" not in body["state"] and body["state"]["parent_pins_version"] == version
     await hass.async_block_till_done()
     assert [(e.data["device_id"], e.data["lockouts"]) for e in locked_out] == [(TV_ID, 1)]
+
+    await _option(hass, "parent_pin", {"person": "person.alex", "pin": OTHER_PIN, "pin_again": OTHER_PIN})
+    body = await (await _post(client, secret, body=status)).json()
+    assert body["state"]["parent_pins_version"] != version
+    assert parent_pin.matches(body["state"]["parent_pins"][0]["hash"], OTHER_PIN)

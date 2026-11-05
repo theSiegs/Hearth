@@ -431,10 +431,12 @@ public class MainActivity extends FlutterActivity {
             case "getHouseholdParentPin" -> answerFrom(sIoExecutor, result, () -> Household.parentPin(this));
             case "getHaParentPins" -> answerFrom(sIoExecutor, result, () -> {
                 java.util.Map<String, Object> pins = new java.util.HashMap<>();
-                pins.put("hashes", HaParentPins.hashes(this));
+                pins.put("kept", HaParentPins.kept(this));
                 pins.put("managed", HaParentPins.managed(this));
                 return pins;
             });
+            case "verifyParentPin" -> answerFrom(sIoExecutor, result,
+                    () -> HaParentPins.verify(this, (String) call.arguments()));
             case "forgetHaParentPins" -> {
                 HaParentPins.forget(this);
                 result.success(null);
