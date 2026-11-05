@@ -73,6 +73,8 @@ ESSENTIAL = frozenset(
     {
         "com.thesiegs.hearth",
         "com.thesiegs.hearth.mobile",
+        "com.thesiegs.glint",
+        "com.thesiegs.hearthtube.mobile",
         "com.google.android.gms",
         "com.google.android.apps.messaging",
         "com.google.android.dialer",
