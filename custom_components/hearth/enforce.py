@@ -103,6 +103,10 @@ class Enforcer:
     entity_id: str
     groups: tuple[str, ...] = ()
     platforms: tuple[str, ...] = ()
+    # A shared Switch: entities that are on while this person is the one playing (the Nintendo integration's player
+    # "playing" sensor, or friend presence). With any, the Switch is held only while one of them is on, so a brother
+    # or sister with time left can play
+    playing: tuple[str, ...] = ()
 
     @property
     def key(self) -> str:
@@ -122,7 +126,8 @@ def enforcers_from_options(options: dict[str, Any]) -> list[Enforcer]:
             platforms = platforms or ("Xbox",)
         elif kind == NINTENDO:
             groups = groups or DEFAULT_NINTENDO_GROUPS
-        found.append(Enforcer(kind, person, entity_id, groups, platforms))
+        playing = tuple(e for e in raw.get("playing") or () if isinstance(e, str)) if kind == NINTENDO else ()
+        found.append(Enforcer(kind, person, entity_id, groups, platforms, playing))
     return found
 
 
@@ -137,16 +142,18 @@ def out_of_time(day: PersonDay | None, groups: tuple[str, ...]) -> list[str]:
     )
 
 
-def wanted(enforcer: Enforcer, day: PersonDay | None, apps_of, now: datetime | None = None) -> set[str]:
+def wanted(
+    enforcer: Enforcer, day: PersonDay | None, apps_of, now: datetime | None = None, playing: bool | None = None
+) -> set[str]:
     """What the enforcer should hold now: packages for Family Link, platforms for Family Safety, the Switch for
-    Nintendo."""
+    Nintendo ([playing]: whether the person is the one on a shared Switch, None when that isn't known)."""
     closed = out_of_time(day, enforcer.groups)
     if enforcer.kind == FAMILY_SAFETY:
         return set(enforcer.platforms) if closed else set()
     if enforcer.kind == NINTENDO:
         now = now or dt_util.now()
         late = dt_util.start_of_local_day(now + timedelta(days=1)) - now <= NINTENDO_LET_GO_BEFORE_MIDNIGHT
-        return {SWITCH} if closed and not late else set()
+        return {SWITCH} if closed and not late and playing is not False else set()
     packages: set[str] = set()
     if enforcer.kind == FAMILY_LINK and ALL in closed:
         # All screen time out of time: the devices are locked (apps with unlimited time still work); let go just
@@ -223,7 +230,9 @@ class Enforcement:
         """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs)."""
         self.enforcers = enforcers
         now = dt_util.now()
-        wanted_now = {e.key: wanted(e, days.get(e.person), apps_of, now) for e in enforcers}
+        wanted_now = {
+            e.key: wanted(e, days.get(e.person), apps_of, now, self._playing(e)) for e in enforcers
+        }
         # An app a parent gave unlimited time in Family Link is never paused: it stays usable, as on a locked device
         for e in enforcers:
             if e.kind == FAMILY_LINK:
@@ -234,6 +243,29 @@ class Enforcement:
         self._wanted = wanted_now
         if any(self._differs(key) for key in wanted_now):
             self._run()
+
+    def _playing(self, enforcer: Enforcer) -> bool | None:
+        """Whether the person is the one playing a shared Switch (any of their playing entities on); None when the
+        enforcer has none, or none of them has a state yet (the whole Switch is held, as before)."""
+        if not enforcer.playing:
+            return None
+        states = [self.hass.states.get(e) for e in enforcer.playing]
+        known = [s for s in states if s is not None and s.state not in ("unknown", "unavailable")]
+        if not known:
+            return None
+        return any(s.state == "on" for s in known)
+
+    def _sharing(self, key: str, entity_id: str | None) -> list[Held]:
+        """Another person's hold on the same Switch, still wanted."""
+        return [
+            other
+            for other_key, other in self.held.items()
+            if other_key != key
+            and other_key.startswith(f"{NINTENDO}|")
+            and other.entity_id == entity_id
+            and SWITCH in _holding(other)
+            and SWITCH in self._wanted.get(other_key, set())
+        ]
 
     def _differs(self, key: str) -> bool:
         held = self.held.get(key) or Held()
@@ -294,6 +326,14 @@ class Enforcement:
 
     async def _call(self, kind: str, entity_id: str, items: set[str], hold: bool, held: Held) -> None:
         if kind == NINTENDO:
+            # One Switch, two kids: the first hold keeps its limit; letting go while the other is still held hands
+            # what to put back over instead of putting it back
+            sharing = self._sharing(next(k for k, v in self.held.items() if v is held), entity_id)
+            if sharing:
+                if not hold and held.restore:
+                    sharing[0].restore = sharing[0].restore or held.restore
+                held.restore = {} if not hold else held.restore
+                return
             await (self._hold_switch(entity_id, held) if hold else self._let_go_switch(entity_id, held))
             return
         if kind == FAMILY_LINK:

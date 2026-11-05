@@ -172,7 +172,15 @@ class Household:
         """Entities whose changes count: the screen time sources and the locks."""
         locks = [lock["entity_id"] for lock in self.options.get(CONF_LOCKS, [])]
         watched = list(self.options.get(CONF_APP_WATCH, []))
-        return [s.entity_id for s in sources_from_options(self.options)] + locks + watched + self.school.watched_entities()
+        # Who's playing a shared Switch: a change holds or lets it go
+        playing = [e for enforcer in enforcers_from_options(self.options) for e in enforcer.playing]
+        return (
+            [s.entity_id for s in sources_from_options(self.options)]
+            + locks
+            + watched
+            + playing
+            + self.school.watched_entities()
+        )
 
     def _locked_by(self, person: str) -> list[str]:
         return [

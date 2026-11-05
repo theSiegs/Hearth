@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+- **Home Assistant: a shared Switch.** Nintendo's limits are the whole console's, so holding one kid held everyone. Now a kid's Nintendo hold can follow a "playing" sensor (on while they're the one playing): the Switch is held only while they play, and a brother or sister with time left can use it. With Nintendo's own data that can be up to about 10 minutes late either way. The Switch also waits out bonus time from the Nintendo app, and a weekday held past midnight gets its limit and bedtime back.
+
 - **Home Assistant: new apps sort themselves.** Nobody is asked any more: a new app goes to a group that lists it, else its kind (games, video, social, messaging; from the app, or a category a Glint phone sends), else Other. Hearth's page shows what was sorted lately and every app with its group, and moving one is a tap; your choice always wins. New built-in groups **Social** and **Messaging**; Messaging doesn't count as screen time unless you tick it.
 - **Home Assistant:** second parents (adults on Hearth's page) can answer requests for more time; each TV can be given its media player on Hearth's page, for Glint's TV tile.
 

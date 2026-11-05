@@ -277,7 +277,8 @@
           "platforms": "Family Safety: platforms to lock",
           "groups": "Family Safety: lock while one of these groups is out of time",
           "nintendo": "Nintendo: the person's Switch (its Max screentime today)",
-          "nintendo_groups": "Nintendo: suspend while one of these groups is out of time"
+          "nintendo_groups": "Nintendo: suspend while one of these groups is out of time",
+          "nintendo_playing": "A shared Switch: held only while this person is the one playing (their playing sensor)"
         }
       }
     },

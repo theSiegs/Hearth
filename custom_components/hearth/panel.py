@@ -102,6 +102,7 @@ def _entity_choices(hass: HomeAssistant) -> dict[str, list[dict[str, Any]]]:
     out["nintendo"] = []
     out["app_lists"] = []
     out["media_player"] = []
+    out["nintendo_playing"] = []
     for entry in registry.entities.values():
         if entry.disabled_by is not None:
             continue
@@ -127,6 +128,8 @@ def _entity_choices(hass: HomeAssistant) -> dict[str, list[dict[str, Any]]]:
             out["family_safety"].append(item)
         if entry.platform == NINTENDO_DOMAIN and entry.domain == "number":
             out["nintendo"].append(item)
+        if entry.domain == "binary_sensor" and (entry.platform == NINTENDO_DOMAIN or "playing" in eid or "presence" in eid):
+            out["nintendo_playing"].append(item)
         if entry.domain == "media_player":
             out["media_player"].append(item)
     for found in out.values():
@@ -247,6 +250,7 @@ OPTION_SCHEMAS: dict[str, Any] = {
                 vol.Required("entity_id"): cv.entity_id,
                 vol.Optional("groups"): [_ID],
                 vol.Optional("platforms"): [vol.In(PLATFORMS)],
+                vol.Optional("playing"): [cv.entity_id],
             }
         )
     ],

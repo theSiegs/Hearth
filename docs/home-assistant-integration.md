@@ -312,9 +312,16 @@ until the group has time again (a bonus, a higher budget, a new day):
     on, so the game is suspended (as with Nintendo's own limit, a game may close without saving). The limit and Suspend
     software it had are kept with what's held and put back when none is out of time. That limit is a setting of the
     Switch's (of every day, or of this weekday when it has a limit per weekday), not of today only, so it's put back 2
-    minutes before midnight; if Home Assistant was off over midnight and the Switch has a limit per weekday, it's left
-    for an adult to check in the Nintendo app (a warning in the log says so). The change goes through Nintendo's cloud and
-    reaches the Switch while it's online (how soon hasn't been measured yet).
+    minutes before midnight; if Home Assistant was off over midnight and the Switch has a limit per weekday, that
+    weekday's limit and bedtime are put back through `nintendo_parental_controls.update_daily_restrictions`. While bonus
+    time from the Nintendo app runs (its time-extended sensor), the Switch refuses a new limit: Hearth waits and says so.
+    The change goes through Nintendo's cloud and reaches the Switch while it's online.
+
+    Nintendo's limits are the whole console's: there's no limit per child. On a **shared Switch**, choose the person's
+    "playing" sensor (an entity that's on while they're the one playing: the rebuilt Nintendo integration's per-player
+    playing sensor, or friend presence) and the Switch is held only while it's on, so a brother or sister with time left
+    can play. Nintendo reports play about every 10 minutes, so with its sensor the hold can start and end that late;
+    friend presence is about a minute. Two kids held on one Switch share the hold: it's put back only when neither is.
 - What's held is kept across restarts, so only what Hearth held is let go. For a few minutes after Home Assistant
   starts nothing is let go (the sources report in first). A failed call shows on the person's **Held by parental
   controls** sensor and is tried again 5 minutes later. Each change fires `hearth_enforced` (person, by, held, let go).

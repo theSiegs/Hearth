@@ -464,6 +464,7 @@ class HearthOptionsFlow(OptionsFlow):
                         "person": person,
                         "entity_id": user_input["nintendo"],
                         "groups": list(user_input.get("nintendo_groups") or DEFAULT_NINTENDO_GROUPS),
+                        **({"playing": list(user_input["nintendo_playing"])} if user_input.get("nintendo_playing") else {}),
                     }
                 )
             return self.async_create_entry(data={**options, CONF_ENFORCE: kept})
@@ -486,6 +487,10 @@ class HearthOptionsFlow(OptionsFlow):
                 ),
                 vol.Optional("nintendo_groups", default=list(DEFAULT_NINTENDO_GROUPS)): SelectSelector(
                     SelectSelectorConfig(options=groups, multiple=True)
+                ),
+                # A shared Switch: held only while one of these is on (this person is the one playing)
+                vol.Optional("nintendo_playing"): EntitySelector(
+                    EntitySelectorConfig(domain="binary_sensor", multiple=True)
                 ),
             }
         )

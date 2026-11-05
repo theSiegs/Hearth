@@ -423,7 +423,8 @@ class HearthPanel extends HTMLElement {
         const nin = this._value(`#enf-nin-${CSS.escape(person)}`);
         if (nin) {
           const groups = [...this.shadowRoot.querySelectorAll(`[data-nin-group="${person}"]:checked`)].map((x) => x.value);
-          kept.push({ kind: "nintendo", person, entity_id: nin, groups });
+          const playing = this._value(`#enf-nin-playing-${CSS.escape(person)}`);
+          kept.push({ kind: "nintendo", person, entity_id: nin, groups, ...(playing ? { playing: [playing] } : {}) });
         }
         await this._setOption("enforce", kept, "Parental controls saved");
         return;
@@ -951,6 +952,9 @@ class HearthPanel extends HTMLElement {
         <label class="field">Nintendo Switch
           <select id="enf-nin-${esc(kid.id)}">${this._entityOptions(cfg.choices?.nintendo, nin?.entity_id || "", "Not used")}</select></label>
         <div class="muted small">Suspends the game while any of these groups is out:</div><div class="checks">${groupBoxes("data-nin-group", nin?.groups || ["all", "games"])}</div>
+        <label class="field">A shared Switch: hold it only while ${esc(kid.name)} is the one playing (their "playing" sensor)
+          <select id="enf-nin-playing-${esc(kid.id)}">${this._entityOptions(cfg.choices?.nintendo_playing, (nin?.playing || [])[0] || "", "Hold the whole Switch")}</select></label>
+        <div class="muted small">Nintendo reports play about every 10 minutes, so the hold can start that late and end that late.</div>
         <div class="actions"><button class="btn primary" data-action="enforce-save" data-person="${esc(kid.id)}">Save</button></div>
       </div>
     </section>`;
