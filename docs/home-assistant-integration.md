@@ -338,13 +338,14 @@ The answer to each status post carries the person's (or, on a TV, each profile's
       "message": null
     }
   },
-  "version": 42
+  "version": "3f9c1a0b2d4e5f60",
+  "contract": 1
 }
 ```
 
 `groups` lists only groups with a budget; `minutes_left` null is no limit. `open_titles` are the own-limit titles still
-open when their usual groups are used up. A TV that hasn't posted in a while gets it on its next post (at least every
-10 minutes, every 2 while playing); `version` lets it skip an unchanged one. This replaces `sensor.hearth_allowance`:
+open when their usual groups are used up. A TV gets it in the answer to each post (at least every 2 minutes while it's
+on); `version`, a hash of the content, lets it skip an unchanged one. This replaces `sensor.hearth_allowance`:
 same meaning, from the integration instead of a template.
 
 A **phone** gets its person's part of the same document, in the answer to each post and pushed when it changes (see
@@ -374,6 +375,17 @@ Who can approve doesn't change.
 sealed blobs the integration can't read (it never has the household key), kept with Home Assistant's storage helper so
 they survive restarts, 2 MB per household, oldest dropped first. Pictures don't go through it. Devices still exchange
 directly on the home network; the mailbox is for devices that are rarely on at the same time.
+
+### Contract
+
+`contract` (an integer, now 1) says which shape of the device API and the household summary this is: in the approved
+pair answer, every status answer (`{"ok": true, "contract": 1, "state": {...}}`), every state document and the
+summary. A device may send its own in its status (`contract`). It goes up only when a field changes meaning or type,
+becomes required, or goes away; an added field doesn't change it, so a reader ignores fields it doesn't know. It's
+apart from `version`, which changes with the content. A phone's person document also says `kind` (`kid`, `adult` or
+`person`) and `kind_set` (whether an adult set it on Hearth's page). Only an adult (on Hearth's page) has a parent PIN.
+The summary is for administrators and for adults on Hearth's page whose person is their Home Assistant user (without
+pairing codes); `hearth.add_bonus` and `hearth.set_budget` take a group's name as well as its id.
 
 ### Ask for more
 

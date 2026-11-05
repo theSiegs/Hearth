@@ -17,6 +17,9 @@ async def test_the_household_at_a_glance(
 ) -> None:
     await _household_with_sam(hass, hass_client_no_auth)
     hass.states.async_set("person.alex", "home", {"friendly_name": "Alex"})
+    from test_parent_pin import _adults
+
+    await _adults(hass, "person.alex")
     await _option(hass, "parent_pin", {"person": "person.alex", "pin": "4826", "pin_again": "4826"})
 
     ws = await hass_ws_client(hass)
@@ -25,7 +28,8 @@ async def test_the_household_at_a_glance(
     assert answer["success"], answer
     body = answer["result"]
     people = {p["id"]: p for p in body["people"]}
-    assert people["person.alex"]["kind"] == "adult"
+    assert people["person.alex"]["kind"] == "adult" and people["person.alex"]["kind_set"] is True
+    assert body["contract"] == 1
     sam = people["person.sam"]
     assert sam["name"] == "Sam"
     assert sam["tv_profiles"] == ["user:10"]
@@ -55,6 +59,22 @@ async def test_a_subscriber_hears_of_changes_once_settled(
     second = (await ws.receive_json())["event"]
     assert second["people"][0]["all"]["used_minutes"] == 25
     assert second["version"] != first["version"]
+
+
+async def test_an_adult_who_isn_t_an_administrator_reads_it(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client, hass_admin_user
+) -> None:
+    from test_parent_pin import _adults
+
+    await _household_with_sam(hass, hass_client_no_auth)
+    hass.states.async_set("person.alex", "home", {"friendly_name": "Alex", "user_id": hass_admin_user.id})
+    await _adults(hass, "person.alex")
+    hass_admin_user.groups = []
+    ws = await hass_ws_client(hass)
+    await ws.send_json({"id": 1, "type": "hearth/household"})
+    answer = await ws.receive_json()
+    assert answer["success"], answer
+    assert all(a["type"] != "pairing" for a in answer["result"]["approvals"])
 
 
 async def test_only_administrators_get_it(

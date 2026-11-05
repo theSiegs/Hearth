@@ -24,7 +24,7 @@ from homeassistant.util import dt as dt_util
 from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.util.network import is_local
 
-from .const import CONF_ROLES, DOMAIN, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
+from .const import CONF_ROLES, CONTRACT, DOMAIN, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
 from .hub import HearthHub, collect_secret, find_pairing
 from .notifications import notify_pairing
 from . import parent_pin
@@ -156,6 +156,7 @@ class PairStatusView(HomeAssistantView):
         return web.json_response(
             {
                 "status": "approved",
+                "contract": CONTRACT,
                 "device_id": pairing.device_id,
                 "secret": secret,
                 "urls": _urls(hass),
@@ -202,7 +203,7 @@ class StatusView(HomeAssistantView):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         hub.update_status(device_id, status)
         # What the device is told: each profile's (or the phone's person's) limits today
-        return web.json_response({"ok": True, "state": hub.household.document_for(device_id)})
+        return web.json_response({"ok": True, "contract": CONTRACT, "state": hub.household.document_for(device_id)})
 
 
 class EventsView(HomeAssistantView):

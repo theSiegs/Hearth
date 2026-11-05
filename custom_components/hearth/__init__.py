@@ -94,14 +94,22 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         household = entries[0].runtime_data.household
         if call.data["person"] not in household.people():
             raise ServiceValidationError(f"{call.data['person']} isn't one of the household's people")
-        if household.group(call.data["group"]) is None:
+        if household.group(group_id(household, call.data["group"])) is None:
             raise ServiceValidationError(f"No group {call.data['group']}")
         return household
+
+    def group_id(household, given: str) -> str:
+        """A group's id, also from its name (an older app gives the name)."""
+        if household.group(given) is not None:
+            return given
+        by_name = next((g.id for g in household.groups if g.name.casefold() == given.strip().casefold()), None)
+        return by_name or given
 
     @callback
     def add_bonus(call: ServiceCall) -> None:
         """Minutes added to (or, negative, taken from) a person's group today: the one way to extend."""
-        household(call).add_bonus(call.data["person"], call.data["group"], call.data["minutes"])
+        target = household(call)
+        target.add_bonus(call.data["person"], group_id(target, call.data["group"]), call.data["minutes"])
 
     @callback
     def set_budget(call: ServiceCall) -> None:
@@ -109,7 +117,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         names = {"school_days": "weekday", "other_days": "weekend", "weekday": "weekday", "weekend": "weekend"}
         days = DAY_TYPES if call.data["days"] == "both" else (names[call.data["days"]],)
         for kind in days:
-            target.set_budget(call.data["person"], call.data["group"], kind, call.data["minutes"])
+            target.set_budget(call.data["person"], group_id(target, call.data["group"]), kind, call.data["minutes"])
 
     hass.services.async_register(DOMAIN, SERVICE_ADD_BONUS, add_bonus, schema=ADD_BONUS_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_SET_BUDGET, set_budget, schema=SET_BUDGET_SCHEMA)

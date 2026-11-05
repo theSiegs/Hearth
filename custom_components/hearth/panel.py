@@ -342,6 +342,9 @@ async def ws_parent_pin(hass: HomeAssistant, connection: websocket_api.ActiveCon
         return
     pins = parent_pin.stored_pins(hub.entry.options)
     pin = msg.get("pin")
+    if pin is not None and hub.entry.options.get(CONF_ROLES, {}).get(msg["person"]) != "adult":
+        connection.send_error(msg["id"], "not_adult", "Mark them as an adult first")
+        return
     if pin is None:
         pins.pop(msg["person"], None)
     elif not parent_pin.PIN.match(pin):

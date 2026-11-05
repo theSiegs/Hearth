@@ -286,7 +286,8 @@
       "already_added": "That sensor is a source already.",
       "bad_profile_id": "Give an id like user:11, and its person.",
       "bad_pin": "Give 4 digits.",
-      "pins_differ": "The two PINs differ."
+      "pins_differ": "The two PINs differ.",
+      "not_adult": "Only an adult has a parent PIN: mark them as an adult on Hearth's page (Family) first."
     },
     "abort": {
       "no_profiles": "No TV has reported its profiles yet. Pair a TV and let it post its status first.",

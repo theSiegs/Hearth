@@ -26,6 +26,7 @@ from .const import (
     CONF_PROFILES,
     CONF_ROLES,
     CONF_TILE_EXCHANGE,
+    CONTRACT,
     DOMAIN,
     EVENT_BUDGET_REACHED,
     EVENT_PLAYING_TOGETHER,
@@ -596,7 +597,13 @@ class Household:
         else:
             person = device.get(CONF_PERSON)
             body = {"person": self._person_document(person) if person else None}
+            if body["person"] is not None:
+                role = self.options.get(CONF_ROLES, {}).get(person)
+                # kid / adult as set on Hearth's page (kind_set); else a kid when they have limits
+                body["person"]["kind"] = role or ("kid" if any(g["minutes_left"] is not None for g in body["person"]["groups"]) else "person")
+                body["person"]["kind_set"] = role is not None
         body["version"] = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()[:16]
+        body["contract"] = CONTRACT
         return body
 
     # Changes from services and entities

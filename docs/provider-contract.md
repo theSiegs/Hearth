@@ -4,7 +4,7 @@ Hearth shares its state with other apps (today: HearthTube) through one content 
 contract: what each column means, when it changes, and what callers may rely on. The provider's `contract_version`
 column says which version of this page it implements.
 
-**Current version: 9** (`ProfileProvider.CONTRACT_VERSION`).
+**Current version: 10** (`ProfileProvider.CONTRACT_VERSION`).
 
 Change rules: adding, removing or changing the meaning of a column or call bumps the version and gets a line in
 the history below. A reader that sees a newer version than it knows keeps using the columns it understands; columns
@@ -82,7 +82,7 @@ answer within a few seconds. Without an agent, a Hearth installed there answers 
 | `parent_blocks` | text (JSON) or null | What a parent has blocked in HearthTube for the active profile: `{"videos": ["<video id>", ...], "channels": ["<channel id>", ...], "words": ["<lower case word>", ...]}`. The union of what is set in Hearth itself and what Home Assistant's integration says (when it's set up); null when nothing is blocked. HearthTube applies them in a kids profile and doesn't let the kid undo them. In a profile's agent, as Hearth last sent it. |
 | `parent_blocks_version` | integer | Goes up whenever `parent_blocks` changes for any profile (0 before the first change). Observers on `/active` are notified. |
 | `kid_unblocks` | text (JSON) or null | What a parent took back in Hearth of what the active kids profile hid or blocked itself: `{"videos": [keys], "channels": [keys], "words": [...]}` (a channel's key is its id, or its name when it was blocked without one). HearthTube takes each back from its own lists (never the parent's); once its next `report_kid_blocks` no longer has one, Hearth drops it. Null when there is nothing to take back. Observers on `/active` are notified when a parent takes one back. |
-| `contract_version` | integer | This page's version (8). Missing on Hearth builds from before version 2. |
+| `contract_version` | integer | This page's version (10). Missing on Hearth builds from before version 2. |
 
 None of these are secret: everything is on screen in Hearth.
 

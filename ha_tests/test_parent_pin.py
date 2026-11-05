@@ -18,6 +18,14 @@ PIN = "4826"
 OTHER_PIN = "7351"
 
 
+async def _adults(hass: HomeAssistant, *people: str) -> None:
+    """Marks them as adults (Hearth's page): only an adult has a parent PIN."""
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    roles = {**entry.options.get("roles", {}), **{p: "adult" for p in people}}
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "roles": roles})
+    await hass.async_block_till_done()
+
+
 async def _verify(client, secret: str | None, pin, device_id: str = TV_ID):
     headers = {"X-Hearth-Secret": secret} if secret else {}
     return await client.post(f"/api/hearth/device/{device_id}/verify_pin", json={"pin": pin}, headers=headers)
@@ -59,6 +67,7 @@ async def test_a_paired_device_checks_the_parent_pin(
     assert response.status == 404
     assert (await response.json())["error"] == "no_pin"
 
+    await _adults(hass, "person.alex", "person.robin")
     await _option(hass, "parent_pin", {"person": "person.alex", "pin": PIN, "pin_again": PIN})
     await _option(hass, "parent_pin", {"person": "person.robin", "pin": OTHER_PIN, "pin_again": OTHER_PIN})
     stored = hass.config_entries.async_entries(DOMAIN)[0].options[parent_pin.CONF_PARENT_PINS]
@@ -79,6 +88,7 @@ async def test_wrong_pins_lock_the_device_out(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
     client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    await _adults(hass, "person.alex")
     await _option(hass, "parent_pin", {"person": "person.alex", "pin": PIN, "pin_again": PIN})
     locked_out = async_capture_events(hass, parent_pin.EVENT_PARENT_PIN_LOCKED_OUT)
 
@@ -111,11 +121,15 @@ async def test_the_pin_is_typed_twice_and_can_be_removed(
         result = await hass.config_entries.options.async_configure(result["flow_id"], {"next_step_id": "parent_pin"})
         return await hass.config_entries.options.async_configure(result["flow_id"], data)
 
+    result = await configure({"person": "person.alex", "pin": PIN, "pin_again": PIN})
+    assert result["type"] is FlowResultType.FORM and result["errors"] == {"person": "not_adult"}
+    await _adults(hass, "person.alex", "person.robin")
     result = await configure({"person": "person.alex", "pin": "12", "pin_again": "12"})
     assert result["type"] is FlowResultType.FORM and result["errors"] == {"pin": "bad_pin"}
     result = await configure({"person": "person.alex", "pin": PIN, "pin_again": "4825"})
     assert result["type"] is FlowResultType.FORM and result["errors"] == {"pin_again": "pins_differ"}
 
+    await _adults(hass, "person.alex", "person.robin")
     await _option(hass, "parent_pin", {"person": "person.alex", "pin": PIN, "pin_again": PIN})
     await _option(hass, "parent_pin", {"person": "person.robin", "pin": OTHER_PIN, "pin_again": OTHER_PIN})
     await _option(hass, "parent_pin", {"person": "person.alex", "remove": True})
@@ -132,6 +146,7 @@ async def test_a_tv_takes_the_adults_pins_and_reports_its_lockouts(
     body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
     assert "parent_pins" not in body["state"]
 
+    await _adults(hass, "person.alex")
     await _option(hass, "parent_pin", {"person": "person.alex", "pin": PIN, "pin_again": PIN})
     locked_out = async_capture_events(hass, parent_pin.EVENT_PARENT_PIN_LOCKED_OUT)
     body = await (await _post(client, secret, body={**_tv_status(hearthtube_s=60), "pin_lockouts": 2})).json()

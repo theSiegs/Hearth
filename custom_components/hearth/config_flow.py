@@ -37,6 +37,7 @@ from .const import (
     CONF_GROUPS,
     CONF_LOCKS,
     CONF_OUTSIDE_ALL,
+    CONF_ROLES,
     CONF_TILE_EXCHANGE,
     CONF_PERSON,
     CONF_PROFILES,
@@ -274,7 +275,9 @@ class HearthOptionsFlow(OptionsFlow):
                 pins.pop(person, None)
                 return self.async_create_entry(data={**options, parent_pin.CONF_PARENT_PINS: pins})
             pin = (user_input.get("pin") or "").strip()
-            if not parent_pin.PIN.match(pin):
+            if options.get(CONF_ROLES, {}).get(person) != "adult":
+                errors[CONF_PERSON] = "not_adult"
+            elif not parent_pin.PIN.match(pin):
                 errors["pin"] = "bad_pin"
             elif pin != (user_input.get("pin_again") or "").strip():
                 errors["pin_again"] = "pins_differ"

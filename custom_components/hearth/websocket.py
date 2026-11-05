@@ -19,7 +19,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_call_later
 
-from .const import CONF_KIND, CONF_PERSON, CONF_ROLES, DOMAIN, KIND_TV, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_STATUS
+from .const import CONF_KIND, CONF_PERSON, CONF_ROLES, CONTRACT, DOMAIN, SIGNAL_DEVICE_ADDED, KIND_TV, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_STATUS
 from .counting import ALL
 from . import parent_pin
 from .asks import AskError
@@ -35,7 +35,7 @@ def summary(hub) -> dict[str, Any]:
     """The whole household, as one JSON object."""
     household = hub.household
     roles: dict[str, str] = dict(hub.entry.options.get(CONF_ROLES, {}))
-    adults = set(parent_pin.stored_pins(hub.entry.options)) | {p for p, r in roles.items() if r == "adult"}
+    adults = {p for p, r in roles.items() if r == "adult"}
     profiles = household.profile_people()
     people = []
     for person in sorted(set(household.people()) | adults | set(roles)):
@@ -62,8 +62,9 @@ def summary(hub) -> dict[str, Any]:
             {
                 "id": person,
                 "name": household.person_name(person),
-                # As set on Hearth's page; else an adult has a parent PIN, a kid has limits, anyone else is a person
-                "kind": roles.get(person) or ("adult" if person in adults else ("kid" if limited else "person")),
+                # As set on Hearth's page (kind_set); else a kid when they have limits, anyone else a person
+                "kind": roles.get(person) or ("kid" if limited else "person"),
+                "kind_set": person in roles,
                 "tv_profiles": sorted(p for p, who in profiles.items() if who == person),
                 # The shared pool: All screen time across every device and source
                 "all": next((g for g in groups if g["id"] == ALL), None),
@@ -96,6 +97,7 @@ def summary(hub) -> dict[str, Any]:
                 "media_title": status.get("media_title"),
                 "media_app": status.get("media_app"),
                 "profile": status.get("profile") if tv else None,
+                "kids_profile": status.get("kids_profile"),
                 "person": household.profile_person(status["profile_id"])
                 if tv and status.get("profile_id")
                 else device.get(CONF_PERSON),
@@ -112,6 +114,7 @@ def summary(hub) -> dict[str, Any]:
         for p in hub.pending_pairings()
     ]
     body = {
+        "contract": CONTRACT,
         "people": people,
         "devices": devices,
         "approvals": approvals,
@@ -126,24 +129,46 @@ def _hub(hass: HomeAssistant):
     return entries[0].runtime_data if entries else None
 
 
-@websocket_api.require_admin
+def _may_read(hass: HomeAssistant, hub, user) -> bool:
+    """An administrator, or a user whose person is an adult on Hearth's page (a second parent who isn't an admin)."""
+    if user.is_admin:
+        return True
+    roles = hub.entry.options.get(CONF_ROLES, {})
+    return any(
+        roles.get(state.entity_id) == "adult" and state.attributes.get("user_id") == user.id
+        for state in hass.states.async_all("person")
+    )
+
+
+def _for_reader(body: dict[str, Any], user) -> dict[str, Any]:
+    """An adult who isn't an administrator doesn't see pairing codes (pairing is an administrator's)."""
+    if user.is_admin:
+        return body
+    return {**body, "approvals": [a for a in body["approvals"] if a.get("type") != "pairing"]}
+
+
 @websocket_api.websocket_command({vol.Required("type"): "hearth/household"})
 @callback
 def ws_household(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
     hub = _hub(hass)
+    if hub is not None and not _may_read(hass, hub, connection.user):
+        connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Unauthorized")
+        return
     if hub is None:
         connection.send_error(msg["id"], "not_set_up", "Hearth isn't set up")
         return
-    connection.send_result(msg["id"], summary(hub))
+    connection.send_result(msg["id"], _for_reader(summary(hub), connection.user))
 
 
-@websocket_api.require_admin
 @websocket_api.websocket_command({vol.Required("type"): "hearth/household/subscribe"})
 @callback
 def ws_household_subscribe(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     hub = _hub(hass)
+    if hub is not None and not _may_read(hass, hub, connection.user):
+        connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Unauthorized")
+        return
     if hub is None:
         connection.send_error(msg["id"], "not_set_up", "Hearth isn't set up")
         return
@@ -156,7 +181,7 @@ def ws_household_subscribe(
         current = _hub(hass)
         if current is None:
             return
-        body = summary(current)
+        body = _for_reader(summary(current), connection.user)
         if body["version"] != sent["version"]:
             sent["version"] = body["version"]
             connection.send_message(websocket_api.event_message(msg["id"], body))
@@ -167,9 +192,15 @@ def ws_household_subscribe(
         if waiting["cancel"] is None:
             waiting["cancel"] = async_call_later(hass, SEND_EVERY, send)
 
+    @callback
+    def device_added(device_id: str) -> None:
+        unsubs.append(async_dispatcher_connect(hass, SIGNAL_STATUS.format(device_id), changed))
+        changed()
+
     unsubs = [
         async_dispatcher_connect(hass, SIGNAL_PEOPLE, changed),
         async_dispatcher_connect(hass, SIGNAL_PAIRINGS, changed),
+        async_dispatcher_connect(hass, SIGNAL_DEVICE_ADDED, device_added),
     ]
     unsubs += [async_dispatcher_connect(hass, SIGNAL_STATUS.format(d), changed) for d in hub.devices]
 
