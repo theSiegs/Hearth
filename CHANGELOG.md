@@ -5,6 +5,10 @@
 
 ## Unreleased
 
+## 2026.11.05 (pre-release)
+
+- **Parent PINs from Home Assistant are checked there.** A connected TV asks Home Assistant whether a PIN is an adult's, and its answer (and its lockout after wrong guesses) is final whenever it's reachable. The TV's copy of the PINs, for when Home Assistant is down, is now kept encrypted with an Android Keystore key (it was kept in the clear), and Home Assistant sends it again only when a PIN changes.
+
 - **Home Assistant: Hearth's own page.** A Hearth entry in Home Assistant's sidebar (administrators only) with a guided setup and five tabs: **Today** (each kid's time left, what's playing, extra time in a tap, the TVs and phones), **Kids** (daily limits for school days and other days, screen time sources, bedtime and school-time locks, Family Link, Family Safety and Nintendo, YouTube's watch log and blocks), **Devices** (pair a TV or phone by checking its code, TV profiles), **Apps** (groups, their apps, what isn't screen time, new apps) and **Family** (kids and adults, each adult's parent PIN, Glint tile sharing, school days). It follows Home Assistant's theme and works on a phone.
 - **Home Assistant:** the household summary for an adult's app (`hearth/household`, with a subscription), and a paired phone is told Home Assistant's addresses so it can sign in there.
 
