@@ -401,7 +401,16 @@ then fetches its state with its secret.
 
 ## Setting it up
 
-All in the household's options (Settings > Devices & services > Hearth > Configure), a menu:
+**Hearth's page** (the Hearth entry in the sidebar, administrators only) does all of it in one place, with a guided
+setup the first time: who's a kid and who's an adult, parent PINs, pairing TVs and phones (the code is checked and
+approved on the page), TV profiles, screen time sources, daily limits, bedtime and school-time locks, other parental
+controls, groups and their apps, school days and Glint tile sharing. Its **Today** tab shows each kid's time left and
+what's playing, with buttons for extra time, and each TV and phone. It is `custom_components/hearth/frontend/hearth-panel.js`,
+a plain custom element on the WebSocket commands in `panel.py` (`hearth/config`, `hearth/config/set`, `hearth/budget`,
+`hearth/pairing`, `hearth/parent_pin`) and the household summary; settings are saved to the entry's options as the
+Configure menu saves them, and budgets as the services set them.
+
+The Configure menu (Settings > Devices & services > Hearth > Configure) still has everything, as a menu:
 
 1. **People**: the TV profiles the TVs have reported, each with a person or nobody; gamer accounts likewise.
 2. **Screen time sources**: add (a sensor, whose, which device or account, and the Family Link device that is really a

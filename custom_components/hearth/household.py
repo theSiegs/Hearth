@@ -24,6 +24,7 @@ from .const import (
     CONF_LOCKS,
     CONF_PERSON,
     CONF_PROFILES,
+    CONF_ROLES,
     CONF_TILE_EXCHANGE,
     DOMAIN,
     EVENT_BUDGET_REACHED,
@@ -157,6 +158,8 @@ class Household:
         found |= {d.get(CONF_PERSON) for d in self.hub.devices.values() if d.get(CONF_PERSON)}
         found |= {s.person for s in sources_from_options(self.options)}
         found |= {lock["person"] for lock in self.options.get(CONF_LOCKS, []) if lock.get("person")}
+        # The kids named on Hearth's page, before anything of theirs is set up
+        found |= {p for p, role in self.options.get(CONF_ROLES, {}).items() if role == "kid"}
         return sorted(found)
 
     def person_name(self, person: str) -> str:

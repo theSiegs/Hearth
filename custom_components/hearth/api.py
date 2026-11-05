@@ -21,6 +21,7 @@ from homeassistant.components.http import HomeAssistantView
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
+from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.util.network import is_local
 
 from .const import DOMAIN, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
@@ -127,7 +128,9 @@ class PairStartView(HomeAssistantView):
 
 class PairStatusView(HomeAssistantView):
     """GET /api/hearth/pair/{pairing_id} (header X-Hearth-Nonce) -> {"status": "pending" | "denied"} or, once,
-    {"status": "approved", "device_id", "secret"}. An unknown or expired pairing is 404."""
+    {"status": "approved", "device_id", "secret", "urls": {"internal", "external"}}: where Home Assistant answers, at
+    home and away (Home Assistant Cloud's when it's set up), either null when not known; a phone's app signs in there
+    with Home Assistant's own login. An unknown or expired pairing is 404."""
 
     url = "/api/hearth/pair/{pairing_id}"
     name = "api:hearth:pair:status"
@@ -146,7 +149,22 @@ class PairStatusView(HomeAssistantView):
         secret = collect_secret(hass, pairing)
         if secret is None:
             return web.json_response({"status": "pending"})
-        return web.json_response({"status": "approved", "device_id": pairing.device_id, "secret": secret})
+        return web.json_response(
+            {"status": "approved", "device_id": pairing.device_id, "secret": secret, "urls": _urls(hass)}
+        )
+
+
+def _urls(hass: HomeAssistant) -> dict[str, str | None]:
+    def url(**kwargs) -> str | None:
+        try:
+            return get_url(hass, **kwargs)
+        except NoURLAvailableError:
+            return None
+
+    return {
+        "internal": url(allow_external=False, allow_cloud=False),
+        "external": url(allow_internal=False, allow_ip=False, prefer_cloud=True),
+    }
 
 
 class StatusView(HomeAssistantView):

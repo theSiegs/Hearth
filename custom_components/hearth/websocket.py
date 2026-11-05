@@ -19,7 +19,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_call_later
 
-from .const import CONF_KIND, CONF_PERSON, DOMAIN, KIND_TV, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_STATUS
+from .const import CONF_KIND, CONF_PERSON, CONF_ROLES, DOMAIN, KIND_TV, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_STATUS
 from .counting import ALL
 from . import parent_pin
 
@@ -33,10 +33,11 @@ def _minutes(seconds: float) -> int:
 def summary(hub) -> dict[str, Any]:
     """The whole household, as one JSON object."""
     household = hub.household
-    adults = set(parent_pin.stored_pins(hub.entry.options))
+    roles: dict[str, str] = dict(hub.entry.options.get(CONF_ROLES, {}))
+    adults = set(parent_pin.stored_pins(hub.entry.options)) | {p for p, r in roles.items() if r == "adult"}
     profiles = household.profile_people()
     people = []
-    for person in sorted(set(household.people()) | adults):
+    for person in sorted(set(household.people()) | adults | set(roles)):
         day = household.days.get(person)
         groups = []
         for group in household.groups:
@@ -57,8 +58,8 @@ def summary(hub) -> dict[str, Any]:
             {
                 "id": person,
                 "name": household.person_name(person),
-                # An adult has a parent PIN; a kid has limits (or a TV kids profile); anyone else is just a person
-                "kind": "adult" if person in adults else ("kid" if limited else "person"),
+                # As set on Hearth's page; else an adult has a parent PIN, a kid has limits, anyone else is a person
+                "kind": roles.get(person) or ("adult" if person in adults else ("kid" if limited else "person")),
                 "tv_profiles": sorted(p for p, who in profiles.items() if who == person),
                 # The shared pool: All screen time across every device and source
                 "all": next((g for g in groups if g["id"] == ALL), None),

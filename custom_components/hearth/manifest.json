@@ -3,6 +3,7 @@
   "name": "Hearth",
   "codeowners": ["@theSiegs"],
   "config_flow": true,
+  "after_dependencies": ["frontend", "panel_custom"],
   "dependencies": ["http", "websocket_api"],
   "documentation": "https://github.com/theSiegs/Hearth/blob/master/docs/home-assistant-integration.md",
   "integration_type": "hub",

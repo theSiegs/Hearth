@@ -24,6 +24,7 @@ from homeassistant.util import dt as dt_util
 
 from .api import async_register_views
 from .websocket import async_register_commands
+from . import panel
 from .apps import ACTION_PREFIX
 from .const import DOMAIN
 from .hub import HearthHub
@@ -190,7 +191,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     if not hass.data.get(_VIEWS_REGISTERED):
         async_register_views(hass)
         async_register_commands(hass)
+        panel.async_register_commands(hass)
         hass.data[_VIEWS_REGISTERED] = True
+    # Hearth's page in the sidebar, while the household is set up
+    await panel.async_register_panel(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     @callback
@@ -234,6 +238,12 @@ async def _async_entry_updated(hass: HomeAssistant, entry: HearthConfigEntry) ->
 async def async_unload_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bool:
     await entry.runtime_data.async_flush()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
+    """The household is deleted: Hearth's page goes from the sidebar. (A reload keeps it, so changing a setting there
+    doesn't send you away.)"""
+    panel.async_remove_panel(hass)
 
 
 async def async_remove_config_entry_device(
