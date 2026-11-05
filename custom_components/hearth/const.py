@@ -47,6 +47,8 @@ CONF_GROUPS = "groups"
 CONF_GROUP_APPS = "group_apps"
 # Groups whose time isn't screen time: not counted in All screen time, not held when it runs out
 CONF_OUTSIDE_ALL = "outside_all"
+# People whose phone may share with a launcher's tile exchange (scrubbed layouts only): a parent's choice
+CONF_TILE_EXCHANGE = "tile_exchange_share"
 # Options: [{"entity_id", "person"}]: the person is locked while any of their lock entities is on
 CONF_LOCKS = "locks"
 

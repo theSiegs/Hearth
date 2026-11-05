@@ -130,7 +130,8 @@
           "add_group": "Add a group",
           "group_apps": "Add apps to Video or Games",
           "not_screen_time": "Not screen time",
-          "remove_group": "Remove a group"
+          "remove_group": "Remove a group",
+          "tile_exchange": "Tile exchange sharing"
         }
       },
       "people": {
@@ -162,6 +163,13 @@
         "description": "Groups whose time doesn't count toward All screen time (music, say). Their apps aren't held when All screen time runs out; a budget of their own still applies.",
         "data": {
           "groups": "Groups"
+        }
+      },
+      "tile_exchange": {
+        "title": "Tile exchange sharing",
+        "description": "People whose phone may share with the launcher's tile exchange: the layout of notifications from apps that have no tile yet, with every word and number blanked out (never chat, health or payment apps). Off for everyone not chosen here.",
+        "data": {
+          "people": "People"
         }
       },
       "remove_group": {
@@ -250,7 +258,7 @@
       },
       "enforce": {
         "title": "Enforce",
-        "description": "When one of this person's groups is out of time, their Hearth TVs and phones stop its apps. Here, other parental controls can hold them too, until the group has time again (more time, a new day). Family Link pauses the group's Android apps, every app for All screen time (they stay installed; Google TV ignores this, Hearth holds the TV). Family Safety locks the platforms below while one of its groups below is out of time, until midnight. Nintendo suspends the Switch's game while one of its groups below is out of time (Max screentime today set to 0, with Suspend software on), and puts its limit and Suspend software back after. Choosing a person again replaces theirs; leaving them all empty stops it, and what was held is let go.",
+        "description": "When one of this person's groups is out of time, their Hearth TVs and phones stop its apps. Here, other parental controls can hold them too, until the group has time again (more time, a new day). Family Link pauses the group's Android apps (they stay installed; Google TV ignores this, Hearth holds the TV); for All screen time it locks the person's devices instead, and apps with unlimited time still work. Family Safety locks the platforms below while one of its groups below is out of time, until midnight. Nintendo suspends the Switch's game while one of its groups below is out of time (Max screentime today set to 0, with Suspend software on), and puts its limit and Suspend software back after. Choosing a person again replaces theirs; leaving them all empty stops it, and what was held is let go.",
         "data": {
           "person": "Person",
           "family_link": "Family Link: any of the person's Family Link entities",

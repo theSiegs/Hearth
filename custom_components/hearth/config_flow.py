@@ -35,6 +35,7 @@ from .const import (
     CONF_GROUPS,
     CONF_LOCKS,
     CONF_OUTSIDE_ALL,
+    CONF_TILE_EXCHANGE,
     CONF_PERSON,
     CONF_PROFILES,
     DOMAIN,
@@ -141,6 +142,7 @@ class HearthOptionsFlow(OptionsFlow):
                 "group_apps",
                 "not_screen_time",
                 "remove_group",
+                "tile_exchange",
             ],
         )
 
@@ -240,6 +242,21 @@ class HearthOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="not_screen_time", data_schema=schema)
+
+    async def async_step_tile_exchange(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """The people whose phone may share with the launcher's tile exchange (scrubbed notification layouts, never
+        content). Off for everyone until chosen here."""
+        options = self._options()
+        if user_input is not None:
+            return self.async_create_entry(data={**options, CONF_TILE_EXCHANGE: list(user_input.get("people", []))})
+        schema = vol.Schema(
+            {
+                vol.Optional("people", default=list(options.get(CONF_TILE_EXCHANGE, []))): EntitySelector(
+                    EntitySelectorConfig(domain="person", multiple=True)
+                )
+            }
+        )
+        return self.async_show_form(step_id="tile_exchange", data_schema=schema)
 
     async def async_step_remove_group(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         options = self._options()

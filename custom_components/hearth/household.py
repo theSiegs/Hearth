@@ -24,6 +24,7 @@ from .const import (
     CONF_LOCKS,
     CONF_PERSON,
     CONF_PROFILES,
+    CONF_TILE_EXCHANGE,
     DOMAIN,
     EVENT_BUDGET_REACHED,
     EVENT_PLAYING_TOGETHER,
@@ -515,6 +516,8 @@ class Household:
             "person": person,
             "groups": groups,
             "locked": bool(day and day.locked),
+            # A parent let this person's phone share with the launcher's tile exchange (off unless chosen)
+            "tile_exchange_share": person in self.options.get(CONF_TILE_EXCHANGE, []),
             # What a parent blocked here, for HearthTube in the person's kids profiles (a TV's Hearth passes it on)
             "youtube_blocks": self.watch.blocks_document(person),
         }

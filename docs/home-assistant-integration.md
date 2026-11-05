@@ -348,7 +348,8 @@ open when their usual groups are used up. A TV that hasn't posted in a while get
 same meaning, from the integration instead of a template.
 
 A **phone** gets its person's part of the same document, in the answer to each post and pushed when it changes (see
-[Away from home](#away-from-home)).
+[Away from home](#away-from-home)). Each person's part also says `tile_exchange_share`: whether a parent let their
+phone share with its launcher's tile exchange (Configure > Tile exchange sharing; false unless chosen).
 
 **Pop-ups**: `hearth.notify` (target: devices, a person's devices, or the household; `title`, `message`, `duration`,
 `position`, `image`, `camera`, up to three `actions`). On a TV it's Hearth's pop-up; on a phone, a notification.
