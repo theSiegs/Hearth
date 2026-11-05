@@ -132,7 +132,7 @@
           "not_screen_time": "Not screen time",
           "remove_group": "Remove a group",
           "tile_exchange": "Tile exchange sharing",
-          "parent_pin": "Parent PIN"
+          "parent_pin": "Parent PINs"
         }
       },
       "people": {
@@ -167,12 +167,13 @@
         }
       },
       "parent_pin": {
-        "title": "Parent PIN",
-        "description": "The household's parent PIN (now {state}). Paired phones check it here to turn kids mode off or loosen it; they never get the PIN. It's kept as a hash. After 5 wrong tries a phone waits, longer each time.",
+        "title": "Parent PINs",
+        "description": "Each adult's own parent PIN (set now: {people}). Any of them unlocks a parent's settings. Paired TVs use these in place of their own Parent PIN, and phones check them here; a phone never gets a PIN. They're kept as hashes. After 5 wrong tries a device waits, longer each time.",
         "data": {
+          "person": "Adult",
           "pin": "New PIN (4 to 8 digits)",
           "pin_again": "New PIN again",
-          "remove": "Remove the PIN"
+          "remove": "Remove their PIN"
         }
       },
       "tile_exchange": {

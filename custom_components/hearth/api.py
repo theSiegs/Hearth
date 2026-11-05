@@ -218,9 +218,11 @@ class EventsView(HomeAssistantView):
 
 
 class VerifyPinView(HomeAssistantView):
-    """POST /api/hearth/device/{device_id}/verify_pin (header X-Hearth-Secret): {"pin": "1234"} -> {"ok": true|false}.
+    """POST /api/hearth/device/{device_id}/verify_pin (header X-Hearth-Secret): {"pin": "1234"} -> {"ok": true, "person":
+    "person.alex"} or {"ok": false}.
 
-    Checks the household's parent PIN (Configure > Parent PIN); the device never gets the PIN or its hash. After
+    Checks the adults' parent PINs (Configure > Parent PINs), any of them; the answer says whose it was, and
+    hearth_parent_pin_used tells automations. The device never gets a PIN or a hash. After
     parent_pin.FREE_TRIES wrong ones in a row the device waits, longer each time: 429 {"error": "locked_out",
     "retry_in": s}, and a wrong answer says its own "retry_in" once it starts one. 404 "no_pin" when none is set (the
     device uses its own). Any paired device may ask."""
@@ -238,7 +240,7 @@ class VerifyPinView(HomeAssistantView):
             return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
         if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
             return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
-        stored = hub.entry.options.get(parent_pin.CONF_PARENT_PIN)
+        stored = parent_pin.stored_pins(hub.entry.options)
         if not stored:
             return _error(HTTPStatus.NOT_FOUND, "no_pin")
         state = hub.state(device_id)
@@ -251,10 +253,11 @@ class VerifyPinView(HomeAssistantView):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         # Counted before the slow check, so parallel guesses can't all slip in under the free tries
         state.pin_failures += 1
-        if await hass.async_add_executor_job(parent_pin.matches, stored, pin):
+        if person := await hass.async_add_executor_job(parent_pin.whose, stored, pin):
             state.pin_failures = 0
             state.pin_locked_until = None
-            return web.json_response({"ok": True})
+            hass.bus.async_fire(parent_pin.EVENT_PARENT_PIN_USED, {"device_id": device_id, "person": person})
+            return web.json_response({"ok": True, "person": person})
         answer: dict[str, Any] = {"ok": False}
         if wait_for := parent_pin.lockout(state.pin_failures):
             state.pin_locked_until = dt_util.utcnow() + wait_for

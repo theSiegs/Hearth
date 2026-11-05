@@ -45,6 +45,7 @@ from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
 from .limits import OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
 from .enforce import Enforcement, enforcers_from_options
 from .watch import WatchLog
+from . import parent_pin
 from .schooldays import SchoolDays
 from .live import LiveTracker, Observation, Together
 from .sources import (
@@ -545,6 +546,18 @@ class Household:
                     if person
                 },
             }
+            # The adults' parent PINs (hashes, never a PIN): a paired TV takes them in place of its own, so it checks
+            # PINs with Home Assistant down too. Each says the TV profiles of its adult.
+            if pins := parent_pin.stored_pins(self.options):
+                body["parent_pins"] = [
+                    {
+                        "person": person,
+                        "name": self.person_name(person),
+                        "hash": stored,
+                        "profiles": sorted(p for p, who in profiles.items() if who == person),
+                    }
+                    for person, stored in sorted(pins.items())
+                ]
         else:
             person = device.get(CONF_PERSON)
             body = {"person": self._person_document(person) if person else None}

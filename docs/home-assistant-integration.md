@@ -464,14 +464,20 @@ an entry of a profile mapped to no one, or one that isn't valid, is dropped, and
 them all sent. 403 `not_a_tv` from a phone; 429 `too_often` past 10 posts a minute; 400 for more than 50 or a
 malformed body.
 
-**Parent PIN** (any paired device). `POST /api/hearth/device/<device_id>/verify_pin` with the same header and
-`{"pin": "<digits>"}`: 200 `{"ok": true}` or `{"ok": false}`. The household's PIN is set in Configure > Parent PIN and
-kept as a salted scrypt hash; neither the PIN nor its hash ever goes to a device. After 5 wrong PINs in a row the device
-waits 30 seconds, doubling with each further wrong one up to an hour: the wrong answer that starts a wait says
-`retry_in` (seconds), and until it ends every try is 429 `{"error": "locked_out", "retry_in": s}`, the right PIN
-included. A right PIN clears the count. Each lockout fires `hearth_parent_pin_locked_out` (`device_id`, `failures`,
-`retry_in`) for an automation to tell the adults. 404 `no_pin` when none is set (the device uses its own); 400 for a
-`pin` that isn't a string.
+**Parent PINs** (any paired device). Each adult has their own, set in Configure > Parent PINs and kept as a salted
+hash in the TV's form (`v2$<iterations>$<salt>$<hash>`, PBKDF2-HMAC-SHA256); any of them is a parent PIN.
+`POST /api/hearth/device/<device_id>/verify_pin` with the same header and `{"pin": "<digits>"}`: 200
+`{"ok": true, "person": "person.alex"}` or `{"ok": false}`, and a right one fires `hearth_parent_pin_used`
+(`device_id`, `person`). After 5 wrong PINs in a row the device waits 30 seconds, doubling with each further wrong one
+up to an hour: the wrong answer that starts a wait says `retry_in` (seconds), and until it ends every try is 429
+`{"error": "locked_out", "retry_in": s}`, the right PIN included. A right PIN clears the count. Each lockout fires
+`hearth_parent_pin_locked_out` (`device_id`, `failures`, `retry_in`) for an automation to tell the adults. 404 `no_pin`
+when none is set (the device uses its own); 400 for a `pin` that isn't a string. A phone never gets a hash.
+
+A **TV** checks PINs itself, as it must with Home Assistant down: its state document carries `parent_pins`,
+`[{"person", "name", "hash", "profiles"}]` (`profiles`: that adult's TV profiles), which replace the TV's own Parent PIN
+while it's paired. The TV keeps its own lockout and posts `pin_lockouts` (how many it has had, only going up) in its
+status; each rise fires `hearth_parent_pin_locked_out` (`device_id`, `lockouts`).
 
 **Entities**, per device, by kind as in [Kinds](#kinds). Screen time today is in seconds (shown in minutes), with
 per-app, playing and (on a TV) per-profile attributes kept out of history. All but Connected are unavailable until the

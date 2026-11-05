@@ -37,6 +37,7 @@ from .const import (
     STORAGE_VERSION,
 )
 from .household import Household
+from .parent_pin import EVENT_PARENT_PIN_LOCKED_OUT
 
 
 def hash_secret(secret: str) -> str:
@@ -172,6 +173,13 @@ class HearthHub:
     @callback
     def update_status(self, device_id: str, status: dict[str, Any]) -> None:
         state = self.state(device_id)
+        # A TV checks the Parent PIN itself: a lockout there is told as for a phone that asked here
+        before = (state.status or {}).get("pin_lockouts")
+        after = status.get("pin_lockouts")
+        if before is not None and after is not None and after > before:
+            self.hass.bus.async_fire(
+                EVENT_PARENT_PIN_LOCKED_OUT, {"device_id": device_id, "lockouts": after - before, "retry_in": None}
+            )
         state.status = status
         state.seen = dt_util.utcnow()
         self._store.async_delay_save(self._data_to_save, 30)

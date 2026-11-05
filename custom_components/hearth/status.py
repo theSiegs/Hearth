@@ -41,6 +41,8 @@ _INT_FIELDS = {
     "screen_time_seen_at": (0, 2**53),
     "screen_time_event_at": (0, 2**53),
     "seconds_today": (0, MAX_SECONDS_PER_DAY),
+    # How many times the TV's Parent PIN pad has locked out wrong guesses since it was installed (only goes up)
+    "pin_lockouts": (0, 2**31),
 }
 
 

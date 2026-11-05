@@ -263,26 +263,28 @@ class HearthOptionsFlow(OptionsFlow):
         return self.async_show_form(step_id="tile_exchange", data_schema=schema)
 
     async def async_step_parent_pin(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """The household's parent PIN, which paired phones check (kept as a hash; see parent_pin.py). Typed twice;
-        "Remove" clears it."""
+        """An adult's parent PIN, which paired TVs and phones check (kept as a hash; see parent_pin.py). Typed twice;
+        "Remove" clears that adult's."""
         options = self._options()
+        pins = parent_pin.stored_pins(options)
         errors: dict[str, str] = {}
         if user_input is not None:
+            person = user_input[CONF_PERSON]
             if user_input.get("remove"):
-                return self.async_create_entry(
-                    data={k: v for k, v in options.items() if k != parent_pin.CONF_PARENT_PIN}
-                )
+                pins.pop(person, None)
+                return self.async_create_entry(data={**options, parent_pin.CONF_PARENT_PINS: pins})
             pin = (user_input.get("pin") or "").strip()
             if not parent_pin.PIN.match(pin):
                 errors["pin"] = "bad_pin"
             elif pin != (user_input.get("pin_again") or "").strip():
                 errors["pin_again"] = "pins_differ"
             else:
-                stored = await self.hass.async_add_executor_job(parent_pin.make, pin)
-                return self.async_create_entry(data={**options, parent_pin.CONF_PARENT_PIN: stored})
+                pins[person] = await self.hass.async_add_executor_job(parent_pin.make, pin)
+                return self.async_create_entry(data={**options, parent_pin.CONF_PARENT_PINS: pins})
         password = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
         schema = vol.Schema(
             {
+                vol.Required(CONF_PERSON): PERSON_SELECTOR,
                 vol.Optional("pin"): password,
                 vol.Optional("pin_again"): password,
                 vol.Optional("remove", default=False): BooleanSelector(),
@@ -292,7 +294,9 @@ class HearthOptionsFlow(OptionsFlow):
             step_id="parent_pin",
             data_schema=schema,
             errors=errors,
-            description_placeholders={"state": "set" if options.get(parent_pin.CONF_PARENT_PIN) else "not set"},
+            description_placeholders={
+                "people": ", ".join(self._household().person_name(p) for p in sorted(pins)) or "nobody yet"
+            },
         )
 
     async def async_step_remove_group(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
