@@ -1390,6 +1390,14 @@
     "@parentPinHouseholdSubtitle": {
         "description": "PIN screen: under Your other TVs' Parent PIN"
     },
+    "parentPinFromHa": "Set in Home Assistant",
+    "@parentPinFromHa": {
+        "description": "Settings > Family > Parent PIN, when the Hearth integration in Home Assistant sets the parent PINs"
+    },
+    "parentPinFromHaBody": "Each adult's parent PIN is set in Home Assistant (Hearth > Configure > Parent PINs), and any of them works here. To change one, change it there.",
+    "@parentPinFromHaBody": {
+        "description": "Shown when the Parent PIN is opened on a TV whose parent PINs come from Home Assistant"
+    },
     "parentPinConfirm": "Enter the PIN again",
     "@parentPinConfirm": {
         "description": "PIN screen title: confirming the new parent PIN"

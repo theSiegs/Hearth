@@ -11,6 +11,12 @@ class _FakeChannel extends FLauncherChannel {
   String state = "none";
   String? hash;
   final List<String?> given = [];
+  // What the Java side kept from Home Assistant's state document
+  List<String> haHashes = [];
+  bool haManaged = false;
+
+  @override
+  Future<Map<dynamic, dynamic>?> getHaParentPins() async => {"hashes": haHashes, "managed": haManaged};
 
   @override
   Future<Map<dynamic, dynamic>?> getHouseholdParentPin() async =>
@@ -76,6 +82,34 @@ void main() {
       settings = SettingsService(prefs);
       channel = _FakeChannel();
       sync = HouseholdParentPin(channel, prefs, settings);
+    });
+
+    test("Home Assistant's parent PINs, any adult's, replace this TV's and the household's", () async {
+      await settings.setParentPin("9999");
+      channel
+        ..state = "live"
+        ..hash = b
+        ..haHashes = [a, b]
+        ..haManaged = true;
+      await sync.tick();
+      expect(settings.haParentPinsManaged, isTrue);
+      expect(settings.verifyParentPin("2468"), isTrue);
+      expect(settings.verifyParentPin("1357"), isTrue);
+      expect(settings.verifyParentPin("9999"), isFalse);
+      expect(settings.householdParentPinOffered, isNull);
+      expect(channel.given, isEmpty);
+
+      // Removed in Home Assistant, or unpaired: the last ones stay, no longer managed
+      channel.haManaged = false;
+      await sync.tick();
+      expect(settings.haParentPinsManaged, isFalse);
+      expect(settings.verifyParentPin("2468"), isTrue);
+
+      // A PIN of the TV's own set here replaces them
+      await settings.setParentPin("1111");
+      expect(settings.haParentPins, isEmpty);
+      expect(settings.verifyParentPin("1111"), isTrue);
+      expect(settings.verifyParentPin("2468"), isFalse);
     });
 
     test("joined without a Parent PIN: the household's is this TV's after one round", () async {

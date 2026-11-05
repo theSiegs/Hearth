@@ -1328,6 +1328,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enter the Parent PIN your other TVs use, and this TV uses it too';
 
   @override
+  String get parentPinFromHa => 'Set in Home Assistant';
+
+  @override
+  String get parentPinFromHaBody =>
+      'Each adult\'s parent PIN is set in Home Assistant (Hearth > Configure > Parent PINs), and any of them works here. To change one, change it there.';
+
+  @override
   String get parentPinConfirm => 'Enter the PIN again';
 
   @override

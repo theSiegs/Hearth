@@ -518,6 +518,16 @@ class FLauncherChannel {
   Future<Map<dynamic, dynamic>?> getHouseholdParentPin() async =>
       await _methodChannel.invokeMapMethod<dynamic, dynamic>("getHouseholdParentPin");
 
+  /// The adults' parent PINs from the Hearth integration (HaParentPins.java): {hashes: [...], managed: bool}.
+  Future<Map<dynamic, dynamic>?> getHaParentPins() async =>
+      await _methodChannel.invokeMapMethod<dynamic, dynamic>("getHaParentPins");
+
+  /// A Parent PIN of this TV's own was set: the kept Home Assistant ones go.
+  Future<void> forgetHaParentPins() async => await _methodChannel.invokeMethod("forgetHaParentPins");
+
+  /// A Parent PIN pad here locked out wrong guesses (counted for the integration).
+  Future<void> noteParentPinLockout() async => await _methodChannel.invokeMethod("noteParentPinLockout");
+
   /// This TV's Parent PIN as it keeps it (a hash; null: removed) for the household; false when it isn't taken.
   Future<bool> publishHouseholdParentPin(String? hash) async =>
       await _methodChannel.invokeMethod<bool>("publishHouseholdParentPin", hash) ?? false;

@@ -354,6 +354,7 @@ final class HaStatusReporter {
         status.put("media_duration_s", metadata == null ? JSONObject.NULL
                 : Math.max(0, metadata.getLong(MediaMetadata.METADATA_KEY_DURATION) / 1000));
         status.put("now_playing_available", s.nowPlayingAvailable);
+        status.put("pin_lockouts", HaParentPins.lockouts(mContext));
         return status;
     }
 
@@ -444,6 +445,8 @@ final class HaStatusReporter {
             HaAllowance.fromDocument(mContext, state);
             // A parent's YouTube blocks set in Home Assistant, for HearthTube in the kids profiles
             ParentBlocks.applyDocument(mContext, state);
+            // The adults' parent PINs, which are this TV's while Home Assistant names them
+            HaParentPins.applyDocument(mContext, state);
             mHandler.post(() -> ProfileProvider.notifyChanged(mContext));
             // And up: what kids profiles started since
             HaIntegration.sendStartedLog(mContext);

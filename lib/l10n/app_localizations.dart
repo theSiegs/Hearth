@@ -2257,6 +2257,18 @@ abstract class AppLocalizations {
   /// **'Enter the Parent PIN your other TVs use, and this TV uses it too'**
   String get parentPinHouseholdSubtitle;
 
+  /// Settings > Family > Parent PIN, when the Hearth integration in Home Assistant sets the parent PINs
+  ///
+  /// In en, this message translates to:
+  /// **'Set in Home Assistant'**
+  String get parentPinFromHa;
+
+  /// Shown when the Parent PIN is opened on a TV whose parent PINs come from Home Assistant
+  ///
+  /// In en, this message translates to:
+  /// **'Each adult\'s parent PIN is set in Home Assistant (Hearth > Configure > Parent PINs), and any of them works here. To change one, change it there.'**
+  String get parentPinFromHaBody;
+
   /// PIN screen title: confirming the new parent PIN
   ///
   /// In en, this message translates to:

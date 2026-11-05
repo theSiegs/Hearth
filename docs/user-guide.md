@@ -171,7 +171,10 @@ Hearth treats a profile as a kids profile when Family Link supervises it.
   anything that could undo your setup asks for the PIN. With household sync on, the household's TVs share one Parent
   PIN: a TV that joins without one takes it, and a change on one TV reaches the others. A TV that had its own,
   different PIN when it joined keeps it until you choose **Use your other TVs' Parent PIN** in **Settings → Family**
-  and enter theirs.
+  and enter theirs. With Hearth's Home Assistant integration, each adult can have their own parent PIN, set in Home
+  Assistant (**Hearth → Configure → Parent PINs**): a connected TV takes them in place of its own, any adult's works,
+  and **Settings → Family → Parent PIN** says **Set in Home Assistant**. The TV keeps them, so they work while Home
+  Assistant is down; if it's disconnected, it keeps the last ones until you set a PIN on the TV again.
 - **YouTube only in HearthTube.** With HearthTube installed, a kids profile watches YouTube only there, where its
   YouTube time applies: YouTube's own app is hidden, and if it opens anyway (a voice search, a link) HearthTube opens
   over it. Adults' profiles start with YouTube's app hidden too; show it again from its app options if you want it.

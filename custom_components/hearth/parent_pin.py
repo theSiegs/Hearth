@@ -22,7 +22,8 @@ CONF_PARENT_PINS = "parent_pins"
 EVENT_PARENT_PIN_LOCKED_OUT = "hearth_parent_pin_locked_out"
 EVENT_PARENT_PIN_USED = "hearth_parent_pin_used"
 
-PIN = re.compile(r"^\d{4,8}$")
+# Four digits: the TV's PIN pad, and Google TV's profile lock, take four
+PIN = re.compile(r"^\d{4}$")
 STORED = re.compile(r"^v2\$([0-9]{1,7})\$([0-9a-f]{32})\$([0-9a-f]{64})$")
 ITERATIONS = 10000
 FREE_TRIES = 5

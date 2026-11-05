@@ -117,8 +117,20 @@ Future<bool> chooseNewParentPin(BuildContext context) async {
     builder: (_) => ParentPinDialog(title: l.parentPinConfirm, verify: (pin) => pin == first),
   );
   if (second == null) return false;
+  final channel = context.mounted ? context.read<FLauncherChannel?>() : null;
   await settings.setParentPin(first);
+  // A PIN of this TV's own replaces any kept from Home Assistant (the Java side's copy too, not waited for)
+  unawaited(forgetHaParentPins(channel));
   return true;
+}
+
+/// Tells the Java side its Home Assistant parent PINs are replaced by a PIN of the TV's own (a failure is only noted).
+Future<void> forgetHaParentPins(FLauncherChannel? channel) async {
+  try {
+    await channel?.forgetHaParentPins();
+  } catch (err) {
+    noteFailure('forget_ha_parent_pins', err);
+  }
 }
 
 /// Full-screen PIN entry in Google TV's style: the shuffled row pad (see [_RowPad]), number keys type directly.
@@ -133,6 +145,9 @@ class PinLockout {
 
   static final PinLockout shared = PinLockout();
 
+  /// Told when a lockout starts (the Parent PIN pads count them for Home Assistant).
+  void Function()? onLocked;
+
   int _misses = 0;
   DateTime? _until;
 
@@ -145,6 +160,7 @@ class PinLockout {
     if (_misses < freeTries) return;
     final seconds = (baseSeconds * (1 << (_misses - freeTries))).clamp(baseSeconds, maxSeconds);
     _until = now.add(Duration(seconds: seconds));
+    onLocked?.call();
   }
 
   void clear() {

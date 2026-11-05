@@ -429,6 +429,20 @@ public class MainActivity extends FlutterActivity {
                     call.argument("profile"), call.argument("slot"), call.argument("jpeg")));
             // The Parent PIN: the household's, and this TV's for it (HouseholdParentPin decides which way)
             case "getHouseholdParentPin" -> answerFrom(sIoExecutor, result, () -> Household.parentPin(this));
+            case "getHaParentPins" -> answerFrom(sIoExecutor, result, () -> {
+                java.util.Map<String, Object> pins = new java.util.HashMap<>();
+                pins.put("hashes", HaParentPins.hashes(this));
+                pins.put("managed", HaParentPins.managed(this));
+                return pins;
+            });
+            case "forgetHaParentPins" -> {
+                HaParentPins.forget(this);
+                result.success(null);
+            }
+            case "noteParentPinLockout" -> {
+                HaParentPins.noteLockout(this);
+                result.success(null);
+            }
             case "publishHouseholdParentPin" -> answerFrom(sIoExecutor, result,
                     () -> Household.publishParentPin(this, (String) call.arguments()));
             case "lookForHouseholds" -> {

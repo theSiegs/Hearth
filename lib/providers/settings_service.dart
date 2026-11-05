@@ -74,6 +74,9 @@ const String _startOnBootKey = "start_on_boot";
 // device_ prefix: shared by all profiles, never part of a per-profile layout
 const String _parentPinHashKey = "device_parent_pin_hash";
 const String _householdParentPinOfferedKey = "device_household_parent_pin_offered";
+// The adults' parent PINs from Home Assistant (hashes), and whether Home Assistant manages them now (HaParentPins.java)
+const String _haParentPinsKey = "device_ha_parent_pins";
+const String _haParentPinsManagedKey = "device_ha_parent_pins_managed";
 const String _updatesIncludePrereleasesKey = "device_updates_include_prereleases";
 const String _updatesBuildKindKey = "device_updates_build_kind";
 
@@ -362,7 +365,27 @@ class SettingsService extends ChangeNotifier {
 
   Future<void> setPinConsentGiven() => _setBool(_pinConsentKey, true);
 
-  bool get hasParentPin => _sharedPreferences.getString(_parentPinHashKey) != null;
+  bool get hasParentPin => _sharedPreferences.getString(_parentPinHashKey) != null || haParentPins.isNotEmpty;
+
+  /// The adults' parent PINs from Home Assistant (hashes): while there are any, any of them is the Parent PIN, in place
+  /// of this TV's own.
+  List<String> get haParentPins => _sharedPreferences.getStringList(_haParentPinsKey) ?? const [];
+
+  /// Home Assistant sets the Parent PIN: it can't be changed here.
+  bool get haParentPinsManaged => _sharedPreferences.getBool(_haParentPinsManagedKey) ?? false;
+
+  /// What the TV last took from Home Assistant ([hashes] empty: none kept).
+  Future<void> setHaParentPins(List<String> hashes, bool managed) async {
+    final valid = hashes.where(ParentPinHash.pattern.hasMatch).toList();
+    if (listEquals(valid, haParentPins) && managed == haParentPinsManaged) return;
+    if (valid.isEmpty) {
+      await _sharedPreferences.remove(_haParentPinsKey);
+    } else {
+      await _sharedPreferences.setStringList(_haParentPinsKey, valid);
+    }
+    await _sharedPreferences.setBool(_haParentPinsManagedKey, managed && valid.isNotEmpty);
+    notifyListeners();
+  }
 
   /// The parent PIN as the TV keeps it (a hash), for the household; null when none is set.
   String? get parentPinHash => _sharedPreferences.getString(_parentPinHashKey);
@@ -376,6 +399,15 @@ class SettingsService extends ChangeNotifier {
   /// Whether [pin] is the Parent PIN. A PIN kept in the old form (an unsalted hash) is kept in the new one after the
   /// first good check.
   bool verifyParentPin(String pin) {
+    final fromHa = haParentPins;
+    if (fromHa.isNotEmpty) {
+      // Any adult's; every one is checked, so the time doesn't tell which matched
+      var ok = false;
+      for (final hash in fromHa) {
+        ok = ParentPinHash.verify(pin, hash) || ok;
+      }
+      return ok;
+    }
     final stored = _sharedPreferences.getString(_parentPinHashKey);
     if (!ParentPinHash.verify(pin, stored)) return false;
     if (ParentPinHash.isLegacy(stored)) {
@@ -410,7 +442,11 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// A Parent PIN of this TV's own (null: none). It replaces any kept from Home Assistant (the caller tells the Java
+  /// side, FLauncherChannel.forgetHaParentPins).
   Future<void> setParentPin(String? pin) async {
+    await _sharedPreferences.remove(_haParentPinsKey);
+    await _sharedPreferences.remove(_haParentPinsManagedKey);
     if (pin == null) {
       await _sharedPreferences.remove(_parentPinHashKey);
     } else {
