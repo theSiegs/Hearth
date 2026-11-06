@@ -161,7 +161,19 @@ marked `source: glint` so nobody mistakes them for a complete record.
 
 ## Store
 
-### Server: Synapse, not the Conduit family (a change from the first direction)
+### Server: Synapse + PostgreSQL (chosen)
+
+**Decided by the owner.** Why it passed the sanity check:
+
+- **Maintained.** Synapse is actively maintained by Element, under the AGPL.
+- **Steady security releases.** For example CVE-2026-45078, a CPU-starvation denial of service by an authenticated
+  local user, fixed in 1.152.1 ([GCVE](https://db.gcve.eu/vuln/CVE-2026-45078)). With federation off and one or a few
+  users, that kind of bug is low risk here.
+- **Pinned and followed.** The compose file pins a Synapse version **≥ 1.152.1**, and the hub follows Synapse's
+  releases (with the bridge's monthly ones).
+- **Media on disk.** Synapse keeps media in its own media store on disk, bridged pictures included, with thumbnails.
+
+The comparison that led there:
 
 | | Synapse + PostgreSQL | continuwuity / tuwunel (Conduit family) |
 |---|---|---|
@@ -174,32 +186,43 @@ marked `source: glint` so nobody mistakes them for a complete record.
 
 **Choose once.** A homeserver can't be switched to another implementation without data loss
 ([matrix-docker-ansible-deploy](https://git.cqre.net/cqrenet/matrix-docker-ansible-deploy/commit/600d04ad166c3e25a56f91b89cf624cb840a460e)).
-The archive is the one part of this that can't be rebuilt, so the recommendation is **Synapse with PostgreSQL**, from
-Phase 0 on. Tuwunel is the fallback if the box that hosts it can't spare the memory.
+The archive is the one part of this that can't be rebuilt, so it is **Synapse with PostgreSQL**, from Phase 0 on.
+(Tuwunel was the fallback if the host couldn't spare the memory; not taken.)
 
 ### Settings
 
 - `federation` off (no federation listener, `federation_domain_whitelist: []`), registration closed, a server name
   that is never public (`hub.home.arpa`).
-- `redaction_retention_period: null` (keep what the phone deleted, for admins) unless the household decides otherwise.
+- Synapse pinned to a version ≥ 1.152.1.
+- `redaction_retention_period: null`: messages are kept, including ones deleted on the phone (readable by admins),
+  for adults and kids alike (decided).
 - Rooms unencrypted in Matrix (see [Encryption at rest](#encryption-at-rest)), so the consumer and server-side search work.
 - Media repository on the same disk, `max_upload_size` large enough for video (100 MB).
+- **Media retention: 30 days from arrival** (decided). Synapse's `media_retention.local_media_lifetime` (since 1.61)
+  purges media that hasn't been *accessed* within the window, not media older than it
+  ([Synapse 1.61](https://matrix.org/blog/2022/06/17/synapse-1-61-released)), so opening a picture would keep it
+  alive. The strict rule needs a **daily job** that calls the admin API's delete-media-before-timestamp endpoint for
+  local media older than 30 days. `local_media_lifetime: 30d` stays set only as a backstop. The message itself stays;
+  the text placeholder that replaces the purged media stays with it.
 - Push gateway for Matrix clients: ntfy, with pushers in `event_id_only` format so no content leaves the hub.
 
-### Hosting: this PC first, then decide
+### Hosting: the laptop first, then a Raspberry Pi 5
 
-- **Phase 0 on a PC in Docker** (Docker Desktop with WSL 2): fast to try, easy to throw away. The cost: the bridge is
-  down whenever the PC sleeps; the bridge catches up when it's back, and that gap is measured in Phase 0.
-- **Then an always-on box.** Two choices, for the owner to make after Phase 0:
-  1. **As Home Assistant apps** (add-ons were renamed apps in 2026.2,
-     [release notes](https://www.home-assistant.io/blog/2026/02/04/release-20262/)): Synapse (community app above or a
-     custom one), PostgreSQL, mautrix-gmessages (no app found: a custom one, a thin wrapper around the bridge's image).
-     Pros: HA's backups and updates. Cons: Home Assistant OS has no disk encryption (a community report says the
-     kernel lacks dm-crypt, [forum](https://community.home-assistant.io/t/run-ha-on-a-fully-encrypted-raspberry-pi/621576))
-     **(unverified)**; every HA backup grows by the archive and its media; the HA box's memory and disk must hold it.
-  2. **A small VM or box beside HA** with LUKS-encrypted disk, the same compose file as Phase 0, its own encrypted
-     backups. HA reaches it on the home network.
-  The recommendation is option 2 unless the HA box has spare memory and the household accepts an unencrypted disk.
+The owner has no always-on server yet. What there is: the PC that runs the hub test (a laptop) and a Raspberry Pi 5.
+
+- **Phase 0 stays on the laptop, in Docker** (Docker Desktop with WSL 2): fast to try, easy to throw away. The cost
+  of a laptop host: while it sleeps, the bridge is offline, and catch-up on wake is limited (by
+  `max_catchup_messages` and by what the phone still holds; measured in test 0.11).
+- **The always-on home before a real server: the Pi 5** (recommended). An NVMe SSD, not the SD card; an encrypted
+  data volume (LUKS); Docker running Synapse, PostgreSQL, the bridge and ntfy from the same compose file as Phase 0;
+  its own encrypted backups. HA reaches it on the home network. A Phase 1 task moves the hub there.
+- **Not recommended: Home Assistant OS apps** (add-ons were renamed apps in 2026.2,
+  [release notes](https://www.home-assistant.io/blog/2026/02/04/release-20262/)). Synapse can run on HAOS as an app
+  (the community app above, with the PostgreSQL app), but wherever HAOS runs isn't always on either; it puts the
+  archive and its media in every HA backup; and HAOS has no disk encryption (a community report says the kernel lacks
+  dm-crypt, [forum](https://community.home-assistant.io/t/run-ha-on-a-fully-encrypted-raspberry-pi/621576)).
+- **Later, a real server** if the household gets one: the same compose file and a `pg_dump` plus media move, keeping
+  the server name.
 
 ### Away from home
 
@@ -252,6 +275,11 @@ change adds image attachments to it and refuses other file types
 ([PR diff](https://github.com/code/app-python-home-assistant-core/pull/927/files)) **(unverified which HA release ships
 it)**. So: text classification works with any local model; pictures need a vision model and a release with that change;
 video and voice notes aren't analysed (a frame or a transcript is later work).
+
+**Where the model runs** (decided): Ollama on the laptop for now, a server later. While the laptop is off, analysis
+queues in the consumer and runs when the laptop is back (alerts from that backlog say how late they are). The Pi 5
+can't run vision models usefully; at most a small text model, slowly, so it isn't the model host. **Image analysis is
+deferred** until the laptop or a server is available for it; until then only text is checked.
 
 Tasks, each a `structure`:
 
@@ -314,10 +342,13 @@ tailnet, serves both. Matrix pushers use `event_id_only`, so ntfy sees room and 
 | **Annotation** | the hub: Matrix events in a private room per account, written by the consumer (so they are in the hub's backups, not HA's) | message, model, task, result, when, reviewed by, reviewed when |
 | **Access log** | the hub | who read which conversation of another person, when (kids can see this about themselves) |
 
-**Retention** (defaults for the owner to confirm): adults' text kept until they delete it; adults' media 2 years;
-kids' text and media kept until the kid turns 18, then handed over (export) and deleted on the hub unless they choose
-to keep it; Glint captures 1 year; annotations as long as their message. A person can delete their own archive at any
-time (an adult) or ask an adult to (a kid).
+**Retention** (decided): messages are kept, adults' and kids', including ones deleted on the phone
+(`redaction_retention_period: null`). Media is kept **30 days from arrival**, then purged by a daily job (see
+[Settings](#settings)); the text placeholder that replaces it stays. Annotations live as long as their message. A
+person can delete their own archive at any time (an adult) or ask an adult to (a kid).
+
+**A kid turning 18: hand off.** The kid's archive migrates to be owned by their own Home Assistant user and their own
+Matrix account (now an adult's); the adults' read access to it ends. (A later-phase task.)
 
 ## Per-person access
 
@@ -333,8 +364,9 @@ time (an adult) or ask an adult to (a kid).
 
 ## Encryption at rest
 
-- **Disk**: Phase 0 on a disk with BitLocker; later on a LUKS disk (option 2 under Hosting). Home Assistant OS
-  can't do this **(unverified)**.
+- **Disk**: Phase 0 on the laptop's BitLocker disk; then the Pi 5's LUKS-encrypted data volume on its NVMe SSD (see
+  [Hosting](#hosting-the-laptop-first-then-a-raspberry-pi-5)). Home Assistant OS can't do this, one reason it isn't
+  the host.
 - **Backups**: always encrypted (below).
 - **Matrix end-to-bridge encryption**: the bridge can encrypt rooms so the homeserver stores ciphertext
   ([mautrix docs](https://docs.mau.fi/bridges/general/end-to-bridge-encryption.html)). The keys then sit in the
@@ -351,8 +383,7 @@ time (an adult) or ask an adult to (a kid).
   [HA blog](https://www.home-assistant.io/blog/2026/03/26/modernizing-encryption-of-home-assistant-backups/)).
 - Kept on the home network and one copy off-site, both encrypted with a key the owner keeps offline (the HA backup
   emergency kit's key if HA's backups carry it: [emergency kit](https://www.home-assistant.io/more-info/backup-emergency-kit/)).
-- If the hub is an HA app, its data is in HA's backups unless excluded; HA Cloud backups (always encrypted) would then
-  carry the archive off-site. A deliberate choice, not a default.
+- The hub isn't an HA app, so its archive isn't in HA's backups; the Pi 5 runs its own (restic, encrypted).
 - A restore test each quarter: restore to a scratch container, check counts.
 
 ## Consent
@@ -364,8 +395,8 @@ time (an adult) or ask an adult to (a kid).
   owner's account only.
 - **Kids**: transparency, not a secret. Before a kid's account is paired, the kid is told what is kept, who can read
   it, what the model looks for and what happens on a flag; Glint (and Hearth Mobile) show that messages are kept and
-  checked; the kid can see the access log for their own archive. Rules can be age-graded (an older teen: only
-  high-severity flags reach adults, no routine reading) **(the owner decides the grades)**.
+  checked; the kid can see the access log for their own archive. Rules are age-graded (see decision 6, still open).
+  At 18 the archive is handed off to the kid (see [Data model](#data-model)).
 - **Other people** (everyone who texts the household) are in the archive too. It is household-internal, never shared,
   and the household's own messages; any legal question about keeping them is the owner's to check (this note isn't
   legal advice).
@@ -387,9 +418,10 @@ time (an adult) or ask an adult to (a kid).
 | Another Messages for Web session takes over | the bridge goes idle | status `idle`; an adult's notification "the hub stopped hearing your phone"; the bridge takes the session back (how: Phase 0) |
 | Google changes pairing or the protocol | logins fail, or messages stop | keep the stable Messages app; update the bridge monthly; re-pair (v26.10 re-pairs by emoji tap) |
 | The Google cookies expire or are revoked | `needs login` | the person re-pairs |
-| The hub host is down (the PC asleep) | nothing is bridged | catch-up on start, limited by `max_catchup_messages`; measured in Phase 0 |
+| The hub host is down (the laptop asleep, in Phase 0) | nothing is bridged | catch-up on wake, limited by `max_catchup_messages`; measured in test 0.11; the Pi 5 in Phase 1 |
 | Home Assistant is down | no checks, no events | the homeserver retries appservice transactions; messages older than 10 minutes are archived without alerts (an "alerts missed while HA was down" summary goes to the adults instead) |
-| The model is slow or down | checks queue | timeout per message; skipped checks counted in `message_hub_status`; kids' messages retried |
+| The model is slow or down (the laptop off) | checks queue | timeout per message; the queue runs when the laptop is back; skipped checks counted in `message_hub_status`; kids' messages retried |
+| Media older than 30 days | purged by the daily job | the message and its text placeholder stay |
 | The model is wrong | false alarms, missed concerns | flags are for an adult to look at; adults can mark "Fine"; a weekly sample review |
 | A phone deletion | Matrix redaction | content kept for admins (`redaction_retention_period: null`) |
 | Disk full (media) | the homeserver refuses uploads | a disk sensor in HA; media retention |
@@ -400,25 +432,45 @@ time (an adult) or ask an adult to (a kid).
 
 | Phase | What | Done when |
 |---|---|---|
-| 0 | Trailblaze on this PC: Synapse, PostgreSQL, mautrix-gmessages in Docker; the owner's phone and account; measurements; a minimal read-only HA consumer | the Phase 0 tasks are checked and the numbers are in this note |
-| 1 | Move to the always-on box (an HA app or a VM beside HA), Tailscale, backups, the owner's Matrix client with ntfy push | a week without missed messages; a restore test passed |
+| 0 | Trailblaze on the laptop: Synapse, PostgreSQL, mautrix-gmessages in Docker; the owner's phone and account; measurements; a minimal read-only HA consumer | the Phase 0 tasks are checked and the numbers are in this note |
+| 1 | Move to the Pi 5 (NVMe, LUKS, Docker), Tailscale, backups, the 30-day media job, the owner's Matrix client with ntfy push | a week without missed messages; a restore test passed |
 | 2 | AI Task checks on the owner's account (classify, extract), TV actions | a week's flags reviewed; nothing written to HA's database |
 | 3 | Hearth: directory, consent records, parent alerts (tested with an adult account playing a kid) | an alert travels to an adult's phone and back |
 | 4 | A kid's phone: check supervised pairing; transparency; kid-safety checks live | a kid's account bridged (or the fallback chosen), the kid told, alerts working |
 | 5 | Glint capture for apps without a bridge | Glint's captures arrive and are marked as such |
 | 6 | Other bridges: WhatsApp, Signal, Meta, each with its own Phase 0 test | per bridge |
 | 7 | A local LLM acting on messages | per use, opt-in |
+| Later | A kid turning 18: hand off their archive | the archive is owned by their own HA user and Matrix account; adults' access gone |
 
 ## Decisions for the owner
 
-1. **The homeserver**: Synapse + PostgreSQL (recommended) or tuwunel. Has to be made before Phase 0, since it can't be
-   changed later without losing the archive.
-2. **Hosting after Phase 0**: HA apps (HA's backups, no disk encryption) or a VM beside HA with LUKS (recommended).
-3. **Keep deleted messages** (`redaction_retention_period: null`) for adults' accounts, kids' accounts, or neither.
-4. **Retention** defaults above.
-5. **Where the model runs** (Ollama on which machine, which models: a text model, a vision model) and whether images
-   are sent to it.
-6. **Kids' rules by age**: who reads what, which severities alert.
+1. **The homeserver: decided, Synapse + PostgreSQL.** Maintained by Element (AGPL), steady security releases (e.g.
+   CVE-2026-45078, fixed in 1.152.1, low risk with federation off and a few users); pinned to ≥ 1.152.1 and its
+   releases followed; media in Synapse's media store on disk, thumbnails included. See [Server](#server-synapse--postgresql-chosen).
+2. **Hosting: decided.** Phase 0 on the laptop (the bridge is offline while it sleeps; catch-up on wake is limited,
+   test 0.11). Then the Raspberry Pi 5 as the always-on home before a real server: NVMe SSD, LUKS data volume, Docker
+   (Synapse, PostgreSQL, the bridge, ntfy). Not HAOS: it isn't always on either, it puts the archive in HA backups,
+   and it has no disk encryption.
+3. **Keep deleted messages: decided, yes,** for adults and kids (`redaction_retention_period: null`).
+4. **Retention: decided.** Messages kept. Media 30 days from arrival, by a daily admin-API purge job, because
+   `local_media_lifetime` counts from last access, not arrival (kept at `30d` only as a backstop); the text placeholder
+   stays. At 18 a kid's archive is handed off: it moves to their own HA user and Matrix account, and adults' read
+   access ends.
+5. **Where the model runs: decided.** Ollama on the laptop for now, a server later; analysis queues while the laptop
+   is off. Not the Pi 5 (no useful vision model; at most a small, slow text model). Image analysis deferred until the
+   laptop or a server can take it.
+6. **Kids' rules by age: still open.** For each kid, by age, the owner decides two things:
+   - **What adults can read**: everything, only the messages the model flagged, or only the alerts (no message text).
+   - **How each kind of flag reaches an adult**: right away (an alert on the phone), in a weekly summary, or never.
+
+   Proposed defaults, by age band:
+
+   | | Under 10 | 10–13 | 14–17 |
+   |---|---|---|---|
+   | Adults can read | everything | only flagged messages | only alerts |
+   | Right away | any flag: stranger contact, grooming signs, sexual content, self-harm, violence, bullying, drugs, scam | grooming signs, sexual content, self-harm, stranger contact, scam | grooming signs, self-harm, severity 3 of anything |
+   | Weekly summary | counts by kind | bullying, violence, drugs, lower-severity flags | bullying, sexual content, violence, drugs, scam (as counts, no text) |
+   | Never | none | marketing, spam | everything else |
 7. **The consumer's home**: inside `custom_components/hearth` or its own integration in this repository
    (recommended: its own, `hearth_messages`, talking to Hearth through its services and events).
 8. **TV actions**: which conversation counts as "the TV".
@@ -429,21 +481,24 @@ Owner: **the owner** (pairing, consent, anything needing the owner's phone, Goog
 Nothing in Phase 0 touches anyone else's phone or account. Results recorded in this note are counts and times, never
 message content, numbers or names.
 
-### Phase 0: trailblaze on the owner's phone and account (on this PC)
+### Phase 0: trailblaze on the owner's phone and account (on the laptop)
 
-- [ ] **0.1 (the owner)** Decide the homeserver (decision 1). Done when this note says which.
-- [ ] **0.2 (the owner)** Check the PC's disk has BitLocker on, and that the PC may stay awake during the test
-  weeks. Done when both are confirmed here.
-- [ ] **0.3 (an agent)** Write `tool/message-hub/` (compose file and configs, no secrets): the chosen homeserver,
-  PostgreSQL, mautrix-gmessages (pinned to the latest release), ntfy; server name `hub.home.arpa`; federation off;
-  registration closed; `redaction_retention_period: null`; ports bound to the PC only (the homeserver calls Home Assistant, not the other way);
+- [x] **0.1 (the owner)** Decide the homeserver (decision 1). Done: Synapse + PostgreSQL.
+- [x] **0.2 (the owner)** Check the laptop's disk has BitLocker on, and that it may stay awake during the test
+  weeks. Done: BitLocker is on, and the laptop can stay awake almost always.
+- [ ] **0.3 (an agent)** Write `tool/message-hub/` (compose file and configs, no secrets): Synapse pinned to a version
+  ≥ 1.152.1, PostgreSQL, mautrix-gmessages (pinned to the latest release), ntfy; server name `hub.home.arpa`; federation off;
+  registration closed; `redaction_retention_period: null`; `media_retention.local_media_lifetime: 30d` (backstop);
+  ports bound to the laptop only (the homeserver calls Home Assistant, not the other way);
   backfill counts raised (`max_initial_messages` 2000, `max_catchup_messages` 5000) before any login; bridge
   permissions so only the owner's Matrix user can log in. Done when `docker compose up` is healthy, the client API
-  answers on the PC, the federation port is closed, and registration is refused.
+  answers on the laptop, the federation port is closed, and registration is refused.
 - [ ] **0.4 (an agent)** Create the owner's Matrix user and register the bridge; write the steps into
   `tool/message-hub/README.md`. Done when the bridge bot answers `help` in a DM with the owner's Matrix user.
 - [ ] **0.5 (the owner)** On the phone: confirm Google Messages is the stable release (leave the beta if enrolled),
   in Google-account mode, and note every paired Messages for Web device and Phone Link. Done when listed here (count only).
+  - [x] The phone runs the stable Google Messages app.
+  - [ ] Count of paired Messages for Web devices and Phone Link: still to do.
 - [ ] **0.6 (the owner)** Record consent for the owner's own account (date, scope: archive and Phase 0 tests only).
 - [ ] **0.7 (the owner)** Pair: `login google` to the bridge bot, sign in in a private Firefox window, paste the
   `/web/config` request, tap the emoji on the phone. Done when the bridge reports connected and portal rooms appear.
@@ -474,24 +529,30 @@ message content, numbers or names.
 
 ### Phase 1: an always-on hub
 
-- [ ] **1.1 (the owner)** Decide hosting (decision 2).
-- [ ] **1.2 (an agent)** Check the target box's free memory and disk against Phase 0's use (homeserver, PostgreSQL,
-  bridge, media growth per month).
-- [ ] **1.3 (an agent)** Package the hub for the chosen host (a custom HA app repository wrapping the images, or the
-  compose file on a LUKS VM); move Phase 0's data (`pg_dump` and media), keeping the server name.
+- [x] **1.1 (the owner)** Decide hosting (decision 2). Done: the Raspberry Pi 5.
+- [ ] **1.2 (an agent)** Check the Pi 5's memory and the NVMe SSD's size against Phase 0's use (Synapse, PostgreSQL,
+  bridge, ntfy, 30 days of media), and that the images run on arm64.
+- [ ] **1.3 (the owner, then an agent)** Move the hub to the Pi 5: fit an NVMe SSD (boot or data; not the SD card),
+  make an encrypted data volume (LUKS) for Docker's data, install Docker; run the Phase 0 compose file there; move
+  Phase 0's data (`pg_dump` and media), keeping the server name; point Home Assistant's appservice settings at it.
+  Done when the bridge is connected on the Pi 5 and the laptop's hub is stopped.
 - [ ] **1.4 (the owner)** Set up Tailscale on the hub host and the owner's phone; install a Matrix client and ntfy
   (UnifiedPush) on the phone.
 - [ ] **1.5 (an agent)** Nightly encrypted backups, one copy off-site; a restore test into a scratch container.
 - [ ] **1.6 (an agent)** `message_hub_status` and per-account entities (bridge state, last message time, counts); an
   automation that tells the owner when the bridge isn't connected for 30 minutes.
+- [ ] **1.7 (an agent)** Daily media job: call Synapse's admin API to delete local media older than 30 days (by
+  timestamp, not last access); log counts only. Done when a test picture older than 30 days is gone, its message and
+  text placeholder remain, and a newer one is untouched.
 
 ### Phase 2: AI Task checks on the owner's account
 
-- [ ] **2.1 (the owner)** Decide where the model runs and which models (decision 5).
-- [ ] **2.2 (an agent)** Confirm the installed HA release's Ollama AI Task entity, and whether it takes image
-  attachments.
+- [x] **2.1 (the owner)** Decide where the model runs (decision 5). Done: Ollama on the laptop; images deferred.
+- [ ] **2.2 (an agent)** Pick the text model for the laptop; confirm the installed HA release's Ollama AI Task entity
+  (image attachments only matter once images are taken up).
 - [ ] **2.3 (an agent)** Add classify and extract to the consumer, called in-process (no service call), with a queue
-  and a timeout; annotations written to the hub; `message_hub_extract` excluded from the recorder.
+  that holds checks while the laptop is off and runs them when it's back, and a timeout; text only; annotations
+  written to the hub; `message_hub_extract` excluded from the recorder.
 - [ ] **2.4 (an agent)** Repeat 0.14's canary with checks on (the model's prompt holds the text): nothing in HA's
   database, logs or traces; check Ollama's logs too.
 - [ ] **2.5 (the owner)** TV actions: name the "TV" conversation; text a YouTube link; it plays through
@@ -539,3 +600,11 @@ message content, numbers or names.
   texts) and what the agent may do (allowed services only; sending stays off).
 - [ ] **7.2 (an agent)** Read access to one person's archive through the hub, scoped and logged; nothing through HA's
   database.
+
+### Later: a kid turning 18
+
+- [ ] **8.1 (an agent)** Hand-off migration: move a kid's archive to be owned by their own Home Assistant user and
+  their own Matrix account (the portal rooms, annotations and access log), re-pair or move the bridge login under that
+  account, change their role in Hearth HA's directory, and remove the adults' read access. Done when tested on a
+  stand-in account: the new adult reads everything, the other adults read nothing, and the access log shows it.
+- [ ] **8.2 (the owner)** Before a kid's 18th birthday: tell them, run 8.1 with them.
