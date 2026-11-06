@@ -15,13 +15,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
+
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/models/ha_lock_state.dart';
 import 'package:flauncher/models/weather_data.dart';
 import 'package:flauncher/providers/calendars.dart';
+import 'package:flauncher/providers/ha_panel_service.dart';
 import 'package:flauncher/providers/notifications_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flauncher/widgets/glint/glance_feed.dart';
 import 'package:flauncher/widgets/glint/glint_faces.dart';
 import 'package:flauncher/widgets/glint/glint_flip.dart';
@@ -56,6 +60,11 @@ class _GlancePageState extends State<GlancePage> {
   late final GlanceHaFeed _family;
   late final HaLockFeed _lock;
 
+  /// Each person's Google TV profile photo, looked up once per page (null: none). The family tile waits until everyone
+  /// on it has been looked up, so a face never swaps on its own.
+  final Map<String, Uint8List?> _photos = {};
+  final Set<String> _lookingUp = {};
+
   @override
   void initState() {
     super.initState();
@@ -74,7 +83,33 @@ class _GlancePageState extends State<GlancePage> {
   }
 
   void _changed() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    for (final p in _family.people) {
+      if (_photos.containsKey(p.name) || !_lookingUp.add(p.name)) continue;
+      unawaited(_lookUp(p.name));
+    }
+    setState(() {});
+  }
+
+  /// A person's Google TV profile photo, which Hearth saves from the profile chooser under the profile's name: by
+  /// their whole name, else their first name (as a TV profile is usually named).
+  Future<void> _lookUp(String name) async {
+    Uint8List? found;
+    final channel = context.read<FLauncherChannel>();
+    for (final candidate in profileNamesFor(name)) {
+      try {
+        final avatar = await channel.getProfileAvatar(candidate);
+        if (avatar.png != null && avatar.png!.isNotEmpty) {
+          found = avatar.png;
+          break;
+        }
+      } catch (err) {
+        noteFailure('glance_page', err);
+      }
+    }
+    if (!mounted) return;
+    _lookingUp.remove(name);
+    setState(() => _photos[name] = found);
   }
 
   @override
@@ -112,7 +147,10 @@ class _GlancePageState extends State<GlancePage> {
     _ticker.motion = GlintMotion.fromName(settings.glintMotion);
     final tiles = glanceTiles(
       lock: _lock.state,
-      people: _family.people,
+      // Shown once everyone on it has been looked up
+      people: _family.people.every((p) => _photos.containsKey(p.name)) ? _family.people : const [],
+      photos: _photos,
+      connection: _family.connection,
       lists: _family.lists,
       house: _house.items,
       weather: context.watch<WeatherService?>()?.weatherData,
@@ -176,6 +214,13 @@ class _GlancePageState extends State<GlancePage> {
   }
 }
 
+/// The Google TV profile names a person could have: their whole name, then their first name.
+List<String> profileNamesFor(String name) {
+  final whole = name.trim();
+  final first = whole.split(RegExp(r"\s+")).first;
+  return [if (whole.isNotEmpty) whole, if (first.isNotEmpty && first != whole) first];
+}
+
 /// One tile on the glance page.
 class GlanceTile {
   final String id;
@@ -190,6 +235,8 @@ class GlanceTile {
 List<GlanceTile> glanceTiles({
   required HaLockState lock,
   List<GlancePerson> people = const [],
+  Map<String, Uint8List?> photos = const {},
+  ({String url, String token})? connection,
   List<GlanceList> lists = const [],
   List<GlintHouseItem> house = const [],
   WeatherData? weather,
@@ -218,7 +265,19 @@ List<GlanceTile> glanceTiles({
       GlintSize.wide,
       (_) => PeekFace(id: "glance:family", items: [
         // Glint's Family rule: first names, lowercase; place names keep their case
-        for (final p in people) PeekItem("family", ProfileFace.shownName(p.name), small: p.where),
+        for (final p in people)
+          PeekItem(
+            "family",
+            ProfileFace.shownName(p.name),
+            small: p.where,
+            // Keyed by whose it is: one person's face never carries over to the next
+            face: PersonFace(
+              key: ValueKey("face:${p.name}"),
+              name: ProfileFace.shownName(p.name),
+              photo: photos[p.name],
+              picture: p.picture == null ? null : HaPanelService.pictureRequest(p.picture!, connection),
+            ),
+          ),
       ]),
     ));
   }

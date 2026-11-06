@@ -664,7 +664,66 @@ class PeekItem {
   final String line;
   final String? small;
   final Color? colourEdge;
-  const PeekItem(this.label, this.line, {this.small, this.colourEdge});
+
+  /// A small round picture before the words (a person's face). Each item has its own: a face never shows on the
+  /// next item's face (key it by whose it is).
+  final Widget? face;
+  const PeekItem(this.label, this.line, {this.small, this.colourEdge, this.face});
+}
+
+/// A person's face, small and round: their Google TV profile photo, else Home Assistant's picture of them, else their
+/// initial on the accent mat. It's what was found when it was made: it doesn't change on its own.
+class PersonFace extends StatelessWidget {
+  final String name;
+  final Uint8List? photo;
+  final ({Uri uri, Map<String, String> headers})? picture;
+  final double size;
+  const PersonFace({super.key, required this.name, this.photo, this.picture, this.size = 44});
+
+  /// Glint's ink on a solid accent fill: white when it reads at 4.5:1 or better than the near-black, else near-black.
+  static Color inkOnAccent() {
+    const dark = Color(0xFF1A1208);
+    final white = GlintLook.contrast(Colors.white, GlintLook.ember);
+    return white >= 4.5 || white > GlintLook.contrast(dark, GlintLook.ember) ? Colors.white : dark;
+  }
+
+  Widget _initial() => Container(
+        key: const Key("person_face_initial"),
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(color: GlintLook.ember, shape: BoxShape.circle),
+        child: Text(
+          name.trim().isEmpty ? "?" : name.trim().characters.first.toLowerCase(),
+          style: TextStyle(color: inkOnAccent(), fontSize: size * 0.5, fontWeight: FontWeight.w600, height: 1),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget face;
+    if (photo != null && photo!.isNotEmpty) {
+      face = Image.memory(photo!,
+          key: const Key("person_face_photo"),
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _initial());
+    } else if (picture != null) {
+      face = Image.network(picture!.uri.toString(),
+          key: const Key("person_face_picture"),
+          headers: picture!.headers.isEmpty ? null : picture!.headers,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          // Until it's in, and if it can't be had: the initial, never someone else's face
+          frameBuilder: (_, child, frame, sync) => frame == null && !sync ? _initial() : child,
+          errorBuilder: (_, _, _) => _initial());
+    } else {
+      return _initial();
+    }
+    return ClipOval(child: SizedBox(width: size, height: size, child: face));
+  }
 }
 
 /// A peek tile (looked at, never selected): one compact row, one thing per face, turning through [items]. [fresh]
@@ -692,7 +751,7 @@ class PeekFace extends StatelessWidget {
     colourEdge: (i) => items[i].colourEdge,
     builder: (context, i) {
       final item = items[i];
-      return Column(
+      final words = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -708,6 +767,9 @@ class PeekFace extends StatelessWidget {
             Text(item.small!, style: GlintLook.secondaryText, maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       );
+      final face = item.face;
+      if (face == null) return words;
+      return Row(children: [face, const SizedBox(width: 12), Expanded(child: words)]);
     },
   );
 }

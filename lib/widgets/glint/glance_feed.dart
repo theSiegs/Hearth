@@ -26,13 +26,17 @@ import 'package:flutter/foundation.dart';
 class GlancePerson {
   final String name;
   final String where;
-  const GlancePerson(this.name, this.where);
+
+  /// Home Assistant's picture of them (the person's entity_picture), when it has one.
+  final String? picture;
+  const GlancePerson(this.name, this.where, [this.picture]);
 
   @override
-  bool operator ==(Object other) => other is GlancePerson && other.name == name && other.where == where;
+  bool operator ==(Object other) =>
+      other is GlancePerson && other.name == name && other.where == where && other.picture == picture;
 
   @override
-  int get hashCode => Object.hash(name, where);
+  int get hashCode => Object.hash(name, where, picture);
 }
 
 /// A to-do list with something left on it ("Chores", 3).
@@ -65,11 +69,15 @@ class GlanceHaFeed extends ChangeNotifier {
   }
 
   List<GlancePerson> get people => _people;
+
+  /// Home Assistant's address and token, once connected (for its pictures).
+  ({String url, String token})? get connection => _connected;
+  ({String url, String token})? _connected;
   List<GlanceList> get lists => _lists;
 
-  /// People ([name, state]) and to-do lists ([name, open items]).
+  /// People ([name, state, picture]) and to-do lists ([name, open items]).
   static const template = "{%- set ns = namespace(people=[], lists=[]) -%}"
-      "{%- for p in states.person -%}{%- set ns.people = ns.people + [[p.name, p.state]] -%}{%- endfor -%}"
+      "{%- for p in states.person -%}{%- set ns.people = ns.people + [[p.name, p.state, p.attributes.entity_picture | default('', true)]] -%}{%- endfor -%}"
       "{%- for t in states.todo -%}{%- set ns.lists = ns.lists + [[t.name, t.state]] -%}{%- endfor -%}"
       "{{ {'people': ns.people, 'lists': ns.lists} | tojson }}";
 
@@ -80,6 +88,7 @@ class GlanceHaFeed extends ChangeNotifier {
       final socket = await _connect(connection.url, connection.token);
       if (_disposed) return unawaited(socket.close());
       _socket = socket;
+      _connected = connection;
       await socket.subscribe({"type": "render_template", "template": template}, (event) {
         if (event is Map && event.containsKey("result")) _take(event["result"]);
       });
@@ -112,10 +121,11 @@ class GlanceHaFeed extends ChangeNotifier {
     final lists = <GlanceList>[];
     if (data is Map) {
       for (final p in (data["people"] is List ? data["people"] as List : const [])) {
-        if (p is List && p.length == 2 && p[0] is String && p[1] is String) {
+        if (p is List && p.length >= 2 && p[0] is String && p[1] is String) {
           final state = (p[1] as String).trim();
           if (state.isEmpty || state == "unknown" || state == "unavailable") continue;
-          people.add(GlancePerson(p[0] as String, state == "not_home" ? "away" : state.replaceAll("_", " ")));
+          final picture = p.length > 2 && p[2] is String && (p[2] as String).trim().isNotEmpty ? p[2] as String : null;
+          people.add(GlancePerson(p[0] as String, state == "not_home" ? "away" : state.replaceAll("_", " "), picture));
         }
       }
       for (final t in (data["lists"] is List ? data["lists"] as List : const [])) {
