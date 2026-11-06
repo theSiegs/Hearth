@@ -1609,6 +1609,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(GlancePage), findsOneWidget);
       expect(inGlance(), isTrue);
+      // Its own page: the home under it (the shelf and the dock) is gone, nothing shows through
+      expect(tester.widget<AnimatedOpacity>(find.byKey(const Key("home_body"))).opacity, 0);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
       await tester.pumpAndSettle();
@@ -1622,6 +1624,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(GlancePage), findsNothing);
       expect(getFocusNodeForApp(tester, "com.example.video")!.hasFocus, isTrue);
+      expect(tester.widget<AnimatedOpacity>(find.byKey(const Key("home_body"))).opacity, 1);
     });
   });
 }

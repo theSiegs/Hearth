@@ -40,6 +40,7 @@ import 'package:flauncher/widgets/glint/glance_page.dart';
 import 'package:flauncher/widgets/glint/peek.dart';
 import 'package:flauncher/widgets/app_card.dart';
 import 'package:flauncher/widgets/glint/glint_home.dart';
+import 'package:flauncher/widgets/glint/glint_look.dart';
 import 'package:flauncher/widgets/painted_once.dart';
 import 'package:flauncher/widgets/category_container_common.dart';
 import 'package:flauncher/widgets/category_row.dart';
@@ -108,8 +109,15 @@ class _FLauncherState extends State<FLauncher> {
   String? _shelfPackage;
   int _shelfGeneration = 0;
 
-  /// The glance page is up over the home (Down from the dock, with the top shelf).
+  /// The glance page is up over the home (Down from the dock, with the top shelf), or still playing out as it goes.
   bool _glanceOpen = false;
+
+  /// The glance page is the page now: the home under it fades away and takes no keys. False as soon as it's asked to
+  /// close, so the home comes back while the page plays out.
+  bool _glanceShown = false;
+
+  /// The glance page now up (a new one each time it opens, so one still going never comes back).
+  GlobalKey<GlancePageState> _glanceKey = GlobalKey<GlancePageState>();
 
   /// A search's results are in the dock's spot (Continue Watching's place), as Continue Watching takes it.
   bool _showingSearch = false;
@@ -350,7 +358,12 @@ class _FLauncherState extends State<FLauncher> {
     if (_searchTyping) setState(() => _searchTyping = false);
     if (_homeSearch?.active ?? false) _endSearch(focusDock: false);
     if (_showingRecents) setState(() => _showingRecents = false);
-    if (_glanceOpen) setState(() => _glanceOpen = false);
+    if (_glanceOpen) {
+      setState(() {
+        _glanceOpen = false;
+        _glanceShown = false;
+      });
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _focusHome();
@@ -411,7 +424,7 @@ class _FLauncherState extends State<FLauncher> {
   /// Android's Back while searching: closes the search box, else ends the search. False when there's no search.
   bool _searchBack() {
     // Android's Back comes here first (HomeSearch.backHandler): the glance page closes before anything else
-    if (_glanceOpen) {
+    if (_glanceShown) {
       _closeGlance();
       return true;
     }
@@ -638,18 +651,40 @@ class _FLauncherState extends State<FLauncher> {
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-      if (event is KeyDownEvent) setState(() => _glanceOpen = true);
+      if (event is KeyDownEvent) _openGlance();
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
   }
 
+  void _openGlance() {
+    setState(() {
+      // A page still playing out goes at once; the new one comes in from the start
+      if (_glanceOpen && !_glanceShown) _glanceKey = GlobalKey<GlancePageState>();
+      _glanceOpen = true;
+      _glanceShown = true;
+    });
+  }
+
+  /// The glance page asked to close (Back, Up from its top row): the home comes back and takes the selection while the
+  /// page plays out, then the page goes ([_glanceGone]).
   void _closeGlance() {
-    if (!_glanceOpen) return;
-    setState(() => _glanceOpen = false);
+    if (!_glanceShown) return;
+    setState(() => _glanceShown = false);
+    final page = _glanceKey.currentState;
+    if (page != null) {
+      page.leave();
+    } else {
+      _glanceGone();
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusDock();
     });
+  }
+
+  void _glanceGone() {
+    if (!mounted || !_glanceOpen || _glanceShown) return;
+    setState(() => _glanceOpen = false);
   }
 
   void _focusDock() {
@@ -747,7 +782,7 @@ class _FLauncherState extends State<FLauncher> {
                 ),
               ),
               ExcludeFocus(
-                excluding: _glanceOpen,
+                excluding: _glanceShown,
                 child: Consumer<LauncherState>(
                   builder: (_, state, child) => Visibility(
                       visible: state.launcherVisible,
@@ -765,14 +800,26 @@ class _FLauncherState extends State<FLauncher> {
                         : Scaffold(
                             backgroundColor: Colors.transparent,
                             appBar: FocusAwareAppBar(key: _appBarKey),
-                            body: Padding(
-                                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                                child: Consumer<AppsService>(
-                                    builder: (context, appsService, _) => _homeBody(context, appsService)))),
+                            // Under the glance page the home fades away (the shelf and the dock never show through
+                            // it); the top bar stays
+                            body: AnimatedOpacity(
+                                key: const Key("home_body"),
+                                opacity: _glanceShown ? 0 : 1,
+                                duration: GlintMotion.fromName(context.read<SettingsService>().glintMotion).pace.moves
+                                    ? GlancePage.openTime
+                                    : Duration.zero,
+                                curve: Curves.easeOut,
+                                child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                    child: Consumer<AppsService>(
+                                        builder: (context, appsService, _) => _homeBody(context, appsService)))),
+                          ),
                   )),
               ),
               // The glance page, down from the dock (Peek: Top shelf + glance page); built only while it's up
-              if (_glanceOpen) Positioned.fill(child: GlancePage(onClose: _closeGlance)),
+              if (_glanceOpen)
+                Positioned.fill(
+                    child: GlancePage(key: _glanceKey, onClose: _closeGlance, onGone: _glanceGone)),
               // Typing or saying a search, over the home
               if (_searchTyping)
                 Positioned.fill(

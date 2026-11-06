@@ -58,6 +58,31 @@ class _PeekMarker extends InheritedWidget {
   bool updateShouldNotify(_PeekMarker old) => false;
 }
 
+/// How the tiles under it look (the glance page's): a flat glass panel instead of frosted glass (the page has its own
+/// dark backdrop, and a blur behind each moving tile is too much for a TV's GPU), and, selected, a soft glow in [glow]
+/// as the dock's selected app has, instead of the white border.
+class GlintTileStyle extends InheritedWidget {
+  final Color glow;
+  const GlintTileStyle({super.key, required this.glow, required super.child});
+
+  static GlintTileStyle? of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<GlintTileStyle>();
+
+  /// The panel's fill, at rest and selected.
+  static const Color fill = Color(0x1AFFFFFF), selectedFill = Color(0x2BFFFFFF);
+
+  /// How much a selected tile grows.
+  static const double selectedScale = 1.04;
+
+  /// The glow round a selected tile: outside it only, so it doesn't tint the see-through panel.
+  static List<BoxShadow> glowOf(Color glow) => [
+    const BoxShadow(color: Color(0x66000000), blurRadius: 16, offset: Offset(0, 8), blurStyle: BlurStyle.outer),
+    BoxShadow(color: glow.withValues(alpha: 0.5), blurRadius: 20, spreadRadius: 1, blurStyle: BlurStyle.outer),
+  ];
+
+  @override
+  bool updateShouldNotify(GlintTileStyle old) => old.glow != glow;
+}
+
 /// One tile on the Glint home: frosted glass over the picture with Glint's hairline and warm top shine, an app's colour
 /// as a strip down the left edge, or a full-bleed [picture] when the face is a real picture (a poster, a photo).
 ///
@@ -184,27 +209,33 @@ class _GlintTileState extends State<GlintTile> with SingleTickerProviderStateMix
   Widget build(BuildContext context) {
     final rest = GlintRest.of(context);
     final radius = BorderRadius.circular(GlintLook.corner);
+    final style = GlintTileStyle.of(context);
     return GlintPress(
       focusNode: widget.focusNode,
       onPressed: widget.onPressed,
       onLongPress: widget.onLongPress,
       onFocusChange: _focusChanged,
       child: AnimatedScale(
-        scale: _focused ? 1.06 : 1.0,
+        scale: _focused ? (style == null ? 1.06 : GlintTileStyle.selectedScale) : 1.0,
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           decoration: BoxDecoration(
             borderRadius: radius,
-            boxShadow: _focused
-                ? const [BoxShadow(color: Color(0x80000000), blurRadius: 24, offset: Offset(0, 10))]
-                : const [],
+            boxShadow: !_focused
+                ? const []
+                : style != null
+                ? GlintTileStyle.glowOf(style.glow)
+                : const [BoxShadow(color: Color(0x80000000), blurRadius: 24, offset: Offset(0, 10))],
           ),
           foregroundDecoration: _focused
               ? BoxDecoration(
                   borderRadius: radius,
-                  border: Border.all(color: Colors.white, width: 2.5),
+                  border: Border.all(
+                    color: style == null ? Colors.white : style.glow.withValues(alpha: 0.9),
+                    width: style == null ? 2.5 : 2,
+                  ),
                 )
               : null,
           child: CustomPaint(
@@ -216,7 +247,12 @@ class _GlintTileState extends State<GlintTile> with SingleTickerProviderStateMix
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (widget.picture == null) ...[
+                  if (widget.picture == null && style != null)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      color: _focused ? GlintTileStyle.selectedFill : GlintTileStyle.fill,
+                    )
+                  else if (widget.picture == null) ...[
                     // The glass clears as the home rests; the selected tile stays frosted so it reads
                     Opacity(
                       opacity: _focused ? 1 : 1 - rest * 0.8,

@@ -57,6 +57,10 @@ class DockShelf extends StatefulWidget {
   /// At most this many cards.
   static const int maxCards = 4;
 
+  /// The cards' corners: rounded rectangles at the thumbnails' own 16:9, never the dock's capsule (it would cut the
+  /// title art, the progress bar and the words off).
+  static const double cardRadius = 14;
+
   const DockShelf({
     super.key,
     required this.package,
@@ -238,6 +242,7 @@ class DockShelfState extends State<DockShelf> with WidgetsBindingObserver {
                       watchNextService: _watchNext!,
                       isFirstInRow: i == 0,
                       isLastInRow: i == look.programs.length - 1,
+                      maxRadius: DockShelf.cardRadius,
                     ),
                   ),
               ],

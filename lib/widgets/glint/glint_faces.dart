@@ -694,7 +694,7 @@ class PersonFace extends StatelessWidget {
         alignment: Alignment.center,
         decoration: const BoxDecoration(color: GlintLook.ember, shape: BoxShape.circle),
         child: Text(
-          name.trim().isEmpty ? "?" : name.trim().characters.first.toLowerCase(),
+          name.trim().isEmpty ? "?" : name.trim().characters.first.toUpperCase(),
           style: TextStyle(color: inkOnAccent(), fontSize: size * 0.5, fontWeight: FontWeight.w600, height: 1),
         ),
       );
