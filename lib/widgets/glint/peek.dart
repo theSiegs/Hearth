@@ -26,6 +26,7 @@ import 'package:flauncher/widgets/glint/glint_flip.dart';
 import 'package:flauncher/widgets/glint/glint_house_feed.dart';
 import 'package:flauncher/widgets/glint/glint_look.dart';
 import 'package:flauncher/widgets/glint/glint_tile.dart';
+import 'package:flauncher/widgets/glint/ha_lock_feed.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:provider/provider.dart';
@@ -63,11 +64,13 @@ class Peek extends StatefulWidget {
 class _PeekState extends State<Peek> with WidgetsBindingObserver {
   final GlintTicker _ticker = GlintTicker();
   late final GlintHouseFeed _house;
+  late final HaLockFeed _lock;
 
   @override
   void initState() {
     super.initState();
     _house = GlintHouseFeed(context.read<FLauncherChannel>().getHaConnection)..addListener(_houseChanged);
+    _lock = HaLockFeed(context.read<FLauncherChannel>().getHaLockState)..addListener(_houseChanged);
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -86,6 +89,9 @@ class _PeekState extends State<Peek> with WidgetsBindingObserver {
     _house
       ..removeListener(_houseChanged)
       ..dispose();
+    _lock
+      ..removeListener(_houseChanged)
+      ..dispose();
     _ticker.dispose();
     super.dispose();
   }
@@ -95,7 +101,15 @@ class _PeekState extends State<Peek> with WidgetsBindingObserver {
     final settings = context.watch<SettingsService>();
     _ticker.motion = GlintMotion.fromName(settings.glintMotion);
     final notifications = context.watch<NotificationsService?>();
+    // A kid's time (a hold now, or bedtime within the hour), in the time tile's words
+    PeekItem? timeItem;
+    final lock = _lock.state;
+    if (TimeUpFace.shows(lock, nothingToOpen: false, now: DateTime.now())) {
+      final w = TimeUpFace.words(context, lock);
+      timeItem = PeekItem("Time", w.title, small: w.until);
+    }
     final data = PeekData(
+      time: timeItem,
       weather: context.watch<WeatherService?>()?.weatherData,
       events: context.watch<CalendarService?>()?.today().take(3).toList() ?? const [],
       notifications: notifications != null && notifications.hasPermission && settings.showNotificationsWidgetInStatusBar
@@ -158,7 +172,7 @@ class _PeekState extends State<Peek> with WidgetsBindingObserver {
   );
 }
 
-enum PeekKind { weather, calendar, notifications, house }
+enum PeekKind { time, weather, calendar, notifications, house }
 
 /// One peek tile's worth: what it is, its faces, and what's new on it (only for things that want a person).
 class PeekThing {
@@ -177,7 +191,16 @@ class PeekData {
   final List<NotificationItem> notifications;
   final List<GlintHouseItem> house;
 
-  const PeekData({this.weather, this.events = const [], this.notifications = const [], this.house = const []});
+  /// A kid's time from Home Assistant: what holds their apps now, or bedtime coming.
+  final PeekItem? time;
+
+  const PeekData({
+    this.weather,
+    this.events = const [],
+    this.notifications = const [],
+    this.house = const [],
+    this.time,
+  });
 
   /// A demo build (`--dart-define=PEEK_DEMO=true`, for looking at the design on a TV with little going on) fills
   /// what's missing with made-up things.
@@ -186,6 +209,7 @@ class PeekData {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     return PeekData(
+      time: time,
       weather: weather?.currentTemp != null
           ? weather
           : const WeatherData(
@@ -237,8 +261,8 @@ class PeekData {
   }
 }
 
-/// The peek tiles there's something for, at most [max]: chosen by what wants a person (a notification, the house)
-/// before what's ambient (the next event, the weather), then shown in a fixed order (weather, event, notification,
+/// The peek tiles there's something for, at most [max]: chosen by what wants a person (a kid's time, a notification, the house)
+/// before what's ambient (the next event, the weather), then shown in a fixed order (time, weather, event, notification,
 /// house) so the tiles don't trade places.
 ///
 /// A notification shows its app, how many there are and its title, never its text: the TV's screen is shared. A
@@ -292,7 +316,9 @@ List<PeekThing> peekThings(PeekData data, {required String Function(DateTime) ti
       for (final h in data.house) PeekItem(h.label, h.line, small: h.detail),
     ], fresh: Object.hashAll(data.house));
   }
-  const wantsPerson = [PeekKind.notifications, PeekKind.house, PeekKind.calendar, PeekKind.weather];
+  final t = data.time;
+  if (t != null) byKind[PeekKind.time] = PeekThing(PeekKind.time, [t], fresh: Object.hash(t.line, t.small));
+  const wantsPerson = [PeekKind.time, PeekKind.notifications, PeekKind.house, PeekKind.calendar, PeekKind.weather];
   final chosen = wantsPerson.where(byKind.containsKey).take(max).toSet();
   return [
     for (final k in PeekKind.values)
@@ -330,7 +356,7 @@ class PeekHeadline extends StatelessWidget {
                 children: [
                   Text(
                     l.label.toLowerCase(),
-                    style: GlintLook.label.copyWith(color: GlintLook.ember, letterSpacing: 0.6, shadows: _shade),
+                    style: GlintLook.label.copyWith(color: GlintLook.accentText(), letterSpacing: 0.6, shadows: _shade),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

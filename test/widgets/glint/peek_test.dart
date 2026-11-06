@@ -2,6 +2,7 @@ import 'package:flauncher/models/weather_data.dart';
 import 'package:flauncher/providers/calendars.dart';
 import 'package:flauncher/providers/notifications_service.dart';
 import 'package:flauncher/widgets/glint/glint_house_feed.dart';
+import 'package:flauncher/widgets/glint/glint_faces.dart' show PeekItem;
 import 'package:flauncher/widgets/glint/peek.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -74,6 +75,17 @@ void main() {
       ],
       [PeekKind.weather, PeekKind.calendar],
     );
+  });
+
+  test("a kid's time comes first, and glows when it changes", () {
+    const t = PeekItem("Time", "It's bedtime", small: "Until 7:00 AM");
+    final things = peekThings(
+      PeekData(weather: weather, events: [event], notifications: [note("k")], house: house, time: t),
+      time: time,
+    );
+    expect([for (final t in things) t.kind], [PeekKind.time, PeekKind.notifications, PeekKind.house]);
+    expect(things.first.items.single.line, "It's bedtime");
+    expect(things.first.fresh, isNotNull);
   });
 
   test("only things that want a person can glow", () {
