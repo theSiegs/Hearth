@@ -533,20 +533,46 @@ Chore claims will join `approvals` when they exist.
 
 TVs stay on the home network. A phone isn't always there, so `mobile` devices also get a **webhook** the integration
 registers (`webhook.async_register`, not local-only), and, when Home Assistant Cloud is set up, a cloudhook URL for it.
-The device's secret is still required on every call: knowing the URL isn't enough. Home Assistant to the phone uses a
-push channel the phone holds open (ntfy, per Hearth Mobile's design), carrying only "something changed"; the phone
-then fetches its state with its secret.
+The device's secret is still required on every call: knowing the URL isn't enough. (The webhook isn't built yet.)
+
+**Push to phones (H-6, built in Home Assistant).** Home Assistant to the phone uses a push channel the phone holds open
+([ntfy](https://ntfy.sh), per Hearth Mobile's design), carrying only "something changed"; the phone then fetches its
+state with its secret. Optional and off unless the household names an ntfy server (Hearth's page, Devices > Push to
+phones, or Configure > Push to phones): ntfy.sh or one of your own, `http(s)://host[:port][/path]`, without a user
+name, password or query. Without one Home Assistant sends nothing and works as before; phones update at their next
+status post.
+
+- **A topic per phone.** Each phone gets its own random topic when it pairs (32 characters of `A-Z a-z 0-9 _ -`,
+  as long as a secret: on a public server, whoever knows the topic can listen to it and post to it). Pairing again
+  makes a new one; a phone paired before this got one when the household next loaded. TVs have none.
+- **Where the phone hears it.** The approved pair answer and every status answer to a phone carry `"push":
+  {"server": "https://ntfy.example.com", "topic": "<topic>"}`, or `"push": null` while there's no server (an added
+  field: `contract` stays 1). The status answer is the one to follow: the server can be set, changed or removed at any
+  time.
+- **When.** When the phone's state document has a `version` the phone hasn't had: not in a status answer (what a phone
+  was just handed isn't news) and not in an earlier ping. Changes come together, so a ping goes 5 seconds after the
+  first, and to one phone at most every 30 seconds (a later change waits out the rest, then goes). Home Assistant
+  starting, or the household reloading, may ping each phone once.
+- **What.** `POST <server>/<topic>` with the body `changed` (text/plain), nothing else: never a name, a number, the
+  version or anything of the state. A failure is logged (without the topic) and not tried again: the next change, or
+  the phone's next status post, catches up.
+- **What the phone does** (Hearth Mobile, Glint; not built yet): subscribe to `<server>/<topic>` (ntfy's JSON stream,
+  WebSocket or UnifiedPush), and on any message post its status with its secret as usual: the answer carries the
+  state document. A ping that says anything but `changed` is treated the same: the message is never read for content.
+  Away from home that post needs the webhook above; until it's built the phone catches up when it's back on the home
+  network.
 
 ## Setting it up
 
 **Hearth's page** (the Hearth entry in the sidebar, administrators only) does all of it in one place, with a guided
 setup the first time: who's a kid and who's an adult, parent PINs, pairing TVs and phones (the code is checked and
 approved on the page), TV profiles, screen time sources, daily limits, bedtime and school-time locks, other parental
-controls, groups and their apps, school days and Glint tile sharing. Its **Today** tab shows each kid's time left and
-what's playing, with buttons for extra time, and each TV and phone. It is `custom_components/hearth/frontend/hearth-panel.js`,
-a plain custom element on the WebSocket commands in `panel.py` (`hearth/config`, `hearth/config/set`, `hearth/budget`,
-`hearth/pairing`, `hearth/parent_pin`) and the household summary; settings are saved to the entry's options as the
-Configure menu saves them, and budgets as the services set them.
+controls, groups and their apps, school days, Glint tile sharing and the push server for phones. Its **Today** tab
+shows each kid's time left and what's playing, with buttons for extra time, and each TV and phone. It is
+`custom_components/hearth/frontend/hearth-panel.js`, a plain custom element on the WebSocket commands in `panel.py`
+(`hearth/config`, `hearth/config/set`, `hearth/budget`, `hearth/pairing`, `hearth/parent_pin`) and the household
+summary; settings are saved to the entry's options as the Configure menu saves them, and budgets as the services set
+them.
 
 The Configure menu (Settings > Devices & services > Hearth > Configure) still has everything, as a menu:
 
@@ -610,7 +636,8 @@ What step 1 built. Every endpoint answers local network addresses only (403 othe
    plenty): `{"status": "pending"}` (or `{"status": "denied"}`), then once `{"status": "approved", "contract",
    "device_id", "secret", "person", "role", "urls": {"internal", "external"}}` (`role`: `kid`, `adult` or null; a URL
    null when unknown). After that, or once the request expires (10 minutes, or 2 minutes after approval), it's 404
-   `unknown`. A wrong or missing nonce is 404 too.
+   `unknown`. A wrong or missing nonce is 404 too. A phone's approved answer also says `push` (see
+   [Away from home](#away-from-home)).
 4. The device keeps `secret`, and nothing else of Home Assistant's.
 
 **Status.** `POST /api/hearth/device/<device_id>/status` with header `X-Hearth-Secret: <secret>` and the status JSON
@@ -620,8 +647,10 @@ wrong secret (it was removed: stop posting and offer to pair again); 429 `too_of
 Assistant's IP ban. The 200 answer carries the device's state document, `{"ok": true, "contract": 1, "state": {...}}` (see
 [What a device gets](#what-a-device-gets)). Every device endpoint answers 503 `not_set_up` while the integration is
 loading: try again, don't unpair. A device may also send `app_categories`, `{"<package>": "game" | "video" | ...}`
-(Android's category, lower case), which helps sort its apps into Video, Games, Social or Messaging. A TV's document also carries `commands` (one-shot commands such as a play,
-see [Play on a TV](#play-on-a-tv)), and the TV says which it ran in `commands_done`.
+(Android's category, lower case), which helps sort its apps into Video, Games, Social or Messaging. A TV's
+document also carries `commands` (one-shot commands such as a play, see [Play on a TV](#play-on-a-tv)), and the TV
+says which it ran in `commands_done`. A phone's answer also says `push` (its ntfy channel, or null; see [Away from
+home](#away-from-home)).
 
 **Events** (a TV only). `POST /api/hearth/device/<device_id>/events` with the same header and
 `{"events": [...]}`, at most 50, each `{"type": "video_started", "profile_id", "t" (ms), "v" (video id), "title",
@@ -662,6 +691,8 @@ device removes it from the household.
 - TV endpoints answer local addresses only (checked on `request.remote`, not a header). The phone's webhook is the one
   way in from outside, and it needs the secret too.
 - The mailbox holds ciphertext only.
+- A phone's push topic only lets someone hear that something changed for it, or send a fake ping: the ping carries
+  nothing, and the phone fetches with its secret, so a forged one costs it a status post.
 - Approvals (not built yet): one-time request ids, two minutes, only the mapped persons can answer; denied or expired requests are
   cleaned up.
 - Everything a device sends is untrusted: only known fields, lengths capped, control characters stripped, numbers

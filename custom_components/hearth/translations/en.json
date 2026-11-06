@@ -132,7 +132,8 @@
           "not_screen_time": "Not screen time",
           "remove_group": "Remove a group",
           "tile_exchange": "Tile exchange sharing",
-          "parent_pin": "Parent PINs"
+          "parent_pin": "Parent PINs",
+        "push": "Push to phones (ntfy)"
         }
       },
       "people": {
@@ -174,6 +175,13 @@
           "pin": "New PIN (4 digits)",
           "pin_again": "New PIN again",
           "remove": "Remove their PIN"
+        }
+      },
+      "push": {
+        "title": "Push to phones",
+        "description": "An ntfy server (ntfy.sh, or your own) through which Home Assistant tells a paired phone that something changed, so it fetches its state at once instead of at its next check. Each phone listens on its own random topic; the ping only says \"changed\", never a name or a number. Leave it empty for no pings.",
+        "data": {
+          "server": "ntfy server"
         }
       },
       "tile_exchange": {
@@ -288,7 +296,8 @@
       "bad_profile_id": "Give an id like user:11, and its person.",
       "bad_pin": "Give 4 digits.",
       "pins_differ": "The two PINs differ.",
-      "not_adult": "Only an adult has a parent PIN: mark them as an adult on Hearth's page (Family) first."
+      "not_adult": "Only an adult has a parent PIN: mark them as an adult on Hearth's page (Family) first.",
+      "bad_server": "Give the server's address, like https://ntfy.example.com (no user name, password or query)."
     },
     "abort": {
       "no_profiles": "No TV has reported its profiles yet. Pair a TV and let it post its status first.",

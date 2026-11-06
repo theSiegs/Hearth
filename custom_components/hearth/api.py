@@ -16,6 +16,7 @@ import re
 from typing import Any
 
 from aiohttp import web
+import voluptuous as vol
 
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY
@@ -24,8 +25,9 @@ from homeassistant.util import dt as dt_util
 from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.util.network import is_local
 
-from .const import CONF_ROLES, CONTRACT, DOMAIN, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
+from .const import CONF_PUSH_SERVER, CONF_ROLES, CONTRACT, DOMAIN, KIND_MOBILE, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
 from .hub import HearthHub, collect_secret, find_pairing
+from .push import clean_server, push_answer
 from .notifications import notify_pairing
 from . import parent_pin
 from .asks import AskError
@@ -132,7 +134,8 @@ class PairStatusView(HomeAssistantView):
     {"status": "approved", "device_id", "secret", "person", "role": "kid" | "adult" | null, "urls": {"internal",
     "external"}}: whose phone it is, and where Home Assistant answers, at
     home and away (Home Assistant Cloud's when it's set up), either null when not known; a phone's app signs in there
-    with Home Assistant's own login. An unknown or expired pairing is 404."""
+    with Home Assistant's own login. A phone's answer also has "push": {"server", "topic"} (its ntfy channel, push.py)
+    or null when the household has no push server. An unknown or expired pairing is 404."""
 
     url = "/api/hearth/pair/{pairing_id}"
     name = "api:hearth:pair:status"
@@ -151,8 +154,11 @@ class PairStatusView(HomeAssistantView):
         secret = collect_secret(hass, pairing)
         if secret is None:
             return web.json_response({"status": "pending"})
-        # Whose phone it is, and whether they're a kid or an adult (as set on Hearth's page; null when not set)
-        roles = hub.entry.options.get(CONF_ROLES, {}) if (hub := _hub(hass)) else {}
+        # Whose phone it is, and whether they're a kid or an adult (as set on Hearth's page; null when not set). The
+        # entry's options are read even while it reloads (approving the device reloads it)
+        entries = hass.config_entries.async_entries(DOMAIN)
+        options = entries[0].options if entries else {}
+        roles = options.get(CONF_ROLES, {})
         return web.json_response(
             {
                 "status": "approved",
@@ -162,8 +168,17 @@ class PairStatusView(HomeAssistantView):
                 "urls": _urls(hass),
                 "person": pairing.person,
                 "role": roles.get(pairing.person) if pairing.person else None,
+                # A phone's push channel: where to listen for "changed" (push.py); null without a push server
+                "push": push_answer(_server(options), pairing.push_topic) if pairing.kind == KIND_MOBILE else None,
             }
         )
+
+
+def _server(options) -> str | None:
+    try:
+        return clean_server(options.get(CONF_PUSH_SERVER))
+    except vol.Invalid:
+        return None
 
 
 def _urls(hass: HomeAssistant) -> dict[str, str | None]:
@@ -203,7 +218,13 @@ class StatusView(HomeAssistantView):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         hub.update_status(device_id, status)
         # What the device is told: each profile's (or the phone's person's) limits today
-        return web.json_response({"ok": True, "contract": CONTRACT, "state": hub.household.document_for(device_id)})
+        state = hub.household.document_for(device_id)
+        answer: dict[str, Any] = {"ok": True, "contract": CONTRACT, "state": state}
+        if hub.kind(device_id) == KIND_MOBILE:
+            # The phone has this version now: it isn't pinged for it; and where to listen for the next (or null)
+            hub.push.delivered(device_id, state["version"])
+            answer["push"] = hub.push.answer_for(device_id)
+        return web.json_response(answer)
 
 
 class EventsView(HomeAssistantView):

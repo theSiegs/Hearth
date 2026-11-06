@@ -28,7 +28,8 @@ from .pause import end_pause, set_pause
 from . import panel
 from .apps import ACTION_PREFIX
 from .commands import is_profile_id, what_to_play
-from .const import DOMAIN, KIND_TV
+from .const import CONF_DEVICES, CONF_KIND, CONF_PUSH_TOPIC, DOMAIN, KIND_MOBILE, KIND_TV
+from .push import new_topic
 from .hub import HearthHub
 from .limits import DAY_TYPES
 from .watch import CHANNELS, MAX_BLOCKS, MAX_LOG, VIDEOS, WORDS, channel_id_of, clean_word, video_id_of
@@ -322,6 +323,23 @@ def _register_watch_services(hass: HomeAssistant) -> None:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bool:
+    # Phones paired before push existed get their topic now (before the update listener, so it doesn't reload)
+    devices = entry.data.get(CONF_DEVICES, {})
+    if any(d.get(CONF_KIND) == KIND_MOBILE and not d.get(CONF_PUSH_TOPIC) for d in devices.values()):
+        hass.config_entries.async_update_entry(
+            entry,
+            data={
+                **entry.data,
+                CONF_DEVICES: {
+                    device_id: (
+                        {**d, CONF_PUSH_TOPIC: new_topic()}
+                        if d.get(CONF_KIND) == KIND_MOBILE and not d.get(CONF_PUSH_TOPIC)
+                        else d
+                    )
+                    for device_id, d in devices.items()
+                },
+            },
+        )
     hub = HearthHub(hass, entry)
     await hub.async_load()
     entry.runtime_data = hub
@@ -370,6 +388,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
             hub.household.sort_app(parts[2], parts[1])
 
     entry.async_on_unload(hass.bus.async_listen("mobile_app_notification_action", phone_answer))
+    # "Something changed" pings to the phones, when a push server is set
+    hub.push.start()
+    entry.async_on_unload(hub.push.stop)
     # People and groups come from the entry: when it changes (options, a phone paired), its entities are made again
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
     return True

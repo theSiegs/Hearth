@@ -29,6 +29,7 @@ from .const import (
     CONF_OUTSIDE_ALL,
     CONF_PERSON,
     CONF_PROFILES,
+    CONF_PUSH_SERVER,
     CONF_ROLES,
     CONF_TILE_EXCHANGE,
     DOMAIN,
@@ -50,6 +51,7 @@ from .notifications import pairing_notification_id
 from .schooldays import CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
 from . import parent_pin
+from .push import clean_server
 
 URL_PATH = "hearth"
 STATIC_URL = "/hearth_static"
@@ -205,6 +207,7 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         "media_players": dict(options.get(CONF_MEDIA_PLAYERS, {})),
         **household.apps_overview(),
         "tile_exchange": list(options.get(CONF_TILE_EXCHANGE, [])),
+        "push_server": options.get(CONF_PUSH_SERVER),
         "parent_pins": sorted(parent_pin.stored_pins(options)),
         "school_days": dict(options.get(CONF_SCHOOL_DAYS) or {}),
         "app_watch": list(options.get(CONF_APP_WATCH, [])),
@@ -260,6 +263,7 @@ OPTION_SCHEMAS: dict[str, Any] = {
     CONF_INSIDE_ALL: [_ID],
     CONF_MEDIA_PLAYERS: vol.Schema({cv.string: cv.entity_domain("media_player")}),
     CONF_ASK_NOTIFY: vol.Any(None, cv.string),
+    CONF_PUSH_SERVER: clean_server,
 }
 
 

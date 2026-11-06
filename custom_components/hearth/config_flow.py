@@ -41,6 +41,7 @@ from .const import (
     CONF_TILE_EXCHANGE,
     CONF_PERSON,
     CONF_PROFILES,
+    CONF_PUSH_SERVER,
     DOMAIN,
     KIND_MOBILE,
 )
@@ -61,6 +62,7 @@ from .notifications import pairing_notification_id
 from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
 from . import parent_pin
+from .push import clean_server
 
 PERSON_SELECTOR = EntitySelector(EntitySelectorConfig(domain="person"))
 
@@ -148,6 +150,7 @@ class HearthOptionsFlow(OptionsFlow):
                 "remove_group",
                 "tile_exchange",
                 "parent_pin",
+                "push",
             ],
         )
 
@@ -262,6 +265,26 @@ class HearthOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="tile_exchange", data_schema=schema)
+
+    async def async_step_push(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """The ntfy server the phones are pinged through when their state changes (push.py); empty: no pings."""
+        options = self._options()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                server = clean_server(user_input.get("server"))
+            except vol.Invalid:
+                errors["server"] = "bad_server"
+            else:
+                return self.async_create_entry(data={**options, CONF_PUSH_SERVER: server})
+        schema = vol.Schema(
+            {
+                vol.Optional("server", description={"suggested_value": options.get(CONF_PUSH_SERVER)}): TextSelector(
+                    TextSelectorConfig(type=TextSelectorType.URL)
+                )
+            }
+        )
+        return self.async_show_form(step_id="push", data_schema=schema, errors=errors)
 
     async def async_step_parent_pin(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """An adult's parent PIN, which paired TVs and phones check (kept as a hash; see parent_pin.py). Typed twice;

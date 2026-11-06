@@ -58,6 +58,10 @@ CONF_ROLES = "roles"
 CONF_MEDIA_PLAYERS = "media_players"
 # Options: [{"entity_id", "person"}]: the person is locked while any of their lock entities is on
 CONF_LOCKS = "locks"
+# Options: the ntfy server phones are pinged through when their state changes (push.py); none: no pings
+CONF_PUSH_SERVER = "push_server"
+# A phone's own random ntfy topic (entry data, made when it pairs)
+CONF_PUSH_TOPIC = "push_topic"
 
 SIGNAL_PEOPLE = "hearth_people"
 # A device asked to pair, or its pairing was answered

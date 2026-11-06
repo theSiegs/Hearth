@@ -460,6 +460,9 @@ class HearthPanel extends HTMLElement {
         this._appFilter = el.value.trim().toLowerCase();
         this._render();
         return;
+      case "push-save":
+        await this._setOption("push_server", this._value("#push-server") || null, this._value("#push-server") ? "Phones get pings" : "Pings off");
+        return;
       case "media-player": {
         const players = { ...(cfg.media_players || {}) };
         if (el.value) players[d.device] = el.value;
@@ -1017,6 +1020,12 @@ class HearthPanel extends HTMLElement {
             <span class="dot ${dv.connected ? "on" : "off"}"></span></li>`)
           .join("")}</ul>` : `<p class="muted">Nothing paired yet.</p>`}
         <p class="muted small">To remove a device, delete it in Settings → Devices & services → Hearth.</p>
+      </section>
+      <section class="card">
+        <h3><ha-icon icon="mdi:bell-ring-outline"></ha-icon>Push to phones</h3>
+        <p class="muted">An ntfy server (ntfy.sh, or your own) through which Home Assistant tells a paired phone that something changed, so it updates at once. Each phone listens on its own random topic, and the ping only says "changed". Empty: no pings; phones still update at their next check.</p>
+        <div class="inline"><input id="push-server" type="url" value="${esc(cfg.push_server || "")}" placeholder="https://ntfy.example.com" data-enter="push-save">
+          <button class="btn primary" data-action="push-save">Save</button></div>
       </section>
       <section class="card">
         <h3><ha-icon icon="mdi:account-switch"></ha-icon>TV profiles</h3>

@@ -22,9 +22,11 @@ from .const import (
     CONF_KIND,
     CONF_MODEL,
     CONF_PERSON,
+    CONF_PUSH_TOPIC,
     CONF_SECRET_HASH,
     CONF_SW_VERSION,
     CONNECTED_WITHIN,
+    KIND_MOBILE,
     MAX_EVENT_POSTS,
     MAX_PENDING_PAIRINGS,
     MAX_STATUS_POSTS,
@@ -39,6 +41,7 @@ from .const import (
 )
 from .asks import Asks
 from .commands import Commands
+from .push import PushChannel, new_topic
 from .household import Household
 from .parent_pin import EVENT_PARENT_PIN_LOCKED_OUT
 
@@ -64,6 +67,8 @@ class Pairing:
     person: str | None = None
     # Set once approved: the secret, handed to the device once
     secret: str | None = None
+    # A phone's ntfy topic, made when it's approved (push.py)
+    push_topic: str | None = None
     denied: bool = False
 
 
@@ -120,6 +125,8 @@ class HearthHub:
         self.asks = Asks(hass, self)
         # One-shot commands for the TVs (hearth.play_on_tv), handed over in their state documents
         self.commands = Commands(hass)
+        # "Something changed" pings to the phones, when the household has a push server
+        self.push = PushChannel(hass, self)
 
     # The devices
 
@@ -284,6 +291,8 @@ class HearthHub:
         if pairing is None or pairing.denied:
             return False
         secret = secrets.token_urlsafe(32)
+        # A phone gets its own push topic; pairing again makes a new one, as it does a new secret
+        topic = new_topic() if pairing.kind == KIND_MOBILE else None
         devices = {
             **self.devices,
             pairing.device_id: {
@@ -293,11 +302,13 @@ class HearthHub:
                 CONF_SW_VERSION: pairing.sw_version,
                 CONF_SECRET_HASH: hash_secret(secret),
                 CONF_PERSON: person,
+                **({CONF_PUSH_TOPIC: topic} if topic else {}),
             },
         }
         self.hass.config_entries.async_update_entry(self.entry, data={**self.entry.data, CONF_DEVICES: devices})
         pairing.secret = secret
         pairing.person = person
+        pairing.push_topic = topic
         pairing.expires = dt_util.utcnow() + APPROVED_EXPIRES
         async_dispatcher_send(self.hass, SIGNAL_DEVICE_ADDED, pairing.device_id)
         async_dispatcher_send(self.hass, SIGNAL_PAIRINGS)
