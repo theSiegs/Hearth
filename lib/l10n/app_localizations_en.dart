@@ -3649,4 +3649,71 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get haPairEnded =>
       'The request ended before it was confirmed. Try again.';
+
+  @override
+  String timeUpForGroup(String group) {
+    return 'Time\'s up for $group today';
+  }
+
+  @override
+  String timeUpPaused(String reason) {
+    return 'Paused: $reason';
+  }
+
+  @override
+  String get timeUpPausedNoReason => 'Paused for now';
+
+  @override
+  String get timeUpBedtime => 'It\'s bedtime';
+
+  @override
+  String get timeUpSchoolTime => 'It\'s school time';
+
+  @override
+  String get timeUpLocked => 'Locked for now';
+
+  @override
+  String timeUpUntil(String time) {
+    return 'Until $time';
+  }
+
+  @override
+  String get askForMoreTime => 'Ask an adult for more time';
+
+  @override
+  String askMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String askWaiting(int minutes) {
+    return 'Asked for $minutes min; waiting for an adult';
+  }
+
+  @override
+  String askApproved(int minutes) {
+    return 'An adult added $minutes min';
+  }
+
+  @override
+  String get askDenied => 'An adult said not now';
+
+  @override
+  String get askExpired => 'No adult answered in time. You can ask again.';
+
+  @override
+  String askCooldown(int minutes) {
+    return 'You can ask again in $minutes min';
+  }
+
+  @override
+  String get askNoPerson =>
+      'This profile isn\'t set up in Home Assistant yet, so it can\'t ask.';
+
+  @override
+  String get askUnreachable =>
+      'Couldn\'t reach Home Assistant. Try again in a moment.';
+
+  @override
+  String get askFailed => 'Couldn\'t ask just now. Try again in a moment.';
 }

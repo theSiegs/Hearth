@@ -20,7 +20,9 @@ import 'dart:async';
 
 import 'package:flauncher/models/parent_channel.dart';
 import 'package:flauncher/models/data_usage.dart';
+import 'package:flauncher/models/ha_lock_state.dart';
 import 'package:flauncher/quiet_failure.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// A channel call that failed and was answered with a default: its name and the error's type go to the log, so a
@@ -424,6 +426,8 @@ class FLauncherChannel {
       if (call.method == "openProfilePins") _onOpenProfilePins?.call(call.arguments as String);
       if (call.method == "resumeSetup") _onResumeSetup?.call(call.arguments as String? ?? "");
       if (call.method == "homePressed") _onHomePressed?.call();
+      if (call.method == "timeUp") _onTimeUp?.call(call.arguments as String?);
+      if (call.method == "haStateChanged") haStateVersion.value++;
       return null;
     });
   }
@@ -583,6 +587,34 @@ class FLauncherChannel {
   }
 
   static void Function()? _onHomePressed;
+
+  /// Calls [onTimeUp] when an app picked on Hearth's home was held: its group's time is up today (the group's name),
+  /// or a family pause holds every app (null).
+  static void listenForTimeUp(void Function(String? group) onTimeUp) {
+    _onTimeUp = onTimeUp;
+    _listen();
+  }
+
+  static void Function(String? group)? _onTimeUp;
+
+  /// Goes up with every new answer from the Hearth integration (a pause, a lock, a request's answer), so what shows
+  /// them reads [getHaLockState] again. Heard once anything has listened ([listenForTimeUp] and the others).
+  static final ValueNotifier<int> haStateVersion = ValueNotifier(0);
+
+  /// What the Hearth integration last said about the active profile: a pause, the lock on now, the next bedtime,
+  /// the latest request for more time, the groups out of time ([HaLockState]). Nothing from it without Home Assistant.
+  Future<HaLockState> getHaLockState() async =>
+      HaLockState.fromMap(await _methodChannel.invokeMapMethod<dynamic, dynamic>("getHaLockState"));
+
+  /// Asks the adults for [minutes] more of [group] (an id; "all" by default) for the active kids profile:
+  /// {ok, request?, error?, retryIn?}. Errors: already_open (with the open request), cooldown (retryIn seconds),
+  /// no_person, not_paired, too_often, unreachable, failed.
+  Future<Map<dynamic, dynamic>> askForMoreTime(int minutes, {String? group}) async =>
+      await _methodChannel.invokeMapMethod<dynamic, dynamic>("askForMoreTime", {"minutes": minutes, "group": group}) ??
+      {"ok": false, "error": "failed"};
+
+  /// Posts the TV's status now, for a fresh answer from the Hearth integration (a request waiting for its answer).
+  Future<void> refreshHaStatus() async => await _methodChannel.invokeMethod("refreshHaStatus");
 
   /// Whether the TV's debugging switch (Developer options) is on: Hearth's own fixes ([runSetupFixes]) need it.
   Future<bool> isAdbEnabled() async => await _methodChannel.invokeMethod<bool>("isAdbEnabled") ?? false;

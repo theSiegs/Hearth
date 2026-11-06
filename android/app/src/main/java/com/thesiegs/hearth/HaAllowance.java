@@ -45,6 +45,17 @@ final class HaAllowance {
     /** Guarded by HaAllowance.class. */
     private static long sNextReadAt;
 
+    /**
+     * What {@link Values#timeUpGroup} says while a family pause holds every app: not a group's name (no name has a
+     * NUL in it), so the kid is told about the pause instead.
+     */
+    static final String PAUSE_HOLD = "\u0000pause";
+    /** The state document's fields about locks, a pause and a request for more time, kept as they came (HaLocks). */
+    static final String LOCKS_KEY = "locks";
+    /** The groups with no time left today, [{id, name}], kept for asking for more (HaLocks). */
+    static final String TIME_UP_GROUPS_KEY = "time_up_groups";
+    private static final String[] LOCK_FIELDS = {"pause", "lock", "next_lock", "request"};
+
     /** The integration's group of every app: its time up holds every app (but these). */
     static final String ALL_GROUP = "all";
     /**
@@ -73,6 +84,11 @@ final class HaAllowance {
         final String allOutOfTime;
         /** The apps All screen time never holds: a group outside it (music, say). */
         final Set<String> allExcept;
+        /**
+         * Until when a family pause (hearth.pause) holds every app, in epoch ms (Long.MAX_VALUE: until Home Assistant
+         * says it's over); null when there's none.
+         */
+        final Long pausedUntil;
 
         Values(Integer youtubeMinutesLeft, boolean scheduleLocked, String message, Long checkedAt) {
             this(youtubeMinutesLeft, scheduleLocked, message, checkedAt, Collections.emptyMap(), null,
@@ -87,6 +103,11 @@ final class HaAllowance {
 
         Values(Integer youtubeMinutesLeft, boolean scheduleLocked, String message, Long checkedAt,
                 Map<String, String> outOfTime, String allOutOfTime, Set<String> allExcept) {
+            this(youtubeMinutesLeft, scheduleLocked, message, checkedAt, outOfTime, allOutOfTime, allExcept, null);
+        }
+
+        Values(Integer youtubeMinutesLeft, boolean scheduleLocked, String message, Long checkedAt,
+                Map<String, String> outOfTime, String allOutOfTime, Set<String> allExcept, Long pausedUntil) {
             this.youtubeMinutesLeft = youtubeMinutesLeft;
             this.scheduleLocked = scheduleLocked;
             this.message = message;
@@ -94,11 +115,21 @@ final class HaAllowance {
             this.outOfTime = outOfTime;
             this.allOutOfTime = allOutOfTime;
             this.allExcept = allExcept;
+            this.pausedUntil = pausedUntil;
         }
 
         /** The group whose time is up today for this app (null: none, it may open). */
         String timeUpGroup(String packageName) {
+            return timeUpGroup(packageName, System.currentTimeMillis());
+        }
+
+        /**
+         * The group whose time is up for this app at [now] (null: none, it may open), or {@link #PAUSE_HOLD} while a
+         * family pause holds every app.
+         */
+        String timeUpGroup(String packageName, long now) {
             if (packageName == null || NEVER_HELD.contains(packageName)) return null;
+            if (pausedUntil != null && now < pausedUntil) return PAUSE_HOLD;
             String group = outOfTime.get(packageName);
             if (group != null) return group;
             return allExcept.contains(packageName) ? null : allOutOfTime;
@@ -170,6 +201,8 @@ final class HaAllowance {
                 JSONArray groups = person != null ? person.optJSONArray("groups") : null;
                 Integer least = null;
                 JSONObject outOfTime = new JSONObject();
+                // The groups with none left, {id, name}, for asking for more of them (HaLocks)
+                JSONArray timeUpGroups = new JSONArray();
                 String allOutOfTime = null;
                 JSONArray allExcept = null;
                 for (int i = 0; groups != null && i < groups.length(); i++) {
@@ -180,6 +213,7 @@ final class HaAllowance {
                     if (left == 0) {
                         String name = group.optString("name", "");
                         if (name.trim().isEmpty()) name = group.optString("id", "");
+                        timeUpGroups.put(new JSONObject().put("id", group.optString("id", "")).put("name", name));
                         if (ALL_GROUP.equals(group.optString("id"))) {
                             allOutOfTime = name;
                             allExcept = group.optJSONArray("except");
@@ -198,9 +232,16 @@ final class HaAllowance {
                 JSONObject entry = new JSONObject();
                 entry.put("youtube_minutes_left", least == null ? JSONObject.NULL : least);
                 entry.put("out_of_time", outOfTime);
+                if (timeUpGroups.length() > 0) entry.put(TIME_UP_GROUPS_KEY, timeUpGroups);
                 if (allOutOfTime != null) entry.put("all_out_of_time", allOutOfTime);
                 if (allOutOfTime != null && allExcept != null) entry.put("all_except", allExcept);
                 entry.put("schedule_locked", person != null && person.optBoolean("locked", false));
+                JSONObject locks = new JSONObject();
+                for (String field : LOCK_FIELDS) {
+                    JSONObject value = person != null ? person.optJSONObject(field) : null;
+                    if (value != null) locks.put(field, value);
+                }
+                if (locks.length() > 0) entry.put(LOCKS_KEY, locks);
                 profiles.put(profileId, entry);
             }
         } catch (JSONException e) {
@@ -243,11 +284,17 @@ final class HaAllowance {
             return new Values(null, false, null, null);
         }
         Long checkedAt = prefs.contains(CHECKED_KEY) ? prefs.getLong(CHECKED_KEY, 0) : null;
+        return valuesOf(entryFor(context, profileKey, now), checkedAt);
+    }
+
+    /** This profile's entry as last read today (null: none, or nothing today). */
+    static JSONObject entryFor(Context context, String profileKey, long now) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        if (profileKey == null || !UsageToday.day(now).equals(prefs.getString(DAY_KEY, null))) return null;
         try {
-            JSONObject profiles = new JSONObject(prefs.getString(PROFILES_KEY, "{}"));
-            return valuesOf(profiles.optJSONObject(profileKey), checkedAt);
+            return new JSONObject(prefs.getString(PROFILES_KEY, "{}")).optJSONObject(profileKey);
         } catch (JSONException e) {
-            return new Values(null, false, null, checkedAt);
+            return null;
         }
     }
 
@@ -267,8 +314,15 @@ final class HaAllowance {
         Set<String> except = new HashSet<>();
         JSONArray spared = entry.optJSONArray("all_except");
         for (int i = 0; spared != null && i < spared.length(); i++) except.add(spared.optString(i, ""));
+        JSONObject locks = entry.optJSONObject(LOCKS_KEY);
+        JSONObject pause = locks != null ? locks.optJSONObject("pause") : null;
+        Long pausedUntil = null;
+        if (pause != null) {
+            Long until = HaLocks.parseTime(pause.optString("until", null));
+            pausedUntil = until != null ? until : Long.MAX_VALUE;
+        }
         return new Values(minutes, entry.optBoolean("schedule_locked", false),
                 message != null && !message.trim().isEmpty() ? message.trim() : null, checkedAt,
-                Collections.unmodifiableMap(outOfTime), all, Collections.unmodifiableSet(except));
+                Collections.unmodifiableMap(outOfTime), all, Collections.unmodifiableSet(except), pausedUntil);
     }
 }

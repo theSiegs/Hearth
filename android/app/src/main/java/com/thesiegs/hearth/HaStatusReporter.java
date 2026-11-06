@@ -192,6 +192,14 @@ final class HaStatusReporter {
     void setScreenOn(boolean on) {
         mScreenOn = on;
         scheduleSend();
+        if (on) BedtimeHeadsUp.schedule(mContext);
+    }
+
+    /** Posts the status now, changed or not, for a fresh answer (a request for more time waiting for its answer). */
+    void refreshNow() {
+        if (!HaIntegration.isPaired(mContext)) return;
+        mHandler.removeCallbacks(mSend);
+        send(true);
     }
 
     void setScreenTimeLock(boolean locked) {
@@ -232,6 +240,8 @@ final class HaStatusReporter {
         // A new profile has its own limits: what the last screen said no longer applies
         mScreenTime = null;
         scheduleSend();
+        // The new profile's bedtime heads-up (or none)
+        BedtimeHeadsUp.schedule(mContext);
     }
 
     private void setControllers(List<MediaController> controllers) {
@@ -449,7 +459,12 @@ final class HaStatusReporter {
             ParentBlocks.applyDocument(mContext, state);
             // The adults' parent PINs, which are this TV's while Home Assistant names them
             HaParentPins.applyDocument(mContext, state);
-            mHandler.post(() -> ProfileProvider.notifyChanged(mContext));
+            mHandler.post(() -> {
+                ProfileProvider.notifyChanged(mContext);
+                // A pause, a lock, the next bedtime or a request's answer may have changed
+                BedtimeHeadsUp.schedule(mContext);
+                MainActivity.notifyHaStateChanged();
+            });
             // And up: what kids profiles started since
             HaIntegration.sendStartedLog(mContext);
             return;

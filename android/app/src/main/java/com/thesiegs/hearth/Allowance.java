@@ -3,7 +3,12 @@ package com.thesiegs.hearth;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.SystemClock;
+import android.text.format.DateFormat;
 import android.widget.Toast;
+
+import org.json.JSONObject;
+
+import java.util.Date;
 
 /**
  * A profile's YouTube allowance for HearthTube to enforce. Hearth works it out on its own: a daily limit set for the
@@ -103,9 +108,17 @@ final class Allowance {
 
     /** Whether the app is held for its group's time (main thread): if so, the kid is told why and it doesn't open. */
     static boolean holdForTime(Context context, String packageName) {
+        return holdForTime(context, packageName, false);
+    }
+
+    /**
+     * As {@link #holdForTime(Context, String)}; [inHearth]: Hearth's home is in front (the app was picked there), so
+     * Hearth's own time's up card can tell the kid, with a way to ask for more time.
+     */
+    static boolean holdForTime(Context context, String packageName, boolean inHearth) {
         String group = timeUpGroup(context, packageName);
         if (group == null) return false;
-        showTimeUp(context, group);
+        showTimeUp(context, group, inHearth);
         return true;
     }
 
@@ -113,13 +126,41 @@ final class Allowance {
     private static String sToldGroup;
     private static long sToldAt;
 
-    /** Tells the kid the group's time is up (main thread); the same group once every few seconds at most. */
+    /**
+     * Tells the kid the group's time is up (main thread), after the app was sent back to the home: Hearth's card when
+     * Hearth's home is the one that comes back, else a toast.
+     */
     static void showTimeUp(Context context, String group) {
+        showTimeUp(context, group, !LauncherAccessibilityService.isGoogleTvHome(context));
+    }
+
+    /**
+     * Tells the kid the group's time is up, or that a family pause holds the apps (main thread); the same once every
+     * few seconds at most. With Hearth's home in front ([inHearth]) Hearth's own card says it (why, until when, and
+     * asking for more time); otherwise, or when Flutter isn't there to show it, a toast.
+     */
+    static void showTimeUp(Context context, String group, boolean inHearth) {
         long now = SystemClock.elapsedRealtime();
         if (group.equals(sToldGroup) && now - sToldAt < TELL_AGAIN_AFTER_MS) return;
         sToldGroup = group;
         sToldAt = now;
-        Toast.makeText(context, context.getString(R.string.time_up_for_group, group), Toast.LENGTH_LONG).show();
+        boolean paused = HaAllowance.PAUSE_HOLD.equals(group);
+        if (inHearth && MainActivity.notifyTimeUp(paused ? null : group)) return;
+        Toast.makeText(context, paused ? pauseMessage(context)
+                : context.getString(R.string.time_up_for_group, group), Toast.LENGTH_LONG).show();
+    }
+
+    /** "Paused: Dinner, until 7:00 PM", as the active profile's pause says it. */
+    private static String pauseMessage(Context context) {
+        long now = System.currentTimeMillis();
+        JSONObject pause = HaLocks.locksOf(HaAllowance.entryFor(context,
+                LauncherAccessibilityService.getActiveProfileKey(context), now)).optJSONObject("pause");
+        String reason = pause != null ? pause.optString("reason", "").trim() : "";
+        Long until = pause != null ? HaLocks.parseTime(pause.optString("until", null)) : null;
+        if (reason.isEmpty()) reason = context.getString(R.string.paused_no_reason);
+        if (until == null || until == Long.MAX_VALUE) return context.getString(R.string.paused_reason, reason);
+        String time = DateFormat.getTimeFormat(context).format(new Date(until));
+        return context.getString(R.string.paused_reason_until, reason, time);
     }
 
     private static SharedPreferences prefs(Context context) {

@@ -280,6 +280,48 @@ final class HaIntegration {
         return HaParentPins.Verdict.UNKNOWN;
     }
 
+    /** The amounts of more time a kid can ask for, in minutes (the integration's asks.AMOUNTS). */
+    static final int[] ASK_MINUTES = {15, 30, 45, 60};
+
+    /**
+     * Asks the adults for more time for a TV profile (blocking): POST .../ask {minutes, group, profile_id}. Answers
+     * {ok: true, request} or {error, request?, retry_in?}: already_open (with the open request), cooldown (retry_in
+     * seconds after a "not now"), no_person (the profile is nobody's in Home Assistant), not_paired, too_often,
+     * unreachable, or failed.
+     */
+    static JSONObject ask(Context context, String profileKey, int minutes, String group) {
+        JSONObject result = new JSONObject();
+        try {
+            String base = HaConfig.baseUrl(context);
+            String secret = secret(context);
+            if (base == null || secret == null) return result.put("error", "not_paired");
+            JSONObject body = new JSONObject().put("minutes", minutes)
+                    .put("group", group == null || group.isEmpty() ? HaAllowance.ALL_GROUP : group);
+            if (profileKey != null) body.put("profile_id", profileKey);
+            Answer answer = request(base + "/api/hearth/device/" + deviceId(context) + "/ask", "POST", body, null,
+                    secret);
+            return askResult(answer.code, answer.body);
+        } catch (JSONException e) {
+            return result;
+        }
+    }
+
+    /** The integration's answer to an ask, as {@link #ask} gives it. */
+    static JSONObject askResult(int code, JSONObject body) throws JSONException {
+        JSONObject result = new JSONObject();
+        JSONObject request = body != null ? body.optJSONObject("request") : null;
+        if (request != null) result.put("request", request);
+        if (code == 200 && request != null) return result.put("ok", true);
+        String error = body != null ? body.optString("error", "") : "";
+        if (code == 429 && body != null && body.has("retry_in")) result.put("retry_in", body.optInt("retry_in"));
+        return result.put("error", code == 409 ? "already_open"
+                : code == 429 && "cooldown".equals(error) ? "cooldown"
+                : code == 429 ? "too_often"
+                : code == 404 && "no_person".equals(error) ? "no_person"
+                : code == 401 ? "not_paired"
+                : code == 0 ? "unreachable" : "failed");
+    }
+
     /**
      * Since when the refusals have lasted, given a refusal now: {@code since} (0: none counted yet) and {@code last},
      * the previous refusal. Refusals more than {@link #REFUSAL_GAP_MS} apart aren't one stretch (the TV was off, or Home

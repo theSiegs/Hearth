@@ -128,4 +128,41 @@ public class HaAllowanceDocumentTest {
         JSONObject stored = new JSONObject(profiles.toString());
         assertEquals("Games", HaAllowance.valuesOf(stored.optJSONObject("user:10"), 1L).timeUpGroup("com.example.game"));
     }
+
+    @Test
+    public void aFamilyPauseHoldsEveryAppUntilItEnds() throws Exception {
+        JSONObject profiles = HaAllowance.profilesFromDocument(document("{\"user:10\": {\"groups\": [],"
+                + " \"pause\": {\"until\": \"2026-10-26T19:00:00-05:00\", \"reason\": \"Dinner\"}}}"));
+        HaAllowance.Values values = HaAllowance.valuesOf(new JSONObject(profiles.toString()).optJSONObject("user:10"), 1L);
+        long until = HaLocks.parseTime("2026-10-26T19:00:00-05:00");
+        assertEquals(HaAllowance.PAUSE_HOLD, values.timeUpGroup("com.example.tv", until - 60_000));
+        assertNull(values.timeUpGroup("com.example.tv", until));
+        assertNull(values.timeUpGroup("com.thesiegs.hearth", until - 60_000));
+        assertNull(values.timeUpGroup("com.android.tv.settings", until - 60_000));
+    }
+
+    @Test
+    public void aPauseWithoutAnEndHoldsUntilHomeAssistantSaysItsOver() throws Exception {
+        JSONObject profiles = HaAllowance.profilesFromDocument(document("{\"user:10\": {\"groups\": [],"
+                + " \"pause\": {\"until\": null, \"reason\": \"\"}}}"));
+        HaAllowance.Values values = HaAllowance.valuesOf(profiles.optJSONObject("user:10"), 1L);
+        assertEquals(HaAllowance.PAUSE_HOLD, values.timeUpGroup("com.example.tv", Long.MAX_VALUE - 1));
+    }
+
+    @Test
+    public void locksAndTheRequestAreKeptForTheTimeUpCard() throws Exception {
+        JSONObject profiles = HaAllowance.profilesFromDocument(document("{\"user:10\": {\"groups\": [],"
+                + " \"lock\": {\"by\": [\"binary_sensor.x\"], \"kind\": \"bedtime\", \"until\": null},"
+                + " \"next_lock\": {\"at\": \"2026-10-26T20:00:00-04:00\", \"kind\": \"bedtime\"},"
+                + " \"request\": {\"id\": \"r1\", \"status\": \"pending\", \"minutes\": 15}},"
+                + " \"user:11\": {\"groups\": []}}"));
+        JSONObject locks = profiles.optJSONObject("user:10").optJSONObject(HaAllowance.LOCKS_KEY);
+        assertEquals("bedtime", locks.optJSONObject("lock").optString("kind"));
+        assertEquals("r1", locks.optJSONObject("request").optString("id"));
+        assertTrue(locks.has("next_lock"));
+        assertFalse(locks.has("pause"));
+        assertFalse(profiles.optJSONObject("user:11").has(HaAllowance.LOCKS_KEY));
+        // A lock alone holds nothing on the TV (Google TV's bedtime does)
+        assertNull(HaAllowance.valuesOf(profiles.optJSONObject("user:10"), 1L).timeUpGroup("com.example.tv", 1L));
+    }
 }
