@@ -459,18 +459,19 @@ Matrix account (now an adult's); the adults' read access to it ends. (A later-ph
 5. **Where the model runs: decided.** Ollama on the laptop for now, a server later; analysis queues while the laptop
    is off. Not the Pi 5 (no useful vision model; at most a small, slow text model). Image analysis deferred until the
    laptop or a server can take it.
-6. **Kids' rules by age: still open.** For each kid, by age, the owner decides two things:
-   - **What adults can read**: everything, only the messages the model flagged, or only the alerts (no message text).
-   - **How each kind of flag reaches an adult**: right away (an alert on the phone), in a weekly summary, or never.
-
-   Proposed defaults, by age band:
+6. **Kids' rules: decided in principle.** Adults can always read all of a kid's messages, at any age. The point of
+   the checks is that they don't have to: flags pick out what deserves a look, and everything else stays unread
+   unless an adult chooses to look. So age changes only how each kind of flag reaches an adult: right away (an alert
+   on the phone), in a weekly summary, or not at all (still searchable). Proposed defaults, by age band, to tune
+   once real flags come in:
 
    | | Under 10 | 10–13 | 14–17 |
    |---|---|---|---|
-   | Adults can read | everything | only flagged messages | only alerts |
    | Right away | any flag: stranger contact, grooming signs, sexual content, self-harm, violence, bullying, drugs, scam | grooming signs, sexual content, self-harm, stranger contact, scam | grooming signs, self-harm, severity 3 of anything |
-   | Weekly summary | counts by kind | bullying, violence, drugs, lower-severity flags | bullying, sexual content, violence, drugs, scam (as counts, no text) |
-   | Never | none | marketing, spam | everything else |
+   | Weekly summary | counts by kind | bullying, violence, drugs, lower-severity flags | bullying, sexual content, violence, drugs, scam |
+   | Not surfaced | none | marketing, spam | everything else |
+
+   Every alert and summary entry links to the flagged message in the archive.
 7. **The consumer's home**: inside `custom_components/hearth` or its own integration in this repository
    (recommended: its own, `hearth_messages`, talking to Hearth through its services and events).
 8. **TV actions**: which conversation counts as "the TV".
@@ -570,7 +571,7 @@ message content, numbers or names.
 
 ### Phase 4: a kid's phone
 
-- [ ] **4.1 (the owner)** Decide the kids' rules by age (decision 6) and tell the kid what is kept and why.
+- [ ] **4.1 (the owner)** Tune the kids' alert defaults (decision 6) and tell the kid what is kept, that adults can read it, and why.
 - [ ] **4.2 (the owner)** Check whether the kid's supervised Google account can pair: try Messages for Web in a
   browser first (no bridge); then the bridge's `login google`. Done when the answer is written here.
 - [ ] **4.3 (the owner)** If it can: pair the kid's account (with the kid), record consent and the transparency talk.
